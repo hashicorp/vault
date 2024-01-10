@@ -386,7 +386,7 @@ func (a *ActivityLog) countsRecordToCountsResponse(record *activity.CountsRecord
 	response := &ResponseCounts{
 		EntityClients:    record.EntityClients,
 		NonEntityClients: record.NonEntityClients,
-		Clients:          record.EntityClients + record.NonEntityClients,
+		Clients:          record.EntityClients + record.NonEntityClients + record.SecretSyncs,
 		SecretSyncs:      record.SecretSyncs,
 	}
 	if includeDeprecated {
@@ -402,7 +402,7 @@ func (a *ActivityLog) namespaceRecordToCountsResponse(record *activity.Namespace
 		EntityClients:    int(record.Entities),
 		NonEntityTokens:  int(record.NonEntityTokens),
 		NonEntityClients: int(record.NonEntityTokens),
-		Clients:          int(record.Entities + record.NonEntityTokens),
+		Clients:          int(record.Entities + record.NonEntityTokens + record.SecretSyncs),
 		SecretSyncs:      int(record.SecretSyncs),
 	}
 }

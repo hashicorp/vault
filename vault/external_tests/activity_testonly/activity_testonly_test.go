@@ -284,16 +284,23 @@ func Test_ActivityLog_SecretSyncResponse(t *testing.T) {
 
 	total := getTotals(t, resp)
 	require.Equal(t, 10, total.SecretSyncs)
+	require.Equal(t, 10, total.Clients)
 
 	byNamespace := getNamespaceData(t, resp)
 	require.Equal(t, 10, byNamespace[0].Counts.SecretSyncs)
 	require.Equal(t, 10, byNamespace[0].Mounts[0].Counts.SecretSyncs)
+	require.Equal(t, 10, byNamespace[0].Counts.Clients)
+	require.Equal(t, 10, byNamespace[0].Mounts[0].Counts.Clients)
 
 	byMonth := getMonthsData(t, resp)
 	require.Equal(t, 10, byMonth[0].NewClients.Counts.SecretSyncs)
 	require.Equal(t, 10, byMonth[0].Counts.SecretSyncs)
 	require.Equal(t, 10, byMonth[0].Namespaces[0].Counts.SecretSyncs)
 	require.Equal(t, 10, byMonth[0].Namespaces[0].Mounts[0].Counts.SecretSyncs)
+	require.Equal(t, 10, byMonth[0].NewClients.Counts.Clients)
+	require.Equal(t, 10, byMonth[0].Counts.Clients)
+	require.Equal(t, 10, byMonth[0].Namespaces[0].Counts.Clients)
+	require.Equal(t, 10, byMonth[0].Namespaces[0].Mounts[0].Counts.Clients)
 }
 
 // Test_ActivityLogCurrentMonth_SecretSyncResponse creates 10 secret sync
@@ -318,16 +325,25 @@ func Test_ActivityLogCurrentMonth_SecretSyncResponse(t *testing.T) {
 	secretSyncs, ok := resp.Data["secret_syncs"]
 	require.True(t, ok)
 	require.Equal(t, json.Number("10"), secretSyncs)
+	clients, ok := resp.Data["clients"]
+	require.True(t, ok)
+	require.Equal(t, json.Number("10"), clients)
 
 	byNamespace := getNamespaceData(t, resp)
 	require.Equal(t, 10, byNamespace[0].Counts.SecretSyncs)
 	require.Equal(t, 10, byNamespace[0].Mounts[0].Counts.SecretSyncs)
+	require.Equal(t, 10, byNamespace[0].Counts.Clients)
+	require.Equal(t, 10, byNamespace[0].Mounts[0].Counts.Clients)
 
 	byMonth := getMonthsData(t, resp)
 	require.Equal(t, 10, byMonth[0].NewClients.Counts.SecretSyncs)
 	require.Equal(t, 10, byMonth[0].Counts.SecretSyncs)
 	require.Equal(t, 10, byMonth[0].Namespaces[0].Counts.SecretSyncs)
 	require.Equal(t, 10, byMonth[0].Namespaces[0].Mounts[0].Counts.SecretSyncs)
+	require.Equal(t, 10, byMonth[0].NewClients.Counts.Clients)
+	require.Equal(t, 10, byMonth[0].Counts.Clients)
+	require.Equal(t, 10, byMonth[0].Namespaces[0].Counts.Clients)
+	require.Equal(t, 10, byMonth[0].Namespaces[0].Mounts[0].Counts.Clients)
 }
 
 // Test_SecretSync_Deduplication verifies that secret sync clients are
@@ -364,4 +380,5 @@ func Test_SecretSync_Deduplication(t *testing.T) {
 
 	total := getTotals(t, resp)
 	require.Equal(t, 15, total.SecretSyncs)
+	require.Equal(t, 15, total.Clients)
 }
