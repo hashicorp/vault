@@ -203,7 +203,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     this.messages = this.store.peekAll('config-ui/message');
 
     await render(
-      hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} @messages={{this.messages}} />`,
+      hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} @messages={{this.messages}} @hasSomeActiveModals={{true}} />`,
       {
         owner: this.engine,
       }
@@ -214,7 +214,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pulvinar mattis nunc sed blandit libero volutpat sed cras ornare.'
     );
     await click(PAGE.radio('modal'));
-    await click(PAGE.button('multiple modals message'));
+    await click(PAGE.button('create-message'));
     await assert.dom(PAGE.modalTitle('Warning: more than one modal')).exists();
     await assert
       .dom(PAGE.modalBody('Warning: more than one modal'))

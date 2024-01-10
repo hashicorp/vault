@@ -23,10 +23,12 @@ export default class MessagesMessageEditRoute extends Route {
   async model() {
     const { id } = this.paramsFor('messages.message');
     const message = await this.store.queryRecord('config-ui/message', id);
-
+    const messages = await this.getMessages(message.authenticated);
     return hash({
       message,
-      messages: this.getMessages(message.authenticated),
+      messages,
+      hasSomeActiveModals:
+        messages.length && messages?.some((message) => message.type === 'modal' && message.active),
     });
   }
 

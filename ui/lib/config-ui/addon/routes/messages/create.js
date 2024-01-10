@@ -26,13 +26,18 @@ export default class MessagesCreateRoute extends Route {
     }
   }
 
-  model(params) {
+  async model(params) {
     const { authenticated } = params;
+    const message = this.store.createRecord('config-ui/message', {
+      authenticated,
+    });
+    const messages = await this.getMessages(authenticated);
+
     return hash({
-      message: this.store.createRecord('config-ui/message', {
-        authenticated,
-      }),
-      messages: this.getMessages(authenticated),
+      message,
+      messages,
+      hasSomeActiveModals:
+        messages.length && messages?.some((message) => message.type === 'modal' && message.active),
     });
   }
 

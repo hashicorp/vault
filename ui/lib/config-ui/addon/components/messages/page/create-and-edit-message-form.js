@@ -49,7 +49,7 @@ export default class MessagesList extends Component {
       this.modelValidations = isValid ? null : state;
       this.invalidFormAlert = invalidFormMessage;
 
-      if (this.args.hasSomeActiveModals) {
+      if (this.args.hasSomeActiveModals && this.args.message.type === 'modal') {
         this.showMultipleModalsMessage = true;
         const isConfirmed = yield this.getUserConfirmation.perform();
         if (!isConfirmed) return;
