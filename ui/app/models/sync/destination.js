@@ -17,6 +17,7 @@ const validations = {
 export default class SyncDestinationModel extends Model {
   @attr('string', { subText: 'Specifies the name for this destination.', editDisabled: true }) name;
   @attr type;
+  @attr('string') purgeInitiatedAt; // only present if delete action has been initiated
 
   // findDestination returns static attributes for each destination type
   get icon() {
