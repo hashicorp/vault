@@ -88,10 +88,11 @@
     >
       <M.Header data-test-modal-title="Warning: more than one modal">
         Warning: more than one modal
+        {{if @message.authenticated "after the user logs in" "on the login page"}}
       </M.Header>
       <M.Body data-test-modal-body="Warning: more than one modal">
         You have an active modal configured
-        {{if @message.authenticated "on the login page" "after the user logs in"}}
+        {{if @message.authenticated "after the user logs in" "on the login page"}}
         and are trying to create another one. It is recommended to
         <b>avoid having more than one modal</b>
         at once as it can be intrusive for users. Would you like to continue creating your message? Click “Confirm” to
