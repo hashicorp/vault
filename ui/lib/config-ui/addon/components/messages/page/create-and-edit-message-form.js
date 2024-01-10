@@ -52,11 +52,13 @@ export default class MessagesList extends Component {
   *save(event) {
     event.preventDefault();
     try {
-      const { isValid, state, invalidFormMessage } = this.args.message.validate();
-      this.modelValidations = isValid ? null : state;
-      this.invalidFormAlert = invalidFormMessage;
+      let isValid;
 
-      if (isValid) {
+      if (!this.showMessagePreviewModal) {
+        isValid = this.validateMessageForm();
+      }
+
+      if (isValid || this.showMessagePreviewModal) {
         const { isNew } = this.args.message;
         const { id, title } = yield this.args.message.save();
         this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} ${title} message.`);
@@ -69,11 +71,16 @@ export default class MessagesList extends Component {
     }
   }
 
-  @action
-  updateMultipleMessageModal() {
+  validateMessageForm() {
     const { isValid, state, invalidFormMessage } = this.args.message.validate();
     this.modelValidations = isValid ? null : state;
     this.invalidFormAlert = invalidFormMessage;
+    return isValid;
+  }
+
+  @action
+  updateMultipleMessageModal() {
+    const isValid = this.validateMessageForm();
     if (isValid) {
       this.showMultipleModalsMessage = true;
     }
