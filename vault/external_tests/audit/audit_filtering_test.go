@@ -13,6 +13,97 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestAuditFilteringOnDifferentFields validates that the audit device 'filter'
+// option works as expected for the fields we allow filtering on. We create
+// three audit devices, each with a different filter, and make some auditable
+// requests, then we ensure that correct entries were written to the respective
+// log files. The mount_type and namespace filters are tested in other tests in
+// this package.
+func TestAuditFilteringOnDifferentFields(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client, err := cluster.Cores[0].Client.Clone()
+	require.NoError(t, err)
+	client.SetToken(cluster.RootToken)
+
+	// Create audit devices.
+	tempDir := t.TempDir()
+	mountPointFilterLogFile, err := os.CreateTemp(tempDir, "")
+	mountPointFilterDevicePath := "mountpoint"
+	mountPointFilterDeviceData := map[string]interface{}{
+		"type":        "file",
+		"description": "",
+		"local":       false,
+		"options": map[string]interface{}{
+			"file_path": mountPointFilterLogFile.Name(),
+			"filter":    "mount_point == secret/",
+		},
+	}
+	_, err = client.Logical().Write("sys/audit/"+mountPointFilterDevicePath, mountPointFilterDeviceData)
+	require.NoError(t, err)
+
+	operationFilterLogFile, err := os.CreateTemp(tempDir, "")
+	operationFilterPath := "operation"
+	operationFilterData := map[string]interface{}{
+		"type":        "file",
+		"description": "",
+		"local":       false,
+		"options": map[string]interface{}{
+			"file_path": operationFilterLogFile.Name(),
+			"filter":    "operation == create",
+		},
+	}
+	_, err = client.Logical().Write("sys/audit/"+operationFilterPath, operationFilterData)
+	require.NoError(t, err)
+
+	pathFilterLogFile, err := os.CreateTemp(tempDir, "")
+	pathFilterDevicePath := "path"
+	pathFilterDeviceData := map[string]interface{}{
+		"type":        "file",
+		"description": "",
+		"local":       false,
+		"options": map[string]interface{}{
+			"file_path": pathFilterLogFile.Name(),
+			"filter":    "path == secret/foo",
+		},
+	}
+	_, err = client.Logical().Write("sys/audit/"+pathFilterDevicePath, pathFilterDeviceData)
+	require.NoError(t, err)
+
+	// A write to KV should produce an audit entry that is written to all the
+	// audit devices.
+	data := map[string]interface{}{
+		"foo": "bar",
+	}
+	err = client.KVv1("secret/").Put(context.Background(), "foo", data)
+	require.NoError(t, err)
+
+	// Disable the audit devices.
+	err = client.Sys().DisableAudit(mountPointFilterDevicePath)
+	require.NoError(t, err)
+	err = client.Sys().DisableAudit(operationFilterPath)
+	require.NoError(t, err)
+	err = client.Sys().DisableAudit(pathFilterDevicePath)
+	require.NoError(t, err)
+	// Ensure the devices are no longer there.
+	devices, err := client.Sys().ListAudit()
+	require.NoError(t, err)
+	_, ok := devices[mountPointFilterDevicePath]
+	require.False(t, ok)
+	_, ok = devices[operationFilterPath]
+	require.False(t, ok)
+	_, ok = devices[pathFilterDevicePath]
+	require.False(t, ok)
+
+	// Validate that only the entries matching the filters were written to each log file.
+	entries := checkAuditEntries(t, mountPointFilterLogFile, "mount_point", "secret/", require.Equal)
+	require.Equal(t, 2, entries)
+	entries = checkAuditEntries(t, operationFilterLogFile, "operation", "create", require.Equal)
+	require.Equal(t, 2, entries)
+	entries = checkAuditEntries(t, pathFilterLogFile, "path", "secret/foo", require.Equal)
+	require.Equal(t, 2, entries)
+}
+
 // TestAuditFilteringMultipleDevices validates that the audit device 'filter'
 // option works as expected and multiple audit devices with the same filter all
 // write the relevant entries to the logs. We create two audit devices that
@@ -91,21 +182,8 @@ func TestAuditFilteringMultipleDevices(t *testing.T) {
 	// numbers of entries are correct in both files.
 	filteredLogFiles := []*os.File{filteredLogFile, filteredLogFile2}
 	for _, f := range filteredLogFiles {
-		counter := 0
-		decoder := json.NewDecoder(f)
-		var auditRecord map[string]interface{}
-		for decoder.Decode(&auditRecord) == nil {
-			auditRequest := map[string]interface{}{}
-			if req, ok := auditRecord["request"]; ok {
-				auditRequest = req.(map[string]interface{})
-			} else {
-				t.Fatal("failed to parse request data from audit log entry")
-			}
-
-			require.Equal(t, "kv", auditRequest["mount_type"])
-			counter += 1
-		}
-		require.Equal(t, 2, counter)
+		numberOfEntries := checkAuditEntries(t, f, "mount_type", "kv", require.Equal)
+		require.Equal(t, 2, numberOfEntries)
 	}
 
 	// Disable the audit devices.
@@ -188,39 +266,15 @@ func TestAuditFilteringFallbackDevice(t *testing.T) {
 	require.False(t, ok)
 
 	// Validate that only the entries matching the filter were written to the filtered log file.
-	counter := 0
-	filterDecoder := json.NewDecoder(filteredLogFile)
-	var auditRecord map[string]interface{}
-	for filterDecoder.Decode(&auditRecord) == nil {
-		auditRequest := map[string]interface{}{}
-		if req, ok := auditRecord["request"]; ok {
-			auditRequest = req.(map[string]interface{})
-		} else {
-			t.Fatal("failed to parse request data from audit log entry")
-		}
+	numberOfEntries := checkAuditEntries(t, filteredLogFile, "mount_type", "kv", require.Equal)
+	require.Equal(t, 2, numberOfEntries)
 
-		require.Equal(t, "kv", auditRequest["mount_type"])
-		counter += 1
-	}
-	require.Equal(t, 2, counter)
-
-	// Validate that only the entries not matching the filter were written to the fallback log file.
-	counter = 0
-	fallbackDecoder := json.NewDecoder(fallbackLogFile)
-	for fallbackDecoder.Decode(&auditRecord) == nil {
-		auditRequest := map[string]interface{}{}
-		if req, ok := auditRecord["request"]; ok {
-			auditRequest = req.(map[string]interface{})
-		} else {
-			t.Fatal("failed to parse request data from audit log entry")
-		}
-
-		require.NotEqual(t, "kv", auditRequest["mount_type"])
-		counter += 1
-	}
-	require.Equal(t, 5, counter)
+	// Validate that only the entries NOT matching the filter were written to the fallback log file.
+	numberOfEntries = checkAuditEntries(t, fallbackLogFile, "mount_type", "kv", require.NotEqual)
+	require.Equal(t, 5, numberOfEntries)
 }
 
+// getFileSize returns the size of the given file in bytes.
 func getFileSize(t *testing.T, filePath string) int64 {
 	t.Helper()
 	fi, err := os.Stat(filePath)
@@ -229,4 +283,38 @@ func getFileSize(t *testing.T, filePath string) int64 {
 	}
 	size := fi.Size()
 	return size
+}
+
+// checkAuditEntries parses the audit log file and asserts that the given key
+// has the expected value for each entry. checkAuditEntries parses the audit log
+// entries from the given file and executes the given assertion function on each
+// entry against the given key and the expected value. It returns the number of
+// entries that were parsed.
+func checkAuditEntries(
+	t *testing.T,
+	logFile *os.File,
+	key string,
+	expectedValue string,
+	assertion func(
+		t require.TestingT,
+		expected interface{},
+		actual interface{},
+		msgAndArgs ...interface{},
+	),
+) int {
+	t.Helper()
+	counter := 0
+	decoder := json.NewDecoder(logFile)
+	var auditRecord map[string]interface{}
+	for decoder.Decode(&auditRecord) == nil {
+		auditRequest := map[string]interface{}{}
+		if req, ok := auditRecord["request"]; ok {
+			auditRequest = req.(map[string]interface{})
+		} else {
+			t.Fatal("failed to parse request data from audit log entry")
+		}
+		assertion(t, expectedValue, auditRequest[key])
+		counter += 1
+	}
+	return counter
 }
