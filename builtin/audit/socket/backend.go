@@ -396,6 +396,7 @@ func (b *Backend) configureFormatterNode(formatConfig audit.FormatterConfig, opt
 
 	b.nodeIDList = append(b.nodeIDList, formatterNodeID)
 	b.nodeMap[formatterNodeID] = formatterNode
+
 	return nil
 }
 

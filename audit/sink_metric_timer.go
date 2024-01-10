@@ -18,6 +18,9 @@ var _ eventlogger.Node = (*SinkMetricTimer)(nil)
 
 // SinkMetricTimer is a wrapper for any kind of eventlogger.NodeTypeSink node that
 // processes events containing an AuditEvent payload.
+// It decorates the implemented eventlogger.Node Process method in order to emit
+// timing metrics for the duration between the creation time of the event and the
+// time the node completes processing.
 type SinkMetricTimer struct {
 	Name string
 	Sink eventlogger.Node
@@ -51,6 +54,9 @@ func NewSinkMetricTimer(name string, sink eventlogger.Node) (*SinkMetricTimer, e
 // Additionally, when the supplied eventlogger.Event has an AuditEvent as its payload,
 // it measures the elapsed time between the creation of the eventlogger.Event and
 // the completion of processing, emitting this as a metric.
+// Examples:
+// 'vault.audit.{DEVICE}.log_request'
+// 'vault.audit.{DEVICE}.log_response'
 func (s *SinkMetricTimer) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	defer func() {
 		auditEvent, ok := e.Payload.(*AuditEvent)

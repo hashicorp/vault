@@ -268,9 +268,9 @@ func TestBackend_configureSinkNode(t *testing.T) {
 				id := b.nodeIDList[0]
 				node := b.nodeMap[id]
 				require.Equal(t, eventlogger.NodeTypeSink, node.Type())
-				sw, ok := node.(*event.MetricsCounter)
+				mc, ok := node.(*event.MetricsCounter)
 				require.True(t, ok)
-				require.Equal(t, tc.expectedName, sw.Name)
+				require.Equal(t, tc.expectedName, mc.Name)
 			}
 		})
 	}
