@@ -46,6 +46,8 @@ export default class MessagesList extends Component {
   *save(event) {
     event.preventDefault();
     try {
+      this.userConfirmation = '';
+
       const { isValid, state, invalidFormMessage } = this.args.message.validate();
       this.modelValidations = isValid ? null : state;
       this.invalidFormAlert = invalidFormMessage;
