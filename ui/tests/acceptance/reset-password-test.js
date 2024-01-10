@@ -8,7 +8,7 @@ import sinon from 'sinon';
 import { currentURL, click, fillIn, settled } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
-import { createPolicyCmd, mountAuthCmd, runCmd } from '../helpers/commands';
+import { createPolicyCmd, deleteAuthCmd, mountAuthCmd, runCmd } from '../helpers/commands';
 import { v4 as uuidv4 } from 'uuid';
 
 module('Acceptance | reset password', function (hooks) {
@@ -21,10 +21,12 @@ module('Acceptance | reset password', function (hooks) {
     path "auth/${this.userpass}/users/reset-me/password" {
       capabilities = ["update", "create"]
     }
-    path "auth/${this.userpass}" {
-      capabilities = ["delete"]
-    }
     `;
+  });
+
+  hooks.afterEach(async function () {
+    await authPage.login();
+    await runCmd(deleteAuthCmd(this.userpass), false);
   });
 
   test('does not allow password reset for non-userpass users', async function (assert) {
