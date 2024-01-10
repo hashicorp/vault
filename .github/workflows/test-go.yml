@@ -292,12 +292,16 @@ jobs:
           fi
 
           # On a release branch, add a flag to rerun failed tests
-          # shellcheck disable=SC2193 # can get false positive for this comparision 
+          # shellcheck disable=SC2193 # can get false positive for this comparision
           if [[  "${{ github.base_ref }}" == release/* ]] || [[  -z "${{ github.base_ref }}" && "${{ github.ref_name }}" == release/* ]]
           then
            RERUN_FAILS="--rerun-fails"
           fi
 
+          VAULT_TEST_LOG_DIR="$(pwd)/test-results/go-test/logs"
+          export VAULT_TEST_LOG_DIR
+          echo "test-log-dir=$VAULT_TEST_LOG_DIR" >> "$GITHUB_OUTPUT"
+          mkdir -p "$VAULT_TEST_LOG_DIR"
           # shellcheck disable=SC2086 # can't quote RERUN_FAILS
           GOARCH=${{ inputs.go-arch }} \
             gotestsum --format=short-verbose \
@@ -327,12 +331,34 @@ jobs:
           fi
           datadog-ci junit upload --service "$GITHUB_REPOSITORY" test-results/go-test/results-${{ matrix.id }}.xml
         if: success() || failure()
-      - name: Archive test results
+      - name: Archive test logs
+        id: archive-test-logs
+        # actions/upload-artifact will compress the artifact for us. We create a tarball to preserve
+        # permissions and to support file names with special characters.
+        run: |
+          log_prefix="test-logs-${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}-${{ matrix.id }}"
+          archive_name="${log_prefix}.tar"
+          {
+            echo "log_prefix=$log_prefix"
+            echo "archive_name=$archive_name"
+          } >> "$GITHUB_OUTPUT"
+          tar -cvf "$archive_name" -C "${{ steps.run-go-tests.outputs.test-log-dir }}" .
+      - name: Upload test logs archives
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
-          name: test-results${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}
-          path: test-results/go-test
+          name: ${{ steps.archive-test-logs.outputs.log_prefix }}
+          path: ${{ steps.archive-test-logs.outputs.archive_name }}
+          retention-days: 7
         if: success() || failure()
+      - name: Upload test results
+        if: success() || failure()
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        with:
+          name: test-results
+          path: |
+            test-results/go-test/*.json
+            test-results/go-test/*.xml
+          retention-days: 1
       # GitHub Actions doesn't expose the job ID or the URL to the job execution,
       # so we have to fetch it from the API
       - name: Fetch job logs URL
