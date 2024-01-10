@@ -170,6 +170,10 @@
         "path": "concepts/lease"
       },
       {
+        "title": "Lease Explosions",
+        "path": "concepts/lease-explosions"
+      },
+      {
         "title": "Authentication",
         "path": "concepts/auth"
       },
