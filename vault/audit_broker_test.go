@@ -7,6 +7,10 @@ import (
 	"context"
 	"crypto/sha256"
 	"testing"
+	"time"
+
+	"github.com/hashicorp/vault/builtin/audit/file"
+	"github.com/hashicorp/vault/helper/namespace"
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/vault/audit"
@@ -255,4 +259,59 @@ func TestAuditBroker_Register_MultipleFails(t *testing.T) {
 	err = a.Register(path, noFilterBackend, false)
 	require.Error(t, err)
 	require.EqualError(t, err, "vault.(AuditBroker).Register: backend already registered 'b2-no-filter'")
+}
+
+func BenchmarkAuditBroker_File_Request_DevNull(b *testing.B) {
+	backendConfig := &audit.BackendConfig{
+		Config: map[string]string{
+			"path": "/dev/null",
+		},
+		MountPath:  "test",
+		SaltConfig: &salt.Config{},
+		SaltView:   &logical.InmemStorage{},
+	}
+
+	sink, err := file.Factory(context.Background(), backendConfig, nil)
+	require.NoError(b, err)
+
+	broker, err := NewAuditBroker(nil)
+	require.NoError(b, err)
+
+	err = broker.Register("test", sink, false)
+	require.NoError(b, err)
+
+	in := &logical.LogInput{
+		Auth: &logical.Auth{
+			ClientToken:     "foo",
+			Accessor:        "bar",
+			EntityID:        "foobarentity",
+			DisplayName:     "testtoken",
+			NoDefaultPolicy: true,
+			Policies:        []string{"root"},
+			TokenType:       logical.TokenTypeService,
+		},
+		Request: &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "/foo",
+			Connection: &logical.Connection{
+				RemoteAddr: "127.0.0.1",
+			},
+			WrapInfo: &logical.RequestWrapInfo{
+				TTL: 60 * time.Second,
+			},
+			Headers: map[string][]string{
+				"foo": {"bar"},
+			},
+		},
+	}
+
+	ctx := namespace.RootContext(context.Background())
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			if err := broker.LogRequest(ctx, in); err != nil {
+				panic(err)
+			}
+		}
+	})
 }

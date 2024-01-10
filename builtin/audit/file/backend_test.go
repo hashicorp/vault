@@ -10,11 +10,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -29,16 +27,16 @@ func TestAuditFile_fileModeNew(t *testing.T) {
 	}
 
 	file := filepath.Join(t.TempDir(), "auditTest.txt")
-	config := map[string]string{
-		"path": file,
-		"mode": modeStr,
-	}
 
-	_, err = Factory(context.Background(), &audit.BackendConfig{
+	backendConfig := &audit.BackendConfig{
+		Config: map[string]string{
+			"path": file,
+			"mode": modeStr,
+		},
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
-		Config:     config,
-	}, false, nil)
+	}
+	_, err = Factory(context.Background(), backendConfig, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,15 +67,14 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 		t.Fatalf("Failure to close temp file for test.")
 	}
 
-	config := map[string]string{
-		"path": f.Name(),
-	}
-
-	_, err = Factory(context.Background(), &audit.BackendConfig{
-		Config:     config,
+	backendConfig := &audit.BackendConfig{
+		Config: map[string]string{
+			"path": f.Name(),
+		},
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
-	}, false, nil)
+	}
+	_, err = Factory(context.Background(), backendConfig, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,16 +105,16 @@ func TestAuditFile_fileMode0000(t *testing.T) {
 		t.Fatalf("Failure to close temp file for test. The error is %v", err)
 	}
 
-	config := map[string]string{
-		"path": f.Name(),
-		"mode": "0000",
-	}
-
-	_, err = Factory(context.Background(), &audit.BackendConfig{
-		Config:     config,
+	backendConfig := &audit.BackendConfig{
+		Config: map[string]string{
+			"path": f.Name(),
+			"mode": "0000",
+		},
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
-	}, false, nil)
+	}
+
+	_, err = Factory(context.Background(), backendConfig, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,17 +139,18 @@ func TestAuditFile_EventLogger_fileModeNew(t *testing.T) {
 	}
 
 	file := filepath.Join(t.TempDir(), "auditTest.txt")
-	config := map[string]string{
-		"path": file,
-		"mode": modeStr,
-	}
 
-	_, err = Factory(context.Background(), &audit.BackendConfig{
+	backendConfig := &audit.BackendConfig{
+		Config: map[string]string{
+			"path": file,
+			"mode": modeStr,
+		},
 		MountPath:  "foo/bar",
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
-		Config:     config,
-	}, true, nil)
+	}
+
+	_, err = Factory(context.Background(), backendConfig, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,55 +162,6 @@ func TestAuditFile_EventLogger_fileModeNew(t *testing.T) {
 	if info.Mode() != os.FileMode(mode) {
 		t.Fatalf("File mode does not match.")
 	}
-}
-
-func BenchmarkAuditFile_request(b *testing.B) {
-	config := map[string]string{
-		"path": "/dev/null",
-	}
-	sink, err := Factory(context.Background(), &audit.BackendConfig{
-		Config:     config,
-		SaltConfig: &salt.Config{},
-		SaltView:   &logical.InmemStorage{},
-	}, false, nil)
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	in := &logical.LogInput{
-		Auth: &logical.Auth{
-			ClientToken:     "foo",
-			Accessor:        "bar",
-			EntityID:        "foobarentity",
-			DisplayName:     "testtoken",
-			NoDefaultPolicy: true,
-			Policies:        []string{"root"},
-			TokenType:       logical.TokenTypeService,
-		},
-		Request: &logical.Request{
-			Operation: logical.UpdateOperation,
-			Path:      "/foo",
-			Connection: &logical.Connection{
-				RemoteAddr: "127.0.0.1",
-			},
-			WrapInfo: &logical.RequestWrapInfo{
-				TTL: 60 * time.Second,
-			},
-			Headers: map[string][]string{
-				"foo": {"bar"},
-			},
-		},
-	}
-
-	ctx := namespace.RootContext(context.Background())
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			if err := sink.LogRequest(ctx, in); err != nil {
-				panic(err)
-			}
-		}
-	})
 }
 
 // TestBackend_formatterConfig ensures that all the configuration values are parsed correctly.
@@ -639,7 +588,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			be, err := Factory(ctx, tc.backendConfig, true, nil)
+			be, err := Factory(ctx, tc.backendConfig, nil)
 
 			switch {
 			case tc.isErrorExpected:
@@ -696,7 +645,7 @@ func TestBackend_IsFallback(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			be, err := Factory(ctx, tc.backendConfig, true, nil)
+			be, err := Factory(ctx, tc.backendConfig, nil)
 			require.NoError(t, err)
 			require.NotNil(t, be)
 			require.Equal(t, tc.isFallbackExpected, be.IsFallback())
