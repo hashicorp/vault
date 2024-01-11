@@ -332,6 +332,7 @@ jobs:
           datadog-ci junit upload --service "$GITHUB_REPOSITORY" test-results/go-test/results-${{ matrix.id }}.xml
         if: success() || failure()
       - name: Archive test logs
+        if: always()
         id: archive-test-logs
         # actions/upload-artifact will compress the artifact for us. We create a tarball to preserve
         # permissions and to support file names with special characters.
