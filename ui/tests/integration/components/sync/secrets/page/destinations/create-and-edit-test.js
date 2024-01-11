@@ -58,7 +58,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     this.model = this.store.peekRecord(`sync/destinations/${type}`, id);
 
     await this.renderFormComponent();
-    assert.dom(PAGE.breadcrumbs).hasText('Secrets Sync Destination Edit Destination');
+    assert.dom(PAGE.breadcrumbs).hasText('Secrets Sync Destinations Destination Edit Destination');
     assert.dom('h2').hasText('Credentials', 'renders credentials section on edit');
     assert
       .dom('p.hds-foreground-faint')
