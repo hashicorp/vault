@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/jefferai/jsonx"
+	"github.com/mitchellh/copystructure"
 )
 
 var (
@@ -82,15 +83,21 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		return nil, fmt.Errorf("%s: cannot parse event payload: %w", op, event.ErrInvalidParameter)
 	}
 
-	var result []byte
-	data := new(logical.LogInput)
-	headers := make(map[string][]string)
+	if a.Data == nil {
+		return nil, fmt.Errorf("%s: cannot audit event (%s) with no data: %w", op, a.Subtype, event.ErrInvalidParameter)
+	}
 
-	if a.Data != nil {
-		*data = *a.Data
-		if a.Data.Request != nil && a.Data.Request.Headers != nil {
-			headers = a.Data.Request.Headers
-		}
+	// Take a copy of the event data before we modify anything.
+	data := new(logical.LogInput)
+	dataCopy, err := copystructure.Copy(a.Data)
+	if err != nil {
+		return nil, fmt.Errorf("%s: unable to copy audit event data: %w", op, err)
+	}
+	data = dataCopy.(*logical.LogInput)
+
+	headers := make(map[string][]string)
+	if data.Request != nil && data.Request.Headers != nil {
+		headers = data.Request.Headers
 	}
 
 	if f.headerFormatter != nil {
@@ -101,6 +108,8 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 
 		data.Request.Headers = adjustedHeaders
 	}
+
+	var result []byte
 
 	switch a.Subtype {
 	case RequestType:
