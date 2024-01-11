@@ -4,6 +4,7 @@
 package audit
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"os"
@@ -96,11 +97,11 @@ func TestAuditFilteringOnDifferentFields(t *testing.T) {
 	require.False(t, ok)
 
 	// Validate that only the entries matching the filters were written to each log file.
-	entries := checkAuditEntries(t, mountPointFilterLogFile, "mount_point", "secret/", require.Equal)
+	entries := checkAuditEntries(t, mountPointFilterLogFile, "mount_point", "secret/")
 	require.Equal(t, 2, entries)
-	entries = checkAuditEntries(t, operationFilterLogFile, "operation", "create", require.Equal)
+	entries = checkAuditEntries(t, operationFilterLogFile, "operation", "create")
 	require.Equal(t, 2, entries)
-	entries = checkAuditEntries(t, pathFilterLogFile, "path", "secret/foo", require.Equal)
+	entries = checkAuditEntries(t, pathFilterLogFile, "path", "secret/foo")
 	require.Equal(t, 2, entries)
 }
 
@@ -182,7 +183,7 @@ func TestAuditFilteringMultipleDevices(t *testing.T) {
 	// numbers of entries are correct in both files.
 	filteredLogFiles := []*os.File{filteredLogFile, filteredLogFile2}
 	for _, f := range filteredLogFiles {
-		numberOfEntries := checkAuditEntries(t, f, "mount_type", "kv", require.Equal)
+		numberOfEntries := checkAuditEntries(t, f, "mount_type", "kv")
 		require.Equal(t, 2, numberOfEntries)
 	}
 
@@ -266,11 +267,25 @@ func TestAuditFilteringFallbackDevice(t *testing.T) {
 	require.False(t, ok)
 
 	// Validate that only the entries matching the filter were written to the filtered log file.
-	numberOfEntries := checkAuditEntries(t, filteredLogFile, "mount_type", "kv", require.Equal)
+	numberOfEntries := checkAuditEntries(t, filteredLogFile, "mount_type", "kv")
 	require.Equal(t, 2, numberOfEntries)
 
 	// Validate that only the entries NOT matching the filter were written to the fallback log file.
-	numberOfEntries = checkAuditEntries(t, fallbackLogFile, "mount_type", "kv", require.NotEqual)
+	// numberOfEntries = checkAuditEntries(t, fallbackLogFile, "mount_type", "kv", require.NotEqual)
+	numberOfEntries = 0
+	scanner := bufio.NewScanner(fallbackLogFile)
+	var auditRecord map[string]any
+	for scanner.Scan() {
+		auditRequest := map[string]any{}
+		err := json.Unmarshal(scanner.Bytes(), &auditRecord)
+		require.NoError(t, err)
+		req, ok := auditRecord["request"]
+		require.True(t, ok, "failed to parse request data from audit log entry")
+
+		auditRequest = req.(map[string]any)
+		require.NotEqual(t, "kv", auditRequest["mount_type"])
+		numberOfEntries += 1
+	}
 	require.Equal(t, 5, numberOfEntries)
 }
 
@@ -286,34 +301,22 @@ func getFileSize(t *testing.T, filePath string) int64 {
 }
 
 // checkAuditEntries parses the audit log file and asserts that the given key
-// has the expected value for each entry. checkAuditEntries parses the audit log
-// entries from the given file and executes the given assertion function on each
-// entry against the given key and the expected value. It returns the number of
-// entries that were parsed.
-func checkAuditEntries(
-	t *testing.T,
-	logFile *os.File,
-	key string,
-	expectedValue string,
-	assertion func(
-		t require.TestingT,
-		expected any,
-		actual any,
-		msgAndArgs ...any,
-	),
-) int {
+// has the expected value for each entry. It returns the number of entries that
+// were parsed.
+func checkAuditEntries(t *testing.T, logFile *os.File, key string, expectedValue any) int {
 	t.Helper()
 	counter := 0
-	decoder := json.NewDecoder(logFile)
+	scanner := bufio.NewScanner(logFile)
 	var auditRecord map[string]any
-	for decoder.Decode(&auditRecord) == nil {
+	for scanner.Scan() {
 		auditRequest := map[string]any{}
-		if req, ok := auditRecord["request"]; ok {
-			auditRequest = req.(map[string]any)
-		} else {
-			t.Fatal("failed to parse request data from audit log entry")
-		}
-		assertion(t, expectedValue, auditRequest[key])
+		err := json.Unmarshal(scanner.Bytes(), &auditRecord)
+		require.NoError(t, err)
+		req, ok := auditRecord["request"]
+		require.True(t, ok, "failed to parse request data from audit log entry")
+
+		auditRequest = req.(map[string]any)
+		require.Equal(t, expectedValue, auditRequest[key])
 		counter += 1
 	}
 	return counter
