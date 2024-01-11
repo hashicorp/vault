@@ -52,6 +52,14 @@ func aliasesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 					Field: "ID",
 				},
 			},
+			"alternative_ids": {
+				Name:         "alternative_ids",
+				Unique:       true,
+				AllowMissing: true,
+				Indexer: &memdb.StringSliceFieldIndex{
+					Field: "AlternativeIDs",
+				},
+			},
 			"factors": {
 				Name:   "factors",
 				Unique: true,
@@ -199,6 +207,14 @@ func groupAliasesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 				Unique: true,
 				Indexer: &memdb.StringFieldIndex{
 					Field: "ID",
+				},
+			},
+			"alternative_ids": {
+				Name:         "alternative_ids",
+				Unique:       true,
+				AllowMissing: true,
+				Indexer: &memdb.StringSliceFieldIndex{
+					Field: "AlternativeIDs",
 				},
 			},
 			"factors": {

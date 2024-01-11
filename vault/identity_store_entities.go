@@ -1075,9 +1075,8 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			if err != nil {
 				return nil, fmt.Errorf("failed to update alias during merge: %w", err), nil
 			}
-
 			// Add the alias to the desired entity
-			toEntity.Aliases = append(toEntity.Aliases, fromAlias)
+			toEntity.UpsertAlias(fromAlias)
 		}
 
 		// If told to, merge policies

@@ -699,13 +699,18 @@ func (i *IdentityStore) processLocalAlias(ctx context.Context, lAlias *logical.A
 
 	updated := false
 	for i, item := range localAliases.Aliases {
-		if item.ID == alias.ID {
+		// Name with MountAccessor form to be the factors that represent an alias in a
+		// unique way. Aliases will be indexed based on this combined uniqueness
+		// factor.
+		if item.Name == alias.Name && item.MountAccessor == alias.MountAccessor {
+			if item.ID != alias.ID {
+				alias.AlternativeIDs = append(alias.AlternativeIDs, item.ID)
+			}
 			localAliases.Aliases[i] = alias
 			updated = true
 			break
 		}
 	}
-
 	if !updated {
 		localAliases.Aliases = append(localAliases.Aliases, alias)
 	}
@@ -722,12 +727,12 @@ func (i *IdentityStore) processLocalAlias(ctx context.Context, lAlias *logical.A
 	}
 
 	if updateDb {
+		persist := !i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary)
+
 		txn := i.db.Txn(true)
 		defer txn.Abort()
-		if err := i.MemDBUpsertAliasInTxn(txn, alias, false); err != nil {
-			return nil, err
-		}
-		if err := i.upsertEntityInTxn(ctx, txn, entity, nil, false); err != nil {
+
+		if err := i.upsertEntityInTxn(ctx, txn, entity, nil, persist); err != nil {
 			return nil, err
 		}
 		txn.Commit()
@@ -900,7 +905,13 @@ func (i *IdentityStore) MemDBAliasByIDInTxn(txn *memdb.Txn, aliasID string, clon
 	}
 
 	if aliasRaw == nil {
-		return nil, nil
+		alias, err := i.MemDBAliasByAlternativeIDInTxn(txn, aliasID, clone, groupAlias)
+		if err != nil {
+			return nil, err
+		}
+		if alias == nil {
+			return nil, nil
+		}
 	}
 
 	alias, ok := aliasRaw.(*identity.Alias)
@@ -923,6 +934,38 @@ func (i *IdentityStore) MemDBAliasByID(aliasID string, clone bool, groupAlias bo
 	txn := i.db.Txn(false)
 
 	return i.MemDBAliasByIDInTxn(txn, aliasID, clone, groupAlias)
+}
+
+func (i *IdentityStore) MemDBAliasByAlternativeIDInTxn(txn *memdb.Txn, alternativeID string, clone bool, groupAlias bool) (*identity.Alias, error) {
+	if alternativeID == "" {
+		return nil, fmt.Errorf("missing merged id")
+	}
+
+	tableName := entityAliasesTable
+	if groupAlias {
+		tableName = groupAliasesTable
+	}
+
+	aliasRaw, err := txn.First(tableName, "alternative_ids", alternativeID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch alias from memdb using alternative id: %w", err)
+	}
+
+	var alias *identity.Alias
+	if aliasRaw != nil {
+		// we need to do this to skip static check from preventing us to return (nil, nil)
+		a, ok := aliasRaw.(*identity.Alias)
+		if !ok {
+			return nil, fmt.Errorf("failed to declare the type of fetched alias")
+		}
+		alias = a
+	}
+
+	if alias != nil && clone {
+		return alias.Clone()
+	}
+
+	return alias, nil
 }
 
 func (i *IdentityStore) MemDBAliasByFactors(mountAccessor, aliasName string, clone bool, groupAlias bool) (*identity.Alias, error) {

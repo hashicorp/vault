@@ -1673,7 +1673,12 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 							}
 						}
 					}
+
+					// Perf secondaries handle local alias update on their own and perf standbys always forward to the active node
 					err = updateLocalAlias(ctx, c, auth, entity)
+					if err != nil {
+						return nil, nil, err
+					}
 				default:
 					entity, entityCreated, err = possiblyForwardAliasCreation(ctx, c, err, auth, entity)
 				}

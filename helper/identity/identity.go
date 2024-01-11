@@ -50,7 +50,13 @@ func (e *Entity) Clone() (*Entity, error) {
 
 func (e *Entity) UpsertAlias(alias *Alias) {
 	for i, item := range e.Aliases {
-		if item.ID == alias.ID {
+		// Name with MountAccessor form to be the factors that represent an alias in a
+		// unique way. Aliases will be indexed based on this combined uniqueness
+		// factor.
+		if item.Name == alias.Name && item.MountAccessor == alias.MountAccessor {
+			if item.ID != alias.ID {
+				alias.AlternativeIDs = append(alias.AlternativeIDs, item.ID)
+			}
 			e.Aliases[i] = alias
 			return
 		}

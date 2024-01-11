@@ -40,6 +40,43 @@ func (c *Core) IdentityStore() *IdentityStore {
 	return c.identityStore
 }
 
+func (c *Core) EntitiesInStorage(ctx context.Context) ([]*identity.Entity, error) {
+	buckets, err := c.identityStore.entityPacker.View().List(ctx, storagepacker.StoragePackerBucketsPrefix)
+	if err != nil {
+		return nil, err
+	}
+
+	var keys []string
+	for _, b := range buckets {
+		if b == "" {
+			continue
+		}
+		keys = append(keys, fmt.Sprintf("%s%s", storagepacker.StoragePackerBucketsPrefix, b))
+	}
+
+	var entities []*identity.Entity
+	i := c.identityStore
+	for _, k := range keys {
+		bucket, err := i.entityPacker.GetBucket(ctx, k)
+		if err != nil {
+			return nil, err
+		}
+
+		if bucket != nil {
+			for _, item := range bucket.Items {
+				entity, err := i.parseEntityFromBucketItem(ctx, item)
+				if err != nil {
+					i.logger.Error("failed to parse entity from bucket entry item", "error", err)
+					return nil, err
+				}
+				entities = append(entities, entity)
+			}
+		}
+	}
+
+	return entities, nil
+}
+
 func (i *IdentityStore) resetDB(ctx context.Context) error {
 	var err error
 
@@ -677,6 +714,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 					i.logger.Error("failed to load local aliases from storage", "error", err)
 					return
 				}
+
 				if localAliases != nil {
 					for _, alias := range localAliases.Aliases {
 						entity.UpsertAlias(alias)
@@ -725,8 +763,8 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		txn.Commit()
 		return
 
-	// Check if the key is a storage entry key for an group bucket
-	// For those entities that are deleted, clear up the local alias entries
+		// Check if the key is a storage entry key for an group bucket
+		// For those entities that are deleted, clear up the local alias entries
 	case strings.HasPrefix(key, groupBucketsPrefix):
 		// Create a MemDB transaction
 		txn := i.db.Txn(true)
@@ -912,6 +950,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 						i.logger.Error("received local alias invalidation for an invalid entity", "item.ID", item.ID)
 						return
 					}
+
 					entity.UpsertAlias(alias)
 
 					// Update the entities table

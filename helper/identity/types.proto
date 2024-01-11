@@ -233,6 +233,11 @@ message Alias {
   // during invalidation of local aliases in performance standbys.
   // @inject_tag: sentinel:"-"
   string local_bucket_key = 14;
+
+  // AlternativeIDs are the IDs which got deprecated when duplicate aliases were found in an entity.
+  // Aliases will be indexed based on all the aliases IDs that belonged to this alias.
+  // @inject_tag: sentinel:"-"
+  repeated string alternative_ids = 15;
 }
 
 // Deprecated. Retained for backwards compatibility.
