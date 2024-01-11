@@ -16,13 +16,20 @@ export default class MessagesRoute extends Route {
     authenticated: {
       refreshModel: true,
     },
+    pageFilter: {
+      refreshModel: true,
+    },
   };
 
   async model(params) {
     try {
-      const { authenticated, page } = params;
+      const { authenticated, page, pageFilter } = params;
+      const filter = pageFilter
+        ? (dataset) => dataset.filter((item) => item?.title.toLowerCase().includes(pageFilter.toLowerCase()))
+        : null;
       return await this.store.lazyPaginatedQuery('config-ui/message', {
         authenticated,
+        pageFilter: filter,
         responsePath: 'data.keys',
         page: page || 1,
       });

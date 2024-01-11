@@ -9,6 +9,17 @@
   @showTabs={{true}}
   @breadcrumbs={{this.breadcrumbs}}
 >
+  <:toolbarFilters>
+    {{#if @messages.meta.total}}
+      <FilterInput
+        aria-label="Filter messages"
+        placeholder="Filter messages"
+        value={{@pageFilter}}
+        @autofocus={{true}}
+        @onInput={{this.onFilterChange}}
+      />
+    {{/if}}
+  </:toolbarFilters>
   <:toolbarActions>
     <ToolbarLink
       data-test-toolbar-create-message
