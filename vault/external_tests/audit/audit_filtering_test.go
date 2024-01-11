@@ -30,11 +30,11 @@ func TestAuditFilteringOnDifferentFields(t *testing.T) {
 	tempDir := t.TempDir()
 	mountPointFilterLogFile, err := os.CreateTemp(tempDir, "")
 	mountPointFilterDevicePath := "mountpoint"
-	mountPointFilterDeviceData := map[string]interface{}{
+	mountPointFilterDeviceData := map[string]any{
 		"type":        "file",
 		"description": "",
 		"local":       false,
-		"options": map[string]interface{}{
+		"options": map[string]any{
 			"file_path": mountPointFilterLogFile.Name(),
 			"filter":    "mount_point == secret/",
 		},
@@ -44,11 +44,11 @@ func TestAuditFilteringOnDifferentFields(t *testing.T) {
 
 	operationFilterLogFile, err := os.CreateTemp(tempDir, "")
 	operationFilterPath := "operation"
-	operationFilterData := map[string]interface{}{
+	operationFilterData := map[string]any{
 		"type":        "file",
 		"description": "",
 		"local":       false,
-		"options": map[string]interface{}{
+		"options": map[string]any{
 			"file_path": operationFilterLogFile.Name(),
 			"filter":    "operation == create",
 		},
@@ -58,11 +58,11 @@ func TestAuditFilteringOnDifferentFields(t *testing.T) {
 
 	pathFilterLogFile, err := os.CreateTemp(tempDir, "")
 	pathFilterDevicePath := "path"
-	pathFilterDeviceData := map[string]interface{}{
+	pathFilterDeviceData := map[string]any{
 		"type":        "file",
 		"description": "",
 		"local":       false,
-		"options": map[string]interface{}{
+		"options": map[string]any{
 			"file_path": pathFilterLogFile.Name(),
 			"filter":    "path == secret/foo",
 		},
@@ -72,7 +72,7 @@ func TestAuditFilteringOnDifferentFields(t *testing.T) {
 
 	// A write to KV should produce an audit entry that is written to all the
 	// audit devices.
-	data := map[string]interface{}{
+	data := map[string]any{
 		"foo": "bar",
 	}
 	err = client.KVv1("secret/").Put(context.Background(), "foo", data)
@@ -122,11 +122,11 @@ func TestAuditFilteringMultipleDevices(t *testing.T) {
 	tempDir := t.TempDir()
 	filteredLogFile, err := os.CreateTemp(tempDir, "")
 	filteredDevicePath := "filtered"
-	filteredDeviceData := map[string]interface{}{
+	filteredDeviceData := map[string]any{
 		"type":        "file",
 		"description": "",
 		"local":       false,
-		"options": map[string]interface{}{
+		"options": map[string]any{
 			"file_path": filteredLogFile.Name(),
 			"filter":    "mount_type == kv",
 		},
@@ -136,11 +136,11 @@ func TestAuditFilteringMultipleDevices(t *testing.T) {
 
 	filteredLogFile2, err := os.CreateTemp(tempDir, "")
 	filteredDevicePath2 := "filtered2"
-	filteredDeviceData2 := map[string]interface{}{
+	filteredDeviceData2 := map[string]any{
 		"type":        "file",
 		"description": "",
 		"local":       false,
-		"options": map[string]interface{}{
+		"options": map[string]any{
 			"file_path": filteredLogFile2.Name(),
 			"filter":    "mount_type == kv",
 		},
@@ -150,11 +150,11 @@ func TestAuditFilteringMultipleDevices(t *testing.T) {
 
 	nonFilteredLogFile, err := os.CreateTemp(tempDir, "")
 	nonFilteredDevicePath := "nonfiltered"
-	nonFilteredDeviceData := map[string]interface{}{
+	nonFilteredDeviceData := map[string]any{
 		"type":        "file",
 		"description": "",
 		"local":       false,
-		"options": map[string]interface{}{
+		"options": map[string]any{
 			"file_path": nonFilteredLogFile.Name(),
 		},
 	}
@@ -167,7 +167,7 @@ func TestAuditFilteringMultipleDevices(t *testing.T) {
 
 	// A write to KV should produce an audit entry that is written to the
 	// filtered devices and the non-filtered device.
-	data := map[string]interface{}{
+	data := map[string]any{
 		"foo": "bar",
 	}
 	err = client.KVv1("secret/").Put(context.Background(), "foo", data)
@@ -218,11 +218,11 @@ func TestAuditFilteringFallbackDevice(t *testing.T) {
 	tempDir := t.TempDir()
 	fallbackLogFile, err := os.CreateTemp(tempDir, "")
 	fallbackDevicePath := "fallback"
-	fallbackDeviceData := map[string]interface{}{
+	fallbackDeviceData := map[string]any{
 		"type":        "file",
 		"description": "",
 		"local":       false,
-		"options": map[string]interface{}{
+		"options": map[string]any{
 			"file_path": fallbackLogFile.Name(),
 			"fallback":  "true",
 		},
@@ -232,11 +232,11 @@ func TestAuditFilteringFallbackDevice(t *testing.T) {
 
 	filteredLogFile, err := os.CreateTemp(tempDir, "")
 	filteredDevicePath := "filtered"
-	filteredDeviceData := map[string]interface{}{
+	filteredDeviceData := map[string]any{
 		"type":        "file",
 		"description": "",
 		"local":       false,
-		"options": map[string]interface{}{
+		"options": map[string]any{
 			"file_path": filteredLogFile.Name(),
 			"filter":    "mount_type == kv",
 		},
@@ -246,7 +246,7 @@ func TestAuditFilteringFallbackDevice(t *testing.T) {
 
 	// A write to KV should produce an audit entry that is written to the
 	// filtered device.
-	data := map[string]interface{}{
+	data := map[string]any{
 		"foo": "bar",
 	}
 	err = client.KVv1("secret/").Put(context.Background(), "foo", data)
@@ -297,19 +297,19 @@ func checkAuditEntries(
 	expectedValue string,
 	assertion func(
 		t require.TestingT,
-		expected interface{},
-		actual interface{},
-		msgAndArgs ...interface{},
+		expected any,
+		actual any,
+		msgAndArgs ...any,
 	),
 ) int {
 	t.Helper()
 	counter := 0
 	decoder := json.NewDecoder(logFile)
-	var auditRecord map[string]interface{}
+	var auditRecord map[string]any
 	for decoder.Decode(&auditRecord) == nil {
-		auditRequest := map[string]interface{}{}
+		auditRequest := map[string]any{}
 		if req, ok := auditRecord["request"]; ok {
-			auditRequest = req.(map[string]interface{})
+			auditRequest = req.(map[string]any)
 		} else {
 			t.Fatal("failed to parse request data from audit log entry")
 		}
