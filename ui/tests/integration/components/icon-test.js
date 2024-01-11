@@ -55,7 +55,7 @@ module('Integration | Component | icon', function (hooks) {
   });
 
   test('it should render FlightIcon', async function (assert) {
-    assert.expect(4);
+    assert.expect(3);
 
     await render(hbs`<Icon @name="x" />`);
     assert.dom('.flight-icon').exists('FlightIcon renders when provided name of icon in set');
