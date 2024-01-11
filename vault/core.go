@@ -64,7 +64,6 @@ import (
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
-	uicustommessages "github.com/hashicorp/vault/vault/ui_custom_messages"
 	"github.com/hashicorp/vault/version"
 	"github.com/patrickmn/go-cache"
 	uberAtomic "go.uber.org/atomic"
@@ -1264,7 +1263,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	// UI
 	uiStoragePrefix := systemBarrierPrefix + "ui"
 	c.uiConfig = NewUIConfig(conf.EnableUI, physical.NewView(c.physical, uiStoragePrefix), NewBarrierView(c.barrier, uiStoragePrefix))
-	c.customMessageManager = uicustommessages.NewManager(c.barrier)
+	c.customMessageManager = createCustomMessageManager(c.barrier, c)
 
 	// Listeners
 	err = c.configureListeners(conf)
