@@ -5,7 +5,6 @@ package file
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -19,12 +18,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestAuditFile_fileModeNew verifies that the backend Factory correctly sets
+// the file mode when the mode argument is set.
 func TestAuditFile_fileModeNew(t *testing.T) {
+	t.Parallel()
+
 	modeStr := "0777"
 	mode, err := strconv.ParseUint(modeStr, 8, 32)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	file := filepath.Join(t.TempDir(), "auditTest.txt")
 
@@ -33,99 +34,81 @@ func TestAuditFile_fileModeNew(t *testing.T) {
 			"path": file,
 			"mode": modeStr,
 		},
+		MountPath:  "foo/bar",
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
 	}
 	_, err = Factory(context.Background(), backendConfig, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	info, err := os.Stat(file)
-	if err != nil {
-		t.Fatalf("Cannot retrieve file mode from `Stat`")
-	}
-	if info.Mode() != os.FileMode(mode) {
-		t.Fatalf("File mode does not match.")
-	}
+	require.NoErrorf(t, err, "cannot retrieve file mode from `Stat`")
+	require.Equalf(t, os.FileMode(mode), info.Mode(), "File mode does not match.")
 }
 
+// TestAuditFile_fileModeExisting verifies that the backend Factory correctly sets
+// the mode on an existing file.
 func TestAuditFile_fileModeExisting(t *testing.T) {
-	f, err := ioutil.TempFile("", "test")
-	if err != nil {
-		t.Fatalf("Failure to create test file.")
-	}
-	defer os.Remove(f.Name())
+	t.Parallel()
+
+	dir := t.TempDir()
+	f, err := os.CreateTemp(dir, "auditTest.log")
+	require.NoErrorf(t, err, "Failure to create test file.")
 
 	err = os.Chmod(f.Name(), 0o777)
-	if err != nil {
-		t.Fatalf("Failure to chmod temp file for testing.")
-	}
+	require.NoErrorf(t, err, "Failure to chmod temp file for testing.")
 
 	err = f.Close()
-	if err != nil {
-		t.Fatalf("Failure to close temp file for test.")
-	}
+	require.NoErrorf(t, err, "Failure to close temp file for test.")
 
 	backendConfig := &audit.BackendConfig{
 		Config: map[string]string{
 			"path": f.Name(),
 		},
+		MountPath:  "foo/bar",
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
 	}
+
 	_, err = Factory(context.Background(), backendConfig, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	info, err := os.Stat(f.Name())
-	if err != nil {
-		t.Fatalf("cannot retrieve file mode from `Stat`")
-	}
-	if info.Mode() != os.FileMode(0o600) {
-		t.Fatalf("File mode does not match.")
-	}
+	require.NoErrorf(t, err, "cannot retrieve file mode from `Stat`")
+	require.Equalf(t, os.FileMode(0o600), info.Mode(), "File mode does not match.")
 }
 
+// TestAuditFile_fileMode0000 verifies that setting the audit file mode to
+// "0000" prevents Vault from modifying the permissions of the file.
 func TestAuditFile_fileMode0000(t *testing.T) {
-	f, err := ioutil.TempFile("", "test")
-	if err != nil {
-		t.Fatalf("Failure to create test file. The error is %v", err)
-	}
-	defer os.Remove(f.Name())
+	t.Parallel()
+
+	dir := t.TempDir()
+	f, err := os.CreateTemp(dir, "auditTest.log")
+	require.NoErrorf(t, err, "Failure to create test file.")
 
 	err = os.Chmod(f.Name(), 0o777)
-	if err != nil {
-		t.Fatalf("Failure to chmod temp file for testing. The error is %v", err)
-	}
+	require.NoErrorf(t, err, "Failure to chmod temp file for testing.")
 
 	err = f.Close()
-	if err != nil {
-		t.Fatalf("Failure to close temp file for test. The error is %v", err)
-	}
+	require.NoErrorf(t, err, "Failure to close temp file for test.")
 
 	backendConfig := &audit.BackendConfig{
 		Config: map[string]string{
 			"path": f.Name(),
 			"mode": "0000",
 		},
+		MountPath:  "foo/bar",
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
 	}
 
 	_, err = Factory(context.Background(), backendConfig, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	info, err := os.Stat(f.Name())
-	if err != nil {
-		t.Fatalf("cannot retrieve file mode from `Stat`. The error is %v", err)
-	}
-	if info.Mode() != os.FileMode(0o777) {
-		t.Fatalf("File mode does not match.")
-	}
+	require.NoErrorf(t, err, "cannot retrieve file mode from `Stat`. The error is %v", err)
+	require.Equalf(t, os.FileMode(0o777), info.Mode(), "File mode does not match.")
 }
 
 // TestAuditFile_EventLogger_fileModeNew verifies that the Factory function
@@ -134,9 +117,7 @@ func TestAuditFile_fileMode0000(t *testing.T) {
 func TestAuditFile_EventLogger_fileModeNew(t *testing.T) {
 	modeStr := "0777"
 	mode, err := strconv.ParseUint(modeStr, 8, 32)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	file := filepath.Join(t.TempDir(), "auditTest.txt")
 
@@ -151,17 +132,11 @@ func TestAuditFile_EventLogger_fileModeNew(t *testing.T) {
 	}
 
 	_, err = Factory(context.Background(), backendConfig, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	info, err := os.Stat(file)
-	if err != nil {
-		t.Fatalf("Cannot retrieve file mode from `Stat`")
-	}
-	if info.Mode() != os.FileMode(mode) {
-		t.Fatalf("File mode does not match.")
-	}
+	require.NoErrorf(t, err, "Cannot retrieve file mode from `Stat`")
+	require.Equalf(t, os.FileMode(mode), info.Mode(), "File mode does not match.")
 }
 
 // TestBackend_formatterConfig ensures that all the configuration values are parsed correctly.
