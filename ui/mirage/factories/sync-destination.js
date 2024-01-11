@@ -27,7 +27,6 @@ export default Factory.extend({
     type: 'gcp-sm',
     name: 'destination-gcp',
     credentials: '*****',
-    project_id: 'gcp-project-id', // TODO backend will add, doesn't exist yet
   }),
   gh: trait({
     type: 'gh',
