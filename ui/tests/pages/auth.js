@@ -19,6 +19,7 @@ export default create({
   namespaceInput: fillable('[data-test-auth-form-ns-input]'),
   optionsToggle: clickable('[data-test-auth-form-options-toggle]'),
   mountPath: fillable('[data-test-auth-form-mount-path]'),
+  authType: fillable('[data-test-select="auth-method"]'),
 
   login: async function (token = rootToken) {
     // make sure we're always logged out and logged back in
