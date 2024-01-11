@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/jefferai/jsonx"
-	"github.com/mitchellh/copystructure"
 )
 
 var (
@@ -88,12 +87,10 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 	}
 
 	// Take a copy of the event data before we modify anything.
-	data := new(logical.LogInput)
-	dataCopy, err := copystructure.Copy(a.Data)
+	data, err := a.Data.Clone()
 	if err != nil {
 		return nil, fmt.Errorf("%s: unable to copy audit event data: %w", op, err)
 	}
-	data = dataCopy.(*logical.LogInput)
 
 	headers := make(map[string][]string)
 	if data.Request != nil && data.Request.Headers != nil {

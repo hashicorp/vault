@@ -3,6 +3,12 @@
 
 package logical
 
+import (
+	"fmt"
+
+	"github.com/mitchellh/copystructure"
+)
+
 type LogInput struct {
 	Type                string
 	Auth                *Auth
@@ -52,4 +58,105 @@ func (l *LogInput) BexprDatum(namespace string) *LogInputBexpr {
 		Operation:  operation,
 		Path:       path,
 	}
+}
+
+// TODO: PW: godoc + tests
+func (l *LogInput) Clone() (*LogInput, error) {
+	// Auth
+	auth, err := cloneAuth(l.Auth)
+	if err != nil {
+		return nil, err
+	}
+
+	// Request
+	req, err := cloneRequest(l.Request)
+	if err != nil {
+		return nil, err
+	}
+
+	// Response
+	resp, err := cloneResponse(l.Response)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: PW: Copy outer error?
+
+	reqDataKeys := make([]string, len(l.NonHMACReqDataKeys))
+	copy(l.NonHMACReqDataKeys, reqDataKeys)
+
+	respDataKeys := make([]string, len(l.NonHMACRespDataKeys))
+	copy(l.NonHMACRespDataKeys, reqDataKeys)
+
+	cloned := &LogInput{
+		Type:                l.Type,
+		Auth:                auth,
+		Request:             req,
+		Response:            resp,
+		OuterErr:            l.OuterErr, // TODO: PW: Don't use the real error interface
+		NonHMACReqDataKeys:  reqDataKeys,
+		NonHMACRespDataKeys: respDataKeys,
+	}
+
+	return cloned, nil
+}
+
+// clone will deep-copy the supplied struct.
+// However, it cannot copy unexported fields or evaluate methods.
+func clone[V any](s V) (V, error) {
+	var result V
+
+	data, err := copystructure.Copy(s)
+	if err != nil {
+		return result, err
+	}
+
+	result = data.(V)
+
+	return result, err
+}
+
+func cloneAuth(auth *Auth) (*Auth, error) {
+	if auth == nil {
+		return nil, nil
+	}
+
+	auth, err := clone[*Auth](auth)
+	if err != nil {
+		return nil, fmt.Errorf("unable to clone auth: %w", err)
+	}
+
+	return auth, nil
+}
+
+func cloneRequest(request *Request) (*Request, error) {
+	if request == nil {
+		return nil, nil
+	}
+
+	req, err := clone[*Request](request)
+	if err != nil {
+		return nil, fmt.Errorf("unable to clone request: %w", err)
+	}
+
+	// Add the values from methods that would otherwise be missed.
+	req.mountClass = request.MountClass()
+	req.mountRunningVersion = request.MountRunningVersion()
+	req.mountRunningSha256 = request.MountRunningSha256()
+	req.mountIsExternalPlugin = request.MountIsExternalPlugin()
+
+	return req, nil
+}
+
+func cloneResponse(response *Response) (*Response, error) {
+	if response == nil {
+		return nil, nil
+	}
+
+	resp, err := clone[*Response](response)
+	if err != nil {
+		return nil, fmt.Errorf("unable to clone response: %w", err)
+	}
+
+	return resp, nil
 }
