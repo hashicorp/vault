@@ -31,6 +31,10 @@ export default {
   }),
   lastTextOutput: getter(function () {
     const count = this.logTextItems.length;
+    if (count === 0) {
+      // If no logOutput items are found, we can assume the response is empty
+      return '';
+    }
     return this.logTextItems.objectAt(count - 1).text;
   }),
   logJSONItems: collection('[data-test-component="console/log-json"]', {
