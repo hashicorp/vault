@@ -123,14 +123,9 @@ export default class SecretEngineModel extends Model {
   }
 
   get icon() {
-    const defaultIcon = this.engineType || 'secrets';
-    return (
-      {
-        keymgmt: 'key',
-        kmip: 'secrets',
-        ldap: 'folder-users',
-      }[this.engineType] || defaultIcon
-    );
+    const engineData = allEngines().find((engine) => engine.type === this.engineType);
+
+    return engineData?.glyph || 'lock';
   }
 
   get engineType() {
