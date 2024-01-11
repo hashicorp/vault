@@ -28,6 +28,7 @@ export default class Icon extends Component {
   constructor(owner, args) {
     super(owner, args);
     assert('Icon component size argument must be either "16" or "24"', ['16', '24'].includes(this.size));
+    assert('Icon name argument must be provided', this.args.name);
   }
 
   get size() {
