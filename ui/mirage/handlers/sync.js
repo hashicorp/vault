@@ -90,14 +90,6 @@ export default function (server) {
         connection_details,
         name,
         type,
-        /* 
-        these only exist if a delete has been initiated, including here for dev/testing purposes
-        if only `purge_initiated_at` present the delete progress banner renders
-        if `purge_error` also has a value then delete failed banner renders
-        */
-        purge_initiated_at: '2024-01-09T16:54:28.463879-07:00',
-        // WIP (backend hasn't added yet) update when we have a realistic error message)
-        // purge_error: '1 error occurred: association could for some confusing reason not be un-synced!',
       },
     };
   };
@@ -141,8 +133,22 @@ export default function (server) {
   });
   server.delete(uri, (schema, req) => {
     const { type, name } = req.params;
-    schema.db.syncDestinations.remove({ type, name });
-    return new Response(204);
+    schema.db.syncDestinations.update(
+      { type, name },
+      // these parameters are added after a purge delete is initiated
+      // if only `purge_initiated_at` exists the delete progress banner renders
+      // if `purge_error` also has a value then delete failed banner renders
+      {
+        purge_initiated_at: '2024-01-09T16:54:28.463879-07:00',
+        // WIP (backend hasn't added yet) update when we have a realistic error message)
+        // purge_error: '1 error occurred: association could for some confusing reason not be un-synced!',
+      }
+    );
+    const record = schema.db.syncDestinations.findBy({ type, name });
+    return destinationResponse(record);
+    // return the following instead to test immediate deletion
+    // schema.db.syncDestinations.remove({ type, name });
+    // return new Response(204);
   });
   // associations
   server.get('/sys/sync/associations', (schema) => {
