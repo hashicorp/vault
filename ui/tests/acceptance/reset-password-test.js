@@ -47,7 +47,7 @@ module('Acceptance | reset password', function (hooks) {
       `write auth/${this.userpass}/users/reset-me password=password token_policies=${this.userpass}`,
     ]);
     await authPage.loginUsername('reset-me', 'password', this.userpass);
-
+    await settled();
     await click('[data-test-user-menu-trigger]');
     await click('[data-test-user-menu-item="reset-password"]');
 
@@ -62,6 +62,7 @@ module('Acceptance | reset password', function (hooks) {
     assert.dom('[data-test-title]').hasText('Reset password', 'page title');
     await fillIn('[data-test-textarea]', 'newpassword');
     await click('[data-test-reset-password-save]');
+    // ARG TODO new failure after main merge
     assert.true(flashSpy.calledOnceWith('Successfully reset password'), 'Shows success message');
     assert.dom('[data-test-textarea]').hasValue('', 'Resets input after save');
   });
@@ -95,6 +96,7 @@ module('Acceptance | reset password', function (hooks) {
     assert.dom('[data-test-title]').hasText('Reset password', 'page title');
     await fillIn('[data-test-textarea]', 'newpassword');
     await click('[data-test-reset-password-save]');
+    // ARG TODO new failure after main merge
     assert.true(flashSpy.calledOnceWith('Successfully reset password'), 'Shows success message');
     assert.dom('[data-test-textarea]').hasValue('', 'Resets input after save');
   });
