@@ -139,9 +139,7 @@ func (s *logVerificationChunkingShim) RestoreState(state *raftchunking.State) er
 }
 
 func (s *logVerificationChunkingShim) isVerifierLog(l *raft.Log) bool {
-	return len(l.Data) == 1 &&
-		l.Data[0] == byte(verifierCheckpointOp) &&
-		bytes.Equal(logVerifierMagicBytes[:], l.Extensions[0:8])
+	return isRaftLogVerifyCheckpoint(l)
 }
 
 // FSM is Vault's primary state storage. It writes updates to a bolt db file

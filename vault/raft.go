@@ -325,7 +325,7 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	}
 
 	// Run the verifier if we're configured to do so
-	raftBackend.RunRaftWalVerifier(c.activeContext)
+	raftBackend.StartRaftWalVerifier(ctx)
 
 	if err := c.startPeriodicRaftTLSRotate(ctx); err != nil {
 		return err

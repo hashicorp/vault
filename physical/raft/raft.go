@@ -4,6 +4,7 @@
 package raft
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
@@ -541,22 +542,16 @@ func (b *RaftBackend) Close() error {
 		return err
 	}
 
-	closeBackend := func(c io.Closer) error {
-		if err := c.Close(); err != nil {
+	// This relies on logStore == stableStore and not having any middleware
+	// wrappers. If these assumptions change, it's possible this will break,
+	// and we should adjust accordingly at that time.
+	if closer, ok := b.logStore.(io.Closer); ok {
+		if err := closer.Close(); err != nil {
 			return err
 		}
-
-		return nil
 	}
 
-	switch t := b.stableStore.(type) {
-	case *raftboltdb.BoltStore:
-		return closeBackend(t)
-	case *raftwal.WAL:
-		return closeBackend(t)
-	default:
-		return nil
-	}
+	return nil
 }
 
 func (b *RaftBackend) FailGetInTxn(fail bool) {
@@ -624,9 +619,10 @@ func (b *RaftBackend) DisableUpgradeMigration() (bool, bool) {
 	return b.autopilotConfig.DisableUpgradeMigration, true
 }
 
-// RunRaftWalVerifier runs a raft log store verifier in the background, if configured to do so.
+// StartRaftWalVerifier runs a raft log store verifier in the background, if configured to do so.
 // This periodically writes out special raft logs to verify that the log store is not corrupting data.
-func (b *RaftBackend) RunRaftWalVerifier(ctx context.Context) {
+// This is only safe to run on the raft leader.
+func (b *RaftBackend) StartRaftWalVerifier(ctx context.Context) {
 	if !b.verifierEnabled() {
 		return
 	}
@@ -665,8 +661,6 @@ func (b *RaftBackend) applyVerifierCheckpoint() error {
 		err = e
 	}
 
-	// TODO: do we need to wait for the response?
-	_ = applyFuture.Response()
 	b.l.RUnlock()
 	b.permitPool.Release()
 
@@ -676,17 +670,7 @@ func (b *RaftBackend) applyVerifierCheckpoint() error {
 // isLogVerifyCheckpoint is the verifier.IsCheckpointFn that can decode our raft logs for
 // their type.
 func isLogVerifyCheckpoint(l *raft.Log) (bool, error) {
-	if len(l.Data) < 1 {
-		// Shouldn't be possible! But no need to make it an error if it wasn't one
-		// before.
-		return false, nil
-	}
-
-	if l.Data[0] == byte(verifierCheckpointOp) {
-		return true, nil
-	}
-
-	return false, nil
+	return isRaftLogVerifyCheckpoint(l), nil
 }
 
 func makeLogVerifyReportFn(logger log.Logger) verifier.ReportFn {
@@ -2285,4 +2269,11 @@ func etcdboltOptions(path string) *etcdbolt.Options {
 	}
 
 	return o
+}
+
+func isRaftLogVerifyCheckpoint(l *raft.Log) bool {
+	return len(l.Data) == 1 &&
+		l.Data[0] == byte(verifierCheckpointOp) &&
+		len(l.Extensions) >= 8 &&
+		bytes.Equal(logVerifierMagicBytes[:], l.Extensions[0:8])
 }
