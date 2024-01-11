@@ -28,6 +28,7 @@ import { formatNumber } from 'core/helpers/format-number';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { disableReplication } from 'vault/tests/helpers/replication';
 import connectionPage from 'vault/tests/pages/secrets/backend/database/connection';
+import { v4 as uuidv4 } from 'uuid';
 
 import { SELECTORS } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 
@@ -306,7 +307,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     };
 
     test('shows the correct actions and links associated with database', async function (assert) {
-      const databaseBackend = `db-database`;
+      const databaseBackend = `database-${uuidv4()}`;
       await mountSecrets.enable('database', databaseBackend);
       await newConnection(databaseBackend);
       await runCommands([
