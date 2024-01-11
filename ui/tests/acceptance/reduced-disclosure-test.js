@@ -12,6 +12,7 @@ import { createTokenCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import ENV from 'vault/config/environment';
+import { overrideResponse } from 'vault/tests/helpers/clients';
 
 const { unsealKeys } = VAULT_KEYS;
 const SELECTORS = {
@@ -27,6 +28,8 @@ module('Acceptance | reduced disclosure test', function (hooks) {
     ENV['ember-cli-mirage'].handler = 'reducedDisclosure';
   });
   hooks.beforeEach(function () {
+    this.unsealCount = 0;
+    this.sealed = false;
     this.versionSvc = this.owner.lookup('service:version');
     return authPage.logout();
   });
@@ -58,7 +61,32 @@ module('Acceptance | reduced disclosure test', function (hooks) {
       .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version for default policy in namespace');
   });
 
-  test.skip('shows correct version on unseal flow', async function (assert) {
+  test('shows correct version on unseal flow', async function (assert) {
+    this.server.get(`/sys/seal-status`, () => {
+      return {
+        type: 'shamir',
+        initialized: true,
+        sealed: this.sealed,
+      };
+    });
+    this.server.put(`/sys/seal`, () => {
+      this.sealed = true;
+      return overrideResponse(204);
+    });
+    this.server.put(`/sys/unseal`, () => {
+      const threshold = unsealKeys.length;
+      const attemptCount = this.unsealCount + 1;
+      if (attemptCount >= threshold) {
+        this.sealed = false;
+      }
+      this.unsealCount = attemptCount;
+      return {
+        sealed: attemptCount < threshold,
+        t: threshold,
+        n: threshold,
+        progress: attemptCount,
+      };
+    });
     await authPage.login();
 
     const versionSvc = this.owner.lookup('service:version');
