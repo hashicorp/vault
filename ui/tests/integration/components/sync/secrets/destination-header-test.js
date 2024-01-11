@@ -60,7 +60,7 @@ module('Integration | Component | sync | Secrets::DestinationHeader', function (
 
     assert.propEqual(
       transitionStub.lastCall.args,
-      ['vault.cluster.sync.secrets.destinations'],
+      ['vault.cluster.sync.secrets.destinations.destination.secrets', 'aws-sm', 'us-west-1'],
       'Transition is triggered on delete success'
     );
     assert.propEqual(
