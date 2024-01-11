@@ -93,12 +93,12 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @action
   async onDelete(destination: SyncDestinationModel) {
     try {
-      const { name } = destination;
+      const { name, type } = destination;
       const message = `Destination ${name} has been queued for deletion.`;
       await destination.destroyRecord();
       this.store.clearDataset('sync/destination');
-      this.router.transitionTo('vault.cluster.sync.secrets.destinations');
-      this.flashMessages.info(message);
+      this.router.transitionTo('vault.cluster.sync.secrets.destinations.destination.secrets', type, name);
+      this.flashMessages.success(message);
     } catch (error) {
       this.flashMessages.danger(`Error deleting destination \n ${errorMessage(error)}`);
     }
