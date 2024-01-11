@@ -374,7 +374,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "${{ (needs.build-other.result != 'failure' && needs.build-linux.result != 'failure' && needs.build-darwin.result != 'failure' && needs.build-docker.result != 'failure' && needs.build-ubi.result != 'failure') && ':white_check_mark:' || ':x:' }} Build results\n${{ (needs.test.result != 'failure' && needs.test-docker-k8s.result != 'failure') && ':white_check_mark:' || ':x:' }} Enos tests"
+                    "text": "${{ (needs.build-other.result == 'success' && needs.build-linux.result == 'success' && needs.build-darwin.result == 'success' && needs.build-docker.result == 'success' && needs.build-ubi.result == 'success') && ':white_check_mark:' || ':x:' }} Build results\n${{ (needs.test.result != 'failure' && needs.test-docker-k8s.result != 'failure') && ':white_check_mark:' || ':x:' }} Enos tests"
                   },
                   "accessory": {
                     "type": "button",
