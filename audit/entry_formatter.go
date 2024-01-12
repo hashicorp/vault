@@ -92,7 +92,7 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		return nil, fmt.Errorf("%s: unable to copy audit event data: %w", op, err)
 	}
 
-	headers := make(map[string][]string)
+	var headers map[string][]string
 	if data.Request != nil && data.Request.Headers != nil {
 		headers = data.Request.Headers
 	}
