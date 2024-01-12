@@ -9,6 +9,7 @@ import (
 	"github.com/mitchellh/copystructure"
 )
 
+// LogInput is used as the input to the audit system on which audit entries are based.
 type LogInput struct {
 	Type                string
 	Auth                *Auth
@@ -60,31 +61,35 @@ func (l *LogInput) BexprDatum(namespace string) *LogInputBexpr {
 	}
 }
 
-// TODO: PW: godoc + tests
+// Clone will attempt to create a deep copy of the LogInput.
+// This is preferred over attempting to use other libraries such as copystructure.
+// Audit formatting methods which parse LogInput into an audit request/response
+// entry, call receivers on the LogInput struct to get their value. These values
+// would be lost using copystructure as it cannot copy unexported fields.
+// If the LogInput type or any of the subtypes referenced by LogInput fields are
+// changed, then the Clone methods
 func (l *LogInput) Clone() (*LogInput, error) {
-	// Auth
+	// Close Auth
 	auth, err := cloneAuth(l.Auth)
 	if err != nil {
 		return nil, err
 	}
 
-	// Request
+	// Close Request
 	req, err := cloneRequest(l.Request)
 	if err != nil {
 		return nil, err
 	}
 
-	// Response
+	// Close Response
 	resp, err := cloneResponse(l.Response)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: PW: Copy outer error?
-
+	// Copy HMAC keys
 	reqDataKeys := make([]string, len(l.NonHMACReqDataKeys))
 	copy(l.NonHMACReqDataKeys, reqDataKeys)
-
 	respDataKeys := make([]string, len(l.NonHMACRespDataKeys))
 	copy(l.NonHMACRespDataKeys, reqDataKeys)
 
@@ -93,7 +98,7 @@ func (l *LogInput) Clone() (*LogInput, error) {
 		Auth:                auth,
 		Request:             req,
 		Response:            resp,
-		OuterErr:            l.OuterErr, // TODO: PW: Don't use the real error interface
+		OuterErr:            l.OuterErr, // TODO: PW: Should we copy the outer error?
 		NonHMACReqDataKeys:  reqDataKeys,
 		NonHMACRespDataKeys: respDataKeys,
 	}
@@ -116,7 +121,9 @@ func clone[V any](s V) (V, error) {
 	return result, err
 }
 
+// cloneAuth deep copies an Auth struct.
 func cloneAuth(auth *Auth) (*Auth, error) {
+	// If auth is nil, there's nothing to clone.
 	if auth == nil {
 		return nil, nil
 	}
@@ -129,7 +136,11 @@ func cloneAuth(auth *Auth) (*Auth, error) {
 	return auth, nil
 }
 
+// cloneRequest deep copies a Request struct.
+// It will set unexported fields which were only previously accessible outside
+// the package via receiver methods.
 func cloneRequest(request *Request) (*Request, error) {
+	// If request is nil, there's nothing to clone.
 	if request == nil {
 		return nil, nil
 	}
@@ -148,7 +159,9 @@ func cloneRequest(request *Request) (*Request, error) {
 	return req, nil
 }
 
+// cloneResponse deep copies a Response struct.
 func cloneResponse(response *Response) (*Response, error) {
+	// If response is nil, there's nothing to clone.
 	if response == nil {
 		return nil, nil
 	}
