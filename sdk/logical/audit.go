@@ -98,7 +98,7 @@ func (l *LogInput) Clone() (*LogInput, error) {
 		Auth:                auth,
 		Request:             req,
 		Response:            resp,
-		OuterErr:            l.OuterErr, // TODO: PW: Should we copy the outer error?
+		OuterErr:            l.OuterErr,
 		NonHMACReqDataKeys:  reqDataKeys,
 		NonHMACRespDataKeys: respDataKeys,
 	}
