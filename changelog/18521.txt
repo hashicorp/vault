@@ -1,0 +1,3 @@
+```release-note:bug
+ui: wait for wanted message event during OIDC callback instead of using the first message event
+```

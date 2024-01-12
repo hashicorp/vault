@@ -8,7 +8,7 @@ description: >-
   Storage. The storage folder must already exist.
 ---
 
-# Manta Storage Backend
+# Manta storage backend
 
 The Manta storage backend is used to persist Vault's data in [Triton's Manta Object
 Storage][manta-object-store]. The storage folder must already exist.
@@ -29,7 +29,7 @@ storage "manta" {
 }
 ```
 
-## `manta` Parameters
+## `manta` parameters
 
 - `directory` `(string: <required>)` – Specifies the name of the manta directory to use.
   This will be in the `/stor/` folder in the specific manta account
@@ -51,7 +51,7 @@ The following settings are used for authenticating to Manta.
 - `max_parallel` `(string: "128")` – Specifies The maximum number of concurrent
   requests to Manta.
 
-## `manta` Examples
+## `manta` examples
 
 This example shows configuring the Azure storage backend with a custom number of
 maximum parallel connections.

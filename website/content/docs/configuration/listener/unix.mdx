@@ -5,7 +5,7 @@ description: |-
   The Unix listener configures Vault to listen on the specified Unix domain socket.
 ---
 
-# `unix` Listener
+# `unix` listener
 
 The Unix listener configures Vault to listen on the specified Unix domain socket.
 
@@ -18,7 +18,7 @@ listener "unix" {
 The `listener` stanza may be specified more than once to make Vault listen on
 multiple sockets.
 
-## `unix` Listener Parameters
+## `unix` listener parameters
 - `address` `(string: "/run/vault.sock", <required>)` – Specifies the address to bind the Unix socket.
 
 - `socket_mode` `(string: "", <optional>)` – Changes the access
@@ -29,9 +29,9 @@ multiple sockets.
 - `socket_group` `(string: "", <optional>)` – Changes the group owner of the Unix socket.
 
 
-## `unix` Listener Examples
+## `unix` listener examples
 
-### Listening on Multiple Sockets
+### Listening on multiple sockets
 
 This example shows Vault listening on a specified socket, as well as the default.
 
@@ -43,7 +43,7 @@ listener "unix" {
 }
 ```
 
-### Listening on Multiple Interfaces
+### Listening on multiple interfaces
 
 This example shows Vault listening on TCP localhost, as well as Unix socket.
 
@@ -57,7 +57,7 @@ listener "tcp" {
 }
 ```
 
-### Configuring Permissions
+### Configuring permissions
 This example shows changing access permissions and ownership of the Unix socket.
 ```hcl
 listener "unix" {

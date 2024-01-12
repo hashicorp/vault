@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { belongsTo, hasMany, attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed'; // eslint-disable-line
 import { computed } from '@ember/object'; // eslint-disable-line
@@ -6,9 +11,18 @@ import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import apiPath from 'vault/utils/api-path';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
+import { allMethods } from 'vault/helpers/mountable-auth-methods';
 
 const validations = {
-  path: [{ type: 'presence', message: "Path can't be blank." }],
+  path: [
+    { type: 'presence', message: "Path can't be blank." },
+    {
+      type: 'containsWhiteSpace',
+      message:
+        "Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.",
+      level: 'warn',
+    },
+  ],
 };
 
 // unsure if ember-api-actions will work on native JS class model
@@ -29,6 +43,11 @@ const ModelExport = AuthMethodModel.extend({
   methodType: computed('type', function () {
     return this.type.replace(/^ns_/, '');
   }),
+  icon: computed('methodType', function () {
+    const authMethods = allMethods().find((backend) => backend.type === this.methodType);
+
+    return authMethods?.glyph || 'users';
+  }),
   description: attr('string', {
     editType: 'textarea',
   }),
@@ -38,7 +57,7 @@ const ModelExport = AuthMethodModel.extend({
   }),
   sealWrap: attr('boolean', {
     helpText:
-      'When enabled - if a seal supporting seal wrapping is specified in the configuration, all critical security parameters (CSPs) in this backend will be seal wrapped. (For K/V mounts, all values will be seal wrapped.) This can only be specified at mount time.',
+      'When enabled - if a seal supporting seal wrapping is specified in the configuration, all critical security parameters (CSPs) in this backend will be seal wrapped. (For KV mounts, all values will be seal wrapped.) This can only be specified at mount time.',
   }),
 
   // used when the `auth` prefix is important,

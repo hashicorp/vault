@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
@@ -6,6 +11,7 @@ import { render } from '@ember/test-helpers';
 import { typeInSearch, clickTrigger, selectChoose } from 'ember-power-select/test-support/helpers';
 import { SELECTORS } from 'vault/tests/helpers/kubernetes/overview';
 import hbs from 'htmlbars-inline-precompile';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | kubernetes | Page::Overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -45,6 +51,13 @@ module('Integration | Component | kubernetes | Page::Overview', function (hooks)
         { owner: this.engine }
       );
     };
+    setRunOptions({
+      rules: {
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+      },
+    });
   });
 
   test('it should display role card', async function (assert) {

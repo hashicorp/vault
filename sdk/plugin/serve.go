@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -94,7 +97,7 @@ func ServeMultiplex(opts *ServeOpts) error {
 	logger := opts.Logger
 	if logger == nil {
 		logger = log.New(&log.LoggerOptions{
-			Level:      log.Info,
+			Level:      log.Trace,
 			Output:     os.Stderr,
 			JSONFormat: true,
 		})

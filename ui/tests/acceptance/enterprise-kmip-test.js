@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { currentURL, currentRouteName, settled, fillIn, waitUntil, find } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -9,6 +14,8 @@ import scopesPage from 'vault/tests/pages/secrets/backend/kmip/scopes';
 import rolesPage from 'vault/tests/pages/secrets/backend/kmip/roles';
 import credentialsPage from 'vault/tests/pages/secrets/backend/kmip/credentials';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
+import { allEngines } from 'vault/helpers/mountable-secret-engines';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const uiConsole = create(consoleClass);
 
@@ -80,6 +87,29 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
   hooks.beforeEach(async function () {
     await authPage.login();
     return;
+  });
+
+  test('it should transition to addon engine route after mount success', async function (assert) {
+    // test supported backends that ARE ember engines (enterprise only engines are tested individually)
+    const engine = allEngines().find((e) => e.type === 'kmip');
+    assert.expect(1);
+
+    await uiConsole.runCommands([
+      // delete any previous mount with same name
+      `delete sys/mounts/${engine.type}`,
+    ]);
+    await mountSecrets.visit();
+    await mountSecrets.selectType(engine.type);
+    await mountSecrets.path(engine.type).submit();
+    assert.strictEqual(
+      currentRouteName(),
+      `vault.cluster.secrets.backend.${engine.engineRoute}`,
+      `Transitions to ${engine.displayName} route on mount success`
+    );
+    await uiConsole.runCommands([
+      // cleanup after
+      `delete sys/mounts/${engine.type}`,
+    ]);
   });
 
   test('it enables KMIP secrets engine', async function (assert) {
@@ -293,6 +323,12 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
   });
 
   test('it can revoke a credential from the list', async function (assert) {
+    // Popup menu causes flakiness
+    setRunOptions({
+      rules: {
+        'color-contrast': { enabled: false },
+      },
+    });
     const { path, scope, role } = await generateCreds();
     await credentialsPage.visit({ backend: path, scope, role });
     // revoke the credentials

@@ -1,8 +1,12 @@
-//* lookup OIDs: http://oid-info.com/basic-search.htm
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
+//* lookup OIDs: http://oid-info.com/basic-search.htm
 export const SUBJECT_OIDs = {
   common_name: '2.5.4.3',
-  serial_number: '2.5.4.5',
+  subject_serial_number: '2.5.4.5',
   ou: '2.5.4.11',
   organization: '2.5.4.10',
   country: '2.5.4.6',
@@ -20,7 +24,7 @@ export const EXTENSION_OIDs = {
 };
 
 // these are allowed ext oids, but not parsed and passed to cross-signed certs
-export const IGNORED_OIDs = {
+export const OTHER_OIDs = {
   // These two extensions are controlled by the parent authority.
   authority_key_identifier: '2.5.29.35',
   authority_access_info: '1.3.6.1.5.5.7.1.1',
@@ -70,3 +74,13 @@ export const SIGNATURE_ALGORITHM_OIDs = {
   '1.2.840.10045.4.3.4': '512', // ECDSA-SHA512
   '1.3.101.112': '0', // Ed25519
 };
+
+// returns array of strings that correspond to possible returned values from parsing cert
+export const parsedParameterKeys = [
+  ...Object.keys(SUBJECT_OIDs),
+  ...Object.keys(EXTENSION_OIDs),
+  ...Object.keys(SAN_TYPES),
+  'use_pss',
+  'not_valid_before',
+  'not_valid_after',
+];

@@ -1,9 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /* eslint-env node */
 'use strict';
 
 const EmberApp = require('ember-cli/lib/broccoli/ember-app');
 const config = require('./config/environment')();
-const nodeSass = require('node-sass');
 
 const environment = EmberApp.env();
 const isProd = environment === 'production';
@@ -19,7 +23,7 @@ const appConfig = {
     //optimize: false,
     //paths: [],
     optimizer: {},
-    sourceDirs: ['node_modules/@hashicorp/structure-icons/dist', 'public'],
+    sourceDirs: ['public'],
     rootURL: '/ui/',
   },
   fingerprint: {
@@ -39,9 +43,18 @@ const appConfig = {
     enabled: !isProd,
   },
   sassOptions: {
-    implementation: nodeSass,
     sourceMap: false,
     onlyIncluded: true,
+    precision: 4,
+    includePaths: [
+      './node_modules/@hashicorp/design-system-components/app/styles',
+      './node_modules/@hashicorp/design-system-tokens/dist/products/css',
+    ],
+  },
+  minifyCSS: {
+    options: {
+      advanced: false,
+    },
   },
   autoprefixer: {
     enabled: isTest || isProd,
@@ -77,22 +90,6 @@ module.exports = function (defaults) {
   app.import('node_modules/jsondiffpatch/dist/formatters-styles/html.css');
 
   app.import('app/styles/bulma/bulma-radio-checkbox.css');
-
-  app.import('node_modules/@hashicorp/structure-icons/dist/loading.css');
-  app.import('node_modules/@hashicorp/structure-icons/dist/run.css');
-
-  // Use `app.import` to add additional libraries to the generated
-  // output files.
-  //
-  // If you need to use different assets in different
-  // environments, specify an object as the first parameter. That
-  // object's keys should be the environment name and the values
-  // should be the asset to use in that environment.
-  //
-  // If the library that you are including contains AMD or ES6
-  // modules that you would like to import into your application
-  // please specify an object with the list of modules as keys
-  // along with the exports of each module as its value.
 
   return app.toTree();
 };

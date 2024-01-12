@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .text-file {
   .has-icon-right {
     display: flex;
@@ -7,8 +12,7 @@
       line-height: inherit;
     }
   }
-  .button.masked-input-toggle,
-  .button.copy-button {
+  .button.masked-input-toggle {
     display: flex;
   }
 }

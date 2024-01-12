@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package cockroachdb
 
 import (
@@ -6,10 +9,12 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"runtime"
+	"strings"
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -23,6 +28,11 @@ type Config struct {
 var _ docker.ServiceConfig = &Config{}
 
 func prepareCockroachDBTestContainer(t *testing.T) (func(), *Config) {
+	// Skipping, as this image can't run on arm architecture
+	if strings.Contains(runtime.GOARCH, "arm") {
+		t.Skip("Skipping, as CockroachDB 1.0 is not supported on ARM architectures")
+	}
+
 	if retURL := os.Getenv("CR_URL"); retURL != "" {
 		s, err := docker.NewServiceURLParse(retURL)
 		if err != nil {

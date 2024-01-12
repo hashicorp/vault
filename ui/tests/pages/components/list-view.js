@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { text, isPresent, collection, clickable } from 'ember-cli-page-object';
 
 export default {

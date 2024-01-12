@@ -1,0 +1,2 @@
+```release-note:bug
+auth/cert: Include OCSP parameters in read CA certificate role response.

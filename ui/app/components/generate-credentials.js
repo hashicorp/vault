@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
 import { computed, set } from '@ember/object';
 import Component from '@ember/component';
@@ -15,17 +20,10 @@ const MODEL_TYPES = {
     title: 'Generate AWS Credentials',
     backIsListLink: true,
   },
-  'pki-issue': {
-    model: 'pki/cert',
-    title: 'Issue Certificate',
-  },
-  'pki-sign': {
-    model: 'pki-certificate-sign',
-    title: 'Sign Certificate',
-  },
 };
 
 export default Component.extend({
+  controlGroup: service(),
   store: service(),
   router: service(),
   // set on the component
@@ -58,7 +56,9 @@ export default Component.extend({
   },
 
   willDestroy() {
-    if (!this.model.isDestroyed && !this.model.isDestroying) {
+    // components are torn down after store is unloaded and will cause an error if attempt to unload record
+    const noTeardown = this.store && !this.store.isDestroying;
+    if (noTeardown && !this.model.isDestroyed && !this.model.isDestroying) {
       this.model.unloadRecord();
     }
     this._super(...arguments);
@@ -90,10 +90,23 @@ export default Component.extend({
     create() {
       const model = this.model;
       this.set('loading', true);
-      this.model.save().finally(() => {
-        model.set('hasGenerated', true);
-        this.set('loading', false);
-      });
+      this.model
+        .save()
+        .then(() => {
+          model.set('hasGenerated', true);
+        })
+        .catch((error) => {
+          // Handle control group AdapterError
+          if (error.message === 'Control Group encountered') {
+            this.controlGroup.saveTokenFromError(error);
+            const err = this.controlGroup.logFromError(error);
+            error.errors = [err.content];
+          }
+          throw error;
+        })
+        .finally(() => {
+          this.set('loading', false);
+        });
     },
 
     codemirrorUpdated(attr, val, codemirror) {

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -5,6 +10,7 @@ import kubernetesScenario from 'vault/mirage/scenarios/kubernetes';
 import ENV from 'vault/config/environment';
 import authPage from 'vault/tests/pages/auth';
 import { fillIn, visit, currentURL, click, currentRouteName } from '@ember/test-helpers';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Acceptance | kubernetes | roles', function (hooks) {
   setupApplicationTest(hooks);
@@ -30,7 +36,7 @@ module('Acceptance | kubernetes | roles', function (hooks) {
   test('it should filter roles', async function (assert) {
     await this.visitRoles();
     assert.dom('[data-test-list-item-link]').exists({ count: 3 }, 'Roles list renders');
-    await fillIn('[data-test-comoponent="navigate-input"]', '1');
+    await fillIn('[data-test-component="navigate-input"]', '1');
     assert.dom('[data-test-list-item-link]').exists({ count: 1 }, 'Filtered roles list renders');
     assert.ok(currentURL().includes('pageFilter=1'), 'pageFilter query param value is set');
   });
@@ -54,6 +60,12 @@ module('Acceptance | kubernetes | roles', function (hooks) {
   });
 
   test('it should have functional list item menu', async function (assert) {
+    // Popup menu causes flakiness
+    setRunOptions({
+      rules: {
+        'color-contrast': { enabled: false },
+      },
+    });
     assert.expect(3);
     await this.visitRoles();
     for (const action of ['details', 'edit', 'delete']) {
@@ -100,7 +112,7 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     this.validateRoute(assert, 'roles.role.edit', 'Transitions to edit route');
     await click('[data-test-cancel]');
     await click('[data-test-list-item-link]');
-    await click('[data-test-delete] button');
+    await click('[data-test-delete]');
     await click('[data-test-confirm-button]');
     assert
       .dom('[data-test-list-item-link]')

@@ -79,14 +79,19 @@ func NewDelimitedReader(r io.Reader, maxSize int) ReadCloser {
 	if c, ok := r.(io.Closer); ok {
 		closer = c
 	}
-	return &varintReader{bufio.NewReader(r), nil, maxSize, closer}
+	return &varintReader{bufio.NewReader(r), nil, maxSize, closer, 0}
 }
 
 type varintReader struct {
-	r       *bufio.Reader
-	buf     []byte
-	maxSize int
-	closer  io.Closer
+	r            *bufio.Reader
+	buf          []byte
+	maxSize      int
+	closer       io.Closer
+	lastReadSize int
+}
+
+func (this *varintReader) GetLastReadSize() int {
+	return this.lastReadSize
 }
 
 func (this *varintReader) ReadMsg(msg proto.Message) error {
@@ -102,9 +107,11 @@ func (this *varintReader) ReadMsg(msg proto.Message) error {
 		this.buf = make([]byte, length)
 	}
 	buf := this.buf[:length]
-	if _, err := io.ReadFull(this.r, buf); err != nil {
+	size, err := io.ReadFull(this.r, buf)
+	if err != nil {
 		return err
 	}
+	this.lastReadSize = size
 	return proto.Unmarshal(buf, msg)
 }
 

@@ -1,4 +1,9 @@
-<WizardContent @headerText="Policies" @glyph="tour">
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<WizardContent @headerText="Policies" @glyph="guide">
   <WizardSection @headerText="Other kinds of policies" @docText="Docs: Policies" @docPath="/docs/concepts/policies.html">
     <p>
       Good! Now you're ready to go writing your own policies. We only explored ACL policies, but there are two other types of
@@ -8,9 +13,6 @@
     </p>
   </WizardSection>
   <WizardSection @headerText="Ready to move on?" @class="wizard-details">
-    <button type="button" class="button next-feature-step" {{action @onAdvance}}>
-      {{@nextFeature}}
-      <Chevron @isButton={{true}} />
-    </button>
+    <Hds::Button @text={{@nextFeature}} @icon="chevron-right" @iconPosition="trailing" {{on "click" (action @onAdvance)}} />
   </WizardSection>
 </WizardContent>

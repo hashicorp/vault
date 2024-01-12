@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -11,9 +14,12 @@ import (
 
 	"github.com/go-errors/errors"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 )
 
 func TestPki_RoleGenerateLease(t *testing.T) {
@@ -65,7 +71,7 @@ func TestPki_RoleGenerateLease(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var role roleEntry
+	var role issuing.RoleEntry
 	if err := entry.DecodeJSON(&role); err != nil {
 		t.Fatal(err)
 	}
@@ -141,12 +147,14 @@ func TestPki_RoleKeyUsage(t *testing.T) {
 	}
 
 	resp, err = b.HandleRequest(context.Background(), roleReq)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route(roleReq.Path), logical.UpdateOperation), resp, true)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route(roleReq.Path), logical.ReadOperation), resp, true)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
@@ -164,7 +172,7 @@ func TestPki_RoleKeyUsage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var role roleEntry
+	var role issuing.RoleEntry
 	if err := entry.DecodeJSON(&role); err != nil {
 		t.Fatal(err)
 	}
@@ -199,7 +207,7 @@ func TestPki_RoleKeyUsage(t *testing.T) {
 	if entry == nil {
 		t.Fatalf("role should not be nil")
 	}
-	var result roleEntry
+	var result issuing.RoleEntry
 	if err := entry.DecodeJSON(&result); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -259,7 +267,7 @@ func TestPki_RoleOUOrganizationUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var role roleEntry
+	var role issuing.RoleEntry
 	if err := entry.DecodeJSON(&role); err != nil {
 		t.Fatal(err)
 	}
@@ -299,7 +307,7 @@ func TestPki_RoleOUOrganizationUpgrade(t *testing.T) {
 	if entry == nil {
 		t.Fatalf("role should not be nil")
 	}
-	var result roleEntry
+	var result issuing.RoleEntry
 	if err := entry.DecodeJSON(&result); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -359,7 +367,7 @@ func TestPki_RoleAllowedDomains(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var role roleEntry
+	var role issuing.RoleEntry
 	if err := entry.DecodeJSON(&role); err != nil {
 		t.Fatal(err)
 	}
@@ -393,7 +401,7 @@ func TestPki_RoleAllowedDomains(t *testing.T) {
 	if entry == nil {
 		t.Fatalf("role should not be nil")
 	}
-	var result roleEntry
+	var result issuing.RoleEntry
 	if err := entry.DecodeJSON(&result); err != nil {
 		t.Fatalf("err: %v", err)
 	}

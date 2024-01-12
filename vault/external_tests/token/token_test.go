@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package token
 
 import (
@@ -10,24 +13,16 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
-	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
-	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/testhelpers/ldap"
-	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
 func TestTokenStore_CreateOrphanResponse(t *testing.T) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	secret, err := client.Auth().Token().CreateOrphan(&api.TokenCreateRequest{
@@ -42,19 +37,8 @@ func TestTokenStore_CreateOrphanResponse(t *testing.T) {
 }
 
 func TestTokenStore_TokenInvalidEntityID(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": credUserpass.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	// Enable userpass auth
@@ -104,20 +88,10 @@ func TestTokenStore_TokenInvalidEntityID(t *testing.T) {
 }
 
 func TestTokenStore_IdentityPolicies(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"ldap": credLdap.Factory,
-		},
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
 		EnableRaw: true,
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
 	client := cluster.Cores[0].Client
 
 	// Enable LDAP auth
@@ -370,20 +344,13 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 }
 
 func TestTokenStore_CIDRBlocks(t *testing.T) {
+	t.Parallel()
 	testPolicy := `
 path "auth/token/create" {
 	capabilities = ["update"]
 }
 `
-
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	rootToken := client.Token()
 
@@ -524,15 +491,10 @@ path "auth/token/create" {
 }
 
 func TestTokenStore_RevocationOnStartup(t *testing.T) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		NumCores:    1,
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
+		EnableRaw: true,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
 	client := cluster.Cores[0].Client
 	rootToken := client.Token()
 

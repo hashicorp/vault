@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package dbplugin
 
 import (
@@ -152,4 +155,8 @@ func (m *mockRunnerUtil) ResponseWrapData(ctx context.Context, data map[string]i
 func (m *mockRunnerUtil) MlockEnabled() bool {
 	args := m.Called()
 	return args.Bool(0)
+}
+
+func (m *mockRunnerUtil) ClusterID(ctx context.Context) (string, error) {
+	return "clusterid", nil
 }

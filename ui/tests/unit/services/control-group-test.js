@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { set } from '@ember/object';
 import Service from '@ember/service';
 import { module, test } from 'qunit';
@@ -46,8 +51,8 @@ module('Unit | Service | control group', function (hooks) {
 
   hooks.afterEach(function () {});
 
-  const isOSS = (context) => set(context, 'version.isOSS', true);
-  const isEnt = (context) => set(context, 'version.isOSS', false);
+  const isCommunity = (context) => set(context, 'version.type', 'community');
+  const isEnt = (context) => set(context, 'version.type', 'enterprise');
   const resolvesArgs = (assert, result, expectedArgs) => {
     return result.then((...args) => {
       return assert.deepEqual(args, expectedArgs, 'resolves with the passed args');
@@ -56,31 +61,31 @@ module('Unit | Service | control group', function (hooks) {
 
   [
     [
-      'it resolves isOSS:true, wrapTTL: true, response: has wrap_info',
-      isOSS,
+      'it resolves isCommunity:true, wrapTTL: true, response: has wrap_info',
+      isCommunity,
       [[{ one: 'two', three: 'four' }], { wrap_info: { token: 'foo', accessor: 'bar' } }, true],
       (assert, result) => resolvesArgs(assert, result, [{ one: 'two', three: 'four' }]),
     ],
     [
-      'it resolves isOSS:true, wrapTTL: false, response: has no wrap_info',
-      isOSS,
+      'it resolves isCommunity:true, wrapTTL: false, response: has no wrap_info',
+      isCommunity,
       [[{ one: 'two', three: 'four' }], { wrap_info: null }, false],
       (assert, result) => resolvesArgs(assert, result, [{ one: 'two', three: 'four' }]),
     ],
     [
-      'it resolves isOSS: false and wrapTTL:true response: has wrap_info',
+      'it resolves isCommunity: false and wrapTTL:true response: has wrap_info',
       isEnt,
       [[{ one: 'two', three: 'four' }], { wrap_info: { token: 'foo', accessor: 'bar' } }, true],
       (assert, result) => resolvesArgs(assert, result, [{ one: 'two', three: 'four' }]),
     ],
     [
-      'it resolves isOSS: false and wrapTTL:false response: has no wrap_info',
+      'it resolves isCommunity: false and wrapTTL:false response: has no wrap_info',
       isEnt,
       [[{ one: 'two', three: 'four' }], { wrap_info: null }, false],
       (assert, result) => resolvesArgs(assert, result, [{ one: 'two', three: 'four' }]),
     ],
     [
-      'it rejects isOSS: false, wrapTTL:false, response: has wrap_info',
+      'it rejects isCommunity: false, wrapTTL:false, response: has wrap_info',
       isEnt,
       [
         [{ one: 'two', three: 'four' }],
@@ -102,7 +107,8 @@ module('Unit | Service | control group', function (hooks) {
     ],
   ].forEach(function ([name, setup, args, expectation]) {
     test(`checkForControlGroup: ${name}`, function (assert) {
-      const assertCount = name === 'it rejects isOSS: false, wrapTTL:false, response: has wrap_info' ? 2 : 1;
+      const assertCount =
+        name === 'it rejects isCommunity: false, wrapTTL:false, response: has wrap_info' ? 2 : 1;
       assert.expect(assertCount);
       if (setup) {
         setup(this);
@@ -118,7 +124,7 @@ module('Unit | Service | control group', function (hooks) {
       accessor: '12345',
       token: 'token',
       creation_path: 'kv/',
-      creation_time: new Date().toISOString(),
+      creation_time: '2022-03-17T20:00:25.594Z',
       ttl: 400,
     };
     const expected = { ...error, uiParams: { url: '/vault/secrets/kv/show/foo' } };
@@ -138,7 +144,7 @@ module('Unit | Service | control group', function (hooks) {
       accessor: '12345',
       token: 'token',
       creation_path: 'kv/',
-      creation_time: new Date().toISOString(),
+      creation_time: '2022-03-17T20:00:25.594Z',
       ttl: 400,
     };
     const service = this.owner.factoryFor('service:control-group').create({
@@ -191,7 +197,7 @@ module('Unit | Service | control group', function (hooks) {
     const info = {
       accessor: '12345',
       creation_path: 'foo/',
-      creation_time: new Date().toISOString(),
+      creation_time: '2022-03-17T20:00:25.594Z',
       ttl: 300,
     };
     const key = `${CONTROL_GROUP_PREFIX}${info.accessor}${TOKEN_SEPARATOR}${info.creation_path}`;

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -5,7 +10,6 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { getRules } from '../../../utils/generated-role-rules';
-import { htmlSafe } from '@ember/template';
 import errorMessage from 'vault/utils/error-message';
 
 /**
@@ -82,7 +86,7 @@ export default class CreateAndEditRolePageComponent extends Component {
       'This specifies the Role or ClusterRole rules to use when generating a role. Kubernetes documentation is';
     const link =
       '<a href="https://kubernetes.io/docs/reference/access-authn-authz/rbac/" target="_blank" rel="noopener noreferrer">available here</>';
-    return htmlSafe(`${message} ${link}.`);
+    return `${message} ${link}.`;
   }
 
   @action

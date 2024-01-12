@@ -1,0 +1,10 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+rules:
+  - id: time-parse-duration
+    patterns:
+      - pattern: time.ParseDuration
+    message: "Usage of time.ParseDuration. Use parseutil.ParseDurationSeconds, instead!"
+    languages: [go]
+    severity: ERROR

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Ember from 'ember';
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
@@ -89,17 +94,17 @@ export default class VaultClusterOidcProviderRoute extends Route {
   _handleSuccess(response, baseUrl, state) {
     const { code } = response;
     const redirectUrl = this._buildUrl(baseUrl, { code, state });
-    if (Ember.testing) {
-      return { redirectUrl };
+    if (!Ember.testing) {
+      this.win.location.replace(redirectUrl);
     }
-    this.win.location.replace(redirectUrl);
+    return { redirectUrl };
   }
   _handleError(errorResp, baseUrl) {
     const redirectUrl = this._buildUrl(baseUrl, { ...errorResp });
-    if (Ember.testing) {
-      return { redirectUrl };
+    if (!Ember.testing) {
+      this.win.location.replace(redirectUrl);
     }
-    this.win.location.replace(redirectUrl);
+    return { redirectUrl };
   }
 
   /**

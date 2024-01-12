@@ -6,11 +6,14 @@ description: |-
   cryptographic modules.
 ---
 
-# Entropy Augmentation
+# Entropy augmentation
 
--> **Note**: This feature requires [Vault Enterprise Plus](https://www.hashicorp.com/products/vault/).
+@include 'alerts/enterprise-only.mdx'
 
-~> **Warning** This feature is not available with FIPS 140-2 Inside variants of Vault.
+<Warning>
+  Entropy augmentation <b>is not</b> available with "FIPS 140-2 Inside" variants of
+  Vault.
+</Warning>
 
 Vault Enterprise features a mechanism to sample entropy (or randomness for
 cryptographic operations) from external cryptographic modules via the [seals](/vault/docs/configuration/seal)
@@ -21,7 +24,7 @@ entropy from hardware-based random number generators is desirable.
 To use this feature, you must have an active or trial license for Vault
 Enterprise. To start a trial, contact [HashiCorp sales](mailto:sales@hashicorp.com).
 
-# Critical Security Parameters (CSPs)
+# Critical security parameters (CSPs)
 
 Entropy augmentation allows Vault Enterprise to supplement its system entropy with
 entropy from an external cryptography module. Designed to operate in environments
@@ -33,7 +36,7 @@ number operations on critical security parameters (CSPs).
 
 These CSPs have been selected from our previous work in [evaluating Vault for conformance with
 FIPS 140-2 guidelines for key storage and key transport](https://www.datocms-assets.com/2885/1510600487-vault_compliance_letter_fips_140-2.pdf)
-and include the following:
+and include (but not limited to) the following:
 
 - Vault’s root key
 - Keyring encryption keys
@@ -49,6 +52,9 @@ and include the following:
 - [SSH](/vault/docs/secrets/ssh) CA key generation, but not for key pair generation
 - [KMIP](/vault/docs/secrets/kmip) uses EA for its TLS CA, server, and client
   certificates.
+- Passwords generated where password policies are supported.
+- TOTP two factor keys.
+
 
 ## Enabling/Disabling
 

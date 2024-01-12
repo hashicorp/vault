@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Allow determining existing issuers and keys on import.
+```

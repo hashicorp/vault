@@ -1,9 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package agent
 
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -14,12 +16,13 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
-	"github.com/hashicorp/vault/command/agent/auth"
-	agentapprole "github.com/hashicorp/vault/command/agent/auth/approle"
-	"github.com/hashicorp/vault/command/agent/cache"
-	"github.com/hashicorp/vault/command/agent/sink"
-	"github.com/hashicorp/vault/command/agent/sink/file"
-	"github.com/hashicorp/vault/command/agent/sink/inmem"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth"
+	agentapprole "github.com/hashicorp/vault/command/agentproxyshared/auth/approle"
+	cache "github.com/hashicorp/vault/command/agentproxyshared/cache"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink/inmem"
+	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -41,9 +44,6 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	var err error
 	logger := logging.NewVaultLogger(log.Trace)
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       log.NewNullLogger(),
 		LogicalBackends: map[string]logical.Factory{
 			"kv": vault.LeasedPassthroughBackendFactory,
 		},
@@ -122,7 +122,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	}
 	roleID1 := resp.Data["role_id"].(string)
 
-	rolef, err := ioutil.TempFile("", "auth.role-id.test.")
+	rolef, err := os.CreateTemp("", "auth.role-id.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	defer os.Remove(role)
 	t.Logf("input role_id_file_path: %s", role)
 
-	secretf, err := ioutil.TempFile("", "auth.secret-id.test.")
+	secretf, err := os.CreateTemp("", "auth.secret-id.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +142,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 
 	// We close these right away because we're just basically testing
 	// permissions and finding a usable file name
-	ouf, err := ioutil.TempFile("", "auth.tokensink.test.")
+	ouf, err := os.CreateTemp("", "auth.tokensink.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,8 +163,10 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 
 	// Create the API proxier
 	apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
-		Client: client,
-		Logger: cacheLogger.Named("apiproxy"),
+		Client:                  client,
+		Logger:                  cacheLogger.Named("apiproxy"),
+		UserAgentStringFunction: useragent.ProxyStringWithProxiedUserAgent,
+		UserAgentString:         useragent.ProxyAPIProxyString(),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -173,10 +175,12 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	// Create the lease cache proxier and set its underlying proxier to
 	// the API proxier.
 	leaseCache, err := cache.NewLeaseCache(&cache.LeaseCacheConfig{
-		Client:      client,
-		BaseContext: ctx,
-		Proxier:     apiProxy,
-		Logger:      cacheLogger.Named("leasecache"),
+		Client:              client,
+		BaseContext:         ctx,
+		Proxier:             apiProxy,
+		Logger:              cacheLogger.Named("leasecache"),
+		CacheDynamicSecrets: true,
+		UserAgentToUse:      "test",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -265,13 +269,13 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		t.Fatal("expected notexist err")
 	}
 
-	if err := ioutil.WriteFile(role, []byte(roleID1), 0o600); err != nil {
+	if err := os.WriteFile(role, []byte(roleID1), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test role 1", "path", role)
 	}
 
-	if err := ioutil.WriteFile(secret, []byte(secretID1), 0o600); err != nil {
+	if err := os.WriteFile(secret, []byte(secretID1), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test secret 1", "path", secret)
@@ -283,7 +287,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 			if time.Now().After(timeout) {
 				t.Fatal("did not find a written token after timeout")
 			}
-			val, err := ioutil.ReadFile(out)
+			val, err := os.ReadFile(out)
 			if err == nil {
 				os.Remove(out)
 				if len(val) == 0 {

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 export default class KubernetesRoleCredentialsRoute extends Route {
@@ -6,7 +11,7 @@ export default class KubernetesRoleCredentialsRoute extends Route {
   model() {
     return {
       roleName: this.paramsFor('roles.role').name,
-      backend: this.secretMountPath.get(),
+      backend: this.secretMountPath.currentPath,
     };
   }
 

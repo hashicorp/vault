@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -36,6 +39,9 @@ type Request struct {
 	// EGPs). If set, the override flag will take effect for all policies
 	// evaluated during the request.
 	PolicyOverride bool
+
+	// HCPCookie is used to set a http cookie when client is connected to HCP
+	HCPCookie *http.Cookie
 }
 
 // SetJSONBody is used to set a request body that is a JSON-encoded value.
@@ -140,6 +146,10 @@ func (r *Request) toRetryableHTTP() (*retryablehttp.Request, error) {
 
 	if r.PolicyOverride {
 		req.Header.Set("X-Vault-Policy-Override", "true")
+	}
+
+	if r.HCPCookie != nil {
+		req.AddCookie(r.HCPCookie)
 	}
 
 	return req, nil
