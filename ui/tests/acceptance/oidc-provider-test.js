@@ -172,16 +172,15 @@ module('Acceptance | oidc provider', function (hooks) {
     await authFormComponent.login();
     await settled();
     assert.strictEqual(currentURL(), url, 'URL is as expected after login');
-    assert.dom('[data-test-oidc-redirect]').exists('redirect text exists');
     assert
       .dom('[data-test-oidc-redirect]')
-      .hasTextContaining(`${callback}?code=`, 'Successful redirect to callback');
+      .hasTextContaining(`click here to go back to app`, 'Shows link back to app');
+    const link = document.querySelector('[data-test-oidc-redirect]').getAttribute('href');
+    assert.ok(link.includes('/callback?code='), 'Redirects to correct url');
 
     //* clean up test state
     await clearRecord(this.store, 'oidc/client', 'my-webapp');
     await clearRecord(this.store, 'oidc/provider', 'my-provider');
-    await authPage.login();
-    await deleteProvider();
   });
 
   test('OIDC Provider redirects to auth if current token and prompt = login', async function (assert) {
