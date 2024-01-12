@@ -11,10 +11,11 @@
   <:toolbarFilters>
     {{#if @messages.meta.total}}
       <FilterInput
-        aria-label="Filter messages"
-        placeholder="Filter messages"
+        aria-label="Search by message title"
+        placeholder="Search by message title"
         value={{@pageFilter}}
         @autofocus={{true}}
+        @wait={{200}}
         @onInput={{this.onFilterChange}}
       />
     {{/if}}

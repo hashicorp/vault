@@ -22,21 +22,22 @@ export default class MessagesRoute extends Route {
     },
   };
 
-  model(params) {
+  async model(params) {
     try {
       const { authenticated, page, pageFilter } = params;
       const filter = pageFilter
         ? (dataset) => dataset.filter((item) => item?.title.toLowerCase().includes(pageFilter.toLowerCase()))
         : null;
+      const messages = await this.store.lazyPaginatedQuery('config-ui/message', {
+        authenticated,
+        pageFilter: filter,
+        responsePath: 'data.keys',
+        page: page || 1,
+        size: 10,
+      });
       return hash({
         pageFilter,
-        messages: this.store.lazyPaginatedQuery('config-ui/message', {
-          authenticated,
-          pageFilter: filter,
-          responsePath: 'data.keys',
-          page: page || 1,
-           size: 10,
-        }),
+        messages,
       });
     } catch (e) {
       if (e.httpStatus === 404) {
