@@ -59,7 +59,6 @@ func (b *backend) getRootConfig(ctx context.Context, s logical.Storage, clientTy
 			fetcher := &PluginIdentityTokenFetcher{
 				sys:      b.System(),
 				logger:   b.Logger(),
-				key:      config.IdentityTokenKey,
 				audience: config.IdentityTokenAudience,
 				ns:       ns,
 				ttl:      config.IdentityTokenTTL * time.Second,
@@ -139,7 +138,6 @@ func (b *backend) nonCachedClientSTS(ctx context.Context, s logical.Storage, log
 type PluginIdentityTokenFetcher struct {
 	sys      logical.SystemView
 	logger   hclog.Logger
-	key      string
 	audience string
 	ns       *namespace.Namespace
 	ttl      time.Duration
@@ -150,7 +148,6 @@ var _ stscreds.TokenFetcher = (*PluginIdentityTokenFetcher)(nil)
 func (f PluginIdentityTokenFetcher) FetchToken(ctx aws.Context) ([]byte, error) {
 	nsCtx := namespace.ContextWithNamespace(ctx, f.ns)
 	resp, err := f.sys.GenerateIdentityToken(nsCtx, pluginutil.IdentityTokenRequest{
-		Key:      f.key,
 		Audience: f.audience,
 		TTL:      f.ttl,
 	})
