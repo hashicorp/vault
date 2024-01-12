@@ -65,6 +65,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await click(SELECTORS.configuration.deleteAllIssuerButton);
       await settled();
       await waitUntil(() => !find(SELECTORS.configuration.deleteAllIssuerModal));
+
       assert.dom(SELECTORS.configuration.deleteAllIssuerModal).doesNotExist();
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
     });
@@ -180,6 +181,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await fillIn(SELECTORS.configuration.deleteAllIssuerInput, 'delete-all');
       await click(SELECTORS.configuration.deleteAllIssuerButton);
       await settled();
+      await waitUntil(() => !find(SELECTORS.configuration.deleteAllIssuerModal));
       assert.dom(SELECTORS.configuration.deleteAllIssuerModal).doesNotExist();
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
       await settled();

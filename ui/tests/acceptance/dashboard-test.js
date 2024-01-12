@@ -241,21 +241,21 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('shows the correct actions and links associated with pki', async function (assert) {
-      const backend = 'pki-dashboard';
-      await mountSecrets.enable('pki', backend);
+      const pkiBackend = `pki-${uuidv4()}`;
+      await mountSecrets.enable('pki', pkiBackend);
       await runCommands([
-        `write ${backend}/roles/some-role \
+        `write ${pkiBackend}/roles/some-role \
       issuer_ref="default" \
       allowed_domains="example.com" \
       allow_subdomains=true \
       max_ttl="720h"`,
       ]);
       await runCommands([
-        `write ${backend}/root/generate/internal issuer_name="Hashicorp" common_name="Hello"`,
+        `write ${pkiBackend}/root/generate/internal issuer_name="Hashicorp" common_name="Hello"`,
       ]);
       await settled();
       await visit('/vault/dashboard');
-      await selectChoose(SELECTORS.searchSelect('secrets-engines'), backend);
+      await selectChoose(SELECTORS.searchSelect('secrets-engines'), pkiBackend);
       await fillIn(SELECTORS.selectEl, 'Issue certificate');
       assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
       assert.dom(SELECTORS.subtitle('param')).hasText('Role to use');
@@ -267,12 +267,13 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
       await visit('/vault/dashboard');
 
-      await selectChoose(SELECTORS.searchSelect('secrets-engines'), backend);
+      await selectChoose(SELECTORS.searchSelect('secrets-engines'), pkiBackend);
       await fillIn(SELECTORS.selectEl, 'View certificate');
       assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
       assert.dom(SELECTORS.subtitle('param')).hasText('Certificate serial number');
       assert.dom(SELECTORS.actionButton('View certificate')).exists({ count: 1 });
       await selectChoose(SELECTORS.searchSelect('params'), '.ember-power-select-option', 0);
+      await settled();
       await click(SELECTORS.actionButton('View certificate'));
       assert.strictEqual(
         currentRouteName(),
@@ -281,7 +282,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
       await visit('/vault/dashboard');
 
-      await selectChoose(SELECTORS.searchSelect('secrets-engines'), backend);
+      await selectChoose(SELECTORS.searchSelect('secrets-engines'), pkiBackend);
       await fillIn(SELECTORS.selectEl, 'View issuer');
       assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
       assert.dom(SELECTORS.subtitle('param')).hasText('Issuer');
@@ -291,7 +292,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.issuers.issuer.details');
 
       // cleanup engine mount
-      await consoleComponent.runCommands(deleteEngineCmd(backend));
+      await consoleComponent.runCommands(deleteEngineCmd(pkiBackend));
     });
 
     const newConnection = async (backend, plugin = 'mongodb-database-plugin') => {
