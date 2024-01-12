@@ -37,7 +37,7 @@ export const runCommands = async function (commands) {
     throw error;
   }
 };
-export const clearRecords = (store) => {
+export const clearPkiRecords = (store) => {
   // Clears pki-related data and capabilities so that admin
   // capabilities from setup don't rollover in permissions tests
   store.unloadAll('pki/issuer');
@@ -55,3 +55,24 @@ export const clearRecords = (store) => {
   store.unloadAll('pki/config/urls');
   store.unloadAll('capabilities');
 };
+
+export function arbitraryWait(millis = 1000) {
+  // this is a temporary fix to resolve an issue in some of the tests where the backend
+  // returned a 404 of the issuers list endpoint after configuring the mount
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, millis);
+  });
+}
+
+export async function configureEngine(store, mountPath, opts = 'common_name="Hashicorp Test"') {
+  await runCommands([`write -field=issuer_id ${mountPath}/root/generate/internal ${opts}`]);
+  await arbitraryWait(500);
+  store.unloadAll('pki/config/crl');
+  store.unloadAll('pki/config/cluster');
+  store.unloadAll('pki/config/acme');
+  store.unloadAll('pki/certificate/generate');
+  store.unloadAll('pki/certificate/sign');
+  store.unloadAll('capabilities');
+}
