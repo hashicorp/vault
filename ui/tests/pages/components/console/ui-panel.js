@@ -58,6 +58,7 @@ export default {
     const toExecute = Array.isArray(commands) ? commands : [commands];
     for (const command of toExecute) {
       await this.consoleInput(command);
+      await settled();
       await this.enter();
       await settled();
     }
