@@ -439,6 +439,10 @@
         "path": "system/config-state"
       },
       {
+        "title": "<code>/sys/config/ui/custom-messages</code>",
+        "path": "system/config-ui-custom-messages"
+      },
+      {
         "title": "<code>/sys/config/ui/headers</code>",
         "path": "system/config-ui-headers"
       },
