@@ -1829,6 +1829,9 @@ func TestSysTuneMount_passthroughRequestHeaders(t *testing.T) {
 	}
 }
 
+// TODO(austin): write test
+func TestSysTuneMount_identityTokenKey(t *testing.T) {}
+
 func TestSysTuneMount_allowedManagedKeys(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)

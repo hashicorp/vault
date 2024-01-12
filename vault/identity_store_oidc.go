@@ -793,9 +793,9 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 
 	targetKeyName := d.Get("name").(string)
 
-	if targetKeyName == defaultKeyName {
+	if targetKeyName == defaultOIDCKeyName {
 		return logical.ErrorResponse("deletion of key %q not allowed",
-			defaultKeyName), nil
+			defaultOIDCKeyName), nil
 	}
 
 	i.oidcLock.Lock()
@@ -1039,7 +1039,7 @@ func (i *IdentityStore) generatePluginToken(ctx context.Context, storage logical
 		return "", 0, err
 	}
 
-	key := defaultKeyName
+	key := defaultOIDCKeyName
 	if me.Config.IdentityTokenKey != "" {
 		key = me.Config.IdentityTokenKey
 	}
@@ -1303,7 +1303,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		return logical.ErrorResponse("the key parameter is required"), nil
 	}
 
-	if role.Key == defaultKeyName {
+	if role.Key == defaultOIDCKeyName {
 		if err := i.lazyGenerateDefaultKey(ctx, req.Storage); err != nil {
 			return nil, fmt.Errorf("failed to generate default key: %w", err)
 		}
@@ -1907,7 +1907,7 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 	}
 
 	// Always add the default key
-	defaultKeyIDs, err := i.keyIDsByName(ctx, s, defaultKeyName)
+	defaultKeyIDs, err := i.keyIDsByName(ctx, s, defaultOIDCKeyName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load default key IDs: %w", err)
 	}
