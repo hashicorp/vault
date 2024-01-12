@@ -2,10 +2,10 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-
+/* eslint-disable ember/no-settled-after-test-helper */
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentRouteName, fillIn, visit } from '@ember/test-helpers';
+import { click, currentRouteName, fillIn, visit, settled } from '@ember/test-helpers';
 
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { v4 as uuidv4 } from 'uuid';
@@ -42,6 +42,7 @@ module('Acceptance | pki tidy', function (hooks) {
   test('it configures a manual tidy operation and shows its details and tidy states', async function (assert) {
     await authPage.login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);
+    await settled();
     await click(SELECTORS.tidyEmptyStateConfigure);
     assert.dom(SELECTORS.tidyConfigureModal.configureTidyModal).exists('Configure tidy modal exists');
     assert.dom(SELECTORS.tidyConfigureModal.tidyModalAutoButton).exists('Configure auto tidy button exists');
