@@ -180,14 +180,14 @@ func TestEntryFormatter_Process(t *testing.T) {
 	}{
 		"json-request-no-data": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(EntryFormatter).Process: unable to parse request from audit event: request to request-audit a nil request",
+			ExpectedErrorMessage: "audit.(EntryFormatter).Process: cannot audit event (AuditRequest) with no data: invalid parameter",
 			Subtype:              RequestType,
 			RequiredFormat:       JSONFormat,
 			Data:                 nil,
 		},
 		"json-response-no-data": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(EntryFormatter).Process: unable to parse response from audit event: request to response-audit a nil request",
+			ExpectedErrorMessage: "audit.(EntryFormatter).Process: cannot audit event (AuditResponse) with no data: invalid parameter",
 			Subtype:              ResponseType,
 			RequiredFormat:       JSONFormat,
 			Data:                 nil,
@@ -236,14 +236,14 @@ func TestEntryFormatter_Process(t *testing.T) {
 		},
 		"jsonx-request-no-data": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(EntryFormatter).Process: unable to parse request from audit event: request to request-audit a nil request",
+			ExpectedErrorMessage: "audit.(EntryFormatter).Process: cannot audit event (AuditRequest) with no data: invalid parameter",
 			Subtype:              RequestType,
 			RequiredFormat:       JSONxFormat,
 			Data:                 nil,
 		},
 		"jsonx-response-no-data": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(EntryFormatter).Process: unable to parse response from audit event: request to response-audit a nil request",
+			ExpectedErrorMessage: "audit.(EntryFormatter).Process: cannot audit event (AuditResponse) with no data: invalid parameter",
 			Subtype:              ResponseType,
 			RequiredFormat:       JSONxFormat,
 			Data:                 nil,
