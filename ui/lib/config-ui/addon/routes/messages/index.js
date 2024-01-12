@@ -35,6 +35,7 @@ export default class MessagesRoute extends Route {
           pageFilter: filter,
           responsePath: 'data.keys',
           page: page || 1,
+           size: 10,
         }),
       });
     } catch (e) {

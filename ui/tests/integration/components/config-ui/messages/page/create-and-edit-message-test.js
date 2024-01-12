@@ -173,4 +173,54 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     assert.dom(PAGE.modalTitle('Preview modal title')).hasText('Preview modal title');
     assert.dom(PAGE.modalBody('Preview modal title')).hasText('Some preview modal message thats super long.');
   });
+
+  test('it should show multiple modal message', async function (assert) {
+    this.store.pushPayload('config-ui/message', {
+      modelName: 'config-ui/message',
+      id: '01234567-89ab-cdef-0123-456789abcdef',
+      active: true,
+      type: 'modal',
+      authenticated: true,
+      title: 'Message title 1',
+      message: 'Some long long long message',
+      link: { title: 'here', href: 'www.example.com' },
+      startTime: '2021-08-01T00:00:00Z',
+      endTime: '',
+    });
+    this.store.pushPayload('config-ui/message', {
+      modelName: 'config-ui/message',
+      id: '01234567-89ab-vvvv-0123-456789abcdef',
+      active: true,
+      type: 'modal',
+      authenticated: false,
+      title: 'Message title 2',
+      message: 'Some long long long message',
+      link: { title: 'here', href: 'www.example.com' },
+      startTime: '2021-08-01T00:00:00Z',
+      endTime: '2090-08-01T00:00:00Z',
+    });
+
+    this.messages = this.store.peekAll('config-ui/message');
+
+    await render(
+      hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} @messages={{this.messages}} @hasSomeActiveModals={{true}} />`,
+      {
+        owner: this.engine,
+      }
+    );
+    await fillIn(PAGE.input('title'), 'Awesome custom message title');
+    await fillIn(
+      PAGE.input('message'),
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pulvinar mattis nunc sed blandit libero volutpat sed cras ornare.'
+    );
+    await click(PAGE.radio('modal'));
+    await click(PAGE.button('create-message'));
+    assert.dom(PAGE.modalTitle('Warning: more than one modal')).exists();
+    assert
+      .dom(PAGE.modalBody('Warning: more than one modal'))
+      .hasText(
+        'You have an active modal configured after the user logs in and are trying to create another one. It is recommended to avoid having more than one modal at once as it can be intrusive for users. Would you like to continue creating your message? Click “Confirm” to continue.'
+      );
+    await click(PAGE.modalButton('confirm'));
+  });
 });

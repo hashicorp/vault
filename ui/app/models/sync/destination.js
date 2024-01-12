@@ -10,7 +10,10 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 
 // Base model for all secret sync destination types
 const validations = {
-  name: [{ type: 'presence', message: 'Name is required.' }],
+  name: [
+    { type: 'presence', message: 'Name is required.' },
+    { type: 'containsWhiteSpace', message: 'Name cannot contain whitespace.' },
+  ],
 };
 
 @withModelValidations(validations)
