@@ -56,14 +56,7 @@
       <div class="level-left">
         <div>
           <Hds::TooltipButton @text={{method.methodType}} aria-label="Type of auth mount">
-            <Icon
-              @name={{if
-                (or (find-by "type" method.methodType (mountable-auth-methods)) (eq method.methodType "token"))
-                method.methodType
-                "auth"
-              }}
-              class="has-text-grey-light"
-            />
+            <Icon @name={{method.icon}} class="has-text-grey-light" />
           </Hds::TooltipButton>
           <span data-test-path data-test-id={{method.id}} class="has-text-weight-semibold has-text-black">
             {{method.path}}
