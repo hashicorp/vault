@@ -366,6 +366,7 @@ type MountConfig struct {
 	AllowedManagedKeys        []string              `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
 	UserLockoutConfig         *UserLockoutConfig    `json:"user_lockout_config,omitempty" mapstructure:"user_lockout_config"`
 	DelegatedAuthAccessors    []string              `json:"delegated_auth_accessors,omitempty" mapstructure:"delegated_auth_accessors"`
+	IdentityTokenKey          string                `json:"identity_token_key,omitempty" mapstructure:"identity_token_key"`
 
 	// PluginName is the name of the plugin registered in the catalog.
 	//
@@ -402,6 +403,7 @@ type APIMountConfig struct {
 	UserLockoutConfig         *UserLockoutConfig    `json:"user_lockout_config,omitempty" mapstructure:"user_lockout_config"`
 	PluginVersion             string                `json:"plugin_version,omitempty" mapstructure:"plugin_version"`
 	DelegatedAuthAccessors    []string              `json:"delegated_auth_accessors,omitempty" mapstructure:"delegated_auth_accessors"`
+	IdentityTokenKey          string                `json:"identity_token_key,omitempty" mapstructure:"identity_token_key"`
 
 	// PluginName is the name of the plugin registered in the catalog.
 	//

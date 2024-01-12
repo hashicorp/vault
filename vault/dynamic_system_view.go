@@ -463,7 +463,7 @@ func (d dynamicSystemView) GenerateIdentityToken(ctx context.Context, req plugin
 	if storage == nil {
 		return pluginutil.IdentityTokenResponse{}, fmt.Errorf("failed to find storage entry for identity mount at %s", identityMountPath)
 	}
-	token, ttl, err := d.core.IdentityStore().generatePluginToken(ctx, storage, d.mountEntry, req.Key, req.Audience, req.TTL)
+	token, ttl, err := d.core.IdentityStore().generatePluginToken(ctx, storage, d.mountEntry, req.Audience, req.TTL)
 	if err != nil {
 		return pluginutil.IdentityTokenResponse{}, err
 	}

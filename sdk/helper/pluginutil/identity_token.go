@@ -8,8 +8,6 @@ import (
 )
 
 type IdentityTokenRequest struct {
-	// Key is the named identity token key to sign the token with
-	Key string
 	// Audience identifies the recipient of the token
 	Audience string
 	// TTL is the duration that the token will be valid for

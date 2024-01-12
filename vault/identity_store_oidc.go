@@ -977,14 +977,20 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 	return retResp, nil
 }
 
-func (i *IdentityStore) generatePluginToken(ctx context.Context, storage logical.Storage, me *MountEntry, key, audience string, ttl time.Duration) (string, time.Duration, error) {
+func (i *IdentityStore) generatePluginToken(ctx context.Context, storage logical.Storage, me *MountEntry, audience string, ttl time.Duration) (string, time.Duration, error) {
+	if me == nil {
+		i.Logger().Error("unexpected nil mount entry when generating plugin identity token")
+		return "", 0, errors.New("mount entry must not be nil")
+	}
+
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return "", 0, err
 	}
 
-	if key == "" {
-		key = "default"
+	key := defaultKeyName
+	if me.Config.IdentityTokenKey != "" {
+		key = me.Config.IdentityTokenKey
 	}
 	if ttl == 0 {
 		ttl = time.Hour

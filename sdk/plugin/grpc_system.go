@@ -202,7 +202,7 @@ func (s *gRPCSystemViewClient) GeneratePasswordFromPolicy(ctx context.Context, p
 	return resp.Password, nil
 }
 
-func (s gRPCSystemViewClient) ClusterID(ctx context.Context) (string, error) {
+func (s *gRPCSystemViewClient) ClusterID(ctx context.Context) (string, error) {
 	reply, err := s.client.ClusterInfo(ctx, &pb.Empty{})
 	if err != nil {
 		return "", err
@@ -211,9 +211,8 @@ func (s gRPCSystemViewClient) ClusterID(ctx context.Context) (string, error) {
 	return reply.ClusterID, nil
 }
 
-func (s gRPCSystemViewClient) GenerateIdentityToken(ctx context.Context, req pluginutil.IdentityTokenRequest) (pluginutil.IdentityTokenResponse, error) {
+func (s *gRPCSystemViewClient) GenerateIdentityToken(ctx context.Context, req pluginutil.IdentityTokenRequest) (pluginutil.IdentityTokenResponse, error) {
 	resp, err := s.client.GenerateIdentityToken(ctx, &pb.GenerateIdentityTokenRequest{
-		Key:      req.Key,
 		Audience: req.Audience,
 		TTL:      int64(req.TTL.Seconds()),
 	})

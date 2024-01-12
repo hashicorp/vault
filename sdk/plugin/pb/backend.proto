@@ -593,7 +593,6 @@ message ClusterInfoReply {
 }
 
 message GenerateIdentityTokenRequest {
-  string key = 1;
   string audience = 2;
   int64 ttl = 3;
 }
