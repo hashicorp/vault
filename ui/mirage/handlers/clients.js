@@ -17,10 +17,10 @@ import {
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
 // Matches mocked date in client-dashboard-test file
-const CURRENT_DATE = new Date('2023-01-13T14:15:00');
+export const CURRENT_DATE = new Date('2023-01-13T14:15:00');
 const COUNTS_START = subMonths(CURRENT_DATE, 12); // pretend vault user started cluster 6 months ago
 // for testing, we're in the middle of a license/billing period
-const LICENSE_START = startOfMonth(subMonths(CURRENT_DATE, 6));
+export const LICENSE_START = startOfMonth(subMonths(CURRENT_DATE, 6));
 // upgrade happened 1 month after license start
 const UPGRADE_DATE = addMonths(LICENSE_START, 1);
 
@@ -34,6 +34,7 @@ function getTotalCounts(array) {
     entity_clients: getSum(array, 'entity_clients'),
     non_entity_tokens: getSum(array, 'non_entity_clients'),
     non_entity_clients: getSum(array, 'non_entity_clients'),
+    secret_syncs: getSum(array, 'secret_syncs'),
     clients: getSum(array, 'clients'),
   };
 }
@@ -53,7 +54,7 @@ function arrayOfCounts(max, arrayLength) {
   return result.sort((a, b) => b - a);
 }
 
-function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
+export function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
   const min = isLowerCounts ? 10 : 50;
   const max = isLowerCounts ? 100 : 5000;
   const nsBlock = {
@@ -64,7 +65,7 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
   const mounts = [];
   Array.from(Array(10)).forEach((mount, index) => {
     const mountClients = randomBetween(min, max);
-    const [nonEntity, entity] = arrayOfCounts(mountClients, 2);
+    const [nonEntity, entity, secretSyncs] = arrayOfCounts(mountClients, 3);
     mounts.push({
       mount_path: `auth/authid${index}`,
       counts: {
@@ -73,6 +74,7 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
         non_entity_clients: nonEntity,
         distinct_entities: entity,
         non_entity_tokens: nonEntity,
+        secret_syncs: secretSyncs,
       },
     });
   });
@@ -119,7 +121,7 @@ function generateMonths(startDate, endDate, namespaces) {
   return months;
 }
 
-function generateActivityResponse(namespaces, startDate, endDate) {
+export function generateActivityResponse(namespaces, startDate, endDate) {
   return {
     start_time: isAfter(new Date(startDate), COUNTS_START) ? startDate : formatRFC3339(COUNTS_START),
     end_time: endDate,
