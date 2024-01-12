@@ -977,7 +977,7 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 	return retResp, nil
 }
 
-func (i *IdentityStore) generatePluginToken(ctx context.Context, storage logical.Storage, me *MountEntry, audience string, ttl time.Duration) (string, time.Duration, error) {
+func (i *IdentityStore) generatePluginIdentityToken(ctx context.Context, storage logical.Storage, me *MountEntry, audience string, ttl time.Duration) (string, time.Duration, error) {
 	if me == nil {
 		i.Logger().Error("unexpected nil mount entry when generating plugin identity token")
 		return "", 0, errors.New("mount entry must not be nil")
@@ -1013,6 +1013,7 @@ func (i *IdentityStore) generatePluginToken(ctx context.Context, storage logical
 		return "", 0, err
 	}
 
+	// TODO(austin): take into account remainder of current key TTL
 	if ttl > namedKey.VerificationTTL {
 		ttl = namedKey.VerificationTTL
 	}
@@ -1020,23 +1021,20 @@ func (i *IdentityStore) generatePluginToken(ctx context.Context, storage logical
 	now := time.Now()
 	claims := map[string]any{
 		"iss": config.effectiveIssuer,
-		"sub": fmt.Sprintf("vault:plugin-identity:%s:%s:%s", me.namespace.Path, me.Table, strings.Trim(me.Path, "/")),
+		"sub": fmt.Sprintf("plugin-identity:%s:%s:%s", me.namespace.Path, me.Table, me.Accessor),
 		"aud": []string{audience},
 		"nbf": now.Unix(),
 		"iat": now.Unix(),
 		"exp": now.Add(ttl).Unix(),
 		"vault.hashicorp.com": map[string]any{
-			"namespace": map[string]any{
-				"id":              ns.ID,
-				"path":            ns.Path,
-				"custom_metadata": ns.CustomMetadata,
-			},
-			"class":    me.Table,
-			"plugin":   me.Type,
-			"version":  me.RunningVersion,
-			"path":     me.Path,
-			"accessor": me.Accessor,
-			"local":    me.Local,
+			"namespace_id":   ns.ID,
+			"namespace_path": ns.Path,
+			"class":          me.Table,
+			"plugin":         me.Type,
+			"version":        me.RunningVersion,
+			"path":           me.Path,
+			"accessor":       me.Accessor,
+			"local":          me.Local,
 		},
 	}
 	payload, err := json.Marshal(claims)
@@ -1046,7 +1044,7 @@ func (i *IdentityStore) generatePluginToken(ctx context.Context, storage logical
 
 	signedIDToken, err := namedKey.signPayload(payload)
 	if err != nil {
-		return "", 0, fmt.Errorf("error signing OIDC token: %w", err)
+		return "", 0, fmt.Errorf("error signing plugin identity token: %w", err)
 	}
 
 	return signedIDToken, ttl, nil
