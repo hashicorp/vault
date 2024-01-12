@@ -1173,9 +1173,10 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 		"running_sha256":          entry.RunningSha256,
 	}
 	entryConfig := map[string]interface{}{
-		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
-		"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
-		"force_no_cache":    entry.Config.ForceNoCache,
+		"default_lease_ttl":  int64(entry.Config.DefaultLeaseTTL.Seconds()),
+		"max_lease_ttl":      int64(entry.Config.MaxLeaseTTL.Seconds()),
+		"force_no_cache":     entry.Config.ForceNoCache,
+		"identity_token_key": entry.Config.IdentityTokenKey,
 	}
 	if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 		entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
@@ -1416,6 +1417,11 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 	if len(apiConfig.DelegatedAuthAccessors) > 0 {
 		config.DelegatedAuthAccessors = apiConfig.DelegatedAuthAccessors
+	}
+
+	config.IdentityTokenKey = apiConfig.IdentityTokenKey
+	if config.IdentityTokenKey == "" {
+		config.IdentityTokenKey = defaultOIDCKeyName
 	}
 
 	// Create the mount entry
@@ -1874,6 +1880,10 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 		resp.Data["allowed_managed_keys"] = rawVal.([]string)
 	}
 
+	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("identity_token_key"); ok {
+		resp.Data["identity_token_key"] = rawVal.(string)
+	}
+
 	if mountEntry.Config.UserLockoutConfig != nil {
 		resp.Data["user_lockout_counter_reset_duration"] = int64(mountEntry.Config.UserLockoutConfig.LockoutCounterReset.Seconds())
 		resp.Data["user_lockout_threshold"] = mountEntry.Config.UserLockoutConfig.LockoutThreshold
@@ -1899,7 +1909,7 @@ func (b *SystemBackend) handleAuthTuneWrite(ctx context.Context, req *logical.Re
 		return logical.ErrorResponse("missing path"), nil
 	}
 
-	return b.handleTuneWriteCommon(ctx, "auth/"+path, data)
+	return b.handleTuneWriteCommon(ctx, "auth/"+path, data, req.Storage)
 }
 
 // handleMountTuneWrite is used to set config settings on a backend
@@ -1912,11 +1922,11 @@ func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.R
 	// This call will write both logical backend's configuration as well as auth methods'.
 	// Retaining this behavior for backward compatibility. If this behavior is not desired,
 	// an error can be returned if path has a prefix of "auth/".
-	return b.handleTuneWriteCommon(ctx, path, data)
+	return b.handleTuneWriteCommon(ctx, path, data, req.Storage)
 }
 
 // handleTuneWriteCommon is used to set config settings on a path
-func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, data *framework.FieldData, s logical.Storage) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
 
 	path = sanitizePath(path)
@@ -2162,6 +2172,43 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 		if b.Core.logger.IsInfo() {
 			b.Core.logger.Info("mount tuning of version successful", "path", path, "version", version)
+		}
+	}
+
+	if rawVal, ok := data.GetOk("identity_token_key"); ok {
+		identityTokenKey := rawVal.(string)
+		if identityTokenKey == "" {
+			identityTokenKey = defaultOIDCKeyName
+		}
+
+		// Ensure that the key exists
+		k, err := b.Core.IdentityStore().getNamedKey(ctx, s, identityTokenKey)
+		if err != nil {
+			return handleError(err)
+		}
+		if k == nil {
+			return handleError(fmt.Errorf("key %q does not exist", identityTokenKey))
+		}
+
+		oldVal := mountEntry.Config.IdentityTokenKey
+		mountEntry.Config.IdentityTokenKey = identityTokenKey
+
+		// Update the mount table
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.IdentityTokenKey = oldVal
+			return handleError(err)
+		}
+
+		mountEntry.SyncCache()
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("mount tuning of identity_token_key successful", "path", path)
 		}
 	}
 
@@ -2918,6 +2965,11 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 	if len(apiConfig.AllowedManagedKeys) > 0 {
 		config.AllowedManagedKeys = apiConfig.AllowedManagedKeys
+	}
+
+	config.IdentityTokenKey = apiConfig.IdentityTokenKey
+	if config.IdentityTokenKey == "" {
+		config.IdentityTokenKey = defaultOIDCKeyName
 	}
 
 	// Create the mount entry
@@ -6282,6 +6334,10 @@ This path responds to the following HTTP methods.
 	},
 	"plugin-runtime-catalog_rootless": {
 		"Whether the container runtime is run as a non-privileged (non-root) user.",
+		"",
+	},
+	"identity_token_key": {
+		"The name of the key used to sign plugin identity tokens. Defaults to the default key.",
 		"",
 	},
 	"leases": {

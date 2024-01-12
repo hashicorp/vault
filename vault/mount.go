@@ -511,6 +511,13 @@ func (e *MountEntry) SyncCache() {
 	} else {
 		e.synthesizedConfigCache.Store("delegated_auth_accessors", e.Config.DelegatedAuthAccessors)
 	}
+
+	// TODO(austin): is this needed?
+	if e.Config.IdentityTokenKey == "" {
+		e.synthesizedConfigCache.Store("identity_token_key", defaultOIDCKeyName)
+	} else {
+		e.synthesizedConfigCache.Store("identity_token_key", e.Config.DelegatedAuthAccessors)
+	}
 }
 
 func (entry *MountEntry) Deserialize() map[string]interface{} {

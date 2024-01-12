@@ -3685,6 +3685,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 									Type:     framework.TypeString,
 									Required: false,
 								},
+								"identity_token_key": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
 							},
 						}},
 					},
@@ -4451,6 +4455,11 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeMap,
 					Description: strings.TrimSpace(sysHelp["tune_user_lockout_config"][0]),
 				},
+				"identity_token_key": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["identity_token_key"][0]),
+					Default:     defaultOIDCKeyName,
+				},
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -4511,6 +4520,11 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 								"plugin_version": {
 									Type:        framework.TypeString,
 									Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+									Required:    false,
+								},
+								"identity_token_key": {
+									Type:        framework.TypeString,
+									Description: strings.TrimSpace(sysHelp["identity_token_key"][0]),
 									Required:    false,
 								},
 								"external_entropy_access": {
