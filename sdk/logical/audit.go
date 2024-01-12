@@ -67,7 +67,9 @@ func (l *LogInput) BexprDatum(namespace string) *LogInputBexpr {
 // entry, call receivers on the LogInput struct to get their value. These values
 // would be lost using copystructure as it cannot copy unexported fields.
 // If the LogInput type or any of the subtypes referenced by LogInput fields are
-// changed, then the Clone methods
+// changed, then the Clone methods will need to be updated.
+// NOTE: Does not deep clone the LogInput.OuterError field as it represents an
+// error interface.
 func (l *LogInput) Clone() (*LogInput, error) {
 	// Close Auth
 	auth, err := cloneAuth(l.Auth)
