@@ -71,19 +71,19 @@ func (l *LogInput) BexprDatum(namespace string) *LogInputBexpr {
 // NOTE: Does not deep clone the LogInput.OuterError field as it represents an
 // error interface.
 func (l *LogInput) Clone() (*LogInput, error) {
-	// Close Auth
+	// Clone Auth
 	auth, err := cloneAuth(l.Auth)
 	if err != nil {
 		return nil, err
 	}
 
-	// Close Request
+	// Clone Request
 	req, err := cloneRequest(l.Request)
 	if err != nil {
 		return nil, err
 	}
 
-	// Close Response
+	// Clone Response
 	resp, err := cloneResponse(l.Response)
 	if err != nil {
 		return nil, err
@@ -95,6 +95,10 @@ func (l *LogInput) Clone() (*LogInput, error) {
 	respDataKeys := make([]string, len(l.NonHMACRespDataKeys))
 	copy(respDataKeys, l.NonHMACRespDataKeys)
 
+	// OuterErr is just linked in a non-deep way as it's an interface, and we
+	// don't know for sure which type this might actually be.
+	// At the time of writing this code, OuterErr isn't modified by anything,
+	// so we shouldn't get any race issues.
 	cloned := &LogInput{
 		Type:                l.Type,
 		Auth:                auth,
