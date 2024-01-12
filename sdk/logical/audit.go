@@ -89,9 +89,9 @@ func (l *LogInput) Clone() (*LogInput, error) {
 
 	// Copy HMAC keys
 	reqDataKeys := make([]string, len(l.NonHMACReqDataKeys))
-	copy(l.NonHMACReqDataKeys, reqDataKeys)
+	copy(reqDataKeys, l.NonHMACReqDataKeys)
 	respDataKeys := make([]string, len(l.NonHMACRespDataKeys))
-	copy(l.NonHMACRespDataKeys, reqDataKeys)
+	copy(respDataKeys, l.NonHMACRespDataKeys)
 
 	cloned := &LogInput{
 		Type:                l.Type,
