@@ -3,4 +3,8 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<Messages::Page::List @messages={{this.model}} @authenticated={{this.authenticated}} />
+<Messages::Page::List
+  @messages={{this.model.messages}}
+  @authenticated={{this.authenticated}}
+  @pageFilter={{this.model.pageFilter}}
+/>

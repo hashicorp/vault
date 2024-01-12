@@ -9,4 +9,5 @@ export default class MessagesController extends Controller {
 
   authenticated = true;
   page = 1;
+  pageFilter = '';
 }
