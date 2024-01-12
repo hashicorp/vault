@@ -152,7 +152,7 @@ func cloneRequest(request *Request) (*Request, error) {
 		return nil, fmt.Errorf("unable to clone request: %w", err)
 	}
 
-	// Add the values from methods that would otherwise be missed.
+	// Add the unexported values that were only retrievable via receivers.
 	req.mountClass = request.MountClass()
 	req.mountRunningVersion = request.MountRunningVersion()
 	req.mountRunningSha256 = request.MountRunningSha256()
