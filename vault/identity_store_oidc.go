@@ -1064,14 +1064,21 @@ func (i *IdentityStore) generatePluginIdentityToken(ctx context.Context, storage
 		return "", 0, err
 	}
 
-	// TODO(austin): take into account remainder of current key TTL
+	// TODO(austin): take into account remainder of current key TTL?
 	if ttl > namedKey.VerificationTTL {
 		ttl = namedKey.VerificationTTL
 	}
 
+	// Tokens for plugins have a distinct issuer from Vault's identity token issuer
+	issuer, err := config.fullIssuer(pluginIdentityTokenIssuer)
+	if err != nil {
+		return "", 0, err
+	}
+
 	now := time.Now()
 	claims := map[string]any{
-		"iss": config.effectiveIssuer,
+		"iss": issuer,
+		// TODO(austin): character set validation and replacement for colons
 		"sub": fmt.Sprintf("plugin-identity:%s:%s:%s", me.namespace.Path, me.Table, me.Accessor),
 		"aud": []string{audience},
 		"nbf": now.Unix(),
