@@ -128,6 +128,9 @@ func cloneRequest(request *Request) (*Request, error) {
 	req.mountRunningVersion = request.MountRunningVersion()
 	req.mountRunningSha256 = request.MountRunningSha256()
 	req.mountIsExternalPlugin = request.MountIsExternalPlugin()
+	// This needs to be overwritten as the internal connection state is not cloned properly
+	// mainly the big.Int serial numbers within the x509.Certificate objects get mangled.
+	req.Connection = request.Connection
 
 	return req, nil
 }
