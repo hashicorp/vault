@@ -44,7 +44,6 @@ export default class SyncDestinationsAzureKeyVaultModel extends SyncDestinationM
 
   @attr('string', {
     subText: 'Specifies a cloud for the client. The default is Azure Public Cloud.',
-    defaultValue: 'cloud',
     editDisabled: true,
   })
   cloud;

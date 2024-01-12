@@ -5,7 +5,7 @@
 
 // accepts an error and returns error.errors joined with a comma, error.message or a fallback message
 export default function (error, fallbackMessage = 'An error occurred, please try again') {
-  if (error instanceof Error && error?.errors) {
+  if (error instanceof Error && error?.errors && typeof error.errors[0] === 'string') {
     return error.errors.join(', ');
   }
   return error?.message || fallbackMessage;

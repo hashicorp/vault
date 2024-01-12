@@ -282,19 +282,19 @@ module('Unit | Model | secret-engine', function (hooks) {
   });
 
   module('icon', function () {
-    test('returns secrets if no engineType', function (assert) {
+    test('returns default icon if no engineType', function (assert) {
       assert.expect(1);
       const model = this.store.createRecord('secret-engine', {
         type: '',
       });
-      assert.strictEqual(model.icon, 'secrets');
+      assert.strictEqual(model.icon, 'lock', 'uses default icon');
     });
-    test('returns secrets if kmip', function (assert) {
+    test('returns default icon if kmip', function (assert) {
       assert.expect(1);
       const model = this.store.createRecord('secret-engine', {
         type: 'kmip',
       });
-      assert.strictEqual(model.icon, 'secrets');
+      assert.strictEqual(model.icon, 'lock');
     });
     test('returns key if keymgmt', function (assert) {
       assert.expect(1);
@@ -303,12 +303,12 @@ module('Unit | Model | secret-engine', function (hooks) {
       });
       assert.strictEqual(model.icon, 'key');
     });
-    test('returns engineType by default', function (assert) {
+    test('returns default when engine type is not in list of mountable engines', function (assert) {
       assert.expect(1);
       const model = this.store.createRecord('secret-engine', {
         type: 'ducks',
       });
-      assert.strictEqual(model.icon, 'ducks');
+      assert.strictEqual(model.icon, 'lock');
     });
   });
 

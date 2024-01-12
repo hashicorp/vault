@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { findAll } from '@ember/test-helpers';
+
 export const SELECTORS = {
   breadcrumb: '[data-test-breadcrumbs] li',
   breadcrumbAtIdx: (idx) => `[data-test-breadcrumbs] li:nth-child(${idx + 1}) a`,
@@ -12,6 +14,7 @@ export const SELECTORS = {
   icon: (name) => `[data-test-icon="${name}"]`,
   tab: (name) => `[data-test-tab="${name}"]`,
   filter: (name) => `[data-test-filter="${name}"]`,
+  filterInput: '[data-test-filter-input]',
   confirmModalInput: '[data-test-confirmation-modal-input]',
   confirmButton: '[data-test-confirm-button]',
   emptyStateTitle: '[data-test-empty-state-title]',
@@ -27,16 +30,17 @@ export const SELECTORS = {
   messageError: '[data-test-message-error]',
   searchSelect: {
     options: '.ember-power-select-option',
+    optionIndex: (text) => findAll('.ember-power-select-options li').findIndex((e) => e.innerText === text),
     option: (index = 0) => `.ember-power-select-option:nth-child(${index + 1})`,
     selectedOption: (index = 0) => `[data-test-selected-option="${index}"]`,
     noMatch: '.ember-power-select-option--no-matches-message',
     removeSelected: '[data-test-selected-list-button="delete"]',
   },
   overviewCard: {
-    title: (title) => `[data-test-overview-card="${title}"] h3`,
-    description: (title) => `[data-test-overview-card-container="${title}"] p`,
+    title: (title) => `[data-test-overview-card-title="${title}"]`,
+    description: (title) => `[data-test-overview-card-subtitle="${title}"]`,
     content: (title) => `[data-test-overview-card-content="${title}"]`,
-    action: (title) => `[data-test-overview-card="${title}"] a`,
+    action: (title) => `[data-test-overview-card-container="${title}"] [data-test-action-text]`,
   },
   pagination: {
     next: '.hds-pagination-nav__arrow--direction-next',

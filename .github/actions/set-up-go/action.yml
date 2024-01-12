@@ -65,10 +65,5 @@ runs:
       shell: bash
       run: |
         git config --global url."https://${{ inputs.github-token }}@github.com".insteadOf https://github.com
-        for mod in $(find . -type f -name go.mod); do
-          pushd "$(dirname $mod)"
-            go list ./...
-            go list -test ./...
-            go mod download
-          popd
-        done
+        make go-mod-download
+        du -h -d 1 ${{ steps.metadata.outputs.cache-path }}

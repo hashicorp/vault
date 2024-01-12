@@ -22,7 +22,9 @@
           @onSuccess={{this._handleSuccess}}
         />
       {{else if this.model.redirectUrl}}
-        <div data-test-oidc-redirect>{{this.model.redirectUrl}}</div>
+        <VaultLogoSpinner />
+        <p>If you are not automatically redirected,
+          <a href={{this.model.redirectUrl}} data-test-oidc-redirect>click here to go back to app.</a></p>
       {{else}}
         <VaultLogoSpinner />
       {{/if}}

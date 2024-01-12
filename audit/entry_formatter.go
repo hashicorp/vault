@@ -11,16 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jefferai/jsonx"
-
-	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-
-	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/jefferai/jsonx"
 )
 
 var (
@@ -29,7 +26,7 @@ var (
 )
 
 // NewEntryFormatter should be used to create an EntryFormatter.
-// Accepted options: WithPrefix.
+// Accepted options: WithHeaderFormatter, WithPrefix.
 func NewEntryFormatter(config FormatterConfig, salter Salter, opt ...Option) (*EntryFormatter, error) {
 	const op = "audit.NewEntryFormatter"
 
@@ -80,20 +77,24 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		return nil, fmt.Errorf("%s: event is nil: %w", op, event.ErrInvalidParameter)
 	}
 
-	a, ok := e.Payload.(*auditEvent)
+	a, ok := e.Payload.(*AuditEvent)
 	if !ok {
 		return nil, fmt.Errorf("%s: cannot parse event payload: %w", op, event.ErrInvalidParameter)
 	}
 
-	var result []byte
-	data := new(logical.LogInput)
-	headers := make(map[string][]string)
+	if a.Data == nil {
+		return nil, fmt.Errorf("%s: cannot audit event (%s) with no data: %w", op, a.Subtype, event.ErrInvalidParameter)
+	}
 
-	if a.Data != nil {
-		*data = *a.Data
-		if a.Data.Request != nil && a.Data.Request.Headers != nil {
-			headers = a.Data.Request.Headers
-		}
+	// Take a copy of the event data before we modify anything.
+	data, err := a.Data.Clone()
+	if err != nil {
+		return nil, fmt.Errorf("%s: unable to copy audit event data: %w", op, err)
+	}
+
+	var headers map[string][]string
+	if data.Request != nil && data.Request.Headers != nil {
+		headers = data.Request.Headers
 	}
 
 	if f.headerFormatter != nil {
@@ -104,6 +105,8 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 
 		data.Request.Headers = adjustedHeaders
 	}
+
+	var result []byte
 
 	switch a.Subtype {
 	case RequestType:

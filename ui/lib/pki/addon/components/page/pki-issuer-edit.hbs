@@ -32,8 +32,8 @@
           <div class="control is-expanded">
             <div class="select is-fullwidth">
               <select
-                name={{@attr.name}}
-                id={{@attr.name}}
+                name={{field.name}}
+                id={{field.name}}
                 {{on "change" (pipe (pick "target.value") (fn (mut @model.leafNotAfterBehavior)))}}
                 onchange={{this.onChangeWithEvent}}
               >

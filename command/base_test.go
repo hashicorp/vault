@@ -7,6 +7,12 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/vault/api"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 )
 
 func getDefaultCliHeaders(t *testing.T) http.Header {
@@ -68,5 +74,39 @@ func TestClient_FlagHeader(t *testing.T) {
 		if !reflect.DeepEqual(expectedHeaders, actualHeaders) {
 			t.Errorf("expected [%#v] but got [%#v]", expectedHeaders, actualHeaders)
 		}
+	}
+}
+
+// TestClient_HCPConfiguration tests that the HCP configuration is applied correctly when it exists in cache.
+func TestClient_HCPConfiguration(t *testing.T) {
+	cases := map[string]struct {
+		Valid        bool
+		ExpectedAddr string
+	}{
+		"valid hcp configuration": {
+			Valid:        true,
+			ExpectedAddr: "https://hcp-proxy.addr:8200",
+		},
+		"empty hcp configuration": {
+			Valid:        false,
+			ExpectedAddr: api.DefaultAddress,
+		},
+	}
+
+	for n, tst := range cases {
+		t.Run(n, func(t *testing.T) {
+			bc := &BaseCommand{hcpTokenHelper: &hcpvlib.TestingHCPTokenHelper{tst.Valid}}
+			cli, err := bc.Client()
+			assert.NoError(t, err)
+
+			if tst.Valid {
+				require.Equal(t, tst.ExpectedAddr, cli.Address())
+				require.NotEmpty(t, cli.HCPCookie())
+				require.Contains(t, cli.HCPCookie(), "hcp_access_token=Test.Access.Token")
+			} else {
+				require.Equal(t, tst.ExpectedAddr, cli.Address())
+				require.Empty(t, cli.HCPCookie())
+			}
+		})
 	}
 }

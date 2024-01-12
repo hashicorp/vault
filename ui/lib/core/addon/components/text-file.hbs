@@ -3,10 +3,12 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-{{#unless @uploadOnly}}
+{{#if @uploadOnly}}
+  <label id="text-file-input-{{this.elementId}}" class="sr-only">{{or @label "File"}}</label>
+{{else}}
   <div class="level is-mobile">
     <div class="level-left">
-      <label for="input-{{this.elementId}}" class="has-text-weight-semibold" data-test-text-file-label>
+      <label id="text-file-input-{{this.elementId}}" class="has-text-weight-semibold" data-test-text-file-label>
         {{or @label "File"}}
         {{#if @helpText}}
           <InfoTooltip>
@@ -31,14 +33,14 @@
       </label>
     </div>
   </div>
-{{/unless}}
+{{/if}}
 <div class="field text-file box is-fullwidth is-marginless is-shadowless is-paddingless" data-test-component="text-file">
   {{#if this.showTextArea}}
     <Hds::Form::MaskedInput::Field
-      id="input-{{this.elementId}}"
       @value={{this.content}}
       @isMultiline={{true}}
       {{on "input" this.handleTextInput}}
+      aria-labelledby="text-file-input-{{this.elementId}}"
       data-test-text-file-textarea
       as |F|
     >
@@ -49,17 +51,15 @@
         {{/if}}
         {{#if @docLink}}
           See our
-          <Hds::Link::Inline @href={{doc-link @docLink}} @icon="docs-link" @iconPosition="trailing">
-            documentation
-          </Hds::Link::Inline>
+          <Hds::Link::Inline @href={{doc-link @docLink}}>documentation</Hds::Link::Inline>
           for help.
         {{/if}}
       </F.HelperText>
     </Hds::Form::MaskedInput::Field>
   {{else}}
     <Hds::Form::FileInput::Field
-      id="file-input-{{this.elementId}}"
       {{on "change" this.handleFileUpload}}
+      aria-labelledby="text-file-input-{{this.elementId}}"
       data-test-text-file-input
       as |F|
     >
@@ -70,9 +70,7 @@
         {{/if}}
         {{#if @docLink}}
           See our
-          <Hds::Link::Inline @href={{doc-link @docLink}} @icon="docs-link" @iconPosition="trailing">
-            documentation
-          </Hds::Link::Inline>
+          <Hds::Link::Inline @href={{doc-link @docLink}}>documentation</Hds::Link::Inline>
           for help.
         {{/if}}
       </F.HelperText>

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /**
@@ -17,4 +17,24 @@ export function isAdvancedSecret(value) {
   } catch (e) {
     return false;
   }
+}
+
+/**
+ * Method to obfuscate all values in a map, including nested values and arrays
+ * @param obj object
+ * @returns object
+ */
+export function obfuscateData(obj) {
+  if (typeof obj !== 'object' || Array.isArray(obj)) return obj;
+  const newObj = {};
+  for (const key of Object.keys(obj)) {
+    if (Array.isArray(obj[key])) {
+      newObj[key] = obj[key].map(() => '********');
+    } else if (typeof obj[key] === 'object') {
+      newObj[key] = obfuscateData(obj[key]);
+    } else {
+      newObj[key] = '********';
+    }
+  }
+  return newObj;
 }
