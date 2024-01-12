@@ -1,3 +1,0 @@
-```release-note:bug
-website/docs: Fixed a small typo in the ACME Troubleshooting page
-```
