@@ -24,14 +24,6 @@ export function formatNumbers(number) {
   return format('.2s')(number).replace('G', 'B');
 }
 
-export function formatTooltipNumber(value) {
-  if (typeof value !== 'number') {
-    return value;
-  }
-  // formats a number according to the locale
-  return new Intl.NumberFormat().format(value);
-}
-
 export function calculateAverage(dataset, objectKey) {
   // before mapping for values, check that the objectKey exists at least once in the dataset because
   // map returns 0 when dataset[objectKey] is undefined in order to calculate average
