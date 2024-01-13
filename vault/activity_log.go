@@ -82,9 +82,9 @@ const (
 	// Known types of activity events; there's presently two internal event
 	// types (tokens/clients with and without entities), but we're beginning
 	// to support additional buckets for e.g., ACME requests.
-	nonEntityTokenActivityType        = "non-entity-token"
-	entityActivityType                = "entity"
-	secretSyncAssociationActivityType = "secret-sync-association"
+	nonEntityTokenActivityType = "non-entity-token"
+	entityActivityType         = "entity"
+	secretSyncActivityType     = "secret-sync"
 )
 
 type segmentInfo struct {
@@ -1105,7 +1105,7 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) e
 	c.AddLogger(logger)
 
 	if os.Getenv("VAULT_DISABLE_ACTIVITY_LOG") != "" {
-		if c.CensusLicensingEnabled() {
+		if c.ManualLicenseReportingEnabled() {
 			logger.Warn("activity log disabled via environment variable while reporting is enabled. " +
 				"Reporting will override, and the activity log will be enabled")
 		} else {
@@ -2033,9 +2033,9 @@ func (p *processCounts) contains(client *activity.EntityRecord) bool {
 
 func (p *processCounts) toCountsRecord() *activity.CountsRecord {
 	return &activity.CountsRecord{
-		EntityClients:          p.countByType(entityActivityType),
-		NonEntityClients:       p.countByType(nonEntityTokenActivityType),
-		SecretSyncAssociations: p.countByType(secretSyncAssociationActivityType),
+		EntityClients:    p.countByType(entityActivityType),
+		NonEntityClients: p.countByType(nonEntityTokenActivityType),
+		SecretSyncs:      p.countByType(secretSyncActivityType),
 	}
 }
 

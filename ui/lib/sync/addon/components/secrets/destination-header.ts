@@ -26,10 +26,14 @@ export default class DestinationsTabsToolbar extends Component<Args> {
   async deleteDestination() {
     try {
       const { destination } = this.args;
-      const message = `Successfully deleted destination ${destination.name}.`;
+      const message = `Destination ${destination.name} has been queued for deletion.`;
       await destination.destroyRecord();
       this.store.clearDataset('sync/destination');
-      this.router.transitionTo('vault.cluster.sync.secrets.destinations');
+      this.router.transitionTo(
+        'vault.cluster.sync.secrets.destinations.destination.secrets',
+        destination.type,
+        destination.name
+      );
       this.flashMessages.success(message);
     } catch (error) {
       this.flashMessages.danger(`Error deleting destination \n ${errorMessage(error)}`);

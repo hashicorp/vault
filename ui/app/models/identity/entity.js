@@ -34,7 +34,7 @@ export default IdentityModel.extend({
   lastUpdateTime: attr('string', {
     readOnly: true,
   }),
-  aliases: hasMany('identity/entity-alias', { async: false, readOnly: true }),
+  aliases: hasMany('identity/entity-alias', { async: false, readOnly: true, inverse: 'entity' }),
   groupIds: attr({
     readOnly: true,
   }),
