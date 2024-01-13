@@ -40,8 +40,7 @@ const BAR_WIDTH = 7; // data bar width is 7 pixels
 export default class VerticalBarChart extends Component {
   @tracked tooltipTarget = '';
   @tracked tooltipTotal = '';
-  @tracked entityClients = '';
-  @tracked nonEntityClients = '';
+  @tracked tooltipStats = [];
 
   get chartLegend() {
     return this.args.chartLegend;
@@ -155,9 +154,14 @@ export default class VerticalBarChart extends Component {
     // MOUSE EVENT FOR TOOLTIP
     tooltipRect.on('mouseover', (data) => {
       const hoveredMonth = data[this.xKey];
-      this.tooltipTotal = `${formatNumber([data[this.yKey]])} ${data.new_clients ? 'total' : 'new'} clients`;
-      this.entityClients = `${formatNumber([data.entity_clients])} entity clients`;
-      this.nonEntityClients = `${formatNumber([data.non_entity_clients])} non-entity clients`;
+      const stackedNumbers = []; // accumulates stacked dataset values to calculate total
+      this.tooltipStats = this.args.chartLegend.map(({ key, label }) => {
+        stackedNumbers.push(data[key]);
+        return `${formatNumber([data[key]])} ${label}`;
+      });
+      this.tooltipTotal = `${formatNumber([stackedNumbers.reduce((a, b) => a + b, 0)])} ${
+        data.new_clients ? 'total' : 'new'
+      } clients`;
       // filter for the tether point that matches the hoveredMonth
       const hoveredElement = tooltipTether.filter((data) => data.month === hoveredMonth).node();
       this.tooltipTarget = hoveredElement; // grab the node from the list of rects
