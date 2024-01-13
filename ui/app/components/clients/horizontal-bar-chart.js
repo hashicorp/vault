@@ -11,7 +11,7 @@ import { select, event, selectAll } from 'd3-selection';
 import { scaleLinear, scaleBand } from 'd3-scale';
 import { axisLeft } from 'd3-axis';
 import { max, maxIndex } from 'd3-array';
-import { BAR_COLOR_HOVER, GREY, LIGHT_AND_DARK_BLUE, formatTooltipNumber } from 'vault/utils/chart-helpers';
+import { BAR_COLOR_HOVER, GREY, LIGHT_AND_DARK_BLUE } from 'vault/utils/chart-helpers';
 import { tracked } from '@glimmer/tracking';
 import { formatNumber } from 'core/helpers/format-number';
 
@@ -56,10 +56,6 @@ export default class HorizontalBarChart extends Component {
 
   get topNamespace() {
     return this.args.dataset[maxIndex(this.args.dataset, (d) => d[this.xKey])];
-  }
-
-  get total() {
-    return this.args.totalCounts[this.xKey] || null;
   }
 
   @action removeTooltip() {
@@ -183,12 +179,10 @@ export default class HorizontalBarChart extends Component {
         const hoveredElement = actionBars.filter((bar) => bar[labelKey] === data[labelKey]).node();
         this.tooltipTarget = hoveredElement;
         this.isLabel = false;
-        this.tooltipText = this.total
-          ? `${Math.round((data[xKey] * 100) / this.total)}%
-        of total client counts:
-        ${formatTooltipNumber(data.entity_clients)} entity clients,
-        ${formatTooltipNumber(data.non_entity_clients)} non-entity clients.`
-          : '';
+        const tooltipStats = this.args.chartLegend.map(({ key, label }) => {
+          return `${formatNumber([data[key]])} ${label}`;
+        });
+        this.tooltipText = tooltipStats.join(', ');
 
         select(hoveredElement).style('opacity', 1);
 
