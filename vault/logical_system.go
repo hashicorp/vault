@@ -1424,6 +1424,16 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		config.IdentityTokenKey = defaultOIDCKeyName
 	}
 
+	// Ensure that the key exists
+	k, err := b.Core.IdentityStore().getNamedKey(ctx, b.Core.IdentityStore().view,
+		config.IdentityTokenKey)
+	if err != nil {
+		return handleError(err)
+	}
+	if k == nil {
+		return handleError(fmt.Errorf("key %q does not exist", config.IdentityTokenKey))
+	}
+
 	// Create the mount entry
 	me := &MountEntry{
 		Table:                 mountTableType,
@@ -1909,7 +1919,7 @@ func (b *SystemBackend) handleAuthTuneWrite(ctx context.Context, req *logical.Re
 		return logical.ErrorResponse("missing path"), nil
 	}
 
-	return b.handleTuneWriteCommon(ctx, "auth/"+path, data, req.Storage)
+	return b.handleTuneWriteCommon(ctx, "auth/"+path, data)
 }
 
 // handleMountTuneWrite is used to set config settings on a backend
@@ -1922,11 +1932,11 @@ func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.R
 	// This call will write both logical backend's configuration as well as auth methods'.
 	// Retaining this behavior for backward compatibility. If this behavior is not desired,
 	// an error can be returned if path has a prefix of "auth/".
-	return b.handleTuneWriteCommon(ctx, path, data, req.Storage)
+	return b.handleTuneWriteCommon(ctx, path, data)
 }
 
 // handleTuneWriteCommon is used to set config settings on a path
-func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, data *framework.FieldData, s logical.Storage) (*logical.Response, error) {
+func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
 
 	path = sanitizePath(path)
@@ -2182,7 +2192,8 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 
 		// Ensure that the key exists
-		k, err := b.Core.IdentityStore().getNamedKey(ctx, s, identityTokenKey)
+		k, err := b.Core.IdentityStore().getNamedKey(ctx, b.Core.IdentityStore().view,
+			identityTokenKey)
 		if err != nil {
 			return handleError(err)
 		}
@@ -2970,6 +2981,16 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	config.IdentityTokenKey = apiConfig.IdentityTokenKey
 	if config.IdentityTokenKey == "" {
 		config.IdentityTokenKey = defaultOIDCKeyName
+	}
+
+	// Ensure that the key exists
+	k, err := b.Core.IdentityStore().getNamedKey(ctx, b.Core.IdentityStore().view,
+		config.IdentityTokenKey)
+	if err != nil {
+		return handleError(err)
+	}
+	if k == nil {
+		return handleError(fmt.Errorf("key %q does not exist", config.IdentityTokenKey))
 	}
 
 	// Create the mount entry
