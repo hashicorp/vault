@@ -271,7 +271,6 @@ func TestAuditFilteringFallbackDevice(t *testing.T) {
 	require.Equal(t, 2, numberOfEntries)
 
 	// Validate that only the entries NOT matching the filter were written to the fallback log file.
-	// numberOfEntries = checkAuditEntries(t, fallbackLogFile, "mount_type", "kv", require.NotEqual)
 	numberOfEntries = 0
 	scanner := bufio.NewScanner(fallbackLogFile)
 	var auditRecord map[string]any
