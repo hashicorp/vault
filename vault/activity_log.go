@@ -1521,7 +1521,8 @@ func (a *ActivityLog) AddActivityToFragment(clientID string, namespaceID string,
 	// Track whether the clientID corresponds to a token without an entity or not.
 	// This field is backward compatible, as the default is 0, so records created
 	// from pre-1.9 activityLog code will automatically be marked as having an entity.
-	if activityType == nonEntityTokenActivityType || activityType == ACMEActivityType {
+	switch activityType {
+	case nonEntityTokenActivityType, ACMEActivityType, secretSyncActivityType:
 		clientRecord.NonEntity = true
 	}
 

@@ -4806,6 +4806,7 @@ func TestAddActivityToFragment(t *testing.T) {
 			activityType: secretSyncActivityType,
 			isAdded:      true,
 			expectedID:   "new-secret-sync",
+			isNonEntity:  true,
 		},
 	}
 	for _, tc := range testCases {
