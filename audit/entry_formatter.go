@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/jefferai/jsonx"
 )
@@ -592,4 +593,9 @@ func newTemporaryEntryFormatter(n *EntryFormatter) *EntryFormatter {
 		config:          n.config,
 		prefix:          n.prefix,
 	}
+}
+
+// Salt returns a new salt with default configuration and no storage usage, and no error.
+func (s *nonPersistentSalt) Salt(_ context.Context) (*salt.Salt, error) {
+	return salt.NewNonpersistentSalt(), nil
 }
