@@ -293,9 +293,7 @@ func TestAuditFilteringFallbackDevice(t *testing.T) {
 func getFileSize(t *testing.T, filePath string) int64 {
 	t.Helper()
 	fi, err := os.Stat(filePath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	size := fi.Size()
 	return size
 }
