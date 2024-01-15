@@ -293,8 +293,7 @@ func getFileSize(t *testing.T, filePath string) int64 {
 	t.Helper()
 	fi, err := os.Stat(filePath)
 	require.NoError(t, err)
-	size := fi.Size()
-	return size
+	return fi.Size()
 }
 
 // checkAuditEntries parses the audit log file and asserts that the given key
