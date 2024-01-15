@@ -285,6 +285,7 @@ func TestAuditFilteringFallbackDevice(t *testing.T) {
 		require.NotEqual(t, "kv", auditRequest["mount_type"])
 		numberOfEntries += 1
 	}
+	// the fallback device will catch all non-kv related entries such as login etc. there should be 5 in total.
 	require.Equal(t, 5, numberOfEntries)
 }
 
