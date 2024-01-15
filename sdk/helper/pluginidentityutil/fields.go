@@ -63,6 +63,7 @@ func AddPluginIdentityTokenFields(m map[string]*framework.FieldSchema) {
 
 	for name, schema := range fields {
 		if _, ok := m[name]; ok {
+			// TODO: Similar to token helper which has a panic. Consider an error.
 			panic(fmt.Sprintf("adding field %q would overwrite existing field", name))
 		}
 		m[name] = schema
