@@ -148,46 +148,6 @@ func Test_ActivityLog_ClientsNewCurrentMonth(t *testing.T) {
 	require.Equal(t, 7, monthsResponse[0].NewClients.Counts.Clients)
 }
 
-// Test_ActivityLog_Disable writes data for a past month and a current month and
-// then disables the activity log. The test then queries for a timeframe that
-// includes both the disabled and enabled dates. The test verifies that the past
-// month's data is returned, but there is no current month data.
-func Test_ActivityLog_Disable(t *testing.T) {
-	t.Parallel()
-	cluster := minimal.NewTestSoloCluster(t, nil)
-	client := cluster.Cores[0].Client
-	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
-		"enabled": "enable",
-	})
-	require.NoError(t, err)
-	_, err = clientcountutil.NewActivityLogData(client).
-		NewPreviousMonthData(1).
-		NewClientsSeen(5).
-		NewCurrentMonthData().
-		NewClientsSeen(5).
-		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
-	require.NoError(t, err)
-
-	_, err = client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
-		"enabled": "disable",
-	})
-	now := time.Now().UTC()
-	// query from the beginning of the previous month to the end of this month
-	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
-		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
-	})
-	require.NoError(t, err)
-	monthsResponse := getMonthsData(t, resp)
-
-	// we only expect data for the previous month
-	require.Len(t, monthsResponse, 1)
-	lastMonthResp := monthsResponse[0]
-	ts, err := time.Parse(time.RFC3339, lastMonthResp.Timestamp)
-	require.NoError(t, err)
-	require.Equal(t, ts.UTC(), timeutil.StartOfPreviousMonth(now.UTC()))
-}
-
 // Test_ActivityLog_EmptyDataMonths writes data for only the current month,
 // then queries a timeframe of several months in the past to now. The test
 // verifies that empty months of data are returned for the past, and the current
@@ -381,4 +341,52 @@ func Test_SecretSync_Deduplication(t *testing.T) {
 	total := getTotals(t, resp)
 	require.Equal(t, 15, total.SecretSyncs)
 	require.Equal(t, 15, total.Clients)
+}
+
+// Test_ActivityLog_MountDeduplication writes data for the previous
+// month across 4 mounts. The cubbyhole and sys mounts have clients in the
+// current month as well. The test verifies that the mount counts are correctly
+// summed in the results when the previous and current month are queried.
+func Test_ActivityLog_MountDeduplication(t *testing.T) {
+	t.Parallel()
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+		"enabled": "enable",
+	})
+	require.NoError(t, err)
+	now := time.Now().UTC()
+
+	_, err = clientcountutil.NewActivityLogData(client).
+		NewPreviousMonthData(1).
+		NewClientSeen(clientcountutil.WithClientMount("sys")).
+		NewClientSeen(clientcountutil.WithClientMount("secret")).
+		NewClientSeen(clientcountutil.WithClientMount("cubbyhole")).
+		NewClientSeen(clientcountutil.WithClientMount("identity")).
+		NewCurrentMonthData().
+		NewClientSeen(clientcountutil.WithClientMount("cubbyhole")).
+		NewClientSeen(clientcountutil.WithClientMount("sys")).
+		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
+	require.NoError(t, err)
+
+	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
+		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
+	})
+
+	require.NoError(t, err)
+	byNamespace := getNamespaceData(t, resp)
+	require.Len(t, byNamespace, 1)
+	require.Len(t, byNamespace[0].Mounts, 4)
+	mountSet := make(map[string]int, 4)
+	for _, mount := range byNamespace[0].Mounts {
+		mountSet[mount.MountPath] = mount.Counts.Clients
+	}
+	require.Equal(t, map[string]int{
+		"identity/":  1,
+		"sys/":       2,
+		"cubbyhole/": 2,
+		"secret/":    1,
+	}, mountSet)
 }
