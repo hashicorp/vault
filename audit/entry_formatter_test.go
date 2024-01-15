@@ -18,6 +18,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/mitchellh/copystructure"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -821,6 +823,160 @@ func TestEntryFormatter_Process_JSONx(t *testing.T) {
 				name, strings.TrimSpace(string(jsonxBytes)), string(tc.ExpectedStr))
 		}
 	}
+}
+
+// TestEntryFormatter_FormatResponse_ElideListResponses ensures that we correctly
+// elide data in responses to LIST operations.
+func TestEntryFormatter_FormatResponse_ElideListResponses(t *testing.T) {
+	type test struct {
+		name         string
+		inputData    map[string]any
+		expectedData map[string]any
+	}
+
+	tests := map[string]struct {
+		inputData    map[string]any
+		expectedData map[string]any
+	}{
+		"nil data": {
+			nil,
+			nil,
+		},
+		"Normal list (keys only)": {
+			map[string]any{
+				"keys": []string{"foo", "bar", "baz"},
+			},
+			map[string]any{
+				"keys": 3,
+			},
+		},
+		"Enhanced list (has key_info)": {
+			map[string]any{
+				"keys": []string{"foo", "bar", "baz", "quux"},
+				"key_info": map[string]any{
+					"foo":  "alpha",
+					"bar":  "beta",
+					"baz":  "gamma",
+					"quux": "delta",
+				},
+			},
+			map[string]any{
+				"keys":     4,
+				"key_info": 4,
+			},
+		},
+		"Unconventional other values in a list response are not touched": {
+			map[string]any{
+				"keys":           []string{"foo", "bar"},
+				"something_else": "baz",
+			},
+			map[string]any{
+				"keys":           2,
+				"something_else": "baz",
+			},
+		},
+		"Conventional values in a list response are not elided if their data types are unconventional": {
+			map[string]any{
+				"keys": map[string]any{
+					"You wouldn't expect keys to be a map": nil,
+				},
+				"key_info": []string{
+					"You wouldn't expect key_info to be a slice",
+				},
+			},
+			map[string]any{
+				"keys": map[string]any{
+					"You wouldn't expect keys to be a map": nil,
+				},
+				"key_info": []string{
+					"You wouldn't expect key_info to be a slice",
+				},
+			},
+		},
+	}
+
+	oneInterestingTestCase := tests["Enhanced list (has key_info)"]
+
+	ss := newStaticSalt(t)
+	ctx := namespace.RootContext(context.Background())
+	var formatter *EntryFormatter
+	var err error
+
+	format := func(t *testing.T, config FormatterConfig, operation logical.Operation, inputData map[string]any) *ResponseEntry {
+		formatter, err = NewEntryFormatter(config, ss)
+		require.NoError(t, err)
+		require.NotNil(t, formatter)
+
+		in := &logical.LogInput{
+			Request:  &logical.Request{Operation: operation},
+			Response: &logical.Response{Data: inputData},
+		}
+
+		resp, err := formatter.FormatResponse(ctx, in)
+		require.NoError(t, err)
+
+		return resp
+	}
+
+	t.Run("Default case", func(t *testing.T) {
+		config, err := NewFormatterConfig(WithElision(true))
+		require.NoError(t, err)
+		for name, tc := range tests {
+			name := name
+			tc := tc
+			t.Run(name, func(t *testing.T) {
+				entry := format(t, config, logical.ListOperation, tc.inputData)
+				assert.Equal(t, formatter.hashExpectedValueForComparison(tc.expectedData), entry.Response.Data)
+			})
+		}
+	})
+
+	t.Run("When Operation is not list, eliding does not happen", func(t *testing.T) {
+		config, err := NewFormatterConfig(WithElision(true))
+		require.NoError(t, err)
+		tc := oneInterestingTestCase
+		entry := format(t, config, logical.ReadOperation, tc.inputData)
+		assert.Equal(t, formatter.hashExpectedValueForComparison(tc.inputData), entry.Response.Data)
+	})
+
+	t.Run("When ElideListResponses is false, eliding does not happen", func(t *testing.T) {
+		config, err := NewFormatterConfig(WithElision(false), WithFormat(JSONFormat.String()))
+		require.NoError(t, err)
+		tc := oneInterestingTestCase
+		entry := format(t, config, logical.ListOperation, tc.inputData)
+		assert.Equal(t, formatter.hashExpectedValueForComparison(tc.inputData), entry.Response.Data)
+	})
+
+	t.Run("When Raw is true, eliding still happens", func(t *testing.T) {
+		config, err := NewFormatterConfig(WithElision(true), WithRaw(true), WithFormat(JSONFormat.String()))
+		require.NoError(t, err)
+		tc := oneInterestingTestCase
+		entry := format(t, config, logical.ListOperation, tc.inputData)
+		assert.Equal(t, tc.expectedData, entry.Response.Data)
+	})
+}
+
+// hashExpectedValueForComparison replicates enough of the audit HMAC process on a piece of expected data in a test,
+// so that we can use assert.Equal to compare the expected and output values.
+func (f *EntryFormatter) hashExpectedValueForComparison(input map[string]any) map[string]any {
+	// Copy input before modifying, since we may re-use the same data in another test
+	copied, err := copystructure.Copy(input)
+	if err != nil {
+		panic(err)
+	}
+	copiedAsMap := copied.(map[string]any)
+
+	s, err := f.salter.Salt(context.Background())
+	if err != nil {
+		panic(err)
+	}
+
+	err = hashMap(s.GetIdentifiedHMAC, copiedAsMap, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	return copiedAsMap
 }
 
 // fakeEvent will return a new fake event containing audit data based  on the
