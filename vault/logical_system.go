@@ -1424,14 +1424,24 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		config.IdentityTokenKey = defaultOIDCKeyName
 	}
 
-	// Ensure that the key exists
-	k, err := b.Core.IdentityStore().getNamedKey(ctx, b.Core.IdentityStore().view,
-		config.IdentityTokenKey)
+	// Ensure the key exists and default key is lazy generated
+	identityStore := b.Core.IdentityStore()
+	identityStoreView := b.Core.IdentityStore().view
+	k, err := identityStore.getNamedKey(ctx, identityStoreView, config.IdentityTokenKey)
 	if err != nil {
 		return handleError(err)
 	}
 	if k == nil {
 		return handleError(fmt.Errorf("key %q does not exist", config.IdentityTokenKey))
+	}
+	// TODO(austin): Excludes default KV mount to pay cost of default key
+	//  generation at a later time. Consider alternative approach.
+	if path != "secret/" && logicalType != "kv" && config.IdentityTokenKey == defaultOIDCKeyName {
+		identityStore.oidcLock.Lock()
+		defer identityStore.oidcLock.Unlock()
+		if err := identityStore.lazyGenerateDefaultKey(ctx, identityStoreView); err != nil {
+			return nil, fmt.Errorf("failed to generate default key: %w", err)
+		}
 	}
 
 	// Create the mount entry
@@ -2191,14 +2201,22 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			identityTokenKey = defaultOIDCKeyName
 		}
 
-		// Ensure that the key exists
-		k, err := b.Core.IdentityStore().getNamedKey(ctx, b.Core.IdentityStore().view,
-			identityTokenKey)
+		// Ensure the key exists and default key is lazy generated
+		identityStore := b.Core.IdentityStore()
+		identityStoreView := b.Core.IdentityStore().view
+		k, err := identityStore.getNamedKey(ctx, identityStoreView, identityTokenKey)
 		if err != nil {
 			return handleError(err)
 		}
 		if k == nil {
 			return handleError(fmt.Errorf("key %q does not exist", identityTokenKey))
+		}
+		if identityTokenKey == defaultOIDCKeyName {
+			identityStore.oidcLock.Lock()
+			defer identityStore.oidcLock.Unlock()
+			if err := identityStore.lazyGenerateDefaultKey(ctx, identityStoreView); err != nil {
+				return nil, fmt.Errorf("failed to generate default key: %w", err)
+			}
 		}
 
 		oldVal := mountEntry.Config.IdentityTokenKey
@@ -2983,14 +3001,22 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		config.IdentityTokenKey = defaultOIDCKeyName
 	}
 
-	// Ensure that the key exists
-	k, err := b.Core.IdentityStore().getNamedKey(ctx, b.Core.IdentityStore().view,
-		config.IdentityTokenKey)
+	// Ensure the key exists and default key is lazy generated
+	identityStore := b.Core.IdentityStore()
+	identityStoreView := b.Core.IdentityStore().view
+	k, err := identityStore.getNamedKey(ctx, identityStoreView, config.IdentityTokenKey)
 	if err != nil {
 		return handleError(err)
 	}
 	if k == nil {
 		return handleError(fmt.Errorf("key %q does not exist", config.IdentityTokenKey))
+	}
+	if config.IdentityTokenKey == defaultOIDCKeyName {
+		identityStore.oidcLock.Lock()
+		defer identityStore.oidcLock.Unlock()
+		if err := identityStore.lazyGenerateDefaultKey(ctx, identityStoreView); err != nil {
+			return nil, fmt.Errorf("failed to generate default key: %w", err)
+		}
 	}
 
 	// Create the mount entry

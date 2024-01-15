@@ -59,9 +59,9 @@ func (b *backend) getRootConfig(ctx context.Context, s logical.Storage, clientTy
 			fetcher := &PluginIdentityTokenFetcher{
 				sys:      b.System(),
 				logger:   b.Logger(),
-				audience: config.IdentityTokenAudience,
 				ns:       ns,
-				ttl:      config.IdentityTokenTTL * time.Second,
+				audience: config.IdentityTokenAudience,
+				ttl:      config.IdentityTokenTTL,
 			}
 
 			sessionSuffix := strconv.FormatInt(time.Now().UnixNano(), 10)
@@ -158,7 +158,7 @@ func (f PluginIdentityTokenFetcher) FetchToken(ctx aws.Context) ([]byte, error) 
 
 	if resp.TTL < f.ttl {
 		f.logger.Debug("generated plugin identity token has shorter TTL than requested",
-			"requested", f.ttl.Seconds(), "actual", resp.TTL)
+			"requested", f.ttl, "actual", resp.TTL)
 	}
 
 	return []byte(resp.Token.Token()), nil

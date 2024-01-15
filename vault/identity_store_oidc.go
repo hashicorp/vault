@@ -1068,7 +1068,7 @@ func (i *IdentityStore) generatePluginIdentityToken(ctx context.Context, storage
 		"nbf": now.Unix(),
 		"iat": now.Unix(),
 		"exp": now.Add(ttl).Unix(),
-		"vault.hashicorp.com": map[string]any{
+		"vaultproject.io": map[string]any{
 			"namespace_id":   ns.ID,
 			"namespace_path": ns.Path,
 			"class":          me.Table,
