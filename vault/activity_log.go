@@ -1581,6 +1581,7 @@ type ResponseCounts struct {
 	SecretSyncs      int `json:"secret_syncs" mapstructure:"secret_syncs"`
 }
 
+// Add adds the new record's counts to the existing record
 func (r *ResponseCounts) Add(newRecord *ResponseCounts) {
 	if newRecord == nil {
 		return
@@ -1600,6 +1601,9 @@ type ResponseNamespace struct {
 	Mounts        []*ResponseMount `json:"mounts"`
 }
 
+// Add adds the namespace counts to the existing record, then either adds the
+// mount counts to the existing mount (if it exists) or appends the mount to the
+// list of mounts
 func (r *ResponseNamespace) Add(newRecord *ResponseNamespace) {
 	// Create a map of the existing mounts, so we don't duplicate them
 	mountMap := make(map[string]*ResponseCounts)

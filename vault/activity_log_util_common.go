@@ -382,6 +382,10 @@ func (e *segmentReader) ReadEntity(ctx context.Context) (*activity.EntityActivit
 	return out, nil
 }
 
+// namespaceRecordToCountsResponse converts the record to the ResponseCounts
+// type. The function sums entity, non-entity, and secret sync counts to get the
+// total client count. If includeDeprecated is true, the deprecated fields
+// NonEntityTokens and DistinctEntities are populated
 func (a *ActivityLog) countsRecordToCountsResponse(record *activity.CountsRecord, includeDeprecated bool) *ResponseCounts {
 	response := &ResponseCounts{
 		EntityClients:    record.EntityClients,
@@ -396,6 +400,9 @@ func (a *ActivityLog) countsRecordToCountsResponse(record *activity.CountsRecord
 	return response
 }
 
+// namespaceRecordToCountsResponse converts the namespace counts to the
+// ResponseCounts type. The function sums entity, non-entity, and secret sync
+// counts to get the total client count.
 func (a *ActivityLog) namespaceRecordToCountsResponse(record *activity.NamespaceRecord) *ResponseCounts {
 	return &ResponseCounts{
 		DistinctEntities: int(record.Entities),
