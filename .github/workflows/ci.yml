@@ -264,7 +264,7 @@ jobs:
           name: test-results-ui
           path: ui/test-results
         if: success() || failure()
-      - uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f # v2.1
+      - uses: test-summary/action@fee35d7df20790255fe6aa92cf0f6d28092ecf2f # v2.2
         with:
           paths: "ui/test-results/qunit/results.xml"
           show: "fail"
