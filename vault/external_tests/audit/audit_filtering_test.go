@@ -311,7 +311,6 @@ func checkAuditEntries(t *testing.T, logFile *os.File, key string, expectedValue
 		require.NoError(t, err)
 		req, ok := auditRecord["request"]
 		require.True(t, ok, "failed to parse request data from audit log entry")
-
 		auditRequest = req.(map[string]any)
 		require.Equal(t, expectedValue, auditRequest[key])
 		counter += 1
