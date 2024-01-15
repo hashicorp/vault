@@ -226,14 +226,14 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       # Setup node.js without caching to allow running npm install -g yarn (next step)
-      - uses: actions/setup-node@e33196f7422957bea03ed53f6fbb155025ffc7b8 # v3.7.0
+      - uses: actions/setup-node@b39b52d1213e96004bfcb1c61a8a6fa8ab84f3e8 # v4.0.1
         with:
           node-version-file: './ui/package.json'
       - id: install-yarn
         run: |
           npm install -g yarn
       # Setup node.js with caching using the yarn.lock file
-      - uses: actions/setup-node@e33196f7422957bea03ed53f6fbb155025ffc7b8 # v3.7.0
+      - uses: actions/setup-node@b39b52d1213e96004bfcb1c61a8a6fa8ab84f3e8 # v4.0.1
         with:
           node-version-file: './ui/package.json'
           cache: yarn
