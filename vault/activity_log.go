@@ -1618,7 +1618,7 @@ func (r *ResponseNamespace) Add(newRecord *ResponseNamespace) {
 	// later.
 	for _, newRecordMount := range newRecord.Mounts {
 		if existingRecordMountCounts, ok := mountMap[newRecordMount.MountPath]; ok {
-			existingRecordMountCounts.Add(&newRecord.Counts)
+			existingRecordMountCounts.Add(newRecordMount.Counts)
 		} else {
 			r.Mounts = append(r.Mounts, newRecordMount)
 		}
