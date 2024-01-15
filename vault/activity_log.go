@@ -1482,12 +1482,8 @@ func (a *ActivityLog) AddActivityToFragment(clientID string, namespaceID string,
 	// Check whether entity ID already recorded
 	var present bool
 
-	// TODO: This hack enables separate tracking of events without handling
-	// separate storage buckets for counting these event types. Consider
-	// removing if the event type is otherwise clear; notably though, this
-	// does help ensure clientID uniqueness across different types of tokens,
-	// assuming it does not break any other downstream systems.
-	if activityType != nonEntityTokenActivityType && activityType != entityActivityType {
+	// ACME clients are prefixed with "pki-acme."
+	if activityType == ACMEActivityType {
 		clientID = activityType + "." + clientID
 	}
 
@@ -1525,10 +1521,8 @@ func (a *ActivityLog) AddActivityToFragment(clientID string, namespaceID string,
 	// Track whether the clientID corresponds to a token without an entity or not.
 	// This field is backward compatible, as the default is 0, so records created
 	// from pre-1.9 activityLog code will automatically be marked as having an entity.
-	if activityType != entityActivityType {
-		// TODO: This part needs to be modified potentially for separate
-		// storage buckets of custom event types. Consider setting the above
-		// condition to activityType == nonEntityTokenEventType in the future.
+	switch activityType {
+	case nonEntityTokenActivityType, ACMEActivityType, secretSyncActivityType:
 		clientRecord.NonEntity = true
 	}
 
