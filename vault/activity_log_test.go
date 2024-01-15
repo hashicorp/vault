@@ -4802,3 +4802,93 @@ func TestActivityLog_HandleEndOfMonth(t *testing.T) {
 	require.Equal(t, now, pq.StartTime)
 	require.Equal(t, timeutil.EndOfMonth(now), pq.EndTime)
 }
+
+// TestAddActivityToFragment calls AddActivityToFragment for different types of
+// clients and verifies that they are added correctly to the tracking data
+// structures
+func TestAddActivityToFragment(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	a := core.activityLog
+	a.SetEnable(true)
+
+	mount := "mount"
+	namespace := "root"
+	id := "id1"
+	a.AddActivityToFragment(id, namespace, 0, entityActivityType, mount)
+
+	testCases := []struct {
+		name         string
+		id           string
+		activityType string
+		isAdded      bool
+		expectedID   string
+		isNonEntity  bool
+	}{
+		{
+			name:         "duplicate",
+			id:           id,
+			activityType: entityActivityType,
+			isAdded:      false,
+			expectedID:   id,
+		},
+		{
+			name:         "new entity",
+			id:           "new-id",
+			activityType: entityActivityType,
+			isAdded:      true,
+			expectedID:   "new-id",
+		},
+		{
+			name:         "new nonentity",
+			id:           "new-nonentity",
+			activityType: nonEntityTokenActivityType,
+			isAdded:      true,
+			expectedID:   "new-nonentity",
+			isNonEntity:  true,
+		},
+		{
+			name:         "new acme",
+			id:           "new-acme",
+			activityType: ACMEActivityType,
+			isAdded:      true,
+			expectedID:   "pki-acme.new-acme",
+			isNonEntity:  true,
+		},
+		{
+			name:         "new secret sync",
+			id:           "new-secret-sync",
+			activityType: secretSyncActivityType,
+			isAdded:      true,
+			expectedID:   "new-secret-sync",
+			isNonEntity:  true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			a.fragmentLock.RLock()
+			numClientsBefore := len(a.fragment.Clients)
+			a.fragmentLock.RUnlock()
+
+			a.AddActivityToFragment(tc.id, namespace, 0, tc.activityType, mount)
+			a.fragmentLock.RLock()
+			defer a.fragmentLock.RUnlock()
+			numClientsAfter := len(a.fragment.Clients)
+
+			if tc.isAdded {
+				require.Equal(t, numClientsBefore+1, numClientsAfter)
+			} else {
+				require.Equal(t, numClientsBefore, numClientsAfter)
+			}
+
+			require.Contains(t, a.partialMonthClientTracker, tc.expectedID)
+			require.True(t, proto.Equal(&activity.EntityRecord{
+				ClientID:      tc.expectedID,
+				NamespaceID:   namespace,
+				Timestamp:     0,
+				NonEntity:     tc.isNonEntity,
+				MountAccessor: mount,
+				ClientType:    tc.activityType,
+			}, a.partialMonthClientTracker[tc.expectedID]))
+		})
+	}
+}
