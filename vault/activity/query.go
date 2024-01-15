@@ -32,6 +32,11 @@ type CountsRecord struct {
 	SecretSyncs      int `json:"secret_syncs"`
 }
 
+// HasCounts returns true when any of the record's fields have a non-zero value
+func (c *CountsRecord) HasCounts() bool {
+	return c.EntityClients+c.NonEntityClients+c.SecretSyncs != 0
+}
+
 type NewClientRecord struct {
 	Counts     *CountsRecord             `json:"counts"`
 	Namespaces []*MonthlyNamespaceRecord `json:"namespaces"`
