@@ -146,11 +146,12 @@ vault-secrets-operator-system   vault-secrets-operator-controller-manager-56754d
 ```
 
 <Note title="Kustomize does not support all features of the Helm chart">
-  Kustomize does not support all features of the Helm chart.
+
   Notably it will not deploy default VaultAuthMethod, VaultConnection or transit related resources.
   Kustomize also does not support pre-delete hooks that the helm chart uses to cleanup resources
   and remove finalizers. Please see [`config/samples`](https://github.com/hashicorp/vault-secrets-operator/config/samples)
   or `config/samples` in the downloaded release artifacts for additional resources.
+
 </Note>
 
 ## Upgrade using Kustomize
