@@ -813,7 +813,18 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
 	}
 
-	// TODO(austin): check if key is used by any plugin mounts and prevent deletion
+	mounts, err := i.mountsReferencingKey(targetKeyName)
+	if err != nil {
+		i.oidcLock.Unlock()
+		return nil, err
+	}
+
+	if len(mounts) > 0 {
+		errorMessage := fmt.Sprintf("unable to delete key %q because it is currently referenced by these mounts: %s",
+			targetKeyName, strings.Join(mounts, ", "))
+		i.oidcLock.Unlock()
+		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
+	}
 
 	// key can safely be deleted now
 	err = req.Storage.Delete(ctx, namedKeyConfigPath+targetKeyName)
@@ -834,6 +845,38 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 	}
 
 	return nil, nil
+}
+
+// TODO: test this with namespaces
+func (i *IdentityStore) listMounts() ([]*MountEntry, error) {
+	secretMounts, err := i.mountLister.ListMounts()
+	if err != nil {
+		return nil, err
+	}
+
+	authMounts, err := i.mountLister.ListAuths()
+	if err != nil {
+		return nil, err
+	}
+
+	return append(authMounts, secretMounts...), nil
+}
+
+// TODO: test this with namespaces
+func (i *IdentityStore) mountsReferencingKey(key string) ([]string, error) {
+	allMounts, err := i.listMounts()
+	if err != nil {
+		return nil, err
+	}
+
+	var mountsWithKey []string
+	for _, mount := range allMounts {
+		if mount.Config.IdentityTokenKey == key {
+			mountsWithKey = append(mountsWithKey, mount.Path)
+		}
+	}
+
+	return mountsWithKey, nil
 }
 
 // handleOIDCListKey is used to list named keys
@@ -1868,8 +1911,6 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 	if err != nil {
 		return nil, err
 	}
-
-	// collect and deduplicate the key IDs for all roles
 	keyIDs := make(map[string]struct{})
 	for _, roleName := range roleNames {
 		role, err := i.getOIDCRole(ctx, s, roleName)
@@ -1890,13 +1931,20 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 		}
 	}
 
-	// Always add the default key
-	defaultKeyIDs, err := i.keyIDsByName(ctx, s, defaultOIDCKeyName)
+	// Also return keys that are associated with a mount
+	mounts, err := i.listMounts()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load default key IDs: %w", err)
+		return nil, err
 	}
-	for _, id := range defaultKeyIDs {
-		keyIDs[id] = struct{}{}
+	for _, mount := range mounts {
+		mountKeyIDs, err := i.keyIDsByName(ctx, s, mount.Config.IdentityTokenKey)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, keyID := range mountKeyIDs {
+			keyIDs[keyID] = struct{}{}
+		}
 	}
 
 	jwks := &jose.JSONWebKeySet{
