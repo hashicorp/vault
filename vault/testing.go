@@ -33,7 +33,6 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
-	raftlib "github.com/hashicorp/raft"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/mitchellh/copystructure"
 	"github.com/mitchellh/go-testing-interface"
@@ -1041,6 +1040,12 @@ type PhysicalBackendBundle struct {
 	Backend   physical.Backend
 	HABackend physical.HABackend
 	Cleanup   func()
+	// MutateCoreConfig is invoked when applying the bundle to core config
+	// during core creation.  We do it this way rather than providing the input
+	// directly as part of the CoreConfig passed in to NewTestCluster so that
+	// the same input conf and opts can be used for multiple clusters, but at
+	// the same time can have per-cluster configuration specified by the backend.
+	MutateCoreConfig func(conf *CoreConfig)
 }
 
 type HandlerHandler interface {
@@ -1103,14 +1108,6 @@ type TestClusterOptions struct {
 	// InmemClusterLayers is a shorthand way of asking for ClusterLayers to be
 	// built using the inmem implementation.
 	InmemClusterLayers bool
-
-	// RaftAddressProvider is used to set the raft ServerAddressProvider on
-	// each core.
-	//
-	// If SkipInit is true, then RaftAddressProvider has no effect.
-	// RaftAddressProvider should only be specified if the underlying physical
-	// storage is Raft.
-	RaftAddressProvider raftlib.ServerAddressProvider
 
 	CoreMetricSinkProvider func(clusterName string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper)
 
@@ -1862,6 +1859,10 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 			// Cleanup setup
 			if physBundle.Cleanup != nil {
 				cleanupFunc = physBundle.Cleanup
+			}
+
+			if physBundle.MutateCoreConfig != nil {
+				physBundle.MutateCoreConfig(&localConfig)
 			}
 		}
 	}
