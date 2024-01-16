@@ -216,18 +216,18 @@
         ]
       },
       {
-        "title": "Key/Value",
+        "title": "Key Value",
         "routes": [
           {
             "title": "Overview",
             "path": "secret/kv"
           },
           {
-            "title": "K/V Version 1",
+            "title": "KV version 1",
             "path": "secret/kv/kv-v1"
           },
           {
-            "title": "K/V Version 2",
+            "title": "KV version 2",
             "path": "secret/kv/kv-v2"
           }
         ]

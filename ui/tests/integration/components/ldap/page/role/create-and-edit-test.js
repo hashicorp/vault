@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -10,6 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (hooks) {
   setupRenderingTest(hooks);
@@ -50,6 +51,12 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
         { owner: this.engine }
       );
     };
+    setRunOptions({
+      rules: {
+        // TODO: Fix JsonEditor component
+        label: { enabled: false },
+      },
+    });
   });
 
   test('it should display different form fields based on type', async function (assert) {

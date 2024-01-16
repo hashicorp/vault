@@ -37,12 +37,12 @@ const validations = {
 export default class MfaLoginEnforcementModel extends Model {
   @service store;
   @attr('string') name;
-  @hasMany('mfa-method') mfa_methods;
+  @hasMany('mfa-method', { async: true, inverse: null }) mfa_methods;
   @attr('string') namespace_id;
   @attr('array', { defaultValue: () => [] }) auth_method_accessors; // ["auth_approle_17a552c6"]
   @attr('array', { defaultValue: () => [] }) auth_method_types; // ["userpass"]
-  @hasMany('identity/entity') identity_entities;
-  @hasMany('identity/group') identity_groups;
+  @hasMany('identity/entity', { async: true, inverse: null }) identity_entities;
+  @hasMany('identity/group', { async: true, inverse: null }) identity_groups;
 
   get targets() {
     return ArrayProxy.extend(PromiseProxyMixin).create({

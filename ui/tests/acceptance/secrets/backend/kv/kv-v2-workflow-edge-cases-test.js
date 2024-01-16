@@ -59,11 +59,11 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       const backend = this.backend;
       const token = await runCmd([
         createPolicyCmd(
-          'nested-secret-list-reader',
+          `nested-secret-list-reader-${this.backend}`,
           metadataPolicy({ backend, secretPath, capabilities }) +
             dataPolicy({ backend, secretPath, capabilities })
         ),
-        createTokenCmd('nested-secret-list-reader'),
+        createTokenCmd(`nested-secret-list-reader-${this.backend}`),
       ]);
       await authPage.login(token);
     });
@@ -95,7 +95,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       );
 
       // Title correct
-      assert.dom(PAGE.title).hasText(`${backend} Version 2`);
+      assert.dom(PAGE.title).hasText(`${backend} version 2`);
       // Tabs correct
       assert.dom(PAGE.secretTab('Secrets')).hasText('Secrets');
       assert.dom(PAGE.secretTab('Secrets')).hasClass('active');
@@ -191,14 +191,14 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       // user has different permissions for each secret path
       const token = await runCmd([
         createPolicyCmd(
-          'destruction-no-read',
+          `destruction-no-read-${this.backend}`,
           dataPolicy({ backend, secretPath: 'data-delete-only', capabilities: ['delete'] }) +
             deleteVersionsPolicy({ backend, secretPath: 'delete-version-only' }) +
             destroyVersionsPolicy({ backend, secretPath: 'destroy-version-only' }) +
             metadataPolicy({ backend, secretPath: 'destroy-metadata-only', capabilities: ['delete'] }) +
             metadataListPolicy(backend)
         ),
-        createTokenCmd('destruction-no-read'),
+        createTokenCmd(`destruction-no-read-${this.backend}`),
       ]);
       for (const secret of testSecrets) {
         await writeVersionedSecret(backend, secret, 'foo', 'bar', 2);
@@ -271,7 +271,12 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     assert.dom(PAGE.list.item()).exists({ count: 2 }, 'two secrets are listed');
   });
 
-  test('complex values default to JSON display', async function (assert) {
+  test('advanced secret values default to JSON display', async function (assert) {
+    const obscuredData = `{
+  "foo3": {
+    "name": "********"
+  }
+}`;
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'complex');
 
@@ -279,10 +284,34 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     assert.strictEqual(codemirror().getValue(), '{ "": "" }');
     codemirror().setValue('{ "foo3": { "name": "bar3" } }');
     await click(FORM.saveBtn);
-    // Future: test that json is automatic on details too
+
+    // Details view
+    assert.dom(FORM.toggleJson).isDisabled();
+    assert.dom(FORM.toggleJson).isChecked();
+    assert.strictEqual(
+      codemirror().getValue(),
+      obscuredData,
+      'Value is obscured by default on details view when advanced'
+    );
+    await click('[data-test-toggle-input="revealValues"]');
+    assert.false(codemirror().getValue().includes('*'), 'Value unobscured after toggle');
+
+    // New version view
     await click(PAGE.detail.createNewVersion);
     assert.dom(FORM.toggleJson).isDisabled();
     assert.dom(FORM.toggleJson).isChecked();
+    assert.false(codemirror().getValue().includes('*'), 'Values are not obscured on edit view');
+  });
+  test('does not register as advanced when value includes {', async function (assert) {
+    await visit(`/vault/secrets/${this.backend}/kv/create`);
+    await fillIn(FORM.inputByAttr('path'), 'not-advanced');
+
+    await fillIn(FORM.keyInput(), 'foo');
+    await fillIn(FORM.maskedValueInput(), '{bar}');
+    await click(FORM.saveBtn);
+    await click(PAGE.detail.createNewVersion);
+    assert.dom(FORM.toggleJson).isNotDisabled();
+    assert.dom(FORM.toggleJson).isNotChecked();
   });
 });
 

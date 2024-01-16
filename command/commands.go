@@ -68,6 +68,7 @@ import (
 	physFile "github.com/hashicorp/vault/sdk/physical/file"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 
+	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	csr "github.com/hashicorp/vault/serviceregistration/consul"
 	ksr "github.com/hashicorp/vault/serviceregistration/kubernetes"
@@ -148,6 +149,8 @@ const (
 	flagNameDisableRedirects = "disable-redirects"
 	// flagNameCombineLogs is used to specify whether log output should be combined and sent to stdout
 	flagNameCombineLogs = "combine-logs"
+	// flagDisableGatedLogs is used to disable gated logs and immediately show the vault logs as they become available
+	flagDisableGatedLogs = "disable-gated-logs"
 	// flagNameLogFile is used to specify the path to the log file that Vault should use for logging
 	flagNameLogFile = "log-file"
 	// flagNameLogRotateBytes is the flag used to specify the number of bytes a log file should be before it is rotated.
@@ -248,10 +251,11 @@ var (
 func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
 	getBaseCommand := func() *BaseCommand {
 		return &BaseCommand{
-			UI:          ui,
-			tokenHelper: runOpts.TokenHelper,
-			flagAddress: runOpts.Address,
-			client:      runOpts.Client,
+			UI:             ui,
+			tokenHelper:    runOpts.TokenHelper,
+			flagAddress:    runOpts.Address,
+			client:         runOpts.Client,
+			hcpTokenHelper: runOpts.HCPTokenHelper,
 		}
 	}
 
@@ -913,7 +917,22 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 	}
 
 	entInitCommands(ui, serverCmdUi, runOpts, commands)
+	initHCPCommands(ui, commands)
+
 	return commands
+}
+
+func initHCPCommands(ui cli.Ui, commands map[string]cli.CommandFactory) {
+	for cmd, cmdFactory := range hcpvlib.InitHCPCommand(ui) {
+		// check for conflicts and only put command in the map in case it doesn't conflict with existing one
+		_, ok := commands[cmd]
+		if !ok {
+			commands[cmd] = cmdFactory
+		} else {
+			ui.Error("Failed to initialize HCP commands.")
+			break
+		}
+	}
 }
 
 // MakeShutdownCh returns a channel that can be used for shutdown

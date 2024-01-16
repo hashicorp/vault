@@ -131,10 +131,6 @@ environment variable as a comma separated string. This environment variable will
 Valid values include: `auto-auth`, and `proxying`. Can also be configured by setting the `VAULT_PROXY_DISABLE_KEEP_ALIVES`
 environment variable as a comma separated string. This environment variable will override any values found in a configuration file.
 
-- `template` <code>([template][template]: <optional\>)</code> - Specifies options used for templating Vault secrets to files.
-
-- `template_config` <code>([template_config][template-config]: <optional\>)</code> - Specifies templating engine behavior.
-
 - `telemetry` <code>([telemetry][telemetry]: <optional\>)</code> – Specifies the telemetry
 reporting system. See the [telemetry Stanza](/vault/docs/agent-and-proxy/proxy#telemetry-stanza) section below
 for a list of metrics specific to Proxy.
@@ -191,6 +187,12 @@ be overridden by setting the `VAULT_SKIP_VERIFY` environment variable.
 - `tls_server_name` `(string: <optional>)` - Name to use as the SNI host when
 connecting via TLS. This value can be overridden by setting the
 `VAULT_TLS_SERVER_NAME` environment variable.
+
+- `namespace` `(string: <optional>)` - Namespace to use for all of Vault Proxy's
+requests to Vault. This can also be specified by command line or environment variable.
+The order of precedence is: this setting lowest, followed by the environment variable
+`VAULT_NAMESPACE`, and then the highest precedence command-line option `-namespace`.
+If none of these are specified, defaults to the root namespace.
 
 #### retry stanza
 
@@ -349,8 +351,6 @@ listener "tcp" {
 [caching]: /vault/docs/agent-and-proxy/proxy/caching
 [apiproxy]: /vault/docs/agent-and-proxy/proxy/apiproxy
 [persistent-cache]: /vault/docs/agent-and-proxy/proxy/caching/persistent-caches
-[template]: /vault/docs/agent-and-proxy/proxy/template
-[template-config]: /vault/docs/agent-and-proxy/proxy/template#template-configurations
 [proxy-api]: /vault/docs/agent-and-proxy/proxy/#proxy_api-stanza
 [listener]: /vault/docs/agent-and-proxy/proxy#listener-stanza
 [listener_main]: /vault/docs/configuration/listener/tcp

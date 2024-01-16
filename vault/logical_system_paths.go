@@ -251,7 +251,6 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["config/ui/headers"][0]),
 			HelpSynopsis:    strings.TrimSpace(sysHelp["config/ui/headers"][1]),
 		},
-
 		{
 			Pattern: "generate-root(/attempt)?$",
 
@@ -2437,6 +2436,37 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			HelpSynopsis: "Generate an OpenAPI 3 document of all mounted paths.",
 		},
 		{
+			Pattern: "internal/ui/authenticated-messages",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "read",
+				OperationSuffix: "authenticated-active-custom-messages",
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathInternalUIAuthenticatedMessages,
+					Summary:  "Retrieves Active post-login Custom Messages",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:     framework.TypeStringSlice,
+									Required: true,
+								},
+								"key_info": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
+			},
+		},
+		{
 			Pattern: "internal/ui/feature-flags",
 
 			DisplayAttrs: &framework.DisplayAttributes{
@@ -2653,6 +2683,37 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][1]),
+		},
+		{
+			Pattern: "internal/ui/unauthenticated-messages",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "read",
+				OperationSuffix: "unauthenticated-active-custom-messages",
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathInternalUIUnauthenticatedMessages,
+					Summary:  "Retrieves Active pre-login Custom Messages",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:     framework.TypeStringSlice,
+									Required: true,
+								},
+								"key_info": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
+			},
 		},
 		{
 			Pattern: "internal/ui/version",

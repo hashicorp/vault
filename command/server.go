@@ -1104,6 +1104,11 @@ func (c *ServerCommand) Run(args []string) int {
 	c.logger = l
 	c.allLoggers = append(c.allLoggers, l)
 
+	// flush logs right away if the server is started with the disable-gated-logs flag
+	if c.logFlags.flagDisableGatedLogs {
+		c.flushLog()
+	}
+
 	// reporting Errors found in the config
 	for _, cErr := range configErrors {
 		c.logger.Warn(cErr.String())
@@ -2061,10 +2066,10 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 	resp, err := core.HandleRequest(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("error creating default K/V store: %w", err)
+		return nil, fmt.Errorf("error creating default KV store: %w", err)
 	}
 	if resp.IsError() {
-		return nil, fmt.Errorf("failed to create default K/V store: %w", resp.Error())
+		return nil, fmt.Errorf("failed to create default KV store: %w", resp.Error())
 	}
 
 	return init, nil

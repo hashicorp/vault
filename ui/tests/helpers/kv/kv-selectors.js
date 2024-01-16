@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 export const PAGE = {
@@ -49,6 +49,7 @@ export const PAGE = {
     deleteOption: 'input#delete-version',
     deleteOptionLatest: 'input#delete-latest-version',
     deleteConfirm: '[data-test-delete-modal-confirm]',
+    syncAlert: (name) => (name ? `[data-test-sync-alert="${name}"]` : '[data-test-sync-alert]'),
   },
   edit: {
     toggleDiff: '[data-test-toggle-input="Show diff"',
@@ -85,8 +86,8 @@ export const PAGE = {
   },
   paths: {
     copyButton: (label) => `${PAGE.infoRowValue(label)} button`,
-    codeSnippet: (section) => `[data-test-code-snippet][data-test-commands="${section}"] code`,
-    snippetCopy: (section) => `[data-test-code-snippet][data-test-commands="${section}"] button`,
+    codeSnippet: (section) => `[data-test-commands="${section}"] code`,
+    snippetCopy: (section) => `[data-test-commands="${section}"] button`,
   },
 };
 

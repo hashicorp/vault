@@ -15,7 +15,7 @@
 </PageHeader>
 
 <Toolbar>
-  <ToolbarActions>
+  <ToolbarActions aria-label="actions for role {{@role.id}}">
     {{#if @model.canDelete}}
       <ConfirmAction
         @buttonText="Delete role"

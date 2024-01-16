@@ -8,9 +8,9 @@ import (
 	"io"
 	"time"
 
-	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-bexpr"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
-
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -35,8 +35,8 @@ type subtype string
 // format defines types of format audit events support.
 type format string
 
-// auditEvent is the audit event.
-type auditEvent struct {
+// AuditEvent is the audit event.
+type AuditEvent struct {
 	ID        string            `json:"id"`
 	Version   string            `json:"version"`
 	Subtype   subtype           `json:"subtype"` // the subtype of the audit event.
@@ -142,6 +142,13 @@ type FormatterConfig struct {
 
 	// The required/target format for the event (supported: JSONFormat and JSONxFormat).
 	RequiredFormat format
+}
+
+// EntryFilter should be used to filter audit requests and responses which should
+// make it to a sink.
+type EntryFilter struct {
+	// the evaluator for the bexpr expression that should be applied by the node.
+	evaluator *bexpr.Evaluator
 }
 
 // RequestEntry is the structure of a request audit log entry.
@@ -268,6 +275,15 @@ type Backend interface {
 	// Salter interface must be implemented by anything implementing Backend.
 	Salter
 
+	// The PipelineReader interface allows backends to surface information about their
+	// nodes for node and pipeline registration.
+	event.PipelineReader
+
+	// IsFallback can be used to determine if this audit backend device is intended to
+	// be used as a fallback to catch all events that are not written when only using
+	// filtered pipelines.
+	IsFallback() bool
+
 	// LogRequest is used to synchronously log a request. This is done after the
 	// request is authorized but before the request is executed. The arguments
 	// MUST not be modified in any way. They should be deep copied if this is
@@ -291,12 +307,6 @@ type Backend interface {
 
 	// Invalidate is called for path invalidation
 	Invalidate(context.Context)
-
-	// RegisterNodesAndPipeline provides an eventlogger.Broker pointer so that
-	// the Backend can call its RegisterNode and RegisterPipeline methods with
-	// the nodes and the pipeline that were created in the corresponding
-	// Factory function.
-	RegisterNodesAndPipeline(*eventlogger.Broker, string) error
 }
 
 // BackendConfig contains configuration parameters used in the factory func to

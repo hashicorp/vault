@@ -11,6 +11,7 @@ import { render, click, waitUntil, find, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { Response } from 'miragejs';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | kubernetes | Page::Configure', function (hooks) {
   setupRenderingTest(hooks);
@@ -43,6 +44,13 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
       kubernetes_host: null,
       service_account_jwt: null,
     };
+    setRunOptions({
+      rules: {
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+      },
+    });
   });
 
   test('it should display proper options when toggling radio cards', async function (assert) {
