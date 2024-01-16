@@ -7,6 +7,7 @@ package activity_testonly
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -147,46 +148,6 @@ func Test_ActivityLog_ClientsNewCurrentMonth(t *testing.T) {
 	require.Equal(t, 7, monthsResponse[0].NewClients.Counts.Clients)
 }
 
-// Test_ActivityLog_Disable writes data for a past month and a current month and
-// then disables the activity log. The test then queries for a timeframe that
-// includes both the disabled and enabled dates. The test verifies that the past
-// month's data is returned, but there is no current month data.
-func Test_ActivityLog_Disable(t *testing.T) {
-	t.Parallel()
-	cluster := minimal.NewTestSoloCluster(t, nil)
-	client := cluster.Cores[0].Client
-	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
-		"enabled": "enable",
-	})
-	require.NoError(t, err)
-	_, err = clientcountutil.NewActivityLogData(client).
-		NewPreviousMonthData(1).
-		NewClientsSeen(5).
-		NewCurrentMonthData().
-		NewClientsSeen(5).
-		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
-	require.NoError(t, err)
-
-	_, err = client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
-		"enabled": "disable",
-	})
-	now := time.Now().UTC()
-	// query from the beginning of the previous month to the end of this month
-	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
-		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
-	})
-	require.NoError(t, err)
-	monthsResponse := getMonthsData(t, resp)
-
-	// we only expect data for the previous month
-	require.Len(t, monthsResponse, 1)
-	lastMonthResp := monthsResponse[0]
-	ts, err := time.Parse(time.RFC3339, lastMonthResp.Timestamp)
-	require.NoError(t, err)
-	require.Equal(t, ts.UTC(), timeutil.StartOfPreviousMonth(now.UTC()))
-}
-
 // Test_ActivityLog_EmptyDataMonths writes data for only the current month,
 // then queries a timeframe of several months in the past to now. The test
 // verifies that empty months of data are returned for the past, and the current
@@ -236,4 +197,196 @@ func getMonthsData(t *testing.T, resp *api.Secret) []vault.ResponseMonth {
 	err := mapstructure.Decode(monthsRaw, &monthsResponse)
 	require.NoError(t, err)
 	return monthsResponse
+}
+
+func getNamespaceData(t *testing.T, resp *api.Secret) []vault.ResponseNamespace {
+	t.Helper()
+	nsRaw, ok := resp.Data["by_namespace"]
+	require.True(t, ok)
+	nsResponse := make([]vault.ResponseNamespace, 0)
+	err := mapstructure.Decode(nsRaw, &nsResponse)
+	require.NoError(t, err)
+	return nsResponse
+}
+
+func getTotals(t *testing.T, resp *api.Secret) vault.ResponseCounts {
+	t.Helper()
+	totalRaw, ok := resp.Data["total"]
+	require.True(t, ok)
+	total := vault.ResponseCounts{}
+	err := mapstructure.Decode(totalRaw, &total)
+	require.NoError(t, err)
+	return total
+}
+
+// Test_ActivityLog_SecretSyncResponse creates 10 secret sync clients and
+// verifies that the activity log query response returns 10 secret sync clients
+// at every level of the response hierarchy
+func Test_ActivityLog_SecretSyncResponse(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+		"enabled": "enable",
+	})
+	_, err = clientcountutil.NewActivityLogData(client).
+		NewCurrentMonthData().
+		NewClientsSeen(10, clientcountutil.WithClientType("secret-sync")).
+		Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
+	require.NoError(t, err)
+
+	now := time.Now().UTC()
+	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
+		"start_time": {timeutil.StartOfMonth(now).Format(time.RFC3339)},
+	})
+	require.NoError(t, err)
+
+	total := getTotals(t, resp)
+	require.Equal(t, 10, total.SecretSyncs)
+	require.Equal(t, 10, total.Clients)
+
+	byNamespace := getNamespaceData(t, resp)
+	require.Equal(t, 10, byNamespace[0].Counts.SecretSyncs)
+	require.Equal(t, 10, byNamespace[0].Mounts[0].Counts.SecretSyncs)
+	require.Equal(t, 10, byNamespace[0].Counts.Clients)
+	require.Equal(t, 10, byNamespace[0].Mounts[0].Counts.Clients)
+
+	byMonth := getMonthsData(t, resp)
+	require.Equal(t, 10, byMonth[0].NewClients.Counts.SecretSyncs)
+	require.Equal(t, 10, byMonth[0].Counts.SecretSyncs)
+	require.Equal(t, 10, byMonth[0].Namespaces[0].Counts.SecretSyncs)
+	require.Equal(t, 10, byMonth[0].Namespaces[0].Mounts[0].Counts.SecretSyncs)
+	require.Equal(t, 10, byMonth[0].NewClients.Counts.Clients)
+	require.Equal(t, 10, byMonth[0].Counts.Clients)
+	require.Equal(t, 10, byMonth[0].Namespaces[0].Counts.Clients)
+	require.Equal(t, 10, byMonth[0].Namespaces[0].Mounts[0].Counts.Clients)
+}
+
+// Test_ActivityLogCurrentMonth_SecretSyncResponse creates 10 secret sync
+// clients and verifies that the activity log partial month response returns
+// 10 secret sync clients at every level of the response hierarchy
+func Test_ActivityLogCurrentMonth_SecretSyncResponse(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+		"enabled": "enable",
+	})
+	_, err = clientcountutil.NewActivityLogData(client).
+		NewCurrentMonthData().
+		NewClientsSeen(10, clientcountutil.WithClientType("secret-sync")).
+		Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
+	require.NoError(t, err)
+
+	resp, err := client.Logical().Read("sys/internal/counters/activity/monthly")
+	require.NoError(t, err)
+
+	secretSyncs, ok := resp.Data["secret_syncs"]
+	require.True(t, ok)
+	require.Equal(t, json.Number("10"), secretSyncs)
+	clients, ok := resp.Data["clients"]
+	require.True(t, ok)
+	require.Equal(t, json.Number("10"), clients)
+
+	byNamespace := getNamespaceData(t, resp)
+	require.Equal(t, 10, byNamespace[0].Counts.SecretSyncs)
+	require.Equal(t, 10, byNamespace[0].Mounts[0].Counts.SecretSyncs)
+	require.Equal(t, 10, byNamespace[0].Counts.Clients)
+	require.Equal(t, 10, byNamespace[0].Mounts[0].Counts.Clients)
+
+	byMonth := getMonthsData(t, resp)
+	require.Equal(t, 10, byMonth[0].NewClients.Counts.SecretSyncs)
+	require.Equal(t, 10, byMonth[0].Counts.SecretSyncs)
+	require.Equal(t, 10, byMonth[0].Namespaces[0].Counts.SecretSyncs)
+	require.Equal(t, 10, byMonth[0].Namespaces[0].Mounts[0].Counts.SecretSyncs)
+	require.Equal(t, 10, byMonth[0].NewClients.Counts.Clients)
+	require.Equal(t, 10, byMonth[0].Counts.Clients)
+	require.Equal(t, 10, byMonth[0].Namespaces[0].Counts.Clients)
+	require.Equal(t, 10, byMonth[0].Namespaces[0].Mounts[0].Counts.Clients)
+}
+
+// Test_SecretSync_Deduplication verifies that secret sync clients are
+// deduplicated across months. The test creates 10 secret sync clients and
+// repeats those clients in later months, then also registers 3 and then 2 new
+// secret sync clients. The test verifies that the total number of secret sync
+// clients is 15 (10 + 2 + 3), ensuring that the duplicates are not included
+func Test_SecretSync_Deduplication(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+		"enabled": "enable",
+	})
+	_, err = clientcountutil.NewActivityLogData(client).
+		NewPreviousMonthData(3).
+		NewClientsSeen(10, clientcountutil.WithClientType("secret-sync")).
+		NewPreviousMonthData(2).
+		RepeatedClientsSeen(4, clientcountutil.WithClientType("secret-sync")).
+		NewClientsSeen(3, clientcountutil.WithClientType("secret-sync")).
+		NewPreviousMonthData(1).
+		RepeatedClientsSeen(5, clientcountutil.WithClientType("secret-sync")).
+		NewClientsSeen(2, clientcountutil.WithClientType("secret-sync")).
+		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES)
+	require.NoError(t, err)
+
+	now := time.Now().UTC()
+	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+		"end_time":   {timeutil.StartOfMonth(now).Format(time.RFC3339)},
+		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(4, now)).Format(time.RFC3339)},
+	},
+	)
+	require.NoError(t, err)
+
+	total := getTotals(t, resp)
+	require.Equal(t, 15, total.SecretSyncs)
+	require.Equal(t, 15, total.Clients)
+}
+
+// Test_ActivityLog_MountDeduplication writes data for the previous
+// month across 4 mounts. The cubbyhole and sys mounts have clients in the
+// current month as well. The test verifies that the mount counts are correctly
+// summed in the results when the previous and current month are queried.
+func Test_ActivityLog_MountDeduplication(t *testing.T) {
+	t.Parallel()
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+		"enabled": "enable",
+	})
+	require.NoError(t, err)
+	now := time.Now().UTC()
+
+	_, err = clientcountutil.NewActivityLogData(client).
+		NewPreviousMonthData(1).
+		NewClientSeen(clientcountutil.WithClientMount("sys")).
+		NewClientSeen(clientcountutil.WithClientMount("secret")).
+		NewClientSeen(clientcountutil.WithClientMount("cubbyhole")).
+		NewClientSeen(clientcountutil.WithClientMount("identity")).
+		NewCurrentMonthData().
+		NewClientSeen(clientcountutil.WithClientMount("cubbyhole")).
+		NewClientSeen(clientcountutil.WithClientMount("sys")).
+		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
+	require.NoError(t, err)
+
+	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
+		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
+	})
+
+	require.NoError(t, err)
+	byNamespace := getNamespaceData(t, resp)
+	require.Len(t, byNamespace, 1)
+	require.Len(t, byNamespace[0].Mounts, 4)
+	mountSet := make(map[string]int, 4)
+	for _, mount := range byNamespace[0].Mounts {
+		mountSet[mount.MountPath] = mount.Counts.Clients
+	}
+	require.Equal(t, map[string]int{
+		"identity/":  1,
+		"sys/":       2,
+		"cubbyhole/": 2,
+		"secret/":    1,
+	}, mountSet)
 }

@@ -49,7 +49,7 @@ export default class PkiOverviewRoute extends Route {
 
   async model() {
     return hash({
-      hasConfig: this.shouldPromptConfig,
+      hasConfig: this.pkiMountHasConfig,
       engine: this.modelFor('application'),
       roles: this.fetchAllRoles(),
       issuers: this.fetchAllIssuers(),

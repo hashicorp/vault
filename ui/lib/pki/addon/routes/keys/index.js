@@ -23,7 +23,7 @@ export default class PkiKeysIndexRoute extends Route {
   model(params) {
     const page = Number(params.page) || 1;
     return hash({
-      hasConfig: this.shouldPromptConfig,
+      hasConfig: this.pkiMountHasConfig,
       parentModel: this.modelFor('keys'),
       keyModels: this.store
         .lazyPaginatedQuery('pki/key', {

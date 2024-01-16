@@ -25,8 +25,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
-	uberAtomic "go.uber.org/atomic"
-
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
@@ -42,6 +40,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/quotas"
 	"github.com/hashicorp/vault/vault/tokens"
+	uberAtomic "go.uber.org/atomic"
 )
 
 const (
@@ -898,7 +897,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 				NonHMACReqDataKeys:  nonHMACReqDataKeys,
 				NonHMACRespDataKeys: nonHMACRespDataKeys,
 			}
-			if auditErr := c.auditBroker.LogResponse(ctx, logInput, c.auditedHeaders); auditErr != nil {
+			if auditErr := c.auditBroker.LogResponse(ctx, logInput); auditErr != nil {
 				c.logger.Error("failed to audit response", "request_path", req.Path, "error", auditErr)
 				return nil, ErrInternalError
 			}
@@ -1088,7 +1087,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 				OuterErr:           ctErr,
 				NonHMACReqDataKeys: nonHMACReqDataKeys,
 			}
-			if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+			if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 				c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			}
 		}
@@ -1109,7 +1108,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			Request:            req,
 			NonHMACReqDataKeys: nonHMACReqDataKeys,
 		}
-		if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+		if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 			c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
@@ -1451,7 +1450,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			OuterErr:           ctErr,
 			NonHMACReqDataKeys: nonHMACReqDataKeys,
 		}
-		if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+		if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 			c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			return nil, nil, ErrInternalError
 		}
@@ -1475,7 +1474,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			Request:            req,
 			NonHMACReqDataKeys: nonHMACReqDataKeys,
 		}
-		if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+		if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 			c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			return nil, nil, ErrInternalError
 		}

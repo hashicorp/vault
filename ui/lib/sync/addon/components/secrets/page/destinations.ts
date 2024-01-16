@@ -9,6 +9,7 @@ import { action } from '@ember/object';
 import { getOwner } from '@ember/application';
 import errorMessage from 'vault/utils/error-message';
 import { findDestination, syncDestinations } from 'core/helpers/sync-destinations';
+import { next } from '@ember/runloop';
 
 import type SyncDestinationModel from 'vault/vault/models/sync/destination';
 import type RouterService from '@ember/routing/router-service';
@@ -16,6 +17,7 @@ import type StoreService from 'vault/services/store';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { EngineOwner } from 'vault/vault/app-types';
 import type { SyncDestinationName, SyncDestinationType } from 'vault/vault/helpers/sync-destinations';
+import type Transition from '@ember/routing/transition';
 
 interface Args {
   destinations: Array<SyncDestinationModel>;
@@ -28,13 +30,29 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @service declare readonly store: StoreService;
   @service declare readonly flashMessages: FlashMessageService;
 
+  // for some reason there isn't a full page refresh happening when transitioning on filter change
+  // when the transition happens it causes the FilterInput component to lose focus since it can only focus on didInsert
+  // to work around this, verify that a transition from this route was completed and then focus the input
+  constructor(owner: unknown, args: Args) {
+    super(owner, args);
+    this.router.on('routeDidChange', this.focusNameFilter);
+  }
+
+  willDestroy(): void {
+    super.willDestroy();
+    this.router.off('routeDidChange', this.focusNameFilter);
+  }
+
+  focusNameFilter(transition?: Transition) {
+    const route = 'vault.cluster.sync.secrets.destinations.index';
+    if (transition?.from?.name === route && transition?.to?.name === route) {
+      next(() => document.getElementById('name-filter')?.focus());
+    }
+  }
+
   // typeFilter arg comes in as destination type but we need to pass the destination display name into the SearchSelect
   get typeFilterName() {
     return findDestination(this.args.typeFilter)?.name;
-  }
-
-  get destinationNames() {
-    return this.args.destinations.map((destination) => ({ id: destination.name, name: destination.name }));
   }
 
   get destinationTypes() {
@@ -65,20 +83,21 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   }
 
   @action
-  onFilterChange(key: string, selectObject: Array<{ id: string; name: string } | undefined>) {
+  onFilterChange(key: string, value: { id: string; name: string }[] | string | undefined) {
+    const queryValue = Array.isArray(value) ? value[0]?.name : value;
     this.router.transitionTo('vault.cluster.sync.secrets.destinations', {
-      queryParams: { [key]: selectObject[0]?.name },
+      queryParams: { [key]: queryValue },
     });
   }
 
   @action
   async onDelete(destination: SyncDestinationModel) {
     try {
-      const { name } = destination;
-      const message = `Successfully deleted destination ${name}.`;
+      const { name, type } = destination;
+      const message = `Destination ${name} has been queued for deletion.`;
       await destination.destroyRecord();
       this.store.clearDataset('sync/destination');
-      this.router.transitionTo('vault.cluster.sync.secrets.destinations');
+      this.router.transitionTo('vault.cluster.sync.secrets.destinations.destination.secrets', type, name);
       this.flashMessages.success(message);
     } catch (error) {
       this.flashMessages.danger(`Error deleting destination \n ${errorMessage(error)}`);
