@@ -141,7 +141,7 @@ jobs:
         run: enos scenario launch --timeout 60m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
       - name: Upload Debug Data
         if: failure()
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
         with:
           # The name of the artifact is the same as the matrix scenario name with the spaces replaced with underscores and colons replaced by equals.
           name: ${{ steps.prepare_scenario.outputs.debug_data_artifact_name }}
