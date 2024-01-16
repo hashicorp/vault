@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { formatNumbers, calculateAverage } from 'vault/utils/chart-helpers';
+import { formatNumbers, calculateAverage, calculateSum } from 'vault/utils/chart-helpers';
 import { module, test } from 'qunit';
 
 const SMALL_NUMBERS = [0, 7, 27, 103, 999];
@@ -57,5 +57,16 @@ module('Unit | Utility | chart-helpers', function () {
       null,
       'returns null when object key does not exist at all'
     );
+  });
+
+  test('calculateSum adds array of numbers', function (assert) {
+    assert.expect(11);
+    const method = calculateSum();
+    assert.ok(method);
+
+    assert.strictEqual(calculateSum([2, 3]), 5, 'it sums array');
+
+    assert.strictEqual(calculateSum(['one', 2]), null, 'returns null if array contains non-integers');
+    assert.strictEqual(calculateSum('not an array'), null, 'returns null if an array is not passed');
   });
 });

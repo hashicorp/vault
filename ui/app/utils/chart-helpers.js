@@ -35,3 +35,10 @@ export function calculateAverage(dataset, objectKey) {
   const checkIntegers = integers.every((n) => Number.isInteger(n)); // decimals will be false
   return checkIntegers ? Math.round(mean(integers)) : null;
 }
+
+export function calculateSum(integerArray) {
+  if (!Array.isArray(integerArray) || integerArray.some((n) => typeof n !== 'number')) {
+    return null;
+  }
+  return integerArray.reduce((a, b) => a + b, 0);
+}
