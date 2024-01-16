@@ -420,7 +420,7 @@ jobs:
         if: success() || failure()
         uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
         with:
-          name: test-results-${{ matrix.id }}
+          name: test-results-${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}-${{ matrix.id }}
           path: |
             test-results/go-test/*.json
             test-results/go-test/*.xml
@@ -493,7 +493,7 @@ jobs:
         uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
         if: success() || failure()
         with:
-          name: failure-summary-${{ matrix.id }}
+          name: failure-summary-${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}-${{ matrix.id }}
           path: failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.md
 
   test-collect-reports:
