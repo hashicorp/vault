@@ -9,6 +9,8 @@ export default class SyncDestinationSerializer extends ApplicationSerializer {
   attrs = {
     name: { serialize: false },
     type: { serialize: false },
+    purgeInitiatedAt: { serialize: false },
+    purgeError: { serialize: false },
   };
 
   serialize(snapshot) {

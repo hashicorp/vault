@@ -4,12 +4,13 @@
  */
 
 import { module, test } from 'qunit';
-import sinon from 'sinon';
-import { currentURL, click, fillIn, settled } from '@ember/test-helpers';
+import { currentURL, click, fillIn, settled, waitFor } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import { createPolicyCmd, deleteAuthCmd, mountAuthCmd, runCmd } from '../helpers/commands';
 import { v4 as uuidv4 } from 'uuid';
+
+const SUCCESS_MESSAGE = 'Successfully reset password';
 
 module('Acceptance | reset password', function (hooks) {
   setupApplicationTest(hooks);
@@ -26,7 +27,7 @@ module('Acceptance | reset password', function (hooks) {
 
   hooks.afterEach(async function () {
     await authPage.login();
-    await runCmd(deleteAuthCmd(this.userpass), false);
+    await runCmd([deleteAuthCmd(this.userpass), `delete sys/policies/acl/${this.userpass}`], false);
   });
 
   test('does not allow password reset for non-userpass users', async function (assert) {
@@ -38,8 +39,6 @@ module('Acceptance | reset password', function (hooks) {
   });
 
   test('allows password reset for userpass users logged in via dropdown', async function (assert) {
-    const flashMessages = this.owner.lookup('service:flashMessages');
-    const flashSpy = sinon.spy(flashMessages, 'success');
     await authPage.login();
     await runCmd([
       mountAuthCmd('userpass', this.userpass),
@@ -62,13 +61,12 @@ module('Acceptance | reset password', function (hooks) {
     assert.dom('[data-test-title]').hasText('Reset password', 'page title');
     await fillIn('[data-test-textarea]', 'newpassword');
     await click('[data-test-reset-password-save]');
-    assert.true(flashSpy.calledOnceWith('Successfully reset password'), 'Shows success message');
+    await waitFor('[data-test-flash-message]');
+    assert.dom('[data-test-flash-message]').hasText(`Success ${SUCCESS_MESSAGE}`);
     assert.dom('[data-test-textarea]').hasValue('', 'Resets input after save');
   });
 
   test('allows password reset for userpass users logged in via tab', async function (assert) {
-    const flashMessages = this.owner.lookup('service:flashMessages');
-    const flashSpy = sinon.spy(flashMessages, 'success');
     await authPage.login();
     await runCmd([
       mountAuthCmd('userpass', this.userpass),
@@ -95,7 +93,8 @@ module('Acceptance | reset password', function (hooks) {
     assert.dom('[data-test-title]').hasText('Reset password', 'page title');
     await fillIn('[data-test-textarea]', 'newpassword');
     await click('[data-test-reset-password-save]');
-    assert.true(flashSpy.calledOnceWith('Successfully reset password'), 'Shows success message');
+    await waitFor('[data-test-flash-message]');
+    assert.dom('[data-test-flash-message]').hasText(`Success ${SUCCESS_MESSAGE}`);
     assert.dom('[data-test-textarea]').hasValue('', 'Resets input after save');
   });
 });

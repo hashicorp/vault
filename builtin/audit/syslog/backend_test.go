@@ -375,7 +375,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			be, err := Factory(ctx, tc.backendConfig, true, nil)
+			be, err := Factory(ctx, tc.backendConfig, nil)
 
 			switch {
 			case tc.isErrorExpected:
@@ -430,7 +430,7 @@ func TestBackend_IsFallback(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			be, err := Factory(ctx, tc.backendConfig, true, nil)
+			be, err := Factory(ctx, tc.backendConfig, nil)
 			require.NoError(t, err)
 			require.NotNil(t, be)
 			require.Equal(t, tc.isFallbackExpected, be.IsFallback())
