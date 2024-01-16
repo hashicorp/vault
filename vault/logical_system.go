@@ -888,7 +888,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 }
 
 func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	var data []map[string]any
+	runtimes := []map[string]any{}
 
 	var pluginRuntimeTypes []consts.PluginRuntimeType
 	runtimeTypeStr := d.Get("type").(string)
@@ -916,7 +916,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *l
 				return strings.Compare(configs[i].Name, configs[j].Name) == -1
 			})
 			for _, conf := range configs {
-				data = append(data, map[string]any{
+				runtimes = append(runtimes, map[string]any{
 					"name":          conf.Name,
 					"type":          conf.Type.String(),
 					"oci_runtime":   conf.OCIRuntime,
@@ -929,15 +929,11 @@ func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *l
 		}
 	}
 
-	resp := &logical.Response{
-		Data: map[string]interface{}{},
-	}
-
-	if len(data) > 0 {
-		resp.Data["runtimes"] = data
-	}
-
-	return resp, nil
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"runtimes": runtimes,
+		},
+	}, nil
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
