@@ -195,6 +195,7 @@ type Request struct {
 	WrapTTL                       int                    `json:"wrap_ttl,omitempty"`
 	Headers                       map[string][]string    `json:"headers,omitempty"`
 	ClientCertificateSerialNumber string                 `json:"client_certificate_serial_number,omitempty"`
+	RequestURI                    string                 `json:"request_uri,omitempty"`
 }
 
 type Response struct {
