@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"testing"
@@ -228,7 +229,7 @@ func TestHandleCreateCustomMessage(t *testing.T) {
 	// it to test different conditions.
 	fieldRaw := map[string]any{
 		"title":      "title",
-		"message":    "message",
+		"message":    base64.StdEncoding.EncodeToString([]byte("message")),
 		"start_time": "2023-01-01T00:00:00Z",
 	}
 
@@ -273,6 +274,13 @@ func TestHandleCreateCustomMessage(t *testing.T) {
 			name: "message-parameter-invalid",
 			fieldRawUpdate: map[string]any{
 				"message": map[int]string{},
+			},
+			errorExpected: true,
+		},
+		{
+			name: "message-parameter-invalid-not-base64",
+			fieldRawUpdate: map[string]any{
+				"message": "The message not base64 encoded.",
 			},
 			errorExpected: true,
 		},
@@ -625,7 +633,7 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 		Raw: map[string]any{
 			"id":            "abc",
 			"title":         "title",
-			"message":       "message",
+			"message":       base64.StdEncoding.EncodeToString([]byte("message")),
 			"authenticated": "true",
 			"type":          uicustommessages.ModalMessageType,
 			"start_time":    startTime,
@@ -703,6 +711,12 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 			name: "message-parameter-invalid",
 			fieldRawUpdate: map[string]any{
 				"message": []bool{},
+			},
+		},
+		{
+			name: "message-parameter-invalid-not-base64",
+			fieldRawUpdate: map[string]any{
+				"message": "The message not base64 encoded.",
 			},
 		},
 		{

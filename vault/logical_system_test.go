@@ -6164,7 +6164,9 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	listExp := map[string]interface{}{}
+	listExp := map[string]any{
+		"runtimes": []map[string]any{},
+	}
 	if !reflect.DeepEqual(resp.Data, listExp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
 	}

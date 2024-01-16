@@ -117,7 +117,7 @@ jobs:
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - uses: ./.github/actions/set-up-gotestsum
       - run: mkdir -p test-results/go-test
-      - uses: actions/cache/restore@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+      - uses: actions/cache/restore@e12d46a63a90f2fae62d114769bbf2a179198b5c # v3.3.3
         if: inputs.test-timing-cache-enabled
         with:
           path: test-results/go-test
@@ -428,7 +428,7 @@ jobs:
       # GitHub Actions doesn't expose the job ID or the URL to the job execution,
       # so we have to fetch it from the API
       - name: Fetch job logs URL
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         if: success() || failure()
         continue-on-error: true
         with:
@@ -501,7 +501,7 @@ jobs:
     needs: test-go
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
-      - uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+      - uses: actions/cache@e12d46a63a90f2fae62d114769bbf2a179198b5c # v3.3.3
         with:
           path: test-results/go-test
           key: ${{ inputs.test-timing-cache-key }}-${{ github.run_number }}
