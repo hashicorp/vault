@@ -23,6 +23,7 @@ export default class MessagesList extends Component {
   @service store;
   @service router;
   @service flashMessages;
+  @service namespace;
 
   get formattedMessages() {
     return this.args.messages.map((message) => {
@@ -71,6 +72,7 @@ export default class MessagesList extends Component {
     this.store.clearDataset('config-ui/message');
     yield message.destroyRecord(message.id);
     this.router.transitionTo('vault.cluster.config-ui.messages');
+    this.customMessages.fetchMessages(this.namespace.path);
     this.flashMessages.success(`Successfully deleted ${message.title}.`);
   }
 

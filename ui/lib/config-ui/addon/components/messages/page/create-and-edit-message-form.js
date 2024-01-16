@@ -25,6 +25,8 @@ export default class MessagesList extends Component {
   @service router;
   @service store;
   @service flashMessages;
+  @service customMessages;
+  @service namespace;
 
   @tracked errorBanner = '';
   @tracked modelValidations;
@@ -63,6 +65,7 @@ export default class MessagesList extends Component {
         const { id, title } = yield this.args.message.save();
         this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} ${title} message.`);
         this.store.clearDataset('config-ui/message');
+        this.customMessages.fetchMessages(this.namespace.path);
         this.router.transitionTo('vault.cluster.config-ui.messages.message.details', id);
       }
     } catch (error) {

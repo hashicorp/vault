@@ -6,7 +6,7 @@
 import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 
-export default class CustomMessageService extends Service {
+export default class CustomMessagesService extends Service {
   @service store;
   @service namespace;
   @service auth;
