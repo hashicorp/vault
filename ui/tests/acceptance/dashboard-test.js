@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+/* eslint-disable ember/no-settled-after-test-helper */
 import { module, test } from 'qunit';
 import {
   visit,
@@ -186,6 +187,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(SELECTORS.cardName('configuration-details')).exists();
       createNS('world');
       await visit('/vault/dashboard?namespace=world');
+      await settled();
       assert.dom(SELECTORS.cardName('configuration-details')).doesNotExist();
     });
 
