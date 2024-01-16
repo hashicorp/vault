@@ -447,7 +447,8 @@ jobs:
       - name: Download failure summary
         uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
         with:
-          name: failure-summary
+          pattern: failure-summary-*
+          merge-multiple: true
       - name: Prepare failure summary
         run: |
           # Sort all of the summary table rows and push them to a temp file.
