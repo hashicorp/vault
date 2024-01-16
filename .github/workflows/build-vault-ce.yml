@@ -43,7 +43,7 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Restore UI from cache
-        uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        uses: actions/cache@e12d46a63a90f2fae62d114769bbf2a179198b5c # v3.3.3
         with:
           # Restore the UI asset from the UI build workflow. Never use a partial restore key.
           enableCrossOsArchive: true
