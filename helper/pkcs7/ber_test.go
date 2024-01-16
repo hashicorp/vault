@@ -51,6 +51,7 @@ func TestBer2Der_Negatives(t *testing.T) {
 		{[]byte{0x30, 0x80, 0x1, 0x2}, "end of ber data reached"},
 		{[]byte{0x30, 0x03, 0x01, 0x02}, "length is more than available data"},
 		{[]byte{0x30}, "end of ber data reached"},
+		{[]byte("?0"), "end of ber data reached"},
 	}
 
 	for _, fixture := range fixtures {
