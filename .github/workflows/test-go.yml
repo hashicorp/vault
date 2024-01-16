@@ -412,7 +412,7 @@ jobs:
       - name: Upload test logs archives
         uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
         with:
-          name: ${{ steps.archive-test-logs.outputs.log_prefix }}
+          name: ${{ steps.archive-test-logs.outputs.log_prefix }}-${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}-${{ matrix.id }}
           path: ${{ steps.archive-test-logs.outputs.archive_name }}
           retention-days: 7
         if: success() || failure()
