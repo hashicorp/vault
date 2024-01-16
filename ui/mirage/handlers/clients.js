@@ -17,10 +17,10 @@ import {
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
 // Matches mocked date in client-dashboard-test file
-export const CURRENT_DATE = new Date('2023-01-13T14:15:00');
+const CURRENT_DATE = new Date('2023-01-13T14:15:00');
 const COUNTS_START = subMonths(CURRENT_DATE, 12); // pretend vault user started cluster 6 months ago
 // for testing, we're in the middle of a license/billing period
-export const LICENSE_START = startOfMonth(subMonths(CURRENT_DATE, 6));
+const LICENSE_START = startOfMonth(subMonths(CURRENT_DATE, 6));
 // upgrade happened 1 month after license start
 const UPGRADE_DATE = addMonths(LICENSE_START, 1);
 
@@ -54,7 +54,7 @@ function arrayOfCounts(max, arrayLength) {
   return result.sort((a, b) => b - a);
 }
 
-export function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
+function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
   const min = isLowerCounts ? 10 : 50;
   const max = isLowerCounts ? 100 : 5000;
   const nsBlock = {
@@ -121,7 +121,7 @@ function generateMonths(startDate, endDate, namespaces) {
   return months;
 }
 
-export function generateActivityResponse(namespaces, startDate, endDate) {
+function generateActivityResponse(namespaces, startDate, endDate) {
   return {
     start_time: isAfter(new Date(startDate), COUNTS_START) ? startDate : formatRFC3339(COUNTS_START),
     end_time: endDate,

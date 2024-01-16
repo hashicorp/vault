@@ -6,8 +6,7 @@
 import { Response } from 'miragejs';
 import { camelize } from '@ember/string';
 import { findDestination } from 'core/helpers/sync-destinations';
-import { generateActivityResponse, generateNamespaceBlock, CURRENT_DATE, LICENSE_START } from './clients';
-import { fromUnixTime, formatRFC3339, endOfMonth, addMonths } from 'date-fns';
+import clientsHandler from './clients';
 
 export const associationsResponse = (schema, req) => {
   const { type, name } = req.params;
@@ -206,49 +205,8 @@ export default function (server) {
 
   // SYNC CLIENTS ACTIVITY RESPONSE
 
-  server.get('sys/license/status', function () {
-    return {
-      request_id: 'my-license-request-id',
-      data: {
-        autoloaded: {
-          license_id: 'my-license-id',
-          start_time: formatRFC3339(LICENSE_START),
-          expiration_time: formatRFC3339(endOfMonth(addMonths(CURRENT_DATE, 6))),
-        },
-      },
-    };
-  });
-
-  server.get('sys/internal/counters/config', function () {
-    return {
-      request_id: 'some-config-id',
-      data: {
-        default_report_months: 12,
-        enabled: 'default-enable',
-        queries_available: true,
-        retention_months: 24,
-      },
-    };
-  });
-
-  // DYNAMIC RESPONSE
-  server.get('/sys/internal/counters/activity', (schema, req) => {
-    let { start_time, end_time } = req.queryParams;
-    // backend returns a timestamp if given unix time, so first convert to timestamp string here
-    if (!start_time.includes('T')) start_time = fromUnixTime(start_time).toISOString();
-    if (!end_time.includes('T')) end_time = fromUnixTime(end_time).toISOString();
-    const namespaces = Array.from(Array(12)).map((v, idx) => generateNamespaceBlock(idx));
-    return {
-      request_id: 'some-activity-id',
-      lease_id: '',
-      renewable: false,
-      lease_duration: 0,
-      data: generateActivityResponse(namespaces, start_time, end_time),
-      wrap_info: null,
-      warnings: null,
-      auth: null,
-    };
-  });
+  // DYNAMIC RESPONSE (with date querying)
+  clientsHandler(server); // imports all of the endpoints defined in mirage/handlers/clients file
 
   // STATIC RESPONSE (0 entity/non-entity clients)
   /* 
