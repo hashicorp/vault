@@ -253,9 +253,11 @@ type Request struct {
 	ChrootNamespace string `json:"chroot_namespace,omitempty"`
 }
 
-// Clone returns a deep copy of the request by using copystructure.
+// Clone returns a deep copy (almost) of the request.
 // It will set unexported fields which were only previously accessible outside
 // the package via receiver methods.
+// NOTE: Request.Connection is NOT deep-copied, due to issues with the results
+// of copystructure on serial numbers within the x509.Certificate objects.
 func (r *Request) Clone() (*Request, error) {
 	cpy, err := copystructure.Copy(r)
 	if err != nil {
