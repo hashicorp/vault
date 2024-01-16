@@ -78,7 +78,7 @@ func (l *LogInput) Clone() (*LogInput, error) {
 	}
 
 	// Clone Request
-	req, err := cloneRequest(l.Request)
+	req, err := l.Request.Clone()
 	if err != nil {
 		return nil, err
 	}
@@ -140,32 +140,6 @@ func cloneAuth(auth *Auth) (*Auth, error) {
 	}
 
 	return auth, nil
-}
-
-// cloneRequest deep copies a Request struct.
-// It will set unexported fields which were only previously accessible outside
-// the package via receiver methods.
-func cloneRequest(request *Request) (*Request, error) {
-	// If request is nil, there's nothing to clone.
-	if request == nil {
-		return nil, nil
-	}
-
-	req, err := clone[*Request](request)
-	if err != nil {
-		return nil, fmt.Errorf("unable to clone request: %w", err)
-	}
-
-	// Add the unexported values that were only retrievable via receivers.
-	req.mountClass = request.MountClass()
-	req.mountRunningVersion = request.MountRunningVersion()
-	req.mountRunningSha256 = request.MountRunningSha256()
-	req.mountIsExternalPlugin = request.MountIsExternalPlugin()
-	// This needs to be overwritten as the internal connection state is not cloned properly
-	// mainly the big.Int serial numbers within the x509.Certificate objects get mangled.
-	req.Connection = request.Connection
-
-	return req, nil
 }
 
 // cloneResponse deep copies a Response struct.
