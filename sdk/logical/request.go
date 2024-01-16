@@ -253,13 +253,20 @@ type Request struct {
 	ChrootNamespace string `json:"chroot_namespace,omitempty"`
 }
 
-// Clone returns a deep copy of the request by using copystructure
+// Clone returns a deep copy of the request by using copystructure,
+// Note that the Connection property will keep the same reference
+// from the original value as to not corrupt some of its internal state
 func (r *Request) Clone() (*Request, error) {
 	cpy, err := copystructure.Copy(r)
 	if err != nil {
 		return nil, err
 	}
-	return cpy.(*Request), nil
+	clonedReq := cpy.(*Request)
+	// We can't properly clone the connection from the request, big.Int values
+	// within the x509 certificates such as the SerialNumber and or PublicKey
+	// do not get copied properly
+	clonedReq.Connection = r.Connection
+	return clonedReq, nil
 }
 
 // Get returns a data field and guards for nil Data
