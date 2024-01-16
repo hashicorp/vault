@@ -67,8 +67,8 @@ func removeRaftNode(t *testing.T, node *docker.DockerClusterNode, client *api.Cl
 	if err != nil {
 		t.Fatal(err)
 	}
+	// clean up the cluster nodes. Note that the node is not removed from the ClusterNodes
 	node.Cleanup()
-	// TODO: remove from the cluster nodes as well.
 }
 
 // stabilizeAndPromote makes sure the given node ID is among the voters using
@@ -104,6 +104,7 @@ func stabilize(t *testing.T, client *api.Client) {
 		require.NoError(t, err)
 		if state.Healthy {
 			healthy = true
+			break
 		}
 		time.Sleep(1 * time.Second)
 	}
@@ -146,8 +147,7 @@ func TestDocker_LogStore_Boltdb_To_Raftwal_And_Back(t *testing.T) {
 	leaderClient := leaderNode.APIClient()
 
 	err := leaderClient.Sys().MountWithContext(context.TODO(), "kv", &api.MountInput{
-		Type:  "kv",
-		Local: true,
+		Type: "kv",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -229,7 +229,7 @@ func TestDocker_LogStore_Boltdb_To_Raftwal_And_Back(t *testing.T) {
 	leaderNode = cluster.GetActiveClusterNode()
 	leaderClient = leaderNode.APIClient()
 
-	// remove the old leader which were still employing boltDB
+	// remove the old leader, which was using boltDB
 	// this will remove it from raft configuration though the container was already removed
 	removeRaftNode(t, cluster.ClusterNodes[0], leaderClient, "core-0")
 
@@ -343,8 +343,7 @@ func TestRaft_LogStore_Migration_Snapshot(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	err := leaderClient.Sys().MountWithContext(ctx, "kv", &api.MountInput{
-		Type:  "kv",
-		Local: true,
+		Type: "kv",
 	})
 	if err != nil {
 		t.Fatal(err)
