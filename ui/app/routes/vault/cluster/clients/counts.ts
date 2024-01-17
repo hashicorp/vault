@@ -11,16 +11,21 @@ import { getUnixTime } from 'date-fns';
 import type StoreService from 'vault/services/store';
 import type { ClientsRouteModel } from '../clients';
 
-export default class ClientCountTokenRoute extends Route {
+export interface ClientsCountsRouteParams {
+  start_time?: string | number | undefined;
+  end_time?: string | number | undefined;
+  ns?: string | undefined;
+  authMount?: string | undefined;
+}
+
+export default class ClientsCountsRoute extends Route {
   @service declare readonly store: StoreService;
 
   queryParams = {
-    start_time: {
-      refreshModel: true,
-    },
-    end_time: {
-      refreshModel: true,
-    },
+    start_time: { refreshModel: true, replace: true },
+    end_time: { refreshModel: true, replace: true },
+    ns: { refreshModel: false, replace: true },
+    authMount: { refreshModel: false, replace: true },
   };
 
   currentTimestamp = getUnixTime(timestamp.now());
@@ -38,7 +43,7 @@ export default class ClientCountTokenRoute extends Route {
     return [activity, activityError];
   }
 
-  async model(params: { start_time: string; end_time: string }) {
+  async model(params: ClientsCountsRouteParams) {
     const { config } = this.modelFor('vault.cluster.clients') as ClientsRouteModel;
     const startTimestamp = Number(params.start_time) || getUnixTime(config.billingStartTimestamp);
     const endTimestamp = Number(params.end_time) || this.currentTimestamp;

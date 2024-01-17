@@ -13,7 +13,6 @@ import { formatDateObject } from 'core/utils/client-count-utils';
 import type VersionService from 'vault/services/version';
 import type ClientsActivityModel from 'vault/models/clients/activity';
 import type ClientsConfigModel from 'vault/models/clients/config';
-import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
 
 interface Args {
@@ -24,11 +23,11 @@ interface Args {
   currentTimestamp: number;
   namespace: string;
   authMount: string;
+  onFilterChange: CallableFunction;
 }
 
-export default class ClientFiltersHeader extends Component<Args> {
+export default class ClientsCountsPageComponent extends Component<Args> {
   @service declare readonly version: VersionService;
-  @service declare readonly router: RouterService;
   @service declare readonly store: StoreService;
 
   get startDate() {
@@ -138,29 +137,38 @@ export default class ClientFiltersHeader extends Component<Args> {
   onDateChange(dateObject: { dateType: string; monthIdx: string; year: string }) {
     const { dateType, monthIdx, year } = dateObject;
     const { currentTimestamp } = this.args;
+    // converts the selectedDate to unix timestamp for activity query
     const selectedDate = formatDateObject({ monthIdx, year }, dateType === 'endDate');
 
     if (dateType !== 'cancel') {
       const start_time = {
-        reset: null, // clicked 'Current billing period' in calendar widget -> defaults to licenseStartTime
-        currentMonth: currentTimestamp, // clicked 'Current month' from calendar widget
+        reset: undefined, // clicked 'Current billing period' in calendar widget -> resets to billing start date in the route file (which is the default query value)
+        currentMonth: currentTimestamp, // clicked 'Current month' from calendar widget -> defaults to currentTimestamp
         startDate: selectedDate, // from "Edit billing start" modal
       }[dateType];
-      // endDate was selections from calendar widget
-      const end_time = dateType === 'endDate' ? selectedDate : currentTimestamp;
-      const queryParams = start_time !== undefined ? { start_time, end_time } : { end_time };
-      this.router.transitionTo({ queryParams });
+      // endDate type is selection from calendar widget
+      const end_time = dateType === 'endDate' ? selectedDate : undefined; // defaults to currentTimestamp
+      const params = start_time !== undefined ? { start_time, end_time } : { end_time };
+      this.args.onFilterChange(params);
     }
   }
 
   @action
-  setFilterValue(type: 'ns' | 'authMount', [value]: [string]) {
-    this.router.transitionTo({ queryParams: { [type]: value } });
+  setFilterValue(type: 'ns' | 'authMount', [value]: [string | undefined]) {
+    const params = { [type]: value };
+    // unset authMount value when namespace is cleared
+    if (type === 'ns' && !value) {
+      params['authMount'] = undefined;
+    }
+    this.args.onFilterChange(params);
   }
 
   @action resetFilters() {
-    this.router.transitionTo({
-      queryParams: { start_time: null, end_time: null, ns: null, authMount: null },
+    this.args.onFilterChange({
+      start_time: undefined,
+      end_time: undefined,
+      ns: undefined,
+      authMount: undefined,
     });
   }
 }
