@@ -14,6 +14,7 @@ interface Args {
   data: SerializedChartData[];
   dataKey: string;
   chartTitle: string;
+  chartHeight?: number;
 }
 
 interface ChartData {
@@ -34,15 +35,19 @@ interface ChartData {
     @chartTitle="Secret Sync client counts"
     @data={{this.model}}
     @dataKey="secret_syncs"
-    @showTable={{true}} />
+    @showTable={{true}}
+    @chartHeight={{200}}
+  />
  * ```
  */
 export default class ClientsSyncBarChartComponent extends Component<Args> {
   barWidth = 7;
-  chartHeight = 190;
-  chartWidth = 600;
 
   @tracked activeDatum: ChartData | null = null;
+
+  get chartHeight() {
+    return this.args.chartHeight || 190;
+  }
 
   get chartData() {
     return this.args.data.map((d): ChartData => {
