@@ -69,6 +69,8 @@ export default Controller.extend({
       transition = this.router.transitionTo('vault.cluster', { queryParams: { namespace } });
     }
     transition.followRedirects().then(() => {
+      this.customMessages.fetchMessages(namespace);
+
       if (isRoot) {
         this.auth.set('isRootToken', true);
         this.flashMessages.warning(

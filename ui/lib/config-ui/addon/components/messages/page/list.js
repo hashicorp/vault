@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { dateFormat } from 'core/helpers/date-format';
+import { action } from '@ember/object';
 
 /**
  * @module Page::MessagesList
@@ -22,6 +23,7 @@ export default class MessagesList extends Component {
   @service store;
   @service router;
   @service flashMessages;
+  @service namespace;
 
   get formattedMessages() {
     return this.args.messages.map((message) => {
@@ -70,6 +72,14 @@ export default class MessagesList extends Component {
     this.store.clearDataset('config-ui/message');
     yield message.destroyRecord(message.id);
     this.router.transitionTo('vault.cluster.config-ui.messages');
+    this.customMessages.fetchMessages(this.namespace.path);
     this.flashMessages.success(`Successfully deleted ${message.title}.`);
+  }
+
+  @action
+  onFilterChange(pageFilter) {
+    this.router.transitionTo('vault.cluster.config-ui.messages', {
+      queryParams: { pageFilter },
+    });
   }
 }

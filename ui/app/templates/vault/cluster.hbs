@@ -3,6 +3,37 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 <Sidebar::Nav::Cluster />
+{{#if this.auth.currentToken}}
+  {{#if this.customMessages.bannerMessages.length}}
+    {{#each this.customMessages.bannerMessages as |bannerMessage|}}
+      <Hds::Alert @type="inline" @color="warning" data-test-alert={{bannerMessage.id}} as |A|>
+        <A.Title data-test-alert-title={{bannerMessage.id}}>{{bannerMessage.title}}</A.Title>
+        <A.Description data-test-alert-description={{bannerMessage.id}}>
+          {{bannerMessage.message}}
+        </A.Description>
+        <A.Description class="has-top-margin-xs">
+          {{! TODO: VAULT-22908 display links when api is updated to { link: { 'learn': 'www.learn.com'} } }}
+        </A.Description>
+      </Hds::Alert>
+    {{/each}}
+  {{/if}}
+  {{#if this.customMessages.modalMessages.length}}
+    {{#each this.customMessages.modalMessages as |modalMessage|}}
+      <Hds::Modal id={{modalMessage.id}} @size="large" @color="warning" data-test-modal={{modalMessage.id}} as |M|>
+        <M.Header data-test-modal-title={{modalMessage.id}}>
+          {{modalMessage.title}}
+        </M.Header>
+        <M.Body data-test-modal-body={{modalMessage.id}}>
+          {{modalMessage.message}}
+          {{! TODO: VAULT-22908 display links when api is updated to { link: { 'learn': 'www.learn.com'} } }}
+        </M.Body>
+        <M.Footer as |F|>
+          <Hds::Button @text="Confirm" {{on "click" F.close}} data-test-modal-button={{modalMessage.id}} />
+        </M.Footer>
+      </Hds::Modal>
+    {{/each}}
+  {{/if}}
+{{/if}}
 <div class="cluster-banners-wrapper">
   {{#if this.activeCluster.version.isEnterprise}}
     <LicenseBanners

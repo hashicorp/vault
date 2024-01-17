@@ -8,6 +8,18 @@
   @showTabs={{true}}
   @breadcrumbs={{this.breadcrumbs}}
 >
+  <:toolbarFilters>
+    {{#if @messages.meta.total}}
+      <FilterInput
+        aria-label="Search by message title"
+        placeholder="Search by message title"
+        value={{@pageFilter}}
+        @autofocus={{true}}
+        @wait={{200}}
+        @onInput={{this.onFilterChange}}
+      />
+    {{/if}}
+  </:toolbarFilters>
   <:toolbarActions>
     <ToolbarLink
       data-test-toolbar-create-message

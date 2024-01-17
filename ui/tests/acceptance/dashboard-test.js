@@ -31,10 +31,51 @@ import connectionPage from 'vault/tests/pages/secrets/backend/database/connectio
 import { v4 as uuidv4 } from 'uuid';
 
 import { SELECTORS } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
+import { PAGE } from 'vault/tests/helpers/config-ui/message-selectors';
 
 const consoleComponent = create(consoleClass);
 
 const createNS = async (name) => consoleComponent.runCommands(`write sys/namespaces/${name} -force`);
+
+const authenticatedMessageResponse = {
+  request_id: '664fbad0-fcd8-9023-4c5b-81a7962e9f4b',
+  lease_id: '',
+  renewable: false,
+  lease_duration: 0,
+  data: {
+    key_info: {
+      'some-awesome-id-2': {
+        authenticated: true,
+        end_time: null,
+        link: {
+          title: '',
+        },
+        message: 'aGVsbG8gd29ybGQgaGVsbG8gd29scmQ=',
+        options: null,
+        start_time: '2024-01-04T08:00:00Z',
+        title: 'Banner title',
+        type: 'banner',
+      },
+      'some-awesome-id-1': {
+        authenticated: true,
+        end_time: null,
+        link: {
+          title: '',
+        },
+        message: 'aGVyZSBpcyBhIGNvb2wgbWVzc2FnZQ==',
+        options: null,
+        start_time: '2024-01-01T08:00:00Z',
+        title: 'Modal title',
+        type: 'modal',
+      },
+    },
+    keys: ['some-awesome-id-2', 'some-awesome-id-1'],
+  },
+  wrap_info: null,
+  warnings: null,
+  auth: null,
+  mount_type: '',
+};
 
 module('Acceptance | landing page dashboard', function (hooks) {
   setupApplicationTest(hooks);
@@ -431,6 +472,68 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(SELECTORS.title('Performance primary')).hasText('Performance primary');
       assert.dom(SELECTORS.tooltipTitle('Performance primary')).hasText('running');
       assert.dom(SELECTORS.tooltipIcon('dr-perf', 'Performance primary', 'check-circle')).exists();
+    });
+  });
+
+  module('custom messages auth tests', function (hooks) {
+    hooks.beforeEach(function () {
+      return this.server.get('/sys/internal/ui/mounts', () => ({}));
+    });
+
+    test('it shows the alert banner and modal message', async function (assert) {
+      this.server.get('/sys/internal/ui/unauthenticated-messages', function () {
+        return authenticatedMessageResponse;
+      });
+      await visit('/vault/dashboard');
+      const modalId = 'some-awesome-id-1';
+      const alertId = 'some-awesome-id-2';
+      assert.dom(PAGE.modal(modalId)).exists();
+      assert.dom(PAGE.modalTitle(modalId)).hasText('Modal title');
+      assert.dom(PAGE.modalBody(modalId)).exists();
+      assert.dom(PAGE.modalBody(modalId)).hasText('here is a cool message');
+      await click(PAGE.modalButton(modalId));
+      assert.dom(PAGE.alertTitle(alertId)).hasText('Banner title');
+      assert.dom(PAGE.alertDescription(alertId)).hasText('hello world hello wolrd');
+    });
+    test('it shows the multiple modal messages', async function (assert) {
+      const modalIdOne = 'some-awesome-id-2';
+      const modalIdTwo = 'some-awesome-id-1';
+
+      this.server.get('/sys/internal/ui/unauthenticated-messages', function () {
+        authenticatedMessageResponse.data.key_info[modalIdOne].type = 'modal';
+        authenticatedMessageResponse.data.key_info[modalIdOne].title = 'Modal title 1';
+        authenticatedMessageResponse.data.key_info[modalIdTwo].type = 'modal';
+        authenticatedMessageResponse.data.key_info[modalIdTwo].title = 'Modal title 2';
+        return authenticatedMessageResponse;
+      });
+      await visit('/vault/dashboard');
+      assert.dom(PAGE.modal(modalIdOne)).exists();
+      assert.dom(PAGE.modalTitle(modalIdOne)).hasText('Modal title 1');
+      assert.dom(PAGE.modalBody(modalIdOne)).exists();
+      assert.dom(PAGE.modalBody(modalIdOne)).hasText('hello world hello wolrd');
+      await click(PAGE.modalButton(modalIdOne));
+      assert.dom(PAGE.modal(modalIdTwo)).exists();
+      assert.dom(PAGE.modalTitle(modalIdTwo)).hasText('Modal title 2');
+      assert.dom(PAGE.modalBody(modalIdTwo)).exists();
+      assert.dom(PAGE.modalBody(modalIdTwo)).hasText('here is a cool message');
+      await click(PAGE.modalButton(modalIdTwo));
+    });
+    test('it shows the multiple banner messages', async function (assert) {
+      const bannerIdOne = 'some-awesome-id-2';
+      const bannerIdTwo = 'some-awesome-id-1';
+
+      this.server.get('/sys/internal/ui/unauthenticated-messages', function () {
+        authenticatedMessageResponse.data.key_info[bannerIdOne].type = 'banner';
+        authenticatedMessageResponse.data.key_info[bannerIdOne].title = 'Banner title 1';
+        authenticatedMessageResponse.data.key_info[bannerIdTwo].type = 'banner';
+        authenticatedMessageResponse.data.key_info[bannerIdTwo].title = 'Banner title 2';
+        return authenticatedMessageResponse;
+      });
+      await visit('/vault/dashboard');
+      assert.dom(PAGE.alertTitle(bannerIdOne)).hasText('Banner title 1');
+      assert.dom(PAGE.alertDescription(bannerIdOne)).hasText('hello world hello wolrd');
+      assert.dom(PAGE.alertTitle(bannerIdTwo)).hasText('Banner title 2');
+      assert.dom(PAGE.alertDescription(bannerIdTwo)).hasText('here is a cool message');
     });
   });
 });

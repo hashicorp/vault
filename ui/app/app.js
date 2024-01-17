@@ -15,7 +15,7 @@ export default class App extends Application {
   engines = {
     configUi: {
       dependencies: {
-        services: ['auth', 'flash-messages', 'namespace', 'router', 'store', 'version'],
+        services: ['auth', 'flash-messages', 'namespace', 'router', 'store', 'version', 'customMessages'],
       },
     },
     openApiExplorer: {

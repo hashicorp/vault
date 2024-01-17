@@ -5,6 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import { hash } from 'rsvp';
 
 export default class MessagesRoute extends Route {
   @service store;
@@ -16,16 +17,27 @@ export default class MessagesRoute extends Route {
     authenticated: {
       refreshModel: true,
     },
+    pageFilter: {
+      refreshModel: true,
+    },
   };
 
   async model(params) {
     try {
-      const { authenticated, page } = params;
-      return await this.store.lazyPaginatedQuery('config-ui/message', {
+      const { authenticated, page, pageFilter } = params;
+      const filter = pageFilter
+        ? (dataset) => dataset.filter((item) => item?.title.toLowerCase().includes(pageFilter.toLowerCase()))
+        : null;
+      const messages = await this.store.lazyPaginatedQuery('config-ui/message', {
         authenticated,
+        pageFilter: filter,
         responsePath: 'data.keys',
         page: page || 1,
         size: 10,
+      });
+      return hash({
+        pageFilter,
+        messages,
       });
     } catch (e) {
       if (e.httpStatus === 404) {

@@ -21,12 +21,15 @@ export default class MessageDetails extends Component {
   @service store;
   @service router;
   @service flashMessages;
+  @service customMessages;
+  @service namespace;
 
   @action
   async deleteMessage() {
     this.store.clearDataset('config-ui/message');
     await this.args.message.destroyRecord(this.args.message.id);
     this.router.transitionTo('vault.cluster.config-ui.messages');
+    this.customMessages.fetchMessages(this.namespace.path);
     this.flashMessages.success(`Successfully deleted ${this.args.message.title}.`);
   }
 }
