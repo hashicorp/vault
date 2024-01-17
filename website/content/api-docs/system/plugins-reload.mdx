@@ -20,7 +20,8 @@ their place.
 ### Parameters
 
 - `type` `(string: <required>)` – The type of the plugin, as registered in the
-  plugin catalog. One of "auth", "secret", or "database".
+  plugin catalog. One of "auth", "secret", "database", or "unknown". If "unknown",
+  all plugin types with the provided name will be reloaded.
 
 - `name` `(string: <required>)` – The name of the plugin to reload, as registered
   in the plugin catalog.

@@ -84,7 +84,8 @@ func (c *PluginReloadCommand) Flags() *FlagSets {
 		Name:       "type",
 		Target:     &c.pluginType,
 		Completion: complete.PredictAnything,
-		Usage:      "The type of plugin to reload, one of auth, secret, or database. Mutually exclusive with -mounts.",
+		Usage: "The type of plugin to reload, one of auth, secret, or database. Mutually " +
+			"exclusive with -mounts. If not provided, all plugins with a matching name will be reloaded.",
 	})
 
 	return set
