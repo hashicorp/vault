@@ -13,7 +13,7 @@ const validations = {
   message: [{ type: 'presence', message: 'Message is required.' }],
 };
 
-@withFormFields(['authenticated', 'type', 'title', 'message', 'linkTitle', 'startTime', 'endTime'])
+@withFormFields(['authenticated', 'type', 'title', 'message', 'link', 'startTime', 'endTime'])
 @withModelValidations(validations)
 export default class MessageModel extends Model {
   @attr('boolean') active;
@@ -81,11 +81,12 @@ export default class MessageModel extends Model {
   startTime;
   @attr('dateTimeLocal', { editType: 'yield', label: 'Message expires' }) endTime;
 
-  // the api returns link as an object with title and href as keys, but we separate the link key/values into
-  // different attributes to easily show link title and href fields on the create form. In our serializer,
-  // we send the link attribute in to the correct format (as an object) to the server.
-  @attr('string') linkTitle;
-  @attr('string') linkHref;
+  @attr('object', {
+    editType: 'singleKv',
+    keyPlaceholder: 'Display text (e.g. Learn more)',
+    valuePlaceholder: 'Paste URL (e.g. www.learnmore.com)',
+  })
+  link;
 
   // date helpers
   get isStartTimeAfterToday() {

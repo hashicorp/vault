@@ -24,6 +24,7 @@ export default class MessagesList extends Component {
   @service router;
   @service flashMessages;
   @service namespace;
+  @service customMessages;
 
   get formattedMessages() {
     return this.args.messages.map((message) => {

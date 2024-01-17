@@ -43,6 +43,10 @@
         (date-format (get @message attr.name) "MMM d, yyyy hh:mm aaa" withTimeZone=true)
       }}
     />
+  {{else if (eq attr.name "link")}}
+    {{#each-in @message.link as |title|}}
+      <InfoTableRow @label="Link" @value={{if title true false}} />
+    {{/each-in}}
   {{else}}
     <InfoTableRow @label={{capitalize (humanize (dasherize attr.name))}} @value={{get @message attr.name}} />
   {{/if}}

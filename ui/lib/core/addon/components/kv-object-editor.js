@@ -55,7 +55,9 @@ export default class KvObjectEditor extends Component {
   @action
   createKvData(elem, [value]) {
     this.kvData = KVObject.create({ content: [] }).fromJSON(value);
-    this.addRow();
+    if (!this.args.shouldOnlyShowSingleRow || !value) {
+      this.addRow();
+    }
   }
   @action
   addRow() {
@@ -86,6 +88,9 @@ export default class KvObjectEditor extends Component {
   }
   @action
   validateKey(rowIndex, event) {
+    if (this.args.shouldOnlyShowSingleRow) {
+      return;
+    }
     const { value } = event.target;
     const keyHasWhitespace = new RegExp('\\s', 'g').test(value);
     const rows = [...this.whitespaceWarningRows];
