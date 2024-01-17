@@ -11,7 +11,7 @@ import { select, event, selectAll } from 'd3-selection';
 import { scaleLinear, scaleBand } from 'd3-scale';
 import { axisLeft } from 'd3-axis';
 import { max, maxIndex } from 'd3-array';
-import { GREY, BLUE_PALETTE, calculateSum } from 'vault/utils/chart-helpers';
+import { GREY, BLUE_PALETTE } from 'vault/utils/chart-helpers';
 import { tracked } from '@glimmer/tracking';
 import { formatNumber } from 'core/helpers/format-number';
 
@@ -27,7 +27,6 @@ import { formatNumber } from 'core/helpers/format-number';
  * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  * @param {string} labelKey - string of key name for label value in chart data
  * @param {string} xKey - string of key name for x value in chart data
- * @param {object} totalCounts - object to calculate percentage for tooltip
  * @param {string} [noDataMessage] - custom empty state message that displays when no dataset is passed to the chart
  */
 
@@ -39,7 +38,7 @@ const LINE_HEIGHT = 24; // each bar w/ padding is 24 pixels thick
 
 export default class HorizontalBarChart extends Component {
   @tracked tooltipTarget = '';
-  @tracked tooltipText = '';
+  @tracked tooltipStats = [];
   @tracked isLabel = null;
 
   get labelKey() {
@@ -174,10 +173,10 @@ export default class HorizontalBarChart extends Component {
         const hoveredElement = actionBars.filter((bar) => bar[labelKey] === data[labelKey]).node();
         this.tooltipTarget = hoveredElement;
         this.isLabel = false;
-        const tooltipStats = this.args.chartLegend.map(({ key, label }) => {
-          return `${formatNumber([data[key]])} ${label}`;
+        this.tooltipStats = []; // clear stats
+        this.args.chartLegend.forEach(({ key, label }) => {
+          this.tooltipStats.pushObject(`${formatNumber([data[key]])} ${label}`);
         });
-        this.tooltipText = tooltipStats.join(', ');
 
         select(hoveredElement).style('opacity', 1);
       })
@@ -222,11 +221,7 @@ export default class HorizontalBarChart extends Component {
       .data(dataset)
       .enter()
       .append('text')
-      .text((d) => {
-        // sum each piece of stacked data
-        const total = calculateSum(this.args.chartLegend.map((l) => d[l.key]));
-        return formatNumber([total]);
-      })
+      .text((d) => formatNumber([d[xKey]]))
       .attr('fill', '#000')
       .attr('class', 'total-value')
       .style('font-size', '.8rem')

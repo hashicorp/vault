@@ -256,21 +256,11 @@ p.data-details {
   font-size: $size-9;
   padding: 6px;
   border-radius: $radius-large;
-  width: 140px;
+  flex-wrap: nowrap;
+  width: fit-content;
 
   .bold {
     font-weight: $font-weight-bold;
-  }
-  .line-chart {
-    width: 117px;
-  }
-  .vertical-chart {
-    text-align: center;
-    flex-wrap: nowrap;
-    width: fit-content;
-  }
-  .horizontal-chart {
-    padding: $spacing-12;
   }
 }
 
