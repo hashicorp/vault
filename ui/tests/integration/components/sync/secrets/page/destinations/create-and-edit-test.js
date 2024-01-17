@@ -58,7 +58,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     this.model = this.store.peekRecord(`sync/destinations/${type}`, id);
 
     await this.renderFormComponent();
-    assert.dom(PAGE.breadcrumbs).hasText('Secrets Sync Destination Edit Destination');
+    assert.dom(PAGE.breadcrumbs).hasText('Secrets Sync Destinations Destination Edit Destination');
     assert.dom('h2').hasText('Credentials', 'renders credentials section on edit');
     assert
       .dom('p.hds-foreground-faint')
@@ -256,11 +256,11 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         assert.dom(PAGE.title).hasTextContaining(`Edit ${this.model.name}`);
 
         for (const attr of this.model.formFields) {
-          // Enable inputs with sensitive values
-          if (maskedParams.includes(attr.name)) {
-            await click(PAGE.form.enableInput(attr.name));
-          }
           if (editable.includes(attr.name)) {
+            if (maskedParams.includes(attr.name)) {
+              // Enable inputs with sensitive values
+              await click(PAGE.form.enableInput(attr.name));
+            }
             await PAGE.form.fillInByAttr(attr.name, `new-${decamelize(attr.name)}-value`);
           } else {
             assert.dom(PAGE.inputByAttr(attr.name)).isDisabled(`${attr.name} is disabled`);

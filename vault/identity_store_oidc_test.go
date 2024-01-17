@@ -1103,7 +1103,9 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 	for _, testSet := range testSets {
 		testSet := testSet
 		t.Run(testSet.namedKey.name, func(t *testing.T) {
-			t.Parallel()
+			// We've disabled parallelism because this test is sensitive to timing and not running it in parallel
+			// makes it less flaky.
+			// t.Parallel()
 
 			// Prepare a storage to run through periodicFunc
 			c, _, _ := TestCoreUnsealed(t)
@@ -1152,7 +1154,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 				now := time.Now()
 				diff := nextRun.Sub(now)
 				if now.Before(nextRun) {
-					time.Sleep(diff)
+					time.Sleep(diff + 100*time.Millisecond)
 				}
 			}
 

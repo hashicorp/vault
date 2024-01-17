@@ -28,8 +28,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	kv "github.com/hashicorp/vault-plugin-secrets-kv"
-
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -38,11 +36,11 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/mlock"
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
+	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
@@ -66,7 +64,6 @@ import (
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
-	uicustommessages "github.com/hashicorp/vault/vault/ui_custom_messages"
 	"github.com/hashicorp/vault/version"
 	"github.com/patrickmn/go-cache"
 	uberAtomic "go.uber.org/atomic"
@@ -526,7 +523,7 @@ type Core struct {
 
 	// uiConfig contains UI configuration
 	uiConfig             *UIConfig
-	customMessageManager *uicustommessages.Manager
+	customMessageManager CustomMessagesManager
 
 	// rawEnabled indicates whether the Raw endpoint is enabled
 	rawEnabled bool
@@ -1266,7 +1263,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	// UI
 	uiStoragePrefix := systemBarrierPrefix + "ui"
 	c.uiConfig = NewUIConfig(conf.EnableUI, physical.NewView(c.physical, uiStoragePrefix), NewBarrierView(c.barrier, uiStoragePrefix))
-	c.customMessageManager = uicustommessages.NewManager(c.barrier)
+	c.customMessageManager = createCustomMessageManager(c.barrier, c)
 
 	// Listeners
 	err = c.configureListeners(conf)
@@ -2177,7 +2174,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		Auth:    auth,
 		Request: req,
 	}
-	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+	if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 		c.logger.Error("failed to audit request", "request_path", req.Path, "error", err)
 		return errors.New("failed to audit request, cannot continue")
 	}
@@ -2435,15 +2432,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 	} else {
-		var err error
-		disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
-		if err != nil {
-			return fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
-		}
-		c.auditBroker, err = NewAuditBroker(logger, !disableEventLogger)
+		broker, err := NewAuditBroker(logger)
 		if err != nil {
 			return err
 		}
+		c.auditBroker = broker
 	}
 
 	if c.isPrimary() {

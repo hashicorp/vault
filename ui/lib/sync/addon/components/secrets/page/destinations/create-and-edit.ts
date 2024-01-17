@@ -45,6 +45,7 @@ export default class DestinationsCreateForm extends Component<Args> {
           title: `Edit ${name}`,
           breadcrumbs: [
             { label: 'Secrets Sync', route: 'secrets.overview' },
+            { label: 'Destinations', route: 'secrets.destinations' },
             {
               label: 'Destination',
               route: 'secrets.destinations.destination.secrets',
@@ -59,7 +60,7 @@ export default class DestinationsCreateForm extends Component<Args> {
   @waitFor
   *save(event: Event) {
     event.preventDefault();
-
+    this.error = '';
     // clear out validation warnings
     this.modelValidations = null;
     const { destination } = this.args;

@@ -82,7 +82,7 @@ jobs:
         run: echo "ui-hash=$(git ls-tree HEAD ui --object-only)" >> "$GITHUB_OUTPUT"
       - name: Set up UI asset cache
         id: cache-ui-assets
-        uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2 # v4.0.0
         with:
           enableCrossOsArchive: true
           lookup-only: true
@@ -92,7 +92,7 @@ jobs:
           key: ui-${{ steps.ui-hash.outputs.ui-hash }}
       - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
         name: Set up node and yarn
-        uses: actions/setup-node@e33196f7422957bea03ed53f6fbb155025ffc7b8 # v3.7.0
+        uses: actions/setup-node@b39b52d1213e96004bfcb1c61a8a6fa8ab84f3e8 # v4.0.1
         with:
           node-version-file: ui/package.json
           cache: yarn
@@ -374,7 +374,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "${{ (needs.build-other.result != 'failure' && needs.build-linux.result != 'failure' && needs.build-darwin.result != 'failure' && needs.build-docker.result != 'failure' && needs.build-ubi.result != 'failure') && ':white_check_mark:' || ':x:' }} Build results\n${{ (needs.test.result != 'failure' && needs.test-docker-k8s.result != 'failure') && ':white_check_mark:' || ':x:' }} Enos tests"
+                    "text": "${{ (needs.build-other.result == 'success' && needs.build-linux.result == 'success' && needs.build-darwin.result == 'success' && needs.build-docker.result == 'success' && needs.build-ubi.result == 'success') && ':white_check_mark:' || ':x:' }} Build results\n${{ (needs.test.result != 'failure' && needs.test-docker-k8s.result != 'failure') && ':white_check_mark:' || ':x:' }} Enos tests"
                   },
                   "accessory": {
                     "type": "button",
@@ -412,7 +412,7 @@ jobs:
         run: vault-auth
       - id: secrets
         name: Fetch Vault Secrets
-        uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
+        uses: hashicorp/vault-action@affa6f04da5c2d55e6e115b7d1b044a6b1af8c74
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
