@@ -153,9 +153,9 @@ func (s *Salt) GetHMAC(data string) string {
 // sure it is not reversible, with an additional HMAC, and ID prepended.
 // Default value ("") string input will be ignored and returned as-is.
 func (s *Salt) GetIdentifiedHMAC(data string) string {
-	// Do not bother to HMAC an empty value.
+	// Do not HMAC an empty value.
 	if data == "" {
-		return ""
+		return data
 	}
 
 	return s.config.HMACType + ":" + s.GetHMAC(data)
