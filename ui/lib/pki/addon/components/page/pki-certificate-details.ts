@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -9,9 +9,9 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
-import FlashMessageService from 'vault/services/flash-messages';
-import DownloadService from 'vault/services/download';
-import PkiCertificateBaseModel from 'vault/models/pki/certificate/base';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type DownloadService from 'vault/services/download';
+import type PkiCertificateBaseModel from 'vault/models/pki/certificate/base';
 
 interface Args {
   model: PkiCertificateBaseModel;

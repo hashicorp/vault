@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -49,8 +49,8 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, _
 		return nil, fmt.Errorf("could not find serial in internal secret data")
 	}
 
-	b.revokeStorageLock.Lock()
-	defer b.revokeStorageLock.Unlock()
+	b.GetRevokeStorageLock().Lock()
+	defer b.GetRevokeStorageLock().Unlock()
 
 	sc := b.makeStorageContext(ctx, req.Storage)
 	serial := serialInt.(string)
@@ -77,7 +77,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, _
 		return nil, nil
 	}
 
-	config, err := sc.Backend.crlBuilder.getConfigWithUpdate(sc)
+	config, err := sc.Backend.CrlBuilder().getConfigWithUpdate(sc)
 	if err != nil {
 		return nil, fmt.Errorf("error revoking serial: %s: failed reading config: %w", serial, err)
 	}

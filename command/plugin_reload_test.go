@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
-	"github.com/mitchellh/cli"
 )
 
 func testPluginReloadCommand(tb testing.TB) (*cli.MockUi, *PluginReloadCommand) {
@@ -46,13 +46,25 @@ func TestPluginReloadCommand_Run(t *testing.T) {
 		{
 			"not_enough_args",
 			nil,
-			"Not enough arguments",
+			"No plugins specified, must specify exactly one of -plugin or -mounts",
 			1,
 		},
 		{
 			"too_many_args",
 			[]string{"-plugin", "foo", "-mounts", "bar"},
-			"Too many arguments",
+			"Must specify exactly one of -plugin or -mounts",
+			1,
+		},
+		{
+			"type_and_mounts_mutually_exclusive",
+			[]string{"-mounts", "bar", "-type", "secret"},
+			"Cannot specify -type with -mounts",
+			1,
+		},
+		{
+			"invalid_type",
+			[]string{"-plugin", "bar", "-type", "unsupported"},
+			"Error parsing -type as a plugin type",
 			1,
 		},
 	}
@@ -85,8 +97,7 @@ func TestPluginReloadCommand_Run(t *testing.T) {
 	t.Run("integration", func(t *testing.T) {
 		t.Parallel()
 
-		pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-		defer cleanup(t)
+		pluginDir := corehelpers.MakeTestPluginDir(t)
 
 		client, _, closer := testVaultServerPluginDir(t, pluginDir)
 		defer closer()
@@ -147,7 +158,7 @@ func TestPluginReloadStatusCommand_Run(t *testing.T) {
 			client, closer := testVaultServer(t)
 			defer closer()
 
-			ui, cmd := testPluginReloadCommand(t)
+			ui, cmd := testPluginReloadStatusCommand(t)
 			cmd.client = client
 
 			args := append([]string{}, tc.args...)

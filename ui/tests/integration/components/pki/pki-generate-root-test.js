@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -23,7 +23,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.secretMountPath = this.owner.lookup('service:secret-mount-path');
     this.secretMountPath.currentPath = 'pki-test';
-    this.urls = this.store.createRecord('pki/urls', { id: 'pki-test' });
+    this.urls = this.store.createRecord('pki/config/urls', { id: 'pki-test' });
     this.model = this.store.createRecord('pki/action');
     this.onSave = Sinon.spy();
     this.onCancel = Sinon.spy();

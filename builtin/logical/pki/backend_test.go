@@ -1,10 +1,11 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -26,6 +27,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -33,7 +35,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
+	"golang.org/x/exp/maps"
 
 	"github.com/hashicorp/vault/helper/testhelpers"
 
@@ -55,6 +59,8 @@ import (
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/net/idna"
+
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 )
 
 var stepCount = 0
@@ -855,7 +861,7 @@ func generateTestCsr(t *testing.T, keyType certutil.PrivateKeyType, keyBits int)
 
 // Generates steps to test out various role permutations
 func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
-	roleVals := roleEntry{
+	roleVals := issuing.RoleEntry{
 		MaxTTL:                    12 * time.Hour,
 		KeyType:                   "rsa",
 		KeyBits:                   2048,
@@ -937,7 +943,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		ret = append(ret, issueTestStep)
 	}
 
-	getCountryCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+	getCountryCheck := func(role issuing.RoleEntry) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
 			err := mapstructure.Decode(resp.Data, &certBundle)
@@ -958,7 +964,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
-	getOuCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+	getOuCheck := func(role issuing.RoleEntry) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
 			err := mapstructure.Decode(resp.Data, &certBundle)
@@ -979,7 +985,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
-	getOrganizationCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+	getOrganizationCheck := func(role issuing.RoleEntry) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
 			err := mapstructure.Decode(resp.Data, &certBundle)
@@ -1000,7 +1006,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
-	getLocalityCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+	getLocalityCheck := func(role issuing.RoleEntry) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
 			err := mapstructure.Decode(resp.Data, &certBundle)
@@ -1021,7 +1027,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
-	getProvinceCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+	getProvinceCheck := func(role issuing.RoleEntry) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
 			err := mapstructure.Decode(resp.Data, &certBundle)
@@ -1042,7 +1048,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
-	getStreetAddressCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+	getStreetAddressCheck := func(role issuing.RoleEntry) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
 			err := mapstructure.Decode(resp.Data, &certBundle)
@@ -1063,7 +1069,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
-	getPostalCodeCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+	getPostalCodeCheck := func(role issuing.RoleEntry) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
 			err := mapstructure.Decode(resp.Data, &certBundle)
@@ -1084,7 +1090,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
-	getNotBeforeCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+	getNotBeforeCheck := func(role issuing.RoleEntry) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
 			err := mapstructure.Decode(resp.Data, &certBundle)
@@ -1109,7 +1115,9 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 	// Returns a TestCheckFunc that performs various validity checks on the
 	// returned certificate information, mostly within checkCertsAndPrivateKey
-	getCnCheck := func(name string, role roleEntry, key crypto.Signer, usage x509.KeyUsage, extUsage x509.ExtKeyUsage, validity time.Duration) logicaltest.TestCheckFunc {
+	getCnCheck := func(name string, role issuing.RoleEntry, key crypto.Signer, usage x509.KeyUsage,
+		extUsage x509.ExtKeyUsage, validity time.Duration,
+	) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
 			err := mapstructure.Decode(resp.Data, &certBundle)
@@ -1219,7 +1227,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	}
 
 	getRandCsr := func(keyType string, errorOk bool, csrTemplate *x509.CertificateRequest) csrPlan {
-		rsaKeyBits := []int{2048, 3072, 4096}
+		rsaKeyBits := []int{2048, 3072, 4096, 8192}
 		ecKeyBits := []int{224, 256, 384, 521}
 		plan := csrPlan{errorOk: errorOk}
 
@@ -1332,7 +1340,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 
 			roleVals.KeyUsage = usage
-			parsedKeyUsage := parseKeyUsages(roleVals.KeyUsage)
+			parsedKeyUsage := parsing.ParseKeyUsages(roleVals.KeyUsage)
 			if parsedKeyUsage == 0 && len(usage) != 0 {
 				panic("parsed key usages was zero")
 			}
@@ -1591,7 +1599,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	}
 
 	{
-		getOtherCheck := func(expectedOthers ...otherNameUtf8) logicaltest.TestCheckFunc {
+		getOtherCheck := func(expectedOthers ...issuing.OtherNameUtf8) logicaltest.TestCheckFunc {
 			return func(resp *logical.Response) error {
 				var certBundle certutil.CertBundle
 				err := mapstructure.Decode(resp.Data, &certBundle)
@@ -1607,7 +1615,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 				if err != nil {
 					return err
 				}
-				var expected []otherNameUtf8
+				var expected []issuing.OtherNameUtf8
 				expected = append(expected, expectedOthers...)
 				if diff := deep.Equal(foundOthers, expected); len(diff) > 0 {
 					return fmt.Errorf("wrong SAN IPs, diff: %v", diff)
@@ -1616,11 +1624,11 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 		}
 
-		addOtherSANTests := func(useCSRs, useCSRSANs bool, allowedOtherSANs []string, errorOk bool, otherSANs []string, csrOtherSANs []otherNameUtf8, check logicaltest.TestCheckFunc) {
-			otherSansMap := func(os []otherNameUtf8) map[string][]string {
+		addOtherSANTests := func(useCSRs, useCSRSANs bool, allowedOtherSANs []string, errorOk bool, otherSANs []string, csrOtherSANs []issuing.OtherNameUtf8, check logicaltest.TestCheckFunc) {
+			otherSansMap := func(os []issuing.OtherNameUtf8) map[string][]string {
 				ret := make(map[string][]string)
 				for _, o := range os {
-					ret[o.oid] = append(ret[o.oid], o.value)
+					ret[o.Oid] = append(ret[o.Oid], o.Value)
 				}
 				return ret
 			}
@@ -1651,14 +1659,14 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		roleVals.UseCSRCommonName = true
 		commonNames.Localhost = true
 
-		newOtherNameUtf8 := func(s string) (ret otherNameUtf8) {
+		newOtherNameUtf8 := func(s string) (ret issuing.OtherNameUtf8) {
 			pieces := strings.Split(s, ";")
 			if len(pieces) == 2 {
 				piecesRest := strings.Split(pieces[1], ":")
 				if len(piecesRest) == 2 {
 					switch strings.ToUpper(piecesRest[0]) {
 					case "UTF-8", "UTF8":
-						return otherNameUtf8{oid: pieces[0], value: piecesRest[1]}
+						return issuing.OtherNameUtf8{Oid: pieces[0], Value: piecesRest[1]}
 					}
 				}
 			}
@@ -1668,7 +1676,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		oid1 := "1.3.6.1.4.1.311.20.2.3"
 		oth1str := oid1 + ";utf8:devops@nope.com"
 		oth1 := newOtherNameUtf8(oth1str)
-		oth2 := otherNameUtf8{oid1, "me@example.com"}
+		oth2 := issuing.OtherNameUtf8{oid1, "me@example.com"}
 		// allowNone, allowAll := []string{}, []string{oid1 + ";UTF-8:*"}
 		allowNone, allowAll := []string{}, []string{"*"}
 
@@ -1683,15 +1691,15 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 		// Given OtherSANs as API argument and useCSRSANs false, CSR arg ignored.
 		addOtherSANTests(useCSRs, false, allowAll, false, []string{oth1str},
-			[]otherNameUtf8{oth2}, getOtherCheck(oth1))
+			[]issuing.OtherNameUtf8{oth2}, getOtherCheck(oth1))
 
 		if useCSRs {
 			// OtherSANs not allowed, valid OtherSANs provided via CSR, should be an error.
-			addOtherSANTests(useCSRs, true, allowNone, true, nil, []otherNameUtf8{oth1}, nil)
+			addOtherSANTests(useCSRs, true, allowNone, true, nil, []issuing.OtherNameUtf8{oth1}, nil)
 
 			// Given OtherSANs as both API and CSR arguments and useCSRSANs=true, API arg ignored.
 			addOtherSANTests(useCSRs, false, allowAll, false, []string{oth2.String()},
-				[]otherNameUtf8{oth1}, getOtherCheck(oth2))
+				[]issuing.OtherNameUtf8{oth1}, getOtherCheck(oth2))
 		}
 	}
 
@@ -2400,6 +2408,14 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	require.NotNil(t, resp, "expected ca info")
 	keyId1 := resp.Data["key_id"]
 	issuerId1 := resp.Data["issuer_id"]
+	cert := parseCert(t, resp.Data["certificate"].(string))
+	certSkid := certutil.GetHexFormatted(cert.SubjectKeyId, ":")
+
+	//  -> Validate the SKID matches between the root cert and the key
+	resp, err = CBRead(b, s, "key/"+keyId1.(issuing.KeyID).String())
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected a response")
+	require.Equal(t, resp.Data["subject_key_id"], certSkid)
 
 	resp, err = CBRead(b, s, "cert/ca_chain")
 	require.NoError(t, err, "error reading ca_chain: %v", err)
@@ -2414,6 +2430,14 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	require.NotNil(t, resp, "expected ca info")
 	keyId2 := resp.Data["key_id"]
 	issuerId2 := resp.Data["issuer_id"]
+	cert = parseCert(t, resp.Data["certificate"].(string))
+	certSkid = certutil.GetHexFormatted(cert.SubjectKeyId, ":")
+
+	//  -> Validate the SKID matches between the root cert and the key
+	resp, err = CBRead(b, s, "key/"+keyId2.(issuing.KeyID).String())
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected a response")
+	require.Equal(t, resp.Data["subject_key_id"], certSkid)
 
 	// Make sure that we actually generated different issuer and key values
 	require.NotEqual(t, keyId1, keyId2)
@@ -2438,13 +2462,27 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, resp, "expected ca info")
+	firstMapping := resp.Data["mapping"].(map[string]string)
 	firstImportedKeys := resp.Data["imported_keys"].([]string)
 	firstImportedIssuers := resp.Data["imported_issuers"].([]string)
+	firstExistingKeys := resp.Data["existing_keys"].([]string)
+	firstExistingIssuers := resp.Data["existing_issuers"].([]string)
 
 	require.NotContains(t, firstImportedKeys, keyId1)
 	require.NotContains(t, firstImportedKeys, keyId2)
 	require.NotContains(t, firstImportedIssuers, issuerId1)
 	require.NotContains(t, firstImportedIssuers, issuerId2)
+	require.Empty(t, firstExistingKeys)
+	require.Empty(t, firstExistingIssuers)
+	require.NotEmpty(t, firstMapping)
+	require.Equal(t, 1, len(firstMapping))
+
+	var issuerId3 string
+	var keyId3 string
+	for i, k := range firstMapping {
+		issuerId3 = i
+		keyId3 = k
+	}
 
 	// Performing this again should result in no key/issuer ids being imported/generated.
 	resp, err = CBWrite(b, s, "config/ca", map[string]interface{}{
@@ -2452,11 +2490,17 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp, "expected ca info")
+	secondMapping := resp.Data["mapping"].(map[string]string)
 	secondImportedKeys := resp.Data["imported_keys"]
 	secondImportedIssuers := resp.Data["imported_issuers"]
+	secondExistingKeys := resp.Data["existing_keys"]
+	secondExistingIssuers := resp.Data["existing_issuers"]
 
-	require.Nil(t, secondImportedKeys)
-	require.Nil(t, secondImportedIssuers)
+	require.Empty(t, secondImportedKeys)
+	require.Empty(t, secondImportedIssuers)
+	require.Contains(t, secondExistingKeys, keyId3)
+	require.Contains(t, secondExistingIssuers, issuerId3)
+	require.Equal(t, 1, len(secondMapping))
 
 	resp, err = CBDelete(b, s, "root")
 	require.NoError(t, err)
@@ -2496,7 +2540,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	}
 }
 
-func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
+func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
 	t.Parallel()
 	b_root, s_root := CreateBackendWithStorage(t)
 	b_int, s_int := CreateBackendWithStorage(t)
@@ -2514,6 +2558,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	_, err = CBWrite(b_root, s_root, "roles/test", map[string]interface{}{
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
+		"allow_any_name":     true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -2523,21 +2568,25 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 		"common_name": "myint.com",
 	})
 	schema.ValidateResponse(t, schema.GetResponseSchema(t, b_root.Route("intermediate/generate/internal"), logical.UpdateOperation), resp, true)
+	require.Contains(t, resp.Data, "key_id")
+	intKeyId := resp.Data["key_id"].(issuing.KeyID)
+	csr := resp.Data["csr"]
+
+	resp, err = CBRead(b_int, s_int, "key/"+intKeyId.String())
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected a response")
+	intSkid := resp.Data["subject_key_id"].(string)
 
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	csr := resp.Data["csr"]
 
 	_, err = CBWrite(b_root, s_root, "sign/test", map[string]interface{}{
 		"common_name": "myint.com",
 		"csr":         csr,
 		"ttl":         "60h",
 	})
-	if err == nil {
-		t.Fatal("expected error")
-	}
+	require.ErrorContains(t, err, "that is beyond the expiration of the CA certificate")
 
 	_, err = CBWrite(b_root, s_root, "sign-verbatim/test", map[string]interface{}{
 		"common_name": "myint.com",
@@ -2545,9 +2594,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 		"csr":         csr,
 		"ttl":         "60h",
 	})
-	if err == nil {
-		t.Fatal("expected error")
-	}
+	require.ErrorContains(t, err, "that is beyond the expiration of the CA certificate")
 
 	resp, err = CBWrite(b_root, s_root, "root/sign-intermediate", map[string]interface{}{
 		"common_name": "myint.com",
@@ -2564,6 +2611,10 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	if len(resp.Warnings) == 0 {
 		t.Fatalf("expected warnings, got %#v", *resp)
 	}
+
+	cert := parseCert(t, resp.Data["certificate"].(string))
+	certSkid := certutil.GetHexFormatted(cert.SubjectKeyId, ":")
+	require.Equal(t, intSkid, certSkid)
 }
 
 func TestBackend_ConsulSignLeafWithLegacyRole(t *testing.T) {
@@ -2720,7 +2771,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	}
 
 	sc := b.makeStorageContext(context.Background(), storage)
-	signingBundle, err := sc.fetchCAInfo(defaultRef, ReadOnlyUsage)
+	signingBundle, err := sc.fetchCAInfo(defaultRef, issuing.ReadOnlyUsage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3079,11 +3130,14 @@ func TestBackend_OID_SANs(t *testing.T) {
 		cert.DNSNames[2] != "foobar.com" {
 		t.Fatalf("unexpected DNS SANs %v", cert.DNSNames)
 	}
-	expectedOtherNames := []otherNameUtf8{{oid1, val1}, {oid2, val2}}
+	expectedOtherNames := []issuing.OtherNameUtf8{{oid1, val1}, {oid2, val2}}
 	foundOtherNames, err := getOtherSANsFromX509Extensions(cert.Extensions)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Sort our returned list as SANS are built internally with a map so ordering can be inconsistent
+	slices.SortFunc(foundOtherNames, func(a, b issuing.OtherNameUtf8) int { return cmp.Compare(a.Oid, b.Oid) })
+
 	if diff := deep.Equal(expectedOtherNames, foundOtherNames); len(diff) != 0 {
 		t.Errorf("unexpected otherNames: %v", diff)
 	}
@@ -3830,9 +3884,11 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 		"maintain_stored_certificate_counts":       true,
 		"publish_stored_certificate_count_metrics": true,
 	})
+	require.NoError(t, err, "failed calling auto-tidy")
 	_, err = client.Logical().Write("/sys/plugins/reload/backend", map[string]interface{}{
 		"mounts": "pki/",
 	})
+	require.NoError(t, err, "failed calling backend reload")
 
 	// Check the metrics initialized in order to calculate backendUUID for /pki
 	// BackendUUID not consistent during tests with UUID from /sys/mounts/pki
@@ -3987,6 +4043,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 		expectedData := map[string]interface{}{
 			"safety_buffer":                         json.Number("1"),
 			"issuer_safety_buffer":                  json.Number("31536000"),
+			"revocation_queue_safety_buffer":        json.Number("172800"),
 			"tidy_cert_store":                       true,
 			"tidy_revoked_certs":                    true,
 			"tidy_revoked_cert_issuer_associations": false,
@@ -3999,6 +4056,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"error":                                 nil,
 			"time_started":                          nil,
 			"time_finished":                         nil,
+			"last_auto_tidy_finished":               nil,
 			"message":                               nil,
 			"cert_store_deleted_count":              json.Number("1"),
 			"revoked_cert_deleted_count":            json.Number("1"),
@@ -4008,6 +4066,12 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"revocation_queue_deleted_count":        json.Number("0"),
 			"cross_revoked_cert_deleted_count":      json.Number("0"),
 			"internal_backend_uuid":                 backendUUID,
+			"tidy_acme":                             false,
+			"acme_account_safety_buffer":            json.Number("2592000"),
+			"acme_orders_deleted_count":             json.Number("0"),
+			"acme_account_revoked_count":            json.Number("0"),
+			"acme_account_deleted_count":            json.Number("0"),
+			"total_acme_account_count":              json.Number("0"),
 		}
 		// Let's copy the times from the response so that we can use deep.Equal()
 		timeStarted, ok := tidyStatus.Data["time_started"]
@@ -4020,6 +4084,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			t.Fatal("Expected tidy status response to include a value for time_finished")
 		}
 		expectedData["time_finished"] = timeFinished
+		expectedData["last_auto_tidy_finished"] = tidyStatus.Data["last_auto_tidy_finished"]
 
 		if diff := deep.Equal(expectedData, tidyStatus.Data); diff != nil {
 			t.Fatal(diff)
@@ -4881,9 +4946,9 @@ func TestRootWithExistingKey(t *testing.T) {
 	resp, err = CBList(b, s, "issuers")
 	require.NoError(t, err)
 	require.Equal(t, 3, len(resp.Data["keys"].([]string)))
-	require.Contains(t, resp.Data["keys"], string(myIssuerId1.(issuerID)))
-	require.Contains(t, resp.Data["keys"], string(myIssuerId2.(issuerID)))
-	require.Contains(t, resp.Data["keys"], string(myIssuerId3.(issuerID)))
+	require.Contains(t, resp.Data["keys"], string(myIssuerId1.(issuing.IssuerID)))
+	require.Contains(t, resp.Data["keys"], string(myIssuerId2.(issuing.IssuerID)))
+	require.Contains(t, resp.Data["keys"], string(myIssuerId3.(issuing.IssuerID)))
 }
 
 func TestIntermediateWithExistingKey(t *testing.T) {
@@ -4984,12 +5049,13 @@ func TestIssuanceTTLs(t *testing.T) {
 	})
 	require.Error(t, err, "expected issuance to fail due to longer default ttl than cert ttl")
 
-	resp, err = CBWrite(b, s, "issuer/root", map[string]interface{}{
-		"issuer_name":             "root",
+	resp, err = CBPatch(b, s, "issuer/root", map[string]interface{}{
 		"leaf_not_after_behavior": "permit",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.Equal(t, resp.Data["leaf_not_after_behavior"], "permit")
 
 	_, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
@@ -5002,6 +5068,8 @@ func TestIssuanceTTLs(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.Equal(t, resp.Data["leaf_not_after_behavior"], "truncate")
 
 	_, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
@@ -5662,17 +5730,18 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 		}
 	}
 
-	if b.certCount.Load() != 6 {
-		t.Fatalf("Failed to count six certificates root,A,B,C,D,E, instead counted %d certs", b.certCount.Load())
+	certCounter := b.GetCertificateCounter()
+	if certCounter.CertificateCount() != 6 {
+		t.Fatalf("Failed to count six certificates root,A,B,C,D,E, instead counted %d certs", certCounter.CertificateCount())
 	}
-	if b.revokedCertCount.Load() != 2 {
-		t.Fatalf("Failed to count two revoked certificates A+B, instead counted %d certs", b.revokedCertCount.Load())
+	if certCounter.RevokedCount() != 2 {
+		t.Fatalf("Failed to count two revoked certificates A+B, instead counted %d certs", certCounter.RevokedCount())
 	}
 
 	// Simulates listing while initialize in progress, by "restarting it"
-	b.certCount.Store(0)
-	b.revokedCertCount.Store(0)
-	b.certsCounted.Store(false)
+	certCounter.certCount.Store(0)
+	certCounter.revokedCertCount.Store(0)
+	certCounter.certsCounted.Store(false)
 
 	// Revoke certificates C, D
 	dirtyRevocations := serials[2:4]
@@ -5697,15 +5766,16 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 	}
 
 	// Run initialize
-	b.initializeStoredCertificateCounts(ctx)
+	err = b.initializeStoredCertificateCounts(ctx)
+	require.NoError(t, err, "failed initializing certificate counts")
 
 	// Test certificate count
-	if b.certCount.Load() != 8 {
-		t.Fatalf("Failed to initialize count of certificates root, A,B,C,D,E,F,G counted %d certs", b.certCount.Load())
+	if certCounter.CertificateCount() != 8 {
+		t.Fatalf("Failed to initialize count of certificates root, A,B,C,D,E,F,G counted %d certs", certCounter.CertificateCount())
 	}
 
-	if b.revokedCertCount.Load() != 4 {
-		t.Fatalf("Failed to count revoked certificates A,B,C,D counted %d certs", b.revokedCertCount.Load())
+	if certCounter.RevokedCount() != 4 {
+		t.Fatalf("Failed to count revoked certificates A,B,C,D counted %d certs", certCounter.RevokedCount())
 	}
 
 	return
@@ -6070,27 +6140,28 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 	_, err = CBWrite(b, s, "config/urls", aiaData)
 	require.NoError(t, err)
 
-	// But root generation will fail.
+	// Root generation should succeed, but without AIA info.
 	rootData := map[string]interface{}{
 		"common_name": "Long-Lived Root X1",
 		"issuer_name": "long-root-x1",
 		"key_type":    "ec",
 	}
-	_, err = CBWrite(b, s, "root/generate/internal", rootData)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "unable to parse AIA URL")
+	resp, err = CBWrite(b, s, "root/generate/internal", rootData)
+	require.NoError(t, err)
+	_, err = CBDelete(b, s, "root")
+	require.NoError(t, err)
 
-	// Clearing the config and regenerating the root should succeed.
+	// Clearing the config and regenerating the root should still succeed.
 	_, err = CBWrite(b, s, "config/urls", map[string]interface{}{
-		"crl_distribution_points": "",
-		"issuing_certificates":    "",
-		"ocsp_servers":            "",
-		"enable_templating":       false,
+		"crl_distribution_points": "{{cluster_path}}/issuer/my-root-id/crl/der",
+		"issuing_certificates":    "{{cluster_aia_path}}/issuer/my-root-id/der",
+		"ocsp_servers":            "{{cluster_path}}/ocsp",
+		"enable_templating":       true,
 	})
 	require.NoError(t, err)
 	resp, err = CBWrite(b, s, "root/generate/internal", rootData)
 	requireSuccessNonNilResponse(t, resp, err)
-	issuerId := string(resp.Data["issuer_id"].(issuerID))
+	issuerId := string(resp.Data["issuer_id"].(issuing.IssuerID))
 
 	// Now write the original AIA config and sign a leaf.
 	_, err = CBWrite(b, s, "config/urls", aiaData)
@@ -6689,7 +6760,7 @@ func TestProperAuthing(t *testing.T) {
 		t.Fatal(err)
 	}
 	serial := resp.Data["serial_number"].(string)
-
+	eabKid := "13b80844-e60d-42d2-b7e9-152a8e834b90"
 	paths := map[string]pathAuthChecker{
 		"ca_chain":                               shouldBeUnauthedReadList,
 		"cert/ca_chain":                          shouldBeUnauthedReadList,
@@ -6710,10 +6781,11 @@ func TestProperAuthing(t *testing.T) {
 		"cert/unified-delta-crl":                 shouldBeUnauthedReadList,
 		"cert/unified-delta-crl/raw":             shouldBeUnauthedReadList,
 		"cert/unified-delta-crl/raw/pem":         shouldBeUnauthedReadList,
-		"certs":                                  shouldBeAuthed,
-		"certs/revoked":                          shouldBeAuthed,
-		"certs/revocation-queue":                 shouldBeAuthed,
-		"certs/unified-revoked":                  shouldBeAuthed,
+		"certs/":                                 shouldBeAuthed,
+		"certs/revoked/":                         shouldBeAuthed,
+		"certs/revocation-queue/":                shouldBeAuthed,
+		"certs/unified-revoked/":                 shouldBeAuthed,
+		"config/acme":                            shouldBeAuthed,
 		"config/auto-tidy":                       shouldBeAuthed,
 		"config/ca":                              shouldBeAuthed,
 		"config/cluster":                         shouldBeAuthed,
@@ -6759,7 +6831,7 @@ func TestProperAuthing(t *testing.T) {
 		"issuer/default/sign-verbatim":           shouldBeAuthed,
 		"issuer/default/sign-verbatim/test":      shouldBeAuthed,
 		"issuer/default/sign/test":               shouldBeAuthed,
-		"issuers":                                shouldBeUnauthedReadList,
+		"issuers/":                               shouldBeUnauthedReadList,
 		"issuers/generate/intermediate/exported": shouldBeAuthed,
 		"issuers/generate/intermediate/internal": shouldBeAuthed,
 		"issuers/generate/intermediate/existing": shouldBeAuthed,
@@ -6771,7 +6843,7 @@ func TestProperAuthing(t *testing.T) {
 		"issuers/import/cert":                    shouldBeAuthed,
 		"issuers/import/bundle":                  shouldBeAuthed,
 		"key/default":                            shouldBeAuthed,
-		"keys":                                   shouldBeAuthed,
+		"keys/":                                  shouldBeAuthed,
 		"keys/generate/internal":                 shouldBeAuthed,
 		"keys/generate/exported":                 shouldBeAuthed,
 		"keys/generate/kms":                      shouldBeAuthed,
@@ -6781,7 +6853,7 @@ func TestProperAuthing(t *testing.T) {
 		"revoke":                                 shouldBeAuthed,
 		"revoke-with-key":                        shouldBeAuthed,
 		"roles/test":                             shouldBeAuthed,
-		"roles":                                  shouldBeAuthed,
+		"roles/":                                 shouldBeAuthed,
 		"root":                                   shouldBeAuthed,
 		"root/generate/exported":                 shouldBeAuthed,
 		"root/generate/internal":                 shouldBeAuthed,
@@ -6806,21 +6878,32 @@ func TestProperAuthing(t *testing.T) {
 		"unified-crl/delta/pem":                  shouldBeUnauthedReadList,
 		"unified-ocsp":                           shouldBeUnauthedWriteOnly,
 		"unified-ocsp/dGVzdAo=":                  shouldBeUnauthedReadList,
+		"eab/":                                   shouldBeAuthed,
+		"eab/" + eabKid:                          shouldBeAuthed,
 	}
 
+	entPaths := getEntProperAuthingPaths(serial)
+	maps.Copy(paths, entPaths)
+
 	// Add ACME based paths to the test suite
-	for _, acmePrefix := range []string{"", "issuer/default/", "roles/test/", "issuer/default/roles/test/"} {
-		paths[acmePrefix+"acme/directory"] = shouldBeUnauthedReadList
-		paths[acmePrefix+"acme/new-nonce"] = shouldBeUnauthedReadList
-		paths[acmePrefix+"acme/new-account"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/new-order"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/orders"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/account/hrKmDYTvicHoHGVN2-3uzZV_BPGdE0W_dNaqYTtYqeo="] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/authorization/29da8c38-7a09-465e-b9a6-3d76802b1afd"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/challenge/29da8c38-7a09-465e-b9a6-3d76802b1afd/http-01"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/order/13b80844-e60d-42d2-b7e9-152a8e834b90"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/order/13b80844-e60d-42d2-b7e9-152a8e834b90/finalize"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/order/13b80844-e60d-42d2-b7e9-152a8e834b90/cert"] = shouldBeUnauthedWriteOnly
+	ossAcmePrefixes := []string{"acme/", "issuer/default/acme/", "roles/test/acme/", "issuer/default/roles/test/acme/"}
+	entAcmePrefixes := getEntAcmePrefixes()
+	for _, acmePrefix := range append(ossAcmePrefixes, entAcmePrefixes...) {
+		paths[acmePrefix+"directory"] = shouldBeUnauthedReadList
+		paths[acmePrefix+"new-nonce"] = shouldBeUnauthedReadList
+		paths[acmePrefix+"new-account"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"revoke-cert"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"new-order"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"orders"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"account/hrKmDYTvicHoHGVN2-3uzZV_BPGdE0W_dNaqYTtYqeo="] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"authorization/29da8c38-7a09-465e-b9a6-3d76802b1afd"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"challenge/29da8c38-7a09-465e-b9a6-3d76802b1afd/http-01"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"order/13b80844-e60d-42d2-b7e9-152a8e834b90"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"order/13b80844-e60d-42d2-b7e9-152a8e834b90/finalize"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"order/13b80844-e60d-42d2-b7e9-152a8e834b90/cert"] = shouldBeUnauthedWriteOnly
+
+		// Make sure this new-eab path is auth'd
+		paths[acmePrefix+"new-eab"] = shouldBeAuthed
 	}
 
 	for path, checkerType := range paths {
@@ -6878,10 +6961,19 @@ func TestProperAuthing(t *testing.T) {
 		if strings.Contains(raw_path, "acme/") && strings.Contains(raw_path, "{order_id}") {
 			raw_path = strings.ReplaceAll(raw_path, "{order_id}", "13b80844-e60d-42d2-b7e9-152a8e834b90")
 		}
+		if strings.Contains(raw_path, "eab") && strings.Contains(raw_path, "{key_id}") {
+			raw_path = strings.ReplaceAll(raw_path, "{key_id}", eabKid)
+		}
+		if strings.Contains(raw_path, "external-policy/") && strings.Contains(raw_path, "{policy}") {
+			raw_path = strings.ReplaceAll(raw_path, "{policy}", "a-policy")
+		}
+
+		raw_path = entProperAuthingPathReplacer(raw_path)
 
 		handler, present := paths[raw_path]
 		if !present {
-			t.Fatalf("OpenAPI reports PKI mount contains %v->%v but was not tested to be authed or authed.", openapi_path, raw_path)
+			t.Fatalf("OpenAPI reports PKI mount contains %v -> %v but was not tested to be authed or not authed.",
+				openapi_path, raw_path)
 		}
 
 		openapi_data := raw_data.(map[string]interface{})
@@ -6914,6 +7006,150 @@ func TestProperAuthing(t *testing.T) {
 	if !validatedPath {
 		t.Fatalf("Expected to have validated at least one path.")
 	}
+}
+
+func TestPatchIssuer(t *testing.T) {
+	t.Parallel()
+
+	type TestCase struct {
+		Field   string
+		Before  interface{}
+		Patched interface{}
+	}
+	testCases := []TestCase{
+		{
+			Field:   "issuer_name",
+			Before:  "root",
+			Patched: "root-new",
+		},
+		{
+			Field:   "leaf_not_after_behavior",
+			Before:  "err",
+			Patched: "permit",
+		},
+		{
+			Field:   "usage",
+			Before:  "crl-signing,issuing-certificates,ocsp-signing,read-only",
+			Patched: "issuing-certificates,read-only",
+		},
+		{
+			Field:   "revocation_signature_algorithm",
+			Before:  "ECDSAWithSHA256",
+			Patched: "ECDSAWithSHA384",
+		},
+		{
+			Field:   "issuing_certificates",
+			Before:  []string{"http://localhost/v1/pki-1/ca"},
+			Patched: []string{"http://localhost/v1/pki/ca"},
+		},
+		{
+			Field:   "crl_distribution_points",
+			Before:  []string{"http://localhost/v1/pki-1/crl"},
+			Patched: []string{"http://localhost/v1/pki/crl"},
+		},
+		{
+			Field:   "ocsp_servers",
+			Before:  []string{"http://localhost/v1/pki-1/ocsp"},
+			Patched: []string{"http://localhost/v1/pki/ocsp"},
+		},
+		{
+			Field:   "enable_aia_url_templating",
+			Before:  false,
+			Patched: true,
+		},
+		{
+			Field:   "manual_chain",
+			Before:  []string(nil),
+			Patched: []string{"self"},
+		},
+	}
+
+	for index, testCase := range testCases {
+		t.Logf("index: %v / tc: %v", index, testCase)
+
+		b, s := CreateBackendWithStorage(t)
+
+		// 1. Setup root issuer.
+		resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+			"common_name": "Vault Root CA",
+			"key_type":    "ec",
+			"ttl":         "7200h",
+			"issuer_name": "root",
+		})
+		requireSuccessNonNilResponse(t, resp, err, "failed generating root issuer")
+		id := string(resp.Data["issuer_id"].(issuing.IssuerID))
+
+		// 2. Enable Cluster paths
+		resp, err = CBWrite(b, s, "config/urls", map[string]interface{}{
+			"path":     "https://localhost/v1/pki",
+			"aia_path": "http://localhost/v1/pki",
+		})
+		requireSuccessNonNilResponse(t, resp, err, "failed updating AIA config")
+
+		// 3. Add AIA information
+		resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+			"issuing_certificates":    "http://localhost/v1/pki-1/ca",
+			"crl_distribution_points": "http://localhost/v1/pki-1/crl",
+			"ocsp_servers":            "http://localhost/v1/pki-1/ocsp",
+		})
+		requireSuccessNonNilResponse(t, resp, err, "failed setting up issuer")
+
+		// 4. Read the issuer before.
+		resp, err = CBRead(b, s, "issuer/default")
+		requireSuccessNonNilResponse(t, resp, err, "failed reading root issuer before")
+		require.Equal(t, testCase.Before, resp.Data[testCase.Field], "bad expectations")
+
+		// 5. Perform modification.
+		resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+			testCase.Field: testCase.Patched,
+		})
+		requireSuccessNonNilResponse(t, resp, err, "failed patching root issuer")
+
+		if testCase.Field != "manual_chain" {
+			require.Equal(t, testCase.Patched, resp.Data[testCase.Field], "failed persisting value")
+		} else {
+			// self->id
+			require.Equal(t, []string{id}, resp.Data[testCase.Field], "failed persisting value")
+		}
+
+		// 6. Ensure it stuck
+		resp, err = CBRead(b, s, "issuer/default")
+		requireSuccessNonNilResponse(t, resp, err, "failed reading root issuer after")
+
+		if testCase.Field != "manual_chain" {
+			require.Equal(t, testCase.Patched, resp.Data[testCase.Field])
+		} else {
+			// self->id
+			require.Equal(t, []string{id}, resp.Data[testCase.Field], "failed persisting value")
+		}
+	}
+}
+
+func TestGenerateRootCAWithAIA(t *testing.T) {
+	// Generate a root CA at /pki-root
+	b_root, s_root := CreateBackendWithStorage(t)
+
+	// Setup templated AIA information
+	_, err := CBWrite(b_root, s_root, "config/cluster", map[string]interface{}{
+		"path":     "https://localhost:8200",
+		"aia_path": "https://localhost:8200",
+	})
+	require.NoError(t, err, "failed to write AIA settings")
+
+	_, err = CBWrite(b_root, s_root, "config/urls", map[string]interface{}{
+		"crl_distribution_points": "{{cluster_path}}/issuer/{{issuer_id}}/crl/der",
+		"issuing_certificates":    "{{cluster_aia_path}}/issuer/{{issuer_id}}/der",
+		"ocsp_servers":            "{{cluster_path}}/ocsp",
+		"enable_templating":       true,
+	})
+	require.NoError(t, err, "failed to write AIA settings")
+
+	// Write a root issuer, this should succeed.
+	resp, err := CBWrite(b_root, s_root, "root/generate/exported", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "ec",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected root generation to succeed")
 }
 
 var (

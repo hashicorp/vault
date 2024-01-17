@@ -6,7 +6,7 @@ description: >-
   credentials to access MongoDB servers.
 ---
 
-# MongoDB Database Plugin HTTP API
+# MongoDB database plugin HTTP API
 
 @include 'x509-sha1-deprecation.mdx'
 
@@ -14,7 +14,7 @@ The MongoDB database plugin is one of the supported plugins for the database
 secrets engine. This plugin generates database credentials dynamically based on
 configured roles for the MongoDB database.
 
-## Configure Connection
+## Configure connection
 
 In addition to the parameters defined by the [Database
 Backend](/vault/api-docs/secret/databases#configure-connection), this plugin
@@ -75,7 +75,7 @@ has a number of parameters to further configure a connection.
 </details>
 </details>
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -88,7 +88,7 @@ has a number of parameters to further configure a connection.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -125,7 +125,7 @@ list the plugin does not support that statement type.
   serialized JSON object. The object can optionally contain a `db` string. If no
   `db` value is provided, it defaults to the `admin` database.
 
-### Sample Creation Statement
+### Sample creation statement
 
 ```json
 {
@@ -139,7 +139,7 @@ list the plugin does not support that statement type.
 }
 ```
 
-### Sample Revocation Statement
+### Sample revocation statement
 
 ```json
 {

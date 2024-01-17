@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { belongsTo, attr } from '@ember-data/model';
@@ -77,7 +77,7 @@ export default IdentityModel.extend({
   ),
   policyPath: lazyCapabilities(apiPath`sys/policies`),
   canCreatePolicies: alias('policyPath.canCreate'),
-  alias: belongsTo('identity/group-alias', { async: false, readOnly: true }),
+  alias: belongsTo('identity/group-alias', { async: false, readOnly: true, inverse: 'group' }),
   updatePath: identityCapabilities(),
   canDelete: alias('updatePath.canDelete'),
   canEdit: alias('updatePath.canUpdate'),

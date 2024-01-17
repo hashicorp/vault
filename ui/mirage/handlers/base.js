@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 // base handlers used in mirage config when a specific handler is not specified
@@ -18,6 +18,7 @@ export default function (server) {
 
   server.get('/sys/health', function () {
     return {
+      enterprise: true,
       initialized: true,
       sealed: false,
       standby: false,
@@ -33,6 +34,14 @@ export default function (server) {
       cluster_name: 'vault-cluster-e779cd7c',
       cluster_id: '5f20f5ab-acea-0481-787e-71ec2ff5a60b',
       last_wal: 121,
+    };
+  });
+
+  server.get('/sys/internal/ui/version', function () {
+    return {
+      data: {
+        version: '1.9.0+ent',
+      },
     };
   });
 

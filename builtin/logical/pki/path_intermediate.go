@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -68,6 +68,16 @@ appended to the bundle.`,
 								Description: "Net-new issuers imported as a part of this request",
 								Required:    true,
 							},
+							"existing_keys": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Existing keys specified as part of the import bundle of this request",
+								Required:    true,
+							},
+							"existing_issuers": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Existing issuers specified as part of the import bundle of this request",
+								Required:    true,
+							},
 						},
 					}},
 				},
@@ -92,7 +102,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 
 	var err error
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not create intermediate until migration has completed"), nil
 	}
 

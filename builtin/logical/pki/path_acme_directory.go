@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -13,15 +13,18 @@ import (
 )
 
 const (
-	pathAcmeDirectoryHelpSync = `Read the proper URLs for various ACME operations`
-	pathAcmeDirectoryHelpDesc = `Provide an ACME directory response that contains URLS for various ACME operations.`
+	pathAcmeHelpSync = `An endpoint implementing the standard ACME protocol`
+	pathAcmeHelpDesc = `This API endpoint implementing a subset of the ACME protocol
+ defined in RFC 8555, with its own authentication and argument syntax that
+ does not follow conventional Vault operations. An ACME client tool or library
+ should be used to interact with these endpoints.`
 )
 
-func pathAcmeDirectory(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeDirectory, "/directory")
+func pathAcmeDirectory(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeDirectory(b, baseUrl+"/directory", opts)
 }
 
-func patternAcmeDirectory(b *backend, pattern string) *framework.Path {
+func patternAcmeDirectory(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 
@@ -30,14 +33,14 @@ func patternAcmeDirectory(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback:                    b.acmeWrapper(b.acmeDirectoryHandler),
+				Callback:                    b.acmeWrapper(opts, b.acmeDirectoryHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
 		},
 
-		HelpSynopsis:    pathAcmeDirectoryHelpSync,
-		HelpDescription: pathAcmeDirectoryHelpDesc,
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
@@ -48,8 +51,9 @@ func (b *backend) acmeDirectoryHandler(acmeCtx *acmeContext, r *logical.Request,
 		"newOrder":   acmeCtx.baseUrl.JoinPath("new-order").String(),
 		"revokeCert": acmeCtx.baseUrl.JoinPath("revoke-cert").String(),
 		"keyChange":  acmeCtx.baseUrl.JoinPath("key-change").String(),
+		// This is purposefully missing newAuthz as we don't support pre-authorization
 		"meta": map[string]interface{}{
-			"externalAccountRequired": false,
+			"externalAccountRequired": acmeCtx.eabPolicy.IsExternalAccountRequired(),
 		},
 	})
 	if err != nil {

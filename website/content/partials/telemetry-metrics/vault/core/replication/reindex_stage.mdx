@@ -1,0 +1,11 @@
+### vault.core.replication.reindex_stage ((#vault-core-replication-reindex_stage))
+
+Metric type | Value   | Description
+----------- | ------- | -----------
+gauge       | stage   | Current stage of the reindexing process
+
+- A value of `4` indicates the reindex process is committing any differences between the newly created tree and the old tree.
+- A value of `3` indicates the reindex process is replaying WALs to ensure no updates were missed while scanning and building.
+- A value of `2` indicates the reindex process is currently building a new merkle tree based of the values for the keys obtained in the scanning stage.
+- A value of `1` indicates the reindex process is currently creating a list of all known storage keys.
+- A value of `0` indicates that a reindex is not in progress.

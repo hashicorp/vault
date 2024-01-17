@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package sealmigration
 
@@ -13,6 +13,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
@@ -801,7 +802,7 @@ func runAutoseal(t *testing.T, logger hclog.Logger, storage teststorage.Reusable
 			t.Fatal(err)
 		}
 	} else {
-		if err := cluster.UnsealCoresWithError(true); err != nil {
+		if err := cluster.UnsealCoresWithError(t, true); err != nil {
 			t.Fatal(err)
 		}
 	}

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div
   class="field string-list form-section"
   data-test-component="string-list"
@@ -27,42 +32,36 @@
           class="input {{if (includes index this.indicesWithComma) 'has-warning-border'}}"
           @value={{data.value}}
           name={{concat this.elementId "-" index}}
-          id={{concat this.elementId "-" index}}
+          aria-label="{{@label}} list item {{index}}"
           {{on "keyup" (action "inputChanged" index)}}
           {{on "change" (action "inputChanged" index)}}
         />
       </div>
-      <div class="control">
+      <div class="control is-narrow">
         {{#if (eq (inc index) this.inputList.length)}}
-          <button
-            type="button"
-            class="button is-outlined is-primary"
-            data-test-string-list-button="add"
-            {{on "click" this.addInput}}
-          >
-            Add
-          </button>
+          <Hds::Button @text="Add" data-test-string-list-button="add" {{on "click" this.addInput}} @isFullWidth={{true}} />
         {{else}}
-          <button
-            type="button"
-            class="button is-expanded is-icon"
+          <Hds::Button
+            @text="delete row"
+            @icon="trash"
+            @isIconOnly={{true}}
+            @color="secondary"
+            @isFullWidth={{true}}
             data-test-string-list-button="delete"
             {{on "click" (fn this.removeInput index)}}
-          >
-            <Icon @name="trash" />
-          </button>
+          />
         {{/if}}
       </div>
       {{#if (includes index this.indicesWithComma)}}
-        <Icon class="is-flex-v-centered has-text-highlight" @name="alert-triangle-fill" />
+        <FlightIcon @name="alert-triangle" @color="var(--token-color-foreground-warning)" @size="24" />
       {{/if}}
     </div>
   {{/each}}
   {{#if this.indicesWithComma}}
-    <AlertInline
-      @type="warning"
-      @message="Input contains a comma. Please separate values into individual rows."
-      @isMarginless={{true}}
-    />
+    <Hds::Alert @type="inline" @color="warning" as |A|>
+      <A.Description>
+        Input contains a comma. Please separate values into individual rows.
+      </A.Description>
+    </Hds::Alert>
   {{/if}}
 </div>

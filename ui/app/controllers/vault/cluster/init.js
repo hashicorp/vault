@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { computed } from '@ember/object';
@@ -48,6 +48,7 @@ export default Controller.extend(DEFAULTS, {
         if (isCloudSeal) {
           data.stored_shares = 1;
           data.recovery_shares = shares;
+          delete data.secret_shares; // API will throw an error if secret_shares is passed for seal types other than shamir (transit, AWSKMS etc.)
         }
       }
       if (data.secret_threshold) {
@@ -55,6 +56,7 @@ export default Controller.extend(DEFAULTS, {
         data.secret_threshold = threshold;
         if (isCloudSeal) {
           data.recovery_threshold = threshold;
+          delete data.secret_threshold; // API will throw an error if secret_threshold is passed for seal types other than shamir (transit, AWSKMS etc.)
         }
       }
       if (!data.use_pgp) {
@@ -63,7 +65,6 @@ export default Controller.extend(DEFAULTS, {
       if (data.use_pgp && isCloudSeal) {
         data.recovery_pgp_keys = data.pgp_keys;
       }
-
       if (!data.use_pgp_for_root) {
         delete data.root_token_pgp_key;
       }

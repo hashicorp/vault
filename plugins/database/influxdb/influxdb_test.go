@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package influxdb
 
@@ -9,12 +9,13 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/helper/docker"
 	influx "github.com/influxdata/influxdb1-client/v2"
@@ -51,6 +52,11 @@ func (c *Config) connectionParams() map[string]interface{} {
 }
 
 func prepareInfluxdbTestContainer(t *testing.T) (func(), *Config) {
+	// Skipping on ARM, as this image can't run on ARM architecture
+	if strings.Contains(runtime.GOARCH, "arm") {
+		t.Skip("Skipping, as this image is not supported on ARM architectures")
+	}
+
 	c := &Config{
 		Username: "influx-root",
 		Password: "influx-root",
@@ -61,8 +67,9 @@ func prepareInfluxdbTestContainer(t *testing.T) (func(), *Config) {
 	}
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ImageRepo: "influxdb",
-		ImageTag:  "1.8-alpine",
+		ImageRepo:     "docker.mirror.hashicorp.services/influxdb",
+		ContainerName: "influxdb",
+		ImageTag:      "1.8-alpine",
 		Env: []string{
 			"INFLUXDB_DB=vault",
 			"INFLUXDB_ADMIN_USER=" + c.Username,

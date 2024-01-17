@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* eslint-disable ember/no-observers */
@@ -20,9 +20,9 @@ export default Helper.extend({
   ),
 
   compute([route], params) {
-    const { routeParams } = params;
+    const { routeParams, requireAll } = params;
     const permissions = this.permissions;
 
-    return permissions.hasNavPermission(route, routeParams);
+    return permissions.hasNavPermission(route, routeParams, requireAll);
   },
 });

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
@@ -61,13 +61,13 @@ export default class PkiActionModel extends Model {
   @attr importedIssuers;
   @attr importedKeys;
   @attr mapping;
-  @attr('string', { readOnly: true, masked: true }) certificate;
+  @attr('string', { readOnly: true, isCertificate: true }) certificate;
 
   /* actionType generate-root */
 
   // readonly attrs returned right after root generation
   @attr serialNumber;
-  @attr('string', { label: 'Issuing CA', readOnly: true, masked: true }) issuingCa;
+  @attr('string', { label: 'Issuing CA', readOnly: true, isCertificate: true }) issuingCa;
   // end of readonly
 
   @attr('string', {
@@ -212,10 +212,10 @@ export default class PkiActionModel extends Model {
   @attr('string', { label: 'Issuer ID', readOnly: true, detailLinkTo: 'issuers.issuer.details' }) issuerId; // returned from generate-root action
 
   // For generating and signing a CSR
-  @attr('string', { label: 'CSR', masked: true }) csr;
+  @attr('string', { label: 'CSR', isCertificate: true }) csr;
   @attr caChain;
   @attr('string', { label: 'Key ID', detailLinkTo: 'keys.key.details' }) keyId;
-  @attr('string', { masked: true }) privateKey;
+  @attr('string', { isCertificate: true }) privateKey;
   @attr('string') privateKeyType;
 
   get backend() {

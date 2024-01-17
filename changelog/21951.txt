@@ -1,0 +1,4 @@
+```release-note:bug
+awsutil: Update awsutil to v0.2.3 to fix a regression where Vault no longer
+respects `AWS_ROLE_ARN`, `AWS_WEB_IDENTITY_TOKEN_FILE`, and `AWS_ROLE_SESSION_NAME`.
+```

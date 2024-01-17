@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -9,8 +9,8 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { methods } from 'vault/helpers/mountable-auth-methods';
+import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engines';
 
 /**
  * @module MountBackendForm
@@ -35,12 +35,12 @@ export default class MountBackendForm extends Component {
   @tracked errorMessage = '';
 
   willDestroy() {
-    // if unsaved, we want to unload so it doesn't show up in the auth mount list
-    super.willDestroy(...arguments);
-    if (this.args.mountModel) {
-      const method = this.args.mountModel.isNew ? 'unloadRecord' : 'rollbackAttributes';
-      this.args.mountModel[method]();
+    // components are torn down after store is unloaded and will cause an error if attempt to unload record
+    const noTeardown = this.store && !this.store.isDestroying;
+    if (noTeardown && this.args?.mountModel?.isNew) {
+      this.args.mountModel.unloadRecord();
     }
+    super.willDestroy(...arguments);
   }
 
   checkPathChange(type) {
@@ -48,7 +48,9 @@ export default class MountBackendForm extends Component {
     const mount = this.args.mountModel;
     const currentPath = mount.path;
     const mountTypes =
-      this.args.mountType === 'secret' ? supportedSecretBackends() : methods().map((auth) => auth.type);
+      this.args.mountType === 'secret'
+        ? allEngines().map((engine) => engine.type)
+        : methods().map((auth) => auth.type);
     // if the current path has not been altered by user,
     // change it here to match the new type
     if (!currentPath || mountTypes.includes(currentPath)) {
@@ -156,7 +158,9 @@ export default class MountBackendForm extends Component {
         this.args.mountType === 'secret' ? 'secrets engine' : 'auth method'
       } at ${path}.`
     );
-    yield this.args.onMountSuccess(type, path);
+    // Check whether to use the engine route, since KV version 1 does not
+    const useEngineRoute = isAddonEngine(mountModel.engineType, mountModel.version);
+    yield this.args.onMountSuccess(type, path, useEngineRoute);
     return;
   }
 

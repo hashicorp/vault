@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
@@ -16,7 +16,7 @@ export default class PkiConfigurationCreateRoute extends Route {
   model() {
     return hash({
       config: this.store.createRecord('pki/action'),
-      urls: this.getOrCreateUrls(this.secretMountPath.currentPath),
+      urls: this.modelFor('configuration').urls,
     });
   }
 
@@ -27,13 +27,5 @@ export default class PkiConfigurationCreateRoute extends Route {
       { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'configure' },
     ];
-  }
-
-  async getOrCreateUrls(backend) {
-    try {
-      return this.store.findRecord('pki/urls', backend);
-    } catch (e) {
-      return this.store.createRecord('pki/urls', { id: backend });
-    }
   }
 }

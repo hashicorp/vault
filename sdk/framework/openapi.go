@@ -107,13 +107,12 @@ type OASLicense struct {
 }
 
 type OASPathItem struct {
-	Description       string             `json:"description,omitempty"`
-	Parameters        []OASParameter     `json:"parameters,omitempty"`
-	Sudo              bool               `json:"x-vault-sudo,omitempty" mapstructure:"x-vault-sudo"`
-	Unauthenticated   bool               `json:"x-vault-unauthenticated,omitempty" mapstructure:"x-vault-unauthenticated"`
-	CreateSupported   bool               `json:"x-vault-createSupported,omitempty" mapstructure:"x-vault-createSupported"`
-	DisplayNavigation bool               `json:"x-vault-displayNavigation,omitempty" mapstructure:"x-vault-displayNavigation"`
-	DisplayAttrs      *DisplayAttributes `json:"x-vault-displayAttrs,omitempty" mapstructure:"x-vault-displayAttrs"`
+	Description     string             `json:"description,omitempty"`
+	Parameters      []OASParameter     `json:"parameters,omitempty"`
+	Sudo            bool               `json:"x-vault-sudo,omitempty" mapstructure:"x-vault-sudo"`
+	Unauthenticated bool               `json:"x-vault-unauthenticated,omitempty" mapstructure:"x-vault-unauthenticated"`
+	CreateSupported bool               `json:"x-vault-createSupported,omitempty" mapstructure:"x-vault-createSupported"`
+	DisplayAttrs    *DisplayAttributes `json:"x-vault-displayAttrs,omitempty" mapstructure:"x-vault-displayAttrs"`
 
 	Get    *OASOperation `json:"get,omitempty"`
 	Post   *OASOperation `json:"post,omitempty"`
@@ -165,6 +164,8 @@ type OASSchema struct {
 	Description string                `json:"description,omitempty"`
 	Properties  map[string]*OASSchema `json:"properties,omitempty"`
 
+	AdditionalProperties interface{} `json:"additionalProperties,omitempty"`
+
 	// Required is a list of keys in Properties that are required to be present. This is a different
 	// approach than OASParameter (unfortunately), but is how JSONSchema handles 'required'.
 	Required []string `json:"required,omitempty"`
@@ -196,6 +197,29 @@ var OASStdRespNoContent = &OASResponse{
 	Description: "empty body",
 }
 
+var OASStdRespListOK = &OASResponse{
+	Description: "OK",
+	Content: OASContent{
+		"application/json": &OASMediaTypeObject{
+			Schema: &OASSchema{
+				Ref: "#/components/schemas/StandardListResponse",
+			},
+		},
+	},
+}
+
+var OASStdSchemaStandardListResponse = &OASSchema{
+	Type: "object",
+	Properties: map[string]*OASSchema{
+		"keys": {
+			Type: "array",
+			Items: &OASSchema{
+				Type: "string",
+			},
+		},
+	},
+}
+
 // Regex for handling fields in paths, and string cleanup.
 // Predefined here to avoid substantial recompilation.
 
@@ -208,7 +232,7 @@ var (
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
 func documentPaths(backend *Backend, requestResponsePrefix string, doc *OASDocument) error {
 	for _, p := range backend.Paths {
-		if err := documentPath(p, backend.SpecialPaths(), requestResponsePrefix, backend.BackendType, doc); err != nil {
+		if err := documentPath(p, backend, requestResponsePrefix, doc); err != nil {
 			return err
 		}
 	}
@@ -217,18 +241,18 @@ func documentPaths(backend *Backend, requestResponsePrefix string, doc *OASDocum
 }
 
 // documentPath parses a framework.Path into one or more OpenAPI paths.
-func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix string, backendType logical.BackendType, doc *OASDocument) error {
+func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *OASDocument) error {
 	var sudoPaths []string
 	var unauthPaths []string
 
-	if specialPaths != nil {
-		sudoPaths = specialPaths.Root
-		unauthPaths = specialPaths.Unauthenticated
+	if backend.PathsSpecial != nil {
+		sudoPaths = backend.PathsSpecial.Root
+		unauthPaths = backend.PathsSpecial.Unauthenticated
 	}
 
 	// Convert optional parameters into distinct patterns to be processed independently.
 	forceUnpublished := false
-	paths, err := expandPattern(p.Pattern)
+	paths, captures, err := expandPattern(p.Pattern)
 	if err != nil {
 		if errors.Is(err, errUnsupportableRegexpOperationForOpenAPI) {
 			// Pattern cannot be transformed into sensible OpenAPI paths. In this case, we override the later
@@ -269,26 +293,14 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 
 		// Process path and header parameters, which are common to all operations.
 		// Body fields will be added to individual operations.
-		pathFields, bodyFields := splitFields(p.Fields, path)
+		pathFields, queryFields, bodyFields := splitFields(p.Fields, path, captures)
 
 		for name, field := range pathFields {
-			location := "path"
-			required := true
-
-			if field == nil {
-				continue
-			}
-
-			if field.Query {
-				location = "query"
-				required = false
-			}
-
 			t := convertType(field.Type)
 			p := OASParameter{
 				Name:        name,
 				Description: cleanString(field.Description),
-				In:          location,
+				In:          "path",
 				Schema: &OASSchema{
 					Type:         t.baseType,
 					Pattern:      t.pattern,
@@ -296,7 +308,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 					Default:      field.Default,
 					DisplayAttrs: withoutOperationHints(field.DisplayAttrs),
 				},
-				Required:   required,
+				Required:   true,
 				Deprecated: field.Deprecated,
 			}
 			pi.Parameters = append(pi.Parameters, p)
@@ -304,11 +316,12 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 
 		// Sort parameters for a stable output
 		sort.Slice(pi.Parameters, func(i, j int) bool {
-			return strings.ToLower(pi.Parameters[i].Name) < strings.ToLower(pi.Parameters[j].Name)
+			return pi.Parameters[i].Name < pi.Parameters[j].Name
 		})
 
 		// Process each supported operation by building up an Operation object
 		// with descriptions, properties and examples from the framework.Path data.
+		var listOperation *OASOperation
 		for opType, opHandler := range operations {
 			props := opHandler.Properties()
 			if props.Unpublished || forceUnpublished {
@@ -322,11 +335,6 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 				if operations[logical.UpdateOperation] != nil {
 					continue
 				}
-			}
-
-			// If both List and Read are defined, only process Read.
-			if opType == logical.ListOperation && operations[logical.ReadOperation] != nil {
-				continue
 			}
 
 			op := NewOASOperation()
@@ -345,8 +353,12 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 			op.Deprecated = props.Deprecated
 			op.OperationID = operationID
 
-			// Add any fields not present in the path as body parameters for POST.
-			if opType == logical.CreateOperation || opType == logical.UpdateOperation {
+			switch opType {
+			// For the operation types which map to POST/PUT methods, and so allow for request body parameters,
+			// prepare the request body definition
+			case logical.CreateOperation:
+				fallthrough
+			case logical.UpdateOperation:
 				s := &OASSchema{
 					Type:       "object",
 					Properties: make(map[string]*OASSchema),
@@ -360,28 +372,19 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 						continue
 					}
 
-					openapiField := convertType(field.Type)
-					if field.Required {
-						s.Required = append(s.Required, name)
-					}
-
-					p := OASSchema{
-						Type:         openapiField.baseType,
-						Description:  cleanString(field.Description),
-						Format:       openapiField.format,
-						Pattern:      openapiField.pattern,
-						Enum:         field.AllowedValues,
-						Default:      field.Default,
-						Deprecated:   field.Deprecated,
-						DisplayAttrs: withoutOperationHints(field.DisplayAttrs),
-					}
-					if openapiField.baseType == "array" {
-						p.Items = &OASSchema{
-							Type: openapiField.items,
-						}
-					}
-					s.Properties[name] = &p
+					addFieldToOASSchema(s, name, field)
 				}
+
+				// Contrary to what one might guess, fields marked with "Query: true" are only query fields when the
+				// request method is one which does not allow for a request body - they are still body fields when
+				// dealing with a POST/PUT request.
+				for name, field := range queryFields {
+					addFieldToOASSchema(s, name, field)
+				}
+
+				// Make the ordering deterministic, so that the generated OpenAPI spec document, observed over several
+				// versions, doesn't contain spurious non-semantic changes.
+				sort.Strings(s.Required)
 
 				// If examples were given, use the first one as the sample
 				// of this schema.
@@ -389,8 +392,20 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 					s.Example = props.Examples[0].Data
 				}
 
+				// TakesArbitraryInput is a case like writing to:
+				//   - sys/wrapping/wrap
+				//   - kv-v1/{path}
+				//   - cubbyhole/{path}
+				// where the entire request body is an arbitrary JSON object used directly as input.
+				if p.TakesArbitraryInput {
+					// Whilst the default value of additionalProperties is true according to the JSON Schema standard,
+					// making this explicit helps communicate this to humans, and also tools such as
+					// https://openapi-generator.tech/ which treat it as defaulting to false.
+					s.AdditionalProperties = true
+				}
+
 				// Set the final request body. Only JSON request data is supported.
-				if len(s.Properties) > 0 || s.Example != nil {
+				if len(s.Properties) > 0 {
 					requestName := hyphenatedToTitleCase(operationID) + "Request"
 					doc.Components.Schemas[requestName] = s
 					op.RequestBody = &OASRequestBody{
@@ -401,12 +416,24 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 							},
 						},
 					}
+				} else if p.TakesArbitraryInput {
+					// When there are no properties, the schema is trivial enough that it makes more sense to write it
+					// inline, rather than as a named component.
+					op.RequestBody = &OASRequestBody{
+						Required: true,
+						Content: OASContent{
+							"application/json": &OASMediaTypeObject{
+								Schema: s,
+							},
+						},
+					}
 				}
-			}
 
-			// LIST is represented as GET with a `list` query parameter.
-			if opType == logical.ListOperation {
-				// Only accepts List (due to the above skipping of ListOperations that also have ReadOperations)
+			// For the operation types which map to HTTP methods without a request body, populate query parameters
+			case logical.ListOperation:
+				// LIST is represented as GET with a `list` query parameter. Code later on in this function will assign
+				// list operations to a path with an extra trailing slash, ensuring they do not collide with read
+				// operations.
 				op.Parameters = append(op.Parameters, OASParameter{
 					Name:        "list",
 					Description: "Must be set to `true`",
@@ -414,19 +441,37 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 					In:          "query",
 					Schema:      &OASSchema{Type: "string", Enum: []interface{}{"true"}},
 				})
-			} else if opType == logical.ReadOperation && operations[logical.ListOperation] != nil {
-				// Accepts both Read and List
-				op.Parameters = append(op.Parameters, OASParameter{
-					Name:        "list",
-					Description: "Return a list if `true`",
-					In:          "query",
-					Schema:      &OASSchema{Type: "string"},
+				fallthrough
+			case logical.DeleteOperation:
+				fallthrough
+			case logical.ReadOperation:
+				for name, field := range queryFields {
+					t := convertType(field.Type)
+					p := OASParameter{
+						Name:        name,
+						Description: cleanString(field.Description),
+						In:          "query",
+						Schema: &OASSchema{
+							Type:         t.baseType,
+							Pattern:      t.pattern,
+							Enum:         field.AllowedValues,
+							Default:      field.Default,
+							DisplayAttrs: withoutOperationHints(field.DisplayAttrs),
+						},
+						Deprecated: field.Deprecated,
+					}
+					op.Parameters = append(op.Parameters, p)
+				}
+
+				// Sort parameters for a stable output
+				sort.Slice(op.Parameters, func(i, j int) bool {
+					return op.Parameters[i].Name < op.Parameters[j].Name
 				})
 			}
 
 			// Add tags based on backend type
 			var tags []string
-			switch backendType {
+			switch backend.BackendType {
 			case logical.TypeLogical:
 				tags = []string{"secrets"}
 			case logical.TypeCredential:
@@ -439,6 +484,9 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 			if len(props.Responses) == 0 {
 				if opType == logical.DeleteOperation {
 					op.Responses[204] = OASStdRespNoContent
+				} else if opType == logical.ListOperation {
+					op.Responses[200] = OASStdRespListOK
+					doc.Components.Schemas["StandardListResponse"] = OASStdSchemaStandardListResponse
 				} else {
 					op.Responses[200] = OASStdRespOK
 				}
@@ -517,17 +565,107 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 			switch opType {
 			case logical.CreateOperation, logical.UpdateOperation:
 				pi.Post = op
-			case logical.ReadOperation, logical.ListOperation:
+			case logical.ReadOperation:
 				pi.Get = op
 			case logical.DeleteOperation:
 				pi.Delete = op
+			case logical.ListOperation:
+				listOperation = op
 			}
 		}
 
-		doc.Paths["/"+path] = &pi
+		// The conventions enforced by the Vault HTTP routing code make it impossible to match a path with a trailing
+		// slash to anything other than a ListOperation. Catch mistakes in path definition, to enforce that if both of
+		// the two following blocks of code (non-list, and list) write an OpenAPI path to the output document, then the
+		// first one will definitely not have a trailing slash.
+		originalPathHasTrailingSlash := strings.HasSuffix(path, "/")
+		if originalPathHasTrailingSlash && (pi.Get != nil || pi.Post != nil || pi.Delete != nil) {
+			backend.Logger().Warn(
+				"OpenAPI spec generation: discarding impossible-to-invoke non-list operations from path with "+
+					"required trailing slash; this is a bug in the backend code", "path", path)
+			pi.Get = nil
+			pi.Post = nil
+			pi.Delete = nil
+		}
+
+		// Write the regular, non-list, OpenAPI path to the OpenAPI document, UNLESS we generated a ListOperation, and
+		// NO OTHER operation types. In that fairly common case (there are lots of list-only endpoints), we avoid
+		// writing a redundant OpenAPI path for (e.g.) "auth/token/accessors" with no operations, only to then write
+		// one for "auth/token/accessors/" immediately below.
+		//
+		// On the other hand, we do still write the OpenAPI path here if we generated ZERO operation types - this serves
+		// to provide documentation to a human that an endpoint exists, even if it has no invokable OpenAPI operations.
+		// Examples of this include kv-v2's ".*" endpoint (regex cannot be translated to OpenAPI parameters), and the
+		// auth/oci/login endpoint (implements ResolveRoleOperation only, only callable from inside Vault).
+		if listOperation == nil || pi.Get != nil || pi.Post != nil || pi.Delete != nil {
+			openAPIPath := "/" + path
+			if doc.Paths[openAPIPath] != nil {
+				backend.Logger().Warn(
+					"OpenAPI spec generation: multiple framework.Path instances generated the same path; "+
+						"last processed wins", "path", openAPIPath)
+			}
+			doc.Paths[openAPIPath] = &pi
+		}
+
+		// If there is a ListOperation, write it to a separate OpenAPI path in the document.
+		if listOperation != nil {
+			// Append a slash here to disambiguate from the path written immediately above.
+			// However, if the path already contains a trailing slash, we want to avoid doubling it, and it is
+			// guaranteed (through the interaction of logic in the last two blocks) that the block immediately above
+			// will NOT have written a path to the OpenAPI document.
+			if !originalPathHasTrailingSlash {
+				path += "/"
+			}
+
+			listPathItem := OASPathItem{
+				Description:  pi.Description,
+				Parameters:   pi.Parameters,
+				DisplayAttrs: pi.DisplayAttrs,
+
+				// Since the path may now have an extra slash on the end, we need to recalculate the special path
+				// matches, as the sudo or unauthenticated status may be changed as a result!
+				Sudo:            specialPathMatch(path, sudoPaths),
+				Unauthenticated: specialPathMatch(path, unauthPaths),
+
+				Get: listOperation,
+			}
+
+			openAPIPath := "/" + path
+			if doc.Paths[openAPIPath] != nil {
+				backend.Logger().Warn(
+					"OpenAPI spec generation: multiple framework.Path instances generated the same path; "+
+						"last processed wins", "path", openAPIPath)
+			}
+			doc.Paths[openAPIPath] = &listPathItem
+		}
 	}
 
 	return nil
+}
+
+func addFieldToOASSchema(s *OASSchema, name string, field *FieldSchema) {
+	openapiField := convertType(field.Type)
+	if field.Required {
+		s.Required = append(s.Required, name)
+	}
+
+	p := OASSchema{
+		Type:         openapiField.baseType,
+		Description:  cleanString(field.Description),
+		Format:       openapiField.format,
+		Pattern:      openapiField.pattern,
+		Enum:         field.AllowedValues,
+		Default:      field.Default,
+		Deprecated:   field.Deprecated,
+		DisplayAttrs: withoutOperationHints(field.DisplayAttrs),
+	}
+	if openapiField.baseType == "array" {
+		p.Items = &OASSchema{
+			Type: openapiField.items,
+		}
+	}
+
+	s.Properties[name] = &p
 }
 
 // specialPathMatch checks whether the given path matches one of the special
@@ -694,8 +832,9 @@ func constructOperationID(
 }
 
 // expandPattern expands a regex pattern by generating permutations of any optional parameters
-// and changing named parameters into their {openapi} equivalents.
-func expandPattern(pattern string) ([]string, error) {
+// and changing named parameters into their {openapi} equivalents. It also returns the names of all capturing groups
+// observed in the pattern.
+func expandPattern(pattern string) (paths []string, captures map[string]struct{}, err error) {
 	// Happily, the Go regexp library exposes its underlying "parse to AST" functionality, so we can rely on that to do
 	// the hard work of interpreting the regexp syntax.
 	rx, err := syntax.Parse(pattern, syntax.Perl)
@@ -705,12 +844,12 @@ func expandPattern(pattern string) ([]string, error) {
 		panic(err)
 	}
 
-	paths, err := collectPathsFromRegexpAST(rx)
+	paths, captures, err = collectPathsFromRegexpAST(rx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return paths, nil
+	return paths, captures, nil
 }
 
 type pathCollector struct {
@@ -731,23 +870,28 @@ type pathCollector struct {
 //
 // Each named capture group - i.e. (?P<name>something here) - is replaced with an OpenAPI parameter - i.e. {name} - and
 // the subtree of regexp AST inside the parameter is completely skipped.
-func collectPathsFromRegexpAST(rx *syntax.Regexp) ([]string, error) {
-	pathCollectors, err := collectPathsFromRegexpASTInternal(rx, []*pathCollector{{}})
+func collectPathsFromRegexpAST(rx *syntax.Regexp) (paths []string, captures map[string]struct{}, err error) {
+	captures = make(map[string]struct{})
+	pathCollectors, err := collectPathsFromRegexpASTInternal(rx, []*pathCollector{{}}, captures)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	paths := make([]string, 0, len(pathCollectors))
+	paths = make([]string, 0, len(pathCollectors))
 	for _, collector := range pathCollectors {
 		if collector.conditionalSlashAppendedAtLength != collector.Len() {
 			paths = append(paths, collector.String())
 		}
 	}
-	return paths, nil
+	return paths, captures, nil
 }
 
 var errUnsupportableRegexpOperationForOpenAPI = errors.New("path regexp uses an operation that cannot be translated to an OpenAPI pattern")
 
-func collectPathsFromRegexpASTInternal(rx *syntax.Regexp, appendingTo []*pathCollector) ([]*pathCollector, error) {
+func collectPathsFromRegexpASTInternal(
+	rx *syntax.Regexp,
+	appendingTo []*pathCollector,
+	captures map[string]struct{},
+) ([]*pathCollector, error) {
 	var err error
 
 	// Depending on the type of this regexp AST node (its Op, i.e. operation), figure out whether it contributes any
@@ -774,7 +918,7 @@ func collectPathsFromRegexpASTInternal(rx *syntax.Regexp, appendingTo []*pathCol
 	// those pieces.
 	case syntax.OpConcat:
 		for _, child := range rx.Sub {
-			appendingTo, err = collectPathsFromRegexpASTInternal(child, appendingTo)
+			appendingTo, err = collectPathsFromRegexpASTInternal(child, appendingTo, captures)
 			if err != nil {
 				return nil, err
 			}
@@ -805,7 +949,7 @@ func collectPathsFromRegexpASTInternal(rx *syntax.Regexp, appendingTo []*pathCol
 					childAppendingTo = append(childAppendingTo, newCollector)
 				}
 			}
-			childAppendingTo, err = collectPathsFromRegexpASTInternal(child, childAppendingTo)
+			childAppendingTo, err = collectPathsFromRegexpASTInternal(child, childAppendingTo, captures)
 			if err != nil {
 				return nil, err
 			}
@@ -823,7 +967,7 @@ func collectPathsFromRegexpASTInternal(rx *syntax.Regexp, appendingTo []*pathCol
 			newCollector.conditionalSlashAppendedAtLength = collector.conditionalSlashAppendedAtLength
 			childAppendingTo = append(childAppendingTo, newCollector)
 		}
-		childAppendingTo, err = collectPathsFromRegexpASTInternal(child, childAppendingTo)
+		childAppendingTo, err = collectPathsFromRegexpASTInternal(child, childAppendingTo, captures)
 		if err != nil {
 			return nil, err
 		}
@@ -845,7 +989,7 @@ func collectPathsFromRegexpASTInternal(rx *syntax.Regexp, appendingTo []*pathCol
 			// In Vault, an unnamed capturing group is not actually used for capturing.
 			// We treat it exactly the same as OpConcat.
 			for _, child := range rx.Sub {
-				appendingTo, err = collectPathsFromRegexpASTInternal(child, appendingTo)
+				appendingTo, err = collectPathsFromRegexpASTInternal(child, appendingTo, captures)
 				if err != nil {
 					return nil, err
 				}
@@ -858,6 +1002,7 @@ func collectPathsFromRegexpASTInternal(rx *syntax.Regexp, appendingTo []*pathCol
 				builder.WriteString(rx.Name)
 				builder.WriteRune('}')
 			}
+			captures[rx.Name] = struct{}{}
 		}
 
 	// Any other kind of operation is a problem, and will trigger an error, resulting in the pattern being left out of
@@ -918,8 +1063,8 @@ func convertType(t FieldType) schemaType {
 		ret.baseType = "integer"
 		ret.format = "int64"
 	case TypeDurationSecond, TypeSignedDurationSecond:
-		ret.baseType = "integer"
-		ret.format = "seconds"
+		ret.baseType = "string"
+		ret.format = "duration"
 	case TypeBool:
 		ret.baseType = "boolean"
 	case TypeMap:
@@ -959,29 +1104,37 @@ func cleanString(s string) string {
 	return s
 }
 
-// splitFields partitions fields into path and body groups
-// The input pattern is expected to have been run through expandPattern,
-// with paths parameters denotes in {braces}.
-func splitFields(allFields map[string]*FieldSchema, pattern string) (pathFields, bodyFields map[string]*FieldSchema) {
+// splitFields partitions fields into path, query and body groups. It uses information on capturing groups previously
+// collected by expandPattern, which is necessary to correctly match the treatment in (*Backend).HandleRequest:
+// a field counts as a path field if it appears in any capture in the regex, and if that capture was inside an
+// alternation or optional part of the regex which does not survive in the OpenAPI path pattern currently being
+// processed, that field should NOT be rendered to the OpenAPI spec AT ALL.
+func splitFields(
+	allFields map[string]*FieldSchema,
+	openAPIPathPattern string,
+	captures map[string]struct{},
+) (pathFields, queryFields, bodyFields map[string]*FieldSchema) {
 	pathFields = make(map[string]*FieldSchema)
+	queryFields = make(map[string]*FieldSchema)
 	bodyFields = make(map[string]*FieldSchema)
 
-	for _, match := range pathFieldsRe.FindAllStringSubmatch(pattern, -1) {
+	for _, match := range pathFieldsRe.FindAllStringSubmatch(openAPIPathPattern, -1) {
 		name := match[1]
 		pathFields[name] = allFields[name]
 	}
 
 	for name, field := range allFields {
-		if _, ok := pathFields[name]; !ok {
+		// Any field which relates to a regex capture was already processed above, if it needed to be.
+		if _, ok := captures[name]; !ok {
 			if field.Query {
-				pathFields[name] = field
+				queryFields[name] = field
 			} else {
 				bodyFields[name] = field
 			}
 		}
 	}
 
-	return pathFields, bodyFields
+	return pathFields, queryFields, bodyFields
 }
 
 // withoutOperationHints returns a copy of the given DisplayAttributes without

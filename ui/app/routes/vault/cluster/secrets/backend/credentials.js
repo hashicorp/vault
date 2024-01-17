@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { resolve } from 'rsvp';
@@ -8,7 +8,7 @@ import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import ControlGroupError from 'vault/lib/control-group-error';
 
-const SUPPORTED_DYNAMIC_BACKENDS = ['database', 'ssh', 'aws', 'pki'];
+const SUPPORTED_DYNAMIC_BACKENDS = ['database', 'ssh', 'aws'];
 
 export default Route.extend({
   templateName: 'vault/cluster/secrets/backend/credentials',

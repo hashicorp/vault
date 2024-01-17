@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -12,8 +12,8 @@ import (
 	"fmt"
 	"net/http"
 
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
+
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -171,8 +171,8 @@ func (c *Core) RekeyInit(config *SealConfig, recovery bool) logical.HTTPCodedErr
 
 // BarrierRekeyInit is used to initialize the rekey settings for the barrier key
 func (c *Core) BarrierRekeyInit(config *SealConfig) logical.HTTPCodedError {
-	switch c.seal.BarrierType() {
-	case wrapping.WrapperTypeShamir:
+	switch c.seal.BarrierSealConfigType() {
+	case SealConfigTypeShamir:
 		// As of Vault 1.3 all seals use StoredShares==1.  The one exception is
 		// legacy shamir seals, which we can read but not write (by design).
 		// So if someone does a rekey, regardless of their intention, we're going
@@ -399,13 +399,17 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 			c.logger.Error("rekey recovery key verification failed", "error", err)
 			return nil, logical.CodedError(http.StatusBadRequest, fmt.Errorf("recovery key verification failed: %w", err).Error())
 		}
-	case c.seal.BarrierType() == wrapping.WrapperTypeShamir:
+	case c.seal.BarrierSealConfigType() == SealConfigTypeShamir:
 		if c.seal.StoredKeysSupported() == seal.StoredKeysSupportedShamirRoot {
-			testseal := NewDefaultSeal(&seal.Access{
-				Wrapper: aeadwrapper.NewShamirWrapper(),
-			})
+			access, err := seal.NewAccessFromWrapper(c.logger, aeadwrapper.NewShamirWrapper(), SealConfigTypeShamir.String())
+			if err != nil {
+				return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to setup test seal: %w", err).Error())
+			}
+			access.GetConfiguredSealWrappersByPriority()[0].Name = existingConfig.Name
+
+			testseal := NewDefaultSeal(access)
 			testseal.SetCore(c)
-			err = testseal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(recoveredKey)
+			err = testseal.GetAccess().SetShamirSealKey(recoveredKey)
 			if err != nil {
 				return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to setup unseal key: %w", err).Error())
 			}
@@ -533,7 +537,7 @@ func (c *Core) performBarrierRekey(ctx context.Context, newSealKey []byte) logic
 	}
 
 	if c.seal.StoredKeysSupported() != seal.StoredKeysSupportedGeneric {
-		err := c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(newSealKey)
+		err := c.seal.GetAccess().SetShamirSealKey(newSealKey)
 		if err != nil {
 			return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to update barrier seal key: %w", err).Error())
 		}

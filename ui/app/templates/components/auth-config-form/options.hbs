@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form {{action (perform this.saveModel) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @model={{this.model}} @errorMessage={{this.model.errorMessage}} />
@@ -7,13 +12,12 @@
     {{/each}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    <button
+    <Hds::Button
+      @text="Update options"
+      @icon={{if this.saveModel.isRunning "loading"}}
       type="submit"
       data-test-save-config="true"
-      class="button is-primary {{if this.saveModel.isRunning 'loading'}}"
       disabled={{this.saveModel.isRunning}}
-    >
-      Update Options
-    </button>
+    />
   </div>
 </form>

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import timestamp from 'core/utils/timestamp';
 import sinon from 'sinon';
 import { module, test } from 'qunit';

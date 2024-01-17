@@ -404,13 +404,14 @@ func ProtoResponseToLogicalResponse(r *Response) (*logical.Response, error) {
 	}
 
 	return &logical.Response{
-		Secret:   secret,
-		Auth:     auth,
-		Data:     data,
-		Redirect: r.Redirect,
-		Warnings: r.Warnings,
-		WrapInfo: wrapInfo,
-		Headers:  headers,
+		Secret:    secret,
+		Auth:      auth,
+		Data:      data,
+		Redirect:  r.Redirect,
+		Warnings:  r.Warnings,
+		WrapInfo:  wrapInfo,
+		Headers:   headers,
+		MountType: r.MountType,
 	}, nil
 }
 
@@ -491,13 +492,14 @@ func LogicalResponseToProtoResponse(r *logical.Response) (*Response, error) {
 	}
 
 	return &Response{
-		Secret:   secret,
-		Auth:     auth,
-		Data:     string(buf[:]),
-		Redirect: r.Redirect,
-		Warnings: r.Warnings,
-		WrapInfo: wrapInfo,
-		Headers:  headers,
+		Secret:    secret,
+		Auth:      auth,
+		Data:      string(buf[:]),
+		Redirect:  r.Redirect,
+		Warnings:  r.Warnings,
+		WrapInfo:  wrapInfo,
+		Headers:   headers,
+		MountType: r.MountType,
 	}, nil
 }
 

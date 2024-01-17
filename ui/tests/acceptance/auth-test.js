@@ -1,23 +1,19 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* eslint qunit/no-conditional-assertions: "warn" */
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import sinon from 'sinon';
-import { click, currentURL, visit, settled, waitUntil, find } from '@ember/test-helpers';
+import { click, currentURL, visit, waitUntil, find } from '@ember/test-helpers';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import authForm from '../pages/components/auth-form';
 import jwtForm from '../pages/components/auth-jwt';
 import { create } from 'ember-cli-page-object';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
-import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 
-const consoleComponent = create(consoleClass);
 const component = create(authForm);
 const jwtComponent = create(jwtForm);
 
@@ -30,13 +26,11 @@ module('Acceptance | auth', function (hooks) {
       shouldAdvanceTime: true,
     });
     this.server = apiStub({ usePassthrough: true });
-    return logout.visit();
   });
 
   hooks.afterEach(function () {
     this.clock.restore();
     this.server.shutdown();
-    return logout.visit();
   });
 
   test('auth query params', async function (assert) {
@@ -56,7 +50,6 @@ module('Acceptance | auth', function (hooks) {
 
   test('it clears token when changing selected auth method', async function (assert) {
     await visit('/vault/auth');
-    assert.strictEqual(currentURL(), '/vault/auth?with=token');
     await component.token('token').selectMethod('github');
     await component.selectMethod('token');
     assert.strictEqual(component.tokenValue, '', 'it clears the token value when toggling methods');
@@ -93,28 +86,6 @@ module('Acceptance | auth', function (hooks) {
         assert.ok(Object.keys(body).includes('password'), `${backend.type} includes password`);
       }
     }
-  });
-
-  test('it shows the token warning beacon on the menu', async function (assert) {
-    const authService = this.owner.lookup('service:auth');
-    await authPage.login();
-    await settled();
-    await consoleComponent.runCommands([
-      'write -field=client_token auth/token/create policies=default ttl=1h',
-    ]);
-    const token = consoleComponent.lastTextOutput;
-    await logout.visit();
-    await settled();
-    await authPage.login(token);
-    await settled();
-    this.clock.tick(authService.IDLE_TIMEOUT);
-    authService.shouldRenew();
-    await settled();
-    assert.dom('[data-test-allow-expiration]').exists('shows expiration beacon');
-
-    await visit('/vault/access');
-
-    assert.dom('[data-test-allow-expiration]').doesNotExist('hides beacon when the api is used again');
   });
 
   test('it shows the push notification warning after submit', async function (assert) {

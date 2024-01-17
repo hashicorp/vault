@@ -1,7 +1,12 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form onsubmit={{action @doSubmit (hash ciphertext=@ciphertext context=@context nonce=@nonce key_version=@key_version)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="rewrap" />
-    <div class="content">
+    <div class="content has-bottom-margin-l">
       <p>
         You can rewrap the provided ciphertext using the latest version of
         <code>{{@key.name}}</code>
@@ -44,7 +49,7 @@
     {{/if}}
   </div>
   <div class="field box is-fullwidth is-bottomless">
-    <div class="content">
+    <div class="content has-bottom-margin-l">
       <p class="help">
         Submitting this form will update the
         <code>ciphertext</code>
@@ -52,39 +57,21 @@
       </p>
     </div>
     <div class="control">
-      <button type="submit" class="button is-primary">
-        Rewrap
-      </button>
+      <Hds::Button @text="Rewrap" type="submit" />
     </div>
   </div>
 </form>
-<Modal @title="Copy your token" @onClose={{action (mut @isModalActive)}} @isActive={{@isModalActive}}>
-  <section class="modal-card-body">
-    <div class="box is-shadowless is-fullwidth is-sideless">
+{{#if @isModalActive}}
+  <Hds::Modal id="transit-rewrap-modal" @onClose={{fn (mut @isModalActive) false}} as |M|>
+    <M.Header>
+      Copy your token
+    </M.Header>
+    <M.Body>
       <h2 class="title is-6">Ciphertext</h2>
-      <div class="copy-text level">
-        <code class="level-left" data-test-encrypted-value="ciphertext">{{@ciphertext}}</code>
-        <CopyButton
-          class="button is-compact is-transparent level-right"
-          data-test-button="modal-copy"
-          @clipboardText={{@ciphertext}}
-          @buttonType="button"
-          @success={{action (set-flash-message "Ciphertext copied!")}}
-        >
-          <Icon @name="clipboard-copy" aria-label="Copy" />
-        </CopyButton>
-      </div>
-    </div>
-  </section>
-  <footer class="modal-card-foot">
-    <CopyButton
-      class="button is-primary copy-close"
-      data-test-button="modal-copy-close"
-      @clipboardText={{@ciphertext}}
-      @buttonType="button"
-      @success={{action @toggleModal "Ciphertext copied!"}}
-    >
-      Copy &amp; Close
-    </CopyButton>
-  </footer>
-</Modal>
+      <Hds::Copy::Snippet @textToCopy={{@ciphertext}} @color="secondary" @container="#transit-rewrap-modal" />
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button @text="Close" {{on "click" F.close}} />
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

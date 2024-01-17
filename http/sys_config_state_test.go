@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package http
 
@@ -173,7 +173,9 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 						"type":   "tcp",
 					},
 				},
-				"storage": tc.expectedStorageOutput,
+				"storage":                       tc.expectedStorageOutput,
+				"administrative_namespace_path": "",
+				"imprecise_lease_role_tracking": false,
 			}
 
 			if tc.expectedHAStorageOutput != nil {
@@ -188,6 +190,7 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 				"warnings":       nil,
 				"auth":           nil,
 				"data":           configResp,
+				"mount_type":     "system",
 			}
 
 			testResponseBody(t, resp, &actual)

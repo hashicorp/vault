@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import sinon from 'sinon';
@@ -11,43 +11,6 @@ module('Unit | Model | secret-engine', function (hooks) {
   setupTest(hooks);
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-  });
-
-  module('modelTypeForKV', function () {
-    test('is secret by default', function (assert) {
-      assert.expect(1);
-      const model = this.store.createRecord('secret-engine');
-      assert.strictEqual(model.get('modelTypeForKV'), 'secret');
-    });
-
-    test('is secret-v2 for kv v2', function (assert) {
-      assert.expect(1);
-      const model = this.store.createRecord('secret-engine', {
-        version: 2,
-        type: 'kv',
-      });
-      assert.strictEqual(model.get('modelTypeForKV'), 'secret-v2');
-    });
-
-    test('is secret-v2 for generic v2', function (assert) {
-      assert.expect(1);
-      const model = this.store.createRecord('secret-engine', {
-        version: 2,
-        type: 'kv',
-      });
-
-      assert.strictEqual(model.get('modelTypeForKV'), 'secret-v2');
-    });
-
-    test('is secret when v2 if not kv or generic', function (assert) {
-      assert.expect(1);
-      const model = this.store.createRecord('secret-engine', {
-        version: 2,
-        type: 'ssh',
-      });
-
-      assert.strictEqual(model.get('modelTypeForKV'), 'secret');
-    });
   });
 
   module('formFields', function () {
@@ -319,19 +282,19 @@ module('Unit | Model | secret-engine', function (hooks) {
   });
 
   module('icon', function () {
-    test('returns secrets if no engineType', function (assert) {
+    test('returns default icon if no engineType', function (assert) {
       assert.expect(1);
       const model = this.store.createRecord('secret-engine', {
         type: '',
       });
-      assert.strictEqual(model.icon, 'secrets');
+      assert.strictEqual(model.icon, 'lock', 'uses default icon');
     });
-    test('returns secrets if kmip', function (assert) {
+    test('returns default icon if kmip', function (assert) {
       assert.expect(1);
       const model = this.store.createRecord('secret-engine', {
         type: 'kmip',
       });
-      assert.strictEqual(model.icon, 'secrets');
+      assert.strictEqual(model.icon, 'lock');
     });
     test('returns key if keymgmt', function (assert) {
       assert.expect(1);
@@ -340,12 +303,12 @@ module('Unit | Model | secret-engine', function (hooks) {
       });
       assert.strictEqual(model.icon, 'key');
     });
-    test('returns engineType by default', function (assert) {
+    test('returns default when engine type is not in list of mountable engines', function (assert) {
       assert.expect(1);
       const model = this.store.createRecord('secret-engine', {
         type: 'ducks',
       });
-      assert.strictEqual(model.icon, 'ducks');
+      assert.strictEqual(model.icon, 'lock');
     });
   });
 

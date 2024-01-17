@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -54,6 +54,17 @@ func (ai *ACMEIdentifier) MaybeParseWildcard() (bool, string, error) {
 	ai.Value = reducedName
 
 	return true, reducedName, nil
+}
+
+func (ai *ACMEIdentifier) NetworkMarshal(useOriginalValue bool) map[string]interface{} {
+	value := ai.OriginalValue
+	if !useOriginalValue {
+		value = ai.Value
+	}
+	return map[string]interface{}{
+		"type":  ai.Type,
+		"value": value,
+	}
 }
 
 type ACMEAuthorizationStatusType string
@@ -155,7 +166,7 @@ func (aa *ACMEAuthorization) GetExpires() (time.Time, error) {
 
 func (aa *ACMEAuthorization) NetworkMarshal(acmeCtx *acmeContext) map[string]interface{} {
 	resp := map[string]interface{}{
-		"identifier": aa.Identifier,
+		"identifier": aa.Identifier.NetworkMarshal( /* use value, not original value */ false),
 		"status":     aa.Status,
 		"wildcard":   aa.Wildcard,
 	}

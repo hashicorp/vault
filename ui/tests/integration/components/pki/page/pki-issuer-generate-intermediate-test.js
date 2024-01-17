@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { click, fillIn, render } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -52,7 +57,7 @@ module('Integration | Component | page/pki-issuer-generate-intermediate', functi
     await fillIn(SELECTORS.typeField, 'internal');
     await fillIn(SELECTORS.inputByName('commonName'), 'foobar');
     await click('[data-test-save]');
-    assert.dom('[data-test-pki-page-title]').hasText('View generated CSR');
+    assert.dom('[data-test-pki-page-title]').hasText('View Generated CSR');
   });
 
   test('it does not update title if API response is an error', async function (assert) {

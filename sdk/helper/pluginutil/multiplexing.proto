@@ -8,9 +8,9 @@ option go_package = "github.com/hashicorp/vault/sdk/helper/pluginutil";
 
 message MultiplexingSupportRequest {}
 message MultiplexingSupportResponse {
-    bool supported = 1;
+  bool supported = 1;
 }
 
 service PluginMultiplexing {
-    rpc MultiplexingSupport(MultiplexingSupportRequest) returns (MultiplexingSupportResponse);
+  rpc MultiplexingSupport(MultiplexingSupportRequest) returns (MultiplexingSupportResponse);
 }

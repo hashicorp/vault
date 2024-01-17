@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -13,7 +13,7 @@ import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, fillIn, find, isSettled, visit } from '@ember/test-helpers';
 import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/policy-generator/pki';
-import { tokenWithPolicy, runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
+import { tokenWithPolicy, runCommands, clearRecords } from 'vault/tests/helpers/pki/pki-run-commands';
 import { unsupportedPem } from 'vault/tests/helpers/pki/values';
 
 /**
@@ -25,12 +25,14 @@ module('Acceptance | pki workflow', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
+    this.store = this.owner.lookup('service:store');
     await authPage.login();
     // Setup PKI engine
     const mountPath = `pki-workflow-${uuidv4()}`;
     await enablePage.enable('pki', mountPath);
     this.mountPath = mountPath;
     await logout.visit();
+    clearRecords(this.store);
   });
 
   hooks.afterEach(async function () {
@@ -38,42 +40,52 @@ module('Acceptance | pki workflow', function (hooks) {
     await authPage.login();
     // Cleanup engine
     await runCommands([`delete sys/mounts/${this.mountPath}`]);
-    await logout.visit();
   });
 
-  test('empty state messages are correct when PKI not configured', async function (assert) {
-    assert.expect(17);
-    const assertEmptyState = (assert, resource) => {
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/${resource}`);
-      assert
-        .dom(SELECTORS.emptyStateTitle)
-        .hasText(
-          'PKI not configured',
-          `${resource} index renders correct empty state title when PKI not configured`
-        );
-      assert.dom(SELECTORS.emptyStateLink).hasText('Configure PKI');
-      assert
-        .dom(SELECTORS.emptyStateMessage)
-        .hasText(
-          `This PKI mount hasn't yet been configured with a certificate issuer.`,
-          `${resource} index empty state message correct when PKI not configured`
-        );
-    };
-    await authPage.login(this.pkiAdminToken);
-    await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-    assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
+  module('not configured', function (hooks) {
+    hooks.beforeEach(async function () {
+      await authPage.login();
+      const pki_admin_policy = adminPolicy(this.mountPath, 'roles');
+      this.pkiAdminToken = await tokenWithPolicy(`pki-admin-${this.mountPath}`, pki_admin_policy);
+      await logout.visit();
+      clearRecords(this.store);
+    });
 
-    await click(SELECTORS.rolesTab);
-    assertEmptyState(assert, 'roles');
+    test('empty state messages are correct when PKI not configured', async function (assert) {
+      assert.expect(21);
+      const assertEmptyState = (assert, resource) => {
+        assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/${resource}`);
+        assert
+          .dom(SELECTORS.emptyStateTitle)
+          .hasText(
+            'PKI not configured',
+            `${resource} index renders correct empty state title when PKI not configured`
+          );
+        assert.dom(SELECTORS.emptyStateLink).hasText('Configure PKI');
+        assert
+          .dom(SELECTORS.emptyStateMessage)
+          .hasText(
+            `This PKI mount hasn't yet been configured with a certificate issuer.`,
+            `${resource} index empty state message correct when PKI not configured`
+          );
+      };
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
 
-    await click(SELECTORS.issuersTab);
-    assertEmptyState(assert, 'issuers');
+      await click(SELECTORS.rolesTab);
+      assertEmptyState(assert, 'roles');
 
-    await click(SELECTORS.certsTab);
-    assertEmptyState(assert, 'certificates');
+      await click(SELECTORS.issuersTab);
+      assertEmptyState(assert, 'issuers');
 
-    await click(SELECTORS.keysTab);
-    assertEmptyState(assert, 'keys');
+      await click(SELECTORS.certsTab);
+      assertEmptyState(assert, 'certificates');
+      await click(SELECTORS.keysTab);
+      assertEmptyState(assert, 'keys');
+      await click(SELECTORS.tidyTab);
+      assertEmptyState(assert, 'tidy');
+    });
   });
 
   module('roles', function (hooks) {
@@ -91,10 +103,11 @@ module('Acceptance | pki workflow', function (hooks) {
       const pki_admin_policy = adminPolicy(this.mountPath, 'roles');
       const pki_reader_policy = readerPolicy(this.mountPath, 'roles');
       const pki_editor_policy = updatePolicy(this.mountPath, 'roles');
-      this.pkiRoleReader = await tokenWithPolicy('pki-reader', pki_reader_policy);
-      this.pkiRoleEditor = await tokenWithPolicy('pki-editor', pki_editor_policy);
-      this.pkiAdminToken = await tokenWithPolicy('pki-admin', pki_admin_policy);
+      this.pkiRoleReader = await tokenWithPolicy(`pki-reader-${this.mountPath}`, pki_reader_policy);
+      this.pkiRoleEditor = await tokenWithPolicy(`pki-editor-${this.mountPath}`, pki_editor_policy);
+      this.pkiAdminToken = await tokenWithPolicy(`pki-admin-${this.mountPath}`, pki_admin_policy);
       await logout.visit();
+      clearRecords(this.store);
     });
 
     test('shows correct items if user has all permissions', async function (assert) {
@@ -126,8 +139,8 @@ module('Acceptance | pki workflow', function (hooks) {
 
       await visit(`/vault/secrets/${this.mountPath}/pki/roles/some-role/details`);
       assert.dom(SELECTORS.deleteRoleButton).exists('Delete role button is shown');
-      await click(`${SELECTORS.deleteRoleButton} [data-test-confirm-action-trigger]`);
-      await click(`[data-test-confirm-button]`);
+      await click(SELECTORS.deleteRoleButton);
+      await click('[data-test-confirm-button]');
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.mountPath}/pki/roles`,
@@ -203,7 +216,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/create`);
       assert.dom(SELECTORS.breadcrumbContainer).exists({ count: 1 }, 'breadcrumbs are rendered');
       assert.dom(SELECTORS.breadcrumbs).exists({ count: 4 }, 'Shows 4 breadcrumbs');
-      assert.dom(SELECTORS.pageTitle).hasText('Create a PKI role');
+      assert.dom(SELECTORS.pageTitle).hasText('Create a PKI Role');
 
       await fillIn(SELECTORS.roleForm.roleName, roleName);
       await click(SELECTORS.roleForm.roleCreateButton);
@@ -222,10 +235,11 @@ module('Acceptance | pki workflow', function (hooks) {
       const pki_admin_policy = adminPolicy(this.mountPath);
       const pki_reader_policy = readerPolicy(this.mountPath, 'keys', true);
       const pki_editor_policy = updatePolicy(this.mountPath, 'keys');
-      this.pkiKeyReader = await tokenWithPolicy('pki-reader', pki_reader_policy);
-      this.pkiKeyEditor = await tokenWithPolicy('pki-editor', pki_editor_policy);
-      this.pkiAdminToken = await tokenWithPolicy('pki-admin', pki_admin_policy);
+      this.pkiKeyReader = await tokenWithPolicy(`pki-reader-${this.mountPath}`, pki_reader_policy);
+      this.pkiKeyEditor = await tokenWithPolicy(`pki-editor-${this.mountPath}`, pki_editor_policy);
+      this.pkiAdminToken = await tokenWithPolicy(`pki-admin-${this.mountPath}`, pki_admin_policy);
       await logout.visit();
+      clearRecords(this.store);
     });
 
     test('shows correct items if user has all permissions', async function (assert) {
@@ -279,7 +293,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`);
 
       assert
-        .dom(SELECTORS.alertBanner)
+        .dom(SELECTORS.keyPages.nextStepsAlert)
         .hasText(
           'Next steps This private key material will only be available once. Copy or download it now.',
           'renders banner to save private key'
@@ -330,7 +344,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(SELECTORS.keyPages.keyDeleteButton).doesNotExist('Delete key button is not shown');
       await click(SELECTORS.keyPages.keyEditLink);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/edit`);
-      assert.dom(SELECTORS.keyPages.title).hasText('Edit key');
+      assert.dom(SELECTORS.keyPages.title).hasText('Edit Key');
       await click(SELECTORS.keyForm.keyCancelButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`);
     });
@@ -339,10 +353,55 @@ module('Acceptance | pki workflow', function (hooks) {
   module('issuers', function (hooks) {
     hooks.beforeEach(async function () {
       await authPage.login();
+      const pki_admin_policy = adminPolicy(this.mountPath);
+      this.pkiAdminToken = await tokenWithPolicy(`pki-admin-${this.mountPath}`, pki_admin_policy);
       // Configure engine with a default issuer
-      await runCommands([`write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test"`]);
+      await runCommands([
+        `write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test" name="Hashicorp Test"`,
+      ]);
       await logout.visit();
+      clearRecords(this.store);
     });
+    test('lists the correct issuer metadata info', async function (assert) {
+      assert.expect(6);
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      assert.dom(SELECTORS.issuersTab).exists('Issuers tab is present');
+      await click(SELECTORS.issuersTab);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/issuers`);
+      assert.dom('.linked-block').exists({ count: 1 }, 'One issuer is in list');
+      assert.dom('[data-test-is-root-tag="0"]').hasText('root');
+      assert.dom('[data-test-serial-number="0"]').exists({ count: 1 }, 'displays serial number tag');
+      assert.dom('[data-test-common-name="0"]').exists({ count: 1 }, 'displays cert common name tag');
+    });
+    test('lists the correct issuer metadata info when user has only read permission', async function (assert) {
+      assert.expect(2);
+      await authPage.login();
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await click(SELECTORS.issuersTab);
+      await click(SELECTORS.issuerPopupMenu);
+      await click(SELECTORS.issuerPopupDetails);
+      const issuerId = find(SELECTORS.issuerDetails.valueByName('Issuer ID')).innerText;
+      const pki_issuer_denied_policy = `
+      path "${this.mountPath}/*" {
+        capabilities = ["create", "read", "update", "delete", "list"]
+      },
+      path "${this.mountPath}/issuer/${issuerId}" {
+        capabilities = ["deny"]
+      }
+      `;
+      this.token = await tokenWithPolicy(
+        `pki-issuer-denied-policy-${this.mountPath}`,
+        pki_issuer_denied_policy
+      );
+      await logout.visit();
+      await authPage.login(this.token);
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await click(SELECTORS.issuersTab);
+      assert.dom('[data-test-serial-number="0"]').exists({ count: 1 }, 'displays serial number tag');
+      assert.dom('[data-test-common-name="0"]').doesNotExist('does not display cert common name tag');
+    });
+
     test('details view renders correct number of info items', async function (assert) {
       assert.expect(13);
       await authPage.login(this.pkiAdminToken);
@@ -356,7 +415,7 @@ module('Acceptance | pki workflow', function (hooks) {
         currentURL().match(`/vault/secrets/${this.mountPath}/pki/issuers/.+/details`),
         `/vault/secrets/${this.mountPath}/pki/issuers/my-issuer/details`
       );
-      assert.dom(SELECTORS.issuerDetails.title).hasText('View issuer certificate');
+      assert.dom(SELECTORS.issuerDetails.title).hasText('View Issuer Certificate');
       ['Certificate', 'CA Chain', 'Common name', 'Issuer name', 'Issuer ID', 'Default key ID'].forEach(
         (label) => {
           assert
@@ -393,7 +452,7 @@ module('Acceptance | pki workflow', function (hooks) {
         .dom(SELECTORS.issuerDetails.configure)
         .hasAttribute('href', `/ui/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/edit`);
       await click(SELECTORS.issuerDetails.rotateRoot);
-      assert.dom(find(SELECTORS.issuerDetails.rotateModal).parentElement).hasClass('is-active');
+      assert.dom(SELECTORS.issuerDetails.rotateModal).exists('rotate root modal opens');
       await click(SELECTORS.issuerDetails.rotateModalGenerate);
       assert.strictEqual(
         currentURL(),
@@ -403,27 +462,6 @@ module('Acceptance | pki workflow', function (hooks) {
       assert
         .dom('[data-test-input="commonName"]')
         .hasValue('Hashicorp Test', 'form prefilled with parent issuer cn');
-    });
-
-    test('it navigates to the tidy page from configuration toolbar', async function (assert) {
-      await authPage.login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
-      await click(SELECTORS.configuration.tidyToolbar);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/tidy`);
-    });
-
-    test('it returns to the configuration page after submit', async function (assert) {
-      await authPage.login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-      await click(SELECTORS.configuration.tidyToolbar);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/tidy`);
-      await click(SELECTORS.configuration.tidyCertStoreCheckbox);
-      await click(SELECTORS.configuration.tidyRevocationCheckbox);
-      await fillIn(SELECTORS.configuration.safetyBufferInput, '100');
-      await fillIn(SELECTORS.configuration.safetyBufferInputDropdown, 'd');
-      await click(SELECTORS.configuration.tidySave);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
     });
   });
 
@@ -447,17 +485,55 @@ module('Acceptance | pki workflow', function (hooks) {
       // but we're just testing that route model was parsed and passed as expected
       await visit(`/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/rotate-root`);
       assert
-        .dom('[data-test-warning-banner]')
+        .dom('[data-test-parsing-warning]')
         .hasTextContaining(
-          'Not all of the certificate values could be parsed and transferred to new root',
+          'Not all of the certificate values can be parsed and transferred to a new root',
           'it renders warning banner'
         );
       assert.dom('[data-test-input="commonName"]').hasValue('fancy-cert-unsupported-subj-and-ext-oids');
       await fillIn('[data-test-input="issuerName"]', 'existing-issuer');
       await click('[data-test-pki-rotate-root-save]');
       assert
-        .dom('[data-test-error-banner]')
+        .dom('[data-test-rotate-error]')
         .hasText('Error issuer name already in use', 'it renders error banner');
+    });
+  });
+
+  module('config', function (hooks) {
+    hooks.beforeEach(async function () {
+      await authPage.login();
+      await runCommands([`write ${this.mountPath}/root/generate/internal issuer_name="existing-issuer"`]);
+      const mixed_config_policy = `
+      ${adminPolicy(this.mountPath)}
+      ${readerPolicy(this.mountPath, 'config/cluster')}
+      `;
+      this.mixedConfigCapabilities = await tokenWithPolicy(
+        `pki-reader-${this.mountPath}`,
+        mixed_config_policy
+      );
+      await logout.visit();
+    });
+
+    test('it updates config when user only has permission to some endpoints', async function (assert) {
+      await authPage.login(this.mixedConfigCapabilities);
+      await visit(`/vault/secrets/${this.mountPath}/pki/configuration/edit`);
+      assert
+        .dom(`${SELECTORS.configEdit.configEditSection} [data-test-component="empty-state"]`)
+        .hasText(
+          `You do not have permission to set this mount's the cluster config Ask your administrator if you think you should have access to: POST /${this.mountPath}/config/cluster`
+        );
+      assert.dom(SELECTORS.configEdit.acmeEditSection).exists();
+      assert.dom(SELECTORS.configEdit.urlsEditSection).exists();
+      assert.dom(SELECTORS.configEdit.crlEditSection).exists();
+      assert.dom(`${SELECTORS.acmeEditSection} [data-test-component="empty-state"]`).doesNotExist();
+      assert.dom(`${SELECTORS.urlsEditSection} [data-test-component="empty-state"]`).doesNotExist();
+      assert.dom(`${SELECTORS.crlEditSection} [data-test-component="empty-state"]`).doesNotExist();
+      await click(SELECTORS.configEdit.crlToggleInput('expiry'));
+      await click(SELECTORS.configEdit.saveButton);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
+      assert
+        .dom('[data-test-value-div="CRL building"]')
+        .hasText('Disabled', 'Successfully saves config with partial permission');
     });
   });
 });

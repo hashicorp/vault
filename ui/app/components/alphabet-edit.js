@@ -1,8 +1,8 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import TransformBase from './transform-edit-base';
 
-export default TransformBase.extend({});
+export default class AlphabetEdit extends TransformBase {}

@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Add missing fields to tidy-status, include new last_auto_tidy_finished field.
+```

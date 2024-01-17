@@ -1,19 +1,28 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package ldap
 
 import (
 	"context"
 	"fmt"
+	"runtime"
+	"strings"
 	"testing"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/cap/ldap"
+
 	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 )
 
 func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ldaputil.ConfigEntry) {
+	// note: this image isn't supported on arm64 architecture in CI.
+	// but if you're running on Apple Silicon, feel free to comment out the code below locally.
+	if strings.Contains(runtime.GOARCH, "arm") {
+		t.Skip("Skipping, as this image is not supported on ARM architectures")
+	}
+
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		// Currently set to "michelvocks" until https://github.com/rroemhild/docker-test-openldap/pull/14
 		// has been merged.
@@ -41,19 +50,16 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
 		connURL := fmt.Sprintf("ldap://%s:%d", host, port)
 		cfg.Url = connURL
-		logger := hclog.New(nil)
-		client := ldaputil.Client{
-			LDAP:   ldaputil.NewLDAP(),
-			Logger: logger,
-		}
 
-		conn, err := client.DialLDAP(cfg)
+		client, err := ldap.NewClient(ctx, ldaputil.ConvertConfig(cfg))
 		if err != nil {
 			return nil, err
 		}
-		defer conn.Close()
 
-		if _, err := client.GetUserBindDN(cfg, conn, "Philip J. Fry"); err != nil {
+		defer client.Close(ctx)
+
+		_, err = client.Authenticate(ctx, "Philip J. Fry", "fry")
+		if err != nil {
 			return nil, err
 		}
 

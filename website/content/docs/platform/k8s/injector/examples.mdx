@@ -4,7 +4,7 @@ page_title: Vault Agent Sidecar Injector Examples
 description: This section documents examples of using the Vault Agent Injector.
 ---
 
-# Vault Agent Injector Examples
+# Vault agent injector examples
 
 The following are different configuration examples to support a variety of
 deployment models.
@@ -13,7 +13,7 @@ deployment models.
 Ensure that the injector annotations are specified on the pod specification when
 using higher level constructs such as deployments, jobs or statefulsets.
 
-## Before Using the Vault Agent Injector
+## Before using the Vault agent injector
 
 Before applying Vault Agent injection annotations to pods, the following requirements
 should be satisfied.
@@ -32,7 +32,7 @@ clusters](https://cloud.google.com/kubernetes-engine/docs/how-to/private-cluster
 the Kubernetes API will connect directly to the injector service endpoint,
 which is on port `8080`.
 
-### Kubernetes and Vault Configuration
+### Kubernetes and Vault configuration
 
 - Kubernetes auth method should be configured and enabled in Vault,
 - Pod should have a service account,
@@ -51,7 +51,7 @@ owner of the pod. Check the following for errors:
   that owns the pod.
 - If the pod was created by a job, check the `job` for errors.
 
-## Patching Existing Pods
+## Patching existing pods
 
 To patch existing pods, a Kubernetes patch can be applied to add the required annotations
 to pods. When applying a patch, the pods will be rescheduled.
@@ -140,11 +140,11 @@ spec:
       serviceAccountName: app-example
 ```
 
-## ConfigMap Example
+## ConfigMap example
 
 The following example creates a deployment that mounts a Kubernetes ConfigMap
 containing Vault Agent configuration files. For a complete list of the Vault
-Agent configuration settings, [see the Agent documentation](/vault/docs/agent/template#vault-agent-templates).
+Agent configuration settings, [see the Agent documentation](/vault/docs/agent-and-proxy/agent/template#vault-agent-templates).
 
 ```yaml
 ---
@@ -247,7 +247,7 @@ data:
     }
 ```
 
-## Environment Variable Example
+## Environment variable example
 
 The following example demonstrates how templates can be used to create environment
 variables. A template should be created that exports a Vault secret as an environment
@@ -276,7 +276,7 @@ spec:
         vault.hashicorp.com/agent-inject-secret-config: 'secret/data/web'
         # Environment variable export template
         vault.hashicorp.com/agent-inject-template-config: |
-          {{ with secret "secret/data/web" -}}
+          {{- with secret "secret/data/web" -}}
             export api_key="{{ .Data.data.payments_api_key }}"
           {{- end }}
     spec:
@@ -292,7 +292,7 @@ spec:
             - containerPort: 9090
 ```
 
-## AppRole Authentication
+## AppRole authentication
 
 The following example demonstrates how the AppRole authentication method can be used by
 Vault Agent for retrieving secrets. A Kubernetes secret containing the AppRole secret ID
@@ -341,7 +341,7 @@ spec:
             - containerPort: 9090
 ```
 
-## PKI Cert Example
+## PKI cert example
 
 The following example demonstrates how to use the [`pkiCert` function][pkiCert] and
 [`writeToFile` function][writeToFile] from consul-template to create two files

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package nomad
 
@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -38,6 +39,11 @@ func (c *Config) Client() (*nomadapi.Client, error) {
 }
 
 func prepareTestContainer(t *testing.T, bootstrap bool) (func(), *Config) {
+	// Skipping on ARM, as this image can't run on ARM architecture
+	if strings.Contains(runtime.GOARCH, "arm") {
+		t.Skip("Skipping, as this image is not supported on ARM architectures")
+	}
+
 	if retAddress := os.Getenv("NOMAD_ADDR"); retAddress != "" {
 		s, err := docker.NewServiceURLParse(retAddress)
 		if err != nil {
@@ -47,7 +53,7 @@ func prepareTestContainer(t *testing.T, bootstrap bool) (func(), *Config) {
 	}
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ImageRepo:     "multani/nomad",
+		ImageRepo:     "docker.mirror.hashicorp.services/multani/nomad",
 		ImageTag:      "1.1.6",
 		ContainerName: "nomad",
 		Ports:         []string{"4646/tcp"},

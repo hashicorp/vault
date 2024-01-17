@@ -1,0 +1,3 @@
+```release-note:improvement
+core/activity: refactor the activity log's generation of precomputed queries 
+```
