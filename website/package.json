@@ -12,7 +12,7 @@
     "simple-git-hooks": "^2.6.1"
   },
   "engines": {
-    "npm": ">=9.8.0",
+    "npm": ">=9.6.7",
     "node": ">=18.17.0 <= 20.x"
   },
   "repository": {
