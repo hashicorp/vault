@@ -112,7 +112,7 @@ export default class App extends Application {
         services: ['flash-messages', 'router', 'store', 'version'],
         externalRoutes: {
           kvSecretDetails: 'vault.cluster.secrets.backend.kv.secret.details',
-          clientCountOverview: 'vault.cluster.clients.overview',
+          clientCountOverview: 'vault.cluster.clients',
         },
       },
     },
