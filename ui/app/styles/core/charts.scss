@@ -175,8 +175,8 @@
 
 .legend-center {
   grid-row-start: 5;
-  grid-column-start: 3;
-  grid-column-end: 5;
+  grid-column-start: 2;
+  grid-column-end: 6;
   align-self: center;
   justify-self: center;
   font-size: $size-9;
@@ -227,6 +227,23 @@ p.data-details {
 }
 
 // MISC STYLES
+
+.legend-colors {
+  height: 10px;
+  width: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  // numbers are indices because chart legend is iterated over
+  &.dot-0 {
+    background-color: var(--token-color-palette-blue-100);
+  }
+  &.dot-1 {
+    background-color: var(--token-color-palette-blue-300);
+  }
+  &.dot-2 {
+    background-color: var(--token-color-palette-blue-500);
+  }
+}
 
 .light-dot {
   background-color: $blue-100;
@@ -313,7 +330,7 @@ p.data-details {
 
 @media only screen and (max-width: 950px) {
   .dual-chart-grid {
-    display: grid;
+    display: inline-grid;
     grid-template-columns: repeat(2, 1fr);
     grid-template-rows: 0.2fr 0.75fr 0.75fr 0.2fr;
     width: 100%;
@@ -337,7 +354,7 @@ p.data-details {
   }
 
   .legend-center {
-    grid-column-start: 1;
+    grid-column-start: 2;
     grid-row-start: 4;
   }
 

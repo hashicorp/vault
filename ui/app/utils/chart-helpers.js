@@ -7,9 +7,8 @@ import { format } from 'd3-format';
 import { mean } from 'd3-array';
 
 // COLOR THEME:
-export const LIGHT_AND_DARK_BLUE = ['#BFD4FF', '#1563FF'];
+export const LIGHT_AND_DARK_BLUE = ['#cce3fe', '#0c56e9', '#1c345f'];
 export const UPGRADE_WARNING = '#FDEEBA';
-export const BAR_COLOR_HOVER = ['#1563FF', '#0F4FD1'];
 export const GREY = '#EBEEF2';
 
 // TRANSLATIONS:

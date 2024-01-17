@@ -11,7 +11,7 @@ import { select, event, selectAll } from 'd3-selection';
 import { scaleLinear, scaleBand } from 'd3-scale';
 import { axisLeft } from 'd3-axis';
 import { max, maxIndex } from 'd3-array';
-import { BAR_COLOR_HOVER, GREY, LIGHT_AND_DARK_BLUE } from 'vault/utils/chart-helpers';
+import { GREY, LIGHT_AND_DARK_BLUE, calculateSum } from 'vault/utils/chart-helpers';
 import { tracked } from '@glimmer/tracking';
 import { formatNumber } from 'core/helpers/format-number';
 
@@ -50,10 +50,6 @@ export default class HorizontalBarChart extends Component {
     return this.args.xKey || 'clients';
   }
 
-  get chartLegend() {
-    return this.args.chartLegend;
-  }
-
   get topNamespace() {
     return this.args.dataset[maxIndex(this.args.dataset, (d) => d[this.xKey])];
   }
@@ -67,7 +63,7 @@ export default class HorizontalBarChart extends Component {
     // chart legend tells stackFunction how to stack/organize data
     // creates an array of data for each key name
     // each array contains coordinates for each data bar
-    const stackFunction = stack().keys(this.chartLegend.map((l) => l.key));
+    const stackFunction = stack().keys(this.args.chartLegend.map((l) => l.key));
     const dataset = chartData;
     const stackedData = stackFunction(dataset);
     const labelKey = this.labelKey;
@@ -167,7 +163,6 @@ export default class HorizontalBarChart extends Component {
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
-    const dataBars = chartSvg.selectAll('rect.data-bar');
     const actionBarSelection = chartSvg.selectAll('rect.action-bar');
 
     const compareAttributes = (elementA, elementB, attr) =>
@@ -185,20 +180,9 @@ export default class HorizontalBarChart extends Component {
         this.tooltipText = tooltipStats.join(', ');
 
         select(hoveredElement).style('opacity', 1);
-
-        dataBars
-          .filter(function () {
-            return compareAttributes(this, hoveredElement, 'y');
-          })
-          .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
       })
       .on('mouseout', function () {
         select(this).style('opacity', 0);
-        dataBars
-          .filter(function () {
-            return compareAttributes(this, event.target, 'y');
-          })
-          .style('fill', (b, i) => `${LIGHT_AND_DARK_BLUE[i]}`);
       });
 
     // MOUSE EVENTS FOR Y-AXIS LABELS
@@ -212,11 +196,6 @@ export default class HorizontalBarChart extends Component {
         } else {
           this.tooltipTarget = null;
         }
-        dataBars
-          .filter(function () {
-            return compareAttributes(this, event.target, 'y');
-          })
-          .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
         actionBarSelection
           .filter(function () {
             return compareAttributes(this, event.target, 'y');
@@ -225,11 +204,6 @@ export default class HorizontalBarChart extends Component {
       })
       .on('mouseout', function () {
         this.tooltipTarget = null;
-        dataBars
-          .filter(function () {
-            return compareAttributes(this, event.target, 'y');
-          })
-          .style('fill', (b, i) => `${LIGHT_AND_DARK_BLUE[i]}`);
         actionBarSelection
           .filter(function () {
             return compareAttributes(this, event.target, 'y');
@@ -248,7 +222,11 @@ export default class HorizontalBarChart extends Component {
       .data(dataset)
       .enter()
       .append('text')
-      .text((d) => formatNumber([d[xKey]]))
+      .text((d) => {
+        // sum each piece of stacked data
+        const total = calculateSum(this.args.chartLegend.map((l) => d[l.key]));
+        return formatNumber([total]);
+      })
       .attr('fill', '#000')
       .attr('class', 'total-value')
       .style('font-size', '.8rem')
