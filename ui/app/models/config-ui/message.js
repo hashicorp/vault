@@ -82,9 +82,10 @@ export default class MessageModel extends Model {
   @attr('dateTimeLocal', { editType: 'yield', label: 'Message expires' }) endTime;
 
   @attr('object', {
-    editType: 'singleKv',
+    editType: 'kv',
     keyPlaceholder: 'Display text (e.g. Learn more)',
     valuePlaceholder: 'Paste URL (e.g. www.learnmore.com)',
+    shouldOnlyShowSingleRow: true,
   })
   link;
 
