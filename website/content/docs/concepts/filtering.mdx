@@ -1,0 +1,113 @@
+---
+layout: docs
+page_title: Filtering
+description: |-
+  An introduction to the filtering syntax used in Vault.
+---
+
+# Filter expressions
+
+Filter expressions can be used by various parts of Vault to provide useful
+functionality. This page describes the overall syntax; see the sub-pages for
+information on the specific values available for filtering for various features,
+including examples.
+
+Each filter expression has matching operators composed with selectors and
+values.
+
+## Create expressions
+
+A single expression is a matching operator with a selector and value. They are
+written in plain text format, and Boolean logic and parenthesization are
+supported. In general whitespace is ignored, except within literal strings.
+
+### Matching operators
+
+All matching operators use a selector or value to choose what data should be
+matched. Each endpoint that supports filtering accepts a potentially different
+list of selectors and is detailed in the API documentation for those endpoints.
+
+```text
+// Equality & Inequality checks
+<Selector> == "<Value>"
+<Selector> != "<Value>"
+
+// Emptiness checks
+<Selector> is empty
+<Selector> is not empty
+
+// Contains checks or Substring Matching
+"<Value>" in <Selector>
+"<Value>" not in <Selector>
+<Selector> contains "<Value>"
+<Selector> not contains "<Value>"
+
+// Regular Expression Matching
+<Selector> matches "<Value>"
+<Selector> not matches "<Value>"
+```
+
+### Selectors
+
+Selectors are used by matching operators to create an expression. Inputs to
+filter expressions are JSON (or JSON-derived); selectors therefore use [JSON
+Pointer](https://tools.ietf.org/html/rfc6901) to select values from the input.
+Each selector must be enclosed in quotes and contain a valid JSON Pointer path,
+including leading slash (`/`).
+
+```text
+// Selects the value `zipzap` from the input `{ "foo": { "bar": "zipzap" } }`
+"/foo/bar"
+```
+
+### Values
+
+Values are used by matching operators to create an expression. Values can be any
+valid selector, a number, or a string. It is best practice to quote values.
+
+Numbers can be base 10 integers or floating point numbers.
+
+When quoting strings, they may either be enclosed in double quotes or backticks.
+When enclosed in backticks they are treated as raw strings and escape sequences
+such as `\n` will not be expanded.
+
+## Connect expressions
+
+There are several methods for connecting expressions, including
+
+- Logical `or`
+- Logical `and`
+- Logical `not`
+- Grouping with parenthesis
+- Matching expressions
+
+```text
+// Logical Or - evaluates to true if either sub-expression does
+<Expression 1> or <Expression 2>
+
+// Logical And - evaluates to true if both sub-expressions do
+<Expression 1 > and <Expression 2>
+
+// Logical Not - evaluates to true if the sub-expression does not
+not <Expression 1>
+
+// Grouping - Overrides normal precedence rules
+( <Expression 1> )
+
+// Inspects data to check for a match
+<Matching Expression 1>
+```
+
+Standard operator precedence can be expected for the various forms. For example,
+the following two expressions would be equivalent.
+
+```text
+<Expression 1> and not <Expression 2> or <Expression 3>
+
+( <Expression 1> and (not <Expression 2> )) or <Expression 3>
+```
+
+## Performance
+
+Filters are executed on Vault nodes and therefore will consume some amount
+of CPU time on the node.
