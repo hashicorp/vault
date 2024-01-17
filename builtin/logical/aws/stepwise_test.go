@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package aws
 
@@ -70,7 +70,7 @@ func testAccStepwiseRead(t *testing.T, path, name string, credentialTests []cred
 			var d struct {
 				AccessKey string `mapstructure:"access_key"`
 				SecretKey string `mapstructure:"secret_key"`
-				STSToken  string `mapstructure:"security_token"`
+				STSToken  string `mapstructure:"session_token"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err

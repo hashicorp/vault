@@ -126,7 +126,8 @@ type PolicyResults struct {
 }
 
 type PolicyInfo struct {
-	Name        string `json:"name"`
-	NamespaceId string `json:"namespace_id"`
-	Type        string `json:"type"`
+	Name          string `json:"name"`
+	NamespaceId   string `json:"namespace_id"`
+	NamespacePath string `json:"namespace_path"`
+	Type          string `json:"type"`
 }

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -211,8 +211,9 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 				}
 				switch {
 				case mountAccessor == "" && name == "":
-					// Just a canonical ID update, maybe
-					if canonicalID == "" {
+					// Check if the canonicalID or the customMetadata are being
+					// updated
+					if canonicalID == "" && !customMetadataExists {
 						// Nothing to do, so be idempotent
 						return nil, nil
 					}

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -10,19 +10,20 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"path"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/nonceutil"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
-	// How long nonces are considered valid.
-	nonceExpiry = 15 * time.Minute
-
 	// How many bytes are in a token. Per RFC 8555 Section
 	// 8.3. HTTP Challenge and Section 11.3 Token Entropy:
 	//
@@ -35,12 +36,17 @@ const (
 	acmeAccountPrefix    = acmePathPrefix + "accounts/"
 	acmeThumbprintPrefix = acmePathPrefix + "account-thumbprints/"
 	acmeValidationPrefix = acmePathPrefix + "validations/"
+	acmeEabPrefix        = acmePathPrefix + "eab/"
 )
 
 type acmeState struct {
-	nextExpiry *atomic.Int64
-	nonces     *sync.Map // map[string]time.Time
-	validator  *ACMEChallengeEngine
+	nonces nonceutil.NonceService
+
+	validator *ACMEChallengeEngine
+
+	configDirty *atomic.Bool
+	_config     sync.RWMutex
+	config      acmeConfigEntry
 }
 
 type acmeThumbprint struct {
@@ -49,25 +55,114 @@ type acmeThumbprint struct {
 }
 
 func NewACMEState() *acmeState {
-	return &acmeState{
-		nextExpiry: new(atomic.Int64),
-		nonces:     new(sync.Map),
-		validator:  NewACMEChallengeEngine(),
+	state := &acmeState{
+		nonces:      nonceutil.NewNonceService(),
+		validator:   NewACMEChallengeEngine(),
+		configDirty: new(atomic.Bool),
 	}
+	// Config hasn't been loaded yet; mark dirty.
+	state.configDirty.Store(true)
+
+	return state
 }
 
 func (a *acmeState) Initialize(b *backend, sc *storageContext) error {
-	if err := a.validator.Initialize(b, sc); err != nil {
+	// Initialize the nonce service.
+	if err := a.nonces.Initialize(); err != nil {
+		return fmt.Errorf("failed to initialize the ACME nonce service: %w", err)
+	}
+
+	// Load the ACME config.
+	_, err := a.getConfigWithUpdate(sc)
+	if err != nil {
 		return fmt.Errorf("error initializing ACME engine: %w", err)
 	}
 
-	go a.validator.Run(b)
+	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary | consts.ReplicationPerformanceStandby) {
+		// It is assumed, that if the node does become the active node later
+		// the plugin is re-initialized, so this is safe. It also spares the node
+		// from loading the existing queue into memory for no reason.
+		b.Logger().Debug("Not on an active node, skipping starting ACME challenge validation engine")
+		return nil
+	}
+	// Kick off our ACME challenge validation engine.
+	go a.validator.Run(b, a, sc)
+
+	// All good.
+	return nil
+}
+
+func (a *acmeState) Shutdown(b *backend) {
+	// If we aren't the active node, nothing to shutdown
+	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary | consts.ReplicationPerformanceStandby) {
+		return
+	}
+
+	a.validator.Closing <- struct{}{}
+}
+
+func (a *acmeState) markConfigDirty() {
+	a.configDirty.Store(true)
+}
+
+func (a *acmeState) reloadConfigIfRequired(sc *storageContext) error {
+	if !a.configDirty.Load() {
+		return nil
+	}
+
+	a._config.Lock()
+	defer a._config.Unlock()
+
+	if !a.configDirty.Load() {
+		// Someone beat us to grabbing the above write lock and already
+		// updated the config.
+		return nil
+	}
+
+	config, err := sc.getAcmeConfig()
+	if err != nil {
+		return fmt.Errorf("failed reading ACME config: %w", err)
+	}
+
+	a.config = *config
+	a.configDirty.Store(false)
 
 	return nil
 }
 
-func generateNonce() (string, error) {
-	return generateRandomBase64(21)
+func (a *acmeState) getConfigWithUpdate(sc *storageContext) (*acmeConfigEntry, error) {
+	if err := a.reloadConfigIfRequired(sc); err != nil {
+		return nil, err
+	}
+
+	a._config.RLock()
+	defer a._config.RUnlock()
+
+	configCopy := a.config
+	return &configCopy, nil
+}
+
+func (a *acmeState) getConfigWithForcedUpdate(sc *storageContext) (*acmeConfigEntry, error) {
+	a.markConfigDirty()
+	return a.getConfigWithUpdate(sc)
+}
+
+func (a *acmeState) writeConfig(sc *storageContext, config *acmeConfigEntry) (*acmeConfigEntry, error) {
+	a._config.Lock()
+	defer a._config.Unlock()
+
+	if err := sc.setAcmeConfig(config); err != nil {
+		a.markConfigDirty()
+		return nil, fmt.Errorf("failed writing ACME config: %w", err)
+	}
+
+	if config != nil {
+		a.config = *config
+	} else {
+		a.config = defaultAcmeConfig
+	}
+
+	return config, nil
 }
 
 func generateRandomBase64(srcBytes int) (string, error) {
@@ -80,66 +175,15 @@ func generateRandomBase64(srcBytes int) (string, error) {
 }
 
 func (a *acmeState) GetNonce() (string, time.Time, error) {
-	now := time.Now()
-	nonce, err := generateNonce()
-	if err != nil {
-		return "", now, err
-	}
-
-	then := now.Add(nonceExpiry)
-	a.nonces.Store(nonce, then)
-
-	nextExpiry := a.nextExpiry.Load()
-	next := time.Unix(nextExpiry, 0)
-	if now.After(next) || then.Before(next) {
-		a.nextExpiry.Store(then.Unix())
-	}
-
-	return nonce, then, nil
+	return a.nonces.Get()
 }
 
 func (a *acmeState) RedeemNonce(nonce string) bool {
-	rawTimeout, present := a.nonces.LoadAndDelete(nonce)
-	if !present {
-		return false
-	}
-
-	timeout := rawTimeout.(time.Time)
-	if time.Now().After(timeout) {
-		return false
-	}
-
-	return true
+	return a.nonces.Redeem(nonce)
 }
 
 func (a *acmeState) DoTidyNonces() {
-	now := time.Now()
-	expiry := a.nextExpiry.Load()
-	then := time.Unix(expiry, 0)
-
-	if expiry == 0 || now.After(then) {
-		a.TidyNonces()
-	}
-}
-
-func (a *acmeState) TidyNonces() {
-	now := time.Now()
-	nextRun := now.Add(nonceExpiry)
-
-	a.nonces.Range(func(key, value any) bool {
-		timeout := value.(time.Time)
-		if now.After(timeout) {
-			a.nonces.Delete(key)
-		}
-
-		if timeout.Before(nextRun) {
-			nextRun = timeout
-		}
-
-		return false /* don't quit looping */
-	})
-
-	a.nextExpiry.Store(nextRun.Unix())
+	a.nonces.Tidy()
 }
 
 type ACMEAccountStatus string
@@ -149,17 +193,22 @@ func (aas ACMEAccountStatus) String() string {
 }
 
 const (
-	StatusValid       ACMEAccountStatus = "valid"
-	StatusDeactivated ACMEAccountStatus = "deactivated"
-	StatusRevoked     ACMEAccountStatus = "revoked"
+	AccountStatusValid       ACMEAccountStatus = "valid"
+	AccountStatusDeactivated ACMEAccountStatus = "deactivated"
+	AccountStatusRevoked     ACMEAccountStatus = "revoked"
 )
 
 type acmeAccount struct {
 	KeyId                string            `json:"-"`
 	Status               ACMEAccountStatus `json:"status"`
 	Contact              []string          `json:"contact"`
-	TermsOfServiceAgreed bool              `json:"termsOfServiceAgreed"`
+	TermsOfServiceAgreed bool              `json:"terms-of-service-agreed"`
 	Jwk                  []byte            `json:"jwk"`
+	AcmeDirectory        string            `json:"acme-directory"`
+	AccountCreatedDate   time.Time         `json:"account-created-date"`
+	MaxCertExpiry        time.Time         `json:"account-max-cert-expiry"`
+	AccountRevokedDate   time.Time         `json:"account-revoked-date"`
+	Eab                  *eabType          `json:"eab"`
 }
 
 type acmeOrder struct {
@@ -171,7 +220,8 @@ type acmeOrder struct {
 	AuthorizationIds        []string            `json:"authorization-ids"`
 	CertificateSerialNumber string              `json:"cert-serial-number"`
 	CertificateExpiry       time.Time           `json:"cert-expiry"`
-	IssuerId                issuerID            `json:"issuer-id"`
+	// The actual issuer UUID that issued the certificate, blank if an order exists but no certificate was issued.
+	IssuerId issuing.IssuerID `json:"issuer-id"`
 }
 
 func (o acmeOrder) getIdentifierDNSValues() []string {
@@ -197,7 +247,7 @@ func (o acmeOrder) getIdentifierIPValues() []net.IP {
 	return identifiers
 }
 
-func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, termsOfServiceAgreed bool) (*acmeAccount, error) {
+func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, termsOfServiceAgreed bool, eab *eabType) (*acmeAccount, error) {
 	// Write out the thumbprint value/entry out first, if we get an error mid-way through
 	// this is easier to recover from. The new kid with the same existing public key
 	// will rewrite the thumbprint entry. This goes in hand with LoadAccountByKey that
@@ -228,7 +278,10 @@ func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, 
 		Contact:              contact,
 		TermsOfServiceAgreed: termsOfServiceAgreed,
 		Jwk:                  c.Jwk,
-		Status:               StatusValid,
+		Status:               AccountStatusValid,
+		AcmeDirectory:        ac.acmeDirectory,
+		AccountCreatedDate:   time.Now(),
+		Eab:                  eab,
 	}
 	json, err := logical.StorageEntryJSON(acmeAccountPrefix+c.Kid, acct)
 	if err != nil {
@@ -242,13 +295,13 @@ func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, 
 	return acct, nil
 }
 
-func (a *acmeState) UpdateAccount(ac *acmeContext, acct *acmeAccount) error {
+func (a *acmeState) UpdateAccount(sc *storageContext, acct *acmeAccount) error {
 	json, err := logical.StorageEntryJSON(acmeAccountPrefix+acct.KeyId, acct)
 	if err != nil {
 		return fmt.Errorf("error creating account entry: %w", err)
 	}
 
-	if err := ac.sc.Storage.Put(ac.sc.Context, json); err != nil {
+	if err := sc.Storage.Put(sc.Context, json); err != nil {
 		return fmt.Errorf("error writing account entry: %w", err)
 	}
 
@@ -270,6 +323,10 @@ func (a *acmeState) LoadAccount(ac *acmeContext, keyId string) (*acmeAccount, er
 	err = entry.DecodeJSON(&acct)
 	if err != nil {
 		return nil, fmt.Errorf("error decoding account: %w", err)
+	}
+
+	if acct.AcmeDirectory != ac.acmeDirectory {
+		return nil, fmt.Errorf("%w: account part of different ACME directory path", ErrMalformed)
 	}
 
 	acct.KeyId = keyId
@@ -389,7 +446,7 @@ func saveAuthorizationAtPath(sc *storageContext, path string, authz *ACMEAuthori
 	return nil
 }
 
-func (a *acmeState) ParseRequestParams(ac *acmeContext, data *framework.FieldData) (*jwsCtx, map[string]interface{}, error) {
+func (a *acmeState) ParseRequestParams(ac *acmeContext, req *logical.Request, data *framework.FieldData) (*jwsCtx, map[string]interface{}, error) {
 	var c jwsCtx
 	var m map[string]interface{}
 
@@ -404,7 +461,7 @@ func (a *acmeState) ParseRequestParams(ac *acmeContext, data *framework.FieldDat
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to base64 parse 'protected': %s: %w", err, ErrMalformed)
 	}
-	if err = c.UnmarshalJSON(a, ac, jwkBytes); err != nil {
+	if err = c.UnmarshalOuterJwsJson(a, ac, jwkBytes); err != nil {
 		return nil, nil, fmt.Errorf("failed to json unmarshal 'protected': %w", err)
 	}
 
@@ -413,6 +470,22 @@ func (a *acmeState) ParseRequestParams(ac *acmeContext, data *framework.FieldDat
 	// work if it is invalid.
 	if !a.RedeemNonce(c.Nonce) {
 		return nil, nil, fmt.Errorf("invalid or reused nonce: %w", ErrBadNonce)
+	}
+
+	// If the path is incorrect, reject the request.
+	//
+	// See RFC 8555 Section 6.4. Request URL Integrity:
+	//
+	// > As noted in Section 6.2, all ACME request objects carry a "url"
+	// > header parameter in their protected header. ... On receiving such
+	// > an object in an HTTP request, the server MUST compare the "url"
+	// > header parameter to the request URL.  If the two do not match,
+	// > then the server MUST reject the request as unauthorized.
+	if len(c.Url) == 0 {
+		return nil, nil, fmt.Errorf("missing required parameter 'url' in 'protected': %w", ErrMalformed)
+	}
+	if ac.clusterUrl.JoinPath(req.Path).String() != c.Url {
+		return nil, nil, fmt.Errorf("invalid value for 'url' in 'protected': got '%v' expected '%v': %w", c.Url, ac.clusterUrl.JoinPath(req.Path).String(), ErrUnauthorized)
 	}
 
 	rawPayloadBase64, ok := data.GetOk("payload")
@@ -484,10 +557,10 @@ func (a *acmeState) SaveOrder(ac *acmeContext, order *acmeOrder) error {
 	return nil
 }
 
-func (a *acmeState) ListOrderIds(ac *acmeContext, accountId string) ([]string, error) {
+func (a *acmeState) ListOrderIds(sc *storageContext, accountId string) ([]string, error) {
 	accountOrderPrefixPath := acmeAccountPrefix + accountId + "/orders/"
 
-	rawOrderIds, err := ac.sc.Storage.List(ac.sc.Context, accountOrderPrefixPath)
+	rawOrderIds, err := sc.Storage.List(sc.Context, accountOrderPrefixPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed listing order ids for account %s: %w", accountId, err)
 	}
@@ -501,6 +574,117 @@ func (a *acmeState) ListOrderIds(ac *acmeContext, accountId string) ([]string, e
 		orderIds = append(orderIds, order)
 	}
 	return orderIds, nil
+}
+
+type acmeCertEntry struct {
+	Serial  string `json:"-"`
+	Account string `json:"-"`
+	Order   string `json:"order"`
+}
+
+func (a *acmeState) TrackIssuedCert(ac *acmeContext, accountId string, serial string, orderId string) error {
+	path := getAcmeSerialToAccountTrackerPath(accountId, serial)
+	entry := acmeCertEntry{
+		Order: orderId,
+	}
+
+	json, err := logical.StorageEntryJSON(path, &entry)
+	if err != nil {
+		return fmt.Errorf("error serializing acme cert entry: %w", err)
+	}
+
+	if err = ac.sc.Storage.Put(ac.sc.Context, json); err != nil {
+		return fmt.Errorf("error writing acme cert entry: %w", err)
+	}
+
+	return nil
+}
+
+func (a *acmeState) GetIssuedCert(ac *acmeContext, accountId string, serial string) (*acmeCertEntry, error) {
+	path := acmeAccountPrefix + accountId + "/certs/" + normalizeSerial(serial)
+
+	entry, err := ac.sc.Storage.Get(ac.sc.Context, path)
+	if err != nil {
+		return nil, fmt.Errorf("error loading acme cert entry: %w", err)
+	}
+
+	if entry == nil {
+		return nil, fmt.Errorf("no certificate with this serial was issued for this account")
+	}
+
+	var cert acmeCertEntry
+	err = entry.DecodeJSON(&cert)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding acme cert entry: %w", err)
+	}
+
+	cert.Serial = denormalizeSerial(serial)
+	cert.Account = accountId
+
+	return &cert, nil
+}
+
+func (a *acmeState) SaveEab(sc *storageContext, eab *eabType) error {
+	json, err := logical.StorageEntryJSON(path.Join(acmeEabPrefix, eab.KeyID), eab)
+	if err != nil {
+		return err
+	}
+	return sc.Storage.Put(sc.Context, json)
+}
+
+func (a *acmeState) LoadEab(sc *storageContext, eabKid string) (*eabType, error) {
+	rawEntry, err := sc.Storage.Get(sc.Context, path.Join(acmeEabPrefix, eabKid))
+	if err != nil {
+		return nil, err
+	}
+	if rawEntry == nil {
+		return nil, fmt.Errorf("%w: no eab found for kid %s", ErrStorageItemNotFound, eabKid)
+	}
+
+	var eab eabType
+	err = rawEntry.DecodeJSON(&eab)
+	if err != nil {
+		return nil, err
+	}
+
+	eab.KeyID = eabKid
+	return &eab, nil
+}
+
+func (a *acmeState) DeleteEab(sc *storageContext, eabKid string) (bool, error) {
+	rawEntry, err := sc.Storage.Get(sc.Context, path.Join(acmeEabPrefix, eabKid))
+	if err != nil {
+		return false, err
+	}
+	if rawEntry == nil {
+		return false, nil
+	}
+
+	err = sc.Storage.Delete(sc.Context, path.Join(acmeEabPrefix, eabKid))
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (a *acmeState) ListEabIds(sc *storageContext) ([]string, error) {
+	entries, err := sc.Storage.List(sc.Context, acmeEabPrefix)
+	if err != nil {
+		return nil, err
+	}
+	var ids []string
+	for _, entry := range entries {
+		if strings.HasSuffix(entry, "/") {
+			continue
+		}
+		ids = append(ids, entry)
+	}
+
+	return ids, nil
+}
+
+func getAcmeSerialToAccountTrackerPath(accountId string, serial string) string {
+	return acmeAccountPrefix + accountId + "/certs/" + normalizeSerial(serial)
 }
 
 func getAuthorizationPath(accountId string, authId string) string {

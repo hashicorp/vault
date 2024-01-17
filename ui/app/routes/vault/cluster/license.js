@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
@@ -10,10 +10,11 @@ import { inject as service } from '@ember/service';
 export default Route.extend(ClusterRoute, {
   store: service(),
   version: service(),
+  router: service(),
 
   beforeModel() {
-    if (this.version.isOSS) {
-      this.transitionTo('vault.cluster');
+    if (this.version.isCommunity) {
+      this.router.transitionTo('vault.cluster');
     }
   },
 

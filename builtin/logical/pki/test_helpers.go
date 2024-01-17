@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -16,6 +16,7 @@ import (
 	"io"
 	"math"
 	"math/big"
+	http2 "net/http"
 	"strings"
 	"testing"
 	"time"
@@ -24,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/ocsp"
 )
 
 // Setup helpers
@@ -57,6 +59,19 @@ func mountPKIEndpoint(t testing.TB, client *api.Client, path string) {
 	require.NoError(t, err, "failed mounting pki endpoint")
 }
 
+func mountCertEndpoint(t testing.TB, client *api.Client, path string) {
+	t.Helper()
+
+	err := client.Sys().EnableAuthWithOptions(path, &api.MountInput{
+		Type: "cert",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	require.NoError(t, err, "failed mounting cert endpoint")
+}
+
 // Signing helpers
 func requireSignedBy(t *testing.T, cert *x509.Certificate, signingCert *x509.Certificate) {
 	t.Helper()
@@ -64,6 +79,21 @@ func requireSignedBy(t *testing.T, cert *x509.Certificate, signingCert *x509.Cer
 	if err := cert.CheckSignatureFrom(signingCert); err != nil {
 		t.Fatalf("signature verification failed: %v", err)
 	}
+}
+
+func requireSignedByAtPath(t *testing.T, client *api.Client, leaf *x509.Certificate, path string) {
+	t.Helper()
+
+	resp, err := client.Logical().Read(path)
+	require.NoError(t, err, "got unexpected error fetching parent certificate")
+	require.NotNil(t, resp, "missing response when fetching parent certificate")
+	require.NotNil(t, resp.Data, "missing data from parent certificate response")
+	require.NotNil(t, resp.Data["certificate"], "missing certificate field on parent read response")
+
+	parentCert := resp.Data["certificate"].(string)
+	parent := parseCert(t, parentCert)
+
+	requireSignedBy(t, leaf, parent)
 }
 
 // Certificate helper
@@ -377,4 +407,69 @@ func summarizeCrl(t *testing.T, crl pkix.TBSCertificateList) string {
 		"Next Update: %s\n"+
 		"Revoked Serial Count: %d\n"+
 		"Revoked Serials: %v", version, crl.ThisUpdate, crl.NextUpdate, len(serials), serials)
+}
+
+// OCSP helpers
+func generateRequest(t *testing.T, requestHash crypto.Hash, cert *x509.Certificate, issuer *x509.Certificate) []byte {
+	t.Helper()
+
+	opts := &ocsp.RequestOptions{Hash: requestHash}
+	ocspRequestDer, err := ocsp.CreateRequest(cert, issuer, opts)
+	require.NoError(t, err, "Failed generating OCSP request")
+	return ocspRequestDer
+}
+
+func requireOcspResponseSignedBy(t *testing.T, ocspResp *ocsp.Response, issuer *x509.Certificate) {
+	t.Helper()
+
+	err := ocspResp.CheckSignatureFrom(issuer)
+	require.NoError(t, err, "Failed signature verification of ocsp response: %w", err)
+}
+
+func performOcspPost(t *testing.T, cert *x509.Certificate, issuerCert *x509.Certificate, client *api.Client, ocspPath string) *ocsp.Response {
+	t.Helper()
+
+	baseClient := client.WithNamespace("")
+
+	ocspReq := generateRequest(t, crypto.SHA256, cert, issuerCert)
+	ocspPostReq := baseClient.NewRequest(http2.MethodPost, ocspPath)
+	ocspPostReq.Headers.Set("Content-Type", "application/ocsp-request")
+	ocspPostReq.BodyBytes = ocspReq
+	rawResp, err := baseClient.RawRequest(ocspPostReq)
+	require.NoError(t, err, "failed sending unified-ocsp post request")
+
+	require.Equal(t, 200, rawResp.StatusCode)
+	require.Equal(t, ocspResponseContentType, rawResp.Header.Get("Content-Type"))
+	bodyReader := rawResp.Body
+	respDer, err := io.ReadAll(bodyReader)
+	bodyReader.Close()
+	require.NoError(t, err, "failed reading response body")
+
+	ocspResp, err := ocsp.ParseResponse(respDer, issuerCert)
+	require.NoError(t, err, "parsing ocsp get response")
+	return ocspResp
+}
+
+func requireCertMissingFromStorage(t *testing.T, client *api.Client, cert *x509.Certificate) {
+	serial := serialFromCert(cert)
+	requireSerialMissingFromStorage(t, client, serial)
+}
+
+func requireSerialMissingFromStorage(t *testing.T, client *api.Client, serial string) {
+	resp, err := client.Logical().ReadWithContext(context.Background(), "pki/cert/"+serial)
+	require.NoErrorf(t, err, "failed reading certificate with serial %s", serial)
+	require.Nilf(t, resp, "expected a nil response looking up serial %s got: %v", serial, resp)
+}
+
+func requireCertInStorage(t *testing.T, client *api.Client, cert *x509.Certificate) {
+	serial := serialFromCert(cert)
+	requireSerialInStorage(t, client, serial)
+}
+
+func requireSerialInStorage(t *testing.T, client *api.Client, serial string) {
+	resp, err := client.Logical().ReadWithContext(context.Background(), "pki/cert/"+serial)
+	require.NoErrorf(t, err, "failed reading certificate with serial %s", serial)
+	require.NotNilf(t, resp, "reading certificate returned a nil response for serial: %s", serial)
+	require.NotNilf(t, resp.Data, "reading certificate returned a nil data response for serial: %s", serial)
+	require.NotEmpty(t, resp.Data["certificate"], "certificate field was empty for serial: %s", serial)
 }

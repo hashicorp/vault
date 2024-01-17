@@ -1,16 +1,16 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
 import (
 	"context"
 	"crypto/elliptic"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/ed25519"
@@ -256,19 +256,22 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		p.Unlock()
 	}
 
-	resp := &logical.Response{}
+	resp, err := b.formatKeyPolicy(p, nil)
+	if err != nil {
+		return nil, err
+	}
 	if !upserted {
 		resp.AddWarning(fmt.Sprintf("key %s already existed", name))
 	}
-
-	return nil, nil
+	return resp, nil
 }
 
 // Built-in helper type for returning asymmetric keys
 type asymKey struct {
-	Name         string    `json:"name" structs:"name" mapstructure:"name"`
-	PublicKey    string    `json:"public_key" structs:"public_key" mapstructure:"public_key"`
-	CreationTime time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
+	Name             string    `json:"name" structs:"name" mapstructure:"name"`
+	PublicKey        string    `json:"public_key" structs:"public_key" mapstructure:"public_key"`
+	CertificateChain string    `json:"certificate_chain" structs:"certificate_chain" mapstructure:"certificate_chain"`
+	CreationTime     time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
 }
 
 func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -289,6 +292,19 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 	}
 	defer p.Unlock()
 
+	contextRaw := d.Get("context").(string)
+	var context []byte
+	if len(contextRaw) != 0 {
+		context, err = base64.StdEncoding.DecodeString(contextRaw)
+		if err != nil {
+			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
+		}
+	}
+
+	return b.formatKeyPolicy(p, context)
+}
+
+func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.Response, error) {
 	// Return the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
@@ -345,15 +361,6 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 		}
 	}
 
-	contextRaw := d.Get("context").(string)
-	var context []byte
-	if len(contextRaw) != 0 {
-		context, err = base64.StdEncoding.DecodeString(contextRaw)
-		if err != nil {
-			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
-		}
-	}
-
 	switch p.Type {
 	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
 		retKeys := map[string]int64{}
@@ -371,6 +378,18 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 			}
 			if key.CreationTime.IsZero() {
 				key.CreationTime = time.Unix(v.DeprecatedCreationTime, 0)
+			}
+			if v.CertificateChain != nil {
+				var pemCerts []string
+				for _, derCertBytes := range v.CertificateChain {
+					pemCert := strings.TrimSpace(string(pem.EncodeToMemory(
+						&pem.Block{
+							Type:  "CERTIFICATE",
+							Bytes: derCertBytes,
+						})))
+					pemCerts = append(pemCerts, pemCert)
+				}
+				key.CertificateChain = strings.Join(pemCerts, "\n")
 			}
 
 			switch p.Type {
@@ -408,21 +427,11 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 					key.Name = "rsa-4096"
 				}
 
-				// Encode the RSA public key in PEM format to return over the
-				// API
-				derBytes, err := x509.MarshalPKIXPublicKey(v.RSAKey.Public())
+				pubKey, err := encodeRSAPublicKey(&v)
 				if err != nil {
-					return nil, fmt.Errorf("error marshaling RSA public key: %w", err)
+					return nil, err
 				}
-				pemBlock := &pem.Block{
-					Type:  "PUBLIC KEY",
-					Bytes: derBytes,
-				}
-				pemBytes := pem.EncodeToMemory(pemBlock)
-				if pemBytes == nil || len(pemBytes) == 0 {
-					return nil, fmt.Errorf("failed to PEM-encode RSA public key")
-				}
-				key.PublicKey = string(pemBytes)
+				key.PublicKey = pubKey
 			}
 
 			retKeys[k] = structs.New(key).Map()

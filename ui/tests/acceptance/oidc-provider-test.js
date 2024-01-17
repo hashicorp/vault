@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { create } from 'ember-cli-page-object';
@@ -131,16 +131,18 @@ const setupOidc = async function (uid) {
 module('Acceptance | oidc provider', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(async function () {
+  hooks.beforeEach(function () {
     this.uid = uuidv4();
-    this.store = await this.owner.lookup('service:store');
-    await logout.visit();
+    this.store = this.owner.lookup('service:store');
     return authPage.login();
   });
 
   test('OIDC Provider logs in and redirects correctly', async function (assert) {
     const { providerName, callback, clientId, authMethodPath } = await setupOidc(this.uid);
-
+    await visit('/vault/access/oidc');
+    assert
+      .dom('[data-test-oidc-client-linked-block="my-webapp"]')
+      .exists({ count: 1 }, 'shows webapp in oidc provider list');
     await logout.visit();
     await settled();
     const url = getAuthzUrl(providerName, callback, clientId);
@@ -164,10 +166,11 @@ module('Acceptance | oidc provider', function (hooks) {
     await authFormComponent.login();
     await settled();
     assert.strictEqual(currentURL(), url, 'URL is as expected after login');
-    assert.dom('[data-test-oidc-redirect]').exists('redirect text exists');
     assert
       .dom('[data-test-oidc-redirect]')
-      .hasTextContaining(`${callback}?code=`, 'Successful redirect to callback');
+      .hasTextContaining(`click here to go back to app`, 'Shows link back to app');
+    const link = document.querySelector('[data-test-oidc-redirect]').getAttribute('href');
+    assert.ok(link.includes('/callback?code='), 'Redirects to correct url');
 
     //* clean up test state
     await clearRecord(this.store, 'oidc/client', 'my-webapp');
@@ -192,7 +195,9 @@ module('Acceptance | oidc provider', function (hooks) {
     await settled();
     assert
       .dom('[data-test-oidc-redirect]')
-      .hasTextContaining(`${callback}?code=`, 'Successful redirect to callback');
+      .hasTextContaining(`click here to go back to app`, 'Shows link back to app');
+    const link = document.querySelector('[data-test-oidc-redirect]').getAttribute('href');
+    assert.ok(link.includes('/callback?code='), 'Redirects to correct url');
 
     //* clean up test state
     await clearRecord(this.store, 'oidc/client', 'my-webapp');

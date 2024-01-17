@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 $light-grey: #dde3e7;
@@ -36,9 +36,9 @@ $gutter-grey: #2a2f36;
 
 .cm-s-hashi-read-only {
   &.CodeMirror {
-    background-color: $grey-lighter;
+    background-color: $grey-lightest;
     border: none;
-    color: #626873;
+    color: $ui-gray-600;
     font-family: $family-monospace;
     -webkit-font-smoothing: auto;
     line-height: 1.4;

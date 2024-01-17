@@ -1,0 +1,73 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
+  <:toolbarActions>
+    {{#if @promptConfig}}
+      <ToolbarLink @route="configure" data-test-toolbar-action="config">
+        Configure LDAP
+      </ToolbarLink>
+    {{/if}}
+  </:toolbarActions>
+</TabPageHeader>
+
+{{#if @promptConfig}}
+  <ConfigCta />
+{{else}}
+  <div class="is-grid has-top-margin-l grid-2-columns grid-gap-2">
+    <OverviewCard
+      @cardTitle="Roles"
+      @subText="The total number of roles that have been set up in this secret engine in order to generate credentials."
+      @actionText="Create new"
+      @actionTo="roles.create"
+    >
+      <h2 class="title is-2 has-font-weight-normal has-top-margin-m" data-test-roles-count>
+        {{or @roles.length "None"}}
+      </h2>
+    </OverviewCard>
+    <OverviewCard
+      @cardTitle="Libraries"
+      @subText="The total number of libraries that have been created for service account management."
+      @actionText="Create new"
+      @actionTo="libraries.create"
+    >
+      <h2 class="title is-2 has-font-weight-normal has-top-margin-m" data-test-libraries-count>
+        {{or @libraries.length "None"}}
+      </h2>
+    </OverviewCard>
+  </div>
+  <div class="is-grid has-top-margin-l grid-2-columns grid-gap-2">
+    <AccountsCheckedOut
+      @libraries={{@libraries}}
+      @statuses={{@librariesStatus}}
+      @showLibraryColumn={{true}}
+      @onCheckInSuccess={{transition-to "vault.cluster.secrets.backend.ldap.overview"}}
+      class="is-flex-half"
+    />
+    <div>
+      <OverviewCard @cardTitle="Generate credentials" @subText="Quickly generate credentials by typing the role name.">
+        <div class="has-top-margin-m is-flex">
+          <SearchSelect
+            class="is-flex-1"
+            @placeholder="Select a role"
+            @disallowNewItems={{true}}
+            @options={{@roles}}
+            @selectLimit="1"
+            @fallbackComponent="input-search"
+            @onChange={{this.selectRole}}
+          />
+          <Hds::Button
+            @text="Get credentials"
+            @color="secondary"
+            class="has-left-margin-s"
+            disabled={{not this.selectedRole}}
+            {{on "click" this.generateCredentials}}
+            data-test-generate-credential-button
+          />
+        </div>
+      </OverviewCard>
+    </div>
+  </div>
+{{/if}}

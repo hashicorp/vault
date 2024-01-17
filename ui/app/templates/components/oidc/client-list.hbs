@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#each @model as |client|}}
   <LinkedBlock
     class="list-item-row"
@@ -20,7 +25,7 @@
       <div class="level-right is-flex is-paddingless is-marginless">
         <div class="level-item">
           <PopupMenu>
-            <nav class="menu">
+            <nav class="menu" aria-label="navigation for managing OIDC client {{client.name}}">
               <ul class="menu-list">
                 <li>
                   <LinkTo

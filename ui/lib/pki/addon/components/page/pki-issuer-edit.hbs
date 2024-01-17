@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.error}} />
@@ -27,8 +32,8 @@
           <div class="control is-expanded">
             <div class="select is-fullwidth">
               <select
-                name={{@attr.name}}
-                id={{@attr.name}}
+                name={{field.name}}
+                id={{field.name}}
                 {{on "change" (pipe (pick "target.value") (fn (mut @model.leafNotAfterBehavior)))}}
                 onchange={{this.onChangeWithEvent}}
               >
@@ -45,33 +50,25 @@
       </FormField>
     {{/each}}
   </div>
-  <div class="has-top-margin-l has-bottom-margin-l">
-    <button
+  <Hds::ButtonSet class="has-top-margin-l has-bottom-margin-l">
+    <Hds::Button
+      @text="Update"
+      @icon={{if this.save.isRunning "loading"}}
       type="submit"
-      class="button is-primary {{if this.save.isRunning 'is-loading'}}"
       disabled={{this.save.isRunning}}
       data-test-save
-    >
-      Update
-    </button>
-    <button
-      type="button"
-      class="button has-left-margin-s"
+    />
+    <Hds::Button
+      @text="Cancel"
+      @color="secondary"
       disabled={{this.save.isRunning}}
       {{on "click" this.cancel}}
       data-test-cancel
-    >
-      Cancel
-    </button>
-    {{#if this.error}}
-      <div class="control">
-        <AlertInline
-          @type="danger"
-          @paddingTop={{true}}
-          @message="There was an error submitting this form."
-          @mimicRefresh={{true}}
-        />
-      </div>
-    {{/if}}
-  </div>
+    />
+  </Hds::ButtonSet>
+  {{#if this.error}}
+    <div class="control">
+      <AlertInline @type="danger" class="has-top-padding-s" @message="There was an error submitting this form." />
+    </div>
+  {{/if}}
 </form>

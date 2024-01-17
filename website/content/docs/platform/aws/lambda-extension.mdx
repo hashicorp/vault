@@ -5,7 +5,7 @@ description: >-
   The Vault Lambda Extension allows a Lambda function to read secrets from a Vault deployment.
 ---
 
-# Vault Lambda Extension
+# Vault lambda extension
 
 AWS Lambda lets you run code without provisioning and managing servers.
 The [Vault Lambda Extension](https://github.com/hashicorp/vault-lambda-extension) utilizes the AWS Lambda Extensions API to help your Lambda function read secrets from your Vault deployment.
@@ -45,7 +45,7 @@ to read secrets, which can both be used side-by-side:
 - Configure environment variables such as `VAULT_SECRET_PATH` for the extension
   to read a secret and write it to disk.
 
-### Adding the extension to your existing Lambda and Vault infrastructure
+### Adding the extension to your existing lambda and Vault infrastructure
 
 #### Requirements
 
@@ -53,9 +53,9 @@ to read secrets, which can both be used side-by-side:
 - An instance of Vault accessible from AWS Lambda
 - An authenticated `vault` client
 - A secret in Vault that you want your Lambda to access, and a policy giving read access to it
-- Your Lambda function must use one of the [supported runtimes][https://docs.aws.amazon.com/lambda/latest/dg/runtimes-extensions-api.html] for extensions
+- Your Lambda function must use one of the [supported runtimes](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-extensions-api.html) for extensions
 
-#### Step 1. Configure Vault
+#### Step 1. configure Vault
 
 Enable the aws auth method.
 
@@ -79,7 +79,7 @@ $ vault write auth/aws/role/vault-lambda-role \
     ttl=1h
 ```
 
-#### Step 2. Option a) Install the extension for Lambda functions packaged in zip archives
+#### Step 2. option a) install the extension for lambda functions packaged in zip archives
 
 If you deploy your Lambda function as a zip file, you can add the extension
 to your Lambda layers using the console or [cli](https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html#configuration-layers-using):
@@ -88,7 +88,7 @@ to your Lambda layers using the console or [cli](https://docs.aws.amazon.com/lam
 arn:aws:lambda:<your-region>:634166935893:layer:vault-lambda-extension:11
 ```
 
-#### Step 2. Option b) Install the extension for Lambda functions packaged in container images
+#### Step 2. option b) install the extension for lambda functions packaged in container images
 
 Alternatively, if you deploy your Lambda function as a container image, simply
 place the built binary in the `/opt/extensions` directory of your image.
@@ -118,7 +118,7 @@ Or to build the binary from source. This requires Golang installed. Run from the
 $ GOOS=linux GOARCH=amd64 go build -o vault-lambda-extension main.go
 ```
 
-#### Step 3. Configure vault-lambda-extension
+#### Step 3. configure vault-lambda-extension
 
 Configure the extension using [Lambda environment
 variables](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html):

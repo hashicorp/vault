@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -49,6 +50,16 @@ secret key and certificate.`,
 							"imported_issuers": {
 								Type:        framework.TypeCommaStringSlice,
 								Description: "Net-new issuers imported as a part of this request",
+								Required:    true,
+							},
+							"existing_keys": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Existing keys specified as part of the import bundle of this request",
+								Required:    true,
+							},
+							"existing_issuers": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Existing issuers specified as part of the import bundle of this request",
 								Required:    true,
 							},
 						},
@@ -202,7 +213,7 @@ func pathReplaceRoot(b *backend) *framework.Path {
 }
 
 func (b *backend) pathCAIssuersRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Cannot read defaults until migration has completed"), nil
 	}
 
@@ -215,7 +226,7 @@ func (b *backend) pathCAIssuersRead(ctx context.Context, req *logical.Request, _
 	return b.formatCAIssuerConfigRead(config), nil
 }
 
-func (b *backend) formatCAIssuerConfigRead(config *issuerConfigEntry) *logical.Response {
+func (b *backend) formatCAIssuerConfigRead(config *issuing.IssuerConfigEntry) *logical.Response {
 	return &logical.Response{
 		Data: map[string]interface{}{
 			defaultRef:                      config.DefaultIssuerId,
@@ -230,7 +241,7 @@ func (b *backend) pathCAIssuersWrite(ctx context.Context, req *logical.Request, 
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Cannot update defaults until migration has completed"), nil
 	}
 
@@ -360,7 +371,7 @@ func pathConfigKeys(b *backend) *framework.Path {
 }
 
 func (b *backend) pathKeyDefaultRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Cannot read key defaults until migration has completed"), nil
 	}
 
@@ -383,7 +394,7 @@ func (b *backend) pathKeyDefaultWrite(ctx context.Context, req *logical.Request,
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Cannot update key defaults until migration has completed"), nil
 	}
 

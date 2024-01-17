@@ -1,14 +1,14 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { keyParamsByType } from 'pki/utils/action-params';
-import PkiActionModel from 'vault/models/pki/action';
-import { ModelValidations } from 'vault/vault/app-types';
+import type PkiActionModel from 'vault/models/pki/action';
+import type { ModelValidations } from 'vault/vault/app-types';
 
 interface Args {
   model: PkiActionModel;

@@ -11,7 +11,7 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 1.2.4 compared to 1.2.3. Please read it carefully.
 
-## Detached Leases From Tokens in non-root Namespaces
+## Detached leases from tokens in non-root namespaces
 
 In a non-root namespace, revocation of a token scoped to a non-root namespace
 did not trigger the expected revocation of dynamic secret leases associated with
@@ -19,7 +19,7 @@ that token. As a result, dynamic secret leases in non-root namespaces may
 outlive the token that created them. This vulnerability, CVE-2019-18616, affects
 Vault Enterprise 0.11.0 and newer.
 
-## Mount Filtering in Disaster Recovery Secondary Clusters
+## Mount filtering in disaster recovery secondary clusters
 
 Disaster Recovery secondary clusters did not delete already-replicated data
 after a mount filter has been created on an upstream Performance secondary
@@ -33,7 +33,7 @@ Enterprise 0.8 and newer.
 Update version of Go to 1.12.12 to fix Go bug golang.org/issue/34960 which
 corresponds to CVE-2019-17596.
 
-## AWS Region Detection in Agent and CLI
+## AWS region detection in agent and CLI
 
 If a custom sts_endpoint is configured, Vault Agent and the CLI should provide
 the corresponding region via the region parameter (which already existed as a

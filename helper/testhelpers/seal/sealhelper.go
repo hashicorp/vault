@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package sealhelper
 
@@ -7,13 +7,12 @@ import (
 	"path"
 	"strconv"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/transit"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/seal"
@@ -33,7 +32,7 @@ func NewTransitSealServer(t testing.T, idx int) *TransitSealServer {
 	opts := &vault.TestClusterOptions{
 		NumCores:    1,
 		HandlerFunc: http.Handler,
-		Logger:      logging.NewVaultLogger(hclog.Trace).Named(t.Name()).Named("transit-seal" + strconv.Itoa(idx)),
+		Logger:      corehelpers.NewTestLogger(t).Named("transit-seal" + strconv.Itoa(idx)),
 	}
 	teststorage.InmemBackendSetup(conf, opts)
 	cluster := vault.NewTestCluster(t, conf, opts)
@@ -69,12 +68,14 @@ func (tss *TransitSealServer) MakeSeal(t testing.T, key string) (vault.Seal, err
 		"key_name":    key,
 		"tls_ca_cert": tss.CACertPEMFile,
 	}
-	transitSeal, _, err := configutil.GetTransitKMSFunc(&configutil.KMS{Config: wrapperConfig})
+	transitSealWrapper, _, err := configutil.GetTransitKMSFunc(&configutil.KMS{Config: wrapperConfig})
 	if err != nil {
 		t.Fatalf("error setting wrapper config: %v", err)
 	}
 
-	return vault.NewAutoSeal(&seal.Access{
-		Wrapper: transitSeal,
-	})
+	access, err := seal.NewAccessFromWrapper(tss.Logger, transitSealWrapper, vault.SealConfigTypeTransit.String())
+	if err != nil {
+		return nil, err
+	}
+	return vault.NewAutoSeal(access), nil
 }

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -155,6 +155,9 @@ func (b *backend) pathWriteCluster(ctx context.Context, req *logical.Request, da
 
 	if value, ok := data.GetOk("path"); ok {
 		cfg.Path = value.(string)
+
+		// This field is required by ACME, if ever we allow un-setting in the
+		// future, this code will need to verify that ACME is not enabled.
 		if !govalidator.IsURL(cfg.Path) {
 			return nil, fmt.Errorf("invalid, non-URL path given to cluster: %v", cfg.Path)
 		}

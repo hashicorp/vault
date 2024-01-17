@@ -36,6 +36,10 @@ type ExecDevCluster struct {
 	Logger             log.Logger
 }
 
+func (dc *ExecDevCluster) SetRootToken(token string) {
+	dc.rootToken = token
+}
+
 func (dc *ExecDevCluster) NamedLogger(s string) log.Logger {
 	return dc.Logger.Named(s)
 }
@@ -59,8 +63,11 @@ func NewTestExecDevCluster(t *testing.T, opts *ExecDevClusterOptions) *ExecDevCl
 	if opts.Logger == nil {
 		opts.Logger = logging.NewVaultLogger(log.Trace).Named(t.Name()) // .Named("container")
 	}
+	if opts.VaultLicense == "" {
+		opts.VaultLicense = os.Getenv(EnvVaultLicenseCI)
+	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	t.Cleanup(cancel)
 
 	dc, err := NewExecDevCluster(ctx, opts)
@@ -146,6 +153,7 @@ func (dc *ExecDevCluster) setupExecDevCluster(ctx context.Context, opts *ExecDev
 	}
 	cmd := exec.CommandContext(execCtx, bin, args...)
 	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "VAULT_LICENSE="+opts.VaultLicense)
 	cmd.Env = append(cmd.Env, "VAULT_LOG_FORMAT=json")
 	cmd.Env = append(cmd.Env, "VAULT_DEV_TEMP_DIR="+dc.tmpDir)
 	if opts.Logger != nil {
@@ -310,7 +318,7 @@ func (dc *ExecDevCluster) Cleanup() {
 	dc.stop()
 }
 
-// RootToken returns the root token of the cluster, if set
-func (dc *ExecDevCluster) RootToken() string {
+// GetRootToken returns the root token of the cluster, if set
+func (dc *ExecDevCluster) GetRootToken() string {
 	return dc.rootToken
 }

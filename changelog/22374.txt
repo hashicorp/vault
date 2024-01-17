@@ -1,0 +1,3 @@
+```release-note:bug
+expiration: Fix a deadlock that could occur when a revocation failure happens while restoring leases on startup.
+```

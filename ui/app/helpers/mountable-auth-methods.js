@@ -1,9 +1,19 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { helper as buildHelper } from '@ember/component/helper';
+
+const ENTERPRISE_AUTH_METHODS = [
+  {
+    displayName: 'SAML',
+    value: 'saml',
+    type: 'saml',
+    category: 'generic',
+    glyph: 'saml-color',
+  },
+];
 
 const MOUNTABLE_AUTH_METHODS = [
   {
@@ -11,12 +21,14 @@ const MOUNTABLE_AUTH_METHODS = [
     value: 'alicloud',
     type: 'alicloud',
     category: 'cloud',
+    glyph: 'alibaba-color',
   },
   {
     displayName: 'AppRole',
     value: 'approle',
     type: 'approle',
     category: 'generic',
+    glyph: 'cpu',
   },
   {
     displayName: 'AWS',
@@ -50,14 +62,14 @@ const MOUNTABLE_AUTH_METHODS = [
     displayName: 'JWT',
     value: 'jwt',
     type: 'jwt',
-    glyph: 'auth',
+    glyph: 'jwt',
     category: 'generic',
   },
   {
     displayName: 'OIDC',
     value: 'oidc',
     type: 'oidc',
-    glyph: 'auth',
+    glyph: 'openid-color',
     category: 'generic',
   },
   {
@@ -71,7 +83,7 @@ const MOUNTABLE_AUTH_METHODS = [
     displayName: 'LDAP',
     value: 'ldap',
     type: 'ldap',
-    glyph: 'auth',
+    glyph: 'folder-users',
     category: 'infra',
   },
   {
@@ -85,7 +97,7 @@ const MOUNTABLE_AUTH_METHODS = [
     displayName: 'RADIUS',
     value: 'radius',
     type: 'radius',
-    glyph: 'auth',
+    glyph: 'mainframe',
     category: 'infra',
   },
   {
@@ -93,17 +105,23 @@ const MOUNTABLE_AUTH_METHODS = [
     value: 'cert',
     type: 'cert',
     category: 'generic',
+    glyph: 'certificate',
   },
   {
     displayName: 'Username & Password',
     value: 'userpass',
     type: 'userpass',
     category: 'generic',
+    glyph: 'users',
   },
 ];
 
 export function methods() {
   return MOUNTABLE_AUTH_METHODS.slice();
+}
+
+export function allMethods() {
+  return [...MOUNTABLE_AUTH_METHODS, ...ENTERPRISE_AUTH_METHODS];
 }
 
 export default buildHelper(methods);

@@ -29,3 +29,16 @@ package-lock.json
 
 # broccoli-debug
 /DEBUG/
+
+# yarn
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# copywrite tool used in pre-commit hook
+.copywrite
+

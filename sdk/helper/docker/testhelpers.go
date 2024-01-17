@@ -24,6 +24,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
@@ -41,26 +42,27 @@ type Runner struct {
 }
 
 type RunOptions struct {
-	ImageRepo         string
-	ImageTag          string
-	ContainerName     string
-	Cmd               []string
-	Entrypoint        []string
-	Env               []string
-	NetworkName       string
-	NetworkID         string
-	CopyFromTo        map[string]string
-	Ports             []string
-	DoNotAutoRemove   bool
-	AuthUsername      string
-	AuthPassword      string
-	OmitLogTimestamps bool
-	LogConsumer       func(string)
-	Capabilities      []string
-	PreDelete         bool
-	PostStart         func(string, string) error
-	LogStderr         io.Writer
-	LogStdout         io.Writer
+	ImageRepo              string
+	ImageTag               string
+	ContainerName          string
+	Cmd                    []string
+	Entrypoint             []string
+	Env                    []string
+	NetworkName            string
+	NetworkID              string
+	CopyFromTo             map[string]string
+	Ports                  []string
+	DoNotAutoRemove        bool
+	AuthUsername           string
+	AuthPassword           string
+	OmitLogTimestamps      bool
+	LogConsumer            func(string)
+	Capabilities           []string
+	PreDelete              bool
+	PostStart              func(string, string) error
+	LogStderr              io.Writer
+	LogStdout              io.Writer
+	VolumeNameToMountPoint map[string]string
 }
 
 func NewDockerAPI() (*client.Client, error) {
@@ -227,19 +229,6 @@ func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr 
 		return nil, "", err
 	}
 
-	var wg sync.WaitGroup
-	consumeLogs := false
-	var logStdout, logStderr io.Writer
-	if d.RunOptions.LogStdout != nil && d.RunOptions.LogStderr != nil {
-		consumeLogs = true
-		logStdout = d.RunOptions.LogStdout
-		logStderr = d.RunOptions.LogStderr
-	} else if d.RunOptions.LogConsumer != nil {
-		consumeLogs = true
-		logStdout = &LogConsumerWriter{d.RunOptions.LogConsumer}
-		logStderr = &LogConsumerWriter{d.RunOptions.LogConsumer}
-	}
-
 	// The waitgroup wg is used here to support some stuff in NewDockerCluster.
 	// We can't generate the PKI cert for the https listener until we know the
 	// container's address, meaning we must first start the container, then
@@ -250,33 +239,17 @@ func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr 
 	// passes in (which does all that PKI cert stuff) waits to see output from
 	// Vault on stdout/stderr before it sends the signal, and we don't want to
 	// run the PostStart until we've hooked into the docker logs.
-	if consumeLogs {
+	var wg sync.WaitGroup
+	logConsumer := d.createLogConsumer(result.Container.ID, &wg)
+
+	if logConsumer != nil {
 		wg.Add(1)
-		go func() {
-			// We must run inside a goroutine because we're using Follow:true,
-			// and StdCopy will block until the log stream is closed.
-			stream, err := d.DockerAPI.ContainerLogs(context.Background(), result.Container.ID, types.ContainerLogsOptions{
-				ShowStdout: true,
-				ShowStderr: true,
-				Timestamps: !d.RunOptions.OmitLogTimestamps,
-				Details:    true,
-				Follow:     true,
-			})
-			wg.Done()
-			if err != nil {
-				d.RunOptions.LogConsumer(fmt.Sprintf("error reading container logs: %v", err))
-			} else {
-				_, err := stdcopy.StdCopy(logStdout, logStderr, stream)
-				if err != nil {
-					d.RunOptions.LogConsumer(fmt.Sprintf("error demultiplexing docker logs: %v", err))
-				}
-			}
-		}()
+		go logConsumer()
 	}
 	wg.Wait()
 
 	if d.RunOptions.PostStart != nil {
-		if err := d.RunOptions.PostStart(result.Container.ID, result.realIP); err != nil {
+		if err := d.RunOptions.PostStart(result.Container.ID, result.RealIP); err != nil {
 			return nil, "", fmt.Errorf("poststart failed: %w", err)
 		}
 	}
@@ -295,7 +268,7 @@ func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr 
 	bo.MaxInterval = time.Second * 5
 	bo.MaxElapsedTime = 2 * time.Minute
 
-	pieces := strings.Split(result.addrs[0], ":")
+	pieces := strings.Split(result.Addrs[0], ":")
 	portInt, err := strconv.Atoi(pieces[1])
 	if err != nil {
 		return nil, "", err
@@ -327,25 +300,67 @@ func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr 
 	}
 
 	return &Service{
-		Config:    config,
-		Cleanup:   cleanup,
-		Container: result.Container,
+		Config:      config,
+		Cleanup:     cleanup,
+		Container:   result.Container,
+		StartResult: result,
 	}, result.Container.ID, nil
 }
 
+// createLogConsumer returns a function to consume the logs of the container with the given ID.
+// If a wait group is given, `WaitGroup.Done()` will be called as soon as the call to the
+// ContainerLogs Docker API call is done.
+// The returned function will block, so it should be run on a goroutine.
+func (d *Runner) createLogConsumer(containerId string, wg *sync.WaitGroup) func() {
+	if d.RunOptions.LogStdout != nil && d.RunOptions.LogStderr != nil {
+		return func() {
+			d.consumeLogs(containerId, wg, d.RunOptions.LogStdout, d.RunOptions.LogStderr)
+		}
+	}
+	if d.RunOptions.LogConsumer != nil {
+		return func() {
+			d.consumeLogs(containerId, wg, &LogConsumerWriter{d.RunOptions.LogConsumer}, &LogConsumerWriter{d.RunOptions.LogConsumer})
+		}
+	}
+	return nil
+}
+
+// consumeLogs is the function called by the function returned by createLogConsumer.
+func (d *Runner) consumeLogs(containerId string, wg *sync.WaitGroup, logStdout, logStderr io.Writer) {
+	// We must run inside a goroutine because we're using Follow:true,
+	// and StdCopy will block until the log stream is closed.
+	stream, err := d.DockerAPI.ContainerLogs(context.Background(), containerId, types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Timestamps: !d.RunOptions.OmitLogTimestamps,
+		Details:    true,
+		Follow:     true,
+	})
+	wg.Done()
+	if err != nil {
+		d.RunOptions.LogConsumer(fmt.Sprintf("error reading container logs: %v", err))
+	} else {
+		_, err := stdcopy.StdCopy(logStdout, logStderr, stream)
+		if err != nil {
+			d.RunOptions.LogConsumer(fmt.Sprintf("error demultiplexing docker logs: %v", err))
+		}
+	}
+}
+
 type Service struct {
-	Config    ServiceConfig
-	Cleanup   func()
-	Container *types.ContainerJSON
+	Config      ServiceConfig
+	Cleanup     func()
+	Container   *types.ContainerJSON
+	StartResult *StartResult
 }
 
-type startResult struct {
+type StartResult struct {
 	Container *types.ContainerJSON
-	addrs     []string
-	realIP    string
+	Addrs     []string
+	RealIP    string
 }
 
-func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*startResult, error) {
+func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*StartResult, error) {
 	name := d.RunOptions.ContainerName
 	if addSuffix {
 		suffix, err := uuid.GenerateUUID()
@@ -404,6 +419,15 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*st
 		_, _ = ioutil.ReadAll(resp)
 	}
 
+	for vol, mtpt := range d.RunOptions.VolumeNameToMountPoint {
+		hostConfig.Mounts = append(hostConfig.Mounts, mount.Mount{
+			Type:     "volume",
+			Source:   vol,
+			Target:   mtpt,
+			ReadOnly: false,
+		})
+	}
+
 	c, err := d.DockerAPI.ContainerCreate(ctx, cfg, hostConfig, netConfig, nil, cfg.Hostname)
 	if err != nil {
 		return nil, fmt.Errorf("container create failed: %v", err)
@@ -458,10 +482,10 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*st
 		realIP = inspect.NetworkSettings.Networks[d.RunOptions.NetworkName].IPAddress
 	}
 
-	return &startResult{
+	return &StartResult{
 		Container: &inspect,
-		addrs:     addrs,
-		realIP:    realIP,
+		Addrs:     addrs,
+		RealIP:    realIP,
 	}, nil
 }
 
@@ -492,6 +516,21 @@ func (d *Runner) Stop(ctx context.Context, containerID string) error {
 		return fmt.Errorf("error stopping container: %v", err)
 	}
 
+	return nil
+}
+
+func (d *Runner) RestartContainerWithTimeout(ctx context.Context, containerID string, timeout int) error {
+	err := d.DockerAPI.ContainerRestart(ctx, containerID, container.StopOptions{Timeout: &timeout})
+	if err != nil {
+		return fmt.Errorf("failed to restart container: %s", err)
+	}
+	var wg sync.WaitGroup
+	logConsumer := d.createLogConsumer(containerID, &wg)
+	if logConsumer != nil {
+		wg.Add(1)
+		go logConsumer()
+	}
+	// we don't really care about waiting for logs to start showing up, do we?
 	return nil
 }
 
@@ -548,6 +587,10 @@ func (u RunCmdUser) Apply(cfg *types.ExecConfig) error {
 }
 
 func (d *Runner) RunCmdWithOutput(ctx context.Context, container string, cmd []string, opts ...RunCmdOpt) ([]byte, []byte, int, error) {
+	return RunCmdWithOutput(d.DockerAPI, ctx, container, cmd, opts...)
+}
+
+func RunCmdWithOutput(api *client.Client, ctx context.Context, container string, cmd []string, opts ...RunCmdOpt) ([]byte, []byte, int, error) {
 	runCfg := types.ExecConfig{
 		AttachStdout: true,
 		AttachStderr: true,
@@ -560,12 +603,12 @@ func (d *Runner) RunCmdWithOutput(ctx context.Context, container string, cmd []s
 		}
 	}
 
-	ret, err := d.DockerAPI.ContainerExecCreate(ctx, container, runCfg)
+	ret, err := api.ContainerExecCreate(ctx, container, runCfg)
 	if err != nil {
 		return nil, nil, -1, fmt.Errorf("error creating execution environment: %v\ncfg: %v\n", err, runCfg)
 	}
 
-	resp, err := d.DockerAPI.ContainerExecAttach(ctx, ret.ID, types.ExecStartCheck{})
+	resp, err := api.ContainerExecAttach(ctx, ret.ID, types.ExecStartCheck{})
 	if err != nil {
 		return nil, nil, -1, fmt.Errorf("error attaching to command execution: %v\ncfg: %v\nret: %v\n", err, runCfg, ret)
 	}
@@ -581,7 +624,7 @@ func (d *Runner) RunCmdWithOutput(ctx context.Context, container string, cmd []s
 	stderr := stderrB.Bytes()
 
 	// Fetch return code.
-	info, err := d.DockerAPI.ContainerExecInspect(ctx, ret.ID)
+	info, err := api.ContainerExecInspect(ctx, ret.ID)
 	if err != nil {
 		return stdout, stderr, -1, fmt.Errorf("error reading command exit code: %v", err)
 	}
@@ -590,6 +633,10 @@ func (d *Runner) RunCmdWithOutput(ctx context.Context, container string, cmd []s
 }
 
 func (d *Runner) RunCmdInBackground(ctx context.Context, container string, cmd []string, opts ...RunCmdOpt) (string, error) {
+	return RunCmdInBackground(d.DockerAPI, ctx, container, cmd, opts...)
+}
+
+func RunCmdInBackground(api *client.Client, ctx context.Context, container string, cmd []string, opts ...RunCmdOpt) (string, error) {
 	runCfg := types.ExecConfig{
 		AttachStdout: true,
 		AttachStderr: true,
@@ -602,12 +649,12 @@ func (d *Runner) RunCmdInBackground(ctx context.Context, container string, cmd [
 		}
 	}
 
-	ret, err := d.DockerAPI.ContainerExecCreate(ctx, container, runCfg)
+	ret, err := api.ContainerExecCreate(ctx, container, runCfg)
 	if err != nil {
 		return "", fmt.Errorf("error creating execution environment: %w\ncfg: %v\n", err, runCfg)
 	}
 
-	err = d.DockerAPI.ContainerExecStart(ctx, ret.ID, types.ExecStartCheck{})
+	err = api.ContainerExecStart(ctx, ret.ID, types.ExecStartCheck{})
 	if err != nil {
 		return "", fmt.Errorf("error starting command execution: %w\ncfg: %v\nret: %v\n", err, runCfg, ret)
 	}
@@ -619,6 +666,8 @@ func (d *Runner) RunCmdInBackground(ctx context.Context, container string, cmd [
 type PathContents interface {
 	UpdateHeader(header *tar.Header) error
 	Get() ([]byte, error)
+	SetMode(mode int64)
+	SetOwners(uid int, gid int)
 }
 
 type FileContents struct {
@@ -639,8 +688,17 @@ func (b FileContents) Get() ([]byte, error) {
 	return b.Data, nil
 }
 
+func (b *FileContents) SetMode(mode int64) {
+	b.Mode = mode
+}
+
+func (b *FileContents) SetOwners(uid int, gid int) {
+	b.UID = uid
+	b.GID = gid
+}
+
 func PathContentsFromBytes(data []byte) PathContents {
-	return FileContents{
+	return &FileContents{
 		Data: data,
 		Mode: 0o644,
 	}
@@ -680,7 +738,7 @@ func BuildContextFromTarball(reader io.Reader) (BuildContext, error) {
 			return nil, fmt.Errorf("unexpectedly short read on tarball: %v of %v", read, header.Size)
 		}
 
-		bCtx[header.Name] = FileContents{
+		bCtx[header.Name] = &FileContents{
 			Data: data,
 			Mode: header.Mode,
 			UID:  header.Uid,
@@ -697,8 +755,14 @@ func (bCtx *BuildContext) ToTarball() (io.Reader, error) {
 	tarBuilder := tar.NewWriter(buffer)
 	defer tarBuilder.Close()
 
+	now := time.Now()
 	for filepath, contents := range *bCtx {
-		fileHeader := &tar.Header{Name: filepath}
+		fileHeader := &tar.Header{
+			Name:       filepath,
+			ModTime:    now,
+			AccessTime: now,
+			ChangeTime: now,
+		}
 		if contents == nil && !strings.HasSuffix(filepath, "/") {
 			return nil, fmt.Errorf("expected file path (%v) to have trailing / due to nil contents, indicating directory", filepath)
 		}

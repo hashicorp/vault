@@ -1,83 +1,96 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { readOnly, match, not } from '@ember/object/computed';
 import Service, { inject as service } from '@ember/service';
-import { computed } from '@ember/object';
-import { task } from 'ember-concurrency';
+import { keepLatestTask, task } from 'ember-concurrency';
+import { tracked } from '@glimmer/tracking';
 
-const hasFeatureMethod = (context, featureKey) => {
-  const features = context.get('features');
-  if (!features) {
-    return false;
+export default class VersionService extends Service {
+  @service store;
+  @tracked features = [];
+  @tracked version = null;
+  @tracked type = null;
+
+  get isEnterprise() {
+    return this.type === 'enterprise';
   }
-  return features.includes(featureKey);
-};
-const hasFeature = (featureKey) => {
-  return computed('features', 'features.[]', function () {
-    return hasFeatureMethod(this, featureKey);
-  });
-};
-export default Service.extend({
-  _features: null,
-  features: readOnly('_features'),
-  version: null,
-  store: service(),
 
-  hasPerfReplication: hasFeature('Performance Replication'),
+  get isCommunity() {
+    return !this.isEnterprise;
+  }
 
-  hasDRReplication: hasFeature('DR Replication'),
+  /* Features */
+  get hasPerfReplication() {
+    return this.features.includes('Performance Replication');
+  }
 
-  hasSentinel: hasFeature('Sentinel'),
-  hasNamespaces: hasFeature('Namespaces'),
+  get hasDRReplication() {
+    return this.features.includes('DR Replication');
+  }
 
-  isEnterprise: match('version', /\+.+$/),
+  get hasSentinel() {
+    return this.features.includes('Sentinel');
+  }
 
-  isOSS: not('isEnterprise'),
+  get hasNamespaces() {
+    return this.features.includes('Namespaces');
+  }
 
-  setVersion(resp) {
-    this.set('version', resp.version);
-  },
+  get hasControlGroups() {
+    return this.features.includes('Control Groups');
+  }
 
-  hasFeature(feature) {
-    return hasFeatureMethod(this, feature);
-  },
-
-  setFeatures(resp) {
-    if (!resp.features) {
-      return;
+  get versionDisplay() {
+    if (!this.version) {
+      return '';
     }
-    this.set('_features', resp.features);
-  },
+    return this.isEnterprise ? `v${this.version.slice(0, this.version.indexOf('+'))}` : `v${this.version}`;
+  }
 
-  getVersion: task(function* () {
-    if (this.version) {
-      return;
-    }
+  @task({ drop: true })
+  *getVersion() {
+    if (this.version) return;
+    const response = yield this.store.adapterFor('cluster').fetchVersion();
+    this.version = response.data?.version;
+  }
+
+  @task
+  *getType() {
+    if (this.type !== null) return;
     const response = yield this.store.adapterFor('cluster').health();
-    this.setVersion(response);
-    return;
-  }),
+    if (response.has_chroot_namespace) {
+      // chroot_namespace feature is only available in enterprise
+      this.type = 'enterprise';
+      return;
+    }
+    this.type = response.enterprise ? 'enterprise' : 'community';
+  }
 
-  getFeatures: task(function* () {
-    if (this.features?.length || this.isOSS) {
+  @keepLatestTask
+  *getFeatures() {
+    if (this.features?.length || this.isCommunity) {
       return;
     }
     try {
       const response = yield this.store.adapterFor('cluster').features();
-      this.setFeatures(response);
+      this.features = response.features;
       return;
     } catch (err) {
       // if we fail here, we're likely in DR Secondary mode and don't need to worry about it
     }
-  }).keepLatest(),
+  }
 
-  fetchVersion: function () {
+  fetchVersion() {
     return this.getVersion.perform();
-  },
-  fetchFeatures: function () {
+  }
+
+  fetchType() {
+    return this.getType.perform();
+  }
+
+  fetchFeatures() {
     return this.getFeatures.perform();
-  },
-});
+  }
+}

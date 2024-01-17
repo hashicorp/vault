@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package mysqlhelper
 
@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -24,6 +25,12 @@ var _ docker.ServiceConfig = &Config{}
 func PrepareTestContainer(t *testing.T, legacy bool, pw string) (func(), string) {
 	if os.Getenv("MYSQL_URL") != "" {
 		return func() {}, os.Getenv("MYSQL_URL")
+	}
+
+	// ARM64 is only supported on MySQL 8.0 and above. If we update
+	// our image and support to 8.0, we can unskip these tests.
+	if strings.Contains(runtime.GOARCH, "arm") {
+		t.Skip("Skipping, as MySQL 5.7 is not supported on ARM architectures")
 	}
 
 	imageVersion := "5.7"

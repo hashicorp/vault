@@ -1,13 +1,12 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentRouteName, currentURL, fillIn, visit } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
 import { Response } from 'miragejs';
@@ -27,7 +26,6 @@ module('Acceptance | mfa-method', function (hooks) {
         methods.addObjects(this.server.db[`mfa${type}Methods`].where({}));
         return methods;
       }, []);
-    await logout.visit();
     return authPage.login();
   });
   hooks.after(function () {
@@ -63,7 +61,7 @@ module('Acceptance | mfa-method', function (hooks) {
       'vault.cluster.access.mfa.methods.create',
       'New method link transitions to create route'
     );
-    await click('.breadcrumb a');
+    await click('.hds-breadcrumb a');
 
     const methods = this.getMethods();
     const model = this.store.peekRecord('mfa-method', methods[0].id);
@@ -83,7 +81,7 @@ module('Acceptance | mfa-method', function (hooks) {
       'vault.cluster.access.mfa.methods.method.index',
       'Details more menu action transitions to method route'
     );
-    await click('.breadcrumb a');
+    await click('.hds-breadcrumb a');
     await click('[data-test-popup-menu-trigger]');
     await click('[data-test-mfa-method-menu-link="edit"]');
     assert.strictEqual(
@@ -109,9 +107,13 @@ module('Acceptance | mfa-method', function (hooks) {
     await visit('/vault/access/mfa/methods');
     await click('[data-test-mfa-method-list-item]');
     assert.dom('[data-test-tab="config"]').hasClass('active', 'Configuration tab is active by default');
+    await click('[data-test-delete-mfa-config]');
+
     assert
-      .dom('[data-test-confirm-action-trigger]')
-      .isDisabled('Delete toolbar action disabled when method is attached to an enforcement');
+      .dom('[data-test-confirm-action-message]')
+      .hasText(
+        "This method cannot be deleted until its enforcements are deleted. This can be done from the 'Enforcements' tab."
+      );
 
     const fields = [
       ['Issuer', 'Period', 'Key size', 'QR size', 'Algorithm', 'Digits', 'Skew', 'Max validation attempts'],
@@ -138,7 +140,7 @@ module('Acceptance | mfa-method', function (hooks) {
         const value = typeof model[key] === 'boolean' ? (model[key] ? 'Yes' : 'No') : model[key].toString();
         assert.dom(`[data-test-value-div="${label}"]`).hasText(value, `${label} value renders`);
       });
-      await click('.breadcrumb a');
+      await click('.hds-breadcrumb a');
     }
 
     await click('[data-test-mfa-method-list-item]');
@@ -201,7 +203,7 @@ module('Acceptance | mfa-method', function (hooks) {
         'vault.cluster.access.mfa.methods.method.index',
         `${type} method is displayed on save`
       );
-      await click('.breadcrumb a');
+      await click('.hds-breadcrumb a');
       assert
         .dom('[data-test-mfa-method-list-item]')
         .exists({ count: methodCount + index + 1 }, `List updates with new ${type} method`);
@@ -224,7 +226,7 @@ module('Acceptance | mfa-method', function (hooks) {
     );
     await click('[data-test-tab="enforcements"]');
     assert.dom('[data-test-list-item]').hasText('bar', 'Enforcement is listed in method view');
-    await click('[data-test-link="mfa"]');
+    await click('[data-test-sidebar-nav-link="Multi-Factor Authentication"]');
     await click('[data-test-tab="enforcements"]');
     assert.dom('[data-test-list-item="bar"]').hasText('bar', 'Enforcement is listed in enforcements view');
     await click('[data-test-list-item="bar"]');
@@ -284,7 +286,7 @@ module('Acceptance | mfa-method', function (hooks) {
     const SHA1radioBtn = this.element.querySelectorAll('input[name=algorithm]')[0];
     await click(SHA1radioBtn);
     await fillIn('[data-test-input="max_validation_attempts"]', 10);
-    await click('[data-test-mfa-method-save]');
+    await click('[data-test-mfa-save]');
     await fillIn('[data-test-confirmation-modal-input]', model.type);
     await click('[data-test-confirm-button]');
 
@@ -293,5 +295,17 @@ module('Acceptance | mfa-method', function (hooks) {
     assert
       .dom('[data-test-row-value="Max validation attempts"]')
       .hasText('10', 'Max validation attempts field is updated');
+  });
+
+  test('it should navigate to enforcements create route from method enforcement tab', async function (assert) {
+    await visit('/vault/access/mfa/methods');
+    await click('[data-test-mfa-method-list-item]');
+    await click('[data-test-tab="enforcements"]');
+    await click('[data-test-enforcement-create]');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.access.mfa.enforcements.create',
+      'Navigates to enforcements create route from toolbar action'
+    );
   });
 });

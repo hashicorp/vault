@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -13,8 +13,7 @@ import (
 )
 
 func TestCanSendEventsFromBuiltinPlugin(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
-
+	c, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{})
 	ctx := namespace.RootContext(nil)
 
 	// subscribe to an event type
@@ -22,7 +21,7 @@ func TestCanSendEventsFromBuiltinPlugin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ch, cancel, err := c.events.Subscribe(ctx, namespace.RootNamespace, eventType)
+	ch, cancel, err := c.events.Subscribe(ctx, namespace.RootNamespace, eventType, "")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -25,7 +25,7 @@ module('Integration | Component | page/pki-configure-create', function (hooks) {
       { label: 'configure' },
     ];
     this.config = this.store.createRecord('pki/action');
-    this.urls = this.store.createRecord('pki/urls');
+    this.urls = this.store.createRecord('pki/config/urls');
   });
 
   test('it renders', async function (assert) {

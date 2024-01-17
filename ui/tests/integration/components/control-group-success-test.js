@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { later, run, _cancelTimers as cancelTimers } from '@ember/runloop';
@@ -13,6 +13,7 @@ import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { create } from 'ember-cli-page-object';
 import controlGroupSuccess from '../../pages/components/control-group-success';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const component = create(controlGroupSuccess);
 
@@ -44,6 +45,13 @@ module('Integration | Component | control group success', function (hooks) {
       this.router.reopen({
         transitionTo: sinon.stub().returns(resolve()),
       });
+      setRunOptions({
+        rules: {
+          // TODO: swap out JsonEditor with Hds::CodeBlock for display
+          'color-contrast': { enabled: false },
+          label: { enabled: false },
+        },
+      });
     });
   });
 
@@ -62,7 +70,7 @@ module('Integration | Component | control group success', function (hooks) {
     };
     this.set('model', MODEL);
     this.set('response', response);
-    await render(hbs`{{control-group-success model=this.model controlGroupResponse=this.response }}`);
+    await render(hbs`<ControlGroupSuccess @model={{this.model}} @controlGroupResponse={{this.response}} />`);
     assert.ok(component.showsNavigateMessage, 'shows unwrap message');
     await component.navigate();
     later(() => cancelTimers(), 50);
@@ -75,7 +83,7 @@ module('Integration | Component | control group success', function (hooks) {
   test('render without token', async function (assert) {
     assert.expect(2);
     this.set('model', MODEL);
-    await render(hbs`{{control-group-success model=this.model}}`);
+    await render(hbs`<ControlGroupSuccess @model={{this.model}} />`);
     assert.ok(component.showsUnwrapForm, 'shows unwrap form');
     await component.token('token');
     component.unwrap();

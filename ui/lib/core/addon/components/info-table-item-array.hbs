@@ -1,5 +1,10 @@
-{{! the class linkable-item is needed for the read-more component }}
-<div data-test-info-table-item-array {{did-insert this.fetchOptions}} class="linkable-item">
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{! the class linked-block-item is needed for the read-more component }}
+<div data-test-info-table-item-array {{did-insert this.fetchOptions}} class="linked-block-item">
   {{#if @isLink}}
     <div data-test-row-value={{@label}}>
       {{#if this.fetchComplete}}

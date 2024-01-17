@@ -1,0 +1,3 @@
+```release-note:feature
+**Vault Proxy Static Secret Caching**: Adds support for static secret (KVv1 and KVv2) caching to Vault Proxy.
+```

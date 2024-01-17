@@ -1,9 +1,9 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { module, skip, test } from 'qunit';
+import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentURL, fillIn, typeIn, visit } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -33,7 +33,6 @@ module('Acceptance | pki action forms test', function (hooks) {
     await authPage.login();
     // Cleanup engine
     await runCommands([`delete sys/mounts/${this.mountPath}`]);
-    await logout.visit();
   });
 
   module('import', function (hooks) {
@@ -55,7 +54,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       assert.dom(S.configuration.emptyState).doesNotExist();
       // Submit before filling out form shows an error
       await click('[data-test-pki-import-pem-bundle]');
-      assert.dom('[data-test-alert-banner="alert"]').hasText('Error please upload your PEM bundle');
+      assert.dom(S.configuration.importError).hasText('Error please upload your PEM bundle');
       // Fill in form data
       await click('[data-test-text-toggle]');
       await fillIn('[data-test-text-file-textarea]', this.pemBundle);
@@ -76,8 +75,7 @@ module('Acceptance | pki action forms test', function (hooks) {
         'redirects to overview when done'
       );
     });
-    skip('with many imports', async function (assert) {
-      // TODO VAULT-14791
+    test('with many imports', async function (assert) {
       this.server.post(`${this.mountPath}/config/ca`, () => {
         return {
           request_id: 'some-config-id',
@@ -94,6 +92,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
       await click(S.configuration.optionByKey('import'));
+      assert.dom(S.configuration.importForm).exists('import form is shown save');
       await click('[data-test-text-toggle]');
       await fillIn('[data-test-text-file-textarea]', this.pemBundle);
       await click('[data-test-pki-import-pem-bundle]');
@@ -115,8 +114,7 @@ module('Acceptance | pki action forms test', function (hooks) {
         'redirects to overview when done'
       );
     });
-    skip('shows imported items when keys is empty', async function (assert) {
-      // TODO VAULT-14791
+    test('shows imported items when keys is empty', async function (assert) {
       this.server.post(`${this.mountPath}/config/ca`, () => {
         return {
           request_id: 'some-config-id',
@@ -133,6 +131,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
       await click(S.configuration.optionByKey('import'));
+      assert.dom(S.configuration.importForm).exists('import form is shown save');
       await click('[data-test-text-toggle]');
       await fillIn('[data-test-text-file-textarea]', this.pemBundle);
       await click('[data-test-pki-import-pem-bundle]');
@@ -140,7 +139,31 @@ module('Acceptance | pki action forms test', function (hooks) {
       assert.dom(S.configuration.importForm).doesNotExist('import form is hidden after save');
       assert.dom(S.configuration.importMapping).exists('import mapping is shown after save');
       assert.dom(S.configuration.importedIssuer).hasText('my-imported-issuer', 'Issuer value is displayed');
-      assert.dom(S.configuration.importedKey).hasText('my-imported-key', 'Key value is displayed');
+      assert.dom(S.configuration.importedKey).hasText('None', 'Shows placeholder value for key');
+    });
+    test('shows None for imported items if nothing new imported', async function (assert) {
+      this.server.post(`${this.mountPath}/config/ca`, () => {
+        return {
+          request_id: 'some-config-id',
+          data: {
+            imported_issuers: null,
+            imported_keys: null,
+            mapping: {},
+          },
+        };
+      });
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
+      await click(S.configuration.optionByKey('import'));
+      assert.dom(S.configuration.importForm).exists('import form is shown save');
+      await click('[data-test-text-toggle]');
+      await fillIn('[data-test-text-file-textarea]', this.pemBundle);
+      await click('[data-test-pki-import-pem-bundle]');
+
+      assert.dom(S.configuration.importForm).doesNotExist('import form is hidden after save');
+      assert.dom(S.configuration.importMapping).exists('import mapping is shown after save');
+      assert.dom(S.configuration.importedIssuer).hasText('None', 'Shows placeholder value for issuer');
+      assert.dom(S.configuration.importedKey).hasText('None', 'Shows placeholder value for key');
     });
   });
 
@@ -174,10 +197,10 @@ module('Acceptance | pki action forms test', function (hooks) {
         `/vault/secrets/${this.mountPath}/pki/configuration/create`,
         'stays on page on success'
       );
-      assert.dom(S.configuration.title).hasText('View root certificate');
-      assert.dom('[data-test-alert-banner="alert"]').doesNotExist('no private key warning');
-      assert.dom(S.configuration.title).hasText('View root certificate', 'Updates title on page');
-      assert.dom(S.configuration.saved.certificate).hasClass('allow-copy', 'copyable certificate is masked');
+      assert.dom(S.configuration.title).hasText('View Root Certificate');
+      assert.dom(S.configuration.nextStepsBanner).doesNotExist('no private key warning');
+      assert.dom(S.configuration.title).hasText('View Root Certificate', 'Updates title on page');
+      assert.dom(S.configuration.saved.certificate).exists('Copyable certificate exists');
       assert.dom(S.configuration.saved.issuerName).hasText(issuerName);
       assert.dom(S.configuration.saved.issuerLink).exists('Issuer link exists');
       assert.dom(S.configuration.saved.keyLink).exists('Key link exists');
@@ -202,22 +225,18 @@ module('Acceptance | pki action forms test', function (hooks) {
         `/vault/secrets/${this.mountPath}/pki/configuration/create`,
         'stays on page on success'
       );
-      assert.dom(S.configuration.title).hasText('View root certificate');
+      assert.dom(S.configuration.title).hasText('View Root Certificate');
       assert
-        .dom('[data-test-alert-banner="alert"]')
+        .dom(S.configuration.nextStepsBanner)
         .hasText('Next steps The private_key is only available once. Make sure you copy and save it now.');
-      assert.dom(S.configuration.title).hasText('View root certificate', 'Updates title on page');
-      assert
-        .dom(S.configuration.saved.certificate)
-        .hasClass('allow-copy', 'copyable masked certificate exists');
+      assert.dom(S.configuration.title).hasText('View Root Certificate', 'Updates title on page');
+      assert.dom(S.configuration.saved.certificate).exists('Copyable certificate exists');
       assert
         .dom(S.configuration.saved.issuerName)
         .doesNotExist('Issuer name not shown because it was not named');
       assert.dom(S.configuration.saved.issuerLink).exists('Issuer link exists');
       assert.dom(S.configuration.saved.keyLink).exists('Key link exists');
-      assert
-        .dom(S.configuration.saved.privateKey)
-        .hasClass('allow-copy', 'copyable masked private key exists');
+      assert.dom(S.configuration.saved.privateKey).exists('Copyable private key exists');
       assert.dom(S.configuration.saved.keyName).doesNotExist('Key name not shown because it was not named');
       assert.dom('[data-test-done]').exists('Done button exists');
       // Check that linked issuer has correct common name
@@ -236,7 +255,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await fillIn(S.configuration.typeField, 'internal');
       await fillIn(S.configuration.inputByName('commonName'), 'my-common-name');
       await click('[data-test-save]');
-      assert.dom(S.configuration.title).hasText('View generated CSR');
+      assert.dom(S.configuration.title).hasText('View Generated CSR');
       await assert.dom(S.configuration.csrDetails).exists('renders CSR details after save');
       await click('[data-test-done]');
       assert.strictEqual(
@@ -254,15 +273,13 @@ module('Acceptance | pki action forms test', function (hooks) {
       await fillIn(S.configuration.inputByName('commonName'), 'my-common-name');
       await click('[data-test-save]');
       await assert.dom(S.configuration.csrDetails).exists('renders CSR details after save');
-      assert.dom(S.configuration.title).hasText('View generated CSR');
+      assert.dom(S.configuration.title).hasText('View Generated CSR');
       assert
-        .dom('[data-test-alert-banner="alert"]')
+        .dom('[data-test-next-steps-csr]')
         .hasText(
           'Next steps Copy the CSR below for a parent issuer to sign and then import the signed certificate back into this mount. The private_key is only available once. Make sure you copy and save it now.'
         );
-      assert
-        .dom(S.configuration.saved.privateKey)
-        .hasClass('allow-copy', 'copyable masked private key exists');
+      assert.dom(S.configuration.saved.privateKey).exists('Copyable private key exists');
       await click('[data-test-done]');
       assert.strictEqual(
         currentURL(),

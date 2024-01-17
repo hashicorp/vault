@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Application from '@ember/application';
@@ -20,9 +20,19 @@ export default class App extends Application {
     },
     replication: {
       dependencies: {
-        services: ['auth', 'flash-messages', 'namespace', 'replication-mode', 'router', 'store', 'version'],
+        services: [
+          'auth',
+          'flash-messages',
+          'namespace',
+          'replication-mode',
+          'router',
+          'store',
+          'version',
+          '-portal',
+        ],
         externalRoutes: {
           replication: 'vault.cluster.replication.index',
+          vault: 'vault.cluster',
         },
       },
     },
@@ -52,6 +62,31 @@ export default class App extends Application {
         },
       },
     },
+    ldap: {
+      dependencies: {
+        services: ['router', 'store', 'secret-mount-path', 'flash-messages', 'auth'],
+        externalRoutes: {
+          secrets: 'vault.cluster.secrets.backends',
+        },
+      },
+    },
+    kv: {
+      dependencies: {
+        services: [
+          'download',
+          'namespace',
+          'router',
+          'store',
+          'secret-mount-path',
+          'flash-messages',
+          'control-group',
+        ],
+        externalRoutes: {
+          secrets: 'vault.cluster.secrets.backends',
+          syncDestination: 'vault.cluster.sync.secrets.destinations.destination',
+        },
+      },
+    },
     pki: {
       dependencies: {
         services: [
@@ -69,6 +104,15 @@ export default class App extends Application {
           secrets: 'vault.cluster.secrets.backends',
           externalMountIssuer: 'vault.cluster.secrets.backend.pki.issuers.issuer.details',
           secretsListRootConfiguration: 'vault.cluster.secrets.backend.configuration',
+        },
+      },
+    },
+    sync: {
+      dependencies: {
+        services: ['flash-messages', 'router', 'store', 'version'],
+        externalRoutes: {
+          kvSecretDetails: 'vault.cluster.secrets.backend.kv.secret.details',
+          clientCountDashboard: 'vault.cluster.clients.dashboard',
         },
       },
     },

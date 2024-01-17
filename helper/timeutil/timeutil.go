@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package timeutil
 
@@ -141,4 +141,27 @@ func SkipAtEndOfMonth(t *testing.T) {
 	if endOfMonth.Sub(time.Now()) < 10*time.Minute {
 		t.Skip("too close to end of month")
 	}
+}
+
+// This interface allows unit tests to substitute in a simulated Clock.
+type Clock interface {
+	Now() time.Time
+	NewTicker(time.Duration) *time.Ticker
+	NewTimer(time.Duration) *time.Timer
+}
+
+type DefaultClock struct{}
+
+var _ Clock = (*DefaultClock)(nil)
+
+func (_ DefaultClock) Now() time.Time {
+	return time.Now()
+}
+
+func (_ DefaultClock) NewTicker(d time.Duration) *time.Ticker {
+	return time.NewTicker(d)
+}
+
+func (_ DefaultClock) NewTimer(d time.Duration) *time.Timer {
+	return time.NewTimer(d)
 }
