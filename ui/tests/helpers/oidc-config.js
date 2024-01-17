@@ -101,20 +101,10 @@ export function overrideCapabilities(requestPath, capabilitiesArray) {
   };
 }
 
-export async function clearRecord(store, modelType, id) {
-  await store
-    .findRecord(modelType, id)
-    .then((model) => {
-      deleteModelRecord(model);
-    })
-    .catch(() => {
-      // swallow error
-    });
+export function clearRecords(store) {
+  store.unloadAll('oidc/client');
+  store.unloadAll('oidc/provider');
 }
-
-const deleteModelRecord = async (model) => {
-  await model.destroyRecord();
-};
 
 // MOCK RESPONSES:
 
