@@ -1421,7 +1421,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 
 	config.IdentityTokenKey = apiConfig.IdentityTokenKey
 	if config.IdentityTokenKey == "" {
-		config.IdentityTokenKey = defaultOIDCKeyName
+		config.IdentityTokenKey = defaultKeyName
 	}
 
 	// Ensure the key exists and default key is lazy generated
@@ -1438,7 +1438,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 	// TODO(austin): Excludes default KV mount to pay cost of default key
 	//  generation at a later time. Consider alternative approach.
-	if path != "secret/" && logicalType != "kv" && config.IdentityTokenKey == defaultOIDCKeyName {
+	if path != "secret/" && logicalType != "kv" && config.IdentityTokenKey == defaultKeyName {
 		if err := identityStore.lazyGenerateDefaultKey(ctx, identityStoreView); err != nil {
 			return nil, fmt.Errorf("failed to generate default key: %w", err)
 		}
@@ -2198,7 +2198,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	if rawVal, ok := data.GetOk("identity_token_key"); ok {
 		identityTokenKey := rawVal.(string)
 		if identityTokenKey == "" {
-			identityTokenKey = defaultOIDCKeyName
+			identityTokenKey = defaultKeyName
 		}
 
 		// Ensure the key exists and default key is lazy generated
@@ -2213,7 +2213,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		if k == nil {
 			return handleError(fmt.Errorf("key %q does not exist", identityTokenKey))
 		}
-		if identityTokenKey == defaultOIDCKeyName {
+		if identityTokenKey == defaultKeyName {
 			if err := identityStore.lazyGenerateDefaultKey(ctx, identityStoreView); err != nil {
 				return nil, fmt.Errorf("failed to generate default key: %w", err)
 			}
@@ -2998,7 +2998,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 
 	config.IdentityTokenKey = apiConfig.IdentityTokenKey
 	if config.IdentityTokenKey == "" {
-		config.IdentityTokenKey = defaultOIDCKeyName
+		config.IdentityTokenKey = defaultKeyName
 	}
 
 	// Ensure the key exists and default key is lazy generated
@@ -3013,7 +3013,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	if k == nil {
 		return handleError(fmt.Errorf("key %q does not exist", config.IdentityTokenKey))
 	}
-	if config.IdentityTokenKey == defaultOIDCKeyName {
+	if config.IdentityTokenKey == defaultKeyName {
 		if err := identityStore.lazyGenerateDefaultKey(ctx, identityStoreView); err != nil {
 			return nil, fmt.Errorf("failed to generate default key: %w", err)
 		}

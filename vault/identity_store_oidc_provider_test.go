@@ -1691,7 +1691,7 @@ func TestOIDC_Path_OIDC_ProviderClient_DefaultKey(t *testing.T) {
 	expectSuccess(t, resp, err)
 
 	// Assert that the client uses the default key
-	require.Equal(t, defaultOIDCKeyName, resp.Data["key"].(string))
+	require.Equal(t, defaultKeyName, resp.Data["key"].(string))
 }
 
 // TestOIDC_Path_OIDC_ProviderClient_NilKeyEntry tests that a client cannot be

@@ -38,30 +38,33 @@ import (
 
 type oidcConfig struct {
 	// Issuer is the scheme://host:port component of the issuer set as
-	// configuration in the Vault API.
+	// configuration in the Vault API. It is the URL base.
 	Issuer string `json:"issuer"`
 
 	// effectiveIssuer is a calculated field and will be either Issuer (if
 	// that's set) or the Vault instance's api_addr, followed by the path
-	// /v1/<namespace_path>/identity/oidc
+	// /v1/<namespace_path>/identity/oidc.
 	effectiveIssuer string
 }
 
+// fullIssuer returns the full issuer for the config, suitable for OpenID metadata and
+// token claims. It takes an optional child, which must be of the value "" or "plugins".
+// The child will be appended as the last path segment on the returned issuer URL.
 func (c *oidcConfig) fullIssuer(child string) (string, error) {
 	if !validChildIssuer(child) {
 		return "", fmt.Errorf("invalid child issuer %q", child)
 	}
 
-	finalIssuer := c.effectiveIssuer
-	if child != "" {
-		finalIssuer += fmt.Sprintf("/%s", child)
+	issuer, err := url.JoinPath(c.effectiveIssuer, child)
+	if err != nil {
+		return "", fmt.Errorf("failed to join issuer: %w", err)
 	}
 
-	return finalIssuer, nil
+	return issuer, nil
 }
 
 func validChildIssuer(child string) bool {
-	return child == "" || child == pluginIdentityTokenIssuer
+	return child == baseIdentityTokenIssuer || child == pluginIdentityTokenIssuer
 }
 
 type expireableKey struct {
@@ -126,13 +129,16 @@ type oidcCache struct {
 var errNilNamespace = errors.New("nil namespace in oidc cache request")
 
 const (
-	issuerPath                = "identity/oidc"
-	oidcTokensPrefix          = "oidc_tokens/"
-	namedKeyCachePrefix       = "namedKeys/"
-	oidcConfigStorageKey      = oidcTokensPrefix + "config/"
-	namedKeyConfigPath        = oidcTokensPrefix + "named_keys/"
-	publicKeysConfigPath      = oidcTokensPrefix + "public_keys/"
-	roleConfigPath            = oidcTokensPrefix + "roles/"
+	issuerPath           = "identity/oidc"
+	oidcTokensPrefix     = "oidc_tokens/"
+	namedKeyCachePrefix  = "namedKeys/"
+	oidcConfigStorageKey = oidcTokensPrefix + "config/"
+	namedKeyConfigPath   = oidcTokensPrefix + "named_keys/"
+	publicKeysConfigPath = oidcTokensPrefix + "public_keys/"
+	roleConfigPath       = oidcTokensPrefix + "roles/"
+
+	// Identity tokens have a base issuer and plugin issuer
+	baseIdentityTokenIssuer   = ""
 	pluginIdentityTokenIssuer = "plugins"
 )
 
@@ -155,6 +161,13 @@ var (
 
 // pseudo-namespace for cache items that don't belong to any real namespace.
 var noNamespace = &namespace.Namespace{ID: "__NO_NAMESPACE"}
+
+// optionalChildIssuerRegex is a regex for optionally accepting a field in an
+// API request as a single path segment. Adapted from framework.OptionalParamRegex
+// to not include additional forward slashes.
+func optionalChildIssuerRegex(name string) string {
+	return fmt.Sprintf(`(/(?P<%s>[^/]+))?`, name)
+}
 
 func oidcPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
@@ -273,15 +286,15 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "List all named OIDC keys",
 		},
 		{
-			Pattern: "oidc" + framework.OptionalParamRegex("issuer") + "/\\.well-known/openid-configuration/?$",
+			Pattern: "oidc" + optionalChildIssuerRegex("child") + "/\\.well-known/openid-configuration/?$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "oidc",
 				OperationSuffix: "open-id-configuration",
 			},
 			Fields: map[string]*framework.FieldSchema{
-				"issuer": {
+				"child": {
 					Type:        framework.TypeString,
-					Description: "Name of the issuer",
+					Description: "Name of the child issuer",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -291,15 +304,15 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "Query this path to retrieve the configured OIDC Issuer and Keys endpoints, response types, subject types, and signing algorithms used by the OIDC backend.",
 		},
 		{
-			Pattern: "oidc" + framework.OptionalParamRegex("issuer") + "/\\.well-known/keys/?$",
+			Pattern: "oidc" + optionalChildIssuerRegex("child") + "/\\.well-known/keys/?$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "oidc",
 				OperationSuffix: "public-keys",
 			},
 			Fields: map[string]*framework.FieldSchema{
-				"issuer": {
+				"child": {
 					Type:        framework.TypeString,
-					Description: "Name of the issuer",
+					Description: "Name of the child issuer",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -780,9 +793,9 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 
 	targetKeyName := d.Get("name").(string)
 
-	if targetKeyName == defaultOIDCKeyName {
+	if targetKeyName == defaultKeyName {
 		return logical.ErrorResponse("deletion of key %q not allowed",
-			defaultOIDCKeyName), nil
+			defaultKeyName), nil
 	}
 
 	i.oidcLock.Lock()
@@ -998,9 +1011,14 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 			"than the verification_ttl of the key it references, setting token ttl to %d", expiry))
 	}
 
+	issuer, err := config.fullIssuer(baseIdentityTokenIssuer)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
 	now := time.Now()
 	idToken := idToken{
-		Issuer:    config.effectiveIssuer,
+		Issuer:    issuer,
 		Namespace: ns.ID,
 		Subject:   req.EntityID,
 		Audience:  role.ClientID,
@@ -1066,7 +1084,7 @@ func (i *IdentityStore) generatePluginIdentityToken(ctx context.Context, storage
 		return "", 0, err
 	}
 
-	key := defaultOIDCKeyName
+	key := defaultKeyName
 	if me.Config.IdentityTokenKey != "" {
 		key = me.Config.IdentityTokenKey
 	}
@@ -1335,7 +1353,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		return logical.ErrorResponse("the key parameter is required"), nil
 	}
 
-	if role.Key == defaultOIDCKeyName {
+	if role.Key == defaultKeyName {
 		if err := i.lazyGenerateDefaultKey(ctx, req.Storage); err != nil {
 			return nil, fmt.Errorf("failed to generate default key: %w", err)
 		}
@@ -1497,12 +1515,12 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
-	var requestedIssuer string
-	if issuerRaw, ok := d.GetOk("issuer"); ok {
-		requestedIssuer = issuerRaw.(string)
+	var child string
+	if childRaw, ok := d.GetOk("child"); ok {
+		child = childRaw.(string)
 	}
 
-	cacheKey := fmt.Sprintf("%s/discoveryResponse", requestedIssuer)
+	cacheKey := fmt.Sprintf("%s/discoveryResponse", child)
 	v, ok, err := i.oidcCache.Get(ns, cacheKey)
 	if err != nil {
 		return nil, err
@@ -1516,7 +1534,7 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 			return nil, err
 		}
 
-		issuer, err := c.fullIssuer(requestedIssuer)
+		issuer, err := c.fullIssuer(child)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
@@ -1596,8 +1614,8 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 	}
 
 	var child string
-	if issuerRaw, ok := d.GetOk("issuer"); ok {
-		child = issuerRaw.(string)
+	if childRaw, ok := d.GetOk("child"); ok {
+		child = childRaw.(string)
 	}
 	if !validChildIssuer(child) {
 		return logical.ErrorResponse("invalid child issuer %q", child), nil
@@ -1716,8 +1734,13 @@ func (i *IdentityStore) pathOIDCIntrospect(ctx context.Context, req *logical.Req
 		return nil, err
 	}
 
+	issuer, err := c.fullIssuer(baseIdentityTokenIssuer)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
 	expected := jwt.Expected{
-		Issuer: c.effectiveIssuer,
+		Issuer: issuer,
 		Time:   time.Now(),
 	}
 

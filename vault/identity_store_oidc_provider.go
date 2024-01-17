@@ -38,8 +38,8 @@ const (
 	clientSecretPrefix       = "hvo_secret_"
 	codeChallengeMethodPlain = "plain"
 	codeChallengeMethodS256  = "S256"
-	defaultOIDCProviderName  = "default"
-	defaultOIDCKeyName       = "default"
+	defaultProviderName      = "default"
+	defaultKeyName           = "default"
 	allowAllAssignmentName   = "allow_all"
 
 	// Storage path constants
@@ -1129,7 +1129,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 		return logical.ErrorResponse("key %q does not exist", client.Key), nil
 	}
 
-	if client.Key == defaultOIDCKeyName {
+	if client.Key == defaultKeyName {
 		if err := i.lazyGenerateDefaultKey(ctx, req.Storage); err != nil {
 			return nil, fmt.Errorf("failed to generate default key: %w", err)
 		}
@@ -1519,9 +1519,9 @@ func (i *IdentityStore) getOIDCProvider(ctx context.Context, s logical.Storage, 
 func (i *IdentityStore) pathOIDCDeleteProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	if name == defaultOIDCProviderName {
+	if name == defaultProviderName {
 		return logical.ErrorResponse("deletion of OIDC provider %q not allowed",
-			defaultOIDCProviderName), nil
+			defaultProviderName), nil
 	}
 
 	return nil, req.Storage.Delete(ctx, providerPath+name)
@@ -2535,7 +2535,7 @@ func allowAllAssignment() assignment {
 
 func (i *IdentityStore) storeOIDCDefaultResources(ctx context.Context, view logical.Storage) error {
 	// Store the default provider
-	storageKey := providerPath + defaultOIDCProviderName
+	storageKey := providerPath + defaultProviderName
 	entry, err := view.Get(ctx, storageKey)
 	if err != nil {
 		return err
@@ -2580,7 +2580,7 @@ func (i *IdentityStore) storeOIDCDefaultResources(ctx context.Context, view logi
 // only writes the key's configuration to storage and does not generate key material
 // for its current and next keys.
 func (i *IdentityStore) ensureDefaultKey(ctx context.Context, storage logical.Storage) (*namedKey, error) {
-	key, err := i.getNamedKey(ctx, storage, defaultOIDCKeyName)
+	key, err := i.getNamedKey(ctx, storage, defaultKeyName)
 	if err != nil {
 		return nil, err
 	}
@@ -2590,7 +2590,7 @@ func (i *IdentityStore) ensureDefaultKey(ctx context.Context, storage logical.St
 
 	// The default key doesn't exist. Write it to storage.
 	defaultKey := defaultOIDCKey()
-	entry, err := logical.StorageEntryJSON(namedKeyConfigPath+defaultOIDCKeyName, defaultKey)
+	entry, err := logical.StorageEntryJSON(namedKeyConfigPath+defaultKeyName, defaultKey)
 	if err != nil {
 		return nil, err
 	}
@@ -2624,7 +2624,7 @@ func (i *IdentityStore) lazyGenerateDefaultKey(ctx context.Context, storage logi
 			return err
 		}
 
-		entry, err := logical.StorageEntryJSON(namedKeyConfigPath+defaultOIDCKeyName, defaultKey)
+		entry, err := logical.StorageEntryJSON(namedKeyConfigPath+defaultKeyName, defaultKey)
 		if err != nil {
 			return err
 		}

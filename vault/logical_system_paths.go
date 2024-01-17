@@ -4458,7 +4458,7 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 				"identity_token_key": {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["identity_token_key"][0]),
-					Default:     defaultOIDCKeyName,
+					Default:     defaultKeyName,
 				},
 			},
 

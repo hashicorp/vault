@@ -514,7 +514,7 @@ func (e *MountEntry) SyncCache() {
 
 	// TODO(austin): is this needed?
 	if e.Config.IdentityTokenKey == "" {
-		e.synthesizedConfigCache.Store("identity_token_key", defaultOIDCKeyName)
+		e.synthesizedConfigCache.Store("identity_token_key", defaultKeyName)
 	} else {
 		e.synthesizedConfigCache.Store("identity_token_key", e.Config.DelegatedAuthAccessors)
 	}
