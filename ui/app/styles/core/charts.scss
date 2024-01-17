@@ -304,7 +304,7 @@ p.data-details {
 
 @media only screen and (max-width: 950px) {
   .dual-chart-grid {
-    display: inline-grid;
+    display: grid;
     grid-template-columns: repeat(2, 1fr);
     grid-template-rows: 0.2fr 0.75fr 0.75fr 0.2fr;
     width: 100%;
