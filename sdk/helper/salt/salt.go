@@ -151,7 +151,7 @@ func (s *Salt) GetHMAC(data string) string {
 
 // GetIdentifiedHMAC is used to apply a salt and hash function to data to make
 // sure it is not reversible, with an additional HMAC, and ID prepended.
-// Only non-default ("") string values will be returned with HMAC.
+// Default value ("") string input will be ignored and returned as-is.
 func (s *Salt) GetIdentifiedHMAC(data string) string {
 	// Do not bother to HMAC an empty value.
 	if data == "" {
