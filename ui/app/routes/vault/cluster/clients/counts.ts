@@ -42,10 +42,7 @@ export default class ClientCountTokenRoute extends Route {
     const { config } = this.modelFor('vault.cluster.clients') as ClientsRouteModel;
     const startTimestamp = Number(params.start_time) || getUnixTime(config.billingStartTimestamp);
     const endTimestamp = Number(params.end_time) || this.currentTimestamp;
-    // only make network request if we have a start_time
-    const [activity, activityError] = startTimestamp
-      ? await this.getActivity(startTimestamp, endTimestamp)
-      : [];
+    const [activity, activityError] = await this.getActivity(startTimestamp, endTimestamp);
     return {
       config,
       activity,
