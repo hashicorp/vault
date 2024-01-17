@@ -1,0 +1,137 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="box is-sideless is-fullwidth is-marginless is-bottomless">
+  <p class="has-bottom-margin-xl">
+    This dashboard will surface Vault client usage over time. Clients represent a user or service that has authenticated to
+    Vault.
+    <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}}>Documentation is available here</Hds::Link::Inline>.
+    Date queries are sent in UTC.
+  </p>
+
+  <h2 class="title is-6 has-bottom-margin-xs">
+    {{this.versionText.label}}
+  </h2>
+
+  <div data-test-start-date-editor class="is-flex-align-baseline">
+    {{#if this.formattedStartDate}}
+      <p class="is-size-6" data-test-date-display>{{this.formattedStartDate}}</p>
+      <Hds::Button
+        class="has-left-margin-xs"
+        @text="Edit"
+        @color="tertiary"
+        @icon="edit"
+        @iconPosition="trailing"
+        {{on "click" (fn (mut this.showBillingStartModal) true)}}
+      />
+    {{else}}
+      <DateDropdown @handleSubmit={{this.onDateChange}} @dateType="startDate" @submitText="Save" />
+    {{/if}}
+  </div>
+
+  <p class="is-8 has-text-grey has-bottom-margin-l">
+    {{this.versionText.description}}
+  </p>
+
+  {{#if (eq @activity.id "no-data")}}
+    <Clients::NoData @config={{@config}} @dateRangeMessage={{this.dateRangeMessage}} />
+  {{else if @activityError}}
+    <Clients::Error @error={{@activityError}} />
+  {{else}}
+    {{#if (eq @config.enabled "Off")}}
+      <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+        <A.Title>Tracking is disabled</A.Title>
+        <A.Description>
+          Tracking is currently disabled and data is not being collected. Historical data can be searched, but you will need
+          to
+          <Hds::Link::Inline @route="vault.cluster.clients.edit">edit the configuration</Hds::Link::Inline>
+          to enable tracking again.
+        </A.Description>
+      </Hds::Alert>
+    {{/if}}
+
+    <div class="is-subtitle-gray has-bottom-margin-m">
+      FILTERS
+      <Toolbar data-test-clients-filter-bar>
+        <ToolbarFilters>
+          <CalendarWidget
+            @startTimestamp={{this.startDate}}
+            @endTimestamp={{this.endDate}}
+            @selectMonth={{this.onDateChange}}
+          />
+          {{#if (or @namespace this.namespaces)}}
+            <SearchSelect
+              @id="namespace-search-select"
+              @options={{this.namespaces}}
+              @inputValue={{if @namespace (array @namespace)}}
+              @selectLimit="1"
+              @disallowNewItems={{true}}
+              @fallbackComponent="input-search"
+              @onChange={{fn this.setFilterValue "ns"}}
+              @placeholder="Filter by namespace"
+              @displayInherit={{true}}
+              class="is-marginless"
+            />
+          {{/if}}
+          {{#if (or @authMount this.authMounts)}}
+            <SearchSelect
+              @id="auth-method-search-select"
+              @options={{this.authMounts}}
+              @inputValue={{if @authMount (array @authMount)}}
+              @selectLimit="1"
+              @disallowNewItems={{true}}
+              @fallbackComponent="input-search"
+              @onChange={{fn this.setFilterValue "authMount"}}
+              @placeholder="Filter by auth method"
+              @displayInherit={{true}}
+            />
+          {{/if}}
+        </ToolbarFilters>
+      </Toolbar>
+    </div>
+
+    {{#if this.filteredActivity}}
+      {{#if this.startTimeDiscrepancy}}
+        <Hds::Alert data-test-clients-upgrade-warning @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+          <A.Title>Warning</A.Title>
+          <A.Description>
+            {{this.startTimeDiscrepancy}}
+          </A.Description>
+        </Hds::Alert>
+      {{/if}}
+
+      {{yield}}
+
+    {{else if (and (not @config.billingStartTimestamp) (not @startTimestamp))}}
+      {{! Empty state for no billing/license start date }}
+      <EmptyState @title={{this.versionText.title}} @message={{this.versionText.message}} />
+    {{else}}
+      <EmptyState
+        @title="No data received  {{if this.dateRangeMessage this.dateRangeMessage}}"
+        @message="Update the filter values or click the button to reset them"
+      >
+        <Hds::Button @text="Reset filters" @color="tertiary" @icon="reload" {{on "click" this.resetFilters}} />
+      </EmptyState>
+    {{/if}}
+  {{/if}}
+</div>
+
+{{#if this.showBillingStartModal}}
+  <Hds::Modal id="clients-edit-date-modal" @onClose={{fn (mut this.showBillingStartModal) false}} as |M|>
+    <M.Header>
+      Edit start month
+    </M.Header>
+    <M.Body>
+      <p class="has-bottom-margin-s">
+        {{this.versionText.description}}
+      </p>
+      <p><strong>{{this.versionText.label}}</strong></p>
+      <DateDropdown class="has-top-padding-s" @handleSubmit={{this.onDateChange}} @dateType="startDate" @submitText="Save" />
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button data-test-date-dropdown-cancel @text="Cancel" @color="secondary" {{on "click" F.close}} />
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}
