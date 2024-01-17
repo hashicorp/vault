@@ -100,4 +100,5 @@ func TestSalt_GetHMAC_Ignored(t *testing.T) {
 	s, err := NewSalt(context.Background(), nil, nil)
 	require.NoError(t, err)
 	require.Equal(t, "", s.GetIdentifiedHMAC(""))
+	require.NotEqual(t, "", s.GetIdentifiedHMAC("juan"))
 }
