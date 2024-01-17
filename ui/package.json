@@ -68,6 +68,7 @@
     "@glimmer/component": "^1.1.2",
     "@glimmer/tracking": "^1.1.2",
     "@icholy/duration": "^5.1.0",
+    "@lineal-viz/lineal": "^0.5.1",
     "@tsconfig/ember": "^1.0.1",
     "@types/ember": "^4.0.2",
     "@types/ember-data": "^4.4.6",
