@@ -64,9 +64,23 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
     mounts: {},
   };
   const mounts = [];
+  const mountClients = randomBetween(min, max);
+  const [nonEntity, entity, secretSyncs] = arrayOfCounts(mountClients, 3);
+  // TODO does sys/ namespace only exist on 'root' namespace or child namespaces as well?
+  mounts.push({
+    mount_path: 'sys/',
+    counts: {
+      clients: secretSyncs,
+      entity_clients: 0,
+      non_entity_clients: 0,
+      distinct_entities: 0,
+      non_entity_tokens: 0,
+      secret_syncs: secretSyncs,
+    },
+  });
+
+  // generate auth mounts array
   Array.from(Array(10)).forEach((mount, index) => {
-    const mountClients = randomBetween(min, max);
-    const [nonEntity, entity, secretSyncs] = arrayOfCounts(mountClients, 3);
     mounts.push({
       mount_path: `auth/authid${index}`,
       counts: {
@@ -75,7 +89,8 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
         non_entity_clients: nonEntity,
         distinct_entities: entity,
         non_entity_tokens: nonEntity,
-        secret_syncs: secretSyncs,
+        // TODO test with live backend to confirm this key is present (and 0) for auth mounts
+        secret_syncs: 0,
       },
     });
   });
