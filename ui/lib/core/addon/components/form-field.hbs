@@ -127,20 +127,6 @@
       @value={{get @model this.valuePath}}
       @onChange={{this.setAndBroadcast}}
     />
-  {{else if (eq @attr.options.editType "singleKv")}}
-    {{! KV Object Editor }}
-    <KvObjectEditor
-      @value={{get @model this.valuePath}}
-      @onChange={{this.setAndBroadcast}}
-      @label={{this.labelString}}
-      @helpText={{@attr.options.helpText}}
-      @subText={{@attr.options.subText}}
-      @keyPlaceholder={{@attr.options.keyPlaceholder}}
-      @valuePlaceholder={{@attr.options.valuePlaceholder}}
-      @onKeyUp={{this.handleKeyUp}}
-      @shouldOnlyShowSingleRow={{true}}
-      @validationError={{this.validationError}}
-    />
   {{else if (eq @attr.options.editType "kv")}}
     {{! KV Object Editor }}
     <KvObjectEditor

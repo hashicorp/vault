@@ -9,7 +9,9 @@
     <A.Description data-test-alert-description={{bannerMessage.id}}>
       {{bannerMessage.message}}
       {{#each-in bannerMessage.link as |title href|}}
-        <Hds::Link::Inline @href={{href}}>{{title}}</Hds::Link::Inline>
+        {{#if (and title href)}}
+          <Hds::Link::Inline @href={{href}}>{{title}}</Hds::Link::Inline>
+        {{/if}}
       {{/each-in}}
     </A.Description>
   </Hds::Alert>
@@ -22,7 +24,9 @@
     <M.Body data-test-modal-body={{modalMessage.id}}>
       {{modalMessage.message}}
       {{#each-in modalMessage.link as |title href|}}
-        <Hds::Link::Inline @href={{href}}>{{title}}</Hds::Link::Inline>
+        {{#if (and title href)}}
+          <Hds::Link::Inline @href={{href}}>{{title}}</Hds::Link::Inline>
+        {{/if}}
       {{/each-in}}
     </M.Body>
     <M.Footer as |F|>
