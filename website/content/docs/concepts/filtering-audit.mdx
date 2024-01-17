@@ -1,0 +1,41 @@
+---
+layout: docs
+page_title: Filtering Audit
+description: |-
+How to filter audit entries in Vault.
+---
+
+[filter syntax]: /vault/docs/concepts/filtering
+
+# Filtering audit entries
+
+This page describes how to use filters with Vault audit devices to fine tune which
+audit entries should be written to an audit log.
+
+Starting in Vault 1.16.0, audit devices can be enabled with a `filter` option which
+is used to evaluate audit entries and decide if they should be written to an audit log.
+Please ensure you are familiar with the [filtering concept](/vault/docs/concepts/filtering)
+before attempting to configure an audit device with a filter.
+
+## Fallback device
+
+The ability to filter audit entries provides great flexibility to our customer's workflows,
+however the additional complexity could mean that a Vault Operator could configure
+their audit devices in such a way that some audit entries are missed out from the audit log entirely.
+
+The `fallback` audit is the mechanism by which Vault can continue to adhere to
+Vault's [security model](/vault/docs/internals/security), that all requests and
+responses are successfully logged before the client receives any secret material.
+
+When filtered audit devices are enabled, alongside the fallback audit device, any
+audit entry that would have been ignored/missed due to filter settings will be sent
+to the fallback device to be written to its audit log.
+
+This means we are able to provide the same guarantee that 'at least one device must
+successfully write an audit entry' as when only standard/non-filtered audit devices
+are enabled.
+
+<Note title="Single fallback device">
+  Vault supports enabling only a single fallback audit device.
+</Note>
+
