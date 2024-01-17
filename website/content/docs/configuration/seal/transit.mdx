@@ -8,6 +8,19 @@ description: |-
 
 # `transit` seal
 
+
+<Note title="Seal wrap functionality requires Vault Enterprise">
+
+  All Vault versions support **auto-unseal** for Transit, but **seal wrapping**
+  requires Vault Enterprise.
+  
+  Vault Enterprise enables seal wrapping by default, which means the KMS service
+  must be available at runtime and not just during the unseal process. Refer to
+  the [Seal wrap](/vault/docs/enterprise/sealwrap) overview for more
+  information.
+
+</Note>
+
 The Transit seal configures Vault to use Vault's Transit Secret Engine as the
 autoseal mechanism.
 The Transit seal is activated by one of the following:
@@ -53,6 +66,10 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 - `key_name` `(string: <required>)`: The transit key to use for encryption and
   decryption. This may also be supplied using the `VAULT_TRANSIT_SEAL_KEY_NAME`
   environment variable.
+
+- `key_id_prefix` `(string: "")`: An optional string to add to the key id
+  of values wrapped by this transit seal.  This can help disambiguate between
+  two transit seals.
 
 - `mount_path` `(string: <required>)`: The mount path to the transit secret engine.
   This may also be supplied using the `VAULT_TRANSIT_SEAL_MOUNT_PATH` environment

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { inject as service } from '@ember/service';
@@ -9,6 +9,15 @@ import ListController from 'core/mixins/list-controller';
 
 export default Controller.extend(ListController, {
   flashMessages: service(),
+
+  // callback from HDS pagination to set the queryParams page
+  get paginationQueryParams() {
+    return (page) => {
+      return {
+        page,
+      };
+    };
+  },
 
   actions: {
     delete(model) {

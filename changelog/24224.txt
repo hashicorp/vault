@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix JSON editor in KV V2 unable to handle pasted values
+```

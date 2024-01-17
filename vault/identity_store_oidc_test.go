@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -1055,10 +1055,11 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     true,
 			setNextSigningKey: true,
 			testCases: []testCase{
+				// Each cycle results in a key going in/out of its verification_ttl period
 				{1, 2, 2},
-				{2, 2, 4},
-				{3, 2, 4},
-				{4, 2, 4},
+				{2, 3, 3},
+				{3, 2, 2},
+				{4, 3, 3},
 			},
 		},
 		{
@@ -1067,8 +1068,11 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     false,
 			setNextSigningKey: true,
 			testCases: []testCase{
-				{1, 1, 2},
-				{2, 2, 4},
+				{1, 1, 1},
+
+				// key counts jump from 1 to 2 because the next signing key becomes
+				// the signing key, and no key is in its verification_ttl period
+				{2, 2, 2},
 			},
 		},
 		{
@@ -1077,8 +1081,11 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     true,
 			setNextSigningKey: false,
 			testCases: []testCase{
-				{1, 1, 2},
-				{2, 2, 4},
+				{1, 1, 1},
+
+				// key counts jump from 1 to 3 because the original signing key is
+				// still published and within its verification_ttl period
+				{2, 3, 3},
 			},
 		},
 		{
@@ -1087,8 +1094,8 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     false,
 			setNextSigningKey: false,
 			testCases: []testCase{
-				{1, 0, 2},
-				{2, 2, 4},
+				{1, 0, 0},
+				{2, 2, 2},
 			},
 		},
 	}
@@ -1096,7 +1103,9 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 	for _, testSet := range testSets {
 		testSet := testSet
 		t.Run(testSet.namedKey.name, func(t *testing.T) {
-			t.Parallel()
+			// We've disabled parallelism because this test is sensitive to timing and not running it in parallel
+			// makes it less flaky.
+			// t.Parallel()
 
 			// Prepare a storage to run through periodicFunc
 			c, _, _ := TestCoreUnsealed(t)
@@ -1145,7 +1154,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 				now := time.Now()
 				diff := nextRun.Sub(now)
 				if now.Before(nextRun) {
-					time.Sleep(diff)
+					time.Sleep(diff + 100*time.Millisecond)
 				}
 			}
 
@@ -1154,7 +1163,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 				expectedKeyCount := testSet.testCases[i].numKeys
 				namedKeySamples[i].DecodeJSON(&testSet.namedKey)
 				actualKeyRingLen := len(testSet.namedKey.KeyRing)
-				if actualKeyRingLen < expectedKeyCount {
+				if actualKeyRingLen != expectedKeyCount {
 					t.Errorf(
 						"For key: %s at cycle: %d expected namedKey's KeyRing to be at least of length %d but was: %d",
 						testSet.namedKey.name,
@@ -1165,7 +1174,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 				}
 				expectedPublicKeyCount := testSet.testCases[i].numPublicKeys
 				actualPubKeysLen := len(publicKeysSamples[i])
-				if actualPubKeysLen < expectedPublicKeyCount {
+				if actualPubKeysLen != expectedPublicKeyCount {
 					t.Errorf(
 						"For key: %s at cycle: %d expected public keys to be at least of length %d but was: %d",
 						testSet.namedKey.name,

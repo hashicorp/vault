@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { belongsTo } from '@ember-data/model';
@@ -34,7 +34,7 @@ import { isArray } from '@ember/array';
 export default function attachCapabilities(modelClass, capabilities) {
   const capabilityKeys = Object.keys(capabilities);
   const newRelationships = capabilityKeys.reduce((ret, key) => {
-    ret[key] = belongsTo('capabilities');
+    ret[key] = belongsTo('capabilities', { async: false, inverse: null });
     return ret;
   }, {});
 

@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 module "autopilot_upgrade_storageconfig" {
   source = "./modules/autopilot_upgrade_storageconfig"
@@ -49,8 +49,37 @@ module "generate_secondary_token" {
   vault_install_dir = var.vault_install_dir
 }
 
+module "install_packages" {
+  source = "./modules/install_packages"
+}
+
 module "read_license" {
   source = "./modules/read_license"
+}
+
+module "replication_data" {
+  source = "./modules/replication_data"
+}
+
+module "seal_awskms" {
+  source = "./modules/seal_awskms"
+
+  cluster_ssh_keypair = var.aws_ssh_keypair_name
+  common_tags         = var.tags
+}
+
+module "seal_shamir" {
+  source = "./modules/seal_shamir"
+
+  cluster_ssh_keypair = var.aws_ssh_keypair_name
+  common_tags         = var.tags
+}
+
+module "seal_pkcs11" {
+  source = "./modules/seal_pkcs11"
+
+  cluster_ssh_keypair = var.aws_ssh_keypair_name
+  common_tags         = var.tags
 }
 
 module "shutdown_node" {
@@ -59,6 +88,17 @@ module "shutdown_node" {
 
 module "shutdown_multiple_nodes" {
   source = "./modules/shutdown_multiple_nodes"
+}
+
+module "start_vault" {
+  source = "./modules/start_vault"
+
+  install_dir = var.vault_install_dir
+  log_level   = var.vault_log_level
+}
+
+module "stop_vault" {
+  source = "./modules/stop_vault"
 }
 
 # create target instances using ec2:CreateFleet
@@ -104,6 +144,13 @@ module "vault_agent" {
   vault_instance_count = var.vault_instance_count
 }
 
+module "vault_proxy" {
+  source = "./modules/vault_proxy"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
 module "vault_verify_agent_output" {
   source = "./modules/vault_verify_agent_output"
 
@@ -121,7 +168,25 @@ module "vault_cluster" {
 module "vault_get_cluster_ips" {
   source = "./modules/vault_get_cluster_ips"
 
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
+module "vault_raft_remove_peer" {
+  source            = "./modules/vault_raft_remove_peer"
   vault_install_dir = var.vault_install_dir
+}
+
+module "vault_setup_perf_secondary" {
+  source = "./modules/vault_setup_perf_secondary"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_test_ui" {
+  source = "./modules/vault_test_ui"
+
+  ui_run_tests = var.ui_run_tests
 }
 
 module "vault_unseal_nodes" {
@@ -137,6 +202,7 @@ module "vault_upgrade" {
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count
 }
+
 
 module "vault_verify_autopilot" {
   source = "./modules/vault_verify_autopilot"
@@ -160,6 +226,13 @@ module "vault_verify_undo_logs" {
   vault_instance_count = var.vault_instance_count
 }
 
+module "vault_verify_default_lcq" {
+  source = "./modules/vault_verify_default_lcq"
+
+  vault_autopilot_default_max_leases = "300000"
+  vault_instance_count               = var.vault_instance_count
+}
+
 module "vault_verify_replication" {
   source = "./modules/vault_verify_replication"
 
@@ -170,7 +243,6 @@ module "vault_verify_replication" {
 module "vault_verify_ui" {
   source = "./modules/vault_verify_ui"
 
-  vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count
 }
 
@@ -183,12 +255,6 @@ module "vault_verify_unsealed" {
 
 module "vault_setup_perf_primary" {
   source = "./modules/vault_setup_perf_primary"
-
-  vault_install_dir = var.vault_install_dir
-}
-
-module "vault_setup_perf_secondary" {
-  source = "./modules/vault_setup_perf_secondary"
 
   vault_install_dir = var.vault_install_dir
 }
@@ -220,13 +286,20 @@ module "vault_verify_write_data" {
   vault_instance_count = var.vault_instance_count
 }
 
-module "vault_raft_remove_peer" {
-  source            = "./modules/vault_raft_remove_peer"
+module "vault_wait_for_leader" {
+  source = "./modules/vault_wait_for_leader"
+
   vault_install_dir = var.vault_install_dir
 }
 
-module "vault_test_ui" {
-  source = "./modules/vault_test_ui"
+module "vault_wait_for_seal_rewrap" {
+  source = "./modules/vault_wait_for_seal_rewrap"
 
-  ui_run_tests = var.ui_run_tests
+  vault_install_dir = var.vault_install_dir
+}
+
+module "verify_seal_type" {
+  source = "./modules/verify_seal_type"
+
+  vault_install_dir = var.vault_install_dir
 }

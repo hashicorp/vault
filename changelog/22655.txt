@@ -1,0 +1,3 @@
+```release-note:change
+database/mongodbatlas: Update plugin to v0.10.1
+```

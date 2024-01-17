@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -81,7 +81,7 @@ func TestACMEIssuerRoleLoading(t *testing.T) {
 
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
-			f := b.acmeWrapper(func(acmeCtx *acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+			f := b.acmeWrapper(acmeWrapperOpts{}, func(acmeCtx *acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 				if tt.roleName != acmeCtx.role.Name {
 					return nil, fmt.Errorf("expected role %s but got %s", tt.roleName, acmeCtx.role.Name)
 				}

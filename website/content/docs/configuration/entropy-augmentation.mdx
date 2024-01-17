@@ -15,6 +15,9 @@ include: [PKCS11 seal](/vault/docs/configuration/seal/pkcs11), [AWS KMS](/vault/
 Vault Enterprises's external entropy support is activated by the presence of an `entropy "seal"`
 block in Vault's configuration file.
 
+~> **Note**: If using the Seal High Availability Beta, entropy will be retrieved
+from seals in priority order, using bytes from the first available and online seal.
+
 ## Requirements
 
 A valid Vault Enterprise license is required for Entropy Augmentation.

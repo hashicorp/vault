@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pkiext_binary
 
@@ -127,9 +127,8 @@ func SubtestACMECaddy(configTemplate string, enableEAB bool) func(*testing.T, *V
 		// Kick off Caddy container.
 		t.Logf("creating on network: %v", vaultNetwork)
 		caddyRunner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
-			// TODO: Replace with pull-through cache. - schultz
-			ImageRepo:     "library/caddy",
-			ImageTag:      "latest",
+			ImageRepo:     "docker.mirror.hashicorp.services/library/caddy",
+			ImageTag:      "2.6.4",
 			ContainerName: fmt.Sprintf("caddy_test_%s", runID),
 			NetworkName:   vaultNetwork,
 			Ports:         []string{"80/tcp", "443/tcp", "443/udp"},
@@ -193,7 +192,7 @@ func SubtestACMECaddy(configTemplate string, enableEAB bool) func(*testing.T, *V
 		// Start a cURL container.
 		curlRunner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
 			ImageRepo:     "docker.mirror.hashicorp.services/curlimages/curl",
-			ImageTag:      "latest",
+			ImageTag:      "8.4.0",
 			ContainerName: fmt.Sprintf("curl_test_%s", runID),
 			NetworkName:   vaultNetwork,
 			Entrypoint:    []string{"sleep", sleepTimer},

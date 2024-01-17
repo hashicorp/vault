@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package builtinplugins
 
@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/constants"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 
@@ -87,6 +88,7 @@ func Test_RegistryKeyCounts(t *testing.T) {
 		name       string
 		pluginType consts.PluginType
 		want       int // use slice length as test condition
+		entWant    int
 		wantOk     bool
 	}{
 		{
@@ -98,6 +100,7 @@ func Test_RegistryKeyCounts(t *testing.T) {
 			name:       "number of auth plugins",
 			pluginType: consts.PluginTypeCredential,
 			want:       19,
+			entWant:    1,
 		},
 		{
 			name:       "number of database plugins",
@@ -108,13 +111,18 @@ func Test_RegistryKeyCounts(t *testing.T) {
 			name:       "number of secrets plugins",
 			pluginType: consts.PluginTypeSecrets,
 			want:       19,
+			entWant:    3,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			keys := Registry.Keys(tt.pluginType)
-			if len(keys) != tt.want {
-				t.Fatalf("got size: %d, want size: %d", len(keys), tt.want)
+			want := tt.want
+			if constants.IsEnterprise {
+				want += tt.entWant
+			}
+			if len(keys) != want {
+				t.Fatalf("got size: %d, want size: %d", len(keys), want)
 			}
 		})
 	}
@@ -240,12 +248,20 @@ func Test_RegistryMatchesGenOpenapi(t *testing.T) {
 		}
 		defer f.Close()
 
+		// This is a hack: the gen_openapi script contains a conditional block to
+		// enable the enterprise plugins, whose lines are indented.  Tweak the
+		// regexp to only include the indented lines on enterprise.
+		leading := "^"
+		if constants.IsEnterprise {
+			leading = "^ *"
+		}
+
 		var (
 			credentialBackends   []string
-			credentialBackendsRe = regexp.MustCompile(`^vault auth enable (?:-.+ )*(?:"([a-zA-Z]+)"|([a-zA-Z]+))$`)
+			credentialBackendsRe = regexp.MustCompile(leading + `vault auth enable (?:-.+ )*(?:"([a-zA-Z]+)"|([a-zA-Z]+))$`)
 
 			secretsBackends   []string
-			secretsBackendsRe = regexp.MustCompile(`^vault secrets enable (?:-.+ )*(?:"([a-zA-Z]+)"|([a-zA-Z]+))$`)
+			secretsBackendsRe = regexp.MustCompile(leading + `vault secrets enable (?:-.+ )*(?:"([a-zA-Z]+)"|([a-zA-Z]+))$`)
 		)
 
 		scanner := bufio.NewScanner(f)
@@ -280,15 +296,15 @@ func Test_RegistryMatchesGenOpenapi(t *testing.T) {
 
 		deprecationStatus, ok := Registry.DeprecationStatus(name, pluginType)
 		if !ok {
-			t.Fatalf("%q %s backend is missing from registry.go; please remove it from gen_openapi.sh", name, pluginType)
+			t.Errorf("%q %s backend is missing from registry.go; please remove it from gen_openapi.sh", name, pluginType)
 		}
 
 		if deprecationStatus == consts.Removed {
-			t.Fatalf("%q %s backend is marked 'removed' in registry.go; please remove it from gen_openapi.sh", name, pluginType)
+			t.Errorf("%q %s backend is marked 'removed' in registry.go; please remove it from gen_openapi.sh", name, pluginType)
 		}
 	}
 
-	// ensureInScript ensures that the given plugin name in in gen_openapi.sh script
+	// ensureInScript ensures that the given plugin name is in gen_openapi.sh script
 	ensureInScript := func(t *testing.T, scriptBackends []string, name string) {
 		t.Helper()
 
@@ -302,7 +318,7 @@ func Test_RegistryMatchesGenOpenapi(t *testing.T) {
 		}
 
 		if !slices.Contains(scriptBackends, name) {
-			t.Fatalf("%q backend could not be found in gen_openapi.sh, please add it there", name)
+			t.Errorf("%q backend could not be found in gen_openapi.sh, please add it there", name)
 		}
 	}
 

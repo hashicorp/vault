@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -17,6 +17,7 @@ import {
   overrideCapabilities,
 } from 'vault/tests/helpers/oidc-config';
 import parseURL from 'core/utils/parse-url';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const ISSUER_URL = 'http://127.0.0.1:8200/v1/identity/oidc/provider/test-provider';
 
@@ -49,6 +50,16 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       };
     });
     this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
+    setRunOptions({
+      rules: {
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+      },
+    });
   });
 
   test('it should save new provider', async function (assert) {

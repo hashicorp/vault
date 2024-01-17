@@ -2,14 +2,7 @@
 
 #### Affected versions
 
-- All current versions of Vault
-
-<Tip title="We are actively working on the underlying issue">
-
-Look for **Fix a race condition with update-primary that could result in data
-loss after a DR failover.** in a future changelog for the resolution.
-
-</Tip>
+All versions of Vault before 1.14.1, 1.13.5, 1.12.9, and 1.11.12.
 
 #### Issue
 
@@ -17,7 +10,7 @@ The [update-primary](/vault/api-docs/system/replication/replication-performance#
 endpoint temporarily removes all mount entries except for those that are managed
 automatically by vault (e.g. identity mounts). In certain situations, a race
 condition between mount table truncation replication repairs may lead to data
-loss when updating secondary replication clusters. 
+loss when updating secondary replication clusters.
 
 Situations where the race condition may occur:
 

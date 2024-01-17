@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -274,9 +274,10 @@ existing CRL and OCSP paths will return the unified CRL instead of a response ba
 
 func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, req.Storage)
-	config, err := sc.getRevocationConfig()
+
+	config, err := b.CrlBuilder().getConfigWithForcedUpdate(sc)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed fetching CRL config: %w", err)
 	}
 
 	return genResponseFromCrlConfig(config), nil
@@ -284,7 +285,7 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *fram
 
 func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, req.Storage)
-	config, err := sc.getRevocationConfig()
+	config, err := b.CrlBuilder().getConfigWithForcedUpdate(sc)
 	if err != nil {
 		return nil, err
 	}
@@ -409,29 +410,21 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		return logical.ErrorResponse("unified_crl=true requires auto_rebuild=true, as unified CRLs cannot be rebuilt on every revocation."), nil
 	}
 
-	entry, err := logical.StorageEntryJSON("config/crl", config)
-	if err != nil {
-		return nil, err
+	if _, err := b.CrlBuilder().writeConfig(sc, config); err != nil {
+		return nil, fmt.Errorf("failed persisting CRL config: %w", err)
 	}
-	err = req.Storage.Put(ctx, entry)
-	if err != nil {
-		return nil, err
-	}
-
-	b.crlBuilder.markConfigDirty()
-	b.crlBuilder.reloadConfigIfRequired(sc)
 
 	resp := genResponseFromCrlConfig(config)
 
 	// Note this only affects/happens on the main cluster node, if you need to
 	// notify something based on a configuration change on all server types
-	// have a look at crlBuilder::reloadConfigIfRequired
+	// have a look at CrlBuilder::reloadConfigIfRequired
 	if oldDisable != config.Disable || (oldAutoRebuild && !config.AutoRebuild) || (oldEnableDelta != config.EnableDelta) || (oldUnifiedCRL != config.UnifiedCRL) {
 		// It wasn't disabled but now it is (or equivalently, we were set to
 		// auto-rebuild and we aren't now or equivalently, we changed our
 		// mind about delta CRLs and need a new complete one or equivalently,
 		// we changed our mind about unified CRLs), rotate the CRLs.
-		warnings, crlErr := b.crlBuilder.rebuild(sc, true)
+		warnings, crlErr := b.CrlBuilder().rebuild(sc, true)
 		if crlErr != nil {
 			switch crlErr.(type) {
 			case errutil.UserError:

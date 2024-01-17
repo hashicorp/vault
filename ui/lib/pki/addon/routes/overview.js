@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
@@ -49,7 +49,7 @@ export default class PkiOverviewRoute extends Route {
 
   async model() {
     return hash({
-      hasConfig: this.shouldPromptConfig,
+      hasConfig: this.pkiMountHasConfig,
       engine: this.modelFor('application'),
       roles: this.fetchAllRoles(),
       issuers: this.fetchAllIssuers(),

@@ -4,6 +4,11 @@ on:
   # Change to nightly cadence once API-credential-requiring tests are added to the jobs
   workflow_dispatch: 
 
+# cancel existing runs of the same workflow on the same ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 # Currently the jobs here are only for acceptance tests that have no dependencies except for Docker
 jobs:
   plugins-database:

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 // This file styles the following styles: title, subtitle, form-section.title and title sizes
@@ -47,10 +47,14 @@
   &.is-7 {
     font-size: $size-7;
   }
+
+  &.is-8 {
+    font-size: $size-8;
+  }
 }
 
 .form-section .title {
-  margin-bottom: $spacing-s;
+  margin-bottom: $spacing-12;
 }
 
 .is-subtitle-gray {

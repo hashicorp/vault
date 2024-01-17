@@ -160,13 +160,13 @@ func TestOpenAPI_ExpandPattern(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		out, err := expandPattern(test.inPattern)
+		paths, _, err := expandPattern(test.inPattern)
 		if err != nil {
 			t.Fatal(err)
 		}
-		sort.Strings(out)
-		if !reflect.DeepEqual(out, test.outPathlets) {
-			t.Fatalf("Test %d: Expected %v got %v", i, test.outPathlets, out)
+		sort.Strings(paths)
+		if !reflect.DeepEqual(paths, test.outPathlets) {
+			t.Fatalf("Test %d: Expected %v got %v", i, test.outPathlets, paths)
 		}
 	}
 }
@@ -188,7 +188,7 @@ func TestOpenAPI_ExpandPattern_ReturnsError(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		_, err := expandPattern(test.inPattern)
+		_, _, err := expandPattern(test.inPattern)
 		if err != test.outError {
 			t.Fatalf("Test %d: Expected %q got %q", i, test.outError, err)
 		}
@@ -196,31 +196,50 @@ func TestOpenAPI_ExpandPattern_ReturnsError(t *testing.T) {
 }
 
 func TestOpenAPI_SplitFields(t *testing.T) {
+	paths, captures, err := expandPattern("some/" + GenericNameRegex("a") + "/path" + OptionalParamRegex("e"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	fields := map[string]*FieldSchema{
 		"a": {Description: "path"},
 		"b": {Description: "body"},
 		"c": {Description: "body"},
 		"d": {Description: "body"},
 		"e": {Description: "path"},
+		"f": {Description: "query", Query: true},
 	}
 
-	pathFields, bodyFields := splitFields(fields, "some/{a}/path/{e}")
+	for index, path := range paths {
+		pathFields, queryFields, bodyFields := splitFields(fields, path, captures)
 
-	lp := len(pathFields)
-	lb := len(bodyFields)
-	l := len(fields)
-	if lp+lb != l {
-		t.Fatalf("split length error: %d + %d != %d", lp, lb, l)
-	}
-
-	for name, field := range pathFields {
-		if field.Description != "path" {
-			t.Fatalf("expected field %s to be in 'path', found in %s", name, field.Description)
+		numPath := len(pathFields)
+		numQuery := len(queryFields)
+		numBody := len(bodyFields)
+		numExpectedDiscarded := 0
+		// The first path generated is expected to be the one omitting the optional parameter field "e"
+		if index == 0 {
+			numExpectedDiscarded = 1
 		}
-	}
-	for name, field := range bodyFields {
-		if field.Description != "body" {
-			t.Fatalf("expected field %s to be in 'body', found in %s", name, field.Description)
+		l := len(fields)
+		if numPath+numQuery+numBody+numExpectedDiscarded != l {
+			t.Fatalf("split length error: %d + %d + %d + %d != %d", numPath, numQuery, numBody, numExpectedDiscarded, l)
+		}
+
+		for name, field := range pathFields {
+			if field.Description != "path" {
+				t.Fatalf("expected field %s to be in 'path', found in %s", name, field.Description)
+			}
+		}
+		for name, field := range queryFields {
+			if field.Description != "query" {
+				t.Fatalf("expected field %s to be in 'query', found in %s", name, field.Description)
+			}
+		}
+		for name, field := range bodyFields {
+			if field.Description != "body" {
+				t.Fatalf("expected field %s to be in 'body', found in %s", name, field.Description)
+			}
 		}
 	}
 }

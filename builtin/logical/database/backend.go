@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package database
 
@@ -15,6 +15,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/builtin/logical/database/schedule"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/syncmap"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -68,7 +69,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 	b.credRotationQueue = queue.New()
 	// Load queue and kickoff new periodic ticker
-	go b.initQueue(b.queueCtx, conf, conf.System.ReplicationState())
+	go b.initQueue(b.queueCtx, conf)
 
 	// collect metrics on number of plugin instances
 	var err error
@@ -106,6 +107,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 				pathListPluginConnection(&b),
 				pathConfigurePluginConnection(&b),
 				pathResetConnection(&b),
+				pathReloadPlugin(&b),
 			},
 			pathListRoles(&b),
 			pathRoles(&b),
@@ -127,6 +129,8 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	b.connections = syncmap.NewSyncMap[string, *dbPluginInstance]()
 	b.queueCtx, b.cancelQueueCtx = context.WithCancel(context.Background())
 	b.roleLocks = locksutil.CreateLocks()
+	b.schedule = &schedule.DefaultSchedule{}
+
 	return &b
 }
 
@@ -176,6 +180,8 @@ type databaseBackend struct {
 	// the running gauge collection process
 	gaugeCollectionProcess     *metricsutil.GaugeCollectionProcess
 	gaugeCollectionProcessStop sync.Once
+
+	schedule schedule.Scheduler
 }
 
 func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage, name string) (*DatabaseConfig, error) {

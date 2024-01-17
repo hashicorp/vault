@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package ssh
 
@@ -2765,7 +2765,7 @@ func TestProperAuthing(t *testing.T) {
 		"public_key":         shouldBeUnauthedReadList,
 		"roles/test-ca":      shouldBeAuthed,
 		"roles/test-otp":     shouldBeAuthed,
-		"roles":              shouldBeAuthed,
+		"roles/":             shouldBeAuthed,
 		"sign/test-ca":       shouldBeAuthed,
 		"tidy/dynamic-keys":  shouldBeAuthed,
 		"verify":             shouldBeUnauthedWriteOnly,
@@ -2809,7 +2809,8 @@ func TestProperAuthing(t *testing.T) {
 
 		handler, present := paths[raw_path]
 		if !present {
-			t.Fatalf("OpenAPI reports SSH mount contains %v->%v  but was not tested to be authed or authed.", openapi_path, raw_path)
+			t.Fatalf("OpenAPI reports SSH mount contains %v -> %v but was not tested to be authed or not authed.",
+				openapi_path, raw_path)
 		}
 
 		openapi_data := raw_data.(map[string]interface{})

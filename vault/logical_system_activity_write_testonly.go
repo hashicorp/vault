@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 //go:build testonly
 
@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,9 +17,10 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/clientcountutil"
+	"github.com/hashicorp/vault/sdk/helper/clientcountutil/generation"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
-	"github.com/hashicorp/vault/vault/activity/generation"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -36,7 +38,7 @@ func (b *SystemBackend) activityWritePath() *framework.Path {
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.CreateOperation: &framework.PathOperation{
+			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.handleActivityWriteData,
 				Summary:  "Write activity log data",
 			},
@@ -56,6 +58,11 @@ func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *lo
 	}
 	if len(input.Data) == 0 {
 		return logical.ErrorResponse("Missing required \"data\" values"), logical.ErrInvalidRequest
+	}
+
+	err = clientcountutil.VerifyInput(input)
+	if err != nil {
+		return logical.ErrorResponse("Invalid input data: %s", err), logical.ErrInvalidRequest
 	}
 
 	numMonths := 0
@@ -182,17 +189,14 @@ func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAc
 	if c.Count > 1 {
 		count = int(c.Count)
 	}
-	clientType := entityActivityType
-	if c.NonEntity {
-		clientType = nonEntityTokenActivityType
-	}
+	isNonEntity := c.ClientType != entityActivityType
 	for i := 0; i < count; i++ {
 		record := &activity.EntityRecord{
 			ClientID:      c.Id,
 			NamespaceID:   c.Namespace,
-			NonEntity:     c.NonEntity,
 			MountAccessor: mountAccessor,
-			ClientType:    clientType,
+			NonEntity:     isNonEntity,
+			ClientType:    c.ClientType,
 		}
 		if record.ClientID == "" {
 			var err error
@@ -223,39 +227,50 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 	m.months[month.GetMonthsAgo()].generationParameters = month
 	add := func(c []*generation.Client, segmentIndex *int) error {
 		for _, clients := range c {
+			mountAccessor := defaultMountAccessorRootNS
 
 			if clients.Namespace == "" {
 				clients.Namespace = namespace.RootNamespaceID
 			}
-
-			// verify that the namespace exists
-			ns, err := core.NamespaceByID(ctx, clients.Namespace)
-			if err != nil {
-				return err
+			if clients.ClientType == "" {
+				clients.ClientType = entityActivityType
 			}
+
+			if clients.Namespace != namespace.RootNamespaceID && !strings.HasSuffix(clients.Namespace, "/") {
+				clients.Namespace += "/"
+			}
+			// verify that the namespace exists
+			ns := core.namespaceByPath(clients.Namespace)
+			if ns.ID == namespace.RootNamespaceID && clients.Namespace != namespace.RootNamespaceID {
+				return fmt.Errorf("unable to find namespace %s", clients.Namespace)
+			}
+			clients.Namespace = ns.ID
 
 			// verify that the mount exists
 			if clients.Mount != "" {
+				if !strings.HasSuffix(clients.Mount, "/") {
+					clients.Mount += "/"
+				}
 				nctx := namespace.ContextWithNamespace(ctx, ns)
 				mountEntry := core.router.MatchingMountEntry(nctx, clients.Mount)
 				if mountEntry == nil {
-					return fmt.Errorf("unable to find matching mount in namespace %s", clients.Namespace)
+					return fmt.Errorf("unable to find matching mount in namespace %s", ns.Path)
 				}
+				mountAccessor = mountEntry.Accessor
 			}
 
-			mountAccessor := defaultMountAccessorRootNS
 			if clients.Namespace != namespace.RootNamespaceID && clients.Mount == "" {
 				// if we're not using the root namespace, find a mount on the namespace that we are using
 				found := false
 				for _, mount := range mounts {
-					if mount.NamespaceID == clients.Namespace {
+					if mount.NamespaceID == ns.ID {
 						mountAccessor = mount.Accessor
 						found = true
 						break
 					}
 				}
 				if !found {
-					return fmt.Errorf("unable to find matching mount in namespace %s", clients.Namespace)
+					return fmt.Errorf("unable to find matching mount in namespace %s", ns.Path)
 				}
 			}
 
@@ -304,7 +319,7 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 		numClients = int(c.Count)
 	}
 	for _, client := range repeatedFrom.clients {
-		if c.NonEntity == client.NonEntity && mountAccessor == client.MountAccessor && c.Namespace == client.NamespaceID {
+		if c.ClientType == client.ClientType && mountAccessor == client.MountAccessor && c.Namespace == client.NamespaceID {
 			addingTo.addEntityRecord(client, segmentIndex)
 			numClients--
 			if numClients == 0 {
@@ -319,21 +334,24 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 }
 
 func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog) ([]string, error) {
-	now := timeutil.StartOfMonth(time.Now().UTC())
+	now := time.Now().UTC()
 	paths := []string{}
 
 	_, writePQ := opts[generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES]
 	_, writeDistinctClients := opts[generation.WriteOptions_WRITE_DISTINCT_CLIENTS]
+	_, writeEntities := opts[generation.WriteOptions_WRITE_ENTITIES]
+	_, writeIntentLog := opts[generation.WriteOptions_WRITE_INTENT_LOGS]
 
 	pqOpts := pqOptions{}
 	if writePQ || writeDistinctClients {
 		pqOpts.byNamespace = make(map[string]*processByNamespace)
 		pqOpts.byMonth = make(map[int64]*processMonth)
-		pqOpts.activePeriodEnd = m.latestTimestamp(now)
-		pqOpts.endTime = timeutil.EndOfMonth(pqOpts.activePeriodEnd)
+		pqOpts.activePeriodEnd = m.latestTimestamp(now, true)
+		pqOpts.endTime = timeutil.EndOfMonth(m.latestTimestamp(pqOpts.activePeriodEnd, false))
 		pqOpts.activePeriodStart = m.earliestTimestamp(now)
 	}
 
+	var earliestTimestamp, latestTimestamp time.Time
 	for i, month := range m.months {
 		if month.generationParameters == nil {
 			continue
@@ -344,12 +362,18 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 		} else {
 			timestamp = now
 		}
+		if earliestTimestamp.IsZero() || timestamp.Before(earliestTimestamp) {
+			earliestTimestamp = timestamp
+		}
+		if timestamp.After(latestTimestamp) {
+			latestTimestamp = timestamp
+		}
 		segments, err := month.populateSegments()
 		if err != nil {
 			return nil, err
 		}
 		for segmentIndex, segment := range segments {
-			if _, ok := opts[generation.WriteOptions_WRITE_ENTITIES]; ok {
+			if writeEntities || writeIntentLog {
 				if segment == nil {
 					// skip the index
 					continue
@@ -367,12 +391,19 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 			}
 		}
 
-		if writePQ || writeDistinctClients {
+		if (writePQ || writeDistinctClients) && i > 0 {
 			reader := newProtoSegmentReader(segments)
 			err = activityLog.segmentToPrecomputedQuery(ctx, timestamp, reader, pqOpts)
 			if err != nil {
 				return nil, err
 			}
+		}
+
+	}
+	if writeIntentLog {
+		err := activityLog.writeIntentLog(ctx, earliestTimestamp.UTC().Unix(), latestTimestamp.UTC())
+		if err != nil {
+			return nil, err
 		}
 	}
 	wg := sync.WaitGroup{}
@@ -380,12 +411,13 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 	if err != nil {
 		return nil, err
 	}
+	wg.Wait()
 	return paths, nil
 }
 
-func (m *multipleMonthsActivityClients) latestTimestamp(now time.Time) time.Time {
+func (m *multipleMonthsActivityClients) latestTimestamp(now time.Time, includeCurrentMonth bool) time.Time {
 	for i, month := range m.months {
-		if month.generationParameters != nil {
+		if month.generationParameters != nil && (i != 0 || includeCurrentMonth) {
 			return timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
 		}
 	}

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* eslint-env node */
 /* eslint-disable no-console */
 /* eslint-disable no-process-exit */
-/* eslint-disable node/no-extraneous-require */
+/* eslint-disable n/no-extraneous-require */
 
 var readline = require('readline');
 const testHelper = require('./test-helper');
@@ -69,7 +69,9 @@ async function processLines(input, eachLine = () => {}) {
       }
     });
     try {
-      await testHelper.run('ember', ['test', ...process.argv.slice(2)]);
+      // only the test:filter command specifies --server by default
+      const verb = process.argv[2] === '--server' ? 'test' : 'exam';
+      await testHelper.run('ember', [verb, ...process.argv.slice(2)]);
     } catch (error) {
       console.log(error);
       process.exit(1);

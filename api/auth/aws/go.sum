@@ -47,8 +47,8 @@ github.com/hashicorp/go-uuid v1.0.2 h1:cfejS+Tpcp13yd5nYHWDI6qVCny6wyX2Mt5SGur2I
 github.com/hashicorp/go-uuid v1.0.2/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
 github.com/hashicorp/hcl v1.0.0 h1:0Anlzjpi4vEasTeNFn2mLJgTSwt0+6sfsiTG8qcWGx4=
 github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T20WEQ=
-github.com/hashicorp/vault/api v1.9.2 h1:YjkZLJ7K3inKgMZ0wzCU9OHqc+UqMQyXsPXnf3Cl2as=
-github.com/hashicorp/vault/api v1.9.2/go.mod h1:jo5Y/ET+hNyz+JnKDt8XLAdKs+AM0G5W0Vp1IrFI8N8=
+github.com/hashicorp/vault/api v1.10.0 h1:/US7sIjWN6Imp4o/Rj1Ce2Nr5bki/AXi9vAW3p2tOJQ=
+github.com/hashicorp/vault/api v1.10.0/go.mod h1:jo5Y/ET+hNyz+JnKDt8XLAdKs+AM0G5W0Vp1IrFI8N8=
 github.com/jmespath/go-jmespath v0.3.0 h1:OS12ieG61fsCg5+qLJ+SsW9NicxNkg3b25OyT2yCeUc=
 github.com/jmespath/go-jmespath v0.3.0/go.mod h1:9QtRXoHjLGCJ5IBSaohpXITPlowMeeYCZ7fLUTSywik=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=

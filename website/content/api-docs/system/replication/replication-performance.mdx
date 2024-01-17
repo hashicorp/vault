@@ -8,9 +8,9 @@ description: >-
 
 # `/sys/replication/performance`
 
-~> **Enterprise Only** – These endpoints require Vault Enterprise.
-
 ## Check performance status
+
+@include 'alerts/enterprise-and-hcp.mdx'
 
 This endpoint prints information about the status of replication (mode,
 sync progress, etc).
@@ -40,6 +40,8 @@ primary, it will look something like:
     "known_secondaries": ["2"],
     "last_wal": 87,
     "merkle_root": "c31e40f6ff02f32c37b70e6a4d58732ac812abf0",
+    "corrupted_merkle_tree": false,
+    "last_corruption_check_epoch": "1694456090",
     "mode": "primary",
     "secondaries": [
       {
@@ -84,6 +86,10 @@ secondary, it will look something like:
 
 ## Enable performance primary replication
 
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
 This endpoint enables replication in primary mode. This is used when replication
 is currently disabled on the cluster (if the cluster is already a secondary, it
 must be promoted).
@@ -121,6 +127,10 @@ $ curl \
 
 ## Demote performance primary
 
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
 This endpoint demotes a performance primary cluster to a performance secondary.
 This secondary cluster will not attempt to connect to a primary (see the update-primary call),
 but will maintain knowledge of its cluster ID and can be reconnected to the same
@@ -140,6 +150,10 @@ $ curl \
 ```
 
 ## Disable performance primary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint disables Performance Replication entirely on the cluster. Any
 performance secondaries will no longer be able to connect. Caution: re-enabling
@@ -162,6 +176,10 @@ $ curl \
 ```
 
 ## Generate performance secondary token
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint generates a performance secondary activation token for the
 cluster with the given opaque identifier, which must be unique. This
@@ -223,6 +241,10 @@ $ curl \
 
 ## Revoke performance secondary token
 
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
 This endpoint revokes a performance secondary's ability to connect to the
 performance primary cluster; the secondary will immediately be disconnected and
 will not be allowed to connect again unless given a new activation token.
@@ -254,6 +276,10 @@ $ curl \
 ```
 
 ## Create paths filter
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint is used to modify the mounts and namespaces that are filtered to a secondary.
 Filtering can be specified in allow mode or deny mode. In allow
@@ -299,6 +325,10 @@ $ curl \
 
 ## Read paths filter
 
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
 This endpoint is used to read the mode and the mount/namespace paths that are filtered
 for a secondary.
 
@@ -329,6 +359,10 @@ $ curl \
 
 ## Delete paths filter
 
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
 This endpoint is used to delete the mount and namespace filters for a secondary.
 
 | Method   | Path                                                    |
@@ -349,6 +383,10 @@ $ curl \
 ```
 
 ## Read dynamically generated filter (PRIMARY)
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint is used to read the namespace and the mount paths that are dynamically
 filtered for a secondary on the primary.
@@ -380,6 +418,10 @@ $ curl \
 
 ## Read dynamically generated filter (SECONDARY)
 
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
 This endpoint is used to read the namespace and the mount paths that are dynamically
 filtered for a secondary on the secondary.
 
@@ -410,7 +452,9 @@ $ curl \
 
 ## Fetch performance secondary public key
 
-(Vault 1.3+)
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint allows fetching a public key that is used to encrypt the returned
 credential information (instead of using a response wrapped token). This avoids
@@ -430,6 +474,10 @@ $ curl \
 ```
 
 ## Enable performance secondary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint enables Performance Replication on a secondary using a secondary activation
 token.
@@ -479,6 +527,10 @@ $ curl \
 
 ## Promote performance secondary
 
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
 This endpoint promotes the performance secondary cluster to performance primary.
 For data safety and security reasons, new secondary tokens will need to be
 issued to other secondaries, and there should never be more than one performance
@@ -516,6 +568,10 @@ $ curl \
 
 ## Disable performance secondary
 
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
 This endpoint disables Performance Replication entirely on the cluster. The cluster will no
 longer be able to connect to the performance primary.
 
@@ -540,8 +596,24 @@ $ curl \
 
 ## Update performance secondary's primary
 
-This endpoint changes a performance secondary cluster's assigned primary cluster using a
-secondary activation token. This does not wipe all data in the cluster.
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+The update endpoint changes the primary cluster assigned to a
+performance secondary cluster. Changing the primary cluster assignment
+does not wipe data in the secondary cluster.
+
+There are two ways to update the primary assignment:
+
+1. **Use a secondary activation token with the `token` parameter**.
+1. **Use primary cluster addresses with the `update_primary_addrs` parameter**.
+   During the update, cluster addresses are pinged one at a time via gRPC. The
+   first cluster to respond successfully is assigned as the new primary address.
+
+The two update methods are mutually exclusive. You may use one or the other,
+but not both. A good rule of thumb is to use `token` on DR secondary
+clusters and `update_primary_addrs` on performance secondary clusters.
 
 | Method | Path                                                    |
 | :----- | :------------------------------------------------------ |
@@ -571,14 +643,31 @@ secondary activation token. This does not wipe all data in the cluster.
   primary clusters. These addresses will be pinged in sequence, and if any of them
   respond successfully, these will be recorded as the new primary addresses. This is
   a lighter weight version of specifying a token and should result in less disruption
-  of replication. Note that it's invalid to specify this and `token` in the same API call.
-  They are mutually exclusive.
+  of replication.
 
 ### Sample payload
 
 ```json
 {
   "token": "..."
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/performance/secondary/update-primary
+```
+
+### Sample payload
+
+```json
+{
+  "update_primary_addrs": ["10.0.0.2:8201"]
 }
 ```
 

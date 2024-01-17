@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -8,10 +8,10 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/hcl/hcl/printer"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/vault"
-	"github.com/mitchellh/cli"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/posener/complete"
 )

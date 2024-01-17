@@ -1,13 +1,13 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .namespace-picker {
   position: relative;
   color: var(--token-color-palette-neutral-300);
   display: flex;
-  padding: $spacing-xxs $spacing-xs;
+  padding: $spacing-4 $spacing-8;
   width: 100%;
 }
 
@@ -22,12 +22,7 @@
   flex: 1 1 auto;
   height: 2rem;
   justify-content: space-between;
-  margin-right: $spacing-xxs;
-}
-
-.namespace-name {
-  font-size: 1rem;
-  margin-left: $spacing-xs;
+  margin-right: $spacing-4;
 }
 
 .namespace-picker-content {
@@ -46,12 +41,11 @@
   max-width: 210px;
   overflow-wrap: break-word;
   word-wrap: break-word;
-  word-break: break-all;
   word-break: break-word;
 }
 
 .namespace-header-bar {
-  padding: $size-11 $size-9;
+  padding: $spacing-4 $spacing-10;
   border-bottom: 1px solid rgba($black, 0.1);
   font-weight: $font-weight-semibold;
   min-height: 32px;
@@ -78,12 +72,12 @@
   color: $black;
   text-decoration: none;
   font-weight: $font-weight-semibold;
-  padding: $size-10 $size-9 $size-10 0;
+  padding: $spacing-8 $spacing-10 $spacing-8 0;
 }
 
 .namespace-link.is-current {
-  margin-top: $size-8;
-  margin-right: -$size-10;
+  margin-top: $spacing-12;
+  margin-right: -$spacing-8;
 
   svg {
     margin-top: 2px;
@@ -92,7 +86,7 @@
 }
 
 .leaf-panel {
-  padding: $size-11 $size-9;
+  padding: $spacing-4 $spacing-10;
   transition: transform ease-in-out 250ms;
   will-change: transform;
   transform: translateX(0);

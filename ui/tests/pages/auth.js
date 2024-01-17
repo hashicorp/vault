@@ -1,10 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { create, visitable, fillable, clickable } from 'ember-cli-page-object';
-import { settled } from '@ember/test-helpers';
+import { click, settled } from '@ember/test-helpers';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 
 const { rootToken } = VAULT_KEYS;
@@ -19,6 +19,7 @@ export default create({
   namespaceInput: fillable('[data-test-auth-form-ns-input]'),
   optionsToggle: clickable('[data-test-auth-form-options-toggle]'),
   mountPath: fillable('[data-test-auth-form-mount-path]'),
+  authType: fillable('[data-test-select="auth-method"]'),
 
   login: async function (token = rootToken) {
     // make sure we're always logged out and logged back in
@@ -45,7 +46,7 @@ export default create({
     await this.usernameInput(username);
     return this.passwordInput(password).submit();
   },
-  loginNs: async function (ns) {
+  loginNs: async function (ns, token = rootToken) {
     // make sure we're always logged out and logged back in
     await this.logout();
     await settled();
@@ -55,7 +56,15 @@ export default create({
     await settled();
     await this.namespaceInput(ns);
     await settled();
-    await this.tokenInput(rootToken).submit();
+    await this.tokenInput(token).submit();
+    return;
+  },
+  clickLogout: async function (clearNamespace = false) {
+    await click('[data-test-user-menu-trigger]');
+    await click('[data-test-user-menu-content] a#logout');
+    if (clearNamespace) {
+      await this.namespaceInput('');
+    }
     return;
   },
 });

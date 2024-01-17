@@ -195,12 +195,17 @@ at a different path.
 
 ### Via the CLI
 
-The default path is `/jwt`. If this auth method was enabled at a
-different path, specify `-path=/my-path` in the CLI.
+```shell-session
+$ vault write auth/<path-to-jwt-backend>/login role=demo jwt=...
+```
+
+The default path for the JWT authentication backend is `/jwt`, so if you're using the default backend, the command would be:
 
 ```shell-session
 $ vault write auth/jwt/login role=demo jwt=...
 ```
+
+If your JWT auth backend is using a different path, use that path.
 
 ### Via the API
 

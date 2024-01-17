@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package aws
 
@@ -158,10 +158,10 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		// Check for an optional custom frequency at which we should poll for creds.
 		credentialPollIntervalSec := defaultCredentialPollInterval
 		if credentialPollIntervalRaw, ok := conf.Config["credential_poll_interval"]; ok {
-			if credentialPollInterval, ok := credentialPollIntervalRaw.(int); ok {
+			if credentialPollInterval, ok := credentialPollIntervalRaw.(int); ok && credentialPollInterval > 0 {
 				credentialPollIntervalSec = credentialPollInterval
 			} else {
-				return nil, errors.New("could not convert 'credential_poll_interval' into int")
+				return nil, errors.New("could not convert 'credential_poll_interval' into positive int")
 			}
 		}
 

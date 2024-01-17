@@ -112,6 +112,10 @@ management tool.
 
 There are two alternate methods of resolving the user object used to authenticate the end user: _Search_ or _User Principal Name_. When using _Search_, the bind can be either anonymous or authenticated. User Principal Name is a method of specifying users supported by Active Directory. More information on UPN can be found [here](<https://msdn.microsoft.com/en-us/library/ms677605(v=vs.85).aspx#userPrincipalName>).
 
+`userfilter` works with both authenticated and anonymous _Search_.
+In order for `userfilter` to apply for authenticated searches, `binddn` and `bindpass` must be set.
+For anonymous search, `discoverdn` must be set to `true`, and `deny_null_bind` must be set to false.
+
 #### Binding - authenticated search
 
 - `binddn` (string, optional) - Distinguished name of object to bind when performing user and group search. Example: `cn=vault,ou=Users,dc=example,dc=com`
@@ -191,7 +195,7 @@ $ vault write auth/ldap/config \
 - CA Certificate stored in file named `ldap_ca_cert.pem`
 - Server does not allow anonymous binds for performing user search.
 - Bind account used for searching is `cn=vault,ou=users,dc=example,dc=com` with password `My$ecrt3tP4ss`.
-- User objects are under the `ou=Users,dc-example,dc=com` organizational unit.
+- User objects are under the `ou=Users,dc=example,dc=com` organizational unit.
 - Username passed to vault when authenticating maps to the `sAMAccountName` attribute.
 - Group membership will be resolved via the `memberOf` attribute of _user_ objects. That search will begin under `ou=Users,dc=example,dc=com`.
 
@@ -269,6 +273,10 @@ default, foobar, zoobar
 ## Note on policy mapping
 
 It should be noted that user -> policy mapping happens at token creation time. And changes in group membership on the LDAP server will not affect tokens that have already been provisioned. To see these changes, old tokens should be revoked and the user should be asked to reauthenticate.
+
+## User lockout
+
+@include 'user-lockout.mdx'
 
 ## API
 

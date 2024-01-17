@@ -3,6 +3,11 @@ on:
     types:
       - closed
 
+# cancel existing runs of the same workflow on the same ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   stable_website_cherry_pick:
     if: github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'docs-cherrypick')

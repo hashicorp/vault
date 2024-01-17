@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package metricsutil
 
@@ -37,9 +37,10 @@ type ClusterMetricSink struct {
 }
 
 type TelemetryConstConfig struct {
-	LeaseMetricsEpsilon         time.Duration
-	NumLeaseMetricsTimeBuckets  int
-	LeaseMetricsNameSpaceLabels bool
+	LeaseMetricsEpsilon              time.Duration
+	NumLeaseMetricsTimeBuckets       int
+	LeaseMetricsNameSpaceLabels      bool
+	RollbackMetricsIncludeMountPoint bool
 }
 
 type Metrics interface {

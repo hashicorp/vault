@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package agentproxyshared
 
@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/command/agentproxyshared/auth/jwt"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth/kerberos"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth/kubernetes"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth/ldap"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth/oci"
 	token_file "github.com/hashicorp/vault/command/agentproxyshared/auth/token-file"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache"
@@ -62,6 +63,8 @@ func GetAutoAuthMethodFromConfig(autoAuthMethodType string, authConfig *auth.Aut
 		return token_file.NewTokenFileAuthMethod(authConfig)
 	case "pcf": // Deprecated.
 		return cf.NewCFAuthMethod(authConfig)
+	case "ldap":
+		return ldap.NewLdapAuthMethod(authConfig)
 	default:
 		return nil, errors.New(fmt.Sprintf("unknown auth method %q", autoAuthMethodType))
 	}

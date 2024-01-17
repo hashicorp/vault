@@ -1,9 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Service, { inject as service } from '@ember/service';
+import { sanitizePath, sanitizeStart } from 'core/utils/sanitize-path';
 import { task } from 'ember-concurrency';
 
 const API_PATHS = {
@@ -64,6 +65,8 @@ export default Service.extend({
   exactPaths: null,
   globPaths: null,
   canViewAll: null,
+  readFailed: false,
+  chrootNamespace: null,
   store: service(),
   auth: service(),
   namespace: service(),
@@ -80,6 +83,7 @@ export default Service.extend({
     } catch (err) {
       // If no policy can be found, default to showing all nav items.
       this.set('canViewAll', true);
+      this.set('readFailed', true);
     }
   }),
 
@@ -87,12 +91,16 @@ export default Service.extend({
     this.set('exactPaths', resp.data.exact_paths);
     this.set('globPaths', resp.data.glob_paths);
     this.set('canViewAll', resp.data.root);
+    this.set('chrootNamespace', resp.data.chroot_namespace);
+    this.set('readFailed', false);
   },
 
   reset() {
     this.set('exactPaths', null);
     this.set('globPaths', null);
     this.set('canViewAll', null);
+    this.set('readFailed', false);
+    this.set('chrootNamespace', null);
   },
 
   hasNavPermission(navItem, routeParams, requireAll) {
@@ -120,20 +128,21 @@ export default Service.extend({
   },
 
   pathNameWithNamespace(pathName) {
-    const namespace = this.namespace.path;
+    const namespace = this.chrootNamespace
+      ? `${sanitizePath(this.chrootNamespace)}/${sanitizePath(this.namespace.path)}`
+      : sanitizePath(this.namespace.path);
     if (namespace) {
-      return `${namespace}/${pathName}`;
+      return `${sanitizePath(namespace)}/${sanitizeStart(pathName)}`;
     } else {
       return pathName;
     }
   },
 
   hasPermission(pathName, capabilities = [null]) {
-    const path = this.pathNameWithNamespace(pathName);
-
     if (this.canViewAll) {
       return true;
     }
+    const path = this.pathNameWithNamespace(pathName);
 
     return capabilities.every(
       (capability) =>

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -31,10 +31,6 @@ var (
 	tmpSuffix                = ".tmp"
 )
 
-func (c *Core) SetLoadCaseSensitiveIdentityStore(caseSensitive bool) {
-	c.loadCaseSensitiveIdentityStore = caseSensitive
-}
-
 func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	if c.identityStore == nil {
 		c.logger.Warn("identity store is not setup, skipping loading")
@@ -58,16 +54,14 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 		return nil
 	}
 
-	if !c.loadCaseSensitiveIdentityStore {
-		// Load everything when memdb is set to operate on lower cased names
-		err := loadFunc(ctx)
-		switch {
-		case err == nil:
-			// If it succeeds, all is well
-			return nil
-		case !errwrap.Contains(err, errDuplicateIdentityName.Error()):
-			return err
-		}
+	// Load everything when memdb is set to operate on lower cased names
+	err := loadFunc(ctx)
+	switch {
+	case err == nil:
+		// If it succeeds, all is well
+		return nil
+	case !errwrap.Contains(err, errDuplicateIdentityName.Error()):
+		return err
 	}
 
 	c.identityStore.logger.Warn("enabling case sensitive identity names")

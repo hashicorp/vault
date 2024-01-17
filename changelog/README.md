@@ -24,7 +24,7 @@ Release notes are text files with three lines:
        might be warranted.
      - `deprecation` - Announcement of a planned future removal of a
        feature. Only use this if a deprecation notice also exists [in the
-       docs](https://www.vaultproject.io/docs/deprecation).
+       docs](https://developer.hashicorp.com/vault/docs/deprecation).
      - `feature` - Large topical additions for a major release. These are
        rarely in minor releases. Formatting for `feature` entries differs
        from normal changelog formatting - see the [new features

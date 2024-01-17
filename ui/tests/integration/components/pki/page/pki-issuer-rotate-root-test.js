@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
@@ -13,6 +13,7 @@ import { loadedCert } from 'vault/tests/helpers/pki/values';
 import camelizeKeys from 'vault/utils/camelize-object-keys';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import { SELECTORS as S } from 'vault/tests/helpers/pki/pki-generate-root';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const SELECTORS = {
   pageTitle: '[data-test-pki-page-title]',
@@ -72,6 +73,13 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
       key_name: 'my-key',
       serial_number: '3a:3c:17:..',
     };
+    setRunOptions({
+      rules: {
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+      },
+    });
   });
 
   test('it renders', async function (assert) {
@@ -206,7 +214,7 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     assert.dom(SELECTORS.infoRowValue('Certificate')).exists();
     assert.dom(SELECTORS.infoRowValue('Issuer name')).exists();
     assert.dom(SELECTORS.infoRowValue('Issuing CA')).exists();
-    assert.dom(`${SELECTORS.infoRowValue('Private key')} .masked-input`).hasClass('allow-copy');
+    assert.dom(SELECTORS.infoRowValue('Private key')).exists();
     assert.dom(`${SELECTORS.infoRowValue('Private key type')} span`).hasText('rsa');
     assert.dom(SELECTORS.infoRowValue('Serial number')).hasText(this.returnedData.serial_number);
     assert.dom(SELECTORS.infoRowValue('Key ID')).hasText(this.returnedData.key_id);

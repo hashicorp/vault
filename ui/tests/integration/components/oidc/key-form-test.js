@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -16,6 +16,7 @@ import {
   overrideMirageResponse,
   overrideCapabilities,
 } from 'vault/tests/helpers/oidc-config';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | oidc/key-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -32,6 +33,16 @@ module('Integration | Component | oidc/key-form', function (hooks) {
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
     this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
+    setRunOptions({
+      rules: {
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+      },
+    });
   });
 
   test('it should save new key', async function (assert) {

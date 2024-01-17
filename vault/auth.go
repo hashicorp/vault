@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -8,17 +8,18 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/plugincatalog"
 )
 
 const (
@@ -81,9 +82,13 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 
 	c.mountsLock.Lock()
 	c.authLock.Lock()
+	locked := true
 	unlock := func() {
-		c.authLock.Unlock()
-		c.mountsLock.Unlock()
+		if locked {
+			c.authLock.Unlock()
+			c.mountsLock.Unlock()
+			locked = false
+		}
 	}
 	defer unlock()
 
@@ -112,7 +117,7 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 	}
 
 	// Ensure the token backend is a singleton
-	if entry.Type == "token" {
+	if entry.Type == mountTypeToken {
 		return fmt.Errorf("token credential backend cannot be instantiated")
 	}
 
@@ -224,7 +229,6 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		c.logger.Error("failed to evaluate filtered paths", "error", err)
 
 		unlock()
-		unlock = func() {}
 		// We failed to evaluate filtered paths so we are undoing the mount operation
 		if disableCredentialErr := c.disableCredentialInternal(ctx, entry.Path, MountTableUpdateStorage); disableCredentialErr != nil {
 			c.logger.Error("failed to disable credential", "error", disableCredentialErr)
@@ -237,7 +241,8 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		// Initialize() if necessary
 		view.setReadOnlyErr(origViewReadOnlyErr)
 		// initialize, using the core's active context.
-		err := backend.Initialize(c.activeContext, &logical.InitializationRequest{Storage: view})
+		nsActiveContext := namespace.ContextWithNamespace(c.activeContext, ns)
+		err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{Storage: view})
 		if err != nil {
 			return err
 		}
@@ -795,10 +800,6 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		view.setReadOnlyErr(logical.ErrSetupReadOnly)
 		if strutil.StrListContains(singletonMounts, entry.Type) {
 			defer view.setReadOnlyErr(origViewReadOnlyErr)
-		} else {
-			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
-				view.setReadOnlyErr(origViewReadOnlyErr)
-			})
 		}
 
 		// Initialize the backend
@@ -884,7 +885,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		}
 
 		// Check if this is the token store
-		if entry.Type == "token" {
+		if entry.Type == mountTypeToken {
 			c.tokenStore = backend.(*TokenStore)
 
 			// At some point when this isn't beta we may persist this but for
@@ -894,7 +895,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			// this is loaded *after* the normal mounts, including cubbyhole
 			c.router.tokenStoreSaltFunc = c.tokenStore.Salt
 			if !c.IsDRSecondary() {
-				c.tokenStore.cubbyholeBackend = c.router.MatchingBackend(ctx, cubbyholeMountPath).(*CubbyholeBackend)
+				c.tokenStore.cubbyholeBackend = c.router.MatchingBackend(ctx, mountPathCubbyhole).(*CubbyholeBackend)
 			}
 		}
 
@@ -910,6 +911,9 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 				if backend == nil {
 					postUnsealLogger.Error("skipping initialization for nil auth backend")
 					return
+				}
+				if !strutil.StrListContains(singletonMounts, localEntry.Type) {
+					view.setReadOnlyErr(origViewReadOnlyErr)
 				}
 
 				err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
@@ -967,7 +971,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 			if entry.Version != "" {
 				errContext += fmt.Sprintf(", version=%s", entry.Version)
 			}
-			return nil, "", fmt.Errorf("%w: %s", ErrPluginNotFound, errContext)
+			return nil, "", fmt.Errorf("%w: %s", plugincatalog.ErrPluginNotFound, errContext)
 		}
 		if len(plug.Sha256) > 0 {
 			runningSha = hex.EncodeToString(plug.Sha256)
@@ -1009,14 +1013,12 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 	}
 
 	config := &logical.BackendConfig{
-		StorageView: view,
-		Logger:      authLogger,
-		Config:      conf,
-		System:      sysView,
-		BackendUUID: entry.BackendAwareUUID,
-	}
-	if c.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
-		config.EventsSender = pluginEventSender
+		StorageView:  view,
+		Logger:       authLogger,
+		Config:       conf,
+		System:       sysView,
+		BackendUUID:  entry.BackendAwareUUID,
+		EventsSender: pluginEventSender,
 	}
 
 	b, err := f(ctx, config)
@@ -1025,6 +1027,44 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 	}
 
 	return b, runningSha, nil
+}
+
+func wrapFactoryCheckPerms(core *Core, f logical.Factory) logical.Factory {
+	return func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+		pluginName := conf.Config["plugin_name"]
+		pluginVersion := conf.Config["plugin_version"]
+		pluginTypeRaw := conf.Config["plugin_type"]
+		pluginType, err := consts.ParsePluginType(pluginTypeRaw)
+		if err != nil {
+			return nil, err
+		}
+
+		pluginDescription := fmt.Sprintf("%s plugin %s", pluginTypeRaw, pluginName)
+		if pluginVersion != "" {
+			pluginDescription += " version " + pluginVersion
+		}
+
+		plugin, err := core.pluginCatalog.Get(ctx, pluginName, pluginType, pluginVersion)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find %s in plugin catalog: %w", pluginDescription, err)
+		}
+		if plugin == nil {
+			return nil, fmt.Errorf("failed to find %s in plugin catalog", pluginDescription)
+		}
+		if plugin.OCIImage != "" {
+			return f(ctx, conf)
+		}
+
+		command, err := filepath.Rel(core.pluginDirectory, plugin.Command)
+		if err != nil {
+			return nil, fmt.Errorf("failed to compute plugin command: %w", err)
+		}
+
+		if err := core.CheckPluginPerms(command); err != nil {
+			return nil, err
+		}
+		return f(ctx, conf)
+	}
 }
 
 // defaultAuthTable creates a default auth table
@@ -1047,7 +1087,7 @@ func (c *Core) defaultAuthTable() *MountTable {
 	tokenAuth := &MountEntry{
 		Table:            credentialTableType,
 		Path:             "token/",
-		Type:             "token",
+		Type:             mountTypeToken,
 		Description:      "token based credentials",
 		UUID:             tokenUUID,
 		Accessor:         tokenAccessor,

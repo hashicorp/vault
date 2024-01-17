@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -124,8 +124,8 @@ export default class Dashboard extends Component {
       isAfter(activityStartDateObject, queryStartDateObject) &&
       !isSameMonth(activityStartDateObject, queryStartDateObject)
     ) {
-      return `${message} ${parseAPITimestamp(this.startMonthTimestamp, 'MMMM yyyy')}. 
-        We only have data from ${parseAPITimestamp(this.getActivityResponse.startTime, 'MMMM yyyy')}, 
+      return `${message} ${parseAPITimestamp(this.startMonthTimestamp, 'MMMM yyyy')}.
+        We only have data from ${parseAPITimestamp(this.getActivityResponse.startTime, 'MMMM yyyy')},
         and that is what is being shown here.`;
     } else {
       return null;

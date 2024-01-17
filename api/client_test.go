@@ -104,6 +104,7 @@ func TestClientSetAddress(t *testing.T) {
 		t.Fatalf("bad: expected: '172.168.2.1:8300' actual: %q", client.addr.Host)
 	}
 	// Test switching to Unix Socket address from TCP address
+	client.config.HttpClient.Transport.(*http.Transport).DialContext = nil
 	if err := client.SetAddress("unix:///var/run/vault.sock"); err != nil {
 		t.Fatal(err)
 	}
@@ -120,6 +121,7 @@ func TestClientSetAddress(t *testing.T) {
 		t.Fatal("bad: expected DialContext to not be nil")
 	}
 	// Test switching to TCP address from Unix Socket address
+	client.config.HttpClient.Transport.(*http.Transport).DialContext = nil
 	if err := client.SetAddress("http://172.168.2.1:8300"); err != nil {
 		t.Fatal(err)
 	}
@@ -128,6 +130,9 @@ func TestClientSetAddress(t *testing.T) {
 	}
 	if client.addr.Scheme != "http" {
 		t.Fatalf("bad: expected: 'http' actual: %q", client.addr.Scheme)
+	}
+	if client.config.HttpClient.Transport.(*http.Transport).DialContext == nil {
+		t.Fatal("bad: expected DialContext to not be nil")
 	}
 }
 
@@ -736,6 +741,61 @@ func TestClone(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestCloneWithHeadersNoDeadlock confirms that the cloning of the client doesn't cause
+// a deadlock.
+// Raised in https://github.com/hashicorp/vault/issues/22393 -- there was a
+// potential deadlock caused by running the problematicFunc() function in
+// multiple goroutines.
+func TestCloneWithHeadersNoDeadlock(t *testing.T) {
+	client, err := NewClient(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wg := &sync.WaitGroup{}
+
+	problematicFunc := func() {
+		wg.Add(1)
+		client.SetCloneToken(true)
+		_, err := client.CloneWithHeaders()
+		if err != nil {
+			t.Fatal(err)
+		}
+		wg.Done()
+	}
+
+	for i := 0; i < 1000; i++ {
+		go problematicFunc()
+	}
+	wg.Wait()
+}
+
+// TestCloneNoDeadlock is like TestCloneWithHeadersNoDeadlock but with
+// Clone instead of CloneWithHeaders
+func TestCloneNoDeadlock(t *testing.T) {
+	client, err := NewClient(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wg := &sync.WaitGroup{}
+
+	problematicFunc := func() {
+		wg.Add(1)
+		client.SetCloneToken(true)
+		_, err := client.Clone()
+		if err != nil {
+			t.Fatal(err)
+		}
+		wg.Done()
+	}
+
+	for i := 0; i < 1000; i++ {
+		go problematicFunc()
+	}
+	wg.Wait()
 }
 
 func TestSetHeadersRaceSafe(t *testing.T) {

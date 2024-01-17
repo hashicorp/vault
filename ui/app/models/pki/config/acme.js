@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
@@ -38,6 +38,13 @@ export default class PkiConfigAcmeModel extends Model {
       "The default value '*' allows every role within the mount to be used. If the default_directory_policy specifies a role, it must be allowed under this configuration.",
   })
   allowedRoles;
+
+  @attr('boolean', {
+    label: 'Allow role ExtKeyUsage',
+    subText:
+      "When enabled, respect the role's ExtKeyUsage flags. Otherwise, ACME certificates are forced to ServerAuth.",
+  })
+  allowRoleExtKeyUsage;
 
   @attr('array', {
     editType: 'stringArray',

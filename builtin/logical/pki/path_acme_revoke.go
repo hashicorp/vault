@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -15,11 +15,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathAcmeRevoke(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeRevoke, "/revoke-cert")
+func pathAcmeRevoke(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeRevoke(b, baseUrl+"/revoke-cert", opts)
 }
 
-func patternAcmeRevoke(b *backend, pattern string) *framework.Path {
+func patternAcmeRevoke(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 	addFieldsForACMERequest(fields)
@@ -29,7 +29,7 @@ func patternAcmeRevoke(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeParsedWrapper(b.acmeRevocationHandler),
+				Callback:                    b.acmeParsedWrapper(opts, b.acmeRevocationHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
@@ -82,7 +82,7 @@ func (b *backend) acmeRevocationHandler(acmeCtx *acmeContext, _ *logical.Request
 
 	// Fetch the CRL config as we need it to ultimately do the
 	// revocation. This should be cached and thus relatively fast.
-	config, err := b.crlBuilder.getConfigWithUpdate(acmeCtx.sc)
+	config, err := b.CrlBuilder().getConfigWithUpdate(acmeCtx.sc)
 	if err != nil {
 		return nil, fmt.Errorf("unable to revoke certificate: failed reading revocation config: %v: %w", err, ErrServerInternal)
 	}
@@ -153,8 +153,8 @@ func (b *backend) acmeRevocationByPoP(acmeCtx *acmeContext, userCtx *jwsCtx, cer
 	}
 
 	// Now it is safe to revoke.
-	b.revokeStorageLock.Lock()
-	defer b.revokeStorageLock.Unlock()
+	b.GetRevokeStorageLock().Lock()
+	defer b.GetRevokeStorageLock().Unlock()
 
 	return revokeCert(acmeCtx.sc, config, cert)
 }
@@ -169,14 +169,14 @@ func (b *backend) acmeRevocationByAccount(acmeCtx *acmeContext, userCtx *jwsCtx,
 	// We only support certificates issued by this user, we don't support
 	// cross-account revocations.
 	serial := serialFromCert(cert)
-	acmeEntry, err := b.acmeState.GetIssuedCert(acmeCtx, userCtx.Kid, serial)
+	acmeEntry, err := b.GetAcmeState().GetIssuedCert(acmeCtx, userCtx.Kid, serial)
 	if err != nil || acmeEntry == nil {
 		return nil, fmt.Errorf("unable to revoke certificate: %v: %w", err, ErrMalformed)
 	}
 
 	// Now it is safe to revoke.
-	b.revokeStorageLock.Lock()
-	defer b.revokeStorageLock.Unlock()
+	b.GetRevokeStorageLock().Lock()
+	defer b.GetRevokeStorageLock().Unlock()
 
 	return revokeCert(acmeCtx.sc, config, cert)
 }

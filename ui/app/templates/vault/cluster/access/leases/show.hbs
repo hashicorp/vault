@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader
@@ -21,15 +26,14 @@
   <Toolbar>
     <ToolbarActions>
       <ConfirmAction
-        @buttonClasses="toolbar-link"
+        @buttonText="Revoke lease"
+        class="toolbar-button"
+        @buttonColor="secondary"
         @confirmTitle="Revoke this?"
-        @confirmMessage={{concat "All leases under this one will also be removed"}}
-        @confirmButtonText="Confirm"
+        @confirmMessage="All leases under this one will also be removed."
         @onConfirmAction={{action "revokeLease" this.model}}
-        data-test-lease-revoke="true"
-      >
-        Revoke lease
-      </ConfirmAction>
+        data-test-lease-revoke
+      />
     </ToolbarActions>
   </Toolbar>
 {{/if}}
@@ -76,9 +80,7 @@
       />
       <div class="field has-top-margin-s">
         <div class="control">
-          <button type="submit" class="button is-primary">
-            Renew lease
-          </button>
+          <Hds::Button @text="Renew lease" type="submit" />
         </div>
       </div>
     </form>

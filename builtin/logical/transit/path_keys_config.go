@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
@@ -217,6 +217,10 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 		if autoRotatePeriod != p.AutoRotatePeriod {
 			p.AutoRotatePeriod = autoRotatePeriod
 			persistNeeded = true
+		}
+
+		if p.Type == keysutil.KeyType_MANAGED_KEY && autoRotatePeriod != 0 {
+			return logical.ErrorResponse("Auto rotation can not be set for managed keys"), nil
 		}
 	}
 

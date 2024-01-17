@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -13,6 +13,7 @@ import { render, fillIn, click, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import ss from 'vault/tests/pages/components/search-select';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const component = create(ss);
 
@@ -58,6 +59,16 @@ module('Integration | Component | search select with modal', function (hooks) {
         },
       };
     });
+    setRunOptions({
+      rules: {
+        // TODO: Fix this component
+        'color-contrast': { enabled: false },
+        label: { enabled: false },
+        'aria-input-field-name': { enabled: false },
+        'aria-required-attr': { enabled: false },
+        'aria-valid-attr-value': { enabled: false },
+      },
+    });
   });
 
   test('it renders passed in models', async function (assert) {
@@ -74,8 +85,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @excludeOptions={{array "root"}}
       @subText="Some modal subtext"
     />
-    <div id="modal-wormhole"></div>
-  `);
+      `);
     assert.dom('[data-test-search-select-with-modal]').exists('the component renders');
     assert.dom('[data-test-modal-subtext]').hasText('Some modal subtext', 'renders modal text');
     assert.strictEqual(component.labelText, 'Policies', 'label text is correct');
@@ -127,8 +137,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @fallbackComponent="string-list"
       @modalFormTemplate="modal-form/policy-template"
     />
-    <div id="modal-wormhole"></div>
-  `);
+      `);
 
     await clickTrigger();
     assert.strictEqual(component.options.length, 4, 'dropdown renders all options');
@@ -146,7 +155,7 @@ module('Integration | Component | search select with modal', function (hooks) {
     );
     await component.selectOption();
 
-    assert.dom('[data-test-modal-div]').hasAttribute('class', 'modal is-info is-active', 'modal is active');
+    assert.dom('#search-select-modal').exists('modal is active');
     assert.dom('[data-test-empty-state-title]').hasText('No policy type selected');
     assert.ok(this.onChange.notCalled, 'onChange is not called');
   });
@@ -175,8 +184,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @fallbackComponent="string-list"
       @modalFormTemplate="modal-form/policy-template"
     />
-    <div id="modal-wormhole"></div>
-  `);
+      `);
     await clickTrigger();
     await typeInSearch('acl-test-new');
     assert.strictEqual(
@@ -188,10 +196,10 @@ module('Integration | Component | search select with modal', function (hooks) {
     assert.dom('[data-test-empty-state-title]').hasText('No policy type selected');
     await fillIn('[data-test-select="policyType"]', 'acl');
     assert.dom('[data-test-policy-form]').exists('policy form renders after type is selected');
-    await click('[data-test-tab-example-policy]');
-    assert.dom('[data-test-tab-example-policy]').hasClass('is-active');
-    await click('[data-test-tab-your-policy]');
-    assert.dom('[data-test-tab-your-policy]').hasClass('is-active');
+    await click('[data-test-tab-example-policy] button');
+    assert.dom('[data-test-tab-example-policy] button').hasAttribute('aria-selected', 'true');
+    await click('[data-test-tab-your-policy] button');
+    assert.dom('[data-test-tab-your-policy] button').hasAttribute('aria-selected', 'true');
     await fillIn(
       '[data-test-component="code-mirror-modifier"] textarea',
       'path "secret/super-secret" { capabilities = ["deny"] }'
@@ -228,8 +236,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @fallbackComponent="string-list"
       @modalFormTemplate="modal-form/policy-template"
     />
-    <div id="modal-wormhole"></div>
-  `);
+      `);
 
     assert.dom('[data-test-search-select-with-modal]').exists('the component renders');
     assert.dom('[data-test-component="string-list"]').doesNotExist('does not render fallback component');
@@ -266,8 +273,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @fallbackComponent="string-list"
       @modalFormTemplate="modal-form/policy-template"
     />
-    <div id="modal-wormhole"></div>
-  `);
+      `);
     assert.dom('[data-test-component="string-list"]').exists('renders fallback component');
     assert.false(component.hasTrigger, 'does not render power select trigger');
     await fillIn('[data-test-string-list-input="0"]', 'string-list-policy');

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -18,18 +18,18 @@ const (
 	minUnifiedTransferDelay = 30 * time.Minute
 )
 
-type unifiedTransferStatus struct {
+type UnifiedTransferStatus struct {
 	isRunning  atomic.Bool
 	lastRun    time.Time
 	forceRerun atomic.Bool
 }
 
-func (uts *unifiedTransferStatus) forceRun() {
+func (uts *UnifiedTransferStatus) forceRun() {
 	uts.forceRerun.Store(true)
 }
 
-func newUnifiedTransferStatus() *unifiedTransferStatus {
-	return &unifiedTransferStatus{}
+func newUnifiedTransferStatus() *UnifiedTransferStatus {
+	return &UnifiedTransferStatus{}
 }
 
 // runUnifiedTransfer meant to run as a background, this will process all and
@@ -37,7 +37,7 @@ func newUnifiedTransferStatus() *unifiedTransferStatus {
 // is enabled.
 func runUnifiedTransfer(sc *storageContext) {
 	b := sc.Backend
-	status := b.unifiedTransferStatus
+	status := b.GetUnifiedTransferStatus()
 
 	isPerfStandby := b.System().ReplicationState().HasState(consts.ReplicationDRSecondary | consts.ReplicationPerformanceStandby)
 
@@ -46,7 +46,7 @@ func runUnifiedTransfer(sc *storageContext) {
 		return
 	}
 
-	config, err := b.crlBuilder.getConfigWithUpdate(sc)
+	config, err := b.CrlBuilder().getConfigWithUpdate(sc)
 	if err != nil {
 		b.Logger().Error("failed to retrieve crl config from storage for unified transfer background process",
 			"error", err)
@@ -125,7 +125,7 @@ func doUnifiedTransferMissingLocalSerials(sc *storageContext, clusterId string) 
 	errCount := 0
 	for i, serialNum := range localRevokedSerialNums {
 		if i%25 == 0 {
-			config, _ := sc.Backend.crlBuilder.getConfigWithUpdate(sc)
+			config, _ := sc.Backend.CrlBuilder().getConfigWithUpdate(sc)
 			if config != nil && !config.UnifiedCRL {
 				return errors.New("unified crl has been disabled after we started, stopping")
 			}
@@ -224,7 +224,7 @@ func doUnifiedTransferMissingDeltaWALSerials(sc *storageContext, clusterId strin
 	errCount := 0
 	for index, serial := range localWALEntries {
 		if index%25 == 0 {
-			config, _ := sc.Backend.crlBuilder.getConfigWithUpdate(sc)
+			config, _ := sc.Backend.CrlBuilder().getConfigWithUpdate(sc)
 			if config != nil && (!config.UnifiedCRL || !config.EnableDelta) {
 				return errors.New("unified or delta CRLs have been disabled after we started, stopping")
 			}

@@ -59,8 +59,9 @@ Sets a CA cert and associated parameters in a role name.
 - `required_extensions` `(string: "" or array: [])` - Require specific Custom
   Extension OIDs to exist and match the pattern. Value is a comma separated
   string or array of `oid:value`. Expects the extension value to be some type
-  of ASN1 encoded string. All conditions _must_ be met. Supports globbing on
-  `value`.
+  of ASN1 encoded string. All conditions _must_ be met. To match on the hex-encoded
+  value of the extension, including non-string extensions, use the format
+  `hex:<oid>:<value>`.Supports globbing on `value`.
 - `allowed_metadata_extensions` `(array:[])` - A comma separated string or
   array of oid extensions. Upon successful authentication, these extensions
   will be added as metadata if they are present in the certificate. The
@@ -255,7 +256,10 @@ Sets a named CRL.
 ### Parameters
 
 - `name` `(string: <required>)` - The name of the CRL.
-- `crl` `(string: <required>)` - The PEM format CRL.
+- `crl` `(string: "")` - The PEM format CRL.
+- `url` `(string: "")` - The URL of a CRL distribution point.
+
+**Note**: Either 'crl' or 'url' parameters must be provided, if both are provided, 'crl' is used.
 
 ### Sample payload
 

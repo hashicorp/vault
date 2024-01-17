@@ -8,6 +8,8 @@ description: >-
 
 # `/sys/mfa`
 
+@include 'alerts/restricted-root.mdx'
+
 The `/sys/mfa` endpoint focuses on managing Multi-factor Authentication (MFA)
 behaviors in Vault Enterprise MFA.
 
@@ -31,7 +33,7 @@ returns an ID when a method is created. Although MFA methods supported with Step
 - Step-up Enterprise MFA: `sys/mfa/method/:type/:/name`
 - Login MFA: `identity/mfa/method/:type`
 
-~> **Note:** While the `sys/mfa` endpoint is supported for both OSS and Vault Enterprise, `sys/mfa/method/:type/:/name` is only supported for Vault Enterprise.
+~> **Note:** While the `sys/mfa` endpoint is supported for both Vault Community and Enterprise editions, `sys/mfa/method/:type/:/name` is only supported for Vault Enterprise.
 
 Refer to the [Login MFA
 FAQ](/vault/docs/auth/login-mfa/faq#q-are-there-new-mfa-api-endpoints-introduced-as-part-of-the-new-vault-version-1-10-mfa-for-login-functionality) document
