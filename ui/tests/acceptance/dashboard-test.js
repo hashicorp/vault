@@ -28,6 +28,7 @@ import { formatNumber } from 'core/helpers/format-number';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { disableReplication } from 'vault/tests/helpers/replication';
 import connectionPage from 'vault/tests/pages/secrets/backend/database/connection';
+import { v4 as uuidv4 } from 'uuid';
 
 import { SELECTORS } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 
@@ -48,10 +49,8 @@ module('Acceptance | landing page dashboard', function (hooks) {
     await authPage.login();
     await visit('/vault/dashboard');
     const version = this.owner.lookup('service:version');
-    const versionName = version.version;
-    const versionText = version.isEnterprise
-      ? `Vault v${versionName.slice(0, versionName.indexOf('+'))} root`
-      : `Vault v${versionName}`;
+    // Since we're using mirage, version is mocked static value
+    const versionText = version.isEnterprise ? `Vault v1.9.0 root` : `Vault v1.9.0`;
 
     assert.dom(SELECTORS.cardHeader('Vault version')).hasText(versionText);
   });
@@ -308,10 +307,11 @@ module('Acceptance | landing page dashboard', function (hooks) {
     };
 
     test('shows the correct actions and links associated with database', async function (assert) {
-      await mountSecrets.enable('database', 'database');
-      await newConnection('database');
+      const databaseBackend = `database-${uuidv4()}`;
+      await mountSecrets.enable('database', databaseBackend);
+      await newConnection(databaseBackend);
       await runCommands([
-        `write database/roles/my-role \
+        `write ${databaseBackend}/roles/my-role \
         db_name=mongodb-database-plugin \
         creation_statements='{ "db": "admin", "roles": [{ "role": "readWrite" }, {"role": "read", "db": "foo"}] }' \
         default_ttl="1h" \
@@ -319,7 +319,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       ]);
       await settled();
       await visit('/vault/dashboard');
-      await selectChoose(SELECTORS.searchSelect('secrets-engines'), 'database');
+      await selectChoose(SELECTORS.searchSelect('secrets-engines'), databaseBackend);
       await fillIn(SELECTORS.selectEl, 'Generate credentials for database');
       assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
       assert.dom(SELECTORS.subtitle('param')).hasText('Role to use');
@@ -327,7 +327,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await selectChoose(SELECTORS.searchSelect('params'), '.ember-power-select-option', 0);
       await click(SELECTORS.actionButton('Generate credentials'));
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.credentials');
-      await consoleComponent.runCommands(deleteEngineCmd('database'));
+      await consoleComponent.runCommands(deleteEngineCmd(databaseBackend));
     });
 
     test('shows the correct actions and links associated with kv v1', async function (assert) {

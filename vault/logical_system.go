@@ -199,6 +199,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogListPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogCRUDPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsReloadPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRootReloadPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogCRUDPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogListPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.auditPaths()...)
@@ -744,8 +745,13 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 		},
 	}
 
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	if pluginName != "" {
-		reloaded, err := b.Core.reloadMatchingPlugin(ctx, pluginName)
+		reloaded, err := b.Core.reloadMatchingPlugin(ctx, ns, consts.PluginTypeUnknown, pluginName)
 		if err != nil {
 			return nil, err
 		}
@@ -757,14 +763,84 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 			}
 		}
 	} else if len(pluginMounts) > 0 {
-		err := b.Core.reloadMatchingPluginMounts(ctx, pluginMounts)
+		err := b.Core.reloadMatchingPluginMounts(ctx, ns, pluginMounts)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if scope == globalScope {
-		err := handleGlobalPluginReload(ctx, b.Core, req.ID, pluginName, pluginMounts)
+		reloadRequest := pluginReloadRequest{
+			Namespace:  ns,
+			Timestamp:  time.Now(),
+			ReloadID:   req.ID,
+			PluginType: consts.PluginTypeUnknown,
+		}
+
+		if pluginName != "" {
+			reloadRequest.Type = pluginReloadPluginsType
+			reloadRequest.Subjects = []string{pluginName}
+		} else {
+			reloadRequest.Type = pluginReloadMountsType
+			reloadRequest.Subjects = pluginMounts
+		}
+		err = handleGlobalPluginReload(ctx, b.Core, reloadRequest)
+		if err != nil {
+			return nil, err
+		}
+		return logical.RespondWithStatusCode(&resp, req, http.StatusAccepted)
+	}
+	return &resp, nil
+}
+
+func (b *SystemBackend) handleRootPluginReloadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginName := d.Get("name").(string)
+	pluginTypeStr := d.Get("type").(string)
+	scope := d.Get("scope").(string)
+
+	if pluginName == "" {
+		return logical.ErrorResponse("'plugin' must be provided"), nil
+	}
+	if pluginTypeStr == "" {
+		return logical.ErrorResponse("'type' must be provided"), nil
+	}
+	pluginType, err := consts.ParsePluginType(pluginTypeStr)
+	if err != nil {
+		return logical.ErrorResponse(`error parsing %q as a plugin type, must be one of "auth", "secret", "database", or "unknown"`, pluginTypeStr), nil
+	}
+	if scope != "" && scope != globalScope {
+		return logical.ErrorResponse("reload scope must be omitted or 'global'"), nil
+	}
+
+	resp := logical.Response{
+		Data: map[string]interface{}{
+			"reload_id": req.ID,
+		},
+	}
+
+	reloaded, err := b.Core.reloadMatchingPlugin(ctx, nil, pluginType, pluginName)
+	if err != nil {
+		return nil, err
+	}
+	if reloaded == 0 {
+		if scope == globalScope {
+			resp.AddWarning("no plugins were reloaded locally (but they may be reloaded on other nodes)")
+		} else {
+			resp.AddWarning("no plugins were reloaded")
+		}
+	}
+
+	if scope == globalScope {
+		reloadRequest := pluginReloadRequest{
+			Type:       pluginReloadPluginsType,
+			Subjects:   []string{pluginName},
+			PluginType: pluginType,
+			Namespace:  nil,
+			Timestamp:  time.Now(),
+			ReloadID:   req.ID,
+		}
+
+		err = handleGlobalPluginReload(ctx, b.Core, reloadRequest)
 		if err != nil {
 			return nil, err
 		}
@@ -888,7 +964,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 }
 
 func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	var data []map[string]any
+	runtimes := []map[string]any{}
 
 	var pluginRuntimeTypes []consts.PluginRuntimeType
 	runtimeTypeStr := d.Get("type").(string)
@@ -916,7 +992,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *l
 				return strings.Compare(configs[i].Name, configs[j].Name) == -1
 			})
 			for _, conf := range configs {
-				data = append(data, map[string]any{
+				runtimes = append(runtimes, map[string]any{
 					"name":          conf.Name,
 					"type":          conf.Type.String(),
 					"oci_runtime":   conf.OCIRuntime,
@@ -929,15 +1005,11 @@ func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *l
 		}
 	}
 
-	resp := &logical.Response{
-		Data: map[string]interface{}{},
-	}
-
-	if len(data) > 0 {
-		resp.Data["runtimes"] = data
-	}
-
-	return resp, nil
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"runtimes": runtimes,
+		},
+	}, nil
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
@@ -6404,6 +6476,36 @@ This path responds to the following HTTP methods.
 	"plugin-backend-reload-mounts": {
 		`The mount paths of the plugin backends to reload.`,
 		"",
+	},
+	"plugin-backend-reload-scope": {
+		`The scope for the reload operation. May be empty or "global".`,
+		`The scope for the reload operation. May be empty or "global". If empty,
+		the plugin(s) will be reloaded only on the local node. If "global", the
+		plugin(s) will be reloaded on all nodes in the cluster and in all replicated
+		clusters.`,
+	},
+	"root-plugin-reload": {
+		"Reload all instances of a specific plugin.",
+		`Reload all plugins of a specific name and type across all namespaces. If
+		"scope" is provided and is "global", the plugin is reloaded across all
+		nodes and clusters. If a new plugin version has been pinned, this will
+		ensure all instances start using the new version.`,
+	},
+	"root-plugin-reload-name": {
+		`The name of the plugin to reload, as registered in the plugin catalog.`,
+		"",
+	},
+	"root-plugin-reload-type": {
+		`The type of the plugin to reload, as registered in the plugin catalog.`,
+		"",
+	},
+	"root-plugin-reload-scope": {
+		`The scope for the reload operation. May be empty or "global".`,
+		`The scope for the reload operation. May be empty or "global". If empty,
+		the plugin will be reloaded only on the local node. If "global", the
+		plugin will be reloaded on all nodes in the cluster and in all replicated
+		clusters. A "global" reload will ensure that any pinned version specified
+		is in full effect.`,
 	},
 	"hash": {
 		"Generate a hash sum for input data",

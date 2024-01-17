@@ -602,8 +602,8 @@
         "path": "system/namespaces"
       },
       {
-        "title": "<code>/sys/plugins/reload/backend</code>",
-        "path": "system/plugins-reload-backend"
+        "title": "<code>/sys/plugins/reload</code>",
+        "path": "system/plugins-reload"
       },
       {
         "title": "<code>/sys/plugins/catalog</code>",

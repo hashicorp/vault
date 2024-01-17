@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -402,6 +403,11 @@ func (b *SystemBackend) handleCreateCustomMessages(ctx context.Context, req *log
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
+	_, err = base64.StdEncoding.DecodeString(messageValue)
+	if err != nil {
+		return logical.ErrorResponse("invalid message parameter value, must be base64 encoded"), nil
+	}
+
 	startTime, err := parameterValidateOrReportMissing[time.Time]("start_time", d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -554,6 +560,11 @@ func (b *SystemBackend) handleUpdateCustomMessage(ctx context.Context, req *logi
 	messageValue, err := parameterValidateOrReportMissing[string]("message", d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	_, err = base64.StdEncoding.DecodeString(messageValue)
+	if err != nil {
+		return logical.ErrorResponse("invalid message parameter value, must be base64 encoded"), nil
 	}
 
 	linkMap, err := parameterValidateMap("link", d)
