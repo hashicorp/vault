@@ -58,8 +58,6 @@ these device-specific options:
   the bit pattern for the file mode, similar to `chmod`. Set to `"0000"` to
   prevent Vault from modifying the file mode.
 
-
-
 ## Log file rotation
 
 To properly rotate Vault File Audit Device log files on BSD, Darwin, or Linux-based Vault servers, it is important that you configure your log rotation software to send the `vault` process a signal hang up / `SIGHUP` after each rotation of the log file.
