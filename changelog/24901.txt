@@ -1,0 +1,4 @@
+```release-note:bug
+audit: Empty string fields no longer have HMAC applied, allowing them to be omitted from the audit log when marked as such in code.
+This change aligns the behavior of audit logs to match the log structure when using the `log_raw` option.
+```
