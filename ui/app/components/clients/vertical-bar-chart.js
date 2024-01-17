@@ -17,6 +17,7 @@ import {
   LIGHT_AND_DARK_BLUE,
   SVG_DIMENSIONS,
   TRANSLATE,
+  calculateSum,
   formatNumbers,
 } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
@@ -42,10 +43,6 @@ export default class VerticalBarChart extends Component {
   @tracked tooltipTotal = '';
   @tracked tooltipStats = [];
 
-  get chartLegend() {
-    return this.args.chartLegend;
-  }
-
   get xKey() {
     return this.args.xKey || 'month';
   }
@@ -58,7 +55,7 @@ export default class VerticalBarChart extends Component {
   renderChart(element, [chartData]) {
     const dataset = chartData;
     const filteredData = dataset.filter((e) => Object.keys(e).includes('clients')); // months with data will contain a 'clients' key (otherwise only a timestamp)
-    const stackFunction = stack().keys(this.chartLegend.map((l) => l.key));
+    const stackFunction = stack().keys(this.args.chartLegend.map((l) => l.key));
     const stackedData = stackFunction(filteredData);
     const chartSvg = select(element);
     const domainMax = max(filteredData.map((d) => d[this.yKey]));
@@ -159,7 +156,7 @@ export default class VerticalBarChart extends Component {
         stackedNumbers.push(data[key]);
         return `${formatNumber([data[key]])} ${label}`;
       });
-      this.tooltipTotal = `${formatNumber([stackedNumbers.reduce((a, b) => a + b, 0)])} ${
+      this.tooltipTotal = `${formatNumber([calculateSum(stackedNumbers)])} ${
         data.new_clients ? 'total' : 'new'
       } clients`;
       // filter for the tether point that matches the hoveredMonth

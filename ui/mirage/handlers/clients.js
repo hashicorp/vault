@@ -61,6 +61,7 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
     namespace_id: ns?.namespace_id || (idx === 0 ? 'root' : Math.random().toString(36).slice(2, 7) + idx),
     namespace_path: ns?.namespace_path || (idx === 0 ? '' : `ns/${idx}`),
     counts: {},
+    mounts: {},
   };
   const mounts = [];
   Array.from(Array(10)).forEach((mount, index) => {
