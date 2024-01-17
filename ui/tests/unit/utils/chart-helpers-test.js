@@ -60,12 +60,7 @@ module('Unit | Utility | chart-helpers', function () {
   });
 
   test('calculateSum adds array of numbers', function (assert) {
-    assert.expect(11);
-    const method = calculateSum();
-    assert.ok(method);
-
     assert.strictEqual(calculateSum([2, 3]), 5, 'it sums array');
-
     assert.strictEqual(calculateSum(['one', 2]), null, 'returns null if array contains non-integers');
     assert.strictEqual(calculateSum('not an array'), null, 'returns null if an array is not passed');
   });
