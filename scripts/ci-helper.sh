@@ -47,7 +47,7 @@ function artifact_basename() {
 # Bundle the dist directory into a zip
 function bundle() {
   : "${BUNDLE_PATH:=$(repo_root)/vault.zip}"
-  echo "--> Bundling dist/* to $BUNDLE_PATH"
+  echo "==> Bundling dist/* to $BUNDLE_PATH..."
   zip -r -j "$BUNDLE_PATH" dist/
 }
 
@@ -88,7 +88,7 @@ function build() {
   (unset GOOS; unset GOARCH; go generate ./...)
 
   # Build our ldflags
-  msg="--> Building Vault revision $revision, built $build_date"
+  msg="==> Building Vault revision $revision, built $build_date..."
 
   # Keep the symbol and dwarf information by default
   if [ -n "$REMOVE_SYMBOLS" ]; then

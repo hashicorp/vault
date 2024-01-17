@@ -34,6 +34,7 @@ function getTotalCounts(array) {
     entity_clients: getSum(array, 'entity_clients'),
     non_entity_tokens: getSum(array, 'non_entity_clients'),
     non_entity_clients: getSum(array, 'non_entity_clients'),
+    secret_syncs: getSum(array, 'secret_syncs'),
     clients: getSum(array, 'clients'),
   };
 }
@@ -64,7 +65,7 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
   const mounts = [];
   Array.from(Array(10)).forEach((mount, index) => {
     const mountClients = randomBetween(min, max);
-    const [nonEntity, entity] = arrayOfCounts(mountClients, 2);
+    const [nonEntity, entity, secretSyncs] = arrayOfCounts(mountClients, 3);
     mounts.push({
       mount_path: `auth/authid${index}`,
       counts: {
@@ -73,6 +74,7 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
         non_entity_clients: nonEntity,
         distinct_entities: entity,
         non_entity_tokens: nonEntity,
+        secret_syncs: secretSyncs,
       },
     });
   });

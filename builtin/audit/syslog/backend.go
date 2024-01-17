@@ -4,7 +4,6 @@
 package syslog
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"strconv"
@@ -24,20 +23,18 @@ var _ audit.Backend = (*Backend)(nil)
 
 // Backend is the audit backend for the syslog-based audit store.
 type Backend struct {
-	fallback     bool
-	formatter    *audit.EntryFormatterWriter
-	formatConfig audit.FormatterConfig
-	logger       gsyslog.Syslogger
-	name         string
-	nodeIDList   []eventlogger.NodeID
-	nodeMap      map[eventlogger.NodeID]eventlogger.Node
-	salt         *salt.Salt
-	saltConfig   *salt.Config
-	saltMutex    sync.RWMutex
-	saltView     logical.Storage
+	fallback   bool
+	logger     gsyslog.Syslogger
+	name       string
+	nodeIDList []eventlogger.NodeID
+	nodeMap    map[eventlogger.NodeID]eventlogger.Node
+	salt       *salt.Salt
+	saltConfig *salt.Config
+	saltMutex  sync.RWMutex
+	saltView   logical.Storage
 }
 
-func Factory(_ context.Context, conf *audit.BackendConfig, useEventLogger bool, headersConfig audit.HeaderFormatter) (audit.Backend, error) {
+func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.HeaderFormatter) (audit.Backend, error) {
 	const op = "syslog.Factory"
 
 	if conf.SaltConfig == nil {
@@ -75,11 +72,6 @@ func Factory(_ context.Context, conf *audit.BackendConfig, useEventLogger bool, 
 		return nil, fmt.Errorf("%s: cannot configure a fallback device with a filter: %w", op, event.ErrInvalidParameter)
 	}
 
-	cfg, err := formatterConfig(conf.Config)
-	if err != nil {
-		return nil, fmt.Errorf("%s: failed to create formatter config: %w", op, err)
-	}
-
 	// Get the logger
 	logger, err := gsyslog.NewLogger(gsyslog.LOG_INFO, facility, tag)
 	if err != nil {
@@ -87,113 +79,54 @@ func Factory(_ context.Context, conf *audit.BackendConfig, useEventLogger bool, 
 	}
 
 	b := &Backend{
-		fallback:     fallback,
-		formatConfig: cfg,
-		logger:       logger,
-		name:         conf.MountPath,
-		saltConfig:   conf.SaltConfig,
-		saltView:     conf.SaltView,
+		fallback:   fallback,
+		logger:     logger,
+		name:       conf.MountPath,
+		saltConfig: conf.SaltConfig,
+		saltView:   conf.SaltView,
+		nodeIDList: []eventlogger.NodeID{},
+		nodeMap:    make(map[eventlogger.NodeID]eventlogger.Node),
 	}
 
-	// Configure the formatter for either case.
-	f, err := audit.NewEntryFormatter(b.formatConfig, b, audit.WithHeaderFormatter(headersConfig), audit.WithPrefix(conf.Config["prefix"]))
+	err = b.configureFilterNode(conf.Config["filter"])
 	if err != nil {
-		return nil, fmt.Errorf("%s: error creating formatter: %w", op, err)
+		return nil, fmt.Errorf("%s: error configuring filter node: %w", op, err)
 	}
 
-	var w audit.Writer
-	switch b.formatConfig.RequiredFormat {
-	case audit.JSONFormat:
-		w = &audit.JSONWriter{Prefix: conf.Config["prefix"]}
-	case audit.JSONxFormat:
-		w = &audit.JSONxWriter{Prefix: conf.Config["prefix"]}
-	}
-
-	fw, err := audit.NewEntryFormatterWriter(b.formatConfig, f, w)
+	cfg, err := formatterConfig(conf.Config)
 	if err != nil {
-		return nil, fmt.Errorf("%s: error creating formatter writer: %w", op, err)
+		return nil, fmt.Errorf("%s: failed to create formatter config: %w", op, err)
 	}
 
-	b.formatter = fw
+	formatterOpts := []audit.Option{
+		audit.WithHeaderFormatter(headersConfig),
+		audit.WithPrefix(conf.Config["prefix"]),
+	}
 
-	if useEventLogger {
-		b.nodeIDList = []eventlogger.NodeID{}
-		b.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node)
+	err = b.configureFormatterNode(cfg, formatterOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: error configuring formatter node: %w", op, err)
+	}
 
-		err := b.configureFilterNode(conf.Config["filter"])
-		if err != nil {
-			return nil, fmt.Errorf("%s: error configuring filter node: %w", op, err)
-		}
+	sinkOpts := []event.Option{
+		event.WithFacility(facility),
+		event.WithTag(tag),
+	}
 
-		formatterOpts := []audit.Option{
-			audit.WithHeaderFormatter(headersConfig),
-			audit.WithPrefix(conf.Config["prefix"]),
-		}
-
-		err = b.configureFormatterNode(cfg, formatterOpts...)
-		if err != nil {
-			return nil, fmt.Errorf("%s: error configuring formatter node: %w", op, err)
-		}
-
-		sinkOpts := []event.Option{
-			event.WithFacility(facility),
-			event.WithTag(tag),
-		}
-
-		err = b.configureSinkNode(conf.MountPath, cfg.RequiredFormat.String(), sinkOpts...)
-		if err != nil {
-			return nil, fmt.Errorf("%s: error configuring sink node: %w", op, err)
-		}
+	err = b.configureSinkNode(conf.MountPath, cfg.RequiredFormat.String(), sinkOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: error configuring sink node: %w", op, err)
 	}
 
 	return b, nil
 }
 
-// Deprecated: Use eventlogger.
-func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
-	var buf bytes.Buffer
-	if err := b.formatter.FormatAndWriteRequest(ctx, &buf, in); err != nil {
-		return err
-	}
-
-	// Write out to syslog
-	_, err := b.logger.Write(buf.Bytes())
-	return err
-}
-
-// Deprecated: Use eventlogger.
-func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
-	var buf bytes.Buffer
-	if err := b.formatter.FormatAndWriteResponse(ctx, &buf, in); err != nil {
-		return err
-	}
-
-	// Write out to syslog
-	_, err := b.logger.Write(buf.Bytes())
-	return err
-}
-
-func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
-	// Event logger behavior - manually Process each node
+func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput) error {
 	if len(b.nodeIDList) > 0 {
 		return audit.ProcessManual(ctx, in, b.nodeIDList, b.nodeMap)
 	}
 
-	// Old behavior
-	var buf bytes.Buffer
-
-	temporaryFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
-	if err != nil {
-		return err
-	}
-
-	if err = temporaryFormatter.FormatAndWriteRequest(ctx, &buf, in); err != nil {
-		return err
-	}
-
-	// Send to syslog
-	_, err = b.logger.Write(buf.Bytes())
-	return err
+	return nil
 }
 
 func (b *Backend) Reload(_ context.Context) error {
@@ -287,6 +220,7 @@ func (b *Backend) configureFilterNode(filter string) error {
 
 	b.nodeIDList = append(b.nodeIDList, filterNodeID)
 	b.nodeMap[filterNodeID] = filterNode
+
 	return nil
 }
 
@@ -306,6 +240,7 @@ func (b *Backend) configureFormatterNode(formatConfig audit.FormatterConfig, opt
 
 	b.nodeIDList = append(b.nodeIDList, formatterNodeID)
 	b.nodeMap[formatterNodeID] = formatterNode
+
 	return nil
 }
 
@@ -333,11 +268,29 @@ func (b *Backend) configureSinkNode(name string, format string, opts ...event.Op
 		return fmt.Errorf("%s: error creating syslog sink node: %w", op, err)
 	}
 
-	// wrap the sink node with metrics middleware
-	sinkNode := &audit.SinkWrapper{Name: name, Sink: n}
+	// Wrap the sink node with metrics middleware
+	sinkMetricTimer, err := audit.NewSinkMetricTimer(name, n)
+	if err != nil {
+		return fmt.Errorf("%s: unable to add timing metrics to sink for path %q: %w", op, name, err)
+	}
+
+	// Decide what kind of labels we want and wrap the sink node inside a metrics counter.
+	var metricLabeler event.Labeler
+	switch {
+	case b.fallback:
+		metricLabeler = &audit.MetricLabelerAuditFallback{}
+	default:
+		metricLabeler = &audit.MetricLabelerAuditSink{}
+	}
+
+	sinkMetricCounter, err := event.NewMetricsCounter(name, sinkMetricTimer, metricLabeler)
+	if err != nil {
+		return fmt.Errorf("%s: unable to add counting metrics to sink for path %q: %w", op, name, err)
+	}
 
 	b.nodeIDList = append(b.nodeIDList, sinkNodeID)
-	b.nodeMap[sinkNodeID] = sinkNode
+	b.nodeMap[sinkNodeID] = sinkMetricCounter
+
 	return nil
 }
 
@@ -363,6 +316,10 @@ func (b *Backend) EventType() eventlogger.EventType {
 
 // HasFiltering determines if the first node for the pipeline is an eventlogger.NodeTypeFilter.
 func (b *Backend) HasFiltering() bool {
+	if b.nodeMap == nil {
+		return false
+	}
+
 	return len(b.nodeIDList) > 0 && b.nodeMap[b.nodeIDList[0]].Type() == eventlogger.NodeTypeFilter
 }
 

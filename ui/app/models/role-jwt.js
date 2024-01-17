@@ -15,7 +15,13 @@ const DOMAIN_STRINGS = {
   'auth0.com': 'Auth0',
 };
 
-const PROVIDER_WITH_LOGO = ['GitHub', 'GitLab', 'Google', 'Okta', 'Auth0'];
+const PROVIDER_WITH_LOGO = {
+  GitHub: 'github',
+  GitLab: 'gitlab',
+  Google: 'google',
+  Okta: 'okta',
+  Auth0: 'auth0',
+};
 
 export { DOMAIN_STRINGS, PROVIDER_WITH_LOGO };
 
@@ -30,6 +36,6 @@ export default class RoleJwtModel extends Model {
 
   get providerIcon() {
     const { providerName } = this;
-    return PROVIDER_WITH_LOGO.includes(providerName) ? providerName.toLowerCase() : null;
+    return PROVIDER_WITH_LOGO[providerName] || null;
   }
 }
