@@ -48,7 +48,7 @@ type oidcConfig struct {
 }
 
 // fullIssuer returns the full issuer for the config, suitable for OpenID metadata and
-// token claims. It takes an optional child, which much be of the value "" or "plugins".
+// token claims. It takes an optional child, which must be of the value "" or "plugins".
 // The child will be appended as the last path segment on the returned issuer URL.
 func (c *oidcConfig) fullIssuer(child string) (string, error) {
 	if !validChildIssuer(child) {
