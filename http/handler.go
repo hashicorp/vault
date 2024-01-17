@@ -426,6 +426,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 						newReq := r.Clone(ctx)
 						newReq.URL.Path = redir
 						hf(w, newReq)
+						cancelFunc()
 						return
 					}
 				}
