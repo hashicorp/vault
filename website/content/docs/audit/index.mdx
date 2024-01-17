@@ -140,6 +140,14 @@ docs](/vault/api-docs/system/audit) for more details.
 - `elide_list_responses` `(bool: false)` - See [Eliding list response
   bodies](/vault/docs/audit#eliding-list-response-bodies) below.
 
+- `fallback` `(bool: false)` - If enabled, marks this audit device as the fallback
+  device to in conjunction with [filtering](/vault/docs/concepts/filtering-audit).
+  Vault supports enabling only a single fallback audit device.
+
+- `filter` (`string: ""`)` - Allows a predicate to be used by the audit device in
+  order to filter which audit entries this device should attempt to log.
+  See [filtering](/vault/docs/concepts/filtering) for more information.
+
 - `format` `(string: "json")` - Allows selecting the output format. Valid values
   are `"json"` and `"jsonx"`, which formats the normal log entries as XML.
 
