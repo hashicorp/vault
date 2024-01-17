@@ -152,9 +152,10 @@ export default class VerticalBarChart extends Component {
     tooltipRect.on('mouseover', (data) => {
       const hoveredMonth = data[this.xKey];
       const stackedNumbers = []; // accumulates stacked dataset values to calculate total
-      this.tooltipStats = this.args.chartLegend.map(({ key, label }) => {
+      this.tooltipStats = []; // clear stats
+      this.args.chartLegend.forEach(({ key, label }) => {
         stackedNumbers.push(data[key]);
-        return `${formatNumber([data[key]])} ${label}`;
+        this.tooltipStats.pushObject(`${formatNumber([data[key]])} ${label}`);
       });
       this.tooltipTotal = `${formatNumber([calculateSum(stackedNumbers)])} ${
         data.new_clients ? 'total' : 'new'
