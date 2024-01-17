@@ -1732,6 +1732,8 @@ func expectStrings(t *testing.T, actualStrings []string, expectedStrings map[str
 	}
 }
 
+// Test_oidcConfig_fullIssuer tests that the full issuer matches expectations
+// given different issuer bases and children.
 func Test_oidcConfig_fullIssuer(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
@@ -1789,6 +1791,7 @@ func Test_oidcConfig_fullIssuer(t *testing.T) {
 	}
 }
 
+// Test_validChildIssuer tests that only valid child issuers are accepted.
 func Test_validChildIssuer(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -1818,6 +1821,9 @@ func Test_validChildIssuer(t *testing.T) {
 	}
 }
 
+// Test_optionalChildIssuerRegex tests that the regex returned from
+// optionalChildIssuerRegex produces the expected captures given different
+// input paths.
 func Test_optionalChildIssuerRegex(t *testing.T) {
 	tests := []struct {
 		name     string
