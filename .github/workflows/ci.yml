@@ -152,7 +152,7 @@ jobs:
     if: |
       needs.setup.outputs.enterprise == 1 &&
       needs.verify-changes.outputs.is_docs_change == 'false' &&
-      needs.verify-changes.outputs.is_ui_change == 'false' && 
+      needs.verify-changes.outputs.is_ui_change == 'false' &&
       (contains(github.event.pull_request.labels.*.name, 'fips') || github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
     needs:
       - setup
@@ -198,20 +198,20 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       # Setup node.js without caching to allow running npm install -g yarn (next step)
-      - uses: actions/setup-node@e33196f7422957bea03ed53f6fbb155025ffc7b8 # v3.7.0
+      - uses: actions/setup-node@b39b52d1213e96004bfcb1c61a8a6fa8ab84f3e8 # v4.0.1
         with:
           node-version-file: './ui/package.json'
       - id: install-yarn
         run: |
           npm install -g yarn
       # Setup node.js with caching using the yarn.lock file
-      - uses: actions/setup-node@e33196f7422957bea03ed53f6fbb155025ffc7b8 # v3.7.0
+      - uses: actions/setup-node@b39b52d1213e96004bfcb1c61a8a6fa8ab84f3e8 # v4.0.1
         with:
           node-version-file: './ui/package.json'
           cache: yarn
           cache-dependency-path: ui/yarn.lock
       - id: install-browser
-        uses: browser-actions/setup-chrome@c485fa3bab6be59dce18dbc18ef6ab7cbc8ff5f1 # v1.2.0
+        uses: browser-actions/setup-chrome@52f10de5479c69bcbbab2eab094c9d373148005e # v1.4.0
       - id: ui-dependencies
         name: ui-dependencies
         working-directory: ./ui
@@ -225,7 +225,7 @@ jobs:
       - id: secrets
         name: Fetch secrets
         if: github.repository == 'hashicorp/vault-enterprise'
-        uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
+        uses: hashicorp/vault-action@affa6f04da5c2d55e6e115b7d1b044a6b1af8c74
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -243,8 +243,7 @@ jobs:
         run: |
           rm -rf ./pkg
           mkdir ./pkg
-
-          make ci-bootstrap dev
+          make prep dev
       - id: test-ui
         name: test-ui
         env:
@@ -265,7 +264,7 @@ jobs:
           name: test-results-ui
           path: ui/test-results
         if: success() || failure()
-      - uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f # v2.1
+      - uses: test-summary/action@fee35d7df20790255fe6aa92cf0f6d28092ecf2f # v2.2
         with:
           paths: "ui/test-results/qunit/results.xml"
           show: "fail"
@@ -373,7 +372,7 @@ jobs:
         run: vault-auth
       - id: secrets
         name: Fetch Vault Secrets
-        uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
+        uses: hashicorp/vault-action@affa6f04da5c2d55e6e115b7d1b044a6b1af8c74
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}

@@ -170,6 +170,10 @@
         "path": "concepts/lease"
       },
       {
+        "title": "Lease Explosions",
+        "path": "concepts/lease-explosions"
+      },
+      {
         "title": "Authentication",
         "path": "concepts/auth"
       },
@@ -1750,13 +1754,27 @@
         "path": "plugins/plugin-management"
       },
       {
-        "title": "Containerized Plugins",
-        "path": "plugins/containerized-plugins",
-        "badge": {
-          "text": "BETA",
-          "type": "outlined",
-          "color": "highlight"
-        }
+        "title": "Containerized plugins",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "plugins/containerized-plugins",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            }
+          },
+          {
+            "title": "Add a containerized plugin",
+            "path": "plugins/containerized-plugins/add-a-containerized-plugin",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            }
+          }
+        ]
       },
       {
         "title": "Integrations Library",
@@ -1985,8 +2003,12 @@
                         "title": "Auth Methods",
                         "routes": [
                           {
+                            "title": "AWS",
+                            "path": "platform/k8s/vso/sources/vault/auth/aws"
+                          },
+                          {
                             "title": "GCP",
-                            "path": "platform/k8s/vso/sources/vault/gcp-auth"
+                            "path": "platform/k8s/vso/sources/vault/auth/gcp"
                           }
                         ]
                       }
@@ -2567,6 +2589,15 @@
           {
             "title": "Create an administrative namespace",
             "path": "enterprise/namespaces/create-admin-namespace"
+          },
+          {
+            "title": "Run Vault with many namespaces",
+            "path": "enterprise/namespaces/namespace-limits",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            }
           }
         ]
       },

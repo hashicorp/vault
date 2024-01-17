@@ -14,11 +14,6 @@ variable "vault_install_dir" {
   description = "The directory where the Vault binary will be installed"
 }
 
-variable "vault_instance_count" {
-  type        = number
-  description = "How many vault instances are in the cluster"
-}
-
 variable "vault_hosts" {
   type = map(object({
     private_ip = string

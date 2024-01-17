@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 const SELECTORS = {
   searchSelect: '.search-select',
   secretsEnginesSelect: '[data-test-secrets-engines-select]',

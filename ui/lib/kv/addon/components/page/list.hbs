@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <KvPageHeader @breadcrumbs={{@breadcrumbs}} @mountName={{@backend}}>
   <:tabLinks>
     <LinkTo @route={{this.router.currentRoute.localName}} data-test-secrets-tab="Secrets">Secrets</LinkTo>
@@ -86,7 +91,11 @@
                       {{/if}}
                       {{#if metadata.canCreateVersionData}}
                         <li>
-                          <LinkTo @route="secret.details.edit" @model={{metadata.fullSecretPath}}>
+                          <LinkTo
+                            @route="secret.details.edit"
+                            @model={{metadata.fullSecretPath}}
+                            data-test-popup-create-new-version
+                          >
                             Create new version
                           </LinkTo>
                         </li>
@@ -98,7 +107,7 @@
                             @onConfirmAction={{fn this.onDelete metadata}}
                             @confirmMessage="This will permanently delete this secret and all its versions."
                             @cancelButtonText="Cancel"
-                            data-test-delete-metadata={{metadata.path}}
+                            data-test-popup-metadata-delete
                           >
                             Permanently delete
                           </ConfirmAction>

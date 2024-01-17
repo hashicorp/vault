@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 const root = ['create', 'read', 'update', 'delete', 'list'];
@@ -25,10 +25,26 @@ export const dataPolicy = ({ backend, secretPath = '*', capabilities = root }) =
   `;
 };
 
+export const dataNestedPolicy = ({ backend, secretPath = '*', capabilities = root }) => {
+  return `
+    path "${backend}/data/app/${secretPath}" {
+      capabilities = [${format(capabilities)}]
+    }
+  `;
+};
+
 export const metadataPolicy = ({ backend, secretPath = '*', capabilities = root }) => {
   // "delete" capability on this path can destroy all versions
   return `
     path "${backend}/metadata/${secretPath}" {
+        capabilities = [${format(capabilities)}]
+    }
+  `;
+};
+
+export const metadataNestedPolicy = ({ backend, secretPath = '*', capabilities = root }) => {
+  return `
+    path "${backend}/metadata/app/${secretPath}" {
         capabilities = [${format(capabilities)}]
     }
   `;
@@ -76,6 +92,9 @@ export const personas = {
     deleteVersionsPolicy({ backend }) +
     undeleteVersionsPolicy({ backend }) +
     destroyVersionsPolicy({ backend }),
+  secretNestedCreator: (backend) =>
+    dataNestedPolicy({ backend, capabilities: ['create', 'update'] }) +
+    metadataNestedPolicy({ backend, capabilities: ['list', 'delete'] }),
   secretCreator: (backend) =>
     dataPolicy({ backend, capabilities: ['create', 'update'] }) +
     metadataPolicy({ backend, capabilities: ['delete'] }),
