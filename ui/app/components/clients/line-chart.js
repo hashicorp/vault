@@ -12,12 +12,7 @@ import { select, selectAll, node } from 'd3-selection';
 import { axisLeft, axisBottom } from 'd3-axis';
 import { scaleLinear, scalePoint } from 'd3-scale';
 import { line } from 'd3-shape';
-import {
-  LIGHT_AND_DARK_BLUE,
-  UPGRADE_WARNING,
-  SVG_DIMENSIONS,
-  formatNumbers,
-} from 'vault/utils/chart-helpers';
+import { BLUE_PALETTE, UPGRADE_WARNING, SVG_DIMENSIONS, formatNumbers } from 'vault/utils/chart-helpers';
 import { parseAPITimestamp, formatChartDate } from 'core/utils/date-formatters';
 import { formatNumber } from 'core/helpers/format-number';
 
@@ -145,7 +140,7 @@ export default class LineChart extends Component {
       .append('g')
       .append('path')
       .attr('fill', 'none')
-      .attr('stroke', LIGHT_AND_DARK_BLUE[1])
+      .attr('stroke', BLUE_PALETTE[1])
       .attr('stroke-width', 0.5)
       .attr('d', lineGenerator(filteredData));
 
@@ -160,8 +155,8 @@ export default class LineChart extends Component {
       .attr('cy', (d) => `${100 - yScale(d[this.yKey])}%`)
       .attr('cx', (d) => xScale(d[this.xKey]))
       .attr('r', 3.5)
-      .attr('fill', LIGHT_AND_DARK_BLUE[0])
-      .attr('stroke', LIGHT_AND_DARK_BLUE[1])
+      .attr('fill', BLUE_PALETTE[0])
+      .attr('stroke', BLUE_PALETTE[1])
       .attr('stroke-width', 1.5);
 
     // LARGER HOVER CIRCLES

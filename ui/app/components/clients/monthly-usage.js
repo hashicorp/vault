@@ -13,12 +13,10 @@ import { calculateAverage } from 'vault/utils/chart-helpers';
  * @example
  * ```js
   <Clients::MonthlyUsage
-    @chartLegend={{this.chartLegend}}
     @responseTimestamp={{this.responseTimestamp}}
     @verticalBarChartData={{this.byMonthActivityData}}
   />
  * ```
- * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  * @param {string} timestamp -  ISO timestamp created in serializer to timestamp the response
  * @param {array} verticalBarChartData - array of flattened objects
     sample object =
@@ -35,9 +33,13 @@ import { calculateAverage } from 'vault/utils/chart-helpers';
         namespaces: [],
       },
     }
- * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  */
 export default class MonthlyUsage extends Component {
+  monthlyUsageLegend = [
+    { key: 'entity_clients', label: 'entity clients' },
+    { key: 'non_entity_clients', label: 'non-entity clients' },
+  ];
+
   get averageTotalClients() {
     return calculateAverage(this.args.verticalBarChartData, 'clients') || '0';
   }

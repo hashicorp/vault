@@ -11,7 +11,7 @@ import { select, event, selectAll } from 'd3-selection';
 import { scaleLinear, scaleBand } from 'd3-scale';
 import { axisLeft } from 'd3-axis';
 import { max, maxIndex } from 'd3-array';
-import { GREY, LIGHT_AND_DARK_BLUE, calculateSum } from 'vault/utils/chart-helpers';
+import { GREY, BLUE_PALETTE, calculateSum } from 'vault/utils/chart-helpers';
 import { tracked } from '@glimmer/tracking';
 import { formatNumber } from 'core/helpers/format-number';
 
@@ -90,7 +90,7 @@ export default class HorizontalBarChart extends Component {
       .attr('data-test-group', (d) => `${d.key}`)
       // shifts chart to accommodate y-axis legend
       .attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`)
-      .style('fill', (d, i) => LIGHT_AND_DARK_BLUE[i]);
+      .style('fill', (d, i) => BLUE_PALETTE[i]);
 
     const yAxis = axisLeft(yScale).tickSize(0);
 

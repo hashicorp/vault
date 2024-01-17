@@ -12,7 +12,7 @@
   </div>
 
   <div class={{concat (unless @verticalBarChartData "chart-empty-state ") "chart-container-wide"}}>
-    <Clients::VerticalBarChart @dataset={{@verticalBarChartData}} @chartLegend={{@chartLegend}} />
+    <Clients::VerticalBarChart @dataset={{@verticalBarChartData}} @chartLegend={{this.monthlyUsageLegend}} />
   </div>
 
   <div class="chart-subTitle">
@@ -45,8 +45,9 @@
 
   {{#if @verticalBarChartData}}
     <div data-test-monthly-usage-legend class="legend-right">
-      <span class="light-dot"></span><span class="legend-label">{{capitalize (get @chartLegend "0.label")}}</span>
-      <span class="dark-dot"></span><span class="legend-label">{{capitalize (get @chartLegend "1.label")}}</span>
+      {{#each this.monthlyUsageLegend as |legend idx|}}
+        <span class="legend-colors dot-{{idx}}"></span><span class="legend-label">{{capitalize legend.label}}</span>
+      {{/each}}
     </div>
   {{/if}}
 </div>

@@ -14,7 +14,7 @@ import { scaleLinear, scalePoint } from 'd3-scale';
 import { stack } from 'd3-shape';
 import {
   GREY,
-  LIGHT_AND_DARK_BLUE,
+  BLUE_PALETTE,
   SVG_DIMENSIONS,
   TRANSLATE,
   calculateSum,
@@ -77,7 +77,7 @@ export default class VerticalBarChart extends Component {
       .data(stackedData)
       .enter()
       .append('g')
-      .style('fill', (d, i) => LIGHT_AND_DARK_BLUE[i]);
+      .style('fill', (d, i) => BLUE_PALETTE[i]);
 
     dataBars
       .selectAll('rect')
