@@ -25,6 +25,7 @@ export const SELECTORS = {
   // FORMS
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   inputByAttr: (attr) => `[data-test-input="${attr}"]`,
+  fieldByAttr: (attr) => `[data-test-field="${attr}"]`,
   validation: (attr) => `[data-test-field-validation=${attr}]`,
   validationWarning: (attr) => `[data-test-validation-warning=${attr}]`,
   messageError: '[data-test-message-error]',
