@@ -38,7 +38,7 @@ export default RESTSerializer.extend({
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const nullResponses = ['updateRecord', 'createRecord', 'deleteRecord'];
     const connections = nullResponses.includes(requestType)
-      ? { name: id, backend: payload.backend }
+      ? { name: payload.data.name, backend: payload.data.backend }
       : this.normalizeSecrets(payload);
     const { modelName } = primaryModelClass;
     let transformedPayload = { [modelName]: connections };

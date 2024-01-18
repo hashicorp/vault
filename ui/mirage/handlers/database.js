@@ -45,6 +45,20 @@ export default function (server) {
     };
   });
   server.post('/:backend/config/:name', (schema, req) => {
+    const { name } = req.params;
+    const { username } = JSON.parse(req.requestBody);
+    if (name === 'bad-connection') {
+      return new Response(
+        500,
+        {},
+        {
+          errors: [
+            `error creating database object: error verifying - ping: Error 1045 (28000): Access denied for user '${username}'@'192.168.65.1' (using password: YES)`,
+          ],
+        }
+      );
+    }
+
     return createRecord(req, 'database-connection');
   });
   server.delete('/:backend/config/:name', (schema, req) => {

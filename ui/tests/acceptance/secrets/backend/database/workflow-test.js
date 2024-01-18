@@ -8,11 +8,15 @@ import { v4 as uuidv4 } from 'uuid';
 import { Response } from 'miragejs';
 import { click, currentURL, fillIn, visit } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { create } from 'ember-cli-page-object';
 
 import ENV from 'vault/config/environment';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
+import flashMessage from 'vault/tests/pages/components/flash-message';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
+
+const flash = create(flashMessage);
 
 const PAGE = {
   emptyStateTitle: '[data-test-empty-state-title]',
@@ -127,6 +131,42 @@ module('Acceptance | database workflow', function (hooks) {
 
       assert.dom(PAGE.rotateModal).hasText('Rotate your root credentials?', 'rotate modal is shown');
       await click(PAGE.skipRotate);
+
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.backend}/show/connect-${this.backend}`,
+        'Takes you to details page for connection'
+      );
+      assert.dom(PAGE.infoRow).exists({ count: this.expectedRows.length }, 'correct number of rows');
+      this.expectedRows.forEach(({ label, value }) => {
+        assert.dom(PAGE.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
+        assert.dom(PAGE.infoRowValue(label)).hasText(value, `Value for ${label} is correct`);
+      });
+    });
+    test('create failure', async function (assert) {
+      assert.expect(25);
+      this.server.post('/:backend/rotate-root/:name', (schema, req) => {
+        const okay = req.params.name !== 'bad-connection';
+        assert.ok(okay, 'rotate root called but not for bad-connection');
+        new Response(204);
+      });
+      await visit(`/vault/secrets/${this.backend}/overview`);
+      assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
+      await click(PAGE.emptyStateAction);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.backend}/create`, 'Takes you to create page');
+
+      // fill in connection details
+      await fillOutConnection(`bad-connection`);
+      await click(FORM.saveBtn);
+      assert.strictEqual(
+        flash.latestMessage,
+        `error creating database object: error verifying - ping: Error 1045 (28000): Access denied for user 'admin'@'192.168.65.1' (using password: YES)`,
+        'shows the error message from API'
+      );
+      await fillIn(FORM.inputByAttr('name'), `connect-${this.backend}`);
+      await click(FORM.saveBtn);
+      assert.dom(PAGE.rotateModal).hasText('Rotate your root credentials?', 'rotate modal is shown');
+      await click(PAGE.confirmRotate);
 
       assert.strictEqual(
         currentURL(),
