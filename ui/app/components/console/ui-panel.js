@@ -8,7 +8,7 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 /* eslint ember/no-computed-properties-in-native-classes: 'warn' */
-import { alias, or } from '@ember/object/computed';
+import { or } from '@ember/object/computed';
 import { schedule } from '@ember/runloop';
 import { camelize } from '@ember/string';
 import { task } from 'ember-concurrency';
@@ -43,15 +43,16 @@ export default class UiPanel extends Component {
   @tracked inputValue = null;
   @tracked element = null;
 
-  @alias('console.log') cliLog;
+  get output() {
+    return this.console.log;
+  }
 
   constructor() {
     super(...arguments);
   }
 
-  scrollToBottom(element) {
-    // We do not have access to element after entering a command. Save the original element var from the executeCommand task to use for this situation.
-    const container = !element ? this.element : element;
+  @action scrollToBottom() {
+    const container = document.querySelector('#console-ui-panel');
     container.scrollTop = container.scrollHeight;
   }
 
