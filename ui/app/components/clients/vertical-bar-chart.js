@@ -13,6 +13,7 @@ import { axisLeft, axisBottom } from 'd3-axis';
 import { scaleLinear, scalePoint } from 'd3-scale';
 import { stack } from 'd3-shape';
 import {
+  BAR_WIDTH,
   GREY,
   BLUE_PALETTE,
   SVG_DIMENSIONS,
@@ -37,7 +38,6 @@ import { formatNumber } from 'core/helpers/format-number';
  * @param {string} [noDataMessage] - custom empty state message that displays when no dataset is passed to the chart
  */
 
-const BAR_WIDTH = 7; // data bar width is 7 pixels
 export default class VerticalBarChart extends Component {
   @tracked tooltipTarget = '';
   @tracked tooltipTotal = '';

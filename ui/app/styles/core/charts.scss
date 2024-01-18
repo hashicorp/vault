@@ -337,3 +337,35 @@ p.data-details {
     grid-row-start: 4;
   }
 }
+
+// LINEAL STYLING //
+.lineal-chart {
+  position: relative;
+  padding: 10px 0px 10px 50px;
+  svg {
+    overflow: visible;
+  }
+}
+.lineal-chart-bar {
+  fill: var(--token-color-palette-blue-300);
+}
+.lineal-axis {
+  color: $ui-gray-500;
+  text {
+    font-size: 0.75rem;
+  }
+  line {
+    color: $ui-gray-300;
+  }
+}
+.lineal-tooltip-position {
+  position: absolute;
+  transform-style: preserve-3d;
+  bottom: 30px;
+  left: -20px;
+  pointer-events: none;
+  width: 140px;
+  transform: translate(calc(1px * var(--x, 0)), calc(-1px * var(--y, 0)));
+  transform-origin: bottom left;
+  z-index: 100;
+}
