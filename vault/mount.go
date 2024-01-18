@@ -512,11 +512,10 @@ func (e *MountEntry) SyncCache() {
 		e.synthesizedConfigCache.Store("delegated_auth_accessors", e.Config.DelegatedAuthAccessors)
 	}
 
-	// TODO(austin): is this needed?
-	if e.Config.IdentityTokenKey == "" {
+	if len(e.Config.IdentityTokenKey) == 0 {
 		e.synthesizedConfigCache.Store("identity_token_key", defaultKeyName)
 	} else {
-		e.synthesizedConfigCache.Store("identity_token_key", e.Config.DelegatedAuthAccessors)
+		e.synthesizedConfigCache.Store("identity_token_key", e.Config.IdentityTokenKey)
 	}
 }
 
