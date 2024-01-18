@@ -79,6 +79,9 @@ module('Integration | Component | messages/page/details', function (hooks) {
         assert
           .dom(`[data-test-value-div="${field.label}"]`)
           .hasText(this.message[field.key] ? 'Yes' : 'No', `${field.label} value renders`);
+      } else if (field.key === 'link') {
+        assert.dom('[data-test-value-div="Link"]').exists();
+        assert.dom('[data-test-value-div="Link"] [data-test-link="message link"]').hasText('here');
       } else {
         assert
           .dom(`[data-test-row-value="${field.label}"]`)
