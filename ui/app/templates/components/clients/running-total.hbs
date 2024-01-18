@@ -41,7 +41,7 @@
       <div class={{concat (unless this.hasAverageNewClients "chart-empty-state ") "chart-container-wide"}}>
         <Clients::VerticalBarChart
           @dataset={{if this.hasAverageNewClients this.byMonthNewClients false}}
-          @chartLegend={{@chartLegend}}
+          @chartLegend={{this.runningTotalLegend}}
           @noDataTitle="No new clients"
           @noDataMessage={{concat
             "There is no new client data available for this "
@@ -83,8 +83,9 @@
 
       {{#if this.hasAverageNewClients}}
         <div class="legend-right" data-test-running-total-legend>
-          <span class="light-dot"></span><span class="legend-label">{{capitalize (get @chartLegend "0.label")}}</span>
-          <span class="dark-dot"></span><span class="legend-label">{{capitalize (get @chartLegend "1.label")}}</span>
+          {{#each this.runningTotalLegend as |legend idx|}}
+            <span class="legend-colors dot-{{idx}}"></span><span class="legend-label">{{capitalize legend.label}}</span>
+          {{/each}}
         </div>
       {{/if}}
     </div>

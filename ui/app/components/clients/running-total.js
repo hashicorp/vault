@@ -15,7 +15,6 @@ import { calculateAverage } from 'vault/utils/chart-helpers';
  * @example
  * ```js
       <Clients::RunningTotal
-        @chartLegend={{this.chartLegend}}
         @selectedNamespace={{this.selectedNamespace}}
         @byMonthActivityData={{this.byMonth}}
         @runningTotals={{this.runningTotals}}
@@ -23,7 +22,6 @@ import { calculateAverage } from 'vault/utils/chart-helpers';
       />
  * ```
 
- * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  * @param {string} selectedAuthMethod - string of auth method label for empty state message in bar chart
  * @param {array} byMonthActivityData - array of objects from /activity response, from the 'months' key, includes total and new clients per month
     object structure: {
@@ -45,6 +43,11 @@ import { calculateAverage } from 'vault/utils/chart-helpers';
  *
  */
 export default class RunningTotal extends Component {
+  runningTotalLegend = [
+    { key: 'entity_clients', label: 'entity clients' },
+    { key: 'non_entity_clients', label: 'non-entity clients' },
+  ];
+
   get byMonthNewClients() {
     if (this.args.byMonthActivityData) {
       return this.args.byMonthActivityData?.map((m) => m.new_clients);

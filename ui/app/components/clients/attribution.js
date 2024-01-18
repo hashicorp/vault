@@ -18,7 +18,6 @@ import { format, isSameMonth } from 'date-fns';
  * @example
  * ```js
  *  <Clients::Attribution
- *    @chartLegend={{this.chartLegend}}
  *    @totalUsageCounts={{this.totalUsageCounts}}
  *    @newUsageCounts={{this.newUsageCounts}}
  *    @totalClientAttribution={{this.totalClientAttribution}}
@@ -31,7 +30,6 @@ import { format, isSameMonth } from 'date-fns';
  *    @upgradeExplanation="We added monthly breakdowns and mount level attribution starting in 1.10, so keep that in mind when looking at the data."
  *  />
  * ```
- * @param {array} chartLegend - (passed to child) array of objects with key names 'key' and 'label' so data can be stacked
  * @param {object} totalUsageCounts - object with total client counts for chart tooltip text
  * @param {object} newUsageCounts - object with new client counts for chart tooltip text
  * @param {array} totalClientAttribution - array of objects containing a label and breakdown of client counts for total clients
@@ -47,6 +45,11 @@ import { format, isSameMonth } from 'date-fns';
 export default class Attribution extends Component {
   @tracked showCSVDownloadModal = false;
   @service download;
+  attributionLegend = [
+    { key: 'entity_clients', label: 'entity clients' },
+    { key: 'non_entity_clients', label: 'non-entity clients' },
+    { key: 'secret_syncs', label: 'secret sync clients' },
+  ];
 
   get formattedStartDate() {
     if (!this.args.startTimestamp) return null;
