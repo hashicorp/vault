@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 // Common sub-types for client counts data
 interface ChartTimestamp {
   month: string; // eg. 12/22
