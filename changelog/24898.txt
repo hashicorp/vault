@@ -1,0 +1,3 @@
+```release-note:improvement
+identity/tokens: adds plugin issuer with openid-configuration and keys APIs
+```

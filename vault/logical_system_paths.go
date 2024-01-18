@@ -2109,6 +2109,66 @@ func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 	}
 }
 
+func (b *SystemBackend) pluginsRootReloadPath() *framework.Path {
+	return &framework.Path{
+		// Unknown plugin type is allowed to make it easier for the CLI changes to be more backwards compatible.
+		Pattern: "plugins/reload/(?P<type>auth|database|secret|unknown)/" + framework.GenericNameRegex("name") + "$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationVerb:   "reload",
+			OperationSuffix: "plugins",
+		},
+
+		Fields: map[string]*framework.FieldSchema{
+			"name": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["root-plugin-reload-name"][0]),
+				Required:    true,
+			},
+			"type": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["root-plugin-reload-type"][0]),
+				Required:    true,
+			},
+			"scope": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["root-plugin-reload-scope"][0]),
+			},
+		},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.handleRootPluginReloadUpdate,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"reload_id": {
+								Type:     framework.TypeString,
+								Required: true,
+							},
+						},
+					}},
+					http.StatusAccepted: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"reload_id": {
+								Type:     framework.TypeString,
+								Required: true,
+							},
+						},
+					}},
+				},
+				Summary:     "Reload all instances of a specific plugin.",
+				Description: `Reload all plugins of a specific name and type across all namespaces. If "scope" is provided and is "global", the plugin is reloaded across all nodes and clusters. If a new plugin version has been pinned, this will ensure all instances start using the new version.`,
+			},
+		},
+
+		HelpSynopsis:    strings.TrimSpace(sysHelp["root-plugin-reload"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["root-plugin-reload"][1]),
+	}
+}
+
 func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "plugins/runtimes/catalog/(?P<type>container)/" + framework.GenericNameRegex("name"),

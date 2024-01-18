@@ -7,8 +7,11 @@ import SyncDestinationModel from '../destination';
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 
-const displayFields = ['name', 'credentials'];
-const formFieldGroups = [{ default: ['name'] }, { Credentials: ['credentials'] }];
+const displayFields = ['name', 'credentials', 'secretNameTemplate', 'customTags'];
+const formFieldGroups = [
+  { default: ['name', 'secretNameTemplate', 'customTags'] },
+  { Credentials: ['credentials'] },
+];
 @withFormFields(displayFields, formFieldGroups)
 export default class SyncDestinationsGoogleCloudSecretManagerModel extends SyncDestinationModel {
   @attr('string', {
@@ -20,5 +23,10 @@ export default class SyncDestinationsGoogleCloudSecretManagerModel extends SyncD
   })
   credentials; // obfuscated, never returned by API
 
-  // TODO - confirm if project_id is going to be added to READ response (not editable)
+  @attr('object', {
+    subText:
+      'An optional set of informational key-value pairs added as additional metadata on secrets synced to this destination. Custom tags are merged with built-in tags.',
+    editType: 'kv',
+  })
+  customTags;
 }

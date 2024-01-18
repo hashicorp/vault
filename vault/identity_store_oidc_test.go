@@ -6,6 +6,8 @@ package vault
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -20,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	gocache "github.com/patrickmn/go-cache"
+	"github.com/stretchr/testify/require"
 )
 
 // TestOIDC_Path_OIDC_RoleNoKeyParameter tests that a role cannot be created
@@ -1726,5 +1729,144 @@ func expectStrings(t *testing.T, actualStrings []string, expectedStrings map[str
 		if !ok {
 			t.Fatalf("the string %q was not expected", actualString)
 		}
+	}
+}
+
+// Test_oidcConfig_fullIssuer tests that the full issuer matches expectations
+// given different issuer bases and children.
+func Test_oidcConfig_fullIssuer(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	tests := []struct {
+		name    string
+		issuer  string
+		child   string
+		want    string
+		wantErr bool
+	}{
+		{
+			name:   "issuer with valid empty child",
+			issuer: "https://vault.dev",
+			child:  baseIdentityTokenIssuer,
+			want:   fmt.Sprintf("https://vault.dev/v1/%s", issuerPath),
+		},
+		{
+			name:   "issuer with valid plugin child",
+			issuer: "http://127.0.0.1:8200",
+			child:  pluginIdentityTokenIssuer,
+			want:   fmt.Sprintf("http://127.0.0.1:8200/v1/%s/%s", issuerPath, pluginIdentityTokenIssuer),
+		},
+		{
+			name:    "issuer with invalid child",
+			issuer:  "http://127.0.0.1:8200",
+			child:   "invalid",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+				Path:      "oidc/config",
+				Operation: logical.UpdateOperation,
+				Storage:   storage,
+				Data: map[string]interface{}{
+					"issuer": tt.issuer,
+				},
+			})
+			expectSuccess(t, resp, err)
+
+			config, err := c.identityStore.getOIDCConfig(ctx, storage)
+			require.NoError(t, err)
+
+			got, err := config.fullIssuer(tt.child)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equalf(t, tt.want, got, "fullIssuer(%v)", tt.child)
+		})
+	}
+}
+
+// Test_validChildIssuer tests that only valid child issuers are accepted.
+func Test_validChildIssuer(t *testing.T) {
+	tests := []struct {
+		name  string
+		child string
+		want  bool
+	}{
+		{
+			name:  "valid child issuer",
+			child: baseIdentityTokenIssuer,
+			want:  true,
+		},
+		{
+			name:  "valid child issuer",
+			child: pluginIdentityTokenIssuer,
+			want:  true,
+		},
+		{
+			name:  "invalid child issuer",
+			child: "test",
+			want:  false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equalf(t, tt.want, validChildIssuer(tt.child), "validChildIssuer(%v)", tt.child)
+		})
+	}
+}
+
+// Test_optionalChildIssuerRegex tests that the regex returned from
+// optionalChildIssuerRegex produces the expected captures given different
+// input paths.
+func Test_optionalChildIssuerRegex(t *testing.T) {
+	tests := []struct {
+		name     string
+		pattern  string
+		path     string
+		captures map[string]string
+	}{
+		{
+			name:     "valid match with capture",
+			pattern:  "oidc" + optionalChildIssuerRegex("child") + "/.well-known/keys",
+			path:     "oidc/plugins/.well-known/keys",
+			captures: map[string]string{"child": "plugins"},
+		},
+		{
+			name:     "valid match with capture name, segment, and path change",
+			pattern:  "oidc" + optionalChildIssuerRegex("name") + "/.well-known/openid-configuration",
+			path:     "oidc/test/.well-known/openid-configuration",
+			captures: map[string]string{"name": "test"},
+		},
+		{
+			name:     "valid match with empty capture",
+			pattern:  "oidc" + optionalChildIssuerRegex("child") + "/.well-known/keys",
+			path:     "oidc/.well-known/keys",
+			captures: map[string]string{"child": ""},
+		},
+		{
+			name:     "invalid match with multiple path segments",
+			pattern:  "oidc" + optionalChildIssuerRegex("child") + "/.well-known/keys",
+			path:     "oidc/plugins/invalid/.well-known/keys",
+			captures: map[string]string{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			re := regexp.MustCompile(tt.pattern)
+			matches := re.FindStringSubmatch(tt.path)
+			actualCaptures := make(map[string]string)
+			for i, name := range re.SubexpNames() {
+				if name != "" && i < len(matches) {
+					actualCaptures[name] = matches[i]
+				}
+			}
+			require.Equal(t, tt.captures, actualCaptures)
+		})
 	}
 }

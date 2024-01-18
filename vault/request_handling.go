@@ -702,7 +702,6 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 			requestBodyToken = token.(string)
 			if IsSSCToken(token.(string)) {
 				token, err = c.CheckSSCToken(ctx, token.(string), c.isLoginRequest(ctx, req), c.perfStandby)
-
 				// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
 				// should receive a 403 bad token error like they do for all other invalid tokens, unless the error
 				// specifies that we should forward the request or retry the request.
@@ -1920,6 +1919,11 @@ func (c *Core) handleDelegatedAuth(ctx context.Context, origReq *logical.Request
 	if err != nil || authResp.IsError() {
 		// see if the backend wishes to handle the failed auth
 		if da.AuthErrorHandler() != nil {
+			if err != nil && errors.Is(err, logical.ErrInvalidCredentials) {
+				// We purposefully ignore the error here as the handler will
+				// always return the original error we passed in.
+				_, _, _ = invalidCredHandler(err)
+			}
 			resp, err := da.AuthErrorHandler()(ctx, origReq, authReq, authResp, err)
 			return resp, nil, err
 		}

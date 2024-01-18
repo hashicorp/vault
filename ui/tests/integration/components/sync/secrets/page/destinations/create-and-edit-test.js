@@ -144,7 +144,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
         assert.dom(PAGE.title).hasTextContaining(`Create Destination for ${name}`);
         for (const attr of this.model.formFields) {
-          assert.dom(PAGE.inputByAttr(attr.name)).exists();
+          assert.dom(PAGE.fieldByAttr(attr.name)).exists();
         }
       });
 
@@ -206,16 +206,18 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
   // EDIT FORM ASSERTIONS FOR EACH DESTINATION TYPE
   const EDITABLE_FIELDS = {
-    'aws-sm': ['accessKeyId', 'secretAccessKey'],
-    'azure-kv': ['clientId', 'clientSecret'],
-    'gcp-sm': ['credentials'],
-    gh: ['accessToken'],
-    'vercel-project': ['accessToken', 'teamId', 'deploymentEnvironments'],
+    'aws-sm': ['accessKeyId', 'secretAccessKey', 'secretNameTemplate', 'customTags'],
+    'azure-kv': ['clientId', 'clientSecret', 'secretNameTemplate', 'customTags'],
+    'gcp-sm': ['credentials', 'secretNameTemplate', 'customTags'],
+    gh: ['accessToken', 'secretNameTemplate'],
+    'vercel-project': ['accessToken', 'teamId', 'deploymentEnvironments', 'secretNameTemplate'],
   };
   const EXPECTED_VALUE = (key) => {
     switch (key) {
       case 'deployment_environments':
         return ['production'];
+      case 'custom_tags':
+        return { foo: `new-${key}-value` };
       default:
         // for all string type parameters
         return `new-${key}-value`;

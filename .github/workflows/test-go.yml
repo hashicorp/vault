@@ -82,7 +82,7 @@ jobs:
       contents: read
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/set-up-go
@@ -117,7 +117,7 @@ jobs:
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - uses: ./.github/actions/set-up-gotestsum
       - run: mkdir -p test-results/go-test
-      - uses: actions/cache/restore@e12d46a63a90f2fae62d114769bbf2a179198b5c # v3.3.3
+      - uses: actions/cache/restore@13aacd865c20de90d75de3b17ebe84f7a17d57d2 # v4.0.0
         if: inputs.test-timing-cache-enabled
         with:
           path: test-results/go-test
@@ -215,7 +215,7 @@ jobs:
       GOPRIVATE: github.com/hashicorp/*
       TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }}
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/set-up-go
@@ -501,7 +501,7 @@ jobs:
     needs: test-go
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
-      - uses: actions/cache@e12d46a63a90f2fae62d114769bbf2a179198b5c # v3.3.3
+      - uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2 # v4.0.0
         with:
           path: test-results/go-test
           key: ${{ inputs.test-timing-cache-key }}-${{ github.run_number }}
