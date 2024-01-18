@@ -42,6 +42,11 @@ access the Kubernetes API.
   extracted. Not every installation of Kubernetes exposes these
   keys.
 - `disable_local_ca_jwt` `(bool: false)` - Disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod.
+- `use_annotations_as_alias_metadata` `(bool: false)` - Indicate annotations with `vault.hashicorp.com/alias-metadata-KEY-NAME`
+  keys of the request JWT service account will be added to the alias metadata. For example, if an annotation
+  "vault.hashicorp.com/alias-metadata-test-key" is configured, "test-key" with its value will be added.
+  NOTE: Vault client or the token reviewer service account needs to be configured
+  with the permission to get service account annotations from Kubernetes API.
 
 ### Deprecated parameters
 
