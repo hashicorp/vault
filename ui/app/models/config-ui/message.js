@@ -11,10 +11,21 @@ import { withFormFields } from 'vault/decorators/model-form-fields';
 const validations = {
   title: [{ type: 'presence', message: 'Title is required.' }],
   message: [{ type: 'presence', message: 'Message is required.' }],
+  link: [
+    {
+      validator(model) {
+        if (!model?.link) return true;
+        const linkTitle = Object.keys(model.link).length === 1;
+        const linkHref = Object.values(model.link);
+        return linkTitle && !!linkHref[0];
+      },
+      message: 'Link href is required.',
+    },
+  ],
 };
 
-@withFormFields(['authenticated', 'type', 'title', 'message', 'link', 'startTime', 'endTime'])
 @withModelValidations(validations)
+@withFormFields(['authenticated', 'type', 'title', 'message', 'link', 'startTime', 'endTime'])
 export default class MessageModel extends Model {
   @attr('boolean') active;
   @attr('string', {
