@@ -112,7 +112,6 @@ You can install and update your installation using `kustomize` which allows you 
 
 To install using Kustomize, download and untar/unzip the latest release from the [Releases Page](https://github.com/hashicorp/vault-secrets-operator/releases).
 ```shell-session
-# Example
 $ wget -q https://github.com/hashicorp/vault-secrets-operator/archive/refs/tags/v0.4.3.tar.gz
 $ tar -zxf v0.4.3.tar.gz
 $ cd vault-secrets-operator-0.4.3/
@@ -144,7 +143,7 @@ deployment.apps/vault-secrets-operator-controller-manager created
 
 Confirm the operator has been installed by examining the pods:
 ```shell-session
-$ k get pods -n vault-secrets-operator-system
+$ kubectl get pods -n vault-secrets-operator-system
 NAMESPACE                       NAME                                                         READY   STATUS    RESTARTS   AGE
 vault-secrets-operator-system   vault-secrets-operator-controller-manager-56754d5496-cq69s   2/2     Running   0          1m17s
 ```
