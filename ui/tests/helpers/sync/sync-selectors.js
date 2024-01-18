@@ -27,6 +27,9 @@ export const PAGE = {
   },
   destinations: {
     deleteBanner: '[data-test-delete-status-banner]',
+    details: {
+      sectionHeader: '[data-test-section-header]',
+    },
     sync: {
       mountSelect: '[data-test-sync-mount-select]',
       mountInput: '[data-test-sync-mount-input]',
