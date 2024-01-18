@@ -37,7 +37,7 @@ export default class ClientsRoute extends Route {
   model() {
     // swallow config error so activity can show if no config permissions
     return hash({
-      config: this.store.queryRecord('clients/config', {}).catch(() => null),
+      config: this.store.queryRecord('clients/config', {}).catch(() => ({})),
       versionHistory: this.getVersionHistory(),
     });
   }

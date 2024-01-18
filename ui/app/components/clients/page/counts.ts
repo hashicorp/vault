@@ -6,7 +6,7 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
-import { fromUnixTime, isSameMonth, isAfter } from 'date-fns';
+import { fromUnixTime, getUnixTime, isSameMonth, isAfter } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { formatDateObject } from 'core/utils/client-count-utils';
 
@@ -136,18 +136,21 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   @action
   onDateChange(dateObject: { dateType: string; monthIdx: string; year: string }) {
     const { dateType, monthIdx, year } = dateObject;
-    const { currentTimestamp } = this.args;
+    const {
+      currentTimestamp,
+      config: { billingStartTimestamp },
+    } = this.args;
     // converts the selectedDate to unix timestamp for activity query
     const selectedDate = formatDateObject({ monthIdx, year }, dateType === 'endDate');
 
     if (dateType !== 'cancel') {
       const start_time = {
-        reset: undefined, // clicked 'Current billing period' in calendar widget -> resets to billing start date in the route file (which is the default query value)
+        reset: getUnixTime(billingStartTimestamp), // clicked 'Current billing period' in calendar widget -> resets to billing start date
         currentMonth: currentTimestamp, // clicked 'Current month' from calendar widget -> defaults to currentTimestamp
         startDate: selectedDate, // from "Edit billing start" modal
       }[dateType];
       // endDate type is selection from calendar widget
-      const end_time = dateType === 'endDate' ? selectedDate : undefined; // defaults to currentTimestamp
+      const end_time = dateType === 'endDate' ? selectedDate : currentTimestamp; // defaults to currentTimestamp
       const params = start_time !== undefined ? { start_time, end_time } : { end_time };
       this.args.onFilterChange(params);
     }

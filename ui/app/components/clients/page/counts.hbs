@@ -11,27 +11,33 @@
     Date queries are sent in UTC.
   </p>
 
-  <h2 class="title is-6 has-bottom-margin-xs">
+  <h2 class="title is-6 has-bottom-margin-xs" data-test-counts-start-label>
     {{this.versionText.label}}
   </h2>
 
-  <div data-test-start-date-editor class="is-flex-align-baseline">
+  <div class="is-flex-align-baseline">
     {{#if this.formattedStartDate}}
-      <p class="is-size-6" data-test-date-display>{{this.formattedStartDate}}</p>
+      <p class="is-size-6" data-test-counts-start-month>{{this.formattedStartDate}}</p>
       <Hds::Button
         class="has-left-margin-xs"
         @text="Edit"
         @color="tertiary"
         @icon="edit"
         @iconPosition="trailing"
+        data-test-counts-start-edit
         {{on "click" (fn (mut this.showBillingStartModal) true)}}
       />
     {{else}}
-      <DateDropdown @handleSubmit={{this.onDateChange}} @dateType="startDate" @submitText="Save" />
+      <DateDropdown
+        @handleSubmit={{this.onDateChange}}
+        @dateType="startDate"
+        @submitText="Save"
+        data-test-counts-start-dropdown
+      />
     {{/if}}
   </div>
 
-  <p class="is-8 has-text-grey has-bottom-margin-l">
+  <p class="is-8 has-text-grey has-bottom-margin-l" data-test-counts-description>
     {{this.versionText.description}}
   </p>
 
@@ -42,7 +48,7 @@
   {{else}}
     {{#if (eq @config.enabled "Off")}}
       <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
-        <A.Title>Tracking is disabled</A.Title>
+        <A.Title data-test-counts-disabled>Tracking is disabled</A.Title>
         <A.Description>
           Tracking is currently disabled and data is not being collected. Historical data can be searched, but you will need
           to
@@ -73,6 +79,7 @@
               @placeholder="Filter by namespace"
               @displayInherit={{true}}
               class="is-marginless"
+              data-test-counts-namespaces
             />
           {{/if}}
           {{#if (or @authMount this.authMounts)}}
@@ -86,6 +93,7 @@
               @onChange={{fn this.setFilterValue "authMount"}}
               @placeholder="Filter by auth method"
               @displayInherit={{true}}
+              data-test-counts-auth-mounts
             />
           {{/if}}
         </ToolbarFilters>
@@ -94,9 +102,9 @@
 
     {{#if this.filteredActivity}}
       {{#if this.startTimeDiscrepancy}}
-        <Hds::Alert data-test-clients-upgrade-warning @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+        <Hds::Alert data-test-counts-start-discrepancy @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
           <A.Title>Warning</A.Title>
-          <A.Description>
+          <A.Description data-test-counts-start-discrepancy>
             {{this.startTimeDiscrepancy}}
           </A.Description>
         </Hds::Alert>
