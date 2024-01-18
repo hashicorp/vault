@@ -29,9 +29,8 @@ import {
  *
  * @example
  * ```js
- <UiPanel todo/>
+ <Console:UiPanel />
  * ```
- * @param {string} [mode=null] - todo
  */
 
 export default class UiPanel extends Component {
