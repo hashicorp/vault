@@ -74,6 +74,9 @@ export const PAGE = {
         case 'credentials':
           await click('[data-test-text-toggle]');
           return fillIn('[data-test-text-file-textarea]', value);
+        case 'customTags':
+          await fillIn('[data-test-kv-key="0"]', 'foo');
+          return fillIn('[data-test-kv-value="0"]', value);
         case 'deploymentEnvironments':
           await click('[data-test-input="deploymentEnvironments"] input#development');
           await click('[data-test-input="deploymentEnvironments"] input#preview');
