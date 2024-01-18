@@ -1920,6 +1920,11 @@ func (c *Core) handleDelegatedAuth(ctx context.Context, origReq *logical.Request
 	if err != nil || authResp.IsError() {
 		// see if the backend wishes to handle the failed auth
 		if da.AuthErrorHandler() != nil {
+			if err != nil && errors.Is(err, logical.ErrInvalidCredentials) {
+				// We purposefully ignore the error here as the handler will
+				// always return the original error we passed in.
+				_, _, _ = invalidCredHandler(err)
+			}
 			resp, err := da.AuthErrorHandler()(ctx, origReq, authReq, authResp, err)
 			return resp, nil, err
 		}
