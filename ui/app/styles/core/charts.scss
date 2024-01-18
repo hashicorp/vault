@@ -347,7 +347,7 @@ p.data-details {
   }
 }
 
-// LINEAR STYLING //
+// LINEAL STYLING //
 .lineal-chart {
   position: relative;
   padding: 10px 0px 10px 50px;
@@ -356,7 +356,7 @@ p.data-details {
   }
 }
 .lineal-chart-bar {
-  fill: $blue-500;
+  fill: var(--token-color-palette-blue-300);
 }
 .lineal-axis {
   color: $ui-gray-500;

@@ -16,6 +16,8 @@ export const GREY = '#EBEEF2';
 export const TRANSLATE = { left: -11 };
 export const SVG_DIMENSIONS = { height: 190, width: 500 };
 
+export const BAR_WIDTH = 7; // data bar width is 7 pixels
+
 // Reference for tickFormat https://www.youtube.com/watch?v=c3MCROTNN8g
 export function formatNumbers(number) {
   if (number < 1000) return number;
