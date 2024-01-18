@@ -96,6 +96,7 @@ export default class MessageModel extends Model {
     editType: 'kv',
     keyPlaceholder: 'Display text (e.g. Learn more)',
     valuePlaceholder: 'Paste URL (e.g. www.learnmore.com)',
+    label: 'Link (optional)',
     shouldOnlyShowSingleRow: true,
   })
   link;
