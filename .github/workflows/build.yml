@@ -64,7 +64,7 @@ jobs:
         with:
           version: ${{ steps.set-product-version.outputs.product-version }}
           product: ${{ steps.get-metadata.outputs.package-name }}
-      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+      - uses: actions/upload-artifact@694cdabd8bdb0f10b2cea11669e1bf5453eed0a6 # v4.2.0
         with:
           name: metadata.json
           path: ${{ steps.generate-metadata-file.outputs.filepath }}
