@@ -58,7 +58,7 @@ module('Integration | Component | clients/sync-bar-chart', function (hooks) {
     await triggerEvent('[data-test-interactive-area="9/22"]', 'mouseover');
     assert.dom('[data-test-tooltip]').exists({ count: 1 }, 'renders tooltip on mouseover');
     assert.dom('[data-test-tooltip-count]').hasText('5,802 secret syncs', 'tooltip has exact count');
-    assert.dom('[data-test-tooltip-month]').hasText('Sep 2022', 'tooltip has humanized month and year');
+    assert.dom('[data-test-tooltip-month]').hasText('September 2022', 'tooltip has humanized month and year');
     await triggerEvent('[data-test-interactive-area="9/22"]', 'mouseout');
     assert.dom('[data-test-tooltip]').doesNotExist('removes tooltip on mouseout');
     await triggerEvent('[data-test-interactive-area="7/22"]', 'mouseover');
