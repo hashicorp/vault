@@ -19,7 +19,8 @@ export default Component.extend({
       const keyCode = event.keyCode;
       switch (keyCode) {
         case keys.ENTER:
-          this.onExecuteCommand(event.target.value);
+          // pass only the target so you have access to the element for repositioning the cursor
+          this.onExecuteCommand.perform(event.target);
           break;
         case keys.UP:
         case keys.DOWN:
