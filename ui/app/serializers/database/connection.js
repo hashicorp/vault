@@ -63,7 +63,8 @@ export default RESTSerializer.extend({
     // filter data to only allow plugin specific attrs
     const allowedAttributes = Object.keys(data).filter((dataAttrs) => pluginAttributes.includes(dataAttrs));
     for (const key in data) {
-      if (!allowedAttributes.includes(key)) {
+      // All connections allow allowed_roles but it's not shown on the form
+      if (key !== 'allowed_roles' && !allowedAttributes.includes(key)) {
         delete data[key];
       }
     }
