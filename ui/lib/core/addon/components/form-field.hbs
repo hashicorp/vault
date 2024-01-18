@@ -133,15 +133,15 @@
       @value={{get @model this.valuePath}}
       @onChange={{this.setAndBroadcast}}
       @label={{this.labelString}}
-      @labelClass={{unless @attr.options.shouldOnlyShowSingleRow (if (eq @mode "create") "title is-5" "title is-4")}}
+      @labelClass="title {{if (eq @mode 'create') 'is-5' 'is-4'}}"
       @helpText={{@attr.options.helpText}}
       @subText={{@attr.options.subText}}
       @onKeyUp={{this.handleKeyUp}}
       @keyPlaceholder={{@attr.options.keyPlaceholder}}
       @valuePlaceholder={{@attr.options.valuePlaceholder}}
       @validationError={{this.validationError}}
-      @shouldOnlyShowSingleRow={{@attr.options.shouldOnlyShowSingleRow}}
-      class={{unless @attr.options.shouldOnlyShowSingleRow "form-section"}}
+      @isSingleRow={{@attr.options.isSingleRow}}
+      class="form-section"
     />
   {{else if (eq @attr.options.editType "file")}}
     {{! File Input }}

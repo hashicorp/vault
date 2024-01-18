@@ -18,13 +18,7 @@
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
 
     {{#each @message.formFields as |attr|}}
-      <FormField
-        @attr={{attr}}
-        @model={{@message}}
-        @modelValidations={{this.modelValidations}}
-        @mode={{if @message.isNew "create" "edit"}}
-        class="has-bottom-margin-m"
-      >
+      <FormField @attr={{attr}} @model={{@message}} @modelValidations={{this.modelValidations}} class="has-bottom-margin-m">
         <Messages::MessageExpirationDateForm @message={{@message}} @attr={{attr}} />
       </FormField>
     {{/each}}

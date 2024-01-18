@@ -16,10 +16,10 @@ const validations = {
       validator(model) {
         if (!model?.link) return true;
         const linkTitle = Object.keys(model.link).length === 1;
-        const linkHref = Object.values(model.link);
-        return linkTitle && !!linkHref[0];
+        const [linkHref] = Object.values(model.link);
+        return linkTitle && !!linkHref;
       },
-      message: 'Link href is required.',
+      message: 'Link title and url is required.',
     },
   ],
 };
@@ -97,7 +97,7 @@ export default class MessageModel extends Model {
     keyPlaceholder: 'Display text (e.g. Learn more)',
     valuePlaceholder: 'Paste URL (e.g. www.learnmore.com)',
     label: 'Link (optional)',
-    shouldOnlyShowSingleRow: true,
+    isSingleRow: true,
   })
   link;
 

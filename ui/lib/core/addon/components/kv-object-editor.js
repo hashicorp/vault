@@ -56,7 +56,7 @@ export default class KvObjectEditor extends Component {
   createKvData(elem, [value]) {
     this.kvData = KVObject.create({ content: [] }).fromJSON(value);
 
-    if (!this.args.shouldOnlyShowSingleRow || !value || Object.keys(value).length < 1) {
+    if (!this.args.isSingleRow || !value || Object.keys(value).length < 1) {
       this.addRow();
     }
   }
@@ -89,7 +89,7 @@ export default class KvObjectEditor extends Component {
   }
   @action
   validateKey(rowIndex, event) {
-    if (this.args.shouldOnlyShowSingleRow) {
+    if (this.args.isSingleRow) {
       return;
     }
     const { value } = event.target;
