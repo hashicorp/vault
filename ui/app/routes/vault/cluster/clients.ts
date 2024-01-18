@@ -5,14 +5,21 @@
 
 import Route from '@ember/routing/route';
 import { hash } from 'rsvp';
-import { action } from '@ember/object';
-import getStorage from 'vault/lib/token-storage';
 import { inject as service } from '@ember/service';
-const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
+
+import type StoreService from 'vault/services/store';
+import type ClientsConfigModel from 'vault/models/clients/config';
+import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
+
+export interface ClientsRouteModel {
+  config: ClientsConfigModel;
+  versionHistory: ClientsVersionHistoryModel;
+}
 
 export default class ClientsRoute extends Route {
-  @service store;
-  async getVersionHistory() {
+  @service declare readonly store: StoreService;
+
+  getVersionHistory() {
     return this.store
       .findAll('clients/version-history')
       .then((response) => {
@@ -30,14 +37,8 @@ export default class ClientsRoute extends Route {
   model() {
     // swallow config error so activity can show if no config permissions
     return hash({
-      config: this.store.queryRecord('clients/config', {}).catch(() => {}),
+      config: this.store.queryRecord('clients/config', {}).catch(() => ({})),
       versionHistory: this.getVersionHistory(),
     });
-  }
-
-  @action
-  deactivate() {
-    // when navigating away from parent route, delete manually inputted license start date
-    getStorage().removeItem(INPUTTED_START_DATE);
   }
 }

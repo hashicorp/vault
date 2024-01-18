@@ -26,9 +26,11 @@ Router.map(function () {
       this.route('license');
       this.route('mfa-setup');
       this.route('clients', function () {
-        this.route('overview');
-        this.route('token');
-        this.route('sync');
+        this.route('counts', function () {
+          this.route('overview');
+          this.route('sync');
+        });
+        this.route('token'); // leaving outside of counts initially to easily reference original implementation when testing
         this.route('config');
         this.route('edit');
       });

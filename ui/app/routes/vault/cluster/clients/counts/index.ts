@@ -6,8 +6,10 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 
-export default class ClientsIndexRoute extends Route {
-  @service router;
+import type RouterService from '@ember/routing/router-service';
+
+export default class ClientsCountsOverviewRoute extends Route {
+  @service declare readonly router: RouterService;
 
   redirect() {
     this.router.transitionTo('vault.cluster.clients.counts.overview');

@@ -5,6 +5,7 @@
 
 import { Response } from 'miragejs';
 import { SELECTORS as GENERAL } from 'vault/tests/helpers/general-selectors';
+import { click } from '@ember/test-helpers';
 
 /** Scenarios
   Config off, no data
@@ -24,6 +25,17 @@ import { SELECTORS as GENERAL } from 'vault/tests/helpers/general-selectors';
 */
 export const SELECTORS = {
   ...GENERAL,
+  counts: {
+    startLabel: '[data-test-counts-start-label]',
+    description: '[data-test-counts-description]',
+    startMonth: '[data-test-counts-start-month]',
+    startEdit: '[data-test-counts-start-edit]',
+    startDropdown: '[data-test-counts-start-dropdown]',
+    configDisabled: '[data-test-counts-disabled]',
+    namespaces: '[data-test-counts-namespaces]',
+    authMounts: '[data-test-counts-auth-mounts]',
+    startDiscrepancy: '[data-test-counts-start-discrepancy]',
+  },
   emptyStateTitle: '[data-test-empty-state-title]',
   usageStats: '[data-test-usage-stats]',
   dateDisplay: '[data-test-date-display]',
@@ -80,4 +92,14 @@ export function overrideResponse(httpStatus, data) {
     return new Response(204, { 'Content-Type': 'application/json' });
   }
   return new Response(200, { 'Content-Type': 'application/json' }, JSON.stringify(data));
+}
+
+export async function dateDropdownSelect(month, year) {
+  const { dateDropdown, counts } = SELECTORS;
+  await click(counts.startEdit);
+  await click(dateDropdown.toggleMonth);
+  await click(dateDropdown.selectMonth(month));
+  await click(dateDropdown.toggleYear);
+  await click(dateDropdown.selectYear(year));
+  await click(dateDropdown.submit);
 }

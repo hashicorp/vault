@@ -4,7 +4,8 @@
  */
 
 import Component from '@glimmer/component';
-import { BAR_WIDTH, formatNumbers, formatTooltipNumber } from 'vault/utils/chart-helpers';
+import { BAR_WIDTH, formatNumbers } from 'vault/utils/chart-helpers';
+import { formatNumber } from 'core/helpers/format-number';
 import type { SerializedChartData } from 'vault/client-counts';
 import { tracked } from '@glimmer/tracking';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
@@ -56,7 +57,7 @@ export default class ClientsSyncBarChartComponent extends Component<Args> {
       return {
         x: format(date, 'M/yy'),
         y: count,
-        tooltip: count === null ? 'No data' : `${formatTooltipNumber(count)} secret syncs`,
+        tooltip: count === null ? 'No data' : `${formatNumber([count])} secret syncs`,
         legendX: format(date, 'MMMM yyyy'),
         legendY: (count ?? 'No data').toString(),
       };

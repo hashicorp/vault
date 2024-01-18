@@ -169,6 +169,7 @@ export default function (server) {
         enabled: 'default-enable',
         queries_available: true,
         retention_months: 24,
+        billing_start_timestamp: formatRFC3339(LICENSE_START),
       },
     };
   });
