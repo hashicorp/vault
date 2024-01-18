@@ -75,7 +75,7 @@ module('Integration | Component | messages/page/details', function (hooks) {
         assert
           .dom(`[data-test-row-value="${field.label}"]`)
           .hasText(formattedDate || 'Never', `${field.label} value renders`);
-      } else if (field.key === 'authenticated' || field.key === 'active' || field.key === 'link') {
+      } else if (field.key === 'authenticated' || field.key === 'active') {
         assert
           .dom(`[data-test-value-div="${field.label}"]`)
           .hasText(this.message[field.key] ? 'Yes' : 'No', `${field.label} value renders`);

@@ -8,6 +8,7 @@ import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { dateFormat } from 'core/helpers/date-format';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 
 /**
  * @module Page::MessagesList
@@ -25,6 +26,8 @@ export default class MessagesList extends Component {
   @service flashMessages;
   @service namespace;
   @service customMessages;
+
+  @tracked showMaxMessageModal = false;
 
   get formattedMessages() {
     return this.args.messages.map((message) => {
@@ -81,6 +84,18 @@ export default class MessagesList extends Component {
   onFilterChange(pageFilter) {
     this.router.transitionTo('vault.cluster.config-ui.messages', {
       queryParams: { pageFilter },
+    });
+  }
+
+  @action
+  createMessage() {
+    if (this.args.messages.meta.total >= 100) {
+      this.showMaxMessageModal = true;
+      return;
+    }
+
+    this.router.transitionTo('vault.cluster.config-ui.messages.create', {
+      queryParams: { authenticated: this.args.authenticated },
     });
   }
 }

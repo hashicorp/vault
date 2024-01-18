@@ -44,8 +44,10 @@
       }}
     />
   {{else if (eq attr.name "link")}}
-    {{#each-in @message.link as |title|}}
-      <InfoTableRow @label="Link" @value={{if title true false}} />
+    {{#each-in @message.link as |title href|}}
+      <InfoTableRow @label="Link" @value={{title}}>
+        <Hds::Link::Inline @icon="external-link" @href={{href}}>{{title}}</Hds::Link::Inline>
+      </InfoTableRow>
     {{/each-in}}
   {{else}}
     <InfoTableRow @label={{capitalize (humanize (dasherize attr.name))}} @value={{get @message attr.name}} />
