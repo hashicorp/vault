@@ -170,6 +170,10 @@
         "path": "concepts/lease"
       },
       {
+        "title": "Lease Explosions",
+        "path": "concepts/lease-explosions"
+      },
+      {
         "title": "Authentication",
         "path": "concepts/auth"
       },
@@ -522,6 +526,10 @@
         "path": "commands"
       },
       {
+        "title": "Web REPL",
+        "path": "commands/web"
+      },
+      {
         "title": "<code>agent</code>",
         "path": "commands/agent"
       },
@@ -590,6 +598,23 @@
       {
         "title": "<code>events</code>",
         "path": "commands/events"
+      },
+      {
+        "title": "<code>hcp</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/hcp"
+          },
+          {
+            "title": "<code>connect</code>",
+            "path": "commands/hcp/connect"
+          },
+          {
+            "title": "<code>disconnect</code>",
+            "path": "commands/hcp/disconnect"
+          }
+        ]
       },
       {
         "title": "<code>kv</code>",
@@ -2593,6 +2618,15 @@
           {
             "title": "Create an administrative namespace",
             "path": "enterprise/namespaces/create-admin-namespace"
+          },
+          {
+            "title": "Run Vault with many namespaces",
+            "path": "enterprise/namespaces/namespace-limits",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            }
           }
         ]
       },

@@ -253,13 +253,30 @@ type Request struct {
 	ChrootNamespace string `json:"chroot_namespace,omitempty"`
 }
 
-// Clone returns a deep copy of the request by using copystructure
+// Clone returns a deep copy (almost) of the request.
+// It will set unexported fields which were only previously accessible outside
+// the package via receiver methods.
+// NOTE: Request.Connection is NOT deep-copied, due to issues with the results
+// of copystructure on serial numbers within the x509.Certificate objects.
 func (r *Request) Clone() (*Request, error) {
 	cpy, err := copystructure.Copy(r)
 	if err != nil {
 		return nil, err
 	}
-	return cpy.(*Request), nil
+
+	req := cpy.(*Request)
+
+	// Add the unexported values that were only retrievable via receivers.
+	// copystructure isn't able to do this, which is why we're doing it manually.
+	req.mountClass = r.MountClass()
+	req.mountRunningVersion = r.MountRunningVersion()
+	req.mountRunningSha256 = r.MountRunningSha256()
+	req.mountIsExternalPlugin = r.MountIsExternalPlugin()
+	// This needs to be overwritten as the internal connection state is not cloned properly
+	// mainly the big.Int serial numbers within the x509.Certificate objects get mangled.
+	req.Connection = r.Connection
+
+	return req, nil
 }
 
 // Get returns a data field and guards for nil Data

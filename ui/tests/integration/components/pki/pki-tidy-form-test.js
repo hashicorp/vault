@@ -291,6 +291,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
         { tidy_acme: false },
         'response contains manual tidy params'
       );
+      return { id: 'pki-manual-tidy' };
     });
     this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
     this.onCancel = () => assert.ok(true, 'onCancel callback fires on save success');

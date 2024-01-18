@@ -10,13 +10,19 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 
 // Base model for all secret sync destination types
 const validations = {
-  name: [{ type: 'presence', message: 'Name is required.' }],
+  name: [
+    { type: 'presence', message: 'Name is required.' },
+    { type: 'containsWhiteSpace', message: 'Name cannot contain whitespace.' },
+  ],
 };
 
 @withModelValidations(validations)
 export default class SyncDestinationModel extends Model {
   @attr('string', { subText: 'Specifies the name for this destination.', editDisabled: true }) name;
   @attr type;
+  // only present if delete action has been initiated
+  @attr('string') purgeInitiatedAt;
+  @attr('string') purgeError;
 
   // findDestination returns static attributes for each destination type
   get icon() {
