@@ -48,4 +48,8 @@ export default class CustomMessagesService extends Service {
       return e;
     }
   }
+
+  clearCustomMessages() {
+    this.messages = [];
+  }
 }
