@@ -64,11 +64,12 @@ export const formatByNamespace = (namespaceArray) => {
 export const homogenizeClientNaming = (object) => {
   // if new key names exist, only return those key/value pairs
   if (Object.keys(object).includes('entity_clients')) {
-    const { clients, entity_clients, non_entity_clients } = object;
+    const { clients, entity_clients, non_entity_clients, secret_syncs } = object;
     return {
       clients,
       entity_clients,
       non_entity_clients,
+      secret_syncs,
     };
   }
   // if object only has outdated key names, update naming
@@ -107,7 +108,7 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
   const nestNewClientsWithinNamespace = totalClientsByNamespace?.map((ns) => {
     const newNamespaceCounts = newClientsByNamespace?.find((n) => n.label === ns.label);
     if (newNamespaceCounts) {
-      const { label, clients, entity_clients, non_entity_clients } = newNamespaceCounts;
+      const { label, clients, entity_clients, non_entity_clients, secret_syncs } = newNamespaceCounts;
       const newClientsByMount = [...newNamespaceCounts.mounts];
       const nestNewClientsWithinMounts = ns.mounts?.map((mount) => {
         const new_clients = newClientsByMount?.find((m) => m.label === mount.label) || {};
@@ -123,6 +124,7 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
           clients,
           entity_clients,
           non_entity_clients,
+          secret_syncs,
           mounts: newClientsByMount,
         },
         mounts: [...nestNewClientsWithinMounts],
@@ -146,12 +148,13 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
       };
     });
 
-    const { label, clients, entity_clients, non_entity_clients, new_clients } = namespaceObject;
+    const { label, clients, entity_clients, non_entity_clients, secret_syncs, new_clients } = namespaceObject;
     namespaces_by_key[label] = {
       month,
       clients,
       entity_clients,
       non_entity_clients,
+      secret_syncs,
       new_clients: { month, ...new_clients },
       mounts_by_key,
     };

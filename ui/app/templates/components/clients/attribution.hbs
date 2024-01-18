@@ -31,7 +31,7 @@
         <p class="chart-description">{{this.chartText.newCopy}}</p>
         <Clients::HorizontalBarChart
           @dataset={{this.barChartNewClients}}
-          @chartLegend={{@chartLegend}}
+          @chartLegend={{this.attributionLegend}}
           @totalCounts={{@newUsageCounts}}
           @noDataMessage="There are no new clients for this namespace during this time period."
         />
@@ -40,22 +40,14 @@
       <div class="chart-container-right" data-test-chart-container="total-clients">
         <h2 class="chart-title">Total clients</h2>
         <p class="chart-description">{{this.chartText.totalCopy}}</p>
-        <Clients::HorizontalBarChart
-          @dataset={{this.barChartTotalClients}}
-          @chartLegend={{@chartLegend}}
-          @totalCounts={{@totalUsageCounts}}
-        />
+        <Clients::HorizontalBarChart @dataset={{this.barChartTotalClients}} @chartLegend={{this.attributionLegend}} />
       </div>
     {{else}}
       <div
         class={{concat (unless this.barChartTotalClients "chart-empty-state ") "chart-container-wide"}}
         data-test-chart-container="single-chart"
       >
-        <Clients::HorizontalBarChart
-          @dataset={{this.barChartTotalClients}}
-          @chartLegend={{@chartLegend}}
-          @totalCounts={{@totalUsageCounts}}
-        />
+        <Clients::HorizontalBarChart @dataset={{this.barChartTotalClients}} @chartLegend={{this.attributionLegend}} />
       </div>
       <div class="chart-subTitle">
         <p class="chart-subtext" data-test-attribution-subtext>{{this.chartText.totalCopy}}</p>
@@ -72,8 +64,9 @@
       </div>
     {{/if}}
     <div class="legend-center">
-      <span class="light-dot"></span><span class="legend-label">{{capitalize (get @chartLegend "0.label")}}</span>
-      <span class="dark-dot"></span><span class="legend-label">{{capitalize (get @chartLegend "1.label")}}</span>
+      {{#each this.attributionLegend as |legend idx|}}
+        <span class="legend-colors dot-{{idx}}"></span><span class="legend-label">{{capitalize legend.label}}</span>
+      {{/each}}
     </div>
   {{else}}
     <div class="chart-empty-state">

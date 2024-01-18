@@ -1433,7 +1433,7 @@ module('Integration | Component | clients/monthly-usage', function (hooks) {
 
   test('it renders empty state with no data', async function (assert) {
     await render(hbs`
-            <Clients::MonthlyUsage @chartLegend={{this.chartLegend}} @responseTimestamp={{this.timestamp}}/>
+            <Clients::MonthlyUsage @responseTimestamp={{this.timestamp}}/>
     `);
     assert.dom('[data-test-monthly-usage]').exists('monthly usage component renders');
     assert.dom('[data-test-component="empty-state"]').exists();
@@ -1454,8 +1454,7 @@ module('Integration | Component | clients/monthly-usage', function (hooks) {
       ),
     ]);
     await render(hbs`
-        <Clients::MonthlyUsage
-    @chartLegend={{this.chartLegend}}
+    <Clients::MonthlyUsage
     @verticalBarChartData={{this.byMonthActivityData}}
     @responseTimestamp={{this.timestamp}}
     />

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { formatNumbers, formatTooltipNumber, calculateAverage } from 'vault/utils/chart-helpers';
+import { formatNumbers, calculateAverage, calculateSum } from 'vault/utils/chart-helpers';
 import { module, test } from 'qunit';
 
 const SMALL_NUMBERS = [0, 7, 27, 103, 999];
@@ -27,11 +27,6 @@ module('Unit | Utility | chart-helpers', function () {
       const expected = LARGE_NUMBERS[num];
       assert.strictEqual(formatNumbers(num), expected, `Formats ${num} as ${expected}`);
     });
-  });
-
-  test('formatTooltipNumber renders number correctly', function (assert) {
-    const formatted = formatTooltipNumber(120300200100);
-    assert.strictEqual(formatted.length, 15, 'adds punctuation at proper place for large numbers');
   });
 
   test('calculateAverage is accurate', function (assert) {
@@ -62,5 +57,11 @@ module('Unit | Utility | chart-helpers', function () {
       null,
       'returns null when object key does not exist at all'
     );
+  });
+
+  test('calculateSum adds array of numbers', function (assert) {
+    assert.strictEqual(calculateSum([2, 3]), 5, 'it sums array');
+    assert.strictEqual(calculateSum(['one', 2]), null, 'returns null if array contains non-integers');
+    assert.strictEqual(calculateSum('not an array'), null, 'returns null if an array is not passed');
   });
 });

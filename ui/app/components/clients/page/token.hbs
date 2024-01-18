@@ -129,7 +129,6 @@
           {{/unless}}
           {{#if this.byMonthActivityData}}
             <Clients::RunningTotal
-              @chartLegend={{this.chartLegend}}
               @selectedAuthMethod={{this.selectedAuthMethod}}
               @byMonthActivityData={{this.byMonthActivityData}}
               @isHistoricalMonth={{and (not this.isCurrentMonth) (not this.isDateRange)}}
@@ -141,7 +140,6 @@
           {{/if}}
           {{#if this.hasAttributionData}}
             <Clients::Attribution
-              @chartLegend={{this.chartLegend}}
               @totalUsageCounts={{this.totalUsageCounts}}
               @newUsageCounts={{this.newClientCounts}}
               @totalClientAttribution={{this.totalClientAttribution}}
@@ -156,7 +154,6 @@
           {{/if}}
           {{#if this.hasMultipleMonthsData}}
             <Clients::MonthlyUsage
-              @chartLegend={{this.chartLegend}}
               @verticalBarChartData={{this.byMonthActivityData}}
               @responseTimestamp={{this.responseTimestamp}}
             />
