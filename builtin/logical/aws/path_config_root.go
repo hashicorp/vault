@@ -58,12 +58,17 @@ func pathConfigRoot(b *backend) *framework.Path {
 			"rotation_schedule": {
 				Type: framework.TypeString,
 				Description: "CRON-style string that will define the schedule on which " +
-					"rotations should occur",
+					"rotations should occur. Mutually exclusive with TTL",
 			},
 			"rotation_window": {
 				Type: framework.TypeInt,
 				Description: "Specifies the amount of time in which the rotation is allowed " +
 					"to occur starting from a given rotation_schedule",
+			},
+			"ttl": {
+				Type: framework.TypeInt,
+				Description: "TTL for automatic credential rotation of the given username. Mutually exclusive " +
+					"with rotation_schedule",
 			},
 		},
 
@@ -115,6 +120,7 @@ func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, 
 		"username_template": config.UsernameTemplate,
 		"rotation_schedule": config.RotationSchedule,
 		"rotation_window":   config.RotationWindow,
+		"ttl":               config.TTL,
 	}
 	return &logical.Response{
 		Data: configData,
@@ -132,7 +138,9 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	}
 
 	rotationSchedule := data.Get("rotation_schedule").(string)
-	rotationWindow := data.Get("rotation_window").(int)
+	rotationScheduleOk := rotationSchedule != ""
+	rotationWindow, rotationWindowOk := data.Get("rotation_window").(int)
+	ttl, ttlOk := data.Get("ttl").(int)
 
 	b.clientMutex.Lock()
 	defer b.clientMutex.Unlock()
@@ -147,6 +155,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		UsernameTemplate: usernameTemplate,
 		RotationSchedule: rotationSchedule,
 		RotationWindow:   rotationWindow,
+		TTL:              ttl,
 	})
 	if err != nil {
 		return nil, err
@@ -162,12 +171,35 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	b.stsClient = nil
 
 	var rc *logical.RootCredential
+	if rotationScheduleOk && ttlOk {
+		return logical.ErrorResponse("mutually exclusive fields rotation_schedule and ttl were both specified; only one of them can be provided"), nil
+	} else if rotationWindowOk && ttlOk {
+		return logical.ErrorResponse("rotation_window does not apply to ttl"), nil
+	} else if !rotationScheduleOk && !ttlOk {
+		return logical.ErrorResponse("one of rotation_schedule or ttl must be provided"), nil
+	} else if rotationScheduleOk && !rotationWindowOk || rotationWindowOk && !rotationScheduleOk {
+		return logical.ErrorResponse("must include both schedule and window"), nil
+	}
 
-	if rotationSchedule != "" && rotationWindow != 0 {
-		rc, err = logical.GetRootCredential(rotationSchedule, "aws/config/root", "aws-root-creds", rotationWindow)
+	if rotationScheduleOk && rotationWindowOk {
+		rc, err = logical.GetRootCredential(rotationSchedule, "aws/config/root", "aws-root-creds", rotationWindow, 0)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
+
+		// unset ttl if rotation_schedule is set since these are mutually exclusive
+		//ttl = 0
+	}
+
+	if ttlOk {
+		rc, err = logical.GetRootCredential("", "aws/config/root", "aws-root-creds", 0, ttl)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		// unset rotation_schedule and rotation_window if ttl is set since these are mutually exclusive
+		//rotationSchedule = ""
+		//rotationWindow = 0
 	}
 
 	if rc != nil {
@@ -190,6 +222,7 @@ type rootConfig struct {
 	UsernameTemplate string `json:"username_template"`
 	RotationSchedule string `json:"rotation_schedule"`
 	RotationWindow   int    `json:"rotation_window"`
+	TTL              int    `json:"ttl"`
 }
 
 const pathConfigRootHelpSyn = `

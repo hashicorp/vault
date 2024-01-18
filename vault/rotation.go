@@ -119,7 +119,7 @@ func (rm *RotationManager) CheckQueue() error {
 		}
 
 		re = entry
-
+		rm.logger.Debug("check", "window", re.RootCredential.Schedule.RotationWindow, "time", re.RootCredential.Schedule.NextVaultRotation)
 		// TODO should we push the credential back into the queue if it is not in the rotation window?
 		// if not in window, do we check the next credential?
 		if !logical.DefaultScheduler.IsInsideRotationWindow(re.RootCredential.Schedule, now) {
@@ -183,6 +183,11 @@ func (rm *RotationManager) Register(ctx context.Context, req *logical.Request, r
 	}
 
 	issueTime := time.Now()
+	expireTime := time.Now()
+	if resp.RootCredential.Schedule.Schedule != nil {
+		expireTime = logical.DefaultScheduler.NextRotationTimeFromInput(resp.RootCredential.Schedule, time.Now())
+		resp.RootCredential.Schedule.NextVaultRotation = expireTime
+	}
 	re := &rotationEntry{
 		RotationID:     rotationID,
 		Path:           req.Path,
@@ -190,7 +195,7 @@ func (rm *RotationManager) Register(ctx context.Context, req *logical.Request, r
 		RootCredential: resp.RootCredential,
 		IssueTime:      issueTime,
 		// expires the next time the schedule is activated from the issue time
-		ExpireTime: resp.RootCredential.Schedule.Schedule.Next(issueTime),
+		ExpireTime: expireTime,
 		namespace:  ns,
 	}
 
@@ -199,6 +204,7 @@ func (rm *RotationManager) Register(ctx context.Context, req *logical.Request, r
 	// r.core.stateLock.Lock()
 
 	rm.logger.Debug("Creating queue item")
+	rm.logger.Debug("next rotation time", "exp", expireTime.Format(time.RFC3339))
 
 	// @TODO for different cases, update rotation entry if it is already in queue
 	// for now, assuming it is a fresh root credential and the schedule is not being updated
@@ -307,15 +313,16 @@ func (j *rotationJob) Execute() error {
 	// success
 	j.rm.logger.Debug("Successfully called rotate root code for backend")
 	issueTime := time.Now()
+	j.entry.RootCredential.Schedule.LastVaultRotation = issueTime
+	expireTime := logical.DefaultScheduler.NextRotationTime(j.entry.RootCredential.Schedule)
 	newEntry := &rotationEntry{
 		RotationID:     j.entry.RotationID,
 		Path:           j.entry.Path,
 		Data:           j.entry.Data,
 		RootCredential: j.entry.RootCredential,
 		IssueTime:      issueTime,
-		// expires the next time the schedule is activated from the issue time
-		ExpireTime: j.entry.RootCredential.Schedule.Schedule.Next(issueTime),
-		namespace:  j.entry.namespace,
+		ExpireTime:     expireTime,
+		namespace:      j.entry.namespace,
 	}
 	j.entry.RootCredential.Schedule.NextVaultRotation = newEntry.ExpireTime
 

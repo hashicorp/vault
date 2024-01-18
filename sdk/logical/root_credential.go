@@ -4,6 +4,7 @@
 package logical
 
 import (
+	"github.com/robfig/cron/v3"
 	"time"
 )
 
@@ -31,20 +32,30 @@ func (s *RootCredential) Validate() error {
 	return nil
 }
 
-func GetRootCredential(rotationSchedule, path, credentialName string, rotationWindow int) (*RootCredential, error) {
-	cronSc, err := DefaultScheduler.Parse(rotationSchedule)
-	if err != nil {
-		return nil, err
+// GetRootCredential initializes a root credential structure based on the passed in rotation_schedule or ttl
+// If rotation schedule is empty, the included spec schedule would be nil
+// NextVaultRotation and LastVaultRotation are set to zero value; it's the responsibility of callers to set these
+// values appropriately
+func GetRootCredential(rotationSchedule, path, credentialName string, rotationWindow int, ttl int) (*RootCredential, error) {
+	var cronSc *cron.SpecSchedule
+	if rotationSchedule != "" {
+		var err error
+		cronSc, err = DefaultScheduler.Parse(rotationSchedule)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	rs := &RootSchedule{
 		Schedule:         cronSc,
 		RotationSchedule: rotationSchedule,
 		RotationWindow:   time.Duration(rotationWindow) * time.Second,
+		TTL:              time.Duration(ttl) * time.Second,
 		// TODO
 		// decide if next rotation should be set here
 		// or when we actually push item into queue
-		NextVaultRotation: cronSc.Next(time.Now()),
+		NextVaultRotation: time.Time{},
+		LastVaultRotation: time.Time{},
 	}
 
 	return &RootCredential{

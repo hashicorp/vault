@@ -5,13 +5,12 @@ package ldap
 
 import (
 	"context"
-	"strings"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"strings"
 )
 
 const userFilterWarning = "userfilter configured does not consider userattr and may result in colliding entity aliases on logins"
@@ -56,12 +55,17 @@ func pathConfig(b *backend) *framework.Path {
 
 	p.Fields["rotation_schedule"] = &framework.FieldSchema{
 		Type:        framework.TypeString,
-		Description: "Schedule, cron format",
+		Description: "CRON-style string that will define the schedule on which rotations should occur. Mutually exclusive with TTL",
 	}
 
 	p.Fields["rotation_window"] = &framework.FieldSchema{
 		Type:        framework.TypeInt,
-		Description: "window",
+		Description: "Specifies the amount of time in which the rotation is allowed to occur starting from a given rotation_schedule",
+	}
+
+	p.Fields["ttl"] = &framework.FieldSchema{
+		Type:        framework.TypeInt,
+		Description: "TTL for automatic credential rotation of the given username. Mutually exclusive with rotation_schedule",
 	}
 
 	return p
@@ -229,24 +233,50 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	if passwordPolicy, ok := d.GetOk("password_policy"); ok {
 		cfg.PasswordPolicy = passwordPolicy.(string)
 	}
-	sched, sok := d.GetOk("rotation_schedule")
-	wind, wok := d.GetOk("rotation_window")
+
+	ttl, ttlOk := d.GetOk("ttl")
+	rotationSchedule, rotationScheduleOk := d.GetOk("rotation_schedule")
+	rotationWindow, rotationWindowOk := d.GetOk("rotation_window")
 
 	var rc *logical.RootCredential
-	if sok && !wok || wok && !sok {
-		return logical.ErrorResponse("must include both schedule and window"), nil
-	} else if sok && wok {
-		cfg.RotationSchedule = sched.(string)
-		cfg.RotationWindow = wind.(int)
+	if rotationScheduleOk && ttlOk {
+		return logical.ErrorResponse("mutually exclusive fields rotation_schedule and ttl were both specified; only one of them can be provided"), nil
+	} else if rotationWindowOk && ttlOk {
+		return logical.ErrorResponse("rotation_window does not apply to ttl"), nil
+	} else if !rotationScheduleOk && !ttlOk {
+		return logical.ErrorResponse("one of rotation_schedule or ttl must be provided"), nil
+	} else if rotationScheduleOk && !rotationWindowOk || rotationWindowOk && !rotationScheduleOk {
+		return logical.ErrorResponse("must include both rotation_schedule and rotation_window"), nil
+	}
 
-		b.Logger().Info("rotation", "window", cfg.RotationWindow, "schedule", cfg.RotationSchedule)
+	if rotationScheduleOk && rotationWindowOk {
+		cfg.RotationSchedule = rotationSchedule.(string)
+		cfg.RotationWindow = rotationWindow.(int)
+
+		b.Logger().Info("rotation", "window", cfg.RotationWindow, "schedule", cfg.RotationSchedule, "ttl", cfg.TTL)
 
 		rc, err = logical.GetRootCredential(cfg.RotationSchedule, "ldap/config",
-			"ldap-root-creds", cfg.RotationWindow)
+			"ldap-root-creds", cfg.RotationWindow, 0)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
 
+		// unset ttl if rotation_schedule is set since these are mutually exclusive
+		//cfg.TTL = 0
+	}
+
+	if ttlOk {
+		cfg.TTL = ttl.(int)
+
+		rc, err = logical.GetRootCredential("", "ldap/config",
+			"ldap-root-creds", 0, cfg.TTL)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		// unset rotation_schedule and rotation_window if ttl is set since these are mutually exclusive
+		//cfg.RotationSchedule = ""
+		//cfg.RotationWindow = 0
 	}
 
 	entry, err := logical.StorageEntryJSON("config", cfg)
@@ -299,6 +329,7 @@ type ldapConfigEntry struct {
 	PasswordPolicy   string `json:"password_policy"`
 	RotationSchedule string `json:"rotation_schedule"`
 	RotationWindow   int    `json:"rotation_window"`
+	TTL              int    `json:"ttl"`
 }
 
 const pathConfigHelpSyn = `
