@@ -60,7 +60,7 @@ export default class SyncDestinationSerializer extends ApplicationSerializer {
     } else if (payload?.data) {
       // uses name for id and spreads connection_details object into data
       const { data } = payload;
-      const { connection_details, options } = data || {};
+      const { connection_details, options } = data;
       data.id = data.name;
       delete data.connection_details;
       delete data.options;
