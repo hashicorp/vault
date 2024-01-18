@@ -32,15 +32,20 @@ export default class ClientsCountsRoute extends Route {
 
   async getActivity(start_time: number, end_time: number) {
     let activity, activityError;
-    try {
-      activity = await this.store.queryRecord('clients/activity', {
-        start_time: { timestamp: start_time },
-        end_time: { timestamp: end_time },
-      });
-    } catch (error) {
-      activityError = error;
+    // if there is no billingStartTimestamp or selected start date initially we allow the user to manually choose a date
+    // in that case bypass the query so that the user isn't stuck viewing the activity error
+    if (start_time) {
+      try {
+        activity = await this.store.queryRecord('clients/activity', {
+          start_time: { timestamp: start_time },
+          end_time: { timestamp: end_time },
+        });
+      } catch (error) {
+        activityError = error;
+      }
+      return [activity, activityError];
     }
-    return [activity, activityError];
+    return [{}, null];
   }
 
   async model(params: ClientsCountsRouteParams) {
