@@ -30,7 +30,7 @@ jobs:
       go-tags: ${{ steps.setup-outputs.outputs.go-tags }}
       checkout-ref: ${{ steps.checkout-ref-output.outputs.checkout-ref }}
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - id: setup-outputs
         name: Setup outputs
         run: |
@@ -193,7 +193,7 @@ jobs:
       contents: read
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-largem) }}
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
@@ -472,7 +472,7 @@ jobs:
           echo "TABLE_TEST_RESULTS<<$EOF" >> "$GITHUB_ENV"
           cat "$temp_file_name" >> "$GITHUB_ENV"
           echo "$EOF" >> "$GITHUB_ENV"
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - name: Create comment
         if: github.head_ref != ''
         env:

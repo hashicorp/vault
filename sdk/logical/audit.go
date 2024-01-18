@@ -61,15 +61,13 @@ func (l *LogInput) BexprDatum(namespace string) *LogInputBexpr {
 	}
 }
 
-// Clone will attempt to create a deep copy of the LogInput.
-// This is preferred over attempting to use other libraries such as copystructure.
-// Audit formatting methods which parse LogInput into an audit request/response
-// entry, call receivers on the LogInput struct to get their value. These values
-// would be lost using copystructure as it cannot copy unexported fields.
+// Clone will attempt to create a deep copy (almost) of the LogInput.
 // If the LogInput type or any of the subtypes referenced by LogInput fields are
 // changed, then the Clone methods will need to be updated.
 // NOTE: Does not deep clone the LogInput.OuterError field as it represents an
 // error interface.
+// NOTE: LogInput.Request.Connection (at the time of writing) is also not deep-copied
+// and remains a pointer, see Request.Clone for more information.
 func (l *LogInput) Clone() (*LogInput, error) {
 	// Clone Auth
 	auth, err := cloneAuth(l.Auth)
@@ -78,9 +76,12 @@ func (l *LogInput) Clone() (*LogInput, error) {
 	}
 
 	// Clone Request
-	req, err := cloneRequest(l.Request)
-	if err != nil {
-		return nil, err
+	var req *Request
+	if l.Request != nil {
+		req, err = l.Request.Clone()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Clone Response
@@ -140,32 +141,6 @@ func cloneAuth(auth *Auth) (*Auth, error) {
 	}
 
 	return auth, nil
-}
-
-// cloneRequest deep copies a Request struct.
-// It will set unexported fields which were only previously accessible outside
-// the package via receiver methods.
-func cloneRequest(request *Request) (*Request, error) {
-	// If request is nil, there's nothing to clone.
-	if request == nil {
-		return nil, nil
-	}
-
-	req, err := clone[*Request](request)
-	if err != nil {
-		return nil, fmt.Errorf("unable to clone request: %w", err)
-	}
-
-	// Add the unexported values that were only retrievable via receivers.
-	req.mountClass = request.MountClass()
-	req.mountRunningVersion = request.MountRunningVersion()
-	req.mountRunningSha256 = request.MountRunningSha256()
-	req.mountIsExternalPlugin = request.MountIsExternalPlugin()
-	// This needs to be overwritten as the internal connection state is not cloned properly
-	// mainly the big.Int serial numbers within the x509.Certificate objects get mangled.
-	req.Connection = request.Connection
-
-	return req, nil
 }
 
 // cloneResponse deep copies a Response struct.
