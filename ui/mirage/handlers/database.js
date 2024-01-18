@@ -85,7 +85,6 @@ export default function (server) {
   // Generate credentials
   server.get('/:backend/creds/:role', (schema, req) => {
     const { role } = req.params;
-    // creds cannot be fetched after creation so we don't need to store them
     if (role === 'static-role') {
       // static creds
       return {
@@ -123,21 +122,3 @@ export default function (server) {
     };
   });
 }
-
-/* CREDS
-dynamic GET http://localhost:8200/v1/database/creds/awesome-role
-{
-    "request_id": "d6248a7d-85db-c989-53d6-37a52ddf98cc",
-    "lease_id": "database/creds/awesome-role/hbmpLDbXXJAH9Q23PdTYqIJX",
-    "renewable": true,
-    "lease_duration": 3600,
-    "data": {
-        "password": "abcd",
-        "username": "v-token-awesome-ro-YYHIPH2BdpE5h"
-    },
-    "wrap_info": null,
-    "warnings": null,
-    "auth": null,
-    "mount_type": "database"
-}
-*/
