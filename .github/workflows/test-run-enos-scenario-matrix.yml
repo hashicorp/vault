@@ -49,7 +49,7 @@ jobs:
       sample: ${{ steps.metadata.outputs.sample }}
       vault-version: ${{ steps.metadata.outputs.vault-version }}
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           ref: ${{ inputs.vault-revision }}
       - uses: hashicorp/action-setup-enos@v1
@@ -96,15 +96,15 @@ jobs:
       ENOS_VAR_vault_license_path: ./support/vault.hclic
       ENOS_DEBUG_DATA_ROOT_DIR: /tmp/enos-debug-data
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           ref: ${{ inputs.vault-revision }}
-      - uses: hashicorp/setup-terraform@v2
+      - uses: hashicorp/setup-terraform@v3
         with:
           # the Terraform wrapper will break Terraform execution in Enos because
           # it changes the output to text when we expect it to be JSON.
           terraform_wrapper: false
-      - uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # v2.2.0
+      - uses: aws-actions/configure-aws-credentials@010d0da01d0b5a38af31e9c3470dbfdabdecca3a # v4.0.1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}

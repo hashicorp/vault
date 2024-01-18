@@ -236,12 +236,19 @@ func FileBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	opts.KeepStandbysSealed = true
 	var bridge *raft.ClusterAddrBridge
-	if !opts.InmemClusterLayers && opts.ClusterLayers == nil {
-		bridge = raft.NewClusterAddrBridge()
-	}
-	conf.ClusterAddrBridge = bridge
 	opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
-		return MakeRaftBackend(t, coreIdx, logger, conf, bridge)
+		// The same PhysicalFactory can be shared across multiple clusters.
+		// The coreIdx == 0 check ensures that each time a new cluster is setup,
+		// when setting up its first node we create a new ClusterAddrBridge.
+		if !opts.InmemClusterLayers && opts.ClusterLayers == nil && coreIdx == 0 {
+			bridge = raft.NewClusterAddrBridge()
+		}
+		bundle := MakeRaftBackend(t, coreIdx, logger, conf, bridge)
+		bundle.MutateCoreConfig = func(conf *vault.CoreConfig) {
+			logger.Trace("setting bridge", "idx", coreIdx, "bridge", fmt.Sprintf("%p", bridge))
+			conf.ClusterAddrBridge = bridge
+		}
+		return bundle
 	}
 	opts.SetupFunc = func(t testing.T, c *vault.TestCluster) {
 		if opts.NumCores != 1 {
