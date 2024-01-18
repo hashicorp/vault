@@ -133,12 +133,12 @@
       @value={{get @model this.valuePath}}
       @onChange={{this.setAndBroadcast}}
       @label={{this.labelString}}
-      @labelClass="title {{if (eq @mode 'create') 'is-5' 'is-4'}}"
+      @labelClass={{if @attr.options.isSectionHeader "title is-4" "is-label"}}
       @helpText={{@attr.options.helpText}}
       @subText={{@attr.options.subText}}
       @onKeyUp={{this.handleKeyUp}}
       @validationError={{this.validationError}}
-      class="form-section"
+      class={{if @attr.options.isSectionHeader "form-section"}}
     />
   {{else if (eq @attr.options.editType "file")}}
     {{! File Input }}
