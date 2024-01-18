@@ -8,11 +8,11 @@
     <A.Title data-test-alert-title={{bannerMessage.id}}>{{bannerMessage.title}}</A.Title>
     <A.Description data-test-alert-description={{bannerMessage.id}}>
       {{bannerMessage.message}}
-      {{#each-in bannerMessage.link as |title href|}}
-        {{#if (and title href)}}
+      {{#unless (is-empty-value bannerMessage.link)}}
+        {{#each-in bannerMessage.link as |title href|}}
           <Hds::Link::Inline @icon="external-link" @href={{href}}>{{title}}</Hds::Link::Inline>
-        {{/if}}
-      {{/each-in}}
+        {{/each-in}}
+      {{/unless}}
     </A.Description>
   </Hds::Alert>
 {{/each}}
@@ -23,11 +23,11 @@
     </M.Header>
     <M.Body data-test-modal-body={{modalMessage.id}}>
       {{modalMessage.message}}
-      {{#each-in modalMessage.link as |title href|}}
-        {{#if (and title href)}}
+      {{#unless (is-empty-value modalMessage.link)}}
+        {{#each-in modalMessage.link as |title href|}}
           <Hds::Link::Inline @icon="external-link" @href={{href}}>{{title}}</Hds::Link::Inline>
-        {{/if}}
-      {{/each-in}}
+        {{/each-in}}
+      {{/unless}}
     </M.Body>
     <M.Footer as |F|>
       <Hds::Button @text="Confirm" {{on "click" F.close}} data-test-modal-button={{modalMessage.id}} />

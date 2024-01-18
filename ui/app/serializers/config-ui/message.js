@@ -5,6 +5,7 @@
 
 import { decodeString, encodeString } from 'core/utils/b64';
 import ApplicationSerializer from '../application';
+import { isEmpty } from '@ember/utils';
 
 export default class MessageSerializer extends ApplicationSerializer {
   attrs = {
@@ -31,6 +32,8 @@ export default class MessageSerializer extends ApplicationSerializer {
   serialize() {
     const json = super.serialize(...arguments);
     json.message = encodeString(json.message);
+    const [linkTitle] = Object.keys(json.link);
+    json.link = isEmpty(linkTitle) ? null : json.link;
     return json;
   }
 

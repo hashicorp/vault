@@ -14,10 +14,10 @@ const validations = {
   link: [
     {
       validator(model) {
-        if (!model?.link) return true;
-        const linkTitle = Object.keys(model.link).length === 1;
+        const linkTitle = Object.keys(model.link);
         const [linkHref] = Object.values(model.link);
-        return linkTitle && !!linkHref;
+        if (!model?.link || linkTitle.length < 1 || linkTitle[0] === '') return true;
+        return !!linkHref;
       },
       message: 'Link title and url is required.',
     },
