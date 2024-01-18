@@ -10,10 +10,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestIdentityToken_String ensures that plugin identity tokens that
+// TestIdentityToken_Stringer ensures that plugin identity tokens that
 // are printed in formatted strings or errors are redacted and getters
 // return expected values.
-func TestIdentityToken_String_Token(t *testing.T) {
+func TestIdentityToken_Stringer(t *testing.T) {
 	contents := "header.payload.signature"
 	tk := IdentityToken(contents)
 
