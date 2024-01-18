@@ -4,8 +4,9 @@
 package logical
 
 import (
-	"github.com/robfig/cron/v3"
 	"time"
+
+	"github.com/robfig/cron/v3"
 )
 
 // RotationOptions is an embeddable struct to capture common lease

@@ -186,9 +186,6 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
-
-		// unset ttl if rotation_schedule is set since these are mutually exclusive
-		//ttl = 0
 	}
 
 	if ttlOk {
@@ -196,10 +193,6 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
-
-		// unset rotation_schedule and rotation_window if ttl is set since these are mutually exclusive
-		//rotationSchedule = ""
-		//rotationWindow = 0
 	}
 
 	if rc != nil {

@@ -5,12 +5,13 @@ package ldap
 
 import (
 	"context"
+	"strings"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"strings"
 )
 
 const userFilterWarning = "userfilter configured does not consider userattr and may result in colliding entity aliases on logins"
@@ -260,9 +261,6 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
-
-		// unset ttl if rotation_schedule is set since these are mutually exclusive
-		//cfg.TTL = 0
 	}
 
 	if ttlOk {
@@ -273,10 +271,6 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
-
-		// unset rotation_schedule and rotation_window if ttl is set since these are mutually exclusive
-		//cfg.RotationSchedule = ""
-		//cfg.RotationWindow = 0
 	}
 
 	entry, err := logical.StorageEntryJSON("config", cfg)
