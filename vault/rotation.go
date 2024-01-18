@@ -188,6 +188,16 @@ func (rm *RotationManager) Register(ctx context.Context, req *logical.Request, r
 		expireTime = logical.DefaultScheduler.NextRotationTimeFromInput(resp.RootCredential.Schedule, time.Now())
 		resp.RootCredential.Schedule.NextVaultRotation = expireTime
 	}
+	if resp.RootCredential.Schedule.RotationSchedule != "" && resp.RootCredential.Schedule.RotationWindow != 0 {
+		resp.RootCredential.Schedule.TTL = 0
+	}
+	if resp.RootCredential.Schedule.TTL != 0 {
+		resp.RootCredential.Schedule.RotationSchedule = ""
+		resp.RootCredential.Schedule.RotationWindow = 0
+	}
+	rm.logger.Debug("SCHEDULE", "VALUE", resp.RootCredential.Schedule.RotationSchedule)
+	rm.logger.Debug("WINDOW", "VALUE", resp.RootCredential.Schedule.RotationWindow)
+	rm.logger.Debug("TTL", "VALUE", resp.RootCredential.Schedule.TTL)
 	re := &rotationEntry{
 		RotationID:     rotationID,
 		Path:           req.Path,
