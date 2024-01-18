@@ -7,9 +7,16 @@ import SyncDestinationModel from '../destination';
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 
-const displayFields = ['name', 'region', 'accessKeyId', 'secretAccessKey'];
+const displayFields = [
+  'name',
+  'region',
+  'accessKeyId',
+  'secretAccessKey',
+  'secretNameTemplate',
+  'customTags',
+];
 const formFieldGroups = [
-  { default: ['name', 'region'] },
+  { default: ['name', 'region', 'secretNameTemplate', 'customTags'] },
   { Credentials: ['accessKeyId', 'secretAccessKey'] },
 ];
 @withFormFields(displayFields, formFieldGroups)
@@ -34,4 +41,11 @@ export default class SyncDestinationsAwsSecretsManagerModel extends SyncDestinat
     editDisabled: true,
   })
   region;
+
+  @attr('object', {
+    subText:
+      'An optional set of informational key-value pairs added as additional metadata on secrets synced to this destination. Custom tags are merged with built-in tags.',
+    editType: 'kv',
+  })
+  customTags;
 }
