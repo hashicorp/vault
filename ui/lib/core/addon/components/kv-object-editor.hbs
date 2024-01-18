@@ -11,7 +11,7 @@
     class={{@labelClass}}
     data-test-kv-label={{true}}
   />
-  {{#if @validationError}}
+  {{#if (and @validationError (not @isSingleRow))}}
     <div>
       <AlertInline @type="danger" @message={{@validationError}} class="has-top-padding-s" />
     </div>
