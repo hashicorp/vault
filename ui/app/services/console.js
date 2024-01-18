@@ -7,10 +7,8 @@
 // this service provides the UI synecdote to the cli commands read, write, delete, and list
 import { filterBy } from '@ember/object/computed';
 
-import Service from '@ember/service';
-
-import { getOwner } from '@ember/application';
-import { computed } from '@ember/object';
+import Service, { inject as service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
 import { shiftCommandIndex } from 'vault/lib/console-helpers';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { sanitizePath, ensureTrailingSlash } from 'core/utils/sanitize-path';
@@ -22,60 +20,56 @@ const VERBS = {
   delete: 'DELETE',
 };
 
-export default Service.extend({
-  isOpen: false,
+export default class ConsoleService extends Service {
+  @tracked isOpen = false;
+  @tracked log = [];
+  @tracked commandIndex = null;
 
-  adapter() {
-    return getOwner(this).lookup('adapter:console');
-  },
-  commandHistory: filterBy('log', 'type', 'command'),
-  log: computed(function () {
-    return [];
-  }),
-  commandIndex: null,
+  @service store;
 
+  @filterBy('log', 'type', 'command') commandHistory;
+
+  /* eslint ember/no-computed-properties-in-native-classes: 'warn' */
   shiftCommandIndex(keyCode, setCommandFn = () => {}) {
     const [newIndex, newCommand] = shiftCommandIndex(keyCode, this.commandHistory, this.commandIndex);
     if (newCommand !== undefined && newIndex !== undefined) {
-      this.set('commandIndex', newIndex);
+      this.commandIndex = newIndex;
       setCommandFn(newCommand);
     }
-  },
+  }
 
   clearLog(clearAll = false) {
-    const log = this.log;
     let history;
     if (!clearAll) {
       history = this.commandHistory.slice();
       history.setEach('hidden', true);
     }
-    log.clear();
+    this.log.clear();
     if (history) {
-      log.addObjects(history);
+      this.log.addObjects(history);
     }
-  },
+  }
 
   logAndOutput(command, logContent) {
-    const log = this.log;
     if (command) {
-      log.pushObject({ type: 'command', content: command });
-      this.set('commandIndex', null);
+      this.log.pushObject({ type: 'command', content: command });
+      this.commandIndex = null;
     }
     if (logContent) {
-      log.pushObject(logContent);
+      this.log.pushObject(logContent);
     }
-  },
+  }
 
   ajax(operation, path, options = {}) {
     const verb = VERBS[operation];
-    const adapter = this.adapter();
+    const adapter = this.store.adapterFor('console');
     const url = adapter.buildURL(encodePath(path));
     const { data, wrapTTL } = options;
     return adapter.ajax(url, verb, {
       data,
       wrapTTL,
     });
-  },
+  }
 
   kvGet(path, data, flags = {}) {
     const { wrapTTL, metadata } = flags;
@@ -84,30 +78,30 @@ export default Service.extend({
     const [backend, secretPath] = path.split(/\/(.+)?/);
     const kvPath = `${backend}/${pathSegment}/${secretPath}`;
     return this.ajax('read', sanitizePath(kvPath), { wrapTTL });
-  },
+  }
 
-  read(path, data, flags) {
+  async read(path, data, flags) {
     const wrapTTL = flags?.wrapTTL;
-    return this.ajax('read', sanitizePath(path), { wrapTTL });
-  },
+    return await this.ajax('read', sanitizePath(path), { wrapTTL });
+  }
 
-  write(path, data, flags) {
+  async write(path, data, flags) {
     const wrapTTL = flags?.wrapTTL;
-    return this.ajax('write', sanitizePath(path), { data, wrapTTL });
-  },
+    return await this.ajax('write', sanitizePath(path), { data, wrapTTL });
+  }
 
-  delete(path) {
-    return this.ajax('delete', sanitizePath(path));
-  },
+  async delete(path) {
+    return await this.ajax('delete', sanitizePath(path));
+  }
 
-  list(path, data, flags) {
+  async list(path, data, flags) {
     const wrapTTL = flags?.wrapTTL;
     const listPath = ensureTrailingSlash(sanitizePath(path));
-    return this.ajax('list', listPath, {
+    return await this.ajax('list', listPath, {
       data: {
         list: true,
       },
       wrapTTL,
     });
-  },
-});
+  }
+}

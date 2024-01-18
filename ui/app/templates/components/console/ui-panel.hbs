@@ -3,6 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 <div
+  id="console-ui-panel"
   data-test-component="console/ui-panel"
   {{did-insert this.scrollToBottom}}
   {{did-update this.scrollToBottom}}
@@ -36,7 +37,7 @@
       <p class="console-ui-panel-intro is-font-mono">→ Read a kv v2 secret's metadata: kv-get &lt;mount&gt;/secret-path
         -metadata</p>
     </div>
-    <Console::OutputLog @outputLog={{this.cliLog}} />
+    <Console::OutputLog @outputLog={{this.output}} />
     <Console::CommandInput
       @isFullscreen={{this.isFullscreen}}
       @isRunning={{this.isRunning}}
