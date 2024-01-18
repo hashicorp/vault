@@ -20,7 +20,12 @@ export default class SyncDestinationSerializer extends ApplicationSerializer {
     // only send changed parameters for PATCH requests
     const changedKeys = Object.keys(snapshot.changedAttributes()).map((key) => decamelize(key));
     return changedKeys.reduce((payload, key) => {
-      payload[key] = data[key];
+      if (JSON.stringify(data[key]) === '{}') {
+        // sending an empty object won't clear the previous param, set to null so PATCH removes pre-existing value
+        payload[key] = null;
+      } else {
+        payload[key] = data[key];
+      }
       return payload;
     }, {});
   }
@@ -55,10 +60,11 @@ export default class SyncDestinationSerializer extends ApplicationSerializer {
     } else if (payload?.data) {
       // uses name for id and spreads connection_details object into data
       const { data } = payload;
-      const connection_details = payload.data.connection_details || {};
+      const { connection_details, options } = data;
       data.id = data.name;
       delete data.connection_details;
-      return { data: { ...data, ...connection_details } };
+      delete data.options;
+      return { data: { ...data, ...connection_details, ...options } };
     }
     return payload;
   }
