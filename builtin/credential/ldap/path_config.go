@@ -261,6 +261,8 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
+		// unset ttl if rotation_schedule is set since these are mutually exclusive
+		cfg.TTL = 0
 	}
 
 	if ttlOk {
@@ -271,6 +273,9 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
+
+		cfg.RotationSchedule = ""
+		cfg.RotationWindow = 0
 	}
 
 	entry, err := logical.StorageEntryJSON("config", cfg)
