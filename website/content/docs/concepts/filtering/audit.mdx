@@ -1,6 +1,6 @@
 ---
 layout: docs
-page_title: Filtering Audit
+page_title: Audit Filtering
 description: |-
   How to filter audit entries in Vault.
 ---
@@ -12,10 +12,69 @@ description: |-
 This page describes how to use filters with Vault audit devices to fine tune which
 audit entries should be written to an audit log.
 
-Starting in Vault 1.16.0, audit devices can be enabled with a `filter` option which
-is used to evaluate audit entries and decide if they should be written to an audit log.
-Please ensure you are familiar with the [filtering concept](/vault/docs/concepts/filtering)
-before attempting to configure an audit device with a filter.
+Starting in Vault 1.16.0, audit devices can be enabled with a `filter` option, which
+is used to evaluate audit entries and decide if they should be written to a particular
+audit log. Please ensure you are familiar with the [filtering concept](/vault/docs/concepts/filtering) before
+attempting to configure an audit device with a filter.
+
+## `filter` option
+
+All audit device types ([file](/vault/docs/audit/file), [socket](/vault/docs/audit/socket)
+and [syslog](/vault/docs/audit/syslog)) support the `filter` option at the time they
+are enabled. After successfully enabling a device with a filter, every audit entry
+that Vault sends to that audit device will be compared to the expression in the filter.
+Audit entries that match the filter should then be written to the device's audit log.
+
+### Valid `filter` properties
+
+The following information should be used in conjunction with [filtering concepts](/vault/docs/concepts/filtering)
+in order to configure a filter for an audit device.
+
+* `mount_point` - relates to the path at which a mount exists.
+* `mount_type` - the type of mount that this audit entry is dealing with.
+* `namespace` - the [namespace](/vault/docs/enterprise/namespaces) to which the audit entry belongs.
+* `operation` - the operation being performed which is being audited.
+* `path` - the path the auditble action is being taken against within Vault.
+
+### Scenario: `kv` only
+
+A Vault Operator wants only `kv` type audit entries to be written to an audit log for a particular device.
+
+1. Enable an audit device with the following filter option:
+
+    ```
+    vault audit enable -path kv-only file file_path=/var/audit.log filter="mount_type == kv"
+    ```
+
+2. List the enabled audit devices:
+
+    ```
+    vault audit list
+    ```
+
+3. Enable a `kv` secrets engine:
+
+    ```
+    vault secrets enable -path my-kv kv-v2
+    ```
+
+4. Write secret data to the `kv` engine:
+
+    ```
+    vault kv put my-kv foo=bar
+    ```
+
+5. Disable the audit device:
+
+    ```
+    vault audit disable -path kv-only
+    ```
+
+In the steps above we performed a number of actions against Vault that generate
+audit entries. However, only two of them had a `mount_type` of `kv` (3 and 4).
+
+Viewing the contents of the file audit log at `/var/audit.log` we see only audit
+entries related to steps 3 and 4, with a request and response audit entry for each.
 
 ## Fallback device
 
