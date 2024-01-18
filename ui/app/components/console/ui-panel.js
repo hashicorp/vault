@@ -76,7 +76,7 @@ export default class UiPanel extends Component {
         api: () => this.routeToExplore.perform(command),
         clearall: () => service.clearLog(true),
         clear: () => service.clearLog(),
-        fullscreen: () => (this.isFullscreen = !this.isFullScreen),
+        fullscreen: () => this.toggleFullscreen(),
         refresh: () => this.refreshRoute.perform(),
       })
     ) {
@@ -156,10 +156,6 @@ export default class UiPanel extends Component {
     }
   }
 
-  @action
-  closeConsole() {
-    this.console.isOpen = false;
-  }
   @action
   toggleFullscreen() {
     this.isFullScreen = !this.isFullScreen;

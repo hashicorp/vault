@@ -3,6 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 <div
+  data-test-component="console/ui-panel"
   {{did-insert this.scrollToBottom}}
   {{did-update this.scrollToBottom}}
   class="console-ui-panel {{if this.isFullScreen 'fullscreen'}}"
@@ -10,7 +11,7 @@
   <div class="console-close-button">
     <Hds::Button
       class="hds-side-nav__icon-button"
-      {{on "click" this.closeConsole}}
+      {{on "click" (fn (mut this.console.isOpen) (not this.console.isOpen))}}
       data-test-console-panel-close
       @text="Close console"
       @icon="x"
