@@ -16,6 +16,7 @@ export default Factory.extend({
   max_open_connections: 4,
   max_idle_connections: 0,
   max_connection_lifetime: '0s',
+  allowed_roles: () => [],
   root_rotation_statements: () => [
     'SELECT user from mysql.user',
     "GRANT ALL PRIVILEGES ON *.* to 'sudo'@'%'",
