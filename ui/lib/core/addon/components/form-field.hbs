@@ -141,8 +141,7 @@
       @valuePlaceholder={{@attr.options.valuePlaceholder}}
       @isSingleRow={{@attr.options.isSingleRow}}
       @allowWhiteSpace={{@attr.options.allowWhiteSpace}}
-      @validationError={{this.validationError}}
-      class={{if @attr.options.isSectionHeader "form-section"}}
+      class="{{if this.validationError 'error-border-child-inputs'}} {{if @attr.options.isSectionHeader 'form-section'}}"
     />
   {{else if (eq @attr.options.editType "file")}}
     {{! File Input }}

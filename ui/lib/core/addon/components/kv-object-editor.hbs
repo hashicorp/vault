@@ -11,11 +11,6 @@
     class={{@labelClass}}
     data-test-kv-label={{true}}
   />
-  {{#if @validationError}}
-    <div>
-      <AlertInline @type="danger" @message={{@validationError}} class="has-top-padding-s" />
-    </div>
-  {{/if}}
   {{#if this.kvData}}
     {{#each this.kvData as |row index|}}
       <div class="columns is-variable" data-test-kv-row>
