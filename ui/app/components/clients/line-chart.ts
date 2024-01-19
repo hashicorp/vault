@@ -87,8 +87,8 @@ export default class LineChart extends Component<Args> {
   // Domains
   get yDomain() {
     const setMax = Math.max(...this.data.map((datum) => datum.y ?? 0));
-    const nearest = setMax < 1500 ? 200 : 2000;
-    // Round to upper 200 or 2000
+    const nearest = setMax > 1000 ? 1000 : setMax > 100 ? 100 : 10;
+    // round to nearest 10, 100, or 1000
     return [0, Math.ceil(setMax / nearest) * nearest];
   }
   get timeDomain() {

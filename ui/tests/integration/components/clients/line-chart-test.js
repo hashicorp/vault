@@ -322,7 +322,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
         },
         {
           foo: '5/20',
-          bar: 17,
+          bar: 70,
         },
         {
           foo: '6/20',
@@ -341,8 +341,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       />
     </div>
     `);
-    assert.dom('[data-test-y-axis]').hasText('0 50 100 150 200', 'y-axis renders correctly for small values');
-
+    assert.dom('[data-test-y-axis]').hasText('0 2 4 6 8 10', 'y-axis renders correctly for small values');
     assert
       .dom('[data-test-x-axis]')
       .hasText('4/20 5/20 6/20 7/20', 'x-axis renders correctly for small values');
@@ -364,9 +363,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     // Update to broken dataset
     this.set('dataset', datasets.broken);
     await waitFor('[data-test-line-chart]');
-    assert
-      .dom('[data-test-y-axis]')
-      .hasText('0 50 100 150 200', 'y-axis renders correctly for new broken values');
+    assert.dom('[data-test-y-axis]').hasText('0 20 40 60', 'y-axis renders correctly for new broken values');
     assert
       .dom('[data-test-x-axis]')
       .hasText('1/20 2/20 3/20 4/20 5/20 6/20', 'x-axis renders correctly for small values');
