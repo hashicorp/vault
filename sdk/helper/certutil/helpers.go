@@ -17,6 +17,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -1585,4 +1586,266 @@ func (oraw *OtherNameRaw) ExtractUTF8String() (*OtherNameUtf8, error) {
 		return &OtherNameUtf8{Oid: oraw.TypeID.String(), Value: string(val)}, nil
 	}
 	return nil, fmt.Errorf("no UTF-8 string found in OtherName")
+}
+
+// Translate Certificates and CSRs into Certificate Template
+// Four "Types" Here: Certificates; Certificate Signing Requests; Fields map[string]interface{}; Creation Parameters
+
+func parseCertificateToCreationParameters(certificate x509.Certificate) (creationParameters CreationParameters, err error) {
+	creationParameters = CreationParameters{
+		Subject:        certificate.Subject,
+		DNSNames:       certificate.DNSNames,
+		EmailAddresses: certificate.EmailAddresses,
+		IPAddresses:    certificate.IPAddresses,
+		URIs:           certificate.URIs,
+		// TODO: OtherSANs
+		IsCA:     certificate.IsCA,
+		KeyType:  getKeyType(certificate.PublicKeyAlgorithm.String()),
+		KeyBits:  findBitLength(certificate.PublicKey),
+		NotAfter: certificate.NotAfter,
+		KeyUsage: certificate.KeyUsage,
+		// TODO ExtKeyUsage: certificate.ExtKeyUsage,
+		// TODO ExtKeyUsageOIDs []string
+		// TODO: PolicyIdentifiers:             certificate.PolicyIdentifiers,
+		BasicConstraintsValidForNonCA: certificate.BasicConstraintsValid,
+		SignatureBits:                 findSignatureBits(certificate.SignatureAlgorithm),
+		UsePSS:                        isPSS(certificate.SignatureAlgorithm),
+		// The following two values are on creation parameters, but are impossible to parse from the certificate
+		// ForceAppendCaChain
+		// UseCSRValues
+		PermittedDNSDomains: certificate.PermittedDNSDomains,
+		// TODO URLs *URLEntries
+		MaxPathLength:     certificate.MaxPathLen,
+		NotBeforeDuration: notBeforeDurationFromNotBefore(certificate.NotBefore), // Assumes Certificate was created this moment
+		SKID:              certificate.SubjectKeyId,
+	}
+
+	return creationParameters, nil
+}
+
+func parseCsrToCreationParameters(csr x509.CertificateRequest) (creationParameters CreationParameters, err error) {
+	creationParameters = CreationParameters{
+		Subject:        csr.Subject,
+		DNSNames:       csr.DNSNames,
+		EmailAddresses: csr.EmailAddresses,
+		IPAddresses:    csr.IPAddresses,
+		URIs:           csr.URIs,
+		// TODO: Help with Other SANs {this is on all of them to ask Victor}
+		// TODO: Is CA
+		KeyType: getKeyType(csr.PublicKeyAlgorithm.String()),
+		KeyBits: findBitLength(csr.PublicKey),
+		// TODO: NotAfter
+		// TODO: KeyUsage                      x509.KeyUsage
+		// TODO: ExtKeyUsage                   CertExtKeyUsage
+		// TODO: ExtKeyUsageOIDs               []string
+		// TODO: PolicyIdentifiers             []string
+		// TODO: BasicConstraintsValidForNonCA bool
+		SignatureBits: findBitLength(csr.Signature), // TODO: Verify that this is correct
+		UsePSS:        isPSS(csr.SignatureAlgorithm),
+		// The following two values are on creation parameters, but are impossible to parse from the csr
+		// ForceAppendCaChain
+		// UseCSRValues
+		// TODO: PermittedDNSDomains           []string
+		// TODO: URLs                          *URLEntries
+		// TODO: MaxPathLength                 int
+		// TODO: NotBeforeDuration             time.Duration
+		// TODO: SKID                          []byte
+	}
+
+	return creationParameters, nil
+}
+
+func parseCsrToFields(csr x509.CertificateRequest) (templateData map[string]interface{}, err error) {
+	templateData = map[string]interface{}{
+		"common_name": csr.Subject.CommonName,
+		"alt_names":   makeAltNamesCommaSeparatedString(csr.DNSNames, csr.EmailAddresses),
+		"ip_sans":     makeIpAddressCommaSeparatedString(csr.IPAddresses),
+		"uri_sans":    makeUriCommaSeparatedString(csr.URIs),
+		// TODO: other_sans (string: "") - Specifies custom OID/UTF8-string SANs. These must match values specified on the role in allowed_other_sans (see role creation for allowed_other_sans globbing rules). The format is the same as OpenSSL: <oid>;<type>:<value> where the only current valid type is UTF8. This can be a comma-delimited list or a JSON string slice.
+		// TODO: See Below, this is broken by refactoring
+		"signature_bits":       findSignatureBits(csr.SignatureAlgorithm),
+		"exclude_cn_from_sans": determineExcludeCnFromCsrSans(csr),
+		"ou":                   csr.Subject.OrganizationalUnit,
+		"organization":         csr.Subject.Organization,
+		"country":              csr.Subject.Country,
+		"locality":             csr.Subject.Locality,
+		"province":             csr.Subject.Province,
+		"street_address":       csr.Subject.StreetAddress,
+		"postal_code":          csr.Subject.PostalCode,
+		"serial_number":        csr.Subject.SerialNumber,
+		// There is no "TTL" on a CSR, that is always set by the signer
+		// TODO: ??? max_path_length {this is a CA thing}
+		// TODO: permitted_dns_domains {this is a CA thing}
+		"use_pss": isPSS(csr.SignatureAlgorithm),
+		// TODO: Is there a subject key ID on a CSR (?) - it could be calculated
+		"key_type": getKeyType(csr.PublicKeyAlgorithm.String()),
+		"key_bits": findBitLength(csr.PublicKey),
+	}
+
+	return templateData, nil
+}
+
+func parseCertificateToFields(certificate x509.Certificate) (templateData map[string]interface{}, err error) {
+	templateData = map[string]interface{}{
+		"common_name": certificate.Subject.CommonName,
+		"alt_names":   makeAltNamesCommaSeparatedString(certificate.DNSNames, certificate.EmailAddresses),
+		"ip_sans":     makeIpAddressCommaSeparatedString(certificate.IPAddresses),
+		"uri_sans":    makeUriCommaSeparatedString(certificate.URIs),
+		// TODO: other_sans (string: "") - Specifies custom OID/UTF8-string SANs. The format is the same as OpenSSL: <oid>;<type>:<value> where the only current valid type is UTF8. This can be a comma-delimited list or a JSON string slice.
+		// TODO: ask Victor for help, this is now in issue_common.go : GetOtherSANsFromX509Extensions
+		"signature_bits":        findSignatureBits(certificate.SignatureAlgorithm),
+		"exclude_cn_from_sans":  determineExcludeCnFromCertSans(certificate),
+		"ou":                    certificate.Subject.OrganizationalUnit,
+		"organization":          certificate.Subject.Organization,
+		"country":               certificate.Subject.Country,
+		"locality":              certificate.Subject.Locality,
+		"province":              certificate.Subject.Province,
+		"street_address":        certificate.Subject.StreetAddress,
+		"postal_code":           certificate.Subject.PostalCode,
+		"serial_number":         certificate.Subject.SerialNumber,
+		"ttl":                   (certificate.NotAfter.Sub(certificate.NotBefore)).String(),
+		"max_path_length":       certificate.MaxPathLen,
+		"permitted_dns_domains": strings.Join(certificate.PermittedDNSDomains, ","),
+		"use_pss":               isPSS(certificate.SignatureAlgorithm),
+		"skid":                  hex.EncodeToString(certificate.SubjectKeyId),
+		"key_type":              getKeyType(certificate.PublicKeyAlgorithm.String()),
+		"key_bits":              findBitLength(certificate.PublicKey),
+	}
+
+	return templateData, nil
+}
+
+func makeAltNamesCommaSeparatedString(names []string, emails []string) string {
+	return strings.Join(names, ",") + "," + strings.Join(emails, ",")
+}
+
+func makeUriCommaSeparatedString(uris []*url.URL) string {
+	stringAddresses := make([]string, len(uris))
+	for i, uri := range uris {
+		stringAddresses[i] = uri.String()
+	}
+	return strings.Join(stringAddresses, ",")
+}
+
+func makeIpAddressCommaSeparatedString(addresses []net.IP) string {
+	stringAddresses := make([]string, len(addresses))
+	for i, address := range addresses {
+		stringAddresses[i] = address.String()
+	}
+	return strings.Join(stringAddresses, ",")
+}
+
+func determineExcludeCnFromCertSans(certificate x509.Certificate) bool {
+	cn := certificate.Subject.CommonName
+	if cn == "" {
+		return false
+	}
+
+	emails := certificate.EmailAddresses
+	for _, email := range emails {
+		if email == cn {
+			return false
+		}
+	}
+
+	dnses := certificate.DNSNames
+	for _, dns := range dnses {
+		if dns == cn {
+			return false
+		}
+	}
+
+	return true
+}
+
+func determineExcludeCnFromCsrSans(csr x509.CertificateRequest) bool {
+	cn := csr.Subject.CommonName
+	if cn == "" {
+		return false
+	}
+
+	emails := csr.EmailAddresses
+	for _, email := range emails {
+		if email == cn {
+			return false
+		}
+	}
+
+	dnses := csr.DNSNames
+	for _, dns := range dnses {
+		if dns == cn {
+			return false
+		}
+	}
+
+	return true
+}
+
+func findBitLength(publicKey any) int {
+	if publicKey == nil {
+		return 0
+	}
+	switch pub := publicKey.(type) {
+	case *rsa.PublicKey:
+		return pub.N.BitLen()
+	case *ecdsa.PublicKey:
+		switch pub.Curve {
+		case elliptic.P224():
+			return 224
+		case elliptic.P256():
+			return 256
+		case elliptic.P384():
+			return 384
+		case elliptic.P521():
+			return 521
+		default:
+			return 0
+		}
+	default:
+		return 0
+	}
+}
+
+func findSignatureBits(algo x509.SignatureAlgorithm) int {
+	switch algo {
+	case x509.MD2WithRSA, x509.MD5WithRSA, x509.SHA1WithRSA, x509.DSAWithSHA1, x509.ECDSAWithSHA1:
+		return -1
+	case x509.SHA256WithRSA, x509.DSAWithSHA256, x509.ECDSAWithSHA256, x509.SHA256WithRSAPSS:
+		return 256
+	case x509.SHA384WithRSA, x509.ECDSAWithSHA384, x509.SHA384WithRSAPSS:
+		return 384
+	case x509.SHA512WithRSA, x509.SHA512WithRSAPSS, x509.ECDSAWithSHA512:
+		return 512
+	case x509.PureEd25519:
+		return 0
+	default:
+		return -1
+	}
+}
+
+func getKeyType(goKeyType string) string {
+	switch goKeyType {
+	case "RSA":
+		return "rsa"
+	case "ECDSA":
+		return "ec"
+	case "Ed25519":
+		return "ed25519"
+	default:
+		return ""
+	}
+}
+
+func isPSS(algorithm x509.SignatureAlgorithm) bool {
+	switch algorithm {
+	case x509.SHA384WithRSAPSS, x509.SHA512WithRSAPSS, x509.SHA256WithRSAPSS:
+		return true
+	default:
+		return false
+	}
+}
+
+func notBeforeDurationFromNotBefore(notBefore time.Time) time.Duration {
+	now := time.Now()
+	return now.Sub(notBefore)
 }
