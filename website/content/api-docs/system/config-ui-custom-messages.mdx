@@ -67,7 +67,7 @@ custom messages already exists, an error will be returned.
 
 - `title` `(string: <required>)` - The title of the custom message.
 
-- `authenticated` `(bool: <optional>)` - A flag indicating whether the custom message is displayed post-login (`true`) or pre-login (`false`). If this parameter is omitted, the custom message is created as post-login.
+- `authenticated` `(bool: <optional>)` - A flag indicating whether the custom message is displayed post-login (`true`) or pre-login (`false`). If this parameter is omitted, the custom message is created as post-login. Pre-login messages may be retrieved by anonymous clients, as such their content should not contain any sensitive information.
 
 - `type` `(string: <optional>)` - The type of the custom message. Must be either `banner` or `modal`. If this parameter is omitted, the custom message type is set to `banner`.
 
@@ -171,7 +171,7 @@ This endpoint updates the properties of a specific custom message.
 
 - `title` `(string: <required>)` - The title of the custom message.
 
-- `authenticated` `(bool: <optional>)` - A flag indicating whether the custom message is displayed post-login (`true`) or pre-login (`false`). If this parameter is omitted, the custom message is created as post-login.
+- `authenticated` `(bool: <optional>)` - A flag indicating whether the custom message is displayed post-login (`true`) or pre-login (`false`). If this parameter is omitted, the custom message is created as post-login. Pre-login messages may be retrieved by anonymous clients, as such their content should not contain any sensitive information.
 
 - `type` `(string: <optional>)` - The type of the custom message. Must be either `banner` or `modal`. If this parameter is omitted, the custom message type is set to `banner`.
 
