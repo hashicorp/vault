@@ -8,12 +8,12 @@
     <Hds::Alert
       @type="inline"
       @color="highlight"
-      data-test-alert={{bannerMessage.id}}
+      data-test-custom-alert={{bannerMessage.id}}
       @onDismiss={{fn this.customMessages.onBannerDismiss bannerMessage.id}}
       as |A|
     >
-      <A.Title data-test-alert-title={{bannerMessage.id}}>{{bannerMessage.title}}</A.Title>
-      <A.Description data-test-alert-description={{bannerMessage.id}}>
+      <A.Title data-test-custom-alert-title={{bannerMessage.id}}>{{bannerMessage.title}}</A.Title>
+      <A.Description data-test-custom-alert-description={{bannerMessage.id}}>
         {{bannerMessage.message}}
         {{#unless (is-empty-value bannerMessage.link)}}
           {{#each-in bannerMessage.link as |title href|}}

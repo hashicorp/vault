@@ -16,11 +16,11 @@
       @color="warning"
       @onDismiss={{fn (mut @showMessagePreviewModal) false}}
       class="has-bottom-margin-s"
-      data-test-alert={{@message.title}}
+      data-test-custom-alert={{@message.title}}
       as |A|
     >
-      <A.Title data-test-alert-title={{@message.title}}>{{@message.title}}</A.Title>
-      <A.Description data-test-alert-description={{@message.title}}>
+      <A.Title data-test-custom-alert-title={{@message.title}}>{{@message.title}}</A.Title>
+      <A.Description data-test-custom-alert-description={{@message.title}}>
         {{@message.message}}
         {{#if @message.linkHref}}
           <Hds::Link::Inline @icon="external-link" @href={{@message.linkHref}}>
