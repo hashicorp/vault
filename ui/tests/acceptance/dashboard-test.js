@@ -48,7 +48,7 @@ const authenticatedMessageResponse = {
         authenticated: true,
         end_time: null,
         link: {
-          title: '',
+          'some link title': 'www.link.com',
         },
         message: 'aGVsbG8gd29ybGQgaGVsbG8gd29scmQ=',
         options: null,
@@ -59,9 +59,6 @@ const authenticatedMessageResponse = {
       'some-awesome-id-1': {
         authenticated: true,
         end_time: null,
-        link: {
-          title: '',
-        },
         message: 'aGVyZSBpcyBhIGNvb2wgbWVzc2FnZQ==',
         options: null,
         start_time: '2024-01-01T08:00:00Z',
@@ -493,7 +490,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(PAGE.modalBody(modalId)).hasText('here is a cool message');
       await click(PAGE.modalButton(modalId));
       assert.dom(PAGE.alertTitle(alertId)).hasText('Banner title');
-      assert.dom(PAGE.alertDescription(alertId)).hasText('hello world hello wolrd');
+      assert.dom(PAGE.alertDescription(alertId)).hasText('hello world hello wolrd some link title');
     });
     test('it shows the multiple modal messages', async function (assert) {
       const modalIdOne = 'some-awesome-id-2';
@@ -510,7 +507,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(PAGE.modal(modalIdOne)).exists();
       assert.dom(PAGE.modalTitle(modalIdOne)).hasText('Modal title 1');
       assert.dom(PAGE.modalBody(modalIdOne)).exists();
-      assert.dom(PAGE.modalBody(modalIdOne)).hasText('hello world hello wolrd');
+      assert.dom(PAGE.modalBody(modalIdOne)).hasText('hello world hello wolrd some link title');
       await click(PAGE.modalButton(modalIdOne));
       assert.dom(PAGE.modal(modalIdTwo)).exists();
       assert.dom(PAGE.modalTitle(modalIdTwo)).hasText('Modal title 2');
@@ -531,7 +528,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       });
       await visit('/vault/dashboard');
       assert.dom(PAGE.alertTitle(bannerIdOne)).hasText('Banner title 1');
-      assert.dom(PAGE.alertDescription(bannerIdOne)).hasText('hello world hello wolrd');
+      assert.dom(PAGE.alertDescription(bannerIdOne)).hasText('hello world hello wolrd some link title');
       assert.dom(PAGE.alertTitle(bannerIdTwo)).hasText('Banner title 2');
       assert.dom(PAGE.alertDescription(bannerIdTwo)).hasText('here is a cool message');
     });
