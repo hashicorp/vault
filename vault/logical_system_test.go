@@ -433,6 +433,147 @@ func TestSystemBackend_mount_force_no_cache(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_mount_secret_identity_token_key(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	core, b, _ := testCoreSystemBackend(t)
+
+	tests := []struct {
+		name      string
+		mountPath string
+		keyName   string
+		createKey bool
+		wantErr   bool
+	}{
+		{
+			name:      "enable secret mount with default key",
+			mountPath: "mounts/dev/",
+			keyName:   defaultKeyName,
+		},
+		{
+			name:      "enable secret mount with empty key",
+			mountPath: "mounts/test/",
+			keyName:   "",
+		},
+		{
+			name:      "enable secret mount with non-default key",
+			mountPath: "mounts/int/",
+			keyName:   "test_key",
+			createKey: true,
+		},
+		{
+			name:      "enable secret mount with key that does not exist",
+			mountPath: "mounts/prod/",
+			keyName:   "does_not_exist_key",
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.createKey {
+				resp, err := core.identityStore.HandleRequest(ctx, &logical.Request{
+					Storage:   core.identityStore.view,
+					Path:      fmt.Sprintf("oidc/key/%s", tt.keyName),
+					Operation: logical.CreateOperation,
+				})
+				require.NoError(t, err)
+				require.Nil(t, resp)
+			}
+
+			// Enable the secret mount
+			req := logical.TestRequest(t, logical.UpdateOperation, tt.mountPath)
+			req.Data["type"] = "kv"
+			req.Data["config"] = map[string]interface{}{
+				"identity_token_key": tt.keyName,
+			}
+			resp, err := b.HandleRequest(ctx, req)
+			if tt.wantErr {
+				require.Error(t, err)
+				require.Equal(t, fmt.Errorf("key %q does not exist", tt.keyName), resp.Error())
+				return
+			}
+			require.NoError(t, err)
+			require.Nil(t, resp)
+
+			// Expect identity token key set on the mount entry
+			mountEntry := core.router.MatchingMountEntry(ctx, strings.TrimPrefix(tt.mountPath, "mounts/"))
+			require.NotNil(t, mountEntry)
+			require.Equal(t, tt.keyName, mountEntry.Config.IdentityTokenKey)
+		})
+	}
+}
+
+func TestSystemBackend_mount_auth_identity_token_key(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	core, b, _ := testCoreSystemBackend(t)
+	core.credentialBackends["userpass"] = credUserpass.Factory
+
+	tests := []struct {
+		name      string
+		mountPath string
+		keyName   string
+		createKey bool
+		wantErr   bool
+	}{
+		{
+			name:      "enable auth mount with default key",
+			mountPath: "auth/dev/",
+			keyName:   defaultKeyName,
+		},
+		{
+			name:      "enable auth mount with empty key",
+			mountPath: "auth/test/",
+			keyName:   "",
+		},
+		{
+			name:      "enable auth mount with non-default key",
+			mountPath: "auth/int/",
+			keyName:   "test_key",
+			createKey: true,
+		},
+		{
+			name:      "enable auth mount with key that does not exist",
+			mountPath: "auth/prod/",
+			keyName:   "does_not_exist_key",
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.createKey {
+				resp, err := core.identityStore.HandleRequest(ctx, &logical.Request{
+					Storage:   core.identityStore.view,
+					Path:      fmt.Sprintf("oidc/key/%s", tt.keyName),
+					Operation: logical.CreateOperation,
+				})
+				require.NoError(t, err)
+				require.Nil(t, resp)
+			}
+
+			// Enable the auth mount
+			req := logical.TestRequest(t, logical.UpdateOperation, tt.mountPath)
+			req.Data["type"] = "userpass"
+			req.Data["config"] = map[string]interface{}{
+				"identity_token_key": tt.keyName,
+			}
+			resp, err := b.HandleRequest(ctx, req)
+			if tt.wantErr {
+				require.Error(t, err)
+				require.Equal(t, fmt.Errorf("key %q does not exist", tt.keyName), resp.Error())
+				return
+			}
+			require.NoError(t, err)
+			require.Nil(t, resp)
+
+			// Expect identity token key set on the mount entry
+			mountEntry := core.router.MatchingMountEntry(ctx, tt.mountPath)
+			require.NotNil(t, mountEntry)
+			require.Equal(t, tt.keyName, mountEntry.Config.IdentityTokenKey)
+		})
+	}
+}
+
 func TestSystemBackend_mount_invalid(t *testing.T) {
 	b := testSystemBackend(t)
 
