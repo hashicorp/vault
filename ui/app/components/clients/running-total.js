@@ -43,11 +43,6 @@ import { calculateAverage } from 'vault/utils/chart-helpers';
  *
  */
 export default class RunningTotal extends Component {
-  runningTotalLegend = [
-    { key: 'entity_clients', label: 'entity clients' },
-    { key: 'non_entity_clients', label: 'non-entity clients' },
-  ];
-
   get byMonthNewClients() {
     if (this.args.byMonthActivityData) {
       return this.args.byMonthActivityData?.map((m) => m.new_clients);
@@ -73,13 +68,6 @@ export default class RunningTotal extends Component {
     return (
       typeof this.entityClientData.runningTotal === 'number' ||
       typeof this.nonEntityClientData.runningTotal === 'number'
-    );
-  }
-
-  get hasAverageNewClients() {
-    return (
-      typeof this.entityClientData.averageNewClients === 'number' ||
-      typeof this.nonEntityClientData.averageNewClients === 'number'
     );
   }
 
