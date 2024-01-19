@@ -2,23 +2,22 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 ~}}
-
-{{#if this.data}}
-  <div class="lineal-chart">
-    <Lineal::Fluid as |width|>
+<div {{did-update (perform this.updateChart)}}>
+  {{#if @dataset}}
+    <div class="lineal-chart">
       {{#let
-        (scale-time range=(array 0 width))
+        (scale-time range=(array 0 500))
         (scale-linear domain=this.yDomain range=(array this.chartHeight 0))
         (scale-linear range=(array 0 this.chartHeight))
         as |xScale yScale tooltipScale|
       }}
-        <svg width="500" height={{this.chartHeight}}>
+        <svg width={{500}} height={{this.chartHeight}} class="chart has-grid" data-test-line-chart>
           {{#if (and xScale.isValid yScale.isValid)}}
             <Lineal::Axis
               @scale={{yScale}}
               @tickCount="4"
               @tickPadding={{10}}
-              @tickSizeInner={{concat "-" width}}
+              @tickSizeInner={{concat "-" "500"}}
               @tickFormat={{this.formatCount}}
               @orientation="left"
               @includeDomain={{false}}
@@ -47,6 +46,7 @@
                 r="10"
                 fill="#FDEEBA"
                 stroke="none"
+                data-test-line-chart="upgrade-month-{{date-format d.x 'M-yy'}}"
               ></circle>
             {{/each}}
           {{/if}}
@@ -80,6 +80,7 @@
                   fill="#cce3fe"
                   stroke="#0c56e9"
                   stroke-width="1.5"
+                  data-test-line-chart="plot-point"
                 ></circle>
                 <circle
                   role="button"
@@ -90,6 +91,7 @@
                   fill="transparent"
                   {{on "mouseover" (fn (mut this.activeDatum) d)}}
                   {{on "mouseout" (fn (mut this.activeDatum) null)}}
+                  data-test-hover-circle={{date-format d.x "M/yy"}}
                 ></circle>
               {{/if}}
             {{/each}}
@@ -106,6 +108,7 @@
             }}
             data-test-tooltip
           >
+
             <p class="bold" data-test-tooltip-month>{{date-format this.activeDatum.x "MMMM yyyy"}}</p>
             <p>{{format-number this.activeDatum.y}} total clients</p>
             <p>{{format-number (or this.activeDatum.new)}} new clients</p>
@@ -117,39 +120,8 @@
           </div>
         {{/if}}
       {{/let}}
-    </Lineal::Fluid>
-  </div>
-  <hr />
-  <svg
-    data-test-line-chart
-    class="chart has-grid"
-    {{on "mouseleave" this.removeTooltip}}
-    {{did-insert this.renderChart @dataset}}
-    {{did-update this.renderChart @dataset}}
-  >
-  </svg>
-{{else}}
-  <EmptyState @subTitle={{or @noDataMessage "No data to display"}} @bottomBorder={{true}} />
-{{/if}}
-
-{{! TOOLTIP }}
-
-{{#if this.tooltipTarget}}
-  {{! Required to set tag name = div https://github.com/yapplabs/ember-modal-dialog/issues/290 }}
-  {{! Component must be in curly bracket notation }}
-  {{! template-lint-disable no-curly-component-invocation }}
-  {{#modal-dialog
-    tagName="div" tetherTarget=this.tooltipTarget targetAttachment="bottom middle" attachment="bottom middle" offset="35px 0"
-  }}
-    <div class="chart-tooltip">
-      <p class="bold">{{this.tooltipMonth}}</p>
-      <p>{{this.tooltipTotal}}</p>
-      <p>{{this.tooltipNew}}</p>
-      {{#if this.tooltipUpgradeText}}
-        <br />
-        <p class="has-text-highlight">{{this.tooltipUpgradeText}}</p>
-      {{/if}}
     </div>
-    <div class="chart-tooltip-arrow"></div>
-  {{/modal-dialog}}
-{{/if}}
+  {{else}}
+    <EmptyState @subTitle={{or @noDataMessage "No data to display"}} @bottomBorder={{true}} />
+  {{/if}}
+</div>

@@ -17,6 +17,7 @@ interface Count {
   entity_clients?: number;
   non_entity_clients?: number;
   secret_syncs?: number;
+  [key: string]: unknown;
 }
 interface EmptyCount {
   count?: null;
@@ -40,4 +41,10 @@ export interface SerializedChartData extends Count, EmptyCount, ChartTimestamp {
   namespaces_by_key: NamespacesByKey;
   new_clients: NewClients;
   [key: string]: unknown;
+}
+
+export interface UpgradeData {
+  version: string;
+  timestampInstalled: string;
+  previousVersion?: string;
 }
