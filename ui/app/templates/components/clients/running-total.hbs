@@ -15,7 +15,7 @@
       </div>
 
       <div class={{concat (unless @byMonthActivityData "chart-empty-state ") "chart-container-wide"}}>
-        <Clients::LineChart @dataset={{@byMonthActivityData}} @upgradeData={{@upgradeData}} />
+        <Clients::LineChart @dataset={{@byMonthActivityData}} @upgradeData={{@upgradeData}} @chartHeight="250" />
       </div>
 
       <div class="chart-subTitle">
@@ -134,7 +134,7 @@
       </div>
     </div>
   {{else}}
-    {{! This renders when either: 
+    {{! This renders when either:
     -> viewing the current month and all namespaces (no filters)
     -> filtering by a namespace with no month over month data
     if filtering by a mount with no month over month data <UsageStats> in dashboard.hbs renders }}
