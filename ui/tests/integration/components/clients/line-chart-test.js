@@ -6,9 +6,10 @@
 import { module, test } from 'qunit';
 import sinon from 'sinon';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, findAll } from '@ember/test-helpers';
+import { find, render, findAll, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { format, formatRFC3339, parseISO, subMonths } from 'date-fns';
+import { format, formatRFC3339, subMonths } from 'date-fns';
+// import { formatChartDate } from 'core/utils/date-formatters';
 import timestamp from 'core/utils/timestamp';
 
 module('Integration | Component | clients/line-chart', function (hooks) {
@@ -21,19 +22,19 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     this.set('yKey', 'bar');
     this.set('dataset', [
       {
-        foo: '2017-12-03T14:15:30',
+        foo: '4/20',
         bar: 4,
       },
       {
-        foo: '2018-01-03T14:15:30',
+        foo: '5/20',
         bar: 8,
       },
       {
-        foo: '2018-02-03T14:15:30',
+        foo: '6/20',
         bar: 14,
       },
       {
-        foo: '2018-03-03T14:15:30',
+        foo: '7/20',
         bar: 10,
       },
     ]);
@@ -46,7 +47,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     await render(hbs`
     <div class="chart-container-wide">
       <Clients::LineChart @dataset={{this.dataset}} @xKey={{this.xKey}} @yKey={{this.yKey}} />
-    </div>
+      </div>
     `);
 
     assert.dom('[data-test-line-chart]').exists('Chart is rendered');
@@ -55,10 +56,9 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       .exists({ count: this.dataset.length }, `renders ${this.dataset.length} plot points`);
 
     findAll('[data-test-x-axis] text').forEach((e, i) => {
-      // For some reason the first x-axis label is missing
-      const date = parseISO(this.dataset[i + 1][this.xKey]);
-      const monthLabel = format(date, 'M/yy');
-      assert.dom(e).hasText(monthLabel, `renders x-axis label: ${monthLabel}`);
+      assert
+        .dom(e)
+        .hasText(`${this.dataset[i][this.xKey]}`, `renders x-axis label: ${this.dataset[i][this.xKey]}`);
     });
     assert.dom('[data-test-y-axis] text').hasText('0', `y-axis starts at 0`);
   });
@@ -67,25 +67,25 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     const now = timestamp.now();
     this.set('dataset', [
       {
-        foo: formatRFC3339(subMonths(now, 4)),
+        foo: format(subMonths(now, 4), 'M/yy'),
         bar: 4,
       },
       {
-        foo: formatRFC3339(subMonths(now, 3)),
+        foo: format(subMonths(now, 3), 'M/yy'),
         bar: 8,
       },
       {
-        foo: formatRFC3339(subMonths(now, 2)),
+        foo: format(subMonths(now, 2), 'M/yy'),
         bar: 14,
       },
       {
-        foo: formatRFC3339(subMonths(now, 1)),
+        foo: format(subMonths(now, 1), 'M/yy'),
         bar: 10,
       },
     ]);
     this.set('upgradeData', [
       {
-        version: '1.10.1',
+        id: '1.10.1',
         previousVersion: '1.9.2',
         timestampInstalled: formatRFC3339(subMonths(now, 2)),
       },
@@ -105,8 +105,11 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       .dom('[data-test-line-chart="plot-point"]')
       .exists({ count: this.dataset.length }, `renders ${this.dataset.length} plot points`);
     assert
-      .dom(`[data-test-line-chart="upgrade-month-2-18"]`)
-      .exists({ count: 1 }, `upgrade data point 2-18 has yellow highlight`);
+      .dom(find(`[data-test-line-chart="upgrade-${this.dataset[2][this.xKey]}"]`))
+      .hasStyle(
+        { fill: 'rgb(253, 238, 186)' },
+        `upgrade data point ${this.dataset[2][this.xKey]} has yellow highlight`
+      );
   });
 
   test('it renders tooltip', async function (assert) {
@@ -114,28 +117,28 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     const now = timestamp.now();
     const tooltipData = [
       {
-        timestamp: formatRFC3339(subMonths(now, 4)),
+        month: format(subMonths(now, 4), 'M/yy'),
         clients: 4,
         new_clients: {
           clients: 0,
         },
       },
       {
-        timestamp: formatRFC3339(subMonths(now, 3)),
+        month: format(subMonths(now, 3), 'M/yy'),
         clients: 8,
         new_clients: {
           clients: 4,
         },
       },
       {
-        timestamp: formatRFC3339(subMonths(now, 2)),
+        month: format(subMonths(now, 2), 'M/yy'),
         clients: 14,
         new_clients: {
           clients: 6,
         },
       },
       {
-        timestamp: formatRFC3339(subMonths(now, 1)),
+        month: format(subMonths(now, 1), 'M/yy'),
         clients: 20,
         new_clients: {
           clients: 4,
@@ -152,16 +155,15 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     ]);
     await render(hbs`
     <div class="chart-container-wide">
-    <Clients::LineChart
-      @dataset={{this.dataset}}
-      @upgradeData={{this.upgradeData}}
-    />
+      <Clients::LineChart
+        @dataset={{this.dataset}}
+        @upgradeData={{this.upgradeData}}
+      />
     </div>
     `);
 
-    assert
-      .dom('[data-test-hover-circle]')
-      .exists({ count: tooltipData.length }, 'all data circles are rendered');
+    const tooltipHoverCircles = findAll('[data-test-hover-circle]');
+    assert.strictEqual(tooltipHoverCircles.length, tooltipData.length, 'all data circles are rendered');
 
     // FLAKY after adding a11y testing, skip for now
     // for (const [i, bar] of tooltipHoverCircles.entries()) {
@@ -227,5 +229,119 @@ module('Integration | Component | clients/line-chart', function (hooks) {
         `this is a custom message to explain why you're not seeing a line chart`,
         'custom message renders'
       );
+  });
+
+  test('it updates axis when dataset updates', async function (assert) {
+    const datasets = {
+      small: [
+        {
+          foo: '4/20',
+          bar: 4,
+        },
+        {
+          foo: '5/20',
+          bar: 8,
+        },
+        {
+          foo: '6/20',
+          bar: 1,
+        },
+        {
+          foo: '7/20',
+          bar: 10,
+        },
+      ],
+      large: [
+        {
+          foo: '8/20',
+          bar: 4586,
+        },
+        {
+          foo: '9/20',
+          bar: 8928,
+        },
+        {
+          foo: '10/20',
+          bar: 11948,
+        },
+        {
+          foo: '11/20',
+          bar: 16943,
+        },
+      ],
+      broken: [
+        {
+          foo: '1/20',
+          bar: null,
+        },
+        {
+          foo: '2/20',
+          bar: 0,
+        },
+        {
+          foo: '3/20',
+          bar: 22,
+        },
+        {
+          foo: '4/20',
+          bar: null,
+        },
+        {
+          foo: '5/20',
+          bar: 17,
+        },
+        {
+          foo: '6/20',
+          bar: 50,
+        },
+      ],
+    };
+    this.set('dataset', datasets.small);
+    await render(hbs`
+    <div class="chart-container-wide">
+      <Clients::LineChart
+        @dataset={{this.dataset}}
+        @upgradeData={{this.upgradeData}}
+        @xKey={{this.xKey}}
+        @yKey={{this.yKey}}
+      />
+    </div>
+    `);
+    assert.dom('[data-test-y-axis]').hasText('0 50 100 150 200', 'y-axis renders correctly for small values');
+
+    assert
+      .dom('[data-test-x-axis]')
+      .hasText('4/20 5/20 6/20 7/20', 'x-axis renders correctly for small values');
+    assert
+      .dom('[data-test-hover-circle="4/20"]')
+      .hasAttribute('cx', '0', 'first value is a aligned all the way to the left');
+
+    // Update to large dataset
+    this.set('dataset', datasets.large);
+    await waitFor('[data-test-line-chart]');
+    assert.dom('[data-test-y-axis]').hasText('0 5k 10k 15k', 'y-axis renders correctly for new large values');
+    assert
+      .dom('[data-test-x-axis]')
+      .hasText('8/20 9/20 10/20 11/20', 'x-axis renders correctly for small values');
+    assert
+      .dom('[data-test-hover-circle="8/20"]')
+      .hasAttribute('cx', '0', 'first value is a aligned all the way to the left');
+
+    // Update to broken dataset
+    this.set('dataset', datasets.broken);
+    await waitFor('[data-test-line-chart]');
+    assert
+      .dom('[data-test-y-axis]')
+      .hasText('0 50 100 150 200', 'y-axis renders correctly for new broken values');
+    assert
+      .dom('[data-test-x-axis]')
+      .hasText('1/20 2/20 3/20 4/20 5/20 6/20', 'x-axis renders correctly for small values');
+    assert
+      .dom('[data-test-hover-circle="1/20"]')
+      .doesNotExist('first month dot does not exist because value is null');
+    assert
+      .dom('[data-test-hover-circle="4/20"]')
+      .doesNotExist('other null count month dot also does not render');
+    // Note: the line should also show a gap, but this is difficult to test for
   });
 });
