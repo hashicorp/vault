@@ -153,7 +153,8 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		result = append([]byte(f.prefix), result...)
 	}
 
-	// Copy the event (and audit event) and store the format for the next (sink) node to Process.
+	// Copy some properties from the event (and audit event) and store the
+	// format for the next (sink) node to Process.
 	a2 := &AuditEvent{
 		ID:        a.ID,
 		Version:   a.Version,
@@ -165,7 +166,7 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 	e2 := &eventlogger.Event{
 		Type:      e.Type,
 		CreatedAt: e.CreatedAt,
-		Formatted: e.Formatted,
+		Formatted: make(map[string][]byte), // we are about to set this ourselves.
 		Payload:   a2,
 	}
 

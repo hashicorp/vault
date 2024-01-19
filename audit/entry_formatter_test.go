@@ -993,12 +993,24 @@ func TestEntryFormatter_Process_NoMutation(t *testing.T) {
 	}
 
 	e := fakeEvent(t, RequestType, in)
+
 	e2, err := formatter.Process(namespace.RootContext(nil), e)
 	require.NoError(t, err)
 	require.NotNil(t, e2)
-	// Ensure the pointers are different
-	require.False(t, e == e2)
-	require.False(t, e.Payload == e2.Payload)
+
+	// Ensure the pointers are different.
+	require.NotEqual(t, e2, e)
+
+	// Do the same for the audit event in the payload.
+	a, ok := e.Payload.(*AuditEvent)
+	require.True(t, ok)
+	require.NotNil(t, a)
+
+	a2, ok := e2.Payload.(*AuditEvent)
+	require.True(t, ok)
+	require.NotNil(t, a2)
+
+	require.NotEqual(t, a2, a)
 }
 
 // hashExpectedValueForComparison replicates enough of the audit HMAC process on a piece of expected data in a test,
