@@ -639,6 +639,7 @@ const (
 	SystemView_GroupsForEntity_FullMethodName            = "/pb.SystemView/GroupsForEntity"
 	SystemView_GeneratePasswordFromPolicy_FullMethodName = "/pb.SystemView/GeneratePasswordFromPolicy"
 	SystemView_ClusterInfo_FullMethodName                = "/pb.SystemView/ClusterInfo"
+	SystemView_GenerateIdentityToken_FullMethodName      = "/pb.SystemView/GenerateIdentityToken"
 )
 
 // SystemViewClient is the client API for SystemView service.
@@ -685,6 +686,8 @@ type SystemViewClient interface {
 	GeneratePasswordFromPolicy(ctx context.Context, in *GeneratePasswordFromPolicyRequest, opts ...grpc.CallOption) (*GeneratePasswordFromPolicyReply, error)
 	// ClusterInfo returns the ClusterID information; may be reused if ClusterName is also exposed.
 	ClusterInfo(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ClusterInfoReply, error)
+	// GenerateIdentityToken returns an identity token for the requesting plugin.
+	GenerateIdentityToken(ctx context.Context, in *GenerateIdentityTokenRequest, opts ...grpc.CallOption) (*GenerateIdentityTokenResponse, error)
 }
 
 type systemViewClient struct {
@@ -812,6 +815,15 @@ func (c *systemViewClient) ClusterInfo(ctx context.Context, in *Empty, opts ...g
 	return out, nil
 }
 
+func (c *systemViewClient) GenerateIdentityToken(ctx context.Context, in *GenerateIdentityTokenRequest, opts ...grpc.CallOption) (*GenerateIdentityTokenResponse, error) {
+	out := new(GenerateIdentityTokenResponse)
+	err := c.cc.Invoke(ctx, SystemView_GenerateIdentityToken_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SystemViewServer is the server API for SystemView service.
 // All implementations must embed UnimplementedSystemViewServer
 // for forward compatibility
@@ -856,6 +868,8 @@ type SystemViewServer interface {
 	GeneratePasswordFromPolicy(context.Context, *GeneratePasswordFromPolicyRequest) (*GeneratePasswordFromPolicyReply, error)
 	// ClusterInfo returns the ClusterID information; may be reused if ClusterName is also exposed.
 	ClusterInfo(context.Context, *Empty) (*ClusterInfoReply, error)
+	// GenerateIdentityToken returns an identity token for the requesting plugin.
+	GenerateIdentityToken(context.Context, *GenerateIdentityTokenRequest) (*GenerateIdentityTokenResponse, error)
 	mustEmbedUnimplementedSystemViewServer()
 }
 
@@ -901,6 +915,9 @@ func (UnimplementedSystemViewServer) GeneratePasswordFromPolicy(context.Context,
 }
 func (UnimplementedSystemViewServer) ClusterInfo(context.Context, *Empty) (*ClusterInfoReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClusterInfo not implemented")
+}
+func (UnimplementedSystemViewServer) GenerateIdentityToken(context.Context, *GenerateIdentityTokenRequest) (*GenerateIdentityTokenResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GenerateIdentityToken not implemented")
 }
 func (UnimplementedSystemViewServer) mustEmbedUnimplementedSystemViewServer() {}
 
@@ -1149,6 +1166,24 @@ func _SystemView_ClusterInfo_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SystemView_GenerateIdentityToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GenerateIdentityTokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemViewServer).GenerateIdentityToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemView_GenerateIdentityToken_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemViewServer).GenerateIdentityToken(ctx, req.(*GenerateIdentityTokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SystemView_ServiceDesc is the grpc.ServiceDesc for SystemView service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1207,6 +1242,10 @@ var SystemView_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ClusterInfo",
 			Handler:    _SystemView_ClusterInfo_Handler,
+		},
+		{
+			MethodName: "GenerateIdentityToken",
+			Handler:    _SystemView_GenerateIdentityToken_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

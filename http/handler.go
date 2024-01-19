@@ -347,7 +347,8 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 	// return an HTTP error here. This information is best effort.
 	hostname, _ := os.Hostname()
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var hf func(w http.ResponseWriter, r *http.Request)
+	hf = func(w http.ResponseWriter, r *http.Request) {
 		// This block needs to be here so that upon sending SIGHUP, custom response
 		// headers are also reloaded into the handlers.
 		var customHeaders map[string][]*logical.CustomHeader
@@ -422,16 +423,9 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 					core.Logger().Warn("error resolving potential API redirect", "error", err)
 				} else {
 					if redir != "" {
-						dest := url.URL{
-							Path:     redir,
-							RawQuery: r.URL.RawQuery,
-						}
-						w.Header().Set("Location", dest.String())
-						if r.Method == http.MethodGet || r.Proto == "HTTP/1.0" {
-							w.WriteHeader(http.StatusFound)
-						} else {
-							w.WriteHeader(http.StatusTemporaryRedirect)
-						}
+						newReq := r.Clone(ctx)
+						newReq.URL.Path = redir
+						hf(w, newReq)
 						cancelFunc()
 						return
 					}
@@ -487,7 +481,8 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		h.ServeHTTP(nw, r)
 
 		cancelFunc()
-	})
+	}
+	return http.HandlerFunc(hf)
 }
 
 func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handler {

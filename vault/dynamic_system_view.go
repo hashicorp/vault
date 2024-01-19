@@ -452,3 +452,11 @@ func (d dynamicSystemView) ClusterID(ctx context.Context) (string, error) {
 
 	return clusterInfo.ID, nil
 }
+
+func (d dynamicSystemView) GenerateIdentityToken(_ context.Context, _ *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error) {
+	// TODO: implement plugin identity token generation using identity store
+	return &pluginutil.IdentityTokenResponse{
+		Token: "unimplemented",
+		TTL:   time.Duration(0),
+	}, nil
+}

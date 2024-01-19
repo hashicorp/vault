@@ -97,6 +97,9 @@ type SystemView interface {
 	// write forwarding (WriteForwardedPaths). This value will be templated
 	// in for the {{cluterId}} sentinel.
 	ClusterID(ctx context.Context) (string, error)
+
+	// GenerateIdentityToken returns an identity token for the requesting plugin.
+	GenerateIdentityToken(ctx context.Context, req *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error)
 }
 
 type PasswordPolicy interface {
@@ -263,6 +266,10 @@ func (d *StaticSystemView) DeletePasswordPolicy(name string) (existed bool) {
 
 func (d StaticSystemView) ClusterID(ctx context.Context) (string, error) {
 	return d.ClusterUUID, nil
+}
+
+func (d StaticSystemView) GenerateIdentityToken(_ context.Context, _ *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error) {
+	return nil, errors.New("GenerateIdentityToken is not implemented in StaticSystemView")
 }
 
 func (d StaticSystemView) APILockShouldBlockRequest() (bool, error) {
