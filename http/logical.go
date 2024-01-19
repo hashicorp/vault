@@ -110,10 +110,8 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 		// add the HTTP request to the logical request object for later consumption.
 		contentType := r.Header.Get("Content-Type")
 
-		if ra != nil && ra.IsBinaryPath(r.Context(), path) {
-			passHTTPReq = true
-			origBody = r.Body
-		} else if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" {
+		if (ra != nil && ra.IsBinaryPath(r.Context(), path)) ||
+			path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" {
 			passHTTPReq = true
 			origBody = r.Body
 		} else {
@@ -192,6 +190,11 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 	case "OPTIONS":
 	default:
 		return nil, nil, http.StatusMethodNotAllowed, nil
+	}
+
+	// RFC 5785 Redirect, keep the request for auditing purposes
+	if r.URL.Path != r.RequestURI {
+		passHTTPReq = true
 	}
 
 	requestId, err := uuid.GenerateUUID()

@@ -255,6 +255,10 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 		},
 	}
 
+	if req.HTTPRequest != nil && req.HTTPRequest.RequestURI != req.Path {
+		reqEntry.Request.RequestURI = req.HTTPRequest.RequestURI
+	}
+
 	if !auth.IssueTime.IsZero() {
 		reqEntry.Auth.TokenIssueTime = auth.IssueTime.Format(time.RFC3339)
 	}
@@ -470,6 +474,10 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 			WrapInfo:              respWrapInfo,
 			Headers:               resp.Headers,
 		},
+	}
+
+	if req.HTTPRequest != nil && req.HTTPRequest.RequestURI != req.Path {
+		respEntry.Request.RequestURI = req.HTTPRequest.RequestURI
 	}
 
 	if auth.PolicyResults != nil {
