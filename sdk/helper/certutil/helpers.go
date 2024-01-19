@@ -1588,22 +1588,60 @@ func (oraw *OtherNameRaw) ExtractUTF8String() (*OtherNameUtf8, error) {
 	return nil, fmt.Errorf("no UTF-8 string found in OtherName")
 }
 
+func getOtherSANsStringFromExtensions(exts []pkix.Extension) (otherSans string, err error) {
+	otherNames, err := GetOtherSANsFromX509Extensions(exts)
+	if err != nil {
+		return "", err
+	}
+
+	otherSansList := make([]string, len(otherNames))
+	for i, otherName := range otherNames {
+		otherSansList[i] = otherName.String()
+	}
+
+	otherSans = strings.Join(otherSansList, ",")
+
+	return otherSans, nil
+}
+
+func getOtherSANsMapFromExtensions(exts []pkix.Extension) (otherSans map[string][]string, err error) {
+	otherNames, err := GetOtherSANsFromX509Extensions(exts)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, name := range otherNames {
+		if otherSans[name.Oid] == nil {
+			otherSans[name.Oid] = []string{name.Value}
+		} else {
+			otherSans[name.Oid] = append(otherSans[name.Oid], name.Value)
+		}
+	}
+
+	return otherSans, nil
+}
+
 // Translate Certificates and CSRs into Certificate Template
 // Four "Types" Here: Certificates; Certificate Signing Requests; Fields map[string]interface{}; Creation Parameters
 
 func parseCertificateToCreationParameters(certificate x509.Certificate) (creationParameters CreationParameters, err error) {
+	otherSans, err := getOtherSANsMapFromExtensions(certificate.Extensions)
+	if err != nil {
+		return CreationParameters{}, err
+	}
+
 	creationParameters = CreationParameters{
 		Subject:        certificate.Subject,
 		DNSNames:       certificate.DNSNames,
 		EmailAddresses: certificate.EmailAddresses,
 		IPAddresses:    certificate.IPAddresses,
 		URIs:           certificate.URIs,
-		// TODO: OtherSANs - repackaging
-		IsCA:     certificate.IsCA,
-		KeyType:  getKeyType(certificate.PublicKeyAlgorithm.String()),
-		KeyBits:  findBitLength(certificate.PublicKey),
-		NotAfter: certificate.NotAfter,
-		KeyUsage: certificate.KeyUsage,
+		OtherSANs:      otherSans,
+		IsCA:           certificate.IsCA,
+		KeyType:        getKeyType(certificate.PublicKeyAlgorithm.String()),
+		KeyBits:        findBitLength(certificate.PublicKey),
+		NotAfter:       certificate.NotAfter,
+		KeyUsage:       certificate.KeyUsage,
 		// TODO ExtKeyUsage: certificate.ExtKeyUsage,
 		// TODO ExtKeyUsageOIDs []string
 		// TODO: PolicyIdentifiers:             certificate.PolicyIdentifiers,
@@ -1624,13 +1662,18 @@ func parseCertificateToCreationParameters(certificate x509.Certificate) (creatio
 }
 
 func parseCsrToCreationParameters(csr x509.CertificateRequest) (creationParameters CreationParameters, err error) {
+	otherSANs, err := getOtherSANsMapFromExtensions(csr.Extensions)
+	if err != nil {
+		return CreationParameters{}, err
+	}
+
 	creationParameters = CreationParameters{
 		Subject:        csr.Subject,
 		DNSNames:       csr.DNSNames,
 		EmailAddresses: csr.EmailAddresses,
 		IPAddresses:    csr.IPAddresses,
 		URIs:           csr.URIs,
-		// TODO: Help with Other SANs {this is on all of them to ask Victor}
+		OtherSANs:      otherSANs,
 		// TODO: Is CA
 		KeyType: getKeyType(csr.PublicKeyAlgorithm.String()),
 		KeyBits: findBitLength(csr.PublicKey),
@@ -1657,11 +1700,11 @@ func parseCsrToCreationParameters(csr x509.CertificateRequest) (creationParamete
 
 func parseCsrToFields(csr x509.CertificateRequest) (templateData map[string]interface{}, err error) {
 	templateData = map[string]interface{}{
-		"common_name": csr.Subject.CommonName,
-		"alt_names":   makeAltNamesCommaSeparatedString(csr.DNSNames, csr.EmailAddresses),
-		"ip_sans":     makeIpAddressCommaSeparatedString(csr.IPAddresses),
-		"uri_sans":    makeUriCommaSeparatedString(csr.URIs),
-		// TODO: other_sans (string: "") - Specifies custom OID/UTF8-string SANs. These must match values specified on the role in allowed_other_sans (see role creation for allowed_other_sans globbing rules). The format is the same as OpenSSL: <oid>;<type>:<value> where the only current valid type is UTF8. This can be a comma-delimited list or a JSON string slice.
+		"common_name":          csr.Subject.CommonName,
+		"alt_names":            makeAltNamesCommaSeparatedString(csr.DNSNames, csr.EmailAddresses),
+		"ip_sans":              makeIpAddressCommaSeparatedString(csr.IPAddresses),
+		"uri_sans":             makeUriCommaSeparatedString(csr.URIs),
+		"other_sans":           getOtherSANsStringFromExtensions(csr.Extensions),
 		"signature_bits":       findSignatureBits(csr.SignatureAlgorithm),
 		"exclude_cn_from_sans": determineExcludeCnFromCsrSans(csr),
 		"ou":                   csr.Subject.OrganizationalUnit,
@@ -1686,12 +1729,11 @@ func parseCsrToFields(csr x509.CertificateRequest) (templateData map[string]inte
 
 func parseCertificateToFields(certificate x509.Certificate) (templateData map[string]interface{}, err error) {
 	templateData = map[string]interface{}{
-		"common_name": certificate.Subject.CommonName,
-		"alt_names":   makeAltNamesCommaSeparatedString(certificate.DNSNames, certificate.EmailAddresses),
-		"ip_sans":     makeIpAddressCommaSeparatedString(certificate.IPAddresses),
-		"uri_sans":    makeUriCommaSeparatedString(certificate.URIs),
-		// TODO: other_sans (string: "") - Specifies custom OID/UTF8-string SANs. The format is the same as OpenSSL: <oid>;<type>:<value> where the only current valid type is UTF8. This can be a comma-delimited list or a JSON string slice.
-		// TODO: ask Victor for help, this is now in issue_common.go : GetOtherSANsFromX509Extensions
+		"common_name":           certificate.Subject.CommonName,
+		"alt_names":             makeAltNamesCommaSeparatedString(certificate.DNSNames, certificate.EmailAddresses),
+		"ip_sans":               makeIpAddressCommaSeparatedString(certificate.IPAddresses),
+		"uri_sans":              makeUriCommaSeparatedString(certificate.URIs),
+		"other_sans":            getOtherSANsStringFromExtensions(certificate.Extensions),
 		"signature_bits":        findSignatureBits(certificate.SignatureAlgorithm),
 		"exclude_cn_from_sans":  determineExcludeCnFromCertSans(certificate),
 		"ou":                    certificate.Subject.OrganizationalUnit,
