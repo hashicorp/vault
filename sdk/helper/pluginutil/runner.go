@@ -144,6 +144,12 @@ type VersionedPlugin struct {
 	SemanticVersion *version.Version `json:"-"`
 }
 
+type PinnedVersion struct {
+	Name    string            `json:"name"`
+	Type    consts.PluginType `json:"type"`
+	Version string            `json:"version"`
+}
+
 // CtxCancelIfCanceled takes a context cancel func and a context. If the context is
 // shutdown the cancelfunc is called. This is useful for merging two cancel
 // functions.

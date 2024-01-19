@@ -298,7 +298,17 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 		return nil, err
 	}
 
-	dbw, err := newDatabaseWrapper(ctx, config.PluginName, config.PluginVersion, b.System(), b.logger)
+	// Override the configured version if there is a pinned version.
+	pinnedVersion, err := b.getPinnedVersion(ctx, config.PluginName)
+	if err != nil {
+		return nil, err
+	}
+	pluginVersion := config.PluginVersion
+	if pinnedVersion != "" {
+		pluginVersion = pinnedVersion
+	}
+
+	dbw, err := newDatabaseWrapper(ctx, config.PluginName, pluginVersion, b.System(), b.logger)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create database instance: %w", err)
 	}

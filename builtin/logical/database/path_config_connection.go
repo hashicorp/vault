@@ -436,58 +436,9 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			return logical.ErrorResponse(respErrEmptyPluginName), nil
 		}
 
-		if pluginVersionRaw, ok := data.GetOk("plugin_version"); ok {
-			config.PluginVersion = pluginVersionRaw.(string)
-		}
-
-		var builtinShadowed bool
-		if unversionedPlugin, err := b.System().LookupPlugin(ctx, config.PluginName, consts.PluginTypeDatabase); err == nil && !unversionedPlugin.Builtin {
-			builtinShadowed = true
-		}
-		switch {
-		case config.PluginVersion != "":
-			semanticVersion, err := version.NewVersion(config.PluginVersion)
-			if err != nil {
-				return logical.ErrorResponse("version %q is not a valid semantic version: %s", config.PluginVersion, err), nil
-			}
-
-			// Canonicalize the version.
-			config.PluginVersion = "v" + semanticVersion.String()
-
-			if config.PluginVersion == versions.GetBuiltinVersion(consts.PluginTypeDatabase, config.PluginName) {
-				if builtinShadowed {
-					return logical.ErrorResponse("database plugin %q, version %s not found, as it is"+
-						" overridden by an unversioned plugin of the same name. Omit `plugin_version` to use the unversioned plugin", config.PluginName, config.PluginVersion), nil
-				}
-
-				config.PluginVersion = ""
-			}
-		case builtinShadowed:
-			// We'll select the unversioned plugin that's been registered.
-		case req.Operation == logical.CreateOperation:
-			// No version provided and no unversioned plugin of that name available.
-			// Pin to the current latest version if any versioned plugins are registered.
-			plugins, err := b.System().ListVersionedPlugins(ctx, consts.PluginTypeDatabase)
-			if err != nil {
-				return nil, err
-			}
-
-			var versionedCandidates []pluginutil.VersionedPlugin
-			for _, plugin := range plugins {
-				if !plugin.Builtin && plugin.Name == config.PluginName && plugin.Version != "" {
-					versionedCandidates = append(versionedCandidates, plugin)
-				}
-			}
-
-			if len(versionedCandidates) != 0 {
-				// Sort in reverse order.
-				sort.SliceStable(versionedCandidates, func(i, j int) bool {
-					return versionedCandidates[i].SemanticVersion.GreaterThan(versionedCandidates[j].SemanticVersion)
-				})
-
-				config.PluginVersion = "v" + versionedCandidates[0].SemanticVersion.String()
-				b.logger.Debug(fmt.Sprintf("pinning %q database plugin version %q from candidates %v", config.PluginName, config.PluginVersion, versionedCandidates))
-			}
+		pluginVersion, respErr, err := b.selectPluginVersion(ctx, config, data, req.Operation)
+		if respErr != nil || err != nil {
+			return respErr, err
 		}
 
 		if allowedRolesRaw, ok := data.GetOk("allowed_roles"); ok {
@@ -536,7 +487,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		}
 
 		// Create a database plugin and initialize it.
-		dbw, err := newDatabaseWrapper(ctx, config.PluginName, config.PluginVersion, b.System(), b.logger)
+		dbw, err := newDatabaseWrapper(ctx, config.PluginName, pluginVersion, b.System(), b.logger)
 		if err != nil {
 			return logical.ErrorResponse("error creating database object: %s", err), nil
 		}
@@ -611,6 +562,92 @@ func storeConfig(ctx context.Context, storage logical.Storage, name string, conf
 		return fmt.Errorf("failed to save object: %w", err)
 	}
 	return nil
+}
+
+func (b *databaseBackend) getPinnedVersion(ctx context.Context, pluginName string) (string, error) {
+	extendedSys, ok := b.System().(logical.ExtendedSystemView)
+	if !ok {
+		return "", fmt.Errorf("database backend does not support running as an external plugin")
+	}
+
+	pin, err := extendedSys.GetPinnedPluginVersion(ctx, consts.PluginTypeDatabase, pluginName)
+	if err != nil {
+		return "", err
+	}
+	if pin == nil {
+		return "", nil
+	}
+
+	return pin.Version, nil
+}
+
+func (b *databaseBackend) selectPluginVersion(ctx context.Context, config *DatabaseConfig, data *framework.FieldData, op logical.Operation) (string, *logical.Response, error) {
+	pinnedVersion, err := b.getPinnedVersion(ctx, config.PluginName)
+	if err != nil {
+		return "", nil, err
+	}
+	pluginVersionRaw, ok := data.GetOk("plugin_version")
+
+	switch {
+	case ok && pinnedVersion != "":
+		return "", logical.ErrorResponse("cannot specify plugin_version for plugin %q as it is pinned (v%s)", config.PluginName, pinnedVersion), nil
+	case pinnedVersion != "":
+		return pinnedVersion, nil, nil
+	case ok:
+		config.PluginVersion = pluginVersionRaw.(string)
+	}
+
+	var builtinShadowed bool
+	if unversionedPlugin, err := b.System().LookupPlugin(ctx, config.PluginName, consts.PluginTypeDatabase); err == nil && !unversionedPlugin.Builtin {
+		builtinShadowed = true
+	}
+	switch {
+	case config.PluginVersion != "":
+		semanticVersion, err := version.NewVersion(config.PluginVersion)
+		if err != nil {
+			return "", logical.ErrorResponse("version %q is not a valid semantic version: %s", config.PluginVersion, err), nil
+		}
+
+		// Canonicalize the version.
+		config.PluginVersion = "v" + semanticVersion.String()
+
+		if config.PluginVersion == versions.GetBuiltinVersion(consts.PluginTypeDatabase, config.PluginName) {
+			if builtinShadowed {
+				return "", logical.ErrorResponse("database plugin %q, version %s not found, as it is"+
+					" overridden by an unversioned plugin of the same name. Omit `plugin_version` to use the unversioned plugin", config.PluginName, config.PluginVersion), nil
+			}
+
+			config.PluginVersion = ""
+		}
+	case builtinShadowed:
+		// We'll select the unversioned plugin that's been registered.
+	case op == logical.CreateOperation:
+		// No version provided and no unversioned plugin of that name available.
+		// Pin to the current latest version if any versioned plugins are registered.
+		plugins, err := b.System().ListVersionedPlugins(ctx, consts.PluginTypeDatabase)
+		if err != nil {
+			return "", nil, err
+		}
+
+		var versionedCandidates []pluginutil.VersionedPlugin
+		for _, plugin := range plugins {
+			if !plugin.Builtin && plugin.Name == config.PluginName && plugin.Version != "" {
+				versionedCandidates = append(versionedCandidates, plugin)
+			}
+		}
+
+		if len(versionedCandidates) != 0 {
+			// Sort in reverse order.
+			sort.SliceStable(versionedCandidates, func(i, j int) bool {
+				return versionedCandidates[i].SemanticVersion.GreaterThan(versionedCandidates[j].SemanticVersion)
+			})
+
+			config.PluginVersion = "v" + versionedCandidates[0].SemanticVersion.String()
+			b.logger.Debug(fmt.Sprintf("pinning %q database plugin version %q from candidates %v", config.PluginName, config.PluginVersion, versionedCandidates))
+		}
+	}
+
+	return config.PluginVersion, nil, nil
 }
 
 const pathConfigConnectionHelpSyn = `

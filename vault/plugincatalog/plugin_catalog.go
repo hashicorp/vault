@@ -38,6 +38,7 @@ var (
 	ErrPluginNotFound           = errors.New("plugin not found in the catalog")
 	ErrPluginConnectionNotFound = errors.New("plugin connection not found for client")
 	ErrPluginBadType            = errors.New("unable to determine plugin type")
+	ErrPinnedVersion            = errors.New("cannot delete a pinned version")
 )
 
 // PluginCatalog keeps a record of plugins known to vault. External plugins need
@@ -1013,6 +1014,14 @@ func (c *PluginCatalog) Delete(ctx context.Context, name string, pluginType cons
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
+	pin, err := c.getPinnedVersionInternal(ctx, pinnedVersionStorageKey(pluginType, name))
+	if err != nil {
+		return err
+	}
+	if pin != nil && pin.Version == pluginVersion {
+		return ErrPinnedVersion
+	}
+
 	// Check the name under which the plugin exists, but if it's unfound, don't return any error.
 	pluginKey := path.Join(pluginType.String(), name)
 	if pluginVersion != "" {
@@ -1059,6 +1068,10 @@ func (c *PluginCatalog) ListPluginsWithRuntime(ctx context.Context, runtime stri
 
 	var ret []string
 	for _, key := range keys {
+		// Skip: pinned version entry.
+		if strings.HasPrefix(key, pinnedVersionStoragePrefix) {
+			continue
+		}
 		entry, err := c.catalogView.Get(ctx, key)
 		if err != nil || entry == nil {
 			continue
@@ -1094,6 +1107,11 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 
 	unversionedPlugins := make(map[string]struct{})
 	for _, key := range keys {
+		// Skip: pinned version entry.
+		if strings.HasPrefix(key, pinnedVersionStoragePrefix) {
+			continue
+		}
+
 		var semanticVersion *semver.Version
 
 		entry, err := c.catalogView.Get(ctx, key)

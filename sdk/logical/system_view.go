@@ -117,6 +117,9 @@ type ExtendedSystemView interface {
 	RequestWellKnownRedirect(ctx context.Context, src, dest string) error
 	// Deregister a specific redirect.  Returns true if that redirect source was found
 	DeregisterWellKnownRedirect(ctx context.Context, src string) bool
+
+	// GetPinnedPluginVersion returns the pinned version for the given plugin, if any.
+	GetPinnedPluginVersion(ctx context.Context, pluginType consts.PluginType, pluginName string) (*pluginutil.PinnedVersion, error)
 }
 
 type PasswordGenerator func() (password string, err error)

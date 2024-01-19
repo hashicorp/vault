@@ -161,6 +161,11 @@ func (e extendedSystemViewImpl) DeregisterWellKnownRedirect(ctx context.Context,
 	return e.core.WellKnownRedirects.DeregisterSource(e.mountEntry.UUID, src)
 }
 
+// GetPinnedPluginVersion implements logical.ExtendedSystemView.
+func (e extendedSystemViewImpl) GetPinnedPluginVersion(ctx context.Context, pluginType consts.PluginType, pluginName string) (*pluginutil.PinnedVersion, error) {
+	return e.core.pluginCatalog.GetPinnedVersion(ctx, pluginType, pluginName)
+}
+
 func (d dynamicSystemView) DefaultLeaseTTL() time.Duration {
 	def, _ := d.fetchTTLs()
 	return def
