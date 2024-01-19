@@ -1632,6 +1632,10 @@
                 "path": "auth/jwt/oidc-providers"
               },
               {
+                "title": "ADFS",
+                "path": "auth/jwt/oidc-providers/adfs"
+              },
+              {
                 "title": "Auth0",
                 "path": "auth/jwt/oidc-providers/auth0"
               },
