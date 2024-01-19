@@ -104,26 +104,24 @@ module('Integration | Component | messages/page/list', function (hooks) {
         active: true,
         type: 'banner',
         authenticated: false,
-        title: 'Message title 3',
+        title: `Message title ${i}`,
         message: 'Some long long long message',
         link: { title: 'here', href: 'www.example.com' },
         startTime: '2021-08-01T00:00:00Z',
       });
     }
 
-    const META = {
-      currentPage: 9,
-      lastPage: 10,
-      nextPage: 10,
-      prevPage: 9,
-      total: 100,
-      filteredTotal: 100,
-      pageSize: 10,
+    this.messages = this.store.peekAll('config-ui/message', {});
+    this.messages.meta = {
+      currentPage: 1,
+      lastPage: 1,
+      nextPage: 1,
+      prevPage: 1,
+      total: this.messages.length,
+      pageSize: 100,
     };
 
-    this.messages = this.store.peekAll('config-ui/message', {});
-    this.messages.meta = META;
-    await render(hbs`<Messages::Page::List @messages={{this.messages}} @meta={{this.messages.meta}} />`, {
+    await render(hbs`<Messages::Page::List @messages={{this.messages}} />`, {
       owner: this.engine,
     });
     await click(PAGE.button('create message'));
