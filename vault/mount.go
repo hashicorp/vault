@@ -513,7 +513,7 @@ func (e *MountEntry) SyncCache() {
 	}
 
 	if len(e.Config.IdentityTokenKey) == 0 {
-		e.synthesizedConfigCache.Store("identity_token_key", defaultKeyName)
+		e.synthesizedConfigCache.Delete("identity_token_key")
 	} else {
 		e.synthesizedConfigCache.Store("identity_token_key", e.Config.IdentityTokenKey)
 	}

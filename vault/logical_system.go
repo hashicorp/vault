@@ -1173,10 +1173,9 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 		"running_sha256":          entry.RunningSha256,
 	}
 	entryConfig := map[string]interface{}{
-		"default_lease_ttl":  int64(entry.Config.DefaultLeaseTTL.Seconds()),
-		"max_lease_ttl":      int64(entry.Config.MaxLeaseTTL.Seconds()),
-		"force_no_cache":     entry.Config.ForceNoCache,
-		"identity_token_key": entry.Config.IdentityTokenKey,
+		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
+		"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
+		"force_no_cache":    entry.Config.ForceNoCache,
 	}
 	if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 		entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
@@ -1197,6 +1196,9 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 	}
 	if rawVal, ok := entry.synthesizedConfigCache.Load("allowed_managed_keys"); ok {
 		entryConfig["allowed_managed_keys"] = rawVal.([]string)
+	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("identity_token_key"); ok {
+		entryConfig["identity_token_key"] = rawVal.(string)
 	}
 	if entry.Table == credentialTableType {
 		entryConfig["token_type"] = entry.Config.TokenType.String()
