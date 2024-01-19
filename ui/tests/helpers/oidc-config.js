@@ -112,6 +112,11 @@ export async function clearRecord(store, modelType, id) {
     });
 }
 
+export function clearRecords(store) {
+  store.unloadAll('oidc/client');
+  store.unloadAll('oidc/provider');
+}
+
 const deleteModelRecord = async (model) => {
   await model.destroyRecord();
 };

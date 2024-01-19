@@ -14,7 +14,10 @@ export default class OidcKeyController extends Controller {
   constructor() {
     super(...arguments);
     this.router.on('routeDidChange', ({ targetName }) => {
-      return (this.isEditRoute = targetName.includes('edit') ? true : false);
+      if (!targetName) {
+        return (this.isEditRoute = false);
+      }
+      return (this.isEditRoute = targetName.includes('edit'));
     });
   }
 
