@@ -7,8 +7,8 @@
     <div class="lineal-chart">
       <Lineal::Fluid as |width|>
         {{#let
-          (scale-time domain=this.timeDomain range=(array 0 width))
-          (scale-linear domain=this.yDomain range=(array this.chartHeight 0))
+          (scale-time domain=this.timeDomain range=(array 0 width) nice=true)
+          (scale-linear domain=this.yDomain range=(array this.chartHeight 0) nice=true)
           (scale-linear range=(array 0 this.chartHeight))
           as |xScale yScale tooltipScale|
         }}
@@ -22,7 +22,6 @@
                 @tickFormat={{this.formatCount}}
                 @orientation="left"
                 @includeDomain={{false}}
-                @nice={{true}}
                 class="lineal-axis"
                 data-test-y-axis
               />
@@ -35,7 +34,6 @@
                 @tickPadding={{10}}
                 @tickFormat={{this.formatMonth}}
                 @tickCount={{this.data.length}}
-                @nice={{true}}
                 class="lineal-axis"
                 data-test-x-axis
               />

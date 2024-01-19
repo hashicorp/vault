@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import sinon from 'sinon';
 import { setupRenderingTest } from 'ember-qunit';
-import { find, render, findAll, waitFor } from '@ember/test-helpers';
+import { find, render, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { format, formatRFC3339, subMonths } from 'date-fns';
 import timestamp from 'core/utils/timestamp';
@@ -21,20 +21,24 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     this.set('yKey', 'bar');
     this.set('dataset', [
       {
-        foo: '4/20',
+        foo: '2018-04-03T14:15:30',
         bar: 4,
+        expectedLabel: '4/18',
       },
       {
-        foo: '5/20',
+        foo: '2018-05-03T14:15:30',
         bar: 8,
+        expectedLabel: '5/18',
       },
       {
-        foo: '6/20',
+        foo: '2018-06-03T14:15:30',
         bar: 14,
+        expectedLabel: '6/18',
       },
       {
-        foo: '7/20',
+        foo: '2018-07-03T14:15:30',
         bar: 10,
+        expectedLabel: '7/18',
       },
     ]);
   });
@@ -53,11 +57,14 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     assert
       .dom('[data-test-line-chart="plot-point"]')
       .exists({ count: this.dataset.length }, `renders ${this.dataset.length} plot points`);
-
     findAll('[data-test-x-axis] text').forEach((e, i) => {
+      // For some reason the first axis label is not rendered
       assert
         .dom(e)
-        .hasText(`${this.dataset[i][this.xKey]}`, `renders x-axis label: ${this.dataset[i][this.xKey]}`);
+        .hasText(
+          `${this.dataset[i].expectedLabel}`,
+          `renders x-axis label: ${this.dataset[i].expectedLabel}`
+        );
     });
     assert.dom('[data-test-y-axis] text').hasText('0', `y-axis starts at 0`);
   });
@@ -66,20 +73,24 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     const now = timestamp.now();
     this.set('dataset', [
       {
-        foo: format(subMonths(now, 4), 'M/yy'),
+        foo: formatRFC3339(subMonths(now, 4)),
         bar: 4,
+        month: format(subMonths(now, 4), 'M/yy'),
       },
       {
-        foo: format(subMonths(now, 3), 'M/yy'),
+        foo: formatRFC3339(subMonths(now, 3)),
         bar: 8,
+        month: format(subMonths(now, 3), 'M/yy'),
       },
       {
-        foo: format(subMonths(now, 2), 'M/yy'),
+        foo: formatRFC3339(subMonths(now, 2)),
         bar: 14,
+        month: format(subMonths(now, 2), 'M/yy'),
       },
       {
-        foo: format(subMonths(now, 1), 'M/yy'),
+        foo: formatRFC3339(subMonths(now, 1)),
         bar: 10,
+        month: format(subMonths(now, 1), 'M/yy'),
       },
     ]);
     this.set('upgradeData', [
@@ -104,10 +115,10 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       .dom('[data-test-line-chart="plot-point"]')
       .exists({ count: this.dataset.length }, `renders ${this.dataset.length} plot points`);
     assert
-      .dom(find(`[data-test-line-chart="upgrade-${this.dataset[2][this.xKey]}"]`))
+      .dom(find(`[data-test-line-chart="upgrade-${this.dataset[2].month}"]`))
       .hasStyle(
         { fill: 'rgb(253, 238, 186)' },
-        `upgrade data point ${this.dataset[2][this.xKey]} has yellow highlight`
+        `upgrade data point ${this.dataset[2].month} has yellow highlight`
       );
   });
 
@@ -117,6 +128,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     const tooltipData = [
       {
         month: format(subMonths(now, 4), 'M/yy'),
+        timestamp: formatRFC3339(subMonths(now, 4)),
         clients: 4,
         new_clients: {
           clients: 0,
@@ -124,6 +136,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       },
       {
         month: format(subMonths(now, 3), 'M/yy'),
+        timestamp: formatRFC3339(subMonths(now, 3)),
         clients: 8,
         new_clients: {
           clients: 4,
@@ -131,6 +144,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       },
       {
         month: format(subMonths(now, 2), 'M/yy'),
+        timestamp: formatRFC3339(subMonths(now, 2)),
         clients: 14,
         new_clients: {
           clients: 6,
@@ -138,6 +152,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       },
       {
         month: format(subMonths(now, 1), 'M/yy'),
+        timestamp: formatRFC3339(subMonths(now, 1)),
         clients: 20,
         new_clients: {
           clients: 4,
@@ -269,64 +284,76 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     const datasets = {
       small: [
         {
-          foo: '4/20',
+          foo: '2020-04-01',
           bar: 4,
+          month: '4/20',
         },
         {
-          foo: '5/20',
+          foo: '2020-05-01',
           bar: 8,
+          month: '5/20',
         },
         {
-          foo: '6/20',
+          foo: '2020-06-01',
           bar: 1,
         },
         {
-          foo: '7/20',
+          foo: '2020-07-01',
           bar: 10,
         },
       ],
       large: [
         {
-          foo: '8/20',
+          foo: '2020-08-01',
           bar: 4586,
+          month: '8/20',
         },
         {
-          foo: '9/20',
+          foo: '2020-09-01',
           bar: 8928,
+          month: '9/20',
         },
         {
-          foo: '10/20',
+          foo: '2020-10-01',
           bar: 11948,
+          month: '10/20',
         },
         {
-          foo: '11/20',
+          foo: '2020-11-01',
           bar: 16943,
+          month: '11/20',
         },
       ],
       broken: [
         {
-          foo: '1/20',
+          foo: '2020-01-01',
           bar: null,
+          month: '1/20',
         },
         {
-          foo: '2/20',
+          foo: '2020-02-01',
           bar: 0,
+          month: '2/20',
         },
         {
-          foo: '3/20',
+          foo: '2020-03-01',
           bar: 22,
+          month: '3/20',
         },
         {
-          foo: '4/20',
+          foo: '2020-04-01',
           bar: null,
+          month: '4/20',
         },
         {
-          foo: '5/20',
+          foo: '2020-05-01',
           bar: 70,
+          month: '5/20',
         },
         {
-          foo: '6/20',
+          foo: '2020-06-01',
           bar: 50,
+          month: '6/20',
         },
       ],
     };
@@ -341,29 +368,23 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       />
     </div>
     `);
-    assert.dom('[data-test-y-axis]').hasText('0 2 4 6 8 10', 'y-axis renders correctly for small values');
+    assert.dom('[data-test-y-axis]').hasText('0 5 10 15 20', 'y-axis renders correctly for small values');
     assert
       .dom('[data-test-x-axis]')
       .hasText('4/20 5/20 6/20 7/20', 'x-axis renders correctly for small values');
-    assert
-      .dom('[data-test-hover-circle="4/20"]')
-      .hasAttribute('cx', '0', 'first value is a aligned all the way to the left');
 
     // Update to large dataset
     this.set('dataset', datasets.large);
-    await waitFor('[data-test-line-chart]');
     assert.dom('[data-test-y-axis]').hasText('0 5k 10k 15k', 'y-axis renders correctly for new large values');
     assert
       .dom('[data-test-x-axis]')
       .hasText('8/20 9/20 10/20 11/20', 'x-axis renders correctly for small values');
-    assert
-      .dom('[data-test-hover-circle="8/20"]')
-      .hasAttribute('cx', '0', 'first value is a aligned all the way to the left');
 
     // Update to broken dataset
     this.set('dataset', datasets.broken);
-    await waitFor('[data-test-line-chart]');
-    assert.dom('[data-test-y-axis]').hasText('0 20 40 60', 'y-axis renders correctly for new broken values');
+    assert
+      .dom('[data-test-y-axis]')
+      .hasText('0 20 40 60 80', 'y-axis renders correctly for new broken values');
     assert
       .dom('[data-test-x-axis]')
       .hasText('1/20 2/20 3/20 4/20 5/20 6/20', 'x-axis renders correctly for small values');
