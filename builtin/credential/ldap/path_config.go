@@ -244,8 +244,6 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		return logical.ErrorResponse("mutually exclusive fields rotation_schedule and ttl were both specified; only one of them can be provided"), nil
 	} else if rotationWindowOk && ttlOk {
 		return logical.ErrorResponse("rotation_window does not apply to ttl"), nil
-	} else if !rotationScheduleOk && !ttlOk {
-		return logical.ErrorResponse("one of rotation_schedule or ttl must be provided"), nil
 	} else if rotationScheduleOk && !rotationWindowOk || rotationWindowOk && !rotationScheduleOk {
 		return logical.ErrorResponse("must include both rotation_schedule and rotation_window"), nil
 	}
