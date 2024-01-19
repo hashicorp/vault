@@ -254,8 +254,6 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		cfg.RotationSchedule = rotationSchedule.(string)
 		cfg.RotationWindow = rotationWindow.(int)
 
-		b.Logger().Info("rotation", "window", cfg.RotationWindow, "schedule", cfg.RotationSchedule, "ttl", cfg.TTL)
-
 		rc, err = logical.GetRootCredential(cfg.RotationSchedule, "ldap/config",
 			"ldap-root-creds", cfg.RotationWindow, 0)
 		if err != nil {
@@ -263,6 +261,8 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		}
 		// unset ttl if rotation_schedule is set since these are mutually exclusive
 		cfg.TTL = 0
+
+		b.Logger().Info("rotation", "window", cfg.RotationWindow, "schedule", cfg.RotationSchedule, "ttl", cfg.TTL)
 	}
 
 	if ttlOk {
@@ -276,6 +276,8 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 
 		cfg.RotationSchedule = ""
 		cfg.RotationWindow = 0
+
+		b.Logger().Info("rotation", "window", cfg.RotationWindow, "schedule", cfg.RotationSchedule, "ttl", cfg.TTL)
 	}
 
 	entry, err := logical.StorageEntryJSON("config", cfg)
