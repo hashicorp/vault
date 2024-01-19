@@ -274,7 +274,6 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	}
 
 	return nil, nil
-
 }
 
 /*

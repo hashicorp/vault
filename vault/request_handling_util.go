@@ -88,7 +88,3 @@ func possiblyForwardSaveCachedAuthResponse(ctx context.Context, c *Core, respAut
 func forwardCreateTokenRegisterAuth(ctx context.Context, c *Core, te *logical.TokenEntry, roleName string, renewable bool, periodToUse, explicitMaxTTLToUse time.Duration) (*logical.TokenEntry, error) {
 	return nil, nil
 }
-
-func getRotationRegisterFunc(c *Core) (func(context.Context, string, *logical.RotationJob) (string, error), error) {
-	return c.rotationManager.Register, nil
-}

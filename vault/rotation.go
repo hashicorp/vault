@@ -44,14 +44,13 @@ type RotationManager struct {
 // rotationEntry is used to structure the values the expiration
 // manager stores. This is used to handle renew and revocation.
 type rotationEntry struct {
-	RotationID     string                  `json:"rotation_id"`
-	Path           string                  `json:"path"`
-	Data           map[string]interface{} `json:"data"`
+	RotationID  string                 `json:"rotation_id"`
+	Path        string                 `json:"path"`
+	Data        map[string]interface{} `json:"data"`
 	RotationJob *logical.RotationJob   `json:"static_secret"`
-	IssueTime      time.Time              `json:"issue_time"`
-	ExpireTime     time.Time               `json:"expire_time"`
-
-	namespace *namespace.Namespace
+	IssueTime   time.Time              `json:"issue_time"`
+	ExpireTime  time.Time              `json:"expire_time"`
+	Namespace   *namespace.Namespace   `json:"namespace"`
 }
 
 func (rm *RotationManager) Start() error {
@@ -120,7 +119,6 @@ func (rm *RotationManager) CheckQueue() error {
 
 		re = entry
 
-		// TODO should we push the credential back into the queue if it is not in the rotation window?
 		// if not in window, do we check the next credential?
 		if !logical.DefaultScheduler.IsInsideRotationWindow(re.RotationJob.Schedule, now) {
 			rm.logger.Debug("Not inside rotation window, pushing back to queue")
@@ -133,15 +131,11 @@ func (rm *RotationManager) CheckQueue() error {
 			break
 		}
 		rm.logger.Debug("Item ready for rotation; making rotation request to sdk/backend")
-		rm.logger.Debug(fmt.Sprintf("CheckQueue path: %s", re.Path))
 		// do rotation
 		req := &logical.Request{
 			Operation: logical.RotationOperation,
 			Path:      re.Path,
 		}
-		// TODO figure out how to get namespace with context here
-		// ctx := namespace.ContextWithNamespace(rm.quitContext, n)
-		rm.logger.Debug(fmt.Sprintf("CheckQueue Req path: %s", req.Path))
 
 		rm.jobManager.AddJob(&rotationJob{
 			rm:    rm,
@@ -174,27 +168,22 @@ func (rm *RotationManager) Register(ctx context.Context, reqPath string, job *lo
 		return "", err
 	}
 
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return "", err
-	}
-
-	rm.logger.Debug(fmt.Sprintf("namespace: %+v", ns))
 	rotationID := path.Join(reqPath, rotationRand)
 
+	ns := job.Namespace
 	if ns.ID != namespace.RootNamespaceID {
 		rotationID = fmt.Sprintf("%s.%s", rotationID, ns.ID)
 	}
 
 	issueTime := time.Now()
 	re := &rotationEntry{
-		RotationID:     rotationID,
-		Path:           reqPath,
+		RotationID:  rotationID,
+		Path:        reqPath,
 		RotationJob: job,
-		IssueTime:      issueTime,
+		IssueTime:   issueTime,
 		// expires the next time the schedule is activated from the issue time
 		ExpireTime: job.Schedule.Schedule.Next(issueTime),
-		namespace:  ns,
+		Namespace:  ns,
 	}
 
 	// lock and populate the queue
@@ -202,7 +191,6 @@ func (rm *RotationManager) Register(ctx context.Context, reqPath string, job *lo
 	// r.core.stateLock.Lock()
 
 	rm.logger.Debug("Creating queue item")
-	rm.logger.Debug(fmt.Sprintf("Register path: %s", re.Path))
 
 	// @TODO for different cases, update rotation entry if it is already in queue
 	// for now, assuming it is a fresh root credential and the schedule is not being updated
@@ -293,10 +281,8 @@ type rotationJob struct {
 // the backend. It will return an error both in the case of a direct error, and in the case of certain kinds
 // of error-shaped logical.Response returns.
 func (j *rotationJob) Execute() error {
-	j.rm.logger.Info("in execute")
-	j.rm.logger.Debug(fmt.Sprintf("req path: %s",j.req.Path))
-
-	_, err := j.rm.router.Route(j.rm.quitContext, j.req)
+	ctx := namespace.ContextWithNamespace(j.rm.quitContext, j.entry.Namespace)
+	_, err := j.rm.router.Route(ctx, j.req)
 
 	// TODO: clean up this branch
 	if errors.Is(err, logical.ErrUnsupportedOperation) {
@@ -314,14 +300,14 @@ func (j *rotationJob) Execute() error {
 	j.rm.logger.Debug("Successfully called rotate root code for backend")
 	issueTime := time.Now()
 	newEntry := &rotationEntry{
-		RotationID:     j.entry.RotationID,
-		Path:           j.entry.Path,
-		Data:           j.entry.Data,
+		RotationID:  j.entry.RotationID,
+		Path:        j.entry.Path,
+		Data:        j.entry.Data,
 		RotationJob: j.entry.RotationJob,
-		IssueTime:      issueTime,
+		IssueTime:   issueTime,
 		// expires the next time the schedule is activated from the issue time
 		ExpireTime: j.entry.RotationJob.Schedule.Schedule.Next(issueTime),
-		namespace:  j.entry.namespace,
+		Namespace:  j.entry.Namespace,
 	}
 	j.entry.RotationJob.Schedule.NextVaultRotation = newEntry.ExpireTime
 

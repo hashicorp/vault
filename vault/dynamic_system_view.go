@@ -88,11 +88,11 @@ func (e extendedSystemViewImpl) SudoPrivilege(ctx context.Context, path string, 
 
 	tokenNS, err := NamespaceByID(ctx, te.NamespaceID, e.core)
 	if err != nil {
-		e.core.logger.Error("failed to lookup token namespace", "error", err)
+		e.core.logger.Error("failed to lookup token Namespace", "error", err)
 		return false
 	}
 	if tokenNS == nil {
-		e.core.logger.Error("failed to lookup token namespace", "error", namespace.ErrNoNamespace)
+		e.core.logger.Error("failed to lookup token Namespace", "error", namespace.ErrNoNamespace)
 		return false
 	}
 
@@ -120,7 +120,7 @@ func (e extendedSystemViewImpl) SudoPrivilege(ctx context.Context, path string, 
 	}
 
 	// Construct the corresponding ACL object. Derive and use a new context that
-	// uses the req.ClientToken's namespace
+	// uses the req.ClientToken's Namespace
 	acl, err := e.core.policyStore.ACL(tokenCtx, entity, policyNames, policies...)
 	if err != nil {
 		e.core.logger.Error("failed to retrieve ACL for token's policies", "token_policies", te.Policies, "error", err)
@@ -131,7 +131,7 @@ func (e extendedSystemViewImpl) SudoPrivilege(ctx context.Context, path string, 
 	// user has already been given access to; we only care about whether they
 	// have sudo. Note that we use root context because the path that comes in
 	// must be fully-qualified already so we don't want AllowOperation to
-	// prepend a namespace prefix onto it.
+	// prepend a Namespace prefix onto it.
 	req := new(logical.Request)
 	req.Operation = logical.ReadOperation
 	req.Path = path
@@ -454,15 +454,13 @@ func (d dynamicSystemView) ClusterID(ctx context.Context) (string, error) {
 }
 
 func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, reqPath string, job *logical.RotationJob) (rotationID string, err error) {
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return "", err
+	ns := job.Namespace
+	path := reqPath
+	if ns != namespace.RootNamespace {
+		path = ns.Path + "/" + reqPath
 	}
 
-	path := ns.Path + "/" + reqPath
-
-	d.core.logger.Debug("Registering the rotation job over the dynamic system view")
-	id, err := d.core.rotationManager.Register(ctx, path, job)
+	id, err := d.core.rotationManager.Register(namespace.ContextWithNamespace(ctx, job.Namespace), path, job)
 	if err != nil {
 		return "", fmt.Errorf("error registering rotation job: %s", err)
 	}

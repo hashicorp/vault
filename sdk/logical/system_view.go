@@ -270,7 +270,7 @@ func (d StaticSystemView) ClusterID(ctx context.Context) (string, error) {
 func (d StaticSystemView) APILockShouldBlockRequest() (bool, error) {
 	return d.APILockShouldBlockRequestVal, nil
 }
-func (d StaticSystemView) RegisterRotationJob(ctx context.Context,  reqPath string, job *RotationJob) (rotationID string, err error){
-	// @TODO determine if this needs to be implemented for static view
+
+func (d StaticSystemView) RegisterRotationJob(ctx context.Context, reqPath string, job *RotationJob) (rotationID string, err error) {
 	return "", errors.New("RegisterRotationJob is not implemented in StaticSystemView")
 }

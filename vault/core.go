@@ -710,7 +710,7 @@ type Core struct {
 	detectDeadlocks []string
 
 	// the rotation manager handles periodic rotation of credentials
-	rotationManager *RotationManager
+	rotationManager               *RotationManager
 	echoDuration                  *uberAtomic.Duration
 	activeNodeClockSkewMillis     *uberAtomic.Int64
 	periodicLeaderRefreshInterval time.Duration

@@ -54,15 +54,15 @@ func GetRotationJob(ctx context.Context, rotationSchedule, path, credentialName 
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return nil ,fmt.Errorf("error obtaining namespace from context: %s", err)
+		return nil, fmt.Errorf("error obtaining namespace from context: %s", err)
 	}
 	return &RotationJob{
 		RotationOptions: RotationOptions{
 			Schedule: rs,
 		},
 		// Figure out how to get mount info
-		Path: path,
-		Name: credentialName,
+		Path:      path,
+		Name:      credentialName,
 		Namespace: ns,
 	}, nil
 }

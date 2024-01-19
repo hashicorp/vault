@@ -214,11 +214,10 @@ func (s gRPCSystemViewClient) ClusterID(ctx context.Context) (string, error) {
 }
 
 func (s gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, reqPath string, job *logical.RotationJob) (id string, retErr error) {
-
 	scheduleData := map[string]interface{}{
-		"schedule": job.Schedule.Schedule,
-		"rotation_window": job.Schedule.RotationWindow,
-		"rotation_schedule": job.Schedule.RotationSchedule,
+		"schedule":            job.Schedule.Schedule,
+		"rotation_window":     job.Schedule.RotationWindow,
+		"rotation_schedule":   job.Schedule.RotationSchedule,
 		"next_vault_rotation": job.Schedule.NextVaultRotation,
 	}
 
@@ -230,10 +229,10 @@ func (s gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, reqPath s
 	req := &pb.RegisterRotationJobRequest{
 		ReqPath: reqPath,
 		Job: &pb.RotationJobInput{
-			Schedule: m.GetStructValue(),
+			Schedule:   m.GetStructValue(),
 			RotationID: job.RotationID,
-			Path: job.Path,
-			Name: job.Name,
+			Path:       job.Path,
+			Name:       job.Name,
 		},
 	}
 

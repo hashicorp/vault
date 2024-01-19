@@ -28,8 +28,6 @@ func TestBackend_PathConfigRoot(t *testing.T) {
 		"sts_endpoint":      "https://sts.us-west-2.amazonaws.com",
 		"max_retries":       10,
 		"username_template": defaultUserNameTemplate,
-		"rotation_schedule": "* * * * *",
-		"rotation_window":   15,
 	}
 
 	configReq := &logical.Request{

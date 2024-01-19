@@ -163,17 +163,17 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 
 	var rc *logical.RotationJob
 
-
-
+	// @TODO make rotation window optional here after poc phase
 	if rotationSchedule != "" && rotationWindow != 0 {
-		rc, err = logical.GetRotationJob(ctx, rotationSchedule, "aws/config/root", "aws-root-creds", rotationWindow)
+		// @TODO find mount info and add it to req.Path here instead of hard-coding it for `aws`
+		rc, err = logical.GetRotationJob(ctx, rotationSchedule, "aws/"+req.Path, "aws-root-creds", rotationWindow)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
 	}
 
 	if rc != nil {
-		b.Logger().Debug("Injecting Root Credential into system backend")
+		b.Logger().Debug("Injecting Root Credential over system view")
 		rotationID, err := b.System().RegisterRotationJob(ctx, rc.Path, rc)
 		if err != nil {
 			return nil, err
