@@ -7,6 +7,7 @@ import { Response } from 'miragejs';
 import { camelize } from '@ember/string';
 import { findDestination } from 'core/helpers/sync-destinations';
 import clientsHandler from './clients';
+import { formatRFC3339, subMonths } from 'date-fns';
 
 export const associationsResponse = (schema, req) => {
   const { type, name } = req.params;
@@ -94,6 +95,33 @@ export default function (server) {
       },
     };
   };
+
+  // client counts with upgrade history
+  server.get('sys/version-history', function () {
+    return {
+      data: {
+        keys: ['1.9.0', '1.9.1', '1.9.2', '1.10.1'],
+        key_info: {
+          '1.9.0': {
+            previous_version: null,
+            timestamp_installed: formatRFC3339(subMonths(new Date(), 4)),
+          },
+          '1.9.1': {
+            previous_version: '1.9.0',
+            timestamp_installed: formatRFC3339(subMonths(new Date(), 3)),
+          },
+          '1.9.2': {
+            previous_version: '1.9.1',
+            timestamp_installed: formatRFC3339(subMonths(new Date(), 2)),
+          },
+          '1.10.1': {
+            previous_version: '1.9.2',
+            timestamp_installed: formatRFC3339(new Date()),
+          },
+        },
+      },
+    };
+  });
 
   // destinations
   server.get(base, (schema) => {
@@ -209,7 +237,7 @@ export default function (server) {
   clientsHandler(server); // imports all of the endpoints defined in mirage/handlers/clients file
 
   // STATIC RESPONSE (0 entity/non-entity clients)
-  /* 
+  /*
   server.get('/sys/internal/counters/activity', (schema, req) => {
     let { start_time, end_time } = req.queryParams;
     // backend returns a timestamp if given unix time, so first convert to timestamp string here
@@ -492,6 +520,6 @@ export default function (server) {
       auth: null,
     };
   });
-  
+
   */
 }
