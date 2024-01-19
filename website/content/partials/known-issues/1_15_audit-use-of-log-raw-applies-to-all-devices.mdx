@@ -10,7 +10,7 @@ Enabling an audit device which specifies the [`log_raw`](/vault/docs/audit#log_r
 could lead to raw data being logged to other audit devices, regardless of whether they
 are configured to use `log_raw`.
 
-The issue with raw data potentially appearing in logs where HMAC data is expected
+The issue with raw data potentially appearing in logs where HMAC data as expected,
 is fixed as a patch release in Vault `1.15.5`.
 
 #### Workaround
