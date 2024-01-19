@@ -77,6 +77,8 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
       PAGE.input('endTime'),
       format(addDays(startOfDay(new Date('2023-12-12')), 10), datetimeLocalStringFormat)
     );
+    await fillIn('[data-test-kv-key="0"]', 'Learn more');
+    await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
 
     await click(PAGE.button('create-message'));
   });
