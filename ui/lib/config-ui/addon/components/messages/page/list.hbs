@@ -138,6 +138,11 @@
         {{on "click" (fn (mut this.showMaxMessageModal) false)}}
         data-test-modal-button="maximum-message-modal"
       />
+      <Hds::Button
+        @text="Cancel"
+        {{on "click" (fn (mut this.showMaxMessageModal) false)}}
+        data-test-modal-button="maximum-message-modal-cancel"
+      />
     </M.Footer>
   </Hds::Modal>
 {{/if}}
