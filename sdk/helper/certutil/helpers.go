@@ -1667,11 +1667,6 @@ func parseCsrToCreationParameters(csr x509.CertificateRequest) (creationParamete
 		return CreationParameters{}, err
 	}
 
-	found, isCA, maxPathLength, err := getBasicConstraintsFromExtension(csr.Extensions)
-	if err != nil {
-		return CreationParameters{}, err
-	}
-
 	creationParameters = CreationParameters{
 		Subject:        csr.Subject,
 		DNSNames:       csr.DNSNames,
@@ -1679,9 +1674,9 @@ func parseCsrToCreationParameters(csr x509.CertificateRequest) (creationParamete
 		IPAddresses:    csr.IPAddresses,
 		URIs:           csr.URIs,
 		OtherSANs:      otherSANs,
-		IsCA:           found && isCA,
-		KeyType:        getKeyType(csr.PublicKeyAlgorithm.String()),
-		KeyBits:        findBitLength(csr.PublicKey),
+		// IsCA: is handled below since the basic constraint it comes from might not be set on the CSR
+		KeyType: getKeyType(csr.PublicKeyAlgorithm.String()),
+		KeyBits: findBitLength(csr.PublicKey),
 		// TODO: NotAfter
 		// TODO: KeyUsage                      x509.KeyUsage
 		// TODO: ExtKeyUsage                   CertExtKeyUsage
@@ -1695,9 +1690,18 @@ func parseCsrToCreationParameters(csr x509.CertificateRequest) (creationParamete
 		// UseCSRValues
 		// TODO: PermittedDNSDomains           []string
 		// TODO: URLs                          *URLEntries
-		MaxPathLength: maxPathLength,
+		// MaxPathLength is handled below since the basic constraint it comes from may not be set on the CSR
 		// TODO: NotBeforeDuration             time.Duration
 		// TODO: SKID                          []byte
+	}
+
+	found, isCA, maxPathLength, err := getBasicConstraintsFromExtension(csr.Extensions)
+	if err != nil {
+		return CreationParameters{}, err
+	}
+	if found {
+		creationParameters.IsCA = isCA
+		creationParameters.MaxPathLength = maxPathLength
 	}
 
 	return creationParameters, nil
