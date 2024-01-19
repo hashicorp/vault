@@ -6,7 +6,7 @@
 import Component from '@glimmer/component';
 import { SVG_DIMENSIONS, formatNumbers } from 'vault/utils/chart-helpers';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { SerializedChartData, UpgradeData } from 'vault/client-counts';
 
 interface Args {
@@ -36,20 +36,39 @@ interface UpgradeByMonth {
  * ```js
  * <LineChart @dataset={{dataset}} @upgradeData={{this.versionHistory}}/>
  * ```
- * @param {string} xKey - string denoting key for x-axis data of dataset. Should point to timestamp string.
- * @param {string} yKey - string denoting key for y-axis data of dataset. Should point to number.
+ * @param {string} xKey - string denoting key for x-axis data of dataset. Should reference a date string with format 'M/yy'.
+ * @param {string} yKey - string denoting key for y-axis data of dataset. Should reference a number or null.
  * @param {array} upgradeData - array of objects containing version history from the /version-history endpoint
  * @param {number} [chartHeight=190] - height of chart in pixels
  */
 export default class LineChart extends Component<Args> {
+  // Chart settings
   get yKey() {
     return this.args.yKey || 'clients';
   }
   get xKey() {
-    return this.args.xKey || 'timestamp';
+    return this.args.xKey || 'month';
   }
   get chartHeight() {
     return this.args.chartHeight || SVG_DIMENSIONS.height;
+  }
+  // Plot points
+  get data(): ChartData[] {
+    return this.args.dataset?.map((datum) => {
+      // We expect the xKey to be formatted like 'M/yy'
+      const timestamp = parse(datum[this.xKey] as string, 'M/yy', new Date()) as Date;
+      const upgradeMessage = this.getUpgradeMessage(datum);
+      return {
+        month: datum[this.xKey],
+        x: timestamp,
+        y: (datum[this.yKey] as number) ?? null,
+        new: this.getNewClients(datum),
+        tooltipUpgrade: upgradeMessage,
+      };
+    });
+  }
+  get upgradedMonths() {
+    return this.data.filter((datum) => datum.tooltipUpgrade);
   }
   get yDomain() {
     const setMax = Math.max(...this.data.map((datum) => datum.y ?? 0));
@@ -71,9 +90,8 @@ export default class LineChart extends Component<Args> {
     );
   }
 
-  tooltipData(datum: SerializedChartData) {
-    const upgradeKey = parseAPITimestamp(datum[this.xKey], 'M/yy') as string;
-    const upgradeInfo = this.upgradeByMonthYear[upgradeKey];
+  getUpgradeMessage(datum: SerializedChartData) {
+    const upgradeInfo = this.upgradeByMonthYear[datum[this.xKey] as string];
     if (upgradeInfo) {
       const { version, previousVersion } = upgradeInfo;
       return `Vault was upgraded
@@ -81,27 +99,12 @@ export default class LineChart extends Component<Args> {
     }
     return null;
   }
-
-  get upgradedMonths() {
-    return this.data.filter((datum) => datum.tooltipUpgrade);
-  }
-  newClients(datum: SerializedChartData) {
+  getNewClients(datum: SerializedChartData) {
     if (!datum?.new_clients) return 0;
     return (datum?.new_clients[this.yKey] as number) || 0;
   }
-  get data(): ChartData[] {
-    return this.args.dataset?.map((datum) => {
-      const date = parseAPITimestamp(datum[this.xKey]) as Date;
-      const upgradeMessage = this.tooltipData(datum);
-      return {
-        x: date,
-        y: (datum[this.yKey] as number) ?? null,
-        new: this.newClients(datum),
-        tooltipUpgrade: upgradeMessage,
-      };
-    });
-  }
 
+  // These functions are used by the tooltip
   formatCount = (count: number) => {
     return formatNumbers([count]);
   };
@@ -112,7 +115,6 @@ export default class LineChart extends Component<Args> {
     return original.toString();
   };
   tooltipY = (original: number) => {
-    const offset = `${this.chartHeight - original + 20}`;
-    return offset;
+    return `${this.chartHeight - original + 15}`;
   };
 }
