@@ -85,6 +85,7 @@
   justify-self: center;
   height: 300px;
   max-width: 700px;
+  width: 100%;
 
   svg.chart {
     width: 100%;
@@ -341,7 +342,8 @@ p.data-details {
 // LINEAL STYLING //
 .lineal-chart {
   position: relative;
-  padding: 10px 0px 10px 50px;
+  padding: 10px 10px 20px 50px;
+  width: 100%;
   svg {
     overflow: visible;
   }

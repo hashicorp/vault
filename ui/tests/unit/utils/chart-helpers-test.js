@@ -9,6 +9,7 @@ import { module, test } from 'qunit';
 const SMALL_NUMBERS = [0, 7, 27, 103, 999];
 const LARGE_NUMBERS = {
   1001: '1k',
+  1245: '1.2k',
   33777: '34k',
   532543: '530k',
   2100100: '2.1M',
@@ -17,7 +18,7 @@ const LARGE_NUMBERS = {
 
 module('Unit | Utility | chart-helpers', function () {
   test('formatNumbers renders number correctly', function (assert) {
-    assert.expect(11);
+    assert.expect(12);
     const method = formatNumbers();
     assert.ok(method);
     SMALL_NUMBERS.forEach(function (num) {
