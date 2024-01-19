@@ -1716,10 +1716,10 @@ func parseCsrToFields(csr x509.CertificateRequest) (templateData map[string]inte
 		"postal_code":          csr.Subject.PostalCode,
 		"serial_number":        csr.Subject.SerialNumber,
 		// There is no "TTL" on a CSR, that is always set by the signer
-		// TODO: ??? max_path_length {this is a CA thing}
-		// TODO: permitted_dns_domains {this is a CA thing}
+		// max_path_length is a CA thing, it generally does not appear on a CSR
+		// permitted_dns_domains is a CA thing, it generally does not appear on a CSR
 		"use_pss": isPSS(csr.SignatureAlgorithm),
-		// TODO: Is there a subject key ID on a CSR (?) - it could be calculated
+		// skid could be calculated, but does not directly exist on a csr, so punting for now
 		"key_type": getKeyType(csr.PublicKeyAlgorithm.String()),
 		"key_bits": findBitLength(csr.PublicKey),
 	}
