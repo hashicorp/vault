@@ -13,10 +13,10 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/mitchellh/cli"
 )
 
 func testSecretsEnableCommand(tb testing.TB) (*cli.MockUi, *SecretsEnableCommand) {

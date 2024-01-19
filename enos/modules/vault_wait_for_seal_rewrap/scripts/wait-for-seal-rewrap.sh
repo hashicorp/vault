@@ -51,6 +51,12 @@ waitForRewrap() {
     return 1
   fi
 
+  if jq -e '.entries.processed == 0' <<< "$data" &> /dev/null; then
+    echo "A seal rewrap has not been started yet. Number of processed entries is zero and a rewrap is not yet running."
+    return 1
+  fi
+
+  echo "$data"
   return 0
 }
 

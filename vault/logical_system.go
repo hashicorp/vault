@@ -49,6 +49,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/roottoken"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/crypto/sha3"
@@ -141,6 +142,8 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 				"wrapping/pubkey",
 				"replication/status",
 				"internal/specs/openapi",
+				"internal/ui/custom-messages",
+				"internal/ui/custom-messages/*",
 				"internal/ui/mounts",
 				"internal/ui/mounts/*",
 				"internal/ui/namespaces",
@@ -188,6 +191,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 
 	b.Backend.Paths = append(b.Backend.Paths, entPaths(b)...)
 	b.Backend.Paths = append(b.Backend.Paths, b.configPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.uiCustomMessagePaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.rekeyPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.sealPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.statusPaths()...)
@@ -453,9 +457,6 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *l
 			return nil, err
 		}
 
-		// Sort for consistent ordering
-		sortVersionedPlugins(versioned)
-
 		versionedPlugins = append(versionedPlugins, versioned...)
 	}
 
@@ -493,23 +494,6 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *l
 	return &logical.Response{
 		Data: data,
 	}, nil
-}
-
-func sortVersionedPlugins(versionedPlugins []pluginutil.VersionedPlugin) {
-	sort.SliceStable(versionedPlugins, func(i, j int) bool {
-		left, right := versionedPlugins[i], versionedPlugins[j]
-		if left.Type != right.Type {
-			return left.Type < right.Type
-		}
-		if left.Name != right.Name {
-			return left.Name < right.Name
-		}
-		if left.Version != right.Version {
-			return right.SemanticVersion.GreaterThan(left.SemanticVersion)
-		}
-
-		return false
-	})
 }
 
 func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -604,7 +588,7 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		Sha256:   sha256Bytes,
 	})
 	if err != nil {
-		if errors.Is(err, ErrPluginNotFound) || strings.HasPrefix(err.Error(), "plugin version mismatch") {
+		if errors.Is(err, plugincatalog.ErrPluginNotFound) || strings.HasPrefix(err.Error(), "plugin version mismatch") {
 			return logical.ErrorResponse(err.Error()), nil
 		}
 		return nil, err
@@ -649,7 +633,7 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 
 	command := plugin.Command
 	if !plugin.Builtin && plugin.OCIImage == "" {
-		command, err = filepath.Rel(b.Core.pluginCatalog.directory, command)
+		command, err = filepath.Rel(b.Core.pluginDirectory, command)
 		if err != nil {
 			return nil, err
 		}
@@ -877,7 +861,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 	}
 
 	conf, err := b.Core.pluginRuntimeCatalog.Get(ctx, runtimeName, runtimeType)
-	if err != nil && !errors.Is(err, ErrPluginRuntimeNotFound) {
+	if err != nil && !errors.Is(err, plugincatalog.ErrPluginRuntimeNotFound) {
 		return nil, err
 	}
 	if conf == nil {
@@ -4708,6 +4692,8 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 		},
 	}
 
+	resp.Data["chroot_namespace"] = req.ChrootNamespace
+
 	if acl.root {
 		resp.Data["root"] = true
 		return resp, nil
@@ -5288,14 +5274,16 @@ func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request
 }
 
 type HAStatusNode struct {
-	Hostname       string     `json:"hostname"`
-	APIAddress     string     `json:"api_address"`
-	ClusterAddress string     `json:"cluster_address"`
-	ActiveNode     bool       `json:"active_node"`
-	LastEcho       *time.Time `json:"last_echo"`
-	Version        string     `json:"version"`
-	UpgradeVersion string     `json:"upgrade_version,omitempty"`
-	RedundancyZone string     `json:"redundancy_zone,omitempty"`
+	Hostname           string     `json:"hostname"`
+	APIAddress         string     `json:"api_address"`
+	ClusterAddress     string     `json:"cluster_address"`
+	ActiveNode         bool       `json:"active_node"`
+	LastEcho           *time.Time `json:"last_echo"`
+	Version            string     `json:"version"`
+	UpgradeVersion     string     `json:"upgrade_version,omitempty"`
+	RedundancyZone     string     `json:"redundancy_zone,omitempty"`
+	EchoDurationMillis int64      `json:"echo_duration_ms"`
+	ClockSkewMillis    int64      `json:"clock_skew_ms"`
 }
 
 func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

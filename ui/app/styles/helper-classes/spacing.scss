@@ -53,6 +53,10 @@
   padding-bottom: $spacing-24;
 }
 
+.has-top-padding-xs {
+  padding-top: $spacing-8;
+}
+
 .has-top-padding-s {
   padding-top: $spacing-12;
 }
@@ -165,6 +169,10 @@
 
 .has-top-margin-xxl {
   margin-top: $spacing-48;
+}
+
+.has-top-margin-xxxl {
+  margin-top: $spacing-64;
 }
 
 .has-top-margin-negative-s {

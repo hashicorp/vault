@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -14,7 +14,7 @@ import { stringify } from 'core/helpers/stringify';
  * <KvDataFields
  *  @showJson={{true}}
  *  @secret={{@secret}}
- *  @isEdit={{true}}
+ *  @type="edit"
  *  @modelValidations={{this.modelValidations}}
  *  @pathValidations={{this.pathValidations}}
  * />
@@ -23,7 +23,8 @@ import { stringify } from 'core/helpers/stringify';
  * @param {boolean} showJson - boolean passed from parent to hide/show json editor
  * @param {object} [modelValidations] - object of errors.  If attr.name is in object and has error message display in AlertInline.
  * @param {callback} [pathValidations] - callback function fired for the path input on key up
- * @param {boolean} [isEdit=false] - if true, this is a new secret version rather than a new secret. Used to change text for some form labels
+ * @param {boolean} [type=null] - can be edit, create, or details. Used to change text for some form labels
+ * @param {boolean} [obscureJson=false] - used to obfuscate json values in JsonEditor
  */
 
 export default class KvDataFields extends Component {

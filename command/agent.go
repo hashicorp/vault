@@ -19,8 +19,9 @@ import (
 	"time"
 
 	systemd "github.com/coreos/go-systemd/daemon"
+	"github.com/hashicorp/cli"
 	ctconfig "github.com/hashicorp/consul-template/config"
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -31,7 +32,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/template"
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
-	cache "github.com/hashicorp/vault/command/agentproxyshared/cache"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/inmem"
@@ -45,7 +46,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/version"
 	"github.com/kr/pretty"
-	"github.com/mitchellh/cli"
 	"github.com/oklog/run"
 	"github.com/posener/complete"
 	"golang.org/x/text/cases"
@@ -62,6 +62,7 @@ const (
 	// flagNameAgentExitAfterAuth is used as an Agent specific flag to indicate
 	// that agent should exit after a single successful auth
 	flagNameAgentExitAfterAuth = "exit-after-auth"
+	nameAgent                  = "agent"
 )
 
 type AgentCommand struct {
@@ -221,6 +222,11 @@ func (c *AgentCommand) Run(args []string) int {
 		InferLevelsWithTimestamp: true,
 	})
 
+	// release log gate if the disable-gated-logs flag is set
+	if c.logFlags.flagDisableGatedLogs {
+		c.logGate.Flush()
+	}
+
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
 	info["log level"] = config.LogLevel
@@ -303,14 +309,25 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 	c.metricsHelper = metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
 
+	var templateNamespace string
+	// This indicates whether the namespace for the client has been set by environment variable.
+	// If it has, we don't touch it
+	namespaceSetByEnvironmentVariable := client.Namespace() != ""
+
+	if !namespaceSetByEnvironmentVariable && config.Vault != nil && config.Vault.Namespace != "" {
+		client.SetNamespace(config.Vault.Namespace)
+	}
+
 	var method auth.AuthMethod
 	var sinks []*sink.SinkConfig
-	var templateNamespace string
 	if config.AutoAuth != nil {
-		if client.Headers().Get(consts.NamespaceHeaderName) == "" && config.AutoAuth.Method.Namespace != "" {
+		// Note: This will only set namespace header to the value in config.AutoAuth.Method.Namespace
+		// only if it hasn't been set by config.Vault.Namespace above. In that case, the config value
+		// present at config.AutoAuth.Method.Namespace will still be used for auto-auth.
+		if !namespaceSetByEnvironmentVariable && config.AutoAuth.Method.Namespace != "" {
 			client.SetNamespace(config.AutoAuth.Method.Namespace)
 		}
-		templateNamespace = client.Headers().Get(consts.NamespaceHeaderName)
+		templateNamespace = client.Namespace()
 
 		sinkClient, err := client.CloneWithHeaders()
 		if err != nil {
@@ -699,6 +716,11 @@ func (c *AgentCommand) Run(args []string) int {
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error cloning client for auth handler: %v", err))
 			return 1
+		}
+
+		// Override the set namespace with the auto-auth specific namespace
+		if !namespaceSetByEnvironmentVariable && config.AutoAuth.Method.Namespace != "" {
+			ahClient.SetNamespace(config.AutoAuth.Method.Namespace)
 		}
 
 		if config.DisableIdleConnsAutoAuth {
@@ -1129,15 +1151,17 @@ func (c *AgentCommand) newLogger() (hclog.InterceptLogger, error) {
 		return nil, errs
 	}
 
-	logCfg := &logging.LogConfig{
-		Name:              "agent",
-		LogLevel:          logLevel,
-		LogFormat:         logFormat,
-		LogFilePath:       c.config.LogFile,
-		LogRotateDuration: logRotateDuration,
-		LogRotateBytes:    c.config.LogRotateBytes,
-		LogRotateMaxFiles: c.config.LogRotateMaxFiles,
+	logCfg, err := logging.NewLogConfig(nameAgent)
+	if err != nil {
+		return nil, err
 	}
+	logCfg.Name = nameAgent
+	logCfg.LogLevel = logLevel
+	logCfg.LogFormat = logFormat
+	logCfg.LogFilePath = c.config.LogFile
+	logCfg.LogRotateDuration = logRotateDuration
+	logCfg.LogRotateBytes = c.config.LogRotateBytes
+	logCfg.LogRotateMaxFiles = c.config.LogRotateMaxFiles
 
 	l, err := logging.Setup(logCfg, c.logWriter)
 	if err != nil {

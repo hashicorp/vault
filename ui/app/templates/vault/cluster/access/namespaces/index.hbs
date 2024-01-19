@@ -23,13 +23,13 @@
   <ListView @items={{this.model}} @itemNoun="namespace" @paginationRouteName="vault.cluster.access.namespaces" as |list|>
     {{#if list.empty}}
       <list.empty>
-        <LinkTo @route="vault.cluster.access.namespaces.create">
-          Create Namespace
-        </LinkTo>
+        <Hds::Link::Standalone @icon="plus" @text="Create Namespace" @route="vault.cluster.access.namespaces.create" />
 
-        <DocLink @path="/vault/tutorials/enterprise/namespaces">
-          Learn more
-        </DocLink>
+        <Hds::Link::Standalone
+          @icon="docs-link"
+          @text="Learn more"
+          @href={{doc-link "/vault/tutorials/enterprise/namespaces"}}
+        />
       </list.empty>
     {{else}}
       <ListItem as |Item|>
