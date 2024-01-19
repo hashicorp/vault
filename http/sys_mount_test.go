@@ -1832,6 +1832,8 @@ func TestSysTuneMount_passthroughRequestHeaders(t *testing.T) {
 	}
 }
 
+// TestSysTuneMount_identityTokenKey ensures that the identity token key for plugin
+// mounts can also be tuned to keys that exist in the identity store.
 func TestSysTuneMount_identityTokenKey(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)

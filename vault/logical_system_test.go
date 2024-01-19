@@ -433,6 +433,8 @@ func TestSystemBackend_mount_force_no_cache(t *testing.T) {
 	}
 }
 
+// TestSystemBackend_mount_secret_identity_token_key ensures that the identity
+// token key can be specified at secret mount enable time.
 func TestSystemBackend_mount_secret_identity_token_key(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	core, b, _ := testCoreSystemBackend(t)
@@ -503,6 +505,8 @@ func TestSystemBackend_mount_secret_identity_token_key(t *testing.T) {
 	}
 }
 
+// TestSystemBackend_mount_auth_identity_token_key ensures that the identity
+// token key can be specified at auth mount enable time.
 func TestSystemBackend_mount_auth_identity_token_key(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	core, b, _ := testCoreSystemBackend(t)
