@@ -8,21 +8,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
-
-	"github.com/hashicorp/go-hclog"
-
-	"github.com/hashicorp/vault/internalshared/configutil"
-
 	metrics "github.com/armon/go-metrics"
+	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-kms-wrapping/v2/aead"
+	"github.com/hashicorp/vault/internalshared/configutil"
 )
 
 type StoredKeysSupport int
@@ -102,7 +101,7 @@ func (sgi *SealGenerationInfo) Validate(existingSgi *SealGenerationInfo, hasPart
 		}
 	}
 
-	if !previousShamirConfigured && (!existingSgi.IsRewrapped() || hasPartiallyWrappedPaths) {
+	if !previousShamirConfigured && (!existingSgi.IsRewrapped() || hasPartiallyWrappedPaths) && os.Getenv("VAULT_SEAL_REWRAP_SAFETY") != "disable" {
 		return errors.New("cannot make seal config changes while seal re-wrap is in progress, please revert any seal configuration changes")
 	}
 
@@ -696,7 +695,18 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 		oldKey bool
 		err    error
 	}
+
 	resultCh := make(chan *result)
+	var resultWg sync.WaitGroup
+	defer func() {
+		// Consume all the discarded results
+		go func() {
+			for range resultCh {
+			}
+		}()
+		resultWg.Wait()
+		close(resultCh)
+	}()
 
 	reportResult := func(name string, plaintext []byte, oldKey bool, err error) {
 		resultCh <- &result{
@@ -705,6 +715,7 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 			oldKey: oldKey,
 			err:    err,
 		}
+		resultWg.Done()
 	}
 
 	decrypt := func(sealWrapper *SealWrapper) {
@@ -722,7 +733,8 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 			for _, sealWrapper := range wrappersByPriority {
 				keyId, err := sealWrapper.Wrapper.KeyId(ctx)
 				if err != nil {
-					reportResult(sealWrapper.Name, nil, false, err)
+					resultWg.Add(1)
+					go reportResult(sealWrapper.Name, nil, false, err)
 					continue
 				}
 				if keyId == k {
@@ -733,18 +745,20 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 		}
 	}
 
+	resultWg.Add(1)
 	go decrypt(first)
 	for _, sealWrapper := range wrappersByPriority {
 		sealWrapper := sealWrapper
 		if sealWrapper != first {
 			timer := time.AfterFunc(wrapperDecryptHighPriorityHeadStart, func() {
+				resultWg.Add(1)
 				decrypt(sealWrapper)
 			})
 			defer timer.Stop()
 		}
 	}
 
-	// Gathering failures, but return right away if there is a succesful result
+	// Gathering failures, but return right away if there is a successful result
 	errs := make(map[string]error)
 GATHER_RESULTS:
 	for {
@@ -759,7 +773,6 @@ GATHER_RESULTS:
 
 			case result.oldKey:
 				return result.pt, false, OldKey
-
 			default:
 				return result.pt, isUpToDate, nil
 			}

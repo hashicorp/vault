@@ -14,8 +14,8 @@ import (
 
 	"github.com/hashicorp/vault/sdk/helper/roottoken"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 )
 
 func testOperatorRekeyCommand(tb testing.TB) (*cli.MockUi, *OperatorRekeyCommand) {

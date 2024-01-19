@@ -39,7 +39,6 @@
             />
             <label for="feature-{{feature.key}}">{{feature.name}}</label>
             <Hds::Button
-              class="button is-ghost icon is-pulled-right"
               @color="tertiary"
               @text={{if (get this (concat feature.key "-isOpen")) "Close" "Open"}}
               @icon={{if (get this (concat feature.key "-isOpen")) "chevron-up" "chevron-down"}}

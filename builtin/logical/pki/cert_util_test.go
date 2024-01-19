@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -97,7 +98,7 @@ func TestPki_FetchCertBySerial(t *testing.T) {
 // order-preserving way.
 func TestPki_MultipleOUs(t *testing.T) {
 	t.Parallel()
-	var b backend
+	b, _ := CreateBackendWithStorage(t)
 	fields := addCACommonFields(map[string]*framework.FieldSchema{})
 
 	apiData := &framework.FieldData{
@@ -109,12 +110,12 @@ func TestPki_MultipleOUs(t *testing.T) {
 	}
 	input := &inputBundle{
 		apiData: apiData,
-		role: &roleEntry{
+		role: &issuing.RoleEntry{
 			MaxTTL: 3600,
 			OU:     []string{"Z", "E", "V"},
 		},
 	}
-	cb, _, err := generateCreationBundle(&b, input, nil, nil)
+	cb, _, err := generateCreationBundle(b, input, nil, nil)
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}
@@ -129,7 +130,7 @@ func TestPki_MultipleOUs(t *testing.T) {
 
 func TestPki_PermitFQDNs(t *testing.T) {
 	t.Parallel()
-	var b backend
+	b, _ := CreateBackendWithStorage(t)
 	fields := addCACommonFields(map[string]*framework.FieldSchema{})
 
 	cases := map[string]struct {
@@ -146,7 +147,7 @@ func TestPki_PermitFQDNs(t *testing.T) {
 						"ttl":         3600,
 					},
 				},
-				role: &roleEntry{
+				role: &issuing.RoleEntry{
 					AllowAnyName:     true,
 					MaxTTL:           3600,
 					EnforceHostnames: true,
@@ -165,7 +166,7 @@ func TestPki_PermitFQDNs(t *testing.T) {
 						"ttl":         3600,
 					},
 				},
-				role: &roleEntry{
+				role: &issuing.RoleEntry{
 					AllowedDomains:   []string{"example.net", "EXAMPLE.COM"},
 					AllowBareDomains: true,
 					MaxTTL:           3600,
@@ -183,7 +184,7 @@ func TestPki_PermitFQDNs(t *testing.T) {
 						"ttl":         3600,
 					},
 				},
-				role: &roleEntry{
+				role: &issuing.RoleEntry{
 					AllowedDomains:   []string{"example.com", "*.Example.com"},
 					AllowGlobDomains: true,
 					MaxTTL:           3600,
@@ -201,7 +202,7 @@ func TestPki_PermitFQDNs(t *testing.T) {
 						"ttl":         3600,
 					},
 				},
-				role: &roleEntry{
+				role: &issuing.RoleEntry{
 					AllowedDomains:   []string{"test@testemail.com"},
 					AllowBareDomains: true,
 					MaxTTL:           3600,
@@ -219,7 +220,7 @@ func TestPki_PermitFQDNs(t *testing.T) {
 						"ttl":         3600,
 					},
 				},
-				role: &roleEntry{
+				role: &issuing.RoleEntry{
 					AllowedDomains:   []string{"testemail.com"},
 					AllowBareDomains: true,
 					MaxTTL:           3600,
@@ -234,7 +235,7 @@ func TestPki_PermitFQDNs(t *testing.T) {
 		name := name
 		testCase := testCase
 		t.Run(name, func(t *testing.T) {
-			cb, _, err := generateCreationBundle(&b, testCase.input, nil, nil)
+			cb, _, err := generateCreationBundle(b, testCase.input, nil, nil)
 			if err != nil {
 				t.Fatalf("Error: %v", err)
 			}
