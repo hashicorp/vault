@@ -90,7 +90,7 @@ export default class KvObjectEditor extends Component {
   }
   @action
   validateKey(rowIndex, event) {
-    if (this.args.isSingleRow) {
+    if (this.args.allowWhiteSpace) {
       return;
     }
     const { value } = event.target;

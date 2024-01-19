@@ -13,7 +13,7 @@ export default class CustomMessagesService extends Service {
   @service auth;
   @tracked messages = [];
   @tracked showMessageModal = true;
-  bannerDismissObject = new TrackedObject();
+  bannerState = new TrackedObject();
 
   constructor() {
     super(...arguments);
@@ -46,7 +46,7 @@ export default class CustomMessagesService extends Service {
       if (body.errors) return (this.messages = []);
       const serializer = this.store.serializerFor('config-ui/message');
       this.messages = serializer.mapPayload(body);
-      this.bannerMessages?.forEach((bm) => (this.bannerDismissObject[bm.id] = true));
+      this.bannerMessages?.forEach((bm) => (this.bannerState[bm.id] = true));
     } catch (e) {
       return e;
     }
@@ -58,6 +58,6 @@ export default class CustomMessagesService extends Service {
 
   @action
   onBannerDismiss(id) {
-    this.bannerDismissObject[id] = false;
+    this.bannerState[id] = false;
   }
 }

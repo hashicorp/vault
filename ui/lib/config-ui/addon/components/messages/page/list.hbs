@@ -24,8 +24,8 @@
     <Hds::Button
       @text="Create message"
       @icon="plus"
-      @color="tertiary"
-      class="toolbar-link"
+      @color="secondary"
+      class="toolbar-button"
       {{on "click" this.createMessage}}
       data-test-button="create message"
       aria-label="create message"
@@ -120,7 +120,6 @@
 {{#if this.showMaxMessageModal}}
   <Hds::Modal
     id="maximum-message-modal"
-    @size="large"
     @color="warning"
     @onClose={{fn (mut this.showMaxMessageModal) false}}
     data-test-modal="maximum-message-modal"
@@ -132,17 +131,8 @@
     <M.Body data-test-modal-body="maximum-message-modal">
       Vault can only store up to 100 messages. To create a message, delete one of your messages to clear up space.
     </M.Body>
-    <M.Footer>
-      <Hds::Button
-        @text="Confirm"
-        {{on "click" (fn (mut this.showMaxMessageModal) false)}}
-        data-test-modal-button="maximum-message-modal"
-      />
-      <Hds::Button
-        @text="Cancel"
-        {{on "click" (fn (mut this.showMaxMessageModal) false)}}
-        data-test-modal-button="maximum-message-modal-cancel"
-      />
+    <M.Footer as |F|>
+      <Hds::Button @text="Close" {{on "click" F.close}} data-test-modal-button="maximum-message-modal" />
     </M.Footer>
   </Hds::Modal>
 {{/if}}

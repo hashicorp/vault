@@ -15,12 +15,12 @@ const validations = {
     {
       validator(model) {
         if (!model?.link) return true;
-        const [linkTitle] = Object.keys(model.link);
-        const [linkHref] = Object.values(model.link);
-        if (!linkTitle) return true;
-        return !!linkHref;
+        const [title] = Object.keys(model.link);
+        const [href] = Object.values(model.link);
+        if (!title && !href) return true;
+        return title || href ? title && href : true;
       },
-      message: 'Link title and url is required.',
+      message: 'Link title and url are required.',
     },
   ],
 };
@@ -96,9 +96,10 @@ export default class MessageModel extends Model {
   @attr('object', {
     editType: 'kv',
     keyPlaceholder: 'Display text (e.g. Learn more)',
-    valuePlaceholder: 'Paste URL (e.g. www.learnmore.com)',
+    valuePlaceholder: 'Link URL (e.g. https://www.learnmore.com)',
     label: 'Link (optional)',
     isSingleRow: true,
+    allowWhiteSpace: true,
   })
   link;
 

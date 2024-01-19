@@ -48,8 +48,14 @@
       <InfoTableRow @label="Link" @value="None" />
     {{else}}
       {{#each-in @message.link as |title href|}}
-        <InfoTableRow @label="Link" @value={{title}}>
-          <Hds::Link::Inline @icon="external-link" @href={{href}} data-test-link="message link">{{title}}</Hds::Link::Inline>
+        <InfoTableRow @label="Link" @value={{or title "None"}}>
+          {{#if href}}
+            <Hds::Link::Inline
+              @icon="external-link"
+              @href={{href}}
+              data-test-link="message link"
+            >{{title}}</Hds::Link::Inline>
+          {{/if}}
         </InfoTableRow>
       {{/each-in}}
     {{/if}}
