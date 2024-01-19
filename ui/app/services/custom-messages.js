@@ -3,15 +3,17 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { action } from '@ember/object';
 import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-
+import { TrackedObject } from 'tracked-built-ins';
 export default class CustomMessagesService extends Service {
   @service store;
   @service namespace;
   @service auth;
   @tracked messages = [];
   @tracked showMessageModal = true;
+  bannerDismissObject = new TrackedObject();
 
   constructor() {
     super(...arguments);
@@ -44,6 +46,7 @@ export default class CustomMessagesService extends Service {
       if (body.errors) return (this.messages = []);
       const serializer = this.store.serializerFor('config-ui/message');
       this.messages = serializer.mapPayload(body);
+      this.bannerMessages?.forEach((bm) => (this.bannerDismissObject[bm.id] = true));
     } catch (e) {
       return e;
     }
@@ -51,5 +54,10 @@ export default class CustomMessagesService extends Service {
 
   clearCustomMessages() {
     this.messages = [];
+  }
+
+  @action
+  onBannerDismiss(id) {
+    this.bannerDismissObject[id] = false;
   }
 }
