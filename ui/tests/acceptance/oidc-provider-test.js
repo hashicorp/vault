@@ -12,11 +12,9 @@ import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import authForm from 'vault/tests/pages/components/auth-form';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import { visit, settled, currentURL, waitFor } from '@ember/test-helpers';
+import { visit, settled, currentURL, waitFor, click } from '@ember/test-helpers';
 import { clearRecords } from 'vault/tests/helpers/oidc-config';
 import { runCmd } from 'vault/tests/helpers/commands';
-const consoleComponent = create(consoleClass);
 const authFormComponent = create(authForm);
 
 const OIDC_USER = 'end-user';
@@ -35,51 +33,45 @@ const GROUP_TOKEN_TEMPLATE = `{
   "groups": {{identity.entity.groups.names}}
 }`;
 const oidcEntity = async function (name, policy) {
-  await consoleComponent.runCommands([
+  await runCmd([
     `write sys/policies/acl/${name} policy=${window.btoa(policy)}`,
     `write identity/entity name="${OIDC_USER}" policies="${name}" metadata="email=vault@hashicorp.com" metadata="phone_number=123-456-7890"`,
-    `read -field=id identity/entity/name/${OIDC_USER}`,
   ]);
-  return consoleComponent.lastLogOutput;
+  return runCmd([`read -field=id identity/entity/name/${OIDC_USER}`]);
 };
 
 const oidcGroup = async function (entityId) {
-  await consoleComponent.runCommands([
+  return runCmd([
     `write identity/group name="engineering" member_entity_ids="${entityId}"`,
     `read -field=id identity/group/name/engineering`,
   ]);
-  return consoleComponent.lastLogOutput;
 };
 
 const authAccessor = async function (path = 'userpass') {
   await enablePage.enable('userpass', path);
-  await consoleComponent.runCommands([
+  return runCmd([
     `write auth/${path}/users/end-user password="${USER_PASSWORD}"`,
     `read -field=accessor sys/internal/ui/mounts/auth/${path}`,
   ]);
-  return consoleComponent.lastLogOutput;
 };
 
 const entityAlias = async function (entityId, accessor, groupId) {
   const userTokenTemplate = btoa(USER_TOKEN_TEMPLATE);
   const groupTokenTemplate = btoa(GROUP_TOKEN_TEMPLATE);
 
-  await consoleComponent.runCommands([
+  return runCmd([
     `write identity/entity-alias name="end-user" canonical_id="${entityId}" mount_accessor="${accessor}"`,
     `write identity/oidc/key/sigkey allowed_client_ids="*"`,
     `write identity/oidc/assignment/my-assignment group_ids="${groupId}" entity_ids="${entityId}"`,
     `write identity/oidc/scope/user description="scope for user metadata" template="${userTokenTemplate}"`,
     `write identity/oidc/scope/groups description="scope for groups" template="${groupTokenTemplate}"`,
   ]);
-  return consoleComponent.lastLogOutput.includes('Success');
 };
 
 const setupProvider = async function (clientId) {
-  await consoleComponent.runCommands(
+  await runCmd(
     `write identity/oidc/provider/my-provider allowed_client_ids="${clientId}" scopes="user,groups"`
   );
-
-  return clientId;
 };
 
 const getAuthzUrl = (providerName, redirect, clientId, params) => {
@@ -111,12 +103,13 @@ const setupOidc = async function (uid) {
   await runCmd([
     `delete identity/oidc/client/my-webapp`,
     `write identity/oidc/client/my-webapp redirect_uris="${callback}" assignments="my-assignment" key="sigkey" id_token_ttl="30m" access_token_ttl="1h"`,
-    `clear`,
-    `read -field=client_id identity/oidc/client/my-webapp`,
   ]);
+
+  // return the clientId through the UI because race conditions are present in the ui-console making the read command unreliable.
+  await click('[data-test-sidebar-nav-link="OIDC Provider"]');
+  await click('[data-test-oidc-client-linked-block="my-webapp"]');
   await settled();
-  // call read command again to ensure you return the read response and not the write which is happening after the ember data upgrade
-  const clientId = await runCmd([`read -field=client_id identity/oidc/client/my-webapp`]);
+  const clientId = document.querySelector('[data-test-row-value="Client ID"]').textContent;
   await setupProvider(clientId);
   return {
     providerName: 'my-provider',
