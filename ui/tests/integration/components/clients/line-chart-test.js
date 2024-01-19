@@ -370,9 +370,14 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     assert
       .dom('[data-test-x-axis]')
       .hasText('1/20 2/20 3/20 4/20 5/20 6/20', 'x-axis renders correctly for small values');
+    assert.dom('[data-test-hover-circle]').exists({ count: 4 }, 'only render circles for non-null values');
+
     assert
       .dom('[data-test-hover-circle="1/20"]')
       .doesNotExist('first month dot does not exist because value is null');
+    assert
+      .dom('[data-test-hover-circle="2/20"]')
+      .hasAttribute('cy', '0', 'zero value is aligned to the bottom of the chart');
     assert
       .dom('[data-test-hover-circle="4/20"]')
       .doesNotExist('other null count month dot also does not render');
