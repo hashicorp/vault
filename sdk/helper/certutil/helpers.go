@@ -1787,16 +1787,11 @@ func parseCertificateToFields(certificate x509.Certificate) (templateData map[st
 func getBasicConstraintsFromExtension(exts []pkix.Extension) (found bool, isCA bool, maxPathLength int, err error) {
 	for _, ext := range exts {
 		if ext.Id.Equal(ExtensionBasicConstraintsOID) {
-			type basicConstraints struct {
-				IsCA       bool `asn1:"optional"`
-				MaxPathLen int  `asn1:"optional,default:-1"`
-			}
-			basicConstraint := basicConstraints{}
-			_, err := asn1.Unmarshal(ext.Value, &basicConstraint)
+			isCA, maxPathLength, err = ParseBasicConstraintExtension(ext)
 			if err != nil {
-				return false, false, -1, errutil.InternalError{Err: errwrap.Wrapf("error unmarshalling basic constraints: {{err}}", err).Error()}
+				return false, false, -1, err
 			}
-			return true, basicConstraint.IsCA, basicConstraint.MaxPathLen, nil
+			return true, isCA, maxPathLength, nil
 		}
 	}
 
