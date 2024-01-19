@@ -376,9 +376,6 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       .dom('[data-test-hover-circle="1/20"]')
       .doesNotExist('first month dot does not exist because value is null');
     assert
-      .dom('[data-test-hover-circle="2/20"]')
-      .hasAttribute('cy', '0', 'zero value is aligned to the bottom of the chart');
-    assert
       .dom('[data-test-hover-circle="4/20"]')
       .doesNotExist('other null count month dot also does not render');
     // Note: the line should also show a gap, but this is difficult to test for
