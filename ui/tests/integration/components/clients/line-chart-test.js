@@ -9,7 +9,6 @@ import { setupRenderingTest } from 'ember-qunit';
 import { find, render, findAll, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { format, formatRFC3339, subMonths } from 'date-fns';
-// import { formatChartDate } from 'core/utils/date-formatters';
 import timestamp from 'core/utils/timestamp';
 
 module('Integration | Component | clients/line-chart', function (hooks) {
@@ -177,6 +176,41 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     //       `tooltip text is correct for ${month}`
     //     );
     // }
+  });
+
+  test('it fails gracefully when data is not formatted correctly', async function (assert) {
+    this.set('dataset', [
+      {
+        foo: 1,
+        bar: 4,
+      },
+      {
+        foo: 2,
+        bar: 8,
+      },
+      {
+        foo: 3,
+        bar: 14,
+      },
+      {
+        foo: 4,
+        bar: 10,
+      },
+    ]);
+    await render(hbs`
+    <div class="chart-container-wide">
+      <Clients::LineChart
+        @dataset={{this.dataset}}
+        @xKey={{this.xKey}}
+        @yKey={{this.yKey}}
+      />
+    </div>
+    `);
+
+    assert.dom('[data-test-line-chart]').doesNotExist('Chart is not rendered');
+    assert
+      .dom('[data-test-component="empty-state"]')
+      .hasText('No data to display', 'Shows empty state when time date is not formatted correctly');
   });
 
   test('it fails gracefully when upgradeData is an object', async function (assert) {

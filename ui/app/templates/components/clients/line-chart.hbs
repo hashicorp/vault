@@ -2,12 +2,12 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 ~}}
-<div {{did-update (perform this.updateChart)}}>
-  {{#if @dataset}}
+<div>
+  {{#if this.data}}
     <div class="lineal-chart">
       <Lineal::Fluid as |width|>
         {{#let
-          (scale-time range=(array 0 width))
+          (scale-time domain=this.timeDomain range=(array 0 width))
           (scale-linear domain=this.yDomain range=(array this.chartHeight 0))
           (scale-linear range=(array 0 this.chartHeight))
           as |xScale yScale tooltipScale|
@@ -47,11 +47,10 @@
                   r="10"
                   fill="#FDEEBA"
                   stroke="none"
-                  data-test-line-chart="upgrade-month-{{date-format d.x 'M-yy'}}"
+                  data-test-line-chart="upgrade-{{d.month}}"
                 ></circle>
               {{/each}}
             {{/if}}
-            {{! this is here to qualify the scales }}
             <Lineal::Line
               @data={{this.data}}
               @x="x"
@@ -62,6 +61,7 @@
               stroke-width="0.5"
               fill="none"
             />
+            {{! this is here to qualify the scales }}
             <Lineal::Line
               @data={{this.data}}
               @x="x"
@@ -73,7 +73,7 @@
             />
             {{#if (and xScale.isValid yScale.isValid)}}
               {{#each this.data as |d|}}
-                {{#if d.y}}
+                {{#if (this.hasValue d.y)}}
                   <circle
                     cx={{xScale.compute d.x}}
                     cy={{yScale.compute d.y}}
