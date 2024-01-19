@@ -11,10 +11,21 @@ import { withFormFields } from 'vault/decorators/model-form-fields';
 const validations = {
   title: [{ type: 'presence', message: 'Title is required.' }],
   message: [{ type: 'presence', message: 'Message is required.' }],
+  link: [
+    {
+      validator(model) {
+        if (!model?.link) return true;
+        const [title] = Object.keys(model.link);
+        const [href] = Object.values(model.link);
+        return title || href ? !!(title && href) : true;
+      },
+      message: 'Link title and url are required.',
+    },
+  ],
 };
 
-@withFormFields(['authenticated', 'type', 'title', 'message', 'linkTitle', 'startTime', 'endTime'])
 @withModelValidations(validations)
+@withFormFields(['authenticated', 'type', 'title', 'message', 'link', 'startTime', 'endTime'])
 export default class MessageModel extends Model {
   @attr('boolean') active;
   @attr('string', {
@@ -81,11 +92,15 @@ export default class MessageModel extends Model {
   startTime;
   @attr('dateTimeLocal', { editType: 'yield', label: 'Message expires' }) endTime;
 
-  // the api returns link as an object with title and href as keys, but we separate the link key/values into
-  // different attributes to easily show link title and href fields on the create form. In our serializer,
-  // we send the link attribute in to the correct format (as an object) to the server.
-  @attr('string') linkTitle;
-  @attr('string') linkHref;
+  @attr('object', {
+    editType: 'kv',
+    keyPlaceholder: 'Display text (e.g. Learn more)',
+    valuePlaceholder: 'Link URL (e.g. https://www.learnmore.com)',
+    label: 'Link (optional)',
+    isSingleRow: true,
+    allowWhiteSpace: true,
+  })
+  link;
 
   // date helpers
   get isStartTimeAfterToday() {

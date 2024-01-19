@@ -19,6 +19,7 @@ const allFields = [
   { label: 'Message', key: 'message' },
   { label: 'Start time', key: 'startTime' },
   { label: 'End time', key: 'endTime' },
+  { label: 'Link', key: 'link' },
 ];
 
 module('Integration | Component | messages/page/details', function (hooks) {
@@ -44,7 +45,7 @@ module('Integration | Component | messages/page/details', function (hooks) {
       authenticated: true,
       title: 'Message title 1',
       message: 'Some long long long message',
-      link: { title: 'here', href: 'www.example.com' },
+      link: { here: 'www.example.com' },
       startTime: '2021-08-01T00:00:00Z',
       endTime: '',
       canDeleteCustomMessages: true,
@@ -62,6 +63,7 @@ module('Integration | Component | messages/page/details', function (hooks) {
     assert
       .dom('[data-test-component="info-table-row"]')
       .exists({ count: allFields.length }, 'Correct number of filtered fields render');
+
     allFields.forEach((field) => {
       assert
         .dom(`[data-test-row-label="${field.label}"]`)
@@ -77,6 +79,9 @@ module('Integration | Component | messages/page/details', function (hooks) {
         assert
           .dom(`[data-test-value-div="${field.label}"]`)
           .hasText(this.message[field.key] ? 'Yes' : 'No', `${field.label} value renders`);
+      } else if (field.key === 'link') {
+        assert.dom('[data-test-value-div="Link"]').exists();
+        assert.dom('[data-test-value-div="Link"] [data-test-link="message link"]').hasText('here');
       } else {
         assert
           .dom(`[data-test-row-value="${field.label}"]`)

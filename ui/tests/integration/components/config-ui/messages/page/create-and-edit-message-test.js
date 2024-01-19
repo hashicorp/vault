@@ -43,8 +43,8 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     assert.dom(PAGE.radio('modal')).isNotChecked();
     assert.dom(PAGE.field('title')).exists();
     assert.dom(PAGE.field('message')).exists();
-    assert.dom(PAGE.input('linkTitle')).exists();
-    assert.dom(PAGE.input('linkHref')).exists();
+    assert.dom('[data-test-kv-key="0"]').exists();
+    assert.dom('[data-test-kv-value="0"]').exists();
     assert.dom(PAGE.input('startTime')).exists();
     assert
       .dom(PAGE.input('startTime'))
@@ -77,6 +77,8 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
       PAGE.input('endTime'),
       format(addDays(startOfDay(new Date('2023-12-12')), 10), datetimeLocalStringFormat)
     );
+    await fillIn('[data-test-kv-key="0"]', 'Learn more');
+    await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
 
     await click(PAGE.button('create-message'));
   });
@@ -104,8 +106,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
       message: 'Blah blah blah. Some super long message.',
       start_time: '2023-12-12T08:00:00.000Z',
       end_time: '2023-12-21T08:00:00.000Z',
-      link_title: 'Learn more',
-      link_href: 'www.learnmore.com',
+      link: { 'Learn more': 'www.learnmore.com' },
     });
     this.message = this.store.peekRecord('config-ui/message', 'hhhhh-iiii-lllll-dddd');
     await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {
@@ -122,10 +123,10 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     assert.dom(PAGE.radio('modal')).isChecked();
     assert.dom(PAGE.input('title')).hasValue('Hello world');
     assert.dom(PAGE.input('message')).hasValue('Blah blah blah. Some super long message.');
-    assert.dom(PAGE.input('linkTitle')).exists();
-    assert.dom(PAGE.input('linkTitle')).hasValue('Learn more');
-    assert.dom(PAGE.input('linkHref')).exists();
-    assert.dom(PAGE.input('linkHref')).hasValue('www.learnmore.com');
+    assert.dom('[data-test-kv-key="0"]').exists();
+    assert.dom('[data-test-kv-key="0"]').hasValue('Learn more');
+    assert.dom('[data-test-kv-value="0"]').exists();
+    assert.dom('[data-test-kv-value="0"]').hasValue('www.learnmore.com');
     await click('#specificDate');
     assert
       .dom(PAGE.input('startTime'))
@@ -183,7 +184,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
       authenticated: true,
       title: 'Message title 1',
       message: 'Some long long long message',
-      link: { title: 'here', href: 'www.example.com' },
+      link: { here: 'www.example.com' },
       startTime: '2021-08-01T00:00:00Z',
       endTime: '',
     });
@@ -195,7 +196,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
       authenticated: false,
       title: 'Message title 2',
       message: 'Some long long long message',
-      link: { title: 'here', href: 'www.example.com' },
+      link: { here: 'www.example.com' },
       startTime: '2021-08-01T00:00:00Z',
       endTime: '2090-08-01T00:00:00Z',
     });

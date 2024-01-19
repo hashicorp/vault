@@ -43,6 +43,16 @@
         (date-format (get @message attr.name) "MMM d, yyyy hh:mm aaa" withTimeZone=true)
       }}
     />
+  {{else if (eq attr.name "link")}}
+    {{#if (is-empty-value @message.link)}}
+      <InfoTableRow @label="Link" @value="None" />
+    {{else}}
+      {{#each-in @message.link as |title href|}}
+        <InfoTableRow @label="Link" @value={{title}}>
+          <Hds::Link::Inline @icon="external-link" @href={{href}} data-test-link="message link">{{title}}</Hds::Link::Inline>
+        </InfoTableRow>
+      {{/each-in}}
+    {{/if}}
   {{else}}
     <InfoTableRow @label={{capitalize (humanize (dasherize attr.name))}} @value={{get @message attr.name}} />
   {{/if}}

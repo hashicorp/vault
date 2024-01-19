@@ -7,10 +7,9 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupEngine } from 'ember-engines/test-support';
-import { render } from '@ember/test-helpers';
+import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-
-// TODO: test file needs to be updated to use mirage handler and to have the correct META pagination numbers
+import { PAGE } from 'vault/tests/helpers/config-ui/message-selectors';
 
 const META = {
   currentPage: 1,
@@ -95,5 +94,43 @@ module('Integration | Component | messages/page/list', function (hooks) {
       assert.dom(`[data-test-list-item="${message.id}"]`).exists();
       assert.dom(`[data-linked-block-title="${message.id}"]`).hasText(message.title);
     }
+  });
+
+  test('it should show max message warning modal', async function (assert) {
+    for (let i = 0; i < 97; i++) {
+      this.store.pushPayload('config-ui/message', {
+        modelName: 'config-ui/message',
+        id: i,
+        active: true,
+        type: 'banner',
+        authenticated: false,
+        title: `Message title ${i}`,
+        message: 'Some long long long message',
+        link: { title: 'here', href: 'www.example.com' },
+        startTime: '2021-08-01T00:00:00Z',
+      });
+    }
+
+    this.messages = this.store.peekAll('config-ui/message', {});
+    this.messages.meta = {
+      currentPage: 1,
+      lastPage: 1,
+      nextPage: 1,
+      prevPage: 1,
+      total: this.messages.length,
+      pageSize: 100,
+    };
+
+    await render(hbs`<Messages::Page::List @messages={{this.messages}} />`, {
+      owner: this.engine,
+    });
+    await click(PAGE.button('create message'));
+    assert.dom(PAGE.modalTitle('maximum-message-modal')).hasText('Maximum number of messages reached');
+    assert
+      .dom(PAGE.modalBody('maximum-message-modal'))
+      .hasText(
+        'Vault can only store up to 100 messages. To create a message, delete one of your messages to clear up space.'
+      );
+    await click(PAGE.modalButton('maximum-message-modal'));
   });
 });

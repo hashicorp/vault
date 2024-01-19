@@ -18,43 +18,9 @@
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
 
     {{#each @message.formFields as |attr|}}
-      {{#if (eq attr.name "linkTitle")}}
-        <div class="field has-bottom-margin-m">
-          <label for="link" class="is-label">Link
-            <span class="has-text-grey-400 has-font-weight-normal">(optional)</span></label>
-          <div class="control is-flex-between has-gap-m">
-            <Input
-              @type="text"
-              @value={{@message.linkTitle}}
-              placeholder="Display text (e.g. Learn more)"
-              id="link-title"
-              class="input"
-              data-test-input={{attr.name}}
-              {{on "input" (pipe (pick "target.value") (fn (mut @message.linkTitle)))}}
-              aria-label="Link title"
-            />
-            <Input
-              @type="text"
-              @value={{@message.linkHref}}
-              placeholder="Paste URL (e.g. www.learnmore.com)"
-              id="link-href"
-              class="input"
-              data-test-input="linkHref"
-              {{on "input" (pipe (pick "target.value") (fn (mut @message.linkHref)))}}
-              aria-label="Link href"
-            />
-          </div>
-        </div>
-      {{else}}
-        <FormField
-          @attr={{attr}}
-          @model={{@message}}
-          @modelValidations={{this.modelValidations}}
-          class="has-bottom-margin-m"
-        >
-          <Messages::MessageExpirationDateForm @message={{@message}} @attr={{attr}} />
-        </FormField>
-      {{/if}}
+      <FormField @attr={{attr}} @model={{@message}} @modelValidations={{this.modelValidations}} class="has-bottom-margin-m">
+        <Messages::MessageExpirationDateForm @message={{@message}} @attr={{attr}} />
+      </FormField>
     {{/each}}
 
     <Hds::ButtonSet class="has-top-margin-s has-bottom-margin-m has-top-margin-xl">
@@ -131,7 +97,7 @@
       <M.Body data-test-modal-body={{@message.title}}>
         {{@message.message}}
         {{#if @message.linkHref}}
-          <Hds::Link::Inline @icon="external-link" @href={{@message.linkHref}}>
+          <Hds::Link::Inline @icon="external-link" @isHrefExternal={{true}} @href={{@message.linkHref}}>
             {{@message.linkTitle}}
           </Hds::Link::Inline>
         {{/if}}

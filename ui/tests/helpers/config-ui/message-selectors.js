@@ -15,7 +15,7 @@ export const PAGE = {
   modalTitle: (title) => `[data-test-modal-title="${title}"]`,
   modalBody: (name) => `[data-test-modal-body="${name}"]`,
   modalButton: (name) => `[data-test-modal-button="${name}"]`,
-  alert: (name) => `data-test-alert=${name}`,
-  alertTitle: (name) => `[data-test-alert-title="${name}"]`,
-  alertDescription: (name) => `[data-test-alert-description="${name}"]`,
+  alert: (name) => `data-test-custom-alert=${name}`,
+  alertTitle: (name) => `[data-test-custom-alert-title="${name}"]`,
+  alertDescription: (name) => `[data-test-custom-alert-description="${name}"]`,
 };
