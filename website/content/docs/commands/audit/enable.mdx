@@ -23,9 +23,6 @@ $ vault audit enable file file_path=/tmp/my-file.txt
 Success! Enabled the file audit device at: file/
 ```
 
-Full configuration parameters for each audit device are available on the 
-[Audit Devices](/vault/docs/audit) page.
-
 ## Usage
 
 The following flags are available in addition to the [standard set of
@@ -40,3 +37,7 @@ flags](/vault/docs/commands) included on all commands.
 - `-path` `(string: "")` - Place where the audit device will be accessible. This
   must be unique across all audit devices. This defaults to the "type" of the
   audit device.
+
+Full configuration parameters for each audit device are available on the
+[Audit Devices](/vault/docs/audit) page, these include options common to all types
+of audit device.

@@ -67,7 +67,10 @@ single word name or a more complex, nested path.
   audit device.
 
 - `options` `(map<string|string>: nil)` – Specifies configuration options to pass to the audit device itself.
-  For more details, please see the relevant page for an audit device `type`, under [Audit Devices docs](/vault/docs/audit).
+  There are a set of [common options](/vault/docs/audit#common-configuration-options)
+  which can be applied to all types of audit device.
+  For more details, please see the relevant page for an audit device `type`,
+  under [Audit Devices docs](/vault/docs/audit).
 
 - `type` `(string: <required>)` – Specifies the type of the audit device.
   Valid types are `file`, `socket` and `syslog`.

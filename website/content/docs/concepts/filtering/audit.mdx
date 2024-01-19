@@ -27,14 +27,13 @@ Audit entries that match the filter should then be written to the device's audit
 
 ### Valid `filter` properties
 
-The following information should be used in conjunction with [filtering concepts](/vault/docs/concepts/filtering)
-in order to configure a filter for an audit device.
+Filters can reference the following properties of an audit entry:
 
-* `mount_point` - relates to the path at which a mount exists.
-* `mount_type` - the type of mount that this audit entry is dealing with.
-* `namespace` - the [namespace](/vault/docs/enterprise/namespaces) to which the audit entry belongs.
-* `operation` - the operation being performed which is being audited.
-* `path` - the path the auditble action is being taken against within Vault.
+* `mount_point` - mount point for the request.
+* `mount_type` - type of mount being interacted with.
+* `namespace` - [namespace](/vault/docs/enterprise/namespaces) the request is taking place within.
+* `operation` - operation being performed.
+* `path` - full path of the request.
 
 ### Scenario: `kv` only
 
