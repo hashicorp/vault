@@ -1,19 +1,19 @@
 ---
 layout: api
-page_title: /sys/config/ui - HTTP API
-description: The '/sys/config/ui' endpoint configures the UI.
+page_title: /sys/config/ui/headers - HTTP API
+description: The '/sys/config/ui/headers' endpoint configures the UI.
 ---
 
-# `/sys/config/ui`
+# `/sys/config/ui/headers`
 
 @include 'alerts/restricted-root.mdx'
 
-The `/sys/config/ui` endpoint is used to configure UI settings.
+The `/sys/config/ui/headers` endpoint is used to configure UI header settings.
 
-- **`sudo` required** – All UI endpoints require `sudo` capability in
+- **`sudo` required** – All of these endpoints require the `sudo` capability in
   addition to any path-specific capabilities.
 
-## Read UI settings
+## Read UI header settings
 
 This endpoint returns the given UI header configuration.
 
