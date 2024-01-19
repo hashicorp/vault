@@ -1667,6 +1667,11 @@ func parseCsrToCreationParameters(csr x509.CertificateRequest) (creationParamete
 		return CreationParameters{}, err
 	}
 
+	found, isCA, maxPathLength, err := getBasicConstraintsFromExtension(csr.Extensions)
+	if err != nil {
+		return CreationParameters{}, err
+	}
+
 	creationParameters = CreationParameters{
 		Subject:        csr.Subject,
 		DNSNames:       csr.DNSNames,
@@ -1674,9 +1679,9 @@ func parseCsrToCreationParameters(csr x509.CertificateRequest) (creationParamete
 		IPAddresses:    csr.IPAddresses,
 		URIs:           csr.URIs,
 		OtherSANs:      otherSANs,
-		// TODO: Is CA
-		KeyType: getKeyType(csr.PublicKeyAlgorithm.String()),
-		KeyBits: findBitLength(csr.PublicKey),
+		IsCA:           found && isCA,
+		KeyType:        getKeyType(csr.PublicKeyAlgorithm.String()),
+		KeyBits:        findBitLength(csr.PublicKey),
 		// TODO: NotAfter
 		// TODO: KeyUsage                      x509.KeyUsage
 		// TODO: ExtKeyUsage                   CertExtKeyUsage
@@ -1690,7 +1695,7 @@ func parseCsrToCreationParameters(csr x509.CertificateRequest) (creationParamete
 		// UseCSRValues
 		// TODO: PermittedDNSDomains           []string
 		// TODO: URLs                          *URLEntries
-		// TODO: MaxPathLength                 int
+		MaxPathLength: maxPathLength,
 		// TODO: NotBeforeDuration             time.Duration
 		// TODO: SKID                          []byte
 	}
@@ -1699,12 +1704,17 @@ func parseCsrToCreationParameters(csr x509.CertificateRequest) (creationParamete
 }
 
 func parseCsrToFields(csr x509.CertificateRequest) (templateData map[string]interface{}, err error) {
+	otherSans, err := getOtherSANsStringFromExtensions(csr.Extensions)
+	if err != nil {
+		return templateData, err
+	}
+
 	templateData = map[string]interface{}{
 		"common_name":          csr.Subject.CommonName,
 		"alt_names":            makeAltNamesCommaSeparatedString(csr.DNSNames, csr.EmailAddresses),
 		"ip_sans":              makeIpAddressCommaSeparatedString(csr.IPAddresses),
 		"uri_sans":             makeUriCommaSeparatedString(csr.URIs),
-		"other_sans":           getOtherSANsStringFromExtensions(csr.Extensions),
+		"other_sans":           otherSans,
 		"signature_bits":       findSignatureBits(csr.SignatureAlgorithm),
 		"exclude_cn_from_sans": determineExcludeCnFromCsrSans(csr),
 		"ou":                   csr.Subject.OrganizationalUnit,
@@ -1716,7 +1726,7 @@ func parseCsrToFields(csr x509.CertificateRequest) (templateData map[string]inte
 		"postal_code":          csr.Subject.PostalCode,
 		"serial_number":        csr.Subject.SerialNumber,
 		// There is no "TTL" on a CSR, that is always set by the signer
-		// max_path_length is a CA thing, it generally does not appear on a CSR
+		// max_path_length is handled below
 		// permitted_dns_domains is a CA thing, it generally does not appear on a CSR
 		"use_pss": isPSS(csr.SignatureAlgorithm),
 		// skid could be calculated, but does not directly exist on a csr, so punting for now
@@ -1724,16 +1734,30 @@ func parseCsrToFields(csr x509.CertificateRequest) (templateData map[string]inte
 		"key_bits": findBitLength(csr.PublicKey),
 	}
 
+	// isCA is not a field in our data call - that is represented inside vault by using a different endpoint
+	found, _, maxPathLength, err := getBasicConstraintsFromExtension(csr.Extensions)
+	if err != nil {
+		return nil, err
+	}
+	if found {
+		templateData["max_path_length"] = maxPathLength
+	}
+
 	return templateData, nil
 }
 
 func parseCertificateToFields(certificate x509.Certificate) (templateData map[string]interface{}, err error) {
+	otherSans, err := getOtherSANsStringFromExtensions(certificate.Extensions)
+	if err != nil {
+		return templateData, err
+	}
+
 	templateData = map[string]interface{}{
 		"common_name":           certificate.Subject.CommonName,
 		"alt_names":             makeAltNamesCommaSeparatedString(certificate.DNSNames, certificate.EmailAddresses),
 		"ip_sans":               makeIpAddressCommaSeparatedString(certificate.IPAddresses),
 		"uri_sans":              makeUriCommaSeparatedString(certificate.URIs),
-		"other_sans":            getOtherSANsStringFromExtensions(certificate.Extensions),
+		"other_sans":            otherSans,
 		"signature_bits":        findSignatureBits(certificate.SignatureAlgorithm),
 		"exclude_cn_from_sans":  determineExcludeCnFromCertSans(certificate),
 		"ou":                    certificate.Subject.OrganizationalUnit,
@@ -1754,6 +1778,25 @@ func parseCertificateToFields(certificate x509.Certificate) (templateData map[st
 	}
 
 	return templateData, nil
+}
+
+func getBasicConstraintsFromExtension(exts []pkix.Extension) (found bool, isCA bool, maxPathLength int, err error) {
+	for _, ext := range exts {
+		if ext.Id.Equal(ExtensionBasicConstraintsOID) {
+			type basicConstraints struct {
+				IsCA       bool `asn1:"optional"`
+				MaxPathLen int  `asn1:"optional,default:-1"`
+			}
+			basicConstraint := basicConstraints{}
+			_, err := asn1.Unmarshal(ext.Value, &basicConstraint)
+			if err != nil {
+				return false, false, -1, errutil.InternalError{Err: errwrap.Wrapf("error unmarshalling basic constraints: {{err}}", err).Error()}
+			}
+			return true, basicConstraint.IsCA, basicConstraint.MaxPathLen, nil
+		}
+	}
+
+	return false, false, -1, nil
 }
 
 func makeAltNamesCommaSeparatedString(names []string, emails []string) string {
