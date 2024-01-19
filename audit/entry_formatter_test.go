@@ -326,18 +326,16 @@ func TestEntryFormatter_Process(t *testing.T) {
 			}
 
 			processed, err := f.Process(ctx, e)
-			b, found := e.Format(string(tc.RequiredFormat))
 
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 				require.Nil(t, processed)
-				require.False(t, found)
-				require.Nil(t, b)
 			default:
 				require.NoError(t, err)
 				require.NotNil(t, processed)
+				b, found := processed.Format(string(tc.RequiredFormat))
 				require.True(t, found)
 				require.NotNil(t, b)
 			}
