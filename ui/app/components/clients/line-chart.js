@@ -15,6 +15,7 @@ import { line } from 'd3-shape';
 import { BLUE_PALETTE, UPGRADE_WARNING, SVG_DIMENSIONS, formatNumbers } from 'vault/utils/chart-helpers';
 import { parseAPITimestamp, formatChartDate } from 'core/utils/date-formatters';
 import { formatNumber } from 'core/helpers/format-number';
+import { format } from 'date-fns';
 
 /**
  * @module LineChart
@@ -43,6 +44,55 @@ export default class LineChart extends Component {
 
   get xKey() {
     return this.args.xKey || 'month';
+  }
+
+  get chartHeight() {
+    return this.args.chartHeight || SVG_DIMENSIONS.height;
+  }
+
+  get yDomain() {
+    const setMax = max(this.data.map((d) => d.y));
+    const nearest = setMax < 1500 ? 200 : 2000;
+    // Round to upper 200 or 2000
+    return [0, Math.ceil((setMax + 200) / nearest) * nearest];
+  }
+
+  get upgradeByMonthYear() {
+    return this.args.upgradeData?.reduce((acc, upgrade) => {
+      if (upgrade.timestampInstalled) {
+        const key = parseAPITimestamp(upgrade.timestampInstalled, 'M/yy');
+        acc[key] = upgrade;
+      }
+      return acc;
+    }, {});
+  }
+
+  tooltipData(datum) {
+    const upgradeKey = parseAPITimestamp(datum.timestamp, 'M/yy');
+    const upgradeInfo = this.upgradeByMonthYear[upgradeKey];
+    if (upgradeInfo) {
+      const { version, previousVersion } = upgradeInfo;
+      return `Vault was upgraded
+        ${previousVersion ? 'from ' + previousVersion : ''} to ${version}`;
+    }
+    return null;
+  }
+
+  get upgradedMonths() {
+    return this.data.filter((datum) => datum.tooltipUpgrade);
+  }
+  get data() {
+    return this.args.dataset?.map((datum) => {
+      const date = parseAPITimestamp(datum.timestamp);
+      const tooltip = this.tooltipData(datum);
+      return {
+        month: datum[this.xKey],
+        x: date,
+        y: datum[this.yKey],
+        new: [datum?.new_clients[this.yKey] || 0],
+        tooltipUpgrade: tooltip,
+      };
+    });
   }
 
   get upgradeData() {
@@ -167,6 +217,7 @@ export default class LineChart extends Component {
       .enter()
       .append('circle')
       .attr('class', 'hover-circle')
+      .attr('fill', 'red')
       .style('cursor', 'pointer')
       .style('opacity', '0')
       .attr('cy', (d) => `${100 - yScale(d[this.yKey])}%`)
@@ -193,4 +244,18 @@ export default class LineChart extends Component {
       this.tooltipTarget = node;
     });
   }
+
+  formatCount = (count) => {
+    return formatNumbers([count]);
+  };
+  formatMonth = (timestamp) => {
+    return format(timestamp, 'M/yy');
+  };
+  tooltipX = (original) => {
+    return original.toString();
+  };
+  tooltipY = (original) => {
+    const offset = `${this.chartHeight - original + 20}`;
+    return offset;
+  };
 }
