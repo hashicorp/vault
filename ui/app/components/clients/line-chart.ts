@@ -38,11 +38,11 @@ interface UpgradeByMonth {
  * ```js
  * <LineChart @dataset={{dataset}} @upgradeData={{this.versionHistory}}/>
  * ```
- * @param {string} xKey - string denoting key for x-axis data of dataset. Should reference a timestamp string.
- * @param {string} yKey - string denoting key for y-axis data of dataset. Should reference a number or null.
- * @param {array} upgradeData - array of objects containing version history from the /version-history endpoint
+ * @param {array} dataset - array of objects containing data to be plotted
+ * @param {string} [xKey=clients] - string denoting key for x-axis data of dataset. Should reference a timestamp string.
+ * @param {string} [yKey=timestamp] - string denoting key for y-axis data of dataset. Should reference a number or null.
+ * @param {array} [upgradeData=null] - array of objects containing version history from the /version-history endpoint
  * @param {number} [chartHeight=190] - height of chart in pixels
- * @param {string} [dateFormat='M/yy'] - format of date string in xKey
  */
 export default class LineChart extends Component<Args> {
   // Chart settings
