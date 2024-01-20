@@ -490,7 +490,7 @@ func TestSystemBackend_mount_secret_identity_token_key(t *testing.T) {
 			}
 			resp, err := b.HandleRequest(ctx, req)
 			if tt.wantErr {
-				require.Error(t, err)
+				require.Nil(t, err)
 				require.Equal(t, fmt.Errorf("key %q does not exist", tt.keyName), resp.Error())
 				return
 			}
@@ -563,7 +563,7 @@ func TestSystemBackend_mount_auth_identity_token_key(t *testing.T) {
 			}
 			resp, err := b.HandleRequest(ctx, req)
 			if tt.wantErr {
-				require.Error(t, err)
+				require.Nil(t, err)
 				require.Equal(t, fmt.Errorf("key %q does not exist", tt.keyName), resp.Error())
 				return
 			}

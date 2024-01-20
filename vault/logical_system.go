@@ -1502,12 +1502,15 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 
 	if apiConfig.IdentityTokenKey != "" {
-		exists, err := identityStoreKeyExists(ctx, b.Core.IdentityStore(), apiConfig.IdentityTokenKey)
+		identityStore := b.Core.IdentityStore()
+		identityStore.oidcLock.RLock()
+		defer identityStore.oidcLock.RUnlock()
+		k, err := identityStore.getNamedKey(ctx, identityStore.view, apiConfig.IdentityTokenKey)
 		if err != nil {
 			return handleError(err)
 		}
-		if !exists {
-			return handleError(fmt.Errorf("key %q does not exist", apiConfig.IdentityTokenKey))
+		if k == nil {
+			return logical.ErrorResponse("key %q does not exist", apiConfig.IdentityTokenKey), nil
 		}
 
 		config.IdentityTokenKey = apiConfig.IdentityTokenKey
@@ -1542,18 +1545,6 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 
 	return resp, nil
-}
-
-// identityStoreKeyExists returns true if the given key exists in the identity store.
-func identityStoreKeyExists(ctx context.Context, store *IdentityStore, name string) (bool, error) {
-	store.oidcLock.Lock()
-	defer store.oidcLock.Unlock()
-	k, err := store.getNamedKey(ctx, store.view, name)
-	if err != nil {
-		return false, err
-	}
-
-	return k != nil, nil
 }
 
 func selectPluginVersion(ctx context.Context, sys logical.SystemView, pluginName string, pluginType consts.PluginType) (string, error) {
@@ -2280,12 +2271,15 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		identityTokenKey := rawVal.(string)
 
 		if identityTokenKey != "" {
-			exists, err := identityStoreKeyExists(ctx, b.Core.IdentityStore(), identityTokenKey)
+			identityStore := b.Core.IdentityStore()
+			identityStore.oidcLock.RLock()
+			defer identityStore.oidcLock.RUnlock()
+			k, err := identityStore.getNamedKey(ctx, identityStore.view, identityTokenKey)
 			if err != nil {
 				return handleError(err)
 			}
-			if !exists {
-				return handleError(fmt.Errorf("key %q does not exist", identityTokenKey))
+			if k == nil {
+				return logical.ErrorResponse("key %q does not exist", identityTokenKey), nil
 			}
 		}
 
@@ -3068,12 +3062,15 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 
 	if apiConfig.IdentityTokenKey != "" {
-		exists, err := identityStoreKeyExists(ctx, b.Core.IdentityStore(), apiConfig.IdentityTokenKey)
+		identityStore := b.Core.IdentityStore()
+		identityStore.oidcLock.RLock()
+		defer identityStore.oidcLock.RUnlock()
+		k, err := identityStore.getNamedKey(ctx, identityStore.view, apiConfig.IdentityTokenKey)
 		if err != nil {
 			return handleError(err)
 		}
-		if !exists {
-			return handleError(fmt.Errorf("key %q does not exist", apiConfig.IdentityTokenKey))
+		if k == nil {
+			return logical.ErrorResponse("key %q does not exist", apiConfig.IdentityTokenKey), nil
 		}
 
 		config.IdentityTokenKey = apiConfig.IdentityTokenKey
