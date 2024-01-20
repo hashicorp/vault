@@ -1502,20 +1502,15 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 
 	if apiConfig.IdentityTokenKey != "" {
-		config.IdentityTokenKey = apiConfig.IdentityTokenKey
-
-		// Ensure the key exists in the identity store
-		identityStore := b.Core.IdentityStore()
-		identityStoreView := identityStore.view
-		identityStore.oidcLock.Lock()
-		defer identityStore.oidcLock.Unlock()
-		k, err := identityStore.getNamedKey(ctx, identityStoreView, config.IdentityTokenKey)
+		exists, err := identityStoreKeyExists(ctx, b.Core.IdentityStore(), apiConfig.IdentityTokenKey)
 		if err != nil {
 			return handleError(err)
 		}
-		if k == nil {
-			return handleError(fmt.Errorf("key %q does not exist", config.IdentityTokenKey))
+		if !exists {
+			return handleError(fmt.Errorf("key %q does not exist", apiConfig.IdentityTokenKey))
 		}
+
+		config.IdentityTokenKey = apiConfig.IdentityTokenKey
 	}
 
 	// Create the mount entry
@@ -1547,6 +1542,18 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 
 	return resp, nil
+}
+
+// identityStoreKeyExists returns true if the given key exists in the identity store.
+func identityStoreKeyExists(ctx context.Context, store *IdentityStore, name string) (bool, error) {
+	store.oidcLock.Lock()
+	defer store.oidcLock.Unlock()
+	k, err := store.getNamedKey(ctx, store.view, name)
+	if err != nil {
+		return false, err
+	}
+
+	return k != nil, nil
 }
 
 func selectPluginVersion(ctx context.Context, sys logical.SystemView, pluginName string, pluginType consts.PluginType) (string, error) {
@@ -2272,17 +2279,12 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	if rawVal, ok := data.GetOk("identity_token_key"); ok {
 		identityTokenKey := rawVal.(string)
 
-		// Ensure the key exists in the identity store
 		if identityTokenKey != "" {
-			identityStore := b.Core.IdentityStore()
-			identityStoreView := identityStore.view
-			identityStore.oidcLock.Lock()
-			defer identityStore.oidcLock.Unlock()
-			k, err := identityStore.getNamedKey(ctx, identityStoreView, identityTokenKey)
+			exists, err := identityStoreKeyExists(ctx, b.Core.IdentityStore(), identityTokenKey)
 			if err != nil {
 				return handleError(err)
 			}
-			if k == nil {
+			if !exists {
 				return handleError(fmt.Errorf("key %q does not exist", identityTokenKey))
 			}
 		}
@@ -3066,20 +3068,15 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 
 	if apiConfig.IdentityTokenKey != "" {
-		config.IdentityTokenKey = apiConfig.IdentityTokenKey
-
-		// Ensure the key exists in the identity store
-		identityStore := b.Core.IdentityStore()
-		identityStoreView := identityStore.view
-		identityStore.oidcLock.Lock()
-		defer identityStore.oidcLock.Unlock()
-		k, err := identityStore.getNamedKey(ctx, identityStoreView, config.IdentityTokenKey)
+		exists, err := identityStoreKeyExists(ctx, b.Core.IdentityStore(), apiConfig.IdentityTokenKey)
 		if err != nil {
 			return handleError(err)
 		}
-		if k == nil {
-			return handleError(fmt.Errorf("key %q does not exist", config.IdentityTokenKey))
+		if !exists {
+			return handleError(fmt.Errorf("key %q does not exist", apiConfig.IdentityTokenKey))
 		}
+
+		config.IdentityTokenKey = apiConfig.IdentityTokenKey
 	}
 
 	// Create the mount entry
