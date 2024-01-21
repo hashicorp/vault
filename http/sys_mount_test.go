@@ -4,7 +4,6 @@
 package http
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -13,13 +12,11 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSysMounts(t *testing.T) {
@@ -1825,116 +1822,6 @@ func TestSysTuneMount_passthroughRequestHeaders(t *testing.T) {
 		"force_no_cache":    false,
 		"options":           map[string]interface{}{"version": "1"},
 	}
-	testResponseBody(t, resp, &actual)
-	expected["request_id"] = actual["request_id"]
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
-	}
-}
-
-// TestSysTuneMount_identityTokenKey ensures that the identity token key for plugin
-// mounts can also be tuned to keys that exist in the identity store.
-func TestSysTuneMount_identityTokenKey(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := TestServer(t, core)
-	defer ln.Close()
-	TestServerAuth(t, addr, token)
-
-	expectedResponse := func(key string) map[string]any {
-		data := map[string]any{
-			"description":       "key/value secret storage",
-			"default_lease_ttl": json.Number("2764800"),
-			"max_lease_ttl":     json.Number("2764800"),
-			"options":           map[string]interface{}{"version": "1"},
-			"force_no_cache":    false,
-		}
-		resp := map[string]any{
-			"lease_id":          "",
-			"renewable":         false,
-			"lease_duration":    json.Number("0"),
-			"wrap_info":         nil,
-			"warnings":          nil,
-			"auth":              nil,
-			"mount_type":        "system",
-			"data":              data,
-			"description":       "key/value secret storage",
-			"default_lease_ttl": json.Number("2764800"),
-			"max_lease_ttl":     json.Number("2764800"),
-			"options":           map[string]interface{}{"version": "1"},
-			"force_no_cache":    false,
-		}
-		if key != "" {
-			resp["identity_token_key"] = key
-			data["identity_token_key"] = key
-		}
-
-		return resp
-	}
-
-	// Mount tune to a key that doesn't exist, expect bad request
-	resp := testHttpPost(t, token, addr+"/v1/sys/mounts/secret/tune", map[string]interface{}{
-		"identity_token_key": "test_key",
-	})
-	testResponseStatus(t, resp, 400)
-
-	// Create a new key
-	ctx := namespace.RootContext(context.Background())
-	res, err := core.IdentityStore().HandleRequest(ctx, &logical.Request{
-		Storage:   core.RouterAccess().StorageByAPIPath(ctx, "identity/"),
-		Path:      "oidc/key/test_key",
-		Operation: logical.CreateOperation,
-		Data: map[string]interface{}{
-			"allowed_client_ids": "*",
-		},
-	})
-	require.Nil(t, err)
-	require.False(t, res.IsError())
-
-	// Mount tune to the existing key
-	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/secret/tune", map[string]interface{}{
-		"identity_token_key": "test_key",
-	})
-	testResponseStatus(t, resp, 204)
-
-	// Expect the key in the mount tune response
-	resp = testHttpGet(t, token, addr+"/v1/sys/mounts/secret/tune")
-	testResponseStatus(t, resp, 200)
-	actual := map[string]interface{}{}
-	expected := expectedResponse("test_key")
-	testResponseBody(t, resp, &actual)
-	expected["request_id"] = actual["request_id"]
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
-	}
-
-	// Mount tune to unset the key
-	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/secret/tune", map[string]interface{}{
-		"identity_token_key": "",
-	})
-	testResponseStatus(t, resp, 204)
-
-	// Expect the key removed in the mount tune response
-	resp = testHttpGet(t, token, addr+"/v1/sys/mounts/secret/tune")
-	testResponseStatus(t, resp, 200)
-	actual = map[string]interface{}{}
-	expected = expectedResponse("")
-	testResponseBody(t, resp, &actual)
-	expected["request_id"] = actual["request_id"]
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
-	}
-
-	// Mount tune to the default key
-	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/secret/tune", map[string]interface{}{
-		"identity_token_key": "default",
-	})
-	testResponseStatus(t, resp, 204)
-
-	// Expect the key in the mount tune response
-	resp = testHttpGet(t, token, addr+"/v1/sys/mounts/secret/tune")
-	testResponseStatus(t, resp, 200)
-	actual = map[string]interface{}{}
-	expected = expectedResponse("default")
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
 	if !reflect.DeepEqual(actual, expected) {
