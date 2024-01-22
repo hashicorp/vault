@@ -45,6 +45,10 @@ module('Integration | Component | clients/token/monthly-new', function (hooks) {
     ]);
   });
 
+  hooks.after(function () {
+    timestamp.now.restore();
+  });
+
   test('it should render with full month activity data', async function (assert) {
     const expectedNewEntity = formatNumber([calculateAverage(this.newActivity, 'entity_clients')]);
     const expectedNewNonEntity = formatNumber([calculateAverage(this.newActivity, 'non_entity_clients')]);
