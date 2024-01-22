@@ -18,4 +18,5 @@ export const PAGE = {
   alert: (name) => `data-test-custom-alert=${name}`,
   alertTitle: (name) => `[data-test-custom-alert-title="${name}"]`,
   alertDescription: (name) => `[data-test-custom-alert-description="${name}"]`,
+  badge: (name) => `[data-test-badge="${name}"]`,
 };

@@ -46,8 +46,8 @@ module('Integration | Component | messages/page/details', function (hooks) {
       title: 'Message title 1',
       message: 'Some long long long message',
       link: { here: 'www.example.com' },
-      startTime: '2021-08-01T00:00:00Z',
-      endTime: '',
+      start_time: '2021-08-01T00:00:00Z',
+      end_time: '',
       canDeleteCustomMessages: true,
       canEditCustomMessages: true,
     });
