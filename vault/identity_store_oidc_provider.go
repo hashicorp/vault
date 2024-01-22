@@ -166,6 +166,7 @@ type providerDiscovery struct {
 	Subjects              []string `json:"subject_types_supported"`
 	GrantTypes            []string `json:"grant_types_supported"`
 	AuthMethods           []string `json:"token_endpoint_auth_methods_supported"`
+	CodeChallengeMethods  []string `json:"code_challenge_methods_supported"`
 }
 
 type authCodeCacheEntry struct {
@@ -1571,6 +1572,10 @@ func (i *IdentityStore) pathOIDCProviderDiscovery(ctx context.Context, req *logi
 			"none",
 			"client_secret_basic",
 			"client_secret_post",
+		},
+		CodeChallengeMethods: []string{
+			codeChallengeMethodPlain,
+			codeChallengeMethodS256,
 		},
 	}
 
