@@ -45,6 +45,9 @@ export const SELECTORS = {
   },
   charts: {
     verticalBar: '[data-test-vertical-bar-chart]',
+    line: {
+      xAxisLabel: '[data-test-line-chart] [data-test-x-axis] text',
+    },
   },
   emptyStateTitle: '[data-test-empty-state-title]',
   usageStats: '[data-test-usage-stats]',

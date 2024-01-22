@@ -51,7 +51,7 @@ module('Acceptance | clients | counts overview', function (hooks) {
       .dom(SELECTORS.runningTotalMonthlyCharts)
       .exists('Shows running totals with monthly breakdown charts');
     assert
-      .dom(find('[data-test-line-chart="x-axis-labels"] g.tick text'))
+      .dom(SELECTORS.charts.line.xAxisLabel)
       .hasText(`7/22`, 'x-axis labels start with billing start date');
     assert.strictEqual(
       findAll('[data-test-line-chart="plot-point"]').length,
@@ -67,7 +67,7 @@ module('Acceptance | clients | counts overview', function (hooks) {
     if (parseInt(find('[data-test-display-year]').innerText) > LICENSE_START.getFullYear()) {
       await click('[data-test-previous-year]');
     }
-    await click(find(`[data-test-calendar-month=${ARRAY_OF_MONTHS[LICENSE_START.getMonth()]}]`));
+    await click(`[data-test-calendar-month=${ARRAY_OF_MONTHS[LICENSE_START.getMonth()]}]`);
     assert
       .dom(SELECTORS.runningTotalMonthStats)
       .doesNotExist('running total single month stat boxes do not show');
@@ -99,7 +99,7 @@ module('Acceptance | clients | counts overview', function (hooks) {
       .dom(SELECTORS.runningTotalMonthlyCharts)
       .exists('Shows running totals with monthly breakdown charts');
     assert
-      .dom(find('[data-test-line-chart="x-axis-labels"] g.tick text'))
+      .dom(SELECTORS.charts.line.xAxisLabel)
       .hasText(`8/22`, 'x-axis labels start with updated billing start month');
     assert.strictEqual(
       findAll('[data-test-line-chart="plot-point"]').length,
@@ -111,7 +111,7 @@ module('Acceptance | clients | counts overview', function (hooks) {
     await click(SELECTORS.rangeDropdown);
     await click('[data-test-show-calendar]');
     await click('[data-test-previous-year]');
-    await click(find(`[data-test-calendar-month="October"]`));
+    await click('[data-test-calendar-month="October"]');
 
     assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
     assert
@@ -122,7 +122,7 @@ module('Acceptance | clients | counts overview', function (hooks) {
       3,
       `line chart plots 3 points to match query`
     );
-    const xAxisLabels = findAll('[data-test-line-chart="x-axis-labels"] g.tick text');
+    const xAxisLabels = findAll(SELECTORS.charts.line.xAxisLabel);
     assert
       .dom(xAxisLabels[xAxisLabels.length - 1])
       .hasText(`10/22`, 'x-axis labels end with queried end month');
@@ -131,7 +131,7 @@ module('Acceptance | clients | counts overview', function (hooks) {
     await click(SELECTORS.rangeDropdown);
     await click('[data-test-show-calendar]');
     assert.dom('[data-test-display-year]').hasText('2022');
-    await click(find(`[data-test-calendar-month="August"]`));
+    await click('[data-test-calendar-month="August"]');
 
     assert.dom(SELECTORS.runningTotalMonthStats).exists('running total single month stat boxes show');
     assert
@@ -172,11 +172,8 @@ module('Acceptance | clients | counts overview', function (hooks) {
     await settled();
     const topNamespace = response.byNamespace[0];
     const topMount = topNamespace.mounts[0];
-    assert.strictEqual(
-      find(SELECTORS.selectedNs).innerText.toLowerCase(),
-      topNamespace.label,
-      'selects top namespace'
-    );
+
+    assert.dom(SELECTORS.selectedNs).hasText(topNamespace.label, 'selects top namespace');
     assert.dom('[data-test-top-attribution]').includesText('Top auth method');
     assert
       .dom('[data-test-running-total-entity] p')
@@ -198,12 +195,9 @@ module('Acceptance | clients | counts overview', function (hooks) {
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
     await settled();
+
     assert.ok(true, 'Filter by first auth method');
-    assert.strictEqual(
-      find(SELECTORS.selectedAuthMount).innerText.toLowerCase(),
-      topMount.label,
-      'selects top mount'
-    );
+    assert.dom(SELECTORS.selectedAuthMount).hasText(topMount.label, 'selects top mount');
     assert
       .dom('[data-test-running-total-entity] p')
       .includesText(`${formatNumber([topMount.entity_clients])}`, 'total entity clients is accurate');
