@@ -37,6 +37,7 @@ export default IdentityModel.extend({
   }),
   metadata: attr('object', {
     editType: 'kv',
+    isSectionHeader: true,
   }),
   policies: attr({
     editType: 'yield',
