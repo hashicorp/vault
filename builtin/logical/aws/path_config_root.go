@@ -139,13 +139,13 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 
 	rotationSchedule := data.Get("rotation_schedule").(string)
 	rotationScheduleOk := rotationSchedule != ""
-	rotationWindow, rotationWindowOk := data.Get("rotation_window").(int)
-	ttl, ttlOk := data.Get("ttl").(int)
+	rotationWindow, rotationWindowOk := data.GetOk("rotation_window")
+	ttl, ttlOk := data.GetOk("ttl")
 
 	b.clientMutex.Lock()
 	defer b.clientMutex.Unlock()
 
-	entry, err := logical.StorageEntryJSON("config/root", rootConfig{
+	rootConfigEntry := rootConfig{
 		AccessKey:        data.Get("access_key").(string),
 		SecretKey:        data.Get("secret_key").(string),
 		IAMEndpoint:      iamendpoint,
@@ -153,10 +153,19 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		Region:           region,
 		MaxRetries:       maxretries,
 		UsernameTemplate: usernameTemplate,
-		RotationSchedule: rotationSchedule,
-		RotationWindow:   rotationWindow,
-		TTL:              ttl,
-	})
+	}
+
+	if rotationScheduleOk {
+		rootConfigEntry.RotationSchedule = rotationSchedule
+	}
+	if rotationWindowOk {
+		rootConfigEntry.RotationWindow = rotationWindow.(int)
+	}
+	if ttlOk {
+		rootConfigEntry.TTL = ttl.(int)
+	}
+
+	entry, err := logical.StorageEntryJSON("config/root", rootConfigEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +189,8 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	}
 
 	if rotationScheduleOk && rotationWindowOk {
-		rc, err = logical.GetRootCredential(rotationSchedule, "aws/config/root", "aws-root-creds", rotationWindow, 0)
+		rotationWindowSeconds := rotationWindow.(int)
+		rc, err = logical.GetRootCredential(rotationSchedule, "aws/config/root", "aws-root-creds", rotationWindowSeconds, 0)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
@@ -189,7 +199,8 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	}
 
 	if ttlOk {
-		rc, err = logical.GetRootCredential("", "aws/config/root", "aws-root-creds", 0, ttl)
+		ttlSeconds := ttl.(int)
+		rc, err = logical.GetRootCredential("", "aws/config/root", "aws-root-creds", 0, ttlSeconds)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
