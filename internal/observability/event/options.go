@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
 	"github.com/hashicorp/go-uuid"
 )
 
@@ -160,7 +159,7 @@ func WithMaxDuration(duration string) Option {
 
 		parsed, err := parseutil.ParseDurationSecond(duration)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to parse max duration: %w", err)
 		}
 
 		o.withMaxDuration = parsed

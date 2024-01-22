@@ -417,7 +417,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "socket.Factory: failed to parse 'write_timeout': time: invalid duration \"qwerty\"",
+			expectedErrorMessage: "socket.Factory: error configuring sink node: socket.(Backend).configureSinkNode: error creating socket sink node: event.NewSocketSink: error applying options: unable to parse max duration: time: invalid duration \"qwerty\"",
 		},
 		"non-fallback-device-with-filter": {
 			backendConfig: &audit.BackendConfig{
