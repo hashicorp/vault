@@ -6,13 +6,14 @@
 import Component from '@glimmer/component';
 import { BAR_WIDTH, formatNumbers } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
-import type { SerializedChartData } from 'vault/client-counts';
+import type { Count, MonthlyChartData } from 'vault/vault/charts/client-counts';
 import { tracked } from '@glimmer/tracking';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { format } from 'date-fns';
+import { toLabel } from 'core/helpers/to-label';
 
 interface Args {
-  data: SerializedChartData[];
+  data: MonthlyChartData[];
   dataKey: string;
   chartTitle: string;
   chartHeight?: number;
@@ -27,21 +28,19 @@ interface ChartData {
 }
 
 /**
- * @module ClientsSyncBarChartComponent
+ * @module VerticalBarBasic
  * Renders a bar chart of secret syncs over time.
  *
  * @example
- * ```js
- * <Clients::SyncBarChart
+ <Clients::Charts::VerticalBarBasic
     @chartTitle="Secret Sync client counts"
     @data={{this.model}}
     @dataKey="secret_syncs"
     @showTable={{true}}
     @chartHeight={{200}}
   />
- * ```
  */
-export default class ClientsSyncBarChartComponent extends Component<Args> {
+export default class VerticalBarBasic extends Component<Args> {
   barWidth = BAR_WIDTH;
 
   @tracked activeDatum: ChartData | null = null;
@@ -53,11 +52,11 @@ export default class ClientsSyncBarChartComponent extends Component<Args> {
   get chartData() {
     return this.args.data.map((d): ChartData => {
       const date = parseAPITimestamp(d.timestamp) as Date;
-      const count = (d[this.args.dataKey] as number) ?? null;
+      const count = d[this.args.dataKey as keyof Count] ?? null;
       return {
         x: format(date, 'M/yy'),
         y: count,
-        tooltip: count === null ? 'No data' : `${formatNumber([count])} secret syncs`,
+        tooltip: count === null ? 'No data' : `${formatNumber([count])} ${toLabel([this.args.dataKey])}`,
         legendX: format(date, 'MMMM yyyy'),
         legendY: (count ?? 'No data').toString(),
       };
