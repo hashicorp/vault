@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { module, test } from 'qunit';
+import { module, test, skip } from 'qunit';
 import sinon from 'sinon';
 import { visit, currentURL, click, findAll, find, settled } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
@@ -94,7 +94,8 @@ module('Acceptance | client counts token', function (hooks) {
     assert.dom(SELECTORS.filterBar).doesNotExist('Does not show filter bar');
   });
 
-  test('visiting entity/non-entity tab with config on and data with mounts', async function (assert) {
+  // moved to counts overview test
+  skip('visiting entity/non-entity tab with config on and data with mounts', async function (assert) {
     assert.expect(8);
 
     await visit('/vault/clients/token');
@@ -120,7 +121,8 @@ module('Acceptance | client counts token', function (hooks) {
     );
   });
 
-  test('updates correctly when querying date ranges', async function (assert) {
+  // moved to counts overview test
+  skip('updates correctly when querying date ranges', async function (assert) {
     assert.expect(27);
 
     await visit('/vault/clients/token');
@@ -228,7 +230,8 @@ module('Acceptance | client counts token', function (hooks) {
       );
   });
 
-  test('totals filter correctly with full data', async function (assert) {
+  // moved to counts overview test
+  skip('totals filter correctly with full data', async function (assert) {
     assert.expect(21);
 
     await visit('/vault/clients/token');

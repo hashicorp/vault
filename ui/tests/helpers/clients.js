@@ -6,6 +6,7 @@
 import { Response } from 'miragejs';
 import { SELECTORS as GENERAL } from 'vault/tests/helpers/general-selectors';
 import { click } from '@ember/test-helpers';
+import { addMonths, startOfMonth, subMonths } from 'date-fns';
 
 /** Scenarios
   Config off, no data
@@ -47,6 +48,7 @@ export const SELECTORS = {
   dateDropdownSubmit: '[data-test-date-dropdown-submit]',
   runningTotalMonthStats: '[data-test-running-total="single-month-stats"]',
   runningTotalMonthlyCharts: '[data-test-running-total="monthly-charts"]',
+  monthlyNewChart: '[data-test-chart="monthly new"]',
   monthlyUsageBlock: '[data-test-monthly-usage]',
   selectedAuthMount: 'div#auth-method-search-select [data-test-selected-option] div',
   selectedNs: 'div#namespace-search-select [data-test-selected-option] div',
@@ -103,3 +105,9 @@ export async function dateDropdownSelect(month, year) {
   await click(dateDropdown.selectYear(year));
   await click(dateDropdown.submit);
 }
+
+export const STATIC_NOW = new Date('2023-01-13T14:15:00');
+// for testing, we're in the middle of a license/billing period
+export const LICENSE_START = startOfMonth(subMonths(STATIC_NOW, 6)); // 2022-07-01
+// upgrade happened 1 month after license start
+export const UPGRADE_DATE = addMonths(LICENSE_START, 1); // 2022-08-01
