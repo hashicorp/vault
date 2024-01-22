@@ -36,7 +36,7 @@ func NewStdoutSinkNode(format string) (*StdoutSink, error) {
 }
 
 // Process persists the provided eventlogger.Event to the standard output stream.
-func (s *StdoutSink) Process(ctx context.Context, event *eventlogger.Event) (*eventlogger.Event, error) {
+func (s *StdoutSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	const op = "event.(StdoutSink).Process"
 
 	select {
@@ -45,11 +45,11 @@ func (s *StdoutSink) Process(ctx context.Context, event *eventlogger.Event) (*ev
 	default:
 	}
 
-	if event == nil {
+	if e == nil {
 		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
 	}
 
-	formattedBytes, found := event.Format(s.requiredFormat)
+	formattedBytes, found := e.Format(s.requiredFormat)
 	if !found {
 		return nil, fmt.Errorf("%s: unable to retrieve event formatted as %q", op, s.requiredFormat)
 	}
