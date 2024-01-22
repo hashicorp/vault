@@ -118,6 +118,14 @@ are enabled.
   Vault supports enabling only a single fallback audit device.
 </Note>
 
+#### Enabling the fallback audit device
+
+[Enabling the fallback audit device](/vault/docs/audit#fallback) requires supplying the `fallback` option:
+
+```shell-session
+vault audit enable -path=my-fallback file file_path=/var/audit.fallback.log fallback=true
+```
+
 ### Metrics
 
 When a fallback device is enabled, and required to persist an audit entry to the audit log,
