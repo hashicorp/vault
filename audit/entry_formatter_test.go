@@ -5,48 +5,22 @@ package audit
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/internal/observability/event"
-
-	"github.com/hashicorp/vault/helper/namespace"
-
-	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internal/observability/event"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/require"
 )
-
-// fakeEvent will return a new fake event containing audit data based  on the
-// specified subtype, format and logical.LogInput.
-func fakeEvent(tb testing.TB, subtype subtype, format format, input *logical.LogInput) *eventlogger.Event {
-	tb.Helper()
-
-	date := time.Date(2023, time.July, 11, 15, 49, 10, 0o0, time.Local)
-
-	auditEvent, err := NewEvent(subtype,
-		WithID("123"),
-		WithNow(date),
-	)
-	require.NoError(tb, err)
-	require.NotNil(tb, auditEvent)
-	require.Equal(tb, "123", auditEvent.ID)
-	require.Equal(tb, "v0.1", auditEvent.Version)
-	require.Equal(tb, subtype, auditEvent.Subtype)
-	require.Equal(tb, date, auditEvent.Timestamp)
-
-	auditEvent.Data = input
-
-	e := &eventlogger.Event{
-		Type:      eventlogger.EventType(event.AuditType),
-		CreatedAt: auditEvent.Timestamp,
-		Formatted: make(map[string][]byte),
-		Payload:   auditEvent,
-	}
-
-	return e
-}
 
 // TestNewEntryFormatter ensures we can create new EntryFormatter structs.
 func TestNewEntryFormatter(t *testing.T) {
@@ -297,7 +271,7 @@ func TestEntryFormatter_Process(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			e := fakeEvent(t, tc.Subtype, tc.RequiredFormat, tc.Data)
+			e := fakeEvent(t, tc.Subtype, tc.Data)
 			require.NotNil(t, e)
 
 			ss := newStaticSalt(t)
@@ -317,18 +291,16 @@ func TestEntryFormatter_Process(t *testing.T) {
 			}
 
 			processed, err := f.Process(ctx, e)
-			b, found := e.Format(string(tc.RequiredFormat))
 
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 				require.Nil(t, processed)
-				require.False(t, found)
-				require.Nil(t, b)
 			default:
 				require.NoError(t, err)
 				require.NotNil(t, processed)
+				b, found := processed.Format(string(tc.RequiredFormat))
 				require.True(t, found)
 				require.NotNil(t, b)
 			}
@@ -381,20 +353,413 @@ func BenchmarkAuditFileSink_Process(b *testing.B) {
 	require.NotNil(b, sink)
 
 	// Generate the event
-	event := fakeEvent(b, RequestType, JSONFormat, in)
-	require.NotNil(b, event)
+	e := fakeEvent(b, RequestType, in)
+	require.NotNil(b, e)
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			event, err = formatter.Process(ctx, event)
+			e2, err := formatter.Process(ctx, e)
 			if err != nil {
 				panic(err)
 			}
-			_, err := sink.Process(ctx, event)
+			_, err = sink.Process(ctx, e2)
 			if err != nil {
 				panic(err)
 			}
 		}
 	})
+}
+
+// TestEntryFormatter_Process_JSON ensures that the JSON output we get matches what
+// we expect for the specified LogInput.
+func TestEntryFormatter_Process_JSON(t *testing.T) {
+	ss := newStaticSalt(t)
+
+	expectedResultStr := fmt.Sprintf(testFormatJSONReqBasicStrFmt, ss.salt.GetIdentifiedHMAC("foo"))
+
+	issueTime, _ := time.Parse(time.RFC3339, "2020-05-28T13:40:18-05:00")
+	cases := map[string]struct {
+		Auth        *logical.Auth
+		Req         *logical.Request
+		Err         error
+		Prefix      string
+		ExpectedStr string
+	}{
+		"auth, request": {
+			&logical.Auth{
+				ClientToken:     "foo",
+				Accessor:        "bar",
+				DisplayName:     "testtoken",
+				EntityID:        "foobarentity",
+				NoDefaultPolicy: true,
+				Policies:        []string{"root"},
+				TokenType:       logical.TokenTypeService,
+				LeaseOptions: logical.LeaseOptions{
+					TTL:       time.Hour * 4,
+					IssueTime: issueTime,
+				},
+			},
+			&logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "/foo",
+				Connection: &logical.Connection{
+					RemoteAddr: "127.0.0.1",
+				},
+				WrapInfo: &logical.RequestWrapInfo{
+					TTL: 60 * time.Second,
+				},
+				Headers: map[string][]string{
+					"foo": {"bar"},
+				},
+			},
+			errors.New("this is an error"),
+			"",
+			expectedResultStr,
+		},
+		"auth, request with prefix": {
+			&logical.Auth{
+				ClientToken:     "foo",
+				Accessor:        "bar",
+				EntityID:        "foobarentity",
+				DisplayName:     "testtoken",
+				NoDefaultPolicy: true,
+				Policies:        []string{"root"},
+				TokenType:       logical.TokenTypeService,
+				LeaseOptions: logical.LeaseOptions{
+					TTL:       time.Hour * 4,
+					IssueTime: issueTime,
+				},
+			},
+			&logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "/foo",
+				Connection: &logical.Connection{
+					RemoteAddr: "127.0.0.1",
+				},
+				WrapInfo: &logical.RequestWrapInfo{
+					TTL: 60 * time.Second,
+				},
+				Headers: map[string][]string{
+					"foo": {"bar"},
+				},
+			},
+			errors.New("this is an error"),
+			"@cee: ",
+			expectedResultStr,
+		},
+	}
+
+	for name, tc := range cases {
+		cfg, err := NewFormatterConfig(WithHMACAccessor(false))
+		require.NoError(t, err)
+		formatter, err := NewEntryFormatter(cfg, ss, WithPrefix(tc.Prefix))
+		require.NoError(t, err)
+
+		in := &logical.LogInput{
+			Auth:     tc.Auth,
+			Request:  tc.Req,
+			OuterErr: tc.Err,
+		}
+
+		// Create an audit event and more generic eventlogger.event to allow us
+		// to process (format).
+		auditEvent, err := NewEvent(RequestType)
+		require.NoError(t, err)
+		auditEvent.Data = in
+
+		e := &eventlogger.Event{
+			Type:      eventlogger.EventType(event.AuditType.String()),
+			CreatedAt: time.Now(),
+			Formatted: make(map[string][]byte),
+			Payload:   auditEvent,
+		}
+
+		e2, err := formatter.Process(namespace.RootContext(nil), e)
+		require.NoErrorf(t, err, "bad: %s\nerr: %s", name, err)
+
+		jsonBytes, ok := e2.Format(JSONFormat.String())
+		require.True(t, ok)
+		require.Positive(t, len(jsonBytes))
+
+		if !strings.HasPrefix(string(jsonBytes), tc.Prefix) {
+			t.Fatalf("no prefix: %s \n log: %s\nprefix: %s", name, expectedResultStr, tc.Prefix)
+		}
+
+		expectedJSON := new(RequestEntry)
+
+		if err := jsonutil.DecodeJSON([]byte(expectedResultStr), &expectedJSON); err != nil {
+			t.Fatalf("bad json: %s", err)
+		}
+		expectedJSON.Request.Namespace = &Namespace{ID: "root"}
+
+		actualJSON := new(RequestEntry)
+		if err := jsonutil.DecodeJSON(jsonBytes[len(tc.Prefix):], &actualJSON); err != nil {
+			t.Fatalf("bad json: %s", err)
+		}
+
+		expectedJSON.Time = actualJSON.Time
+
+		expectedBytes, err := json.Marshal(expectedJSON)
+		if err != nil {
+			t.Fatalf("unable to marshal json: %s", err)
+		}
+
+		if !strings.HasSuffix(strings.TrimSpace(string(jsonBytes)), string(expectedBytes)) {
+			t.Fatalf("bad: %s\nResult:\n\n%q\n\nExpected:\n\n%q", name, string(jsonBytes), string(expectedBytes))
+		}
+	}
+}
+
+// TestEntryFormatter_Process_JSONx ensures that the JSONx output we get matches what
+// we expect for the specified LogInput.
+func TestEntryFormatter_Process_JSONx(t *testing.T) {
+	s, err := salt.NewSalt(context.Background(), nil, nil)
+	require.NoError(t, err)
+	tempStaticSalt := &staticSalt{salt: s}
+
+	fooSalted := s.GetIdentifiedHMAC("foo")
+	issueTime, _ := time.Parse(time.RFC3339, "2020-05-28T13:40:18-05:00")
+
+	cases := map[string]struct {
+		Auth        *logical.Auth
+		Req         *logical.Request
+		Err         error
+		Prefix      string
+		Result      string
+		ExpectedStr string
+	}{
+		"auth, request": {
+			&logical.Auth{
+				ClientToken:     "foo",
+				Accessor:        "bar",
+				DisplayName:     "testtoken",
+				EntityID:        "foobarentity",
+				NoDefaultPolicy: true,
+				Policies:        []string{"root"},
+				TokenType:       logical.TokenTypeService,
+				LeaseOptions: logical.LeaseOptions{
+					TTL:       time.Hour * 4,
+					IssueTime: issueTime,
+				},
+			},
+			&logical.Request{
+				ID:                  "request",
+				ClientToken:         "foo",
+				ClientTokenAccessor: "bar",
+				Operation:           logical.UpdateOperation,
+				Path:                "/foo",
+				Connection: &logical.Connection{
+					RemoteAddr: "127.0.0.1",
+				},
+				WrapInfo: &logical.RequestWrapInfo{
+					TTL: 60 * time.Second,
+				},
+				Headers: map[string][]string{
+					"foo": {"bar"},
+				},
+				PolicyOverride: true,
+			},
+			errors.New("this is an error"),
+			"",
+			"",
+			fmt.Sprintf(`<json:object name="auth"><json:string name="accessor">bar</json:string><json:string name="client_token">%s</json:string><json:string name="display_name">testtoken</json:string><json:string name="entity_id">foobarentity</json:string><json:boolean name="no_default_policy">true</json:boolean><json:array name="policies"><json:string>root</json:string></json:array><json:string name="token_issue_time">2020-05-28T13:40:18-05:00</json:string><json:number name="token_ttl">14400</json:number><json:string name="token_type">service</json:string></json:object><json:string name="error">this is an error</json:string><json:object name="request"><json:string name="client_token">%s</json:string><json:string name="client_token_accessor">bar</json:string><json:object name="headers"><json:array name="foo"><json:string>bar</json:string></json:array></json:object><json:string name="id">request</json:string><json:object name="namespace"><json:string name="id">root</json:string></json:object><json:string name="operation">update</json:string><json:string name="path">/foo</json:string><json:boolean name="policy_override">true</json:boolean><json:string name="remote_address">127.0.0.1</json:string><json:number name="wrap_ttl">60</json:number></json:object><json:string name="type">request</json:string>`,
+				fooSalted, fooSalted),
+		},
+		"auth, request with prefix": {
+			&logical.Auth{
+				ClientToken:     "foo",
+				Accessor:        "bar",
+				DisplayName:     "testtoken",
+				NoDefaultPolicy: true,
+				EntityID:        "foobarentity",
+				Policies:        []string{"root"},
+				TokenType:       logical.TokenTypeService,
+				LeaseOptions: logical.LeaseOptions{
+					TTL:       time.Hour * 4,
+					IssueTime: issueTime,
+				},
+			},
+			&logical.Request{
+				ID:                  "request",
+				ClientToken:         "foo",
+				ClientTokenAccessor: "bar",
+				Operation:           logical.UpdateOperation,
+				Path:                "/foo",
+				Connection: &logical.Connection{
+					RemoteAddr: "127.0.0.1",
+				},
+				WrapInfo: &logical.RequestWrapInfo{
+					TTL: 60 * time.Second,
+				},
+				Headers: map[string][]string{
+					"foo": {"bar"},
+				},
+				PolicyOverride: true,
+			},
+			errors.New("this is an error"),
+			"",
+			"@cee: ",
+			fmt.Sprintf(`<json:object name="auth"><json:string name="accessor">bar</json:string><json:string name="client_token">%s</json:string><json:string name="display_name">testtoken</json:string><json:string name="entity_id">foobarentity</json:string><json:boolean name="no_default_policy">true</json:boolean><json:array name="policies"><json:string>root</json:string></json:array><json:string name="token_issue_time">2020-05-28T13:40:18-05:00</json:string><json:number name="token_ttl">14400</json:number><json:string name="token_type">service</json:string></json:object><json:string name="error">this is an error</json:string><json:object name="request"><json:string name="client_token">%s</json:string><json:string name="client_token_accessor">bar</json:string><json:object name="headers"><json:array name="foo"><json:string>bar</json:string></json:array></json:object><json:string name="id">request</json:string><json:object name="namespace"><json:string name="id">root</json:string></json:object><json:string name="operation">update</json:string><json:string name="path">/foo</json:string><json:boolean name="policy_override">true</json:boolean><json:string name="remote_address">127.0.0.1</json:string><json:number name="wrap_ttl">60</json:number></json:object><json:string name="type">request</json:string>`,
+				fooSalted, fooSalted),
+		},
+	}
+
+	for name, tc := range cases {
+		cfg, err := NewFormatterConfig(
+			WithOmitTime(true),
+			WithHMACAccessor(false),
+			WithFormat(JSONxFormat.String()),
+		)
+		require.NoError(t, err)
+		formatter, err := NewEntryFormatter(cfg, tempStaticSalt, WithPrefix(tc.Prefix))
+		require.NoError(t, err)
+		require.NotNil(t, formatter)
+
+		in := &logical.LogInput{
+			Auth:     tc.Auth,
+			Request:  tc.Req,
+			OuterErr: tc.Err,
+		}
+
+		// Create an audit event and more generic eventlogger.event to allow us
+		// to process (format).
+		auditEvent, err := NewEvent(RequestType)
+		require.NoError(t, err)
+		auditEvent.Data = in
+
+		e := &eventlogger.Event{
+			Type:      eventlogger.EventType(event.AuditType.String()),
+			CreatedAt: time.Now(),
+			Formatted: make(map[string][]byte),
+			Payload:   auditEvent,
+		}
+
+		e2, err := formatter.Process(namespace.RootContext(nil), e)
+		require.NoErrorf(t, err, "bad: %s\nerr: %s", name, err)
+
+		jsonxBytes, ok := e2.Format(JSONxFormat.String())
+		require.True(t, ok)
+		require.Positive(t, len(jsonxBytes))
+
+		if !strings.HasPrefix(string(jsonxBytes), tc.Prefix) {
+			t.Fatalf("no prefix: %s \n log: %s\nprefix: %s", name, tc.Result, tc.Prefix)
+		}
+
+		if !strings.HasSuffix(strings.TrimSpace(string(jsonxBytes)), string(tc.ExpectedStr)) {
+			t.Fatalf(
+				"bad: %s\nResult:\n\n%q\n\nExpected:\n\n%q",
+				name, strings.TrimSpace(string(jsonxBytes)), string(tc.ExpectedStr))
+		}
+	}
+}
+
+// TestEntryFormatter_Process_NoMutation tests that the event returned by an
+// EntryFormatter.Process method is not the same as the one that it accepted.
+func TestEntryFormatter_Process_NoMutation(t *testing.T) {
+	// Create the formatter node.
+	cfg, err := NewFormatterConfig()
+	require.NoError(t, err)
+	ss := newStaticSalt(t)
+	formatter, err := NewEntryFormatter(cfg, ss)
+	require.NoError(t, err)
+	require.NotNil(t, formatter)
+
+	in := &logical.LogInput{
+		Auth: &logical.Auth{
+			ClientToken:     "foo",
+			Accessor:        "bar",
+			EntityID:        "foobarentity",
+			DisplayName:     "testtoken",
+			NoDefaultPolicy: true,
+			Policies:        []string{"root"},
+			TokenType:       logical.TokenTypeService,
+		},
+		Request: &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "/foo",
+			Connection: &logical.Connection{
+				RemoteAddr: "127.0.0.1",
+			},
+			WrapInfo: &logical.RequestWrapInfo{
+				TTL: 60 * time.Second,
+			},
+			Headers: map[string][]string{
+				"foo": {"bar"},
+			},
+		},
+	}
+
+	e := fakeEvent(t, RequestType, in)
+
+	e2, err := formatter.Process(namespace.RootContext(nil), e)
+	require.NoError(t, err)
+	require.NotNil(t, e2)
+
+	// Ensure the pointers are different.
+	require.NotEqual(t, e2, e)
+
+	// Do the same for the audit event in the payload.
+	a, ok := e.Payload.(*AuditEvent)
+	require.True(t, ok)
+	require.NotNil(t, a)
+
+	a2, ok := e2.Payload.(*AuditEvent)
+	require.True(t, ok)
+	require.NotNil(t, a2)
+
+	require.NotEqual(t, a2, a)
+}
+
+// hashExpectedValueForComparison replicates enough of the audit HMAC process on a piece of expected data in a test,
+// so that we can use assert.Equal to compare the expected and output values.
+func (f *EntryFormatter) hashExpectedValueForComparison(input map[string]any) map[string]any {
+	// Copy input before modifying, since we may re-use the same data in another test
+	copied, err := copystructure.Copy(input)
+	if err != nil {
+		panic(err)
+	}
+	copiedAsMap := copied.(map[string]any)
+
+	s, err := f.salter.Salt(context.Background())
+	if err != nil {
+		panic(err)
+	}
+
+	err = hashMap(s.GetIdentifiedHMAC, copiedAsMap, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	return copiedAsMap
+}
+
+// fakeEvent will return a new fake event containing audit data based  on the
+// specified subtype, format and logical.LogInput.
+func fakeEvent(tb testing.TB, subtype subtype, input *logical.LogInput) *eventlogger.Event {
+	tb.Helper()
+
+	date := time.Date(2023, time.July, 11, 15, 49, 10, 0o0, time.Local)
+
+	auditEvent, err := NewEvent(subtype,
+		WithID("123"),
+		WithNow(date),
+	)
+	require.NoError(tb, err)
+	require.NotNil(tb, auditEvent)
+	require.Equal(tb, "123", auditEvent.ID)
+	require.Equal(tb, "v0.1", auditEvent.Version)
+	require.Equal(tb, subtype, auditEvent.Subtype)
+	require.Equal(tb, date, auditEvent.Timestamp)
+
+	auditEvent.Data = input
+
+	e := &eventlogger.Event{
+		Type:      eventlogger.EventType(event.AuditType),
+		CreatedAt: auditEvent.Timestamp,
+		Formatted: make(map[string][]byte),
+		Payload:   auditEvent,
+	}
+
+	return e
 }
