@@ -23,7 +23,6 @@
       </FormField>
       {{#if (eq attr.name "message")}}
         <Hds::Alert class="has-top-margin-negative-m has-bottom-margin-l" @type="compact" @color="highlight" as |A|>
-          <A.Title>Title here</A.Title>
           <A.Description>Note: Do not include sensitive info in this message since users are unauthenticated at this stage.</A.Description>
         </Hds::Alert>
       {{/if}}
