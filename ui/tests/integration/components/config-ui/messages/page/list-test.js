@@ -38,8 +38,8 @@ module('Integration | Component | messages/page/list', function (hooks) {
       title: 'Message title 1',
       message: 'Some long long long message',
       link: { title: 'here', href: 'www.example.com' },
-      startTime: '2021-08-01T00:00:00Z',
-      endTime: '',
+      start_time: '2021-08-01T00:00:00Z',
+      end_time: '',
     });
     this.store.pushPayload('config-ui/message', {
       modelName: 'config-ui/message',
@@ -50,8 +50,8 @@ module('Integration | Component | messages/page/list', function (hooks) {
       title: 'Message title 2',
       message: 'Some long long long message blah blah blah',
       link: { title: 'here', href: 'www.example2.com' },
-      startTime: '2023-07-01T00:00:00Z',
-      endTime: '2023-08-01T00:00:00Z',
+      start_time: '2023-07-01T00:00:00Z',
+      end_time: '2023-08-01T00:00:00Z',
     });
     this.store.pushPayload('config-ui/message', {
       modelName: 'config-ui/message',
@@ -62,8 +62,6 @@ module('Integration | Component | messages/page/list', function (hooks) {
       title: 'Message title 3',
       message: 'Some long long long message',
       link: { title: 'here', href: 'www.example.com' },
-      startTime: new Date().toISOString(),
-      endTime: '2090-08-01T00:00:00Z',
     });
   });
 
@@ -107,7 +105,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
         title: `Message title ${i}`,
         message: 'Some long long long message',
         link: { title: 'here', href: 'www.example.com' },
-        startTime: '2021-08-01T00:00:00Z',
+        start_time: '2021-08-01T00:00:00Z',
       });
     }
 
@@ -140,6 +138,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
       owner: this.engine,
     });
     assert.dom(PAGE.badge('0')).hasClass('hds-badge--color-success');
-    assert.dom(PAGE.badge('1')).hasClass('hds-badge--color-highlight');
+    assert.dom(PAGE.badge('1')).hasClass('hds-badge--color-neutral');
+    assert.dom(PAGE.badge('2')).hasClass('hds-badge--color-highlight');
   });
 });
