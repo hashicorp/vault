@@ -1502,12 +1502,17 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 
 	if apiConfig.IdentityTokenKey != "" {
+		storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+		if storage == nil {
+			return nil, errors.New("failed to find identity storage")
+		}
+
 		identityStore := b.Core.IdentityStore()
 		identityStore.oidcLock.RLock()
 		defer identityStore.oidcLock.RUnlock()
-		k, err := identityStore.getNamedKey(ctx, identityStore.view, apiConfig.IdentityTokenKey)
+		k, err := identityStore.getNamedKey(ctx, storage, apiConfig.IdentityTokenKey)
 		if err != nil {
-			return handleError(err)
+			return nil, fmt.Errorf("failed getting key %q: %w", apiConfig.IdentityTokenKey, err)
 		}
 		if k == nil {
 			return logical.ErrorResponse("key %q does not exist", apiConfig.IdentityTokenKey), nil
@@ -2271,12 +2276,17 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		identityTokenKey := rawVal.(string)
 
 		if identityTokenKey != "" {
+			storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+			if storage == nil {
+				return nil, errors.New("failed to find identity storage")
+			}
+
 			identityStore := b.Core.IdentityStore()
 			identityStore.oidcLock.RLock()
 			defer identityStore.oidcLock.RUnlock()
-			k, err := identityStore.getNamedKey(ctx, identityStore.view, identityTokenKey)
+			k, err := identityStore.getNamedKey(ctx, storage, identityTokenKey)
 			if err != nil {
-				return handleError(err)
+				return nil, fmt.Errorf("failed getting key %q: %w", identityTokenKey, err)
 			}
 			if k == nil {
 				return logical.ErrorResponse("key %q does not exist", identityTokenKey), nil
@@ -3062,12 +3072,17 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 
 	if apiConfig.IdentityTokenKey != "" {
+		storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+		if storage == nil {
+			return nil, errors.New("failed to find identity storage")
+		}
+
 		identityStore := b.Core.IdentityStore()
 		identityStore.oidcLock.RLock()
 		defer identityStore.oidcLock.RUnlock()
-		k, err := identityStore.getNamedKey(ctx, identityStore.view, apiConfig.IdentityTokenKey)
+		k, err := identityStore.getNamedKey(ctx, storage, apiConfig.IdentityTokenKey)
 		if err != nil {
-			return handleError(err)
+			return nil, fmt.Errorf("failed getting key %q: %w", apiConfig.IdentityTokenKey, err)
 		}
 		if k == nil {
 			return logical.ErrorResponse("key %q does not exist", apiConfig.IdentityTokenKey), nil
