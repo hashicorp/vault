@@ -111,3 +111,18 @@ the following two expressions would be equivalent.
 
 Filters are executed on Vault nodes and therefore will consume some amount
 of CPU time on the node.
+
+<Note title="Regular expressions">
+  Using multiple/complex expressions including regular expressions
+  (regex) will have a larger impact on performance than fewer/simpler filters.
+</Note>
+
+We recommend that all filters are tested in pre-production environments in order
+to ensure correctness.
+
+Ideally you should [codify your management of Vault](/vault/tutorials/operations/codify-mgmt-vault-terraform)
+using tools such as [Terraform](https://www.terraform.io/), to prevent accidentally enabling an audit device
+in a production environment with untested/incorrect settings.
+
+Finally, always ensure you profile production-like workloads within your pre-production
+environments in order to accurately assess the performance of Vault.

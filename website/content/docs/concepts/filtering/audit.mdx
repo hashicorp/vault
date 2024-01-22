@@ -17,23 +17,44 @@ is used to evaluate audit entries and decide if they should be written to a part
 audit log. Please ensure you are familiar with the [filtering concept](/vault/docs/concepts/filtering) before
 attempting to configure an audit device with a filter.
 
+<Note title="Advanced audit feature">
+  The use of filtering in Vault's audit system should be considered an advanced feature.
+  Whilst it has been designed to be simple and flexible, exclusively enabling filtered
+  devices could result in some requests and responses that are not audited.
+</Note>
+
+Please see the [Vault security model](/vault/docs/internals/security) for further information.
+
 ## `filter` option
 
 All audit device types ([file](/vault/docs/audit/file), [socket](/vault/docs/audit/socket)
 and [syslog](/vault/docs/audit/syslog)) support the `filter` option at the time they
 are enabled. After successfully enabling a device with a filter, every audit entry
 that Vault sends to that audit device will be compared to the expression in the filter.
-Audit entries that match the filter should then be written to the device's audit log.
+Only audit entries that match the filter should then be written to the device's audit log.
 
 ### Valid `filter` properties
 
 Filters can reference the following properties of an audit entry:
 
-* `mount_point` - mount point for the request.
+* `mount_point` - path to the mount (e.g. [auth method](/vault/docs/auth), [secret engine](/vault/docs/secrets)),
+including namespaces.
 * `mount_type` - type of mount being interacted with.
 * `namespace` - [namespace](/vault/docs/enterprise/namespaces) the request is taking place within.
-* `operation` - operation being performed.
+* `operation` - [operation](/vault/docs/glossary#operation) being performed.
 * `path` - full path of the request.
+
+### Example filters
+
+The following are examples that could be supplied as a `filter` value.
+
+| Purpose                                                                                | Filter                                  |
+|----------------------------------------------------------------------------------------|-----------------------------------------|
+| Only persist audit entries for requests within `ns1`                                   | `namespace == ns1`                      |
+| Only persist audit entries for requests that are **not** in the root namespace         | `namespace != \"\"`                     |
+| Only persist audit entries that interact with `kv` engines                             | `mount_type == kv`                      |
+| Only persist audit entries that attempt to perform `read` operations                   | `operation == read`                     |
+| Only persist audit entries for requests that interact with `kv` within namespace `ns2` | `namespace == ns2 and mount_type == kv` |
 
 ### Scenario: `kv` only
 
@@ -48,7 +69,7 @@ A Vault Operator wants only `kv` type audit entries to be written to an audit lo
 2. List the enabled audit devices:
 
     ```
-    vault audit list
+    vault audit list --detailed
     ```
 
 3. Enable a `kv` secrets engine:
@@ -69,27 +90,27 @@ A Vault Operator wants only `kv` type audit entries to be written to an audit lo
     vault audit disable -path kv-only
     ```
 
-In the steps above we performed a number of actions against Vault that generate
-audit entries. However, only two of them had a `mount_type` of `kv` (3 and 4).
+The steps above performed a number of actions against Vault that generate audit entries.
+However, only two of them had a `mount_type` of `kv` (steps 3 and 4).
 
-Viewing the contents of the file audit log at `/var/audit.log` we see only audit
+Viewing the contents of the file audit log at `/var/audit.log` will show that only audit
 entries related to steps 3 and 4, with a request and response audit entry for each.
 
 ## Fallback device
 
-The ability to filter audit entries provides great flexibility to our customer's workflows,
+The ability to filter audit entries can provide great flexibility to your workflows,
 however the additional complexity could mean that a Vault Operator could configure
 their audit devices in such a way that some audit entries are missed out from the audit log entirely.
 
-The `fallback` audit is the mechanism by which Vault can continue to adhere to
+The `fallback` audit device is the mechanism by which Vault can continue to adhere to
 Vault's [security model](/vault/docs/internals/security), that all requests and
 responses are successfully logged before the client receives any secret material.
 
 When filtered audit devices are enabled, alongside the fallback audit device, any
 audit entry that would have been ignored/missed due to filter settings will be sent
-to the fallback device to be written to its audit log.
+to the fallback device to be written to an audit log.
 
-This means we are able to provide the same guarantee that 'at least one device must
+This means Vault is able to provide the same guarantee that 'at least one device must
 successfully write an audit entry' as when only standard/non-filtered audit devices
 are enabled.
 
@@ -97,3 +118,13 @@ are enabled.
   Vault supports enabling only a single fallback audit device.
 </Note>
 
+### Metrics
+
+When a fallback device is enabled, and required to persist an audit entry to the audit log,
+Vault will emit a [fallback 'success' metric](/vault/docs/internals/telemetry/metrics/audit#vault-audit-fallback-success) on
+a successful write to the audit log.
+
+If audit devices are enabled that make use of filtering, but no fallback audit device
+has been enabled, Vault will produce a [fallback 'miss' metric](/vault/docs/internals/telemetry/metrics/audit#vault-audit-fallback-miss)
+as a way to allow Operators to understand how many auditable Vault entries are not
+being persisted to their audit logs.
