@@ -1288,7 +1288,7 @@ func TestOIDC_pathOIDCKeyExistenceCheck(t *testing.T) {
 		t.Fatalf("Expected existence check to return false but instead returned: %t", exists)
 	}
 
-	// Populte storage with a namedKey
+	// Populate storage with a namedKey
 	namedKey := &namedKey{}
 	entry, _ := logical.StorageEntryJSON(namedKeyConfigPath+keyName, namedKey)
 	if err := storage.Put(ctx, entry); err != nil {
