@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/mitchellh/copystructure"
@@ -1751,7 +1752,7 @@ func (c *Core) resolveMountEntryVersion(ctx context.Context, pluginType consts.P
 		pluginName = alias
 	}
 	pinnedVersion, err := c.pluginCatalog.GetPinnedVersion(ctx, pluginType, pluginName)
-	if err != nil {
+	if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
 		return "", err
 	}
 	if pinnedVersion != nil {

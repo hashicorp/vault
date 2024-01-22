@@ -96,6 +96,8 @@ func TestCore_EnableExternalPlugin(t *testing.T) {
 	}
 }
 
+// TestCore_UpgradePluginUsingPinnedVersion tests a full workflow of upgrading
+// an external plugin gated by pinned versions.
 func TestCore_UpgradePluginUsingPinnedVersion(t *testing.T) {
 	cluster := NewTestCluster(t, &CoreConfig{}, &TestClusterOptions{
 		Plugins: []*TestPluginConfig{

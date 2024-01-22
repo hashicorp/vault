@@ -5,6 +5,7 @@ package pluginutil
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -16,6 +17,9 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"google.golang.org/grpc"
 )
+
+// ErrPluginNotFound is returned when a plugin does not have a pinned version.
+var ErrPinnedVersionNotFound = errors.New("pinned version not found")
 
 // Looker defines the plugin Lookup function that looks into the plugin catalog
 // for available plugins and returns a PluginRunner

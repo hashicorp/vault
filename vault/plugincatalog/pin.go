@@ -68,7 +68,7 @@ func (c *PluginCatalog) getPinnedVersionInternal(ctx context.Context, key string
 	}
 
 	if logicalEntry == nil {
-		return nil, nil
+		return nil, pluginutil.ErrPinnedVersionNotFound
 	}
 
 	var pin pluginutil.PinnedVersion
@@ -111,9 +111,6 @@ func (c *PluginCatalog) ListPinnedVersions(ctx context.Context) ([]*pluginutil.P
 		pin, err := c.getPinnedVersionInternal(ctx, key)
 		if err != nil {
 			return nil, err
-		}
-		if pin == nil {
-			continue
 		}
 
 		pinnedVersions = append(pinnedVersions, pin)

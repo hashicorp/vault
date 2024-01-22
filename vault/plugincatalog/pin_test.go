@@ -15,6 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestPluginCatalog_PinnedVersionCRUD tests the CRUD operations for pinned
+// versions.
 func TestPluginCatalog_PinnedVersionCRUD(t *testing.T) {
 	catalog := testPluginCatalog(t)
 
@@ -85,7 +87,7 @@ func TestPluginCatalog_PinnedVersionCRUD(t *testing.T) {
 
 	// Verify that the pinned version is deleted.
 	pinnedVersion, err = catalog.GetPinnedVersion(context.Background(), pin.Type, pin.Name)
-	assert.Nil(t, err)
+	assert.Equal(t, pluginutil.ErrPinnedVersionNotFound, err)
 	assert.Nil(t, pinnedVersion)
 
 	// List should be empty again.

@@ -1082,6 +1082,8 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 	}
 }
 
+// TestPluginCatalog_CannotDeletePinnedVersion ensures we cannot delete a
+// plugin which is referred to in an active pinned version.
 func TestPluginCatalog_CannotDeletePinnedVersion(t *testing.T) {
 	pluginCatalog := testPluginCatalog(t)
 

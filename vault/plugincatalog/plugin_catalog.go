@@ -1015,7 +1015,7 @@ func (c *PluginCatalog) Delete(ctx context.Context, name string, pluginType cons
 	defer c.lock.Unlock()
 
 	pin, err := c.getPinnedVersionInternal(ctx, pinnedVersionStorageKey(pluginType, name))
-	if err != nil {
+	if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
 		return err
 	}
 	if pin != nil && pin.Version == pluginVersion {

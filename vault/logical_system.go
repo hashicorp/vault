@@ -1980,7 +1980,7 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 	} else {
 		pinnedVersion, err = b.Core.pluginCatalog.GetPinnedVersion(ctx, consts.PluginTypeSecrets, mountEntry.Type)
 	}
-	if err != nil {
+	if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
 		return nil, err
 	}
 	if pinnedVersion != nil && mountEntry.Version != pinnedVersion.Version {
@@ -2233,7 +2233,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 
 		pinnedVersion, err := b.Core.pluginCatalog.GetPinnedVersion(ctx, pluginType, mountEntry.Type)
-		if err != nil {
+		if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
 			return nil, err
 		}
 		if pinnedVersion != nil {
@@ -3064,7 +3064,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 
 func (b *SystemBackend) validateVersion(ctx context.Context, version string, pluginName string, pluginType consts.PluginType) (string, *logical.Response, error) {
 	pinnedVersion, err := b.Core.pluginCatalog.GetPinnedVersion(ctx, pluginType, pluginName)
-	if err != nil {
+	if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
 		return "", nil, err
 	}
 	if pinnedVersion != nil {
