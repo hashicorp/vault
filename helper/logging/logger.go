@@ -162,11 +162,11 @@ func Setup(config *LogConfig, w io.Writer) (hclog.InterceptLogger, error) {
 	}
 
 	logger := hclog.NewInterceptLogger(&hclog.LoggerOptions{
-		Name:              config.Name,
-		Level:             config.LogLevel,
-		IndependentLevels: true,
-		Output:            io.MultiWriter(writers...),
-		JSONFormat:        config.isFormatJson(),
+		Name:            config.Name,
+		Level:           config.LogLevel,
+		SyncParentLevel: true,
+		Output:          io.MultiWriter(writers...),
+		JSONFormat:      config.isFormatJson(),
 	})
 
 	return logger, nil

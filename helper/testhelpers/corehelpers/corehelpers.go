@@ -526,14 +526,14 @@ func NewTestLogger(t testing.T) *TestLogger {
 	// We send nothing on the regular logger, that way we can later deregister
 	// the sink to stop logging during cluster cleanup.
 	logger := hclog.NewInterceptLogger(&hclog.LoggerOptions{
-		Output:            io.Discard,
-		IndependentLevels: true,
-		Name:              t.Name(),
+		Output:          io.Discard,
+		SyncParentLevel: true,
+		Name:            t.Name(),
 	})
 	sink := hclog.NewSinkAdapter(&hclog.LoggerOptions{
-		Output:            output,
-		Level:             hclog.Trace,
-		IndependentLevels: true,
+		Output:          output,
+		Level:           hclog.Trace,
+		SyncParentLevel: true,
 	})
 	logger.RegisterSink(sink)
 

@@ -45,10 +45,10 @@ func NewVaultLogger(level log.Level) log.Logger {
 // writer and a Vault formatter
 func NewVaultLoggerWithWriter(w io.Writer, level log.Level) log.Logger {
 	opts := &log.LoggerOptions{
-		Level:             level,
-		IndependentLevels: true,
-		Output:            w,
-		JSONFormat:        ParseEnvLogFormat() == JSONFormat,
+		Level:           level,
+		SyncParentLevel: true,
+		Output:          w,
+		JSONFormat:      ParseEnvLogFormat() == JSONFormat,
 	}
 	return log.New(opts)
 }
