@@ -27,16 +27,16 @@
     </div>
 
     {{#if this.hasAverageNewClients}}
-      <div class="chart-subTitle has-top-padding-l" data-test-monthly-new-entity>
+      <div class="chart-subTitle has-top-padding-l">
         <h3 class="data-details">Average new entity clients per month</h3>
-        <p class="data-details">
+        <p class="data-details" data-test-monthly-new-entity>
           {{format-number this.entityClientData.averageNewClients}}
         </p>
       </div>
 
-      <div class="data-details-top has-top-padding-l" data-test-monthly-new-nonentity>
+      <div class="data-details-top has-top-padding-l">
         <h3 class="data-details">Average new non-entity clients per month</h3>
-        <p class="data-details">
+        <p class="data-details" data-test-monthly-new-nonentity>
           {{format-number this.nonEntityClientData.averageNewClients}}
         </p>
       </div>

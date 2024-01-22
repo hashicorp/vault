@@ -37,6 +37,15 @@ export const SELECTORS = {
     authMounts: '[data-test-counts-auth-mounts]',
     startDiscrepancy: '[data-test-counts-start-discrepancy]',
   },
+  monthlyNew: {
+    entity: '[data-test-monthly-new-entity]',
+    nonentity: '[data-test-monthly-new-nonentity]',
+    timestamp: '[data-test-monthly-new-timestamp]',
+    legend: '[data-test-monthly-new-legend]',
+  },
+  charts: {
+    verticalBar: '[data-test-vertical-bar-chart]',
+  },
   emptyStateTitle: '[data-test-empty-state-title]',
   usageStats: '[data-test-usage-stats]',
   dateDisplay: '[data-test-date-display]',
