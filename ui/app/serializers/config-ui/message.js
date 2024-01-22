@@ -31,8 +31,6 @@ export default class MessageSerializer extends ApplicationSerializer {
   serialize() {
     const json = super.serialize(...arguments);
     json.message = encodeString(json.message);
-    json.link =
-      JSON.stringify(json.link) === '{"":""}' || JSON.stringify(json.link) === '{}' ? null : json.link;
     return json;
   }
 
