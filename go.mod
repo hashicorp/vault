@@ -62,6 +62,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/google/tink/go v1.6.1
+	github.com/hashicorp-forge/bbolt v1.3.8-hc3
 	github.com/hashicorp/cap v0.2.1-0.20230221194157-7894fed1633d
 	github.com/hashicorp/consul-template v0.29.5
 	github.com/hashicorp/consul/api v1.17.0
