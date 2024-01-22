@@ -476,6 +476,9 @@ func testLoadConfigFile(t *testing.T) {
 		EnableResponseHeaderRaftNodeIDRaw: true,
 
 		LicensePath: "/path/to/license",
+
+		PluginDirectory: "/path/to/plugins",
+		PluginTmpdir:    "/tmp/plugins",
 	}
 
 	addExpectedEntConfig(expected, []string{})
