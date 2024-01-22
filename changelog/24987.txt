@@ -1,0 +1,3 @@
+```release-note:feature
+secrets/aws: add WIF support for AWS secrets engine.
+```
