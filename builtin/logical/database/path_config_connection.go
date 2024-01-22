@@ -571,11 +571,11 @@ func (b *databaseBackend) getPinnedVersion(ctx context.Context, pluginName strin
 	}
 
 	pin, err := extendedSys.GetPinnedPluginVersion(ctx, consts.PluginTypeDatabase, pluginName)
+	if errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
+		return "", nil
+	}
 	if err != nil {
 		return "", err
-	}
-	if pin == nil {
-		return "", nil
 	}
 
 	return pin.Version, nil
