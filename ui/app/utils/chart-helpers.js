@@ -20,6 +20,8 @@ export const BAR_WIDTH = 7; // data bar width is 7 pixels
 // Reference for tickFormat https://www.youtube.com/watch?v=c3MCROTNN8g
 export function formatNumbers(number) {
   if (number < 1000) return number;
+  if (number < 1100) return format('.1s')(number);
+  if (number < 2000) return format('.2s')(number); // between 1k and 2k, show 2 decimals
   if (number < 10000) return format('.1s')(number);
   // replace SI prefix of 'G' for billions to 'B'
   return format('.2s')(number).replace('G', 'B');

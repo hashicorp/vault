@@ -111,9 +111,7 @@ module('Acceptance | client counts token', function (hooks) {
     assert
       .dom(SELECTORS.runningTotalMonthlyCharts)
       .exists('Shows running totals with monthly breakdown charts');
-    assert
-      .dom(find('[data-test-line-chart="x-axis-labels"] g.tick text'))
-      .hasText(`7/22`, 'x-axis labels start with billing start date');
+    assert.dom('[data-test-x-axis] text').hasText(`7/22`, 'x-axis labels start with billing start date');
     assert.strictEqual(
       findAll('[data-test-line-chart="plot-point"]').length,
       6,
@@ -168,7 +166,7 @@ module('Acceptance | client counts token', function (hooks) {
       .dom(SELECTORS.runningTotalMonthlyCharts)
       .exists('Shows running totals with monthly breakdown charts');
     assert
-      .dom(find('[data-test-line-chart="x-axis-labels"] g.tick text'))
+      .dom(find('[data-test-x-axis] text'))
       .hasText(`8/22`, 'x-axis labels start with updated billing start month');
     assert.strictEqual(
       findAll('[data-test-line-chart="plot-point"]').length,
@@ -187,12 +185,10 @@ module('Acceptance | client counts token', function (hooks) {
     assert
       .dom(SELECTORS.runningTotalMonthlyCharts)
       .exists('Shows running totals with monthly breakdown charts');
-    assert.strictEqual(
-      findAll('[data-test-line-chart="plot-point"]').length,
-      3,
-      `line chart plots 3 points to match query`
-    );
-    const xAxisLabels = findAll('[data-test-line-chart="x-axis-labels"] g.tick text');
+    assert
+      .dom('[data-test-line-chart="plot-point"]')
+      .exists({ count: 3 }, `line chart plots 3 points to match query`);
+    const xAxisLabels = findAll('[data-test-x-axis] text');
     assert
       .dom(xAxisLabels[xAxisLabels.length - 1])
       .hasText(`10/22`, 'x-axis labels end with queried end month');
@@ -251,11 +247,8 @@ module('Acceptance | client counts token', function (hooks) {
     const topNamespace = response.byNamespace[0];
     const topMount = topNamespace.mounts[0];
     assert.ok(true, 'Filter by first namespace');
-    assert.strictEqual(
-      find(SELECTORS.selectedNs).innerText.toLowerCase(),
-      topNamespace.label,
-      'selects top namespace'
-    );
+    assert.dom('[data-test-selected-option="0"]').hasText(topNamespace.label, 'selects top namespace');
+
     assert.dom('[data-test-top-attribution]').includesText('Top auth method');
     assert
       .dom('[data-test-running-total-entity] p')
