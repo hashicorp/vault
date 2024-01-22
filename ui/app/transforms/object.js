@@ -20,7 +20,7 @@ export default class ObjectTransform extends Transform {
     if (typeOf(value) !== 'object') {
       return {};
     } else {
-      return JSON.stringify(value) === '{"":""}' ? {} : value;
+      return value;
     }
   }
 }
