@@ -1993,6 +1993,8 @@ github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c h1:6rhixN/i8
 github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c/go.mod h1:NMPJylDgVpX0MLRlPy15sqSwOFv/U1GZ2m21JhFfek0=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed h1:5upAirOpQc1Q53c0bnx2ufif5kANL7bfZWcc6VJWJd8=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed/go.mod h1:tMWxXQ9wFIaZeTI9F+hmhFiGpFmhOHzyShyFUhRm0H4=
+github.com/hashicorp-forge/bbolt v1.3.8-hc3 h1:iTWR3RDPj0TGChAvJ8QjHFcNFWAUVgNQV73IE6gAX4E=
+github.com/hashicorp-forge/bbolt v1.3.8-hc3/go.mod h1:sQBu5UIJ+rcUFU4Fo9rpTHNV935jwmGWS3dQ/MV8810=
 github.com/hashicorp/cap v0.3.0 h1:zFzVxuWy78lO6QRLHu/ONkjx/Jh0lpfvPgmpDGri43E=
 github.com/hashicorp/cap v0.3.0/go.mod h1:dHTmyMIVbzT981XxRoci5G//dfWmd/HhuNiCH6J5+IA=
 github.com/hashicorp/consul-template v0.33.0 h1:UNyf7V/nFeh8edh5X6pP8f+9LZVn+DG9uNLLcTpLsFc=
