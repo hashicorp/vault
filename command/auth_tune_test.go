@@ -168,7 +168,7 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 			if diff := deep.Equal([]string{"foo,bar"}, mountInfo.Config.AuditNonHMACResponseKeys); len(diff) > 0 {
 				t.Errorf("Failed to find expected values in AuditNonHMACResponseKeys. Difference is: %v", diff)
 			}
-			if diff := deep.Equal([]string{"default"}, mountInfo.Config.IdentityTokenKey); len(diff) > 0 {
+			if diff := deep.Equal("default", mountInfo.Config.IdentityTokenKey); len(diff) > 0 {
 				t.Errorf("Failed to find expected values in IdentityTokenKey. Difference is: %v", diff)
 			}
 		})
