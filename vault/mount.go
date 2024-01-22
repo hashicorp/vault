@@ -1652,7 +1652,6 @@ func (c *Core) unloadMounts(ctx context.Context) error {
 }
 
 // newLogicalBackend is used to create and configure a new logical backend by name.
-// It also returns the SHA256 of the plugin, if available.
 func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView logical.SystemView, view logical.Storage) (logical.Backend, error) {
 	t := entry.Type
 	if alias, ok := mountAliases[t]; ok {
