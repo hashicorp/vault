@@ -49,11 +49,7 @@
               {{message.title}}
             </Hds::Text::Display>
             <div class="has-top-margin-xs">
-              <Hds::Badge
-                @text={{message.badgeDisplayText}}
-                @color={{message.badgeColor}}
-                data-test-badge={{concat "active:" message.active}}
-              />
+              <Hds::Badge @text={{message.badgeDisplayText}} @color={{message.badgeColor}} data-test-badge={{message.id}} />
               <Hds::Badge
                 @text={{(capitalize message.type)}}
                 @color={{message.badgeColor}}

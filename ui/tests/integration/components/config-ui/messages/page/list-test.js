@@ -31,7 +31,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
 
     this.store.pushPayload('config-ui/message', {
       modelName: 'config-ui/message',
-      id: '01234567-89ab-cdef-0123-456789abcdef',
+      id: '0',
       active: true,
       type: 'banner',
       authenticated: true,
@@ -43,26 +43,26 @@ module('Integration | Component | messages/page/list', function (hooks) {
     });
     this.store.pushPayload('config-ui/message', {
       modelName: 'config-ui/message',
-      id: '01234567-89ab-dddd-0123-456789abcdef',
+      id: '1',
       active: false,
       type: 'modal',
       authenticated: true,
       title: 'Message title 2',
       message: 'Some long long long message blah blah blah',
       link: { title: 'here', href: 'www.example2.com' },
-      startTime: '2023-08-01T00:00:00Z',
+      startTime: '2023-07-01T00:00:00Z',
       endTime: '2023-08-01T00:00:00Z',
     });
     this.store.pushPayload('config-ui/message', {
       modelName: 'config-ui/message',
-      id: '01234567-89ab-vvvv-0123-456789abcdef',
-      active: true,
+      id: '2',
+      active: false,
       type: 'banner',
       authenticated: false,
       title: 'Message title 3',
       message: 'Some long long long message',
       link: { title: 'here', href: 'www.example.com' },
-      startTime: '2021-08-01T00:00:00Z',
+      startTime: new Date().toISOString(),
       endTime: '2090-08-01T00:00:00Z',
     });
   });
@@ -100,7 +100,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
     for (let i = 0; i < 97; i++) {
       this.store.pushPayload('config-ui/message', {
         modelName: 'config-ui/message',
-        id: i,
+        id: `${i}-a`,
         active: true,
         type: 'banner',
         authenticated: false,
@@ -120,7 +120,6 @@ module('Integration | Component | messages/page/list', function (hooks) {
       total: this.messages.length,
       pageSize: 100,
     };
-
     await render(hbs`<Messages::Page::List @messages={{this.messages}} />`, {
       owner: this.engine,
     });
@@ -132,5 +131,15 @@ module('Integration | Component | messages/page/list', function (hooks) {
         'Vault can only store up to 100 messages. To create a message, delete one of your messages to clear up space.'
       );
     await click(PAGE.modalButton('maximum-message-modal'));
+  });
+
+  test('it should show the correct badge colors based on badge status', async function (assert) {
+    this.messages = this.store.peekAll('config-ui/message', {});
+    this.messages.meta = META;
+    await render(hbs`<Messages::Page::List @messages={{this.messages}} />`, {
+      owner: this.engine,
+    });
+    assert.dom(PAGE.badge('0')).hasClass('hds-badge--color-success');
+    assert.dom(PAGE.badge('1')).hasClass('hds-badge--color-highlight');
   });
 });
