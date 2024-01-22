@@ -433,20 +433,30 @@ func (b *SystemBackend) handleCreateCustomMessages(ctx context.Context, req *log
 	}
 
 	var link *uicustommessages.MessageLink
-	if linkMap != nil {
-		link = &uicustommessages.MessageLink{}
-
-		for k, v := range linkMap {
-			href, ok := v.(string)
-			if !ok {
-				return logical.ErrorResponse(fmt.Sprintf("invalid url for %q key in link parameter value", k)), nil
-			}
-
-			link.Title = k
-			link.Href = href
-
-			break
+FORLOOP:
+	for k, v := range linkMap {
+		href, ok := v.(string)
+		switch {
+		case !ok:
+			// href value is not a string, so return an error
+			return logical.ErrorResponse(fmt.Sprintf("invalid url for %q key in link parameter value", k)), nil
+		case len(k) == 0 && len(href) > 0:
+			// no title key, but there's an href value, so return an error
+			return logical.ErrorResponse("missing title key in link parameter value"), nil
+		case len(k) > 0 && len(href) == 0:
+			// no href value, but there's a title key, so return an error
+			return logical.ErrorResponse(fmt.Sprintf("missing url for %q key in link parameter value", k)), nil
+		case len(k) == 0 && len(href) == 0:
+			// no title key and no href value, treat it as if no link was specified
+			break FORLOOP
 		}
+
+		link = &uicustommessages.MessageLink{
+			Title: k,
+			Href:  href,
+		}
+
+		break FORLOOP
 	}
 
 	options, err := parameterValidateMap("options", d)
@@ -577,20 +587,31 @@ func (b *SystemBackend) handleUpdateCustomMessage(ctx context.Context, req *logi
 	}
 
 	var link *uicustommessages.MessageLink
-	if linkMap != nil {
-		link = &uicustommessages.MessageLink{}
+FORLOOP:
+	for k, v := range linkMap {
+		href, ok := v.(string)
 
-		for k, v := range linkMap {
-			href, ok := v.(string)
-			if !ok {
-				return logical.ErrorResponse("invalid url for %q key link parameter value", k), nil
-			}
-
-			link.Title = k
-			link.Href = href
-
-			break
+		switch {
+		case !ok:
+			// href value is not a string, so return an error
+			return logical.ErrorResponse(fmt.Sprintf("invalid url for %q key in link parameter value", k)), nil
+		case len(k) == 0 && len(href) > 0:
+			// no title key, but there's an href value, so return an error
+			return logical.ErrorResponse("missing title key in link parameter value"), nil
+		case len(k) > 0 && len(href) == 0:
+			// no href value, but there's a title key, so return an error
+			return logical.ErrorResponse(fmt.Sprintf("missing url for %q key in link parameter value", k)), nil
+		case len(k) == 0 && len(href) == 0:
+			// no title key and no href value, treat it as if no link was specified
+			break FORLOOP
 		}
+
+		link = &uicustommessages.MessageLink{
+			Title: k,
+			Href:  href,
+		}
+
+		break FORLOOP
 	}
 
 	options, err := parameterValidateMap("options", d)
