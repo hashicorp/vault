@@ -428,10 +428,6 @@ func (b *SystemBackend) handleCreateCustomMessages(ctx context.Context, req *log
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	if len(linkMap) > 1 {
-		return logical.ErrorResponse("invalid number of elements in link parameter value; only a single element can be provided"), nil
-	}
-
 	link, resp := validateLinkMap(linkMap)
 	if resp != nil {
 		return resp, nil
@@ -490,6 +486,10 @@ func (b *SystemBackend) handleCreateCustomMessages(ctx context.Context, req *log
 // Response being returned.
 // If the linkMap is neither invalid nor incomplete, a MessageLink is returned.
 func validateLinkMap(linkMap map[string]any) (*uicustommessages.MessageLink, *logical.Response) {
+	if len(linkMap) > 1 {
+		return nil, logical.ErrorResponse("invalid number of elements in link parameter value; only a single element can be provided")
+	}
+
 	for k, v := range linkMap {
 		href, ok := v.(string)
 
@@ -598,10 +598,6 @@ func (b *SystemBackend) handleUpdateCustomMessage(ctx context.Context, req *logi
 	linkMap, err := parameterValidateMap("link", d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
-	}
-
-	if len(linkMap) > 1 {
-		return logical.ErrorResponse("invalid number of elements in link parameter value; only a single element can be provided"), nil
 	}
 
 	link, resp := validateLinkMap(linkMap)
