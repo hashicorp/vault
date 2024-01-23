@@ -331,11 +331,13 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('does not show kv1 mounts', async function (assert) {
-      await runCommands(['write sys/mounts/kv1 type=kv', 'write kv1/foo bar=baz']);
+      // delete before in case you are rerunning the test and it fails without deleting
+      await consoleComponent.runCommands(deleteEngineCmd('kv1'));
+      await consoleComponent.runCommands([`write sys/mounts/kv1 type=kv`]);
       await settled();
       await visit('/vault/dashboard');
       await click('[data-test-component="search-select"] .ember-basic-dropdown-trigger');
-      assert.dom('.ember-power-select-option').hasTextContaining('kv', 'dropdown shows kv2 mount');
+      assert.dom('.ember-power-select-option').hasTextContaining('kv', 'dropdown shows KV v2 mount');
       assert
         .dom('.ember-power-select-option')
         .doesNotHaveTextContaining('kv1', 'dropdown does not show kv1 mount');
