@@ -13,7 +13,7 @@ import type { Count, MonthlyChartData } from 'vault/vault/charts/client-counts';
 
 interface Args {
   data: MonthlyChartData[];
-  yKey: string;
+  dataKey: string;
   chartTitle: string;
   chartHeight?: number;
 }
@@ -28,13 +28,13 @@ interface ChartData {
 
 /**
  * @module VerticalBarBasic
- * Renders a vertical bar chart of counts (@yKey) over time.
+ * Renders a vertical bar chart of counts fora single data point (@dataKey) over time.
  *
  * @example
  <Clients::Charts::VerticalBarBasic
     @chartTitle="Secret Sync client counts"
     @data={{this.model}}
-    @yKey="secret_syncs"
+    @dataKey="secret_syncs"
     @showTable={{true}}
     @chartHeight={{200}}
   />
@@ -51,12 +51,12 @@ export default class VerticalBarBasic extends Component<Args> {
   get chartData() {
     return this.args.data.map((d): ChartData => {
       const xValue = d.timestamp as string;
-      const yValue = (d[this.args.yKey as keyof Count] as number) ?? null;
+      const yValue = (d[this.args.dataKey as keyof Count] as number) ?? null;
       return {
         x: parseAPITimestamp(xValue, 'M/yy') as string,
         y: yValue,
         tooltip:
-          yValue === null ? 'No data' : `${formatNumber([yValue])} ${this.args.yKey.replace(/_/g, ' ')}`,
+          yValue === null ? 'No data' : `${formatNumber([yValue])} ${this.args.dataKey.replace(/_/g, ' ')}`,
         legendX: parseAPITimestamp(xValue, 'MMMM yyyy') as string,
         legendY: (yValue ?? 'No data').toString(),
       };

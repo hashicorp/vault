@@ -44,7 +44,7 @@ module('Integration | Component | clients/charts/vertical-bar-basic', function (
 
   test('it renders when some months have no data', async function (assert) {
     assert.expect(10);
-    await render(hbs`<Clients::Charts::VerticalBarBasic @data={{this.data}} @yKey="secret_syncs" />`);
+    await render(hbs`<Clients::Charts::VerticalBarBasic @data={{this.data}} @dataKey="secret_syncs" />`);
     assert.dom('[data-test-sync-bar-chart]').exists('renders chart container');
     assert.dom('[data-test-vertical-bar]').exists({ count: 3 }, 'renders 3 vertical bars');
 
@@ -88,7 +88,7 @@ module('Integration | Component | clients/charts/vertical-bar-basic', function (
         secret_syncs: 0,
       },
     ];
-    await render(hbs`<Clients::Charts::VerticalBarBasic @data={{this.data}} @yKey="secret_syncs" />`);
+    await render(hbs`<Clients::Charts::VerticalBarBasic @data={{this.data}} @dataKey="secret_syncs" />`);
 
     assert.dom('[data-test-sync-bar-chart]').exists('renders chart container');
     assert.dom('[data-test-vertical-bar]').exists({ count: 2 }, 'renders 2 vertical bars');
@@ -108,7 +108,7 @@ module('Integration | Component | clients/charts/vertical-bar-basic', function (
   test('it renders underlying data', async function (assert) {
     assert.expect(3);
     await render(
-      hbs`<Clients::Charts::VerticalBarBasic @data={{this.data}} @yKey="secret_syncs" @showTable={{true}} />`
+      hbs`<Clients::Charts::VerticalBarBasic @data={{this.data}} @dataKey="secret_syncs" @showTable={{true}} />`
     );
     assert.dom('[data-test-sync-bar-chart]').exists('renders chart container');
     assert.dom('[data-test-underlying-data]').exists('renders underlying data when showTable=true');
