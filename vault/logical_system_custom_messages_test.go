@@ -494,6 +494,8 @@ func TestHandleCreateAndUpdateCustomMessageLinkProperty(t *testing.T) {
 		linkField             any
 		responseErrorExpected bool
 	}{
+		// First group of testcases, setup an incomplete link parameter,
+		// which result in a CustomMessage with a Link field set to nil
 		{
 			name:      "nil-link",
 			linkField: nil,
@@ -520,6 +522,9 @@ func TestHandleCreateAndUpdateCustomMessageLinkProperty(t *testing.T) {
 				"": nil,
 			},
 		},
+		// Second group of testcases, setup an invalid link parameter,
+		// which result in an error being returned and the message not being
+		// created or updated.
 		{
 			name: "nil-value-link-map",
 			linkField: map[string]any{
