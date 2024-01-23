@@ -7,12 +7,14 @@ import Component from '@glimmer/component';
 import { SVG_DIMENSIONS, formatNumbers } from 'vault/utils/chart-helpers';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { format, isValid } from 'date-fns';
-import { SerializedChartData, UpgradeData } from 'vault/client-counts';
 import { debug } from '@ember/debug';
 
+import type { Count, MonthlyChartData, Timestamp } from 'vault/vault/charts/client-counts';
+import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
+
 interface Args {
-  dataset: SerializedChartData[];
-  upgradeData: UpgradeData[];
+  dataset: MonthlyChartData[];
+  upgradeData: ClientsVersionHistoryModel[];
   xKey?: string;
   yKey?: string;
   chartHeight?: number;
@@ -27,7 +29,7 @@ interface ChartData {
 }
 
 interface UpgradeByMonth {
-  [key: string]: UpgradeData;
+  [key: string]: ClientsVersionHistoryModel;
 }
 
 /**
@@ -59,13 +61,13 @@ export default class LineChart extends Component<Args> {
   get data(): ChartData[] {
     try {
       return this.args.dataset?.map((datum) => {
-        const timestamp = parseAPITimestamp(datum[this.xKey]) as Date;
+        const timestamp = parseAPITimestamp(datum[this.xKey as keyof Timestamp]) as Date;
         if (isValid(timestamp) === false)
-          throw new Error(`Unable to parse value "${datum[this.xKey]}" as date`);
+          throw new Error(`Unable to parse value "${datum[this.xKey as keyof Timestamp]}" as date`);
         const upgradeMessage = this.getUpgradeMessage(datum);
         return {
           x: timestamp,
-          y: (datum[this.yKey] as number) ?? null,
+          y: (datum[this.yKey as keyof Count] as number) ?? null,
           new: this.getNewClients(datum),
           tooltipUpgrade: upgradeMessage,
           month: datum.month,
@@ -107,7 +109,7 @@ export default class LineChart extends Component<Args> {
     );
   }
 
-  getUpgradeMessage(datum: SerializedChartData) {
+  getUpgradeMessage(datum: MonthlyChartData) {
     const upgradeInfo = this.upgradeByMonthYear[datum.month as string];
     if (upgradeInfo) {
       const { version, previousVersion } = upgradeInfo;
@@ -116,9 +118,9 @@ export default class LineChart extends Component<Args> {
     }
     return null;
   }
-  getNewClients(datum: SerializedChartData) {
+  getNewClients(datum: MonthlyChartData) {
     if (!datum?.new_clients) return 0;
-    return (datum?.new_clients[this.yKey] as number) || 0;
+    return (datum?.new_clients[this.yKey as keyof Count] as number) || 0;
   }
 
   hasValue = (count: number | null) => {

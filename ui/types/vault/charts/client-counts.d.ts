@@ -20,4 +20,6 @@ interface Timestamp {
   timestamp: string; // ISO 8601
 }
 
-export interface MonthlyChartData extends Count, EmptyCount, Timestamp {}
+export interface MonthlyChartData extends Count, EmptyCount, Timestamp {
+  new_clients?: Count;
+}
