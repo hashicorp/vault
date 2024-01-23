@@ -1009,9 +1009,9 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 	}
 
 	pluginTypeLoadsFailedErrMap := map[consts.PluginType]error{
-		consts.PluginTypeCredential: ErrAllBackendPluginLoadsFailed,
-		consts.PluginTypeSecrets:    ErrAllBackendPluginLoadsFailed,
-		consts.PluginTypeDatabase:   ErrAllBackendPluginLoadsFailed,
+		consts.PluginTypeCredential: ErrAllContainerizedBackendPluginLoadsFailed,
+		consts.PluginTypeSecrets:    ErrAllContainerizedBackendPluginLoadsFailed,
+		consts.PluginTypeDatabase:   ErrAllContainerizedBackendPluginLoadsFailed,
 	}
 
 	pluginCatalog := testPluginCatalog(t)

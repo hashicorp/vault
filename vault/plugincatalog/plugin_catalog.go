@@ -34,13 +34,13 @@ import (
 )
 
 var (
-	ErrDirectoryNotConfigured       = errors.New("could not set plugin, plugin directory is not configured")
-	ErrPluginNotFound               = errors.New("plugin not found in the catalog")
-	ErrPluginConnectionNotFound     = errors.New("plugin connection not found for client")
-	ErrPluginBadType                = errors.New("unable to determine plugin type")
-	ErrPluginVersionMismatch        = errors.New("plugin version mismatch")
-	ErrAllBackendPluginLoadsFailed  = errors.New("failed to dispense all backend plugins v4 through v5")
-	ErrAllDatabasePluginLoadsFailed = errors.New("failed to load all database plugins v4 through v5")
+	ErrDirectoryNotConfigured                    = errors.New("could not set plugin, plugin directory is not configured")
+	ErrPluginNotFound                            = errors.New("plugin not found in the catalog")
+	ErrPluginConnectionNotFound                  = errors.New("plugin connection not found for client")
+	ErrPluginBadType                             = errors.New("unable to determine plugin type")
+	ErrPluginVersionMismatch                     = errors.New("plugin version mismatch")
+	ErrAllContainerizedBackendPluginLoadsFailed  = errors.New("failed to dispense all containerized backend plugins v4 through v5")
+	ErrAllContainerizedDatabasePluginLoadsFailed = errors.New("failed to load all containerized database plugins v4 through v5")
 )
 
 // PluginCatalog keeps a record of plugins known to vault. External plugins need
@@ -598,7 +598,10 @@ func (c *PluginCatalog) getBackendRunningVersion(ctx context.Context, pluginRunn
 	if err != nil {
 		merr = multierror.Append(merr, err)
 		c.logger.Debug("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", err)
-		return logical.EmptyPluginVersion, fmt.Errorf("%w: %s", ErrAllBackendPluginLoadsFailed, merr)
+		if pluginRunner.OCIImage != "" {
+			return logical.EmptyPluginVersion, fmt.Errorf("%w: %s", ErrAllContainerizedBackendPluginLoadsFailed, merr)
+		}
+		return logical.EmptyPluginVersion, merr.ErrorOrNil()
 	}
 	c.logger.Debug("successfully dispensed v4 backend plugin", "name", pluginRunner.Name)
 	defer client.Cleanup(ctx)
@@ -674,7 +677,11 @@ func (c *PluginCatalog) getDatabaseRunningVersion(ctx context.Context, pluginRun
 	}
 
 	merr = multierror.Append(merr, err)
-	return logical.EmptyPluginVersion, fmt.Errorf("%w: %s", ErrAllDatabasePluginLoadsFailed, merr)
+	if pluginRunner.OCIImage != "" {
+		return logical.EmptyPluginVersion, fmt.Errorf("%w: %s", ErrAllContainerizedDatabasePluginLoadsFailed, merr)
+	}
+
+	return logical.EmptyPluginVersion, merr.ErrorOrNil()
 }
 
 // isDatabasePlugin returns an error if the plugin is not a database plugin.
@@ -967,7 +974,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 	}
 	if versionErr != nil {
 		c.logger.Warn("Error determining plugin version", "error", versionErr)
-		if errors.Is(versionErr, ErrAllBackendPluginLoadsFailed) || errors.Is(versionErr, ErrAllDatabasePluginLoadsFailed) {
+		if errors.Is(versionErr, ErrAllContainerizedBackendPluginLoadsFailed) || errors.Is(versionErr, ErrAllContainerizedDatabasePluginLoadsFailed) {
 			return nil, versionErr
 		}
 	} else if plugin.Version != "" && runningVersion.Version != "" && plugin.Version != runningVersion.Version {
