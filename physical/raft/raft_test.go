@@ -635,6 +635,8 @@ func TestRaft_TransactionalBackend_ThreeNode(t *testing.T) {
 	compareFSMs(t, raft1.fsm, raft3.fsm)
 }
 
+// TestRaft_TransactionalLimitsEnvOverride ensures the ENV var overrides for
+// transaction size limits are plumbed through as expected.
 func TestRaft_TransactionalLimitsEnvOverride(t *testing.T) {
 	tc := []struct {
 		name        string
