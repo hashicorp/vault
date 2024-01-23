@@ -13,6 +13,11 @@ export default class App extends Application {
   podModulePrefix = config.podModulePrefix;
   Resolver = Resolver;
   engines = {
+    configUi: {
+      dependencies: {
+        services: ['auth', 'flash-messages', 'namespace', 'router', 'store', 'version', 'customMessages'],
+      },
+    },
     openApiExplorer: {
       dependencies: {
         services: ['auth', 'flash-messages', 'namespace', 'router', 'version'],
