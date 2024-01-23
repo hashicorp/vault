@@ -85,6 +85,11 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		return nil, err
 	}
 
+	opts := []audit.Option{
+		audit.WithHeaderFormatter(headersConfig),
+		audit.WithPrefix(conf.Config["prefix"]),
+	}
+
 	b := &Backend{
 		saltConfig:   conf.SaltConfig,
 		saltView:     conf.SaltView,
@@ -96,7 +101,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	}
 
 	// Configure the formatter for either case.
-	f, err := audit.NewEntryFormatter(b.formatConfig, b, audit.WithHeaderFormatter(headersConfig))
+	f, err := audit.NewEntryFormatter(b.formatConfig, b, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
