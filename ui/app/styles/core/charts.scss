@@ -47,6 +47,9 @@
   grid-template-columns: 1fr 0.3fr 3.7fr;
   grid-template-rows: 0.5fr 1fr 1fr 1fr 0.25fr;
   width: 100%;
+  &.no-legend {
+    grid-template-rows: 0.5fr 1fr 1fr 0.5fr;
+  }
 }
 
 .dual-chart-grid {
@@ -169,9 +172,8 @@
 }
 
 .timestamp {
-  grid-column-start: 1;
-  grid-column-end: 2;
-  grid-row-start: 5;
+  grid-column: 1 / span 2;
+  grid-row-start: -2;
   color: $ui-gray-500;
   font-size: $size-9;
   align-self: end;
