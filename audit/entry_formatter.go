@@ -19,6 +19,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/jefferai/jsonx"
+	"github.com/mitchellh/mapstructure"
+	"github.com/mitchellh/pointerstructure"
 )
 
 var (
@@ -26,8 +28,17 @@ var (
 	_ eventlogger.Node = (*EntryFormatter)(nil)
 )
 
+// EntryFormatter should be used to format audit requests and responses.
+type EntryFormatter struct {
+	salter          Salter
+	headerFormatter HeaderFormatter
+	config          FormatterConfig
+	prefix          string
+	exclusions      []*exclusion
+}
+
 // NewEntryFormatter should be used to create an EntryFormatter.
-// Accepted options: WithHeaderFormatter, WithPrefix.
+// Accepted options: WithExclusions, WithHeaderFormatter, WithPrefix.
 func NewEntryFormatter(config FormatterConfig, salter Salter, opt ...Option) (*EntryFormatter, error) {
 	const op = "audit.NewEntryFormatter"
 
@@ -50,6 +61,7 @@ func NewEntryFormatter(config FormatterConfig, salter Salter, opt ...Option) (*E
 		config:          config,
 		headerFormatter: opts.withHeaderFormatter,
 		prefix:          opts.withPrefix,
+		exclusions:      opts.withExclusions,
 	}, nil
 }
 
@@ -107,31 +119,34 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		data.Request.Headers = adjustedHeaders
 	}
 
+	// Using any as we have two different types that we can get back from either
+	// FormatRequest or FormatResponse.
+	var entry any
 	var result []byte
 
 	switch a.Subtype {
 	case RequestType:
-		entry, err := f.FormatRequest(ctx, data)
-		if err != nil {
-			return nil, fmt.Errorf("%s: unable to parse request from audit event: %w", op, err)
-		}
-
-		result, err = jsonutil.EncodeJSON(entry)
-		if err != nil {
-			return nil, fmt.Errorf("%s: unable to format request: %w", op, err)
-		}
+		entry, err = f.FormatRequest(ctx, data)
 	case ResponseType:
-		entry, err := f.FormatResponse(ctx, data)
-		if err != nil {
-			return nil, fmt.Errorf("%s: unable to parse response from audit event: %w", op, err)
-		}
-
-		result, err = jsonutil.EncodeJSON(entry)
-		if err != nil {
-			return nil, fmt.Errorf("%s: unable to format response: %w", op, err)
-		}
+		entry, err = f.FormatResponse(ctx, data)
 	default:
 		return nil, fmt.Errorf("%s: unknown audit event subtype: %q", op, a.Subtype)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("%s: unable to parse %s from audit event: %w", op, a.Subtype.HumanReadableString(), err)
+	}
+
+	// Redact/exclude data from the RequestEntry/ResponseEntry.
+	m, err := f.redactFields(entry)
+	if err != nil {
+		return nil, fmt.Errorf("%s: unable to exclude audit data from %s: %w", op, a.Subtype.HumanReadableString(), err)
+	}
+
+	// Convert map m into a slice of bytes
+	result, err = jsonutil.EncodeJSON(m)
+	if err != nil {
+		return nil, fmt.Errorf("%s: unable to format %s: %w", op, a.Subtype.HumanReadableString(), err)
 	}
 
 	if f.config.RequiredFormat == JSONxFormat {
@@ -622,4 +637,61 @@ func newTemporaryEntryFormatter(n *EntryFormatter) *EntryFormatter {
 // Salt returns a new salt with default configuration and no storage usage, and no error.
 func (s *nonPersistentSalt) Salt(_ context.Context) (*salt.Salt, error) {
 	return salt.NewNonpersistentSalt(), nil
+}
+
+// redactFields takes an entry (RequestEntry or ResponseEntry) and attempts to
+// redact/exclude fields that have been configured on the formatter node.
+func (f *EntryFormatter) redactFields(entry any) (map[string]any, error) {
+	m := make(map[string]any)
+	err := mapstructure.Decode(entry, &m)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding entry: %v", err)
+	}
+
+	// If there are no exclusions to process then return the map.
+	if len(f.exclusions) < 1 {
+		return m, nil
+	}
+
+	// Take another copy which will be the original we use for all evaluations.
+	original := make(map[string]any, len(m))
+	err = mapstructure.Decode(entry, &original)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding entry: %v", err)
+	}
+
+	for _, exc := range f.exclusions {
+		// By default, we want to remove fields, as condition is optional.
+		shouldRemoveFields := true
+
+		if exc.Evaluator != nil {
+			// See if the evaluator matches such that we should still remove the fields.
+			shouldRemoveFields, err = exc.Evaluator.Evaluate(original)
+			if err != nil {
+				return nil, fmt.Errorf("unable to evaluate entry: %w", err)
+			}
+		}
+
+		if !shouldRemoveFields {
+			continue
+		}
+
+		for _, field := range exc.Fields {
+			ptr, err := pointerstructure.Parse(field)
+			if err != nil {
+				return nil, fmt.Errorf("unable to parse field '%s': %w", field, err)
+			}
+
+			_, err = ptr.Delete(m)
+			if err != nil && !strings.Contains(err.Error(), "couldn't find key") {
+				// An error may occur if the structure of the data didn't have the property that was expected.
+				// In this case it wouldn't be an 'error' where data wasn't redacted as expected,
+				// more like we don't want to fail audit because something wasn't there to redact in
+				// the first place.
+				return nil, fmt.Errorf("unable to exclude field '%s': %w", field, err)
+			}
+		}
+	}
+
+	return m, nil
 }

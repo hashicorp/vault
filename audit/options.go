@@ -4,11 +4,42 @@
 package audit
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/go-bexpr"
+	"github.com/hashicorp/go-hclog"
 )
+
+// Option is how options are passed as arguments.
+type Option func(*options) error
+
+// options are used to represent configuration for a audit related nodes.
+type options struct {
+	withID              string
+	withNow             time.Time
+	withSubtype         subtype
+	withFormat          format
+	withPrefix          string
+	withRaw             bool
+	withElision         bool
+	withOmitTime        bool
+	withHMACAccessor    bool
+	withHeaderFormatter HeaderFormatter
+	withExclusions      []*exclusion
+	withLogger          hclog.Logger
+}
+
+// exclusion represents an optional condition and fields which should be excluded
+// from audit entries.
+type exclusion struct {
+	Evaluator *bexpr.Evaluator `json:"condition,omitempty"`
+	Fields    []string         `json:"fields,omitempty"`
+}
 
 // getDefaultOptions returns options with their default values.
 func getDefaultOptions() options {
@@ -157,4 +188,107 @@ func WithHeaderFormatter(f HeaderFormatter) Option {
 
 		return nil
 	}
+}
+
+// WithExclusions provides an Option to supply exclusions in a JSON string format.
+// See 'exclusion' type for more information and example below:
+// Expected JSON format:
+//
+//	[
+//		{
+//			"condition": "\"/request/mount_type\" == transit",
+//			"fields": [ "/request/data", "/response/data" ]
+//		},
+//		{
+//			"condition":  "\"/request/mount_type\" == userpass",
+//			"fields": [ "/request/data" ]
+//		}
+//	]
+func WithExclusions(e string) Option {
+	return func(o *options) error {
+		var result []*exclusion
+
+		err := json.Unmarshal([]byte(e), &result)
+		if err != nil {
+			return fmt.Errorf("unable to parse exclusions: %w", err)
+		}
+
+		o.withExclusions = result
+
+		return nil
+	}
+}
+
+// WithLogger provides an Option to supply a hclog.Logger which can be used when
+// errors need to be written to the Vault server logs.
+func WithLogger(l hclog.Logger) Option {
+	return func(o *options) error {
+		if l != nil && !reflect.ValueOf(l).IsNil() {
+			o.withLogger = l
+		}
+
+		return nil
+	}
+}
+
+// UnmarshalJSON handles unmarshalling JSON bytes (string representation) of a collection
+// of exclusion types into a Go type.
+func (e *exclusion) UnmarshalJSON(b []byte) error {
+	// Reference the JSON struct tags for exclusion.
+	const keyFields = "fields"
+	const keyCondition = "condition"
+
+	var err error
+
+	m := make(map[string]any)
+	if err = json.Unmarshal(b, &m); err != nil {
+		return err
+	}
+
+	// Parse fields
+	f, ok := m[keyFields]
+	if !ok {
+		return fmt.Errorf("exclusion '%s' missing", keyFields)
+	}
+	intermediateFields, ok := f.([]any)
+	if !ok {
+		return fmt.Errorf("unable to parse '%s': expected collection of %s; got: '%v'", keyFields, keyFields, f)
+	}
+	var fields []string
+	for _, v := range intermediateFields {
+		s := strings.TrimSpace(v.(string))
+		if s != "" {
+			fields = append(fields, s)
+		}
+	}
+	if len(fields) < 1 {
+		return fmt.Errorf("exclusion '%s' cannot be empty", keyFields)
+	}
+
+	// Set the fields now, so we can return early if we don't have an optional condition.
+	e.Fields = fields
+
+	// Optional condition
+	var eval *bexpr.Evaluator
+	c, ok := m[keyCondition]
+	if !ok {
+		// Return early as we've already set the exclusion.Fields
+		return nil
+	}
+
+	condition := strings.TrimSpace(fmt.Sprint(c))
+	if condition == "" {
+		// Return early as we've already set the exclusion.Fields
+		return nil
+	}
+
+	eval, err = bexpr.CreateEvaluator(condition)
+	if err != nil {
+		return fmt.Errorf("unable to parse expression '%s': %w", condition, err)
+	}
+
+	// Set the condition to the new evaluator.
+	e.Evaluator = eval
+
+	return nil
 }

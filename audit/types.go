@@ -5,60 +5,40 @@ package audit
 
 import (
 	"context"
-	"io"
-	"time"
 
-	"github.com/hashicorp/go-bexpr"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// Audit subtypes.
-const (
-	RequestType  subtype = "AuditRequest"
-	ResponseType subtype = "AuditResponse"
-)
+// Backend interface must be implemented for an audit
+// mechanism to be made available. Audit backends can be enabled to
+// sink information to different backends such as logs, file, databases,
+// or other external services.
+type Backend interface {
+	// Salter interface must be implemented by anything implementing Backend.
+	Salter
 
-// Audit formats.
-const (
-	JSONFormat  format = "json"
-	JSONxFormat format = "jsonx"
-)
+	// The PipelineReader interface allows backends to surface information about their
+	// nodes for node and pipeline registration.
+	event.PipelineReader
 
-// version defines the version of audit events.
-const version = "v0.1"
+	// IsFallback can be used to determine if this audit backend device is intended to
+	// be used as a fallback to catch all events that are not written when only using
+	// filtered pipelines.
+	IsFallback() bool
 
-// subtype defines the type of audit event.
-type subtype string
+	// LogTestMessage is used to check an audit backend before adding it
+	// permanently. It should attempt to synchronously log the given test
+	// message, WITHOUT using the normal Salt (which would require a storage
+	// operation on creation, which is currently disallowed.)
+	LogTestMessage(context.Context, *logical.LogInput) error
 
-// format defines types of format audit events support.
-type format string
+	// Reload is called on SIGHUP for supporting backends.
+	Reload(context.Context) error
 
-// AuditEvent is the audit event.
-type AuditEvent struct {
-	ID        string            `json:"id"`
-	Version   string            `json:"version"`
-	Subtype   subtype           `json:"subtype"` // the subtype of the audit event.
-	Timestamp time.Time         `json:"timestamp"`
-	Data      *logical.LogInput `json:"data"`
-}
-
-// Option is how options are passed as arguments.
-type Option func(*options) error
-
-// options are used to represent configuration for a audit related nodes.
-type options struct {
-	withID              string
-	withNow             time.Time
-	withSubtype         subtype
-	withFormat          format
-	withPrefix          string
-	withRaw             bool
-	withElision         bool
-	withOmitTime        bool
-	withHMACAccessor    bool
-	withHeaderFormatter HeaderFormatter
+	// Invalidate is called for path invalidation
+	Invalidate(context.Context)
 }
 
 // Salter is an interface that provides a way to obtain a Salt for hashing.
@@ -76,15 +56,6 @@ type Formatter interface {
 	FormatResponse(context.Context, *logical.LogInput) (*ResponseEntry, error)
 }
 
-// Writer is an interface that provides a way to write request and response audit entries.
-// Formatters write their output to an io.Writer.
-type Writer interface {
-	// WriteRequest writes the request entry to the writer or returns an error.
-	WriteRequest(io.Writer, *RequestEntry) error
-	// WriteResponse writes the response entry to the writer or returns an error.
-	WriteResponse(io.Writer, *ResponseEntry) error
-}
-
 // HeaderFormatter is an interface defining the methods of the
 // vault.AuditedHeadersConfig structure needed in this package.
 type HeaderFormatter interface {
@@ -92,21 +63,6 @@ type HeaderFormatter interface {
 	// intersection of the provided set of header values with a configured
 	// set of headers and will hash headers that have been configured as such.
 	ApplyConfig(context.Context, map[string][]string, Salter) (map[string][]string, error)
-}
-
-// EntryFormatter should be used to format audit requests and responses.
-type EntryFormatter struct {
-	salter          Salter
-	headerFormatter HeaderFormatter
-	config          FormatterConfig
-	prefix          string
-}
-
-// EntryFormatterWriter should be used to format and write out audit requests and responses.
-type EntryFormatterWriter struct {
-	Formatter
-	Writer
-	config FormatterConfig
 }
 
 // FormatterConfig is used to provide basic configuration to a formatter.
@@ -144,58 +100,51 @@ type FormatterConfig struct {
 	RequiredFormat format
 }
 
-// EntryFilter should be used to filter audit requests and responses which should
-// make it to a sink.
-type EntryFilter struct {
-	// the evaluator for the bexpr expression that should be applied by the node.
-	evaluator *bexpr.Evaluator
-}
-
 // RequestEntry is the structure of a request audit log entry.
 type RequestEntry struct {
-	Time          string   `json:"time,omitempty"`
-	Type          string   `json:"type,omitempty"`
-	Auth          *Auth    `json:"auth,omitempty"`
-	Request       *Request `json:"request,omitempty"`
-	Error         string   `json:"error,omitempty"`
-	ForwardedFrom string   `json:"forwarded_from,omitempty"` // Populated in Enterprise when a request is forwarded
+	Time          string   `mapstructure:"time,omitempty"           json:"time,omitempty"`
+	Type          string   `mapstructure:"type,omitempty"           json:"type,omitempty"`
+	Auth          *Auth    `mapstructure:"auth,omitempty"           json:"auth,omitempty"`
+	Request       *Request `mapstructure:"request,omitempty"        json:"request,omitempty"`
+	Error         string   `mapstructure:"error,omitempty"          json:"error,omitempty"`
+	ForwardedFrom string   `mapstructure:"forwarded_from,omitempty" json:"forwarded_from,omitempty"` // Populated in Enterprise when a request is forwarded
 }
 
 // ResponseEntry is the structure of a response audit log entry.
 type ResponseEntry struct {
-	Time      string    `json:"time,omitempty"`
-	Type      string    `json:"type,omitempty"`
-	Auth      *Auth     `json:"auth,omitempty"`
-	Request   *Request  `json:"request,omitempty"`
-	Response  *Response `json:"response,omitempty"`
-	Error     string    `json:"error,omitempty"`
-	Forwarded bool      `json:"forwarded,omitempty"`
+	Time      string    `mapstructure:"time,omitempty" json:"time,omitempty"`
+	Type      string    `mapstructure:"type,omitempty" json:"type,omitempty"`
+	Auth      *Auth     `mapstructure:"auth,omitempty" json:"auth,omitempty"`
+	Request   *Request  `mapstructure:"request,omitempty" json:"request,omitempty"`
+	Response  *Response `mapstructure:"response,omitempty" json:"response,omitempty"`
+	Error     string    `mapstructure:"error,omitempty" json:"error,omitempty"`
+	Forwarded bool      `mapstructure:"forwarded,omitempty" json:"forwarded,omitempty"`
 }
 
 type Request struct {
-	ID                            string                 `json:"id,omitempty"`
-	ClientID                      string                 `json:"client_id,omitempty"`
-	ReplicationCluster            string                 `json:"replication_cluster,omitempty"`
-	Operation                     logical.Operation      `json:"operation,omitempty"`
-	MountPoint                    string                 `json:"mount_point,omitempty"`
-	MountType                     string                 `json:"mount_type,omitempty"`
-	MountAccessor                 string                 `json:"mount_accessor,omitempty"`
-	MountRunningVersion           string                 `json:"mount_running_version,omitempty"`
-	MountRunningSha256            string                 `json:"mount_running_sha256,omitempty"`
-	MountClass                    string                 `json:"mount_class,omitempty"`
-	MountIsExternalPlugin         bool                   `json:"mount_is_external_plugin,omitempty"`
-	ClientToken                   string                 `json:"client_token,omitempty"`
-	ClientTokenAccessor           string                 `json:"client_token_accessor,omitempty"`
-	Namespace                     *Namespace             `json:"namespace,omitempty"`
-	Path                          string                 `json:"path,omitempty"`
-	Data                          map[string]interface{} `json:"data,omitempty"`
-	PolicyOverride                bool                   `json:"policy_override,omitempty"`
-	RemoteAddr                    string                 `json:"remote_address,omitempty"`
-	RemotePort                    int                    `json:"remote_port,omitempty"`
-	WrapTTL                       int                    `json:"wrap_ttl,omitempty"`
-	Headers                       map[string][]string    `json:"headers,omitempty"`
-	ClientCertificateSerialNumber string                 `json:"client_certificate_serial_number,omitempty"`
-	RequestURI                    string                 `json:"request_uri,omitempty"`
+	ID                            string                 `mapstructure:"id,omitempty" json:"id,omitempty"`
+	ClientID                      string                 `mapstructure:"client_id,omitempty" json:"client_id,omitempty"`
+	ReplicationCluster            string                 `mapstructure:"replication_cluster,omitempty" json:"replication_cluster,omitempty"`
+	Operation                     logical.Operation      `mapstructure:"operation,omitempty" json:"operation,omitempty"`
+	MountPoint                    string                 `mapstructure:"mount_point,omitempty" json:"mount_point,omitempty"`
+	MountType                     string                 `mapstructure:"mount_type,omitempty" json:"mount_type,omitempty"`
+	MountAccessor                 string                 `mapstructure:"mount_accessor,omitempty" json:"mount_accessor,omitempty"`
+	MountRunningVersion           string                 `mapstructure:"mount_running_version,omitempty" json:"mount_running_version,omitempty"`
+	MountRunningSha256            string                 `mapstructure:"mount_running_sha256,omitempty" json:"mount_running_sha256,omitempty"`
+	MountClass                    string                 `mapstructure:"mount_class,omitempty" json:"mount_class,omitempty"`
+	MountIsExternalPlugin         bool                   `mapstructure:"mount_is_external_plugin,omitempty" json:"mount_is_external_plugin,omitempty"`
+	ClientToken                   string                 `mapstructure:"client_token,omitempty" json:"client_token,omitempty"`
+	ClientTokenAccessor           string                 `mapstructure:"client_token_accessor,omitempty" json:"client_token_accessor,omitempty"`
+	Namespace                     *Namespace             `mapstructure:"namespace,omitempty"  json:"namespace,omitempty"`
+	Path                          string                 `mapstructure:"path,omitempty" json:"path,omitempty"`
+	Data                          map[string]interface{} `mapstructure:"data,omitempty" json:"data,omitempty"`
+	PolicyOverride                bool                   `mapstructure:"policy_override,omitempty" json:"policy_override,omitempty"`
+	RemoteAddr                    string                 `mapstructure:"remote_address,omitempty" json:"remote_address,omitempty"`
+	RemotePort                    int                    `mapstructure:"remote_port,omitempty" json:"remote_port,omitempty"`
+	WrapTTL                       int                    `mapstructure:"wrap_ttl,omitempty" json:"wrap_ttl,omitempty"`
+	Headers                       map[string][]string    `mapstructure:"headers,omitempty" json:"headers,omitempty"`
+	ClientCertificateSerialNumber string                 `mapstructure:"client_certificate_serial_number,omitempty" json:"client_certificate_serial_number,omitempty"`
+	RequestURI                    string                 `mapstructure:"request_uri,omitempty" json:"request_uri,omitempty"`
 }
 
 type Response struct {
@@ -216,87 +165,57 @@ type Response struct {
 }
 
 type Auth struct {
-	ClientToken               string              `json:"client_token,omitempty"`
-	Accessor                  string              `json:"accessor,omitempty"`
-	DisplayName               string              `json:"display_name,omitempty"`
-	Policies                  []string            `json:"policies,omitempty"`
-	TokenPolicies             []string            `json:"token_policies,omitempty"`
-	IdentityPolicies          []string            `json:"identity_policies,omitempty"`
-	ExternalNamespacePolicies map[string][]string `json:"external_namespace_policies,omitempty"`
-	NoDefaultPolicy           bool                `json:"no_default_policy,omitempty"`
-	PolicyResults             *PolicyResults      `json:"policy_results,omitempty"`
-	Metadata                  map[string]string   `json:"metadata,omitempty"`
-	NumUses                   int                 `json:"num_uses,omitempty"`
-	RemainingUses             int                 `json:"remaining_uses,omitempty"`
-	EntityID                  string              `json:"entity_id,omitempty"`
-	EntityCreated             bool                `json:"entity_created,omitempty"`
-	TokenType                 string              `json:"token_type,omitempty"`
-	TokenTTL                  int64               `json:"token_ttl,omitempty"`
-	TokenIssueTime            string              `json:"token_issue_time,omitempty"`
+	ClientToken               string              `mapstructure:"client_token,omitempty" json:"client_token,omitempty"`
+	Accessor                  string              `mapstructure:"accessor,omitempty" json:"accessor,omitempty"`
+	DisplayName               string              `mapstructure:"display_name,omitempty" json:"display_name,omitempty"`
+	Policies                  []string            `mapstructure:"policies,omitempty" json:"policies,omitempty"`
+	TokenPolicies             []string            `mapstructure:"token_policies,omitempty" json:"token_policies,omitempty"`
+	IdentityPolicies          []string            `mapstructure:"identity_policies,omitempty" json:"identity_policies,omitempty"`
+	ExternalNamespacePolicies map[string][]string `mapstructure:"external_namespace_policies,omitempty" json:"external_namespace_policies,omitempty"`
+	NoDefaultPolicy           bool                `mapstructure:"no_default_policy,omitempty" json:"no_default_policy,omitempty"`
+	PolicyResults             *PolicyResults      `mapstructure:"policy_results,omitempty" json:"policy_results,omitempty"`
+	Metadata                  map[string]string   `mapstructure:"metadata,omitempty" json:"metadata,omitempty"`
+	NumUses                   int                 `mapstructure:"num_uses,omitempty" json:"num_uses,omitempty"`
+	RemainingUses             int                 `mapstructure:"remaining_uses,omitempty" json:"remaining_uses,omitempty"`
+	EntityID                  string              `mapstructure:"entity_id,omitempty" json:"entity_id,omitempty"`
+	EntityCreated             bool                `mapstructure:"entity_created,omitempty" json:"entity_created,omitempty"`
+	TokenType                 string              `mapstructure:"token_type,omitempty" json:"token_type,omitempty"`
+	TokenTTL                  int64               `mapstructure:"token_ttl,omitempty" json:"token_ttl,omitempty"`
+	TokenIssueTime            string              `mapstructure:"token_issue_time,omitempty" json:"token_issue_time,omitempty"`
 }
 
 type PolicyResults struct {
-	Allowed          bool         `json:"allowed"`
-	GrantingPolicies []PolicyInfo `json:"granting_policies,omitempty"`
+	Allowed          bool         `mapstructure:"allowed" json:"allowed"`
+	GrantingPolicies []PolicyInfo `mapstructure:"granting_policies,omitempty" json:"granting_policies,omitempty"`
 }
 
 type PolicyInfo struct {
-	Name          string `json:"name,omitempty"`
-	NamespaceId   string `json:"namespace_id,omitempty"`
-	NamespacePath string `json:"namespace_path,omitempty"`
-	Type          string `json:"type"`
+	Name          string `mapstructure:"name,omitempty" json:"name,omitempty"`
+	NamespaceId   string `mapstructure:"namespace_id,omitempty" json:"namespace_id,omitempty"`
+	NamespacePath string `mapstructure:"namespace_path,omitempty" json:"namespace_path,omitempty"`
+	Type          string `mapstructure:"type" json:"type"`
 }
 
 type Secret struct {
-	LeaseID string `json:"lease_id,omitempty"`
+	LeaseID string `mapstructure:"lease_id,omitempty" json:"lease_id,omitempty"`
 }
 
 type ResponseWrapInfo struct {
-	TTL             int    `json:"ttl,omitempty"`
-	Token           string `json:"token,omitempty"`
-	Accessor        string `json:"accessor,omitempty"`
-	CreationTime    string `json:"creation_time,omitempty"`
-	CreationPath    string `json:"creation_path,omitempty"`
-	WrappedAccessor string `json:"wrapped_accessor,omitempty"`
+	TTL             int    `mapstructure:"ttl,omitempty" json:"ttl,omitempty"`
+	Token           string `mapstructure:"token,omitempty" json:"token,omitempty"`
+	Accessor        string `mapstructure:"accessor,omitempty" json:"accessor,omitempty"`
+	CreationTime    string `mapstructure:"creation_time,omitempty" json:"creation_time,omitempty"`
+	CreationPath    string `mapstructure:"creation_path,omitempty" json:"creation_path,omitempty"`
+	WrappedAccessor string `mapstructure:"wrapped_accessor,omitempty" json:"wrapped_accessor,omitempty"`
 }
 
 type Namespace struct {
-	ID   string `json:"id,omitempty"`
-	Path string `json:"path,omitempty"`
+	ID   string `mapstructure:"id,omitempty" json:"id,omitempty"`
+	Path string `mapstructure:"path,omitempty" json:"path,omitempty"`
 }
 
 // nonPersistentSalt is used for obtaining a salt that is not persisted.
 type nonPersistentSalt struct{}
-
-// Backend interface must be implemented for an audit
-// mechanism to be made available. Audit backends can be enabled to
-// sink information to different backends such as logs, file, databases,
-// or other external services.
-type Backend interface {
-	// Salter interface must be implemented by anything implementing Backend.
-	Salter
-
-	// The PipelineReader interface allows backends to surface information about their
-	// nodes for node and pipeline registration.
-	event.PipelineReader
-
-	// IsFallback can be used to determine if this audit backend device is intended to
-	// be used as a fallback to catch all events that are not written when only using
-	// filtered pipelines.
-	IsFallback() bool
-
-	// LogTestMessage is used to check an audit backend before adding it
-	// permanently. It should attempt to synchronously log the given test
-	// message, WITHOUT using the normal Salt (which would require a storage
-	// operation on creation, which is currently disallowed.)
-	LogTestMessage(context.Context, *logical.LogInput) error
-
-	// Reload is called on SIGHUP for supporting backends.
-	Reload(context.Context) error
-
-	// Invalidate is called for path invalidation
-	Invalidate(context.Context)
-}
 
 // BackendConfig contains configuration parameters used in the factory func to
 // instantiate audit backends

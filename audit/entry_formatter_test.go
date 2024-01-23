@@ -1011,6 +1011,75 @@ func TestEntryFormatter_Process_NoMutation(t *testing.T) {
 	require.NotEqual(t, a2, a)
 }
 
+// TestEntryFormatter_Process_Redaction tests that we can successfully redact/exclude
+// data from our audit entries.
+func TestEntryFormatter_Process_Redaction(t *testing.T) {
+	jsonExclusion := `[
+	  {
+		"condition": "\"/request/mount_type\" == transit",
+		"fields": [ "/request/data", "/response/data" ]
+	  },
+	  {
+		"condition":  "\"/auth/client_token\" matches \"hmac.*\"",
+		"fields": [ "/auth/entity_id" ]
+	  }
+	]`
+
+	// Create the formatter node.
+	cfg, err := NewFormatterConfig()
+	require.NoError(t, err)
+	ss := newStaticSalt(t)
+	formatter, err := NewEntryFormatter(cfg, ss, WithExclusions(jsonExclusion))
+	require.NoError(t, err)
+	require.NotNil(t, formatter)
+
+	in := &logical.LogInput{
+		Auth: &logical.Auth{
+			ClientToken:     "hvs.foo",
+			Accessor:        "bar",
+			EntityID:        "foobarentity",
+			DisplayName:     "testtoken",
+			NoDefaultPolicy: true,
+			Policies:        []string{"root"},
+			TokenType:       logical.TokenTypeService,
+		},
+		Request: &logical.Request{
+			MountType: "transit",
+			Operation: logical.UpdateOperation,
+			Path:      "/foo",
+			Connection: &logical.Connection{
+				RemoteAddr: "127.0.0.1",
+			},
+			WrapInfo: &logical.RequestWrapInfo{
+				TTL: 60 * time.Second,
+			},
+			Headers: map[string][]string{
+				"foo": {"bar"},
+			},
+			Data: map[string]interface{}{
+				"juan":  "secret1",
+				"juan2": "secret2",
+			},
+		},
+	}
+
+	e := fakeEvent(t, RequestType, in)
+
+	e2, err := formatter.Process(namespace.RootContext(nil), e)
+	require.NoError(t, err)
+	require.NotNil(t, e2)
+
+	jsonBytes, ok := e2.Format(JSONFormat.String())
+	require.True(t, ok)
+	require.NotNil(t, jsonBytes)
+	var req *RequestEntry
+	err = json.Unmarshal(jsonBytes, &req)
+	require.NoError(t, err)
+	require.NotNil(t, req)
+	require.Nil(t, req.Request.Data)
+	require.Empty(t, req.Auth.EntityID)
+}
+
 // hashExpectedValueForComparison replicates enough of the audit HMAC process on a piece of expected data in a test,
 // so that we can use assert.Equal to compare the expected and output values.
 func (f *EntryFormatter) hashExpectedValueForComparison(input map[string]any) map[string]any {

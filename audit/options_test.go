@@ -401,6 +401,151 @@ func TestOptions_WithHeaderFormatter(t *testing.T) {
 	}
 }
 
+// TestOptions_WithExclusions ensures that we can parse a JSON string into the
+// exclusions we need can apply to data when formatting it.
+func TestOptions_WithExclusions(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		json                 string
+		isErrorExpected      bool
+		expectedErrorMessage string
+	}{
+		"good": {
+			json: `[
+			  {
+				"condition": "\"/request/mount_type\" == transit",
+				"fields": [ "/request/data", "/response/data" ]
+			  },
+			  {
+				"condition":  "\"/request/mount_type\" == userpass",
+				"fields": [ "/request/data" ]
+			  }
+			]`,
+		},
+		"bad-condition": {
+			json: `[
+			  {
+				"condition": "qwerty",
+				"fields": [ "/request/data", "/response/data" ]
+			  },
+			  {
+				"condition":  "\"/request/mount_type\" == userpass",
+				"fields": [ "/request/data" ]
+			  }
+			]`,
+			isErrorExpected:      true,
+			expectedErrorMessage: "unable to parse exclusions: unable to parse expression 'qwerty': 1:7 (6): no match found, expected: \"!=\", \".\", \"==\", \"[\", [ \\t\\r\\n] or [a-zA-Z0-9_/]",
+		},
+		"empty-conditions": {
+			json: `[
+			  {
+				"condition": "",
+				"fields": [ "/request/data", "/response/data" ]
+			  },
+			  {
+				"condition":  "",
+				"fields": [ "/request/data" ]
+			  }
+			]`,
+		},
+		"no-conditions": {
+			json: `[
+			  {
+				"fields": [ "/request/data", "/response/data" ]
+			  },
+			  {
+				"fields": [ "/request/data" ]
+			  }
+			]`,
+		},
+		"json-wrong-value-types": {
+			json: `[
+			  {
+				"condition": ["qwerty"],
+				"fields":  "/request/data"
+			  },
+			  {
+				"condition":  "\"/request/mount_type\" == userpass",
+				"fields": [ "/request/data" ]
+			  }
+			]`,
+			isErrorExpected:      true,
+			expectedErrorMessage: "unable to parse exclusions: unable to parse 'fields': expected collection of fields; got: '/request/data'",
+		},
+		"unparsable-json": {
+			json: `[
+			  {
+				"condition": "qwerty",
+				"fields":  "/request/data", "/response/data"]
+			  },
+			]`,
+			isErrorExpected:      true,
+			expectedErrorMessage: "unable to parse exclusions: invalid character ']' after object key",
+		},
+		"no-condition-key": {
+			json: `[
+			  {
+				"fields": [ "/request/data", "/response/data" ]
+			  },
+			  {
+				"fields": [ "/request/data" ]
+			  }
+			]`,
+		},
+		"no-fields": {
+			json: `[
+			  {
+				"condition": ""
+			  }
+			]`,
+			isErrorExpected:      true,
+			expectedErrorMessage: "unable to parse exclusions: exclusion 'fields' missing",
+		},
+		"empty-fields": {
+			json: `[
+			  {
+				"condition": "",
+				"fields": [""]
+			  }
+			]`,
+			isErrorExpected:      true,
+			expectedErrorMessage: "unable to parse exclusions: exclusion 'fields' cannot be empty",
+		},
+		"spacey-fields": {
+			json: `[
+			  {
+				"condition": "",
+				"fields": [" ", "   "]
+			  }
+			]`,
+			isErrorExpected:      true,
+			expectedErrorMessage: "unable to parse exclusions: exclusion 'fields' cannot be empty",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			opts := &options{}
+			opt := WithExclusions(tc.json)
+			err := opt(opts)
+
+			switch {
+			case tc.isErrorExpected:
+				require.Error(t, err)
+				require.EqualError(t, err, tc.expectedErrorMessage)
+			default:
+				require.NoError(t, err)
+				require.Len(t, opts.withExclusions, 2)
+			}
+		})
+	}
+}
+
 // TestOptions_Default exercises getDefaultOptions to assert the default values.
 func TestOptions_Default(t *testing.T) {
 	opts := getDefaultOptions()
