@@ -94,6 +94,7 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 
 	opts := []audit.Option{
 		audit.WithHeaderFormatter(headersConfig),
+		audit.WithPrefix(conf.Config["prefix"]),
 	}
 
 	err = b.configureFormatterNode(cfg, opts...)
