@@ -21,7 +21,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
 	github.com/hashicorp/hcl v1.0.0
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.8.4
 	golang.org/x/net v0.17.0
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1
 )
@@ -39,5 +39,5 @@ require (
 	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
