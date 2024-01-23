@@ -131,7 +131,7 @@ func testRegisterAndEnable(t *testing.T, client *api.Client, plugin pluginhelper
 	t.Helper()
 	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 		Name:    plugin.Name,
-		Type:    api.PluginType(plugin.Typ),
+		Type:    api.PluginType(plugin.Type),
 		Command: plugin.Name,
 		SHA256:  plugin.Sha256,
 		Version: plugin.Version,
@@ -139,7 +139,7 @@ func testRegisterAndEnable(t *testing.T, client *api.Client, plugin pluginhelper
 		t.Fatal(err)
 	}
 
-	switch plugin.Typ {
+	switch plugin.Type {
 	case consts.PluginTypeSecrets:
 		if err := client.Sys().Mount(plugin.Name, &api.MountInput{
 			Type: plugin.Name,
@@ -304,7 +304,7 @@ func TestExternalPlugin_AuthMethod(t *testing.T) {
 	// Register
 	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 		Name:    plugin.Name,
-		Type:    api.PluginType(plugin.Typ),
+		Type:    api.PluginType(plugin.Type),
 		Command: plugin.Name,
 		SHA256:  plugin.Sha256,
 		Version: plugin.Version,
@@ -403,7 +403,7 @@ func TestExternalPlugin_AuthMethod(t *testing.T) {
 	// Deregister
 	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
 		Name:    plugin.Name,
-		Type:    api.PluginType(plugin.Typ),
+		Type:    api.PluginType(plugin.Type),
 		Version: plugin.Version,
 	}); err != nil {
 		t.Fatal(err)
@@ -478,7 +478,7 @@ func TestExternalPlugin_AuthMethodReload(t *testing.T) {
 	// Deregister
 	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
 		Name:    plugin.Name,
-		Type:    api.PluginType(plugin.Typ),
+		Type:    api.PluginType(plugin.Type),
 		Version: plugin.Version,
 	}); err != nil {
 		t.Fatal(err)
@@ -498,7 +498,7 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 	// Register
 	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 		Name:    plugin.Name,
-		Type:    api.PluginType(plugin.Typ),
+		Type:    api.PluginType(plugin.Type),
 		Command: plugin.Name,
 		SHA256:  plugin.Sha256,
 		Version: plugin.Version,
@@ -558,7 +558,7 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 	// Deregister
 	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
 		Name:    plugin.Name,
-		Type:    api.PluginType(plugin.Typ),
+		Type:    api.PluginType(plugin.Type),
 		Version: plugin.Version,
 	}); err != nil {
 		t.Fatal(err)
@@ -624,7 +624,7 @@ func TestExternalPlugin_SecretsEngineReload(t *testing.T) {
 	// Deregister
 	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
 		Name:    plugin.Name,
-		Type:    api.PluginType(plugin.Typ),
+		Type:    api.PluginType(plugin.Type),
 		Version: plugin.Version,
 	}); err != nil {
 		t.Fatal(err)
@@ -760,7 +760,7 @@ func TestExternalPlugin_Database(t *testing.T) {
 	// Deregister
 	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
 		Name:    plugin.Name,
-		Type:    api.PluginType(plugin.Typ),
+		Type:    api.PluginType(plugin.Type),
 		Version: plugin.Version,
 	}); err != nil {
 		t.Fatal(err)
@@ -848,7 +848,7 @@ func TestExternalPlugin_DatabaseReload(t *testing.T) {
 	// Deregister
 	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
 		Name:    plugin.Name,
-		Type:    api.PluginType(plugin.Typ),
+		Type:    api.PluginType(plugin.Type),
 		Version: plugin.Version,
 	}); err != nil {
 		t.Fatal(err)
@@ -944,7 +944,7 @@ func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Auth(t *testing.T) 
 	// Deregister
 	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
 		Name:    plugin.Name,
-		Type:    api.PluginType(plugin.Typ),
+		Type:    api.PluginType(plugin.Type),
 		Version: plugin.Version,
 	}); err != nil {
 		t.Fatal(err)
@@ -1017,7 +1017,7 @@ func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T
 	// Deregister
 	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
 		Name:    plugin.Name,
-		Type:    api.PluginType(plugin.Typ),
+		Type:    api.PluginType(plugin.Type),
 		Version: plugin.Version,
 	}); err != nil {
 		t.Fatal(err)
