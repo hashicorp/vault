@@ -23,9 +23,7 @@ import (
 func TestAuditFilteringOnDifferentFields(t *testing.T) {
 	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
-	client, err := cluster.Cores[0].Client.Clone()
-	require.NoError(t, err)
-	client.SetToken(cluster.RootToken)
+	client := cluster.Cores[0].Client
 
 	// Create audit devices.
 	tempDir := t.TempDir()
@@ -115,9 +113,7 @@ func TestAuditFilteringOnDifferentFields(t *testing.T) {
 func TestAuditFilteringMultipleDevices(t *testing.T) {
 	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
-	client, err := cluster.Cores[0].Client.Clone()
-	require.NoError(t, err)
-	client.SetToken(cluster.RootToken)
+	client := cluster.Cores[0].Client
 
 	// Create audit devices.
 	tempDir := t.TempDir()
@@ -212,9 +208,7 @@ func TestAuditFilteringMultipleDevices(t *testing.T) {
 func TestAuditFilteringFallbackDevice(t *testing.T) {
 	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
-	client, err := cluster.Cores[0].Client.Clone()
-	require.NoError(t, err)
-	client.SetToken(cluster.RootToken)
+	client := cluster.Cores[0].Client
 
 	tempDir := t.TempDir()
 	fallbackLogFile, err := os.CreateTemp(tempDir, "")
@@ -295,9 +289,7 @@ func TestAuditFilteringFallbackDevice(t *testing.T) {
 func TestAuditFilteringFilterForUnsupportedField(t *testing.T) {
 	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
-	client, err := cluster.Cores[0].Client.Clone()
-	require.NoError(t, err)
-	client.SetToken(cluster.RootToken)
+	client := cluster.Cores[0].Client
 
 	tempDir := t.TempDir()
 	filteredLogFile, err := os.CreateTemp(tempDir, "")
