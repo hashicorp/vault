@@ -1,0 +1,37 @@
+{{! HBS display template for rendering title, description and stat boxes with a chart on the right }}
+
+<div class="chart-wrapper single-chart-grid {{unless (has-block 'legend') 'no-legend'}}">
+  <div class="chart-header has-bottom-margin-xl">
+    <h2 class="chart-title">{{@title}}</h2>
+    <p class="chart-description">
+      {{@description}}
+    </p>
+  </div>
+
+  {{#if (has-block "subTitle")}}
+    <div class="chart-subTitle">
+      {{yield to="subTitle"}}
+    </div>
+  {{/if}}
+
+  {{#if (has-block "stats")}}
+    {{yield to="stats"}}
+  {{/if}}
+
+  {{#if (has-block "chart")}}
+    <div class="{{unless @hasData 'chart-empty-state'}} chart-container-wide">
+      {{yield to="chart"}}
+    </div>
+  {{/if}}
+
+  {{#if (has-block "legend")}}
+    {{yield to="legend"}}
+  {{/if}}
+
+  {{#if @timestamp}}
+    <div class="timestamp">
+      Updated
+      {{date-format @timestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
+    </div>
+  {{/if}}
+</div>
