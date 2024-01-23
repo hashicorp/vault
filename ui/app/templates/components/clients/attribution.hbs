@@ -63,7 +63,7 @@
         <p class="data-details">{{format-number this.topClientCounts.clients}}</p>
       </div>
     {{/if}}
-    <div class="legend-center">
+    <div class="legend">
       {{#each this.attributionLegend as |legend idx|}}
         <span class="legend-colors dot-{{idx}}"></span><span class="legend-label">{{capitalize legend.label}}</span>
       {{/each}}
