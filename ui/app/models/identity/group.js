@@ -37,6 +37,7 @@ export default IdentityModel.extend({
   }),
   metadata: attr('object', {
     editType: 'kv',
+    isSectionHeader: true,
   }),
   policies: attr({
     editType: 'yield',
@@ -77,7 +78,7 @@ export default IdentityModel.extend({
   ),
   policyPath: lazyCapabilities(apiPath`sys/policies`),
   canCreatePolicies: alias('policyPath.canCreate'),
-  alias: belongsTo('identity/group-alias', { async: false, readOnly: true }),
+  alias: belongsTo('identity/group-alias', { async: false, readOnly: true, inverse: 'group' }),
   updatePath: identityCapabilities(),
   canDelete: alias('updatePath.canDelete'),
   canEdit: alias('updatePath.canUpdate'),

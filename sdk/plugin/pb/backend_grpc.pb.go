@@ -644,6 +644,7 @@ type SystemViewClient interface {
 	GeneratePasswordFromPolicy(ctx context.Context, in *GeneratePasswordFromPolicyRequest, opts ...grpc.CallOption) (*GeneratePasswordFromPolicyReply, error)
 	// ClusterInfo returns the ClusterID information; may be reused if ClusterName is also exposed.
 	ClusterInfo(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ClusterInfoReply, error)
+	// GenerateIdentityToken returns an identity token for the requesting plugin.
 	GenerateIdentityToken(ctx context.Context, in *GenerateIdentityTokenRequest, opts ...grpc.CallOption) (*GenerateIdentityTokenResponse, error)
 }
 
@@ -825,6 +826,7 @@ type SystemViewServer interface {
 	GeneratePasswordFromPolicy(context.Context, *GeneratePasswordFromPolicyRequest) (*GeneratePasswordFromPolicyReply, error)
 	// ClusterInfo returns the ClusterID information; may be reused if ClusterName is also exposed.
 	ClusterInfo(context.Context, *Empty) (*ClusterInfoReply, error)
+	// GenerateIdentityToken returns an identity token for the requesting plugin.
 	GenerateIdentityToken(context.Context, *GenerateIdentityTokenRequest) (*GenerateIdentityTokenResponse, error)
 	mustEmbedUnimplementedSystemViewServer()
 }

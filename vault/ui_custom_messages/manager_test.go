@@ -214,15 +214,42 @@ func TestManagerPutEntry(t *testing.T) {
 // context (e.g. checking that the list contains 1 element and that it's equal
 // to namespace.RootNamespace).
 func TestGetNamespacesToSearch(t *testing.T) {
-	list, err := getNamespacesToSearch(context.Background(), FindFilter{})
+	testManager := &Manager{nsManager: &CommunityEditionNamespaceManager{}}
+
+	list, err := testManager.getNamespacesToSearch(context.Background(), FindFilter{})
 	assert.Error(t, err)
 	assert.Nil(t, list)
 
-	list, err = getNamespacesToSearch(namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace), FindFilter{})
+	list, err = testManager.getNamespacesToSearch(namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace), FindFilter{})
 	assert.NoError(t, err)
-	assert.NotNil(t, list)
-	assert.Equal(t, 1, len(list))
+	assert.Len(t, list, 1)
 	assert.Equal(t, namespace.RootNamespace, list[0])
+
+	testManager.nsManager = &testNamespaceManager{
+		results: []namespace.Namespace{
+			{
+				ID:   "ccc",
+				Path: "c/",
+			},
+			{
+				ID:   "bbb",
+				Path: "b/",
+			},
+			{
+				ID:   "aaa",
+				Path: "a/",
+			},
+		},
+	}
+
+	list, err = testManager.getNamespacesToSearch(namespace.ContextWithNamespace(context.Background(), &namespace.Namespace{ID: "ddd", Path: "d/"}), FindFilter{IncludeAncestors: true})
+	assert.NoError(t, err)
+	assert.Len(t, list, 5)
+	assert.Equal(t, list[0].Path, "d/")
+	assert.Equal(t, list[1].Path, "c/")
+	assert.Equal(t, list[2].Path, "b/")
+	assert.Equal(t, list[3].Path, "a/")
+	assert.Equal(t, list[4].Path, "")
 }
 
 // TestStorageKeyForNamespace verifies that the storageKeyForNamespace function
@@ -632,4 +659,25 @@ func (s *testingStorage) Put(_ context.Context, _ *logical.StorageEntry) error {
 	}
 
 	return nil
+}
+
+// testNamespaceManager is a perculiar type of NamespaceManager where it can be
+// instantiated with the results that successive calls to its GetParentNamespace
+// method will return.
+type testNamespaceManager struct {
+	results []namespace.Namespace
+}
+
+// GetParentNamespace effectively pops namespaces from the results field in the
+// receiver testNamespaceManager struct and returns them. Once all namespaces
+// have been returns, it returns namespace.RootNamespace.
+func (n *testNamespaceManager) GetParentNamespace(_ string) *namespace.Namespace {
+	if len(n.results) == 0 {
+		return namespace.RootNamespace
+	}
+
+	ns := n.results[0]
+	n.results = n.results[1:]
+
+	return &ns
 }

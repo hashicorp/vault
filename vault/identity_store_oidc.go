@@ -38,11 +38,34 @@ import (
 )
 
 type oidcConfig struct {
+	// Issuer is the scheme://host:port component of the issuer set as
+	// configuration in the Vault API. It is the URL base.
 	Issuer string `json:"issuer"`
 
 	// effectiveIssuer is a calculated field and will be either Issuer (if
-	// that's set) or the Vault instance's api_addr.
+	// that's set) or the Vault instance's api_addr, followed by the path
+	// /v1/<namespace_path>/identity/oidc.
 	effectiveIssuer string
+}
+
+// fullIssuer returns the full issuer for the config, suitable for OpenID metadata and
+// token claims. It takes an optional child, which must be of the value "" or "plugins".
+// The child will be appended as the last path segment on the returned issuer URL.
+func (c *oidcConfig) fullIssuer(child string) (string, error) {
+	if !validChildIssuer(child) {
+		return "", fmt.Errorf("invalid child issuer %q", child)
+	}
+
+	issuer, err := url.JoinPath(c.effectiveIssuer, child)
+	if err != nil {
+		return "", fmt.Errorf("failed to join issuer: %w", err)
+	}
+
+	return issuer, nil
+}
+
+func validChildIssuer(child string) bool {
+	return child == baseIdentityTokenIssuer || child == pluginIdentityTokenIssuer
 }
 
 type expireableKey struct {
@@ -114,6 +137,10 @@ const (
 	namedKeyConfigPath   = oidcTokensPrefix + "named_keys/"
 	publicKeysConfigPath = oidcTokensPrefix + "public_keys/"
 	roleConfigPath       = oidcTokensPrefix + "roles/"
+
+	// Identity tokens have a base issuer and plugin issuer
+	baseIdentityTokenIssuer   = ""
+	pluginIdentityTokenIssuer = "plugins"
 )
 
 var (
@@ -135,6 +162,13 @@ var (
 
 // pseudo-namespace for cache items that don't belong to any real namespace.
 var noNamespace = &namespace.Namespace{ID: "__NO_NAMESPACE"}
+
+// optionalChildIssuerRegex is a regex for optionally accepting a field in an
+// API request as a single path segment. Adapted from framework.OptionalParamRegex
+// to not include additional forward slashes.
+func optionalChildIssuerRegex(name string) string {
+	return fmt.Sprintf(`(/(?P<%s>[^/]+))?`, name)
+}
 
 func oidcPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
@@ -253,10 +287,16 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "List all named OIDC keys",
 		},
 		{
-			Pattern: "oidc/\\.well-known/openid-configuration/?$",
+			Pattern: "oidc" + optionalChildIssuerRegex("child") + "/\\.well-known/openid-configuration/?$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "oidc",
 				OperationSuffix: "open-id-configuration",
+			},
+			Fields: map[string]*framework.FieldSchema{
+				"child": {
+					Type:        framework.TypeString,
+					Description: "Name of the child issuer",
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: i.pathOIDCDiscovery,
@@ -265,10 +305,16 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "Query this path to retrieve the configured OIDC Issuer and Keys endpoints, response types, subject types, and signing algorithms used by the OIDC backend.",
 		},
 		{
-			Pattern: "oidc/\\.well-known/keys/?$",
+			Pattern: "oidc" + optionalChildIssuerRegex("child") + "/\\.well-known/keys/?$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "oidc",
 				OperationSuffix: "public-keys",
+			},
+			Fields: map[string]*framework.FieldSchema{
+				"child": {
+					Type:        framework.TypeString,
+					Description: "Name of the child issuer",
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: i.pathOIDCReadPublicKeys,
@@ -921,9 +967,14 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 			"than the verification_ttl of the key it references, setting token ttl to %d", expiry))
 	}
 
+	issuer, err := config.fullIssuer(baseIdentityTokenIssuer)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
 	now := time.Now()
 	idToken := idToken{
-		Issuer:    config.effectiveIssuer,
+		Issuer:    issuer,
 		Namespace: ns.ID,
 		Subject:   req.EntityID,
 		Audience:  role.ClientID,
@@ -1409,7 +1460,13 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
-	v, ok, err := i.oidcCache.Get(ns, "discoveryResponse")
+	var child string
+	if childRaw, ok := d.GetOk("child"); ok {
+		child = childRaw.(string)
+	}
+
+	cacheKey := fmt.Sprintf("%s/discoveryResponse", child)
+	v, ok, err := i.oidcCache.Get(ns, cacheKey)
 	if err != nil {
 		return nil, err
 	}
@@ -1422,9 +1479,14 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 			return nil, err
 		}
 
+		issuer, err := c.fullIssuer(child)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
 		disc := discovery{
-			Issuer:        c.effectiveIssuer,
-			Keys:          c.effectiveIssuer + "/.well-known/keys",
+			Issuer:        issuer,
+			Keys:          issuer + "/.well-known/keys",
 			ResponseTypes: []string{"id_token"},
 			Subjects:      []string{"public"},
 			IDTokenAlgs:   supportedAlgs,
@@ -1435,7 +1497,7 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 			return nil, err
 		}
 
-		if err := i.oidcCache.SetDefault(ns, "discoveryResponse", data); err != nil {
+		if err := i.oidcCache.SetDefault(ns, cacheKey, data); err != nil {
 			return nil, err
 		}
 	}
@@ -1494,6 +1556,14 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	var child string
+	if childRaw, ok := d.GetOk("child"); ok {
+		child = childRaw.(string)
+	}
+	if !validChildIssuer(child) {
+		return logical.ErrorResponse("invalid child issuer %q", child), nil
 	}
 
 	v, ok, err := i.oidcCache.Get(ns, "jwksResponse")
@@ -1609,8 +1679,13 @@ func (i *IdentityStore) pathOIDCIntrospect(ctx context.Context, req *logical.Req
 		return nil, err
 	}
 
+	issuer, err := c.fullIssuer(baseIdentityTokenIssuer)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
 	expected := jwt.Expected{
-		Issuer: c.effectiveIssuer,
+		Issuer: issuer,
 		Time:   time.Now(),
 	}
 

@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
+
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -59,7 +60,7 @@ func (b *backend) getRootConfig(ctx context.Context, s logical.Storage, clientTy
 			fetcher := &PluginIdentityTokenFetcher{
 				sys:      b.System(),
 				logger:   b.Logger(),
-				key:      config.IdentityTokenKey,
+				key:      "default",
 				audience: config.IdentityTokenAudience,
 				ns:       ns,
 				ttl:      config.IdentityTokenTTL * time.Second,
@@ -149,8 +150,7 @@ var _ stscreds.TokenFetcher = (*PluginIdentityTokenFetcher)(nil)
 
 func (f PluginIdentityTokenFetcher) FetchToken(ctx aws.Context) ([]byte, error) {
 	nsCtx := namespace.ContextWithNamespace(ctx, f.ns)
-	resp, err := f.sys.GenerateIdentityToken(nsCtx, pluginutil.IdentityTokenRequest{
-		Key:      f.key,
+	resp, err := f.sys.GenerateIdentityToken(nsCtx, &pluginutil.IdentityTokenRequest{
 		Audience: f.audience,
 		TTL:      f.ttl,
 	})

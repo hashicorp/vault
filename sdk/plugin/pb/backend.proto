@@ -593,9 +593,8 @@ message ClusterInfoReply {
 }
 
 message GenerateIdentityTokenRequest {
-  string key = 1;
-  string audience = 2;
-  int64 ttl = 3;
+  string audience = 1;
+  int64 ttl = 2;
 }
 
 message GenerateIdentityTokenResponse {
@@ -659,6 +658,7 @@ service SystemView {
   // ClusterInfo returns the ClusterID information; may be reused if ClusterName is also exposed.
   rpc ClusterInfo(Empty) returns (ClusterInfoReply);
 
+  // GenerateIdentityToken returns an identity token for the requesting plugin.
   rpc GenerateIdentityToken(GenerateIdentityTokenRequest) returns (GenerateIdentityTokenResponse);
 }
 

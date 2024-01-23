@@ -82,6 +82,9 @@ export default class PkiCertificateBaseModel extends Model {
   })
   otherSans;
 
+  // Fixes warning about "no attribute or relationship with the name `role` on `pki/certificate/base`"
+  @attr('string') role;
+
   // Attrs that come back from API POST request
   @attr({ label: 'CA Chain', isCertificate: true }) caChain;
   @attr('string', { isCertificate: true }) certificate;
