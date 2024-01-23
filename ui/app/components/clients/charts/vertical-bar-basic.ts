@@ -4,17 +4,16 @@
  */
 
 import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
 import { BAR_WIDTH, formatNumbers } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
-import type { Count, MonthlyChartData } from 'vault/vault/charts/client-counts';
-import { tracked } from '@glimmer/tracking';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { format } from 'date-fns';
-import { toLabel } from 'core/helpers/to-label';
+
+import type { Count, MonthlyChartData } from 'vault/vault/charts/client-counts';
 
 interface Args {
   data: MonthlyChartData[];
-  dataKey: string;
+  yKey: string;
   chartTitle: string;
   chartHeight?: number;
 }
@@ -29,13 +28,13 @@ interface ChartData {
 
 /**
  * @module VerticalBarBasic
- * Renders a bar chart of secret syncs over time.
+ * Renders a vertical bar chart of counts (@yKey) over time.
  *
  * @example
  <Clients::Charts::VerticalBarBasic
     @chartTitle="Secret Sync client counts"
     @data={{this.model}}
-    @dataKey="secret_syncs"
+    @yKey="secret_syncs"
     @showTable={{true}}
     @chartHeight={{200}}
   />
@@ -51,40 +50,48 @@ export default class VerticalBarBasic extends Component<Args> {
 
   get chartData() {
     return this.args.data.map((d): ChartData => {
-      const date = parseAPITimestamp(d.timestamp) as Date;
-      const count = d[this.args.dataKey as keyof Count] ?? null;
+      const xValue = d.timestamp as string;
+      const yValue = (d[this.args.yKey as keyof Count] as number) ?? null;
       return {
-        x: format(date, 'M/yy'),
-        y: count,
-        tooltip: count === null ? 'No data' : `${formatNumber([count])} ${toLabel([this.args.dataKey])}`,
-        legendX: format(date, 'MMMM yyyy'),
-        legendY: (count ?? 'No data').toString(),
+        x: parseAPITimestamp(xValue, 'M/yy') as string,
+        y: yValue,
+        tooltip:
+          yValue === null ? 'No data' : `${formatNumber([yValue])} ${this.args.yKey.replace(/_/g, ' ')}`,
+        legendX: parseAPITimestamp(xValue, 'MMMM yyyy') as string,
+        legendY: (yValue ?? 'No data').toString(),
       };
     });
   }
 
-  get countDomain() {
-    const counts: number[] = this.chartData.map((d) => d.y).flatMap((num) => (num ? [num] : []));
-    const upper = Math.round(Math.max(...counts) / 1000) * 1000;
-    return [0, upper];
+  get yDomain() {
+    const counts: number[] = this.chartData
+      .map((d) => d.y)
+      .flatMap((num) => (typeof num === 'number' ? [num] : []));
+    const max = Math.max(...counts);
+    // if max is 0, hardcode 4 because that's the y-axis tickCount
+    return [0, max === 0 ? 4 : max];
   }
 
-  get monthDomain() {
+  get xDomain() {
     const months = this.chartData.map((d) => d.x);
     return new Set(months);
   }
 
+  // TEMPLATE HELPERS
   barOffset = (bandwidth: number) => {
     return (bandwidth - this.barWidth) / 2;
   };
+
   tooltipX = (original: number, bandwidth: number) => {
     return (original + bandwidth / 2).toString();
   };
+
   tooltipY = (original: number) => {
     if (!original) return `0`;
     return `${original}`;
   };
-  formatCount = (num: number): string => {
+
+  formatTicksY = (num: number): string => {
     return formatNumbers(num) || num.toString();
   };
 }
