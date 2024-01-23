@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mitchellh/mapstructure"
+
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internal/observability/event"
@@ -668,8 +670,12 @@ func TestEntryFormatter_Process_JSON(t *testing.T) {
 		}
 
 		expectedJSON.Time = actualJSON.Time
-
-		expectedBytes, err := json.Marshal(expectedJSON)
+		m := make(map[string]any)
+		err = mapstructure.Decode(expectedJSON, &m)
+		if err != nil {
+			t.Fatalf("unable to decode json: %s", err)
+		}
+		expectedBytes, err := json.Marshal(m)
 		if err != nil {
 			t.Fatalf("unable to marshal json: %s", err)
 		}
