@@ -10,14 +10,8 @@ import { hash } from 'rsvp';
 export default class MessagesMessageEditRoute extends Route {
   @service store;
 
-  async getMessages(authenticated = true) {
-    try {
-      return await this.store.query('config-ui/message', {
-        authenticated,
-      });
-    } catch {
-      return [];
-    }
+  getMessages(authenticated = true) {
+    return this.store.query('config-ui/message', { authenticated }).catch(() => []);
   }
 
   async model() {

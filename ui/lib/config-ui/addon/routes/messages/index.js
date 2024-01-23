@@ -22,30 +22,29 @@ export default class MessagesRoute extends Route {
     },
   };
 
-  async model(params) {
-    try {
-      const { authenticated, page, pageFilter } = params;
-      const filter = pageFilter
-        ? (dataset) => dataset.filter((item) => item?.title.toLowerCase().includes(pageFilter.toLowerCase()))
-        : null;
-      const messages = await this.store.lazyPaginatedQuery('config-ui/message', {
+  model(params) {
+    const { authenticated, page, pageFilter } = params;
+    const filter = pageFilter
+      ? (dataset) => dataset.filter((item) => item?.title.toLowerCase().includes(pageFilter.toLowerCase()))
+      : null;
+    const messages = this.store
+      .lazyPaginatedQuery('config-ui/message', {
         authenticated,
         pageFilter: filter,
         responsePath: 'data.keys',
         page: page || 1,
         size: 10,
+      })
+      .catch((e) => {
+        if (e.httpStatus === 404) {
+          return [];
+        }
+        throw e;
       });
-      return hash({
-        pageFilter,
-        messages,
-      });
-    } catch (e) {
-      if (e.httpStatus === 404) {
-        return [];
-      }
-
-      throw e;
-    }
+    return hash({
+      pageFilter,
+      messages,
+    });
   }
 
   setupController(controller, resolvedModel) {

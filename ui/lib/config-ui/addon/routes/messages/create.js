@@ -5,7 +5,6 @@
 
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-import { hash } from 'rsvp';
 
 export default class MessagesCreateRoute extends Route {
   @service store;
@@ -33,13 +32,13 @@ export default class MessagesCreateRoute extends Route {
     });
     const messages = await this.getMessages(authenticated);
 
-    return hash({
+    return {
       message,
       messages,
       authenticated,
       hasSomeActiveModals:
         messages.length && messages?.some((message) => message.type === 'modal' && message.active),
-    });
+    };
   }
 
   setupController(controller, resolvedModel) {
