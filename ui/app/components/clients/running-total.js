@@ -22,7 +22,6 @@ import { calculateAverage } from 'vault/utils/chart-helpers';
       />
  * ```
 
- * @param {string} selectedAuthMethod - string of auth method label for empty state message in bar chart
  * @param {array} byMonthActivityData - array of objects from /activity response, from the 'months' key, includes total and new clients per month
     object structure: {
       month: '1/22',
