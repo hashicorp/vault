@@ -39,8 +39,13 @@ func TestEntryFilter_NewEntryFilter(t *testing.T) {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.NewEntryFilter: cannot create new audit filter",
 		},
+		"unsupported-field-filter": {
+			Filter:               "foo == bar",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "audit.NewEntryFilter: filter references an unsupported field: foo == bar",
+		},
 		"good-filter": {
-			Filter:          "foo == bar",
+			Filter:          "operation == create",
 			IsErrorExpected: false,
 		},
 	}
@@ -92,7 +97,7 @@ func TestEntryFilter_Process_ContextDone(t *testing.T) {
 	// Explicitly cancel the context
 	cancel()
 
-	l, err := NewEntryFilter("foo == bar")
+	l, err := NewEntryFilter("operation == foo")
 	require.NoError(t, err)
 
 	// Fake audit event
@@ -121,7 +126,7 @@ func TestEntryFilter_Process_ContextDone(t *testing.T) {
 func TestEntryFilter_Process_NilEvent(t *testing.T) {
 	t.Parallel()
 
-	l, err := NewEntryFilter("foo == bar")
+	l, err := NewEntryFilter("operation == foo")
 	require.NoError(t, err)
 	e, err := l.Process(context.Background(), nil)
 	require.Error(t, err)
@@ -137,7 +142,7 @@ func TestEntryFilter_Process_NilEvent(t *testing.T) {
 func TestEntryFilter_Process_BadPayload(t *testing.T) {
 	t.Parallel()
 
-	l, err := NewEntryFilter("foo == bar")
+	l, err := NewEntryFilter("operation == foo")
 	require.NoError(t, err)
 
 	e := &eventlogger.Event{
@@ -160,7 +165,7 @@ func TestEntryFilter_Process_BadPayload(t *testing.T) {
 func TestEntryFilter_Process_NoAuditDataInPayload(t *testing.T) {
 	t.Parallel()
 
-	l, err := NewEntryFilter("foo == bar")
+	l, err := NewEntryFilter("operation == foo")
 	require.NoError(t, err)
 
 	a, err := NewEvent(RequestType)

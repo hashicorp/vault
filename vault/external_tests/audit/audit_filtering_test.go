@@ -289,6 +289,39 @@ func TestAuditFilteringFallbackDevice(t *testing.T) {
 	require.Equal(t, 5, numberOfEntries)
 }
 
+// TestAuditFilteringFilterForUnsupportedField validates that the audit device
+// 'filter' option fails when the filter expression selector references an
+// unsupported field and that the error prevents an audit device from created.
+func TestAuditFilteringFilterForUnsupportedField(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client, err := cluster.Cores[0].Client.Clone()
+	require.NoError(t, err)
+	client.SetToken(cluster.RootToken)
+
+	tempDir := t.TempDir()
+	filteredLogFile, err := os.CreateTemp(tempDir, "")
+	filteredDevicePath := "filtered"
+	filteredDeviceData := map[string]any{
+		"type":        "file",
+		"description": "",
+		"local":       false,
+		"options": map[string]any{
+			"file_path": filteredLogFile.Name(),
+			"filter":    "auth == foo", // 'auth' is not one of the fields we allow filtering on
+		},
+	}
+	_, err = client.Logical().Write("sys/audit/"+filteredDevicePath, filteredDeviceData)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "audit.NewEntryFilter: filter references an unsupported field: auth == foo")
+
+	// Ensure the device has not been created.
+	devices, err := client.Sys().ListAudit()
+	require.NoError(t, err)
+	_, ok := devices[filteredDevicePath]
+	require.False(t, ok)
+}
+
 // getFileSize returns the size of the given file in bytes.
 func getFileSize(t *testing.T, filePath string) int64 {
 	t.Helper()
