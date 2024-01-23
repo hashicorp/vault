@@ -5,7 +5,6 @@
 
 {{#if this.byMonthActivityData}}
   <Clients::RunningTotal
-    @selectedAuthMethod={{@authMount}}
     @byMonthActivityData={{this.byMonthActivityData}}
     @isHistoricalMonth={{and (not this.isCurrentMonth) (not this.isDateRange)}}
     @isCurrentMonth={{this.isCurrentMonth}}
