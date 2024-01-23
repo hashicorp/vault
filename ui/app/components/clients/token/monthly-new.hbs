@@ -28,19 +28,19 @@
   </:emptyState>
 
   <:stats>
-    <div class="chart-subTitle has-top-padding-l">
-      <h3 class="data-details">Average new entity clients per month</h3>
-      <p class="data-details" data-test-monthly-new-entity>
-        {{format-number this.entityClientData.averageNewClients}}
-      </p>
-    </div>
+    <StatText
+      @label="Average new entity clients per month"
+      @value={{this.entityClientData.averageNewClients}}
+      @size="m"
+      class="chart-subTitle has-top-padding-l"
+    />
 
-    <div class="data-details-top has-top-padding-l">
-      <h3 class="data-details">Average new non-entity clients per month</h3>
-      <p class="data-details" data-test-monthly-new-nonentity>
-        {{format-number this.nonEntityClientData.averageNewClients}}
-      </p>
-    </div>
+    <StatText
+      @label="Average new non-entity clients per month"
+      @value={{this.nonEntityClientData.averageNewClients}}
+      @size="m"
+      class="data-details-top has-top-padding-l"
+    />
   </:stats>
 
   <:legend>

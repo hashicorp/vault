@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if this.isDateRange}}
   <Clients::ChartContainer
     @title={{this.title}}
@@ -16,12 +21,12 @@
     </:subTitle>
 
     <:stats>
-      <div class="data-details-top has-top-padding-l">
-        <h3 class="data-details">Average sync clients per month</h3>
-        <p class="data-details">
-          {{format-number (this.average this.byMonthActivityData "secret_syncs")}}
-        </p>
-      </div>
+      <StatText
+        @label="Average sync clients per month"
+        @value={{this.average this.byMonthActivityData "secret_syncs"}}
+        @size="m"
+        class="data-details-top has-top-padding-l"
+      />
     </:stats>
 
     <:chart>
@@ -36,7 +41,7 @@
     <:emptyState>
       <EmptyState
         @title="No monthly secrets sync clients"
-        @subTitle="There is no secret sync data is available for this date range."
+        @subTitle="There is no secrets sync data available for this date range."
         @bottomBorder={{true}}
       />
     </:emptyState>
