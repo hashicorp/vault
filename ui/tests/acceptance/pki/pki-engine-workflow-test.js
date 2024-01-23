@@ -15,7 +15,9 @@ import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/policy-generator/pki';
 import { tokenWithPolicy, runCommands, clearRecords } from 'vault/tests/helpers/pki/pki-run-commands';
 import { unsupportedPem } from 'vault/tests/helpers/pki/values';
-
+import { create } from 'ember-cli-page-object';
+import flashMessage from 'vault/tests/pages/components/flash-message';
+const flash = create(flashMessage);
 /**
  * This test module should test the PKI workflow, including:
  * - link between pages and confirm that the url is as expected
@@ -220,7 +222,11 @@ module('Acceptance | pki workflow', function (hooks) {
 
       await fillIn(SELECTORS.roleForm.roleName, roleName);
       await click(SELECTORS.roleForm.roleCreateButton);
-
+      assert.strictEqual(
+        flash.latestMessage,
+        `Successfully created the role ${roleName}`,
+        'renders success flash upon creation'
+      );
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/${roleName}/details`);
       assert.dom(SELECTORS.breadcrumbs).exists({ count: 4 }, 'Shows 4 breadcrumbs');
       assert.dom(SELECTORS.pageTitle).hasText(`PKI Role ${roleName}`);
