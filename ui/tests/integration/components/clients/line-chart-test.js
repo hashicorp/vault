@@ -49,7 +49,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
   test('it renders', async function (assert) {
     await render(hbs`
     <div class="chart-container-wide">
-      <Clients::LineChart @dataset={{this.dataset}} @xKey={{this.xKey}} @yKey={{this.yKey}} />
+      <Clients::Charts::Line @dataset={{this.dataset}} @xKey={{this.xKey}} @yKey={{this.yKey}} />
       </div>
     `);
 
@@ -102,7 +102,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     ]);
     await render(hbs`
     <div class="chart-container-wide">
-      <Clients::LineChart
+      <Clients::Charts::Line
         @dataset={{this.dataset}}
         @upgradeData={{this.upgradeData}}
         @xKey={{this.xKey}}
@@ -169,7 +169,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     ]);
     await render(hbs`
     <div class="chart-container-wide">
-      <Clients::LineChart
+      <Clients::Charts::Line
         @dataset={{this.dataset}}
         @upgradeData={{this.upgradeData}}
       />
@@ -214,7 +214,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     ]);
     await render(hbs`
     <div class="chart-container-wide">
-      <Clients::LineChart
+      <Clients::Charts::Line
         @dataset={{this.dataset}}
         @xKey={{this.xKey}}
         @yKey={{this.yKey}}
@@ -232,7 +232,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     this.set('upgradeData', { some: 'object' });
     await render(hbs`
     <div class="chart-container-wide">
-    <Clients::LineChart
+    <Clients::Charts::Line
     @dataset={{this.dataset}}
     @upgradeData={{this.upgradeData}}
     @xKey={{this.xKey}}
@@ -250,7 +250,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     this.set('upgradeData', [{ incorrect: 'key names' }]);
     await render(hbs`
     <div class="chart-container-wide">
-    <Clients::LineChart
+    <Clients::Charts::Line
     @dataset={{this.dataset}}
     @upgradeData={{this.upgradeData}}
     @xKey={{this.xKey}}
@@ -267,7 +267,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
   test('it renders empty state when no dataset', async function (assert) {
     await render(hbs`
     <div class="chart-container-wide">
-    <Clients::LineChart @noDataMessage="this is a custom message to explain why you're not seeing a line chart"/>
+    <Clients::Charts::Line @noDataMessage="this is a custom message to explain why you're not seeing a line chart"/>
     </div>
     `);
 
@@ -360,7 +360,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     this.set('dataset', datasets.small);
     await render(hbs`
     <div class="chart-container-wide">
-      <Clients::LineChart
+      <Clients::Charts::Line
         @dataset={{this.dataset}}
         @upgradeData={{this.upgradeData}}
         @xKey={{this.xKey}}
@@ -368,7 +368,6 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       />
     </div>
     `);
-
     assert.dom('[data-test-y-axis]').hasText('0 2 4 6 8 10', 'y-axis renders correctly for small values');
     assert
       .dom('[data-test-x-axis]')

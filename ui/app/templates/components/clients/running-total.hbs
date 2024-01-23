@@ -14,7 +14,7 @@
     </div>
 
     <div class={{concat (unless @byMonthActivityData "chart-empty-state ") "chart-container-wide"}}>
-      <Clients::LineChart @dataset={{@byMonthActivityData}} @upgradeData={{@upgradeData}} @chartHeight="250" />
+      <Clients::Charts::Line @dataset={{@byMonthActivityData}} @upgradeData={{@upgradeData}} @chartHeight="250" />
     </div>
 
     <div class="chart-subTitle">
