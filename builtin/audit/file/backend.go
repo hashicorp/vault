@@ -4,12 +4,8 @@
 package file
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -36,23 +32,17 @@ var _ audit.Backend = (*Backend)(nil)
 // It doesn't do anything more at the moment to assist with rotation
 // or reset the write cursor, this should be done in the future.
 type Backend struct {
-	f            *os.File
-	fallback     bool
-	fileLock     sync.RWMutex
-	formatter    *audit.EntryFormatterWriter
-	formatConfig audit.FormatterConfig
-	mode         os.FileMode
-	name         string
-	nodeIDList   []eventlogger.NodeID
-	nodeMap      map[eventlogger.NodeID]eventlogger.Node
-	filePath     string
-	salt         *atomic.Value
-	saltConfig   *salt.Config
-	saltMutex    sync.RWMutex
-	saltView     logical.Storage
+	fallback   bool
+	name       string
+	nodeIDList []eventlogger.NodeID
+	nodeMap    map[eventlogger.NodeID]eventlogger.Node
+	salt       *atomic.Value
+	saltConfig *salt.Config
+	saltMutex  sync.RWMutex
+	saltView   logical.Storage
 }
 
-func Factory(_ context.Context, conf *audit.BackendConfig, useEventLogger bool, headersConfig audit.HeaderFormatter) (audit.Backend, error) {
+func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.HeaderFormatter) (audit.Backend, error) {
 	const op = "file.Factory"
 
 	if conf.SaltConfig == nil {
@@ -96,25 +86,23 @@ func Factory(_ context.Context, conf *audit.BackendConfig, useEventLogger bool, 
 		filePath = discard
 	}
 
-	mode := os.FileMode(0o600)
-	if modeRaw, ok := conf.Config["mode"]; ok {
-		m, err := strconv.ParseUint(modeRaw, 8, 32)
-		if err != nil {
-			return nil, fmt.Errorf("%s: unable to parse 'mode': %w", op, err)
-		}
-		switch m {
-		case 0:
-			// if mode is 0000, then do not modify file mode
-			if filePath != stdout && filePath != discard {
-				fileInfo, err := os.Stat(filePath)
-				if err != nil {
-					return nil, fmt.Errorf("%s: unable to stat %q: %w", op, filePath, err)
-				}
-				mode = fileInfo.Mode()
-			}
-		default:
-			mode = os.FileMode(m)
-		}
+	b := &Backend{
+		fallback:   fallback,
+		name:       conf.MountPath,
+		saltConfig: conf.SaltConfig,
+		saltView:   conf.SaltView,
+		salt:       new(atomic.Value),
+		nodeIDList: []eventlogger.NodeID{},
+		nodeMap:    make(map[eventlogger.NodeID]eventlogger.Node),
+	}
+
+	// Ensure we are working with the right type by explicitly storing a nil of
+	// the right type
+	b.salt.Store((*salt.Salt)(nil))
+
+	err = b.configureFilterNode(conf.Config["filter"])
+	if err != nil {
+		return nil, fmt.Errorf("%s: error configuring filter node: %w", op, err)
 	}
 
 	cfg, err := formatterConfig(conf.Config)
@@ -122,78 +110,19 @@ func Factory(_ context.Context, conf *audit.BackendConfig, useEventLogger bool, 
 		return nil, fmt.Errorf("%s: failed to create formatter config: %w", op, err)
 	}
 
-	b := &Backend{
-		fallback:     fallback,
-		filePath:     filePath,
-		formatConfig: cfg,
-		mode:         mode,
-		name:         conf.MountPath,
-		saltConfig:   conf.SaltConfig,
-		saltView:     conf.SaltView,
-		salt:         new(atomic.Value),
+	formatterOpts := []audit.Option{
+		audit.WithHeaderFormatter(headersConfig),
+		audit.WithPrefix(conf.Config["prefix"]),
 	}
 
-	// Ensure we are working with the right type by explicitly storing a nil of
-	// the right type
-	b.salt.Store((*salt.Salt)(nil))
-
-	// Configure the formatter for either case.
-	f, err := audit.NewEntryFormatter(b.formatConfig, b, audit.WithHeaderFormatter(headersConfig), audit.WithPrefix(conf.Config["prefix"]))
+	err = b.configureFormatterNode(cfg, formatterOpts...)
 	if err != nil {
-		return nil, fmt.Errorf("%s: error creating formatter: %w", op, err)
+		return nil, fmt.Errorf("%s: error configuring formatter node: %w", op, err)
 	}
 
-	var w audit.Writer
-	switch b.formatConfig.RequiredFormat {
-	case audit.JSONFormat:
-		w = &audit.JSONWriter{Prefix: conf.Config["prefix"]}
-	case audit.JSONxFormat:
-		w = &audit.JSONxWriter{Prefix: conf.Config["prefix"]}
-	default:
-		return nil, fmt.Errorf("%s: unknown format type %q", op, b.formatConfig.RequiredFormat)
-	}
-
-	fw, err := audit.NewEntryFormatterWriter(b.formatConfig, f, w)
+	err = b.configureSinkNode(conf.MountPath, filePath, conf.Config["mode"], cfg.RequiredFormat.String())
 	if err != nil {
-		return nil, fmt.Errorf("%s: error creating formatter writer: %w", op, err)
-	}
-	b.formatter = fw
-
-	if useEventLogger {
-		b.nodeIDList = []eventlogger.NodeID{}
-		b.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node)
-
-		err := b.configureFilterNode(conf.Config["filter"])
-		if err != nil {
-			return nil, fmt.Errorf("%s: error configuring filter node: %w", op, err)
-		}
-
-		formatterOpts := []audit.Option{
-			audit.WithHeaderFormatter(headersConfig),
-			audit.WithPrefix(conf.Config["prefix"]),
-		}
-
-		err = b.configureFormatterNode(cfg, formatterOpts...)
-		if err != nil {
-			return nil, fmt.Errorf("%s: error configuring formatter node: %w", op, err)
-		}
-
-		err = b.configureSinkNode(conf.MountPath, filePath, conf.Config["mode"], cfg.RequiredFormat.String())
-		if err != nil {
-			return nil, fmt.Errorf("%s: error configuring sink node: %w", op, err)
-		}
-	} else {
-		switch filePath {
-		case stdout:
-		case discard:
-		default:
-			// Ensure that the file can be successfully opened for writing;
-			// otherwise it will be too late to catch later without problems
-			// (ref: https://github.com/hashicorp/vault/issues/550)
-			if err := b.open(); err != nil {
-				return nil, fmt.Errorf("%s: sanity check failed; unable to open %q for writing: %w", op, filePath, err)
-			}
-		}
+		return nil, fmt.Errorf("%s: error configuring sink node: %w", op, err)
 	}
 
 	return b, nil
@@ -223,178 +152,22 @@ func (b *Backend) Salt(ctx context.Context) (*salt.Salt, error) {
 	return newSalt, nil
 }
 
-// Deprecated: Use eventlogger.
-func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
-	var writer io.Writer
-	switch b.filePath {
-	case stdout:
-		writer = os.Stdout
-	case discard:
-		return nil
-	}
-
-	buf := bytes.NewBuffer(make([]byte, 0, 2000))
-	err := b.formatter.FormatAndWriteRequest(ctx, buf, in)
-	if err != nil {
-		return err
-	}
-
-	return b.log(ctx, buf, writer)
-}
-
-// Deprecated: Use eventlogger.
-func (b *Backend) log(_ context.Context, buf *bytes.Buffer, writer io.Writer) error {
-	reader := bytes.NewReader(buf.Bytes())
-
-	b.fileLock.Lock()
-
-	if writer == nil {
-		if err := b.open(); err != nil {
-			b.fileLock.Unlock()
-			return err
-		}
-		writer = b.f
-	}
-
-	if _, err := reader.WriteTo(writer); err == nil {
-		b.fileLock.Unlock()
-		return nil
-	} else if b.filePath == stdout {
-		b.fileLock.Unlock()
-		return err
-	}
-
-	// If writing to stdout there's no real reason to think anything would have
-	// changed so return above. Otherwise, opportunistically try to re-open the
-	// FD, once per call.
-	b.f.Close()
-	b.f = nil
-
-	if err := b.open(); err != nil {
-		b.fileLock.Unlock()
-		return err
-	}
-
-	reader.Seek(0, io.SeekStart)
-	_, err := reader.WriteTo(writer)
-	b.fileLock.Unlock()
-	return err
-}
-
-// Deprecated: Use eventlogger.
-func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
-	var writer io.Writer
-	switch b.filePath {
-	case stdout:
-		writer = os.Stdout
-	case discard:
-		return nil
-	}
-
-	buf := bytes.NewBuffer(make([]byte, 0, 6000))
-	err := b.formatter.FormatAndWriteResponse(ctx, buf, in)
-	if err != nil {
-		return err
-	}
-
-	return b.log(ctx, buf, writer)
-}
-
-func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
-	// Event logger behavior - manually Process each node
+func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput) error {
 	if len(b.nodeIDList) > 0 {
 		return audit.ProcessManual(ctx, in, b.nodeIDList, b.nodeMap)
-	}
-
-	// Old behavior
-	var writer io.Writer
-	switch b.filePath {
-	case stdout:
-		writer = os.Stdout
-	case discard:
-		return nil
-	}
-
-	var buf bytes.Buffer
-
-	temporaryFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
-	if err != nil {
-		return err
-	}
-
-	if err = temporaryFormatter.FormatAndWriteRequest(ctx, &buf, in); err != nil {
-		return err
-	}
-
-	return b.log(ctx, &buf, writer)
-}
-
-// The file lock must be held before calling this
-// Deprecated: Use eventlogger.
-func (b *Backend) open() error {
-	if b.f != nil {
-		return nil
-	}
-	if err := os.MkdirAll(filepath.Dir(b.filePath), b.mode); err != nil {
-		return err
-	}
-
-	var err error
-	b.f, err = os.OpenFile(b.filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, b.mode)
-	if err != nil {
-		return err
-	}
-
-	// Change the file mode in case the log file already existed. We special
-	// case /dev/null since we can't chmod it and bypass if the mode is zero
-	switch b.filePath {
-	case "/dev/null":
-	default:
-		if b.mode != 0 {
-			err = os.Chmod(b.filePath, b.mode)
-			if err != nil {
-				return err
-			}
-		}
 	}
 
 	return nil
 }
 
 func (b *Backend) Reload(_ context.Context) error {
-	// When there are nodes created in the map, use the eventlogger behavior.
-	if len(b.nodeMap) > 0 {
-		for _, n := range b.nodeMap {
-			if n.Type() == eventlogger.NodeTypeSink {
-				return n.Reopen()
-			}
+	for _, n := range b.nodeMap {
+		if n.Type() == eventlogger.NodeTypeSink {
+			return n.Reopen()
 		}
-
-		return nil
-	} else {
-		// old non-eventlogger behavior
-		switch b.filePath {
-		case stdout, discard:
-			return nil
-		}
-
-		b.fileLock.Lock()
-		defer b.fileLock.Unlock()
-
-		if b.f == nil {
-			return b.open()
-		}
-
-		err := b.f.Close()
-		// Set to nil here so that even if we error out, on the next access open()
-		// will be tried
-		b.f = nil
-		if err != nil {
-			return err
-		}
-
-		return b.open()
 	}
+
+	return nil
 }
 
 func (b *Backend) Invalidate(_ context.Context) {
@@ -464,6 +237,7 @@ func (b *Backend) configureFilterNode(filter string) error {
 
 	b.nodeIDList = append(b.nodeIDList, filterNodeID)
 	b.nodeMap[filterNodeID] = filterNode
+
 	return nil
 }
 
@@ -483,6 +257,7 @@ func (b *Backend) configureFormatterNode(formatConfig audit.FormatterConfig, opt
 
 	b.nodeIDList = append(b.nodeIDList, formatterNodeID)
 	b.nodeMap[formatterNodeID] = formatterNode
+
 	return nil
 }
 
@@ -537,10 +312,29 @@ func (b *Backend) configureSinkNode(name string, filePath string, mode string, f
 		return fmt.Errorf("%s: file sink creation failed for path %q: %w", op, filePath, err)
 	}
 
-	sinkNode = &audit.SinkWrapper{Name: sinkName, Sink: sinkNode}
+	// Wrap the sink node with metrics middleware
+	sinkMetricTimer, err := audit.NewSinkMetricTimer(sinkName, sinkNode)
+	if err != nil {
+		return fmt.Errorf("%s: unable to add timing metrics to sink for path %q: %w", op, filePath, err)
+	}
+
+	// Decide what kind of labels we want and wrap the sink node inside a metrics counter.
+	var metricLabeler event.Labeler
+	switch {
+	case b.fallback:
+		metricLabeler = &audit.MetricLabelerAuditFallback{}
+	default:
+		metricLabeler = &audit.MetricLabelerAuditSink{}
+	}
+
+	sinkMetricCounter, err := event.NewMetricsCounter(sinkName, sinkMetricTimer, metricLabeler)
+	if err != nil {
+		return fmt.Errorf("%s: unable to add counting metrics to sink for path %q: %w", op, filePath, err)
+	}
 
 	b.nodeIDList = append(b.nodeIDList, sinkNodeID)
-	b.nodeMap[sinkNodeID] = sinkNode
+	b.nodeMap[sinkNodeID] = sinkMetricCounter
+
 	return nil
 }
 
@@ -566,6 +360,10 @@ func (b *Backend) EventType() eventlogger.EventType {
 
 // HasFiltering determines if the first node for the pipeline is an eventlogger.NodeTypeFilter.
 func (b *Backend) HasFiltering() bool {
+	if b.nodeMap == nil {
+		return false
+	}
+
 	return len(b.nodeIDList) > 0 && b.nodeMap[b.nodeIDList[0]].Type() == eventlogger.NodeTypeFilter
 }
 

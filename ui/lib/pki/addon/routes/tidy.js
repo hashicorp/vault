@@ -15,7 +15,7 @@ export default class PkiTidyRoute extends Route {
   model() {
     const engine = this.modelFor('application');
     return hash({
-      hasConfig: this.shouldPromptConfig,
+      hasConfig: this.pkiMountHasConfig,
       engine,
       autoTidyConfig: this.store.findRecord('pki/tidy', engine.id),
     });

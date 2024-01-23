@@ -82,7 +82,7 @@ jobs:
       contents: read
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/set-up-go
@@ -95,7 +95,7 @@ jobs:
       - name: Fetch Secrets
         id: secrets
         if: github.repository == 'hashicorp/vault-enterprise'
-        uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
+        uses: hashicorp/vault-action@affa6f04da5c2d55e6e115b7d1b044a6b1af8c74
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -117,7 +117,7 @@ jobs:
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - uses: ./.github/actions/set-up-gotestsum
       - run: mkdir -p test-results/go-test
-      - uses: actions/cache/restore@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+      - uses: actions/cache/restore@13aacd865c20de90d75de3b17ebe84f7a17d57d2 # v4.0.0
         if: inputs.test-timing-cache-enabled
         with:
           path: test-results/go-test
@@ -215,7 +215,7 @@ jobs:
       GOPRIVATE: github.com/hashicorp/*
       TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }}
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/set-up-go
@@ -228,7 +228,7 @@ jobs:
       - name: Fetch Secrets
         id: secrets
         if: github.repository == 'hashicorp/vault-enterprise'
-        uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
+        uses: hashicorp/vault-action@affa6f04da5c2d55e6e115b7d1b044a6b1af8c74
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -248,12 +248,13 @@ jobs:
         if: github.repository != 'hashicorp/vault-enterprise'
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
-      - id: build
-        if: inputs.binary-tests && matrix.id == inputs.total-runners
+      - uses: ./.github/actions/install-external-tools
+      - if: inputs.binary-tests && matrix.id == inputs.total-runners
+        name: Build dev binary for binary tests
+        # The dev mode binary has to exist for binary tests that are dispatched on the last runner.
         env:
           GOPRIVATE: github.com/hashicorp/*
-        run: time make ci-bootstrap dev
-      - uses: ./.github/actions/set-up-gotestsum
+        run: time make prep dev
       - name: Install gVisor
         # Enterprise repo runners do not allow sudo, so can't install gVisor there yet.
         if: ${{ !inputs.enterprise }}
@@ -342,11 +343,11 @@ jobs:
           # The docker/binary tests are more expensive, and we've had problems with timeouts when running at full
           # parallelism.  The default if -p isn't specified is to use NumCPUs, which seems fine for regular tests.
           package_parallelism=""
-          
+
           if [ -f bin/vault ]; then
             VAULT_BINARY="$(pwd)/bin/vault"
             export VAULT_BINARY
-          
+
             package_parallelism="-p 2"
           fi
 
@@ -361,13 +362,12 @@ jobs:
             fi
           fi
 
-          VAULT_TEST_LOG_DIR="$(pwd)/test-results/go-test/logs-${{ matrix.id }}"
+          VAULT_TEST_LOG_DIR="$(pwd)/test-results/go-test/logs"
           export VAULT_TEST_LOG_DIR
+          echo "test-log-dir=$VAULT_TEST_LOG_DIR" >> "$GITHUB_OUTPUT"
           mkdir -p "$VAULT_TEST_LOG_DIR"
-          
-          
           # shellcheck disable=SC2086 # can't quote RERUN_FAILS
-          GOARCH=${{ inputs.go-arch }} \
+          GOARCH=${{ inputs.go-arch }} VAULT_ADDR='' \
             gotestsum --format=short-verbose \
               --junitfile test-results/go-test/results-${{ matrix.id }}.xml \
               --jsonfile test-results/go-test/results-${{ matrix.id }}.json \
@@ -381,7 +381,7 @@ jobs:
               -parallel=${{ inputs.go-test-parallelism }} \
               ${{ inputs.extra-flags }} \
       - name: Prepare datadog-ci
-        if: github.repository == 'hashicorp/vault' && (success() || failure())
+        if: (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise') && (success() || failure())
         continue-on-error: true
         run: |
           curl -L --fail "https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64" --output "/usr/local/bin/datadog-ci"
@@ -396,16 +396,39 @@ jobs:
           fi
           datadog-ci junit upload --service "$GITHUB_REPOSITORY" test-results/go-test/results-${{ matrix.id }}.xml
         if: success() || failure()
-      - name: Archive test results
+      - name: Archive test logs
+        if: always()
+        id: archive-test-logs
+        # actions/upload-artifact will compress the artifact for us. We create a tarball to preserve
+        # permissions and to support file names with special characters.
+        run: |
+          log_prefix="test-logs-${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}-${{ matrix.id }}"
+          archive_name="${log_prefix}.tar"
+          {
+            echo "log_prefix=$log_prefix"
+            echo "archive_name=$archive_name"
+          } >> "$GITHUB_OUTPUT"
+          tar -cvf "$archive_name" -C "${{ steps.run-go-tests.outputs.test-log-dir }}" .
+      - name: Upload test logs archives
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
-          name: test-results${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}
-          path: test-results/go-test
+          name: ${{ steps.archive-test-logs.outputs.log_prefix }}
+          path: ${{ steps.archive-test-logs.outputs.archive_name }}
+          retention-days: 7
         if: success() || failure()
+      - name: Upload test results
+        if: success() || failure()
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        with:
+          name: test-results
+          path: |
+            test-results/go-test/*.json
+            test-results/go-test/*.xml
+          retention-days: 1
       # GitHub Actions doesn't expose the job ID or the URL to the job execution,
       # so we have to fetch it from the API
       - name: Fetch job logs URL
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         if: success() || failure()
         continue-on-error: true
         with:
@@ -478,7 +501,7 @@ jobs:
     needs: test-go
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
-      - uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+      - uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2 # v4.0.0
         with:
           path: test-results/go-test
           key: ${{ inputs.test-timing-cache-key }}-${{ github.run_number }}
@@ -490,7 +513,6 @@ jobs:
           name: test-results
           path: test-results/go-test
       - run: |
-          rm -rf test-results/go-test/logs
           ls -lhR test-results/go-test
           find test-results/go-test -mindepth 1 -type f -mtime +3 -delete
 

@@ -599,7 +599,6 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 
 			cluster, _ := raftCluster(t, &RaftClusterOpts{
 				DisablePerfStandby: tCaseLocal.DisablePerfStandby,
-				InmemCluster:       true,
 			})
 			defer cluster.Cleanup()
 
@@ -804,7 +803,6 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 
 			cluster, _ := raftCluster(t, &RaftClusterOpts{
 				DisablePerfStandby: tCaseLocal.DisablePerfStandby,
-				InmemCluster:       true,
 			})
 			defer cluster.Cleanup()
 

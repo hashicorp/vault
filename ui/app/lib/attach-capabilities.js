@@ -34,7 +34,7 @@ import { isArray } from '@ember/array';
 export default function attachCapabilities(modelClass, capabilities) {
   const capabilityKeys = Object.keys(capabilities);
   const newRelationships = capabilityKeys.reduce((ret, key) => {
-    ret[key] = belongsTo('capabilities');
+    ret[key] = belongsTo('capabilities', { async: false, inverse: null });
     return ret;
   }, {});
 

@@ -23,7 +23,7 @@ export default class ConfigurationIndexRoute extends Route {
   model() {
     const { acme, cluster, urls, crl, engine } = this.modelFor('configuration');
     return hash({
-      hasConfig: this.shouldPromptConfig,
+      hasConfig: this.pkiMountHasConfig,
       engine,
       acme,
       cluster,

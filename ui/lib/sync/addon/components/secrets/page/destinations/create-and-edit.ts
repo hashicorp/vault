@@ -45,6 +45,7 @@ export default class DestinationsCreateForm extends Component<Args> {
           title: `Edit ${name}`,
           breadcrumbs: [
             { label: 'Secrets Sync', route: 'secrets.overview' },
+            { label: 'Destinations', route: 'secrets.destinations' },
             {
               label: 'Destination',
               route: 'secrets.destinations.destination.secrets',

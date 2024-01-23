@@ -70,8 +70,9 @@ export default class DestinationSyncPageComponent extends Component<Args> {
   setMount(selected: Array<string>) {
     this.mountPath = selected[0] || '';
     if (this.mountPath === '') {
-      // clear secret path when mount is cleared
+      // reset form path when mount is cleared
       this.secretPath = '';
+      this.syncedSecret = '';
     }
   }
 
