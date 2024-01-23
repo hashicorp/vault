@@ -213,10 +213,12 @@ module('Acceptance | pki workflow', function (hooks) {
 
     test('create role happy path', async function (assert) {
       const roleName = 'another-role';
+      assert.true(this.pkiAdminToken.startsWith('hvs.'), 'admin token is valid');
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
       assert.dom(SELECTORS.emptyState).doesNotExist();
+      await waitFor(SELECTORS.rolesTab);
       assert.dom(SELECTORS.rolesTab).exists('Roles tab is present');
       await click(SELECTORS.rolesTab);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles`);
@@ -230,7 +232,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await click(SELECTORS.roleForm.roleCreateButton);
       assert.strictEqual(
         flash.latestMessage,
-        `Successfully created the role ${roleName}`,
+        `Successfully created the role ${roleName}.`,
         'renders success flash upon creation'
       );
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/${roleName}/details`);
