@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form onsubmit={{action @doSubmit (hash ciphertext=@ciphertext context=@context nonce=@nonce)}}>
+<form onsubmit={{perform @doSubmit (hash ciphertext=@ciphertext context=@context nonce=@nonce)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <div class="content has-bottom-margin-l">
       <p>You can decrypt ciphertext using <code>{{@key.name}}</code> as the encryption key.</p>
@@ -60,7 +60,7 @@
     </M.Header>
     <M.Body>
       <h2 class="has-text-weight-semibold is-6">Plaintext</h2>
-      <p class="sub-text">Plaintext is base64 encoded</p>
+      <p class="sub-text">Plaintext is base64 encoded.</p>
       <Hds::Copy::Snippet
         @textToCopy={{@plaintext}}
         @color="secondary"

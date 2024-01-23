@@ -3,13 +3,31 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { assign } from '@ember/polyfills';
-import { copy } from 'ember-copy';
-import { assert } from '@ember/debug';
+import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import Component from '@ember/component';
-import { set, get, computed } from '@ember/object';
+import { action } from '@ember/object';
+import { assert } from '@ember/debug';
+import { tracked } from '@glimmer/tracking';
+import { task } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
 import { encodeString } from 'vault/utils/b64';
+
+/**
+ * @module TransitKeyActions
+ * TransitKeyActions component handles the actions a user can take on a transit key model.
+ *
+ * @example
+ * ```js
+ * <TransitKeyActions
+ * @key={{this.model}}
+ * @selectedAction="rotate"
+ * @capabilities={{@capabilities}}
+ * @onRefresh={{@refresh}}
+ * @backend={{this.backend}}
+ * />
+ *
+ * @param backend= {String} - Optional if from the layout view.
+ */
 
 const TRANSIT_PARAMS = {
   hash_algorithm: 'sha2-256',
@@ -40,14 +58,15 @@ const TRANSIT_PARAMS = {
   didDecode: false,
   verification: 'Signature',
 };
-const PARAMS_FOR_ACTION = {
-  sign: ['input', 'hash_algorithm', 'key_version', 'prehashed', 'signature_algorithm'],
-  verify: ['input', 'hmac', 'signature', 'hash_algorithm', 'prehashed'],
-  hmac: ['input', 'algorithm', 'key_version'],
-  encrypt: ['plaintext', 'context', 'nonce', 'key_version'],
-  decrypt: ['ciphertext', 'context', 'nonce'],
-  rewrap: ['ciphertext', 'context', 'nonce', 'key_version'],
-};
+// ARG TODO ?>
+// const PARAMS_FOR_ACTION = {
+//   sign: ['input', 'hash_algorithm', 'key_version', 'prehashed', 'signature_algorithm'],
+//   verify: ['input', 'hmac', 'signature', 'hash_algorithm', 'prehashed'],
+//   hmac: ['input', 'algorithm', 'key_version'],
+//   encrypt: ['plaintext', 'context', 'nonce', 'key_version'],
+//   decrypt: ['ciphertext', 'context', 'nonce'],
+//   rewrap: ['ciphertext', 'context', 'nonce', 'key_version'],
+// };
 const SUCCESS_MESSAGE_FOR_ACTION = {
   sign: 'Signed your data',
   // the verify action doesn't trigger a success message
@@ -58,52 +77,30 @@ const SUCCESS_MESSAGE_FOR_ACTION = {
   datakey: 'Generated your key',
   export: 'Exported your key',
 };
-export default Component.extend(TRANSIT_PARAMS, {
-  store: service(),
-  flashMessages: service(),
+export default class TransitKeyActions extends Component {
+  @service store;
+  @service flashMessages;
 
   // public attrs
-  selectedAction: null,
-  key: null,
-  isModalActive: false,
+  @tracked isModalActive = false;
+  @tracked firstSupportedKeyAction;
+  @tracked oldSelectedAction;
+  @tracked errors;
+  @tracked props = Object.assign({}, TRANSIT_PARAMS); // shallow copy of the object. We don't want to mutate the original.
 
-  onRefresh() {},
-  init() {
-    this._super(...arguments);
-    // TODO figure out why get is needed here Ember Upgrade
-    // eslint-disable-next-line ember/no-get
-    if (this.selectedAction) {
-      return;
-    }
-    // eslint-disable-next-line ember/no-get
-    set(this, 'selectedAction', get(this, 'key.supportedActions.firstObject'));
-    assert('`key` is required for `' + this.toString() + '`.', this.getModelInfo());
-  },
+  constructor() {
+    super(...arguments);
+    assert(`@selectedAction is required for TransitKeyActions components`, this.args.selectedAction);
+    assert('@key` is required for TransitKeyActions components', this.args.key);
+  }
 
-  didReceiveAttrs() {
-    this._super(...arguments);
-    this.checkAction();
-    if (this.selectedAction === 'export') {
-      this.setExportKeyDefaults();
-    }
-  },
-
-  setExportKeyDefaults() {
-    const exportKeyType = this.key.exportKeyTypes.firstObject;
-    const exportKeyVersion = this.key.validKeyVersions.lastObject;
-    this.setProperties({
-      exportKeyType,
-      exportKeyVersion,
-    });
-  },
-
-  keyIsRSA: computed('key.type', function () {
-    const type = this.key.type;
+  get keyIsRSA() {
+    const { type } = this.args.key;
     return type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
-  }),
+  }
 
-  getModelInfo() {
-    const model = this.key || this.backend;
+  get getModelInfo() {
+    const model = this.args.key || this.backend;
     if (!model) {
       return null;
     }
@@ -114,82 +111,76 @@ export default Component.extend(TRANSIT_PARAMS, {
       backend,
       id,
     };
-  },
+  }
 
-  checkAction() {
-    const currentAction = this.selectedAction;
-    const oldAction = this.oldSelectedAction;
+  // checkAction() {
+  //   this.resetParams(this.oldSelectedAction, this.args.selectedAction);
+  //   this.oldSelectedAction = this.args.selectedAction;
+  // }
+  // ARG TODO revisit
+  // resetParams(oldAction, action) {
 
-    this.resetParams(oldAction, currentAction);
-    set(this, 'oldSelectedAction', currentAction);
-  },
+  //   let paramsToKeep;
+  //   const clearWithoutCheck =
+  //     !oldAction ||
+  //     // don't save values from datakey
+  //     oldAction === 'datakey' ||
+  //     // can rewrap signatures — using that as a ciphertext later would be problematic
+  //     (oldAction === 'rewrap' && !this.args.key.supportsEncryption);
 
-  resetParams(oldAction, action) {
-    const params = copy(TRANSIT_PARAMS);
-    let paramsToKeep;
-    const clearWithoutCheck =
-      !oldAction ||
-      // don't save values from datakey
-      oldAction === 'datakey' ||
-      // can rewrap signatures — using that as a ciphertext later would be problematic
-      (oldAction === 'rewrap' && !this.key.supportsEncryption);
+  //   if (!clearWithoutCheck && action) {
+  //     paramsToKeep = PARAMS_FOR_ACTION[action];
+  //   }
 
-    if (!clearWithoutCheck && action) {
-      paramsToKeep = PARAMS_FOR_ACTION[action];
-    }
-
-    if (paramsToKeep) {
-      paramsToKeep.forEach((param) => delete params[param]);
-    }
-    //resets params still left in the object to defaults
-    this.clearErrors();
-    this.setProperties(params);
-    if (action === 'export') {
-      this.setExportKeyDefaults();
-    }
-  },
+  //   if (paramsToKeep) {
+  //     paramsToKeep.forEach((param) => delete params[param]);
+  //   }
+  //   //resets params still left in the object to defaults
+  //   this.clearErrors();
+  //   this.setProperties(params);
+  //   if (action === 'export') {
+  //     this.props.exportKeyType = this.args.key.exportKeyTypes.firstObject;
+  //     this.props.exportKeyVersion = this.args.key.validKeyVersions.lastObject;
+  //   }
+  // }
 
   handleError(e) {
-    this.set('errors', e.errors);
-  },
+    this.errors = e.errors;
+  }
 
   clearErrors() {
-    this.set('errors', null);
-  },
+    this.errors = null;
+  }
 
   triggerSuccessMessage(action) {
     const message = SUCCESS_MESSAGE_FOR_ACTION[action];
     if (!message) return;
     this.flashMessages.success(message);
-  },
+  }
 
   handleSuccess(resp, options, action) {
-    let props = {};
     if (resp && resp.data) {
       if (action === 'export' && resp.data.keys) {
         const { keys, type, name } = resp.data;
         resp.data.keys = { keys, type, name };
       }
-      props = assign({}, props, resp.data);
+      this.props = { ...this.props, ...resp.data };
     }
     if (options.wrapTTL) {
-      props = assign({}, props, { wrappedToken: resp.wrap_info.token });
+      this.props = { ...this.props, ...{ wrappedToken: resp.wrap_info.token } };
     }
-    if (!this.isDestroyed && !this.isDestroying) {
-      this.toggleProperty('isModalActive');
-      this.setProperties(props);
-    }
+    // open the modal
+    this.isModalActive = !this.isModalActive;
+
     if (action === 'rotate') {
       this.onRefresh();
     }
     this.triggerSuccessMessage(action);
-  },
+  }
 
   compactData(data) {
-    const type = this.key.type;
-    const isRSA = type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
     return Object.keys(data).reduce((result, key) => {
-      if (key === 'signature_algorithm' && !isRSA) {
+      if (key === 'signature_algorithm' && !this.keyIsRSA) {
         return result;
       }
       if (data[key]) {
@@ -197,51 +188,54 @@ export default Component.extend(TRANSIT_PARAMS, {
       }
       return result;
     }, {});
-  },
+  }
+  // arg todo?
+  // @action onActionChange(action) {
+  // this.firstSupportedKeyAction = action;
+  // this.checkAction();
+  // }
+  // arg todo?
+  // @action onClear() {
+  // this.resetParams(null, this.firstSupportedKeyAction);
+  // }
+  // arg todo?
+  // @action clearParams(params) {
+  // const arr = Array.isArray(params) ? params : [params];
+  // arr.forEach((param) => (param = null));
+  // }
 
-  actions: {
-    onActionChange(action) {
-      set(this, 'selectedAction', action);
-      this.checkAction();
-    },
+  @action toggleEncodeBase64() {
+    this.props.encodedBase64 = !this.props.encodedBase64;
+  }
 
-    onClear() {
-      this.resetParams(null, this.selectedAction);
-    },
-
-    clearParams(params) {
-      const arr = Array.isArray(params) ? params : [params];
-      arr.forEach((param) => this.set(param, null));
-    },
-
-    doSubmit(data, options = {}, maybeEvent) {
-      const event = options.type === 'submit' ? options : maybeEvent;
-      if (event) {
-        event.preventDefault();
+  @task
+  @waitFor
+  *doSubmit(data, options = {}, maybeEvent) {
+    const event = options.type === 'submit' ? options : maybeEvent;
+    if (event) {
+      event.preventDefault();
+    }
+    const { backend, id } = this.getModelInfo;
+    const action = this.args.selectedAction;
+    const { ...formData } = data || {};
+    if (!this.props.encodedBase64) {
+      if (action === 'encrypt' && !!formData.plaintext) {
+        formData.plaintext = encodeString(formData.plaintext);
       }
-      const { backend, id } = this.getModelInfo();
-      const action = this.selectedAction;
-      const { encodedBase64, ...formData } = data || {};
-      if (!encodedBase64) {
-        if (action === 'encrypt' && !!formData.plaintext) {
-          formData.plaintext = encodeString(formData.plaintext);
-        }
-        if ((action === 'hmac' || action === 'verify' || action === 'sign') && !!formData.input) {
-          formData.input = encodeString(formData.input);
-        }
+      if ((action === 'hmac' || action === 'verify' || action === 'sign') && !!formData.input) {
+        formData.input = encodeString(formData.input);
       }
-      const payload = formData ? this.compactData(formData) : null;
-      this.setProperties({
-        errors: null,
-        result: null,
-      });
-      this.store
+    }
+    const payload = formData ? this.compactData(formData) : null;
+    this.errors = null;
+
+    try {
+      const resp = yield this.store
         .adapterFor('transit-key')
-        .keyAction(action, { backend, id, payload }, options)
-        .then(
-          (resp) => this.handleSuccess(resp, options, action),
-          (...errArgs) => this.handleError(...errArgs)
-        );
-    },
-  },
-});
+        .keyAction(action, { backend, id, payload }, options);
+      this.handleSuccess(resp, options, action);
+    } catch (e) {
+      this.handleError(e);
+    }
+  }
+}

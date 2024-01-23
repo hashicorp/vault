@@ -4,7 +4,7 @@
 ~}}
 
 <form
-  onsubmit={{action
+  onsubmit={{perform
     @doSubmit
     (hash
       input=@input
@@ -34,7 +34,13 @@
       </div>
     </div>
     <div class="field">
-      <Input @type="checkbox" id="encodedBase64" @checked={{@encodedBase64}} data-test-transit-input="encodedBase64" />
+      <Input
+        @type="checkbox"
+        id="encodedBase64"
+        @checked={{@encodedBase64}}
+        {{on "change" @toggleEncodeBase64}}
+        data-test-transit-input="encodedBase64"
+      />
       <label for="encodedBase64">This data is already encoded in base64</label>
     </div>
     {{#if (and @key.supportsSigning @key.derived (not @hmac))}}
@@ -186,7 +192,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <Hds::Button @text="Verify" @icon={{if @loading "loading"}} type="submit" disabled={{@loading}} />
+      <Hds::Button @text="Verify" @icon={{@doSubmit.isRunning}} type="submit" disabled={{@doSubmit.isRunning}} />
     </div>
   </div>
 </form>

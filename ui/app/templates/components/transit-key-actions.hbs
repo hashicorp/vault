@@ -3,53 +3,98 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-{{#if (eq this.selectedAction "rotate")}}
-  {{#if this.key.canRotate}}
-    <ConfirmAction
-      @buttonText="Rotate encryption key"
-      class="toolbar-button"
-      @buttonColor="secondary"
-      @confirmTitle="Rotate this key?"
-      @confirmMessage="After rotation, all key actions will default to using the newest version of the key."
-      @modalColor="warning"
-      @onConfirmAction={{action "doSubmit"}}
-      data-test-transit-key-rotate
-    />
-  {{/if}}
+{{#if (and (eq @selectedAction "rotate") @key.canRotate)}}
+  <ConfirmAction
+    @buttonText="Rotate encryption key"
+    class="toolbar-button"
+    @buttonColor="secondary"
+    @confirmTitle="Rotate this key?"
+    @confirmMessage="After rotation, all key actions will default to using the newest version of the key."
+    @modalColor="warning"
+    @onConfirmAction={{perform this.doSubmit}}
+    data-test-transit-key-rotate
+  />
 {{else}}
   <MessageError @errors={{this.errors}} />
-  {{#if this.selectedAction}}
-    <div data-test-transit-action={{this.selectedAction}}>
-      {{! template-lint-disable no-passed-in-event-handlers }}
-      {{component
-        (concat "transit-key-action/" this.selectedAction)
-        key=this.key
-        keys=this.keys
-        keyIsRSA=this.keyIsRSA
-        verification=this.verification
-        hmac=this.hmac
-        param=this.param
-        key_version=this.key_version
-        isModalActive=this.isModalActive
-        ciphertext=this.ciphertext
-        plaintext=this.plaintext
-        context=this.context
-        nonce=this.nonce
-        input=this.input
-        bits=this.bits
-        algorithm=this.algorithm
-        signature=this.signature
-        signature_algorithm=this.signature_algorithm
-        hash_algorithm=this.hash_algorithm
-        prehashed=this.prehashed
-        wrappedToken=this.wrappedToken
-        exportKeyType=this.exportKeyType
-        exportKeyVersion=this.exportKeyVersion
-        encodedBase64=this.encodedBase64
-        valid=this.valid
-        doSubmit=(action "doSubmit")
-        clearParams=(action "clearParams")
-      }}
-    </div>
+  {{#if (eq @selectedAction "encrypt")}}
+    <TransitKeyAction::Encrypt
+      @key={{@key}}
+      @param={{this.props.param}}
+      @context={{this.props.context}}
+      @nonce={{this.props.nonce}}
+      @bits={{this.props.bits}}
+      @key_version={{this.props.key_version}}
+      @encodeBase64={{this.props.encodedBase64}}
+      @toggleEncodeBase64={{this.toggleEncodeBase64}}
+      @plaintext={{this.props.plaintext}}
+      @ciphertext={{this.props.ciphertext}}
+      @doSubmit={{this.doSubmit}}
+      @isModalActive={{this.isModalActive}}
+    />
+  {{else if (eq @selectedAction "decrypt")}}
+    <TransitKeyAction::Decrypt
+      @key={{@key}}
+      @ciphertext={{this.props.ciphertext}}
+      @context={{this.props.context}}
+      @nonce={{this.props.nonce}}
+      @isModalActive={{this.isModalActive}}
+      @plaintext={{this.props.plaintext}}
+      @doSubmit={{this.doSubmit}}
+    />
+  {{else if (eq @selectedAction "datakey")}}
+    <TransitKeyAction::Datakey
+      @key={{@key}}
+      @param={{this.props.param}}
+      @context={{this.props.context}}
+      @nonce={{this.props.nonce}}
+      @bits={{this.props.bits}}
+      @plaintext={{this.props.plaintext}}
+      @ciphertext={{this.props.ciphertext}}
+      @doSubmit={{this.doSubmit}}
+      @isModalActive={{this.isModalActive}}
+    />
+  {{else if (eq @selectedAction "rewrap")}}
+    <TransitKeyAction::rewrap
+      @key={{@key}}
+      @param={{this.props.param}}
+      @context={{this.props.context}}
+      @nonce={{this.props.nonce}}
+      @key_version={{this.props.key_version}}
+      @ciphertext={{this.props.ciphertext}}
+      @isModalActive={{this.isModalActive}}
+      @doSubmit={{this.doSubmit}}
+    />
+  {{else if (eq @selectedAction "hmac")}}
+    <TransitKeyAction::hmac
+      @key={{@key}}
+      {{! ARG TODO revisit no input passed in }}
+      {{!-- @input={{this.props.input}} --}}
+      @algorithm={{this.props.algorithm}}
+      @key_version={{this.props.key_version}}
+      @encodeBase64={{this.props.encodeBase64}}
+      @toggleEncodeBase64={{this.toggleEncodeBase64}}
+      @hmac={{this.props.hmac}}
+      @isModalActive={{this.isModalActive}}
+      @doSubmit={{this.doSubmit}}
+    />
+  {{else if (eq @selectedAction "verify")}}
+    <TransitKeyAction::verify
+      @key={{@key}}
+      {{! ARG TODO revisit no input passed in }}
+      {{!-- @input={{this.props.input}} --}}
+      @signature={{this.props.signature}}
+      @signature_algorithm={{this.props.signature_algorithm}}
+      @hmac={{this.props.hmac}}
+      @hash_algorithm={{this.props.hash_algorithm}}
+      @context={{this.props.context}}
+      @prehashed={{this.props.prehashed}}
+      @encodeBase64={{this.props.encodeBase64}}
+      @verification={{this.props.verification}}
+      @valid={{this.props.valid}}
+      @toggleEncodeBase64={{this.toggleEncodeBase64}}
+      @keyIsRSA={{this.keyIsRSA}}
+      @isModalActive={{this.isModalActive}}
+      @doSubmit={{this.doSubmit}}
+    />
   {{/if}}
 {{/if}}
