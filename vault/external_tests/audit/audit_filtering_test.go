@@ -312,6 +312,27 @@ func TestAuditFilteringFilterForUnsupportedField(t *testing.T) {
 	require.NoError(t, err)
 	_, ok := devices[filteredDevicePath]
 	require.False(t, ok)
+
+	// Now we do the same test but with the 'skip_test' option set to true.
+	filteredDeviceDataSkipTest := map[string]any{
+		"type":        "file",
+		"description": "",
+		"local":       false,
+		"options": map[string]any{
+			"file_path": filteredLogFile.Name(),
+			"filter":    "auth == foo", // 'auth' is not one of the fields we allow filtering on
+			"skip_test": true,
+		},
+	}
+	_, err = client.Logical().Write("sys/audit/"+filteredDevicePath, filteredDeviceDataSkipTest)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "audit.NewEntryFilter: filter references an unsupported field: auth == foo")
+
+	// Ensure the device has not been created.
+	devices, err = client.Sys().ListAudit()
+	require.NoError(t, err)
+	_, ok = devices[filteredDevicePath]
+	require.False(t, ok)
 }
 
 // getFileSize returns the size of the given file in bytes.
