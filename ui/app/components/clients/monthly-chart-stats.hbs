@@ -19,7 +19,7 @@
   {{/if}}
 
   {{#if (has-block "chart")}}
-    <div class="{{unless @hasData 'chart-empty-state'}} chart-container-wide">
+    <div class="{{unless @hasChartData 'chart-empty-state'}} chart-container-wide">
       {{yield to="chart"}}
     </div>
   {{/if}}
@@ -34,4 +34,5 @@
       {{date-format @timestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
     </div>
   {{/if}}
+
 </div>

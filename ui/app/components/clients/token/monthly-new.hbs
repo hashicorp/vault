@@ -7,10 +7,9 @@
   @title="Monthly new"
   @description="Entity or non-entity clients which interacted with Vault for the first time during this date range, displayed per month."
   @timestamp={{@responseTimestamp}}
-  @hasData={{this.averageNewClients}}
+  @hasChartData={{this.hasAverageNewClients}}
   data-test-chart="monthly new"
 >
-
   <:chart>
     {{#if this.hasAverageNewClients}}
       <Clients::VerticalBarChart @dataset={{this.byMonthNewClients}} @chartLegend={{this.runningTotalLegend}} />
