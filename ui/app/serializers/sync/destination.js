@@ -20,12 +20,16 @@ export default class SyncDestinationSerializer extends ApplicationSerializer {
     // only send changed parameters for PATCH requests
     const changedKeys = Object.keys(snapshot.changedAttributes()).map((key) => decamelize(key));
     return changedKeys.reduce((payload, key) => {
-      if (JSON.stringify(data[key]) === '{}') {
-        // sending an empty object won't clear the previous param, set to null so PATCH removes pre-existing value
-        payload[key] = null;
-      } else {
-        payload[key] = data[key];
+      if (changedKeys.includes('custom_tags')) {
+        const [oldObject, newObject] = snapshot.changedAttributes()['customTags'];
+        if (oldObject && newObject) {
+          // manually compare the new and old keys of custom_tags object to determine which need to be removed
+          const oldKeys = Object.keys(oldObject).filter((k) => !Object.keys(newObject).includes(k));
+          // add tags_to_remove to the payload if there is a diff
+          if (oldKeys.length > 0) payload.tags_to_remove = oldKeys;
+        }
       }
+      payload[key] = data[key];
       return payload;
     }, {});
   }

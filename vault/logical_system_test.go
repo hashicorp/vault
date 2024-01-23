@@ -433,6 +433,244 @@ func TestSystemBackend_mount_force_no_cache(t *testing.T) {
 	}
 }
 
+// TestSystemBackend_mount_secret_identity_token_key ensures that the identity
+// token key can be specified at secret mount enable time.
+func TestSystemBackend_mount_secret_identity_token_key(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	core, b, _ := testCoreSystemBackend(t)
+
+	// Create a test key
+	testKey := "test_key"
+	resp, err := core.identityStore.HandleRequest(ctx, &logical.Request{
+		Storage:   core.identityStore.view,
+		Path:      fmt.Sprintf("oidc/key/%s", testKey),
+		Operation: logical.CreateOperation,
+	})
+	require.NoError(t, err)
+	require.Nil(t, resp)
+
+	tests := []struct {
+		name      string
+		mountPath string
+		keyName   string
+		wantErr   bool
+	}{
+		{
+			name:      "enable secret mount with default key",
+			mountPath: "mounts/dev/",
+			keyName:   defaultKeyName,
+		},
+		{
+			name:      "enable secret mount with empty key",
+			mountPath: "mounts/test/",
+			keyName:   "",
+		},
+		{
+			name:      "enable secret mount with existing key",
+			mountPath: "mounts/int/",
+			keyName:   testKey,
+		},
+		{
+			name:      "enable secret mount with key that does not exist",
+			mountPath: "mounts/prod/",
+			keyName:   "does_not_exist_key",
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Enable the secret mount
+			req := logical.TestRequest(t, logical.UpdateOperation, tt.mountPath)
+			req.Data["type"] = "kv"
+			req.Data["config"] = map[string]interface{}{
+				"identity_token_key": tt.keyName,
+			}
+			resp, err := b.HandleRequest(ctx, req)
+			if tt.wantErr {
+				require.Nil(t, err)
+				require.Equal(t, fmt.Errorf("key %q does not exist", tt.keyName), resp.Error())
+				return
+			}
+			require.NoError(t, err)
+			require.Nil(t, resp)
+
+			// Expect identity token key set on the mount entry
+			mountEntry := core.router.MatchingMountEntry(ctx, strings.TrimPrefix(tt.mountPath, "mounts/"))
+			require.NotNil(t, mountEntry)
+			require.Equal(t, tt.keyName, mountEntry.Config.IdentityTokenKey)
+		})
+	}
+}
+
+// TestSystemBackend_mount_auth_identity_token_key ensures that the identity
+// token key can be specified at auth mount enable time.
+func TestSystemBackend_mount_auth_identity_token_key(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	core, b, _ := testCoreSystemBackend(t)
+	core.credentialBackends["userpass"] = credUserpass.Factory
+
+	// Create a test key
+	testKey := "test_key"
+	resp, err := core.identityStore.HandleRequest(ctx, &logical.Request{
+		Storage:   core.identityStore.view,
+		Path:      fmt.Sprintf("oidc/key/%s", testKey),
+		Operation: logical.CreateOperation,
+	})
+	require.NoError(t, err)
+	require.Nil(t, resp)
+
+	tests := []struct {
+		name      string
+		mountPath string
+		keyName   string
+		wantErr   bool
+	}{
+		{
+			name:      "enable auth mount with default key",
+			mountPath: "auth/dev/",
+			keyName:   defaultKeyName,
+		},
+		{
+			name:      "enable auth mount with empty key",
+			mountPath: "auth/test/",
+			keyName:   "",
+		},
+		{
+			name:      "enable auth mount with existing key",
+			mountPath: "auth/int/",
+			keyName:   testKey,
+		},
+		{
+			name:      "enable auth mount with key that does not exist",
+			mountPath: "auth/prod/",
+			keyName:   "does_not_exist_key",
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Enable the auth mount
+			req := logical.TestRequest(t, logical.UpdateOperation, tt.mountPath)
+			req.Data["type"] = "userpass"
+			req.Data["config"] = map[string]interface{}{
+				"identity_token_key": tt.keyName,
+			}
+			resp, err := b.HandleRequest(ctx, req)
+			if tt.wantErr {
+				require.Nil(t, err)
+				require.Equal(t, fmt.Errorf("key %q does not exist", tt.keyName), resp.Error())
+				return
+			}
+			require.NoError(t, err)
+			require.Nil(t, resp)
+
+			// Expect identity token key set on the mount entry
+			mountEntry := core.router.MatchingMountEntry(ctx, tt.mountPath)
+			require.NotNil(t, mountEntry)
+			require.Equal(t, tt.keyName, mountEntry.Config.IdentityTokenKey)
+		})
+	}
+}
+
+// TestSystemBackend_tune_identity_token_key ensures that the identity
+// token key can be tuned for existing auth and secret mounts.
+func TestSystemBackend_tune_identity_token_key(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	core, b, _ := testCoreSystemBackend(t)
+	core.credentialBackends["userpass"] = credUserpass.Factory
+
+	// Enable an auth mount with an empty identity token key
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/dev/")
+	req.Data["type"] = "userpass"
+	resp, err := b.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.Nil(t, resp)
+
+	// Enable a secret mount with the default key
+	req = logical.TestRequest(t, logical.UpdateOperation, "mounts/test/")
+	req.Data["type"] = "kv"
+	req.Data["config"] = map[string]interface{}{
+		"identity_token_key": defaultKeyName,
+	}
+	resp, err = b.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.Nil(t, resp)
+
+	// Create a test key
+	testKey := "test_key"
+	resp, err = core.identityStore.HandleRequest(ctx, &logical.Request{
+		Storage:   core.identityStore.view,
+		Path:      fmt.Sprintf("oidc/key/%s", testKey),
+		Operation: logical.CreateOperation,
+	})
+	require.NoError(t, err)
+	require.Nil(t, resp)
+
+	tests := []struct {
+		name    string
+		keyName string
+		wantErr bool
+	}{
+		{
+			name:    "tune mounts to default key",
+			keyName: defaultKeyName,
+		},
+		{
+			name:    "tune mounts to empty key",
+			keyName: "",
+		},
+		{
+			name:    "tune mounts with existing key",
+			keyName: testKey,
+		},
+		{
+			name:    "tune mounts with key that does not exist",
+			keyName: "does_not_exist_key",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Tune the auth mount
+			req = logical.TestRequest(t, logical.UpdateOperation, "auth/dev/tune")
+			req.Data["identity_token_key"] = tt.keyName
+			resp, err := b.HandleRequest(ctx, req)
+			if tt.wantErr {
+				require.Nil(t, err)
+				require.Equal(t, fmt.Errorf("key %q does not exist", tt.keyName), resp.Error())
+				return
+			}
+			require.NoError(t, err)
+			require.Nil(t, resp)
+
+			// Expect identity token key set on the auth mount entry
+			mountEntry := core.router.MatchingMountEntry(ctx, "auth/dev/")
+			require.NotNil(t, mountEntry)
+			require.Equal(t, tt.keyName, mountEntry.Config.IdentityTokenKey)
+
+			// Tune the secret mount
+			req = logical.TestRequest(t, logical.UpdateOperation, "mounts/test/tune")
+			req.Data["identity_token_key"] = tt.keyName
+			resp, err = b.HandleRequest(ctx, req)
+			if tt.wantErr {
+				require.Nil(t, err)
+				require.Equal(t, fmt.Errorf("key %q does not exist", tt.keyName), resp.Error())
+				return
+			}
+			require.NoError(t, err)
+			require.Nil(t, resp)
+
+			// Expect identity token key set on the secret mount entry
+			mountEntry = core.router.MatchingMountEntry(ctx, "test/")
+			require.NotNil(t, mountEntry)
+			require.Equal(t, tt.keyName, mountEntry.Config.IdentityTokenKey)
+		})
+	}
+}
+
 func TestSystemBackend_mount_invalid(t *testing.T) {
 	b := testSystemBackend(t)
 

@@ -306,7 +306,7 @@ func TestEntryFormatter_Process(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			e := fakeEvent(t, tc.Subtype, tc.RequiredFormat, tc.Data)
+			e := fakeEvent(t, tc.Subtype, tc.Data)
 			require.NotNil(t, e)
 
 			ss := newStaticSalt(t)
@@ -326,18 +326,16 @@ func TestEntryFormatter_Process(t *testing.T) {
 			}
 
 			processed, err := f.Process(ctx, e)
-			b, found := e.Format(string(tc.RequiredFormat))
 
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 				require.Nil(t, processed)
-				require.False(t, found)
-				require.Nil(t, b)
 			default:
 				require.NoError(t, err)
 				require.NotNil(t, processed)
+				b, found := processed.Format(string(tc.RequiredFormat))
 				require.True(t, found)
 				require.NotNil(t, b)
 			}
@@ -390,7 +388,7 @@ func BenchmarkAuditFileSink_Process(b *testing.B) {
 	require.NotNil(b, sink)
 
 	// Generate the event
-	e := fakeEvent(b, RequestType, JSONFormat, in)
+	e := fakeEvent(b, RequestType, in)
 	require.NotNil(b, e)
 
 	b.ResetTimer()
@@ -956,6 +954,63 @@ func TestEntryFormatter_FormatResponse_ElideListResponses(t *testing.T) {
 	})
 }
 
+// TestEntryFormatter_Process_NoMutation tests that the event returned by an
+// EntryFormatter.Process method is not the same as the one that it accepted.
+func TestEntryFormatter_Process_NoMutation(t *testing.T) {
+	// Create the formatter node.
+	cfg, err := NewFormatterConfig()
+	require.NoError(t, err)
+	ss := newStaticSalt(t)
+	formatter, err := NewEntryFormatter(cfg, ss)
+	require.NoError(t, err)
+	require.NotNil(t, formatter)
+
+	in := &logical.LogInput{
+		Auth: &logical.Auth{
+			ClientToken:     "foo",
+			Accessor:        "bar",
+			EntityID:        "foobarentity",
+			DisplayName:     "testtoken",
+			NoDefaultPolicy: true,
+			Policies:        []string{"root"},
+			TokenType:       logical.TokenTypeService,
+		},
+		Request: &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "/foo",
+			Connection: &logical.Connection{
+				RemoteAddr: "127.0.0.1",
+			},
+			WrapInfo: &logical.RequestWrapInfo{
+				TTL: 60 * time.Second,
+			},
+			Headers: map[string][]string{
+				"foo": {"bar"},
+			},
+		},
+	}
+
+	e := fakeEvent(t, RequestType, in)
+
+	e2, err := formatter.Process(namespace.RootContext(nil), e)
+	require.NoError(t, err)
+	require.NotNil(t, e2)
+
+	// Ensure the pointers are different.
+	require.NotEqual(t, e2, e)
+
+	// Do the same for the audit event in the payload.
+	a, ok := e.Payload.(*AuditEvent)
+	require.True(t, ok)
+	require.NotNil(t, a)
+
+	a2, ok := e2.Payload.(*AuditEvent)
+	require.True(t, ok)
+	require.NotNil(t, a2)
+
+	require.NotEqual(t, a2, a)
+}
+
 // hashExpectedValueForComparison replicates enough of the audit HMAC process on a piece of expected data in a test,
 // so that we can use assert.Equal to compare the expected and output values.
 func (f *EntryFormatter) hashExpectedValueForComparison(input map[string]any) map[string]any {
@@ -981,7 +1036,7 @@ func (f *EntryFormatter) hashExpectedValueForComparison(input map[string]any) ma
 
 // fakeEvent will return a new fake event containing audit data based  on the
 // specified subtype, format and logical.LogInput.
-func fakeEvent(tb testing.TB, subtype subtype, format format, input *logical.LogInput) *eventlogger.Event {
+func fakeEvent(tb testing.TB, subtype subtype, input *logical.LogInput) *eventlogger.Event {
 	tb.Helper()
 
 	date := time.Date(2023, time.July, 11, 15, 49, 10, 0o0, time.Local)

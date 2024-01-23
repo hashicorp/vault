@@ -1277,6 +1277,9 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 	if rawVal, ok := entry.synthesizedConfigCache.Load("allowed_managed_keys"); ok {
 		entryConfig["allowed_managed_keys"] = rawVal.([]string)
 	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("identity_token_key"); ok {
+		entryConfig["identity_token_key"] = rawVal.(string)
+	}
 	if entry.Table == credentialTableType {
 		entryConfig["token_type"] = entry.Config.TokenType.String()
 	}
@@ -1496,6 +1499,26 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 	if len(apiConfig.DelegatedAuthAccessors) > 0 {
 		config.DelegatedAuthAccessors = apiConfig.DelegatedAuthAccessors
+	}
+
+	if apiConfig.IdentityTokenKey != "" {
+		storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+		if storage == nil {
+			return nil, errors.New("failed to find identity storage")
+		}
+
+		identityStore := b.Core.IdentityStore()
+		identityStore.oidcLock.RLock()
+		defer identityStore.oidcLock.RUnlock()
+		k, err := identityStore.getNamedKey(ctx, storage, apiConfig.IdentityTokenKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed getting key %q: %w", apiConfig.IdentityTokenKey, err)
+		}
+		if k == nil {
+			return logical.ErrorResponse("key %q does not exist", apiConfig.IdentityTokenKey), nil
+		}
+
+		config.IdentityTokenKey = apiConfig.IdentityTokenKey
 	}
 
 	// Create the mount entry
@@ -1954,6 +1977,10 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 		resp.Data["allowed_managed_keys"] = rawVal.([]string)
 	}
 
+	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("identity_token_key"); ok {
+		resp.Data["identity_token_key"] = rawVal.(string)
+	}
+
 	if mountEntry.Config.UserLockoutConfig != nil {
 		resp.Data["user_lockout_counter_reset_duration"] = int64(mountEntry.Config.UserLockoutConfig.LockoutCounterReset.Seconds())
 		resp.Data["user_lockout_threshold"] = mountEntry.Config.UserLockoutConfig.LockoutThreshold
@@ -2242,6 +2269,50 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 		if b.Core.logger.IsInfo() {
 			b.Core.logger.Info("mount tuning of version successful", "path", path, "version", version)
+		}
+	}
+
+	if rawVal, ok := data.GetOk("identity_token_key"); ok {
+		identityTokenKey := rawVal.(string)
+
+		if identityTokenKey != "" {
+			storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+			if storage == nil {
+				return nil, errors.New("failed to find identity storage")
+			}
+
+			identityStore := b.Core.IdentityStore()
+			identityStore.oidcLock.RLock()
+			defer identityStore.oidcLock.RUnlock()
+			k, err := identityStore.getNamedKey(ctx, storage, identityTokenKey)
+			if err != nil {
+				return nil, fmt.Errorf("failed getting key %q: %w", identityTokenKey, err)
+			}
+			if k == nil {
+				return logical.ErrorResponse("key %q does not exist", identityTokenKey), nil
+			}
+		}
+
+		oldVal := mountEntry.Config.IdentityTokenKey
+		mountEntry.Config.IdentityTokenKey = identityTokenKey
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.IdentityTokenKey = oldVal
+			return handleError(err)
+		}
+
+		mountEntry.SyncCache()
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("mount tuning of identity_token_key successful", "path", path)
 		}
 	}
 
@@ -2998,6 +3069,26 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 	if len(apiConfig.AllowedManagedKeys) > 0 {
 		config.AllowedManagedKeys = apiConfig.AllowedManagedKeys
+	}
+
+	if apiConfig.IdentityTokenKey != "" {
+		storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+		if storage == nil {
+			return nil, errors.New("failed to find identity storage")
+		}
+
+		identityStore := b.Core.IdentityStore()
+		identityStore.oidcLock.RLock()
+		defer identityStore.oidcLock.RUnlock()
+		k, err := identityStore.getNamedKey(ctx, storage, apiConfig.IdentityTokenKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed getting key %q: %w", apiConfig.IdentityTokenKey, err)
+		}
+		if k == nil {
+			return logical.ErrorResponse("key %q does not exist", apiConfig.IdentityTokenKey), nil
+		}
+
+		config.IdentityTokenKey = apiConfig.IdentityTokenKey
 	}
 
 	// Create the mount entry
@@ -6443,6 +6534,10 @@ This path responds to the following HTTP methods.
 	},
 	"plugin-runtime-catalog_rootless": {
 		"Whether the container runtime is run as a non-privileged (non-root) user.",
+		"",
+	},
+	"identity_token_key": {
+		"The name of the key used to sign plugin identity tokens. Defaults to the default key.",
 		"",
 	},
 	"leases": {
