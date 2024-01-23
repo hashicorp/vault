@@ -251,7 +251,7 @@ func TestBackend_configureFilterNode(t *testing.T) {
 		expectedErrorMsg string
 	}{
 		"happy": {
-			filter: "foo == bar",
+			filter: "operation == update",
 		},
 		"empty": {
 			filter:         "",
@@ -477,7 +477,7 @@ func TestBackend_configureFilterFormatterSink(t *testing.T) {
 	formatConfig, err := audit.NewFormatterConfig()
 	require.NoError(t, err)
 
-	err = b.configureFilterNode("foo == bar")
+	err = b.configureFilterNode("path == bar")
 	require.NoError(t, err)
 
 	err = b.configureFormatterNode(formatConfig)
