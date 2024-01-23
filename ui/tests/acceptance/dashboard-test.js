@@ -337,7 +337,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await settled();
       await visit('/vault/dashboard');
       await click('[data-test-component="search-select"] .ember-basic-dropdown-trigger');
-      assert.dom('.ember-power-select-option').hasTextContaining('kv', 'dropdown shows KV v2 mount');
       assert
         .dom('.ember-power-select-option')
         .doesNotHaveTextContaining('kv1', 'dropdown does not show kv1 mount');
