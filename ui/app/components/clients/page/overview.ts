@@ -3,6 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import CountsComponent from '../counts';
+import ActivityComponent from '../activity';
 
-export default CountsComponent;
+export default ActivityComponent;

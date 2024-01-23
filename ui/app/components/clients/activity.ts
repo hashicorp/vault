@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-// base component for counts routes that can be extended as needed
+// base component for counts child routes that can be extended as needed
 // contains getters that filter and extract data from activity model for use in charts
 
 import Component from '@glimmer/component';
@@ -23,7 +23,7 @@ interface Args {
   authMount: string;
 }
 
-export default class ClientsCountsComponent extends Component<Args> {
+export default class ClientsActivityComponent extends Component<Args> {
   get startTimeISO() {
     return fromUnixTime(this.args.startTimestamp).toISOString();
   }
