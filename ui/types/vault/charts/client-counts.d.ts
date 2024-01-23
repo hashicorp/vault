@@ -15,8 +15,9 @@ interface Count {
 interface EmptyCount {
   count?: null;
 }
-
-export interface MonthlyChartData extends Count, EmptyCount {
+interface Timestamp {
   month: string; // eg. 12/22
   timestamp: string; // ISO 8601
 }
+
+export interface MonthlyChartData extends Count, EmptyCount, Timestamp {}
