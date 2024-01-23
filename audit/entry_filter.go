@@ -33,8 +33,8 @@ func NewEntryFilter(filter string) (*EntryFilter, error) {
 	}
 
 	// Validate the filter by attempting to evaluate it with an empty input.
-	// This prevents us from users providing a filter on a field that will never
-	// match, which would block all auditable requests to Vault.
+	// This prevents users providing a filter with a field that would error during
+	// matching, and block all auditable requests to Vault.
 	li := logical.LogInputBexpr{}
 	_, err = eval.Evaluate(li)
 	if err != nil {
