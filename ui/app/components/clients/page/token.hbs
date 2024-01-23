@@ -128,13 +128,10 @@
             />
           {{/unless}}
           {{#if this.byMonthActivityData}}
-            <Clients::RunningTotal
-              @selectedAuthMethod={{this.selectedAuthMethod}}
+            <Clients::Token::MonthlyNew
               @byMonthActivityData={{this.byMonthActivityData}}
-              @isHistoricalMonth={{and (not this.isCurrentMonth) (not this.isDateRange)}}
-              @isCurrentMonth={{this.isCurrentMonth}}
+              @authMount={{this.selectedAuthMethod}}
               @runningTotals={{this.totalUsageCounts}}
-              @upgradeData={{this.upgradeDuringActivity}}
               @responseTimestamp={{this.responseTimestamp}}
             />
           {{/if}}

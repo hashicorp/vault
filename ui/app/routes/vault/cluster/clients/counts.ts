@@ -49,12 +49,13 @@ export default class ClientsCountsRoute extends Route {
   }
 
   async model(params: ClientsCountsRouteParams) {
-    const { config } = this.modelFor('vault.cluster.clients') as ClientsRouteModel;
+    const { config, versionHistory } = this.modelFor('vault.cluster.clients') as ClientsRouteModel;
     const startTimestamp = Number(params.start_time) || getUnixTime(config.billingStartTimestamp);
     const endTimestamp = Number(params.end_time) || this.currentTimestamp;
     const [activity, activityError] = await this.getActivity(startTimestamp, endTimestamp);
     return {
       config,
+      versionHistory,
       activity,
       activityError,
       startTimestamp,

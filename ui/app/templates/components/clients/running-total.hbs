@@ -9,8 +9,8 @@
       <div class="chart-header has-bottom-margin-xl">
         <h2 class="chart-title">Vault client counts</h2>
         <p class="chart-description">
-          A client is any user or service that interacts with Vault. They are made up of entity clients and non-entity
-          clients. The total client count number is an important consideration for Vault billing.
+          The total billable clients in the specified date range. This includes entity, non-entity, and secrets sync clients.
+          The total client count number is an important consideration for Vault billing.
         </p>
       </div>
 
@@ -19,14 +19,29 @@
       </div>
 
       <div class="chart-subTitle">
-        <h2 class="chart-title">Running client total</h2>
-        <p class="chart-subtext">The number of clients which interacted with Vault during this date range. </p>
+        <StatText
+          @label="Running client total"
+          @subText="The number of clients which interacted with Vault during this date range."
+          @value={{@runningTotals.clients}}
+          @size="l"
+        />
       </div>
-      <div class="data-details-top" data-test-running-total-entity>
-        <h3 class="data-details">Entity clients</h3>
-        <p class="data-details">
-          {{format-number this.entityClientData.runningTotal}}
-        </p>
+      <div class="data-details-top has-top-padding-l">
+        <div class="is-flex-row">
+          <div data-test-running-total-entity>
+            <h3 class="data-details">Entity clients</h3>
+            <p class="data-details">
+              {{format-number this.entityClientData.runningTotal}}
+            </p>
+          </div>
+
+          <div class="has-left-margin-l" data-test-running-total-sync>
+            <h3 class="data-details">Secrets sync clients</h3>
+            <p class="data-details">
+              {{format-number @runningTotals.secret_syncs}}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div class="data-details-bottom" data-test-running-total-nonentity>
@@ -35,59 +50,13 @@
           {{format-number this.nonEntityClientData.runningTotal}}
         </p>
       </div>
-    </div>
 
-    <div class="single-chart-grid">
-      <div class={{concat (unless this.hasAverageNewClients "chart-empty-state ") "chart-container-wide"}}>
-        <Clients::VerticalBarChart
-          @dataset={{if this.hasAverageNewClients this.byMonthNewClients false}}
-          @chartLegend={{this.runningTotalLegend}}
-          @noDataTitle="No new clients"
-          @noDataMessage={{concat
-            "There is no new client data available for this "
-            (if @selectedAuthMethod "auth method" "namespace")
-            " in this date range"
-          }}
-        />
-      </div>
-
-      <div class="chart-subTitle">
-        <h2 class="chart-title">New monthly clients</h2>
-        <p class="chart-subtext">
-          Clients which interacted with Vault for the first time during this date range, displayed per month.
-        </p>
-      </div>
-
-      {{#if this.hasAverageNewClients}}
-        <div class="data-details-top" data-test-running-new-entity>
-          <h3 class="data-details">Average new entity clients per month</h3>
-          <p class="data-details">
-            {{format-number this.entityClientData.averageNewClients}}
-          </p>
-        </div>
-
-        <div class="data-details-bottom" data-test-running-new-nonentity>
-          <h3 class="data-details">Average new non-entity clients per month</h3>
-          <p class="data-details">
-            {{format-number this.nonEntityClientData.averageNewClients}}
-          </p>
-        </div>
-      {{/if}}
-
-      <div class="timestamp" data-test-running-total-timestamp>
+      <div class="timestamp" data-test-monthly-new-timestamp>
         {{#if @responseTimestamp}}
           Updated
           {{date-format @responseTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
         {{/if}}
       </div>
-
-      {{#if this.hasAverageNewClients}}
-        <div class="legend-right" data-test-running-total-legend>
-          {{#each this.runningTotalLegend as |legend idx|}}
-            <span class="legend-colors dot-{{idx}}"></span><span class="legend-label">{{capitalize legend.label}}</span>
-          {{/each}}
-        </div>
-      {{/if}}
     </div>
   </div>
 {{else}}
@@ -96,8 +65,8 @@
       <div class="chart-header has-bottom-margin-sm">
         <h2 class="chart-title">Vault client counts</h2>
         <p class="chart-description">
-          A client is any user or service that interacts with Vault. They are made up of entity clients and non-entity
-          clients. The total client count number is an important consideration for Vault billing.
+          The total billable clients in the specified date range. This includes entity, non-entity, and secrets sync clients.
+          The total client count number is an important consideration for Vault billing.
         </p>
       </div>
       <div class="single-month-stats" data-test-new>
@@ -115,6 +84,9 @@
         <div class="single-month-breakdown-nonentity">
           <StatText @label="Non-entity clients" @value={{this.singleMonthData.new_clients.non_entity_clients}} @size="m" />
         </div>
+        <div class="single-month-breakdown-sync">
+          <StatText @label="Secrets sync clients" @value={{this.singleMonthData.new_clients.secret_syncs}} @size="m" />
+        </div>
       </div>
       <div class="single-month-stats" data-test-total>
         <div class="single-month-section-title">
@@ -130,6 +102,9 @@
         </div>
         <div class="single-month-breakdown-nonentity">
           <StatText @label="Non-entity clients" @value={{this.singleMonthData.non_entity_clients}} @size="m" />
+        </div>
+        <div class="single-month-breakdown-sync">
+          <StatText @label="Secrets sync clients" @value={{this.singleMonthData.secret_syncs}} @size="m" />
         </div>
       </div>
     </div>

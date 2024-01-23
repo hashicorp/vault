@@ -9,6 +9,7 @@ interface ClientActivityTotals {
   clients: number;
   entity_clients: number;
   non_entity_clients: number;
+  secret_syncs: number;
 }
 
 interface ClientActivityNestedCount extends ClientActivityTotals {
@@ -25,16 +26,17 @@ interface ClientActivityNamespace extends ClientActivityNestedCount {
   mounts: ClientActivityNestedCount[];
 }
 
-interface ClientActivityNamespaceByKey extends ClientActivityTotals {
+interface ClientActivityResourceByKey extends ClientActivityTotals {
   month: 'string';
-  mounts_by_key: { [key]: ClientActivityNewClients };
+  mounts_by_key: { [key: string]: ClientActivityResourceByKey };
+  new_clients: ClientActivityNewClients;
 }
 
 interface ClientActivityMonthly extends ClientActivityTotals {
   month: string;
   timestamp: string;
   namespaces: ClientActivityNamespace[];
-  namespaces_by_key: { [key: ClientActivityNamespaceByKey] };
+  namespaces_by_key: { [key: string]: ClientActivityResourceByKey };
   new_clients: ClientActivityNewClients;
 }
 
