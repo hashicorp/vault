@@ -60,7 +60,6 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
     await render(hbs`
       <Clients::RunningTotal
-        @selectedAuthMethod={{this.selectedAuthMethod}}
         @byMonthActivityData={{this.activity.byMonth}}
         @runningTotals={{this.totalUsageCounts}}
         @upgradeData={{this.upgradeDuringActivity}}
@@ -115,7 +114,6 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
     await render(hbs`
       <Clients::RunningTotal
-        @selectedAuthMethod={{this.selectedAuthMethod}}
         @byMonthActivityData={{this.monthlyWithoutNew}}
         @runningTotals={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
@@ -154,7 +152,6 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
     await render(hbs`
       <Clients::RunningTotal
-        @selectedAuthMethod={{this.selectedAuthMethod}}
         @byMonthActivityData={{this.singleMonth}}
         @runningTotals={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
