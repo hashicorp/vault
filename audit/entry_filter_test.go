@@ -44,8 +44,24 @@ func TestEntryFilter_NewEntryFilter(t *testing.T) {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.NewEntryFilter: filter references an unsupported field: foo == bar",
 		},
-		"good-filter": {
+		"good-filter-operation": {
 			Filter:          "operation == create",
+			IsErrorExpected: false,
+		},
+		"good-filter-mount_type": {
+			Filter:          "mount_type == kv",
+			IsErrorExpected: false,
+		},
+		"good-filter-mount_point": {
+			Filter:          "mount_point == \"/auth/userpass\"",
+			IsErrorExpected: false,
+		},
+		"good-filter-namespace": {
+			Filter:          "namespace == juan",
+			IsErrorExpected: false,
+		},
+		"good-filter-path": {
+			Filter:          "path == foo",
 			IsErrorExpected: false,
 		},
 	}
