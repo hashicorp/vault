@@ -3,29 +3,31 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div class="chart-wrapper stacked-charts" data-test-chart="monthly new">
-  <div class="single-chart-grid">
-    <div class="chart-header">
-      <h2 class="chart-title">Monthly new</h2>
-      <p class="chart-description">
-        Entity or non-entity clients which interacted with Vault for the first time during this date range, displayed per
-        month.
-      </p>
-    </div>
+<Clients::MonthlyChartStats
+  @title="Monthly new"
+  @description="Entity or non-entity clients which interacted with Vault for the first time during this date range, displayed per month."
+  @timestamp={{@responseTimestamp}}
+  @hasData={{this.averageNewClients}}
+  data-test-chart="monthly new"
+>
 
-    <div class={{concat (unless this.hasAverageNewClients "chart-empty-state ") "chart-container-wide"}}>
-      <Clients::VerticalBarChart
-        @dataset={{if this.hasAverageNewClients this.byMonthNewClients false}}
-        @chartLegend={{this.runningTotalLegend}}
-        @noDataTitle="No new clients"
-        @noDataMessage={{concat
-          "There is no new client data available for this "
-          (if @authMount "auth method" "namespace")
-          " in this date range"
-        }}
+  <:chart>
+    {{#if this.hasAverageNewClients}}
+      <Clients::VerticalBarChart @dataset={{this.byMonthNewClients}} @chartLegend={{this.runningTotalLegend}} />
+    {{else}}
+      <EmptyState
+        @title="No new clients"
+        @subTitle="There is no new client data available for this {{if
+          @authMount
+          'auth method'
+          'namespace'
+        }} in this date range."
+        @bottomBorder={{true}}
       />
-    </div>
+    {{/if}}
+  </:chart>
 
+  <:stats>
     {{#if this.hasAverageNewClients}}
       <div class="chart-subTitle has-top-padding-l">
         <h3 class="data-details">Average new entity clients per month</h3>
@@ -41,14 +43,9 @@
         </p>
       </div>
     {{/if}}
+  </:stats>
 
-    <div class="timestamp" data-test-monthly-new-timestamp>
-      {{#if @responseTimestamp}}
-        Updated
-        {{date-format @responseTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
-      {{/if}}
-    </div>
-
+  <:legend>
     {{#if this.hasAverageNewClients}}
       <div class="legend-right" data-test-monthly-new-legend>
         {{#each this.runningTotalLegend as |legend idx|}}
@@ -56,5 +53,5 @@
         {{/each}}
       </div>
     {{/if}}
-  </div>
-</div>
+  </:legend>
+</Clients::MonthlyChartStats>
