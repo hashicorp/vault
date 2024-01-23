@@ -142,6 +142,11 @@ func TestBackend_configureFilterNode(t *testing.T) {
 			wantErr:          true,
 			expectedErrorMsg: "socket.(Backend).configureFilterNode: error creating filter node: audit.NewEntryFilter: cannot create new audit filter",
 		},
+		"unsupported-field": {
+			filter:           "foo == bar",
+			wantErr:          true,
+			expectedErrorMsg: "filter references an unsupported field: foo == bar",
+		},
 	}
 	for name, tc := range tests {
 		name := name
