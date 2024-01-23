@@ -408,6 +408,7 @@ func TestOptions_WithExclusions(t *testing.T) {
 
 	tests := map[string]struct {
 		json                 string
+		numExpected          int
 		isErrorExpected      bool
 		expectedErrorMessage string
 	}{
@@ -422,6 +423,7 @@ func TestOptions_WithExclusions(t *testing.T) {
 				"fields": [ "/request/data" ]
 			  }
 			]`,
+			numExpected: 2,
 		},
 		"bad-condition": {
 			json: `[
@@ -448,6 +450,7 @@ func TestOptions_WithExclusions(t *testing.T) {
 				"fields": [ "/request/data" ]
 			  }
 			]`,
+			numExpected: 2,
 		},
 		"no-conditions": {
 			json: `[
@@ -458,6 +461,7 @@ func TestOptions_WithExclusions(t *testing.T) {
 				"fields": [ "/request/data" ]
 			  }
 			]`,
+			numExpected: 2,
 		},
 		"json-wrong-value-types": {
 			json: `[
@@ -492,6 +496,7 @@ func TestOptions_WithExclusions(t *testing.T) {
 				"fields": [ "/request/data" ]
 			  }
 			]`,
+			numExpected: 2,
 		},
 		"no-fields": {
 			json: `[
@@ -522,6 +527,10 @@ func TestOptions_WithExclusions(t *testing.T) {
 			isErrorExpected:      true,
 			expectedErrorMessage: "unable to parse exclusions: exclusion 'fields' cannot be empty",
 		},
+		"empty-json": {
+			json:        "",
+			numExpected: 0,
+		},
 	}
 
 	for name, tc := range tests {
@@ -540,7 +549,7 @@ func TestOptions_WithExclusions(t *testing.T) {
 				require.EqualError(t, err, tc.expectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Len(t, opts.withExclusions, 2)
+				require.Len(t, opts.withExclusions, tc.numExpected)
 			}
 		})
 	}

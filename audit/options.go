@@ -206,6 +206,11 @@ func WithHeaderFormatter(f HeaderFormatter) Option {
 //	]
 func WithExclusions(e string) Option {
 	return func(o *options) error {
+		e = strings.TrimSpace(e)
+		if e == "" {
+			return nil
+		}
+
 		var result []*exclusion
 
 		err := json.Unmarshal([]byte(e), &result)
