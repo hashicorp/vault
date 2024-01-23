@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -1007,9 +1008,18 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 		t.Skip("Running plugins in containers is only supported on linux")
 	}
 
-	pluginCatalog := testPluginCatalog(t)
+	pluginTypeLoadsFailedErrMap := map[consts.PluginType]error{
+		consts.PluginTypeCredential: ErrAllBackendPluginLoadsFailed,
+		consts.PluginTypeSecrets:    ErrAllBackendPluginLoadsFailed,
+		consts.PluginTypeDatabase:   ErrAllBackendPluginLoadsFailed,
+	}
 
-	var plugins []pluginhelpers.TestPlugin
+	pluginCatalog := testPluginCatalog(t)
+	var testCases []struct {
+		plugin      pluginhelpers.TestPlugin
+		expectedErr error
+	}
+
 	for _, pluginType := range []consts.PluginType{
 		consts.PluginTypeCredential,
 		consts.PluginTypeSecrets,
@@ -1017,21 +1027,38 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 	} {
 		plugin := pluginhelpers.CompilePlugin(t, pluginType, "v1.2.3", pluginCatalog.directory)
 		plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, pluginCatalog.directory)
-		plugins = append(plugins, plugin)
+
+		testCases = append(testCases,
+			struct {
+				plugin      pluginhelpers.TestPlugin
+				expectedErr error
+			}{
+				plugin:      plugin,
+				expectedErr: nil,
+			})
+
+		plugin.Image += "-will-not-be-found"
+		testCases = append(testCases, struct {
+			plugin      pluginhelpers.TestPlugin
+			expectedErr error
+		}{
+			plugin:      plugin,
+			expectedErr: pluginTypeLoadsFailedErrMap[plugin.Typ],
+		})
 	}
 
-	for _, plugin := range plugins {
-		t.Run(plugin.Typ.String(), func(t *testing.T) {
+	for _, tc := range testCases {
+		t.Run(tc.plugin.Typ.String(), func(t *testing.T) {
 			for _, ociRuntime := range []string{"runc", "runsc"} {
 				t.Run(ociRuntime, func(t *testing.T) {
 					if _, err := exec.LookPath(ociRuntime); err != nil {
 						t.Skipf("Skipping test as %s not found on path", ociRuntime)
 					}
 
-					shaBytes, _ := hex.DecodeString(plugin.ImageSha256)
+					shaBytes, _ := hex.DecodeString(tc.plugin.ImageSha256)
 					entry := &pluginutil.PluginRunner{
-						Name:     plugin.Name,
-						OCIImage: plugin.Image,
+						Name:     tc.plugin.Name,
+						OCIImage: tc.plugin.Image,
 						Args:     nil,
 						Sha256:   shaBytes,
 						Builtin:  false,
@@ -1043,16 +1070,22 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 
 					var version logical.PluginVersion
 					var err error
-					if plugin.Typ == consts.PluginTypeDatabase {
+					if tc.plugin.Typ == consts.PluginTypeDatabase {
 						version, err = pluginCatalog.getDatabaseRunningVersion(context.Background(), entry)
 					} else {
 						version, err = pluginCatalog.getBackendRunningVersion(context.Background(), entry)
 					}
-					if err != nil {
-						t.Fatal(err)
-					}
-					if version.Version != plugin.Version {
-						t.Errorf("Expected to get version %v but got %v", plugin.Version, version.Version)
+
+					if tc.expectedErr == nil {
+						if err != nil {
+							t.Fatalf("Expected successful get backend type version but got: %v", err)
+						}
+						if version.Version != tc.plugin.Version {
+							t.Errorf("Expected to get version %v but got %v", tc.plugin.Version, version.Version)
+						}
+
+					} else if !errors.Is(err, tc.expectedErr) {
+						t.Errorf("Expected to get err %s but got %s", tc.expectedErr, err)
 					}
 				})
 			}
