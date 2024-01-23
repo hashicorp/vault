@@ -1,43 +1,53 @@
-<Clients::ChartContainer
-  @title="Secrets sync usage"
-  @description="This data can be used to understand how many secrets sync clients have been used for this date range. A secret with a
-      configured sync destination would qualify as a unique and active client."
-  @timestamp={{@currentTimestamp}}
-  @hasChartData={{this.byMonthActivityData}}
-  class="no-legend"
->
-  <:subTitle>
-    <StatText
-      @label="Total sync clients"
-      @subText="The total number of secrets synced from Vault to other destinations during this date range."
-      @value={{this.totalUsageCounts.secret_syncs}}
-      @size="l"
-    />
-  </:subTitle>
+{{#if this.isDateRange}}
+  <Clients::ChartContainer
+    @title={{this.title}}
+    @description={{this.description}}
+    @timestamp={{@currentTimestamp}}
+    @hasChartData={{this.byMonthActivityData}}
+    class="no-legend"
+  >
+    <:subTitle>
+      <StatText
+        @label="Total sync clients"
+        @subText="The total number of secrets synced from Vault to other destinations during this date range."
+        @value={{this.totalUsageCounts.secret_syncs}}
+        @size="l"
+      />
+    </:subTitle>
 
-  <:stats>
-    <div class="data-details-top has-top-padding-l">
-      <h3 class="data-details">Average sync clients per month</h3>
-      <p class="data-details">
-        {{format-number (this.average this.byMonthActivityData "secret_syncs")}}
-      </p>
+    <:stats>
+      <div class="data-details-top has-top-padding-l">
+        <h3 class="data-details">Average sync clients per month</h3>
+        <p class="data-details">
+          {{format-number (this.average this.byMonthActivityData "secret_syncs")}}
+        </p>
+      </div>
+    </:stats>
+
+    <:chart>
+      <Clients::Charts::VerticalBarBasic
+        @chartTitle="Secrets sync usage"
+        @data={{this.byMonthActivityData}}
+        @dataKey="secret_syncs"
+        @chartHeight={{200}}
+      />
+    </:chart>
+
+    <:emptyState>
+      <EmptyState
+        @title="No monthly secrets sync clients"
+        @subTitle="There is no secret sync data is available for this date range."
+        @bottomBorder={{true}}
+      />
+    </:emptyState>
+  </Clients::ChartContainer>
+{{else}}
+
+  <div class="chart-wrapper" data-test-usage-stats>
+    <div class="chart-header has-bottom-margin-m">
+      <h2 class="chart-title">{{this.title}}</h2>
+      <p class="chart-description has-bottom-padding-m">{{this.description}}</p>
     </div>
-  </:stats>
-
-  <:chart>
-    <Clients::Charts::VerticalBarBasic
-      @chartTitle="Secrets sync usage"
-      @data={{this.byMonthActivityData}}
-      @dataKey="secret_syncs"
-      @chartHeight={{200}}
-    />
-  </:chart>
-
-  <:emptyState>
-    <EmptyState
-      @title="No monthly secrets sync clients"
-      @subTitle="There is no secret sync data is available for this date range."
-      @bottomBorder={{true}}
-    />
-  </:emptyState>
-</Clients::ChartContainer>
+    <StatText @label="Total sync clients" @value={{this.totalUsageCounts.secret_syncs}} @size="l" />
+  </div>
+{{/if}}

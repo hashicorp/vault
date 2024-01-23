@@ -12,4 +12,7 @@ export default class SyncComponent extends ActivityComponent {
   average = (data: MonthlyChartData[], key: string) => {
     return calculateAverage(data, key);
   };
+  title = 'Secrets sync usage';
+  description =
+    'This data can be used to understand how many secrets sync clients have been used for this date range. A secret with a configured sync destination would qualify as a unique and active client.';
 }
