@@ -37,10 +37,6 @@
 .single-month-breakdown-sync {
   grid-column-start: 3;
 }
-.stacked-charts {
-  display: grid;
-  width: 100%;
-}
 
 .single-chart-grid {
   display: grid;
@@ -48,7 +44,7 @@
   grid-template-rows: 0.5fr 1fr 1fr 1fr 0.25fr;
   width: 100%;
   &.no-legend {
-    grid-template-rows: 0.5fr 1fr 1fr 0.5fr;
+    grid-template-rows: 0.5fr 1fr 1fr 0.25fr;
   }
 }
 
@@ -136,6 +132,7 @@
 .chart-empty-state {
   place-self: center stretch;
   grid-row-end: span 3;
+  grid-column-start: 1;
   grid-column-end: span 3;
   max-width: none;
   padding-right: 20px;
