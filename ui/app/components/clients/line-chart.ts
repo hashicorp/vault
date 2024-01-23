@@ -83,10 +83,12 @@ export default class LineChart extends Component<Args> {
   }
   // Domains
   get yDomain() {
-    const setMax = Math.max(...this.data.map((datum) => datum.y ?? 0));
-    const nearest = setMax > 1000 ? 1000 : setMax > 100 ? 200 : 20;
-    // round to nearest 10, 100, or 1000
-    return [0, Math.ceil(setMax / nearest) * nearest];
+    const counts: number[] = this.data
+      .map((d) => d.y)
+      .flatMap((num) => (typeof num === 'number' ? [num] : []));
+    const max = Math.max(...counts);
+    // if max is 0, hardcode 4 because that's the y-axis tickCount
+    return [0, max === 0 ? 4 : max];
   }
   get timeDomain() {
     // assume data is sorted by time
