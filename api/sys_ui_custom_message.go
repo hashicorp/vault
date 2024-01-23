@@ -12,6 +12,12 @@ import (
 	"strconv"
 )
 
+const (
+	// baseEndpoint is the common base URL path for all endpoints used in this
+	// module.
+	baseEndpoint string = "/v1/sys/config/ui/custom-messages"
+)
+
 // ListUICustomMessages calls ListUICustomMessagesWithContext using a background
 // Context.
 func (c *Sys) ListUICustomMessages(req UICustomMessageListRequest) (*Secret, error) {
@@ -27,7 +33,7 @@ func (c *Sys) ListUICustomMessagesWithContext(ctx context.Context, req UICustomM
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("LIST", "/v1/sys/config/ui/custom-messages/")
+	r := c.c.NewRequest("LIST", fmt.Sprintf("%s/", baseEndpoint))
 	if req.Active != nil {
 		r.Params.Add("active", strconv.FormatBool(*req.Active))
 	}
@@ -70,7 +76,7 @@ func (c *Sys) CreateUICustomMessageWithContext(ctx context.Context, req UICustom
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest(http.MethodPost, "/v1/sys/config/ui/custom-messages")
+	r := c.c.NewRequest(http.MethodPost, baseEndpoint)
 	if err := r.SetJSONBody(&req); err != nil {
 		return nil, fmt.Errorf("error encoding request body to json: %w", err)
 	}
@@ -107,7 +113,7 @@ func (c *Sys) ReadUICustomMessageWithContext(ctx context.Context, id string) (*S
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest(http.MethodGet, fmt.Sprintf("/v1/sys/config/ui/custom-messages/%s", id))
+	r := c.c.NewRequest(http.MethodGet, fmt.Sprintf("%s/%s", baseEndpoint, id))
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
@@ -142,7 +148,7 @@ func (c *Sys) UpdateUICustomMessageWithContext(ctx context.Context, id string, r
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest(http.MethodPost, fmt.Sprintf("/v1/sys/config/ui/custom-messages/%s", id))
+	r := c.c.NewRequest(http.MethodPost, fmt.Sprintf("%s/%s", baseEndpoint, id))
 	if err := r.SetJSONBody(&req); err != nil {
 		return fmt.Errorf("error encoding request body to json: %w", err)
 	}
@@ -170,7 +176,7 @@ func (c *Sys) DeleteUICustomMessageWithContext(ctx context.Context, id string) e
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest(http.MethodDelete, fmt.Sprintf("/v1/sys/config/ui/custom-messages/%s", id))
+	r := c.c.NewRequest(http.MethodDelete, fmt.Sprintf("%s/%s", baseEndpoint, id))
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
