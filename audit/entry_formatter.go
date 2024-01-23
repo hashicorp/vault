@@ -683,11 +683,16 @@ func (f *EntryFormatter) redactFields(entry any) (map[string]any, error) {
 			}
 
 			_, err = ptr.Delete(m)
-			if err != nil && !strings.Contains(err.Error(), "couldn't find key") {
-				// An error may occur if the structure of the data didn't have the property that was expected.
-				// In this case it wouldn't be an 'error' where data wasn't redacted as expected,
-				// more like we don't want to fail audit because something wasn't there to redact in
-				// the first place.
+
+			// An error may occur if the structure of the data didn't have the property that was expected.
+			// In this case it wouldn't be an 'error' where data wasn't redacted as expected,
+			// more like we don't want to fail audit because something wasn't there to redact in
+			// the first place.
+			if errors.Is(err, pointerstructure.ErrNotFound) || errors.Is(err, pointerstructure.ErrOutOfRange) {
+				continue
+			}
+
+			if err != nil {
 				return nil, fmt.Errorf("unable to exclude field '%s': %w", field, err)
 			}
 		}
