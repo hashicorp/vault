@@ -60,10 +60,9 @@ func (b *backend) getRootConfig(ctx context.Context, s logical.Storage, clientTy
 			fetcher := &PluginIdentityTokenFetcher{
 				sys:      b.System(),
 				logger:   b.Logger(),
-				key:      "default",
-				audience: config.IdentityTokenAudience,
 				ns:       ns,
-				ttl:      config.IdentityTokenTTL * time.Second,
+				audience: config.IdentityTokenAudience,
+				ttl:      config.IdentityTokenTTL,
 			}
 
 			sessionSuffix := strconv.FormatInt(time.Now().UnixNano(), 10)
@@ -140,7 +139,6 @@ func (b *backend) nonCachedClientSTS(ctx context.Context, s logical.Storage, log
 type PluginIdentityTokenFetcher struct {
 	sys      logical.SystemView
 	logger   hclog.Logger
-	key      string
 	audience string
 	ns       *namespace.Namespace
 	ttl      time.Duration
@@ -150,7 +148,11 @@ var _ stscreds.TokenFetcher = (*PluginIdentityTokenFetcher)(nil)
 
 func (f PluginIdentityTokenFetcher) FetchToken(ctx aws.Context) ([]byte, error) {
 	nsCtx := namespace.ContextWithNamespace(ctx, f.ns)
+<<<<<<< HEAD
 	resp, err := f.sys.GenerateIdentityToken(nsCtx, &pluginutil.IdentityTokenRequest{
+=======
+	resp, err := f.sys.GenerateIdentityToken(nsCtx, pluginutil.IdentityTokenRequest{
+>>>>>>> plugin-workload-identity
 		Audience: f.audience,
 		TTL:      f.ttl,
 	})
@@ -161,7 +163,7 @@ func (f PluginIdentityTokenFetcher) FetchToken(ctx aws.Context) ([]byte, error) 
 
 	if resp.TTL < f.ttl {
 		f.logger.Debug("generated plugin identity token has shorter TTL than requested",
-			"requested", f.ttl.Seconds(), "actual", resp.TTL)
+			"requested", f.ttl, "actual", resp.TTL)
 	}
 
 	return []byte(resp.Token.Token()), nil

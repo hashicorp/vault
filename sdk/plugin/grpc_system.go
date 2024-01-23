@@ -202,7 +202,7 @@ func (s *gRPCSystemViewClient) GeneratePasswordFromPolicy(ctx context.Context, p
 	return resp.Password, nil
 }
 
-func (s gRPCSystemViewClient) ClusterID(ctx context.Context) (string, error) {
+func (s *gRPCSystemViewClient) ClusterID(ctx context.Context) (string, error) {
 	reply, err := s.client.ClusterInfo(ctx, &pb.Empty{})
 	if err != nil {
 		return "", err

@@ -10,8 +10,7 @@ import (
 const redactedTokenString = "ey***"
 
 type IdentityTokenRequest struct {
-	// Audience identifies the recipient of the token. The requested
-	// value will be in the "aud" claim. Required.
+	// Audience identifies the recipient of the token
 	Audience string
 	// TTL is the requested duration that the token will be valid for.
 	// Optional with a default of 1hr.

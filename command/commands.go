@@ -33,6 +33,7 @@ import (
 	credOIDC "github.com/hashicorp/vault-plugin-auth-jwt"
 	credKerb "github.com/hashicorp/vault-plugin-auth-kerberos"
 	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
+
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
@@ -42,6 +43,7 @@ import (
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
+
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 
 	physAerospike "github.com/hashicorp/vault/physical/aerospike"
@@ -69,6 +71,7 @@ import (
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 
 	hcpvlib "github.com/hashicorp/vault-hcp-lib"
+
 	sr "github.com/hashicorp/vault/serviceregistration"
 	csr "github.com/hashicorp/vault/serviceregistration/consul"
 	ksr "github.com/hashicorp/vault/serviceregistration/kubernetes"
@@ -137,6 +140,8 @@ const (
 	flagNameAllowedManagedKeys = "allowed-managed-keys"
 	// flagNamePluginVersion selects what version of a plugin should be used.
 	flagNamePluginVersion = "plugin-version"
+	// flagNameIdentityTokenKey selects the key used to sign plugin identity tokens
+	flagNameIdentityTokenKey = "identity-token-key"
 	// flagNameUserLockoutThreshold is the flag name used for tuning the auth mount lockout threshold parameter
 	flagNameUserLockoutThreshold = "user-lockout-threshold"
 	// flagNameUserLockoutDuration is the flag name used for tuning the auth mount lockout duration parameter

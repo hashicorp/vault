@@ -593,8 +593,8 @@ message ClusterInfoReply {
 }
 
 message GenerateIdentityTokenRequest {
-  string audience = 1;
-  int64 ttl = 2;
+  string audience = 2;
+  int64 ttl = 3;
 }
 
 message GenerateIdentityTokenResponse {
