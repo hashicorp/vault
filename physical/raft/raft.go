@@ -543,8 +543,10 @@ func (b *RaftBackend) Close() error {
 	}
 
 	// This relies on logStore == stableStore and not having any middleware
-	// wrappers. If these assumptions change, it's possible this will break,
-	// and we should adjust accordingly at that time.
+	// wrappers around the stableStore (the logStore is always wrapped
+	// which is why we call close on it rather than stableStore so all 
+	// middleware see the Close too). If these assumptions change,
+	// it's possible this will break, and we should adjust accordingly.
 	if closer, ok := b.logStore.(io.Closer); ok {
 		if err := closer.Close(); err != nil {
 			return err
