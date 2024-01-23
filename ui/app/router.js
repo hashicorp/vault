@@ -29,8 +29,9 @@ Router.map(function () {
         this.route('counts', function () {
           this.route('overview');
           this.route('sync');
+          this.route('token');
         });
-        this.route('token'); // leaving outside of counts initially to easily reference original implementation when testing
+        this.route('dashboard'); // leaving for now to easily reference original implementation when testing
         this.route('config');
         this.route('edit');
       });
