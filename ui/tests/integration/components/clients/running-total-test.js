@@ -25,12 +25,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
       namespaces: [],
       new_clients: {
         month: '8/21',
+        timestamp: '2021-08-01T00:00:00Z',
         namespaces: [],
       },
       namespaces_by_key: {},
     },
     {
       month: '9/21',
+      timestamp: '2021-09-01T00:00:00Z',
       clients: 19251,
       entity_clients: 10713,
       non_entity_clients: 8538,
@@ -199,11 +201,13 @@ module('Integration | Component | clients/running-total', function (hooks) {
       namespaces_by_key: {
         root: {
           month: '9/21',
+          timestamp: '2021-09-01T00:00:00Z',
           clients: 4852,
           entity_clients: 3108,
           non_entity_clients: 1744,
           new_clients: {
             month: '9/21',
+            timestamp: '2021-09-01T00:00:00Z',
             label: 'root',
             clients: 2525,
             entity_clients: 1315,
@@ -212,12 +216,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
           mounts_by_key: {
             'path-3-with-over-18-characters': {
               month: '9/21',
+              timestamp: '2021-09-01T00:00:00Z',
               label: 'path-3-with-over-18-characters',
               clients: 1598,
               entity_clients: 687,
               non_entity_clients: 911,
               new_clients: {
                 month: '9/21',
+                timestamp: '2021-09-01T00:00:00Z',
                 label: 'path-3-with-over-18-characters',
                 clients: 1055,
                 entity_clients: 257,
@@ -226,12 +232,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-1': {
               month: '9/21',
+              timestamp: '2021-09-01T00:00:00Z',
               label: 'path-1',
               clients: 1429,
               entity_clients: 981,
               non_entity_clients: 448,
               new_clients: {
                 month: '9/21',
+                timestamp: '2021-09-01T00:00:00Z',
                 label: 'path-1',
                 clients: 543,
                 entity_clients: 340,
@@ -240,12 +248,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-4-with-over-18-characters': {
               month: '9/21',
+              timestamp: '2021-09-01T00:00:00Z',
               label: 'path-4-with-over-18-characters',
               clients: 965,
               entity_clients: 720,
               non_entity_clients: 245,
               new_clients: {
                 month: '9/21',
+                timestamp: '2021-09-01T00:00:00Z',
                 label: 'path-4-with-over-18-characters',
                 clients: 136,
                 entity_clients: 7,
@@ -254,12 +264,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-2': {
               month: '9/21',
+              timestamp: '2021-09-01T00:00:00Z',
               label: 'path-2',
               clients: 860,
               entity_clients: 720,
               non_entity_clients: 140,
               new_clients: {
                 month: '9/21',
+                timestamp: '2021-09-01T00:00:00Z',
                 label: 'path-2',
                 clients: 791,
                 entity_clients: 711,
@@ -270,11 +282,13 @@ module('Integration | Component | clients/running-total', function (hooks) {
         },
         'test-ns-2/': {
           month: '9/21',
+          timestamp: '2021-09-01T00:00:00Z',
           clients: 4702,
           entity_clients: 3057,
           non_entity_clients: 1645,
           new_clients: {
             month: '9/21',
+            timestamp: '2021-09-01T00:00:00Z',
             label: 'test-ns-2/',
             clients: 1537,
             entity_clients: 662,
@@ -283,12 +297,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
           mounts_by_key: {
             'path-3-with-over-18-characters': {
               month: '9/21',
+              timestamp: '2021-09-01T00:00:00Z',
               label: 'path-3-with-over-18-characters',
               clients: 1686,
               entity_clients: 926,
               non_entity_clients: 760,
               new_clients: {
                 month: '9/21',
+                timestamp: '2021-09-01T00:00:00Z',
                 label: 'path-3-with-over-18-characters',
                 clients: 520,
                 entity_clients: 13,
@@ -297,12 +313,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-4-with-over-18-characters': {
               month: '9/21',
+              timestamp: '2021-09-01T00:00:00Z',
               label: 'path-4-with-over-18-characters',
               clients: 1525,
               entity_clients: 789,
               non_entity_clients: 736,
               new_clients: {
                 month: '9/21',
+                timestamp: '2021-09-01T00:00:00Z',
                 label: 'path-4-with-over-18-characters',
                 clients: 499,
                 entity_clients: 197,
@@ -311,12 +329,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-2': {
               month: '9/21',
+              timestamp: '2021-09-01T00:00:00Z',
               label: 'path-2',
               clients: 905,
               entity_clients: 849,
               non_entity_clients: 56,
               new_clients: {
                 month: '9/21',
+                timestamp: '2021-09-01T00:00:00Z',
                 label: 'path-2',
                 clients: 398,
                 entity_clients: 370,
@@ -325,12 +345,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-1': {
               month: '9/21',
+              timestamp: '2021-09-01T00:00:00Z',
               label: 'path-1',
               clients: 586,
               entity_clients: 493,
               non_entity_clients: 93,
               new_clients: {
                 month: '9/21',
+                timestamp: '2021-09-01T00:00:00Z',
                 label: 'path-1',
                 clients: 120,
                 entity_clients: 82,
@@ -346,6 +368,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
           non_entity_clients: 2698,
           new_clients: {
             month: '9/21',
+            timestamp: '2021-09-01T00:00:00Z',
             label: 'test-ns-1/',
             clients: 2712,
             entity_clients: 879,
@@ -354,6 +377,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
           mounts_by_key: {
             'path-4-with-over-18-characters': {
               month: '9/21',
+              timestamp: '2021-09-01T00:00:00Z',
               label: 'path-4-with-over-18-characters',
               clients: 1534,
               entity_clients: 619,
@@ -368,6 +392,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-3-with-over-18-characters': {
               month: '9/21',
+              timestamp: '2021-09-01T00:00:00Z',
               label: 'path-3-with-over-18-characters',
               clients: 1528,
               entity_clients: 589,
@@ -382,6 +407,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-1': {
               month: '9/21',
+              timestamp: '2021-09-01T00:00:00Z',
               label: 'path-1',
               clients: 828,
               entity_clients: 612,
@@ -396,6 +422,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-2': {
               month: '9/21',
+              timestamp: '2021-09-01T00:00:00Z',
               label: 'path-2',
               clients: 679,
               entity_clients: 51,
@@ -412,11 +439,13 @@ module('Integration | Component | clients/running-total', function (hooks) {
         },
         'test-ns-2-with-namespace-length-over-18-characters/': {
           month: '9/21',
+          timestamp: '2021-09-01T00:00:00Z',
           clients: 3771,
           entity_clients: 2029,
           non_entity_clients: 1742,
           new_clients: {
             month: '9/21',
+            timestamp: '2021-09-01T00:00:00Z',
             label: 'test-ns-2-with-namespace-length-over-18-characters/',
             clients: 2087,
             entity_clients: 902,
@@ -425,12 +454,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
           mounts_by_key: {
             'path-3-with-over-18-characters': {
               month: '9/21',
+              timestamp: '2021-09-01T00:00:00Z',
               label: 'path-3-with-over-18-characters',
               clients: 1249,
               entity_clients: 793,
               non_entity_clients: 456,
               new_clients: {
                 month: '9/21',
+                timestamp: '2021-09-01T00:00:00Z',
                 label: 'path-3-with-over-18-characters',
                 clients: 472,
                 entity_clients: 260,
@@ -439,12 +470,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-1': {
               month: '9/21',
+              timestamp: '2021-09-01T00:00:00Z',
               label: 'path-1',
               clients: 1046,
               entity_clients: 444,
               non_entity_clients: 602,
               new_clients: {
                 month: '9/21',
+                timestamp: '2021-09-01T00:00:00Z',
                 label: 'path-1',
                 clients: 775,
                 entity_clients: 349,
@@ -453,12 +486,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-2': {
               month: '9/21',
+              timestamp: '2021-09-01T00:00:00Z',
               label: 'path-2',
               clients: 930,
               entity_clients: 277,
               non_entity_clients: 653,
               new_clients: {
                 month: '9/21',
+                timestamp: '2021-09-01T00:00:00Z',
                 label: 'path-2',
                 clients: 632,
                 entity_clients: 90,
@@ -467,12 +502,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-4-with-over-18-characters': {
               month: '9/21',
+              timestamp: '2021-09-01T00:00:00Z',
               label: 'path-4-with-over-18-characters',
               clients: 546,
               entity_clients: 515,
               non_entity_clients: 31,
               new_clients: {
                 month: '9/21',
+                timestamp: '2021-09-01T00:00:00Z',
                 label: 'path-4-with-over-18-characters',
                 clients: 208,
                 entity_clients: 203,
@@ -483,11 +520,13 @@ module('Integration | Component | clients/running-total', function (hooks) {
         },
         'test-ns-1-with-namespace-length-over-18-characters/': {
           month: '9/21',
+          timestamp: '2021-09-01T00:00:00Z',
           clients: 1357,
           entity_clients: 648,
           non_entity_clients: 709,
           new_clients: {
             month: '9/21',
+            timestamp: '2021-09-01T00:00:00Z',
             label: 'test-ns-1-with-namespace-length-over-18-characters/',
             clients: 560,
             entity_clients: 189,
@@ -496,12 +535,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
           mounts_by_key: {
             'path-1': {
               month: '9/21',
+              timestamp: '2021-09-01T00:00:00Z',
               label: 'path-1',
               clients: 613,
               entity_clients: 23,
               non_entity_clients: 590,
               new_clients: {
                 month: '9/21',
+                timestamp: '2021-09-01T00:00:00Z',
                 label: 'path-1',
                 clients: 318,
                 entity_clients: 12,
@@ -510,12 +551,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-3-with-over-18-characters': {
               month: '9/21',
+              timestamp: '2021-09-01T00:00:00Z',
               label: 'path-3-with-over-18-characters',
               clients: 543,
               entity_clients: 465,
               non_entity_clients: 78,
               new_clients: {
                 month: '9/21',
+                timestamp: '2021-09-01T00:00:00Z',
                 label: 'path-3-with-over-18-characters',
                 clients: 126,
                 entity_clients: 89,
@@ -524,12 +567,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-2': {
               month: '9/21',
+              timestamp: '2021-09-01T00:00:00Z',
               label: 'path-2',
               clients: 146,
               entity_clients: 141,
               non_entity_clients: 5,
               new_clients: {
                 month: '9/21',
+                timestamp: '2021-09-01T00:00:00Z',
                 label: 'path-2',
                 clients: 76,
                 entity_clients: 75,
@@ -538,12 +583,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-4-with-over-18-characters': {
               month: '9/21',
+              timestamp: '2021-09-01T00:00:00Z',
               label: 'path-4-with-over-18-characters',
               clients: 55,
               entity_clients: 19,
               non_entity_clients: 36,
               new_clients: {
                 month: '9/21',
+                timestamp: '2021-09-01T00:00:00Z',
                 label: 'path-4-with-over-18-characters',
                 clients: 40,
                 entity_clients: 13,
@@ -555,6 +602,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
       },
       new_clients: {
         month: '9/21',
+        timestamp: '2021-09-01T00:00:00Z',
         clients: 9421,
         entity_clients: 3947,
         non_entity_clients: 5474,
@@ -724,6 +772,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     },
     {
       month: '10/21',
+      timestamp: '2021-10-01T00:00:00Z',
       clients: 19417,
       entity_clients: 10105,
       non_entity_clients: 9312,
@@ -892,11 +941,13 @@ module('Integration | Component | clients/running-total', function (hooks) {
       namespaces_by_key: {
         root: {
           month: '10/21',
+          timestamp: '2021-10-01T00:00:00Z',
           clients: 4835,
           entity_clients: 2364,
           non_entity_clients: 2471,
           new_clients: {
             month: '10/21',
+            timestamp: '2021-10-01T00:00:00Z',
             label: 'root',
             clients: 1732,
             entity_clients: 586,
@@ -905,12 +956,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
           mounts_by_key: {
             'path-3-with-over-18-characters': {
               month: '10/21',
+              timestamp: '2021-10-01T00:00:00Z',
               label: 'path-3-with-over-18-characters',
               clients: 1797,
               entity_clients: 883,
               non_entity_clients: 914,
               new_clients: {
                 month: '10/21',
+                timestamp: '2021-10-01T00:00:00Z',
                 label: 'path-3-with-over-18-characters',
                 clients: 907,
                 entity_clients: 192,
@@ -919,12 +972,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-1': {
               month: '10/21',
+              timestamp: '2021-10-01T00:00:00Z',
               label: 'path-1',
               clients: 1501,
               entity_clients: 663,
               non_entity_clients: 838,
               new_clients: {
                 month: '10/21',
+                timestamp: '2021-10-01T00:00:00Z',
                 label: 'path-1',
                 clients: 276,
                 entity_clients: 202,
@@ -933,12 +988,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-2': {
               month: '10/21',
+              timestamp: '2021-10-01T00:00:00Z',
               label: 'path-2',
               clients: 1461,
               entity_clients: 800,
               non_entity_clients: 661,
               new_clients: {
                 month: '10/21',
+                timestamp: '2021-10-01T00:00:00Z',
                 label: 'path-2',
                 clients: 502,
                 entity_clients: 189,
@@ -947,12 +1004,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-4-with-over-18-characters': {
               month: '10/21',
+              timestamp: '2021-10-01T00:00:00Z',
               label: 'path-4-with-over-18-characters',
               clients: 76,
               entity_clients: 18,
               non_entity_clients: 58,
               new_clients: {
                 month: '10/21',
+                timestamp: '2021-10-01T00:00:00Z',
                 label: 'path-4-with-over-18-characters',
                 clients: 47,
                 entity_clients: 3,
@@ -963,11 +1022,13 @@ module('Integration | Component | clients/running-total', function (hooks) {
         },
         'test-ns-2/': {
           month: '10/21',
+          timestamp: '2021-10-01T00:00:00Z',
           clients: 4027,
           entity_clients: 1692,
           non_entity_clients: 2335,
           new_clients: {
             month: '10/21',
+            timestamp: '2021-10-01T00:00:00Z',
             label: 'test-ns-2/',
             clients: 2301,
             entity_clients: 678,
@@ -976,12 +1037,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
           mounts_by_key: {
             'path-4-with-over-18-characters': {
               month: '10/21',
+              timestamp: '2021-10-01T00:00:00Z',
               label: 'path-4-with-over-18-characters',
               clients: 1223,
               entity_clients: 820,
               non_entity_clients: 403,
               new_clients: {
                 month: '10/21',
+                timestamp: '2021-10-01T00:00:00Z',
                 label: 'path-4-with-over-18-characters',
                 clients: 602,
                 entity_clients: 212,
@@ -990,12 +1053,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-3-with-over-18-characters': {
               month: '10/21',
+              timestamp: '2021-10-01T00:00:00Z',
               label: 'path-3-with-over-18-characters',
               clients: 1110,
               entity_clients: 111,
               non_entity_clients: 999,
               new_clients: {
                 month: '10/21',
+                timestamp: '2021-10-01T00:00:00Z',
                 label: 'path-3-with-over-18-characters',
                 clients: 440,
                 entity_clients: 7,
@@ -1004,12 +1069,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-1': {
               month: '10/21',
+              timestamp: '2021-10-01T00:00:00Z',
               label: 'path-1',
               clients: 1034,
               entity_clients: 462,
               non_entity_clients: 572,
               new_clients: {
                 month: '10/21',
+                timestamp: '2021-10-01T00:00:00Z',
                 label: 'path-1',
                 clients: 980,
                 entity_clients: 454,
@@ -1018,12 +1085,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-2': {
               month: '10/21',
+              timestamp: '2021-10-01T00:00:00Z',
               label: 'path-2',
               clients: 660,
               entity_clients: 299,
               non_entity_clients: 361,
               new_clients: {
                 month: '10/21',
+                timestamp: '2021-10-01T00:00:00Z',
                 label: 'path-2',
                 clients: 279,
                 entity_clients: 5,
@@ -1034,11 +1103,13 @@ module('Integration | Component | clients/running-total', function (hooks) {
         },
         'test-ns-2-with-namespace-length-over-18-characters/': {
           month: '10/21',
+          timestamp: '2021-10-01T00:00:00Z',
           clients: 3924,
           entity_clients: 2132,
           non_entity_clients: 1792,
           new_clients: {
             month: '10/21',
+            timestamp: '2021-10-01T00:00:00Z',
             label: 'test-ns-2-with-namespace-length-over-18-characters/',
             clients: 1561,
             entity_clients: 1225,
@@ -1047,12 +1118,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
           mounts_by_key: {
             'path-3-with-over-18-characters': {
               month: '10/21',
+              timestamp: '2021-10-01T00:00:00Z',
               label: 'path-3-with-over-18-characters',
               clients: 1411,
               entity_clients: 765,
               non_entity_clients: 646,
               new_clients: {
                 month: '10/21',
+                timestamp: '2021-10-01T00:00:00Z',
                 label: 'path-3-with-over-18-characters',
                 clients: 948,
                 entity_clients: 660,
@@ -1061,12 +1134,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-2': {
               month: '10/21',
+              timestamp: '2021-10-01T00:00:00Z',
               label: 'path-2',
               clients: 1205,
               entity_clients: 382,
               non_entity_clients: 823,
               new_clients: {
                 month: '10/21',
+                timestamp: '2021-10-01T00:00:00Z',
                 label: 'path-2',
                 clients: 305,
                 entity_clients: 289,
@@ -1075,12 +1150,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-1': {
               month: '10/21',
+              timestamp: '2021-10-01T00:00:00Z',
               label: 'path-1',
               clients: 884,
               entity_clients: 850,
               non_entity_clients: 34,
               new_clients: {
                 month: '10/21',
+                timestamp: '2021-10-01T00:00:00Z',
                 label: 'path-1',
                 clients: 230,
                 entity_clients: 207,
@@ -1089,12 +1166,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-4-with-over-18-characters': {
               month: '10/21',
+              timestamp: '2021-10-01T00:00:00Z',
               label: 'path-4-with-over-18-characters',
               clients: 424,
               entity_clients: 135,
               non_entity_clients: 289,
               new_clients: {
                 month: '10/21',
+                timestamp: '2021-10-01T00:00:00Z',
                 label: 'path-4-with-over-18-characters',
                 clients: 78,
                 entity_clients: 69,
@@ -1105,11 +1184,13 @@ module('Integration | Component | clients/running-total', function (hooks) {
         },
         'test-ns-1-with-namespace-length-over-18-characters/': {
           month: '10/21',
+          timestamp: '2021-10-01T00:00:00Z',
           clients: 3639,
           entity_clients: 2314,
           non_entity_clients: 1325,
           new_clients: {
             month: '10/21',
+            timestamp: '2021-10-01T00:00:00Z',
             label: 'test-ns-1-with-namespace-length-over-18-characters/',
             clients: 1245,
             entity_clients: 710,
@@ -1118,12 +1199,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
           mounts_by_key: {
             'path-1': {
               month: '10/21',
+              timestamp: '2021-10-01T00:00:00Z',
               label: 'path-1',
               clients: 1062,
               entity_clients: 781,
               non_entity_clients: 281,
               new_clients: {
                 month: '10/21',
+                timestamp: '2021-10-01T00:00:00Z',
                 label: 'path-1',
                 clients: 288,
                 entity_clients: 63,
@@ -1132,12 +1215,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-4-with-over-18-characters': {
               month: '10/21',
+              timestamp: '2021-10-01T00:00:00Z',
               label: 'path-4-with-over-18-characters',
               clients: 1021,
               entity_clients: 609,
               non_entity_clients: 412,
               new_clients: {
                 month: '10/21',
+                timestamp: '2021-10-01T00:00:00Z',
                 label: 'path-4-with-over-18-characters',
                 clients: 440,
                 entity_clients: 323,
@@ -1146,12 +1231,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-2': {
               month: '10/21',
+              timestamp: '2021-10-01T00:00:00Z',
               label: 'path-2',
               clients: 849,
               entity_clients: 426,
               non_entity_clients: 423,
               new_clients: {
                 month: '10/21',
+                timestamp: '2021-10-01T00:00:00Z',
                 label: 'path-2',
                 clients: 339,
                 entity_clients: 308,
@@ -1160,12 +1247,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-3-with-over-18-characters': {
               month: '10/21',
+              timestamp: '2021-10-01T00:00:00Z',
               label: 'path-3-with-over-18-characters',
               clients: 707,
               entity_clients: 498,
               non_entity_clients: 209,
               new_clients: {
                 month: '10/21',
+                timestamp: '2021-10-01T00:00:00Z',
                 label: 'path-3-with-over-18-characters',
                 clients: 178,
                 entity_clients: 16,
@@ -1176,11 +1265,13 @@ module('Integration | Component | clients/running-total', function (hooks) {
         },
         'test-ns-1/': {
           month: '10/21',
+          timestamp: '2021-10-01T00:00:00Z',
           clients: 2992,
           entity_clients: 1603,
           non_entity_clients: 1389,
           new_clients: {
             month: '10/21',
+            timestamp: '2021-10-01T00:00:00Z',
             label: 'test-ns-1/',
             clients: 820,
             entity_clients: 356,
@@ -1189,12 +1280,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
           mounts_by_key: {
             'path-1': {
               month: '10/21',
+              timestamp: '2021-10-01T00:00:00Z',
               label: 'path-1',
               clients: 1140,
               entity_clients: 480,
               non_entity_clients: 660,
               new_clients: {
                 month: '10/21',
+                timestamp: '2021-10-01T00:00:00Z',
                 label: 'path-1',
                 clients: 239,
                 entity_clients: 30,
@@ -1203,12 +1296,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-4-with-over-18-characters': {
               month: '10/21',
+              timestamp: '2021-10-01T00:00:00Z',
               label: 'path-4-with-over-18-characters',
               clients: 1058,
               entity_clients: 651,
               non_entity_clients: 407,
               new_clients: {
                 month: '10/21',
+                timestamp: '2021-10-01T00:00:00Z',
                 label: 'path-4-with-over-18-characters',
                 clients: 256,
                 entity_clients: 63,
@@ -1217,12 +1312,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-2': {
               month: '10/21',
+              timestamp: '2021-10-01T00:00:00Z',
               label: 'path-2',
               clients: 575,
               entity_clients: 416,
               non_entity_clients: 159,
               new_clients: {
                 month: '10/21',
+                timestamp: '2021-10-01T00:00:00Z',
                 label: 'path-2',
                 clients: 259,
                 entity_clients: 245,
@@ -1231,12 +1328,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
             },
             'path-3-with-over-18-characters': {
               month: '10/21',
+              timestamp: '2021-10-01T00:00:00Z',
               label: 'path-3-with-over-18-characters',
               clients: 219,
               entity_clients: 56,
               non_entity_clients: 163,
               new_clients: {
                 month: '10/21',
+                timestamp: '2021-10-01T00:00:00Z',
                 label: 'path-3-with-over-18-characters',
                 clients: 66,
                 entity_clients: 18,
@@ -1248,6 +1347,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
       },
       new_clients: {
         month: '10/21',
+        timestamp: '2021-10-01T00:00:00Z',
         clients: 7659,
         entity_clients: 3555,
         non_entity_clients: 4104,

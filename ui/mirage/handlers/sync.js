@@ -209,7 +209,7 @@ export default function (server) {
   clientsHandler(server); // imports all of the endpoints defined in mirage/handlers/clients file
 
   // STATIC RESPONSE (0 entity/non-entity clients)
-  /* 
+  /*
   server.get('/sys/internal/counters/activity', (schema, req) => {
     let { start_time, end_time } = req.queryParams;
     // backend returns a timestamp if given unix time, so first convert to timestamp string here
@@ -492,6 +492,6 @@ export default function (server) {
       auth: null,
     };
   });
-  
+
   */
 }

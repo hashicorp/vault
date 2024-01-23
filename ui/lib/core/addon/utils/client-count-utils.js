@@ -33,7 +33,12 @@ export const formatByMonths = (monthsArray) => {
         timestamp: m.timestamp,
         ...totalCounts,
         namespaces: formatByNamespace(m.namespaces) || [],
-        namespaces_by_key: namespaceArrayToObject(totalClientsByNamespace, newClientsByNamespace, month),
+        namespaces_by_key: namespaceArrayToObject(
+          totalClientsByNamespace,
+          newClientsByNamespace,
+          month,
+          m.timestamp
+        ),
         new_clients: {
           month,
           timestamp: m.timestamp,
@@ -110,7 +115,7 @@ export const sortMonthsByTimestamp = (monthsArray) => {
   );
 };
 
-export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByNamespace, month) => {
+export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByNamespace, month, timestamp) => {
   if (!totalClientsByNamespace) return {}; // return if no data for that month
   // all 'new_client' data resides within a separate key of each month (see data structure below)
   // FIRST: iterate and nest respective 'new_clients' data within each namespace and mount object
@@ -153,6 +158,7 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
     namespaceObject.mounts.forEach((mountObject) => {
       mounts_by_key[mountObject.label] = {
         month,
+        timestamp,
         ...mountObject,
         new_clients: { month, ...mountObject.new_clients },
       };
@@ -161,6 +167,7 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
     const { label, clients, entity_clients, non_entity_clients, secret_syncs, new_clients } = namespaceObject;
     namespaces_by_key[label] = {
       month,
+      timestamp,
       clients,
       entity_clients,
       non_entity_clients,
