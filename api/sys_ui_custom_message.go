@@ -12,10 +12,17 @@ import (
 	"strconv"
 )
 
+// ListUICustomMessages calls ListUICustomMessagesWithContext using a background
+// Context.
 func (c *Sys) ListUICustomMessages(req UICustomMessageListRequest) (*Secret, error) {
 	return c.ListUICustomMessagesWithContext(context.Background(), req)
 }
 
+// ListUICustomMessagesWithContext sends a request to the List custom messages
+// endpoint using the provided Context and UICustomMessageListRequest value as
+// the inputs. It returns a pointer to a Secret if a response was obtained from
+// the server, including error responses; or an error if a response could not be
+// obtained due to an error.
 func (c *Sys) ListUICustomMessagesWithContext(ctx context.Context, req UICustomMessageListRequest) (*Secret, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
@@ -48,10 +55,17 @@ func (c *Sys) ListUICustomMessagesWithContext(ctx context.Context, req UICustomM
 	return secret, nil
 }
 
+// CreateUICustomMessage calls CreateUICustomMessageWithContext using a
+// background Context.
 func (c *Sys) CreateUICustomMessage(req UICustomMessageRequest) (*Secret, error) {
 	return c.CreateUICustomMessageWithContext(context.Background(), req)
 }
 
+// CreateUICustomMessageWithContext sends a request to the Create custom
+// messages endpoint using the provided Context and UICustomMessageRequest
+// values as the inputs. It returns a pointer to a Secret if a response was
+// obtained from the server, including error responses; or an error if a
+// response could not be obtained due to an error.
 func (c *Sys) CreateUICustomMessageWithContext(ctx context.Context, req UICustomMessageRequest) (*Secret, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
@@ -79,10 +93,16 @@ func (c *Sys) CreateUICustomMessageWithContext(ctx context.Context, req UICustom
 	return secret, nil
 }
 
+// ReadUICustomMessage calls ReadUICustomMessageWithContext using a background
+// Context.
 func (c *Sys) ReadUICustomMessage(id string) (*Secret, error) {
 	return c.ReadUICustomMessageWithContext(context.Background(), id)
 }
 
+// ReadUICustomMessageWithContext sends a request to the Read custom message
+// endpoint using the provided Context and id values. It returns a pointer to a
+// Secret if a response was obtained from the server, including error responses;
+// or an error if a response could not be obtained due to an error.
 func (c *Sys) ReadUICustomMessageWithContext(ctx context.Context, id string) (*Secret, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
@@ -107,10 +127,17 @@ func (c *Sys) ReadUICustomMessageWithContext(ctx context.Context, id string) (*S
 	return secret, nil
 }
 
+// UpdateUICustomMessage calls UpdateUICustomMessageWithContext using a
+// background Context.
 func (c *Sys) UpdateUICustomMessage(id string, req UICustomMessageRequest) error {
 	return c.UpdateUICustomMessageWithContext(context.Background(), id, req)
 }
 
+// UpdateUICustomMessageWithContext sends a request to the Update custom message
+// endpoint using the provided Context, id, and UICustomMessageRequest values.
+// It returns a pointer to a Secret if a response was obtained from the server,
+// including error responses; or an error if a response could not be obtained
+// due to an error.
 func (c *Sys) UpdateUICustomMessageWithContext(ctx context.Context, id string, req UICustomMessageRequest) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
@@ -129,10 +156,16 @@ func (c *Sys) UpdateUICustomMessageWithContext(ctx context.Context, id string, r
 	return nil
 }
 
+// DeleteUICustomMessage calls DeleteUICustomMessageWithContext using a
+// background Context.
 func (c *Sys) DeleteUICustomMessage(id string) error {
 	return c.DeletePolicyWithContext(context.Background(), id)
 }
 
+// DeleteUICustomMessageWithContext sends a request to the Delete custom message
+// endpoint using the provided Context and id values. It returns a pointer to a
+// Secret if a response was obtained from the server, including error responses;
+// or an error if a response could not be obtained due to an error.
 func (c *Sys) DeleteUICustomMessageWithContext(ctx context.Context, id string) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
@@ -148,30 +181,42 @@ func (c *Sys) DeleteUICustomMessageWithContext(ctx context.Context, id string) e
 	return nil
 }
 
+// UICustomMessageListRequest is a struct used to contain inputs for the List
+// custom messages request. Each field is optional, so their types are pointers.
+// The With... methods can be used to easily set the fields with pointers to
+// values.
 type UICustomMessageListRequest struct {
 	Authenticated *bool
 	Type          *string
 	Active        *bool
 }
 
+// WithAuthenticated sets the Authenticated field to a pointer referencing the
+// provided bool value.
 func (r *UICustomMessageListRequest) WithAuthenticated(value bool) *UICustomMessageListRequest {
 	r.Authenticated = &value
 
 	return r
 }
 
+// WithType sets the Type field to a pointer referencing the provided string
+// value.
 func (r *UICustomMessageListRequest) WithType(value string) *UICustomMessageListRequest {
 	r.Type = &value
 
 	return r
 }
 
+// WithActive sets the Active field to a pointer referencing the provided bool
+// value.
 func (r *UICustomMessageListRequest) WithActive(value bool) *UICustomMessageListRequest {
 	r.Active = &value
 
 	return r
 }
 
+// UICustomMessageRequest is a struct containing the properties of a custom
+// message. The Link field can be set using the WithLink method.
 type UICustomMessageRequest struct {
 	Title         string               `json:"title"`
 	Message       string               `json:"message"`
@@ -183,6 +228,8 @@ type UICustomMessageRequest struct {
 	Options       map[string]any       `json:"options,omitempty"`
 }
 
+// WithLink sets the Link field to the address of a new uiCustomMessageLink
+// struct constructed from the provided title and href values.
 func (r *UICustomMessageRequest) WithLink(title, href string) *UICustomMessageRequest {
 	r.Link = &uiCustomMessageLink{
 		Title: title,
@@ -192,11 +239,15 @@ func (r *UICustomMessageRequest) WithLink(title, href string) *UICustomMessageRe
 	return r
 }
 
+// uiCustomMessageLink is a utility struct used to represent a link associated
+// with a custom message.
 type uiCustomMessageLink struct {
 	Title string
 	Href  string
 }
 
+// MarshalJSON encodes the state of the receiver uiCustomMessageLink as JSON and
+// returns those encoded bytes or an error.
 func (l uiCustomMessageLink) MarshalJSON() ([]byte, error) {
 	m := make(map[string]string)
 
@@ -205,6 +256,8 @@ func (l uiCustomMessageLink) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m)
 }
 
+// UnmarshalJSON updates the state of the receiver uiCustomMessageLink from the
+// provided JSON encoded bytes. It returns an error if there was a failure.
 func (l *uiCustomMessageLink) UnmarshalJSON(b []byte) error {
 	m := make(map[string]string)
 

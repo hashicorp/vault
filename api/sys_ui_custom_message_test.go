@@ -14,6 +14,8 @@ import (
 
 var messageBase64 string = base64.StdEncoding.EncodeToString([]byte("message"))
 
+// TestUICustomMessageJsonMarshalling verifies that json marshalling (struct to
+// json) works with the uiCustomMessageRequest type.
 func TestUICustomMessageJsonMarshalling(t *testing.T) {
 	for _, testcase := range []struct {
 		name         string
@@ -94,6 +96,8 @@ func TestUICustomMessageJsonMarshalling(t *testing.T) {
 	}
 }
 
+// TestUICustomMessageJsonUnmarshal verifies that json unmarshalling (json to
+// struct) works with the uiCustomMessageRequest type.
 func TestUICustomMessageJsonUnmarshal(t *testing.T) {
 	for _, testcase := range []struct {
 		name             string
@@ -155,7 +159,9 @@ func TestUICustomMessageJsonUnmarshal(t *testing.T) {
 	}
 }
 
-func TestUICustomMessageListRequestOptionChaining(t *testing.T) {
+// TestUICustomMessageListRequestOptions verifies the correct behaviour of all
+// of the With... methods of the UICustomMessageListRequest.
+func TestUICustomMessageListRequestOptions(t *testing.T) {
 	request := &UICustomMessageListRequest{}
 	assert.Nil(t, request.Active)
 	assert.Nil(t, request.Authenticated)
