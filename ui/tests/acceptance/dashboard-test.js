@@ -330,16 +330,16 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await consoleComponent.runCommands(deleteEngineCmd(databaseBackend));
     });
 
-    test('shows the correct actions and links associated with kv v1', async function (assert) {
-      await runCommands(['write sys/mounts/kv type=kv', 'write kv/foo bar=baz']);
+    test('does not show kv1 mounts', async function (assert) {
+      await runCommands(['write sys/mounts/kv1 type=kv', 'write kv1/foo bar=baz']);
       await settled();
       await visit('/vault/dashboard');
-      await selectChoose(SELECTORS.searchSelect('secrets-engines'), 'kv');
-      await fillIn(SELECTORS.selectEl, 'Find KV secrets');
-      assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
-      assert.dom(SELECTORS.subtitle('param')).hasText('Secret path');
-      assert.dom(SELECTORS.actionButton('Read secrets')).exists({ count: 1 });
-      await consoleComponent.runCommands(deleteEngineCmd('kv'));
+      await click('[data-test-component="search-select"] .ember-basic-dropdown-trigger');
+      assert.dom('.ember-power-select-option').hasTextContaining('kv', 'dropdown shows kv2 mount');
+      assert
+        .dom('.ember-power-select-option')
+        .doesNotHaveTextContaining('kv1', 'dropdown does not show kv1 mount');
+      await consoleComponent.runCommands(deleteEngineCmd('kv1'));
     });
   });
 
