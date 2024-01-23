@@ -38,8 +38,9 @@
         @noDefault={{true}}
         @ariaLabel="Action"
       />
+
       {{#if this.searchSelectParams.model}}
-        {{! use special input to allow searching secrets inside directories }}
+        {{! use special input to allow searching for KVv2 secrets inside a directory }}
         {{#if (eq this.selectedEngine.type "kv")}}
           <KvSuggestionInput
             @label="Secret Path"
