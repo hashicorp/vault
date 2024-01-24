@@ -1,0 +1,3 @@
+```release-note:improvement
+oidc/provider: Adds `code_challenge_methods_supported` to OpenID Connect Metadata
+```
