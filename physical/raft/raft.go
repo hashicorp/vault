@@ -543,7 +543,7 @@ func (b *RaftBackend) Close() error {
 
 	// This relies on logStore == stableStore and not having any middleware
 	// wrappers around the stableStore (the logStore is always wrapped
-	// which is why we call close on it rather than stableStore so all 
+	// which is why we call close on it rather than stableStore so all
 	// middleware see the Close too). If these assumptions change,
 	// it's possible this will break, and we should adjust accordingly.
 	if closer, ok := b.logStore.(io.Closer); ok {
@@ -2273,8 +2273,27 @@ func etcdboltOptions(path string) *etcdbolt.Options {
 }
 
 func isRaftLogVerifyCheckpoint(l *raft.Log) bool {
-	return len(l.Data) == 1 &&
-		l.Data[0] == byte(verifierCheckpointOp) &&
-		(len(l.Extensions) == 0 ||
-			len(l.Extensions) >= 8 && bytes.Equal(logVerifierMagicBytes[:], l.Extensions[0:8]))
+	chkpnt := make([]byte, 1)
+	chkpnt[0] = byte(verifierCheckpointOp)
+
+	if !bytes.Equal(l.Data, chkpnt) {
+		return false
+	}
+
+	// Single byte log with that byte value can only be a checkpoint or
+	// the last byte of a chunked message. If it's chunked it will have
+	// chunking metadata.
+	if len(l.Extensions) == 0 {
+		// No metadata, must be a checkpoint on the leader with no
+		// verifier metadata yet.
+		return true
+	}
+
+	if bytes.HasPrefix(l.Extensions, logVerifierMagicBytes[:]) {
+		// Has verifier metadata so must be a replicated checkpoint on a follower
+		return true
+	}
+
+	// Must be the last chunk of a chunked object that has chunking meta
+	return false
 }
