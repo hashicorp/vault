@@ -11,10 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/internal/observability/event"
-
 	"github.com/cjrd/allocate"
 	"github.com/hashicorp/go-bexpr"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/mitchellh/mapstructure"
 	"github.com/mitchellh/pointerstructure"
 )
