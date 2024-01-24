@@ -676,11 +676,16 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 		switch l.Type {
 		case raft.LogCommand:
 			command := &LogData{}
-			err := proto.Unmarshal(l.Data, command)
-			if err != nil {
-				f.logger.Error("error proto unmarshaling log data", "error", err, "data", l.Data)
-				panic("error proto unmarshaling log data")
+
+			// explicitly check for zero length Data, which will be the case for verifier no-ops
+			if len(l.Data) >= 0 {
+				err := proto.Unmarshal(l.Data, command)
+				if err != nil {
+					f.logger.Error("error proto unmarshaling log data", "error", err, "data", l.Data)
+					panic("error proto unmarshaling log data")
+				}
 			}
+
 			commands = append(commands, command)
 		case raft.LogConfiguration:
 			configuration := raft.DecodeConfiguration(l.Data)
@@ -703,7 +708,9 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 	var err error
 	latestIndex, _ := f.LatestState()
 	lastLog := logs[numLogs-1]
-	if latestIndex.Index < lastLog.Index {
+
+	// empty logs from above will have a 0 index, so if that's the case, skip this
+	if lastLog.Index > 0 && latestIndex.Index < lastLog.Index {
 		logIndex, err = proto.Marshal(&IndexValue{
 			Term:  lastLog.Term,
 			Index: lastLog.Index,
@@ -727,6 +734,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 			entrySlice := make([]*FSMEntry, 0)
 			switch command := commandRaw.(type) {
 			case *LogData:
+				// empty logs will have a zero length slice of Operations, so this loop will be a no-op
 				for _, op := range command.Operations {
 					var err error
 					switch op.OpType {
