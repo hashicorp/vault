@@ -3,37 +3,47 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { alias } from '@ember/object/computed';
-import { computed } from '@ember/object';
-import Base from './_popup-base';
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
+import { service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
 
-export default Base.extend({
-  model: alias('params.firstObject'),
+export default class IdentityPopupMembers extends Component {
+  @service flashMessages;
+  @tracked showConfirmModal = false;
 
-  groupArray: computed('params', function () {
-    return this.params.objectAt(1);
-  }),
+  onSuccess() {
+    if (this.args.onSuccess) {
+      this.args.onSuccess();
+    }
+    this.flashMessages.success(`Successfully removed '${this.args.memberId}' from the group`);
+  }
+  onError(err) {
+    if (this.args.onError) {
+      this.args.onError(this.args.model, this.args.memberId);
+    }
+    const error = this.errorMessage(err);
+    this.flashMessages.error(error);
+  }
 
-  memberId: computed('params', function () {
-    return this.params.objectAt(2);
-  }),
-
-  messageArgs(/*model, groupArray, memberId*/) {
-    return [...arguments];
-  },
-
-  successMessage(model, groupArray, memberId) {
-    return `Successfully removed '${memberId}' from the group`;
-  },
-
-  errorMessage(e, model, groupArray, memberId) {
+  errorMessage(e) {
     const error = e.errors ? e.errors.join(' ') : e.message;
-    return `There was a problem removing '${memberId}' from the group - ${error}`;
-  },
+    return `There was a problem removing '${this.args.memberId}' from the group - ${error}`;
+  }
 
-  transaction(model, groupArray, memberId) {
-    const members = model.get(groupArray);
-    model.set(groupArray, members.without(memberId));
-    return model.save();
-  },
-});
+  transaction() {
+    const members = this.args.model[this.args.groupArray];
+    this.args.model[this.args.groupArray] = members.without(this.args.memberId);
+    return this.args.model.save();
+  }
+
+  @action
+  async removeGroup() {
+    try {
+      await this.transaction();
+      this.onSuccess();
+    } catch (e) {
+      this.onError(e);
+    }
+  }
+}
