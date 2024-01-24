@@ -682,17 +682,21 @@ func (f *EntryFormatter) redactFields(entry any) (map[string]any, error) {
 				return nil, fmt.Errorf("unable to parse field '%s': %w", field, err)
 			}
 
+			// We don't need the return value as the map is being modified by Delete.
 			_, err = ptr.Delete(m)
-
-			// An error may occur if the structure of the data didn't have the property that was expected.
-			// In this case it wouldn't be an 'error' where data wasn't redacted as expected,
-			// more like we don't want to fail audit because something wasn't there to redact in
-			// the first place.
-			if errors.Is(err, pointerstructure.ErrNotFound) || errors.Is(err, pointerstructure.ErrOutOfRange) {
+			// There are some types of errors that may be returned, which we do not
+			// consider to mean redaction has failed. We test for these explicitly
+			// so any additional error types that may be added to the pointerstructure
+			// library in the future can be considered before also being ignored.
+			switch {
+			case errors.Is(err, pointerstructure.ErrNotFound),
+				errors.Is(err, pointerstructure.ErrOutOfRange),
+				errors.Is(err, pointerstructure.ErrInvalidKind),
+				errors.Is(err, pointerstructure.ErrConvert):
+				fallthrough
+			case err == nil:
 				continue
-			}
-
-			if err != nil {
+			default:
 				return nil, fmt.Errorf("unable to exclude field '%s': %w", field, err)
 			}
 		}
