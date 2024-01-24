@@ -23,7 +23,12 @@ export default class IdentityPopupMetadata extends Component {
       this.args.onError(this.args.model, this.args.key);
     }
     const error = this.errorMessage(err);
-    this.flashMessages.error(`There was a problem removing '${this.args.key}' from the metadata - ${error}`);
+    this.flashMessages.error(error);
+  }
+
+  errorMessage(e) {
+    const error = e.errors ? e.errors.join(' ') : e.message;
+    return `There was a problem removing '${this.args.key}' from the metadata - ${error}`;
   }
 
   transaction() {
@@ -41,9 +46,5 @@ export default class IdentityPopupMetadata extends Component {
     } catch (e) {
       this.onError(e);
     }
-    const metadata = this.args.model.metadata;
-    delete metadata[this.args.key];
-    this.args.model.metadata = { ...metadata };
-    return this.args.model.save();
   }
 }
