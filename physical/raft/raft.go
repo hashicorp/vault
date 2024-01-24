@@ -55,7 +55,6 @@ const (
 	// EnvVaultRaftNonVoter is used to override the non_voter config option, telling Vault to join as a non-voter (i.e. read replica).
 	EnvVaultRaftNonVoter  = "VAULT_RAFT_RETRY_JOIN_AS_NON_VOTER"
 	raftNonVoterConfigKey = "retry_join_as_non_voter"
-	raftWalConfigKey      = "raft_wal"
 )
 
 var getMmapFlags = func(string) int { return 0 }
@@ -2057,22 +2056,22 @@ func parseRaftBackendConfig(conf map[string]string, logger log.Logger) (*RaftBac
 		if err == nil && len(localIDRaw) > 0 {
 			c.NodeId = string(localIDRaw)
 		}
-		if err != nil && !os.IsNotExist(err) {
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+	}
+
+	if c.NodeId == "" {
+		id, err := uuid.GenerateUUID()
+		if err != nil {
 			return nil, err
 		}
 
-		if c.NodeId == "" {
-			id, err := uuid.GenerateUUID()
-			if err != nil {
-				return nil, err
-			}
-
-			if err = os.WriteFile(filepath.Join(c.Path, "node-id"), []byte(id), 0o600); err != nil {
-				return nil, err
-			}
-
-			c.NodeId = id
+		if err = os.WriteFile(filepath.Join(c.Path, "node-id"), []byte(id), 0o600); err != nil {
+			return nil, err
 		}
+
+		c.NodeId = id
 	}
 
 	if delayRaw, ok := conf["apply_delay"]; ok {
@@ -2084,10 +2083,10 @@ func parseRaftBackendConfig(conf map[string]string, logger log.Logger) (*RaftBac
 		c.ApplyDelay = delay
 	}
 
-	if walRaw, ok := conf[raftWalConfigKey]; ok {
+	if walRaw, ok := conf["raft_wal"]; ok {
 		useRaftWal, err := strconv.ParseBool(walRaw)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse %s config value %q as a boolean: %w", raftWalConfigKey, walRaw, err)
+			return nil, fmt.Errorf("raft_wal does not parse as a boolean: %w", err)
 		}
 
 		c.RaftWal = useRaftWal
@@ -2276,6 +2275,6 @@ func etcdboltOptions(path string) *etcdbolt.Options {
 func isRaftLogVerifyCheckpoint(l *raft.Log) bool {
 	return len(l.Data) == 1 &&
 		l.Data[0] == byte(verifierCheckpointOp) &&
-		len(l.Extensions) >= 8 &&
-		bytes.Equal(logVerifierMagicBytes[:], l.Extensions[0:8])
+		(len(l.Extensions) == 0 ||
+			len(l.Extensions) >= 8 && bytes.Equal(logVerifierMagicBytes[:], l.Extensions[0:8]))
 }

@@ -207,8 +207,8 @@ func TestRaft_Backend(t *testing.T) {
 
 	testBothRaftBackends(t, func(useRaftWal string) {
 		conf := map[string]string{
-			"trailing_logs":  "100",
-			raftWalConfigKey: useRaftWal,
+			"trailing_logs": "100",
+			"raft_wal":      useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -223,9 +223,9 @@ func TestRaft_SwitchFromBoltDBToRaftWal(t *testing.T) {
 
 	// configured to use raft-wal
 	conf := map[string]string{
-		"path":           tmpDir,
-		"trailing_logs":  "100",
-		raftWalConfigKey: "true",
+		"path":          tmpDir,
+		"trailing_logs": "100",
+		"raft_wal":      "true",
 	}
 
 	// raftBaseDir will end up looking like $tmpDir/raft
@@ -270,7 +270,7 @@ func TestRaft_VerifierEnabled(t *testing.T) {
 	testBothRaftBackends(t, func(useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs":             "100",
-			raftWalConfigKey:            useRaftWal,
+			"raft_wal":                  useRaftWal,
 			"raft_log_verifier_enabled": "true",
 		}
 
@@ -288,9 +288,9 @@ func TestRaft_VerifierEnabled(t *testing.T) {
 func TestRaft_ParseRaftWalBackend(t *testing.T) {
 	raftDir := t.TempDir()
 	conf := map[string]string{
-		"path":           raftDir,
-		"node_id":        "abc123",
-		raftWalConfigKey: "notabooleanlol",
+		"path":     raftDir,
+		"node_id":  "abc123",
+		"raft_wal": "notabooleanlol",
 	}
 
 	_, err := NewRaftBackend(conf, hclog.NewNullLogger())
@@ -298,7 +298,7 @@ func TestRaft_ParseRaftWalBackend(t *testing.T) {
 		t.Fatal("expected an error but got none")
 	}
 
-	if !strings.Contains(err.Error(), "failed to parse") {
+	if !strings.Contains(err.Error(), "does not parse as a boolean") {
 		t.Fatal("expected an error about parsing config keys but got none")
 	}
 }
@@ -309,7 +309,7 @@ func TestRaft_ParseRaftWalVerifierEnabled(t *testing.T) {
 	conf := map[string]string{
 		"path":                      raftDir,
 		"node_id":                   "abc123",
-		raftWalConfigKey:            "true",
+		"raft_wal":                  "true",
 		"raft_log_verifier_enabled": "notabooleanlol",
 	}
 
@@ -375,7 +375,7 @@ func TestRaft_ParseRaftWalVerifierInterval(t *testing.T) {
 			conf := map[string]string{
 				"path":                           raftDir,
 				"node_id":                        "abc123",
-				raftWalConfigKey:                 "true",
+				"raft_wal":                       "true",
 				"raft_log_verifier_enabled":      "true",
 				"raft_log_verification_interval": tc.givenInterval,
 			}
@@ -491,8 +491,8 @@ func TestRaft_Backend_LargeKey(t *testing.T) {
 
 	testBothRaftBackends(t, func(useRaftWal string) {
 		conf := map[string]string{
-			"trailing_logs":  "100",
-			raftWalConfigKey: useRaftWal,
+			"trailing_logs": "100",
+			"raft_wal":      useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -526,8 +526,8 @@ func TestRaft_Backend_LargeValue(t *testing.T) {
 
 	testBothRaftBackends(t, func(useRaftWal string) {
 		conf := map[string]string{
-			"trailing_logs":  "100",
-			raftWalConfigKey: useRaftWal,
+			"trailing_logs": "100",
+			"raft_wal":      useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -560,8 +560,8 @@ func TestRaft_TransactionalBackend_GetTransactions(t *testing.T) {
 	t.Parallel()
 	testBothRaftBackends(t, func(useRaftWal string) {
 		conf := map[string]string{
-			"trailing_logs":  "100",
-			raftWalConfigKey: useRaftWal,
+			"trailing_logs": "100",
+			"raft_wal":      useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -623,8 +623,8 @@ func TestRaft_TransactionalBackend_LargeKey(t *testing.T) {
 	t.Parallel()
 	testBothRaftBackends(t, func(useRaftWal string) {
 		conf := map[string]string{
-			"trailing_logs":  "100",
-			raftWalConfigKey: useRaftWal,
+			"trailing_logs": "100",
+			"raft_wal":      useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -668,8 +668,8 @@ func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
 	t.Parallel()
 	testBothRaftBackends(t, func(useRaftWal string) {
 		conf := map[string]string{
-			"trailing_logs":  "100",
-			raftWalConfigKey: useRaftWal,
+			"trailing_logs": "100",
+			"raft_wal":      useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -709,8 +709,8 @@ func TestRaft_Backend_ListPrefix(t *testing.T) {
 	t.Parallel()
 	testBothRaftBackends(t, func(useRaftWal string) {
 		conf := map[string]string{
-			"trailing_logs":  "100",
-			raftWalConfigKey: useRaftWal,
+			"trailing_logs": "100",
+			"raft_wal":      useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -722,8 +722,8 @@ func TestRaft_TransactionalBackend(t *testing.T) {
 	t.Parallel()
 	testBothRaftBackends(t, func(useRaftWal string) {
 		conf := map[string]string{
-			"trailing_logs":  "100",
-			raftWalConfigKey: useRaftWal,
+			"trailing_logs": "100",
+			"raft_wal":      useRaftWal,
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
@@ -745,8 +745,8 @@ func TestRaft_Backend_ThreeNode(t *testing.T) {
 	t.Parallel()
 	testBothRaftBackends(t, func(useRaftWal string) {
 		conf := map[string]string{
-			"trailing_logs":  "100",
-			raftWalConfigKey: useRaftWal,
+			"trailing_logs": "100",
+			"raft_wal":      useRaftWal,
 		}
 
 		raft1, _ := GetRaftWithConfig(t, true, true, conf)
@@ -772,8 +772,8 @@ func TestRaft_GetOfflineConfig(t *testing.T) {
 	t.Parallel()
 	testBothRaftBackends(t, func(useRaftWal string) {
 		config := map[string]string{
-			"trailing_logs":  "100",
-			raftWalConfigKey: useRaftWal,
+			"trailing_logs": "100",
+			"raft_wal":      useRaftWal,
 		}
 
 		// Create 3 raft nodes
@@ -824,8 +824,8 @@ func TestRaft_Recovery(t *testing.T) {
 	t.Parallel()
 	testBothRaftBackends(t, func(useRaftWal string) {
 		conf := map[string]string{
-			"trailing_logs":  "100",
-			raftWalConfigKey: useRaftWal,
+			"trailing_logs": "100",
+			"raft_wal":      useRaftWal,
 		}
 
 		// Create 4 raft nodes
@@ -937,8 +937,8 @@ func TestRaft_TransactionalBackend_ThreeNode(t *testing.T) {
 	t.Parallel()
 	testBothRaftBackends(t, func(useRaftWal string) {
 		conf := map[string]string{
-			"trailing_logs":  "100",
-			raftWalConfigKey: useRaftWal,
+			"trailing_logs": "100",
+			"raft_wal":      useRaftWal,
 		}
 
 		raft1, _ := GetRaftWithConfig(t, true, true, conf)
@@ -964,8 +964,8 @@ func TestRaft_Backend_Performance(t *testing.T) {
 	t.Parallel()
 	testBothRaftBackends(t, func(useRaftWal string) {
 		conf := map[string]string{
-			"trailing_logs":  "100",
-			raftWalConfigKey: useRaftWal,
+			"trailing_logs": "100",
+			"raft_wal":      useRaftWal,
 		}
 
 		b, dir := GetRaftWithConfig(t, true, true, conf)
@@ -1034,8 +1034,8 @@ func TestRaft_Backend_Performance(t *testing.T) {
 func BenchmarkDB_Puts(b *testing.B) {
 	testBothRaftBackendsBenchmark(b, func(useRaftWal string) {
 		conf := map[string]string{
-			"trailing_logs":  "100",
-			raftWalConfigKey: useRaftWal,
+			"trailing_logs": "100",
+			"raft_wal":      useRaftWal,
 		}
 
 		raft1, _ := GetRaftWithConfig(b, true, false, conf)
@@ -1071,8 +1071,8 @@ func BenchmarkDB_Puts(b *testing.B) {
 func BenchmarkDB_Snapshot(b *testing.B) {
 	testBothRaftBackendsBenchmark(b, func(useRaftWal string) {
 		conf := map[string]string{
-			"trailing_logs":  "100",
-			raftWalConfigKey: useRaftWal,
+			"trailing_logs": "100",
+			"raft_wal":      useRaftWal,
 		}
 
 		raft1, _ := GetRaftWithConfig(b, true, false, conf)
