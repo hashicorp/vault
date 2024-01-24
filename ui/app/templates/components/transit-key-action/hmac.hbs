@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form onsubmit={{perform @doSubmit (hash input=@input algorithm=@algorithm key_version=@key_version)}}>
+<form onsubmit={{perform @doSubmit (hash input=@trackedInput algorithm=@algorithm key_version=@key_version)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="HMAC creation" />
     <div class="content has-bottom-margin-l">
@@ -16,7 +16,12 @@
     <KeyVersionSelect @key={{@key}} @onVersionChange={{action (mut @key_version)}} @key_version={{@key_version}} />
     <div class="field">
       <div id="input-control" class="control is-relative">
-        <JsonEditor @title="Input" @valueUpdated={{action (mut @input)}} @mode="ruby" @data-test-transit-input="input" />
+        <JsonEditor
+          @title="Input"
+          @valueUpdated={{action (mut @trackedInput)}}
+          @mode="ruby"
+          @data-test-transit-input="input"
+        />
       </div>
     </div>
     <div class="field">

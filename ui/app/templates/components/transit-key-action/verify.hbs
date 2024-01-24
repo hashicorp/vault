@@ -7,7 +7,7 @@
   onsubmit={{perform
     @doSubmit
     (hash
-      input=@input
+      input=@trackedInput
       signature=@signature
       signature_algorithm=@signature_algorithm
       hmac=@hmac
@@ -26,8 +26,8 @@
       <div class="control is-relative">
         <JsonEditor
           @title="Input"
-          @value={{@input}}
-          @valueUpdated={{action (mut @input)}}
+          @value={{@trackedInput}}
+          @valueUpdated={{action (mut @trackedInput)}}
           @mode="ruby"
           @data-test-transit-input="input"
         />

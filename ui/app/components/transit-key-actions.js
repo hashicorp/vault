@@ -23,10 +23,8 @@ import { encodeString } from 'vault/utils/b64';
  * @selectedAction="rotate"
  * @capabilities={{@capabilities}}
  * @onRefresh={{@refresh}}
- * @backend={{this.backend}}
  * />
  *
- * @param backend= {String} - Optional if from the layout view.
  */
 
 const TRANSIT_PARAMS = {
@@ -81,10 +79,7 @@ export default class TransitKeyActions extends Component {
   @service store;
   @service flashMessages;
 
-  // public attrs
   @tracked isModalActive = false;
-  @tracked firstSupportedKeyAction;
-  @tracked oldSelectedAction;
   @tracked errors;
   @tracked props = Object.assign({}, TRANSIT_PARAMS); // shallow copy of the object. We don't want to mutate the original.
 
@@ -97,20 +92,6 @@ export default class TransitKeyActions extends Component {
   get keyIsRSA() {
     const { type } = this.args.key;
     return type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
-  }
-
-  get getModelInfo() {
-    const model = this.args.key || this.backend;
-    if (!model) {
-      return null;
-    }
-    const backend = model.backend || model.id;
-    const id = model.id;
-
-    return {
-      backend,
-      id,
-    };
   }
 
   // checkAction() {
@@ -171,10 +152,6 @@ export default class TransitKeyActions extends Component {
     }
     // open the modal
     this.isModalActive = !this.isModalActive;
-
-    if (action === 'rotate') {
-      this.onRefresh();
-    }
     this.triggerSuccessMessage(action);
   }
 
@@ -215,7 +192,7 @@ export default class TransitKeyActions extends Component {
     if (event) {
       event.preventDefault();
     }
-    const { backend, id } = this.getModelInfo;
+    const { backend, id } = this.args.key;
     const action = this.args.selectedAction;
     const { ...formData } = data || {};
     if (!this.props.encodedBase64) {
