@@ -4,7 +4,7 @@
 ~}}
 
 <form
-  onsubmit={{action
+  onsubmit={{perform
     @doSubmit
     (hash param=(compact (array @exportKeyType (if this.exportVersion @exportKeyVersion))))
     (hash wrapTTL=this.wrapTTL)

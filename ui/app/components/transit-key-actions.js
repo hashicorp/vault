@@ -14,20 +14,19 @@ import { encodeString } from 'vault/utils/b64';
 
 /**
  * @module TransitKeyActions
- * TransitKeyActions component handles the actions a user can take on a transit key model.
+ * TransitKeyActions component handles the actions a user can take on a transit key model. The model and props are updated on every tab change
  *
  * @example
  * ```js
  * <TransitKeyActions
  * @key={{this.model}}
- * @selectedAction="rotate"
- * @capabilities={{@capabilities}}
- * @onRefresh={{@refresh}}
+ * @selectedAction="hmac"
  * />
  *
+ * @param {string} selectedAction - This is the query param "action" value. Ex: hmac, verify, decrypt, etc.
  */
 
-const TRANSIT_PARAMS = {
+const STARTING_TRANSIT_PARAMS = {
   hash_algorithm: 'sha2-256',
   algorithm: 'sha2-256',
   signature_algorithm: 'pss',
@@ -56,15 +55,7 @@ const TRANSIT_PARAMS = {
   didDecode: false,
   verification: 'Signature',
 };
-// ARG TODO ?>
-// const PARAMS_FOR_ACTION = {
-//   sign: ['input', 'hash_algorithm', 'key_version', 'prehashed', 'signature_algorithm'],
-//   verify: ['input', 'hmac', 'signature', 'hash_algorithm', 'prehashed'],
-//   hmac: ['input', 'algorithm', 'key_version'],
-//   encrypt: ['plaintext', 'context', 'nonce', 'key_version'],
-//   decrypt: ['ciphertext', 'context', 'nonce'],
-//   rewrap: ['ciphertext', 'context', 'nonce', 'key_version'],
-// };
+
 const SUCCESS_MESSAGE_FOR_ACTION = {
   sign: 'Signed your data',
   // the verify action doesn't trigger a success message
@@ -78,81 +69,31 @@ const SUCCESS_MESSAGE_FOR_ACTION = {
 export default class TransitKeyActions extends Component {
   @service store;
   @service flashMessages;
+  @service router;
 
   @tracked isModalActive = false;
-  @tracked errors;
-  @tracked props = Object.assign({}, TRANSIT_PARAMS); // shallow copy of the object. We don't want to mutate the original.
+  @tracked errors = null;
+  @tracked props = Object.assign({}, STARTING_TRANSIT_PARAMS); // shallow copy of the object. We don't want to mutate the original.
 
   constructor() {
     super(...arguments);
     assert(`@selectedAction is required for TransitKeyActions components`, this.args.selectedAction);
     assert('@key` is required for TransitKeyActions components', this.args.key);
+
+    if (this.args.selectedAction === 'export') {
+      this.props.exportKeyType = this.args.key.exportKeyTypes.firstObject;
+      this.props.exportKeyVersion = this.args.key.validKeyVersions.lastObject;
+    }
+  }
+  @action updateProps() {
+    // reset props and errors to null. this is called when the queryParam changes, i.e. the tab is changed.
+    this.errors = null; // reset errors
+    this.props = Object.assign({}, STARTING_TRANSIT_PARAMS); // reset props
   }
 
   get keyIsRSA() {
     const { type } = this.args.key;
     return type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
-  }
-
-  // checkAction() {
-  //   this.resetParams(this.oldSelectedAction, this.args.selectedAction);
-  //   this.oldSelectedAction = this.args.selectedAction;
-  // }
-  // ARG TODO revisit
-  // resetParams(oldAction, action) {
-
-  //   let paramsToKeep;
-  //   const clearWithoutCheck =
-  //     !oldAction ||
-  //     // don't save values from datakey
-  //     oldAction === 'datakey' ||
-  //     // can rewrap signatures — using that as a ciphertext later would be problematic
-  //     (oldAction === 'rewrap' && !this.args.key.supportsEncryption);
-
-  //   if (!clearWithoutCheck && action) {
-  //     paramsToKeep = PARAMS_FOR_ACTION[action];
-  //   }
-
-  //   if (paramsToKeep) {
-  //     paramsToKeep.forEach((param) => delete params[param]);
-  //   }
-  //   //resets params still left in the object to defaults
-  //   this.clearErrors();
-  //   this.setProperties(params);
-  //   if (action === 'export') {
-  //     this.props.exportKeyType = this.args.key.exportKeyTypes.firstObject;
-  //     this.props.exportKeyVersion = this.args.key.validKeyVersions.lastObject;
-  //   }
-  // }
-
-  handleError(e) {
-    this.errors = e.errors;
-  }
-
-  clearErrors() {
-    this.errors = null;
-  }
-
-  triggerSuccessMessage(action) {
-    const message = SUCCESS_MESSAGE_FOR_ACTION[action];
-    if (!message) return;
-    this.flashMessages.success(message);
-  }
-
-  handleSuccess(resp, options, action) {
-    if (resp && resp.data) {
-      if (action === 'export' && resp.data.keys) {
-        const { keys, type, name } = resp.data;
-        resp.data.keys = { keys, type, name };
-      }
-      this.props = { ...this.props, ...resp.data };
-    }
-    if (options.wrapTTL) {
-      this.props = { ...this.props, ...{ wrappedToken: resp.wrap_info.token } };
-    }
-    // open the modal
-    this.isModalActive = !this.isModalActive;
-    this.triggerSuccessMessage(action);
   }
 
   compactData(data) {
@@ -166,20 +107,6 @@ export default class TransitKeyActions extends Component {
       return result;
     }, {});
   }
-  // arg todo?
-  // @action onActionChange(action) {
-  // this.firstSupportedKeyAction = action;
-  // this.checkAction();
-  // }
-  // arg todo?
-  // @action onClear() {
-  // this.resetParams(null, this.firstSupportedKeyAction);
-  // }
-  // arg todo?
-  // @action clearParams(params) {
-  // const arr = Array.isArray(params) ? params : [params];
-  // arr.forEach((param) => (param = null));
-  // }
 
   @action toggleEncodeBase64() {
     this.props.encodedBase64 = !this.props.encodedBase64;
@@ -204,7 +131,6 @@ export default class TransitKeyActions extends Component {
       }
     }
     const payload = formData ? this.compactData(formData) : null;
-    this.errors = null;
 
     try {
       const resp = yield this.store
@@ -212,7 +138,26 @@ export default class TransitKeyActions extends Component {
         .keyAction(action, { backend, id, payload }, options);
       this.handleSuccess(resp, options, action);
     } catch (e) {
-      this.handleError(e);
+      this.errors = e.errors;
+    }
+  }
+
+  handleSuccess(resp, options, action) {
+    if (resp && resp.data) {
+      if (action === 'export' && resp.data.keys) {
+        const { keys, type, name } = resp.data;
+        resp.data.keys = { keys, type, name };
+      }
+      this.props = { ...this.props, ...resp.data };
+    }
+    if (options.wrapTTL) {
+      this.props = { ...this.props, ...{ wrappedToken: resp.wrap_info.token } };
+    }
+    // open the modal
+    this.isModalActive = !this.isModalActive;
+    // verify doesn't trigger a success message
+    if (this.selectedAction !== 'verify') {
+      this.flashMessages.success(SUCCESS_MESSAGE_FOR_ACTION[action]);
     }
   }
 }
