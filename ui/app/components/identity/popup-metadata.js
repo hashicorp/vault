@@ -3,32 +3,47 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Base from './_popup-base';
-import { computed } from '@ember/object';
-import { alias } from '@ember/object/computed';
+import { action } from '@ember/object';
+import { service } from '@ember/service';
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
 
-export default Base.extend({
-  model: alias('params.firstObject'),
-  key: computed('params', function () {
-    return this.params.objectAt(1);
-  }),
+export default class IdentityPopupMetadata extends Component {
+  @service flashMessages;
+  @tracked showConfirmModal = false;
 
-  messageArgs(model, key) {
-    return [model, key];
-  },
+  onSuccess() {
+    if (this.args.onSuccess) {
+      this.args.onSuccess();
+    }
+    this.flashMessages.success(`Successfully removed '${this.args.key}' from metadata`);
+  }
+  onError(err) {
+    if (this.args.onError) {
+      this.args.onError(this.args.model, this.args.key);
+    }
+    const error = this.errorMessage(err);
+    this.flashMessages.error(`There was a problem removing '${this.args.key}' from the metadata - ${error}`);
+  }
 
-  successMessage(model, key) {
-    return `Successfully removed '${key}' from metadata`;
-  },
-  errorMessage(e, model, key) {
-    const error = e.errors ? e.errors.join(' ') : e.message;
-    return `There was a problem removing '${key}' from the metadata - ${error}`;
-  },
+  transaction() {
+    const metadata = this.args.model.metadata;
+    delete metadata[this.args.key];
+    this.args.model.metadata = { ...metadata };
+    return this.args.model.save();
+  }
 
-  transaction(model, key) {
-    const metadata = model.metadata;
-    delete metadata[key];
-    model.set('metadata', { ...metadata });
-    return model.save();
-  },
-});
+  @action
+  async removeMetadata() {
+    try {
+      await this.transaction();
+      this.onSuccess();
+    } catch (e) {
+      this.onError(e);
+    }
+    const metadata = this.args.model.metadata;
+    delete metadata[this.args.key];
+    this.args.model.metadata = { ...metadata };
+    return this.args.model.save();
+  }
+}
