@@ -52,16 +52,36 @@ const (
 	// EnvVaultRaftNonVoter is used to override the non_voter config option, telling Vault to join as a non-voter (i.e. read replica).
 	EnvVaultRaftNonVoter  = "VAULT_RAFT_RETRY_JOIN_AS_NON_VOTER"
 	raftNonVoterConfigKey = "retry_join_as_non_voter"
+
+	// EnvVaultRaftMaxBatchEntries is used to override the default maxBatchEntries
+	// limit.
+	EnvVaultRaftMaxBatchEntries = "VAULT_RAFT_MAX_BATCH_ENTRIES"
+
+	// EnvVaultRaftMaxBatchSizeBytes is used to override the default maxBatchSize
+	// limit.
+	EnvVaultRaftMaxBatchSizeBytes = "VAULT_RAFT_MAX_BATCH_SIZE_BYTES"
+
+	// defaultMaxBatchEntries is the default maxBatchEntries limit. This was
+	// derived from performance testing. It is effectively high enough never to be
+	// a real limit for realistic Vault operation sizes and the size limit
+	// provides the actual limit since that amount of data stored is more relevant
+	// that the specific number of operations.
+	defaultMaxBatchEntries = 4096
+
+	// defaultMaxBatchSize is the default maxBatchSize limit. This was derived
+	// from performance testing.
+	defaultMaxBatchSize = 128 * 1024
 )
 
 var getMmapFlags = func(string) int { return 0 }
 
 // Verify RaftBackend satisfies the correct interfaces
 var (
-	_ physical.Backend       = (*RaftBackend)(nil)
-	_ physical.Transactional = (*RaftBackend)(nil)
-	_ physical.HABackend     = (*RaftBackend)(nil)
-	_ physical.Lock          = (*RaftLock)(nil)
+	_ physical.Backend             = (*RaftBackend)(nil)
+	_ physical.Transactional       = (*RaftBackend)(nil)
+	_ physical.TransactionalLimits = (*RaftBackend)(nil)
+	_ physical.HABackend           = (*RaftBackend)(nil)
+	_ physical.Lock                = (*RaftLock)(nil)
 )
 
 var (
@@ -140,6 +160,17 @@ type RaftBackend struct {
 	// It is suggested to use a value of 2x the Raft chunking size for optimal
 	// performance.
 	maxEntrySize uint64
+
+	// maxBatchEntries is the number of operation entries in each batch. It is set
+	// by default to a value we've tested to work well but may be overridden by
+	// Environment variable VAULT_RAFT_MAX_BATCH_ENTRIES.
+	maxBatchEntries int
+
+	// maxBatchSize is the maximum combined key and value size of operation
+	// entries in each batch. It is set by default to a value we've tested to work
+	// well but may be overridden by Environment variable
+	// VAULT_RAFT_MAX_BATCH_SIZE_BYTES.
+	maxBatchSize int
 
 	// autopilot is the instance of raft-autopilot library implementation of the
 	// autopilot features. This will be instantiated in both leader and followers.
@@ -339,6 +370,30 @@ func (c *ClusterAddrBridge) ServerAddr(id raft.ServerID) (raft.ServerAddress, er
 	return "", fmt.Errorf("could not find cluster addr for id=%s", id)
 }
 
+func batchLimitsFromEnv(logger log.Logger) (int, int) {
+	maxBatchEntries := defaultMaxBatchEntries
+	if envVal := os.Getenv(EnvVaultRaftMaxBatchEntries); envVal != "" {
+		if i, err := strconv.Atoi(envVal); err == nil && i > 0 {
+			maxBatchEntries = i
+		} else {
+			logger.Warn("failed to parse VAULT_RAFT_MAX_BATCH_ENTRIES as an integer > 0. Using default value.",
+				"env_val", envVal, "default_used", maxBatchEntries)
+		}
+	}
+
+	maxBatchSize := defaultMaxBatchSize
+	if envVal := os.Getenv(EnvVaultRaftMaxBatchSizeBytes); envVal != "" {
+		if i, err := strconv.Atoi(envVal); err == nil && i > 0 {
+			maxBatchSize = i
+		} else {
+			logger.Warn("failed to parse VAULT_RAFT_MAX_BATCH_SIZE_BYTES as an integer > 0. Using default value.",
+				"env_val", envVal, "default_used", maxBatchSize)
+		}
+	}
+
+	return maxBatchEntries, maxBatchSize
+}
+
 // NewRaftBackend constructs a RaftBackend using the given directory
 func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 	path := os.Getenv(EnvVaultRaftPath)
@@ -531,6 +586,8 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		return nil, fmt.Errorf("setting %s to true is only valid if at least one retry_join stanza is specified", raftNonVoterConfigKey)
 	}
 
+	maxBatchEntries, maxBatchSize := batchLimitsFromEnv(logger)
+
 	return &RaftBackend{
 		logger:                     logger,
 		fsm:                        fsm,
@@ -543,6 +600,8 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		localID:                    localID,
 		permitPool:                 physical.NewPermitPool(physical.DefaultParallelOperations),
 		maxEntrySize:               maxEntrySize,
+		maxBatchEntries:            maxBatchEntries,
+		maxBatchSize:               maxBatchSize,
 		followerHeartbeatTicker:    time.NewTicker(time.Second),
 		autopilotReconcileInterval: reconcileInterval,
 		autopilotUpdateInterval:    updateInterval,
@@ -1672,6 +1731,10 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 	}
 
 	return err
+}
+
+func (b *RaftBackend) TransactionLimits() (int, int) {
+	return b.maxBatchEntries, b.maxBatchSize
 }
 
 // applyLog will take a given log command and apply it to the raft log. applyLog

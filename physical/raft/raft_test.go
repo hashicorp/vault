@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/stretchr/testify/require"
 )
 
 func connectPeers(nodes ...*RaftBackend) {
@@ -632,6 +633,88 @@ func TestRaft_TransactionalBackend_ThreeNode(t *testing.T) {
 	// Make sure all stores are the same
 	compareFSMs(t, raft1.fsm, raft2.fsm)
 	compareFSMs(t, raft1.fsm, raft3.fsm)
+}
+
+// TestRaft_TransactionalLimitsEnvOverride ensures the ENV var overrides for
+// transaction size limits are plumbed through as expected.
+func TestRaft_TransactionalLimitsEnvOverride(t *testing.T) {
+	tc := []struct {
+		name        string
+		envEntries  string
+		envSize     string
+		wantEntries int
+		wantSize    int
+		wantLog     string
+	}{
+		{
+			name:        "defaults",
+			wantEntries: defaultMaxBatchEntries,
+			wantSize:    defaultMaxBatchSize,
+		},
+		{
+			name:        "valid env",
+			envEntries:  "123",
+			envSize:     "456",
+			wantEntries: 123,
+			wantSize:    456,
+		},
+		{
+			name:        "invalid entries",
+			envEntries:  "not-a-number",
+			envSize:     "100",
+			wantEntries: defaultMaxBatchEntries,
+			wantSize:    100,
+			wantLog:     "failed to parse VAULT_RAFT_MAX_BATCH_ENTRIES",
+		},
+		{
+			name:        "invalid entries",
+			envEntries:  "100",
+			envSize:     "asdasdsasd",
+			wantEntries: 100,
+			wantSize:    defaultMaxBatchSize,
+			wantLog:     "failed to parse VAULT_RAFT_MAX_BATCH_SIZE_BYTES",
+		},
+		{
+			name:        "zero entries",
+			envEntries:  "0",
+			envSize:     "100",
+			wantEntries: defaultMaxBatchEntries,
+			wantSize:    100,
+			wantLog:     "failed to parse VAULT_RAFT_MAX_BATCH_ENTRIES as an integer > 0",
+		},
+		{
+			name:        "zero size",
+			envEntries:  "100",
+			envSize:     "0",
+			wantEntries: 100,
+			wantSize:    defaultMaxBatchSize,
+			wantLog:     "failed to parse VAULT_RAFT_MAX_BATCH_SIZE_BYTES as an integer > 0",
+		},
+	}
+
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set the env vars within this test
+			if tt.envEntries != "" {
+				t.Setenv(EnvVaultRaftMaxBatchEntries, tt.envEntries)
+			}
+			if tt.envSize != "" {
+				t.Setenv(EnvVaultRaftMaxBatchSizeBytes, tt.envSize)
+			}
+
+			var logBuf bytes.Buffer
+			raft1, dir := GetRaftWithLogOutput(t, false, true, &logBuf)
+			defer os.RemoveAll(dir)
+
+			e, s := raft1.TransactionLimits()
+
+			require.Equal(t, tt.wantEntries, e)
+			require.Equal(t, tt.wantSize, s)
+			if tt.wantLog != "" {
+				require.Contains(t, logBuf.String(), tt.wantLog)
+			}
+		})
+	}
 }
 
 func TestRaft_Backend_Performance(t *testing.T) {

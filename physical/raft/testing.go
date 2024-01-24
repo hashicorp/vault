@@ -6,6 +6,7 @@ package raft
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"testing"
 
@@ -20,18 +21,29 @@ func GetRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, str
 	}
 	t.Logf("raft dir: %s", raftDir)
 
-	return getRaftWithDir(t, bootstrap, noStoreState, raftDir)
+	return getRaftWithDirAndLogOutput(t, bootstrap, noStoreState, raftDir, nil)
 }
 
-func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir string) (*RaftBackend, string) {
+func GetRaftWithLogOutput(t testing.TB, bootstrap bool, noStoreState bool, logOutput io.Writer) (*RaftBackend, string) {
+	raftDir, err := ioutil.TempDir("", "vault-raft-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("raft dir: %s", raftDir)
+
+	return getRaftWithDirAndLogOutput(t, bootstrap, noStoreState, raftDir, logOutput)
+}
+
+func getRaftWithDirAndLogOutput(t testing.TB, bootstrap bool, noStoreState bool, raftDir string, logOutput io.Writer) (*RaftBackend, string) {
 	id, err := uuid.GenerateUUID()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	logger := hclog.New(&hclog.LoggerOptions{
-		Name:  fmt.Sprintf("raft-%s", id),
-		Level: hclog.Trace,
+		Name:   fmt.Sprintf("raft-%s", id),
+		Level:  hclog.Trace,
+		Output: logOutput,
 	})
 	logger.Info("raft dir", "dir", raftDir)
 

@@ -16,16 +16,18 @@ import (
 	"github.com/armon/go-radix"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/physical"
+	uberAtomic "go.uber.org/atomic"
 )
 
 // Verify interfaces are satisfied
 var (
-	_ physical.Backend       = (*InmemBackend)(nil)
-	_ physical.HABackend     = (*InmemHABackend)(nil)
-	_ physical.HABackend     = (*TransactionalInmemHABackend)(nil)
-	_ physical.Lock          = (*InmemLock)(nil)
-	_ physical.Transactional = (*TransactionalInmemBackend)(nil)
-	_ physical.Transactional = (*TransactionalInmemHABackend)(nil)
+	_ physical.Backend             = (*InmemBackend)(nil)
+	_ physical.HABackend           = (*InmemHABackend)(nil)
+	_ physical.HABackend           = (*TransactionalInmemHABackend)(nil)
+	_ physical.Lock                = (*InmemLock)(nil)
+	_ physical.Transactional       = (*TransactionalInmemBackend)(nil)
+	_ physical.Transactional       = (*TransactionalInmemHABackend)(nil)
+	_ physical.TransactionalLimits = (*TransactionalInmemBackend)(nil)
 )
 
 var (
@@ -55,6 +57,16 @@ type InmemBackend struct {
 
 type TransactionalInmemBackend struct {
 	InmemBackend
+
+	// Using Uber atomic because our SemGrep rules don't like the old pointer
+	// trick we used above any more even though it's fine. The newer sync/atomic
+	// types are almost the same, but lack was to initialize them cleanly in New*
+	// functions so sticking with what SemGrep likes for now.
+	maxBatchEntries *uberAtomic.Int32
+	maxBatchSize    *uberAtomic.Int32
+
+	largestBatchLen  *uberAtomic.Uint64
+	largestBatchSize *uberAtomic.Uint64
 }
 
 // NewInmem constructs a new in-memory backend
@@ -109,6 +121,11 @@ func NewTransactionalInmem(conf map[string]string, logger log.Logger) (physical.
 			logOps:       os.Getenv("VAULT_INMEM_LOG_ALL_OPS") != "",
 			maxValueSize: maxValueSize,
 		},
+
+		maxBatchEntries:  uberAtomic.NewInt32(64),
+		maxBatchSize:     uberAtomic.NewInt32(128 * 1024),
+		largestBatchLen:  uberAtomic.NewUint64(0),
+		largestBatchSize: uberAtomic.NewUint64(0),
 	}, nil
 }
 
@@ -303,11 +320,39 @@ func (t *TransactionalInmemBackend) Transaction(ctx context.Context, txns []*phy
 	defer t.Unlock()
 
 	failGetInTxn := atomic.LoadUint32(t.failGetInTxn)
+	size := uint64(0)
 	for _, t := range txns {
+		// We use 2x key length to match the logic in WALBackend.persistWALs
+		// presumably this is attempting to account for some amount of encoding
+		// overhead.
+		size += uint64(2*len(t.Entry.Key) + len(t.Entry.Value))
 		if t.Operation == physical.GetOperation && failGetInTxn != 0 {
 			return GetInTxnDisabledError
 		}
 	}
 
+	if size > t.largestBatchSize.Load() {
+		t.largestBatchSize.Store(size)
+	}
+	if len(txns) > int(t.largestBatchLen.Load()) {
+		t.largestBatchLen.Store(uint64(len(txns)))
+	}
+
 	return physical.GenericTransactionHandler(ctx, t, txns)
+}
+
+func (t *TransactionalInmemBackend) SetMaxBatchEntries(entries int) {
+	t.maxBatchEntries.Store(int32(entries))
+}
+
+func (t *TransactionalInmemBackend) SetMaxBatchSize(entries int) {
+	t.maxBatchSize.Store(int32(entries))
+}
+
+func (t *TransactionalInmemBackend) TransactionLimits() (int, int) {
+	return int(t.maxBatchEntries.Load()), int(t.maxBatchSize.Load())
+}
+
+func (t *TransactionalInmemBackend) BatchStats() (maxEntries uint64, maxSize uint64) {
+	return t.largestBatchLen.Load(), t.largestBatchSize.Load()
 }
