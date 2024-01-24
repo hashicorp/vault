@@ -126,10 +126,10 @@ export default class Attribution extends Component {
   }
 
   destructureCountsToArray(object) {
-    // destructure the namespace object  {label: 'some-namespace', entity_clients: 171, non_entity_clients: 20, clients: 191}
+    // destructure the namespace object  {label: 'some-namespace', entity_clients: 171, non_entity_clients: 20, secret_syncs: 10, clients: 201}
     // to get integers for CSV file
-    const { clients, entity_clients, non_entity_clients } = object;
-    return [clients, entity_clients, non_entity_clients];
+    const { clients, entity_clients, non_entity_clients, secret_syncs } = object;
+    return [clients, entity_clients, non_entity_clients, secret_syncs];
   }
 
   constructCsvRow(namespaceColumn, mountColumn = null, totalColumns, newColumns = null) {
@@ -149,19 +149,25 @@ export default class Attribution extends Component {
     const csvData = [];
     // added to clarify that the row of namespace totals without an auth method (blank) are not additional clients
     // but indicate the total clients for that ns, including its auth methods
+    const upgrade = this.args.upgradeExplanation
+      ? `\n **data contains an upgrade, mount summation may not equal namespace totals`
+      : '';
     const descriptionOfBlanks = this.isSingleNamespace
       ? ''
-      : `\n  *namespace totals, inclusive of auth method clients`;
+      : `\n  *namespace totals, inclusive of child mount clients ${upgrade}`;
     const csvHeader = [
       'Namespace path',
-      `"Authentication method ${descriptionOfBlanks}"`,
+      `"Mount path ${descriptionOfBlanks}"`,
       'Total clients',
       'Entity clients',
       'Non-entity clients',
+      'Secrets sync clients',
     ];
 
     if (newAttribution) {
-      csvHeader.push('Total new clients, New entity clients, New non-entity clients');
+      csvHeader.push(
+        'Total new clients, New entity clients, New non-entity clients, New secrets sync clients'
+      );
     }
 
     totalAttribution.forEach((totalClientsObject) => {
@@ -202,7 +208,7 @@ export default class Attribution extends Component {
     const endRange = this.formattedEndDate ? `-${this.formattedEndDate}` : '';
     const csvDateRange = this.formattedStartDate + endRange;
     return this.isSingleNamespace
-      ? `clients_by_auth_method_${csvDateRange}`
+      ? `clients_by_mount_path_${csvDateRange}`
       : `clients_by_namespace_${csvDateRange}`;
   }
 
