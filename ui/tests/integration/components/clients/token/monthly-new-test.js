@@ -64,10 +64,16 @@ module('Integration | Component | clients/token/monthly-new', function (hooks) {
 
     assert
       .dom(monthlyNew.entity)
-      .hasText(`${expectedNewEntity}`, `renders correct new entity average ${expectedNewEntity}`);
+      .hasText(
+        `Average new entity clients per month ${expectedNewEntity}`,
+        `renders correct new entity stat ${expectedNewEntity}`
+      );
     assert
       .dom(monthlyNew.nonentity)
-      .hasText(`${expectedNewNonEntity}`, `renders correct new nonentity average ${expectedNewNonEntity}`);
+      .hasText(
+        `Average new non-entity clients per month ${expectedNewNonEntity}`,
+        `renders correct new nonentity stat ${expectedNewNonEntity}`
+      );
     // assert bar chart is correct
     findAll('[data-test-vertical-chart="x-axis-labels"] text').forEach((e, i) => {
       assert

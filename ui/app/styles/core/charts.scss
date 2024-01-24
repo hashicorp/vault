@@ -37,16 +37,15 @@
 .single-month-breakdown-sync {
   grid-column-start: 3;
 }
-.stacked-charts {
-  display: grid;
-  width: 100%;
-}
 
 .single-chart-grid {
   display: grid;
   grid-template-columns: 1fr 0.3fr 3.7fr;
   grid-template-rows: 0.5fr 1fr 1fr 1fr 0.25fr;
   width: 100%;
+  &.no-legend {
+    grid-template-rows: 0.5fr 1fr 1fr 0.25fr;
+  }
 }
 
 .dual-chart-grid {
@@ -132,7 +131,8 @@
 
 .chart-empty-state {
   place-self: center stretch;
-  grid-row-end: span 3;
+  grid-row-end: span 2;
+  grid-column-start: 1;
   grid-column-end: span 3;
   max-width: none;
   padding-right: 20px;
@@ -169,28 +169,18 @@
 }
 
 .timestamp {
-  grid-column-start: 1;
-  grid-column-end: 2;
-  grid-row-start: 5;
+  grid-column: 1 / span 2;
+  grid-row-start: -2;
   color: $ui-gray-500;
   font-size: $size-9;
   align-self: end;
 }
 
-.legend-center {
+.legend {
   grid-row-start: 5;
   grid-column-start: 2;
   grid-column-end: 6;
   align-self: center;
-  justify-self: center;
-  font-size: $size-9;
-}
-
-.legend-right {
-  grid-row-start: 4;
-  grid-column-start: 3;
-  grid-column-end: 3;
-  align-self: end;
   justify-self: center;
   font-size: $size-9;
 }
@@ -331,7 +321,7 @@ p.data-details {
     margin-right: $spacing-48;
   }
 
-  .legend-center {
+  .legend {
     grid-column-start: 2;
     grid-row-start: 4;
   }
