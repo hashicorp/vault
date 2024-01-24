@@ -40,7 +40,7 @@ export const SELECTORS = {
   monthlyNew: {
     entity: '[data-test-monthly-new-entity]',
     nonentity: '[data-test-monthly-new-nonentity]',
-    timestamp: '[data-test-monthly-new-timestamp]',
+    timestamp: '[data-test-chart-timestamp]',
     legend: '[data-test-monthly-new-legend]',
   },
   charts: {
