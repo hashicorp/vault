@@ -223,6 +223,7 @@ func TestTimeutil_IsCurrentMonth(t *testing.T) {
 	}
 }
 
+// TestTimeutil_IsCurrentDay checks if the test times equals the current day or not.
 func TestTimeutil_IsCurrentDay(t *testing.T) {
 	now := time.Now()
 	testCases := []struct {
