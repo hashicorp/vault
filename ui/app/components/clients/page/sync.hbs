@@ -17,6 +17,7 @@
         @subText="The total number of secrets synced from Vault to other destinations during this date range."
         @value={{this.totalUsageCounts.secret_syncs}}
         @size="l"
+        data-test-total-sync-clients
       />
     </:subTitle>
 
@@ -26,6 +27,7 @@
         @value={{this.average this.byMonthActivityData "secret_syncs"}}
         @size="m"
         class="data-details-top has-top-padding-l"
+        data-test-average-sync-clients
       />
     </:stats>
 
@@ -47,7 +49,6 @@
     </:emptyState>
   </Clients::ChartContainer>
 {{else}}
-
   <div class="chart-wrapper" data-test-usage-stats>
     <div class="chart-header has-bottom-margin-m">
       <h2 class="chart-title">{{this.title}}</h2>

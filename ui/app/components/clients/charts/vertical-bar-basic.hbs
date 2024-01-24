@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div class="lineal-chart">
+<div class="lineal-chart" data-test-chart={{@chartTitle}}>
   <Lineal::Fluid as |width|>
     {{#let
       (scale-band domain=this.xDomain range=(array 0 width) padding=0.1)
