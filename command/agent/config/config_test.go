@@ -104,6 +104,9 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 				NumRetries: 12,
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -209,6 +212,9 @@ func TestLoadConfigDir_AgentCache(t *testing.T) {
 				NumRetries: 12,
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -266,6 +272,9 @@ func TestLoadConfigDir_AutoAuthAndListener(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -329,6 +338,9 @@ func TestLoadConfigDir_VaultBlock(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -415,6 +427,9 @@ func TestLoadConfigFile_AgentCache_NoListeners(t *testing.T) {
 				Destination: pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -476,6 +491,9 @@ func TestLoadConfigFile(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -524,6 +542,9 @@ func TestLoadConfigFile_Method_Wrapping(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -562,6 +583,9 @@ func TestLoadConfigFile_Method_InitialBackoff(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -602,6 +626,9 @@ func TestLoadConfigFile_Method_ExitOnErr(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -627,6 +654,9 @@ func TestLoadConfigFile_AgentCache_NoAutoAuth(t *testing.T) {
 					TLSDisable: true,
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -762,6 +792,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -804,6 +837,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_Force(t *testing.T) {
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: "force",
 			ForceAutoAuthToken:  true,
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -848,6 +884,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_True(t *testing.T) {
 			UseAutoAuthTokenRaw: "true",
 			ForceAutoAuthToken:  false,
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -888,6 +927,9 @@ func TestLoadConfigFile_Agent_AutoAuth_APIProxyAllConfig(t *testing.T) {
 			ForceAutoAuthToken:  true,
 			EnforceConsistency:  "always",
 			WhenInconsistent:    "forward",
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -939,6 +981,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_False(t *testing.T) {
 			UseAutoAuthTokenRaw: "false",
 			ForceAutoAuthToken:  false,
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -973,6 +1018,9 @@ func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -1005,14 +1053,14 @@ func TestLoadConfigFile_TemplateConfig(t *testing.T) {
 			"./test-fixtures/config-template_config-empty.hcl",
 			TemplateConfig{
 				ExitOnRetryFailure:    false,
-				MaxConnectionsPerHost: 10,
+				MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 			},
 		},
 		"missing": {
 			"./test-fixtures/config-template_config-missing.hcl",
 			TemplateConfig{
 				ExitOnRetryFailure:    false,
-				MaxConnectionsPerHost: 10,
+				MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 			},
 		},
 	}
@@ -1149,6 +1197,9 @@ func TestLoadConfigFile_Template(t *testing.T) {
 					},
 				},
 				Templates: tc.expectedTemplates,
+				TemplateConfig: &TemplateConfig{
+					MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+				},
 			}
 
 			config.Prune()
@@ -1245,6 +1296,9 @@ func TestLoadConfigFile_Template_NoSinks(t *testing.T) {
 					Sinks: nil,
 				},
 				Templates: tc.expectedTemplates,
+				TemplateConfig: &TemplateConfig{
+					MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+				},
 			}
 
 			config.Prune()
@@ -1283,6 +1337,9 @@ func TestLoadConfigFile_Template_WithCache(t *testing.T) {
 				Source:      pointerutil.StringPtr("/path/on/disk/to/template.ctmpl"),
 				Destination: pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -1329,6 +1386,9 @@ func TestLoadConfigFile_Vault_Retry(t *testing.T) {
 				NumRetries: 5,
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -1374,6 +1434,9 @@ func TestLoadConfigFile_Vault_Retry_Empty(t *testing.T) {
 				ctconfig.DefaultRetryAttempts,
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -1403,6 +1466,9 @@ func TestLoadConfigFile_EnforceConsistency(t *testing.T) {
 			EnforceConsistency: "always",
 			WhenInconsistent:   "retry",
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -1431,6 +1497,9 @@ func TestLoadConfigFile_EnforceConsistency_APIProxy(t *testing.T) {
 		APIProxy: &APIProxy{
 			EnforceConsistency: "always",
 			WhenInconsistent:   "retry",
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -1481,6 +1550,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_All(t *testing.T) {
 				ctconfig.DefaultRetryAttempts,
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -1529,6 +1601,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_Auto_Auth(t *testing.T) {
 			Retry: &Retry{
 				ctconfig.DefaultRetryAttempts,
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -1579,6 +1654,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_Templating(t *testing.T) {
 				ctconfig.DefaultRetryAttempts,
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -1627,6 +1705,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_Caching(t *testing.T) {
 			Retry: &Retry{
 				ctconfig.DefaultRetryAttempts,
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -1677,6 +1758,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_Proxying(t *testing.T) {
 				ctconfig.DefaultRetryAttempts,
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -1725,6 +1809,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_Empty(t *testing.T) {
 			Retry: &Retry{
 				ctconfig.DefaultRetryAttempts,
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -1780,6 +1867,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_Env(t *testing.T) {
 			Retry: &Retry{
 				ctconfig.DefaultRetryAttempts,
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -1837,6 +1927,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_All(t *testing.T) {
 				ctconfig.DefaultRetryAttempts,
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -1885,6 +1978,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_Auto_Auth(t *testing.T) {
 			Retry: &Retry{
 				ctconfig.DefaultRetryAttempts,
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -1935,6 +2031,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_Templating(t *testing.T) {
 				ctconfig.DefaultRetryAttempts,
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -1983,6 +2082,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_Caching(t *testing.T) {
 			Retry: &Retry{
 				ctconfig.DefaultRetryAttempts,
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -2033,6 +2135,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_Proxying(t *testing.T) {
 				ctconfig.DefaultRetryAttempts,
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -2081,6 +2186,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_Empty(t *testing.T) {
 			Retry: &Retry{
 				ctconfig.DefaultRetryAttempts,
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -2136,6 +2244,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_Env(t *testing.T) {
 			Retry: &Retry{
 				ctconfig.DefaultRetryAttempts,
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
