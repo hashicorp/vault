@@ -40,7 +40,7 @@ Filters can reference the following properties of an audit entry:
 * `mount_point` - path to the mount (e.g. [auth method](/vault/docs/auth), [secret engine](/vault/docs/secrets)),
 including namespaces.
 * `mount_type` - type of mount being interacted with.
-* `namespace` - [namespace](/vault/docs/enterprise/namespaces) the request is taking place within.
+* `namespace` - [namespace](/vault/docs/enterprise/namespaces) 'path' that the request is taking place within.
 * `operation` - [operation](/vault/docs/glossary#operation) being performed.
 * `path` - full path of the request.
 
@@ -99,16 +99,17 @@ entries related to steps 3 and 4, with a request and response audit entry for ea
 ## Fallback device
 
 The ability to filter audit entries can provide great flexibility to your workflows,
-however the additional complexity could mean that a Vault Operator could configure
-their audit devices in such a way that some audit entries are missed out from the audit log entirely.
+however the additional complexity could mean that a Vault Operator configures their
+audit devices in such a way that some audit entries are missed out from audit logs entirely.
 
-The `fallback` audit device is the mechanism by which Vault can continue to adhere to
-Vault's [security model](/vault/docs/internals/security), that all requests and
-responses are successfully logged before the client receives any secret material.
+The `fallback` audit device is the (non-mandatory) mechanism by which Vault can
+continue to adhere to Vault's [security model](/vault/docs/internals/security),
+that all requests and responses are successfully logged before the client receives
+any secret material.
 
-When filtered audit devices are enabled, alongside the fallback audit device, any
-audit entry that would have been ignored/missed due to filter settings will be sent
-to the fallback device to be written to an audit log.
+When exclusively using filtered audit devices, enabling the fallback audit device
+results in any audit entry which would have been ignored/missed due to filter settings
+being sent to the fallback device to be written to an audit log.
 
 This means Vault is able to provide the same guarantee that 'at least one device must
 successfully write an audit entry' as when only standard/non-filtered audit devices
@@ -128,7 +129,7 @@ vault audit enable -path=my-fallback file file_path=/var/audit.fallback.log fall
 
 ### Metrics
 
-When a fallback device is enabled, and required to persist an audit entry to the audit log,
+When the fallback device is enabled, and required to persist an audit entry to the audit log,
 Vault will emit a [fallback 'success' metric](/vault/docs/internals/telemetry/metrics/audit#vault-audit-fallback-success) on
 a successful write to the audit log.
 
