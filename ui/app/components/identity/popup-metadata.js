@@ -7,28 +7,24 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
+import errorMessage from 'vault/utils/error-message';
 
 export default class IdentityPopupMetadata extends Component {
   @service flashMessages;
   @tracked showConfirmModal = false;
 
-  onSuccess() {
+  onSuccess(key) {
     if (this.args.onSuccess) {
       this.args.onSuccess();
     }
-    this.flashMessages.success(`Successfully removed '${this.args.key}' from metadata`);
+    this.flashMessages.success(`Successfully removed '${key}' from metadata`);
   }
-  onError(err) {
+  onError(err, key) {
     if (this.args.onError) {
-      this.args.onError(this.args.model, this.args.key);
+      this.args.onError();
     }
-    const error = this.errorMessage(err);
-    this.flashMessages.error(error);
-  }
-
-  errorMessage(e) {
-    const error = e.errors ? e.errors.join(' ') : e.message;
-    return `There was a problem removing '${this.args.key}' from the metadata - ${error}`;
+    const error = errorMessage(err);
+    this.flashMessages.danger(`There was a problem removing '${key}' from the metadata - ${error}`);
   }
 
   transaction() {
@@ -40,11 +36,12 @@ export default class IdentityPopupMetadata extends Component {
 
   @action
   async removeMetadata() {
+    const key = this.args.key;
     try {
       await this.transaction();
-      this.onSuccess();
+      this.onSuccess(key);
     } catch (e) {
-      this.onError(e);
+      this.onError(e, key);
     }
   }
 }
