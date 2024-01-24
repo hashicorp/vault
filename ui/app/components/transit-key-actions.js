@@ -26,7 +26,7 @@ import { encodeString } from 'vault/utils/b64';
  * @param {string} selectedAction - This is the query param "action" value. Ex: hmac, verify, decrypt, etc.
  */
 
-const STARTING_TRANSIT_PARAMS = {
+const STARTING_TRANSIT_PROPS = {
   hash_algorithm: 'sha2-256',
   algorithm: 'sha2-256',
   signature_algorithm: 'pss',
@@ -57,15 +57,26 @@ const STARTING_TRANSIT_PARAMS = {
 };
 
 const SUCCESS_MESSAGE_FOR_ACTION = {
-  sign: 'Signed your data',
+  sign: 'Signed your data.',
   // the verify action doesn't trigger a success message
-  hmac: 'Created your hash output',
-  encrypt: 'Created a wrapped token for your data',
-  decrypt: 'Decrypted the data from your token',
-  rewrap: 'Created a new token for your data',
-  datakey: 'Generated your key',
-  export: 'Exported your key',
+  hmac: 'Created your hash output.',
+  encrypt: 'Created a wrapped token for your data.',
+  decrypt: 'Decrypted the data from your token.',
+  rewrap: 'Created a new token for your data.',
+  datakey: 'Generated your key.',
+  export: 'Exported your key.',
 };
+
+const PROPS_TO_KEEP = {
+  encrypt: ['plaintext', 'context', 'nonce', 'key_version'],
+  decrypt: ['ciphertext', 'context', 'nonce'],
+  sign: ['input', 'hash_algorithm', 'key_version', 'prehashed', 'signature_algorithm'],
+  verify: ['input', 'hmac', 'signature', 'hash_algorithm', 'prehashed'],
+  hmac: ['input', 'algorithm', 'key_version'],
+  rewrap: ['ciphertext', 'context', 'nonce', 'key_version'],
+  datakey: [],
+};
+
 export default class TransitKeyActions extends Component {
   @service store;
   @service flashMessages;
@@ -73,7 +84,7 @@ export default class TransitKeyActions extends Component {
 
   @tracked isModalActive = false;
   @tracked errors = null;
-  @tracked props = Object.assign({}, STARTING_TRANSIT_PARAMS); // shallow copy of the object. We don't want to mutate the original.
+  @tracked props = Object.assign({}, STARTING_TRANSIT_PROPS); // shallow copy of the object. We don't want to mutate the original.
 
   constructor() {
     super(...arguments);
@@ -85,10 +96,17 @@ export default class TransitKeyActions extends Component {
       this.props.exportKeyVersion = this.args.key.validKeyVersions.lastObject;
     }
   }
+
   @action updateProps() {
-    // reset props and errors to null. this is called when the queryParam changes, i.e. the tab is changed.
-    this.errors = null; // reset errors
-    this.props = Object.assign({}, STARTING_TRANSIT_PARAMS); // reset props
+    this.errors = null;
+    // There are specific props we want to carry over from the previous tab.
+    // Ex: carrying over this.props.context from the encrypt tab to the decrypt tab, but not carrying over this.props.plaintext.
+    // To do this, we make a new object that contains the old this.props key/values from the previous tab that we want to keep. We then merge that new object into the STARTING_TRANSIT_PROPS object to come up with our new this.props tracked property.
+    const transferredProps = PROPS_TO_KEEP[this.args.selectedAction].reduce(
+      (obj, key) => ({ ...obj, [key]: this.props[key] }),
+      {}
+    );
+    this.props = { ...STARTING_TRANSIT_PROPS, ...transferredProps };
   }
 
   get keyIsRSA() {
