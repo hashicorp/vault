@@ -13,7 +13,7 @@
   <M.Body class="is-paddingless is-overflow-hidden">
     <Hds::Alert
       @type="page"
-      @color="warning"
+      @color="highlight"
       @onDismiss={{fn (mut @showMessagePreviewModal) false}}
       class="has-bottom-margin-s"
       data-test-custom-alert={{@message.title}}
@@ -22,12 +22,20 @@
       <A.Title data-test-custom-alert-title={{@message.title}}>{{@message.title}}</A.Title>
       <A.Description data-test-custom-alert-description={{@message.title}}>
         {{@message.message}}
-        {{#if @message.linkHref}}
-          <Hds::Link::Inline @icon="external-link" @href={{@message.linkHref}}>
-            {{@message.linkTitle}}
-          </Hds::Link::Inline>
-        {{/if}}
       </A.Description>
+      {{#unless (is-empty-value @message.link)}}
+        {{#each-in @message.link as |title href|}}
+          <A.Link::Standalone
+            @color="secondary"
+            @icon="external-link"
+            @isHrefExternal={{true}}
+            @iconPosition="trailing"
+            @text={{title}}
+            @href={{href}}
+          />
+        {{/each-in}}
+      {{/unless}}
+
     </Hds::Alert>
     <img
       src={{img-path (if @message.authenticated "~/custom-messages-dashboard.png" "~/custom-messages-login.png")}}

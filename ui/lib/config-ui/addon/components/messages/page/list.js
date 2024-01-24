@@ -95,7 +95,7 @@ export default class MessagesList extends Component {
 
   @action
   createMessage() {
-    if (this.args.messages?.meta.total >= 100) {
+    if (this.args.messages?.meta && this.args.messages?.meta.total >= 100) {
       this.showMaxMessageModal = true;
       return;
     }
