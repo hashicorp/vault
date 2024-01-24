@@ -134,19 +134,19 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("%s: unable to parse %s from audit event: %w", op, a.Subtype.HumanReadableString(), err)
+		return nil, fmt.Errorf("%s: unable to parse %s from audit event: %w", op, a.Subtype.String(), err)
 	}
 
 	// Exclude data from the RequestEntry/ResponseEntry.
 	m, err := f.excludeFields(entry)
 	if err != nil {
-		return nil, fmt.Errorf("%s: unable to exclude audit data from %s: %w", op, a.Subtype.HumanReadableString(), err)
+		return nil, fmt.Errorf("%s: unable to exclude audit data from %s: %w", op, a.Subtype.String(), err)
 	}
 
 	// Convert map m into a slice of bytes
 	result, err = jsonutil.EncodeJSON(m)
 	if err != nil {
-		return nil, fmt.Errorf("%s: unable to format %s: %w", op, a.Subtype.HumanReadableString(), err)
+		return nil, fmt.Errorf("%s: unable to format %s: %w", op, a.Subtype.String(), err)
 	}
 
 	if f.config.RequiredFormat == JSONxFormat {

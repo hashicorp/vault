@@ -142,8 +142,8 @@ func (t subtype) MetricTag() string {
 	return ""
 }
 
-// HumanReadableString returns the subtype as a human-readable string.
-func (t subtype) HumanReadableString() string {
+// String returns the subtype as a human-readable string.
+func (t subtype) String() string {
 	switch t {
 	case RequestType:
 		return "request"
@@ -151,5 +151,5 @@ func (t subtype) HumanReadableString() string {
 		return "response"
 	}
 
-	return ""
+	return string(t)
 }
