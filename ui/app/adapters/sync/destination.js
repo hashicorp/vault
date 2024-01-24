@@ -33,6 +33,14 @@ export default class SyncDestinationAdapter extends ApplicationAdapter {
     return this.ajax(this.buildURL(modelName), 'GET', { data: { list: true } });
   }
 
+  createRecord(store, type, snapshot) {
+    const id = `${snapshot.record.type}:${snapshot.record.name}`;
+    return super.createRecord(...arguments).then((resp) => {
+      resp.id = id;
+      return resp;
+    });
+  }
+
   // return normalized query response
   // useful for fetching data directly without loading models into store
   async normalizedQuery() {

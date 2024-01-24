@@ -195,6 +195,7 @@ type Request struct {
 	WrapTTL                       int                    `json:"wrap_ttl,omitempty"`
 	Headers                       map[string][]string    `json:"headers,omitempty"`
 	ClientCertificateSerialNumber string                 `json:"client_certificate_serial_number,omitempty"`
+	RequestURI                    string                 `json:"request_uri,omitempty"`
 }
 
 type Response struct {
@@ -284,23 +285,11 @@ type Backend interface {
 	// filtered pipelines.
 	IsFallback() bool
 
-	// LogRequest is used to synchronously log a request. This is done after the
-	// request is authorized but before the request is executed. The arguments
-	// MUST not be modified in any way. They should be deep copied if this is
-	// a possibility.
-	LogRequest(context.Context, *logical.LogInput) error
-
-	// LogResponse is used to synchronously log a response. This is done after
-	// the request is processed but before the response is sent. The arguments
-	// MUST not be modified in any way. They should be deep copied if this is
-	// a possibility.
-	LogResponse(context.Context, *logical.LogInput) error
-
 	// LogTestMessage is used to check an audit backend before adding it
 	// permanently. It should attempt to synchronously log the given test
 	// message, WITHOUT using the normal Salt (which would require a storage
 	// operation on creation, which is currently disallowed.)
-	LogTestMessage(context.Context, *logical.LogInput, map[string]string) error
+	LogTestMessage(context.Context, *logical.LogInput) error
 
 	// Reload is called on SIGHUP for supporting backends.
 	Reload(context.Context) error
@@ -326,4 +315,4 @@ type BackendConfig struct {
 }
 
 // Factory is the factory function to create an audit backend.
-type Factory func(context.Context, *BackendConfig, bool, HeaderFormatter) (Backend, error)
+type Factory func(context.Context, *BackendConfig, HeaderFormatter) (Backend, error)

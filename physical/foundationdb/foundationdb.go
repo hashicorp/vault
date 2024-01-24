@@ -449,7 +449,6 @@ func (f *FDBBackend) Put(ctx context.Context, entry *physical.Entry) error {
 
 		return nil, nil
 	})
-
 	if err != nil {
 		return fmt.Errorf("put failed for item %s: %w", entry.Key, err)
 	}
@@ -507,7 +506,6 @@ func (f *FDBBackend) Delete(ctx context.Context, key string) error {
 
 		return nil, nil
 	})
-
 	if err != nil {
 		return fmt.Errorf("delete failed for item %s: %w", key, err)
 	}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
@@ -126,7 +127,7 @@ func TestBackend_configureFilterNode(t *testing.T) {
 		expectedErrorMsg string
 	}{
 		"happy": {
-			filter: "foo == bar",
+			filter: "mount_point == \"/auth/token\"",
 		},
 		"empty": {
 			filter:         "",
@@ -140,6 +141,11 @@ func TestBackend_configureFilterNode(t *testing.T) {
 			filter:           "___qwerty",
 			wantErr:          true,
 			expectedErrorMsg: "socket.(Backend).configureFilterNode: error creating filter node: audit.NewEntryFilter: cannot create new audit filter",
+		},
+		"unsupported-field": {
+			filter:           "foo == bar",
+			wantErr:          true,
+			expectedErrorMsg: "filter references an unsupported field: foo == bar",
 		},
 	}
 	for name, tc := range tests {
@@ -285,9 +291,9 @@ func TestBackend_configureSinkNode(t *testing.T) {
 				id := b.nodeIDList[0]
 				node := b.nodeMap[id]
 				require.Equal(t, eventlogger.NodeTypeSink, node.Type())
-				sw, ok := node.(*audit.SinkWrapper)
+				mc, ok := node.(*event.MetricsCounter)
 				require.True(t, ok)
-				require.Equal(t, tc.expectedName, sw.Name)
+				require.Equal(t, tc.expectedName, mc.Name)
 			}
 		})
 	}
@@ -308,7 +314,7 @@ func TestBackend_configureFilterFormatterSink(t *testing.T) {
 	formatConfig, err := audit.NewFormatterConfig()
 	require.NoError(t, err)
 
-	err = b.configureFilterNode("foo == bar")
+	err = b.configureFilterNode("mount_type == kv")
 	require.NoError(t, err)
 
 	err = b.configureFormatterNode(formatConfig)
@@ -416,7 +422,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "socket.Factory: failed to parse 'write_timeout': time: invalid duration \"qwerty\"",
+			expectedErrorMessage: "socket.Factory: error configuring sink node: socket.(Backend).configureSinkNode: error creating socket sink node: event.NewSocketSink: error applying options: unable to parse max duration: time: invalid duration \"qwerty\"",
 		},
 		"non-fallback-device-with-filter": {
 			backendConfig: &audit.BackendConfig{
@@ -455,7 +461,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			be, err := Factory(ctx, tc.backendConfig, true, nil)
+			be, err := Factory(ctx, tc.backendConfig, nil)
 
 			switch {
 			case tc.isErrorExpected:
@@ -514,7 +520,7 @@ func TestBackend_IsFallback(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			be, err := Factory(ctx, tc.backendConfig, true, nil)
+			be, err := Factory(ctx, tc.backendConfig, nil)
 			require.NoError(t, err)
 			require.NotNil(t, be)
 			require.Equal(t, tc.isFallbackExpected, be.IsFallback())

@@ -466,14 +466,21 @@ func TestSystemBackend_Plugin_SealUnseal(t *testing.T) {
 }
 
 func TestSystemBackend_Plugin_reload(t *testing.T) {
+	// Paths being tested.
+	const (
+		reloadBackendPath = "sys/plugins/reload/backend"
+		rootReloadPath    = "sys/plugins/reload/%s/%s"
+	)
 	testCases := []struct {
 		name        string
 		backendType logical.BackendType
+		path        string
 		data        map[string]interface{}
 	}{
 		{
 			name:        "test plugin reload for type credential",
 			backendType: logical.TypeCredential,
+			path:        reloadBackendPath,
 			data: map[string]interface{}{
 				"plugin": "mock-plugin",
 			},
@@ -481,6 +488,7 @@ func TestSystemBackend_Plugin_reload(t *testing.T) {
 		{
 			name:        "test mount reload for type credential",
 			backendType: logical.TypeCredential,
+			path:        reloadBackendPath,
 			data: map[string]interface{}{
 				"mounts": "sys/auth/mock-0/,auth/mock-1/",
 			},
@@ -488,6 +496,7 @@ func TestSystemBackend_Plugin_reload(t *testing.T) {
 		{
 			name:        "test plugin reload for type secret",
 			backendType: logical.TypeLogical,
+			path:        reloadBackendPath,
 			data: map[string]interface{}{
 				"plugin": "mock-plugin",
 			},
@@ -495,21 +504,38 @@ func TestSystemBackend_Plugin_reload(t *testing.T) {
 		{
 			name:        "test mount reload for type secret",
 			backendType: logical.TypeLogical,
+			path:        reloadBackendPath,
 			data: map[string]interface{}{
 				"mounts": "mock-0/,mock-1",
 			},
 		},
+		{
+			name:        "root plugin reload for type auth",
+			backendType: logical.TypeCredential,
+			path:        fmt.Sprintf(rootReloadPath, "auth", "mock-plugin"),
+		},
+		{
+			name:        "root plugin reload for type secret",
+			backendType: logical.TypeLogical,
+			path:        fmt.Sprintf(rootReloadPath, "secret", "mock-plugin"),
+		},
+		{
+			name:        "root plugin reload for unknown type",
+			backendType: logical.TypeUnknown,
+			path:        fmt.Sprintf(rootReloadPath, "unknown", "mock-plugin"),
+		},
 	}
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			testSystemBackend_PluginReload(t, tc.data, tc.backendType)
+			testSystemBackend_PluginReload(t, tc.path, tc.data, tc.backendType)
 		})
 	}
 }
 
 // Helper func to test different reload methods on plugin reload endpoint
-func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}, backendType logical.BackendType) {
+func testSystemBackend_PluginReload(t *testing.T, path string, reqData map[string]interface{}, backendType logical.BackendType) {
 	testCases := []struct {
 		pluginVersion string
 	}{
@@ -532,25 +558,25 @@ func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}
 			core := cluster.Cores[0]
 			client := core.Client
 
-			pathPrefix := "mock-"
+			var mountPaths []string
 			if backendType == logical.TypeCredential {
-				pathPrefix = "auth/" + pathPrefix
-			}
-			for i := 0; i < 2; i++ {
-				// Update internal value in the backend
-				resp, err := client.Logical().Write(fmt.Sprintf("%s%d/internal", pathPrefix, i), map[string]interface{}{
-					"value": "baz",
-				})
-				if err != nil {
-					t.Fatalf("err: %v", err)
-				}
-				if resp != nil {
-					t.Fatalf("bad: %v", resp)
-				}
+				mountPaths = []string{"auth/mock-0", "auth/mock-1"}
+			} else {
+				mountPaths = []string{"mock-0", "mock-1"}
 			}
 
-			// Perform plugin reload
-			resp, err := client.Logical().Write("sys/plugins/reload/backend", reqData)
+			for _, mountPath := range mountPaths {
+				// Update internal value in the backend
+				mock.WriteInternalValue(t, client, mountPath, "baz")
+			}
+
+			// Verify our precondition that the write succeeded.
+			for _, mountPath := range mountPaths {
+				mock.ExpectInternalValue(t, client, mountPath, "baz")
+			}
+
+			// Perform plugin reload which should reset the value.
+			resp, err := client.Logical().Write(path, reqData)
 			if err != nil {
 				t.Fatalf("err: %v", err)
 			}
@@ -564,18 +590,9 @@ func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}
 				t.Fatal(resp.Warnings)
 			}
 
-			for i := 0; i < 2; i++ {
-				// Ensure internal backed value is reset
-				resp, err := client.Logical().Read(fmt.Sprintf("%s%d/internal", pathPrefix, i))
-				if err != nil {
-					t.Fatalf("err: %v", err)
-				}
-				if resp == nil {
-					t.Fatalf("bad: response should not be nil")
-				}
-				if resp.Data["value"].(string) == "baz" {
-					t.Fatal("did not expect backend internal value to be 'baz'")
-				}
+			// Ensure internal backed value is reset
+			for _, mountPath := range mountPaths {
+				mock.ExpectInternalValue(t, client, mountPath, mock.MockPluginDefaultInternalValue)
 			}
 		})
 	}
@@ -643,7 +660,7 @@ func testSystemBackendMock(t *testing.T, numCores, numMounts int, backendType lo
 	env := []string{pluginutil.PluginCACertPEMEnv + "=" + cluster.CACertPEMFile}
 
 	switch backendType {
-	case logical.TypeLogical:
+	case logical.TypeLogical, logical.TypeUnknown:
 		plugin := logicalVersionMap[pluginVersion]
 		vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "", plugin, env)
 		for i := 0; i < numMounts; i++ {

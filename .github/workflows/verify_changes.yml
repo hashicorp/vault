@@ -18,7 +18,7 @@ jobs:
       is_docs_change: ${{ steps.get-changeddir.outputs.is_docs_change }}
       is_ui_change: ${{ steps.get-changeddir.outputs.is_ui_change }}
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 # Use fetch depth 0 for comparing changes to base branch

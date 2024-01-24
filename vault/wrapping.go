@@ -376,7 +376,7 @@ func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) 
 			if !valid {
 				logInput.OuterErr = consts.ErrInvalidWrappingToken
 			}
-			if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+			if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 				c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			}
 		}
