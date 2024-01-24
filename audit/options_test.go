@@ -412,6 +412,20 @@ func TestOptions_WithExclusions(t *testing.T) {
 		isErrorExpected      bool
 		expectedErrorMessage string
 	}{
+		"datum-structure-does-not-match-condition": {
+			json: `[
+			  {
+				"condition": "\"/foo/mount_type\" == transit",
+				"fields": [ "/request/data", "/response/data" ]
+			  },
+			  {
+				"condition":  "\"/request/mount_type\" == userpass",
+				"fields": [ "/request/data" ]
+			  }
+			]`,
+			isErrorExpected:      true,
+			expectedErrorMessage: "audit.(exclusion).validate: unable to evaluate exclusion condition against expected request entry: error finding value in datum: /foo/mount_type at part 0: couldn't find key \"foo\"",
+		},
 		"good": {
 			json: `[
 			  {

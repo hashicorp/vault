@@ -11,8 +11,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cjrd/allocate"
 	"github.com/hashicorp/go-bexpr"
-	"github.com/hashicorp/go-hclog"
+	"github.com/mitchellh/mapstructure"
+	"github.com/mitchellh/pointerstructure"
 )
 
 // Option is how options are passed as arguments.
@@ -31,7 +33,6 @@ type options struct {
 	withHMACAccessor    bool
 	withHeaderFormatter HeaderFormatter
 	withExclusions      []*exclusion
-	withLogger          hclog.Logger
 }
 
 // exclusion represents an optional condition and fields which should be excluded
@@ -218,19 +219,14 @@ func WithExclusions(e string) Option {
 			return fmt.Errorf("unable to parse exclusions: %w", err)
 		}
 
-		o.withExclusions = result
-
-		return nil
-	}
-}
-
-// WithLogger provides an Option to supply a hclog.Logger which can be used when
-// errors need to be written to the Vault server logs.
-func WithLogger(l hclog.Logger) Option {
-	return func(o *options) error {
-		if l != nil && !reflect.ValueOf(l).IsNil() {
-			o.withLogger = l
+		// Validate the exclusions
+		for _, exc := range result {
+			if err := exc.validate(); err != nil {
+				return err
+			}
 		}
+
+		o.withExclusions = result
 
 		return nil
 	}
@@ -294,6 +290,57 @@ func (e *exclusion) UnmarshalJSON(b []byte) error {
 
 	// Set the condition to the new evaluator.
 	e.Evaluator = eval
+
+	return nil
+}
+
+// validate attempts to parse the supplied fields to ensure they can be represented
+// as JSON pointers. When present, it will also evaluate the (optional) condition
+// using a sample RequestEntry and ResponseEntry.
+// NOTE: Validation will only be carried out against RequestEntry and ResponseEntry
+// types.
+func (e *exclusion) validate() error {
+	const op = "audit.(exclusion).validate"
+
+	// Validate the 'fields' first (as the condition expression is optional)
+	for _, field := range e.Fields {
+		if _, err := pointerstructure.Parse(field); err != nil {
+			return fmt.Errorf("%s: unable to parse field '%s': %w", op, field, err)
+		}
+	}
+
+	// No condition expression for these fields, we can return early.
+	if e.Evaluator == nil {
+		return nil
+	}
+
+	// Generate a sample RequestEntry
+	req := new(RequestEntry)
+	if err := allocate.Zero(req); err != nil {
+		return fmt.Errorf("%s: unable to generate sample request entry: %w", op, err)
+	}
+	reqMap := make(map[string]any)
+	if err := mapstructure.Decode(req, &reqMap); err != nil {
+		return fmt.Errorf("%s: unable to decode request entry: %w", op, err)
+	}
+
+	// Generate a sample ResponseEntry
+	resp := new(ResponseEntry)
+	if err := allocate.Zero(resp); err != nil {
+		return fmt.Errorf("%s: unable to generate sample response entry: %w", op, err)
+	}
+	respMap := make(map[string]any)
+	if err := mapstructure.Decode(resp, &respMap); err != nil {
+		return fmt.Errorf("%s: unable to decode response entry: %w", op, err)
+	}
+
+	// Attempt to evaluate the condition expression against the datum for request and response.
+	if _, err := e.Evaluator.Evaluate(reqMap); err != nil {
+		return fmt.Errorf("%s: unable to evaluate exclusion condition against expected request entry: %w", op, err)
+	}
+	if _, err := e.Evaluator.Evaluate(respMap); err != nil {
+		return fmt.Errorf("%s: unable to evaluate exclusion condition against expected response entry: %w", op, err)
+	}
 
 	return nil
 }

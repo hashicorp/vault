@@ -688,6 +688,8 @@ func (f *EntryFormatter) redactFields(entry any) (map[string]any, error) {
 			// consider to mean redaction has failed. We test for these explicitly
 			// so any additional error types that may be added to the pointerstructure
 			// library in the future can be considered before also being ignored.
+			// We do not check for pointerstructure.ErrParse as we have validated this
+			// during the application of the WithExclusions Option.
 			switch {
 			case errors.Is(err, pointerstructure.ErrNotFound),
 				errors.Is(err, pointerstructure.ErrOutOfRange),

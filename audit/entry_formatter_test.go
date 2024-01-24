@@ -1016,16 +1016,72 @@ func TestEntryFormatter_Process_NoMutation(t *testing.T) {
 	require.NotEqual(t, a2, a)
 }
 
+// TestEntryFormatter_NewEntryFormatter_Exclusions tests that creating a new
+// EntryFormatter when supplying exclusions gives us the expected result.
+func TestEntryFormatter_NewEntryFormatter_Exclusions(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		json                 string
+		isErrorExpected      bool
+		expectedErrorMessage string
+	}{
+		"valid-exclusions": {
+			json: `[
+			  {
+				"condition": "\"/request/mount_type\" == transit",
+				"fields": [ "/request/data", "/response/data" ]
+			  },
+			  {
+				"condition":  "\"/auth/client_token\" matches \"hmac.*\"",
+				"fields": [ "/auth/entity_id" ]
+			  }
+			]`,
+		},
+		"invalid-exclusion-json": {
+			json:                 "[{foo}]",
+			isErrorExpected:      true,
+			expectedErrorMessage: "audit.NewEntryFormatter: error applying options: unable to parse exclusions: invalid character 'f' looking for beginning of object key string",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// Create the formatter node.
+			cfg, err := NewFormatterConfig()
+			require.NoError(t, err)
+			ss := newStaticSalt(t)
+			formatter, err := NewEntryFormatter(cfg, ss, WithExclusions(tc.json))
+
+			switch {
+			case tc.isErrorExpected:
+				require.Error(t, err)
+				require.EqualError(t, err, tc.expectedErrorMessage)
+			default:
+				require.NoError(t, err)
+				require.NotNil(t, formatter)
+			}
+		})
+	}
+}
+
 // TestEntryFormatter_Process_Redaction tests that we can successfully redact/exclude
-// data from our audit entries.
+// data from our audit entries when the EntryFormatter is configured WithExclusions
+// and runs its Process method.
 func TestEntryFormatter_Process_Redaction(t *testing.T) {
+	t.Parallel()
+
 	jsonExclusion := `[
 	  {
 		"condition": "\"/request/mount_type\" == transit",
 		"fields": [ "/request/data", "/response/data" ]
 	  },
 	  {
-		"condition":  "\"/auth/client_token\" matches \"hmac.*\"",
+		"condition":  "\"/auth/client_token\" matches \"hmac.+\"",
 		"fields": [ "/auth/entity_id" ]
 	  }
 	]`
@@ -1068,6 +1124,10 @@ func TestEntryFormatter_Process_Redaction(t *testing.T) {
 		},
 	}
 
+	// Sanity check for the end of the test
+	require.NotNil(t, in.Request.Data)
+	require.NotEmpty(t, in.Auth.EntityID)
+
 	e := fakeEvent(t, RequestType, in)
 
 	e2, err := formatter.Process(namespace.RootContext(nil), e)
@@ -1081,6 +1141,8 @@ func TestEntryFormatter_Process_Redaction(t *testing.T) {
 	err = json.Unmarshal(jsonBytes, &req)
 	require.NoError(t, err)
 	require.NotNil(t, req)
+
+	// The values should be redacted
 	require.Nil(t, req.Request.Data)
 	require.Empty(t, req.Auth.EntityID)
 }
