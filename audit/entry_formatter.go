@@ -137,8 +137,8 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		return nil, fmt.Errorf("%s: unable to parse %s from audit event: %w", op, a.Subtype.HumanReadableString(), err)
 	}
 
-	// Redact/exclude data from the RequestEntry/ResponseEntry.
-	m, err := f.redactFields(entry)
+	// Exclude data from the RequestEntry/ResponseEntry.
+	m, err := f.excludeFields(entry)
 	if err != nil {
 		return nil, fmt.Errorf("%s: unable to exclude audit data from %s: %w", op, a.Subtype.HumanReadableString(), err)
 	}
@@ -639,9 +639,9 @@ func (s *nonPersistentSalt) Salt(_ context.Context) (*salt.Salt, error) {
 	return salt.NewNonpersistentSalt(), nil
 }
 
-// redactFields takes an entry (RequestEntry or ResponseEntry) and attempts to
-// redact/exclude fields that have been configured on the formatter node.
-func (f *EntryFormatter) redactFields(entry any) (map[string]any, error) {
+// excludeFields takes an entry (RequestEntry or ResponseEntry) and attempts to
+// exclude fields that have been configured on the formatter node.
+func (f *EntryFormatter) excludeFields(entry any) (map[string]any, error) {
 	m := make(map[string]any)
 	err := mapstructure.Decode(entry, &m)
 	if err != nil {
