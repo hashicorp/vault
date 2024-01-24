@@ -23,9 +23,7 @@ import (
 func TestAuditFilteringOnDifferentFields(t *testing.T) {
 	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
-	client, err := cluster.Cores[0].Client.Clone()
-	require.NoError(t, err)
-	client.SetToken(cluster.RootToken)
+	client := cluster.Cores[0].Client
 
 	// Create audit devices.
 	tempDir := t.TempDir()
@@ -115,9 +113,7 @@ func TestAuditFilteringOnDifferentFields(t *testing.T) {
 func TestAuditFilteringMultipleDevices(t *testing.T) {
 	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
-	client, err := cluster.Cores[0].Client.Clone()
-	require.NoError(t, err)
-	client.SetToken(cluster.RootToken)
+	client := cluster.Cores[0].Client
 
 	// Create audit devices.
 	tempDir := t.TempDir()
@@ -212,9 +208,7 @@ func TestAuditFilteringMultipleDevices(t *testing.T) {
 func TestAuditFilteringFallbackDevice(t *testing.T) {
 	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
-	client, err := cluster.Cores[0].Client.Clone()
-	require.NoError(t, err)
-	client.SetToken(cluster.RootToken)
+	client := cluster.Cores[0].Client
 
 	tempDir := t.TempDir()
 	fallbackLogFile, err := os.CreateTemp(tempDir, "")
@@ -287,6 +281,58 @@ func TestAuditFilteringFallbackDevice(t *testing.T) {
 	}
 	// the fallback device will catch all non-kv related entries such as login etc. there should be 5 in total.
 	require.Equal(t, 5, numberOfEntries)
+}
+
+// TestAuditFilteringFilterForUnsupportedField validates that the audit device
+// 'filter' option fails when the filter expression selector references an
+// unsupported field and that the error prevents an audit device from created.
+func TestAuditFilteringFilterForUnsupportedField(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	tempDir := t.TempDir()
+	filteredLogFile, err := os.CreateTemp(tempDir, "")
+	filteredDevicePath := "filtered"
+	filteredDeviceData := map[string]any{
+		"type":        "file",
+		"description": "",
+		"local":       false,
+		"options": map[string]any{
+			"file_path": filteredLogFile.Name(),
+			"filter":    "auth == foo", // 'auth' is not one of the fields we allow filtering on
+		},
+	}
+	_, err = client.Logical().Write("sys/audit/"+filteredDevicePath, filteredDeviceData)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "audit.NewEntryFilter: filter references an unsupported field: auth == foo")
+
+	// Ensure the device has not been created.
+	devices, err := client.Sys().ListAudit()
+	require.NoError(t, err)
+	_, ok := devices[filteredDevicePath]
+	require.False(t, ok)
+
+	// Now we do the same test but with the 'skip_test' option set to true.
+	filteredDeviceDataSkipTest := map[string]any{
+		"type":        "file",
+		"description": "",
+		"local":       false,
+		"options": map[string]any{
+			"file_path": filteredLogFile.Name(),
+			"filter":    "auth == foo", // 'auth' is not one of the fields we allow filtering on
+			"skip_test": true,
+		},
+	}
+	_, err = client.Logical().Write("sys/audit/"+filteredDevicePath, filteredDeviceDataSkipTest)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "audit.NewEntryFilter: filter references an unsupported field: auth == foo")
+
+	// Ensure the device has not been created.
+	devices, err = client.Sys().ListAudit()
+	require.NoError(t, err)
+	_, ok = devices[filteredDevicePath]
+	require.False(t, ok)
 }
 
 // getFileSize returns the size of the given file in bytes.
