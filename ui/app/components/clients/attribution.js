@@ -48,7 +48,7 @@ export default class Attribution extends Component {
   attributionLegend = [
     { key: 'entity_clients', label: 'entity clients' },
     { key: 'non_entity_clients', label: 'non-entity clients' },
-    { key: 'secret_syncs', label: 'secret sync clients' },
+    { key: 'secret_syncs', label: 'secrets sync clients' },
   ];
 
   get formattedStartDate() {
