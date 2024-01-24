@@ -4,7 +4,7 @@
 ~}}
 <div>
   {{#if this.data}}
-    <div class="lineal-chart">
+    <div class="lineal-chart" data-test-chart={{@chartTitle}}>
       <Lineal::Fluid as |width|>
         {{#let
           (scale-time domain=this.timeDomain range=(array 0 width) nice=true)

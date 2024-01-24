@@ -40,14 +40,21 @@ export const SELECTORS = {
   monthlyNew: {
     entity: '[data-test-monthly-new-entity]',
     nonentity: '[data-test-monthly-new-nonentity]',
-    timestamp: '[data-test-chart-timestamp]',
     legend: '[data-test-monthly-new-legend]',
   },
+  syncTab: {
+    total: '[data-test-total-sync-clients]',
+    average: '[data-test-average-sync-clients]',
+  },
   charts: {
-    verticalBar: '[data-test-vertical-bar-chart]',
+    chart: (title) => `[data-test-chart="${title}"]`, // newer lineal charts
+    timestamp: '[data-test-chart-timestamp]',
+    dataBar: '[data-test-vertical-bar]',
+    xAxisLabel: '[data-test-x-axis] text',
     line: {
       xAxisLabel: '[data-test-line-chart] [data-test-x-axis] text',
     },
+    verticalBar: '[data-test-vertical-bar-chart]', // selector for old d3 bar chart
   },
   emptyStateTitle: '[data-test-empty-state-title]',
   usageStats: '[data-test-usage-stats]',
@@ -60,7 +67,6 @@ export const SELECTORS = {
   dateDropdownSubmit: '[data-test-date-dropdown-submit]',
   runningTotalMonthStats: '[data-test-running-total="single-month-stats"]',
   runningTotalMonthlyCharts: '[data-test-running-total="monthly-charts"]',
-  monthlyNewChart: '[data-test-chart="monthly new"]',
   monthlyUsageBlock: '[data-test-monthly-usage]',
   selectedAuthMount: 'div#auth-method-search-select [data-test-selected-option] div',
   selectedNs: 'div#namespace-search-select [data-test-selected-option] div',

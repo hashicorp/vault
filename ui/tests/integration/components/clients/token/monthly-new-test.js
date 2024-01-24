@@ -112,7 +112,7 @@ module('Integration | Component | clients/token/monthly-new', function (hooks) {
     const formattedTimestamp = dateFormat([this.timestamp, 'MMM d yyyy, h:mm:ss aaa'], {
       withTimeZone: true,
     });
-    assert.dom(monthlyNew.timestamp).hasText(`Updated ${formattedTimestamp}`, 'renders timestamp');
+    assert.dom(charts.timestamp).hasText(`Updated ${formattedTimestamp}`, 'renders timestamp');
     assert.dom(monthlyNew.entity).doesNotExist('new client counts does not exist');
     assert.dom(monthlyNew.nonentity).doesNotExist('average new client counts does not exist');
   });
