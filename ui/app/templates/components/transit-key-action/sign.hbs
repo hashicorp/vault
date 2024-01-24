@@ -16,6 +16,7 @@
       encodedBase64=@encodedBase64
     )
   }}
+  ...attributes
 >
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="signing" />
@@ -120,7 +121,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <Hds::Button @text="Sign" @icon={{@doSubmit.isRunning}} type="submit" disabled={{@doSubmit.isRunning}} />
+      <Hds::Button @text="Sign" @icon={{if @doSubmit.isRunning "loading"}} type="submit" disabled={{@doSubmit.isRunning}} />
     </div>
   </div>
 </form>

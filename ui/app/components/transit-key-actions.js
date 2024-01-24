@@ -88,8 +88,8 @@ export default class TransitKeyActions extends Component {
 
   constructor() {
     super(...arguments);
-    assert(`@selectedAction is required for TransitKeyActions components`, this.args.selectedAction);
-    assert('@key` is required for TransitKeyActions components', this.args.key);
+    assert('@key is required for TransitKeyActions components', this.args.key);
+    assert('@selectedAction is required for TransitKeyActions components', this.args.selectedAction);
 
     if (this.args.selectedAction === 'export') {
       this.props.exportKeyType = this.args.key.exportKeyTypes.firstObject;
@@ -128,6 +128,10 @@ export default class TransitKeyActions extends Component {
 
   @action toggleEncodeBase64() {
     this.props.encodedBase64 = !this.props.encodedBase64;
+  }
+
+  @action clearSpecificProps(arrayToClear) {
+    arrayToClear.forEach((prop) => (this.props[prop] = null));
   }
 
   @task
