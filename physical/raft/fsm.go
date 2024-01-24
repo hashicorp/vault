@@ -39,6 +39,7 @@ const (
 	restoreCallbackOp
 	getOp
 	verifierCheckpointOp
+	noOp
 
 	chunkingPrefix   = "raftchunking/"
 	databaseFilename = "vault.db"
@@ -115,7 +116,14 @@ func (s *logVerificationChunkingShim) ApplyBatch(logs []*raft.Log) []interface{}
 
 	for _, l := range logs {
 		if s.isVerifierLog(l) {
-			newBatch = append(newBatch, &raft.Log{})
+			command := &LogData{Operations: make([]*LogOperation, 1)}
+			op := &LogOperation{OpType: noOp}
+			command.Operations[0] = op
+			commandBytes, err := proto.Marshal(command)
+			if err != nil {
+				panic("can't encode noOp LogData")
+			}
+			newBatch = append(newBatch, &raft.Log{Data: commandBytes})
 		} else {
 			newBatch = append(newBatch, l)
 		}
@@ -750,6 +758,8 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 							// Kick off the restore callback function in a go routine
 							go f.restoreCb(context.Background())
 						}
+					case noOp:
+						// noOp means do nothing
 					default:
 						if _, ok := f.unknownOpTypes.Load(op.OpType); !ok {
 							f.logger.Error("unsupported transaction operation", "op", op.OpType)
