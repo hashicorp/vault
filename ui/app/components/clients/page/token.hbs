@@ -10,6 +10,7 @@
     @timestamp={{@activity.responseTimestamp}}
     @legend={{this.legend}}
     @hasChartData={{true}}
+    data-test-chart="monthly total"
   >
     <:subTitle>
       <h2 class="chart-title">Total monthly clients</h2>
@@ -24,7 +25,7 @@
         @value={{this.average this.byMonthActivityData "clients"}}
         @size="m"
         class="data-details-top has-top-padding-l"
-        data-test-monthly-new-entity
+        data-test-chart-stat="monthly total"
       />
 
       <StatText
@@ -32,7 +33,7 @@
         @value={{this.average this.byMonthNewClients "clients"}}
         @size="m"
         class="data-details-bottom has-top-padding-l"
-        data-test-monthly-new-nonentity
+        data-test-chart-stat="monthly new"
       />
     </:stats>
 
@@ -56,7 +57,7 @@
         @value={{this.average this.byMonthNewClients "entity_clients"}}
         @size="m"
         class="chart-subTitle has-top-padding-l"
-        data-test-monthly-new-entity
+        data-test-chart-stat="entity"
       />
 
       <StatText
@@ -64,7 +65,7 @@
         @value={{this.average this.byMonthNewClients "non_entity_clients"}}
         @size="m"
         class="data-details-top has-top-padding-l"
-        data-test-monthly-new-nonentity
+        data-test-chart-stat="nonentity"
       />
     </:stats>
 
