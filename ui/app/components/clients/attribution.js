@@ -154,7 +154,7 @@ export default class Attribution extends Component {
       : '';
     const descriptionOfBlanks = this.isSingleNamespace
       ? ''
-      : `\n  *namespace totals, inclusive of child mount clients ${upgrade}`;
+      : `\n  *namespace totals, inclusive of mount clients ${upgrade}`;
     const csvHeader = [
       'Namespace path',
       `"Mount path ${descriptionOfBlanks}"`,
