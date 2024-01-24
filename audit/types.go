@@ -102,116 +102,116 @@ type FormatterConfig struct {
 
 // RequestEntry is the structure of a request audit log entry.
 type RequestEntry struct {
-	Time          string   `mapstructure:"time,omitempty"           json:"time,omitempty"`
-	Type          string   `mapstructure:"type,omitempty"           json:"type,omitempty"`
-	Auth          *Auth    `mapstructure:"auth,omitempty"           json:"auth,omitempty"`
-	Request       *Request `mapstructure:"request,omitempty"        json:"request,omitempty"`
-	Error         string   `mapstructure:"error,omitempty"          json:"error,omitempty"`
-	ForwardedFrom string   `mapstructure:"forwarded_from,omitempty" json:"forwarded_from,omitempty"` // Populated in Enterprise when a request is forwarded
+	Time          string   `bexpr:"time,omitempty" mapstructure:"time,omitempty" json:"time,omitempty"`
+	Type          string   `bexpr:"type,omitempty" mapstructure:"type,omitempty" json:"type,omitempty"`
+	Auth          *Auth    `bexpr:"auth,omitempty" mapstructure:"auth,omitempty" json:"auth,omitempty"`
+	Request       *Request `bexpr:"request,omitempty" mapstructure:"request,omitempty" json:"request,omitempty"`
+	Error         string   `bexpr:"error,omitempty" mapstructure:"error,omitempty" json:"error,omitempty"`
+	ForwardedFrom string   `bexpr:"forwarded_from,omitempty" mapstructure:"forwarded_from,omitempty" json:"forwarded_from,omitempty"` // Populated in Enterprise when a request is forwarded
 }
 
 // ResponseEntry is the structure of a response audit log entry.
 type ResponseEntry struct {
-	Time      string    `mapstructure:"time,omitempty" json:"time,omitempty"`
-	Type      string    `mapstructure:"type,omitempty" json:"type,omitempty"`
-	Auth      *Auth     `mapstructure:"auth,omitempty" json:"auth,omitempty"`
-	Request   *Request  `mapstructure:"request,omitempty" json:"request,omitempty"`
-	Response  *Response `mapstructure:"response,omitempty" json:"response,omitempty"`
-	Error     string    `mapstructure:"error,omitempty" json:"error,omitempty"`
-	Forwarded bool      `mapstructure:"forwarded,omitempty" json:"forwarded,omitempty"`
+	Time      string    `bexpr:"time,omitempty" mapstructure:"time,omitempty" json:"time,omitempty"`
+	Type      string    `bexpr:"type,omitempty" mapstructure:"type,omitempty" json:"type,omitempty"`
+	Auth      *Auth     `bexpr:"auth,omitempty" mapstructure:"auth,omitempty" json:"auth,omitempty"`
+	Request   *Request  `bexpr:"request,omitempty" mapstructure:"request,omitempty" json:"request,omitempty"`
+	Response  *Response `bexpr:"response,omitempty" mapstructure:"response,omitempty" json:"response,omitempty"`
+	Error     string    `bexpr:"error,omitempty" mapstructure:"error,omitempty" json:"error,omitempty"`
+	Forwarded bool      `bexpr:"forwarded,omitempty" mapstructure:"forwarded,omitempty" json:"forwarded,omitempty"`
 }
 
 type Request struct {
-	ID                            string                 `mapstructure:"id,omitempty" json:"id,omitempty"`
-	ClientID                      string                 `mapstructure:"client_id,omitempty" json:"client_id,omitempty"`
-	ReplicationCluster            string                 `mapstructure:"replication_cluster,omitempty" json:"replication_cluster,omitempty"`
-	Operation                     logical.Operation      `mapstructure:"operation,omitempty" json:"operation,omitempty"`
-	MountPoint                    string                 `mapstructure:"mount_point,omitempty" json:"mount_point,omitempty"`
-	MountType                     string                 `mapstructure:"mount_type,omitempty" json:"mount_type,omitempty"`
-	MountAccessor                 string                 `mapstructure:"mount_accessor,omitempty" json:"mount_accessor,omitempty"`
-	MountRunningVersion           string                 `mapstructure:"mount_running_version,omitempty" json:"mount_running_version,omitempty"`
-	MountRunningSha256            string                 `mapstructure:"mount_running_sha256,omitempty" json:"mount_running_sha256,omitempty"`
-	MountClass                    string                 `mapstructure:"mount_class,omitempty" json:"mount_class,omitempty"`
-	MountIsExternalPlugin         bool                   `mapstructure:"mount_is_external_plugin,omitempty" json:"mount_is_external_plugin,omitempty"`
-	ClientToken                   string                 `mapstructure:"client_token,omitempty" json:"client_token,omitempty"`
-	ClientTokenAccessor           string                 `mapstructure:"client_token_accessor,omitempty" json:"client_token_accessor,omitempty"`
-	Namespace                     *Namespace             `mapstructure:"namespace,omitempty"  json:"namespace,omitempty"`
-	Path                          string                 `mapstructure:"path,omitempty" json:"path,omitempty"`
-	Data                          map[string]interface{} `mapstructure:"data,omitempty" json:"data,omitempty"`
-	PolicyOverride                bool                   `mapstructure:"policy_override,omitempty" json:"policy_override,omitempty"`
-	RemoteAddr                    string                 `mapstructure:"remote_address,omitempty" json:"remote_address,omitempty"`
-	RemotePort                    int                    `mapstructure:"remote_port,omitempty" json:"remote_port,omitempty"`
-	WrapTTL                       int                    `mapstructure:"wrap_ttl,omitempty" json:"wrap_ttl,omitempty"`
-	Headers                       map[string][]string    `mapstructure:"headers,omitempty" json:"headers,omitempty"`
-	ClientCertificateSerialNumber string                 `mapstructure:"client_certificate_serial_number,omitempty" json:"client_certificate_serial_number,omitempty"`
-	RequestURI                    string                 `mapstructure:"request_uri,omitempty" json:"request_uri,omitempty"`
+	ID                            string                 `bexpr:"id,omitempty" mapstructure:"id,omitempty" json:"id,omitempty"`
+	ClientID                      string                 `bexpr:"client_id,omitempty" mapstructure:"client_id,omitempty" json:"client_id,omitempty"`
+	ReplicationCluster            string                 `bexpr:"replication_cluster,omitempty" mapstructure:"replication_cluster,omitempty" json:"replication_cluster,omitempty"`
+	Operation                     logical.Operation      `bexpr:"operation,omitempty" mapstructure:"operation,omitempty" json:"operation,omitempty"`
+	MountPoint                    string                 `bexpr:"mount_point,omitempty" mapstructure:"mount_point,omitempty" json:"mount_point,omitempty"`
+	MountType                     string                 `bexpr:"mount_type,omitempty" mapstructure:"mount_type,omitempty" json:"mount_type,omitempty"`
+	MountAccessor                 string                 `bexpr:"mount_accessor,omitempty" mapstructure:"mount_accessor,omitempty" json:"mount_accessor,omitempty"`
+	MountRunningVersion           string                 `bexpr:"mount_running_version,omitempty" mapstructure:"mount_running_version,omitempty" json:"mount_running_version,omitempty"`
+	MountRunningSha256            string                 `bexpr:"mount_running_sha256,omitempty" mapstructure:"mount_running_sha256,omitempty" json:"mount_running_sha256,omitempty"`
+	MountClass                    string                 `bexpr:"mount_class,omitempty" mapstructure:"mount_class,omitempty" json:"mount_class,omitempty"`
+	MountIsExternalPlugin         bool                   `bexpr:"mount_is_external_plugin,omitempty" mapstructure:"mount_is_external_plugin,omitempty" json:"mount_is_external_plugin,omitempty"`
+	ClientToken                   string                 `bexpr:"client_token,omitempty" mapstructure:"client_token,omitempty" json:"client_token,omitempty"`
+	ClientTokenAccessor           string                 `bexpr:"client_token_accessor,omitempty" mapstructure:"client_token_accessor,omitempty" json:"client_token_accessor,omitempty"`
+	Namespace                     *Namespace             `bexpr:"namespace,omitempty" mapstructure:"namespace,omitempty"  json:"namespace,omitempty"`
+	Path                          string                 `bexpr:"path,omitempty" mapstructure:"path,omitempty" json:"path,omitempty"`
+	Data                          map[string]interface{} `bexpr:"data,omitempty" mapstructure:"data,omitempty" json:"data,omitempty"`
+	PolicyOverride                bool                   `bexpr:"policy_override,omitempty" mapstructure:"policy_override,omitempty" json:"policy_override,omitempty"`
+	RemoteAddr                    string                 `bexpr:"remote_address,omitempty" mapstructure:"remote_address,omitempty" json:"remote_address,omitempty"`
+	RemotePort                    int                    `bexpr:"remote_port,omitempty" mapstructure:"remote_port,omitempty" json:"remote_port,omitempty"`
+	WrapTTL                       int                    `bexpr:"wrap_ttl,omitempty" mapstructure:"wrap_ttl,omitempty" json:"wrap_ttl,omitempty"`
+	Headers                       map[string][]string    `bexpr:"headers,omitempty" mapstructure:"headers,omitempty" json:"headers,omitempty"`
+	ClientCertificateSerialNumber string                 `bexpr:"client_certificate_serial_number,omitempty" mapstructure:"client_certificate_serial_number,omitempty" json:"client_certificate_serial_number,omitempty"`
+	RequestURI                    string                 `bexpr:"request_uri,omitempty" mapstructure:"request_uri,omitempty" json:"request_uri,omitempty"`
 }
 
 type Response struct {
-	Auth                  *Auth                  `json:"auth,omitempty"`
-	MountPoint            string                 `json:"mount_point,omitempty"`
-	MountType             string                 `json:"mount_type,omitempty"`
-	MountAccessor         string                 `json:"mount_accessor,omitempty"`
-	MountRunningVersion   string                 `json:"mount_running_plugin_version,omitempty"`
-	MountRunningSha256    string                 `json:"mount_running_sha256,omitempty"`
-	MountClass            string                 `json:"mount_class,omitempty"`
-	MountIsExternalPlugin bool                   `json:"mount_is_external_plugin,omitempty"`
-	Secret                *Secret                `json:"secret,omitempty"`
-	Data                  map[string]interface{} `json:"data,omitempty"`
-	Warnings              []string               `json:"warnings,omitempty"`
-	Redirect              string                 `json:"redirect,omitempty"`
-	WrapInfo              *ResponseWrapInfo      `json:"wrap_info,omitempty"`
-	Headers               map[string][]string    `json:"headers,omitempty"`
+	Auth                  *Auth                  `bexpr:"auth,omitempty" mapstructure:"auth,omitempty" json:"auth,omitempty"`
+	MountPoint            string                 `bexpr:"mount_point,omitempty" mapstructure:"mount_point,omitempty" json:"mount_point,omitempty"`
+	MountType             string                 `bexpr:"mount_type,omitempty" mapstructure:"mount_type,omitempty" json:"mount_type,omitempty"`
+	MountAccessor         string                 `bexpr:"mount_accessor,omitempty" mapstructure:"mount_accessor,omitempty" json:"mount_accessor,omitempty"`
+	MountRunningVersion   string                 `bexpr:"mount_running_plugin_version,omitempty" mapstructure:"mount_running_plugin_version,omitempty" json:"mount_running_plugin_version,omitempty"`
+	MountRunningSha256    string                 `bexpr:"mount_running_sha256,omitempty" mapstructure:"mount_running_sha256,omitempty" json:"mount_running_sha256,omitempty"`
+	MountClass            string                 `bexpr:"mount_class,omitempty" mapstructure:"mount_class,omitempty" json:"mount_class,omitempty"`
+	MountIsExternalPlugin bool                   `bexpr:"mount_is_external_plugin,omitempty" mapstructure:"mount_is_external_plugin,omitempty" json:"mount_is_external_plugin,omitempty"`
+	Secret                *Secret                `bexpr:"secret,omitempty" mapstructure:"secret,omitempty" json:"secret,omitempty"`
+	Data                  map[string]interface{} `bexpr:"data,omitempty" mapstructure:"data,omitempty" json:"data,omitempty"`
+	Warnings              []string               `bexpr:"warnings,omitempty" mapstructure:"warnings,omitempty" json:"warnings,omitempty"`
+	Redirect              string                 `bexpr:"redirect,omitempty" mapstructure:"redirect,omitempty" json:"redirect,omitempty"`
+	WrapInfo              *ResponseWrapInfo      `bexpr:"wrap_info,omitempty" mapstructure:"wrap_info,omitempty" json:"wrap_info,omitempty"`
+	Headers               map[string][]string    `bexpr:"headers,omitempty" mapstructure:"headers,omitempty" json:"headers,omitempty"`
 }
 
 type Auth struct {
-	ClientToken               string              `mapstructure:"client_token,omitempty" json:"client_token,omitempty"`
-	Accessor                  string              `mapstructure:"accessor,omitempty" json:"accessor,omitempty"`
-	DisplayName               string              `mapstructure:"display_name,omitempty" json:"display_name,omitempty"`
-	Policies                  []string            `mapstructure:"policies,omitempty" json:"policies,omitempty"`
-	TokenPolicies             []string            `mapstructure:"token_policies,omitempty" json:"token_policies,omitempty"`
-	IdentityPolicies          []string            `mapstructure:"identity_policies,omitempty" json:"identity_policies,omitempty"`
-	ExternalNamespacePolicies map[string][]string `mapstructure:"external_namespace_policies,omitempty" json:"external_namespace_policies,omitempty"`
-	NoDefaultPolicy           bool                `mapstructure:"no_default_policy,omitempty" json:"no_default_policy,omitempty"`
-	PolicyResults             *PolicyResults      `mapstructure:"policy_results,omitempty" json:"policy_results,omitempty"`
-	Metadata                  map[string]string   `mapstructure:"metadata,omitempty" json:"metadata,omitempty"`
-	NumUses                   int                 `mapstructure:"num_uses,omitempty" json:"num_uses,omitempty"`
-	RemainingUses             int                 `mapstructure:"remaining_uses,omitempty" json:"remaining_uses,omitempty"`
-	EntityID                  string              `mapstructure:"entity_id,omitempty" json:"entity_id,omitempty"`
-	EntityCreated             bool                `mapstructure:"entity_created,omitempty" json:"entity_created,omitempty"`
-	TokenType                 string              `mapstructure:"token_type,omitempty" json:"token_type,omitempty"`
-	TokenTTL                  int64               `mapstructure:"token_ttl,omitempty" json:"token_ttl,omitempty"`
-	TokenIssueTime            string              `mapstructure:"token_issue_time,omitempty" json:"token_issue_time,omitempty"`
+	ClientToken               string              `bexpr:"client_token,omitempty" mapstructure:"client_token,omitempty" json:"client_token,omitempty"`
+	Accessor                  string              `bexpr:"accessor,omitempty" mapstructure:"accessor,omitempty" json:"accessor,omitempty"`
+	DisplayName               string              `bexpr:"display_name,omitempty" mapstructure:"display_name,omitempty" json:"display_name,omitempty"`
+	Policies                  []string            `bexpr:"policies,omitempty" mapstructure:"policies,omitempty" json:"policies,omitempty"`
+	TokenPolicies             []string            `bexpr:"token_policies,omitempty" mapstructure:"token_policies,omitempty" json:"token_policies,omitempty"`
+	IdentityPolicies          []string            `bexpr:"identity_policies,omitempty" mapstructure:"identity_policies,omitempty" json:"identity_policies,omitempty"`
+	ExternalNamespacePolicies map[string][]string `bexpr:"external_namespace_policies,omitempty" mapstructure:"external_namespace_policies,omitempty" json:"external_namespace_policies,omitempty"`
+	NoDefaultPolicy           bool                `bexpr:"no_default_policy,omitempty" mapstructure:"no_default_policy,omitempty" json:"no_default_policy,omitempty"`
+	PolicyResults             *PolicyResults      `bexpr:"policy_results,omitempty" mapstructure:"policy_results,omitempty" json:"policy_results,omitempty"`
+	Metadata                  map[string]string   `bexpr:"metadata,omitempty" mapstructure:"metadata,omitempty" json:"metadata,omitempty"`
+	NumUses                   int                 `bexpr:"num_uses,omitempty" mapstructure:"num_uses,omitempty" json:"num_uses,omitempty"`
+	RemainingUses             int                 `bexpr:"remaining_uses,omitempty" mapstructure:"remaining_uses,omitempty" json:"remaining_uses,omitempty"`
+	EntityID                  string              `bexpr:"entity_id,omitempty" mapstructure:"entity_id,omitempty" json:"entity_id,omitempty"`
+	EntityCreated             bool                `bexpr:"entity_created,omitempty" mapstructure:"entity_created,omitempty" json:"entity_created,omitempty"`
+	TokenType                 string              `bexpr:"token_type,omitempty" mapstructure:"token_type,omitempty" json:"token_type,omitempty"`
+	TokenTTL                  int64               `bexpr:"token_ttl,omitempty" mapstructure:"token_ttl,omitempty" json:"token_ttl,omitempty"`
+	TokenIssueTime            string              `bexpr:"token_issue_time,omitempty" mapstructure:"token_issue_time,omitempty" json:"token_issue_time,omitempty"`
 }
 
 type PolicyResults struct {
-	Allowed          bool         `mapstructure:"allowed" json:"allowed"`
-	GrantingPolicies []PolicyInfo `mapstructure:"granting_policies,omitempty" json:"granting_policies,omitempty"`
+	Allowed          bool         `bexpr:"allowed" mapstructure:"allowed" json:"allowed"`
+	GrantingPolicies []PolicyInfo `bexpr:"granting_policies,omitempty" mapstructure:"granting_policies,omitempty" json:"granting_policies,omitempty"`
 }
 
 type PolicyInfo struct {
-	Name          string `mapstructure:"name,omitempty" json:"name,omitempty"`
-	NamespaceId   string `mapstructure:"namespace_id,omitempty" json:"namespace_id,omitempty"`
-	NamespacePath string `mapstructure:"namespace_path,omitempty" json:"namespace_path,omitempty"`
-	Type          string `mapstructure:"type" json:"type"`
+	Name          string `bexpr:"name,omitempty" mapstructure:"name,omitempty" json:"name,omitempty"`
+	NamespaceId   string `bexpr:"namespace_id,omitempty" mapstructure:"namespace_id,omitempty" json:"namespace_id,omitempty"`
+	NamespacePath string `bexpr:"namespace_path,omitempty" mapstructure:"namespace_path,omitempty" json:"namespace_path,omitempty"`
+	Type          string `bexpr:"type" mapstructure:"type" json:"type"`
 }
 
 type Secret struct {
-	LeaseID string `mapstructure:"lease_id,omitempty" json:"lease_id,omitempty"`
+	LeaseID string `bexpr:"lease_id,omitempty" mapstructure:"lease_id,omitempty" json:"lease_id,omitempty"`
 }
 
 type ResponseWrapInfo struct {
-	TTL             int    `mapstructure:"ttl,omitempty" json:"ttl,omitempty"`
-	Token           string `mapstructure:"token,omitempty" json:"token,omitempty"`
-	Accessor        string `mapstructure:"accessor,omitempty" json:"accessor,omitempty"`
-	CreationTime    string `mapstructure:"creation_time,omitempty" json:"creation_time,omitempty"`
-	CreationPath    string `mapstructure:"creation_path,omitempty" json:"creation_path,omitempty"`
-	WrappedAccessor string `mapstructure:"wrapped_accessor,omitempty" json:"wrapped_accessor,omitempty"`
+	TTL             int    `bexpr:"ttl,omitempty" mapstructure:"ttl,omitempty" json:"ttl,omitempty"`
+	Token           string `bexpr:"token,omitempty" mapstructure:"token,omitempty" json:"token,omitempty"`
+	Accessor        string `bexpr:"accessor,omitempty" mapstructure:"accessor,omitempty" json:"accessor,omitempty"`
+	CreationTime    string `bexpr:"creation_time,omitempty" mapstructure:"creation_time,omitempty" json:"creation_time,omitempty"`
+	CreationPath    string `bexpr:"creation_path,omitempty" mapstructure:"creation_path,omitempty" json:"creation_path,omitempty"`
+	WrappedAccessor string `bexpr:"wrapped_accessor,omitempty" mapstructure:"wrapped_accessor,omitempty" json:"wrapped_accessor,omitempty"`
 }
 
 type Namespace struct {
-	ID   string `mapstructure:"id,omitempty" json:"id,omitempty"`
-	Path string `mapstructure:"path,omitempty" json:"path,omitempty"`
+	ID   string `bexpr:"id,omitempty" mapstructure:"id,omitempty" json:"id,omitempty"`
+	Path string `bexpr:"path,omitempty" mapstructure:"path,omitempty" json:"path,omitempty"`
 }
 
 // nonPersistentSalt is used for obtaining a salt that is not persisted.
