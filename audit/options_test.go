@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-bexpr"
 	"github.com/stretchr/testify/require"
 )
 
@@ -689,6 +690,83 @@ func TestOptions_Opts(t *testing.T) {
 					require.Equal(t, tc.ExpectedNow, opts.withNow)
 				}
 
+			}
+		})
+	}
+}
+
+// TestOptions_exclusions_validate explicitly tests the validate method for an exclusion.
+func TestOptions_exclusions_validate(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		expression           string
+		fields               []string
+		isErrorExpected      bool
+		expectedErrorMessage string
+	}{
+		"no-fields-no-expression": {
+			isErrorExpected:      true,
+			expectedErrorMessage: "audit.(exclusion).validate: exclusion doesn't contain any fields: invalid parameter",
+		},
+		"empty-expression": {
+			expression: "",
+			fields:     []string{"/foo"},
+		},
+		"valid-expression": {
+			expression: "\"/request/auth\" == foo",
+			fields:     []string{"/foo"},
+		},
+		"invalid-expression": {
+			expression:           "\"/foo/bar\" == juan",
+			fields:               []string{"/foo"},
+			isErrorExpected:      true,
+			expectedErrorMessage: "audit.(exclusion).validate: unable to evaluate exclusion condition against expected request entry: error finding value in datum: /foo/bar at part 0: couldn't find key \"foo\"",
+		},
+		"valid-fields": {
+			expression: "\"/request/auth\" == foo",
+			fields: []string{
+				"/foo",
+			},
+		},
+		"invalid-fields": {
+			expression: "\"/request/auth\" == foo",
+			fields: []string{
+				"foo",
+			},
+			isErrorExpected:      true,
+			expectedErrorMessage: "audit.(exclusion).validate: unable to parse field 'foo': parse Go pointer \"foo\": first char must be '/'",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			var eval *bexpr.Evaluator
+			var err error
+
+			if tc.expression != "" {
+				eval, err = bexpr.CreateEvaluator(tc.expression)
+				require.NoError(t, err)
+			}
+
+			exc := &exclusion{
+				Evaluator: eval,
+				Fields:    tc.fields,
+			}
+
+			err = exc.validate()
+
+			switch {
+			case tc.isErrorExpected:
+				require.Error(t, err)
+				require.EqualError(t, err, tc.expectedErrorMessage)
+			default:
+				require.NoError(t, err)
 			}
 		})
 	}

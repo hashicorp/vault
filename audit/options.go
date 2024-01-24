@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/internal/observability/event"
+
 	"github.com/cjrd/allocate"
 	"github.com/hashicorp/go-bexpr"
 	"github.com/mitchellh/mapstructure"
@@ -301,6 +303,10 @@ func (e *exclusion) UnmarshalJSON(b []byte) error {
 // types.
 func (e *exclusion) validate() error {
 	const op = "audit.(exclusion).validate"
+
+	if len(e.Fields) < 1 {
+		return fmt.Errorf("%s: exclusion doesn't contain any fields: %w", op, event.ErrInvalidParameter)
+	}
 
 	// Validate the 'fields' first (as the condition expression is optional)
 	for _, field := range e.Fields {
