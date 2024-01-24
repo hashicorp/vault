@@ -9,8 +9,10 @@
 import Component from '@glimmer/component';
 import { isAfter, isBefore, isSameMonth, fromUnixTime } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
+import { calculateAverage } from 'vault/utils/chart-helpers';
 
 import type ClientsActivityModel from 'vault/models/clients/activity';
+import type { ClientActivityNewClients, ClientActivityMonthly } from 'vault/models/clients/activity';
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
 
 interface Args {
@@ -24,6 +26,10 @@ interface Args {
 }
 
 export default class ClientsActivityComponent extends Component<Args> {
+  average = (data: (ClientActivityNewClients | ClientActivityMonthly | undefined)[], key: string) => {
+    return calculateAverage(data, key);
+  };
+
   get startTimeISO() {
     return fromUnixTime(this.args.startTimestamp).toISOString();
   }
@@ -35,6 +41,10 @@ export default class ClientsActivityComponent extends Component<Args> {
   get byMonthActivityData() {
     const { activity, namespace } = this.args;
     return namespace ? this.filteredActivityByMonth : activity.byMonth;
+  }
+
+  get byMonthNewClients() {
+    return this.byMonthActivityData ? this.byMonthActivityData?.map((m) => m?.new_clients) : [];
   }
 
   get filteredActivityByMonth() {
