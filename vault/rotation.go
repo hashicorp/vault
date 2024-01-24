@@ -118,7 +118,6 @@ func (rm *RotationManager) CheckQueue() error {
 		}
 
 		re = entry
-
 		// if not in window, do we check the next credential?
 		if !logical.DefaultScheduler.IsInsideRotationWindow(re.RotationJob.Schedule, now) {
 			rm.logger.Debug("Not inside rotation window, pushing back to queue")
@@ -176,13 +175,21 @@ func (rm *RotationManager) Register(ctx context.Context, reqPath string, job *lo
 	}
 
 	issueTime := time.Now()
+	expireTime := time.Now()
+	if resp.RootCredential.Schedule.Schedule != nil {
+		expireTime = logical.DefaultScheduler.NextRotationTimeFromInput(resp.RootCredential.Schedule, time.Now())
+		resp.RootCredential.Schedule.NextVaultRotation = expireTime
+	}
+	rm.logger.Debug("SCHEDULE", "VALUE", resp.RootCredential.Schedule.RotationSchedule)
+	rm.logger.Debug("WINDOW", "VALUE", resp.RootCredential.Schedule.RotationWindow)
+	rm.logger.Debug("TTL", "VALUE", resp.RootCredential.Schedule.TTL)
 	re := &rotationEntry{
 		RotationID:  rotationID,
 		Path:        reqPath,
 		RotationJob: job,
 		IssueTime:   issueTime,
 		// expires the next time the schedule is activated from the issue time
-		ExpireTime: job.Schedule.Schedule.Next(issueTime),
+    ExpireTime: expireTime,
 		Namespace:  ns,
 	}
 
@@ -191,6 +198,7 @@ func (rm *RotationManager) Register(ctx context.Context, reqPath string, job *lo
 	// r.core.stateLock.Lock()
 
 	rm.logger.Debug("Creating queue item")
+	rm.logger.Debug("next rotation time", "exp", expireTime.Format(time.RFC3339))
 
 	// @TODO for different cases, update rotation entry if it is already in queue
 	// for now, assuming it is a fresh root credential and the schedule is not being updated
@@ -299,6 +307,8 @@ func (j *rotationJob) Execute() error {
 	// success
 	j.rm.logger.Debug("Successfully called rotate root code for backend")
 	issueTime := time.Now()
+	j.entry.RootCredential.Schedule.LastVaultRotation = issueTime
+	expireTime := logical.DefaultScheduler.NextRotationTime(j.entry.RootCredential.Schedule)
 	newEntry := &rotationEntry{
 		RotationID:  j.entry.RotationID,
 		Path:        j.entry.Path,
@@ -306,8 +316,9 @@ func (j *rotationJob) Execute() error {
 		RotationJob: j.entry.RotationJob,
 		IssueTime:   issueTime,
 		// expires the next time the schedule is activated from the issue time
-		ExpireTime: j.entry.RotationJob.Schedule.Schedule.Next(issueTime),
-		Namespace:  j.entry.Namespace,
+    ExpireTime:  expireTime,
+		Namespace:   j.entry.Namespace,
+
 	}
 	j.entry.RotationJob.Schedule.NextVaultRotation = newEntry.ExpireTime
 

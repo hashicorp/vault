@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"time"
 
+
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/robfig/cron/v3"
 )
 
 // RotationOptions is an embeddable struct to capture common lease
@@ -36,20 +38,30 @@ func (s *RotationJob) Validate() error {
 	return nil
 }
 
-func GetRotationJob(ctx context.Context, rotationSchedule, path, credentialName string, rotationWindow int) (*RotationJob, error) {
-	cronSc, err := DefaultScheduler.Parse(rotationSchedule)
-	if err != nil {
-		return nil, err
+// GetRotationJob initializes a root credential structure based on the passed in rotation_schedule or ttl
+// If rotation schedule is empty, the included spec schedule would be nil
+// NextVaultRotation and LastVaultRotation are set to zero value; it's the responsibility of callers to set these
+// values appropriately
+func GetRotationJob(ctx context.Context, rotationSchedule, path, credentialName string, rotationWindow, ttl int) (*RotationJob, error) {
+	var cronSc *cron.SpecSchedule
+	if rotationSchedule != "" {
+		var err error
+		cronSc, err = DefaultScheduler.Parse(rotationSchedule)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	rs := &RootSchedule{
 		Schedule:         cronSc,
 		RotationSchedule: rotationSchedule,
 		RotationWindow:   time.Duration(rotationWindow) * time.Second,
+		TTL:              time.Duration(ttl) * time.Second,
 		// TODO
 		// decide if next rotation should be set here
 		// or when we actually push item into queue
-		NextVaultRotation: cronSc.Next(time.Now()),
+		NextVaultRotation: time.Time{},
+		LastVaultRotation: time.Time{},
 	}
 
 	ns, err := namespace.FromContext(ctx)
