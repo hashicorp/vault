@@ -321,7 +321,7 @@ func (e *exclusion) validate() error {
 	}
 	reqMap := make(map[string]any)
 	if err := mapstructure.Decode(req, &reqMap); err != nil {
-		return fmt.Errorf("%s: unable to decode request entry: %w", op, err)
+		return fmt.Errorf("%s: unable to decode sample request entry: %w", op, err)
 	}
 
 	// Generate a sample ResponseEntry
@@ -331,7 +331,7 @@ func (e *exclusion) validate() error {
 	}
 	respMap := make(map[string]any)
 	if err := mapstructure.Decode(resp, &respMap); err != nil {
-		return fmt.Errorf("%s: unable to decode response entry: %w", op, err)
+		return fmt.Errorf("%s: unable to decode sample response entry: %w", op, err)
 	}
 
 	// Attempt to evaluate the condition expression against the datum for request and response.
