@@ -1159,7 +1159,7 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) e
 			close(manager.retentionDone)
 		}(manager.retentionMonths)
 
-		manager.CensusReportDone = make(chan bool)
+		manager.CensusReportDone = make(chan bool, 1)
 		go c.activityLog.CensusReport(ctx, c.CensusAgent(), c.BillingStart())
 	}
 
@@ -1391,7 +1391,6 @@ func (a *ActivityLog) HandleEndOfMonth(ctx context.Context, currentTime time.Tim
 	// empty when it returns, but dropping some measurements is acceptable.
 	// We use force=true here in case an entry didn't appear this month
 	err = a.saveCurrentSegmentToStorageLocked(ctx, true)
-
 	// Don't return this error, just log it, we are done with that segment anyway.
 	if err != nil {
 		a.logger.Warn("last save of segment failed", "error", err)
