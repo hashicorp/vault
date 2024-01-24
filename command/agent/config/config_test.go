@@ -1008,6 +1008,13 @@ func TestLoadConfigFile_TemplateConfig(t *testing.T) {
 				MaxConnectionsPerHost: 10,
 			},
 		},
+		"missing": {
+			"./test-fixtures/config-template_config-missing.hcl",
+			TemplateConfig{
+				ExitOnRetryFailure:    false,
+				MaxConnectionsPerHost: 10,
+			},
+		},
 	}
 
 	for name, tc := range testCases {

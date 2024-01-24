@@ -1106,6 +1106,12 @@ func parseTemplateConfig(result *Config, list *ast.ObjectList) error {
 
 	templateConfigList := list.Filter(name)
 	if len(templateConfigList.Items) == 0 {
+		// ensure that we default max_connections_per_host if template_config
+		// has not been provided
+		result.TemplateConfig = &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		}
+
 		return nil
 	}
 
