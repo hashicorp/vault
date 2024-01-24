@@ -8,7 +8,7 @@ Vault automatically chunks any storage entry that is larger than 512 KiB but
 smaller than `max_entry_size` into smaller pieces before writing the entry to Raft.
 
 For Vault deployments using the Consul storage backend, the default entry size
-limit is 512 KiB. The default size in enforced by Consol rather than Vault. You
+limit is 512 KiB. The default size in enforced by Consul rather than Vault. You
 can configure the entry size limit with the 
 [`kv_max_value_size`](/consul/docs/agent/config/config-files#kv_max_value_size)
 Consul parameter.
