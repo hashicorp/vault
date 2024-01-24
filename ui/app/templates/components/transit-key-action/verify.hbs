@@ -17,6 +17,7 @@
       encodedBase64=@encodedBase64
     )
   }}
+  ...attributes
 >
   <div class="box is-sideless is-fullwidth is-marginless">
     <div class="content has-bottom-margin-l">
@@ -70,7 +71,7 @@
                   id="verification"
                   onchange={{queue
                     (action (mut @verification) value="target.value")
-                    (action @clearParams (array "hmac" "signature"))
+                    (action @clearSpecificProps (array "hmac" "signature"))
                   }}
                 >
                   {{#each (array "Signature" "HMAC") as |type|}}
@@ -192,7 +193,12 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <Hds::Button @text="Verify" @icon={{@doSubmit.isRunning}} type="submit" disabled={{@doSubmit.isRunning}} />
+      <Hds::Button
+        @text="Verify"
+        @icon={{if @doSubmit.isRunning "loading"}}
+        type="submit"
+        disabled={{@doSubmit.isRunning}}
+      />
     </div>
   </div>
 </form>

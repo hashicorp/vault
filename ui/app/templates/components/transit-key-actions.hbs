@@ -20,6 +20,7 @@
       @ciphertext={{this.props.ciphertext}}
       @doSubmit={{this.doSubmit}}
       @isModalActive={{this.isModalActive}}
+      data-test-transit-action={{@selectedAction}}
     />
   {{else if (eq @selectedAction "decrypt")}}
     <TransitKeyAction::Decrypt
@@ -30,6 +31,7 @@
       @isModalActive={{this.isModalActive}}
       @plaintext={{this.props.plaintext}}
       @doSubmit={{this.doSubmit}}
+      data-test-transit-action={{@selectedAction}}
     />
   {{else if (eq @selectedAction "datakey")}}
     <TransitKeyAction::Datakey
@@ -42,6 +44,7 @@
       @ciphertext={{this.props.ciphertext}}
       @doSubmit={{this.doSubmit}}
       @isModalActive={{this.isModalActive}}
+      data-test-transit-action={{@selectedAction}}
     />
   {{else if (eq @selectedAction "rewrap")}}
     <TransitKeyAction::rewrap
@@ -53,6 +56,7 @@
       @ciphertext={{this.props.ciphertext}}
       @isModalActive={{this.isModalActive}}
       @doSubmit={{this.doSubmit}}
+      data-test-transit-action={{@selectedAction}}
     />
   {{else if (eq @selectedAction "hmac")}}
     <TransitKeyAction::hmac
@@ -65,6 +69,7 @@
       @hmac={{this.props.hmac}}
       @isModalActive={{this.isModalActive}}
       @doSubmit={{this.doSubmit}}
+      data-test-transit-action={{@selectedAction}}
     />
   {{else if (eq @selectedAction "verify")}}
     <TransitKeyAction::verify
@@ -83,6 +88,8 @@
       @keyIsRSA={{this.keyIsRSA}}
       @isModalActive={{this.isModalActive}}
       @doSubmit={{this.doSubmit}}
+      @clearSpecificProps={{this.clearSpecificProps}}
+      data-test-transit-action={{@selectedAction}}
     />
   {{else if (eq @selectedAction "sign")}}
     <TransitKeyAction::sign
@@ -98,6 +105,7 @@
       @toggleEncodeBase64={{this.toggleEncodeBase64}}
       @isModalActive={{this.isModalActive}}
       @doSubmit={{this.doSubmit}}
+      data-test-transit-action={{@selectedAction}}
     />
   {{else if (eq @selectedAction "export")}}
     <TransitKeyAction::export
@@ -113,6 +121,7 @@
       @toggleEncodeBase64={{this.toggleEncodeBase64}}
       @isModalActive={{this.isModalActive}}
       @doSubmit={{this.doSubmit}}
+      data-test-transit-action={{@selectedAction}}
     />
   {{/if}}
 </div>

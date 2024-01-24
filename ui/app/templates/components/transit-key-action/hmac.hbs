@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form onsubmit={{perform @doSubmit (hash input=@trackedInput algorithm=@algorithm key_version=@key_version)}}>
+<form onsubmit={{perform @doSubmit (hash input=@trackedInput algorithm=@algorithm key_version=@key_version)}} ...attributes>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="HMAC creation" />
     <div class="content has-bottom-margin-l">
