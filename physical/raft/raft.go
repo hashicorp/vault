@@ -2338,10 +2338,7 @@ func etcdboltOptions(path string) *etcdbolt.Options {
 }
 
 func isRaftLogVerifyCheckpoint(l *raft.Log) bool {
-	chkpnt := make([]byte, 1)
-	chkpnt[0] = byte(verifierCheckpointOp)
-
-	if !bytes.Equal(l.Data, chkpnt) {
+	if !bytes.Equal(l.Data, []byte{byte(verifierCheckpointOp)}) {
 		return false
 	}
 
