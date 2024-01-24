@@ -6,6 +6,7 @@ package raft
 import (
 	"context"
 	"fmt"
+	"io"
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
@@ -13,6 +14,21 @@ import (
 )
 
 func GetRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, string) {
+	return getRaftInternal(t, bootstrap, defaultRaftConfig(t, bootstrap, noStoreState), nil)
+}
+
+func GetRaftWithConfig(t testing.TB, bootstrap bool, noStoreState bool, conf map[string]string) (*RaftBackend, string) {
+	defaultConf := defaultRaftConfig(t, bootstrap, noStoreState)
+	conf["path"] = defaultConf["path"]
+	conf["doNotStoreLatestState"] = defaultConf["doNotStoreLatestState"]
+	return getRaftInternal(t, bootstrap, conf, nil)
+}
+
+func GetRaftWithLogOutput(t testing.TB, bootstrap bool, noStoreState bool, logOutput io.Writer) (*RaftBackend, string) {
+	return getRaftInternal(t, bootstrap, defaultRaftConfig(t, bootstrap, noStoreState), logOutput)
+}
+
+func defaultRaftConfig(t testing.TB, bootstrap bool, noStoreState bool) map[string]string {
 	raftDir := t.TempDir()
 	t.Logf("raft dir: %s", raftDir)
 
@@ -25,30 +41,19 @@ func GetRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, str
 		conf["doNotStoreLatestState"] = ""
 	}
 
-	return getRaftWithDirAndConfig(t, bootstrap, conf)
+	return conf
 }
 
-func GetRaftWithConfig(t testing.TB, bootstrap bool, noStoreState bool, conf map[string]string) (*RaftBackend, string) {
-	raftDir := t.TempDir()
-	t.Logf("raft dir: %s", raftDir)
-
-	conf["path"] = raftDir
-	if noStoreState {
-		conf["doNotStoreLatestState"] = ""
-	}
-
-	return getRaftWithDirAndConfig(t, bootstrap, conf)
-}
-
-func getRaftWithDirAndConfig(t testing.TB, bootstrap bool, conf map[string]string) (*RaftBackend, string) {
+func getRaftInternal(t testing.TB, bootstrap bool, conf map[string]string, logOutput io.Writer) (*RaftBackend, string) {
 	id, err := uuid.GenerateUUID()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	logger := hclog.New(&hclog.LoggerOptions{
-		Name:  fmt.Sprintf("raft-%s", id),
-		Level: hclog.Trace,
+		Name:   fmt.Sprintf("raft-%s", id),
+		Level:  hclog.Trace,
+		Output: logOutput,
 	})
 
 	conf["node_id"] = id
@@ -84,6 +89,5 @@ func getRaftWithDirAndConfig(t testing.TB, bootstrap bool, conf map[string]strin
 	}
 
 	backend.DisableAutopilot()
-
 	return backend, conf["path"]
 }

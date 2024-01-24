@@ -1,0 +1,3 @@
+```release-note:feature
+**Custom messages**: Introduces custom messages settings, allowing users to view, and operators to configure system-wide messages.
+```

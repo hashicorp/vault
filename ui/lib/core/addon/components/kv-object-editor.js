@@ -27,6 +27,7 @@ import KVObject from 'vault/lib/kv-object';
  * @param {string} value - the value is captured from the model.
  * @param {function} onChange - function that captures the value on change
  * @param {boolean} [isMasked = false] - when true the <MaskedInput> renders instead of the default <textarea> to input the value portion of the key/value object 
+ * @param {boolean} [isSingleRow = false] - when true the kv object editor will only show one row and hide the Add button
  * @param {function} [onKeyUp] - function passed in that handles the dom keyup event. Used for validation on the kv custom metadata.
  * @param {string} [label] - label displayed over key value inputs
  * @param {string} [labelClass] - override default label class in FormFieldLabel component
@@ -55,7 +56,10 @@ export default class KvObjectEditor extends Component {
   @action
   createKvData(elem, [value]) {
     this.kvData = KVObject.create({ content: [] }).fromJSON(value);
-    this.addRow();
+
+    if (!this.args.isSingleRow || !value || Object.keys(value).length < 1) {
+      this.addRow();
+    }
   }
   @action
   addRow() {
@@ -86,6 +90,9 @@ export default class KvObjectEditor extends Component {
   }
   @action
   validateKey(rowIndex, event) {
+    if (this.args.allowWhiteSpace) {
+      return;
+    }
     const { value } = event.target;
     const keyHasWhitespace = new RegExp('\\s', 'g').test(value);
     const rows = [...this.whitespaceWarningRows];
