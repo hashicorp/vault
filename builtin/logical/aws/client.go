@@ -148,11 +148,7 @@ var _ stscreds.TokenFetcher = (*PluginIdentityTokenFetcher)(nil)
 
 func (f PluginIdentityTokenFetcher) FetchToken(ctx aws.Context) ([]byte, error) {
 	nsCtx := namespace.ContextWithNamespace(ctx, f.ns)
-<<<<<<< HEAD
 	resp, err := f.sys.GenerateIdentityToken(nsCtx, &pluginutil.IdentityTokenRequest{
-=======
-	resp, err := f.sys.GenerateIdentityToken(nsCtx, pluginutil.IdentityTokenRequest{
->>>>>>> plugin-workload-identity
 		Audience: f.audience,
 		TTL:      f.ttl,
 	})

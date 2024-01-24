@@ -453,24 +453,24 @@ func (d dynamicSystemView) ClusterID(ctx context.Context) (string, error) {
 	return clusterInfo.ID, nil
 }
 
-func (d dynamicSystemView) GenerateIdentityToken(ctx context.Context, req pluginutil.IdentityTokenRequest) (pluginutil.IdentityTokenResponse, error) {
+func (d dynamicSystemView) GenerateIdentityToken(ctx context.Context, req *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return pluginutil.IdentityTokenResponse{}, err
+		return &pluginutil.IdentityTokenResponse{}, err
 	}
 
 	identityMountPath := ns.Path + "identity/"
 	storage := d.core.router.MatchingStorageByAPIPath(ctx, identityMountPath)
 	if storage == nil {
-		return pluginutil.IdentityTokenResponse{}, fmt.Errorf("failed to find storage entry for identity mount at %s", identityMountPath)
+		return &pluginutil.IdentityTokenResponse{}, fmt.Errorf("failed to find storage entry for identity mount at %s", identityMountPath)
 	}
 
 	token, ttl, err := d.core.IdentityStore().generatePluginIdentityToken(ctx, storage, d.mountEntry, req.Audience, req.TTL)
 	if err != nil {
-		return pluginutil.IdentityTokenResponse{}, err
+		return &pluginutil.IdentityTokenResponse{}, err
 	}
 
-	return pluginutil.IdentityTokenResponse{
+	return &pluginutil.IdentityTokenResponse{
 		Token: pluginutil.IdentityToken(token),
 		TTL:   ttl,
 	}, nil

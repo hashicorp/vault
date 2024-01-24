@@ -24,10 +24,6 @@ replace github.com/hashicorp/vault/api/auth/userpass => ./api/auth/userpass
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
-replace github.com/hashicorp/vault-plugin-secrets-gcp => /Users/vinaygopalan/Desktop/vault-projects/vault-plugin-secrets-gcp
-
-replace github.com/hashicorp/go-gcp-common => /Users/vinaygopalan/go/src/github.com/hashicorp/go-gcp-common
-
 require (
 	cloud.google.com/go/cloudsqlconn v1.4.3
 	cloud.google.com/go/monitoring v1.16.1
@@ -88,7 +84,7 @@ require (
 	github.com/hashicorp/go-bexpr v0.1.12
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192
-	github.com/hashicorp/go-gcp-common v0.8.0
+	github.com/hashicorp/go-gcp-common v0.8.1-0.20240124022842-d7cdd48f6e55
 	github.com/hashicorp/go-hclog v1.5.0
 	github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.0
 	github.com/hashicorp/go-kms-wrapping/v2 v2.0.13
@@ -151,7 +147,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-ad v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.15.1
 	github.com/hashicorp/vault-plugin-secrets-azure v0.16.3
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.17.0
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.6-0.20240124030247-c4f7b0b16ff0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.15.1
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.6.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.16.2
@@ -162,7 +158,7 @@ require (
 	github.com/hashicorp/vault/api v1.10.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.10.0
+	github.com/hashicorp/vault/sdk v0.10.2-0.20240119000100-06442c4a3c2f
 	github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jackc/pgx/v4 v4.18.1
