@@ -67,7 +67,8 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
     assert.dom(PAGE.modalBody(modalId)).hasText('here is a cool message');
     await click(PAGE.modalButton(modalId));
     assert.dom(PAGE.alertTitle(alertId)).hasText('Banner title');
-    assert.dom(PAGE.alertDescription(alertId)).hasText('hello world hello wolrd some alert link');
+    assert.dom(PAGE.alertDescription(alertId)).hasText('hello world hello wolrd');
+    assert.dom(PAGE.alertAction('link')).hasText('some alert link');
   });
   test('it shows the multiple modal messages', async function (assert) {
     const modalIdOne = 'some-awesome-id-2';
@@ -105,8 +106,9 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
     });
     await visit('/vault/auth');
     assert.dom(PAGE.alertTitle(bannerIdOne)).hasText('Banner title 1');
-    assert.dom(PAGE.alertDescription(bannerIdOne)).hasText('hello world hello wolrd some alert link');
+    assert.dom(PAGE.alertDescription(bannerIdOne)).hasText('hello world hello wolrd');
     assert.dom(PAGE.alertTitle(bannerIdTwo)).hasText('Banner title 2');
     assert.dom(PAGE.alertDescription(bannerIdTwo)).hasText('here is a cool message');
+    assert.dom(PAGE.alertAction('link')).hasText('some alert link');
   });
 });

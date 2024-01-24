@@ -38,7 +38,7 @@
         data-test-button="preview"
       />
 
-      <Hds::Button @text="{{if @message.isNew 'Create' 'Edit'}} message" data-test-button="create-message" type="submit" />
+      <Hds::Button @text="{{if @message.isNew 'Create message' 'Save'}}" data-test-button="create-message" type="submit" />
 
       <Hds::Button @text="Cancel" @color="secondary" {{on "click" this.cancel}} />
     </Hds::ButtonSet>
