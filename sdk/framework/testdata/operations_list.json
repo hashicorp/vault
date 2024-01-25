@@ -12,10 +12,6 @@
   "paths": {
     "/foo/{id}": {
       "description": "Synopsis",
-      "x-vault-sudo": true,
-      "x-vault-displayAttrs": {
-        "navigation": true
-      },
       "parameters": [
         {
           "name": "format",
@@ -35,33 +31,40 @@
           "required": true
         }
       ],
+      "x-vault-sudo": true,
+      "x-vault-displayAttrs": {
+        "navigation": true
+      },
       "get": {
-        "operationId": "getFooId",
-        "tags": ["secrets"],
         "summary": "List Summary",
         "description": "List Description",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        },
+        "operationId": "getFooId",
+        "tags": [
+          "secrets"
+        ],
         "parameters": [
           {
             "name": "list",
             "description": "Must be set to `true`",
-            "required": true,
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["true"]
-            }
+              "enum": [
+                "true"
+              ]
+            },
+            "required": true
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
       }
     }
   },
   "components": {
-    "schemas": {
-    }
+    "schemas": {}
   }
 }
