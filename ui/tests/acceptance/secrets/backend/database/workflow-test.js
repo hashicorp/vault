@@ -14,9 +14,20 @@ import ENV from 'vault/config/environment';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import flashMessage from 'vault/tests/pages/components/flash-message';
-import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
+import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 
 const flash = create(flashMessage);
+const consoleComponent = create(consoleClass);
+function mountEngineCmd(type, customName = '') {
+  const name = customName || type;
+  if (type === 'kv-v2') {
+    return `write sys/mounts/${name} type=kv options=version=2`;
+  }
+  return `write sys/mounts/${name} type=${type}`;
+}
+function deleteEngineCmd(name) {
+  return `delete sys/mounts/${name}`;
+}
 
 const PAGE = {
   // GENERIC
@@ -27,7 +38,7 @@ const PAGE = {
   infoRowValue: (label) => `[data-test-row-value="${label}"]`,
   infoRowValueDiv: (label) => `[data-test-value-div="${label}"]`,
   // CONNECTIONS
-  rotateModal: '[data-test-db-connection-modal-title]',
+  rotateModal: '[data-test-database-rotate-root-modal] [data-test-modal-title]',
   confirmRotate: '[data-test-enable-rotate-connection]',
   skipRotate: '[data-test-enable-connection]',
   // ROLES
@@ -71,12 +82,12 @@ module('Acceptance | database workflow', function (hooks) {
     this.backend = `db-workflow-${uuidv4()}`;
     this.store = this.owner.lookup('service:store');
     await authPage.login();
-    await runCmd(mountEngineCmd('database', this.backend), false);
+    await consoleComponent.runCommands(mountEngineCmd('database', this.backend), false);
   });
 
   hooks.afterEach(async function () {
     await authPage.login();
-    return runCmd(deleteEngineCmd(this.backend));
+    return consoleComponent.runCommands(deleteEngineCmd(this.backend));
   });
 
   module('connections', function (hooks) {
@@ -327,7 +338,7 @@ module('Acceptance | database workflow', function (hooks) {
       assert
         .dom(`[data-test-value-div="Password"] [data-test-masked-input]`)
         .hasText('generated-password', 'Password is generated');
-      assert.dom(PAGE.infoRowValue('Lease Duration')).hasText('3600', 'shows lease duration from response');
+      assert.dom(PAGE.infoRowValue('Lease Duration')).hasText('1 hour', 'shows lease duration from response');
       assert
         .dom(PAGE.infoRowValue('Lease ID'))
         .hasText(`database/creds/${roleName}/abcd`, 'shows lease ID from response');
