@@ -12,10 +12,6 @@
   "paths": {
     "/foo/{id}": {
       "description": "Synopsis",
-      "x-vault-sudo": true,
-      "x-vault-displayAttrs": {
-        "navigation": true
-      },
       "parameters": [
         {
           "name": "format",
@@ -35,32 +31,36 @@
           "required": true
         }
       ],
+      "x-vault-sudo": true,
+      "x-vault-displayAttrs": {
+        "navigation": true
+      },
       "get": {
+        "summary": "List Summary",
+        "description": "List Description",
         "operationId": "kv-list-foo-id",
         "tags": [
           "secrets"
         ],
-        "summary": "List Summary",
-        "description": "List Description",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        },
         "parameters": [
           {
             "name": "list",
             "description": "Must be set to `true`",
-            "required": true,
             "in": "query",
             "schema": {
               "type": "string",
               "enum": [
                 "true"
               ]
-            }
+            },
+            "required": true
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
       }
     }
   },
