@@ -322,7 +322,7 @@ func TestMakeConfig(t *testing.T) {
 			responseWrapInfoTimes: 0,
 
 			mlockEnabled:      false,
-			mlockEnabledTimes: 1,
+			mlockEnabledTimes: 2,
 
 			expectedConfig: &plugin.ClientConfig{
 				HandshakeConfig: plugin.HandshakeConfig{
@@ -341,9 +341,10 @@ func TestMakeConfig(t *testing.T) {
 					plugin.ProtocolNetRPC,
 					plugin.ProtocolGRPC,
 				},
-				Logger:      hclog.NewNullLogger(),
-				AutoMTLS:    true,
-				SkipHostEnv: true,
+				Logger:              hclog.NewNullLogger(),
+				AutoMTLS:            true,
+				SkipHostEnv:         true,
+				GRPCBrokerMultiplex: true,
 				UnixSocketConfig: &plugin.UnixSocketConfig{
 					Group: strconv.Itoa(os.Getgid()),
 				},
