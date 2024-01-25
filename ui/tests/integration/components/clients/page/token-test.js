@@ -159,21 +159,32 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
   });
 
   test('it should render usage stats', async function (assert) {
-    this.activity.byMonth = null;
+    assert.expect(6);
+
+    this.activity.endTime = this.activity.startTime;
     const {
       total: { clients, entity_clients, non_entity_clients },
     } = this.activity;
 
-    await this.renderComponent();
+    const checkUsage = () => {
+      assert
+        .dom(ts.charts.usageStat('total-clients'))
+        .hasText(formatNumber([clients]), 'Total clients value renders');
+      assert
+        .dom(ts.charts.usageStat('entity-clients'))
+        .hasText(formatNumber([entity_clients]), 'Entity clients value renders');
+      assert
+        .dom(ts.charts.usageStat('non-entity-clients'))
+        .hasText(formatNumber([non_entity_clients]), 'Non-entity clients value renders');
+    };
 
-    assert
-      .dom(ts.charts.usageStat('total-clients'))
-      .hasText(formatNumber([clients]), 'Total clients value renders');
-    assert
-      .dom(ts.charts.usageStat('entity-clients'))
-      .hasText(formatNumber([entity_clients]), 'Entity clients value renders');
-    assert
-      .dom(ts.charts.usageStat('non-entity-clients'))
-      .hasText(formatNumber([non_entity_clients]), 'Non-entity clients value renders');
+    // total usage should display for single month query
+    await this.renderComponent();
+    checkUsage();
+
+    // total usage should display when there is no monthly data
+    this.activity.byMonth = null;
+    await this.renderComponent();
+    checkUsage();
   });
 });
