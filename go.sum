@@ -2092,14 +2092,12 @@ github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.8 h1:uvdmC28xaqklq
 github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.8/go.mod h1:zHX8LhkrU/M8sJkIQ85Dsrg7aqNEonY1+l6MlUC+6O4=
 github.com/hashicorp/go-memdb v1.3.4 h1:XSL3NR682X/cVk2IeV0d70N4DZ9ljI885xAEU8IoK3c=
 github.com/hashicorp/go-memdb v1.3.4/go.mod h1:uBTr1oQbtuMgd1SSGoR8YV27eT3sBHbYiNm53bMpgSg=
-github.com/hashicorp/go-metrics v0.5.1 h1:rfPwUqFU6uZXNvGl4hzjY8LEBsqFVU4si1H9/Hqck/U=
-github.com/hashicorp/go-metrics v0.5.1/go.mod h1:KEjodfebIOuBYSAe/bHTm+HChmKSxAOXPBieMLYozDE=
 github.com/hashicorp/go-msgpack v0.5.3/go.mod h1:ahLV/dePpqEmjfWmKiqvPkv/twdG7iPBM1vqhUKIvfM=
 github.com/hashicorp/go-msgpack v0.5.5/go.mod h1:ahLV/dePpqEmjfWmKiqvPkv/twdG7iPBM1vqhUKIvfM=
 github.com/hashicorp/go-msgpack v1.1.5 h1:9byZdVjKTe5mce63pRVNP1L7UAmdHOTEMGehn6KvJWs=
 github.com/hashicorp/go-msgpack v1.1.5/go.mod h1:gWVc3sv/wbDmR3rQsj1CAktEZzoz1YNK9NfGLXJ69/4=
-github.com/hashicorp/go-msgpack/v2 v2.0.0 h1:c1fiLq1LNghmLOry1ipGhvLDi+/zEoaEP2JrE1oFJ9s=
-github.com/hashicorp/go-msgpack/v2 v2.0.0/go.mod h1:JIxYkkFJRDDRSoWQBSh7s9QAVThq+82iWmUpmE4jKak=
+github.com/hashicorp/go-msgpack/v2 v2.1.1 h1:xQEY9yB2wnHitoSzk/B9UjXWRQ67QKu5AOm8aFp8N3I=
+github.com/hashicorp/go-msgpack/v2 v2.1.1/go.mod h1:upybraOAblm4S7rx0+jeNy+CWWhzywQsSRV5033mMu4=
 github.com/hashicorp/go-multierror v0.0.0-20161216184304-ed905158d874/go.mod h1:JMRHfdO9jKNzS/+BTlxCjKNQHg/jZAft8U7LloJvN7I=
 github.com/hashicorp/go-multierror v1.0.0/go.mod h1:dHtQlpGsu+cZNNAkkCN/P3hoUDHhCYQXV3UM06sGGrk=
 github.com/hashicorp/go-multierror v1.1.0/go.mod h1:spPvp8C1qA32ftKqdAHm4hHTbPw+vmowP0z+KUhOZdA=
@@ -2248,8 +2246,8 @@ github.com/hashicorp/vault-plugin-database-snowflake v0.9.1 h1:KWwZfBVY1AGhuGogz
 github.com/hashicorp/vault-plugin-database-snowflake v0.9.1/go.mod h1:COMbAUyRr1KgNLv0R3n0/olFoy3JkXq57VYd5+9ulPw=
 github.com/hashicorp/vault-plugin-mock v0.16.1 h1:5QQvSUHxDjEEbrd2REOeacqyJnCLPD51IQzy71hx8P0=
 github.com/hashicorp/vault-plugin-mock v0.16.1/go.mod h1:83G4JKlOwUtxVourn5euQfze3ZWyXcUiLj2wqrKSDIM=
-github.com/hashicorp/vault-plugin-secrets-ad v0.16.1 h1:Ns0/JcpOrC3+yCYcV9+SbehfRkob1pB793VILE1yo2E=
-github.com/hashicorp/vault-plugin-secrets-ad v0.16.1/go.mod h1:WeR9mm1FT3jmuf0SDJmqy7N/9Y34Qv8elt43/k/oaW0=
+github.com/hashicorp/vault-plugin-secrets-ad v0.16.2 h1:AkNt0No686jr0gKxQZQi2QM3b5RrHnbbeHPvUlCxIV0=
+github.com/hashicorp/vault-plugin-secrets-ad v0.16.2/go.mod h1:RLBzi/8sdtwcCpwFHkZEPWKcLKzPEToKYj9ROQs0o6g=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.15.1 h1:LrcvOhx1hy8NvENdORrJUcpuY4JHDD5NvDILdlOgefw=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.15.1/go.mod h1:YKoctp9/8VkjIx827IrNCqSow/Z88wCz3Qb/sAFLe6o=
 github.com/hashicorp/vault-plugin-secrets-azure v0.16.3 h1:XqVsmkGK5szTZe3YpMlHB5v+QceujZDR7ghY/YOg7jk=
