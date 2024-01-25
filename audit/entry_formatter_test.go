@@ -1154,6 +1154,9 @@ func TestEntryFormatter_Process_Redaction(t *testing.T) {
 // pre-configured conditions/fields of the EntryFormatter. It covers some scenarios
 // where we expect errors due to invalid input, which is unlikely to happen in reality.
 func TestEntryFormatter_excludeFields(t *testing.T) {
+	// Side-note: this also ensures that we don't blast values that we later need
+	// to compare (i.e. in the method we have a source object we reference and
+	// a result object that has values excluded.
 	jsonExclusion := `[
 		{
 			"condition":  "\"/auth/client_token\" matches \"hmac.+\"",
@@ -1233,8 +1236,9 @@ func TestEntryFormatter_excludeFields(t *testing.T) {
 	require.NotEmpty(t, after.Auth.ClientToken)
 }
 
-// TestEntryFormatter_excludeFields_data checks how we handle dynamic data in a response.
-func TestEntryFormatter_excludeFields_data(t *testing.T) {
+// TestEntryFormatter_excludeFields_condition_data checks how we handle an expression
+// that addresses dynamic data in a response.
+func TestEntryFormatter_excludeFields_condition_data(t *testing.T) {
 	jsonExclusion := `[
 		{
 			"condition":  "\"/response/data/key1\" is not empty",
@@ -1285,6 +1289,74 @@ func TestEntryFormatter_excludeFields_data(t *testing.T) {
 
 	// Check we still have some values we'd expect
 	require.NotEmpty(t, after.Auth.ClientToken)
+}
+
+// TestEntryFormatter_excludeFields_condition_slice tests that we can evaluate a
+// condition expression which addresses an element in a slice.
+func TestEntryFormatter_excludeFields_condition_slice(t *testing.T) {
+	jsonExclusion := `[
+		{
+			"condition":  "\"/auth/policies/1\" == bar",
+			"fields": [ "/auth/policies/0" ]
+		}
+	]`
+
+	// Create the formatter node.
+	cfg, err := NewFormatterConfig()
+	require.NoError(t, err)
+	ss := newStaticSalt(t)
+	formatter, err := NewEntryFormatter(cfg, ss, WithExclusions(jsonExclusion))
+	require.NoError(t, err)
+	require.NotNil(t, formatter)
+
+	// Pass in a real deal ResponseEntry and make sure we redact stuff.
+	resp := &ResponseEntry{
+		Auth: &Auth{
+			ClientToken: "hmac:sdfghgfdsdfgt6543456543",
+			Policies:    []string{"foo", "bar"},
+		},
+	}
+	res, err := formatter.excludeFields(resp)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	// Parse the map back to a ResponseEntry, so we can check things were excluded.
+	var after *ResponseEntry
+	d, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{TagName: "json", Result: &after})
+	require.NoError(t, err)
+	err = d.Decode(res)
+	require.NoError(t, err)
+
+	// Check we excluded the right values.
+	require.NotEmpty(t, after.Auth.Policies)
+	require.Len(t, after.Auth.Policies, 1)
+	require.Equal(t, "bar", after.Auth.Policies[0])
+
+	// Check we still have some values we'd expect
+	require.NotEmpty(t, after.Auth.ClientToken)
+	require.Equal(t, "hmac:sdfghgfdsdfgt6543456543", after.Auth.ClientToken)
+
+	// Also try when the slice is smaller than we'd expect
+	resp.Auth.Policies = []string{"bar"}
+
+	res, err = formatter.excludeFields(resp)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	// Parse the map back to a ResponseEntry, so we can check things were excluded.
+	d, err = mapstructure.NewDecoder(&mapstructure.DecoderConfig{TagName: "json", Result: &after})
+	require.NoError(t, err)
+	err = d.Decode(res)
+	require.NoError(t, err)
+
+	// Check we excluded the right values.
+	require.NotEmpty(t, after.Auth.Policies)
+	require.Len(t, after.Auth.Policies, 1)
+	require.Equal(t, "bar", after.Auth.Policies[0])
+
+	// Check we still have some values we'd expect
+	require.NotEmpty(t, after.Auth.ClientToken)
+	require.Equal(t, "hmac:sdfghgfdsdfgt6543456543", after.Auth.ClientToken)
 }
 
 // hashExpectedValueForComparison replicates enough of the audit HMAC process on a piece of expected data in a test,

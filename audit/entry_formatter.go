@@ -694,15 +694,29 @@ func (f *EntryFormatter) excludeFields(entry any) (map[string]any, error) {
 			shouldRemoveFields, err = exc.Evaluator.Evaluate(sourceMap)
 			switch {
 			// There may be cases when the evaluator gives us an error, but it's
-			// because the datum doesn't have the same structure as the expression
-			// it was created with.
-			// For example, a RequestEntry doesn't have a response inside of it.
+			// because the datum doesn't currently have the same structure as
+			// the expression it was created with.
+			// Examples:
+			//
+			// 1. (ErrNotFound) RequestEntry doesn't have a 'Response' inside of it.
 			// So an expression such as "\"/response/mount_type\" == kv" should not
 			// cause a failure when we audit a request, which could block audit.
-			case errors.Is(err, pointerstructure.ErrNotFound):
-				// We can ignore this error, we won't attempt to exclude the fields
-				// as the condition failed and shouldRemoveFields will have been
-				// set to false.
+			//
+			// 2. (ErrNotFound) Both Request and Response have a Data property which
+			// is flexible as it is described as map[string]interface{}, the
+			// following expression is valid but wouldn't run without error on
+			// every type of audit entry: "\"response/data/my-key\" is not empty"
+			//
+			// 3. (ErrOutOfRange) Attempting to evaluate a part of an array/slice
+			// that doesn't exist shouldn't stop us from auditing, it should just
+			// mean that we don't redact fields as the condition failed, if we only
+			// have a single auth policy but use: "\"/auth/policies/1\" == bar"
+			case errors.Is(err, pointerstructure.ErrNotFound),
+				errors.Is(err, pointerstructure.ErrOutOfRange):
+				// We can ignore this error, we won't attempt to exclude fields
+				// as the condition failed.
+				// shouldRemoveFields will have been set to false as a result of
+				// the Evaluate call.
 			case err != nil:
 				return nil, fmt.Errorf("%s: unable to evaluate conditional expression associated with fields: '%s': %w", op, strings.Join(exc.Fields, ", "), err)
 			}
