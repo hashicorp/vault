@@ -819,19 +819,6 @@ type CreationParameters struct {
 
 	// The explicit SKID to use; especially useful for cross-signing.
 	SKID []byte
-
-	// If this was taken from a CSR, the Change Subject Name Field, Necessary for EST
-	// https://datatracker.ietf.org/doc/html/rfc6402#section-2.8
-	ChangeSubject *ChangeSubjectName
-}
-
-type ChangeSubjectName struct {
-	Subject        pkix.Name
-	DNSNames       []string
-	EmailAddresses []string
-	IPAddresses    []net.IP
-	URIs           []*url.URL
-	OtherSANs      map[string][]string
 }
 
 type CreationBundle struct {
