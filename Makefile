@@ -160,9 +160,9 @@ protolint: prep check-tools-external
 # dependency.
 prep: check-go-version
 	@echo "==> Running go generate..."
-	GOARCH= GOOS= $(GO_CMD) generate $(MAIN_PACKAGES)
-	GOARCH= GOOS= cd api && $(GO_CMD) generate $(API_PACKAGES)
-	GOARCH= GOOS= cd sdk && $(GO_CMD) generate $(SDK_PACKAGES)
+	@GOARCH= GOOS= $(GO_CMD) generate $(MAIN_PACKAGES)
+	@GOARCH= GOOS= cd api && $(GO_CMD) generate $(API_PACKAGES)
+	@GOARCH= GOOS= cd sdk && $(GO_CMD) generate $(SDK_PACKAGES)
 	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
 
 # bootstrap the build by generating any necessary code and downloading additional tools that may
