@@ -322,7 +322,7 @@ func TestMakeConfig(t *testing.T) {
 			responseWrapInfoTimes: 0,
 
 			mlockEnabled:      false,
-			mlockEnabledTimes: 1,
+			mlockEnabledTimes: 2,
 
 			expectedConfig: &plugin.ClientConfig{
 				HandshakeConfig: plugin.HandshakeConfig{
