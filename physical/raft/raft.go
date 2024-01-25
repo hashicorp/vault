@@ -148,6 +148,18 @@ type RaftBackend struct {
 	// startup.
 	bootstrapConfig *raft.Configuration
 
+	// closers is a list of managed resource (such as stores above or wrapper
+	// layers around them). That should have Close called on them when the backend
+	// is closed. We need to take care that each distinct object is closed only
+	// once which might involve knowing how wrappers to stores work. For example
+	// raft wal verifier wraps LogStore and is an io.Closer but it also closes the
+	// underlying LogStore so if we add it here we shouldn't also add the actual
+	// LogStore or StableStore if it's the same underlying instance. We could use
+	// a map[io.Closer]bool to prevent double registrations, but that doesn't
+	// solve the problem of "knowing" whether or not calling Close on some wrapper
+	// also calls "Close" on it's underlying.
+	closers []io.Closer
+
 	// dataDir is the location on the local filesystem that raft and FSM data
 	// will be stored.
 	dataDir string
@@ -449,6 +461,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	var logStore raft.LogStore
 	var stableStore raft.StableStore
 	var snapStore raft.SnapshotStore
+	var closers []io.Closer
 
 	var devMode bool
 	if devMode {
@@ -485,6 +498,9 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 			if err != nil {
 				return nil, fmt.Errorf("fail to open write-ahead-log: %w", err)
 			}
+			// We need to Close the store but don't register it in closers yet because
+			// if we are going to wrap it with a verifier we need to close through
+			// that instead.
 
 			stableStore = wal
 			logStore = wal
@@ -501,6 +517,9 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 			if err != nil {
 				return nil, err
 			}
+			// We need to Close the store but don't register it in closers yet because
+			// if we are going to wrap it with a verifier we need to close through
+			// that instead.
 
 			stableStore = store
 			logStore = store
@@ -522,6 +541,21 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		logStore = v
 	}
 
+	// Register the logStore as a closer whether or not it's wrapped in a verifier
+	// (which is a closer). We do this before the LogCache since that is _not_ an
+	// io.Closer.
+	if closer, ok := logStore.(io.Closer); ok {
+		closers = append(closers, closer)
+	}
+	// Note that we DON'T register the stableStore as a closer because right now
+	// we always use the same underlying object as the logStore and we don't want
+	// to call close on it twice. If we ever support different stable store and
+	// log store then this logic will get even more complex! We don't register
+	// snapStore because none of our snapshot stores are io.Closers.
+
+	// Close the FSM
+	closers = append(closers, fsm)
+
 	// Wrap the store in a LogCache to improve performance.
 	cacheStore, err := raft.NewLogCache(raftLogCacheSize, logStore)
 	if err != nil {
@@ -541,6 +575,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		logStore:                    logStore,
 		stableStore:                 stableStore,
 		snapStore:                   snapStore,
+		closers:                     closers,
 		dataDir:                     backendConfig.Path,
 		localID:                     backendConfig.NodeId,
 		permitPool:                  physical.NewPermitPool(physical.DefaultParallelOperations),
@@ -596,21 +631,11 @@ func (b *RaftBackend) Close() error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	if err := b.fsm.Close(); err != nil {
-		return err
-	}
-
-	// This relies on logStore == stableStore and not having any middleware
-	// wrappers around the stableStore (the logStore is always wrapped
-	// which is why we call close on it rather than stableStore so all
-	// middleware see the Close too). If these assumptions change,
-	// it's possible this will break, and we should adjust accordingly.
-	if closer, ok := b.logStore.(io.Closer); ok {
-		if err := closer.Close(); err != nil {
+	for _, cl := range b.closers {
+		if err := cl.Close(); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
