@@ -191,6 +191,7 @@ func WithHeaderFormatter(f HeaderFormatter) Option {
 }
 
 // WithExclusions provides an Option to supply exclusions in a JSON string format.
+// 'condition' is an optional value in the JSON.
 // See 'exclusion' type for more information and example below:
 // Expected JSON format:
 //
