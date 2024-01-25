@@ -27,7 +27,7 @@ const LICENSE_START = startOfMonth(subMonths(STATIC_NOW, 6)); // 2022-07-01
 // upgrade happened 1 month after license start
 const UPGRADE_DATE = addMonths(LICENSE_START, 1); // 2022-08-01
 
-module('Acceptance | client counts token', function (hooks) {
+module('Acceptance | client counts dashboard', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
@@ -50,7 +50,7 @@ module('Acceptance | client counts token', function (hooks) {
   });
 
   test('shows warning when config off, no data', async function (assert) {
-    assert.expect(4);
+    assert.expect(3);
 
     this.server.get('sys/internal/counters/activity', () => overrideResponse(204));
     this.server.get('sys/internal/counters/config', () => {
@@ -65,15 +65,14 @@ module('Acceptance | client counts token', function (hooks) {
       };
     });
 
-    await visit('/vault/clients/token');
-    assert.strictEqual(currentURL(), '/vault/clients/token');
-    assert.dom(SELECTORS.tab('token')).hasClass('active', 'Entity/Non-entity tab is active');
+    await visit('/vault/clients/dashboard');
+    assert.strictEqual(currentURL(), '/vault/clients/dashboard');
     assert.dom(SELECTORS.emptyStateTitle).hasText('Data tracking is disabled');
     assert.dom(SELECTORS.filterBar).doesNotExist('Filter bar is hidden when no data available');
   });
 
   test('shows empty state when config enabled and no data', async function (assert) {
-    assert.expect(4);
+    assert.expect(3);
 
     this.server.get('sys/internal/counters/activity', () => overrideResponse(204));
     this.server.get('sys/internal/counters/config', () => {
@@ -87,9 +86,8 @@ module('Acceptance | client counts token', function (hooks) {
       };
     });
 
-    await visit('/vault/clients/token');
-    assert.strictEqual(currentURL(), '/vault/clients/token');
-    assert.dom(SELECTORS.tab('token')).hasClass('active', 'Entity/Non-entity tab is active');
+    await visit('/vault/clients/dashboard');
+    assert.strictEqual(currentURL(), '/vault/clients/dashboard');
     assert.dom(SELECTORS.emptyStateTitle).hasTextContaining('No data received');
     assert.dom(SELECTORS.filterBar).doesNotExist('Does not show filter bar');
   });
@@ -98,8 +96,8 @@ module('Acceptance | client counts token', function (hooks) {
   skip('visiting entity/non-entity tab with config on and data with mounts', async function (assert) {
     assert.expect(8);
 
-    await visit('/vault/clients/token');
-    assert.strictEqual(currentURL(), '/vault/clients/token');
+    await visit('/vault/clients/dashboard');
+    assert.strictEqual(currentURL(), '/vault/clients/dashboard');
     assert
       .dom(SELECTORS.dateDisplay)
       .hasText('July 2022', 'billing start month is correctly parsed from license');
@@ -123,8 +121,8 @@ module('Acceptance | client counts token', function (hooks) {
   skip('updates correctly when querying date ranges', async function (assert) {
     assert.expect(27);
 
-    await visit('/vault/clients/token');
-    assert.strictEqual(currentURL(), '/vault/clients/token');
+    await visit('/vault/clients/dashboard');
+    assert.strictEqual(currentURL(), '/vault/clients/dashboard');
     // query for single, historical month with no new counts
     await click(SELECTORS.rangeDropdown);
     await click('[data-test-show-calendar]');
@@ -230,8 +228,8 @@ module('Acceptance | client counts token', function (hooks) {
   skip('totals filter correctly with full data', async function (assert) {
     assert.expect(21);
 
-    await visit('/vault/clients/token');
-    assert.strictEqual(currentURL(), '/vault/clients/token', 'clients/token URL is correct');
+    await visit('/vault/clients/dashboard');
+    assert.strictEqual(currentURL(), '/vault/clients/dashboard', 'clients/dashboard URL is correct');
     assert.dom(SELECTORS.tab('token')).hasClass('active', 'Entity/Non-entity tab is active');
     assert
       .dom(SELECTORS.runningTotalMonthlyCharts)
@@ -305,7 +303,7 @@ module('Acceptance | client counts token', function (hooks) {
   });
 
   test('shows warning if upgrade happened within license period', async function (assert) {
-    assert.expect(4);
+    assert.expect(3);
 
     this.server.get('sys/version-history', function () {
       return {
@@ -333,9 +331,8 @@ module('Acceptance | client counts token', function (hooks) {
       };
     });
 
-    await visit('/vault/clients/token');
-    assert.strictEqual(currentURL(), '/vault/clients/token', 'clients/token URL is correct');
-    assert.dom(SELECTORS.tab('token')).hasClass('active', 'Entity/Non-entity tab is active');
+    await visit('/vault/clients/dashboard');
+    assert.strictEqual(currentURL(), '/vault/clients/dashboard', 'clients/dashboard URL is correct');
     assert
       .dom(SELECTORS.upgradeWarning)
       .hasTextContaining(
@@ -368,17 +365,16 @@ module('Acceptance | client counts token', function (hooks) {
       };
     });
 
-    await visit('/vault/clients/token');
-    assert.strictEqual(currentURL(), '/vault/clients/token', 'clients/token URL is correct');
+    await visit('/vault/clients/dashboard');
+    assert.strictEqual(currentURL(), '/vault/clients/dashboard', 'clients/dashboard URL is correct');
     assert.dom(SELECTORS.emptyStateTitle).doesNotExist('No data for this billing period');
   });
 
   test('shows correct interface if no permissions on license', async function (assert) {
     this.server.get('/sys/license/status', () => overrideResponse(403));
 
-    await visit('/vault/clients/token');
-    assert.strictEqual(currentURL(), '/vault/clients/token', 'clients/token URL is correct');
-    assert.dom(SELECTORS.tab('token')).hasClass('active', 'Entity/Non-entity tab is active');
+    await visit('/vault/clients/dashboard');
+    assert.strictEqual(currentURL(), '/vault/clients/dashboard', 'clients/dashboard URL is correct');
     // Message changes depending on ent or OSS
     assert.dom(SELECTORS.emptyStateTitle).exists('Empty state exists');
     assert.dom(SELECTORS.monthDropdown).exists('Dropdown exists to select month');
@@ -391,8 +387,8 @@ module('Acceptance | client counts token', function (hooks) {
     this.server.get('sys/internal/counters/config', () => overrideResponse(403));
     this.server.get('sys/internal/counters/activity', () => overrideResponse(403));
 
-    await visit('/vault/clients/token');
-    assert.strictEqual(currentURL(), '/vault/clients/token', 'clients/token URL is correct');
+    await visit('/vault/clients/dashboard');
+    assert.strictEqual(currentURL(), '/vault/clients/dashboard', 'clients/dashboard URL is correct');
     assert
       .dom(SELECTORS.emptyStateTitle)
       .includesText('start date found', 'Empty state shows no billing start date');
