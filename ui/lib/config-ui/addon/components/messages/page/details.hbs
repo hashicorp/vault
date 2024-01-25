@@ -53,6 +53,11 @@
         </InfoTableRow>
       {{/each-in}}
     {{/if}}
+  {{else if (eq attr.name "message")}}
+    <InfoTableRow
+      @label={{capitalize (humanize (dasherize attr.name))}}
+      @value={{multi-line-join (get @message attr.name)}}
+    />
   {{else}}
     <InfoTableRow @label={{capitalize (humanize (dasherize attr.name))}} @value={{get @message attr.name}} />
   {{/if}}
