@@ -50,6 +50,7 @@ const STARTING_TRANSIT_PROPS = {
   exportKeyType: null,
   exportKeyVersion: null,
   wrappedToken: null,
+  wrappedTTL: '30m',
   valid: null,
   plaintextOriginal: null,
   didDecode: false,
@@ -89,9 +90,13 @@ export default class TransitKeyActions extends Component {
   constructor() {
     super(...arguments);
     assert('@key is required for TransitKeyActions components', this.args.key);
-    assert('@selectedAction is required for TransitKeyActions components', this.args.selectedAction);
+    // @selectedAction can be null if exporting a key.
+    assert(
+      '@selectedAction is required for TransitKeyActions components',
+      this.args.selectedAction || this.args.key.supportedActions.firstObject
+    );
 
-    if (this.args.selectedAction === 'export') {
+    if (this.args.key.supportedActions.firstObject === 'export' || this.args.selectedAction === 'export') {
       this.props.exportKeyType = this.args.key.exportKeyTypes.firstObject;
       this.props.exportKeyVersion = this.args.key.validKeyVersions.lastObject;
     }
@@ -142,7 +147,7 @@ export default class TransitKeyActions extends Component {
       event.preventDefault();
     }
     const { backend, id } = this.args.key;
-    const action = this.args.selectedAction;
+    const action = this.args.selectedAction || this.args.key.supportedActions.firstObject;
     const { ...formData } = data || {};
     if (!this.props.encodedBase64) {
       if (action === 'encrypt' && !!formData.plaintext) {
@@ -158,6 +163,7 @@ export default class TransitKeyActions extends Component {
       const resp = yield this.store
         .adapterFor('transit-key')
         .keyAction(action, { backend, id, payload }, options);
+
       this.handleSuccess(resp, options, action);
     } catch (e) {
       this.errors = e.errors;

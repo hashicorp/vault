@@ -7,7 +7,7 @@
   onsubmit={{perform
     @doSubmit
     (hash param=(compact (array @exportKeyType (if this.exportVersion @exportKeyVersion))))
-    (hash wrapTTL=this.wrapTTL)
+    (hash wrapTTL=@wrappedTTL)
   }}
   ...attributes
 >
@@ -56,7 +56,7 @@
         </div>
       {{/if}}
     </div>
-    <WrapTtl @onChange={{action (mut this.wrapTTL)}} />
+    <WrapTtl @onChange={{action (mut @wrappedTTL)}} />
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
@@ -71,7 +71,7 @@
     </M.Header>
     <M.Body>
       <h2 class="title is-6">Wrapped key</h2>
-      {{#if this.wrapTTL}}
+      {{#if @wrappedTTL}}
         <Hds::Copy::Snippet
           class="has-bottom-margin-m"
           @textToCopy={{@wrappedToken}}
@@ -82,7 +82,6 @@
       {{else}}
         <div class="copy-text level is-relative">
           <pre data-test-encrypted-value="export" class="level-left">
-            {{! ARG TODO waht are keys? }}
             {{stringify @keys}}
           </pre>
           <Hds::Copy::Button
