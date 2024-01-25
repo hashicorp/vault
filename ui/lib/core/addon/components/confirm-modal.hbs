@@ -4,6 +4,7 @@
   @color={{or @color "warning"}}
   @size="small"
   @onClose={{@onClose}}
+  data-test-confirm-modal
   as |M|
 >
   {{#if @disabledMessage}}
@@ -21,7 +22,7 @@
       {{or @confirmTitle "Are you sure?"}}
     </M.Header>
     <M.Body data-test-confirm-action-message>
-      {{@confirmMessage}}
+      {{or @confirmMessage "You will not be able to recover it later."}}
     </M.Body>
     <M.Footer as |F|>
       <Hds::ButtonSet>
