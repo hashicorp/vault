@@ -23,8 +23,8 @@
     tagName="div" tetherTarget=this.tooltipTarget targetAttachment="bottom middle" attachment="bottom middle" offset="35px 0"
   }}
     <div class="chart-tooltip {{if this.isLabel ' is-label-fit-content'}}">
-      {{#each this.tooltipStats as |stat|}}
-        <p>{{stat}}</p>
+      {{#each this.tooltipText as |text|}}
+        <p>{{text}}</p>
       {{/each}}
     </div>
     <div class="chart-tooltip-arrow"></div>
