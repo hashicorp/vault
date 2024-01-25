@@ -286,6 +286,7 @@ func TestRaft_VerifierEnabled(t *testing.T) {
 	})
 }
 
+// TestRaft_ParseRaftWalBackend ensures that the raft_wal config option parses correctly and returns an error if not
 func TestRaft_ParseRaftWalBackend(t *testing.T) {
 	raftDir := t.TempDir()
 	conf := map[string]string{
@@ -408,6 +409,7 @@ func TestRaft_ParseRaftWalVerifierInterval(t *testing.T) {
 	}
 }
 
+// TestRaft_ParseAutopilotUpgradeVersion tests that autopilot_upgrade_version parses correctly and returns an error if not
 func TestRaft_ParseAutopilotUpgradeVersion(t *testing.T) {
 	raftDir := t.TempDir()
 	conf := map[string]string{
