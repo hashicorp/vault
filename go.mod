@@ -237,6 +237,7 @@ require (
 	cloud.google.com/go/iam v1.1.2 // indirect
 	cloud.google.com/go/kms v1.15.2 // indirect
 	code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f // indirect
+	dario.cat/mergo v1.0.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/99designs/keyring v1.2.2 // indirect
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
@@ -322,8 +323,8 @@ require (
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/distribution/reference v0.5.0 // indirect
 	github.com/dnephin/pflag v1.0.7 // indirect
-	github.com/docker/cli v24.0.1+incompatible // indirect
-	github.com/docker/docker v25.0.0+incompatible // indirect
+	github.com/docker/cli v25.0.1+incompatible // indirect
+	github.com/docker/docker v25.0.1+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
