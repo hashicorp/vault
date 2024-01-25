@@ -21,7 +21,7 @@ import (
 // Option is how options are passed as arguments.
 type Option func(*options) error
 
-// options are used to represent configuration for a audit related nodes.
+// options are used to represent configuration for audit related nodes.
 type options struct {
 	withID              string
 	withNow             time.Time
