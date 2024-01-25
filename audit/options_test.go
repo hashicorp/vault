@@ -730,11 +730,10 @@ func TestOptions_exclusions_validate(t *testing.T) {
 			expression: "\"/request/auth\" == foo",
 			fields:     []string{"/foo"},
 		},
-		"invalid-expression": {
-			expression:           "\"/foo/bar\" == juan",
-			fields:               []string{"/foo"},
-			isErrorExpected:      true,
-			expectedErrorMessage: "unable to evaluate exclusion condition against expected entry: request: error finding value in datum: /foo/bar at part 0: couldn't find key \"foo\": response: error finding value in datum: /foo/bar at part 0: couldn't find key \"foo\"",
+		"expression-not-request-or-response-structure": {
+			expression:      "\"/foo/bar\" == juan",
+			fields:          []string{"/foo"},
+			isErrorExpected: false,
 		},
 		"valid-fields": {
 			expression: "\"/request/auth\" == foo",

@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cjrd/allocate"
 	"github.com/hashicorp/go-bexpr"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/mitchellh/pointerstructure"
@@ -302,72 +301,21 @@ func (e *exclusion) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// validate attempts to parse the supplied fields to ensure they can be represented
-// as JSON pointers. When present, it will also evaluate the (optional) condition
-// using a sample RequestEntry and ResponseEntry.
-// NOTE: Validation will only be carried out against RequestEntry and ResponseEntry
-// types.
+// validate attempts to ensure an exclusion has fields that should be excluded,
+// and that they can be represented as JSON pointers.
+// NOTE: Due to the dynamic nature of parts of the request and response, we are
+// unable to validate that the expression condition works as intended.
+// e.g. /request/data/myKey would not appear in a vanilla RequestEntry but is
+// valid and should match when the response data contains that key.
 func (e *exclusion) validate() error {
 	if len(e.Fields) < 1 {
 		return fmt.Errorf("exclusion doesn't contain any fields: %w", event.ErrInvalidParameter)
 	}
 
-	// Validate the 'fields' first (as the condition expression is optional)
 	for _, field := range e.Fields {
 		if _, err := pointerstructure.Parse(field); err != nil {
 			return fmt.Errorf("unable to parse field '%s': %w", field, err)
 		}
-	}
-
-	// No condition expression for these fields, we can return early.
-	if e.Evaluator == nil {
-		return nil
-	}
-
-	// Generate a sample RequestEntry
-	req := new(RequestEntry)
-	if err := allocate.Zero(req); err != nil {
-		return fmt.Errorf("unable to generate sample request entry: %w", err)
-	}
-	reqMap := make(map[string]any)
-	decoder, err := mapDecoderJSON(&reqMap)
-	if err != nil {
-		return fmt.Errorf("error creating decoder for request entry: %w", err)
-	}
-	err = decoder.Decode(req)
-	if err != nil {
-		return fmt.Errorf("unable to decode sample request entry: %w", err)
-	}
-
-	// Generate a sample ResponseEntry
-	resp := new(ResponseEntry)
-	if err := allocate.Zero(resp); err != nil {
-		return fmt.Errorf("unable to generate sample response entry: %w", err)
-	}
-	respMap := make(map[string]any)
-	decoder, err = mapDecoderJSON(&respMap)
-	if err != nil {
-		return fmt.Errorf("error creating decoder for response entry: %w", err)
-	}
-	err = decoder.Decode(resp)
-	if err != nil {
-		return fmt.Errorf("unable to decode sample response entry: %w", err)
-	}
-
-	// Attempt to evaluate the condition expression against the datum for request and response.
-	_, requestError := e.Evaluator.Evaluate(reqMap)
-	if requestError != nil && !errors.Is(requestError, pointerstructure.ErrNotFound) {
-		return fmt.Errorf("unable to evaluate exclusion condition against expected request entry: %w", requestError)
-	}
-
-	_, responseError := e.Evaluator.Evaluate(respMap)
-	if responseError != nil && !errors.Is(responseError, pointerstructure.ErrNotFound) {
-		return fmt.Errorf("unable to evaluate exclusion condition against expected response entry: %w", responseError)
-	}
-
-	if requestError != nil && errors.Is(requestError, pointerstructure.ErrNotFound) &&
-		responseError != nil && errors.Is(responseError, pointerstructure.ErrNotFound) {
-		return fmt.Errorf("unable to evaluate exclusion condition against expected entry: request: %w: response: %w", requestError, responseError)
 	}
 
 	return nil

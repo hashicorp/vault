@@ -1233,6 +1233,60 @@ func TestEntryFormatter_excludeFields(t *testing.T) {
 	require.NotEmpty(t, after.Auth.ClientToken)
 }
 
+// TestEntryFormatter_excludeFields_data checks how we handle dynamic data in a response.
+func TestEntryFormatter_excludeFields_data(t *testing.T) {
+	jsonExclusion := `[
+		{
+			"condition":  "\"/response/data/key1\" is not empty",
+			"fields": [ "/response/mount_type", "/auth/entity_id", "/response/data/key1" ]
+		}
+	]`
+
+	// Create the formatter node.
+	cfg, err := NewFormatterConfig()
+	require.NoError(t, err)
+	ss := newStaticSalt(t)
+	formatter, err := NewEntryFormatter(cfg, ss, WithExclusions(jsonExclusion))
+	require.NoError(t, err)
+	require.NotNil(t, formatter)
+
+	// Pass in a real deal ResponseEntry and make sure we redact stuff.
+	resp := &ResponseEntry{
+		Auth: &Auth{
+			ClientToken: "hmac:sdfghgfdsdfgt6543456543",
+			EntityID:    "please-exclude-me", // expect this to be excluded
+		},
+		Response: &Response{
+			MountType: "transit", // expect this to be excluded
+			Data: map[string]interface{}{ // expect this to be excluded
+				"key1": "secret1-to-exclude",
+				"key2": "secret2-to-exclude",
+			},
+		},
+	}
+	res, err := formatter.excludeFields(resp)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	// Parse the map back to a ResponseEntry, so we can check things were excluded.
+	var after *ResponseEntry
+	d, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{TagName: "json", Result: &after})
+	require.NoError(t, err)
+	err = d.Decode(res)
+	require.NoError(t, err)
+
+	// Check we excluded the right values.
+	require.Empty(t, after.Auth.EntityID)
+	require.Empty(t, after.Response.MountType)
+	require.NotEmpty(t, after.Response.Data)
+	require.Empty(t, after.Response.Data["key1"])
+	require.NotEmpty(t, after.Response.Data["key2"])
+	require.Equal(t, "secret2-to-exclude", after.Response.Data["key2"].(string))
+
+	// Check we still have some values we'd expect
+	require.NotEmpty(t, after.Auth.ClientToken)
+}
+
 // hashExpectedValueForComparison replicates enough of the audit HMAC process on a piece of expected data in a test,
 // so that we can use assert.Equal to compare the expected and output values.
 func (f *EntryFormatter) hashExpectedValueForComparison(input map[string]any) map[string]any {
