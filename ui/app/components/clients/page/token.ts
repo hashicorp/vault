@@ -5,16 +5,36 @@
 
 import ActivityComponent from '../activity';
 
+import type {
+  ClientActivityNewClients,
+  ClientActivityMonthly,
+  ClientActivityResourceByKey,
+} from 'vault/vault/models/clients/activity';
+
 export default class ClientsTokenPageComponent extends ActivityComponent {
   legend = [
     { key: 'entity_clients', label: 'entity clients' },
     { key: 'non_entity_clients', label: 'non-entity clients' },
   ];
 
-  get hasAverageNewClients() {
-    return (
-      typeof this.average(this.byMonthNewClients, 'entity_clients') === 'number' ||
-      typeof this.average(this.byMonthNewClients, 'non_entity_clients') === 'number'
-    );
+  calculateClientAverages(
+    dataset:
+      | ClientActivityMonthly[]
+      | (ClientActivityResourceByKey | undefined)[]
+      | (ClientActivityNewClients | undefined)[]
+      | undefined
+  ) {
+    return ['entity_clients', 'non_entity_clients'].reduce((count, key) => {
+      const average = this.average(dataset, key);
+      return (count += average || 0);
+    }, 0);
+  }
+
+  get averageTotalClients() {
+    return this.calculateClientAverages(this.byMonthActivityData);
+  }
+
+  get averageNewClients() {
+    return this.calculateClientAverages(this.byMonthNewClients);
   }
 }

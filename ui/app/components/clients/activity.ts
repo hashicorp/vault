@@ -12,7 +12,11 @@ import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 
 import type ClientsActivityModel from 'vault/models/clients/activity';
-import type { ClientActivityNewClients, ClientActivityMonthly } from 'vault/models/clients/activity';
+import type {
+  ClientActivityNewClients,
+  ClientActivityMonthly,
+  ClientActivityResourceByKey,
+} from 'vault/models/clients/activity';
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
 
 interface Args {
@@ -26,7 +30,14 @@ interface Args {
 }
 
 export default class ClientsActivityComponent extends Component<Args> {
-  average = (data: (ClientActivityNewClients | ClientActivityMonthly | undefined)[], key: string) => {
+  average = (
+    data:
+      | ClientActivityMonthly[]
+      | (ClientActivityResourceByKey | undefined)[]
+      | (ClientActivityNewClients | undefined)[]
+      | undefined,
+    key: string
+  ) => {
     return calculateAverage(data, key);
   };
 
@@ -57,14 +68,14 @@ export default class ClientsActivityComponent extends Component<Args> {
       .filter((d) => d !== undefined);
 
     if (!authMount) {
-      return namespaceData.length === 0 ? null : namespaceData;
+      return namespaceData.length === 0 ? undefined : namespaceData;
     }
 
     const mountData = authMount
       ? namespaceData.map((namespace) => namespace?.mounts_by_key[authMount]).filter((d) => d !== undefined)
       : namespaceData;
 
-    return mountData.length === 0 ? null : mountData;
+    return mountData.length === 0 ? undefined : mountData;
   }
 
   get filteredActivityByNamespace() {

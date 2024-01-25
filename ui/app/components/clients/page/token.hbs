@@ -22,7 +22,7 @@
     <:stats>
       <StatText
         @label="Average total clients per month"
-        @value={{this.average this.byMonthActivityData "clients"}}
+        @value={{this.averageTotalClients}}
         @size="m"
         class="data-details-top has-top-padding-l"
         data-test-chart-stat="monthly total"
@@ -30,7 +30,7 @@
 
       <StatText
         @label="Average new clients per month"
-        @value={{this.average this.byMonthNewClients "clients"}}
+        @value={{this.averageNewClients}}
         @size="m"
         class="data-details-bottom has-top-padding-l"
         data-test-chart-stat="monthly new"
@@ -47,8 +47,8 @@
     @description="Entity or non-entity clients which interacted with Vault for the first time during this date range, displayed per month."
     @timestamp={{@activity.responseTimestamp}}
     @legend={{this.legend}}
-    @hasChartData={{this.hasAverageNewClients}}
-    class={{unless this.hasAverageNewClients "no-legend"}}
+    @hasChartData={{this.averageNewClients}}
+    class={{unless this.averageNewClients "no-legend"}}
     data-test-chart="monthly new"
   >
     <:stats>
