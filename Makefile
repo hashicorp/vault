@@ -2,7 +2,11 @@
 # Be sure to place this BEFORE `include` directives, if any.
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
 
-TEST?=$$($(GO_CMD) list ./... | grep -v /vendor/ | grep -v /integ)
+MAIN_PACKAGES=$$($(GO_CMD) list ./... | grep -v vendor/ )
+SDK_PACKAGES=$$(cd $(CURDIR)/sdk && $(GO_CMD) list ./... | grep -v vendor/ )
+API_PACKAGES=$$(cd $(CURDIR)/api && $(GO_CMD) list ./... | grep -v vendor/ )
+ALL_PACKAGES=$(MAIN_PACKAGES) $(SDK_PACKAGES) $(API_PACKAGES)
+TEST=$$(echo $(ALL_PACKAGES) | grep -v integ/ )
 TEST_TIMEOUT?=45m
 EXTENDED_TEST_TIMEOUT=60m
 INTEG_TEST_TIMEOUT=120m
@@ -156,7 +160,9 @@ protolint: prep check-tools-external
 # dependency.
 prep: check-go-version
 	@echo "==> Running go generate..."
-	@GOARCH= GOOS= $(GO_CMD) generate $$($(GO_CMD) list ./... | grep -v /vendor/)
+	@GOARCH= GOOS= $(GO_CMD) generate $(MAIN_PACKAGES)
+	@GOARCH= GOOS= cd api && $(GO_CMD) generate $(API_PACKAGES)
+	@GOARCH= GOOS= cd sdk && $(GO_CMD) generate $(SDK_PACKAGES)
 	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
 
 # bootstrap the build by generating any necessary code and downloading additional tools that may
@@ -371,3 +377,7 @@ ci-copywriteheaders:
 .PHONY: all bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-codechecker ci-vet-codechecker clean dev
 
 .NOTPARALLEL: ember-dist ember-dist-dev
+
+.PHONY: all-packages
+all-packages:
+	@echo $(ALL_PACKAGES) | tr ' ' '\n' 
