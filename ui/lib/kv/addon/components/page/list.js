@@ -30,6 +30,7 @@ export default class KvListPageComponent extends Component {
   @service store;
 
   @tracked secretPath;
+  @tracked deleteSecretModal = null; // set to the metadata intended to delete
 
   get mountPoint() {
     // mountPoint tells transition where to start. In this case, mountPoint will always be vault.cluster.secrets.backend.kv.
