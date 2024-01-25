@@ -232,6 +232,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.PluginDirectory = opts.PluginDirectory
 	conf.DetectDeadlocks = opts.DetectDeadlocks
 	conf.Experiments = []string{experiments.VaultExperimentEventsAlpha1}
+	conf.CensusAgent = opts.CensusAgent
 	conf.AdministrativeNamespacePath = opts.AdministrativeNamespacePath
 	conf.ImpreciseLeaseRoleTracking = opts.ImpreciseLeaseRoleTracking
 
