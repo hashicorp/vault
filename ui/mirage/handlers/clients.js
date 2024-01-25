@@ -64,18 +64,21 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
     mounts: {},
   };
   const mounts = [];
-  const [secretSyncs] = arrayOfCounts(randomBetween(min, max), 1);
-  // TODO does sys/ namespace only exist on 'root' namespace or child namespaces as well?
-  mounts.push({
-    mount_path: 'sys/',
-    counts: {
-      clients: secretSyncs,
-      entity_clients: 0,
-      non_entity_clients: 0,
-      distinct_entities: 0,
-      non_entity_tokens: 0,
-      secret_syncs: secretSyncs,
-    },
+
+  Array.from(Array(5)).forEach((mount, index) => {
+    const [secretSyncs] = arrayOfCounts(randomBetween(min, max), 1);
+    mounts.push({
+      mount_path: `kvv2-engine-${index}`,
+      counts: {
+        clients: secretSyncs,
+        // TODO test with live backend to confirm entity keys are present (and 0) for kv mounts
+        entity_clients: 0,
+        non_entity_clients: 0,
+        distinct_entities: 0,
+        non_entity_tokens: 0,
+        secret_syncs: secretSyncs,
+      },
+    });
   });
 
   // generate auth mounts array
@@ -90,7 +93,7 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
         non_entity_clients: nonEntity,
         distinct_entities: entity,
         non_entity_tokens: nonEntity,
-        // TODO test with live backend to confirm this key is present (and 0) for auth mounts
+        // TODO test with live backend to confirm this key is present (and 0) for auth mounts (non-kv mounts)
         secret_syncs: 0,
       },
     });
