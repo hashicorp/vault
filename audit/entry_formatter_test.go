@@ -1150,6 +1150,89 @@ func TestEntryFormatter_Process_Redaction(t *testing.T) {
 	require.Empty(t, req.Auth.EntityID)
 }
 
+// TestEntryFormatter_excludeFields tests that we can exclude data based on the
+// pre-configured conditions/fields of the EntryFormatter. It covers some scenarios
+// where we expect errors due to invalid input, which is unlikely to happen in reality.
+func TestEntryFormatter_excludeFields(t *testing.T) {
+	jsonExclusion := `[
+		{
+			"condition":  "\"/auth/client_token\" matches \"hmac.+\"",
+			"fields": [ "/response/mount_type", "/auth/entity_id" ]
+		},
+		{
+			"condition": "\"/response/mount_type\" == transit",
+			"fields": [ "/response/data" ]
+		}
+	]`
+
+	// Create the formatter node.
+	cfg, err := NewFormatterConfig()
+	require.NoError(t, err)
+	ss := newStaticSalt(t)
+	formatter, err := NewEntryFormatter(cfg, ss, WithExclusions(jsonExclusion))
+	require.NoError(t, err)
+	require.NotNil(t, formatter)
+
+	// Pass in nil
+	res, err := formatter.excludeFields(nil)
+	require.Error(t, err)
+	require.EqualError(t, err, "audit.(EntryFormatter).excludeFields: entry cannot be nil: invalid parameter")
+	require.Nil(t, res)
+
+	// Pass in int
+	res, err = formatter.excludeFields(1)
+	require.Error(t, err)
+	require.EqualError(t, err, "audit.(EntryFormatter).excludeFields: unexpected type: int")
+	require.Nil(t, res)
+
+	// Test passing in 'any' that is not RequestEntry or ResponseEntry
+	type notRequestOrResponseEntry struct{}
+	entry := &notRequestOrResponseEntry{}
+	res, err = formatter.excludeFields(entry)
+	require.Error(t, err)
+	require.EqualError(t, err, "audit.(EntryFormatter).excludeFields: unexpected type: *audit.notRequestOrResponseEntry")
+	require.Nil(t, res)
+
+	// Pass in RequestEntry (our conditions only apply to a /response/..)
+	req := &RequestEntry{}
+	res, err = formatter.excludeFields(req)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	// Pass in a real deal ResponseEntry and make sure we redact stuff.
+	resp := &ResponseEntry{
+		Auth: &Auth{
+			ClientToken: "hmac:sdfghgfdsdfgt6543456543",
+			EntityID:    "please-exclude-me", // expect this to be excluded
+		},
+		Response: &Response{
+			MountType: "transit", // expect this to be excluded
+			Data: map[string]interface{}{ // expect this to be excluded
+				"key1": "secret1-to-exclude",
+				"key2": "secret2-to-exclude",
+			},
+		},
+	}
+	res, err = formatter.excludeFields(resp)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	// Parse the map back to a ResponseEntry, so we can check things were excluded.
+	var after *ResponseEntry
+	d, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{TagName: "json", Result: &after})
+	require.NoError(t, err)
+	err = d.Decode(res)
+	require.NoError(t, err)
+
+	// Check we excluded the right values.
+	require.Empty(t, after.Auth.EntityID)
+	require.Empty(t, after.Response.MountType)
+	require.Empty(t, after.Response.Data)
+
+	// Check we still have some values we'd expect
+	require.NotEmpty(t, after.Auth.ClientToken)
+}
+
 // hashExpectedValueForComparison replicates enough of the audit HMAC process on a piece of expected data in a test,
 // so that we can use assert.Equal to compare the expected and output values.
 func (f *EntryFormatter) hashExpectedValueForComparison(input map[string]any) map[string]any {
