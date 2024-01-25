@@ -344,7 +344,6 @@ module('Acceptance | transit (flaky)', function (hooks) {
 
     await click(SELECTORS.versionsTab);
     assert.dom(SELECTORS.versionRow(1)).hasTextContaining('Version 1', `${name}: only one key version`);
-
     await waitUntil(() => find(SELECTORS.rotate.trigger));
     await click(SELECTORS.rotate.trigger);
     await click(SELECTORS.rotate.confirm);

@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render, click, settled, waitFor } from '@ember/test-helpers';
+import { render, click, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
@@ -114,8 +114,6 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     assert.dom(name(0)).hasText('destination-aws', 'First destination renders on page 1');
 
     await click(pagination.next);
-    // eslint-disable-next-line ember/no-settled-after-test-helper
-    await settled();
     assert.dom(overview.table.row).exists({ count: 3 }, 'New items are fetched and rendered on page change');
     assert.dom(name(0)).hasText('destination-gcp', 'First destination renders on page 2');
   });
@@ -126,7 +124,6 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
     // since the request resolved trigger a page change and return an error from the associations endpoint
     await click(pagination.next);
-    await waitFor('[data-test-empty-state-title]', { timeout: 5000 });
     assert.dom(emptyStateTitle).hasText('Error fetching information', 'Empty state title renders');
     assert
       .dom(emptyStateMessage)
