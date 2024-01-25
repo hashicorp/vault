@@ -33,7 +33,7 @@
 
     <:chart>
       <Clients::Charts::VerticalBarBasic
-        @chartTitle="Secrets sync usage"
+        @chartTitle={{this.title}}
         @data={{this.byMonthActivityData}}
         @dataKey="secret_syncs"
         @chartHeight={{200}}
