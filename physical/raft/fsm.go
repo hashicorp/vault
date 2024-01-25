@@ -115,7 +115,13 @@ func (s *logVerificationChunkingShim) ApplyBatch(logs []*raft.Log) []interface{}
 
 	for _, l := range logs {
 		if s.isVerifierLog(l) {
-			newBatch = append(newBatch, &raft.Log{})
+			// Replace checkpoint with an empty op, but keep the index and term so
+			// downstream FSMs don't get confused about having a 0 index suddenly.
+			newBatch = append(newBatch, &raft.Log{
+				Index:      l.Index,
+				Term:       l.Term,
+				AppendedAt: l.AppendedAt,
+			})
 		} else {
 			newBatch = append(newBatch, l)
 		}
@@ -676,11 +682,16 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 		switch l.Type {
 		case raft.LogCommand:
 			command := &LogData{}
-			err := proto.Unmarshal(l.Data, command)
-			if err != nil {
-				f.logger.Error("error proto unmarshaling log data", "error", err, "data", l.Data)
-				panic("error proto unmarshaling log data")
+
+			// explicitly check for zero length Data, which will be the case for verifier no-ops
+			if len(l.Data) > 0 {
+				err := proto.Unmarshal(l.Data, command)
+				if err != nil {
+					f.logger.Error("error proto unmarshaling log data", "error", err, "data", l.Data)
+					panic("error proto unmarshaling log data")
+				}
 			}
+
 			commands = append(commands, command)
 		case raft.LogConfiguration:
 			configuration := raft.DecodeConfiguration(l.Data)
@@ -727,6 +738,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 			entrySlice := make([]*FSMEntry, 0)
 			switch command := commandRaw.(type) {
 			case *LogData:
+				// empty logs will have a zero length slice of Operations, so this loop will be a no-op
 				for _, op := range command.Operations {
 					var err error
 					switch op.OpType {
