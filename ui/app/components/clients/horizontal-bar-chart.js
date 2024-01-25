@@ -38,7 +38,7 @@ const LINE_HEIGHT = 24; // each bar w/ padding is 24 pixels thick
 
 export default class HorizontalBarChart extends Component {
   @tracked tooltipTarget = '';
-  @tracked tooltipStats = [];
+  @tracked tooltipText = [];
   @tracked isLabel = null;
 
   get labelKey() {
@@ -173,9 +173,9 @@ export default class HorizontalBarChart extends Component {
         const hoveredElement = actionBars.filter((bar) => bar[labelKey] === data[labelKey]).node();
         this.tooltipTarget = hoveredElement;
         this.isLabel = false;
-        this.tooltipStats = []; // clear stats
+        this.tooltipText = []; // clear stats
         this.args.chartLegend.forEach(({ key, label }) => {
-          this.tooltipStats.pushObject(`${formatNumber([data[key]])} ${label}`);
+          this.tooltipText.pushObject(`${formatNumber([data[key]])} ${label}`);
         });
 
         select(hoveredElement).style('opacity', 1);
@@ -191,7 +191,7 @@ export default class HorizontalBarChart extends Component {
           const hoveredElement = labelActionBar.filter((bar) => bar[labelKey] === data[labelKey]).node();
           this.tooltipTarget = hoveredElement;
           this.isLabel = true;
-          this.tooltipText = data[labelKey];
+          this.tooltipText = [data[labelKey]];
         } else {
           this.tooltipTarget = null;
         }
