@@ -12,6 +12,7 @@ import logout from 'vault/tests/pages/logout';
 import { format, addDays, startOfDay } from 'date-fns';
 import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
 import { PAGE as MESSAGE_SELECTORS } from 'vault/tests/helpers/config-ui/message-selectors';
+import { PAGE } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | config-ui', function (hooks) {
   setupApplicationTest(hooks);
@@ -48,32 +49,36 @@ module('Acceptance | config-ui', function (hooks) {
 
   test('it should show an empty state when no messages are created', async function (assert) {
     await visit('vault/config-ui/messages');
-    await assert.dom('[data-test-component="empty-state"]').exists();
+    await assert.dom(PAGE.emptyStateTitle).exists();
+    await assert.dom(PAGE.emptyStateMessage).exists();
     await assert.dom('[data-test-empty-state-title]').hasText('No messages yet');
     await click(MESSAGE_SELECTORS.tab('On login page'));
-    await assert.dom('[data-test-component="empty-state"]').exists();
+    await assert.dom(PAGE.emptyStateTitle).exists();
+    await assert.dom(PAGE.emptyStateMessage).exists();
     await assert.dom('[data-test-empty-state-title]').hasText('No messages yet');
   });
 
   module('Authenticated messages', function () {
     test('it should create and edit a message', async function (assert) {
       this.createMessage();
-      assert.dom('[data-test-page-title]').hasText('Awesome custom message title');
+      assert.dom(PAGE.pageTitle).hasText('Awesome custom message title');
       await click('[data-test-link="edit"]');
       await fillIn(MESSAGE_SELECTORS.input('title'), 'Edited custom message title');
       await click(MESSAGE_SELECTORS.button('create-message'));
-      assert.dom('[data-test-page-title]').hasText('Edited custom message title');
+      assert.dom(PAGE.pageTitle).hasText('Edited custom message title');
       await click('[data-test-confirm-action="Delete message"]');
-      await click('[data-test-confirm-button]');
+      await click(PAGE.confirmButton);
     });
     test('it should delete a message', async function (assert) {
       this.createMessage();
       await visit('vault/config-ui/messages');
-      await assert.dom('[data-test-component="empty-state"]').doesNotExist();
-      await click('[data-test-popup-menu-trigger]');
-      await click('[data-test-confirm-action-trigger]');
-      await click('[data-test-confirm-button]');
-      await assert.dom('[data-test-component="empty-state"]').exists();
+      await assert.dom(PAGE.emptyStateTitle).doesNotExist();
+      await assert.dom(PAGE.emptyStateMessage).doesNotExist();
+      await click(PAGE.menuTrigger);
+      await click(PAGE.confirmTrigger);
+      await click(PAGE.confirmButton);
+      await assert.dom(PAGE.emptyStateTitle).exists();
+      await assert.dom(PAGE.emptyStateMessage).exists();
     });
   });
 });
