@@ -8,8 +8,10 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -1227,9 +1229,18 @@ func (c *Core) raftLeaderInfo(leaderInfo *raft.LeaderJoinInfo, disco *discover.D
 			return nil, fmt.Errorf("failed to parse addresses from auto-join metadata: %w", err)
 		}
 		for _, ip := range clusterIPs {
-			if strings.Count(ip, ":") >= 2 && !strings.HasPrefix(ip, "[") {
+			if count := strings.Count(ip, ":"); count >= 2 && !strings.HasPrefix(ip, "[") {
 				// An IPv6 address in implicit form, however we need it in explicit form to use in a URL.
 				ip = fmt.Sprintf("[%s]", ip)
+			} else if count > 0 && !strings.HasSuffix(ip, "]") {
+				tmpIp, portStr, err := net.SplitHostPort(ip)
+				if err == nil {
+					ip = tmpIp
+					tmpPort, err := strconv.Atoi(portStr)
+					if err == nil {
+						port = uint(tmpPort)
+					}
+				}
 			}
 			u := fmt.Sprintf("%s://%s:%d", scheme, ip, port)
 			info := *leaderInfo
