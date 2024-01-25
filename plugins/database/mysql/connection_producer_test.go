@@ -17,7 +17,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	dockertest "github.com/ory/dockertest/v3"
+	"github.com/ory/dockertest"
 )
 
 func Test_addTLStoDSN(t *testing.T) {
