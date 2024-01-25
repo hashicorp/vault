@@ -61,8 +61,14 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
   });
 
   test('it should render monthly total chart', async function (assert) {
-    const expectedTotal = formatNumber([calculateAverage(this.activity.byMonth, 'clients')]);
-    const expectedNew = formatNumber([calculateAverage(this.newActivity, 'clients')]);
+    const getAverage = (data) => {
+      const average = ['entity_clients', 'non_entity_clients'].reduce((count, key) => {
+        return (count += calculateAverage(data, key) || 0);
+      }, 0);
+      return formatNumber([average]);
+    };
+    const expectedTotal = getAverage(this.activity.byMonth);
+    const expectedNew = getAverage(this.newActivity);
     const chart = ts.charts.chart('monthly total');
 
     await this.renderComponent();
