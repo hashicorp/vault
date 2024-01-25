@@ -670,7 +670,10 @@ func TestEntryFormatter_Process_JSON(t *testing.T) {
 
 		expectedJSON.Time = actualJSON.Time
 		m := make(map[string]any)
-		err = mapstructure.Decode(expectedJSON, &m)
+		d, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{TagName: "json", Result: &m})
+		require.NoError(t, err)
+		require.NotNil(t, d)
+		err = d.Decode(expectedJSON)
 		if err != nil {
 			t.Fatalf("unable to decode json: %s", err)
 		}

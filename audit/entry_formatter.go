@@ -639,25 +639,49 @@ func (s *nonPersistentSalt) Salt(_ context.Context) (*salt.Salt, error) {
 	return salt.NewNonpersistentSalt(), nil
 }
 
-// excludeFields takes an entry (RequestEntry or ResponseEntry) and attempts to
+// excludeFields takes an entry (*RequestEntry or *ResponseEntry) and attempts to
 // exclude fields that have been configured on the formatter node.
+// NOTE: Whilst the method accepts 'any' the types must be one of the two specified above.
 func (f *EntryFormatter) excludeFields(entry any) (map[string]any, error) {
-	m := make(map[string]any)
-	err := mapstructure.Decode(entry, &m)
+	const op = "audit.(EntryFormatter).excludeFields"
+
+	// Perform some validation on the entry (and its type).
+	if entry == nil {
+		return nil, fmt.Errorf("%s: entry cannot be nil: %w", op, event.ErrInvalidParameter)
+	}
+
+	switch v := entry.(type) {
+	case *RequestEntry, *ResponseEntry:
+		// These types are expected.
+	default:
+		return nil, fmt.Errorf("%s: unexpected type: %T", op, v)
+	}
+
+	// Decode the entry into a map which can be manipulated as we exclude fields.
+	resultMap := make(map[string]any)
+	decoder, err := mapDecoderJSON(&resultMap)
 	if err != nil {
-		return nil, fmt.Errorf("error decoding entry: %v", err)
+		return nil, fmt.Errorf("%s: error creating decoder for entry: %w", op, err)
+	}
+	err = decoder.Decode(entry)
+	if err != nil {
+		return nil, fmt.Errorf("%s: error decoding entry: %w", op, err)
 	}
 
 	// If there are no exclusions to process then return the map.
 	if len(f.exclusions) < 1 {
-		return m, nil
+		return resultMap, nil
 	}
 
 	// Take another copy which will be the original we use for all evaluations.
-	original := make(map[string]any, len(m))
-	err = mapstructure.Decode(entry, &original)
+	sourceMap := make(map[string]any, len(resultMap))
+	decoder, err = mapDecoderJSON(&sourceMap)
 	if err != nil {
-		return nil, fmt.Errorf("error decoding entry: %v", err)
+		return nil, fmt.Errorf("%s: error creating decoder for (source) entry: %w", op, err)
+	}
+	err = decoder.Decode(entry)
+	if err != nil {
+		return nil, fmt.Errorf("%s: error decoding (source) entry: %w", op, err)
 	}
 
 	for _, exc := range f.exclusions {
@@ -665,10 +689,22 @@ func (f *EntryFormatter) excludeFields(entry any) (map[string]any, error) {
 		shouldRemoveFields := true
 
 		if exc.Evaluator != nil {
-			// See if the evaluator matches such that we should still remove the fields.
-			shouldRemoveFields, err = exc.Evaluator.Evaluate(original)
-			if err != nil {
-				return nil, fmt.Errorf("unable to evaluate entry: %w", err)
+			// Decide if we should/shouldn't remove these fields as we have an
+			// optional condition expression configured.
+			shouldRemoveFields, err = exc.Evaluator.Evaluate(sourceMap)
+			switch {
+			// There may be cases when the evaluator gives us an error, but it's
+			// because the datum doesn't have the same structure as the expression
+			// it was created with.
+			// For example, a RequestEntry doesn't have a response inside of it.
+			// So an expression such as "\"/response/mount_type\" == kv" should not
+			// cause a failure when we audit a request, which could block audit.
+			case errors.Is(err, pointerstructure.ErrNotFound):
+				// We can ignore this error, we won't attempt to exclude the fields
+				// as the condition failed and shouldRemoveFields will have been
+				// set to false.
+			case err != nil:
+				return nil, fmt.Errorf("%s: unable to evaluate conditional expression associated with fields: '%s': %w", op, strings.Join(exc.Fields, ", "), err)
 			}
 		}
 
@@ -679,11 +715,11 @@ func (f *EntryFormatter) excludeFields(entry any) (map[string]any, error) {
 		for _, field := range exc.Fields {
 			ptr, err := pointerstructure.Parse(field)
 			if err != nil {
-				return nil, fmt.Errorf("unable to parse field '%s': %w", field, err)
+				return nil, fmt.Errorf("%s: unable to parse field '%s': %w", op, field, err)
 			}
 
 			// We don't need the return value as the map is being modified by Delete.
-			_, err = ptr.Delete(m)
+			_, err = ptr.Delete(resultMap)
 			// There are some types of errors that may be returned, which we do not
 			// consider to mean redaction has failed. We test for these explicitly
 			// so any additional error types that may be added to the pointerstructure
@@ -699,10 +735,24 @@ func (f *EntryFormatter) excludeFields(entry any) (map[string]any, error) {
 			case err == nil:
 				continue
 			default:
-				return nil, fmt.Errorf("unable to exclude field '%s': %w", field, err)
+				return nil, fmt.Errorf("%s: unable to exclude field '%s': %w", op, field, err)
 			}
 		}
 	}
 
-	return m, nil
+	return resultMap, nil
+}
+
+// mapDecoderJSON returns a decoder configured to use JSON struct tags output to the
+// specified target.
+func mapDecoderJSON(target any) (*mapstructure.Decoder, error) {
+	const op = "audit.mapDecoderJSON"
+
+	// Configure the decoder to use JSON struct tags to represent mapstructure ones with the same name.
+	d, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{TagName: "json", Result: &target})
+	if err != nil {
+		return nil, fmt.Errorf("%s: unable to create JSON map decoder: %w", op, err)
+	}
+
+	return d, nil
 }

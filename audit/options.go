@@ -14,7 +14,6 @@ import (
 	"github.com/cjrd/allocate"
 	"github.com/hashicorp/go-bexpr"
 	"github.com/hashicorp/vault/internal/observability/event"
-	"github.com/mitchellh/mapstructure"
 	"github.com/mitchellh/pointerstructure"
 )
 
@@ -221,9 +220,9 @@ func WithExclusions(e string) Option {
 		}
 
 		// Validate the exclusions
-		for _, exc := range result {
+		for i, exc := range result {
 			if err := exc.validate(); err != nil {
-				return err
+				return fmt.Errorf("exclusion (#%d) validation failure: %w", i+1, err)
 			}
 		}
 
@@ -258,7 +257,11 @@ func (e *exclusion) UnmarshalJSON(b []byte) error {
 	}
 	var fields []string
 	for _, v := range intermediateFields {
-		s := strings.TrimSpace(v.(string))
+		v, ok := v.(string)
+		if !ok {
+			continue
+		}
+		s := strings.TrimSpace(v)
 		if s != "" {
 			fields = append(fields, s)
 		}
@@ -277,14 +280,18 @@ func (e *exclusion) UnmarshalJSON(b []byte) error {
 		// Return early as we've already set the exclusion.Fields
 		return nil
 	}
-
-	condition := strings.TrimSpace(fmt.Sprint(c))
+	v, ok := c.(string)
+	if !ok {
+		return nil
+	}
+	condition := strings.TrimSpace(v)
 	if condition == "" {
 		// Return early as we've already set the exclusion.Fields
 		return nil
 	}
 
-	eval, err = bexpr.CreateEvaluator(condition)
+	// Create the evaluator and use the current JSON struct tags.
+	eval, err = bexpr.CreateEvaluator(condition, bexpr.WithTagName("json"))
 	if err != nil {
 		return fmt.Errorf("unable to parse expression '%s': %w", condition, err)
 	}
@@ -301,16 +308,14 @@ func (e *exclusion) UnmarshalJSON(b []byte) error {
 // NOTE: Validation will only be carried out against RequestEntry and ResponseEntry
 // types.
 func (e *exclusion) validate() error {
-	const op = "audit.(exclusion).validate"
-
 	if len(e.Fields) < 1 {
-		return fmt.Errorf("%s: exclusion doesn't contain any fields: %w", op, event.ErrInvalidParameter)
+		return fmt.Errorf("exclusion doesn't contain any fields: %w", event.ErrInvalidParameter)
 	}
 
 	// Validate the 'fields' first (as the condition expression is optional)
 	for _, field := range e.Fields {
 		if _, err := pointerstructure.Parse(field); err != nil {
-			return fmt.Errorf("%s: unable to parse field '%s': %w", op, field, err)
+			return fmt.Errorf("unable to parse field '%s': %w", field, err)
 		}
 	}
 
@@ -322,29 +327,47 @@ func (e *exclusion) validate() error {
 	// Generate a sample RequestEntry
 	req := new(RequestEntry)
 	if err := allocate.Zero(req); err != nil {
-		return fmt.Errorf("%s: unable to generate sample request entry: %w", op, err)
+		return fmt.Errorf("unable to generate sample request entry: %w", err)
 	}
 	reqMap := make(map[string]any)
-	if err := mapstructure.Decode(req, &reqMap); err != nil {
-		return fmt.Errorf("%s: unable to decode sample request entry: %w", op, err)
+	decoder, err := mapDecoderJSON(&reqMap)
+	if err != nil {
+		return fmt.Errorf("error creating decoder for request entry: %w", err)
+	}
+	err = decoder.Decode(req)
+	if err != nil {
+		return fmt.Errorf("unable to decode sample request entry: %w", err)
 	}
 
 	// Generate a sample ResponseEntry
 	resp := new(ResponseEntry)
 	if err := allocate.Zero(resp); err != nil {
-		return fmt.Errorf("%s: unable to generate sample response entry: %w", op, err)
+		return fmt.Errorf("unable to generate sample response entry: %w", err)
 	}
 	respMap := make(map[string]any)
-	if err := mapstructure.Decode(resp, &respMap); err != nil {
-		return fmt.Errorf("%s: unable to decode sample response entry: %w", op, err)
+	decoder, err = mapDecoderJSON(&respMap)
+	if err != nil {
+		return fmt.Errorf("error creating decoder for response entry: %w", err)
+	}
+	err = decoder.Decode(resp)
+	if err != nil {
+		return fmt.Errorf("unable to decode sample response entry: %w", err)
 	}
 
 	// Attempt to evaluate the condition expression against the datum for request and response.
-	if _, err := e.Evaluator.Evaluate(reqMap); err != nil {
-		return fmt.Errorf("%s: unable to evaluate exclusion condition against expected request entry: %w", op, err)
+	_, requestError := e.Evaluator.Evaluate(reqMap)
+	if requestError != nil && !errors.Is(requestError, pointerstructure.ErrNotFound) {
+		return fmt.Errorf("unable to evaluate exclusion condition against expected request entry: %w", requestError)
 	}
-	if _, err := e.Evaluator.Evaluate(respMap); err != nil {
-		return fmt.Errorf("%s: unable to evaluate exclusion condition against expected response entry: %w", op, err)
+
+	_, responseError := e.Evaluator.Evaluate(respMap)
+	if responseError != nil && !errors.Is(responseError, pointerstructure.ErrNotFound) {
+		return fmt.Errorf("unable to evaluate exclusion condition against expected response entry: %w", responseError)
+	}
+
+	if requestError != nil && errors.Is(requestError, pointerstructure.ErrNotFound) &&
+		responseError != nil && errors.Is(responseError, pointerstructure.ErrNotFound) {
+		return fmt.Errorf("unable to evaluate exclusion condition against expected entry: request: %w: response: %w", requestError, responseError)
 	}
 
 	return nil

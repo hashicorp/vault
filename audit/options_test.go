@@ -413,6 +413,19 @@ func TestOptions_WithExclusions(t *testing.T) {
 		isErrorExpected      bool
 		expectedErrorMessage string
 	}{
+		"request-and-response-conditions": {
+			json: `[
+			  {
+				"condition": "\"/request/mount_type\" == transit",
+				"fields": [ "/request/data", "/response/data" ]
+			  },
+			  {
+				"condition": "\"/response/mount_type\" == transit",
+				"fields": [ "/request/data", "/response/data" ]
+			  }
+			]`,
+			numExpected: 2,
+		},
 		"datum-structure-does-not-match-condition": {
 			json: `[
 			  {
@@ -425,7 +438,7 @@ func TestOptions_WithExclusions(t *testing.T) {
 			  }
 			]`,
 			isErrorExpected:      true,
-			expectedErrorMessage: "audit.(exclusion).validate: unable to evaluate exclusion condition against expected request entry: error finding value in datum: /foo/mount_type at part 0: couldn't find key \"foo\"",
+			expectedErrorMessage: "exclusion (#1) validation failure: unable to evaluate exclusion condition against expected entry: request: error finding value in datum: /foo/mount_type at part 0: couldn't find key \"foo\": response: error finding value in datum: /foo/mount_type at part 0: couldn't find key \"foo\"",
 		},
 		"good": {
 			json: `[
@@ -707,7 +720,7 @@ func TestOptions_exclusions_validate(t *testing.T) {
 	}{
 		"no-fields-no-expression": {
 			isErrorExpected:      true,
-			expectedErrorMessage: "audit.(exclusion).validate: exclusion doesn't contain any fields: invalid parameter",
+			expectedErrorMessage: "exclusion doesn't contain any fields: invalid parameter",
 		},
 		"empty-expression": {
 			expression: "",
@@ -721,7 +734,7 @@ func TestOptions_exclusions_validate(t *testing.T) {
 			expression:           "\"/foo/bar\" == juan",
 			fields:               []string{"/foo"},
 			isErrorExpected:      true,
-			expectedErrorMessage: "audit.(exclusion).validate: unable to evaluate exclusion condition against expected request entry: error finding value in datum: /foo/bar at part 0: couldn't find key \"foo\"",
+			expectedErrorMessage: "unable to evaluate exclusion condition against expected entry: request: error finding value in datum: /foo/bar at part 0: couldn't find key \"foo\": response: error finding value in datum: /foo/bar at part 0: couldn't find key \"foo\"",
 		},
 		"valid-fields": {
 			expression: "\"/request/auth\" == foo",
@@ -735,7 +748,7 @@ func TestOptions_exclusions_validate(t *testing.T) {
 				"foo",
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "audit.(exclusion).validate: unable to parse field 'foo': parse Go pointer \"foo\": first char must be '/'",
+			expectedErrorMessage: "unable to parse field 'foo': parse Go pointer \"foo\": first char must be '/'",
 		},
 	}
 
@@ -750,7 +763,7 @@ func TestOptions_exclusions_validate(t *testing.T) {
 			var err error
 
 			if tc.expression != "" {
-				eval, err = bexpr.CreateEvaluator(tc.expression)
+				eval, err = bexpr.CreateEvaluator(tc.expression, bexpr.WithTagName("json"))
 				require.NoError(t, err)
 			}
 
