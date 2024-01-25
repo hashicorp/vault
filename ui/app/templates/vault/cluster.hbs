@@ -15,12 +15,20 @@
       <A.Title data-test-custom-alert-title={{bannerMessage.id}}>{{bannerMessage.title}}</A.Title>
       <A.Description data-test-custom-alert-description={{bannerMessage.id}}>
         {{bannerMessage.message}}
-        {{#unless (is-empty-value bannerMessage.link)}}
-          {{#each-in bannerMessage.link as |title href|}}
-            <Hds::Link::Inline @icon="external-link" @isHrefExternal={{true}} @href={{href}}>{{title}}</Hds::Link::Inline>
-          {{/each-in}}
-        {{/unless}}
       </A.Description>
+      {{#unless (is-empty-value bannerMessage.link)}}
+        {{#each-in bannerMessage.link as |title href|}}
+          <A.Link::Standalone
+            @color="secondary"
+            @icon="external-link"
+            @isHrefExternal={{true}}
+            @iconPosition="trailing"
+            @text={{title}}
+            @href={{href}}
+            data-test-custom-alert-action="link"
+          />
+        {{/each-in}}
+      {{/unless}}
     </Hds::Alert>
   {{/if}}
 {{/each}}

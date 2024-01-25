@@ -92,4 +92,13 @@ export default class MessagesList extends Component {
     this.userConfirmation = userConfirmation;
     this.showMultipleModalsMessage = false;
   }
+
+  @action
+  cancel() {
+    if (this.args.message.isNew) {
+      this.router.transitionTo('vault.cluster.config-ui.messages');
+    } else {
+      this.router.transitionTo('vault.cluster.config-ui.messages.message.details', this.args.message.id);
+    }
+  }
 }
