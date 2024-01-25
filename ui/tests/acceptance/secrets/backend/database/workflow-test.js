@@ -27,7 +27,7 @@ const PAGE = {
   infoRowValue: (label) => `[data-test-row-value="${label}"]`,
   infoRowValueDiv: (label) => `[data-test-value-div="${label}"]`,
   // CONNECTIONS
-  rotateModal: '[data-test-db-connection-modal-title]',
+  rotateModal: '[data-test-database-rotate-root-modal] [data-test-modal-title]',
   confirmRotate: '[data-test-enable-rotate-connection]',
   skipRotate: '[data-test-enable-connection]',
   // ROLES
@@ -110,7 +110,6 @@ module('Acceptance | database workflow', function (hooks) {
       // fill in connection details
       await fillOutConnection(`connect-${this.backend}`);
       await click(FORM.saveBtn);
-
       assert.dom(PAGE.rotateModal).hasText('Rotate your root credentials?', 'rotate modal is shown');
       await click(PAGE.confirmRotate);
 
