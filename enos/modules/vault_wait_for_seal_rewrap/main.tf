@@ -19,11 +19,6 @@ variable "vault_root_token" {
   description = "The vault root token"
 }
 
-variable "vault_instance_count" {
-  type        = number
-  description = "The number of instances in the vault cluster"
-}
-
 variable "vault_hosts" {
   type = map(object({
     private_ip = string
@@ -46,9 +41,11 @@ variable "retry_interval" {
 
 locals {
   private_ips = [for k, v in values(tomap(var.vault_hosts)) : tostring(v["private_ip"])]
+  first_key   = element(keys(enos_remote_exec.wait_for_seal_rewrap_to_be_completed), 0)
 }
 
 resource "enos_remote_exec" "wait_for_seal_rewrap_to_be_completed" {
+  for_each = var.vault_hosts
   environment = {
     RETRY_INTERVAL    = var.retry_interval
     TIMEOUT_SECONDS   = var.timeout
@@ -61,7 +58,15 @@ resource "enos_remote_exec" "wait_for_seal_rewrap_to_be_completed" {
 
   transport = {
     ssh = {
-      host = var.vault_hosts[0].public_ip
+      host = each.value.public_ip
     }
   }
+}
+
+output "stdout" {
+  value = enos_remote_exec.wait_for_seal_rewrap_to_be_completed[local.first_key].stdout
+}
+
+output "stderr" {
+  value = enos_remote_exec.wait_for_seal_rewrap_to_be_completed[local.first_key].stdout
 }

@@ -118,13 +118,15 @@ func (c *Core) getHAMembers() ([]HAStatusNode, error) {
 	for _, peerNode := range c.GetHAPeerNodesCached() {
 		lastEcho := peerNode.LastEcho
 		nodes = append(nodes, HAStatusNode{
-			Hostname:       peerNode.Hostname,
-			APIAddress:     peerNode.APIAddress,
-			ClusterAddress: peerNode.ClusterAddress,
-			LastEcho:       &lastEcho,
-			Version:        peerNode.Version,
-			UpgradeVersion: peerNode.UpgradeVersion,
-			RedundancyZone: peerNode.RedundancyZone,
+			Hostname:           peerNode.Hostname,
+			APIAddress:         peerNode.APIAddress,
+			ClusterAddress:     peerNode.ClusterAddress,
+			LastEcho:           &lastEcho,
+			Version:            peerNode.Version,
+			UpgradeVersion:     peerNode.UpgradeVersion,
+			RedundancyZone:     peerNode.RedundancyZone,
+			EchoDurationMillis: peerNode.EchoDuration.Milliseconds(),
+			ClockSkewMillis:    peerNode.ClockSkewMillis,
 		})
 	}
 
@@ -345,7 +347,7 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 		Auth:    auth,
 		Request: req,
 	}
-	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+	if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 		c.logger.Error("failed to audit request", "request_path", req.Path, "error", err)
 		return errors.New("failed to audit request, cannot continue")
 	}
@@ -661,6 +663,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		err = c.postUnseal(activeCtx, activeCtxCancel, standardUnsealStrategy{})
 		if err == nil {
 			c.standby = false
+			c.activeTime = time.Now()
 			c.leaderUUID = uuid
 			c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 1, nil)
 		}
@@ -713,6 +716,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 
 			// Mark as standby
 			c.standby = true
+			c.activeTime = time.Time{}
 			c.leaderUUID = ""
 			c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 0, nil)
 
@@ -833,7 +837,7 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 
 	clusterAddr := ""
 	for {
-		timer := time.NewTimer(leaderCheckInterval)
+		timer := time.NewTimer(c.periodicLeaderRefreshInterval)
 		select {
 		case <-timer.C:
 			count := atomic.AddInt32(opCount, 1)

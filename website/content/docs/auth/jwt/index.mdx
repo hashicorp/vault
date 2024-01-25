@@ -339,7 +339,8 @@ This specifies that the value in the JWT claim "division" should be copied to th
 "department" claim value will also be copied into metadata but will retain the key name. If a claim is configured in `claim_mappings`,
 it must existing in the JWT or else the authentication will fail.
 
-Note: the metadata key name "role" is reserved and may not be used for claim mappings.
+Note: the metadata key name "role" is reserved and may not be used for claim mappings. Since Vault 1.16 the role name is available 
+by the key `role` in the alias metadata of the entity after a successful login.
 
 ### Claim specifications and JSON pointer
 

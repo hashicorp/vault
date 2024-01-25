@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -321,7 +322,7 @@ const mountStateUnmounting = "unmounting"
 // MountEntry is used to represent a mount table entry
 type MountEntry struct {
 	Table                 string            `json:"table"`                             // The table it belongs to
-	Path                  string            `json:"path"`                              // Mount Path
+	Path                  string            `json:"path"`                              // Mount Path, as provided in the mount API call but with a trailing slash, i.e. no auth/ or namespace prefix.
 	Type                  string            `json:"type"`                              // Logical backend Type. NB: This is the plugin name, e.g. my-vault-plugin, NOT plugin type (e.g. auth).
 	Description           string            `json:"description"`                       // User-provided description
 	UUID                  string            `json:"uuid"`                              // Barrier view UUID
@@ -365,6 +366,7 @@ type MountConfig struct {
 	AllowedManagedKeys        []string              `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
 	UserLockoutConfig         *UserLockoutConfig    `json:"user_lockout_config,omitempty" mapstructure:"user_lockout_config"`
 	DelegatedAuthAccessors    []string              `json:"delegated_auth_accessors,omitempty" mapstructure:"delegated_auth_accessors"`
+	IdentityTokenKey          string                `json:"identity_token_key,omitempty" mapstructure:"identity_token_key"`
 
 	// PluginName is the name of the plugin registered in the catalog.
 	//
@@ -401,6 +403,7 @@ type APIMountConfig struct {
 	UserLockoutConfig         *UserLockoutConfig    `json:"user_lockout_config,omitempty" mapstructure:"user_lockout_config"`
 	PluginVersion             string                `json:"plugin_version,omitempty" mapstructure:"plugin_version"`
 	DelegatedAuthAccessors    []string              `json:"delegated_auth_accessors,omitempty" mapstructure:"delegated_auth_accessors"`
+	IdentityTokenKey          string                `json:"identity_token_key,omitempty" mapstructure:"identity_token_key"`
 
 	// PluginName is the name of the plugin registered in the catalog.
 	//
@@ -507,6 +510,12 @@ func (e *MountEntry) SyncCache() {
 		e.synthesizedConfigCache.Delete("delegated_auth_accessors")
 	} else {
 		e.synthesizedConfigCache.Store("delegated_auth_accessors", e.Config.DelegatedAuthAccessors)
+	}
+
+	if len(e.Config.IdentityTokenKey) == 0 {
+		e.synthesizedConfigCache.Delete("identity_token_key")
+	} else {
+		e.synthesizedConfigCache.Store("identity_token_key", e.Config.IdentityTokenKey)
 	}
 }
 
@@ -1690,7 +1699,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 			if entry.Version != "" {
 				errContext += fmt.Sprintf(", version=%s", entry.Version)
 			}
-			return nil, "", fmt.Errorf("%w: %s", ErrPluginNotFound, errContext)
+			return nil, "", fmt.Errorf("%w: %s", plugincatalog.ErrPluginNotFound, errContext)
 		}
 		if len(plug.Sha256) > 0 {
 			runningSha = hex.EncodeToString(plug.Sha256)

@@ -41,10 +41,11 @@ const (
 
 // Verify ConsulBackend satisfies the correct interfaces
 var (
-	_ physical.Backend          = (*ConsulBackend)(nil)
-	_ physical.FencingHABackend = (*ConsulBackend)(nil)
-	_ physical.Lock             = (*ConsulLock)(nil)
-	_ physical.Transactional    = (*ConsulBackend)(nil)
+	_ physical.Backend             = (*ConsulBackend)(nil)
+	_ physical.FencingHABackend    = (*ConsulBackend)(nil)
+	_ physical.Lock                = (*ConsulLock)(nil)
+	_ physical.Transactional       = (*ConsulBackend)(nil)
+	_ physical.TransactionalLimits = (*ConsulBackend)(nil)
 
 	GetInTxnDisabledError = errors.New("get operations inside transactions are disabled in consul backend")
 )
@@ -428,6 +429,15 @@ func (c *ConsulBackend) makeApiTxn(txn *physical.TxnEntry) (*api.TxnOp, error) {
 	}
 
 	return &api.TxnOp{KV: op}, nil
+}
+
+func (c *ConsulBackend) TransactionLimits() (int, int) {
+	// Note that even for modern Consul versions that support 128 entries per txn,
+	// we have an effective limit of 64 write operations because the other 64 are
+	// used for undo log read operations. We also reserve 1 for a check-session
+	// operation to prevent split brain so the most we allow WAL to put in a batch
+	// is 63.
+	return 63, 128 * 1024
 }
 
 // Put is used to insert or update an entry

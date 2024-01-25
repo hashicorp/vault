@@ -7,12 +7,12 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-multierror"
-
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-multierror"
 )
 
 var _ eventlogger.Node = (*SocketSink)(nil)
@@ -29,8 +29,18 @@ type SocketSink struct {
 
 // NewSocketSink should be used to create a new SocketSink.
 // Accepted options: WithMaxDuration and WithSocketType.
-func NewSocketSink(format string, address string, opt ...Option) (*SocketSink, error) {
+func NewSocketSink(address string, format string, opt ...Option) (*SocketSink, error) {
 	const op = "event.NewSocketSink"
+
+	address = strings.TrimSpace(address)
+	if address == "" {
+		return nil, fmt.Errorf("%s: address is required: %w", op, ErrInvalidParameter)
+	}
+
+	format = strings.TrimSpace(format)
+	if format == "" {
+		return nil, fmt.Errorf("%s: format is required: %w", op, ErrInvalidParameter)
+	}
 
 	opts, err := getOpts(opt...)
 	if err != nil {

@@ -8,7 +8,7 @@
     <h1 class="title is-3 title-with-icon" data-test-mount-form-header="true">
       {{#if this.showEnable}}
         {{#let (find-by "type" @mountModel.type @mountTypes) as |typeInfo|}}
-          <Icon @name={{or typeInfo.glyph typeInfo.type}} @size="24" class="has-text-grey-light" />
+          <Icon @name={{typeInfo.glyph}} @size="24" class="has-text-grey-light" />
           {{#if (eq @mountType "secret")}}
             {{concat "Enable " typeInfo.displayName " Secrets Engine"}}
           {{else}}
@@ -52,7 +52,7 @@
         </div>
         {{#if this.invalidFormAlert}}
           <div class="control">
-            <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
+            <AlertInline @type="danger" class="has-top-padding-s" @message={{this.invalidFormAlert}} />
           </div>
         {{/if}}
       </div>

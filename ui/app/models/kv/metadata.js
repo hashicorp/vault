@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
@@ -51,6 +51,7 @@ export default class KvSecretMetadataModel extends Model {
 
   @attr('object', {
     editType: 'kv',
+    isSectionHeader: true,
     subText: 'An optional set of informational key-value pairs that will be stored with all secret versions.',
   })
   customMetadata;
@@ -95,9 +96,14 @@ export default class KvSecretMetadataModel extends Model {
     };
   }
 
+  get permissionsPath() {
+    return this.fullSecretPath || this.path;
+  }
+
   // permissions needed for the list view where kv/data has not yet been called. Allows us to conditionally show action items in the LinkedBlock popups.
-  @lazyCapabilities(apiPath`${'backend'}/data/${'path'}`, 'backend', 'path') dataPath;
-  @lazyCapabilities(apiPath`${'backend'}/metadata/${'path'}`, 'backend', 'path') metadataPath;
+  @lazyCapabilities(apiPath`${'backend'}/data/${'permissionsPath'}`, 'backend', 'permissionsPath') dataPath;
+  @lazyCapabilities(apiPath`${'backend'}/metadata/${'permissionsPath'}`, 'backend', 'permissionsPath')
+  metadataPath;
 
   get canDeleteMetadata() {
     return this.metadataPath.get('canDelete') !== false;

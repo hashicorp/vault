@@ -50,9 +50,6 @@ var (
 
 	raftAutopilotConfigurationStoragePath = "core/raft/autopilot/configuration"
 
-	// TestingUpdateClusterAddr is used in tests to override the cluster address
-	TestingUpdateClusterAddr uint32
-
 	ErrJoinWithoutAutoloading = errors.New("attempt to join a cluster using autoloaded licenses while not using autoloading ourself")
 )
 
@@ -314,14 +311,6 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	c.logger.Info("starting raft active node")
 	raftBackend.SetEffectiveSDKVersion(c.effectiveSDKVersion)
 
-	autopilotConfig, err := c.loadAutopilotConfiguration(ctx)
-	if err != nil {
-		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
-	}
-	disableAutopilot := c.disableAutopilot
-
-	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, disableAutopilot)
-
 	c.pendingRaftPeers = &sync.Map{}
 
 	// Reload the raft TLS keys to ensure we are using the latest version.
@@ -334,7 +323,18 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	if err := c.monitorUndoLogs(); err != nil {
 		return err
 	}
-	return c.startPeriodicRaftTLSRotate(ctx)
+
+	if err := c.startPeriodicRaftTLSRotate(ctx); err != nil {
+		return err
+	}
+
+	autopilotConfig, err := c.loadAutopilotConfiguration(ctx)
+	if err != nil {
+		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
+	}
+	disableAutopilot := c.disableAutopilot
+	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, disableAutopilot)
+	return nil
 }
 
 func (c *Core) stopRaftActiveNode() {
@@ -1300,7 +1300,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, r
 		return fmt.Errorf("error parsing cluster address: %w", err)
 	}
 	clusterAddr := parsedClusterAddr.Host
-	if atomic.LoadUint32(&TestingUpdateClusterAddr) == 1 && strings.HasSuffix(clusterAddr, ":0") {
+	if c.clusterAddrBridge != nil && strings.HasSuffix(clusterAddr, ":0") {
 		// We are testing and have an address provider, so just create a random
 		// addr, it will be overwritten later.
 		var err error

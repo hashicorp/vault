@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
 	"github.com/hashicorp/go-uuid"
 )
 
@@ -113,7 +112,11 @@ func WithNow(now time.Time) Option {
 // WithFacility provides an Option to represent a 'facility' for a syslog sink.
 func WithFacility(facility string) Option {
 	return func(o *options) error {
-		o.withFacility = facility
+		facility = strings.TrimSpace(facility)
+
+		if facility != "" {
+			o.withFacility = facility
+		}
 
 		return nil
 	}
@@ -122,7 +125,11 @@ func WithFacility(facility string) Option {
 // WithTag provides an Option to represent a 'tag' for a syslog sink.
 func WithTag(tag string) Option {
 	return func(o *options) error {
-		o.withTag = tag
+		tag = strings.TrimSpace(tag)
+
+		if tag != "" {
+			o.withTag = tag
+		}
 
 		return nil
 	}
@@ -152,7 +159,7 @@ func WithMaxDuration(duration string) Option {
 
 		parsed, err := parseutil.ParseDurationSecond(duration)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to parse max duration: %w", err)
 		}
 
 		o.withMaxDuration = parsed

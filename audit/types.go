@@ -8,9 +8,9 @@ import (
 	"io"
 	"time"
 
-	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-bexpr"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
-
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -35,8 +35,8 @@ type subtype string
 // format defines types of format audit events support.
 type format string
 
-// auditEvent is the audit event.
-type auditEvent struct {
+// AuditEvent is the audit event.
+type AuditEvent struct {
 	ID        string            `json:"id"`
 	Version   string            `json:"version"`
 	Subtype   subtype           `json:"subtype"` // the subtype of the audit event.
@@ -144,6 +144,13 @@ type FormatterConfig struct {
 	RequiredFormat format
 }
 
+// EntryFilter should be used to filter audit requests and responses which should
+// make it to a sink.
+type EntryFilter struct {
+	// the evaluator for the bexpr expression that should be applied by the node.
+	evaluator *bexpr.Evaluator
+}
+
 // RequestEntry is the structure of a request audit log entry.
 type RequestEntry struct {
 	Time          string   `json:"time,omitempty"`
@@ -188,6 +195,7 @@ type Request struct {
 	WrapTTL                       int                    `json:"wrap_ttl,omitempty"`
 	Headers                       map[string][]string    `json:"headers,omitempty"`
 	ClientCertificateSerialNumber string                 `json:"client_certificate_serial_number,omitempty"`
+	RequestURI                    string                 `json:"request_uri,omitempty"`
 }
 
 type Response struct {
@@ -268,35 +276,26 @@ type Backend interface {
 	// Salter interface must be implemented by anything implementing Backend.
 	Salter
 
-	// LogRequest is used to synchronously log a request. This is done after the
-	// request is authorized but before the request is executed. The arguments
-	// MUST not be modified in any way. They should be deep copied if this is
-	// a possibility.
-	LogRequest(context.Context, *logical.LogInput) error
+	// The PipelineReader interface allows backends to surface information about their
+	// nodes for node and pipeline registration.
+	event.PipelineReader
 
-	// LogResponse is used to synchronously log a response. This is done after
-	// the request is processed but before the response is sent. The arguments
-	// MUST not be modified in any way. They should be deep copied if this is
-	// a possibility.
-	LogResponse(context.Context, *logical.LogInput) error
+	// IsFallback can be used to determine if this audit backend device is intended to
+	// be used as a fallback to catch all events that are not written when only using
+	// filtered pipelines.
+	IsFallback() bool
 
 	// LogTestMessage is used to check an audit backend before adding it
 	// permanently. It should attempt to synchronously log the given test
 	// message, WITHOUT using the normal Salt (which would require a storage
 	// operation on creation, which is currently disallowed.)
-	LogTestMessage(context.Context, *logical.LogInput, map[string]string) error
+	LogTestMessage(context.Context, *logical.LogInput) error
 
 	// Reload is called on SIGHUP for supporting backends.
 	Reload(context.Context) error
 
 	// Invalidate is called for path invalidation
 	Invalidate(context.Context)
-
-	// RegisterNodesAndPipeline provides an eventlogger.Broker pointer so that
-	// the Backend can call its RegisterNode and RegisterPipeline methods with
-	// the nodes and the pipeline that were created in the corresponding
-	// Factory function.
-	RegisterNodesAndPipeline(*eventlogger.Broker, string) error
 }
 
 // BackendConfig contains configuration parameters used in the factory func to
@@ -316,4 +315,4 @@ type BackendConfig struct {
 }
 
 // Factory is the factory function to create an audit backend.
-type Factory func(context.Context, *BackendConfig, bool, HeaderFormatter) (Backend, error)
+type Factory func(context.Context, *BackendConfig, HeaderFormatter) (Backend, error)

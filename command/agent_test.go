@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-hclog"
 	vaultjwt "github.com/hashicorp/vault-plugin-auth-jwt"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
@@ -35,7 +36,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	"github.com/mitchellh/cli"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -2818,6 +2818,36 @@ func TestAgent_LogFile_Config(t *testing.T) {
 	assert.Equal(t, "TMPDIR/juan.log", cfg.LogFile, "actual config check")
 	assert.Equal(t, 2, cfg.LogRotateMaxFiles)
 	assert.Equal(t, 1048576, cfg.LogRotateBytes)
+}
+
+// TestAgent_EnvVar_Overrides tests that environment variables are properly
+// parsed and override defaults.
+func TestAgent_EnvVar_Overrides(t *testing.T) {
+	configFile := populateTempFile(t, "agent-config.hcl", BasicHclConfig)
+
+	cfg, err := agentConfig.LoadConfigFile(configFile.Name())
+	if err != nil {
+		t.Fatal("Cannot load config to test update/merge", err)
+	}
+
+	assert.Equal(t, false, cfg.Vault.TLSSkipVerify)
+
+	t.Setenv("VAULT_SKIP_VERIFY", "true")
+	// Parse the cli flags (but we pass in an empty slice)
+	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
+	f := cmd.Flags()
+	err = f.Parse([]string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cmd.applyConfigOverrides(f, cfg)
+	assert.Equal(t, true, cfg.Vault.TLSSkipVerify)
+
+	t.Setenv("VAULT_SKIP_VERIFY", "false")
+
+	cmd.applyConfigOverrides(f, cfg)
+	assert.Equal(t, false, cfg.Vault.TLSSkipVerify)
 }
 
 func TestAgent_Config_NewLogger_Default(t *testing.T) {

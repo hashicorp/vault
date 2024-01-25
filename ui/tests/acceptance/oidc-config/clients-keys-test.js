@@ -100,7 +100,7 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
       .exists('lists correct app with default');
 
     // create a new key
-    await click('[data-test-breadcrumb-link="oidc-keys"]');
+    await click('[data-test-breadcrumb-link="oidc-keys"] a');
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.oidc.keys.index',

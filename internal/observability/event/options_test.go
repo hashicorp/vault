@@ -205,7 +205,7 @@ func TestOptions_WithFacility(t *testing.T) {
 		},
 		"whitespace": {
 			Value:         "    ",
-			ExpectedValue: "    ",
+			ExpectedValue: "",
 		},
 		"value": {
 			Value:         "juan",
@@ -213,7 +213,7 @@ func TestOptions_WithFacility(t *testing.T) {
 		},
 		"spacey-value": {
 			Value:         "   juan   ",
-			ExpectedValue: "   juan   ",
+			ExpectedValue: "juan",
 		},
 	}
 
@@ -243,7 +243,7 @@ func TestOptions_WithTag(t *testing.T) {
 		},
 		"whitespace": {
 			Value:         "    ",
-			ExpectedValue: "    ",
+			ExpectedValue: "",
 		},
 		"value": {
 			Value:         "juan",
@@ -251,7 +251,7 @@ func TestOptions_WithTag(t *testing.T) {
 		},
 		"spacey-value": {
 			Value:         "   juan   ",
-			ExpectedValue: "   juan   ",
+			ExpectedValue: "juan",
 		},
 	}
 
@@ -324,12 +324,12 @@ func TestOptions_WithMaxDuration(t *testing.T) {
 		"bad-value": {
 			Value:                "juan",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "time: invalid duration \"juan\"",
+			ExpectedErrorMessage: "unable to parse max duration: time: invalid duration \"juan\"",
 		},
 		"bad-spacey-value": {
 			Value:                "   juan   ",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "time: invalid duration \"juan\"",
+			ExpectedErrorMessage: "unable to parse max duration: time: invalid duration \"juan\"",
 		},
 		"duration-2s": {
 			Value:         "2s",

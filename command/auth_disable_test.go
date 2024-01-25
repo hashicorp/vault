@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 )
 
 func testAuthDisableCommand(tb testing.TB) (*cli.MockUi, *AuthDisableCommand) {

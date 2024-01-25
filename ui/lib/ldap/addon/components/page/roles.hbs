@@ -7,9 +7,9 @@
   <:toolbarFilters>
     {{#if (and (not @promptConfig) @roles.meta.total)}}
       <FilterInput
-        @placeholder="Filter roles"
-        @value={{@pageFilter}}
-        @wait={{500}}
+        aria-label="Filter roles"
+        placeholder="Filter roles"
+        value={{@pageFilter}}
         @autofocus={{true}}
         @onInput={{this.onFilterChange}}
       />

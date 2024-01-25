@@ -518,3 +518,43 @@ func SetupTestingTransactions(t testing.TB, b Backend) []*TxnEntry {
 
 	return txns
 }
+
+// Several tests across packages have to test logic with a few variations of
+// transactional backends. Make some suitable for testing limits support that
+// can be re-used.
+
+type TestTransactionalNonLimitBackend struct{}
+
+var _ Transactional = (*TestTransactionalNonLimitBackend)(nil)
+
+func (b *TestTransactionalNonLimitBackend) Put(ctx context.Context, entry *Entry) error {
+	return nil
+}
+
+func (b *TestTransactionalNonLimitBackend) Get(ctx context.Context, key string) (*Entry, error) {
+	return nil, nil
+}
+
+func (b *TestTransactionalNonLimitBackend) Delete(ctx context.Context, key string) error {
+	return nil
+}
+
+func (b *TestTransactionalNonLimitBackend) List(ctx context.Context, prefix string) ([]string, error) {
+	return nil, nil
+}
+
+func (b *TestTransactionalNonLimitBackend) Transaction(ctx context.Context, txns []*TxnEntry) error {
+	return nil
+}
+
+type TestTransactionalLimitBackend struct {
+	TestTransactionalNonLimitBackend
+
+	MaxEntries, MaxSize int
+}
+
+var _ TransactionalLimits = (*TestTransactionalLimitBackend)(nil)
+
+func (b *TestTransactionalLimitBackend) TransactionLimits() (int, int) {
+	return b.MaxEntries, b.MaxSize
+}

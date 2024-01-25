@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click, find } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const SELECTORS = {
   modalToggle: '[data-test-confirm-action-trigger]',
@@ -39,11 +40,7 @@ module('Integration | Component | confirm-action', function (hooks) {
       'hds-modal hds-modal--size-small hds-modal--color-critical has-text-left',
       'renders critical modal color by default'
     );
-    assert.strictEqual(
-      find(SELECTORS.confirm).className,
-      'hds-button hds-button--size-medium hds-button--color-critical',
-      'renders critical confirm button'
-    );
+    assert.dom(SELECTORS.confirm).hasClass('hds-button--color-critical', 'renders critical confirm button');
     assert.dom(SELECTORS.title).hasText('Are you sure?', 'renders default title');
     assert
       .dom(SELECTORS.message)
@@ -57,6 +54,12 @@ module('Integration | Component | confirm-action', function (hooks) {
   });
 
   test('it renders isInDropdown defaults and calls onConfirmAction', async function (assert) {
+    setRunOptions({
+      rules: {
+        // this component breaks this rule because it expects to be rendered within <ul>
+        listitem: { enabled: false },
+      },
+    });
     await render(hbs`
       <ConfirmAction
         @buttonText="DELETE"
@@ -135,23 +138,10 @@ module('Integration | Component | confirm-action', function (hooks) {
       />
       `);
 
-    // hasClass assertion wasn't working so this is the workaround
-    assert.strictEqual(
-      find(SELECTORS.modalToggle).className,
-      'hds-button hds-button--size-medium hds-button--color-secondary',
-      'renders @buttonColor classes'
-    );
+    assert.dom(SELECTORS.modalToggle).hasClass('hds-button--color-secondary', 'renders @buttonColor classes');
     await click(SELECTORS.modalToggle);
-    assert.strictEqual(
-      find('#confirm-action-modal').className,
-      'hds-modal hds-modal--size-small hds-modal--color-warning has-text-left',
-      'renders warning modal'
-    );
-    assert.strictEqual(
-      find(SELECTORS.confirm).className,
-      'hds-button hds-button--size-medium hds-button--color-primary',
-      'renders primary confirm button'
-    );
+    assert.dom('#confirm-action-modal').hasClass('hds-modal--color-warning', 'renders warning modal');
+    assert.dom(SELECTORS.confirm).hasClass('hds-button--color-primary', 'renders primary confirm button');
     assert.dom(SELECTORS.title).hasText('Do this?', 'renders passed title');
     assert.dom(SELECTORS.message).hasText('Are you really, really sure?', 'renders passed body text');
     assert.dom(SELECTORS.confirm).hasText('Confirm');

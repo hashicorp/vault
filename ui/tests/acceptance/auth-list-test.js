@@ -21,7 +21,7 @@ const SELECTORS = {
   input: (attr) => `[data-test-input="${attr}"]`,
   password: '[data-test-textarea]',
   saveBtn: '[data-test-save-config]',
-  methods: '[data-test-access-methods]',
+  methods: '[data-test-access-methods] a',
   listItem: '[data-test-list-item-content]',
 };
 module('Acceptance | auth backend list', function (hooks) {
@@ -34,14 +34,12 @@ module('Acceptance | auth backend list', function (hooks) {
     this.user1 = 'user1';
     this.user2 = 'user2';
 
-    await runCmd(mountAuthCmd('userpass', this.path1));
-    await runCmd(mountAuthCmd('userpass', this.path2));
+    await runCmd([mountAuthCmd('userpass', this.path1), mountAuthCmd('userpass', this.path2)], false);
   });
 
   hooks.afterEach(async function () {
     await authPage.login();
-    await runCmd(deleteAuthCmd(this.path1));
-    await runCmd(deleteAuthCmd(this.path2));
+    await runCmd([deleteAuthCmd(this.path1), deleteAuthCmd(this.path2)], false);
     return;
   });
 

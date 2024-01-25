@@ -4,11 +4,12 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
@@ -19,9 +20,10 @@ var (
 
 type PluginReloadCommand struct {
 	*BaseCommand
-	plugin string
-	mounts []string
-	scope  string
+	plugin     string
+	mounts     []string
+	scope      string
+	pluginType string
 }
 
 func (c *PluginReloadCommand) Synopsis() string {
@@ -36,9 +38,16 @@ Usage: vault plugin reload [options]
   mount(s) must be provided, but not both. In case the plugin name is provided,
   all of its corresponding mounted paths that use the plugin backend will be reloaded.
 
-  Reload the plugin named "my-custom-plugin":
+  If run with a Vault namespace other than the root namespace, only plugins
+  running in the same namespace will be reloaded.
 
-	  $ vault plugin reload -plugin=my-custom-plugin
+  Reload the secret plugin named "my-custom-plugin" on the current node:
+
+      $ vault plugin reload -type=secret -plugin=my-custom-plugin
+
+  Reload the secret plugin named "my-custom-plugin" across all nodes and replicated clusters:
+
+      $ vault plugin reload -type=secret -plugin=my-custom-plugin -scope=global
 
 ` + c.Flags().Help()
 
@@ -68,7 +77,15 @@ func (c *PluginReloadCommand) Flags() *FlagSets {
 		Name:       "scope",
 		Target:     &c.scope,
 		Completion: complete.PredictAnything,
-		Usage:      "The scope of the reload, omitted for local, 'global', for replicated reloads",
+		Usage:      "The scope of the reload, omitted for local, 'global', for replicated reloads.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:       "type",
+		Target:     &c.pluginType,
+		Completion: complete.PredictAnything,
+		Usage: "The type of plugin to reload, one of auth, secret, or database. Mutually " +
+			"exclusive with -mounts. If not provided, all plugins with a matching name will be reloaded.",
 	})
 
 	return set
@@ -103,6 +120,10 @@ func (c *PluginReloadCommand) Run(args []string) int {
 		return 1
 	case c.scope != "" && c.scope != "global":
 		c.UI.Error(fmt.Sprintf("Invalid reload scope: %s", c.scope))
+		return 1
+	case len(c.mounts) > 0 && c.pluginType != "":
+		c.UI.Error("Cannot specify -type with -mounts")
+		return 1
 	}
 
 	client, err := c.Client()
@@ -111,25 +132,46 @@ func (c *PluginReloadCommand) Run(args []string) int {
 		return 2
 	}
 
-	rid, err := client.Sys().ReloadPlugin(&api.ReloadPluginInput{
-		Plugin: c.plugin,
-		Mounts: c.mounts,
-		Scope:  c.scope,
-	})
+	var reloadID string
+	if client.Namespace() == "" {
+		pluginType := api.PluginTypeUnknown
+		pluginTypeStr := strings.TrimSpace(c.pluginType)
+		if pluginTypeStr != "" {
+			var err error
+			pluginType, err = api.ParsePluginType(pluginTypeStr)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error parsing -type as a plugin type, must be unset or one of auth, secret, or database: %s", err))
+				return 1
+			}
+		}
+
+		reloadID, err = client.Sys().RootReloadPlugin(context.Background(), &api.RootReloadPluginInput{
+			Plugin: c.plugin,
+			Type:   pluginType,
+			Scope:  c.scope,
+		})
+	} else {
+		reloadID, err = client.Sys().ReloadPlugin(&api.ReloadPluginInput{
+			Plugin: c.plugin,
+			Mounts: c.mounts,
+			Scope:  c.scope,
+		})
+	}
+
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error reloading plugin/mounts: %s", err))
 		return 2
 	}
 
 	if len(c.mounts) > 0 {
-		if rid != "" {
-			c.UI.Output(fmt.Sprintf("Success! Reloading mounts: %s, reload_id: %s", c.mounts, rid))
+		if reloadID != "" {
+			c.UI.Output(fmt.Sprintf("Success! Reloading mounts: %s, reload_id: %s", c.mounts, reloadID))
 		} else {
 			c.UI.Output(fmt.Sprintf("Success! Reloaded mounts: %s", c.mounts))
 		}
 	} else {
-		if rid != "" {
-			c.UI.Output(fmt.Sprintf("Success! Reloading plugin: %s, reload_id: %s", c.plugin, rid))
+		if reloadID != "" {
+			c.UI.Output(fmt.Sprintf("Success! Reloading plugin: %s, reload_id: %s", c.plugin, reloadID))
 		} else {
 			c.UI.Output(fmt.Sprintf("Success! Reloaded plugin: %s", c.plugin))
 		}

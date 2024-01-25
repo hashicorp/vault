@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -134,7 +134,7 @@ module('Integration | Component | dashboard/secrets-engines-card', function (hoo
     test('it adds disabled css styling to unsupported secret engines', async function (assert) {
       await this.renderComponent();
       assert.dom('[data-test-secrets-engines-row="nomad"] [data-test-view]').doesNotExist();
-      assert.dom('[data-test-icon="nomad"]').hasClass('has-text-grey');
+      assert.dom('[data-test-secrets-engines-row="nomad"] [data-test-secret-path]').hasClass('has-text-grey');
     });
   });
 });
