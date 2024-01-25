@@ -644,6 +644,8 @@ type Core struct {
 	// it is protected by activityLogLock
 	activityLogConfig ActivityLogCoreConfig
 
+	censusConfig atomic.Value
+
 	// activeTime is set on active nodes indicating the time at which this node
 	// became active.
 	activeTime time.Time
@@ -822,6 +824,9 @@ type CoreConfig struct {
 	License         string
 	LicensePath     string
 	LicensingConfig *LicensingConfig
+
+	// Configured Census Agent
+	CensusAgent CensusReporter
 
 	DisablePerformanceStandby bool
 	DisableIndexing           bool
@@ -2460,10 +2465,8 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 
-		if !c.perfStandby {
-			if err := c.setupCensusManager(); err != nil {
-				logger.Error("skipping license reporting for nil agent", "error", err)
-			}
+		if err := c.setupCensusAgent(); err != nil {
+			c.logger.Error("skipping reporting for nil agent", "error", err)
 		}
 
 		// not waiting on wg to avoid changing existing behavior
@@ -2471,11 +2474,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.setupActivityLog(ctx, &wg); err != nil {
 			return err
 		}
-
-		if !c.perfStandby {
-			c.StartManualCensusSnapshots()
-		}
-
 	} else {
 		c.auditBroker = NewAuditBroker(c.logger)
 	}
@@ -2671,8 +2669,8 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
 	c.stopActivityLog()
-	// Clean up census on seal
-	if err := c.teardownCensusManager(); err != nil {
+	// Clean up the censusAgent on seal
+	if err := c.teardownCensusAgent(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down reporting agent: %w", err))
 	}
 
