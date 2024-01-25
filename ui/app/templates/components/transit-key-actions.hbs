@@ -107,9 +107,10 @@
       @doSubmit={{this.doSubmit}}
       data-test-transit-action={{@selectedAction}}
     />
-  {{else if (eq @selectedAction "export")}}
+  {{else if (or (eq @selectedAction "export") (eq @key.supportedActions.firstObject "export"))}}
     <TransitKeyAction::export
       @key={{@key}}
+      @keys={{this.props.keys}}
       @trackedInput={{this.props.input}}
       @hash_algorithm={{this.props.hash_algorithm}}
       @signature={{this.props.signature}}
@@ -118,10 +119,14 @@
       @context={{this.props.context}}
       @prehashed={{this.props.prehashed}}
       @encodedBase64={{this.props.encodedBase64}}
+      @exportKeyType={{this.props.exportKeyType}}
+      @exportKeyVersion={{this.props.exportKeyVersion}}
+      @wrappedToken={{this.props.wrappedToken}}
+      @wrappedTTL={{this.props.wrappedTTL}}
       @toggleEncodeBase64={{this.toggleEncodeBase64}}
       @isModalActive={{this.isModalActive}}
       @doSubmit={{this.doSubmit}}
-      data-test-transit-action={{@selectedAction}}
+      data-test-transit-action="export"
     />
   {{/if}}
 </div>

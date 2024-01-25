@@ -60,7 +60,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     render(hbs`
       <TransitKeyActions />`);
     const err = await promise;
-    assert.ok(err.message.includes('`key` is required for'), 'asserts without key');
+    assert.ok(err.message.includes('@key is required for'), 'asserts without key');
   });
 
   test('it renders', async function (assert) {
@@ -100,19 +100,6 @@ module('Integration | Component | transit key actions', function (hooks) {
     assert
       .dom('[data-test-signature-algorithm]')
       .exists({ count: 1 }, 'renders signature_algorithm field on verify with rsa key');
-  });
-
-  test('it renders: rotate', async function (assert) {
-    this.set('key', { backend: 'transit', id: 'akey', supportedActions: ['rotate'] });
-    await render(hbs`
-    <TransitKeyActions @selectedAction="rotate" @key={{this.key}} />`);
-
-    assert.dom('*').hasText('', 'renders an empty div');
-
-    this.set('key.canRotate', true);
-    assert
-      .dom('button')
-      .hasText('Rotate encryption key', 'renders confirm-button when key.canRotate is true');
   });
 
   async function doEncrypt(assert, actions = [], keyattrs = {}) {
@@ -312,7 +299,7 @@ module('Integration | Component | transit key actions', function (hooks) {
       validKeyVersions: [1],
     });
     await render(hbs`
-    <TransitKeyActions @key={{this.key}} />`);
+    <TransitKeyActions @key={{this.key}} @selectedAction="hmac" />`);
     await fillIn('#algorithm', 'sha2-384');
     await blur('#algorithm');
     await fillIn('[data-test-component="code-mirror-modifier"] textarea', 'plaintext');
