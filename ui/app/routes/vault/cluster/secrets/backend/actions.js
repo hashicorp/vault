@@ -10,7 +10,6 @@ export default EditBase.extend({
   queryParams: {
     selectedAction: {
       replace: true,
-      refreshModel: true,
     },
   },
 
