@@ -23,7 +23,7 @@ import { encodeString } from 'vault/utils/b64';
  * @selectedAction="hmac"
  * />
  *
- * @param {string} selectedAction - This is the query param "action" value. Ex: hmac, verify, decrypt, etc.
+ * @param {string} selectedAction - This is the query param "action" value. Ex: hmac, verify, decrypt, etc. The only time this param can be empty is if a user is exporting a key
  */
 
 const STARTING_TRANSIT_PROPS = {
@@ -90,11 +90,6 @@ export default class TransitKeyActions extends Component {
   constructor() {
     super(...arguments);
     assert('@key is required for TransitKeyActions components', this.args.key);
-    // @selectedAction can be null if exporting a key.
-    assert(
-      '@selectedAction is required for TransitKeyActions components',
-      this.args.selectedAction || this.args.key.supportedActions.firstObject
-    );
 
     if (this.args.key.supportedActions.firstObject === 'export' || this.args.selectedAction === 'export') {
       this.props.exportKeyType = this.args.key.exportKeyTypes.firstObject;
