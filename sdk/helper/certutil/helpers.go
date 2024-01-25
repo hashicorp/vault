@@ -1627,7 +1627,7 @@ func getOtherSANsMapFromExtensions(exts []pkix.Extension) (otherSans map[string]
 // Translate Certificates and CSRs into Certificate Template
 // Four "Types" Here: Certificates; Certificate Signing Requests; Fields map[string]interface{}; Creation Parameters
 
-func parseCertificateToCreationParameters(certificate x509.Certificate) (creationParameters CreationParameters, err error) {
+func ParseCertificateToCreationParameters(certificate x509.Certificate) (creationParameters CreationParameters, err error) {
 	otherSans, err := getOtherSANsMapFromExtensions(certificate.Extensions)
 	if err != nil {
 		return CreationParameters{}, err
@@ -1664,7 +1664,7 @@ func parseCertificateToCreationParameters(certificate x509.Certificate) (creatio
 	return creationParameters, nil
 }
 
-func parseCsrToCreationParameters(csr x509.CertificateRequest) (creationParameters CreationParameters, err error) {
+func ParseCsrToCreationParameters(csr x509.CertificateRequest) (creationParameters CreationParameters, err error) {
 	otherSANs, err := getOtherSANsMapFromExtensions(csr.Extensions)
 	if err != nil {
 		return CreationParameters{}, err
@@ -1713,7 +1713,7 @@ func parseCsrToCreationParameters(csr x509.CertificateRequest) (creationParamete
 	return creationParameters, nil
 }
 
-func parseCsrToFields(csr x509.CertificateRequest) (templateData map[string]interface{}, err error) {
+func ParseCsrToFields(csr x509.CertificateRequest) (templateData map[string]interface{}, err error) {
 	otherSans, err := getOtherSANsStringFromExtensions(csr.Extensions)
 	if err != nil {
 		return templateData, err
@@ -1756,7 +1756,7 @@ func parseCsrToFields(csr x509.CertificateRequest) (templateData map[string]inte
 	return templateData, nil
 }
 
-func parseCertificateToFields(certificate x509.Certificate) (templateData map[string]interface{}, err error) {
+func ParseCertificateToFields(certificate x509.Certificate) (templateData map[string]interface{}, err error) {
 	otherSans, err := getOtherSANsStringFromExtensions(certificate.Extensions)
 	if err != nil {
 		return templateData, err
