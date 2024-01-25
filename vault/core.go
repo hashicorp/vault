@@ -2452,7 +2452,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 
 		if !c.perfStandby {
 			if err := c.setupCensusManager(); err != nil {
-				logger.Error("failed to instantiate the license reporting agent", "error", err)
+				logger.Error("skipping license reporting for nil agent", "error", err)
 			}
 		}
 
