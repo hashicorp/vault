@@ -1104,7 +1104,7 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) e
 	c.AddLogger(logger)
 
 	if os.Getenv("VAULT_DISABLE_ACTIVITY_LOG") != "" {
-		if c.ManualLicenseReportingEnabled() {
+		if c.CensusLicensingEnabled() {
 			logger.Warn("activity log disabled via environment variable while reporting is enabled. " +
 				"Reporting will override, and the activity log will be enabled")
 		} else {
@@ -1150,7 +1150,7 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) e
 			close(manager.retentionDone)
 		}(manager.retentionMonths)
 
-		manager.CensusReportDone = make(chan bool, 1)
+		manager.CensusReportDone = make(chan bool)
 		go c.activityLog.CensusReport(ctx, c.CensusAgent(), c.BillingStart())
 	}
 
