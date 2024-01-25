@@ -63,6 +63,8 @@ runs:
     - if: steps.cache-modules.outputs.cache-hit != 'true'
       name: Download go modules
       shell: bash
+      env:
+        GOPRIVATE: github.com/hashicorp/*
       run: |
         git config --global url."https://${{ inputs.github-token }}@github.com".insteadOf https://github.com
         make go-mod-download
