@@ -378,4 +378,4 @@ ci-copywriteheaders:
 
 .PHONY: all-packages
 all-packages:
-	@echo -e $(ALL_PACKAGES) | tr ' ' '\n' 
+	@echo $(ALL_PACKAGES) | tr ' ' '\n' 
