@@ -126,7 +126,7 @@ function generateMonths(startDate, endDate, namespaces) {
       continue;
     }
 
-    const monthNs = namespaces.map((ns, idx) => generateNamespaceBlock(idx, true, ns));
+    const monthNs = namespaces.map((ns, idx) => generateNamespaceBlock(idx, false, ns));
     const newClients = namespaces.map((ns, idx) => generateNamespaceBlock(idx, true, ns));
     months.push({
       timestamp: formatRFC3339(month),

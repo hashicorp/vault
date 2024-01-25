@@ -48,13 +48,22 @@ export const SELECTORS = {
   },
   charts: {
     chart: (title) => `[data-test-chart="${title}"]`, // newer lineal charts
-    timestamp: '[data-test-chart-timestamp]',
+    stat: (name) => `[data-test-chart-stat="${name}"]`,
+    usageStat: (name) => `[data-test-stat-text="${name}"] .stat-value`,
+    legend: '[data-test-chart-container-legend]',
+    legendLabel: (nth) => `.legend-label:nth-child(${nth * 2})`, // nth * 2 accounts for dots in legend
+    timestamp: '[data-test-chart-container-timestamp]',
     dataBar: '[data-test-vertical-bar]',
     xAxisLabel: '[data-test-x-axis] text',
+    // selectors for old d3 charts
+    verticalBar: '[data-test-vertical-bar-chart]',
+    bar: {
+      xAxisLabel: '[data-test-vertical-chart="x-axis-labels"] text',
+      dataBar: '[data-test-vertical-chart="data-bar"]',
+    },
     line: {
       xAxisLabel: '[data-test-line-chart] [data-test-x-axis] text',
     },
-    verticalBar: '[data-test-vertical-bar-chart]', // selector for old d3 bar chart
   },
   emptyStateTitle: '[data-test-empty-state-title]',
   usageStats: '[data-test-usage-stats]',

@@ -9,8 +9,14 @@
 import Component from '@glimmer/component';
 import { isAfter, isBefore, isSameMonth, fromUnixTime } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
+import { calculateAverage } from 'vault/utils/chart-helpers';
 
 import type ClientsActivityModel from 'vault/models/clients/activity';
+import type {
+  ClientActivityNewClients,
+  ClientActivityMonthly,
+  ClientActivityResourceByKey,
+} from 'vault/models/clients/activity';
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
 
 interface Args {
@@ -24,6 +30,17 @@ interface Args {
 }
 
 export default class ClientsActivityComponent extends Component<Args> {
+  average = (
+    data:
+      | ClientActivityMonthly[]
+      | (ClientActivityResourceByKey | undefined)[]
+      | (ClientActivityNewClients | undefined)[]
+      | undefined,
+    key: string
+  ) => {
+    return calculateAverage(data, key);
+  };
+
   get startTimeISO() {
     return fromUnixTime(this.args.startTimestamp).toISOString();
   }
@@ -37,6 +54,10 @@ export default class ClientsActivityComponent extends Component<Args> {
     return namespace ? this.filteredActivityByMonth : activity.byMonth;
   }
 
+  get byMonthNewClients() {
+    return this.byMonthActivityData ? this.byMonthActivityData?.map((m) => m?.new_clients) : [];
+  }
+
   get filteredActivityByMonth() {
     const { namespace, authMount, activity } = this.args;
     if (!namespace && !authMount) {
@@ -47,14 +68,14 @@ export default class ClientsActivityComponent extends Component<Args> {
       .filter((d) => d !== undefined);
 
     if (!authMount) {
-      return namespaceData.length === 0 ? null : namespaceData;
+      return namespaceData.length === 0 ? undefined : namespaceData;
     }
 
     const mountData = authMount
       ? namespaceData.map((namespace) => namespace?.mounts_by_key[authMount]).filter((d) => d !== undefined)
       : namespaceData;
 
-    return mountData.length === 0 ? null : mountData;
+    return mountData.length === 0 ? undefined : mountData;
   }
 
   get filteredActivityByNamespace() {
