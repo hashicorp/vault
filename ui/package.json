@@ -219,7 +219,7 @@
     "xmlhttprequest-ssl": "^1.6.2"
   },
   "engines": {
-    "node": "16"
+    "node": "18"
   },
   "ember": {
     "edition": "octane"
