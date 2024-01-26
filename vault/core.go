@@ -2952,6 +2952,7 @@ func setPhysicalSealConfig(ctx context.Context, c *Core, label, configPath strin
 		Value: buf,
 	}
 
+	// nosemgrep: physical-storage-bypass-encryption
 	if err := c.physical.Put(ctx, pe); err != nil {
 		c.logger.Error(fmt.Sprintf("failed to write %s seal configuration", label), "error", err)
 		return fmt.Errorf("failed to write %s seal configuration: %w", label, err)
