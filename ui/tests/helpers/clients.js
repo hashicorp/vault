@@ -37,7 +37,7 @@ export const SELECTORS = {
     mountPaths: '[data-test-counts-auth-mounts]',
     startDiscrepancy: '[data-test-counts-start-discrepancy]',
   },
-  monthlyNew: {
+  tokenTab: {
     entity: '[data-test-monthly-new-entity]',
     nonentity: '[data-test-monthly-new-nonentity]',
     legend: '[data-test-monthly-new-legend]',

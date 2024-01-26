@@ -160,8 +160,8 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
     assert.dom(`${chart} ${ts.charts.verticalBar}`).doesNotExist('Chart does not render');
     assert.dom(`${chart} ${ts.charts.legend}`).doesNotExist('Legend does not render');
     assert.dom(ts.emptyStateTitle).hasText('No new clients');
-    assert.dom(ts.monthlyNew.entity).doesNotExist('New client counts does not exist');
-    assert.dom(ts.monthlyNew.nonentity).doesNotExist('Average new client counts does not exist');
+    assert.dom(ts.tokenTab.entity).doesNotExist('New client counts does not exist');
+    assert.dom(ts.tokenTab.nonentity).doesNotExist('Average new client counts does not exist');
   });
 
   test('it should render usage stats', async function (assert) {
