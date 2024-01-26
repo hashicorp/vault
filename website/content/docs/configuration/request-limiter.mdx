@@ -1,0 +1,24 @@
+---
+layout: docs
+page_title: Request Limiter - Configuration
+description: |-
+  The Request Limiter mitigates overload scenarios in Vault by adaptively
+  limiting in-flight requests based on latency measurements.
+---
+
+# `request_limiter`
+
+The `request_limiter` stanza allows operators to turn off the adaptive
+concurrency limiter, which is on by default. This is a reloadable config.
+
+```hcl
+request_limiter {
+  disable = true
+}
+```
+
+~> **Warning** Turning off the Request Limiter while Vault is experiencing high
+levels of traffic could result in immediate overload of the server. Great care
+should be taken when using this configuration to avoid adverse affects in
+optimal request servicing. It is strongly advised NOT to use this configuration
+unless there is a very good reason.
