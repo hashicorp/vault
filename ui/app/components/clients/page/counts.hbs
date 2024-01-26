@@ -82,16 +82,16 @@
               data-test-counts-namespaces
             />
           {{/if}}
-          {{#if (or @authMount this.authMounts)}}
+          {{#if (or @mountPath this.mountPaths)}}
             <SearchSelect
               @id="auth-method-search-select"
-              @options={{this.authMounts}}
-              @inputValue={{if @authMount (array @authMount)}}
+              @options={{this.mountPaths}}
+              @inputValue={{if @mountPath (array @mountPath)}}
               @selectLimit="1"
               @disallowNewItems={{true}}
               @fallbackComponent="input-search"
-              @onChange={{fn this.setFilterValue "authMount"}}
-              @placeholder="Filter by auth method"
+              @onChange={{fn this.setFilterValue "mountPath"}}
+              @placeholder="Filter by mount path"
               @displayInherit={{true}}
               data-test-counts-auth-mounts
             />

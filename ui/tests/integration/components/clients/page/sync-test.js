@@ -43,7 +43,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
         @endTimestamp={{this.endTimestamp}}
         @currentTimestamp={{this.currentTimestamp}}
         @namespace={{this.countsController.ns}}
-        @authMount={{this.countsController.authMount}}
+        @mountPath={{this.countsController.mountPath}}
       />
     `);
   });

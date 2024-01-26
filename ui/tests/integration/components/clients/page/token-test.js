@@ -55,7 +55,7 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
           @endTimestamp={{this.endTimestamp}}
           @currentTimestamp={{this.currentTimestamp}}
           @namespace={{this.ns}}
-          @authMount={{this.authMount}}
+          @mountPath={{this.mountPath}}
         />
       `);
   });

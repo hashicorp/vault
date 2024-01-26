@@ -15,7 +15,7 @@ export interface ClientsCountsRouteParams {
   start_time?: string | number | undefined;
   end_time?: string | number | undefined;
   ns?: string | undefined;
-  authMount?: string | undefined;
+  mountPath?: string | undefined;
 }
 
 export default class ClientsCountsRoute extends Route {
@@ -25,7 +25,7 @@ export default class ClientsCountsRoute extends Route {
     start_time: { refreshModel: true, replace: true },
     end_time: { refreshModel: true, replace: true },
     ns: { refreshModel: false, replace: true },
-    authMount: { refreshModel: false, replace: true },
+    mountPath: { refreshModel: false, replace: true },
   };
 
   currentTimestamp = getUnixTime(timestamp.now());

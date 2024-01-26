@@ -8,14 +8,14 @@ import { action, set } from '@ember/object';
 
 import type { ClientsCountsRouteParams } from 'vault/routes/vault/cluster/clients/counts';
 
-const queryParamKeys = ['start_time', 'end_time', 'ns', 'authMount'];
+const queryParamKeys = ['start_time', 'end_time', 'ns', 'mountPath'];
 export default class ClientsCountsController extends Controller {
   queryParams = queryParamKeys;
 
   start_time: string | number | undefined = undefined;
   end_time: string | number | undefined = undefined;
   ns: string | undefined = undefined;
-  authMount: string | undefined = undefined;
+  mountPath: string | undefined = undefined;
 
   // using router.transitionTo to update the query params results in the model hook firing each time
   // this happens when the queryParams object is not added to the route or refreshModel is explicitly set to false

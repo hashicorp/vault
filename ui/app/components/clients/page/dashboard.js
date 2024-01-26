@@ -360,8 +360,8 @@ export default class Dashboard extends Component {
   }
 
   @action
-  setAuthMethod([authMount]) {
-    this.selectedAuthMethod = authMount;
+  setAuthMethod([mountPath]) {
+    this.selectedAuthMethod = mountPath;
   }
 
   // validation function sent to <DateDropdown> selecting 'endDate'

@@ -56,7 +56,7 @@ module('Integration | Component | clients/token/monthly-new', function (hooks) {
     await render(hbs`
       <Clients::Token::MonthlyNew
         @byMonthActivityData={{this.activity.byMonth}}
-        @authMount={{this.selectedAuthMethod}}
+        @mountPath={{this.selectedAuthMethod}}
         @runningTotals={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
       />
@@ -100,7 +100,7 @@ module('Integration | Component | clients/token/monthly-new', function (hooks) {
     await render(hbs`
       <Clients::Token::MonthlyNew
         @byMonthActivityData={{this.monthlyWithoutNew}}
-        @authMount={{this.selectedAuthMethod}}
+        @mountPath={{this.selectedAuthMethod}}
         @runningTotals={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
       />

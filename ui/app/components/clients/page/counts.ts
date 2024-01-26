@@ -22,7 +22,7 @@ interface Args {
   endTimestamp: number;
   currentTimestamp: number;
   namespace: string;
-  authMount: string;
+  mountPath: string;
   onFilterChange: CallableFunction;
 }
 
@@ -86,7 +86,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
       : [];
   }
 
-  get authMounts() {
+  get mountPaths() {
     if (this.namespaces.length) {
       return this.activityForNamespace?.mounts.map((mount) => ({
         id: mount.label,
@@ -124,10 +124,10 @@ export default class ClientsCountsPageComponent extends Component<Args> {
 
   get filteredActivity() {
     // return activity counts based on selected namespace and auth mount values
-    const { namespace, authMount, activity } = this.args;
+    const { namespace, mountPath, activity } = this.args;
     if (namespace) {
-      return authMount
-        ? this.activityForNamespace?.mounts.find((mount) => mount.label === authMount)
+      return mountPath
+        ? this.activityForNamespace?.mounts.find((mount) => mount.label === mountPath)
         : this.activityForNamespace;
     }
     return activity.total;
@@ -157,11 +157,11 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   }
 
   @action
-  setFilterValue(type: 'ns' | 'authMount', [value]: [string | undefined]) {
+  setFilterValue(type: 'ns' | 'mountPath', [value]: [string | undefined]) {
     const params = { [type]: value };
-    // unset authMount value when namespace is cleared
+    // unset mountPath value when namespace is cleared
     if (type === 'ns' && !value) {
-      params['authMount'] = undefined;
+      params['mountPath'] = undefined;
     }
     this.args.onFilterChange(params);
   }
@@ -171,7 +171,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
       start_time: undefined,
       end_time: undefined,
       ns: undefined,
-      authMount: undefined,
+      mountPath: undefined,
     });
   }
 }
