@@ -30,29 +30,29 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   @service declare readonly version: VersionService;
   @service declare readonly store: StoreService;
 
-  get startDate() {
+  get startTimestampISO() {
     return this.args.startTimestamp ? fromUnixTime(this.args.startTimestamp).toISOString() : null;
   }
 
-  get endDate() {
+  get endTimestampISO() {
     return this.args.endTimestamp ? fromUnixTime(this.args.endTimestamp).toISOString() : null;
   }
 
   get formattedStartDate() {
-    return this.startDate ? parseAPITimestamp(this.startDate, 'MMMM yyyy') : null;
+    return this.startTimestampISO ? parseAPITimestamp(this.startTimestampISO, 'MMMM yyyy') : null;
   }
 
   // returns text for empty state message if noActivityData
   get dateRangeMessage() {
-    if (this.startDate && this.endDate) {
+    if (this.startTimestampISO && this.endTimestampISO) {
       const endMonth = isSameMonth(
-        parseAPITimestamp(this.startDate) as Date,
-        parseAPITimestamp(this.endDate) as Date
+        parseAPITimestamp(this.startTimestampISO) as Date,
+        parseAPITimestamp(this.endTimestampISO) as Date
       )
         ? ''
-        : `to ${parseAPITimestamp(this.endDate, 'MMMM yyyy')}`;
+        : `to ${parseAPITimestamp(this.endTimestampISO, 'MMMM yyyy')}`;
       // completes the message 'No data received from { dateRangeMessage }'
-      return `from ${parseAPITimestamp(this.startDate, 'MMMM yyyy')} ${endMonth}`;
+      return `from ${parseAPITimestamp(this.startTimestampISO, 'MMMM yyyy')} ${endMonth}`;
     }
     return null;
   }
@@ -100,9 +100,9 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     // show banner if startTime returned from activity log (response) is after the queried startTime
     const { activity, config } = this.args;
     const activityStartDateObject = parseAPITimestamp(activity.startTime) as Date;
-    const queryStartDateObject = parseAPITimestamp(this.startDate) as Date;
+    const queryStartDateObject = parseAPITimestamp(this.startTimestampISO) as Date;
     const isEnterprise =
-      this.startDate === config.billingStartTimestamp?.toISOString() && this.version.isEnterprise;
+      this.startTimestampISO === config.billingStartTimestamp?.toISOString() && this.version.isEnterprise;
     const message = isEnterprise ? 'Your license start date is' : 'You requested data from';
 
     if (

@@ -63,8 +63,8 @@
         <Toolbar data-test-clients-filter-bar>
           <ToolbarFilters>
             <CalendarWidget
-              @startTimestamp={{this.startDate}}
-              @endTimestamp={{this.endDate}}
+              @startTimestamp={{this.startTimestampISO}}
+              @endTimestamp={{this.endTimestampISO}}
               @selectMonth={{this.onDateChange}}
             />
             {{#if (or @namespace this.namespaces)}}
