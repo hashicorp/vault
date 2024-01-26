@@ -891,7 +891,8 @@ type CoreConfig struct {
 
 	ClusterAddrBridge *raft.ClusterAddrBridge
 
-	LimiterRegistry *limits.LimiterRegistry
+	DisableRequestLimiter bool
+	LimiterRegistry       *limits.LimiterRegistry
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -1292,6 +1293,15 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	c.limiterRegistry = conf.LimiterRegistry
+	c.limiterRegistryLock.Lock()
+	if conf.DisableRequestLimiter {
+		c.limiterRegistry.Disable()
+	} else {
+		c.limiterRegistry.Enable()
+	}
+	c.limiterRegistryLock.Unlock()
 
 	err = c.adjustForSealMigration(conf.UnwrapSeal)
 	if err != nil {
@@ -4053,6 +4063,27 @@ func (c *Core) ReloadLogRequestsLevel() {
 		c.logRequestsLevel.Store(int32(log.LevelFromString(infoLevel)))
 	case infoLevel != "":
 		c.logger.Warn("invalid log_requests_level", "level", infoLevel)
+	}
+}
+
+func (c *Core) ReloadRequestLimiter() {
+	c.limiterRegistry.Logger.Info("reloading request limiter config")
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return
+	}
+
+	disable := false
+	requestLimiterConfig := conf.(*server.Config).RequestLimiter
+	if requestLimiterConfig != nil {
+		disable = requestLimiterConfig.Disable
+	}
+
+	switch disable {
+	case true:
+		c.limiterRegistry.Disable()
+	default:
+		c.limiterRegistry.Enable()
 	}
 }
 
