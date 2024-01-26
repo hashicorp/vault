@@ -9,6 +9,7 @@ import { task } from 'ember-concurrency';
 import { dateFormat } from 'core/helpers/date-format';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module Page::MessagesList
@@ -79,11 +80,16 @@ export default class MessagesList extends Component {
 
   @task
   *deleteMessage(message) {
-    this.store.clearDataset('config-ui/message');
-    yield message.destroyRecord(message.id);
-    this.router.transitionTo('vault.cluster.config-ui.messages');
-    this.customMessages.fetchMessages(this.namespace.path);
-    this.flashMessages.success(`Successfully deleted ${message.title}.`);
+    try {
+      this.store.clearDataset('config-ui/message');
+      yield message.destroyRecord(message.id);
+      this.router.transitionTo('vault.cluster.config-ui.messages');
+      this.customMessages.fetchMessages(this.namespace.path);
+      this.flashMessages.success(`Successfully deleted ${message.title}.`);
+    } catch (e) {
+      const message = errorMessage(e);
+      this.flashMessages.danger(message);
+    }
   }
 
   @action
