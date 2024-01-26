@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
 module('Integration | Component | resultant-acl-banner', function (hooks) {
@@ -43,5 +43,12 @@ module('Integration | Component | resultant-acl-banner', function (hooks) {
     assert
       .dom('[data-test-resultant-acl-reauthenticate]')
       .hasText('Log into root namespace', 'Shows reauth link with default namespace');
+  });
+
+  test('it goes away when dismiss button clicked', async function (assert) {
+    await render(hbs`<ResultantAclBanner />`);
+    assert.dom('[data-test-resultant-acl-banner]').exists('Shows banner initially');
+    await click('.hds-dismiss-button');
+    assert.dom('[data-test-resultant-acl-banner]').doesNotExist('Hides banner after dismiss');
   });
 });

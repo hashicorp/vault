@@ -5,10 +5,12 @@
 
 import { service } from '@ember/service';
 import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
 
 export default class ResultantAclBannerComponent extends Component {
   @service namespace;
   @service router;
+  @tracked hideBanner = false;
 
   get ns() {
     return this.namespace.path || 'root';
