@@ -1308,11 +1308,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 
-	c.limiterRegistry = conf.LimiterRegistry
-	c.limiterRegistryLock.Lock()
-	c.limiterRegistry.Enable()
-	c.limiterRegistryLock.Unlock()
-
 	// Version history
 	if c.versionHistory == nil {
 		c.logger.Info("Initializing version history cache for core")
