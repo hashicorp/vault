@@ -19,10 +19,11 @@
   <div class="columns">
     <div class="column">
       <StatText
+        class="column"
         @label="Total clients"
         @value={{@totalUsageCounts.clients}}
         @size="l"
-        @subText="The sum of entity clientIDs and non-entity clientIDs; this is Vault’s primary billing metric."
+        @subText="The sum of the clients listed; this is Vault’s primary billing metric."
         data-test-stat-text="total-clients"
       />
     </div>
@@ -46,5 +47,17 @@
         data-test-stat-text="non-entity-clients"
       />
     </div>
+    {{#if (gte @totalUsageCounts.secret_syncs 0)}}
+      <div class="column">
+        <StatText
+          class="column"
+          @label="Secrets sync clients"
+          @value={{@totalUsageCounts.secret_syncs}}
+          @size="l"
+          @subText="Clients created with a shared set of permissions, but not associated with an entity. "
+          data-test-stat-text="secret-syncs"
+        />
+      </div>
+    {{/if}}
   </div>
 </div>

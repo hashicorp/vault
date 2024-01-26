@@ -3,16 +3,14 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-{{#if this.byMonthActivityData}}
-  <Clients::RunningTotal
-    @byMonthActivityData={{this.byMonthActivityData}}
-    @isHistoricalMonth={{and (not this.isCurrentMonth) (not this.isDateRange)}}
-    @isCurrentMonth={{this.isCurrentMonth}}
-    @runningTotals={{this.totalUsageCounts}}
-    @upgradeData={{this.upgradeDuringActivity}}
-    @responseTimestamp={{@activity.responseTimestamp}}
-  />
-{{/if}}
+<Clients::RunningTotal
+  @byMonthActivityData={{this.byMonthActivityData}}
+  @isHistoricalMonth={{and (not this.isCurrentMonth) (not this.isDateRange)}}
+  @isCurrentMonth={{this.isCurrentMonth}}
+  @runningTotals={{this.totalUsageCounts}}
+  @upgradeData={{this.upgradeDuringActivity}}
+  @responseTimestamp={{@activity.responseTimestamp}}
+/>
 {{#if this.hasAttributionData}}
   <Clients::Attribution
     @totalUsageCounts={{this.totalUsageCounts}}
