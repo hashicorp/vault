@@ -3565,16 +3565,17 @@ func (c *Core) readFeatureFlags(ctx context.Context) (*FeatureFlags, error) {
 // misconfigured. This allows users to recover from errors when starting Vault
 // with misconfigured plugins. It should not be possible for existing builtins
 // to be misconfigured, so that is a fatal error.
-func (c *Core) isMountable(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) bool {
-	return !c.isMountEntryBuiltin(ctx, entry, pluginType)
+func (c *Core) isMountable(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) (bool, error) {
+	builtin, err := c.isMountEntryBuiltin(ctx, entry, pluginType)
+	return !builtin, err
 }
 
 // isMountEntryBuiltin determines whether a mount entry is associated with a
 // builtin of the specified plugin type.
-func (c *Core) isMountEntryBuiltin(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) bool {
+func (c *Core) isMountEntryBuiltin(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) (bool, error) {
 	// Prevent a panic early on
 	if entry == nil || c.pluginCatalog == nil {
-		return false
+		return false, nil
 	}
 
 	// Allow type to be determined from mount entry when not otherwise specified
@@ -3588,12 +3589,16 @@ func (c *Core) isMountEntryBuiltin(ctx context.Context, entry *MountEntry, plugi
 		pluginName = alias
 	}
 
-	plug, err := c.pluginCatalog.Get(ctx, pluginName, pluginType, entry.Version)
+	pluginVersion, err := c.resolveMountEntryVersion(ctx, pluginType, entry)
+	if err != nil {
+		return false, err
+	}
+	plug, err := c.pluginCatalog.Get(ctx, pluginName, pluginType, pluginVersion)
 	if err != nil || plug == nil {
-		return false
+		return false, nil
 	}
 
-	return plug.Builtin
+	return plug.Builtin, nil
 }
 
 // MatchingMount returns the path of the mount that will be responsible for
