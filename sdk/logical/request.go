@@ -6,6 +6,7 @@ package logical
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -446,4 +447,21 @@ type CtxKeyInFlightRequestID struct{}
 
 func (c CtxKeyInFlightRequestID) String() string {
 	return "in-flight-request-ID"
+}
+
+type CtxKeyRequestRole struct{}
+
+func (c CtxKeyRequestRole) String() string {
+	return "request-role"
+}
+
+type ctxKeyOriginalBody struct{}
+
+func ContextOriginalBodyValue(ctx context.Context) (io.ReadCloser, bool) {
+	value, ok := ctx.Value(ctxKeyOriginalBody{}).(io.ReadCloser)
+	return value, ok
+}
+
+func CreateContextOriginalBody(parent context.Context, body io.ReadCloser) context.Context {
+	return context.WithValue(parent, ctxKeyOriginalBody{}, body)
 }

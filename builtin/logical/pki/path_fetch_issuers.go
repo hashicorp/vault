@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -249,7 +249,7 @@ to be set on all PR secondary clusters.`,
 					Required:    false,
 				},
 				"usage": {
-					Type:        framework.TypeStringSlice,
+					Type:        framework.TypeString,
 					Description: `Usage`,
 					Required:    false,
 				},
@@ -283,7 +283,7 @@ to be set on all PR secondary clusters.`,
 				},
 				"ocsp_servers": {
 					Type:        framework.TypeStringSlice,
-					Description: `OSCP Servers`,
+					Description: `OCSP Servers`,
 					Required:    false,
 				},
 				"enable_aia_url_templating": {
@@ -1115,6 +1115,18 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 		msg := fmt.Sprintf("Failed to rebuild remaining issuers' chains: %v", err)
 		b.Logger().Error(msg)
 		response.AddWarning(msg)
+	}
+
+	// Finally, we need to rebuild both the local and the unified CRLs. This
+	// will free up any now unnecessary space used in both the CRL config
+	// and for the underlying CRL.
+	warnings, err := b.crlBuilder.rebuild(sc, true)
+	if err != nil {
+		return nil, err
+	}
+
+	for index, warning := range warnings {
+		response.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
 	}
 
 	return response, nil

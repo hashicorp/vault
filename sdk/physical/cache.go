@@ -37,6 +37,11 @@ var cacheExceptionsPaths = []string{
 	// exceptions to avoid unseal errors. See VAULT-17227
 	"core/seal-config",
 	"core/recovery-config",
+
+	// we need to make sure the persisted license is read from the storage
+	// to ensure the changes to the autoloaded license on the active node
+	// is observed on the perfStandby nodes
+	"core/autoloaded-license",
 }
 
 // CacheRefreshContext returns a context with an added value denoting if the

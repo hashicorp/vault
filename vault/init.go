@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -451,7 +451,7 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	}
 
 	// Disallow auto-unsealing when migrating
-	if c.IsInSealMigrationMode() && !c.IsSealMigrated() {
+	if c.IsInSealMigrationMode(true) && !c.IsSealMigrated(true) {
 		return NewNonFatalError(errors.New("cannot auto-unseal during seal migration"))
 	}
 

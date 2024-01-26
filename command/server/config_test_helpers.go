@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package server
 
@@ -503,7 +503,7 @@ func testUnknownFieldValidation(t *testing.T) {
 			Problem: "unknown or unsupported field bad_value found in configuration",
 			Position: token.Pos{
 				Filename: "./test-fixtures/config.hcl",
-				Offset:   651,
+				Offset:   652,
 				Line:     37,
 				Column:   5,
 			},
@@ -570,6 +570,28 @@ func testUnknownFieldValidationHcl(t *testing.T) {
 	if errors != nil {
 		t.Fatal(errors)
 	}
+}
+
+// testConfigWithAdministrativeNamespaceJson tests that a config with a valid administrative namespace path is correctly validated and loaded.
+func testConfigWithAdministrativeNamespaceJson(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config_with_valid_admin_ns.json")
+	require.NoError(t, err)
+
+	configErrors := config.Validate("./test-fixtures/config_with_valid_admin_ns.json")
+	require.Empty(t, configErrors)
+
+	require.NotEmpty(t, config.AdministrativeNamespacePath)
+}
+
+// testConfigWithAdministrativeNamespaceHcl tests that a config with a valid administrative namespace path is correctly validated and loaded.
+func testConfigWithAdministrativeNamespaceHcl(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config_with_valid_admin_ns.hcl")
+	require.NoError(t, err)
+
+	configErrors := config.Validate("./test-fixtures/config_with_valid_admin_ns.hcl")
+	require.Empty(t, configErrors)
+
+	require.NotEmpty(t, config.AdministrativeNamespacePath)
 }
 
 func testLoadConfigFile_json(t *testing.T) {
@@ -819,6 +841,8 @@ func testConfig_Sanitized(t *testing.T) {
 			"num_lease_metrics_buckets":              168,
 			"add_lease_metrics_namespace_labels":     false,
 		},
+		"administrative_namespace_path": "admin/",
+		"imprecise_lease_role_tracking": false,
 	}
 
 	addExpectedEntSanitizedConfig(expected, []string{"http"})

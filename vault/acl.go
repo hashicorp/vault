@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -391,6 +391,16 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 		}
 	}
 
+	// List operations need to check without the trailing slash first, because
+	// there could be other rules with trailing wildcards that will match the
+	// path
+	if op == logical.ListOperation && strings.HasSuffix(path, "/") {
+		permissions = a.CheckAllowedFromNonExactPaths(strings.TrimSuffix(path, "/"), false)
+		if permissions != nil {
+			capabilities = permissions.CapabilitiesBitmap
+			goto CHECK
+		}
+	}
 	permissions = a.CheckAllowedFromNonExactPaths(path, false)
 	if permissions != nil {
 		capabilities = permissions.CapabilitiesBitmap

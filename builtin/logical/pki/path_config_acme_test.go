@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -91,7 +91,7 @@ func TestAcmeConfig(t *testing.T) {
 	testCtx := context.Background()
 
 	for _, tc := range cases {
-		deadline := time.Now().Add(time.Second * 10)
+		deadline := time.Now().Add(1 * time.Minute)
 		subTestCtx, _ := context.WithDeadline(testCtx, deadline)
 
 		_, err := client.Logical().WriteWithContext(subTestCtx, "pki/roles/exists", roleConfig)

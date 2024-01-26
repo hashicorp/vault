@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { helper } from '@ember/component/helper';
@@ -26,7 +26,7 @@ export function changelogUrlFor([version]) {
     const versionNumber = version.split('+')[0].split('.').join('');
 
     // only recent versions have a predictable url
-    if (versionNumber >= '143') {
+    if (versionNumber >= 143) {
       return url.concat(versionNumber);
     }
   } catch (e) {

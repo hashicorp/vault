@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}} @root={{@root}} @showCurrent={{true}} />
@@ -337,7 +342,7 @@
           @alwaysRender={{not (is-empty-value (get @model attr.name) hasDefault=defaultDisplay)}}
           @defaultShown={{defaultDisplay}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{get @model attr.name}}
+          @value={{if (eq attr.name "connection_url") (decode-uri (get @model attr.name)) (get @model attr.name)}}
         />
       {{/if}}
     {{/let}}
@@ -350,6 +355,7 @@
   @isActive={{this.showSaveModal}}
   @type="info"
   @showCloseButton={{false}}
+  data-test-database-rotate-root-modal
 >
   <section class="modal-card-body">
     <p class="has-bottom-margin-s">

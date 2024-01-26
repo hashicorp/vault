@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package server
 
@@ -62,6 +62,12 @@ func TestParseSeals(t *testing.T) {
 
 func TestParseStorage(t *testing.T) {
 	testParseStorageTemplate(t)
+}
+
+// TestConfigWithAdministrativeNamespace tests that .hcl and .json configurations are correctly parsed when the administrative_namespace_path is present.
+func TestConfigWithAdministrativeNamespace(t *testing.T) {
+	testConfigWithAdministrativeNamespaceHcl(t)
+	testConfigWithAdministrativeNamespaceJson(t)
 }
 
 func TestUnknownFieldValidation(t *testing.T) {

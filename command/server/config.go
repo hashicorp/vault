@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package server
 
@@ -111,6 +111,8 @@ type Config struct {
 	LogRequestsLevelRaw interface{} `hcl:"log_requests_level"`
 
 	DetectDeadlocks string `hcl:"detect_deadlocks"`
+
+	ImpreciseLeaseRoleTracking bool `hcl:"imprecise_lease_role_tracking"`
 
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
 	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
@@ -412,6 +414,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DetectDeadlocks = c2.DetectDeadlocks
 	}
 
+	result.ImpreciseLeaseRoleTracking = c.ImpreciseLeaseRoleTracking
+	if c2.ImpreciseLeaseRoleTracking {
+		result.ImpreciseLeaseRoleTracking = c2.ImpreciseLeaseRoleTracking
+	}
+
 	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
 	if c2.EnableResponseHeaderRaftNodeID {
 		result.EnableResponseHeaderRaftNodeID = c2.EnableResponseHeaderRaftNodeID
@@ -445,6 +452,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		if result.DisableClusteringRaw != nil {
 			haStorage.DisableClustering = result.DisableClustering
 		}
+	}
+
+	result.AdministrativeNamespacePath = c.AdministrativeNamespacePath
+	if c2.AdministrativeNamespacePath != "" {
+		result.AdministrativeNamespacePath = c2.AdministrativeNamespacePath
 	}
 
 	result.entConfig = c.entConfig.Merge(c2.entConfig)
@@ -1131,6 +1143,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"experiments":        c.Experiments,
 
 		"detect_deadlocks": c.DetectDeadlocks,
+
+		"imprecise_lease_role_tracking": c.ImpreciseLeaseRoleTracking,
 	}
 	for k, v := range sharedResult {
 		result[k] = v

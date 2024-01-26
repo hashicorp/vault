@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -6769,7 +6769,9 @@ func TestProperAuthing(t *testing.T) {
 		"certs":                                  shouldBeAuthed,
 		"certs/revoked":                          shouldBeAuthed,
 		"certs/revocation-queue":                 shouldBeAuthed,
+		"certs/revocation-queue/":                shouldBeAuthed,
 		"certs/unified-revoked":                  shouldBeAuthed,
+		"certs/unified-revoked/":                 shouldBeAuthed,
 		"config/acme":                            shouldBeAuthed,
 		"config/auto-tidy":                       shouldBeAuthed,
 		"config/ca":                              shouldBeAuthed,

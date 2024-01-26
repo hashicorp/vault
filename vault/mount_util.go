@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 //go:build !enterprise
 
@@ -33,7 +33,7 @@ func runFilteredPathsEvaluation(context.Context, *Core, bool) error           { 
 // ViewPath returns storage prefix for the view
 func (e *MountEntry) ViewPath() string {
 	switch e.Type {
-	case systemMountType:
+	case mountTypeSystem:
 		return systemBarrierPrefix
 	case "token":
 		return path.Join(systemBarrierPrefix, tokenSubPath) + "/"
@@ -71,4 +71,8 @@ func (c *Core) mountEntrySysView(entry *MountEntry) extendedSystemView {
 		return esi
 	}
 	return c.NewAcmeBillingSystemView(esi)
+}
+
+func (c *Core) entBuiltinPluginMetrics(ctx context.Context, entry *MountEntry, val float32) error {
+	return nil
 }

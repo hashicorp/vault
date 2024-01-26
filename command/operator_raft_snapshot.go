@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -34,6 +34,10 @@ Usage: vault operator raft snapshot <subcommand> [options] [args]
   Saves a snapshot of the current state of the Raft cluster into a file:
 
       $ vault operator raft snapshot save raft.snap
+
+  Inspects a snapshot based on a file:
+
+      $ vault operator raft snapshot inspect raft.snap
 
   Please see the individual subcommand help for detailed usage information.
 `

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -34,7 +34,7 @@ func pathRotateRoot(b *backend) *framework.Path {
 	pattern := "root/rotate/" + framework.GenericNameRegex("exported")
 
 	displayAttrs := &framework.DisplayAttributes{
-		OperationPrefix: operationPrefixPKIIssuers,
+		OperationPrefix: operationPrefixPKI,
 		OperationVerb:   "rotate",
 		OperationSuffix: "root",
 	}
@@ -55,8 +55,8 @@ func buildPathGenerateRoot(b *backend, pattern string, displayAttrs *framework.D
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"expiration": {
-								Type:        framework.TypeString,
-								Description: `The expiration of the given.`,
+								Type:        framework.TypeInt64,
+								Description: `The expiration of the given issuer.`,
 								Required:    true,
 							},
 							"serial_number": {

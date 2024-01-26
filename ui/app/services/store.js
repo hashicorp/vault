@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Store from '@ember-data/store';
@@ -12,6 +12,7 @@ import { assert } from '@ember/debug';
 import { set, get, computed } from '@ember/object';
 import clamp from 'vault/utils/clamp';
 import config from 'vault/config/environment';
+import sortObjects from 'vault/utils/sort-objects';
 
 const { DEFAULT_PAGE_SIZE } = config.APP;
 
@@ -77,9 +78,12 @@ export default Store.extend({
   //   pageFilter: a string that will be used to do a fuzzy match against the
   //     results, this is done pre-pagination
   lazyPaginatedQuery(modelType, query /*, options*/) {
+    const skipCache = query.skipCache;
+    // We don't want skipCache to be part of the actual query key, so remove it
+    delete query.skipCache;
     const adapter = this.adapterFor(modelType);
     const modelName = normalizeModelName(modelType);
-    const dataCache = this.getDataset(modelName, query);
+    const dataCache = skipCache ? this.clearDataset(modelName) : this.getDataset(modelName, query);
     const responsePath = query.responsePath;
     assert('responsePath is required', responsePath);
     assert('page is required', typeof query.page === 'number');
@@ -111,7 +115,7 @@ export default Store.extend({
     let newData = dataset || [];
     if (filter) {
       newData = dataset.filter(function (item) {
-        const id = item.id || item;
+        const id = item.id || item.name || item;
         return id.toLowerCase().includes(filter.toLowerCase());
       });
     }
@@ -144,6 +148,7 @@ export default Store.extend({
       prevPage: clamp(currentPage - 1, 1, lastPage),
       total: dataset.length || 0,
       filteredTotal: data.length || 0,
+      pageSize: size,
     };
 
     return response;
@@ -181,11 +186,12 @@ export default Store.extend({
   // store data cache as { response, dataset}
   // also populated `lazyCaches` attribute
   storeDataset(modelName, query, response, array) {
-    const dataSet = {
+    const dataset = query.sortBy ? sortObjects(array, query.sortBy) : array;
+    const value = {
       response,
-      dataset: array,
+      dataset,
     };
-    this.setLazyCacheForModel(modelName, query, dataSet);
+    this.setLazyCacheForModel(modelName, query, value);
   },
 
   clearDataset(modelName) {

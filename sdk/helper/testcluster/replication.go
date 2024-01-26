@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package testcluster
 
 import (
@@ -255,7 +258,7 @@ func WaitForPerfReplicationWorking(ctx context.Context, pri, sec VaultCluster) e
 		"bar": 1,
 	})
 	if err != nil {
-		return fmt.Errorf("unable to write KV on primary", "path", path)
+		return fmt.Errorf("unable to write KV on primary, path=%s", path)
 	}
 
 	for ctx.Err() == nil {

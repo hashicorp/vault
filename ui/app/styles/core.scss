@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 // Variables
@@ -15,6 +15,9 @@
 // Mixins
 @import './utils/mixins';
 @import './utils/animations';
+
+// Open-api styling
+@import './utils/swagger';
 
 // Core Styles: each file styles a class that is not associated with a component. Ex: box and not box-label.
 @import './core/alert-banner';

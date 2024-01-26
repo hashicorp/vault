@@ -42,5 +42,5 @@ const (
 
 	PerformanceReplicationPathTarget = "performance"
 
-	DRReplicationPathParget = "dr"
+	DRReplicationPathTarget = "dr"
 )

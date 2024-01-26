@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -111,7 +111,7 @@ signed by an issuer in this mount.`,
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"revocation_time": {
-								Type:        framework.TypeDurationSecond,
+								Type:        framework.TypeInt64,
 								Description: `Revocation Time`,
 								Required:    false,
 							},
@@ -176,7 +176,7 @@ be in PEM format.`,
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"revocation_time": {
-								Type:        framework.TypeDurationSecond,
+								Type:        framework.TypeInt64,
 								Description: `Revocation Time`,
 								Required:    false,
 							},

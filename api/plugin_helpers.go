@@ -40,7 +40,7 @@ const (
 // path matches that path or not (useful specifically for the paths that
 // contain templated fields.)
 var sudoPaths = map[string]*regexp.Regexp{
-	"/auth/token/accessors/":                        regexp.MustCompile(`^/auth/token/accessors/?$`),
+	"/auth/token/accessors":                         regexp.MustCompile(`^/auth/token/accessors/?$`),
 	"/pki/root":                                     regexp.MustCompile(`^/pki/root$`),
 	"/pki/root/sign-self-issued":                    regexp.MustCompile(`^/pki/root/sign-self-issued$`),
 	"/sys/audit":                                    regexp.MustCompile(`^/sys/audit$`),
@@ -50,7 +50,7 @@ var sudoPaths = map[string]*regexp.Regexp{
 	"/sys/config/auditing/request-headers":          regexp.MustCompile(`^/sys/config/auditing/request-headers$`),
 	"/sys/config/auditing/request-headers/{header}": regexp.MustCompile(`^/sys/config/auditing/request-headers/.+$`),
 	"/sys/config/cors":                              regexp.MustCompile(`^/sys/config/cors$`),
-	"/sys/config/ui/headers/":                       regexp.MustCompile(`^/sys/config/ui/headers/?$`),
+	"/sys/config/ui/headers":                        regexp.MustCompile(`^/sys/config/ui/headers/?$`),
 	"/sys/config/ui/headers/{header}":               regexp.MustCompile(`^/sys/config/ui/headers/.+$`),
 	"/sys/leases":                                   regexp.MustCompile(`^/sys/leases$`),
 	"/sys/leases/lookup/":                           regexp.MustCompile(`^/sys/leases/lookup/?$`),
@@ -85,6 +85,7 @@ type PluginAPIClientMeta struct {
 	flagCAPath     string
 	flagClientCert string
 	flagClientKey  string
+	flagServerName string
 	flagInsecure   bool
 }
 
@@ -96,6 +97,7 @@ func (f *PluginAPIClientMeta) FlagSet() *flag.FlagSet {
 	fs.StringVar(&f.flagCAPath, "ca-path", "", "")
 	fs.StringVar(&f.flagClientCert, "client-cert", "", "")
 	fs.StringVar(&f.flagClientKey, "client-key", "", "")
+	fs.StringVar(&f.flagServerName, "tls-server-name", "", "")
 	fs.BoolVar(&f.flagInsecure, "tls-skip-verify", false, "")
 
 	return fs
@@ -104,13 +106,13 @@ func (f *PluginAPIClientMeta) FlagSet() *flag.FlagSet {
 // GetTLSConfig will return a TLSConfig based off the values from the flags
 func (f *PluginAPIClientMeta) GetTLSConfig() *TLSConfig {
 	// If we need custom TLS configuration, then set it
-	if f.flagCACert != "" || f.flagCAPath != "" || f.flagClientCert != "" || f.flagClientKey != "" || f.flagInsecure {
+	if f.flagCACert != "" || f.flagCAPath != "" || f.flagClientCert != "" || f.flagClientKey != "" || f.flagInsecure || f.flagServerName != "" {
 		t := &TLSConfig{
 			CACert:        f.flagCACert,
 			CAPath:        f.flagCAPath,
 			ClientCert:    f.flagClientCert,
 			ClientKey:     f.flagClientKey,
-			TLSServerName: "",
+			TLSServerName: f.flagServerName,
 			Insecure:      f.flagInsecure,
 		}
 
@@ -249,7 +251,9 @@ func SudoPaths() map[string]*regexp.Regexp {
 	return sudoPaths
 }
 
-// Determine whether the given path requires the sudo capability
+// Determine whether the given path requires the sudo capability.
+// Note that this uses hardcoded static path information, so will return incorrect results for paths in namespaces,
+// or for secret engines mounted at non-default paths.
 func IsSudoPath(path string) bool {
 	// Return early if the path is any of the non-templated sudo paths.
 	if _, ok := sudoPaths[path]; ok {

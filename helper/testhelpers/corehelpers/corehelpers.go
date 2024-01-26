@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 // Package corehelpers contains testhelpers that don't depend on package vault,
 // and thus can be used within vault (as well as elsewhere.)
@@ -9,7 +9,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -25,6 +25,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/go-testing-interface"
 )
+
+var externalPlugins = []string{"transform", "kmip", "keymgmt"}
 
 // RetryUntil runs f until it returns a nil result or the timeout is reached.
 // If a nil result hasn't been obtained by timeout, calls t.Fatal.
@@ -180,8 +182,21 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 			"pending-removal-test-plugin",
 			"approle",
 		}
+
+	case consts.PluginTypeSecrets:
+		return append(externalPlugins, "kv")
 	}
+
 	return []string{}
+}
+
+func (r *mockBuiltinRegistry) IsBuiltinEntPlugin(name string, pluginType consts.PluginType) bool {
+	for _, i := range externalPlugins {
+		if i == name {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *mockBuiltinRegistry) Contains(name string, pluginType consts.PluginType) bool {
@@ -371,7 +386,7 @@ func (n *NoopAudit) Invalidate(ctx context.Context) {
 }
 
 type TestLogger struct {
-	hclog.Logger
+	hclog.InterceptLogger
 	Path string
 	File *os.File
 	sink hclog.SinkAdapter
@@ -401,8 +416,9 @@ func NewTestLogger(t testing.T) *TestLogger {
 	// We send nothing on the regular logger, that way we can later deregister
 	// the sink to stop logging during cluster cleanup.
 	logger := hclog.NewInterceptLogger(&hclog.LoggerOptions{
-		Output:            ioutil.Discard,
+		Output:            io.Discard,
 		IndependentLevels: true,
+		Name:              t.Name(),
 	})
 	sink := hclog.NewSinkAdapter(&hclog.LoggerOptions{
 		Output:            output,
@@ -411,13 +427,13 @@ func NewTestLogger(t testing.T) *TestLogger {
 	})
 	logger.RegisterSink(sink)
 	return &TestLogger{
-		Path:   logPath,
-		File:   logFile,
-		Logger: logger,
-		sink:   sink,
+		Path:            logPath,
+		File:            logFile,
+		InterceptLogger: logger,
+		sink:            sink,
 	}
 }
 
 func (tl *TestLogger) StopLogging() {
-	tl.Logger.(hclog.InterceptLogger).DeregisterSink(tl.sink)
+	tl.InterceptLogger.DeregisterSink(tl.sink)
 }

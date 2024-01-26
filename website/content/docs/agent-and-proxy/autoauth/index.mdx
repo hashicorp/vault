@@ -27,7 +27,7 @@ allowed or fails, at which point it will attempt to reauthenticate.
 Every time an authentication is successful, the token is written to the
 configured Sinks, subject to their configuration.
 
-## Advanced Functionality
+## Advanced functionality
 
 Sinks support some advanced features, including the ability for the written
 values to be encrypted or
@@ -36,7 +36,7 @@ values to be encrypted or
 Both mechanisms can be used concurrently; in this case, the value will be
 response-wrapped, then encrypted.
 
-### Response-Wrapping Tokens
+### Response-Wrapping tokens
 
 There are two ways that tokens can be response-wrapped:
 
@@ -56,7 +56,7 @@ There are two ways that tokens can be response-wrapped:
    the token renewed for the end client and automatically reauthenticate when
    it expires.
 
-### Encrypting Tokens
+### Encrypting tokens
 
 ~> Support for encrypted tokens is experimental; if input/output formats
 change, we will make every effort to provide backwards compatibility.
@@ -198,13 +198,13 @@ These configuration values are common to all Sinks:
 - `config` `(object: required)` - Configuration of the sink itself. See the
   sidebar for information about each sink.
 
-### Auto Auth Examples
+### Auto auth examples
 
 Auto-Auth configuration objects take two separate forms when specified in HCL
 and JSON. The following examples are meant to clarify the differences between
 the two formats.
 
-#### Sinks (HCL Format)
+#### Sinks (HCL format)
 
 The HCL format may define any number of sink objects with an optional wrapping
 `sinks {...}` object.

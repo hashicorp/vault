@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -27,7 +27,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
-	cache "github.com/hashicorp/vault/command/agentproxyshared/cache"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/inmem"
@@ -59,6 +59,7 @@ const (
 	// flagNameProxyExitAfterAuth is used as a Proxy specific flag to indicate
 	// that proxy should exit after a single successful auth
 	flagNameProxyExitAfterAuth = "exit-after-auth"
+	nameProxy                  = "proxy"
 )
 
 type ProxyCommand struct {
@@ -208,6 +209,11 @@ func (c *ProxyCommand) Run(args []string) int {
 		return 1
 	}
 	c.logger = l
+
+	// release log gate if the disable-gated-logs flag is set
+	if c.logFlags.flagDisableGatedLogs {
+		c.logGate.Flush()
+	}
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
@@ -983,15 +989,17 @@ func (c *ProxyCommand) newLogger() (log.InterceptLogger, error) {
 		return nil, errors
 	}
 
-	logCfg := &logging.LogConfig{
-		Name:              "proxy",
-		LogLevel:          logLevel,
-		LogFormat:         logFormat,
-		LogFilePath:       c.config.LogFile,
-		LogRotateDuration: logRotateDuration,
-		LogRotateBytes:    c.config.LogRotateBytes,
-		LogRotateMaxFiles: c.config.LogRotateMaxFiles,
+	logCfg, err := logging.NewLogConfig(nameProxy)
+	if err != nil {
+		return nil, err
 	}
+	logCfg.Name = nameProxy
+	logCfg.LogLevel = logLevel
+	logCfg.LogFormat = logFormat
+	logCfg.LogFilePath = c.config.LogFile
+	logCfg.LogRotateDuration = logRotateDuration
+	logCfg.LogRotateBytes = c.config.LogRotateBytes
+	logCfg.LogRotateMaxFiles = c.config.LogRotateMaxFiles
 
 	l, err := logging.Setup(logCfg, c.logWriter)
 	if err != nil {

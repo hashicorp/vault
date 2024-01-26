@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -20,7 +20,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 	"unicode"
 
@@ -34,6 +33,7 @@ import (
 	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/monitor"
@@ -1720,7 +1720,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		return nil, logical.ErrReadOnly
 	}
 
-	var lock *sync.RWMutex
+	var lock *locking.DeadlockRWMutex
 	switch {
 	case strings.HasPrefix(path, credentialRoutePrefix):
 		lock = &b.Core.authLock
@@ -2032,7 +2032,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		if !strings.HasPrefix(path, "auth/") {
 			return logical.ErrorResponse(fmt.Sprintf("'token_type' can only be modified on auth mounts")), logical.ErrInvalidRequest
 		}
-		if mountEntry.Type == "token" || mountEntry.Type == "ns_token" {
+		if mountEntry.Type == mountTypeToken || mountEntry.Type == mountTypeNSToken {
 			return logical.ErrorResponse(fmt.Sprintf("'token_type' cannot be set for 'token' or 'ns_token' auth mounts")), logical.ErrInvalidRequest
 		}
 
@@ -3003,11 +3003,13 @@ const (
 
 // handlePoliciesPasswordList returns the list of password policies
 func (*SystemBackend) handlePoliciesPasswordList(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
-	keys, err := req.Storage.List(ctx, "password_policy/")
+	keys, err := logical.CollectKeysWithPrefix(ctx, req.Storage, "password_policy/")
 	if err != nil {
 		return nil, err
 	}
-
+	for i := range keys {
+		keys[i] = strings.TrimPrefix(keys[i], "password_policy/")
+	}
 	return logical.ListResponse(keys), nil
 }
 
@@ -3474,7 +3476,7 @@ func (b *SystemBackend) handleKeyRotationConfigUpdate(ctx context.Context, req *
 	}
 
 	// Store the rotation config
-	b.Core.barrier.SetRotationConfig(ctx, rotConfig)
+	err = b.Core.barrier.SetRotationConfig(ctx, rotConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -4326,7 +4328,12 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		return errResp, logical.ErrPermissionDenied
 	}
 
-	filtered, err := b.Core.checkReplicatedFiltering(ctx, me, "")
+	var routerPrefix string
+	if strings.HasPrefix(me.APIPathNoNamespace(), credentialRoutePrefix) {
+		routerPrefix = credentialRoutePrefix
+	}
+
+	filtered, err := b.Core.checkReplicatedFiltering(ctx, me, routerPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -4541,7 +4548,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	// Generic mount paths will primarily be used for code generation purposes.
 	// This will result in parameterized mount paths being returned instead of
 	// hardcoded actual paths. For example /auth/my-auth-method/login would be
-	// replaced with /auth/{my-auth-method_mount_path}/login.
+	// replaced with /auth/{my_auth_method_mount_path}/login.
 	//
 	// Note that for this to actually be useful, you have to be using it with
 	// a Vault instance in which you have mounted one of each secrets engine
@@ -4615,7 +4622,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 						(pluginType == "system" || pluginType == "identity" || pluginType == "cubbyhole"))
 
 				if !isSingletonMount {
-					mountPathParameterName = strings.TrimRight(mount, "/") + "_mount_path"
+					mountPathParameterName = strings.TrimRight(strings.ReplaceAll(mount, "-", "_"), "/") + "_mount_path"
 				}
 			}
 
@@ -4708,7 +4715,7 @@ type SealStatusResponse struct {
 	Warnings          []string `json:"warnings,omitempty"`
 }
 
-func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error) {
+func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResponse, error) {
 	sealed := core.Sealed()
 
 	initialized, err := core.Initialized(ctx)
@@ -4761,7 +4768,7 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		clusterID = cluster.ID
 	}
 
-	progress, nonce := core.SecretProgress()
+	progress, nonce := core.SecretProgress(lock)
 
 	s := &SealStatusResponse{
 		Type:         sealConfig.Type,
@@ -4773,7 +4780,7 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		Nonce:        nonce,
 		Version:      version.GetVersion().VersionNumber(),
 		BuildDate:    version.BuildDate,
-		Migration:    core.IsInSealMigrationMode() && !core.IsSealMigrated(),
+		Migration:    core.IsInSealMigrationMode(lock) && !core.IsSealMigrated(lock),
 		ClusterName:  clusterName,
 		ClusterID:    clusterID,
 		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
@@ -4804,8 +4811,15 @@ type LeaderResponse struct {
 }
 
 func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
+	core.stateLock.RLock()
+	defer core.stateLock.RUnlock()
+
+	return core.GetLeaderStatusLocked()
+}
+
+func (core *Core) GetLeaderStatusLocked() (*LeaderResponse, error) {
 	haEnabled := true
-	isLeader, address, clusterAddr, err := core.Leader()
+	isLeader, address, clusterAddr, err := core.LeaderLocked()
 	if errwrap.Contains(err, ErrHANotEnabled.Error()) {
 		haEnabled = false
 		err = nil
@@ -4819,10 +4833,10 @@ func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
 		IsSelf:               isLeader,
 		LeaderAddress:        address,
 		LeaderClusterAddress: clusterAddr,
-		PerfStandby:          core.PerfStandby(),
+		PerfStandby:          core.perfStandby,
 	}
 	if isLeader {
-		resp.ActiveTime = core.ActiveTime()
+		resp.ActiveTime = core.activeTime
 	}
 	if resp.PerfStandby {
 		resp.PerfStandbyLastRemoteWAL = LastRemoteWAL(core)
@@ -4830,12 +4844,12 @@ func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
 		resp.LastWAL = LastWAL(core)
 	}
 
-	resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexes()
+	resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexesLocked()
 	return resp, nil
 }
 
 func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	status, err := b.Core.GetSealStatus(ctx)
+	status, err := b.Core.GetSealStatus(ctx, false)
 	if err != nil {
 		return nil, err
 	}
@@ -4854,7 +4868,7 @@ func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Reque
 }
 
 func (b *SystemBackend) handleLeaderStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	status, err := b.Core.GetLeaderStatus()
+	status, err := b.Core.GetLeaderStatusLocked()
 	if err != nil {
 		return nil, err
 	}

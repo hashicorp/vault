@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -449,7 +449,7 @@ func (b *backend) initialize(ctx context.Context, _ *logical.InitializationReque
 }
 
 func (b *backend) cleanup(_ context.Context) {
-	b.acmeState.validator.Closing <- struct{}{}
+	b.acmeState.Shutdown(b)
 }
 
 func (b *backend) initializePKIIssuersStorage(ctx context.Context) error {

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 export const SELECTORS = {
@@ -14,4 +14,10 @@ export const SELECTORS = {
   privateKey: '[data-test-value-div="Private key"] [data-test-masked-input]',
   revocationTime: '[data-test-row-value="Revocation time"]',
   serialNumber: '[data-test-row-value="Serial number"]',
+};
+
+export const STANDARD_META = {
+  total: 2,
+  currentPage: 1,
+  pageSize: 100,
 };

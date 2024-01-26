@@ -4,6 +4,7 @@
 package testcluster
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/tls"
 	"crypto/x509"
@@ -90,15 +91,16 @@ type ClusterJson struct {
 }
 
 type ClusterOptions struct {
-	ClusterName        string
-	KeepStandbysSealed bool
-	SkipInit           bool
-	CACert             []byte
-	NumCores           int
-	TmpDir             string
-	Logger             hclog.Logger
-	VaultNodeConfig    *VaultNodeConfig
-	VaultLicense       string
+	ClusterName                 string
+	KeepStandbysSealed          bool
+	SkipInit                    bool
+	CACert                      []byte
+	NumCores                    int
+	TmpDir                      string
+	Logger                      hclog.Logger
+	VaultNodeConfig             *VaultNodeConfig
+	VaultLicense                string
+	AdministrativeNamespacePath string
 }
 
 type CA struct {
@@ -108,4 +110,11 @@ type CA struct {
 	CACertPEMFile string
 	CAKey         *ecdsa.PrivateKey
 	CAKeyPEM      []byte
+}
+
+type ClusterStorage interface {
+	Start(context.Context, *ClusterOptions) error
+	Cleanup() error
+	Opts() map[string]interface{}
+	Type() string
 }

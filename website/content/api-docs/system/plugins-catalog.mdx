@@ -10,7 +10,7 @@ The `/sys/plugins/catalog` endpoint is used to read, register, update, and
 remove plugins in Vault's catalog. Plugins must be registered before use, and
 once registered backends can use the plugin by querying the catalog.
 
-## LIST Plugins
+## LIST plugins
 
 This endpoint lists the plugins in the catalog by type.
 
@@ -18,7 +18,7 @@ This endpoint lists the plugins in the catalog by type.
 | :----- | :--------------------- |
 | `GET`  | `/sys/plugins/catalog` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -26,7 +26,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/plugins/catalog
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -81,7 +81,7 @@ $ curl \
 }
 ```
 
-## LIST Plugins
+## LIST plugins
 
 This endpoint lists the plugins in the catalog by type.
 
@@ -91,7 +91,7 @@ This endpoint lists the plugins in the catalog by type.
 | `LIST` | `/sys/plugins/catalog/database` |
 | `LIST` | `/sys/plugins/catalog/secret`   |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -100,7 +100,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/plugins/catalog/auth
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -116,7 +116,7 @@ $ curl \
 }
 ```
 
-## Register Plugin
+## Register plugin
 
 This endpoint registers a new plugin, or updates an existing one with the
 supplied name.
@@ -154,7 +154,7 @@ supplied name.
   execution of the plugin. Each entry is of the form "key=value". e.g
   `"FOO=BAR"`.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -163,7 +163,7 @@ supplied name.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -173,7 +173,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin
 ```
 
-## Read Plugin
+## Read plugin
 
 This endpoint returns the configuration data for the plugin with the given name.
 
@@ -195,7 +195,7 @@ This endpoint returns the configuration data for the plugin with the given name.
 - `version` `(string: "")` – The semantic version of the plugin to read. Required
   if the plugin was registered with a version.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -204,7 +204,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin?version=v1.0.0
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -219,7 +219,7 @@ $ curl \
 }
 ```
 
-## Remove Plugin from Catalog
+## Remove plugin from catalog
 
 This endpoint removes the plugin with the given name.
 
@@ -241,7 +241,7 @@ This endpoint removes the plugin with the given name.
 - `version` `(string: "")` – Specifies the semantic version of the plugin
   to delete.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

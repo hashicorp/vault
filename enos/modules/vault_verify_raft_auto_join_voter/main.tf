@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 terraform {
   required_providers {
@@ -50,12 +50,14 @@ locals {
 resource "enos_remote_exec" "verify_raft_auto_join_voter" {
   for_each = local.instances
 
-  content = templatefile("${path.module}/templates/verify-raft-auto-join-voter.sh", {
-    vault_cluster_addr      = "${each.value.private_ip}:${var.vault_cluster_addr_port}"
-    vault_install_dir       = var.vault_install_dir
-    vault_local_binary_path = "${var.vault_install_dir}/vault"
-    vault_token             = var.vault_root_token
-  })
+  environment = {
+    VAULT_CLUSTER_ADDR      = "${each.value.private_ip}:${var.vault_cluster_addr_port}"
+    VAULT_INSTALL_DIR       = var.vault_install_dir
+    VAULT_LOCAL_BINARY_PATH = "${var.vault_install_dir}/vault"
+    VAULT_TOKEN             = var.vault_root_token
+  }
+
+  scripts = [abspath("${path.module}/scripts/verify-raft-auto-join-voter.sh")]
 
   transport = {
     ssh = {

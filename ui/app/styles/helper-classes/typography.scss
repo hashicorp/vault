@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* This helper includes styles relating to: font-size, font-family, font-alignment, text-transform, text-weight, font-style, text-decoration. */
@@ -73,6 +73,10 @@
 // Text alignment
 .has-text-right {
   text-align: right !important;
+}
+
+.has-text-left {
+  text-align: left;
 }
 
 .has-text-centered {

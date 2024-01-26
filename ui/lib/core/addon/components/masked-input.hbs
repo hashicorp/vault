@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div
   class="masked-input {{if @displayOnly 'display-only'}} {{if @allowCopy 'allow-copy'}}"
   data-test-masked-input
@@ -35,15 +40,9 @@
     </CopyButton>
   {{/if}}
   {{#if @allowDownload}}
-    <DownloadButton
-      class="button download-button"
-      @filename={{or @name "secret-value"}}
-      @data={{@value}}
-      @stringify={{true}}
-      aria-label="Download secret value"
-    >
-      <Icon @name="download" />
-    </DownloadButton>
+    <button type="button" class="button download-button" {{on "click" (fn (mut this.modalOpen) true)}}>
+      <Icon data-test-download-icon @name="download" />
+    </button>
   {{/if}}
   <button
     onclick={{this.toggleMask}}
@@ -56,3 +55,46 @@
     <Icon @name={{if this.showValue "eye" "eye-off"}} />
   </button>
 </div>
+
+{{! CONFIRM DOWNLOAD MODAL }}
+{{#if @allowDownload}}
+  <Modal
+    @title="Download secret value?"
+    @onClose={{action (mut this.modalOpen) false}}
+    @isActive={{this.modalOpen}}
+    @type="warning"
+  >
+    <section class="modal-card-body">
+      This download is
+      <strong>unencrypted</strong>. Are you sure you want to download this secret data as plaintext?
+
+      <div class="has-top-margin-m">
+        <Hds::Form::Toggle::Field
+          checked={{this.stringifyDownload}}
+          {{on "change" this.toggleStringifyDownload}}
+          data-test-stringify-toggle
+          as |F|
+        >
+          <F.Label>Stringify secret value</F.Label>
+          <F.HelperText>Preserve formatting for JSON values.</F.HelperText>
+        </Hds::Form::Toggle::Field>
+      </div>
+    </section>
+
+    <footer class="modal-card-foot modal-card-foot-outlined">
+      <DownloadButton
+        class="button is-primary"
+        @filename={{or @name "secret-value"}}
+        @data={{@value}}
+        @stringify={{this.stringifyDownload}}
+        aria-label="Download secret value"
+        @onSuccess={{fn (mut this.modalOpen) false}}
+      >
+        Download
+      </DownloadButton>
+      <button type="button" class="button is-secondary" {{on "click" (fn (mut this.modalOpen) false)}}>
+        Cancel
+      </button>
+    </footer>
+  </Modal>
+{{/if}}

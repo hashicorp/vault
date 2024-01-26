@@ -11,14 +11,14 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 1.5.0 compared to 1.4.1. Please read it carefully.
 
-## Google Cloud Storage `credentials_file` removed
+## Google Cloud storage `credentials_file` removed
 
 The deprecated `credentials_file` config option has been removed. The `GOOGLE_APPLICATION_CREDENTIALS`
 environment variable or default credentials may be used instead. See
 [GCS Authentication](/vault/docs/configuration/storage/google-cloud-storage#gcs-authentication)
 for details on supported options.
 
-## Raft Configuration
+## Raft configuration
 
 A new Raft configuration value, `max_entry_size`, has been introduced. This value
 limits the size in bytes for a Raft K/V entry. It applies to both put operations and

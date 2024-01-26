@@ -11,7 +11,7 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 0.8.0 compared to the most recent release. Please read it carefully.
 
-## Enterprise Upgrade Procedure
+## Enterprise upgrade procedure
 
 If you are upgrading from Vault Enterprise, you should take one of the
 following upgrade paths. Please note that reindexing stops the ability of the
@@ -25,26 +25,26 @@ different indexes. One will happen automatically when the cluster is upgraded
 to 0.8.0. _This happens even if you are not currently using replication._ The
 other can be done in one of a few ways, as follows.
 
-### If Not Using Replication
+### If not using replication
 
 If not using replication, no further action needs to be taken.
 
-### If Using Replication
+### If using replication
 
-#### Option 1: Reindex the Primary, then Upgrade Secondaries
+#### Option 1: reindex the primary, then upgrade secondaries
 
 The first option is to issue a write to [`sys/replication/reindex`][reindex] on the
 primary (it is not necessary on the secondaries). When the reindex on the
 primary is finished, upgrade the secondaries, then upgrade the primary.
 
-#### Option 2: Upgrade All Nodes Simultaneously
+#### Option 2: upgrade all nodes simultaneously
 
 The second option is to upgrade all nodes to 0.8.0 at the same time. This
 removes the need to perform an explicit reindex but may equate to more down
 time since secondaries will not be able to service requests while the primary
 is performing an explicit reindex.
 
-## `sys/revoke-force` Requires `sudo` Capability
+## `sys/revoke-force` requires `sudo` capability
 
 This path was meant to require `sudo` capability but was not implemented this
 way. It now requires `sudo` capability to run.

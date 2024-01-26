@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package azure
 
@@ -7,9 +7,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
+	policy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	az "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
@@ -31,10 +33,12 @@ type azureMethod struct {
 	logger    hclog.Logger
 	mountPath string
 
-	role     string
-	resource string
-	objectID string
-	clientID string
+	authenticateFromEnvironment bool
+	role                        string
+	scope                       string
+	resource                    string
+	objectID                    string
+	clientID                    string
 }
 
 func NewAzureAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
@@ -84,6 +88,25 @@ func NewAzureAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		}
 	}
 
+	scopeRaw, ok := conf.Config["scope"]
+	if ok {
+		a.scope, ok = scopeRaw.(string)
+		if !ok {
+			return nil, errors.New("could not convert 'scope' config value to string")
+		}
+	}
+	if a.scope == "" {
+		a.scope = fmt.Sprintf("%s/.default", a.resource)
+	}
+
+	authenticateFromEnvironmentRaw, ok := conf.Config["authenticate_from_environment"]
+	if ok {
+		a.authenticateFromEnvironment, ok = authenticateFromEnvironmentRaw.(bool)
+		if !ok {
+			return nil, errors.New("could not convert 'authenticate_from_environment' config value to bool")
+		}
+	}
+
 	switch {
 	case a.role == "":
 		return nil, errors.New("'role' value is empty")
@@ -106,10 +129,11 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (ret
 			ResourceGroupName string
 			SubscriptionID    string
 			VMScaleSetName    string
+			ResourceID        string
 		}
 	}
 
-	body, err := getMetadataInfo(ctx, instanceEndpoint, "", "", "")
+	body, err := getInstanceMetadataInfo(ctx)
 	if err != nil {
 		retErr = err
 		return
@@ -121,21 +145,19 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (ret
 		return
 	}
 
-	// Fetch JWT
-	var identity struct {
-		AccessToken string `json:"access_token"`
-	}
-
-	body, err = getMetadataInfo(ctx, identityEndpoint, a.resource, a.objectID, a.clientID)
-	if err != nil {
-		retErr = err
-		return
-	}
-
-	err = jsonutil.DecodeJSON(body, &identity)
-	if err != nil {
-		retErr = fmt.Errorf("error parsing identity metadata response: %w", err)
-		return
+	token := ""
+	if a.authenticateFromEnvironment {
+		token, err = getAzureTokenFromEnvironment(ctx, a.scope)
+		if err != nil {
+			retErr = err
+			return
+		}
+	} else {
+		token, err = getTokenFromIdentityEndpoint(ctx, a.resource, a.objectID, a.clientID)
+		if err != nil {
+			retErr = err
+			return
+		}
 	}
 
 	// Attempt login
@@ -145,7 +167,7 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (ret
 		"vmss_name":           instance.Compute.VMScaleSetName,
 		"resource_group_name": instance.Compute.ResourceGroupName,
 		"subscription_id":     instance.Compute.SubscriptionID,
-		"jwt":                 identity.AccessToken,
+		"jwt":                 token,
 	}
 
 	return fmt.Sprintf("%s/login", a.mountPath), nil, data, nil
@@ -161,6 +183,54 @@ func (a *azureMethod) CredSuccess() {
 func (a *azureMethod) Shutdown() {
 }
 
+// getAzureTokenFromEnvironment Is Azure's preferred way for authentication, and takes values
+// from environment variables to form a credential.
+// It uses a DefaultAzureCredential:
+// https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity#readme-defaultazurecredential
+// Environment variables are taken into account in the following order:
+// https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity#readme-environment-variables
+func getAzureTokenFromEnvironment(ctx context.Context, scope string) (string, error) {
+	cred, err := az.NewDefaultAzureCredential(nil)
+	if err != nil {
+		return "", err
+	}
+
+	tokenOpts := policy.TokenRequestOptions{Scopes: []string{scope}}
+	tk, err := cred.GetToken(ctx, tokenOpts)
+	if err != nil {
+		return "", err
+	}
+	return tk.Token, nil
+}
+
+// getInstanceMetadataInfo calls the Azure Instance Metadata endpoint to get
+// information about the Azure environment it's running in.
+func getInstanceMetadataInfo(ctx context.Context) ([]byte, error) {
+	return getMetadataInfo(ctx, instanceEndpoint, "", "", "")
+}
+
+// getTokenFromIdentityEndpoint is kept for backwards compatibility purposes. Using the
+// newer APIs and the Azure SDK should be preferred over this mechanism.
+func getTokenFromIdentityEndpoint(ctx context.Context, resource, objectID, clientID string) (string, error) {
+	var identity struct {
+		AccessToken string `json:"access_token"`
+	}
+
+	body, err := getMetadataInfo(ctx, identityEndpoint, resource, objectID, clientID)
+	if err != nil {
+		return "", err
+	}
+
+	err = jsonutil.DecodeJSON(body, &identity)
+	if err != nil {
+		return "", fmt.Errorf("error parsing identity metadata response: %w", err)
+	}
+
+	return identity.AccessToken, nil
+}
+
+// getMetadataInfo calls the Azure metadata endpoint with the given parameters.
+// An empty resource, objectID and clientID will return metadata information.
 func getMetadataInfo(ctx context.Context, endpoint, resource, objectID, clientID string) ([]byte, error) {
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
@@ -194,7 +264,7 @@ func getMetadataInfo(ctx context.Context, endpoint, resource, objectID, clientID
 	}
 
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error reading metadata from %s: %w", endpoint, err)
 	}

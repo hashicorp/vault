@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -59,8 +59,6 @@ export default class DatabaseConnectionEdit extends Component {
   async handleCreateConnection(evt) {
     evt.preventDefault();
     const secret = this.args.model;
-    const secretId = secret.name;
-    secret.set('id', secretId);
     secret
       .save()
       .then(() => {

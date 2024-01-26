@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -141,6 +141,20 @@ func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 	return TestCoreWithSealAndUI(t, conf)
 }
 
+func TestCoreWithDeadlockDetection(t testing.T, testSeal Seal, enableRaw bool) *Core {
+	conf := &CoreConfig{
+		Seal:            testSeal,
+		EnableUI:        false,
+		EnableRaw:       enableRaw,
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
+		DetectDeadlocks: "expiration,quotas,statelock",
+	}
+	return TestCoreWithSealAndUI(t, conf)
+}
+
 func TestCoreWithCustomResponseHeaderAndUI(t testing.T, CustomResponseHeaders map[string]map[string]string, enableUI bool) (*Core, [][]byte, string) {
 	confRaw := &server.Config{
 		SharedConfig: &configutil.SharedConfig{
@@ -191,7 +205,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 }
 
 func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.NewTestLogger(t)
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -219,6 +233,8 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.DetectDeadlocks = opts.DetectDeadlocks
 	conf.Experiments = []string{experiments.VaultExperimentEventsAlpha1}
 	conf.CensusAgent = opts.CensusAgent
+	conf.AdministrativeNamespacePath = opts.AdministrativeNamespacePath
+	conf.ImpreciseLeaseRoleTracking = opts.ImpreciseLeaseRoleTracking
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -237,6 +253,12 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 
 	for k, v := range opts.AuditBackends {
 		conf.AuditBackends[k] = v
+	}
+	if opts.RollbackPeriod != time.Duration(0) {
+		conf.RollbackPeriod = opts.RollbackPeriod
+	}
+	if opts.NumRollbackWorkers != 0 {
+		conf.NumRollbackWorkers = opts.NumRollbackWorkers
 	}
 
 	conf.ActivityLogConfig = opts.ActivityLogConfig
@@ -292,6 +314,7 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 		CredentialBackends: credentialBackends,
 		DisableMlock:       true,
 		Logger:             logger,
+		NumRollbackWorkers: 10,
 		BuiltinRegistry:    corehelpers.NewMockBuiltinRegistry(),
 	}
 
@@ -1264,21 +1287,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		net.IPv6loopback,
 		net.ParseIP("127.0.0.1"),
 	}
-	var baseAddr *net.TCPAddr
-	if opts != nil && opts.BaseListenAddress != "" {
-		baseAddr, err = net.ResolveTCPAddr("tcp", opts.BaseListenAddress)
 
-		if err != nil {
-			t.Fatal("could not parse given base IP")
-		}
-		certIPs = append(certIPs, baseAddr.IP)
-	} else {
-		baseAddr = &net.TCPAddr{
-			IP:   net.ParseIP("127.0.0.1"),
-			Port: 0,
-		}
-	}
-
+	baseAddr, certIPs := GenerateListenerAddr(t, opts, certIPs)
 	var testCluster TestCluster
 	testCluster.base = base
 
@@ -1543,6 +1553,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisableSentinelTrace = base.DisableSentinelTrace
 		coreConfig.ClusterName = base.ClusterName
 		coreConfig.DisableAutopilot = base.DisableAutopilot
+		coreConfig.AdministrativeNamespacePath = base.AdministrativeNamespacePath
+		coreConfig.ServiceRegistration = base.ServiceRegistration
+		coreConfig.ImpreciseLeaseRoleTracking = base.ImpreciseLeaseRoleTracking
 
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
@@ -1793,7 +1806,27 @@ func (cluster *TestCluster) StopCore(t testing.T, idx int) {
 	cluster.cleanupFuncs[idx]()
 }
 
-// Restart a TestClusterCore that was stopped, by replacing the
+func GenerateListenerAddr(t testing.T, opts *TestClusterOptions, certIPs []net.IP) (*net.TCPAddr, []net.IP) {
+	var baseAddr *net.TCPAddr
+	var err error
+
+	if opts != nil && opts.BaseListenAddress != "" {
+		baseAddr, err = net.ResolveTCPAddr("tcp", opts.BaseListenAddress)
+		if err != nil {
+			t.Fatal("could not parse given base IP")
+		}
+		certIPs = append(certIPs, baseAddr.IP)
+	} else {
+		baseAddr = &net.TCPAddr{
+			IP:   net.ParseIP("127.0.0.1"),
+			Port: 0,
+		}
+	}
+
+	return baseAddr, certIPs
+}
+
+// StartCore restarts a TestClusterCore that was stopped, by replacing the
 // underlying Core.
 func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOptions) {
 	t.Helper()
@@ -2017,6 +2050,10 @@ func (testCluster *TestCluster) setupClusterListener(
 	core.Logger().Info("assigning cluster listener for test core", "core", idx, "port", port)
 	core.SetClusterListenerAddrs(clusterAddrGen(listeners, port))
 	core.SetClusterHandler(handler)
+}
+
+func (tc *TestCluster) InitCores(t testing.T, opts *TestClusterOptions, addAuditBackend bool) {
+	tc.initCores(t, opts, addAuditBackend)
 }
 
 func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAuditBackend bool) {

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="action-block is-rounded" data-test-disable-replication>
   <div class="action-block-info">
     <h4 class="title is-5 is-marginless">
@@ -28,8 +33,8 @@
   @isActive={{this.isModalActive}}
   @confirmText={{this.model.replicationModeForDisplay}}
   @toConfirmMsg="disabling {{this.model.replicationModeForDisplay}} Replication on this cluster"
-  @onConfirm={{action
-    "onSubmit"
+  @onConfirm={{fn
+    (action "onSubmit")
     "disable"
     (if (eq this.model.replicationAttrs.modeForUrl "bootstrapping") this.mode this.model.replicationAttrs.modeForUrl)
   }}

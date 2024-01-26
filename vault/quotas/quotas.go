@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package quotas
 
@@ -170,13 +170,13 @@ type Manager struct {
 	metricSink *metricsutil.ClusterMetricSink
 
 	// quotaLock is a lock for manipulating quotas and anything not covered by a more specific lock
-	quotaLock *locking.DeadlockRWMutex
+	quotaLock locking.RWMutex
 
 	// quotaConfigLock is a lock for accessing config items, such as RateLimitExemptPaths
-	quotaConfigLock *locking.DeadlockRWMutex
+	quotaConfigLock locking.RWMutex
 
 	// dbAndCacheLock is a lock for db and path caches that need to be reset during Reset()
-	dbAndCacheLock *locking.DeadlockRWMutex
+	dbAndCacheLock locking.RWMutex
 }
 
 // QuotaLeaseInformation contains all of the information lease-count quotas require
@@ -272,7 +272,7 @@ type Request struct {
 
 // NewManager creates and initializes a new quota manager to hold all the quota
 // rules and to process incoming requests.
-func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.ClusterMetricSink) (*Manager, error) {
+func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.ClusterMetricSink, detectDeadlocks bool) (*Manager, error) {
 	db, err := memdb.NewMemDB(dbSchema())
 	if err != nil {
 		return nil, err
@@ -284,9 +284,16 @@ func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.Clust
 		metricSink:           ms,
 		rateLimitPathManager: pathmanager.New(),
 		config:               new(Config),
-		quotaLock:            new(locking.DeadlockRWMutex),
-		quotaConfigLock:      new(locking.DeadlockRWMutex),
-		dbAndCacheLock:       new(locking.DeadlockRWMutex),
+		quotaLock:            &locking.SyncRWMutex{},
+		quotaConfigLock:      &locking.SyncRWMutex{},
+		dbAndCacheLock:       &locking.SyncRWMutex{},
+	}
+
+	if detectDeadlocks {
+		logger.Debug("enabling deadlock detection")
+		manager.quotaLock = &locking.DeadlockRWMutex{}
+		manager.quotaConfigLock = &locking.DeadlockRWMutex{}
+		manager.dbAndCacheLock = &locking.DeadlockRWMutex{}
 	}
 
 	manager.init(walkFunc)
@@ -600,6 +607,37 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 	return nil, nil
 }
 
+// QueryResolveRoleQuotas checks if there's a quota for the request mount path
+// which requires ResolveRoleOperation.
+func (m *Manager) QueryResolveRoleQuotas(req *Request) (bool, error) {
+	m.dbAndCacheLock.RLock()
+	defer m.dbAndCacheLock.RUnlock()
+
+	txn := m.db.Txn(false)
+
+	// ns would have been made non-empty during insertion. Use non-empty
+	// value during query as well.
+	if req.NamespacePath == "" {
+		req.NamespacePath = "root"
+	}
+
+	// Check for any role-based quotas on the request namespaces/mount path.
+	for _, qType := range quotaTypes() {
+		// Use the namespace and mount as indexes and find all matches with a
+		// set Role field (see: 'true' as the last argument). We can't use
+		// indexNamespaceMountRole for this, because Role is a StringFieldIndex,
+		// which won't match on an empty string.
+		quota, err := txn.First(qType, indexNamespaceMount, req.NamespacePath, req.MountPath, false, true)
+		if err != nil {
+			return false, err
+		}
+		if quota != nil {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // DeleteQuota removes a quota rule from the db for a given name
 func (m *Manager) DeleteQuota(ctx context.Context, qType string, name string) error {
 	m.quotaLock.Lock()
@@ -776,6 +814,13 @@ func (m *Manager) resetCache() error {
 		}
 		if quota != nil {
 			rlq := quota.(*RateLimitQuota)
+
+			// Cancel the quota's purgeBlockedClients goroutine
+			err = rlq.close(context.Background())
+			if err != nil {
+				return err
+			}
+
 			err = rlq.store.Close(context.Background())
 			if err != nil {
 				return err
@@ -1270,4 +1315,11 @@ func (m *Manager) HandleBackendDisabling(ctx context.Context, nsPath, mountPath 
 	txn.Commit()
 
 	return nil
+}
+
+func (m *Manager) DetectDeadlocks() bool {
+	if _, ok := m.quotaLock.(*locking.DeadlockRWMutex); ok {
+		return true
+	}
+	return false
 }

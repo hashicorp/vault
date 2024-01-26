@@ -1,11 +1,12 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package eventbus
 
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"strings"
 	"sync"
@@ -85,7 +86,9 @@ func (bus *EventBus) Start() {
 // This function is meant to be used by trusted internal code, so it can specify details like the namespace
 // and plugin info. Events from plugins should be routed through WithPlugin(), which will populate
 // the namespace and plugin info automatically.
-func (bus *EventBus) SendInternal(ctx context.Context, ns *namespace.Namespace, pluginInfo *logical.EventPluginInfo, eventType logical.EventType, data *logical.EventData) error {
+// The context passed in is currently ignored to ensure that the event is sent if the context is short-lived,
+// such as with an HTTP request context.
+func (bus *EventBus) SendInternal(_ context.Context, ns *namespace.Namespace, pluginInfo *logical.EventPluginInfo, eventType logical.EventType, data *logical.EventData) error {
 	if ns == nil {
 		return namespace.ErrNoNamespace
 	}
@@ -102,7 +105,7 @@ func (bus *EventBus) SendInternal(ctx context.Context, ns *namespace.Namespace, 
 
 	// We can't easily know when the Send is complete, so we can't call the cancel function.
 	// But, it is called automatically after bus.timeout, so there won't be any leak as long as bus.timeout is not too long.
-	ctx, _ = context.WithTimeout(ctx, bus.timeout)
+	ctx, _ := context.WithTimeout(context.Background(), bus.timeout)
 	_, err := bus.broker.Send(ctx, eventTypeAll, eventReceived)
 	if err != nil {
 		// if no listeners for this event type are registered, that's okay, the event
@@ -127,6 +130,7 @@ func (bus *EventBus) WithPlugin(ns *namespace.Namespace, eventPluginInfo *logica
 
 // Send sends an event to the event bus and routes it to all relevant subscribers.
 // This function does *not* wait for all subscribers to acknowledge before returning.
+// The context passed in is currently ignored.
 func (bus *pluginEventBus) Send(ctx context.Context, eventType logical.EventType, data *logical.EventData) error {
 	return bus.bus.SendInternal(ctx, bus.namespace, bus.pluginInfo, eventType, data)
 }
@@ -146,7 +150,10 @@ func init() {
 }
 
 func NewEventBus(logger hclog.Logger) (*EventBus, error) {
-	broker := eventlogger.NewBroker()
+	broker, err := eventlogger.NewBroker()
+	if err != nil {
+		return nil, err
+	}
 
 	formatterID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -218,7 +225,8 @@ func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pat
 	// add info needed to cancel the subscription
 	asyncNode.pipelineID = eventlogger.PipelineID(pipelineID)
 	asyncNode.cancelFunc = cancel
-	return asyncNode.ch, asyncNode.Close, nil
+	// Capture context in a closure for the cancel func
+	return asyncNode.ch, func() { asyncNode.Close(ctx) }, nil
 }
 
 // SetSendTimeout sets the timeout of sending events. If the events are not accepted by the
@@ -257,13 +265,19 @@ func newAsyncNode(ctx context.Context, logger hclog.Logger) *asyncChanNode {
 }
 
 // Close tells the bus to stop sending us events.
-func (node *asyncChanNode) Close() {
+func (node *asyncChanNode) Close(ctx context.Context) {
 	node.closeOnce.Do(func() {
 		defer node.cancelFunc()
 		if node.broker != nil {
-			err := node.broker.RemovePipeline(eventTypeAll, node.pipelineID)
-			if err != nil {
-				node.logger.Warn("Error removing pipeline for closing node", "error", err)
+			isPipelineRemoved, err := node.broker.RemovePipelineAndNodes(ctx, eventTypeAll, node.pipelineID)
+
+			switch {
+			case err != nil && isPipelineRemoved:
+				msg := fmt.Sprintf("Error removing nodes referenced by pipeline %q", node.pipelineID)
+				node.logger.Warn(msg, err)
+			case err != nil:
+				msg := fmt.Sprintf("Error removing pipeline %q", node.pipelineID)
+				node.logger.Warn(msg, err)
 			}
 		}
 		addSubscriptions(-1)
@@ -283,7 +297,7 @@ func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*
 		}
 		if timeout {
 			node.logger.Info("Subscriber took too long to process event, closing", "ID", e.Payload.(*logical.EventReceived).Event.Id)
-			node.Close()
+			node.Close(ctx)
 		}
 	}()
 	return e, nil

@@ -1,10 +1,19 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* eslint qunit/no-conditional-assertions: "warn" */
-import { click, fillIn, settled, visit, triggerKeyEvent, find, waitUntil } from '@ember/test-helpers';
+import {
+  click,
+  fillIn,
+  settled,
+  visit,
+  triggerKeyEvent,
+  find,
+  waitUntil,
+  currentURL,
+} from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -123,5 +132,21 @@ module('Acceptance | auth backend list', function (hooks) {
         await consoleComponent.runCommands(`delete sys/auth/${path}`);
       }
     }
+  });
+
+  test('enterprise: token config within namespace', async function (assert) {
+    const ns = 'ns-wxyz';
+    await consoleComponent.runCommands(`write sys/namespaces/${ns} -f`);
+    await authPage.loginNs(ns);
+    // go directly to token configure route
+    await visit('/vault/settings/auth/configure/token/options');
+    await fillIn('[data-test-input="description"]', 'My custom description');
+    await click('[data-test-save-config="true"]');
+    assert.strictEqual(currentURL(), '/vault/access', 'successfully saves and navigates away');
+    await click('[data-test-auth-backend-link="token"]');
+    assert
+      .dom('[data-test-row-value="Description"]')
+      .hasText('My custom description', 'description was saved');
+    await consoleComponent.runCommands(`delete sys/namespaces/${ns}`);
   });
 });

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -60,18 +60,18 @@ const (
 	activitySegmentWriteTimeout = 1 * time.Minute
 
 	// Number of client records to store per segment. Each ClientRecord may
-	// consume upto 99 bytes; rounding it to 100bytes. Considering the storage
-	// limit of 512KB per storage entry, we can roughly store 512KB/100bytes =
-	// 5241 clients; rounding down to 5000 clients.
-	activitySegmentClientCapacity = 5000
+	// consume upto 99 bytes; rounding it to 100bytes. This []byte undergo JSON marshalling
+	// before adding them in storage increasing the size by approximately 4/3 times. Considering the storage
+	// limit of 512KB per storage entry, we can roughly store 512KB/(100bytes * 4/3) yielding approximately 3820 records.
+	ActivitySegmentClientCapacity = 3820
 
 	// Maximum number of segments per month. This allows for 700K entities per
-	// month; 700K/5K. These limits are geared towards controlling the storage
+	// month; 700K/3820 (ActivitySegmentClientCapacity). These limits are geared towards controlling the storage
 	// implications of persisting activity logs. If we hit a scenario where the
 	// storage consequences are less important in comparison to the accuracy of
 	// the client activity, these limits can be further relaxed or even be
 	// removed.
-	activityLogMaxSegmentPerMonth = 140
+	activityLogMaxSegmentPerMonth = 184
 
 	// trackedTWESegmentPeriod is a time period of a little over a month, and represents
 	// the amount of time that needs to pass after a 1.9 or later upgrade to result in
@@ -94,11 +94,6 @@ type segmentInfo struct {
 	// This field is needed for backward compatibility with fragments
 	// and segments created with vault versions before 1.9.
 	tokenCount *activity.TokenCount
-}
-
-type clients struct {
-	distinctEntities    uint64
-	distinctNonEntities uint64
 }
 
 // ActivityLog tracks unique entity counts and non-entity token counts.
@@ -356,7 +351,7 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 	}
 
 	// Will all new entities fit?  If not, roll over to a new segment.
-	available := activitySegmentClientCapacity - len(a.currentSegment.currentClients.Clients)
+	available := ActivitySegmentClientCapacity - len(a.currentSegment.currentClients.Clients)
 	remaining := available - len(newEntities)
 	excess := 0
 	if remaining < 0 {
@@ -394,9 +389,9 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 
 		// Rotate to next segment
 		a.currentSegment.clientSequenceNumber += 1
-		if len(excessClients) > activitySegmentClientCapacity {
+		if len(excessClients) > ActivitySegmentClientCapacity {
 			a.logger.Warn("too many new active clients, dropping tail", "clients", len(excessClients))
-			excessClients = excessClients[:activitySegmentClientCapacity]
+			excessClients = excessClients[:ActivitySegmentClientCapacity]
 		}
 		a.currentSegment.currentClients.Clients = excessClients
 		err := a.saveCurrentSegmentInternal(ctx, force)
@@ -1912,39 +1907,50 @@ func (a *ActivityLog) loadConfigOrDefault(ctx context.Context) (activityConfig, 
 
 // HandleTokenUsage adds the TokenEntry to the current fragment of the activity log
 // This currently occurs on token usage only.
-func (a *ActivityLog) HandleTokenUsage(ctx context.Context, entry *logical.TokenEntry, clientID string, isTWE bool) {
+func (a *ActivityLog) HandleTokenUsage(ctx context.Context, entry *logical.TokenEntry, clientID string, isTWE bool) error {
 	// First, check if a is enabled, so as to avoid the cost of creating an ID for
 	// tokens without entities in the case where it not.
 	a.fragmentLock.RLock()
 	if !a.enabled {
 		a.fragmentLock.RUnlock()
-		return
+		return nil
 	}
 	a.fragmentLock.RUnlock()
 
 	// Do not count wrapping tokens in client count
 	if IsWrappingToken(entry) {
-		return
+		return nil
 	}
 
 	// Do not count root tokens in client count.
 	if entry.IsRoot() {
-		return
+		return nil
 	}
 
 	// Tokens created for the purpose of Link should bypass counting for billing purposes
 	if entry.InternalMeta != nil && entry.InternalMeta[IgnoreForBilling] == "true" {
-		return
+		return nil
 	}
 
+	// Look up the mount accessor of the auth method that issued the token, taking care to resolve the token path
+	// against the token namespace, which may not be the same as the request namespace!
+	tokenNS, err := NamespaceByID(ctx, entry.NamespaceID, a.core)
+	if err != nil {
+		return err
+	}
+	if tokenNS == nil {
+		return namespace.ErrNoNamespace
+	}
+	tokenCtx := namespace.ContextWithNamespace(ctx, tokenNS)
 	mountAccessor := ""
-	mountEntry := a.core.router.MatchingMountEntry(ctx, entry.Path)
+	mountEntry := a.core.router.MatchingMountEntry(tokenCtx, entry.Path)
 	if mountEntry != nil {
 		mountAccessor = mountEntry.Accessor
 	}
 
 	// Parse an entry's client ID and add it to the activity log
 	a.AddClientToFragment(clientID, entry.NamespaceID, entry.CreationTime, isTWE, mountAccessor)
+	return nil
 }
 
 func (a *ActivityLog) namespaceToLabel(ctx context.Context, nsID string) string {

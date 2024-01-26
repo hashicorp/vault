@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package quotas
 
@@ -218,7 +218,7 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 
 func TestRateLimitQuota_Update(t *testing.T) {
 	defer goleak.VerifyNone(t)
-	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink())
+	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink(), true)
 	require.NoError(t, err)
 
 	quota := NewRateLimitQuota("quota1", "", "", "", "", 10, time.Second, 0)

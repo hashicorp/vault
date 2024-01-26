@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import AdapterError from '@ember-data/adapter/error';
@@ -342,6 +342,7 @@ export default Route.extend(UnloadModelRoute, {
           )
         ) {
           version && version.rollbackAttributes();
+          model && model.rollbackAttributes();
           this.unloadModel();
           return true;
         } else {

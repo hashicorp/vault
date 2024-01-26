@@ -96,7 +96,7 @@ For example, the GitHub login endpoint is located at `auth/github/login`.
 And to determine the arguments needed, `vault path-help auth/github/login` can
 be used.
 
-## Auth Leases
+## Auth leases
 
 Just like secrets, identities have
 [leases](/vault/docs/concepts/lease) associated with them. This means that
@@ -111,7 +111,7 @@ And just like secrets, identities can be renewed without having to
 completely reauthenticate. Just use `vault token renew <token>` with the
 leased token associated with your identity to renew it.
 
-## Code Example
+## Code example
 
 The following code snippet demonstrates how to renew auth tokens.
 

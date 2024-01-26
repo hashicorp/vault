@@ -130,13 +130,13 @@ set to a duration greater than the backend's, the backend's Delete-Version-After
 setting will be used. Any changes to the Delete-Version-After setting will only
 be applied to new versions.
 
-#### Output Options
+#### Output options
 
 - `-format` `(string: "table")` - Print the output in the given format. Valid
   formats are "table", "json", or "yaml". This can also be specified via the
   `VAULT_FORMAT` environment variable.
 
-#### Subcommand Options
+#### Subcommand options
 
 - `-cas-required` `(bool: false)` - If true the key will require the cas
   parameter to be set on all write requests. If false, the backend’s

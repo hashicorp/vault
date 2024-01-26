@@ -1,8 +1,8 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 ## DOCKERHUB DOCKERFILE ##
-FROM alpine:3.15 as default
+FROM alpine:3.18 as default
 
 ARG BIN_NAME
 # NAME and PRODUCT_VERSION are the name of the software in releases.hashicorp.com
