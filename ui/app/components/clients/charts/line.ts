@@ -87,8 +87,8 @@ export default class LineChart extends Component<Args> {
       .map((d) => d.y)
       .flatMap((num) => (typeof num === 'number' ? [num] : []));
     const max = Math.max(...counts);
-    // if max is 0, hardcode 4 because that's the y-axis tickCount
-    return [0, max === 0 ? 4 : max];
+    // if max is <=4, hardcode 4 which is the y-axis tickCount so y-axes are not decimals
+    return [0, max <= 4 ? 4 : max];
   }
   get timeDomain() {
     // assume data is sorted by time
