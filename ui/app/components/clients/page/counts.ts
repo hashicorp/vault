@@ -3,35 +3,56 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import ActivityComponent from '../activity';
+import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
-import { getUnixTime, isSameMonth, isAfter } from 'date-fns';
+import { fromUnixTime, getUnixTime, isSameMonth, isAfter } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { formatDateObject } from 'core/utils/client-count-utils';
 
 import type VersionService from 'vault/services/version';
+import type ClientsActivityModel from 'vault/models/clients/activity';
+import type ClientsConfigModel from 'vault/models/clients/config';
 import type StoreService from 'vault/services/store';
 
-export default class ClientsCountsPageComponent extends ActivityComponent {
+interface Args {
+  activity: ClientsActivityModel;
+  config: ClientsConfigModel;
+  startTimestamp: number;
+  endTimestamp: number;
+  currentTimestamp: number;
+  namespace: string;
+  mountPath: string;
+  onFilterChange: CallableFunction;
+}
+
+export default class ClientsCountsPageComponent extends Component<Args> {
   @service declare readonly version: VersionService;
   @service declare readonly store: StoreService;
 
+  get startDate() {
+    return this.args.startTimestamp ? fromUnixTime(this.args.startTimestamp).toISOString() : null;
+  }
+
+  get endDate() {
+    return this.args.endTimestamp ? fromUnixTime(this.args.endTimestamp).toISOString() : null;
+  }
+
   get formattedStartDate() {
-    return this.startTimeISO ? parseAPITimestamp(this.startTimeISO, 'MMMM yyyy') : null;
+    return this.startDate ? parseAPITimestamp(this.startDate, 'MMMM yyyy') : null;
   }
 
   // returns text for empty state message if noActivityData
   get dateRangeMessage() {
-    if (this.startTimeISO && this.endTimeISO) {
+    if (this.startDate && this.endDate) {
       const endMonth = isSameMonth(
-        parseAPITimestamp(this.startTimeISO) as Date,
-        parseAPITimestamp(this.endTimeISO) as Date
+        parseAPITimestamp(this.startDate) as Date,
+        parseAPITimestamp(this.endDate) as Date
       )
         ? ''
-        : `to ${parseAPITimestamp(this.endTimeISO, 'MMMM yyyy')}`;
+        : `to ${parseAPITimestamp(this.endDate, 'MMMM yyyy')}`;
       // completes the message 'No data received from { dateRangeMessage }'
-      return `from ${parseAPITimestamp(this.startTimeISO, 'MMMM yyyy')} ${endMonth}`;
+      return `from ${parseAPITimestamp(this.startDate, 'MMMM yyyy')} ${endMonth}`;
     }
     return null;
   }
@@ -79,9 +100,9 @@ export default class ClientsCountsPageComponent extends ActivityComponent {
     // show banner if startTime returned from activity log (response) is after the queried startTime
     const { activity, config } = this.args;
     const activityStartDateObject = parseAPITimestamp(activity.startTime) as Date;
-    const queryStartDateObject = parseAPITimestamp(this.startTimeISO) as Date;
+    const queryStartDateObject = parseAPITimestamp(this.startDate) as Date;
     const isEnterprise =
-      this.startTimeISO === config.billingStartTimestamp?.toISOString() && this.version.isEnterprise;
+      this.startDate === config.billingStartTimestamp?.toISOString() && this.version.isEnterprise;
     const message = isEnterprise ? 'Your license start date is' : 'You requested data from';
 
     if (
@@ -99,6 +120,17 @@ export default class ClientsCountsPageComponent extends ActivityComponent {
   get activityForNamespace() {
     const { activity, namespace } = this.args;
     return namespace ? activity.byNamespace.find((ns) => ns.label === namespace) : null;
+  }
+
+  get filteredActivity() {
+    // return activity counts based on selected namespace and auth mount values
+    const { namespace, mountPath, activity } = this.args;
+    if (namespace) {
+      return mountPath
+        ? this.activityForNamespace?.mounts.find((mount) => mount.label === mountPath)
+        : this.activityForNamespace;
+    }
+    return activity.total;
   }
 
   @action
