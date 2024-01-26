@@ -45,7 +45,6 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
       .catch(() => []);
     this.startTimestamp = START_TIME;
     this.endTimestamp = END_TIME;
-    this.currentTimestamp = END_TIME;
     this.renderComponent = () =>
       render(hbs`
         <Clients::Page::Token
@@ -53,7 +52,6 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
           @versionHistory={{this.versionHistory}}
           @startTimestamp={{this.startTimestamp}}
           @endTimestamp={{this.endTimestamp}}
-          @currentTimestamp={{this.currentTimestamp}}
           @namespace={{this.ns}}
           @mountPath={{this.mountPath}}
         />

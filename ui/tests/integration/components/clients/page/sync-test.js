@@ -33,7 +33,6 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     this.activity = await this.store.queryRecord('clients/activity', activityQuery);
     this.startTimestamp = START_TIME;
     this.endTimestamp = END_TIME;
-    this.currentTimestamp = END_TIME;
     this.renderComponent = () =>
       render(hbs`
       <Clients::Page::Sync
@@ -41,7 +40,6 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
         @versionHistory={{this.versionHistory}}
         @startTimestamp={{this.startTimestamp}}
         @endTimestamp={{this.endTimestamp}}
-        @currentTimestamp={{this.currentTimestamp}}
         @namespace={{this.countsController.ns}}
         @mountPath={{this.countsController.mountPath}}
       />
@@ -66,7 +64,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
         `renders correct average sync stat ${expectedAvg}`
       );
 
-    const formattedTimestamp = dateFormat([this.currentTimestamp, 'MMM d yyyy, h:mm:ss aaa'], {
+    const formattedTimestamp = dateFormat([this.activity.responseTimestamp, 'MMM d yyyy, h:mm:ss aaa'], {
       withTimeZone: true,
     });
     assert.dom(charts.timestamp).hasText(`Updated ${formattedTimestamp}`, 'renders response timestamp');
@@ -96,7 +94,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
 
     assert.dom(charts.chart('Secrets sync usage')).doesNotExist('vertical bar chart does not render');
     assert.dom(SELECTORS.emptyStateTitle).hasText('No monthly secrets sync clients');
-    const formattedTimestamp = dateFormat([this.currentTimestamp, 'MMM d yyyy, h:mm:ss aaa'], {
+    const formattedTimestamp = dateFormat([this.activity.responseTimestamp, 'MMM d yyyy, h:mm:ss aaa'], {
       withTimeZone: true,
     });
     assert.dom(charts.timestamp).hasText(`Updated ${formattedTimestamp}`, 'renders timestamp');

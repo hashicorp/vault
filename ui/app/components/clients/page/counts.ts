@@ -14,13 +14,13 @@ import type VersionService from 'vault/services/version';
 import type ClientsActivityModel from 'vault/models/clients/activity';
 import type ClientsConfigModel from 'vault/models/clients/config';
 import type StoreService from 'vault/services/store';
+import timestamp from 'core/utils/timestamp';
 
 interface Args {
   activity: ClientsActivityModel;
   config: ClientsConfigModel;
   startTimestamp: number;
   endTimestamp: number;
-  currentTimestamp: number;
   namespace: string;
   mountPath: string;
   onFilterChange: CallableFunction;
@@ -136,7 +136,9 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   @action
   onDateChange(dateObject: { dateType: string; monthIdx: string; year: string }) {
     const { dateType, monthIdx, year } = dateObject;
-    const { currentTimestamp, config } = this.args;
+    const { config } = this.args;
+    const currentTimestamp = getUnixTime(timestamp.now());
+
     // converts the selectedDate to unix timestamp for activity query
     const selectedDate = formatDateObject({ monthIdx, year }, dateType === 'endDate');
 

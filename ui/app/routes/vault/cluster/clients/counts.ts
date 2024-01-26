@@ -28,8 +28,6 @@ export default class ClientsCountsRoute extends Route {
     mountPath: { refreshModel: false, replace: true },
   };
 
-  currentTimestamp = getUnixTime(timestamp.now());
-
   async getActivity(start_time: number, end_time: number) {
     let activity, activityError;
     // if there is no billingStartTimestamp or selected start date initially we allow the user to manually choose a date
@@ -51,7 +49,7 @@ export default class ClientsCountsRoute extends Route {
   async model(params: ClientsCountsRouteParams) {
     const { config, versionHistory } = this.modelFor('vault.cluster.clients') as ClientsRouteModel;
     const startTimestamp = Number(params.start_time) || getUnixTime(config.billingStartTimestamp);
-    const endTimestamp = Number(params.end_time) || this.currentTimestamp;
+    const endTimestamp = Number(params.end_time) || getUnixTime(timestamp.now());
     const [activity, activityError] = await this.getActivity(startTimestamp, endTimestamp);
     return {
       config,
@@ -60,7 +58,6 @@ export default class ClientsCountsRoute extends Route {
       activityError,
       startTimestamp,
       endTimestamp,
-      currentTimestamp: this.currentTimestamp,
     };
   }
 }

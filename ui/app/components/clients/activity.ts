@@ -24,7 +24,6 @@ interface Args {
   versionHistory: ClientsVersionHistoryModel[];
   startTimestamp: number;
   endTimestamp: number;
-  currentTimestamp: number;
   namespace: string;
   mountPath: string;
 }
@@ -92,8 +91,8 @@ export default class ClientsActivityComponent extends Component<Args> {
   }
 
   get isCurrentMonth() {
-    const { activity, currentTimestamp } = this.args;
-    const current = parseAPITimestamp(fromUnixTime(currentTimestamp)) as Date;
+    const { activity } = this.args;
+    const current = parseAPITimestamp(activity.responseTimestamp) as Date;
     const start = parseAPITimestamp(activity.startTime) as Date;
     const end = parseAPITimestamp(activity.endTime) as Date;
     return isSameMonth(start, current) && isSameMonth(end, current);

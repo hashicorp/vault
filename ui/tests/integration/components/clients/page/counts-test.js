@@ -12,13 +12,20 @@ import clientsHandler from 'vault/mirage/handlers/clients';
 import { getUnixTime } from 'date-fns';
 import { SELECTORS as ts, dateDropdownSelect } from 'vault/tests/helpers/clients';
 import { selectChoose } from 'ember-power-select/test-support/helpers';
+import timestamp from 'core/utils/timestamp';
+import sinon from 'sinon';
 
+const STATIC_NOW = new Date('2024-01-25T23:59:59Z');
 const START_TIME = getUnixTime(new Date('2023-10-01T00:00:00Z'));
-const END_TIME = getUnixTime(new Date('2024-01-31T23:59:59Z'));
+const END_TIME = getUnixTime(STATIC_NOW);
 
 module('Integration | Component | clients | Page::Counts', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
+
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
+  });
 
   hooks.beforeEach(async function () {
     clientsHandler(this.server);
@@ -31,7 +38,6 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     this.config = await store.queryRecord('clients/config', {});
     this.startTimestamp = START_TIME;
     this.endTimestamp = END_TIME;
-    this.currentTimestamp = END_TIME;
     this.renderComponent = () =>
       render(hbs`
       <Clients::Page::Counts
@@ -40,7 +46,6 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
         @config={{this.config}}
         @startTimestamp={{this.startTimestamp}}
         @endTimestamp={{this.endTimestamp}}
-        @currentTimestamp={{this.currentTimestamp}}
         @namespace={{this.namespace}}
         @mountPath={{this.mountPath}}
         @onFilterChange={{this.onFilterChange}}
@@ -48,6 +53,9 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
         <div data-test-yield>Yield block</div>
       </Clients::Page::Counts>
     `);
+  });
+  hooks.after(function () {
+    timestamp.now.restore();
   });
 
   test('it should render start date label and description based on version', async function (assert) {
