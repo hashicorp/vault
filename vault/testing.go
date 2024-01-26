@@ -232,7 +232,6 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.PluginDirectory = opts.PluginDirectory
 	conf.DetectDeadlocks = opts.DetectDeadlocks
 	conf.Experiments = opts.Experiments
-	conf.CensusAgent = opts.CensusAgent
 	conf.AdministrativeNamespacePath = opts.AdministrativeNamespacePath
 	conf.ImpreciseLeaseRoleTracking = opts.ImpreciseLeaseRoleTracking
 
@@ -520,7 +519,7 @@ func TestKeyCopy(key []byte) []byte {
 	return result
 }
 
-func TestDynamicSystemView(c *Core, ns *namespace.Namespace) *dynamicSystemView {
+func TestDynamicSystemView(c *Core, ns *namespace.Namespace) logical.SystemView {
 	me := &MountEntry{
 		Config: MountConfig{
 			DefaultLeaseTTL: 24 * time.Hour,
@@ -535,7 +534,9 @@ func TestDynamicSystemView(c *Core, ns *namespace.Namespace) *dynamicSystemView 
 		me.namespace = ns
 	}
 
-	return &dynamicSystemView{c, me, c.perfStandby}
+	return &extendedSystemViewImpl{
+		dynamicSystemView{c, me, c.perfStandby},
+	}
 }
 
 func TestAddTestPlugin(t testing.T, core *Core, name string, pluginType consts.PluginType, version string, testFunc string, env []string) {

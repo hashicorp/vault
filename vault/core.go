@@ -636,8 +636,6 @@ type Core struct {
 	// it is protected by activityLogLock
 	activityLogConfig ActivityLogCoreConfig
 
-	censusConfig atomic.Value
-
 	// activeTime is set on active nodes indicating the time at which this node
 	// became active.
 	activeTime time.Time
@@ -832,9 +830,6 @@ type CoreConfig struct {
 	License         string
 	LicensePath     string
 	LicensingConfig *LicensingConfig
-
-	// Configured Census Agent
-	CensusAgent CensusReporter
 
 	DisablePerformanceStandby bool
 	DisableIndexing           bool
@@ -2422,8 +2417,10 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	}
 
 	if !c.IsDRSecondary() {
-		if err := c.setupCensusAgent(); err != nil {
-			logger.Error("skipping reporting for nil agent", "error", err)
+		if !c.perfStandby {
+			if err := c.setupCensusManager(); err != nil {
+				logger.Error("failed to instantiate the license reporting agent", "error", err)
+			}
 		}
 
 		// not waiting on wg to avoid changing existing behavior
@@ -2431,6 +2428,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.setupActivityLog(ctx, &wg); err != nil {
 			return err
 		}
+
+		if !c.perfStandby {
+			c.StartManualCensusSnapshots()
+		}
+
 	} else {
 		broker, err := NewAuditBroker(logger)
 		if err != nil {
@@ -2792,8 +2794,8 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
 	c.stopActivityLog()
-	// Clean up the censusAgent on seal
-	if err := c.teardownCensusAgent(); err != nil {
+	// Clean up census on seal
+	if err := c.teardownCensusManager(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down reporting agent: %w", err))
 	}
 
@@ -2950,6 +2952,7 @@ func setPhysicalSealConfig(ctx context.Context, c *Core, label, configPath strin
 		Value: buf,
 	}
 
+	// nosemgrep: physical-storage-bypass-encryption
 	if err := c.physical.Put(ctx, pe); err != nil {
 		c.logger.Error(fmt.Sprintf("failed to write %s seal configuration", label), "error", err)
 		return fmt.Errorf("failed to write %s seal configuration: %w", label, err)
@@ -3543,16 +3546,17 @@ func (c *Core) readFeatureFlags(ctx context.Context) (*FeatureFlags, error) {
 // misconfigured. This allows users to recover from errors when starting Vault
 // with misconfigured plugins. It should not be possible for existing builtins
 // to be misconfigured, so that is a fatal error.
-func (c *Core) isMountable(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) bool {
-	return !c.isMountEntryBuiltin(ctx, entry, pluginType)
+func (c *Core) isMountable(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) (bool, error) {
+	builtin, err := c.isMountEntryBuiltin(ctx, entry, pluginType)
+	return !builtin, err
 }
 
 // isMountEntryBuiltin determines whether a mount entry is associated with a
 // builtin of the specified plugin type.
-func (c *Core) isMountEntryBuiltin(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) bool {
+func (c *Core) isMountEntryBuiltin(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) (bool, error) {
 	// Prevent a panic early on
 	if entry == nil || c.pluginCatalog == nil {
-		return false
+		return false, nil
 	}
 
 	// Allow type to be determined from mount entry when not otherwise specified
@@ -3566,12 +3570,16 @@ func (c *Core) isMountEntryBuiltin(ctx context.Context, entry *MountEntry, plugi
 		pluginName = alias
 	}
 
-	plug, err := c.pluginCatalog.Get(ctx, pluginName, pluginType, entry.Version)
+	pluginVersion, err := c.resolveMountEntryVersion(ctx, pluginType, entry)
+	if err != nil {
+		return false, err
+	}
+	plug, err := c.pluginCatalog.Get(ctx, pluginName, pluginType, pluginVersion)
 	if err != nil || plug == nil {
-		return false
+		return false, nil
 	}
 
-	return plug.Builtin
+	return plug.Builtin, nil
 }
 
 // MatchingMount returns the path of the mount that will be responsible for

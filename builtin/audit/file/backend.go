@@ -36,7 +36,6 @@ type Backend struct {
 	name       string
 	nodeIDList []eventlogger.NodeID
 	nodeMap    map[eventlogger.NodeID]eventlogger.Node
-	filePath   string
 	salt       *atomic.Value
 	saltConfig *salt.Config
 	saltMutex  sync.RWMutex
@@ -89,7 +88,6 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 
 	b := &Backend{
 		fallback:   fallback,
-		filePath:   filePath,
 		name:       conf.MountPath,
 		saltConfig: conf.SaltConfig,
 		saltView:   conf.SaltView,

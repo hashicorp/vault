@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 	"go.uber.org/atomic"
@@ -85,6 +86,9 @@ const (
 	nonEntityTokenActivityType = "non-entity-token"
 	entityActivityType         = "entity"
 	secretSyncActivityType     = "secret-sync"
+
+	// FeatureSecretSyncBilling will always be false
+	FeatureSecretSyncBilling = license.FeatureNone
 )
 
 type segmentInfo struct {
@@ -1155,7 +1159,7 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) e
 			close(manager.retentionDone)
 		}(manager.retentionMonths)
 
-		manager.CensusReportDone = make(chan bool)
+		manager.CensusReportDone = make(chan bool, 1)
 		go c.activityLog.CensusReport(ctx, c.CensusAgent(), c.BillingStart())
 	}
 
@@ -1478,6 +1482,9 @@ func (a *ActivityLog) AddClientToFragment(clientID string, namespaceID string, t
 // fragment. The timestamp is a Unix timestamp *without* nanoseconds,
 // as that is what token.CreationTime uses.
 func (a *ActivityLog) AddActivityToFragment(clientID string, namespaceID string, timestamp int64, activityType string, mountAccessor string) {
+	if activityType == secretSyncActivityType && !a.core.HasFeature(FeatureSecretSyncBilling) {
+		return
+	}
 	// Check whether entity ID already recorded
 	var present bool
 

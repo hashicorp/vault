@@ -13,7 +13,7 @@ import (
 // for audit events. It will generate an ID if no ID is supplied. Supported
 // options: WithID, WithNow.
 func NewEvent(s subtype, opt ...Option) (*AuditEvent, error) {
-	const op = "audit.newEvent"
+	const op = "audit.NewEvent"
 
 	// Get the default options
 	opts, err := getOpts(opt...)

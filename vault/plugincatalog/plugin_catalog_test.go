@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -71,6 +72,33 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 
 	pluginCatalog := testPluginCatalog(t)
 
+	// Register a fake plugin in the catalog.
+	file, err := os.CreateTemp(pluginCatalog.directory, "temp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	err = pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+		Name:    pluginName,
+		Type:    consts.PluginTypeDatabase,
+		Version: "1.0.0",
+		Command: filepath.Base(file.Name()),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Register a pinned version, should not affect anything below.
+	err = pluginCatalog.SetPinnedVersion(context.Background(), &pluginutil.PinnedVersion{
+		Name:    pluginName,
+		Type:    consts.PluginTypeDatabase,
+		Version: "1.0.0",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Get builtin plugin
 	p, err := pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, "")
 	if err != nil {
@@ -106,12 +134,6 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	}
 
 	// Set a plugin, test overwriting a builtin plugin
-	file, err := os.CreateTemp(pluginCatalog.directory, "temp")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer file.Close()
-
 	command := filepath.Base(file.Name())
 	err = pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
 		Name:    pluginName,
@@ -1057,6 +1079,58 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 				})
 			}
 		})
+	}
+}
+
+// TestPluginCatalog_CannotDeletePinnedVersion ensures we cannot delete a
+// plugin which is referred to in an active pinned version.
+func TestPluginCatalog_CannotDeletePinnedVersion(t *testing.T) {
+	pluginCatalog := testPluginCatalog(t)
+
+	// Register a fake plugin in the catalog.
+	file, err := os.CreateTemp(pluginCatalog.directory, "temp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	err = pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+		Name:    "my-plugin",
+		Type:    consts.PluginTypeSecrets,
+		Version: "1.0.0",
+		Command: filepath.Base(file.Name()),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Pin a version and check we can't delete it.
+	err = pluginCatalog.SetPinnedVersion(context.Background(), &pluginutil.PinnedVersion{
+		Name:    "my-plugin",
+		Type:    consts.PluginTypeSecrets,
+		Version: "1.0.0",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = pluginCatalog.Delete(context.Background(), "my-plugin", consts.PluginTypeSecrets, "1.0.0")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !errors.Is(err, ErrPinnedVersion) {
+		t.Fatal(err)
+	}
+
+	// Now delete the pinned version and we should be able to delete the plugin.
+	err = pluginCatalog.DeletePinnedVersion(context.Background(), consts.PluginTypeSecrets, "my-plugin")
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	err = pluginCatalog.Delete(context.Background(), "my-plugin", consts.PluginTypeSecrets, "1.0.0")
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

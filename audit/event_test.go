@@ -29,21 +29,21 @@ func TestAuditEvent_new(t *testing.T) {
 			Subtype:              subtype(""),
 			Format:               format(""),
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.newEvent: audit.(AuditEvent).validate: audit.(subtype).validate: '' is not a valid event subtype: invalid parameter",
+			ExpectedErrorMessage: "audit.NewEvent: audit.(AuditEvent).validate: audit.(subtype).validate: '' is not a valid event subtype: invalid parameter",
 		},
 		"empty-Option": {
 			Options:              []Option{},
 			Subtype:              subtype(""),
 			Format:               format(""),
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.newEvent: audit.(AuditEvent).validate: audit.(subtype).validate: '' is not a valid event subtype: invalid parameter",
+			ExpectedErrorMessage: "audit.NewEvent: audit.(AuditEvent).validate: audit.(subtype).validate: '' is not a valid event subtype: invalid parameter",
 		},
 		"bad-id": {
 			Options:              []Option{WithID("")},
 			Subtype:              ResponseType,
 			Format:               JSONFormat,
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.newEvent: error applying options: id cannot be empty",
+			ExpectedErrorMessage: "audit.NewEvent: error applying options: id cannot be empty",
 		},
 		"good": {
 			Options: []Option{
