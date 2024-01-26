@@ -263,6 +263,10 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		wrappedHandler = disableReplicationStatusEndpointWrapping(wrappedHandler)
 	}
 
+	if props.ListenerConfig != nil && props.ListenerConfig.DisableRequestLimiter {
+		wrappedHandler = wrapRequestLimiterHandler(wrappedHandler, props)
+	}
+
 	return wrappedHandler
 }
 
@@ -910,6 +914,15 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 }
 
 func acquireLimiterListener(core *vault.Core, rawReq *http.Request, r *logical.Request) (*limits.RequestListener, bool) {
+	var disable bool
+	disableRequestLimiter := rawReq.Context().Value(logical.CtxKeyDisableRequestLimiter{})
+	if disableRequestLimiter != nil {
+		disable = disableRequestLimiter.(bool)
+	}
+	if disable {
+		return &limits.RequestListener{}, true
+	}
+
 	lim := &limits.RequestLimiter{}
 	if r.PathLimited {
 		lim = core.GetRequestLimiter(limits.SpecialPathLimiter)
