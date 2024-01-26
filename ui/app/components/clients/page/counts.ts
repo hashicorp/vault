@@ -136,16 +136,13 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   @action
   onDateChange(dateObject: { dateType: string; monthIdx: string; year: string }) {
     const { dateType, monthIdx, year } = dateObject;
-    const {
-      currentTimestamp,
-      config: { billingStartTimestamp },
-    } = this.args;
+    const { currentTimestamp, config } = this.args;
     // converts the selectedDate to unix timestamp for activity query
     const selectedDate = formatDateObject({ monthIdx, year }, dateType === 'endDate');
 
     if (dateType !== 'cancel') {
       const start_time = {
-        reset: getUnixTime(billingStartTimestamp), // clicked 'Current billing period' in calendar widget -> resets to billing start date
+        reset: getUnixTime(config?.billingStartTimestamp) || null, // clicked 'Current billing period' in calendar widget -> resets to billing start date
         currentMonth: currentTimestamp, // clicked 'Current month' from calendar widget -> defaults to currentTimestamp
         startDate: selectedDate, // from "Edit billing start" modal
       }[dateType];
