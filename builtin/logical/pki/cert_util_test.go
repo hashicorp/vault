@@ -273,7 +273,7 @@ type parseCertificateTestCase struct {
 	wantErr    bool
 }
 
-func TestParseCertificateToCreationParameters(t *testing.T) {
+func TestParseCertificate(t *testing.T) {
 	t.Parallel()
 
 	parseURL := func(s string) *url.URL {
@@ -288,16 +288,17 @@ func TestParseCertificateToCreationParameters(t *testing.T) {
 		{
 			name: "simple CA",
 			data: map[string]interface{}{
-				"common_name":    "the common name",
-				"key_type":       "ec",
-				"key_bits":       384,
-				"ttl":            "1h",
-				"street_address": "",
+				"common_name":         "the common name",
+				"key_type":            "ec",
+				"key_bits":            384,
+				"ttl":                 "1h",
+				"not_before_duration": "30s",
+				"street_address":      "",
 			},
 			ttl: 1 * time.Hour,
 			wantParams: certutil.CreationParameters{
 				Subject: pkix.Name{
-					CommonName: "the common name", // add logic to make this work
+					CommonName: "the common name",
 				},
 				DNSNames:                      nil,
 				EmailAddresses:                nil,
@@ -305,23 +306,23 @@ func TestParseCertificateToCreationParameters(t *testing.T) {
 				URIs:                          nil,
 				OtherSANs:                     make(map[string][]string),
 				IsCA:                          true,
-				KeyType:                       "ec", // cover all the getKeytype() types
+				KeyType:                       "ec",
 				KeyBits:                       384,
 				NotAfter:                      time.Time{},
 				KeyUsage:                      x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
 				ExtKeyUsage:                   0,
 				ExtKeyUsageOIDs:               nil,
 				PolicyIdentifiers:             nil,
-				BasicConstraintsValidForNonCA: false, // don't assert for CAs
-				SignatureBits:                 384,   // look at findSignatureBits
-				UsePSS:                        false, // look at isPSS
+				BasicConstraintsValidForNonCA: false,
+				SignatureBits:                 384,
+				UsePSS:                        false,
 				ForceAppendCaChain:            false,
 				UseCSRValues:                  false,
 				PermittedDNSDomains:           nil,
 				URLs:                          nil,
 				MaxPathLength:                 -1,
-				NotBeforeDuration:             0,   // assert that it is greater than 30 s (the default)
-				SKID:                          nil, // assert that it is not nil
+				NotBeforeDuration:             30,
+				SKID:                          []byte("We'll assert that it is not nil as an special case"),
 			},
 			wantFields: map[string]interface{}{
 				"common_name":           "the common name",
@@ -343,9 +344,9 @@ func TestParseCertificateToCreationParameters(t *testing.T) {
 				"max_path_length":       -1,
 				"permitted_dns_domains": "",
 				"use_pss":               false,
-				"skid":                  "",
 				"key_type":              "ec",
 				"key_bits":              384,
+				"skid":                  "We'll assert that it is not nil as an special case",
 			},
 			wantErr: false,
 		},
@@ -368,7 +369,7 @@ func TestParseCertificateToCreationParameters(t *testing.T) {
 				"province":              "province1, province2",
 				"street_address":        "street_address1, street_address2",
 				"postal_code":           "postal_code1, postal_code2",
-				"not_before_duration":   "30s",
+				"not_before_duration":   "45s",
 				"key_type":              "rsa",
 				"use_pss":               true,
 				"key_bits":              2048,
@@ -378,7 +379,7 @@ func TestParseCertificateToCreationParameters(t *testing.T) {
 			ttl: 2 * time.Hour,
 			wantParams: certutil.CreationParameters{
 				Subject: pkix.Name{
-					CommonName:         "the common name", // add logic to make this work
+					CommonName:         "the common name",
 					OrganizationalUnit: []string{"unit1", "unit2"},
 					Organization:       []string{"org1", "org2"},
 					Country:            []string{"CA", "US"},
@@ -408,8 +409,8 @@ func TestParseCertificateToCreationParameters(t *testing.T) {
 				PermittedDNSDomains:           []string{".example.com", ".www.example.com"},
 				URLs:                          nil,
 				MaxPathLength:                 2,
-				NotBeforeDuration:             0,
-				SKID:                          nil,
+				NotBeforeDuration:             45 * time.Second,
+				SKID:                          []byte("We'll assert that it is not nil as an special case"),
 			},
 			wantFields: map[string]interface{}{
 				"common_name":           "the common name",
@@ -427,18 +428,17 @@ func TestParseCertificateToCreationParameters(t *testing.T) {
 				"street_address":        "street_address1,street_address2",
 				"postal_code":           "postal_code1,postal_code2",
 				"serial_number":         "",
-				"ttl":                   "1h0m30s",
+				"ttl":                   "2h0m45s",
 				"max_path_length":       2,
 				"permitted_dns_domains": ".example.com,.www.example.com",
 				"use_pss":               true,
-				"skid":                  "",
 				"key_type":              "rsa",
 				"key_bits":              2048,
+				"skid":                  "We'll assert that it is not nil as an special case",
 			},
 			wantErr: false,
 		},
 		// need a test for non CA
-		// need a test with a different ttl
 	}
 	for _, tt := range tests {
 
@@ -492,38 +492,26 @@ func testParseCertificateToCreationParameters(t *testing.T, issueTime time.Time,
 		}
 
 		require.NotNil(t, params.SKID)
-		require.GreaterOrEqual(t, params.NotBeforeDuration, 30*time.Second)
+		require.GreaterOrEqual(t, params.NotBeforeDuration, tt.wantParams.NotBeforeDuration)
 
-		// with ttl=1h
-		require.GreaterOrEqual(t, params.NotAfter, issueTime.Add(59*time.Minute))
-		require.LessOrEqual(t, params.NotAfter, issueTime.Add(61*time.Minute))
+		require.GreaterOrEqual(t, params.NotAfter, issueTime.Add(tt.ttl).Add(-1*time.Minute))
+		require.LessOrEqual(t, params.NotAfter, issueTime.Add(tt.ttl).Add(1*time.Minute))
 	}
 }
 
 func testParseCertificateToFields(t *testing.T, issueTime time.Time, tt *parseCertificateTestCase, cert *x509.Certificate) {
 	fields, err := certutil.ParseCertificateToFields(*cert)
-	t.Log(fields)
 	if tt.wantErr {
 		require.Error(t, err)
 	} else {
 		require.NoError(t, err)
 
 		require.NotNil(t, fields["skid"])
-		fieldsToDelete := []string{"skid"}
-		for _, f := range fieldsToDelete {
-			delete(fields, f)
-			delete(tt.wantFields, f)
-		}
+		delete(fields, "skid")
+		delete(tt.wantFields, "skid")
 
 		if diff := deep.Equal(tt.wantFields, fields); diff != nil {
 			t.Errorf("testParseCertificateToFields() diff: %s", strings.ReplaceAll(strings.Join(diff, "\n"), "map", "\nmap"))
 		}
-
-		//require.NotNil(t, params.SKID)
-		//require.GreaterOrEqual(t, params.NotBeforeDuration, 30*time.Second)
-		//
-		//// with ttl=1h
-		//require.GreaterOrEqual(t, params.NotAfter, issueTime.Add(59*time.Minute))
-		//require.LessOrEqual(t, params.NotAfter, issueTime.Add(61*time.Minute))
 	}
 }
