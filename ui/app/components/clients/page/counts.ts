@@ -102,7 +102,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     const activityStartDateObject = parseAPITimestamp(activity.startTime) as Date;
     const queryStartDateObject = parseAPITimestamp(this.startDate) as Date;
     const isEnterprise =
-      this.startDate === config.billingStartTimestamp.toISOString() && this.version.isEnterprise;
+      this.startDate === config.billingStartTimestamp?.toISOString() && this.version.isEnterprise;
     const message = isEnterprise ? 'Your license start date is' : 'You requested data from';
 
     if (
