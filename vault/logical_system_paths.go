@@ -3721,6 +3721,11 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
 				},
+				"identity_token_key": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["identity_token_key"][0]),
+					Required:    false,
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -3804,6 +3809,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 									Required: false,
 								},
 								"plugin_version": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"identity_token_key": {
 									Type:     framework.TypeString,
 									Required: false,
 								},
@@ -4573,6 +4582,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeMap,
 					Description: strings.TrimSpace(sysHelp["tune_user_lockout_config"][0]),
 				},
+				"identity_token_key": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["identity_token_key"][0]),
+				},
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -4669,6 +4682,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 								},
 								"user_lockout_disable": {
 									Type:     framework.TypeBool,
+									Required: false,
+								},
+								"identity_token_key": {
+									Type:     framework.TypeString,
 									Required: false,
 								},
 							},

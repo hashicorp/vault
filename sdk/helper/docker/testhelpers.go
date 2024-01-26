@@ -291,7 +291,6 @@ func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr 
 		config = c
 		return nil
 	}, bo)
-
 	if err != nil {
 		if !d.RunOptions.DoNotAutoRemove {
 			cleanup()

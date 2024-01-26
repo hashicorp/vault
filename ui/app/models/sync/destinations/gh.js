@@ -6,9 +6,9 @@
 import SyncDestinationModel from '../destination';
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
-const displayFields = ['name', 'repositoryOwner', 'repositoryName', 'accessToken'];
+const displayFields = ['name', 'repositoryOwner', 'repositoryName', 'accessToken', 'secretNameTemplate'];
 const formFieldGroups = [
-  { default: ['name', 'repositoryOwner', 'repositoryName'] },
+  { default: ['name', 'repositoryOwner', 'repositoryName', 'secretNameTemplate'] },
   { Credentials: ['accessToken'] },
 ];
 

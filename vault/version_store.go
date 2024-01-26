@@ -45,7 +45,6 @@ func (c *Core) storeVersionEntry(ctx context.Context, vaultVersion *VaultVersion
 	if force {
 		// avoid storage lookup and write immediately
 		err = c.barrier.Put(ctx, newEntry)
-
 		if err != nil {
 			return false, err
 		}
@@ -63,7 +62,6 @@ func (c *Core) storeVersionEntry(ctx context.Context, vaultVersion *VaultVersion
 	}
 
 	err = c.barrier.Put(ctx, newEntry)
-
 	if err != nil {
 		return false, err
 	}
