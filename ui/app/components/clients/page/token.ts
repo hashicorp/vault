@@ -37,4 +37,16 @@ export default class ClientsTokenPageComponent extends ActivityComponent {
   get averageNewClients() {
     return this.calculateClientAverages(this.byMonthNewClients);
   }
+
+  get tokenUsageCounts() {
+    if (this.totalUsageCounts) {
+      const { entity_clients, non_entity_clients } = this.totalUsageCounts;
+      return {
+        clients: entity_clients + non_entity_clients,
+        entity_clients,
+        non_entity_clients,
+      };
+    }
+    return null;
+  }
 }
