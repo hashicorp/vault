@@ -43,6 +43,19 @@ func wrapMaxRequestSizeHandler(handler http.Handler, props *vault.HandlerPropert
 	})
 }
 
+func wrapRequestLimiterHandler(handler http.Handler, props *vault.HandlerProperties) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		request := r.WithContext(
+			context.WithValue(
+				r.Context(),
+				logical.CtxKeyDisableRequestLimiter{},
+				props.ListenerConfig.DisableRequestLimiter,
+			),
+		)
+		handler.ServeHTTP(w, request)
+	})
+}
+
 func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ns, err := namespace.FromContext(r.Context())

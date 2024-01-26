@@ -543,3 +543,9 @@ func ContextOriginalBodyValue(ctx context.Context) (io.ReadCloser, bool) {
 func CreateContextOriginalBody(parent context.Context, body io.ReadCloser) context.Context {
 	return context.WithValue(parent, ctxKeyOriginalBody{}, body)
 }
+
+type CtxKeyDisableRequestLimiter struct{}
+
+func (c CtxKeyDisableRequestLimiter) String() string {
+	return "disable_request_limiter"
+}

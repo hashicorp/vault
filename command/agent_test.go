@@ -350,11 +350,13 @@ listener "tcp" {
     address = "%s"
     tls_disable = true
     require_request_header = false
+    disable_request_limiter = false
 }
 listener "tcp" {
     address = "%s"
     tls_disable = true
     require_request_header = true
+	disable_request_limiter = true
 }
 `
 	listenAddr1 := generateListenerAddress(t)
