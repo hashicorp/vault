@@ -6,7 +6,7 @@
 {{#if (gt @byMonthActivityData.length 1)}}
   <Clients::ChartContainer
     @title="Vault client counts"
-    @description="The total billable clients in the specified date range. This includes entity, non-entity, and secrets sync clients. The total client count number is an important consideration for Vault billing."
+    @description="The total clients in the specified date range. This includes entity, non-entity, and secrets sync clients. The total client count number is an important consideration for Vault billing."
     @timestamp={{@responseTimestamp}}
     @hasChartData={{true}}
     data-test-chart="running total"
@@ -109,7 +109,7 @@
       @title="Total usage"
       @description="These totals are within this namespace and all its children. {{if
         @isCurrentMonth
-        "Only totals are available when viewing the current month. To see a breakdown of new and total clients for this month, select the 'Current Billing Period' filter."
+        "Only totals are available when viewing the current month. To see a breakdown of new and total clients for this month, select the 'Current billing period' filter."
       }}"
       @totalUsageCounts={{@runningTotals}}
     />
