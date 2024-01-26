@@ -85,16 +85,20 @@ export default class TransitKeyActions extends Component {
 
   @tracked isModalActive = false;
   @tracked errors = null;
-  @tracked props = Object.assign({}, STARTING_TRANSIT_PROPS); // shallow copy of the object. We don't want to mutate the original.
+  @tracked props = { ...STARTING_TRANSIT_PROPS }; // Shallow copy of the object. We don't want to mutate the original.
 
   constructor() {
     super(...arguments);
     assert('@key is required for TransitKeyActions components', this.args.key);
 
-    if (this.args.key.supportedActions.firstObject === 'export' || this.args.selectedAction === 'export') {
-      this.props.exportKeyType = this.args.key.exportKeyTypes.firstObject;
+    if (this.firstSupportedAction === 'export' || this.args.selectedAction === 'export') {
+      this.props.exportKeyType = this.args.key.exportKeyTypes[0];
       this.props.exportKeyVersion = this.args.key.validKeyVersions.lastObject;
     }
+  }
+
+  get firstSupportedAction() {
+    return this.args.key.supportedActions[0];
   }
 
   @action updateProps() {
@@ -142,7 +146,7 @@ export default class TransitKeyActions extends Component {
       event.preventDefault();
     }
     const { backend, id } = this.args.key;
-    const action = this.args.selectedAction || this.args.key.supportedActions.firstObject;
+    const action = this.args.selectedAction || this.firstSupportedAction;
     const { ...formData } = data || {};
     if (!this.props.encodedBase64) {
       if (action === 'encrypt' && !!formData.plaintext) {
