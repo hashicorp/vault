@@ -48,7 +48,7 @@ module('Acceptance | clients | counts overview', function (hooks) {
       .hasText(`Jul 2022 - Jan 2023`, 'Date range shows dates correctly parsed activity response');
     assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
     assert
-      .dom(SELECTORS.runningTotalMonthlyCharts)
+      .dom(SELECTORS.charts.chart('running total'))
       .exists('Shows running totals with monthly breakdown charts');
     assert
       .dom(SELECTORS.charts.line.xAxisLabel)
@@ -72,7 +72,7 @@ module('Acceptance | clients | counts overview', function (hooks) {
       .dom(SELECTORS.runningTotalMonthStats)
       .doesNotExist('running total single month stat boxes do not show');
     assert
-      .dom(SELECTORS.runningTotalMonthlyCharts)
+      .dom(SELECTORS.charts.chart('running total'))
       .doesNotExist('running total month over month charts do not show');
     assert.dom(SELECTORS.attributionBlock).exists('attribution area shows');
     assert
@@ -96,7 +96,7 @@ module('Acceptance | clients | counts overview', function (hooks) {
     await click('[data-test-date-dropdown-submit]');
     assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
     assert
-      .dom(SELECTORS.runningTotalMonthlyCharts)
+      .dom(SELECTORS.charts.chart('running total'))
       .exists('Shows running totals with monthly breakdown charts');
     assert
       .dom(SELECTORS.charts.line.xAxisLabel)
@@ -115,7 +115,7 @@ module('Acceptance | clients | counts overview', function (hooks) {
 
     assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
     assert
-      .dom(SELECTORS.runningTotalMonthlyCharts)
+      .dom(SELECTORS.charts.chart('running total'))
       .exists('Shows running totals with monthly breakdown charts');
     assert.strictEqual(
       findAll('[data-test-line-chart="plot-point"]').length,
@@ -135,7 +135,7 @@ module('Acceptance | clients | counts overview', function (hooks) {
 
     assert.dom(SELECTORS.runningTotalMonthStats).exists('running total single month stat boxes show');
     assert
-      .dom(SELECTORS.runningTotalMonthlyCharts)
+      .dom(SELECTORS.charts.chart('running total'))
       .doesNotExist('running total month over month charts do not show');
     assert.dom(SELECTORS.attributionBlock).exists('attribution area shows');
     assert.dom('[data-test-chart-container="new-clients"]').exists('new client attribution chart shows');
@@ -161,7 +161,7 @@ module('Acceptance | clients | counts overview', function (hooks) {
 
   test('totals filter correctly with full data', async function (assert) {
     assert
-      .dom(SELECTORS.runningTotalMonthlyCharts)
+      .dom(SELECTORS.charts.chart('running total'))
       .exists('Shows running totals with monthly breakdown charts');
     assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
 
@@ -176,16 +176,16 @@ module('Acceptance | clients | counts overview', function (hooks) {
     assert.dom(SELECTORS.selectedNs).hasText(topNamespace.label, 'selects top namespace');
     assert.dom('[data-test-top-attribution]').includesText('Top auth method');
     assert
-      .dom('[data-test-running-total-entity] p')
+      .dom(SELECTORS.charts.statTextValue('Entity clients'))
       .includesText(`${formatNumber([topNamespace.entity_clients])}`, 'total entity clients is accurate');
     assert
-      .dom('[data-test-running-total-nonentity] p')
+      .dom(SELECTORS.charts.statTextValue('Non-entity clients'))
       .includesText(
         `${formatNumber([topNamespace.non_entity_clients])}`,
         'total non-entity clients is accurate'
       );
     assert
-      .dom('[data-test-running-total-sync] p')
+      .dom(SELECTORS.charts.statTextValue('Secrets sync clients'))
       .includesText(`${formatNumber([topNamespace.secret_syncs])}`, 'total sync clients is accurate');
     assert
       .dom('[data-test-attribution-clients] p')
@@ -199,13 +199,13 @@ module('Acceptance | clients | counts overview', function (hooks) {
     assert.ok(true, 'Filter by first auth method');
     assert.dom(SELECTORS.selectedAuthMount).hasText(topMount.label, 'selects top mount');
     assert
-      .dom('[data-test-running-total-entity] p')
+      .dom(SELECTORS.charts.statTextValue('Entity clients'))
       .includesText(`${formatNumber([topMount.entity_clients])}`, 'total entity clients is accurate');
     assert
-      .dom('[data-test-running-total-nonentity] p')
+      .dom(SELECTORS.charts.statTextValue('Non-entity clients'))
       .includesText(`${formatNumber([topMount.non_entity_clients])}`, 'total non-entity clients is accurate');
     assert
-      .dom('[data-test-running-total-sync] p')
+      .dom(SELECTORS.charts.statTextValue('Secrets sync clients'))
       .includesText(`${formatNumber([topMount.secret_syncs])}`, 'total sync clients is accurate');
     assert.dom(SELECTORS.attributionBlock).doesNotExist('Does not show attribution block');
 
@@ -213,19 +213,19 @@ module('Acceptance | clients | counts overview', function (hooks) {
     assert.ok(true, 'Remove namespace filter without first removing auth method filter');
     assert.dom('[data-test-top-attribution]').includesText('Top namespace');
     assert
-      .dom('[data-test-running-total-entity]')
+      .dom(SELECTORS.charts.statTextValue('Entity clients'))
       .hasTextContaining(
         `${formatNumber([response.total.entity_clients])}`,
         'total entity clients is back to unfiltered value'
       );
     assert
-      .dom('[data-test-running-total-nonentity]')
+      .dom(SELECTORS.charts.statTextValue('Non-entity clients'))
       .hasTextContaining(
         `${formatNumber([formatNumber([response.total.non_entity_clients])])}`,
         'total non-entity clients is back to unfiltered value'
       );
     assert
-      .dom('[data-test-running-total-sync]')
+      .dom(SELECTORS.charts.statTextValue('Secrets sync clients'))
       .hasTextContaining(
         `${formatNumber([formatNumber([response.total.secret_syncs])])}`,
         'total non-entity clients is back to unfiltered value'
