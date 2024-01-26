@@ -374,7 +374,7 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 	if err != nil {
 		metrics.IncrCounter([]string{"ha", "rpc", "client", "forward", "errors"}, 1)
 		c.logger.Error("error during forwarded RPC request", "error", err)
-		return 0, nil, nil, fmt.Errorf("error during forwarding RPC request")
+		return 0, nil, nil, fmt.Errorf("error during forwarding RPC request: %w", err)
 	}
 
 	var header http.Header

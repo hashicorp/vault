@@ -49,6 +49,7 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/osutil"
+	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -707,6 +708,9 @@ type Core struct {
 	periodicLeaderRefreshInterval time.Duration
 
 	clusterAddrBridge *raft.ClusterAddrBridge
+
+	limiterRegistry     *limits.LimiterRegistry
+	limiterRegistryLock sync.Mutex
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -715,6 +719,10 @@ func (c *Core) ActiveNodeClockSkewMillis() int64 {
 
 func (c *Core) EchoDuration() time.Duration {
 	return c.echoDuration.Load()
+}
+
+func (c *Core) GetRequestLimiter(key string) *limits.RequestLimiter {
+	return c.limiterRegistry.GetLimiter(key)
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -882,6 +890,8 @@ type CoreConfig struct {
 	PeriodicLeaderRefreshInterval time.Duration
 
 	ClusterAddrBridge *raft.ClusterAddrBridge
+
+	LimiterRegistry *limits.LimiterRegistry
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -982,6 +992,10 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		for k, v := range detectDeadlocks {
 			detectDeadlocks[k] = strings.ToLower(strings.TrimSpace(v))
 		}
+	}
+
+	if conf.LimiterRegistry == nil {
+		conf.LimiterRegistry = limits.NewLimiterRegistry(conf.Logger.Named("limits"))
 	}
 
 	// Use imported logging deadlock if requested
@@ -1306,6 +1320,12 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.events.Start()
 
 	c.clusterAddrBridge = conf.ClusterAddrBridge
+	c.limiterRegistry = conf.LimiterRegistry
+
+	c.limiterRegistry.Logger = conf.Logger.Named("limits")
+	c.limiterRegistryLock.Lock()
+	c.limiterRegistry.Enable()
+	c.limiterRegistryLock.Unlock()
 
 	return c, nil
 }

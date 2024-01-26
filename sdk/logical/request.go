@@ -194,6 +194,10 @@ type Request struct {
 	// accessible.
 	Unauthenticated bool `json:"unauthenticated" structs:"unauthenticated" mapstructure:"unauthenticated"`
 
+	// PathLimited indicates that the request path is marked for special-case
+	// request limiting.
+	PathLimited bool `json:"path_limited" structs:"path_limited" mapstructure:"path_limited"`
+
 	// MFACreds holds the parsed MFA information supplied over the API as part of
 	// X-Vault-MFA header
 	MFACreds MFACreds `json:"mfa_creds" structs:"mfa_creds" mapstructure:"mfa_creds" sentinel:""`
