@@ -1432,6 +1432,12 @@ func (c *ServerCommand) Run(args []string) int {
 	infoKeys = append(infoKeys, "administrative namespace")
 	info["administrative namespace"] = config.AdministrativeNamespacePath
 
+	infoKeys = append(infoKeys, "request limiter")
+	info["request limiter"] = "enabled"
+	if config.RequestLimiter != nil && config.RequestLimiter.Disable {
+		info["request limiter"] = "disabled"
+	}
+
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
 
@@ -1660,6 +1666,8 @@ func (c *ServerCommand) Run(args []string) int {
 
 			// Setting log request with the new value in the config after reload
 			core.ReloadLogRequestsLevel()
+
+			core.ReloadRequestLimiter()
 
 			// reloading HCP link
 			hcpLink, err = c.reloadHCPLink(hcpLink, config, core, hcpLogger)
@@ -3093,6 +3101,10 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		DisableSSCTokens:               config.DisableSSCTokens,
 		Experiments:                    config.Experiments,
 		AdministrativeNamespacePath:    config.AdministrativeNamespacePath,
+	}
+
+	if config.RequestLimiter != nil {
+		coreConfig.DisableRequestLimiter = config.RequestLimiter.Disable
 	}
 
 	if c.flagDev {
