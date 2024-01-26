@@ -1535,7 +1535,11 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		Version:               pluginVersion,
 	}
 
-	if b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeSecrets) {
+	builtin, err := b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeSecrets)
+	if err != nil {
+		return nil, err
+	}
+	if builtin {
 		resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
 		if err != nil {
 			b.Core.logger.Error("could not mount builtin", "name", me.Type, "path", me.Path, "error", err)
@@ -1949,7 +1953,8 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 		resp.Data["external_entropy_access"] = true
 	}
 
-	if mountEntry.Table == credentialTableType {
+	isAuth := mountEntry.Table == credentialTableType
+	if isAuth {
 		resp.Data["token_type"] = mountEntry.Config.TokenType.String()
 	}
 
@@ -1994,6 +1999,19 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 
 	if mountEntry.Version != "" {
 		resp.Data["plugin_version"] = mountEntry.Version
+	}
+	var pinnedVersion *pluginutil.PinnedVersion
+	var err error
+	if isAuth {
+		pinnedVersion, err = b.Core.pluginCatalog.GetPinnedVersion(ctx, consts.PluginTypeCredential, mountEntry.Type)
+	} else {
+		pinnedVersion, err = b.Core.pluginCatalog.GetPinnedVersion(ctx, consts.PluginTypeSecrets, mountEntry.Type)
+	}
+	if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
+		return nil, err
+	}
+	if pinnedVersion != nil && mountEntry.Version != pinnedVersion.Version {
+		resp.AddWarning(fmt.Sprintf("plugin_version is configured as %s but a version pin for %s is in effect", mountEntry.Version, pinnedVersion.Version))
 	}
 
 	return resp, nil
@@ -2236,6 +2254,19 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("plugin_version"); ok {
+		pluginType := consts.PluginTypeSecrets
+		if strings.HasPrefix(path, "auth/") {
+			pluginType = consts.PluginTypeCredential
+		}
+
+		pinnedVersion, err := b.Core.pluginCatalog.GetPinnedVersion(ctx, pluginType, mountEntry.Type)
+		if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
+			return nil, err
+		}
+		if pinnedVersion != nil {
+			return logical.ErrorResponse(fmt.Sprintf("plugin_version cannot be set for %s plugin %q as a pinned version %s is in effect", pluginType, mountEntry.Type, pinnedVersion.Version)), nil
+		}
+
 		version := rawVal.(string)
 		semanticVersion, err := semver.NewVersion(version)
 		if err != nil {
@@ -2244,10 +2275,6 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		version = "v" + semanticVersion.String()
 
 		// Lookup the version to ensure it exists in the catalog before committing.
-		pluginType := consts.PluginTypeSecrets
-		if strings.HasPrefix(path, "auth/") {
-			pluginType = consts.PluginTypeCredential
-		}
 		_, err = b.System().LookupPluginVersion(ctx, mountEntry.Type, pluginType, version)
 		if err != nil {
 			return handleError(err)
@@ -3106,7 +3133,11 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 
 	var resp *logical.Response
-	if b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeCredential) {
+	builtin, err := b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeCredential)
+	if err != nil {
+		return nil, err
+	}
+	if builtin {
 		resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
 		if err != nil {
 			b.Core.logger.Error("could not mount builtin", "name", me.Type, "path", me.Path, "error", err)
@@ -3123,6 +3154,18 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 }
 
 func (b *SystemBackend) validateVersion(ctx context.Context, version string, pluginName string, pluginType consts.PluginType) (string, *logical.Response, error) {
+	pinnedVersion, err := b.Core.pluginCatalog.GetPinnedVersion(ctx, pluginType, pluginName)
+	if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
+		return "", nil, err
+	}
+	if pinnedVersion != nil {
+		if version != "" {
+			return "", logical.ErrorResponse("cannot specify plugin_version for %s plugin %q, as it is pinned to version %s", pluginType.String(), pluginName, pinnedVersion.Version), nil
+		}
+
+		return pinnedVersion.Version, nil, nil
+	}
+
 	switch version {
 	case "":
 		var err error
