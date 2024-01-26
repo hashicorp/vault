@@ -3740,6 +3740,141 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	}
 }
 
+// TestSystemBackend_PluginCatalogPins_CRUD tests CRUD operations for pinning
+// plugin versions.
+func TestSystemBackend_PluginCatalogPins_CRUD(t *testing.T) {
+	sym, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		PluginDirectory: sym,
+	})
+	b := c.systemBackend
+	ctx := namespace.RootContext(context.Background())
+
+	// List pins.
+	req := logical.TestRequest(t, logical.ReadOperation, "plugins/pins")
+	resp, err := b.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	if len(resp.Data["pinned_versions"].([]map[string]any)) != 0 {
+		t.Fatalf("Wrong number of plugins, expected %d, got %d", 0, len(resp.Data["pins"].([]string)))
+	}
+
+	// Set a plugin so we can pin to it.
+	file, err := os.CreateTemp(sym, "temp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	req = logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
+	req.Data["sha_256"] = hex.EncodeToString([]byte{'1'})
+	req.Data["command"] = filepath.Base(file.Name())
+	req.Data["version"] = "v1.0.0"
+	resp, err = b.HandleRequest(ctx, req)
+	if err != nil || resp.IsError() {
+		t.Fatal(resp, err)
+	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	// Now create a pin.
+	req = logical.TestRequest(t, logical.UpdateOperation, "plugins/pins/database/test-plugin")
+	req.Data["version"] = "v1.0.0"
+	resp, err = b.HandleRequest(ctx, req)
+	if err != nil || resp.IsError() {
+		t.Fatal(resp, err)
+	}
+	if resp != nil {
+		t.Fatal(resp)
+	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	// Read the pin.
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/pins/database/test-plugin")
+	resp, err = b.HandleRequest(ctx, req)
+	if err != nil || resp.Error() != nil {
+		t.Fatal(resp, err)
+	}
+
+	expected := map[string]interface{}{
+		"name":    "test-plugin",
+		"type":    "database",
+		"version": "v1.0.0",
+	}
+
+	actual := resp.Data
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actual, expected)
+	}
+
+	// List pins again.
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/pins/")
+	resp, err = b.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	pinnedVersions := resp.Data["pinned_versions"].([]map[string]any)
+	if len(pinnedVersions) != 1 {
+		t.Fatalf("Wrong number of plugins, expected %d, got %d", 1, len(resp.Data["pins"].([]string)))
+	}
+	// Check the pin is correct.
+	actual = pinnedVersions[0]
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actual, expected)
+	}
+
+	// Delete the pin.
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/pins/database/test-plugin")
+	resp, err = b.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	// Should now get a 404 when reading the pin.
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/pins/database/test-plugin")
+	resp, err = b.HandleRequest(ctx, req)
+	if err != nil || resp != nil {
+		t.Fatal(resp, err)
+	}
+}
+
 // TestSystemBackend_PluginCatalog_ContainerCRUD tests that plugins registered
 // with oci_image set get recorded properly in the catalog.
 func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
