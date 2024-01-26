@@ -50,8 +50,7 @@ func testBothRaftBackends(t *testing.T, f func(raftWALValue string)) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
+			// we can't use t.Parallel() here because some raft tests manipulate package level variables
 			f(tc.useWAL)
 		})
 	}
