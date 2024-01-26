@@ -57,47 +57,49 @@
       </Hds::Alert>
     {{/if}}
 
-    <div class="is-subtitle-gray has-bottom-margin-m">
-      FILTERS
-      <Toolbar data-test-clients-filter-bar>
-        <ToolbarFilters>
-          <CalendarWidget
-            @startTimestamp={{this.startDate}}
-            @endTimestamp={{this.endDate}}
-            @selectMonth={{this.onDateChange}}
-          />
-          {{#if (or @namespace this.namespaces)}}
-            <SearchSelect
-              @id="namespace-search-select"
-              @options={{this.namespaces}}
-              @inputValue={{if @namespace (array @namespace)}}
-              @selectLimit="1"
-              @disallowNewItems={{true}}
-              @fallbackComponent="input-search"
-              @onChange={{fn this.setFilterValue "ns"}}
-              @placeholder="Filter by namespace"
-              @displayInherit={{true}}
-              class="is-marginless"
-              data-test-counts-namespaces
+    {{#if @startTimestamp}}
+      <div class="is-subtitle-gray has-bottom-margin-m">
+        FILTERS
+        <Toolbar data-test-clients-filter-bar>
+          <ToolbarFilters>
+            <CalendarWidget
+              @startTimestamp={{this.startDate}}
+              @endTimestamp={{this.endDate}}
+              @selectMonth={{this.onDateChange}}
             />
-          {{/if}}
-          {{#if (or @mountPath this.mountPaths)}}
-            <SearchSelect
-              @id="auth-method-search-select"
-              @options={{this.mountPaths}}
-              @inputValue={{if @mountPath (array @mountPath)}}
-              @selectLimit="1"
-              @disallowNewItems={{true}}
-              @fallbackComponent="input-search"
-              @onChange={{fn this.setFilterValue "mountPath"}}
-              @placeholder="Filter by mount path"
-              @displayInherit={{true}}
-              data-test-counts-auth-mounts
-            />
-          {{/if}}
-        </ToolbarFilters>
-      </Toolbar>
-    </div>
+            {{#if (or @namespace this.namespaces)}}
+              <SearchSelect
+                @id="namespace-search-select"
+                @options={{this.namespaces}}
+                @inputValue={{if @namespace (array @namespace)}}
+                @selectLimit="1"
+                @disallowNewItems={{true}}
+                @fallbackComponent="input-search"
+                @onChange={{fn this.setFilterValue "ns"}}
+                @placeholder="Filter by namespace"
+                @displayInherit={{true}}
+                class="is-marginless"
+                data-test-counts-namespaces
+              />
+            {{/if}}
+            {{#if (or @mountPath this.mountPaths)}}
+              <SearchSelect
+                @id="auth-method-search-select"
+                @options={{this.mountPaths}}
+                @inputValue={{if @mountPath (array @mountPath)}}
+                @selectLimit="1"
+                @disallowNewItems={{true}}
+                @fallbackComponent="input-search"
+                @onChange={{fn this.setFilterValue "mountPath"}}
+                @placeholder="Filter by mount path"
+                @displayInherit={{true}}
+                data-test-counts-auth-mounts
+              />
+            {{/if}}
+          </ToolbarFilters>
+        </Toolbar>
+      </div>
+    {{/if}}
 
     {{#if this.filteredActivity}}
       {{#if this.startTimeDiscrepancy}}
