@@ -18,7 +18,7 @@
       @toggleEncodeBase64={{this.toggleEncodeBase64}}
       @plaintext={{this.props.plaintext}}
       @ciphertext={{this.props.ciphertext}}
-      @doSubmit={{this.doSubmit}}
+      @doSubmit={{perform this.doSubmit}}
       @isModalActive={{this.isModalActive}}
       data-test-transit-action={{@selectedAction}}
     />
@@ -30,7 +30,7 @@
       @nonce={{this.props.nonce}}
       @isModalActive={{this.isModalActive}}
       @plaintext={{this.props.plaintext}}
-      @doSubmit={{this.doSubmit}}
+      @doSubmit={{perform this.doSubmit}}
       data-test-transit-action={{@selectedAction}}
     />
   {{else if (eq @selectedAction "datakey")}}
@@ -42,7 +42,7 @@
       @bits={{this.props.bits}}
       @plaintext={{this.props.plaintext}}
       @ciphertext={{this.props.ciphertext}}
-      @doSubmit={{this.doSubmit}}
+      @doSubmit={{perform this.doSubmit}}
       @isModalActive={{this.isModalActive}}
       data-test-transit-action={{@selectedAction}}
     />
@@ -55,7 +55,7 @@
       @key_version={{this.props.key_version}}
       @ciphertext={{this.props.ciphertext}}
       @isModalActive={{this.isModalActive}}
-      @doSubmit={{this.doSubmit}}
+      @doSubmit={{perform this.doSubmit}}
       data-test-transit-action={{@selectedAction}}
     />
   {{else if (eq @selectedAction "hmac")}}
@@ -68,7 +68,7 @@
       @toggleEncodeBase64={{this.toggleEncodeBase64}}
       @hmac={{this.props.hmac}}
       @isModalActive={{this.isModalActive}}
-      @doSubmit={{this.doSubmit}}
+      @doSubmit={{perform this.doSubmit}}
       data-test-transit-action={{@selectedAction}}
     />
   {{else if (eq @selectedAction "verify")}}
@@ -87,7 +87,8 @@
       @toggleEncodeBase64={{this.toggleEncodeBase64}}
       @keyIsRSA={{this.keyIsRSA}}
       @isModalActive={{this.isModalActive}}
-      @doSubmit={{this.doSubmit}}
+      @doSubmit={{perform this.doSubmit}}
+      @submitIsRunning={{this.submitIsRunning}}
       @clearSpecificProps={{this.clearSpecificProps}}
       data-test-transit-action={{@selectedAction}}
     />
@@ -104,7 +105,8 @@
       @encodedBase64={{this.props.encodedBase64}}
       @toggleEncodeBase64={{this.toggleEncodeBase64}}
       @isModalActive={{this.isModalActive}}
-      @doSubmit={{this.doSubmit}}
+      @doSubmit={{perform this.doSubmit}}
+      @submitIsRunning={{this.submitIsRunning}}
       data-test-transit-action={{@selectedAction}}
     />
   {{else if (or (eq @selectedAction "export") (eq @key.supportedActions.firstObject "export"))}}
@@ -125,7 +127,7 @@
       @wrappedTTL={{this.props.wrappedTTL}}
       @toggleEncodeBase64={{this.toggleEncodeBase64}}
       @isModalActive={{this.isModalActive}}
-      @doSubmit={{this.doSubmit}}
+      @doSubmit={{perform this.doSubmit}}
       data-test-transit-action="export"
     />
   {{/if}}

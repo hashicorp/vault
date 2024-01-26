@@ -4,17 +4,20 @@
 ~}}
 
 <form
-  onsubmit={{perform
-    @doSubmit
-    (hash
-      input=@trackedInput
-      signature=@signature
-      signature_algorithm=@signature_algorithm
-      hmac=@hmac
-      hash_algorithm=@hash_algorithm
-      context=@context
-      prehashed=@prehashed
-      encodedBase64=@encodedBase64
+  {{on
+    "submit"
+    (fn
+      @doSubmit
+      (hash
+        input=@trackedInput
+        signature=@signature
+        signature_algorithm=@signature_algorithm
+        hmac=@hmac
+        hash_algorithm=@hash_algorithm
+        context=@context
+        prehashed=@prehashed
+        encodedBase64=@encodedBase64
+      )
     )
   }}
   ...attributes
@@ -193,12 +196,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <Hds::Button
-        @text="Verify"
-        @icon={{if @doSubmit.isRunning "loading"}}
-        type="submit"
-        disabled={{@doSubmit.isRunning}}
-      />
+      <Hds::Button @text="Verify" @icon={{if @submitIsRunning "loading"}} type="submit" disabled={{@submitIsRunning}} />
     </div>
   </div>
 </form>

@@ -4,7 +4,7 @@
 ~}}
 
 <form
-  onsubmit={{perform @doSubmit (hash ciphertext=@ciphertext context=@context nonce=@nonce key_version=@key_version)}}
+  {{on "submit" (fn @doSubmit (hash ciphertext=@ciphertext context=@context nonce=@nonce key_version=@key_version))}}
   ...attributes
 >
   <div class="box is-sideless is-fullwidth is-marginless">

@@ -86,6 +86,7 @@ export default class TransitKeyActions extends Component {
   @tracked isModalActive = false;
   @tracked errors = null;
   @tracked props = { ...STARTING_TRANSIT_PROPS }; // Shallow copy of the object. We don't want to mutate the original.
+  @tracked submitIsRunning = this.doSubmit.isRunning;
 
   constructor() {
     super(...arguments);
