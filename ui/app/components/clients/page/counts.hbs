@@ -63,8 +63,8 @@
         <Toolbar data-test-clients-filter-bar>
           <ToolbarFilters>
             <CalendarWidget
-              @startTimestamp={{this.startDate}}
-              @endTimestamp={{this.endDate}}
+              @startTimestamp={{this.startTimeISO}}
+              @endTimestamp={{this.endTimeISO}}
               @selectMonth={{this.onDateChange}}
             />
             {{#if (or @namespace this.namespaces)}}
@@ -101,7 +101,7 @@
       </div>
     {{/if}}
 
-    {{#if this.filteredActivity}}
+    {{#if this.totalUsageCounts}}
       {{#if this.startTimeDiscrepancy}}
         <Hds::Alert data-test-counts-start-discrepancy @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
           <A.Title>Warning</A.Title>

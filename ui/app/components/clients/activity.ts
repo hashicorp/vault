@@ -12,21 +12,24 @@ import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 
 import type ClientsActivityModel from 'vault/models/clients/activity';
+import ClientsConfigModel from 'vault/models/clients/config';
+import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
 import type {
   ClientActivityNewClients,
   ClientActivityMonthly,
   ClientActivityResourceByKey,
 } from 'vault/models/clients/activity';
-import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
 
 interface Args {
   activity: ClientsActivityModel;
+  config: ClientsConfigModel;
   versionHistory: ClientsVersionHistoryModel[];
   startTimestamp: number;
   endTimestamp: number;
   currentTimestamp: number;
   namespace: string;
   mountPath: string;
+  onFilterChange: CallableFunction; // only for CountsPageComponent
 }
 
 export default class ClientsActivityComponent extends Component<Args> {
@@ -42,11 +45,11 @@ export default class ClientsActivityComponent extends Component<Args> {
   };
 
   get startTimeISO() {
-    return fromUnixTime(this.args.startTimestamp).toISOString();
+    return this.args.startTimestamp ? fromUnixTime(this.args.startTimestamp).toISOString() : null;
   }
 
   get endTimeISO() {
-    return fromUnixTime(this.args.endTimestamp).toISOString();
+    return this.args.endTimestamp ? fromUnixTime(this.args.endTimestamp).toISOString() : null;
   }
 
   get byMonthActivityData() {
