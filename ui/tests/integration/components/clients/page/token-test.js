@@ -72,11 +72,11 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
     await this.renderComponent();
 
     assert
-      .dom(ts.charts.stat('monthly total'))
-      .hasText(`Average total clients per month ${expectedTotal}`, 'renders correct total clients');
+      .dom(ts.charts.statTextValue('Average total clients per month'))
+      .hasText(expectedTotal, 'renders correct total clients');
     assert
-      .dom(ts.charts.stat('monthly new'))
-      .hasText(`Average new clients per month ${expectedNew}`, 'renders correct new clients');
+      .dom(ts.charts.statTextValue('Average new clients per month'))
+      .hasText(expectedNew, 'renders correct new clients');
     // assert bar chart is correct
     findAll(`${chart} ${ts.charts.bar.xAxisLabel}`).forEach((e, i) => {
       assert
@@ -110,17 +110,11 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
     await this.renderComponent();
 
     assert
-      .dom(ts.charts.stat('entity'))
-      .hasText(
-        `Average new entity clients per month ${expectedNewEntity}`,
-        'renders correct new entity clients'
-      );
+      .dom(ts.charts.statTextValue('Average new entity clients per month'))
+      .hasText(expectedNewEntity, 'renders correct new entity clients');
     assert
-      .dom(ts.charts.stat('nonentity'))
-      .hasText(
-        `Average new non-entity clients per month ${expectedNewNonEntity}`,
-        'renders correct new nonentity clients'
-      );
+      .dom(ts.charts.statTextValue('Average new non-entity clients per month'))
+      .hasText(expectedNewNonEntity, 'renders correct new nonentity clients');
     // assert bar chart is correct
     findAll(`${chart} ${ts.charts.bar.xAxisLabel}`).forEach((e, i) => {
       assert
@@ -167,18 +161,18 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
 
     this.activity.endTime = this.activity.startTime;
     const {
-      total: { clients, entity_clients, non_entity_clients },
+      total: { entity_clients, non_entity_clients },
     } = this.activity;
 
     const checkUsage = () => {
       assert
-        .dom(ts.charts.usageStat('total-clients'))
-        .hasText(formatNumber([clients]), 'Total clients value renders');
+        .dom(ts.charts.statTextValue('Total clients'))
+        .hasText(formatNumber([entity_clients + non_entity_clients]), 'Total clients value renders');
       assert
-        .dom(ts.charts.usageStat('entity-clients'))
+        .dom(ts.charts.statTextValue('Entity clients'))
         .hasText(formatNumber([entity_clients]), 'Entity clients value renders');
       assert
-        .dom(ts.charts.usageStat('non-entity-clients'))
+        .dom(ts.charts.statTextValue('Non-entity clients'))
         .hasText(formatNumber([non_entity_clients]), 'Non-entity clients value renders');
     };
 
