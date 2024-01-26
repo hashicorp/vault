@@ -45,12 +45,13 @@ jobs:
       - name: Download Docker Image
         id: download
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        # pin to v3.x until HREL-99 is resolved.
         with:
           name: ${{ inputs.artifact-name }}
           path: ./enos/support/downloads
       - name: Prepare for scenario execution
         env:
-          IS_ENT: ${{ startsWith(env.ARTIFACT_NAME, 'vault-enterprise' ) }}
+          IS_ENT: ${{ contains(env.ARTIFACT_NAME, 'vault-enterprise' ) }}
         run: |
           mkdir -p ./enos/support/terraform-plugin-cache
           if [ "$IS_ENT" == true ]; then

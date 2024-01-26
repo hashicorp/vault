@@ -87,6 +87,6 @@ jobs:
         cat results.sarif
 
     - name: Upload SARIF file
-      uses: github/codeql-action/upload-sarif@46a6823b81f2d7c67ddf123851eea88365bc8a67 # codeql-bundle-v2.13.5
+      uses: github/codeql-action/upload-sarif@7e187e1c529d80bac7b87a16e7a792427f65cf02 # codeql-bundle-v2.15.5
       with:
         sarif_file: results.sarif
