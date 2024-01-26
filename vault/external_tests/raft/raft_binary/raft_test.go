@@ -83,9 +83,10 @@ func stabilizeAndPromote(t *testing.T, client *api.Client, nodeID string) {
 	for time.Now().Before(deadline) {
 		state, err = client.Sys().RaftAutopilotState()
 
-		// If the state endpoint gets called during a leader election, we'll get an error about there not being an active
-		// cluster node. Rather than erroring out of this loop, just ignore the error and keep trying. It should resolve
-		// in a few seconds. There's a deadline after all, so it's not like this loop will continue indefinitely.
+		// If the state endpoint gets called during a leader election, we'll get an error about
+		// there not being an active cluster node. Rather than erroring out of this loop, just
+		// ignore the error and keep trying. It should resolve in a few seconds. There's a
+		// deadline after all, so it's not like this loop will continue indefinitely.
 		if err != nil {
 			if strings.Contains(err.Error(), "active cluster node not found") {
 				continue
