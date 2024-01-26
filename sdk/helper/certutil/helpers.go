@@ -1613,6 +1613,7 @@ func getOtherSANsMapFromExtensions(exts []pkix.Extension) (otherSans map[string]
 		return nil, err
 	}
 
+	otherSans = make(map[string][]string)
 	for _, name := range otherNames {
 		if otherSans[name.Oid] == nil {
 			otherSans[name.Oid] = []string{name.Value}
@@ -1634,7 +1635,7 @@ func ParseCertificateToCreationParameters(certificate x509.Certificate) (creatio
 	}
 
 	creationParameters = CreationParameters{
-		Subject:        certificate.Subject,
+		Subject:        removeNames(certificate.Subject),
 		DNSNames:       certificate.DNSNames,
 		EmailAddresses: certificate.EmailAddresses,
 		IPAddresses:    certificate.IPAddresses,
@@ -1662,6 +1663,11 @@ func ParseCertificateToCreationParameters(certificate x509.Certificate) (creatio
 	}
 
 	return creationParameters, nil
+}
+
+func removeNames(name pkix.Name) pkix.Name {
+	name.Names = nil
+	return name
 }
 
 func ParseCsrToCreationParameters(csr x509.CertificateRequest) (creationParameters CreationParameters, err error) {
@@ -1727,13 +1733,13 @@ func ParseCsrToFields(csr x509.CertificateRequest) (templateData map[string]inte
 		"other_sans":           otherSans,
 		"signature_bits":       findSignatureBits(csr.SignatureAlgorithm),
 		"exclude_cn_from_sans": determineExcludeCnFromCsrSans(csr),
-		"ou":                   csr.Subject.OrganizationalUnit,
-		"organization":         csr.Subject.Organization,
-		"country":              csr.Subject.Country,
-		"locality":             csr.Subject.Locality,
-		"province":             csr.Subject.Province,
-		"street_address":       csr.Subject.StreetAddress,
-		"postal_code":          csr.Subject.PostalCode,
+		"ou":                   makeCommaSeparatedString(csr.Subject.OrganizationalUnit),
+		"organization":         makeCommaSeparatedString(csr.Subject.Organization),
+		"country":              makeCommaSeparatedString(csr.Subject.Country),
+		"locality":             makeCommaSeparatedString(csr.Subject.Locality),
+		"province":             makeCommaSeparatedString(csr.Subject.Province),
+		"street_address":       makeCommaSeparatedString(csr.Subject.StreetAddress),
+		"postal_code":          makeCommaSeparatedString(csr.Subject.PostalCode),
 		"serial_number":        csr.Subject.SerialNumber,
 		// There is no "TTL" on a CSR, that is always set by the signer
 		// max_path_length is handled below
@@ -1770,13 +1776,13 @@ func ParseCertificateToFields(certificate x509.Certificate) (templateData map[st
 		"other_sans":            otherSans,
 		"signature_bits":        findSignatureBits(certificate.SignatureAlgorithm),
 		"exclude_cn_from_sans":  determineExcludeCnFromCertSans(certificate),
-		"ou":                    certificate.Subject.OrganizationalUnit,
-		"organization":          certificate.Subject.Organization,
-		"country":               certificate.Subject.Country,
-		"locality":              certificate.Subject.Locality,
-		"province":              certificate.Subject.Province,
-		"street_address":        certificate.Subject.StreetAddress,
-		"postal_code":           certificate.Subject.PostalCode,
+		"ou":                    makeCommaSeparatedString(certificate.Subject.OrganizationalUnit),
+		"organization":          makeCommaSeparatedString(certificate.Subject.Organization),
+		"country":               makeCommaSeparatedString(certificate.Subject.Country),
+		"locality":              makeCommaSeparatedString(certificate.Subject.Locality),
+		"province":              makeCommaSeparatedString(certificate.Subject.Province),
+		"street_address":        makeCommaSeparatedString(certificate.Subject.StreetAddress),
+		"postal_code":           makeCommaSeparatedString(certificate.Subject.PostalCode),
 		"serial_number":         certificate.Subject.SerialNumber,
 		"ttl":                   (certificate.NotAfter.Sub(certificate.NotBefore)).String(),
 		"max_path_length":       certificate.MaxPathLen,
@@ -1805,7 +1811,7 @@ func getBasicConstraintsFromExtension(exts []pkix.Extension) (found bool, isCA b
 }
 
 func makeAltNamesCommaSeparatedString(names []string, emails []string) string {
-	return strings.Join(names, ",") + "," + strings.Join(emails, ",")
+	return strings.Join(append(names, emails...), ",")
 }
 
 func makeUriCommaSeparatedString(uris []*url.URL) string {
@@ -1822,6 +1828,10 @@ func makeIpAddressCommaSeparatedString(addresses []net.IP) string {
 		stringAddresses[i] = address.String()
 	}
 	return strings.Join(stringAddresses, ",")
+}
+
+func makeCommaSeparatedString(values []string) string {
+	return strings.Join(values, ",")
 }
 
 func determineExcludeCnFromCertSans(certificate x509.Certificate) bool {
