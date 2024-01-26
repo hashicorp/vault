@@ -6774,4 +6774,13 @@ This path responds to the following HTTP methods.
 		"A list of auth accessors that the mount is allowed to delegate authentication too",
 		"",
 	},
+	"utilization": {
+		"This internal api will return manual license reporting report data.",
+		`
+This path responds to the following HTTP methods.
+
+	POST /
+		returns the manual license reporting data.
+		`,
+	},
 }
