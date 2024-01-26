@@ -195,6 +195,23 @@ func (r *LimiterRegistry) Register(flags LimiterFlags) {
 	r.Limiters[flags.Name] = limiter
 }
 
+// Disable drops its references to underlying limiters.
+func (r *LimiterRegistry) Disable() {
+	r.Lock()
+
+	if !r.Enabled {
+		return
+	}
+
+	r.Logger.Info("disabling request limiters")
+	// Any outstanding tokens will be flushed when their request completes, as
+	// they've already acquired a listener. Just drop the limiter references
+	// here and the garbage-collector should take care of the rest.
+	r.Limiters = map[string]*RequestLimiter{}
+	r.Enabled = false
+	r.Unlock()
+}
+
 // GetLimiter looks up a RequestLimiter by key in the LimiterRegistry.
 func (r *LimiterRegistry) GetLimiter(key string) *RequestLimiter {
 	r.RLock()
