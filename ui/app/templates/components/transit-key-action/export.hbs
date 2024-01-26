@@ -4,10 +4,13 @@
 ~}}
 
 <form
-  onsubmit={{perform
-    @doSubmit
-    (hash param=(compact (array @exportKeyType (if this.exportVersion @exportKeyVersion))))
-    (hash wrapTTL=@wrappedTTL)
+  {{on
+    "submit"
+    (fn
+      @doSubmit
+      (hash param=(compact (array @exportKeyType (if this.exportVersion @exportKeyVersion))))
+      (hash wrapTTL=@wrappedTTL)
+    )
   }}
   ...attributes
 >
