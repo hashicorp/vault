@@ -34,10 +34,10 @@ export const SELECTORS = {
     startDropdown: '[data-test-counts-start-dropdown]',
     configDisabled: '[data-test-counts-disabled]',
     namespaces: '[data-test-counts-namespaces]',
-    authMounts: '[data-test-counts-auth-mounts]',
+    mountPaths: '[data-test-counts-auth-mounts]',
     startDiscrepancy: '[data-test-counts-start-discrepancy]',
   },
-  monthlyNew: {
+  tokenTab: {
     entity: '[data-test-monthly-new-entity]',
     nonentity: '[data-test-monthly-new-nonentity]',
     legend: '[data-test-monthly-new-legend]',

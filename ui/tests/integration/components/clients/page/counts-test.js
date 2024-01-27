@@ -12,13 +12,20 @@ import clientsHandler from 'vault/mirage/handlers/clients';
 import { getUnixTime } from 'date-fns';
 import { SELECTORS as ts, dateDropdownSelect } from 'vault/tests/helpers/clients';
 import { selectChoose } from 'ember-power-select/test-support/helpers';
+import timestamp from 'core/utils/timestamp';
+import sinon from 'sinon';
 
+const STATIC_NOW = new Date('2024-01-25T23:59:59Z');
 const START_TIME = getUnixTime(new Date('2023-10-01T00:00:00Z'));
-const END_TIME = getUnixTime(new Date('2024-01-31T23:59:59Z'));
+const END_TIME = getUnixTime(STATIC_NOW);
 
 module('Integration | Component | clients | Page::Counts', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
+
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
+  });
 
   hooks.beforeEach(async function () {
     clientsHandler(this.server);
@@ -31,7 +38,6 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     this.config = await store.queryRecord('clients/config', {});
     this.startTimestamp = START_TIME;
     this.endTimestamp = END_TIME;
-    this.currentTimestamp = END_TIME;
     this.renderComponent = () =>
       render(hbs`
       <Clients::Page::Counts
@@ -40,14 +46,16 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
         @config={{this.config}}
         @startTimestamp={{this.startTimestamp}}
         @endTimestamp={{this.endTimestamp}}
-        @currentTimestamp={{this.currentTimestamp}}
         @namespace={{this.namespace}}
-        @authMount={{this.authMount}}
+        @mountPath={{this.mountPath}}
         @onFilterChange={{this.onFilterChange}}
       >
         <div data-test-yield>Yield block</div>
       </Clients::Page::Counts>
     `);
+  });
+  hooks.after(function () {
+    timestamp.now.restore();
   });
 
   test('it should render start date label and description based on version', async function (assert) {
@@ -145,36 +153,36 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     assert.expect(5);
 
     this.namespace = 'root';
-    this.authMount = 'auth/authid0';
+    this.mountPath = 'auth/authid0';
 
     let assertion = (params) =>
-      assert.deepEqual(params, { ns: undefined, authMount: undefined }, 'Auth mount cleared with namespace');
+      assert.deepEqual(params, { ns: undefined, mountPath: undefined }, 'Auth mount cleared with namespace');
     this.onFilterChange = (params) => {
       if (assertion) {
         assertion(params);
       }
       const keys = Object.keys(params);
       this.namespace = keys.includes('ns') ? params.ns : this.namespace;
-      this.authMount = keys.includes('authMount') ? params.authMount : this.authMount;
+      this.mountPath = keys.includes('mountPath') ? params.mountPath : this.mountPath;
     };
 
     await this.renderComponent();
 
     assert.dom(ts.counts.namespaces).includesText(this.namespace, 'Selected namespace renders');
-    assert.dom(ts.counts.authMounts).includesText(this.authMount, 'Selected auth mount renders');
+    assert.dom(ts.counts.mountPaths).includesText(this.mountPath, 'Selected auth mount renders');
 
     await click(`${ts.counts.namespaces} button`);
     // this is only necessary in tests since SearchSelect does not respond to initialValue changes
     // in the app the component is rerender on query param change
     assertion = null;
-    await click(`${ts.counts.authMounts} button`);
+    await click(`${ts.counts.mountPaths} button`);
 
     assertion = (params) => assert.true(params.ns.includes('ns/'), 'Namespace value sent on change');
     await selectChoose(ts.counts.namespaces, '.ember-power-select-option', 0);
 
     assertion = (params) =>
-      assert.true(params.authMount.includes('auth/'), 'Auth mount value sent on change');
-    await selectChoose(ts.counts.authMounts, '.ember-power-select-option', 0);
+      assert.true(params.mountPath.includes('auth/'), 'Auth mount value sent on change');
+    await selectChoose(ts.counts.mountPaths, '.ember-power-select-option', 0);
   });
 
   test('it should render start time discrepancy alert', async function (assert) {

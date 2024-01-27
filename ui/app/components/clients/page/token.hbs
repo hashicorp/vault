@@ -77,7 +77,7 @@
       <EmptyState
         @title="No new clients"
         @subTitle="There is no new client data available for this {{if
-          this.countsController.authMount
+          this.countsController.mountPath
           'auth method'
           'namespace'
         }} in this date range."
@@ -91,7 +91,7 @@
   <Clients::UsageStats
     @title="Total usage"
     @description="These totals are within
-    {{or @authMount 'this namespace and all its children'}}.
+    {{or @mountPath 'this namespace and all its children'}}.
     {{if
       this.isCurrentMonth
       "Only totals are available when viewing the current month. To see a breakdown of new and total clients for this month, select the 'Current Billing Period' filter."

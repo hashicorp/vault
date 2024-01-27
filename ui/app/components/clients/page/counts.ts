@@ -14,15 +14,15 @@ import type VersionService from 'vault/services/version';
 import type ClientsActivityModel from 'vault/models/clients/activity';
 import type ClientsConfigModel from 'vault/models/clients/config';
 import type StoreService from 'vault/services/store';
+import timestamp from 'core/utils/timestamp';
 
 interface Args {
   activity: ClientsActivityModel;
   config: ClientsConfigModel;
   startTimestamp: number;
   endTimestamp: number;
-  currentTimestamp: number;
   namespace: string;
-  authMount: string;
+  mountPath: string;
   onFilterChange: CallableFunction;
 }
 
@@ -30,29 +30,29 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   @service declare readonly version: VersionService;
   @service declare readonly store: StoreService;
 
-  get startDate() {
+  get startTimestampISO() {
     return this.args.startTimestamp ? fromUnixTime(this.args.startTimestamp).toISOString() : null;
   }
 
-  get endDate() {
+  get endTimestampISO() {
     return this.args.endTimestamp ? fromUnixTime(this.args.endTimestamp).toISOString() : null;
   }
 
   get formattedStartDate() {
-    return this.startDate ? parseAPITimestamp(this.startDate, 'MMMM yyyy') : null;
+    return this.startTimestampISO ? parseAPITimestamp(this.startTimestampISO, 'MMMM yyyy') : null;
   }
 
   // returns text for empty state message if noActivityData
   get dateRangeMessage() {
-    if (this.startDate && this.endDate) {
+    if (this.startTimestampISO && this.endTimestampISO) {
       const endMonth = isSameMonth(
-        parseAPITimestamp(this.startDate) as Date,
-        parseAPITimestamp(this.endDate) as Date
+        parseAPITimestamp(this.startTimestampISO) as Date,
+        parseAPITimestamp(this.endTimestampISO) as Date
       )
         ? ''
-        : `to ${parseAPITimestamp(this.endDate, 'MMMM yyyy')}`;
+        : `to ${parseAPITimestamp(this.endTimestampISO, 'MMMM yyyy')}`;
       // completes the message 'No data received from { dateRangeMessage }'
-      return `from ${parseAPITimestamp(this.startDate, 'MMMM yyyy')} ${endMonth}`;
+      return `from ${parseAPITimestamp(this.startTimestampISO, 'MMMM yyyy')} ${endMonth}`;
     }
     return null;
   }
@@ -86,7 +86,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
       : [];
   }
 
-  get authMounts() {
+  get mountPaths() {
     if (this.namespaces.length) {
       return this.activityForNamespace?.mounts.map((mount) => ({
         id: mount.label,
@@ -100,9 +100,9 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     // show banner if startTime returned from activity log (response) is after the queried startTime
     const { activity, config } = this.args;
     const activityStartDateObject = parseAPITimestamp(activity.startTime) as Date;
-    const queryStartDateObject = parseAPITimestamp(this.startDate) as Date;
+    const queryStartDateObject = parseAPITimestamp(this.startTimestampISO) as Date;
     const isEnterprise =
-      this.startDate === config.billingStartTimestamp.toISOString() && this.version.isEnterprise;
+      this.startTimestampISO === config.billingStartTimestamp?.toISOString() && this.version.isEnterprise;
     const message = isEnterprise ? 'Your license start date is' : 'You requested data from';
 
     if (
@@ -124,10 +124,10 @@ export default class ClientsCountsPageComponent extends Component<Args> {
 
   get filteredActivity() {
     // return activity counts based on selected namespace and auth mount values
-    const { namespace, authMount, activity } = this.args;
+    const { namespace, mountPath, activity } = this.args;
     if (namespace) {
-      return authMount
-        ? this.activityForNamespace?.mounts.find((mount) => mount.label === authMount)
+      return mountPath
+        ? this.activityForNamespace?.mounts.find((mount) => mount.label === mountPath)
         : this.activityForNamespace;
     }
     return activity.total;
@@ -136,16 +136,15 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   @action
   onDateChange(dateObject: { dateType: string; monthIdx: string; year: string }) {
     const { dateType, monthIdx, year } = dateObject;
-    const {
-      currentTimestamp,
-      config: { billingStartTimestamp },
-    } = this.args;
+    const { config } = this.args;
+    const currentTimestamp = getUnixTime(timestamp.now());
+
     // converts the selectedDate to unix timestamp for activity query
     const selectedDate = formatDateObject({ monthIdx, year }, dateType === 'endDate');
 
     if (dateType !== 'cancel') {
       const start_time = {
-        reset: getUnixTime(billingStartTimestamp), // clicked 'Current billing period' in calendar widget -> resets to billing start date
+        reset: getUnixTime(config?.billingStartTimestamp) || null, // clicked 'Current billing period' in calendar widget -> resets to billing start date
         currentMonth: currentTimestamp, // clicked 'Current month' from calendar widget -> defaults to currentTimestamp
         startDate: selectedDate, // from "Edit billing start" modal
       }[dateType];
@@ -157,11 +156,11 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   }
 
   @action
-  setFilterValue(type: 'ns' | 'authMount', [value]: [string | undefined]) {
+  setFilterValue(type: 'ns' | 'mountPath', [value]: [string | undefined]) {
     const params = { [type]: value };
-    // unset authMount value when namespace is cleared
+    // unset mountPath value when namespace is cleared
     if (type === 'ns' && !value) {
-      params['authMount'] = undefined;
+      params['mountPath'] = undefined;
     }
     this.args.onFilterChange(params);
   }
@@ -171,7 +170,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
       start_time: undefined,
       end_time: undefined,
       ns: undefined,
-      authMount: undefined,
+      mountPath: undefined,
     });
   }
 }

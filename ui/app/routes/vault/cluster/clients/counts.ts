@@ -15,7 +15,7 @@ export interface ClientsCountsRouteParams {
   start_time?: string | number | undefined;
   end_time?: string | number | undefined;
   ns?: string | undefined;
-  authMount?: string | undefined;
+  mountPath?: string | undefined;
 }
 
 export default class ClientsCountsRoute extends Route {
@@ -25,10 +25,8 @@ export default class ClientsCountsRoute extends Route {
     start_time: { refreshModel: true, replace: true },
     end_time: { refreshModel: true, replace: true },
     ns: { refreshModel: false, replace: true },
-    authMount: { refreshModel: false, replace: true },
+    mountPath: { refreshModel: false, replace: true },
   };
-
-  currentTimestamp = getUnixTime(timestamp.now());
 
   async getActivity(start_time: number, end_time: number) {
     let activity, activityError;
@@ -51,7 +49,7 @@ export default class ClientsCountsRoute extends Route {
   async model(params: ClientsCountsRouteParams) {
     const { config, versionHistory } = this.modelFor('vault.cluster.clients') as ClientsRouteModel;
     const startTimestamp = Number(params.start_time) || getUnixTime(config.billingStartTimestamp);
-    const endTimestamp = Number(params.end_time) || this.currentTimestamp;
+    const endTimestamp = Number(params.end_time) || getUnixTime(timestamp.now());
     const [activity, activityError] = await this.getActivity(startTimestamp, endTimestamp);
     return {
       config,
@@ -60,7 +58,6 @@ export default class ClientsCountsRoute extends Route {
       activityError,
       startTimestamp,
       endTimestamp,
-      currentTimestamp: this.currentTimestamp,
     };
   }
 }

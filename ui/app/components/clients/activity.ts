@@ -24,9 +24,8 @@ interface Args {
   versionHistory: ClientsVersionHistoryModel[];
   startTimestamp: number;
   endTimestamp: number;
-  currentTimestamp: number;
   namespace: string;
-  authMount: string;
+  mountPath: string;
 }
 
 export default class ClientsActivityComponent extends Component<Args> {
@@ -59,20 +58,20 @@ export default class ClientsActivityComponent extends Component<Args> {
   }
 
   get filteredActivityByMonth() {
-    const { namespace, authMount, activity } = this.args;
-    if (!namespace && !authMount) {
+    const { namespace, mountPath, activity } = this.args;
+    if (!namespace && !mountPath) {
       return activity.byMonth;
     }
     const namespaceData = activity.byMonth
       .map((m) => m.namespaces_by_key[namespace as keyof typeof m.namespaces_by_key])
       .filter((d) => d !== undefined);
 
-    if (!authMount) {
+    if (!mountPath) {
       return namespaceData.length === 0 ? undefined : namespaceData;
     }
 
-    const mountData = authMount
-      ? namespaceData.map((namespace) => namespace?.mounts_by_key[authMount]).filter((d) => d !== undefined)
+    const mountData = mountPath
+      ? namespaceData.map((namespace) => namespace?.mounts_by_key[mountPath]).filter((d) => d !== undefined)
       : namespaceData;
 
     return mountData.length === 0 ? undefined : mountData;
@@ -84,16 +83,16 @@ export default class ClientsActivityComponent extends Component<Args> {
   }
 
   get filteredActivityByAuthMount() {
-    return this.filteredActivityByNamespace?.mounts?.find((mount) => mount.label === this.args.authMount);
+    return this.filteredActivityByNamespace?.mounts?.find((mount) => mount.label === this.args.mountPath);
   }
 
   get filteredActivity() {
-    return this.args.authMount ? this.filteredActivityByAuthMount : this.filteredActivityByNamespace;
+    return this.args.mountPath ? this.filteredActivityByAuthMount : this.filteredActivityByNamespace;
   }
 
   get isCurrentMonth() {
-    const { activity, currentTimestamp } = this.args;
-    const current = parseAPITimestamp(fromUnixTime(currentTimestamp)) as Date;
+    const { activity } = this.args;
+    const current = parseAPITimestamp(activity.responseTimestamp) as Date;
     const start = parseAPITimestamp(activity.startTime) as Date;
     const end = parseAPITimestamp(activity.endTime) as Date;
     return isSameMonth(start, current) && isSameMonth(end, current);
@@ -165,8 +164,8 @@ export default class ClientsActivityComponent extends Component<Args> {
   }
 
   get hasAttributionData() {
-    const { authMount, namespace } = this.args;
-    if (!authMount) {
+    const { mountPath, namespace } = this.args;
+    if (!mountPath) {
       if (namespace) {
         const mounts = this.filteredActivityByNamespace?.mounts?.map((mount) => ({
           id: mount.label,

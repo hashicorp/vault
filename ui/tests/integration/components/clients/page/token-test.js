@@ -45,7 +45,6 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
       .catch(() => []);
     this.startTimestamp = START_TIME;
     this.endTimestamp = END_TIME;
-    this.currentTimestamp = END_TIME;
     this.renderComponent = () =>
       render(hbs`
         <Clients::Page::Token
@@ -53,9 +52,8 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
           @versionHistory={{this.versionHistory}}
           @startTimestamp={{this.startTimestamp}}
           @endTimestamp={{this.endTimestamp}}
-          @currentTimestamp={{this.currentTimestamp}}
           @namespace={{this.ns}}
-          @authMount={{this.authMount}}
+          @mountPath={{this.mountPath}}
         />
       `);
   });
@@ -154,8 +152,8 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
     assert.dom(`${chart} ${ts.charts.verticalBar}`).doesNotExist('Chart does not render');
     assert.dom(`${chart} ${ts.charts.legend}`).doesNotExist('Legend does not render');
     assert.dom(ts.emptyStateTitle).hasText('No new clients');
-    assert.dom(ts.monthlyNew.entity).doesNotExist('New client counts does not exist');
-    assert.dom(ts.monthlyNew.nonentity).doesNotExist('Average new client counts does not exist');
+    assert.dom(ts.tokenTab.entity).doesNotExist('New client counts does not exist');
+    assert.dom(ts.tokenTab.nonentity).doesNotExist('Average new client counts does not exist');
   });
 
   test('it should render usage stats', async function (assert) {

@@ -130,7 +130,7 @@
           {{#if this.byMonthActivityData}}
             <Clients::Token::MonthlyNew
               @byMonthActivityData={{this.byMonthActivityData}}
-              @authMount={{this.selectedAuthMethod}}
+              @mountPath={{this.selectedAuthMethod}}
               @runningTotals={{this.totalUsageCounts}}
               @responseTimestamp={{this.responseTimestamp}}
             />

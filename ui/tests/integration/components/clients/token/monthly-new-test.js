@@ -17,7 +17,7 @@ import sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
 import { dateFormat } from 'core/helpers/date-format';
 
-const { monthlyNew, charts } = SELECTORS;
+const { tokenTab, charts } = SELECTORS;
 const START_TIME = getUnixTime(new Date('2023-10-01T00:00:00Z'));
 
 module('Integration | Component | clients/token/monthly-new', function (hooks) {
@@ -56,20 +56,20 @@ module('Integration | Component | clients/token/monthly-new', function (hooks) {
     await render(hbs`
       <Clients::Token::MonthlyNew
         @byMonthActivityData={{this.activity.byMonth}}
-        @authMount={{this.selectedAuthMethod}}
+        @mountPath={{this.selectedAuthMethod}}
         @runningTotals={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
       />
     `);
 
     assert
-      .dom(monthlyNew.entity)
+      .dom(tokenTab.entity)
       .hasText(
         `Average new entity clients per month ${expectedNewEntity}`,
         `renders correct new entity stat ${expectedNewEntity}`
       );
     assert
-      .dom(monthlyNew.nonentity)
+      .dom(tokenTab.nonentity)
       .hasText(
         `Average new non-entity clients per month ${expectedNewNonEntity}`,
         `renders correct new nonentity stat ${expectedNewNonEntity}`
@@ -100,20 +100,20 @@ module('Integration | Component | clients/token/monthly-new', function (hooks) {
     await render(hbs`
       <Clients::Token::MonthlyNew
         @byMonthActivityData={{this.monthlyWithoutNew}}
-        @authMount={{this.selectedAuthMethod}}
+        @mountPath={{this.selectedAuthMethod}}
         @runningTotals={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
       />
     `);
 
     assert.dom(charts.verticalBar).doesNotExist('vertical bar chart does not render');
-    assert.dom(monthlyNew.legend).doesNotExist('legend does not render');
+    assert.dom(tokenTab.legend).doesNotExist('legend does not render');
     assert.dom(SELECTORS.emptyStateTitle).hasText('No new clients');
     const formattedTimestamp = dateFormat([this.timestamp, 'MMM d yyyy, h:mm:ss aaa'], {
       withTimeZone: true,
     });
     assert.dom(charts.timestamp).hasText(`Updated ${formattedTimestamp}`, 'renders timestamp');
-    assert.dom(monthlyNew.entity).doesNotExist('new client counts does not exist');
-    assert.dom(monthlyNew.nonentity).doesNotExist('average new client counts does not exist');
+    assert.dom(tokenTab.entity).doesNotExist('new client counts does not exist');
+    assert.dom(tokenTab.nonentity).doesNotExist('average new client counts does not exist');
   });
 });

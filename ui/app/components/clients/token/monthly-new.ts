@@ -10,7 +10,7 @@ import type { ClientActivityMonthly, ClientActivityTotals } from 'vault/vault/mo
 
 interface Args {
   byMonthActivityData: ClientActivityMonthly[];
-  authMount: string;
+  mountPath: string;
   runningTotals: ClientActivityTotals;
   responseTimestamp: string;
 }

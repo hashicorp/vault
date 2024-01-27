@@ -5,8 +5,7 @@
 
 <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
   <p class="has-bottom-margin-xl">
-    This dashboard will surface Vault client usage over time. Clients represent a user or service that has authenticated to
-    Vault.
+    This dashboard surfaces Vault client usage over time.
     <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}}>Documentation is available here</Hds::Link::Inline>.
     Date queries are sent in UTC.
   </p>
@@ -58,47 +57,49 @@
       </Hds::Alert>
     {{/if}}
 
-    <div class="is-subtitle-gray has-bottom-margin-m">
-      FILTERS
-      <Toolbar data-test-clients-filter-bar>
-        <ToolbarFilters>
-          <CalendarWidget
-            @startTimestamp={{this.startDate}}
-            @endTimestamp={{this.endDate}}
-            @selectMonth={{this.onDateChange}}
-          />
-          {{#if (or @namespace this.namespaces)}}
-            <SearchSelect
-              @id="namespace-search-select"
-              @options={{this.namespaces}}
-              @inputValue={{if @namespace (array @namespace)}}
-              @selectLimit="1"
-              @disallowNewItems={{true}}
-              @fallbackComponent="input-search"
-              @onChange={{fn this.setFilterValue "ns"}}
-              @placeholder="Filter by namespace"
-              @displayInherit={{true}}
-              class="is-marginless"
-              data-test-counts-namespaces
+    {{#if @startTimestamp}}
+      <div class="is-subtitle-gray has-bottom-margin-m">
+        FILTERS
+        <Toolbar data-test-clients-filter-bar>
+          <ToolbarFilters>
+            <CalendarWidget
+              @startTimestamp={{this.startTimestampISO}}
+              @endTimestamp={{this.endTimestampISO}}
+              @selectMonth={{this.onDateChange}}
             />
-          {{/if}}
-          {{#if (or @authMount this.authMounts)}}
-            <SearchSelect
-              @id="auth-method-search-select"
-              @options={{this.authMounts}}
-              @inputValue={{if @authMount (array @authMount)}}
-              @selectLimit="1"
-              @disallowNewItems={{true}}
-              @fallbackComponent="input-search"
-              @onChange={{fn this.setFilterValue "authMount"}}
-              @placeholder="Filter by auth method"
-              @displayInherit={{true}}
-              data-test-counts-auth-mounts
-            />
-          {{/if}}
-        </ToolbarFilters>
-      </Toolbar>
-    </div>
+            {{#if (or @namespace this.namespaces)}}
+              <SearchSelect
+                @id="namespace-search-select"
+                @options={{this.namespaces}}
+                @inputValue={{if @namespace (array @namespace)}}
+                @selectLimit="1"
+                @disallowNewItems={{true}}
+                @fallbackComponent="input-search"
+                @onChange={{fn this.setFilterValue "ns"}}
+                @placeholder="Filter by namespace"
+                @displayInherit={{true}}
+                class="is-marginless"
+                data-test-counts-namespaces
+              />
+            {{/if}}
+            {{#if (or @mountPath this.mountPaths)}}
+              <SearchSelect
+                @id="auth-method-search-select"
+                @options={{this.mountPaths}}
+                @inputValue={{if @mountPath (array @mountPath)}}
+                @selectLimit="1"
+                @disallowNewItems={{true}}
+                @fallbackComponent="input-search"
+                @onChange={{fn this.setFilterValue "mountPath"}}
+                @placeholder="Filter by mount path"
+                @displayInherit={{true}}
+                data-test-counts-auth-mounts
+              />
+            {{/if}}
+          </ToolbarFilters>
+        </Toolbar>
+      </div>
+    {{/if}}
 
     {{#if this.filteredActivity}}
       {{#if this.startTimeDiscrepancy}}
