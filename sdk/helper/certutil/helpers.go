@@ -1677,7 +1677,7 @@ func ParseCsrToCreationParameters(csr x509.CertificateRequest) (creationParamete
 	}
 
 	creationParameters = CreationParameters{
-		Subject:        csr.Subject,
+		Subject:        removeNames(csr.Subject),
 		DNSNames:       csr.DNSNames,
 		EmailAddresses: csr.EmailAddresses,
 		IPAddresses:    csr.IPAddresses,
@@ -1692,7 +1692,7 @@ func ParseCsrToCreationParameters(csr x509.CertificateRequest) (creationParamete
 		// TODO: ExtKeyUsageOIDs               []string
 		// TODO: PolicyIdentifiers             []string
 		// TODO: BasicConstraintsValidForNonCA bool
-		SignatureBits: findBitLength(csr.Signature), // TODO: Verify that this is correct
+		SignatureBits: findSignatureBits(csr.SignatureAlgorithm), // TODO: Verify that this is correct
 		UsePSS:        isPSS(csr.SignatureAlgorithm),
 		// The following two values are on creation parameters, but are impossible to parse from the csr
 		// ForceAppendCaChain

@@ -515,3 +515,213 @@ func testParseCertificateToFields(t *testing.T, issueTime time.Time, tt *parseCe
 		}
 	}
 }
+
+func TestParseCsr(t *testing.T) {
+	t.Parallel()
+
+	parseURL := func(s string) *url.URL {
+		u, err := url.Parse(s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return u
+	}
+
+	tests := []*parseCertificateTestCase{
+		{
+			name: "simple CSR",
+			data: map[string]interface{}{
+				"common_name":         "the common name",
+				"key_type":            "ec",
+				"key_bits":            384,
+				"ttl":                 "1h",
+				"not_before_duration": "30s",
+				"street_address":      "",
+			},
+			ttl: 1 * time.Hour,
+			wantParams: certutil.CreationParameters{
+				Subject: pkix.Name{
+					CommonName: "the common name",
+				},
+				DNSNames:                      nil,
+				EmailAddresses:                nil,
+				IPAddresses:                   nil,
+				URIs:                          nil,
+				OtherSANs:                     make(map[string][]string),
+				IsCA:                          false,
+				KeyType:                       "ec",
+				KeyBits:                       384,
+				NotAfter:                      time.Time{},
+				KeyUsage:                      0,
+				ExtKeyUsage:                   0,
+				ExtKeyUsageOIDs:               nil,
+				PolicyIdentifiers:             nil,
+				BasicConstraintsValidForNonCA: false,
+				SignatureBits:                 384,
+				UsePSS:                        false,
+				ForceAppendCaChain:            false,
+				UseCSRValues:                  false,
+				PermittedDNSDomains:           nil,
+				URLs:                          nil,
+				MaxPathLength:                 0,
+				NotBeforeDuration:             0,
+				SKID:                          nil,
+			},
+			wantFields: map[string]interface{}{
+				"common_name":          "the common name",
+				"ou":                   "",
+				"organization":         "",
+				"country":              "",
+				"locality":             "",
+				"province":             "",
+				"street_address":       "",
+				"postal_code":          "",
+				"alt_names":            "",
+				"ip_sans":              "",
+				"uri_sans":             "",
+				"other_sans":           "",
+				"exclude_cn_from_sans": true,
+				"key_type":             "ec",
+				"key_bits":             384,
+				"signature_bits":       384,
+				"use_pss":              false,
+				"serial_number":        "",
+			},
+			wantErr: false,
+		},
+		{
+			name: "full CSR",
+			data: map[string]interface{}{
+				// using the same order as in https://developer.hashicorp.com/vault/api-docs/secret/pki#generate-intermediate-csr
+				"common_name": "the common name",
+				"alt_names":   "user@example.com,admin@example.com,example.com,www.example.com",
+				"ip_sans":     "1.2.3.4,1.2.3.5",
+				"uri_sans":    "https://example.com,https://www.example.com",
+				"other_sans":  "1.3.6.1.4.1.311.20.2.3;utf8:caadmin@example.com",
+				// format
+				// private_key_format
+				"key_type": "rsa",
+				"key_bits": 2048,
+				"key_name": "the-key-name",
+				// key_ref
+				"signature_bits": 384,
+				// exclude_cn_from_sans
+				"ou":             "unit1, unit2",
+				"organization":   "org1, org2",
+				"country":        "US, CA",
+				"locality":       "locality1, locality2",
+				"province":       "province1, province2",
+				"street_address": "street_address1, street_address2",
+				"postal_code":    "postal_code1, postal_code2",
+				"serial_number":  "37:60:16:e4:85:d5:96:38:3a:ed:31:06:8d:ed:7a:46:d4:22:63:d8",
+				// add_basic_constraints
+			},
+			ttl: 2 * time.Hour,
+			wantParams: certutil.CreationParameters{
+				Subject: pkix.Name{
+					CommonName:         "the common name",
+					OrganizationalUnit: []string{"unit1", "unit2"},
+					Organization:       []string{"org1", "org2"},
+					Country:            []string{"CA", "US"},
+					Locality:           []string{"locality1", "locality2"},
+					Province:           []string{"province1", "province2"},
+					StreetAddress:      []string{"street_address1", "street_address2"},
+					PostalCode:         []string{"postal_code1", "postal_code2"},
+					SerialNumber:       "37:60:16:e4:85:d5:96:38:3a:ed:31:06:8d:ed:7a:46:d4:22:63:d8",
+				},
+				DNSNames:                      []string{"example.com", "www.example.com"},
+				EmailAddresses:                []string{"admin@example.com", "user@example.com"},
+				IPAddresses:                   []net.IP{[]byte{1, 2, 3, 4}, []byte{1, 2, 3, 5}},
+				URIs:                          []*url.URL{parseURL("https://example.com"), parseURL("https://www.example.com")},
+				OtherSANs:                     map[string][]string{"1.3.6.1.4.1.311.20.2.3": []string{"caadmin@example.com"}},
+				IsCA:                          false,
+				KeyType:                       "rsa",
+				KeyBits:                       2048,
+				NotAfter:                      time.Time{},
+				KeyUsage:                      0,     // TODO(victorr): Verify with Kit
+				ExtKeyUsage:                   0,     // TODO(victorr): Verify with Kit
+				ExtKeyUsageOIDs:               nil,   // TODO(victorr): Verify with Kit
+				PolicyIdentifiers:             nil,   // TODO(victorr): Verify with Kit
+				BasicConstraintsValidForNonCA: false, // TODO(victorr): Verify with Kit
+				SignatureBits:                 384,
+				UsePSS:                        false, // TODO(victorr): Verify with Kit
+				ForceAppendCaChain:            false,
+				UseCSRValues:                  false,
+				PermittedDNSDomains:           nil, // TODO(victorr): Verify with Kit
+				URLs:                          nil,
+				MaxPathLength:                 0, // TODO(victorr): Verify with Kit
+				NotBeforeDuration:             0, // TODO(victorr): Verify with Kit
+				SKID:                          nil,
+			},
+			wantFields: map[string]interface{}{
+				"common_name":          "the common name",
+				"ou":                   "unit1,unit2",
+				"organization":         "org1,org2",
+				"country":              "CA,US",
+				"locality":             "locality1,locality2",
+				"province":             "province1,province2",
+				"street_address":       "street_address1,street_address2",
+				"postal_code":          "postal_code1,postal_code2",
+				"alt_names":            "example.com,www.example.com,admin@example.com,user@example.com",
+				"ip_sans":              "1.2.3.4,1.2.3.5",
+				"uri_sans":             "https://example.com,https://www.example.com",
+				"other_sans":           "1.3.6.1.4.1.311.20.2.3;UTF-8:caadmin@example.com",
+				"exclude_cn_from_sans": true,
+				"key_type":             "rsa",
+				"key_bits":             2048,
+				"signature_bits":       384,
+				"use_pss":              false,
+				"serial_number":        "37:60:16:e4:85:d5:96:38:3a:ed:31:06:8d:ed:7a:46:d4:22:63:d8",
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+
+		b, s := CreateBackendWithStorage(t)
+
+		issueTime := time.Now()
+		resp, err := CBWrite(b, s, "intermediate/generate/internal", tt.data)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+
+		csrData := resp.Data["csr"].(string)
+		csr, err := parsing.ParseCertificateRequestFromString(csrData)
+		require.NoError(t, err)
+		require.NotNil(t, csr)
+
+		t.Run(tt.name+" parameters", func(t *testing.T) {
+			testParseCsrToCreationParameters(t, issueTime, tt, csr)
+		})
+		t.Run(tt.name+" fields", func(t *testing.T) {
+			testParseCsrToFields(t, issueTime, tt, csr)
+		})
+	}
+}
+
+func testParseCsrToCreationParameters(t *testing.T, issueTime time.Time, tt *parseCertificateTestCase, csr *x509.CertificateRequest) {
+	params, err := certutil.ParseCsrToCreationParameters(*csr)
+
+	if tt.wantErr {
+		require.Error(t, err)
+	} else {
+		require.NoError(t, err)
+
+		if diff := deep.Equal(tt.wantParams, params); diff != nil {
+			t.Errorf("testParseCertificateToCreationParameters() diff: %s", strings.ReplaceAll(strings.Join(diff, "\n"), "map", "\nmap"))
+		}
+	}
+}
+
+func testParseCsrToFields(t *testing.T, issueTime time.Time, tt *parseCertificateTestCase, csr *x509.CertificateRequest) {
+	fields, err := certutil.ParseCsrToFields(*csr)
+	if tt.wantErr {
+		require.Error(t, err)
+	} else {
+		require.NoError(t, err)
+
+		if diff := deep.Equal(tt.wantFields, fields); diff != nil {
+			t.Errorf("testParseCertificateToFields() diff: %s", strings.ReplaceAll(strings.Join(diff, "\n"), "map", "\nmap"))
+		}
+	}
+}
