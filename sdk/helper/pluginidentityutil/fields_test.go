@@ -39,7 +39,7 @@ func TestParsePluginIdentityTokenFields(t *testing.T) {
 		want    map[string]interface{}
 	}{
 		{
-			name: "basic",
+			name: "all input",
 			d: identityTokenFieldData(map[string]interface{}{
 				fieldIDTokenTTL:      10,
 				fieldIDTokenAudience: "test-aud",
@@ -50,19 +50,24 @@ func TestParsePluginIdentityTokenFields(t *testing.T) {
 			},
 		},
 		{
-			name: "empty-ttl",
+			name: "empty ttl",
 			d: identityTokenFieldData(map[string]interface{}{
 				fieldIDTokenAudience: "test-aud",
 			}),
 			want: map[string]interface{}{
-				fieldIDTokenTTL:      time.Hour,
+				fieldIDTokenTTL:      time.Duration(0),
 				fieldIDTokenAudience: "test-aud",
 			},
 		},
 		{
-			name:    "empty-audience",
-			d:       identityTokenFieldData(map[string]interface{}{}),
-			wantErr: true,
+			name: "empty audience",
+			d: identityTokenFieldData(map[string]interface{}{
+				fieldIDTokenTTL: 10,
+			}),
+			want: map[string]interface{}{
+				fieldIDTokenTTL:      time.Duration(10) * time.Second,
+				fieldIDTokenAudience: "",
+			},
 		},
 	}
 
