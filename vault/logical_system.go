@@ -1501,12 +1501,11 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		config.DelegatedAuthAccessors = apiConfig.DelegatedAuthAccessors
 	}
 
+	storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+	if storage == nil {
+		return nil, errors.New("failed to find identity storage")
+	}
 	if apiConfig.IdentityTokenKey != "" {
-		storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
-		if storage == nil {
-			return nil, errors.New("failed to find identity storage")
-		}
-
 		identityStore := b.Core.IdentityStore()
 		identityStore.oidcLock.RLock()
 		defer identityStore.oidcLock.RUnlock()
@@ -1519,6 +1518,11 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		}
 
 		config.IdentityTokenKey = apiConfig.IdentityTokenKey
+	}
+	if path != "secret/" && logicalType != "kv" && config.IdentityTokenKey == defaultKeyName || config.IdentityTokenKey == "" {
+		if err := b.Core.IdentityStore().lazyGenerateDefaultKey(ctx, storage); err != nil {
+			return nil, fmt.Errorf("failed to generate default key: %w", err)
+		}
 	}
 
 	// Create the mount entry
@@ -2290,6 +2294,11 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			}
 			if k == nil {
 				return logical.ErrorResponse("key %q does not exist", identityTokenKey), nil
+			}
+			if identityTokenKey == defaultKeyName {
+				if err := identityStore.lazyGenerateDefaultKey(ctx, storage); err != nil {
+					return nil, fmt.Errorf("failed to generate default key: %w", err)
+				}
 			}
 		}
 

@@ -1960,7 +1960,11 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 		return nil, err
 	}
 	for _, mount := range mounts {
-		mountKeyIDs, err := i.keyIDsByName(ctx, s, mount.Config.IdentityTokenKey)
+		keyName := mount.Config.IdentityTokenKey
+		if keyName == "" {
+			keyName = defaultKeyName
+		}
+		mountKeyIDs, err := i.keyIDsByName(ctx, s, keyName)
 		if err != nil {
 			return nil, err
 		}
