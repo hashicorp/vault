@@ -3,14 +3,13 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-/* eslint-disable ember/no-settled-after-test-helper */
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ldapMirageScenario from 'vault/mirage/scenarios/ldap';
 import ENV from 'vault/config/environment';
 import authPage from 'vault/tests/pages/auth';
-import { click, fillIn, visit, settled } from '@ember/test-helpers';
+import { click, fillIn, visit } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
 import { isURL, visitURL } from 'vault/tests/helpers/ldap';
 
@@ -34,7 +33,6 @@ module('Acceptance | ldap | overview', function (hooks) {
     await visit('/vault/secrets');
     await click('[data-test-enable-engine]');
     await click('[data-test-mount-type="ldap"]');
-    await settled();
     await fillIn('[data-test-input="path"]', 'ldap-test');
     await click('[data-test-mount-submit]');
     assert.true(isURL('overview'), 'Transitions to ldap overview route on mount success');

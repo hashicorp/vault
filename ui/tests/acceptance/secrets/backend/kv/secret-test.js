@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-/* eslint-disable ember/no-settled-after-test-helper */
 import { click, visit, settled, currentURL, currentRouteName, fillIn } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -22,9 +21,8 @@ import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 
 const deleteEngine = async function (enginePath, assert) {
   await logout.visit();
-  await settled();
   await authPage.login();
-  await settled();
+
   const response = await runCmd([`delete sys/mounts/${enginePath}`]);
   assert.strictEqual(
     response,
@@ -49,7 +47,6 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       const maxVersion = '101';
       await mountSecrets.visit();
       await click('[data-test-mount-type="kv"]');
-      await settled();
 
       await fillIn('[data-test-input="path"]', enginePath);
       await fillIn('[data-test-input="maxVersions"]', maxVersion);
@@ -78,7 +75,6 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       assert.expect(2);
       await runCmd(['vault write sys/mounts/test type=kv', 'refresh', 'vault write test/a keys=a keys=b']);
       await showPage.visit({ backend: 'test', id: 'a' });
-      await settled();
       assert.ok(showPage.editIsPresent, 'renders the page properly');
       await deleteEngine('test', assert);
     });
@@ -318,7 +314,6 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         `vault write ${backend}/filter/foo2 keys=a keys=b`,
       ]);
       await listPage.visit({ backend, id: 'filter' });
-      await settled();
       assert.strictEqual(listPage.secrets.length, 3, 'renders three secrets');
       await listPage.filterInput('filter/foo1');
       assert.strictEqual(listPage.secrets.length, 1, 'renders only one secret');

@@ -3,13 +3,12 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-/* eslint-disable ember/no-settled-after-test-helper */
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { hbs } from 'ember-cli-htmlbars';
-import { fillIn, render, click, settled } from '@ember/test-helpers';
+import { fillIn, render, click } from '@ember/test-helpers';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { PAGE, FORM } from 'vault/tests/helpers/kv/kv-selectors';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
@@ -38,7 +37,6 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
     await render(hbs`<KvDataFields @showJson={{false}} @secret={{this.secret}} @type="create" />`, {
       owner: this.engine,
     });
-    await settled();
     await fillIn(FORM.inputByAttr('path'), this.path);
     await fillIn(FORM.keyInput(), 'foo');
     await fillIn(FORM.maskedValueInput(), 'bar');
@@ -75,7 +73,6 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
     await render(hbs`<KvDataFields @showJson={{false}} @secret={{this.secret}} @type="edit" />`, {
       owner: this.engine,
     });
-    await settled();
     assert.dom(FORM.inputByAttr('path')).isDisabled();
     assert.dom(FORM.inputByAttr('path')).hasValue(this.path);
     assert.dom(FORM.keyInput()).hasValue('foo');
