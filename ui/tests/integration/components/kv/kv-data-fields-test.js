@@ -73,6 +73,7 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
     await render(hbs`<KvDataFields @showJson={{false}} @secret={{this.secret}} @type="edit" />`, {
       owner: this.engine,
     });
+
     assert.dom(FORM.inputByAttr('path')).isDisabled();
     assert.dom(FORM.inputByAttr('path')).hasValue(this.path);
     assert.dom(FORM.keyInput()).hasValue('foo');
