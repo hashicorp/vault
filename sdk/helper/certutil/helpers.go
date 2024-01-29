@@ -1692,7 +1692,7 @@ func ParseCsrToCreationParameters(csr x509.CertificateRequest) (creationParamete
 		// TODO: ExtKeyUsageOIDs               []string
 		// TODO: PolicyIdentifiers             []string
 		// TODO: BasicConstraintsValidForNonCA bool
-		SignatureBits: findSignatureBits(csr.SignatureAlgorithm), // TODO: Verify that this is correct
+		SignatureBits: findSignatureBits(csr.SignatureAlgorithm),
 		UsePSS:        isPSS(csr.SignatureAlgorithm),
 		// The following two values are on creation parameters, but are impossible to parse from the csr
 		// ForceAppendCaChain
@@ -1751,13 +1751,11 @@ func ParseCsrToFields(csr x509.CertificateRequest) (templateData map[string]inte
 	}
 
 	// isCA is not a field in our data call - that is represented inside vault by using a different endpoint
-	found, _, maxPathLength, err := getBasicConstraintsFromExtension(csr.Extensions)
+	found, _, _, err := getBasicConstraintsFromExtension(csr.Extensions)
 	if err != nil {
 		return nil, err
 	}
-	if found {
-		templateData["max_path_length"] = maxPathLength
-	}
+	templateData["add_basic_constraints"] = found
 
 	return templateData, nil
 }
