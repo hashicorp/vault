@@ -39,8 +39,9 @@ check_fmt() {
     printf '%s\n' "${malformed[@]}"
     echo "Run \`make fmt\` to reformat code."
     for file in "${malformed[@]}"; do
-      echo "==> $file <=="
-      gofumpt "$file"
+      echo "==> Diff for $file <=="
+      gofumpt -w "$file"
+      echo "$(git diff --no-color "$file")"
     done
     exit 1
   fi
