@@ -63,7 +63,10 @@ func TestBackend_PathConfigRoot(t *testing.T) {
 	}
 }
 
-func TestBackend_PathConfigRootIDToken(t *testing.T) {
+// TestBackend_PathConfigRoot_PluginIdentityToken tests parsing and validation of
+// configuration used to set the secret engine up for web identity federation using
+// plugin identity tokens.
+func TestBackend_PathConfigRoot_PluginIdentityToken(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
@@ -72,10 +75,7 @@ func TestBackend_PathConfigRootIDToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// basic case
 	configData := map[string]interface{}{
-		// Vault can take different integers as input for ttl
-		// it returns an int64 value. Cast here for easier comparison below
 		"identity_token_ttl":      int64(10),
 		"identity_token_audience": "test-aud",
 		"role_arn":                "test-role-arn",
