@@ -15,7 +15,7 @@ export const writeSecret = async function (backend, path, key, val, ns = null) {
   await fillIn(FORM.inputByAttr('path'), path);
   await fillIn(FORM.keyInput(), key);
   await fillIn(FORM.maskedValueInput(), val);
-  return await click(FORM.saveBtn);
+  return click(FORM.saveBtn);
 };
 
 export const writeVersionedSecret = async function (backend, path, key, val, version = 2, ns = null) {
