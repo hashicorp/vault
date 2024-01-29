@@ -23,3 +23,7 @@ func (r *RouterAccess) StoragePrefixByAPIPath(ctx context.Context, path string) 
 func (r *RouterAccess) IsBinaryPath(ctx context.Context, path string) bool {
 	return r.c.router.BinaryPath(ctx, path)
 }
+
+func (r *RouterAccess) IsLimitedPath(ctx context.Context, path string) bool {
+	return r.c.router.LimitedPath(ctx, path)
+}
