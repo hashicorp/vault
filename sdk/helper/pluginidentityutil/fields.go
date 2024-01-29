@@ -4,7 +4,6 @@
 package pluginidentityutil
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -25,15 +24,9 @@ func (p *PluginIdentityTokenParams) ParsePluginIdentityTokenFields(d *framework.
 	if tokenTTLRaw, ok := d.GetOk("identity_token_ttl"); ok {
 		p.IdentityTokenTTL = time.Duration(tokenTTLRaw.(int)) * time.Second
 	}
-	if p.IdentityTokenTTL == 0 {
-		p.IdentityTokenTTL = time.Hour
-	}
 
 	if tokenAudienceRaw, ok := d.GetOk("identity_token_audience"); ok {
 		p.IdentityTokenAudience = tokenAudienceRaw.(string)
-	}
-	if p.IdentityTokenAudience == "" {
-		return errors.New("missing required identity_token_audience")
 	}
 
 	return nil

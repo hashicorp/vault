@@ -198,6 +198,7 @@ func (b *backendGRPCPluginServer) SpecialPaths(ctx context.Context, args *pb.Emp
 			SealWrapStorage:       paths.SealWrapStorage,
 			WriteForwardedStorage: paths.WriteForwardedStorage,
 			Binary:                paths.Binary,
+			Limited:               paths.Limited,
 		},
 	}, nil
 }

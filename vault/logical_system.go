@@ -1277,6 +1277,9 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 	if rawVal, ok := entry.synthesizedConfigCache.Load("allowed_managed_keys"); ok {
 		entryConfig["allowed_managed_keys"] = rawVal.([]string)
 	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("identity_token_key"); ok {
+		entryConfig["identity_token_key"] = rawVal.(string)
+	}
 	if entry.Table == credentialTableType {
 		entryConfig["token_type"] = entry.Config.TokenType.String()
 	}
@@ -1498,6 +1501,26 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		config.DelegatedAuthAccessors = apiConfig.DelegatedAuthAccessors
 	}
 
+	if apiConfig.IdentityTokenKey != "" {
+		storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+		if storage == nil {
+			return nil, errors.New("failed to find identity storage")
+		}
+
+		identityStore := b.Core.IdentityStore()
+		identityStore.oidcLock.RLock()
+		defer identityStore.oidcLock.RUnlock()
+		k, err := identityStore.getNamedKey(ctx, storage, apiConfig.IdentityTokenKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed getting key %q: %w", apiConfig.IdentityTokenKey, err)
+		}
+		if k == nil {
+			return logical.ErrorResponse("key %q does not exist", apiConfig.IdentityTokenKey), nil
+		}
+
+		config.IdentityTokenKey = apiConfig.IdentityTokenKey
+	}
+
 	// Create the mount entry
 	me := &MountEntry{
 		Table:                 mountTableType,
@@ -1512,7 +1535,11 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		Version:               pluginVersion,
 	}
 
-	if b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeSecrets) {
+	builtin, err := b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeSecrets)
+	if err != nil {
+		return nil, err
+	}
+	if builtin {
 		resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
 		if err != nil {
 			b.Core.logger.Error("could not mount builtin", "name", me.Type, "path", me.Path, "error", err)
@@ -1926,7 +1953,8 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 		resp.Data["external_entropy_access"] = true
 	}
 
-	if mountEntry.Table == credentialTableType {
+	isAuth := mountEntry.Table == credentialTableType
+	if isAuth {
 		resp.Data["token_type"] = mountEntry.Config.TokenType.String()
 	}
 
@@ -1954,6 +1982,10 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 		resp.Data["allowed_managed_keys"] = rawVal.([]string)
 	}
 
+	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("identity_token_key"); ok {
+		resp.Data["identity_token_key"] = rawVal.(string)
+	}
+
 	if mountEntry.Config.UserLockoutConfig != nil {
 		resp.Data["user_lockout_counter_reset_duration"] = int64(mountEntry.Config.UserLockoutConfig.LockoutCounterReset.Seconds())
 		resp.Data["user_lockout_threshold"] = mountEntry.Config.UserLockoutConfig.LockoutThreshold
@@ -1967,6 +1999,19 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 
 	if mountEntry.Version != "" {
 		resp.Data["plugin_version"] = mountEntry.Version
+	}
+	var pinnedVersion *pluginutil.PinnedVersion
+	var err error
+	if isAuth {
+		pinnedVersion, err = b.Core.pluginCatalog.GetPinnedVersion(ctx, consts.PluginTypeCredential, mountEntry.Type)
+	} else {
+		pinnedVersion, err = b.Core.pluginCatalog.GetPinnedVersion(ctx, consts.PluginTypeSecrets, mountEntry.Type)
+	}
+	if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
+		return nil, err
+	}
+	if pinnedVersion != nil && mountEntry.Version != pinnedVersion.Version {
+		resp.AddWarning(fmt.Sprintf("plugin_version is configured as %s but a version pin for %s is in effect", mountEntry.Version, pinnedVersion.Version))
 	}
 
 	return resp, nil
@@ -2209,6 +2254,19 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("plugin_version"); ok {
+		pluginType := consts.PluginTypeSecrets
+		if strings.HasPrefix(path, "auth/") {
+			pluginType = consts.PluginTypeCredential
+		}
+
+		pinnedVersion, err := b.Core.pluginCatalog.GetPinnedVersion(ctx, pluginType, mountEntry.Type)
+		if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
+			return nil, err
+		}
+		if pinnedVersion != nil {
+			return logical.ErrorResponse(fmt.Sprintf("plugin_version cannot be set for %s plugin %q as a pinned version %s is in effect", pluginType, mountEntry.Type, pinnedVersion.Version)), nil
+		}
+
 		version := rawVal.(string)
 		semanticVersion, err := semver.NewVersion(version)
 		if err != nil {
@@ -2217,10 +2275,6 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		version = "v" + semanticVersion.String()
 
 		// Lookup the version to ensure it exists in the catalog before committing.
-		pluginType := consts.PluginTypeSecrets
-		if strings.HasPrefix(path, "auth/") {
-			pluginType = consts.PluginTypeCredential
-		}
 		_, err = b.System().LookupPluginVersion(ctx, mountEntry.Type, pluginType, version)
 		if err != nil {
 			return handleError(err)
@@ -2242,6 +2296,50 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 		if b.Core.logger.IsInfo() {
 			b.Core.logger.Info("mount tuning of version successful", "path", path, "version", version)
+		}
+	}
+
+	if rawVal, ok := data.GetOk("identity_token_key"); ok {
+		identityTokenKey := rawVal.(string)
+
+		if identityTokenKey != "" {
+			storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+			if storage == nil {
+				return nil, errors.New("failed to find identity storage")
+			}
+
+			identityStore := b.Core.IdentityStore()
+			identityStore.oidcLock.RLock()
+			defer identityStore.oidcLock.RUnlock()
+			k, err := identityStore.getNamedKey(ctx, storage, identityTokenKey)
+			if err != nil {
+				return nil, fmt.Errorf("failed getting key %q: %w", identityTokenKey, err)
+			}
+			if k == nil {
+				return logical.ErrorResponse("key %q does not exist", identityTokenKey), nil
+			}
+		}
+
+		oldVal := mountEntry.Config.IdentityTokenKey
+		mountEntry.Config.IdentityTokenKey = identityTokenKey
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.IdentityTokenKey = oldVal
+			return handleError(err)
+		}
+
+		mountEntry.SyncCache()
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("mount tuning of identity_token_key successful", "path", path)
 		}
 	}
 
@@ -3000,6 +3098,26 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		config.AllowedManagedKeys = apiConfig.AllowedManagedKeys
 	}
 
+	if apiConfig.IdentityTokenKey != "" {
+		storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+		if storage == nil {
+			return nil, errors.New("failed to find identity storage")
+		}
+
+		identityStore := b.Core.IdentityStore()
+		identityStore.oidcLock.RLock()
+		defer identityStore.oidcLock.RUnlock()
+		k, err := identityStore.getNamedKey(ctx, storage, apiConfig.IdentityTokenKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed getting key %q: %w", apiConfig.IdentityTokenKey, err)
+		}
+		if k == nil {
+			return logical.ErrorResponse("key %q does not exist", apiConfig.IdentityTokenKey), nil
+		}
+
+		config.IdentityTokenKey = apiConfig.IdentityTokenKey
+	}
+
 	// Create the mount entry
 	me := &MountEntry{
 		Table:                 credentialTableType,
@@ -3015,7 +3133,11 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 
 	var resp *logical.Response
-	if b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeCredential) {
+	builtin, err := b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeCredential)
+	if err != nil {
+		return nil, err
+	}
+	if builtin {
 		resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
 		if err != nil {
 			b.Core.logger.Error("could not mount builtin", "name", me.Type, "path", me.Path, "error", err)
@@ -3032,6 +3154,18 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 }
 
 func (b *SystemBackend) validateVersion(ctx context.Context, version string, pluginName string, pluginType consts.PluginType) (string, *logical.Response, error) {
+	pinnedVersion, err := b.Core.pluginCatalog.GetPinnedVersion(ctx, pluginType, pluginName)
+	if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
+		return "", nil, err
+	}
+	if pinnedVersion != nil {
+		if version != "" {
+			return "", logical.ErrorResponse("cannot specify plugin_version for %s plugin %q, as it is pinned to version %s", pluginType.String(), pluginName, pinnedVersion.Version), nil
+		}
+
+		return pinnedVersion.Version, nil, nil
+	}
+
 	switch version {
 	case "":
 		var err error
@@ -6445,6 +6579,10 @@ This path responds to the following HTTP methods.
 		"Whether the container runtime is run as a non-privileged (non-root) user.",
 		"",
 	},
+	"identity_token_key": {
+		"The name of the key used to sign plugin identity tokens. Defaults to the default key.",
+		"",
+	},
 	"leases": {
 		`View or list lease metadata.`,
 		`
@@ -6635,5 +6773,14 @@ This path responds to the following HTTP methods.
 	"delegated_auth_accessors": {
 		"A list of auth accessors that the mount is allowed to delegate authentication too",
 		"",
+	},
+	"utilization": {
+		"This internal api will return manual license reporting report data.",
+		`
+This path responds to the following HTTP methods.
+
+	POST /
+		returns the manual license reporting data.
+		`,
 	},
 }
