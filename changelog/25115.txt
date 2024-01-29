@@ -1,0 +1,3 @@
+```release-note:improvement
+physical/dynamodb: Allow Vault to modify it's DynamoDB table and use per-per-request billing mode.
+```
