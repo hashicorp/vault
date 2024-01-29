@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
-import { click, currentURL, fillIn, find, isSettled, visit } from '@ember/test-helpers';
+import { click, currentURL, fillIn, find, isSettled, visit, waitFor } from '@ember/test-helpers';
 import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/policy-generator/pki';
 import { tokenWithPolicy, runCommands, clearRecords } from 'vault/tests/helpers/pki/pki-run-commands';
@@ -208,9 +208,12 @@ module('Acceptance | pki workflow', function (hooks) {
 
     test('create role happy path', async function (assert) {
       const roleName = 'another-role';
+      assert.true(this.pkiAdminToken.startsWith('hvs.'), 'admin token is valid');
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
+      assert.dom(SELECTORS.emptyState).doesNotExist();
+      await waitFor(SELECTORS.rolesTab);
       assert.dom(SELECTORS.rolesTab).exists('Roles tab is present');
       await click(SELECTORS.rolesTab);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles`);
@@ -224,7 +227,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await click(SELECTORS.roleForm.roleCreateButton);
       assert.strictEqual(
         flash.latestMessage,
-        `Successfully created the role ${roleName}`,
+        `Successfully created the role ${roleName}.`,
         'renders success flash upon creation'
       );
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/${roleName}/details`);
