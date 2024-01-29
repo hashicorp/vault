@@ -880,7 +880,7 @@ func (b *SystemBackend) handlePluginCatalogPinUpdate(ctx context.Context, _ *log
 		return nil, err
 	}
 
-	return nil, nil
+	return &logical.Response{}, nil
 }
 
 func (b *SystemBackend) handlePluginCatalogPinRead(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -891,7 +891,7 @@ func (b *SystemBackend) handlePluginCatalogPinRead(ctx context.Context, _ *logic
 
 	pin, err := b.Core.pluginCatalog.GetPinnedVersion(ctx, pluginType, pluginName)
 	if errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
-		return nil, nil
+		return nil, logical.CodedError(http.StatusNotFound, "no pinned version for this plugin")
 	}
 	if err != nil {
 		return nil, err
@@ -914,13 +914,13 @@ func (b *SystemBackend) handlePluginCatalogPinDelete(ctx context.Context, _ *log
 
 	if err := b.Core.pluginCatalog.DeletePinnedVersion(ctx, pluginType, pluginName); err != nil {
 		if errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
-			return nil, nil
+			return &logical.Response{}, nil
 		}
 
 		return nil, err
 	}
 
-	return nil, nil
+	return &logical.Response{}, nil
 }
 
 func requirePluginTypeAndName(d *framework.FieldData) (consts.PluginType, string, *logical.Response) {

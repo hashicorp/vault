@@ -3756,8 +3756,8 @@ func TestSystemBackend_PluginCatalogPins_CRUD(t *testing.T) {
 	// List pins.
 	req := logical.TestRequest(t, logical.ReadOperation, "plugins/pins")
 	resp, err := b.HandleRequest(ctx, req)
-	if err != nil {
-		t.Fatal(err)
+	if err != nil || resp.IsError() {
+		t.Fatal(resp, err)
 	}
 
 	schema.ValidateResponse(
@@ -3800,9 +3800,6 @@ func TestSystemBackend_PluginCatalogPins_CRUD(t *testing.T) {
 	if err != nil || resp.IsError() {
 		t.Fatal(resp, err)
 	}
-	if resp != nil {
-		t.Fatal(resp)
-	}
 
 	schema.ValidateResponse(
 		t,
@@ -3832,8 +3829,8 @@ func TestSystemBackend_PluginCatalogPins_CRUD(t *testing.T) {
 	// List pins again.
 	req = logical.TestRequest(t, logical.ReadOperation, "plugins/pins/")
 	resp, err = b.HandleRequest(ctx, req)
-	if err != nil {
-		t.Fatal(err)
+	if err != nil || resp.IsError() {
+		t.Fatal(resp, err)
 	}
 
 	schema.ValidateResponse(
@@ -3856,8 +3853,8 @@ func TestSystemBackend_PluginCatalogPins_CRUD(t *testing.T) {
 	// Delete the pin.
 	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/pins/database/test-plugin")
 	resp, err = b.HandleRequest(ctx, req)
-	if err != nil {
-		t.Fatal(err)
+	if err != nil || resp.IsError() {
+		t.Fatal(resp, err)
 	}
 
 	schema.ValidateResponse(
@@ -3869,9 +3866,13 @@ func TestSystemBackend_PluginCatalogPins_CRUD(t *testing.T) {
 
 	// Should now get a 404 when reading the pin.
 	req = logical.TestRequest(t, logical.ReadOperation, "plugins/pins/database/test-plugin")
-	resp, err = b.HandleRequest(ctx, req)
-	if err != nil || resp != nil {
-		t.Fatal(resp, err)
+	_, err = b.HandleRequest(ctx, req)
+	var codedErr logical.HTTPCodedError
+	if !errors.As(err, &codedErr) {
+		t.Fatal(err)
+	}
+	if codedErr.Code() != http.StatusNotFound {
+		t.Fatal(codedErr)
 	}
 }
 
