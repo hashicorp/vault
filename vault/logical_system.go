@@ -1718,7 +1718,7 @@ func (b *SystemBackend) handleReadMount(ctx context.Context, req *logical.Reques
 	}
 	if entry.Version != "" && entry.Version != entry.RunningVersion {
 		warning := fmt.Sprintf("Plugin version is configured as %q, but running %q", entry.Version, entry.RunningVersion)
-		if pin, _ := b.Core.pluginCatalog.GetPinnedVersion(ctx, consts.PluginTypeSecrets, entry.Type); pin.Version == entry.RunningVersion {
+		if pin, _ := b.Core.pluginCatalog.GetPinnedVersion(ctx, consts.PluginTypeSecrets, entry.Type); pin != nil && pin.Version == entry.RunningVersion {
 			warning += " because that version is pinned"
 		} else {
 			warning += " either due to a pinned version or because the plugin was upgraded and not yet reloaded"
