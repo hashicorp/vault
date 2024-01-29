@@ -47,6 +47,7 @@ const (
 // RequestLimiter is a thin wrapper for limiter.DefaultLimiter.
 type RequestLimiter struct {
 	*limiter.DefaultLimiter
+	Flags LimiterFlags
 }
 
 // Acquire consults the underlying RequestLimiter to see if a new
@@ -103,34 +104,31 @@ func concurrencyChanger(limit int) int {
 	return int(change)
 }
 
-var (
-	// DefaultWriteLimiterFlags have a less conservative MinLimit to prevent
+var DefaultLimiterFlags = map[string]LimiterFlags{
+	// WriteLimiter defaults flags have a less conservative MinLimit to prevent
 	// over-optimizing the request latency, which would result in
 	// under-utilization and client starvation.
-	DefaultWriteLimiterFlags = LimiterFlags{
-		Name:     WriteLimiter,
-		MinLimit: 100,
-		MaxLimit: 5000,
-	}
+	WriteLimiter: {
+		MinLimit:     100,
+		MaxLimit:     5000,
+		InitialLimit: 100,
+	},
 
-	// DefaultSpecialPathLimiterFlags have a conservative MinLimit to allow more
-	// aggressive concurrency throttling for CPU-bound workloads such as
+	// SpecialPathLimiter default flags have a conservative MinLimit to allow
+	// more aggressive concurrency throttling for CPU-bound workloads such as
 	// `pki/issue`.
-	DefaultSpecialPathLimiterFlags = LimiterFlags{
-		Name:     SpecialPathLimiter,
-		MinLimit: 5,
-		MaxLimit: 5000,
-	}
-)
+	SpecialPathLimiter: {
+		MinLimit:     5,
+		MaxLimit:     5000,
+		InitialLimit: 5,
+	},
+}
 
 // LimiterFlags establish some initial configuration for a new request limiter.
 type LimiterFlags struct {
-	// Name specifies the limiter Name for registry lookup and logging.
-	Name string
-
 	// MinLimit defines the minimum concurrency floor to prevent over-throttling
 	// requests during periods of high traffic.
-	MinLimit int
+	MinLimit int `json:"min_limit,omitempty" mapstructure:"min_limit,omitempty"`
 
 	// MaxLimit defines the maximum concurrency ceiling to prevent skewing to a
 	// point of no return.
@@ -139,7 +137,7 @@ type LimiterFlags struct {
 	// high-performing specs will tolerate higher limits, while the algorithm
 	// will find its own steady-state concurrency well below this threshold in
 	// most cases.
-	MaxLimit int
+	MaxLimit int `json:"max_limit,omitempty" mapstructure:"max_limit,omitempty"`
 
 	// InitialLimit defines the starting concurrency limit prior to any
 	// measurements.
@@ -150,13 +148,13 @@ type LimiterFlags struct {
 	// rejection; however, the adaptive nature of the algorithm will prevent
 	// this from being a prolonged state as the allowed concurrency will
 	// increase during normal operation.
-	InitialLimit int
+	InitialLimit int `json:"initial_limit,omitempty" mapstructure:"initial_limit,omitempty"`
 }
 
 // NewRequestLimiter is a basic constructor for the RequestLimiter wrapper. It
 // is responsible for setting up the Gradient2 Limit and instantiating a new
 // wrapped DefaultLimiter.
-func NewRequestLimiter(logger hclog.Logger, flags LimiterFlags) (*RequestLimiter, error) {
+func NewRequestLimiter(logger hclog.Logger, name string, flags LimiterFlags) (*RequestLimiter, error) {
 	logger.Info("setting up new request limiter",
 		"initialLimit", flags.InitialLimit,
 		"maxLimit", flags.MaxLimit,
@@ -167,7 +165,7 @@ func NewRequestLimiter(logger hclog.Logger, flags LimiterFlags) (*RequestLimiter
 	// decisions. It gathers latency measurements and calculates an Exponential
 	// Moving Average to determine whether latency deviation warrants a change
 	// in the current concurrency limit.
-	lim, err := limit.NewGradient2Limit(flags.Name,
+	lim, err := limit.NewGradient2Limit(name,
 		flags.InitialLimit,
 		flags.MaxLimit,
 		flags.MinLimit,
@@ -178,7 +176,7 @@ func NewRequestLimiter(logger hclog.Logger, flags LimiterFlags) (*RequestLimiter
 		DefaultMetricsRegistry,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create gradient2 limit: %w", err)
+		return &RequestLimiter{}, fmt.Errorf("failed to create gradient2 limit: %w", err)
 	}
 
 	strategy := strategy.NewSimpleStrategy(flags.InitialLimit)
@@ -187,5 +185,5 @@ func NewRequestLimiter(logger hclog.Logger, flags LimiterFlags) (*RequestLimiter
 		return &RequestLimiter{}, err
 	}
 
-	return &RequestLimiter{defLimiter}, nil
+	return &RequestLimiter{Flags: flags, DefaultLimiter: defLimiter}, nil
 }
