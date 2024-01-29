@@ -113,7 +113,7 @@ func TestBackend_PathConfigRoot_PluginIdentityToken(t *testing.T) {
 		t.Errorf("bad: expected to read config root as %#v, got %#v instead", configData, resp.Data)
 	}
 
-	// mutually exclusive fields provided
+	// mutually exclusive fields must result in an error
 	configData = map[string]interface{}{
 		"identity_token_audience": "test-aud",
 		"access_key":              "ASIAIO10230XVB",
@@ -130,8 +130,29 @@ func TestBackend_PathConfigRoot_PluginIdentityToken(t *testing.T) {
 	if !resp.IsError() {
 		t.Fatalf("expected an error but got nil")
 	}
-	expectedError := "must specify either 'access_key' or 'identity_token_audience'"
+	expectedError := "only one of 'access_key' or 'identity_token_audience' can be set"
 	if !strings.Contains(resp.Error().Error(), expectedError) {
-		t.Fatalf("expected errr %s, got %s", expectedError, err)
+		t.Fatalf("expected err %s, got %s", expectedError, resp.Error())
+	}
+
+	// missing role arn with audience must result in an error
+	configData = map[string]interface{}{
+		"identity_token_audience": "test-aud",
+	}
+
+	configReq = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   config.StorageView,
+		Path:      "config/root",
+		Data:      configData,
+	}
+
+	resp, err = b.HandleRequest(context.Background(), configReq)
+	if !resp.IsError() {
+		t.Fatalf("expected an error but got nil")
+	}
+	expectedError = "missing required 'role_arn' when 'identity_token_audience' is set"
+	if !strings.Contains(resp.Error().Error(), expectedError) {
+		t.Fatalf("expected err %s, got %s", expectedError, resp.Error())
 	}
 }

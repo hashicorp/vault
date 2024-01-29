@@ -148,9 +148,12 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	// return error for mutually exclusive fields if provided
 	if rc.IdentityTokenAudience != "" && rc.AccessKey != "" {
-		return logical.ErrorResponse("must specify either 'access_key' or 'identity_token_audience', not both"), nil
+		return logical.ErrorResponse("only one of 'access_key' or 'identity_token_audience' can be set"), nil
+	}
+
+	if rc.IdentityTokenAudience != "" && rc.RoleARN == "" {
+		return logical.ErrorResponse("missing required 'role_arn' when 'identity_token_audience' is set"), nil
 	}
 
 	entry, err := logical.StorageEntryJSON("config/root", rc)
