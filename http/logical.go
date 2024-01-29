@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -211,6 +213,10 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 		Headers:    r.Header,
 	}
 
+	if ra != nil && ra.IsLimitedPath(r.Context(), path) {
+		req.PathLimited = true
+	}
+
 	if passHTTPReq {
 		req.HTTPRequest = r
 	}
@@ -378,6 +384,9 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 		// success.
 		resp, ok, needsForward := request(core, w, r, req)
 		switch {
+		case errors.Is(resp.Error(), limits.ErrCapacity):
+			respondError(w, http.StatusServiceUnavailable, limits.ErrCapacity)
+			return
 		case needsForward && noForward:
 			respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
 			return

@@ -35,7 +35,7 @@ module('Acceptance | mfa-login', function (hooks) {
   });
 
   const login = async (user) => {
-    await visit('/vault/auth');
+    await visit('/vault/auth?with=token');
     await fillIn('[data-test-select="auth-method"]', 'userpass');
     await fillIn('[data-test-username]', user);
     await fillIn('[data-test-password]', 'test');

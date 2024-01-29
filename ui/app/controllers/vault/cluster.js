@@ -16,6 +16,7 @@ export default Controller.extend({
   permissions: service(),
   namespaceService: service('namespace'),
   flashMessages: service(),
+  customMessages: service(),
 
   vaultVersion: service('version'),
   console: service(),

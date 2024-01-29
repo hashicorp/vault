@@ -207,7 +207,7 @@ func RespondErrorAndData(w http.ResponseWriter, status int, data interface{}, er
 
 	type ErrorAndDataResponse struct {
 		Errors []string    `json:"errors"`
-		Data   interface{} `json:"data""`
+		Data   interface{} `json:"data"`
 	}
 	resp := &ErrorAndDataResponse{Errors: make([]string, 0, 1)}
 	if err != nil {

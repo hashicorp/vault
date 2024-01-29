@@ -272,7 +272,7 @@ type MountConfigInput struct {
 	PluginVersion             string                  `json:"plugin_version,omitempty"`
 	UserLockoutConfig         *UserLockoutConfigInput `json:"user_lockout_config,omitempty"`
 	DelegatedAuthAccessors    []string                `json:"delegated_auth_accessors,omitempty" mapstructure:"delegated_auth_accessors"`
-	IdentityTokenKey          string                  `json:"identity_token_key,omitempty"`
+	IdentityTokenKey          string                  `json:"identity_token_key,omitempty" mapstructure:"identity_token_key"`
 
 	// Deprecated: This field will always be blank for newer server responses.
 	PluginName string `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
@@ -307,7 +307,7 @@ type MountConfigOutput struct {
 	AllowedManagedKeys        []string                 `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
 	UserLockoutConfig         *UserLockoutConfigOutput `json:"user_lockout_config,omitempty"`
 	DelegatedAuthAccessors    []string                 `json:"delegated_auth_accessors,omitempty" mapstructure:"delegated_auth_accessors"`
-	IdentityTokenKey          string                   `json:"identity_token_key,omitempty"`
+	IdentityTokenKey          string                   `json:"identity_token_key,omitempty" mapstructure:"identity_token_key"`
 
 	// Deprecated: This field will always be blank for newer server responses.
 	PluginName string `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
