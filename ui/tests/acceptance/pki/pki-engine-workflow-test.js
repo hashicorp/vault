@@ -10,10 +10,11 @@ import { v4 as uuidv4 } from 'uuid';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
-import { click, currentURL, fillIn, find, isSettled, visit, waitFor } from '@ember/test-helpers';
+import { click, currentURL, fillIn, find, isSettled, visit } from '@ember/test-helpers';
 import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/policy-generator/pki';
 import { tokenWithPolicy, runCommands, clearRecords } from 'vault/tests/helpers/pki/pki-run-commands';
+import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { unsupportedPem } from 'vault/tests/helpers/pki/values';
 import { create } from 'ember-cli-page-object';
 import flashMessage from 'vault/tests/pages/components/flash-message';
@@ -105,9 +106,13 @@ module('Acceptance | pki workflow', function (hooks) {
       const pki_admin_policy = adminPolicy(this.mountPath, 'roles');
       const pki_reader_policy = readerPolicy(this.mountPath, 'roles');
       const pki_editor_policy = updatePolicy(this.mountPath, 'roles');
-      this.pkiRoleReader = await tokenWithPolicy(`pki-reader-${this.mountPath}`, pki_reader_policy);
-      this.pkiRoleEditor = await tokenWithPolicy(`pki-editor-${this.mountPath}`, pki_editor_policy);
-      this.pkiAdminToken = await tokenWithPolicy(`pki-admin-${this.mountPath}`, pki_admin_policy);
+      this.pkiRoleReader = await runCmd(
+        tokenWithPolicyCmd(`pki-reader-${this.mountPath}`, pki_reader_policy)
+      );
+      this.pkiRoleEditor = await runCmd(
+        tokenWithPolicyCmd(`pki-editor-${this.mountPath}`, pki_editor_policy)
+      );
+      this.pkiAdminToken = await runCmd(tokenWithPolicyCmd(`pki-admin-${this.mountPath}`, pki_admin_policy));
       await logout.visit();
       clearRecords(this.store);
     });
@@ -208,7 +213,7 @@ module('Acceptance | pki workflow', function (hooks) {
 
     test('create role happy path', async function (assert) {
       const roleName = 'another-role';
-      await authPage.login();
+      await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
       assert.dom(SELECTORS.emptyState).doesNotExist();
@@ -513,9 +518,8 @@ module('Acceptance | pki workflow', function (hooks) {
       ${adminPolicy(this.mountPath)}
       ${readerPolicy(this.mountPath, 'config/cluster')}
       `;
-      this.mixedConfigCapabilities = await tokenWithPolicy(
-        `pki-reader-${this.mountPath}`,
-        mixed_config_policy
+      this.mixedConfigCapabilities = await runCmd(
+        tokenWithPolicyCmd(`pki-reader-${this.mountPath}`, mixed_config_policy)
       );
       await logout.visit();
     });
