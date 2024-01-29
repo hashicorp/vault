@@ -10,7 +10,7 @@ import { click, currentURL, fillIn, visit } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { create } from 'ember-cli-page-object';
 
-import ENV from 'vault/config/environment';
+import databaseHandlers from 'vault/mirage/handlers/database';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import flashMessage from 'vault/tests/pages/components/flash-message';
@@ -60,14 +60,8 @@ module('Acceptance | database workflow', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'database';
-  });
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
-  });
-
   hooks.beforeEach(async function () {
+    databaseHandlers(this.server);
     this.backend = `db-workflow-${uuidv4()}`;
     this.store = this.owner.lookup('service:store');
     await authPage.login();

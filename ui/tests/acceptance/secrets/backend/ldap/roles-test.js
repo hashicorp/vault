@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ldapMirageScenario from 'vault/mirage/scenarios/ldap';
-import ENV from 'vault/config/environment';
+import ldapHandlers from 'vault/mirage/handlers/ldap';
 import authPage from 'vault/tests/pages/auth';
 import { click, fillIn } from '@ember/test-helpers';
 import { isURL, visitURL } from 'vault/tests/helpers/ldap';
@@ -17,18 +17,11 @@ module('Acceptance | ldap | roles', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'ldap';
-  });
-
   hooks.beforeEach(async function () {
+    ldapHandlers(this.server);
     ldapMirageScenario(this.server);
     await authPage.login();
     return visitURL('roles');
-  });
-
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
   });
 
   test('it should transition to create role route on toolbar link click', async function (assert) {

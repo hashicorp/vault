@@ -23,7 +23,7 @@ import { deleteEngineCmd } from 'vault/tests/helpers/commands';
 import authPage from 'vault/tests/pages/auth';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import ENV from 'vault/config/environment';
+import clientsHandlers from 'vault/mirage/handlers/clients';
 import { formatNumber } from 'core/helpers/format-number';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { disableReplication } from 'vault/tests/helpers/replication';
@@ -383,18 +383,11 @@ module('Acceptance | landing page dashboard', function (hooks) {
   });
 
   module('client counts card enterprise', function (hooks) {
-    hooks.before(async function () {
-      ENV['ember-cli-mirage'].handler = 'clients';
-    });
-
     hooks.beforeEach(async function () {
+      clientsHandlers(this.server);
       this.store = this.owner.lookup('service:store');
 
       await authPage.login();
-    });
-
-    hooks.after(function () {
-      ENV['ember-cli-mirage'].handler = null;
     });
 
     test('shows the client count card for enterprise', async function (assert) {
