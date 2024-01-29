@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBackend_PathConfigRoot(t *testing.T) {
@@ -22,13 +23,16 @@ func TestBackend_PathConfigRoot(t *testing.T) {
 	}
 
 	configData := map[string]interface{}{
-		"access_key":        "AKIAEXAMPLE",
-		"secret_key":        "RandomData",
-		"region":            "us-west-2",
-		"iam_endpoint":      "https://iam.amazonaws.com",
-		"sts_endpoint":      "https://sts.us-west-2.amazonaws.com",
-		"max_retries":       10,
-		"username_template": defaultUserNameTemplate,
+		"access_key":              "AKIAEXAMPLE",
+		"secret_key":              "RandomData",
+		"region":                  "us-west-2",
+		"iam_endpoint":            "https://iam.amazonaws.com",
+		"sts_endpoint":            "https://sts.us-west-2.amazonaws.com",
+		"max_retries":             10,
+		"username_template":       defaultUserNameTemplate,
+		"role_arn":                "",
+		"identity_token_audience": "",
+		"identity_token_ttl":      int64(0),
 	}
 
 	configReq := &logical.Request{
@@ -53,6 +57,7 @@ func TestBackend_PathConfigRoot(t *testing.T) {
 	}
 
 	delete(configData, "secret_key")
+	require.Equal(t, configData, resp.Data)
 	if !reflect.DeepEqual(resp.Data, configData) {
 		t.Errorf("bad: expected to read config root as %#v, got %#v instead", configData, resp.Data)
 	}
