@@ -438,7 +438,7 @@ func TestParseCertificate(t *testing.T) {
 			},
 			wantErr: false,
 		},
-		// need a test for non CA
+		// TODO(victorr): need a test for non CA
 	}
 	for _, tt := range tests {
 
@@ -639,19 +639,19 @@ func TestParseCsr(t *testing.T) {
 				KeyType:                       "rsa",
 				KeyBits:                       2048,
 				NotAfter:                      time.Time{},
-				KeyUsage:                      0,   // TODO(victorr): Verify with Kit
-				ExtKeyUsage:                   0,   // TODO(victorr): Verify with Kit
-				ExtKeyUsageOIDs:               nil, // TODO(victorr): Verify with Kit
-				PolicyIdentifiers:             nil, // TODO(victorr): Verify with Kit
+				KeyUsage:                      0,   // TODO(kitography): Verify with Kit
+				ExtKeyUsage:                   0,   // TODO(kitography): Verify with Kit
+				ExtKeyUsageOIDs:               nil, // TODO(kitography): Verify with Kit
+				PolicyIdentifiers:             nil, // TODO(kitography): Verify with Kit
 				BasicConstraintsValidForNonCA: true,
 				SignatureBits:                 384,
-				UsePSS:                        false, // TODO(victorr): Verify with Kit
+				UsePSS:                        false,
 				ForceAppendCaChain:            false,
 				UseCSRValues:                  false,
-				PermittedDNSDomains:           nil, // TODO(victorr): Verify with Kit
+				PermittedDNSDomains:           nil,
 				URLs:                          nil,
 				MaxPathLength:                 -1,
-				NotBeforeDuration:             0, // TODO(victorr): Verify with Kit
+				NotBeforeDuration:             0,
 				SKID:                          nil,
 			},
 			wantFields: map[string]interface{}{
