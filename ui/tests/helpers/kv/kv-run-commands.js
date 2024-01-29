@@ -15,8 +15,7 @@ export const writeSecret = async function (backend, path, key, val, ns = null) {
   await fillIn(FORM.inputByAttr('path'), path);
   await fillIn(FORM.keyInput(), key);
   await fillIn(FORM.maskedValueInput(), val);
-  await click(FORM.saveBtn);
-  return;
+  return await click(FORM.saveBtn);
 };
 
 export const writeVersionedSecret = async function (backend, path, key, val, version = 2, ns = null) {
@@ -24,6 +23,7 @@ export const writeVersionedSecret = async function (backend, path, key, val, ver
   for (let currentVersion = 2; currentVersion <= version; currentVersion++) {
     const url = `/vault/secrets/${backend}/kv/${encodeURIComponent(path)}/details/edit`;
     ns ? await visit(url + `?namespace=${ns}`) : await visit(url);
+
     if (currentVersion === version) {
       await fillIn(FORM.keyInput(), key);
       await fillIn(FORM.maskedValueInput(), val);
