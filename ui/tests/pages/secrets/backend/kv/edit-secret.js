@@ -5,6 +5,7 @@
 
 import { Base } from '../create';
 import { clickable, create, fillable } from 'ember-cli-page-object';
+import { settled } from '@ember/test-helpers';
 
 export default create({
   ...Base,
@@ -14,6 +15,8 @@ export default create({
   save: clickable('[data-test-secret-save]'),
   toggleJSON: clickable('[data-test-toggle-input="json"]'),
   createSecret: async function (path, key, value) {
-    return this.path(path).secretKey(key).secretValue(value).save();
+    await this.path(path).secretKey(key).secretValue(value).save();
+    await settled();
+    return;
   },
 });
