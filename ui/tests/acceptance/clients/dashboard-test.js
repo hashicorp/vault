@@ -10,8 +10,8 @@ import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
 import { addMonths, formatRFC3339, startOfMonth, subMonths } from 'date-fns';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import ENV from 'vault/config/environment';
-import { SELECTORS, overrideResponse } from '../../helpers/clients';
+import clientsHandlers from 'vault/mirage/handlers/clients';
+import { SELECTORS, overrideResponse } from '../helpers/clients';
 import { create } from 'ember-cli-page-object';
 import ss from 'vault/tests/pages/components/search-select';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
@@ -33,16 +33,15 @@ module('Acceptance | client counts dashboard', function (hooks) {
 
   hooks.before(function () {
     sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
-    ENV['ember-cli-mirage'].handler = 'clients';
   });
 
   hooks.beforeEach(function () {
+    clientsHandlers(this.server);
     this.store = this.owner.lookup('service:store');
   });
 
   hooks.after(function () {
     timestamp.now.restore();
-    ENV['ember-cli-mirage'].handler = null;
   });
 
   hooks.beforeEach(function () {

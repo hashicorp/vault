@@ -229,7 +229,7 @@
     "@embroider/macros": "^1.0.0"
   },
   "engines": {
-    "node": "16"
+    "node": "18"
   },
   "ember": {
     "edition": "octane"
@@ -237,13 +237,14 @@
   "private": true,
   "ember-addon": {
     "paths": [
+      "lib/config-ui",
       "lib/core",
       "lib/css",
       "lib/keep-gitkeep",
       "lib/kmip",
       "lib/kubernetes",
-      "lib/ldap",
       "lib/kv",
+      "lib/ldap",
       "lib/open-api-explorer",
       "lib/pki",
       "lib/replication",

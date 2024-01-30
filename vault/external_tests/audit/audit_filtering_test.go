@@ -23,9 +23,7 @@ import (
 func TestAuditFilteringOnDifferentFields(t *testing.T) {
 	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
-	client, err := cluster.Cores[0].Client.Clone()
-	require.NoError(t, err)
-	client.SetToken(cluster.RootToken)
+	client := cluster.Cores[0].Client
 
 	// Create audit devices.
 	tempDir := t.TempDir()
@@ -71,6 +69,16 @@ func TestAuditFilteringOnDifferentFields(t *testing.T) {
 	_, err = client.Logical().Write("sys/audit/"+pathFilterDevicePath, pathFilterDeviceData)
 	require.NoError(t, err)
 
+	// Ensure the devices have been created.
+	devices, err := client.Sys().ListAudit()
+	require.NoError(t, err)
+	_, ok := devices[mountPointFilterDevicePath+"/"]
+	require.True(t, ok)
+	_, ok = devices[operationFilterPath+"/"]
+	require.True(t, ok)
+	_, ok = devices[pathFilterDevicePath+"/"]
+	require.True(t, ok)
+
 	// A write to KV should produce an audit entry that is written to all the
 	// audit devices.
 	data := map[string]any{
@@ -87,14 +95,9 @@ func TestAuditFilteringOnDifferentFields(t *testing.T) {
 	err = client.Sys().DisableAudit(pathFilterDevicePath)
 	require.NoError(t, err)
 	// Ensure the devices are no longer there.
-	devices, err := client.Sys().ListAudit()
+	devices, err = client.Sys().ListAudit()
 	require.NoError(t, err)
-	_, ok := devices[mountPointFilterDevicePath]
-	require.False(t, ok)
-	_, ok = devices[operationFilterPath]
-	require.False(t, ok)
-	_, ok = devices[pathFilterDevicePath]
-	require.False(t, ok)
+	require.Len(t, devices, 0)
 
 	// Validate that only the entries matching the filters were written to each log file.
 	entries := checkAuditEntries(t, mountPointFilterLogFile, "mount_point", "secret/")
@@ -115,9 +118,7 @@ func TestAuditFilteringOnDifferentFields(t *testing.T) {
 func TestAuditFilteringMultipleDevices(t *testing.T) {
 	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
-	client, err := cluster.Cores[0].Client.Clone()
-	require.NoError(t, err)
-	client.SetToken(cluster.RootToken)
+	client := cluster.Cores[0].Client
 
 	// Create audit devices.
 	tempDir := t.TempDir()
@@ -162,6 +163,16 @@ func TestAuditFilteringMultipleDevices(t *testing.T) {
 	_, err = client.Logical().Write("sys/audit/"+nonFilteredDevicePath, nonFilteredDeviceData)
 	require.NoError(t, err)
 
+	// Ensure the devices have been created.
+	devices, err := client.Sys().ListAudit()
+	require.NoError(t, err)
+	_, ok := devices[filteredDevicePath+"/"]
+	require.True(t, ok)
+	_, ok = devices[filteredDevicePath2+"/"]
+	require.True(t, ok)
+	_, ok = devices[nonFilteredDevicePath+"/"]
+	require.True(t, ok)
+
 	// Ensure the non-filtered log file is not empty.
 	nonFilteredLogSize := getFileSize(t, nonFilteredLogFile.Name())
 	require.Positive(t, nonFilteredLogSize)
@@ -195,14 +206,9 @@ func TestAuditFilteringMultipleDevices(t *testing.T) {
 	err = client.Sys().DisableAudit(nonFilteredDevicePath)
 	require.NoError(t, err)
 	// Ensure the devices are no longer there.
-	devices, err := client.Sys().ListAudit()
+	devices, err = client.Sys().ListAudit()
 	require.NoError(t, err)
-	_, ok := devices[filteredDevicePath]
-	require.False(t, ok)
-	_, ok = devices[filteredDevicePath2]
-	require.False(t, ok)
-	_, ok = devices[nonFilteredDevicePath]
-	require.False(t, ok)
+	require.Len(t, devices, 0)
 }
 
 // TestAuditFilteringFallbackDevice validates that the audit device 'fallback'
@@ -212,9 +218,7 @@ func TestAuditFilteringMultipleDevices(t *testing.T) {
 func TestAuditFilteringFallbackDevice(t *testing.T) {
 	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
-	client, err := cluster.Cores[0].Client.Clone()
-	require.NoError(t, err)
-	client.SetToken(cluster.RootToken)
+	client := cluster.Cores[0].Client
 
 	tempDir := t.TempDir()
 	fallbackLogFile, err := os.CreateTemp(tempDir, "")
@@ -245,6 +249,14 @@ func TestAuditFilteringFallbackDevice(t *testing.T) {
 	_, err = client.Logical().Write("sys/audit/"+filteredDevicePath, filteredDeviceData)
 	require.NoError(t, err)
 
+	// Ensure the devices have been created.
+	devices, err := client.Sys().ListAudit()
+	require.NoError(t, err)
+	_, ok := devices[fallbackDevicePath+"/"]
+	require.True(t, ok)
+	_, ok = devices[filteredDevicePath+"/"]
+	require.True(t, ok)
+
 	// A write to KV should produce an audit entry that is written to the
 	// filtered device.
 	data := map[string]any{
@@ -259,12 +271,8 @@ func TestAuditFilteringFallbackDevice(t *testing.T) {
 	err = client.Sys().DisableAudit(filteredDevicePath)
 	require.NoError(t, err)
 	// Ensure the devices are no longer there.
-	devices, err := client.Sys().ListAudit()
-	require.NoError(t, err)
-	_, ok := devices[fallbackDevicePath]
-	require.False(t, ok)
-	_, ok = devices[filteredDevicePath]
-	require.False(t, ok)
+	devices, err = client.Sys().ListAudit()
+	require.Len(t, devices, 0)
 
 	// Validate that only the entries matching the filter were written to the filtered log file.
 	numberOfEntries := checkAuditEntries(t, filteredLogFile, "mount_type", "kv")
@@ -285,8 +293,59 @@ func TestAuditFilteringFallbackDevice(t *testing.T) {
 		require.NotEqual(t, "kv", auditRequest["mount_type"])
 		numberOfEntries += 1
 	}
-	// the fallback device will catch all non-kv related entries such as login etc. there should be 5 in total.
-	require.Equal(t, 5, numberOfEntries)
+	// the fallback device will catch all non-kv related entries such as login, etc. there should be 7 in total.
+	require.Equal(t, 7, numberOfEntries)
+}
+
+// TestAuditFilteringFilterForUnsupportedField validates that the audit device
+// 'filter' option fails when the filter expression selector references an
+// unsupported field and that the error prevents an audit device from being
+// created.
+func TestAuditFilteringFilterForUnsupportedField(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	tempDir := t.TempDir()
+	filteredLogFile, err := os.CreateTemp(tempDir, "")
+	filteredDevicePath := "filtered"
+	filteredDeviceData := map[string]any{
+		"type":        "file",
+		"description": "",
+		"local":       false,
+		"options": map[string]any{
+			"file_path": filteredLogFile.Name(),
+			"filter":    "auth == foo", // 'auth' is not one of the fields we allow filtering on
+		},
+	}
+	_, err = client.Logical().Write("sys/audit/"+filteredDevicePath, filteredDeviceData)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "audit.NewEntryFilter: filter references an unsupported field: auth == foo")
+
+	// Ensure the device has not been created.
+	devices, err := client.Sys().ListAudit()
+	require.NoError(t, err)
+	require.Len(t, devices, 0)
+
+	// Now we do the same test but with the 'skip_test' option set to true.
+	filteredDeviceDataSkipTest := map[string]any{
+		"type":        "file",
+		"description": "",
+		"local":       false,
+		"options": map[string]any{
+			"file_path": filteredLogFile.Name(),
+			"filter":    "auth == foo", // 'auth' is not one of the fields we allow filtering on
+			"skip_test": true,
+		},
+	}
+	_, err = client.Logical().Write("sys/audit/"+filteredDevicePath, filteredDeviceDataSkipTest)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "audit.NewEntryFilter: filter references an unsupported field: auth == foo")
+
+	// Ensure the device has not been created.
+	devices, err = client.Sys().ListAudit()
+	require.NoError(t, err)
+	require.Len(t, devices, 0)
 }
 
 // getFileSize returns the size of the given file in bytes.

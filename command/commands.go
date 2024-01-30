@@ -97,6 +97,9 @@ const (
 	// logged at startup _per node_. This was initially introduced for the events
 	// system being developed over multiple release cycles.
 	EnvVaultExperiments = "VAULT_EXPERIMENTS"
+	// EnvVaultPluginTmpdir sets the folder to use for Unix sockets when setting
+	// up containerized plugins.
+	EnvVaultPluginTmpdir = "VAULT_PLUGIN_TMPDIR"
 
 	// flagNameAddress is the flag used in the base command to read in the
 	// address of the Vault server.
@@ -137,6 +140,8 @@ const (
 	flagNameAllowedManagedKeys = "allowed-managed-keys"
 	// flagNamePluginVersion selects what version of a plugin should be used.
 	flagNamePluginVersion = "plugin-version"
+	// flagNameIdentityTokenKey selects the key used to sign plugin identity tokens
+	flagNameIdentityTokenKey = "identity-token-key"
 	// flagNameUserLockoutThreshold is the flag name used for tuning the auth mount lockout threshold parameter
 	flagNameUserLockoutThreshold = "user-lockout-threshold"
 	// flagNameUserLockoutDuration is the flag name used for tuning the auth mount lockout duration parameter
@@ -526,6 +531,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		},
 		"operator usage": func() (cli.Command, error) {
 			return &OperatorUsageCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator utilization": func() (cli.Command, error) {
+			return &OperatorUtilizationCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

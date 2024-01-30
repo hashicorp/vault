@@ -153,10 +153,26 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		result = append([]byte(f.prefix), result...)
 	}
 
-	// Store the final format.
-	e.FormattedAs(f.config.RequiredFormat.String(), result)
+	// Copy some properties from the event (and audit event) and store the
+	// format for the next (sink) node to Process.
+	a2 := &AuditEvent{
+		ID:        a.ID,
+		Version:   a.Version,
+		Subtype:   a.Subtype,
+		Timestamp: a.Timestamp,
+		Data:      data, // Use the cloned data here rather than a pointer to the original.
+	}
 
-	return e, nil
+	e2 := &eventlogger.Event{
+		Type:      e.Type,
+		CreatedAt: e.CreatedAt,
+		Formatted: make(map[string][]byte), // we are about to set this ourselves.
+		Payload:   a2,
+	}
+
+	e2.FormattedAs(f.config.RequiredFormat.String(), result)
+
+	return e2, nil
 }
 
 // FormatRequest attempts to format the specified logical.LogInput into a RequestEntry.
@@ -253,6 +269,10 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 			Headers:                       req.Headers,
 			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
 		},
+	}
+
+	if req.HTTPRequest != nil && req.HTTPRequest.RequestURI != req.Path {
+		reqEntry.Request.RequestURI = req.HTTPRequest.RequestURI
 	}
 
 	if !auth.IssueTime.IsZero() {
@@ -470,6 +490,10 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 			WrapInfo:              respWrapInfo,
 			Headers:               resp.Headers,
 		},
+	}
+
+	if req.HTTPRequest != nil && req.HTTPRequest.RequestURI != req.Path {
+		respEntry.Request.RequestURI = req.HTTPRequest.RequestURI
 	}
 
 	if auth.PolicyResults != nil {
