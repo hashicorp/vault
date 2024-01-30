@@ -75,6 +75,9 @@ func main() {
 	}
 
 	inputParsed, err := parseFile(b)
+	if err != nil {
+		fatal(err)
+	}
 	needed, existing, err := inputParsed.areStubsNeeded()
 	if err != nil {
 		fatal(err)
