@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { assign } from '@ember/polyfills';
 import { copy } from 'ember-copy';
 import { assert } from '@ember/debug';
 import { inject as service } from '@ember/service';
@@ -170,10 +169,10 @@ export default Component.extend(TRANSIT_PARAMS, {
         const { keys, type, name } = resp.data;
         resp.data.keys = { keys, type, name };
       }
-      props = assign({}, props, resp.data);
+      props = { ...props, ...resp.data };
     }
     if (options.wrapTTL) {
-      props = assign({}, props, { wrappedToken: resp.wrap_info.token });
+      props = { ...props, ...{ wrappedToken: resp.wrap_info.token } };
     }
     if (!this.isDestroyed && !this.isDestroying) {
       this.toggleProperty('isModalActive');
