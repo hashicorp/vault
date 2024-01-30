@@ -8,7 +8,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { click, currentRouteName, currentURL, fillIn, visit } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import ENV from 'vault/config/environment';
+import mfaConfigHandler from 'vault/mirage/handlers/mfa-config';
 import { Response } from 'miragejs';
 import { underscore } from '@ember/string';
 
@@ -16,10 +16,8 @@ module('Acceptance | mfa-method', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'mfaConfig';
-  });
   hooks.beforeEach(async function () {
+    mfaConfigHandler(this.server);
     this.store = this.owner.lookup('service:store');
     this.getMethods = () =>
       ['Totp', 'Duo', 'Okta', 'Pingid'].reduce((methods, type) => {
@@ -27,9 +25,6 @@ module('Acceptance | mfa-method', function (hooks) {
         return methods;
       }, []);
     return authPage.login();
-  });
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
   });
 
   test('it should display landing page when no methods exist', async function (assert) {
