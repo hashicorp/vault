@@ -476,6 +476,9 @@ func testLoadConfigFile(t *testing.T) {
 		EnableResponseHeaderRaftNodeIDRaw: true,
 
 		LicensePath: "/path/to/license",
+
+		PluginDirectory: "/path/to/plugins",
+		PluginTmpdir:    "/tmp/plugins",
 	}
 
 	addExpectedEntConfig(expected, []string{})
@@ -802,6 +805,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"max_lease_ttl":    (30 * 24 * time.Hour) / time.Second,
 		"pid_file":         "./pidfile",
 		"plugin_directory": "",
+		"plugin_tmpdir":    "",
 		"seals": []interface{}{
 			map[string]interface{}{
 				"disabled": false,

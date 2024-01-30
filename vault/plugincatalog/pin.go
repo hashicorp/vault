@@ -33,7 +33,7 @@ func (c *PluginCatalog) SetPinnedVersion(ctx context.Context, pin *pluginutil.Pi
 		return err
 	}
 	if plugin == nil {
-		return fmt.Errorf("%s plugin %q version %s does not exist", pin.Type.String(), pin.Name, pin.Version)
+		return fmt.Errorf("%w; %s plugin %q version %s does not exist", ErrPluginNotFound, pin.Type.String(), pin.Name, pin.Version)
 	}
 
 	bytes, err := json.Marshal(pin)
