@@ -84,6 +84,10 @@ func (l *warningCountLogger) reset() {
 	l.warnings = 0
 }
 
+// TestPluginCatalog_SetupPluginCatalog_WarningsWithLegacyEnvSetting ensures we
+// log the correct number of warnings during plugin catalog setup (which is run
+// during unseal) if users have set the flag to keep old behavior. This is to
+// help users migrate safely to the new default behavior.
 func TestPluginCatalog_SetupPluginCatalog_WarningsWithLegacyEnvSetting(t *testing.T) {
 	logger := &warningCountLogger{
 		Logger: log.New(&hclog.LoggerOptions{
