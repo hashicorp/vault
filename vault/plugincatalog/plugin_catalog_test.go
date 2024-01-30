@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -67,6 +68,112 @@ func testPluginCatalog(t *testing.T) *PluginCatalog {
 		t.Fatal(err)
 	}
 	return pluginCatalog
+}
+
+type warningCountLogger struct {
+	log.Logger
+	warnings int
+}
+
+func (l *warningCountLogger) Warn(msg string, args ...interface{}) {
+	l.warnings++
+	l.Logger.Warn(msg, args...)
+}
+
+func (l *warningCountLogger) reset() {
+	l.warnings = 0
+}
+
+func TestPluginCatalog_SetupPluginCatalog_WarningsWithLegacyEnvSetting(t *testing.T) {
+	logger := &warningCountLogger{
+		Logger: log.New(&hclog.LoggerOptions{
+			Level: hclog.Trace,
+		}),
+	}
+	storage, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logicalStorage := logical.NewLogicalStorage(storage)
+
+	// prefix to avoid collisions with other tests.
+	const prefix = "TEST_PLUGIN_CATALOG_ENV_"
+	plugin := &pluginutil.PluginRunner{
+		Name:    "mysql-database-plugin",
+		Type:    consts.PluginTypeDatabase,
+		Version: "1.0.0",
+		Env: []string{
+			prefix + "A=1",
+			prefix + "VALUE_WITH_EQUALS=1=2",
+			prefix + "EMPTY_VALUE=",
+		},
+	}
+
+	// Insert a plugin into storage before the catalog is setup.
+	buf, err := json.Marshal(plugin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logicalEntry := logical.StorageEntry{
+		Key:   path.Join(plugin.Type.String(), plugin.Name, plugin.Version),
+		Value: buf,
+	}
+	if err := logicalStorage.Put(context.Background(), &logicalEntry); err != nil {
+		t.Fatal(err)
+	}
+
+	for name, tc := range map[string]struct {
+		sysEnv           map[string]string
+		expectedWarnings int
+	}{
+		"no env": {},
+		"colliding env, no flag": {
+			sysEnv: map[string]string{
+				prefix + "A": "10",
+			},
+			expectedWarnings: 0,
+		},
+		"colliding env, with flag": {
+			sysEnv: map[string]string{
+				pluginutil.PluginUseLegacyEnvLayering: "true",
+				prefix + "A":                          "10",
+			},
+			expectedWarnings: 2,
+		},
+		"all colliding env, with flag": {
+			sysEnv: map[string]string{
+				pluginutil.PluginUseLegacyEnvLayering: "true",
+				prefix + "A":                          "10",
+				prefix + "VALUE_WITH_EQUALS":          "1=2",
+				prefix + "EMPTY_VALUE":                "",
+			},
+			expectedWarnings: 4,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			logger.reset()
+			for k, v := range tc.sysEnv {
+				t.Setenv(k, v)
+			}
+
+			_, err := SetupPluginCatalog(
+				context.Background(),
+				logger,
+				corehelpers.NewMockBuiltinRegistry(),
+				logicalStorage,
+				"",
+				false,
+				nil,
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if tc.expectedWarnings != logger.warnings {
+				t.Fatalf("expected %d warnings, got %d", tc.expectedWarnings, logger.warnings)
+			}
+		})
+	}
 }
 
 func TestPluginCatalog_CRUD(t *testing.T) {
