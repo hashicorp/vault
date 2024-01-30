@@ -12,6 +12,7 @@ import { or } from '@ember/object/computed';
 import { schedule } from '@ember/runloop';
 import { camelize } from '@ember/string';
 import { task } from 'ember-concurrency';
+import { buildWaiter } from '@ember/test-waiters';
 import ControlGroupError from 'vault/lib/control-group-error';
 import {
   parseCommand,
@@ -56,6 +57,8 @@ export default class UiPanel extends Component {
     container.scrollTop = container.scrollHeight;
   }
 
+  const waiter = buildWaiter('web-repl');
+
   logAndOutput(command, logContent) {
     this.console.logAndOutput(command, logContent);
     schedule('afterRender', () => this.scrollToBottom());
@@ -80,6 +83,7 @@ export default class UiPanel extends Component {
         refresh: () => this.refreshRoute.perform(),
       })
     ) {
+      waiter.endAsync(waiterToken);
       return;
     }
 
@@ -90,6 +94,7 @@ export default class UiPanel extends Component {
       if (shouldThrow) {
         this.logAndOutput(command, { type: 'help' });
       }
+      waiter.endAsync(waiterToken);
       return;
     }
 
@@ -100,6 +105,7 @@ export default class UiPanel extends Component {
     const inputError = formattedErrorFromInput(path, method, flags, dataArray);
     if (inputError) {
       this.logAndOutput(command, inputError);
+      waiter.endAsync(waiterToken);
       return;
     }
     try {
@@ -107,10 +113,12 @@ export default class UiPanel extends Component {
       this.logAndOutput(command, logFromResponse(resp, path, method, flags));
     } catch (error) {
       if (error instanceof ControlGroupError) {
+        waiter.endAsync(waiterToken);
         return this.logAndOutput(command, this.controlGroup.logFromError(error));
       }
       this.logAndOutput(command, logFromError(error, path, method));
     }
+    waiter.endAsync(waiterToken);
   }
 
   @task
