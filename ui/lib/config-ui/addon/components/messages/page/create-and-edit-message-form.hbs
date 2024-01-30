@@ -33,8 +33,7 @@
         @text="Preview"
         @color="tertiary"
         @icon="eye"
-        disabled={{and (not @message.title @message.message)}}
-        {{on "click" (fn (mut this.showMessagePreviewModal) true)}}
+        {{on "click" this.displayPreviewModal}}
         data-test-button="preview"
       />
 

@@ -44,15 +44,20 @@ export default class MessagesList extends Component {
     }
   }
 
+  validate() {
+    const { isValid, state, invalidFormMessage } = this.args.message.validate();
+    this.modelValidations = isValid ? null : state;
+    this.invalidFormAlert = invalidFormMessage;
+    return isValid;
+  }
+
   @task
   *save(event) {
     event.preventDefault();
     try {
       this.userConfirmation = '';
 
-      const { isValid, state, invalidFormMessage } = this.args.message.validate();
-      this.modelValidations = isValid ? null : state;
-      this.invalidFormAlert = invalidFormMessage;
+      const isValid = this.validate();
 
       if (this.args.hasSomeActiveModals && this.args.message.type === 'modal') {
         this.showMultipleModalsMessage = true;
@@ -84,6 +89,14 @@ export default class MessagesList extends Component {
         return this.userConfirmation === 'confirmed';
       }
       yield timeout(500);
+    }
+  }
+
+  @action
+  displayPreviewModal() {
+    const isValid = this.validate();
+    if (isValid) {
+      this.showMessagePreviewModal = true;
     }
   }
 
