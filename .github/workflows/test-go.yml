@@ -157,7 +157,9 @@ jobs:
 
           # `go list` lumps together quoted arguments, so we need an array to please the shellchecker
           TESTONLY_DIRS=()
-          IFS=" " read -r -a TESTONLY_DIRS <<< "$(find . -type d -name "*_testonly")"
+          while IFS='' read -r line; do
+            TESTONLY_DIRS+=("$line");
+          done < <(find . -type d -name "*_testonly*")
 
           # tack on various extra test packages to the `go list`
           TESTONLY_PACKAGES=$(go list -tags=testonly "${TESTONLY_DIRS[@]}" \
