@@ -158,7 +158,7 @@ jobs:
           # `go list` lumps together quoted arguments, so we need an array to please the shellchecker
           TESTONLY_DIRS=( $(find . -type d -name "*_testonly*") )
 
-          # tack on various extra to the `go list`
+          # tack on various extra test packages to the `go list`
           TESTONLY_PACKAGES=$(go list -tags=testonly "${TESTONLY_DIRS[@]}" \
                                 ./vault/external_tests/{kv,token,*replication-perf*} \
                                 ./vault/)
