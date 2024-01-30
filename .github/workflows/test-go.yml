@@ -162,7 +162,7 @@ jobs:
           # tack on various extra test packages to the `go list`
           TESTONLY_PACKAGES=$(go list -tags=testonly "${TESTONLY_DIRS[@]}" \
                                 ./vault/external_tests/{kv,token,*replication-perf*} \
-                                ./vault/)
+                                ./vault/ | xargs)
 
           # disable glob expansion
           shopt -u nullglob
