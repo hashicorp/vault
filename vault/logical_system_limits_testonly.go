@@ -14,20 +14,28 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// RequestLimiterResponse is a struct for marshalling Request Limiter status responses.
 type RequestLimiterResponse struct {
 	GlobalDisabled   bool                      `json:"global_disabled" mapstructure:"global_disabled"`
 	ListenerDisabled bool                      `json:"listener_disabled" mapstructure:"listener_disabled"`
 	Limiters         map[string]*LimiterStatus `json:"types" mapstructure:"types"`
 }
 
+// LimiterStatus holds the per-limiter status and flags for testing.
 type LimiterStatus struct {
 	Enabled bool                `json:"enabled" mapstructure:"enabled"`
 	Flags   limits.LimiterFlags `json:"flags,omitempty" mapstructure:"flags,omitempty"`
 }
 
+const readRequestLimiterHelpText = `
+Read the current status of the request limiter.
+`
+
 func (b *SystemBackend) requestLimiterReadPath() *framework.Path {
 	return &framework.Path{
-		Pattern: "internal/request-limiter/status$",
+		Pattern:         "internal/request-limiter/status$",
+		HelpDescription: readRequestLimiterHelpText,
+		HelpSynopsis:    readRequestLimiterHelpText,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.handleReadRequestLimiter,
