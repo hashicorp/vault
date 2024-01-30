@@ -31,9 +31,9 @@ export default class MessagesList extends Component {
 
   @tracked showMaxMessageModal = false;
 
-  // This follows the pattern in secrets/page/destinations for FilterInput. Currently, FilterInput doesn't
-  // do a full page refresh causing it to lose focus. The work around is to verify that a transition from this route was
-  // completed and then focus the input.
+  // This follows the pattern in sync/addon/components/secrets/page/destinations for FilterInput.
+  // Currently, FilterInput doesn't do a full page refresh causing it to lose focus.
+  // The work around is to verify that a transition from this route was completed and then focus the input.
   constructor(owner, args) {
     super(owner, args);
     this.router.on('routeDidChange', this.focusNameFilter);
