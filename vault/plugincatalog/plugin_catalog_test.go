@@ -158,12 +158,15 @@ func TestPluginCatalog_SetupPluginCatalog_WarningsWithLegacyEnvSetting(t *testin
 
 			_, err := SetupPluginCatalog(
 				context.Background(),
-				logger,
-				corehelpers.NewMockBuiltinRegistry(),
-				logicalStorage,
-				"",
-				false,
-				nil,
+				&PluginCatalogInput{
+					Logger:               logger,
+					BuiltinRegistry:      corehelpers.NewMockBuiltinRegistry(),
+					CatalogView:          logicalStorage,
+					PluginDirectory:      "",
+					Tmpdir:               "",
+					EnableMlock:          false,
+					PluginRuntimeCatalog: nil,
+				},
 			)
 			if err != nil {
 				t.Fatal(err)

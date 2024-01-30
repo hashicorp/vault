@@ -196,11 +196,10 @@ func SetupPluginCatalog(ctx context.Context, in *PluginCatalogInput) (*PluginCat
 		}
 	}
 
+	logger.Info("successfully setup plugin catalog", "plugin-directory", catalog.directory)
 	if catalog.tmpdir != "" {
 		logger.Debug("plugin temporary directory configured", "tmpdir", catalog.tmpdir)
 	}
-
-	logger.Info("successfully setup plugin catalog", "plugin-directory", catalog.directory)
 
 	return catalog, nil
 }
