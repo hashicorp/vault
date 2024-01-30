@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render, click, settled, waitFor } from '@ember/test-helpers';
+import { render, click, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
@@ -124,7 +124,6 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
     // since the request resolved trigger a page change and return an error from the associations endpoint
     await click(pagination.next);
-    await waitFor('[data-test-empty-state-title]', { timeout: 5000 });
     assert.dom(emptyStateTitle).hasText('Error fetching information', 'Empty state title renders');
     assert
       .dom(emptyStateMessage)
