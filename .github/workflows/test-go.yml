@@ -145,7 +145,8 @@ jobs:
               --partitions "${{ inputs.total-runners }}" \
               --timing-files 'test-results/go-test/*.json' > matrix.json
           )
-      - name: Build matrix for tests tagged with testonly
+      - name: Build up list of testonly packages
+        id: list-testonly
         if: ${{ inputs.testonly }}
         env:
           GOPRIVATE: github.com/hashicorp/*
@@ -153,15 +154,30 @@ jobs:
           set -exo pipefail
           # enable glob expansion
           shopt -s nullglob
+
+          # `go list` lumps together quoted arguments, so we need an array to please the shellchecker
+          TESTONLY_DIRS=( $(find . -type d -name "*_testonly*") )
+
+          # tack on various extra to the `go list`
+          TESTONLY_PACKAGES=$(go list -tags=testonly "${TESTONLY_DIRS[@]}" \
+                                ./vault/external_tests/{kv,token,*replication-perf*} \
+                                ./vault/)
+
+          # disable glob expansion
+          shopt -u nullglob
+          echo "packages=$TESTONLY_PACKAGES" >> "$GITHUB_OUTPUT"
+      - name: Build matrix for tests tagged with testonly
+        if: ${{ inputs.testonly }}
+        env:
+          GOPRIVATE: github.com/hashicorp/*
+        run: |
           # testonly tagged tests need an additional tag to be included
           # also running some extra tests for sanity checking with the testonly build tag
           (
-            go list -tags=testonly ./vault/external_tests/{kv,token,*replication-perf*,*testonly*} ./vault/ | gotestsum tool ci-matrix --debug \
+            echo "${{ steps.list-testonly.output.packages }}"| gotestsum tool ci-matrix --debug \
               --partitions "${{ inputs.total-runners }}" \
               --timing-files 'test-results/go-test/*.json' > matrix.json
           )
-          # disable glob expansion
-          shopt -u nullglob
       - name: Capture list of binary tests
         if: inputs.binary-tests
         id: list-binary-tests
