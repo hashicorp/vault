@@ -24,7 +24,6 @@ const deleteEngine = async function (enginePath, assert) {
   await logout.visit();
   await settled();
   await authPage.login();
-  await settled();
   const response = await runCmd([`delete sys/mounts/${enginePath}`]);
   assert.strictEqual(
     response,
