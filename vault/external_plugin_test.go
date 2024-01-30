@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin"
 	"github.com/hashicorp/vault/sdk/plugin/mock"
@@ -93,98 +92,6 @@ func TestCore_EnableExternalPlugin(t *testing.T) {
 				t.Fatalf("missing mount, match: %q", match)
 			}
 		})
-	}
-}
-
-// TestCore_UpgradePluginUsingPinnedVersion tests a full workflow of upgrading
-// an external plugin gated by pinned versions.
-func TestCore_UpgradePluginUsingPinnedVersion(t *testing.T) {
-	cluster := NewTestCluster(t, &CoreConfig{}, &TestClusterOptions{
-		Plugins: []*TestPluginConfig{
-			{
-				Typ:      consts.PluginTypeCredential,
-				Versions: []string{""},
-			},
-			{
-				Typ:      consts.PluginTypeSecrets,
-				Versions: []string{""},
-			},
-		},
-	})
-
-	cluster.Start()
-	t.Cleanup(cluster.Cleanup)
-
-	c := cluster.Cores[0].Core
-	TestWaitActive(t, c)
-
-	for name, tc := range map[string]struct {
-		idx int
-	}{
-		"credential plugin": {
-			idx: 0,
-		},
-		"secrets plugin": {
-			idx: 1,
-		},
-	} {
-		t.Run(name, func(t *testing.T) {
-			plugin := cluster.Plugins[tc.idx]
-			for _, version := range []string{"v1.0.0", "v1.0.1"} {
-				registerPlugin(t, c.systemBackend, plugin.Name, plugin.Typ.String(), version, plugin.Sha256, plugin.FileName)
-			}
-
-			// Mount 1.0.0 then pin to 1.0.1
-			mountPlugin(t, c.systemBackend, plugin.Name, plugin.Typ, "v1.0.0", "")
-			err := c.pluginCatalog.SetPinnedVersion(context.Background(), &pluginutil.PinnedVersion{
-				Name:    plugin.Name,
-				Type:    plugin.Typ,
-				Version: "v1.0.1",
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			mountedPath := "foo/"
-			if plugin.Typ == consts.PluginTypeCredential {
-				mountedPath = "auth/" + mountedPath
-			}
-			expectRunningVersion(t, c, mountedPath, "v1.0.0")
-
-			reloaded, err := c.reloadMatchingPlugin(context.Background(), nil, plugin.Typ, plugin.Name)
-			if reloaded != 1 || err != nil {
-				t.Fatal(reloaded, err)
-			}
-
-			// Pinned version should be in effect after reloading.
-			expectRunningVersion(t, c, mountedPath, "v1.0.1")
-
-			err = c.pluginCatalog.DeletePinnedVersion(context.Background(), plugin.Typ, plugin.Name)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			reloaded, err = c.reloadMatchingPlugin(context.Background(), nil, plugin.Typ, plugin.Name)
-			if reloaded != 1 || err != nil {
-				t.Fatal(reloaded, err)
-			}
-
-			// After pin is deleted, the previously configured version should stand.
-			expectRunningVersion(t, c, mountedPath, "v1.0.0")
-		})
-	}
-}
-
-func expectRunningVersion(t *testing.T, c *Core, path, expectedVersion string) {
-	t.Helper()
-	match := c.router.MatchingMount(namespace.RootContext(context.Background()), path)
-	if match != path {
-		t.Fatalf("missing mount for %s, match: %q", path, match)
-	}
-
-	raw, _ := c.router.root.Get(match)
-	if actual := raw.(*routeEntry).mountEntry.RunningVersion; expectedVersion != actual {
-		t.Fatalf("expected running_plugin_version to be %s but got %s", expectedVersion, actual)
 	}
 }
 

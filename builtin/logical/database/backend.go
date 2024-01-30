@@ -40,9 +40,10 @@ type dbPluginInstance struct {
 	sync.RWMutex
 	database databaseVersionWrapper
 
-	id     string
-	name   string
-	closed bool
+	id                   string
+	name                 string
+	runningPluginVersion string
+	closed               bool
 }
 
 func (dbi *dbPluginInstance) ID() string {
@@ -324,9 +325,10 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 	}
 
 	dbi = &dbPluginInstance{
-		database: dbw,
-		id:       id,
-		name:     name,
+		database:             dbw,
+		id:                   id,
+		name:                 name,
+		runningPluginVersion: pluginVersion,
 	}
 	oldConn := b.connections.Put(name, dbi)
 	if oldConn != nil {
