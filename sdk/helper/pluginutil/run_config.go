@@ -56,6 +56,7 @@ type runConfig struct {
 	runtimeConfig *pluginruntimeutil.PluginRuntimeConfig
 
 	PluginClientConfig
+	tmpdir string
 }
 
 func (rc runConfig) mlockEnabled() bool {
@@ -144,7 +145,7 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 		clientConfig.RunnerFunc = containerCfg.NewContainerRunner
 		clientConfig.UnixSocketConfig = &plugin.UnixSocketConfig{
 			Group:   strconv.Itoa(containerCfg.GroupAdd),
-			TempDir: os.Getenv("VAULT_PLUGIN_TMPDIR"),
+			TempDir: rc.tmpdir,
 		}
 		clientConfig.GRPCBrokerMultiplex = true
 	}
@@ -271,6 +272,7 @@ func (r *PluginRunner) RunConfig(ctx context.Context, opts ...RunOpt) (*plugin.C
 		sha256:        r.Sha256,
 		env:           r.Env,
 		runtimeConfig: r.RuntimeConfig,
+		tmpdir:        r.Tmpdir,
 		PluginClientConfig: PluginClientConfig{
 			Name:       r.Name,
 			PluginType: r.Type,

@@ -54,12 +54,14 @@ func testPluginCatalog(t *testing.T) *PluginCatalog {
 	pluginRuntimeCatalog := testPluginRuntimeCatalog(t)
 	pluginCatalog, err := SetupPluginCatalog(
 		context.Background(),
-		logger,
-		corehelpers.NewMockBuiltinRegistry(),
-		logical.NewLogicalStorage(storage),
-		testDir,
-		false,
-		pluginRuntimeCatalog,
+		&PluginCatalogInput{
+			Logger:               logger,
+			BuiltinRegistry:      corehelpers.NewMockBuiltinRegistry(),
+			CatalogView:          logical.NewLogicalStorage(storage),
+			PluginDirectory:      testDir,
+			EnableMlock:          false,
+			PluginRuntimeCatalog: pluginRuntimeCatalog,
+		},
 	)
 	if err != nil {
 		t.Fatal(err)

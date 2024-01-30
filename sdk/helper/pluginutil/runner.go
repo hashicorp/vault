@@ -69,6 +69,7 @@ type PluginRunner struct {
 	Builtin        bool                        `json:"builtin" structs:"builtin"`
 	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
 	RuntimeConfig  *prutil.PluginRuntimeConfig `json:"-" structs:"-"`
+	Tmpdir         string                      `json:"-" structs:"-"`
 }
 
 // BinaryReference returns either the OCI image reference if it's a container
