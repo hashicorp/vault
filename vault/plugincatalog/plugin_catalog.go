@@ -38,6 +38,7 @@ var (
 	ErrPluginNotFound           = errors.New("plugin not found in the catalog")
 	ErrPluginConnectionNotFound = errors.New("plugin connection not found for client")
 	ErrPluginBadType            = errors.New("unable to determine plugin type")
+	ErrPinnedVersion            = errors.New("cannot delete a pinned version")
 )
 
 // PluginCatalog keeps a record of plugins known to vault. External plugins need
@@ -47,6 +48,7 @@ type PluginCatalog struct {
 	builtinRegistry BuiltinRegistry
 	catalogView     logical.Storage
 	directory       string
+	tmpdir          string
 	logger          log.Logger
 
 	// externalPlugins holds plugin process connections by a key which is
@@ -137,37 +139,42 @@ type pluginClient struct {
 	plugin.ClientProtocol
 }
 
-func SetupPluginCatalog(
-	ctx context.Context,
-	logger log.Logger,
-	builtinRegistry BuiltinRegistry,
-	catalogView logical.Storage,
-	pluginDirectory string,
-	enableMlock bool,
-	pluginRuntimeCatalog *PluginRuntimeCatalog,
-) (*PluginCatalog, error) {
-	pluginCatalog := &PluginCatalog{
-		builtinRegistry: builtinRegistry,
-		catalogView:     catalogView,
-		directory:       pluginDirectory,
+type PluginCatalogInput struct {
+	Logger               log.Logger
+	BuiltinRegistry      BuiltinRegistry
+	CatalogView          logical.Storage
+	PluginDirectory      string
+	Tmpdir               string
+	EnableMlock          bool
+	PluginRuntimeCatalog *PluginRuntimeCatalog
+}
+
+func SetupPluginCatalog(ctx context.Context, in *PluginCatalogInput) (*PluginCatalog, error) {
+	logger := in.Logger
+	catalog := &PluginCatalog{
+		builtinRegistry: in.BuiltinRegistry,
+		catalogView:     in.CatalogView,
+		directory:       in.PluginDirectory,
+		tmpdir:          in.Tmpdir,
 		logger:          logger,
-		mlockPlugins:    enableMlock,
+		mlockPlugins:    in.EnableMlock,
 		wrapper:         logical.StaticSystemView{VersionString: version.GetVersion().Version},
-		runtimeCatalog:  pluginRuntimeCatalog,
+		runtimeCatalog:  in.PluginRuntimeCatalog,
 	}
 
 	// Run upgrade if untyped plugins exist
-	err := pluginCatalog.UpgradePlugins(ctx, logger)
+	err := catalog.upgradePlugins(ctx, logger)
 	if err != nil {
 		logger.Error("error while upgrading plugin storage", "error", err)
 		return nil, err
 	}
 
-	if logger.IsInfo() {
-		logger.Info("successfully setup plugin catalog", "plugin-directory", pluginDirectory)
+	logger.Info("successfully setup plugin catalog", "plugin-directory", catalog.directory)
+	if catalog.tmpdir != "" {
+		logger.Debug("plugin temporary directory configured", "tmpdir", catalog.tmpdir)
 	}
 
-	return pluginCatalog, nil
+	return catalog, nil
 }
 
 type pluginClientConn struct {
@@ -722,9 +729,9 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 	return merr.ErrorOrNil()
 }
 
-// UpgradePlugins will loop over all the plugins of unknown type and attempt to
+// upgradePlugins will loop over all the plugins of unknown type and attempt to
 // upgrade them to typed plugins
-func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) error {
+func (c *PluginCatalog) upgradePlugins(ctx context.Context, logger log.Logger) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -738,6 +745,10 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 	if err != nil {
 		return err
 	}
+	if len(pluginsRaw) == 0 {
+		return nil
+	}
+
 	plugins := make([]string, 0, len(pluginsRaw))
 	for _, p := range pluginsRaw {
 		if !strings.HasSuffix(p, "/") {
@@ -837,6 +848,7 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 		// If none of the cases are satisfied, we'll search for a builtin plugin below.
 		switch {
 		case entry.OCIImage != "":
+			entry.Tmpdir = c.tmpdir
 			if entry.Runtime != "" {
 				entry.RuntimeConfig, err = c.runtimeCatalog.Get(ctx, entry.Runtime, consts.PluginRuntimeTypeContainer)
 				if err != nil {
@@ -1013,6 +1025,14 @@ func (c *PluginCatalog) Delete(ctx context.Context, name string, pluginType cons
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
+	pin, err := c.getPinnedVersionInternal(ctx, pinnedVersionStorageKey(pluginType, name))
+	if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
+		return err
+	}
+	if pin != nil && pin.Version == pluginVersion {
+		return ErrPinnedVersion
+	}
+
 	// Check the name under which the plugin exists, but if it's unfound, don't return any error.
 	pluginKey := path.Join(pluginType.String(), name)
 	if pluginVersion != "" {
@@ -1059,6 +1079,10 @@ func (c *PluginCatalog) ListPluginsWithRuntime(ctx context.Context, runtime stri
 
 	var ret []string
 	for _, key := range keys {
+		// Skip: pinned version entry.
+		if strings.HasPrefix(key, pinnedVersionStoragePrefix) {
+			continue
+		}
 		entry, err := c.catalogView.Get(ctx, key)
 		if err != nil || entry == nil {
 			continue
@@ -1071,6 +1095,9 @@ func (c *PluginCatalog) ListPluginsWithRuntime(ctx context.Context, runtime stri
 
 		if plugin.Runtime == runtime {
 			ret = append(ret, plugin.Name)
+		}
+		if plugin.OCIImage != "" {
+			plugin.Tmpdir = c.tmpdir
 		}
 	}
 	return ret, nil
@@ -1094,6 +1121,11 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 
 	unversionedPlugins := make(map[string]struct{})
 	for _, key := range keys {
+		// Skip: pinned version entry.
+		if strings.HasPrefix(key, pinnedVersionStoragePrefix) {
+			continue
+		}
+
 		var semanticVersion *semver.Version
 
 		entry, err := c.catalogView.Get(ctx, key)
@@ -1125,6 +1157,10 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 		// Only list user-added plugins if they're of the given type.
 		if plugin.Type != consts.PluginTypeUnknown && plugin.Type != pluginType {
 			continue
+		}
+
+		if plugin.OCIImage != "" {
+			plugin.Tmpdir = c.tmpdir
 		}
 
 		result = append(result, pluginutil.VersionedPlugin{
