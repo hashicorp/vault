@@ -43,9 +43,10 @@ export default Component.extend({
     this.scrollToBottom();
   },
 
-  logAndOutput(command, logContent) {
+  logAndOutput(command, logContent, waiterToken) {
     this.console.logAndOutput(command, logContent);
     schedule('afterRender', () => this.scrollToBottom());
+    waiter.endAsync(waiterToken);
   },
 
   isRunning: or('executeCommand.isRunning', 'refreshRoute.isRunning'),
@@ -57,15 +58,19 @@ export default Component.extend({
     let serviceArgs;
 
     if (
-      executeUICommand(command, (args) => this.logAndOutput(args), {
-        api: () => this.routeToExplore.perform(command),
-        clearall: () => service.clearLog(true),
-        clear: () => service.clearLog(),
-        fullscreen: () => this.toggleProperty('isFullscreen'),
-        refresh: () => this.refreshRoute.perform(),
-      })
+      executeUICommand(
+        command,
+        (args) => this.logAndOutput(args),
+        {
+          api: () => this.routeToExplore.perform(command),
+          clearall: () => service.clearLog(true),
+          clear: () => service.clearLog(),
+          fullscreen: () => this.toggleProperty('isFullscreen'),
+          refresh: () => this.refreshRoute.perform(),
+        },
+        waiterToken
+      )
     ) {
-      waiter.endAsync(waiterToken);
       return;
     }
 
@@ -74,9 +79,8 @@ export default Component.extend({
       serviceArgs = parseCommand(command);
     } catch (e) {
       if (shouldThrow) {
-        this.logAndOutput(command, { type: 'help' });
+        this.logAndOutput(command, { type: 'help' }, waiterToken);
       }
-      waiter.endAsync(waiterToken);
       return;
     }
 
@@ -86,19 +90,17 @@ export default Component.extend({
 
     const inputError = formattedErrorFromInput(path, method, flags, dataArray);
     if (inputError) {
-      this.logAndOutput(command, inputError);
-      waiter.endAsync(waiterToken);
+      this.logAndOutput(command, inputError, waiterToken);
       return;
     }
     try {
       const resp = yield service[camelize(method)].call(service, path, data, flags);
-      this.logAndOutput(command, logFromResponse(resp, path, method, flags));
+      this.logAndOutput(command, logFromResponse(resp, path, method, flags), waiterToken);
     } catch (error) {
       if (error instanceof ControlGroupError) {
-        waiter.endAsync(waiterToken);
-        return this.logAndOutput(command, this.controlGroup.logFromError(error));
+        return this.logAndOutput(command, this.controlGroup.logFromError(error), waiterToken);
       }
-      this.logAndOutput(command, logFromError(error, path, method));
+      this.logAndOutput(command, logFromError(error, path, method), waiterToken);
     }
     waiter.endAsync(waiterToken);
   }),
