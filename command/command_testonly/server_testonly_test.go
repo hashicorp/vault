@@ -201,7 +201,6 @@ func TestServer_ReloadRequestLimiter(t *testing.T) {
 				t.Fatalf("test timed out")
 			}
 
-			// Verify that the test-case is
 			verifyLimiters(t, tc.expectedResponse)
 		})
 	}
