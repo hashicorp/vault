@@ -40,9 +40,7 @@ func SetupPluginRuntimeCatalog(ctx context.Context, logger log.Logger, catalogVi
 		logger:      logger,
 	}
 
-	if logger.IsInfo() {
-		logger.Info("successfully setup plugin runtime catalog")
-	}
+	logger.Info("successfully setup plugin runtime catalog")
 
 	return pluginRuntimeCatalog, nil
 }
