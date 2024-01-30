@@ -189,7 +189,7 @@ func SetupPluginCatalog(ctx context.Context, in *PluginCatalogInput) (*PluginCat
 		}
 		if conflicts {
 			logger.Warn("conflicts found between system and plugin environment variables, "+
-				"system environment variables will take precendence until flag is disabled",
+				"system environment variables will take precedence until flag is disabled",
 				pluginutil.PluginUseLegacyEnvLayering, os.Getenv(pluginutil.PluginUseLegacyEnvLayering))
 		} else {
 			logger.Info("no conflicts found between system and plugin environment variables")
