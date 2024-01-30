@@ -300,11 +300,10 @@ func TestSubmitWorkUpdatesIndex(t *testing.T) {
 	newIndex, err := sscm.leaseCache.db.GetCapabilitiesIndex(cachememdb.IndexNameID, indexId)
 	require.Nil(t, err)
 	newIndex.IndexLock.RLock()
-	readablePaths := newIndex.ReadablePaths
-	newIndex.IndexLock.RUnlock()
 	require.Equal(t, map[string]struct{}{
 		"auth/token/lookup-self": {},
-	}, readablePaths)
+	}, newIndex.ReadablePaths)
+	newIndex.IndexLock.RUnlock()
 
 	// Forcefully stop any remaining workers
 	sscm.workerPool.Stop()
@@ -417,11 +416,10 @@ func TestSubmitWorkUpdatesAllIndexes(t *testing.T) {
 	newIndex, err := sscm.leaseCache.db.GetCapabilitiesIndex(cachememdb.IndexNameID, indexId)
 	require.Nil(t, err)
 	newIndex.IndexLock.RLock()
-	readablePaths := newIndex.ReadablePaths
-	newIndex.IndexLock.RUnlock()
 	require.Equal(t, map[string]struct{}{
 		"auth/token/lookup-self": {},
-	}, readablePaths)
+	}, newIndex.ReadablePaths)
+	newIndex.IndexLock.RUnlock()
 
 	// For this, we expect the token to have been deleted
 	newPathIndex1, err := sscm.leaseCache.db.Get(cachememdb.IndexNameID, pathIndexId1)
