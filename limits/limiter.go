@@ -105,7 +105,7 @@ func concurrencyChanger(limit int) int {
 }
 
 var DefaultLimiterFlags = map[string]LimiterFlags{
-	// WriteLimiter defaults flags have a less conservative MinLimit to prevent
+	// WriteLimiter default flags have a less conservative MinLimit to prevent
 	// over-optimizing the request latency, which would result in
 	// under-utilization and client starvation.
 	WriteLimiter: {
