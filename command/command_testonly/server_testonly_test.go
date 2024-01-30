@@ -80,44 +80,44 @@ func TestServer_ReloadRequestLimiter(t *testing.T) {
 	}
 
 	cases := []struct {
-		name        string
-		configAfter string
-		disabled    bool
+		name             string
+		configAfter      string
+		expectedResponse *vault.RequestLimiterResponse
 	}{
 		{
 			"enable after default",
 			baseHCL + requestLimiterEnableHCL,
-			false,
+			enabledResponse,
 		},
 		{
 			"enable after enable",
 			baseHCL + requestLimiterEnableHCL,
-			false,
+			enabledResponse,
 		},
 		{
 			"disable after enable",
 			baseHCL + requestLimiterDisableHCL,
-			true,
+			disabledResponse,
 		},
 		{
 			"default after disable",
 			baseHCL,
-			false,
+			enabledResponse,
 		},
 		{
 			"default after default",
 			baseHCL,
-			false,
+			enabledResponse,
 		},
 		{
 			"disable after default",
 			baseHCL + requestLimiterDisableHCL,
-			true,
+			disabledResponse,
 		},
 		{
 			"disable after disable",
 			baseHCL + requestLimiterDisableHCL,
-			true,
+			disabledResponse,
 		},
 	}
 
@@ -167,8 +167,9 @@ func TestServer_ReloadRequestLimiter(t *testing.T) {
 	output = ui.ErrorWriter.String() + ui.OutputWriter.String()
 	require.Contains(t, output, "Request Limiter: enabled")
 
-	verifyLimiters := func(t *testing.T, expectedDisabled bool) {
+	verifyLimiters := func(t *testing.T, expectedResponse *vault.RequestLimiterResponse) {
 		t.Helper()
+
 		statusResp, err := cli.Logical().Read("/sys/internal/request-limiter/status")
 		require.NoError(t, err)
 		require.NotNil(t, statusResp)
@@ -182,21 +183,15 @@ func TestServer_ReloadRequestLimiter(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, limiters)
 
-		switch expectedDisabled {
-		case true:
-			require.Equal(t, disabledResponse, limiters)
-		default:
-			require.Equal(t, enabledResponse, limiters)
-		}
+		require.Equal(t, expectedResponse, limiters)
 	}
 
-	verifyLimiters(t, false)
+	// Start off with default enabled
+	verifyLimiters(t, enabledResponse)
 
 	for _, tc := range cases {
-		tc := tc
-		// Check that we default on
 		t.Run(tc.name, func(t *testing.T) {
-			// write the new contents and reload the server
+			// Write the new contents and reload the server
 			f, err = os.OpenFile(configPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
 			require.NoError(t, err)
 			defer f.Close()
@@ -210,7 +205,9 @@ func TestServer_ReloadRequestLimiter(t *testing.T) {
 			case <-time.After(5 * time.Second):
 				t.Fatalf("test timed out")
 			}
-			verifyLimiters(t, tc.disabled)
+
+			// Verify that the test-case is
+			verifyLimiters(t, tc.expectedResponse)
 		})
 	}
 }
