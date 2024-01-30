@@ -9,6 +9,7 @@ import (
 	"crypto/x509/pkix"
 	"fmt"
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/stretchr/testify/require"
@@ -351,6 +352,7 @@ func TestParseCertificate(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			// Note that this test's data is used to create the internal CA used by test "full non CA cert"
 			name: "full CA",
 			data: map[string]interface{}{
 				// using the same order as in https://developer.hashicorp.com/vault/api-docs/secret/pki#sign-certificate
@@ -438,21 +440,126 @@ func TestParseCertificate(t *testing.T) {
 			},
 			wantErr: false,
 		},
-		// TODO(victorr): need a test for non CA
+		{
+			// Note that we use the data of test "full CA" to create the internal CA needed for this test
+			name: "full non CA cert",
+			data: map[string]interface{}{
+				// using the same order as in https://developer.hashicorp.com/vault/api-docs/secret/pki#generate-certificate-and-key
+				"common_name": "the common name non ca",
+				"alt_names":   "user@example.com,admin@example.com,example.com,www.example.com",
+				"ip_sans":     "1.2.3.4,1.2.3.5",
+				"uri_sans":    "https://example.com,https://www.example.com",
+				"other_sans":  "1.3.6.1.4.1.311.20.2.3;utf8:caadmin@example.com",
+				"ttl":         "2h",
+				// format
+				// private_key_format
+				"exclude_cn_from_sans": true,
+				// not_after
+				// remove_roots_from_chain
+				"user_ids": "humanoid,robot",
+			},
+			ttl: 2 * time.Hour,
+			wantParams: certutil.CreationParameters{
+				Subject: pkix.Name{
+					CommonName: "the common name non ca",
+				},
+				DNSNames:                      []string{"example.com", "www.example.com"},
+				EmailAddresses:                []string{"admin@example.com", "user@example.com"},
+				IPAddresses:                   []net.IP{[]byte{1, 2, 3, 4}, []byte{1, 2, 3, 5}},
+				URIs:                          []*url.URL{parseURL("https://example.com"), parseURL("https://www.example.com")},
+				OtherSANs:                     map[string][]string{"1.3.6.1.4.1.311.20.2.3": []string{"caadmin@example.com"}},
+				IsCA:                          false,
+				KeyType:                       "rsa",
+				KeyBits:                       2048,
+				NotAfter:                      time.Time{},
+				KeyUsage:                      x509.KeyUsageKeyAgreement | x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+				ExtKeyUsage:                   0,
+				ExtKeyUsageOIDs:               nil,
+				PolicyIdentifiers:             nil,
+				BasicConstraintsValidForNonCA: false,
+				SignatureBits:                 256, // TODO(victorr): why is it 256?
+				UsePSS:                        false,
+				ForceAppendCaChain:            false,
+				UseCSRValues:                  false,
+				PermittedDNSDomains:           nil, //[]string{".example.com", ".www.example.com"},
+				URLs:                          nil,
+				MaxPathLength:                 0,
+				NotBeforeDuration:             30, // TODO(victorr): why is this 30?
+				SKID:                          []byte("We'll assert that it is not nil as an special case"),
+			},
+			wantFields: map[string]interface{}{
+				"common_name":           "the common name non ca",
+				"alt_names":             "example.com,www.example.com,admin@example.com,user@example.com",
+				"ip_sans":               "1.2.3.4,1.2.3.5",
+				"uri_sans":              "https://example.com,https://www.example.com",
+				"other_sans":            "1.3.6.1.4.1.311.20.2.3;UTF-8:caadmin@example.com",
+				"signature_bits":        256,
+				"exclude_cn_from_sans":  true,
+				"ou":                    "",
+				"organization":          "",
+				"country":               "",
+				"locality":              "",
+				"province":              "",
+				"street_address":        "",
+				"postal_code":           "",
+				"serial_number":         "",
+				"ttl":                   "2h0m30s",
+				"max_path_length":       0,
+				"permitted_dns_domains": "",
+				"use_pss":               false,
+				"key_type":              "rsa",
+				"key_bits":              2048,
+				"skid":                  "We'll assert that it is not nil as an special case",
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 
 		b, s := CreateBackendWithStorage(t)
 
+		var cert *x509.Certificate
 		issueTime := time.Now()
-		resp, err := CBWrite(b, s, "root/generate/internal", tt.data)
-		require.NoError(t, err)
-		require.NotNil(t, resp)
+		if tt.wantParams.IsCA {
+			resp, err := CBWrite(b, s, "root/generate/internal", tt.data)
+			require.NoError(t, err)
+			require.NotNil(t, resp)
 
-		certData := resp.Data["certificate"].(string)
-		cert, err := parsing.ParseCertificateFromString(certData)
-		require.NoError(t, err)
-		require.NotNil(t, cert)
+			certData := resp.Data["certificate"].(string)
+			cert, err = parsing.ParseCertificateFromString(certData)
+			require.NoError(t, err)
+			require.NotNil(t, cert)
+		} else {
+			// use the "simple CA" data to create the internal CA
+			caData := tests[1].data
+			caData["ttl"] = "3h"
+			resp, err := CBWrite(b, s, "root/generate/internal", caData)
+			require.NoError(t, err)
+			require.NotNil(t, resp)
+
+			// create a role
+			resp, err = CBWrite(b, s, "roles/test", map[string]interface{}{
+				"allow_any_name": true,
+				//"allow_subdomains": true,
+				"cn_validations":     "disabled",
+				"allow_ip_sans":      true,
+				"allowed_other_sans": "1.3.6.1.4.1.311.20.2.3;utf8:*@example.com",
+				"allowed_uri_sans":   "https://example.com,https://www.example.com",
+				"allowed_user_ids":   "*",
+			})
+			require.NoError(t, err)
+			require.NotNil(t, resp)
+
+			// create the cert
+			resp, err = CBWrite(b, s, "issue/test", tt.data)
+			require.NoError(t, err)
+			require.NotNil(t, resp)
+
+			certData := resp.Data["certificate"].(string)
+			cert, err = parsing.ParseCertificateFromString(certData)
+			require.NoError(t, err)
+			require.NotNil(t, cert)
+		}
 
 		t.Run(tt.name+" parameters", func(t *testing.T) {
 			testParseCertificateToCreationParameters(t, issueTime, tt, cert)
@@ -492,10 +599,10 @@ func testParseCertificateToCreationParameters(t *testing.T, issueTime time.Time,
 		}
 
 		require.NotNil(t, params.SKID)
-		require.GreaterOrEqual(t, params.NotBeforeDuration, tt.wantParams.NotBeforeDuration)
+		require.GreaterOrEqual(t, params.NotBeforeDuration, tt.wantParams.NotBeforeDuration, "NotBeforeDuration")
 
-		require.GreaterOrEqual(t, params.NotAfter, issueTime.Add(tt.ttl).Add(-1*time.Minute))
-		require.LessOrEqual(t, params.NotAfter, issueTime.Add(tt.ttl).Add(1*time.Minute))
+		require.GreaterOrEqual(t, params.NotAfter, issueTime.Add(tt.ttl).Add(-1*time.Minute), "NotAfter")
+		require.LessOrEqual(t, params.NotAfter, issueTime.Add(tt.ttl).Add(1*time.Minute), "NotAfter")
 	}
 }
 
@@ -509,6 +616,22 @@ func testParseCertificateToFields(t *testing.T, issueTime time.Time, tt *parseCe
 		require.NotNil(t, fields["skid"])
 		delete(fields, "skid")
 		delete(tt.wantFields, "skid")
+
+		{
+			// Sometimes TTL comes back as 1s off, so we'll allow that
+			expectedTTL, err := parseutil.ParseDurationSecond(tt.wantFields["ttl"].(string))
+			require.NoError(t, err)
+			actualTTL, err := parseutil.ParseDurationSecond(fields["ttl"].(string))
+			require.NoError(t, err)
+
+			diff := expectedTTL - actualTTL
+			if diff < 0 {
+				diff = -diff
+			}
+			require.LessOrEqual(t, diff, 1*time.Second, "ttl must be at most 1s off")
+			delete(fields, "ttl")
+			delete(tt.wantFields, "ttl")
+		}
 
 		if diff := deep.Equal(tt.wantFields, fields); diff != nil {
 			t.Errorf("testParseCertificateToFields() diff: %s", strings.ReplaceAll(strings.Join(diff, "\n"), "map", "\nmap"))
