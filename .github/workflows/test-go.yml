@@ -174,7 +174,7 @@ jobs:
           # testonly tagged tests need an additional tag to be included
           # also running some extra tests for sanity checking with the testonly build tag
           (
-            echo "${{ steps.list-testonly.output.packages }}"| gotestsum tool ci-matrix --debug \
+            echo "${{ steps.list-testonly.outputs.packages }}"| gotestsum tool ci-matrix --debug \
               --partitions "${{ inputs.total-runners }}" \
               --timing-files 'test-results/go-test/*.json' > matrix.json
           )
