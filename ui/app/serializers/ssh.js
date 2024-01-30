@@ -24,7 +24,7 @@ export default RESTSerializer.extend({
   },
 
   normalizeItems(payload) {
-    payload = { ...payload, ...payload.data };
+    Object.assign(payload, payload.data);
     delete payload.data;
     return payload;
   },

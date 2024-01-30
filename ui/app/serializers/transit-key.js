@@ -18,7 +18,7 @@ export default RESTSerializer.extend({
       const secrets = payload.data.keys.map((secret) => ({ name: secret, backend: payload.backend }));
       return secrets;
     }
-    payload = { ...payload, ...payload.data };
+    Object.assign(payload, payload.data);
     delete payload.data;
     // timestamps for these two are in seconds...
     if (

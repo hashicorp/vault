@@ -18,7 +18,7 @@ export default ApplicationSerializer.extend({
         return model;
       });
     }
-    payload = { ...payload, ...payload.data };
+    Object.assign(payload, payload.data);
     delete payload.data;
     return payload;
   },

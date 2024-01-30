@@ -29,7 +29,7 @@ export default JSONSerializer.extend({
       });
       return models;
     }
-    payload = { ...payload, ...payload.data };
+    Object.assign(payload, payload.data);
     delete payload.data;
     return payload;
   },
