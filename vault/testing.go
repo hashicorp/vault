@@ -1430,6 +1430,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.MaxLeaseTTL = base.MaxLeaseTTL
 		coreConfig.CacheSize = base.CacheSize
 		coreConfig.PluginDirectory = base.PluginDirectory
+		coreConfig.PluginTmpdir = base.PluginTmpdir
 		coreConfig.Seal = base.Seal
 		coreConfig.UnwrapSeal = base.UnwrapSeal
 		coreConfig.DevToken = base.DevToken
