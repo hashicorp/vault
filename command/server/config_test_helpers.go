@@ -803,6 +803,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"max_lease_ttl":    (30 * 24 * time.Hour) / time.Second,
 		"pid_file":         "./pidfile",
 		"plugin_directory": "",
+		"plugin_tmpdir":    "",
 		"seals": []interface{}{
 			map[string]interface{}{
 				"disabled": false,

@@ -1234,7 +1234,12 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 			return nil, fmt.Errorf("core setup failed, could not verify plugin directory: %w", err)
 		}
 	}
-	c.pluginTmpdir = conf.PluginTmpdir
+	if conf.PluginTmpdir != "" {
+		c.pluginTmpdir, err = filepath.Abs(conf.PluginTmpdir)
+		if err != nil {
+			return nil, fmt.Errorf("core setup failed, could not verify plugin tmpdir: %w", err)
+		}
+	}
 
 	if conf.PluginFileUid != 0 {
 		c.pluginFileUid = conf.PluginFileUid
