@@ -15,23 +15,21 @@
         placeholder="Search by message title"
         value={{@pageFilter}}
         @autofocus={{true}}
-        @wait={{200}}
+        @wait={{500}}
         @onInput={{this.onFilterChange}}
       />
     {{/if}}
   </:toolbarFilters>
   <:toolbarActions>
-    {{#if @messages.canCreateCustomMessages}}
-      <Hds::Button
-        @text="Create message"
-        @icon="plus"
-        @color="secondary"
-        class="toolbar-button"
-        {{on "click" this.createMessage}}
-        data-test-button="create message"
-        aria-label="create message"
-      />
-    {{/if}}
+    <Hds::Button
+      @text="Create message"
+      @icon="plus"
+      @color="secondary"
+      class="toolbar-button"
+      {{on "click" this.createMessage}}
+      data-test-button="create message"
+      aria-label="create message"
+    />
   </:toolbarActions>
 </Messages::TabPageHeader>
 
@@ -101,22 +99,17 @@
 {{else}}
   <EmptyState
     @title="No messages yet"
-    @message="Add a custom message for all users after they log into Vault. {{if
-      @messages.canCreateCustomMessages
-      'Create message to get started.'
-    }}"
+    @message="Add a custom message for all users after they log into Vault. Create message to get started."
   >
-    {{#if @messages.canCreateCustomMessages}}
-      <Hds::Link::Standalone
-        @icon="plus"
-        @iconPosition="leading"
-        @text="Create message"
-        @route="messages.create"
-        @query={{hash authenticated=@authenticated}}
-        class="is-no-underline"
-        data-test-action-text="Create message"
-      />
-    {{/if}}
+    <Hds::Link::Standalone
+      @icon="plus"
+      @iconPosition="leading"
+      @text="Create message"
+      @route="messages.create"
+      @query={{hash authenticated=@authenticated}}
+      class="is-no-underline"
+      data-test-action-text="Create message"
+    />
   </EmptyState>
 {{/if}}
 
