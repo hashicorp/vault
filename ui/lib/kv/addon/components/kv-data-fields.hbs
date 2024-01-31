@@ -15,7 +15,7 @@
 {{#if @showJson}}
   <JsonEditor
     @title="{{if (eq @type 'create') 'Secret' 'Version'}} data"
-    @value={{this.secretDataForCodeMirror}}
+    @value={{this.stringifiedSecretData}}
     @obscure={{@obscureJson}}
     @valueUpdated={{this.handleJson}}
     @readOnly={{eq @type "details"}}
@@ -34,7 +34,14 @@
 {{else if (eq @type "details")}}
   {{#each-in @secret.secretData as |key value|}}
     <InfoTableRow @label={{key}} @value={{value}} @alwaysRender={{true}}>
-      <MaskedInput @name={{key}} @value={{value}} @displayOnly={{true}} @allowCopy={{true}} @allowDownload={{true}} />
+      <MaskedInput
+        @name={{key}}
+        {{! ARG TODO stringify only if object }}
+        @value={{stringify value}}
+        @displayOnly={{true}}
+        @allowCopy={{true}}
+        @allowDownload={{true}}
+      />
     </InfoTableRow>
   {{else}}
     <InfoTableRow @label="" @value="" @alwaysRender={{true}} />

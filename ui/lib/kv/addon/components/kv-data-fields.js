@@ -30,7 +30,7 @@ import { stringify } from 'core/helpers/stringify';
 export default class KvDataFields extends Component {
   @tracked lintingErrors;
 
-  get secretDataForCodeMirror() {
+  get stringifiedSecretData() {
     return this.args.secret?.secretData ? stringify([this.args.secret.secretData], {}) : '{ "": "" }';
   }
 
