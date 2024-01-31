@@ -78,22 +78,27 @@ func TestSQS_SendOneMessage(t *testing.T) {
 	})
 
 	backend := New()
-	ctx := context.Background()
-
 	subID, err := uuid.GenerateUUID()
 	assert.Nil(t, err)
 
-	err = backend.Subscribe(ctx, &event.SubscribeRequest{
-		SubscriptionID: subID,
-		Config: map[string]interface{}{
-			"queue_name": tempQueueName,
-			"region":     os.Getenv("AWS_REGION"),
+	err = backend.Send(&event.Request{
+		Subscribe: &event.SubscribeRequest{
+			SubscriptionID: subID,
+			Config: map[string]interface{}{
+				"queue_name": tempQueueName,
+				"region":     os.Getenv("AWS_REGION"),
+			},
+			VerifyConnection: false,
 		},
-		VerifyConnection: false,
 	})
 	assert.Nil(t, err)
 
-	err = backend.SendSubscriptionEvent(subID, "{}")
+	err = backend.Send(&event.Request{
+		Event: &event.SendEventRequest{
+			SubscriptionID: subID,
+			EventJSON:      "{}",
+		},
+	})
 	assert.Nil(t, err)
 
 	msg := receiveMessage(t, sqsClient, tempQueueURL)

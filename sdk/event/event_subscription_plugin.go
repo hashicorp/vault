@@ -13,8 +13,10 @@ import (
 
 // SubscriptionPlugin is the interface implemented by plugins that can subscribe to and receive events.
 type SubscriptionPlugin interface {
-	Subscribe(ctx context.Context, request *SubscribeRequest) error
-	SendSubscriptionEvent(subscriptionID string, eventJson string) error
+	// Send is used to set up a new connection and send events to that connection.
+	// The first call should have .Subscribe populated with the configuration.
+	// Other calls should populate .Event with the event being sent.
+	Send(request *Request) error
 	Unsubscribe(ctx context.Context, subscriptionID string) error
 	// PluginName returns the name for the particular event subscription plugin.
 	// This type name is usually set as a constant the backend, e.g., "sqs" for the
@@ -24,10 +26,20 @@ type SubscriptionPlugin interface {
 	Close(ctx context.Context) error
 }
 
+type Request struct {
+	Subscribe *SubscribeRequest
+	Event     *SendEventRequest
+}
+
 type SubscribeRequest struct {
 	SubscriptionID   string
 	Config           map[string]interface{}
 	VerifyConnection bool
+}
+
+type SendEventRequest struct {
+	SubscriptionID string
+	EventJSON      string
 }
 
 // SubscribeConfigDefaults defines configuration map keys for common default options.

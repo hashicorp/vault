@@ -75,7 +75,7 @@ func newClient(sconfig *sqsConfig) (*sqs.SQS, error) {
 	return sqs.New(session), nil
 }
 
-func (s *sqsBackend) Subscribe(_ context.Context, request *event.SubscribeRequest) error {
+func (s *sqsBackend) subscribe(request *event.SubscribeRequest) error {
 	var sconfig sqsConfig
 	err := mapstructure.Decode(request.Config, &sconfig)
 	if err != nil {
@@ -154,25 +154,16 @@ func (s *sqsBackend) getConn(subscriptionID string) (*sqsConnection, error) {
 	return conn, nil
 }
 
-func (s *sqsBackend) SendSubscriptionEvent(subscriptionID string, eventJson string) error {
-	conn, err := s.getConn(subscriptionID)
-	if err != nil {
-		return err
+func (s *sqsBackend) Send(request *event.Request) error {
+	if request.Subscribe != nil {
+		return s.subscribe(request.Subscribe)
+	} else {
+		return s.sendEvent(request.Event)
 	}
-	backoff := conn.config.NewRetryBackoff()
-	err = backoff.Retry(func() error {
-		_, err = conn.client.SendMessage(&sqs.SendMessageInput{
-			MessageBody: &eventJson,
-			QueueUrl:    &conn.queueURL,
-		})
-		return err
-	})
-	if err != nil {
-		// refresh client and try again
-		s.killConnection(subscriptionID)
-		return err
-	}
-	return nil
+}
+
+func (s *sqsBackend) sendEvent(send *event.SendEventRequest) error {
+	return s.sendSubscriptionEventInternal(send.SubscriptionID, send.EventJSON, false)
 }
 
 func (s *sqsBackend) refreshClient(subscriptionID string) error {
