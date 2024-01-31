@@ -1668,7 +1668,7 @@ func getExtKeyUsageOids(exts []pkix.Extension) (keyUsageOidStrings []string, err
 			return keyUsageOidStrings, nil
 		}
 	}
-	return keyUsageOidStrings, nil
+	return nil, nil
 }
 
 func getPolicyIdentifiers(exts []pkix.Extension) (policyIdentifiers []string, err error) {
@@ -1694,7 +1694,7 @@ func getPolicyIdentifiers(exts []pkix.Extension) (policyIdentifiers []string, er
 			return policyIdentifiers, nil
 		}
 	}
-	return policyIdentifiers, nil
+	return nil, nil
 }
 
 // Translate Certificates and CSRs into Certificate Template
@@ -1783,12 +1783,21 @@ func ParseCsrToCreationParameters(csr x509.CertificateRequest) (creationParamete
 	}
 
 	keyUsage, err := getKeyUsage(csr.Extensions)
+	if err != nil {
+		return CreationParameters{}, err
+	}
 	creationParameters.KeyUsage = keyUsage
 
 	extKeyUsageOIDS, err := getExtKeyUsageOids(csr.Extensions)
+	if err != nil {
+		return CreationParameters{}, err
+	}
 	creationParameters.ExtKeyUsageOIDs = extKeyUsageOIDS
 
 	policyInformationOids, err := getPolicyIdentifiers(csr.Extensions)
+	if err != nil {
+		return CreationParameters{}, err
+	}
 	creationParameters.PolicyIdentifiers = policyInformationOids
 
 	found, isCA, maxPathLength, err := getBasicConstraintsFromExtension(csr.Extensions)
