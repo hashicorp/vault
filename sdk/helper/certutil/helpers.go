@@ -1658,7 +1658,7 @@ func getExtKeyUsageOids(exts []pkix.Extension) (keyUsageOidStrings []string, err
 	keyUsageOids := make([]asn1.ObjectIdentifier, 0)
 	for _, ext := range exts {
 		if ext.Id.Equal(ExtendedKeyUsageOID) {
-			_, err := asn1.Unmarshal(ext.Value, keyUsageOids)
+			_, err := asn1.Unmarshal(ext.Value, &keyUsageOids)
 			if err != nil {
 				return nil, fmt.Errorf("unable to unmarshal KeyUsageOid extension: %w", err)
 			}
@@ -1680,8 +1680,8 @@ func getPolicyIdentifiers(exts []pkix.Extension) (policyIdentifiers []string, er
 			//        policyQualifiers   SEQUENCE SIZE (1..MAX) OF
 			//                                PolicyQualifierInfo OPTIONAL }
 			type policyInformation struct {
-				policyIdentifier asn1.ObjectIdentifier `asn1:"explicit,tag:0"`
-				policyQualifier  any                   `asn1:"optional,tag:1"`
+				PolicyIdentifier asn1.ObjectIdentifier `asn1:"optional"`
+				PolicyQualifier  any                   `asn1:"optional"`
 			}
 			policies := make([]policyInformation, 0)
 			_, err := asn1.Unmarshal(ext.Value, &policies)
@@ -1689,7 +1689,7 @@ func getPolicyIdentifiers(exts []pkix.Extension) (policyIdentifiers []string, er
 				return nil, err
 			}
 			for _, policy := range policies {
-				policyIdentifiers = append(policyIdentifiers, policy.policyIdentifier.String())
+				policyIdentifiers = append(policyIdentifiers, policy.PolicyIdentifier.String())
 			}
 			return policyIdentifiers, nil
 		}

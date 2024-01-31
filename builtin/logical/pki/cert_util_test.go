@@ -8,17 +8,18 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
-	"github.com/go-test/deep"
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
-	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/stretchr/testify/require"
 	"net"
 	"net/url"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/go-test/deep"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/stretchr/testify/require"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -395,7 +396,7 @@ func TestParseCertificate(t *testing.T) {
 				EmailAddresses:                []string{"admin@example.com", "user@example.com"},
 				IPAddresses:                   []net.IP{[]byte{1, 2, 3, 4}, []byte{1, 2, 3, 5}},
 				URIs:                          []*url.URL{parseURL("https://example.com"), parseURL("https://www.example.com")},
-				OtherSANs:                     map[string][]string{"1.3.6.1.4.1.311.20.2.3": []string{"caadmin@example.com"}},
+				OtherSANs:                     map[string][]string{"1.3.6.1.4.1.311.20.2.3": {"caadmin@example.com"}},
 				IsCA:                          true,
 				KeyType:                       "rsa",
 				KeyBits:                       2048,
@@ -460,7 +461,7 @@ func TestParseCertificate(t *testing.T) {
 				"user_ids": "humanoid,robot",
 			},
 			roleData: map[string]interface{}{
-				"allow_any_name": true,
+				"allow_any_name":      true,
 				"cn_validations":      "disabled",
 				"allow_ip_sans":       true,
 				"allowed_other_sans":  "1.3.6.1.4.1.311.20.2.3;utf8:*@example.com",
@@ -468,6 +469,11 @@ func TestParseCertificate(t *testing.T) {
 				"allowed_user_ids":    "*",
 				"not_before_duration": "45s",
 				"signature_bits":      384,
+				"key_usage":           "KeyAgreement",
+				"ext_key_usage":       "ServerAuth",
+				"client_flag":         false,
+				"server_flag":         false,
+				"policy_identifiers":  "1.2.3.4.5.6.7.8.9.0",
 			},
 			ttl: 2 * time.Hour,
 			wantParams: certutil.CreationParameters{
@@ -478,15 +484,15 @@ func TestParseCertificate(t *testing.T) {
 				EmailAddresses:                []string{"admin@example.com", "user@example.com"},
 				IPAddresses:                   []net.IP{[]byte{1, 2, 3, 4}, []byte{1, 2, 3, 5}},
 				URIs:                          []*url.URL{parseURL("https://example.com"), parseURL("https://www.example.com")},
-				OtherSANs:                     map[string][]string{"1.3.6.1.4.1.311.20.2.3": []string{"caadmin@example.com"}},
+				OtherSANs:                     map[string][]string{"1.3.6.1.4.1.311.20.2.3": {"caadmin@example.com"}},
 				IsCA:                          false,
 				KeyType:                       "rsa",
 				KeyBits:                       2048,
 				NotAfter:                      time.Time{},
-				KeyUsage:                      x509.KeyUsageKeyAgreement | x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-				ExtKeyUsage:                   0,
-				ExtKeyUsageOIDs:               nil,
-				PolicyIdentifiers:             nil,
+				KeyUsage:                      x509.KeyUsageKeyAgreement,
+				ExtKeyUsage:                   0, // Please Ignore
+				ExtKeyUsageOIDs:               []string{"1.3.6.1.5.5.7.3.1"},
+				PolicyIdentifiers:             []string{"1.2.3.4.5.6.7.8.9.0"},
 				BasicConstraintsValidForNonCA: false,
 				SignatureBits:                 384,
 				UsePSS:                        false,
@@ -764,7 +770,7 @@ func TestParseCsr(t *testing.T) {
 				EmailAddresses:                []string{"admin@example.com", "user@example.com"},
 				IPAddresses:                   []net.IP{[]byte{1, 2, 3, 4}, []byte{1, 2, 3, 5}},
 				URIs:                          []*url.URL{parseURL("https://example.com"), parseURL("https://www.example.com")},
-				OtherSANs:                     map[string][]string{"1.3.6.1.4.1.311.20.2.3": []string{"caadmin@example.com"}},
+				OtherSANs:                     map[string][]string{"1.3.6.1.4.1.311.20.2.3": {"caadmin@example.com"}},
 				IsCA:                          true,
 				KeyType:                       "rsa",
 				KeyBits:                       2048,
@@ -851,7 +857,7 @@ func TestParseCsr(t *testing.T) {
 				EmailAddresses:                []string{"admin@example.com", "user@example.com"},
 				IPAddresses:                   []net.IP{[]byte{1, 2, 3, 4}, []byte{1, 2, 3, 5}},
 				URIs:                          []*url.URL{parseURL("https://example.com"), parseURL("https://www.example.com")},
-				OtherSANs:                     map[string][]string{"1.3.6.1.4.1.311.20.2.3": []string{"caadmin@example.com"}},
+				OtherSANs:                     map[string][]string{"1.3.6.1.4.1.311.20.2.3": {"caadmin@example.com"}},
 				IsCA:                          false,
 				KeyType:                       "rsa",
 				KeyBits:                       2048,
