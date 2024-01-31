@@ -85,10 +85,7 @@ var InvSignatureAlgorithmNames = map[x509.SignatureAlgorithm]string{
 }
 
 // OIDs for X.509 SAN Extension
-var (
-	OidExtensionSubjectAltName    = asn1.ObjectIdentifier([]int{2, 5, 29, 17})
-	OidExtensionChangeSubjectName = asn1.ObjectIdentifier([]int{1, 3, 6, 1, 5, 5, 7, 7, 36}) // https://oidref.com/1.3.6.1.5.5.7.7.36
-)
+var OidExtensionSubjectAltName = asn1.ObjectIdentifier([]int{2, 5, 29, 17})
 
 // OID for RFC 5280 CRL Number extension.
 //
@@ -1714,16 +1711,16 @@ func ParseCertificateToCreationParameters(certificate x509.Certificate) (creatio
 		URIs:           certificate.URIs,
 		OtherSANs:      otherSans,
 		IsCA:           certificate.IsCA,
-		KeyType:        getKeyType(certificate.PublicKeyAlgorithm.String()),
-		KeyBits:        findBitLength(certificate.PublicKey),
+		KeyType:        GetKeyType(certificate.PublicKeyAlgorithm.String()),
+		KeyBits:        FindBitLength(certificate.PublicKey),
 		NotAfter:       certificate.NotAfter,
 		KeyUsage:       certificate.KeyUsage,
 		// ExtKeyUsage: We use ExtKeyUsageOIDs instead as the more general field
 		// ExtKeyUsageOIDs: this is an extension that may not be set, so is handled below
 		// PolicyIdentifiers: this is an extension that may not be set, so is handled below
 		BasicConstraintsValidForNonCA: certificate.BasicConstraintsValid,
-		SignatureBits:                 findSignatureBits(certificate.SignatureAlgorithm),
-		UsePSS:                        isPSS(certificate.SignatureAlgorithm),
+		SignatureBits:                 FindSignatureBits(certificate.SignatureAlgorithm),
+		UsePSS:                        IsPSS(certificate.SignatureAlgorithm),
 		// The following two values are on creation parameters, but are impossible to parse from the certificate
 		// ForceAppendCaChain
 		// UseCSRValues
@@ -1762,16 +1759,16 @@ func ParseCsrToCreationParameters(csr x509.CertificateRequest) (creationParamete
 		URIs:           csr.URIs,
 		OtherSANs:      otherSANs,
 		// IsCA: is handled below since the basic constraint it comes from might not be set on the CSR
-		KeyType: getKeyType(csr.PublicKeyAlgorithm.String()),
-		KeyBits: findBitLength(csr.PublicKey),
+		KeyType: GetKeyType(csr.PublicKeyAlgorithm.String()),
+		KeyBits: FindBitLength(csr.PublicKey),
 		// NotAfter: this is not set on a CSR
 		// KeyUsage: handled below since this may not be set
 		// ExtKeyUsage: We use exclusively ExtKeyUsageOIDs here
 		// ExtKeyUsageOIDs: handled below since this may not be set
 		// PolicyIdentifiers: handled below since this may not be set
 		// BasicConstraintsValidForNonCA is handled below, since it may or may not be set on the CSR
-		SignatureBits: findSignatureBits(csr.SignatureAlgorithm),
-		UsePSS:        isPSS(csr.SignatureAlgorithm),
+		SignatureBits: FindSignatureBits(csr.SignatureAlgorithm),
+		UsePSS:        IsPSS(csr.SignatureAlgorithm),
 		// The following two values are on creation parameters, but are impossible to parse from the csr
 		// ForceAppendCaChain
 		// UseCSRValues
@@ -1823,12 +1820,12 @@ func ParseCsrToFields(csr x509.CertificateRequest) (templateData map[string]inte
 
 	templateData = map[string]interface{}{
 		"common_name":          csr.Subject.CommonName,
-		"alt_names":            makeAltNamesCommaSeparatedString(csr.DNSNames, csr.EmailAddresses),
-		"ip_sans":              makeIpAddressCommaSeparatedString(csr.IPAddresses),
-		"uri_sans":             makeUriCommaSeparatedString(csr.URIs),
+		"alt_names":            MakeAltNamesCommaSeparatedString(csr.DNSNames, csr.EmailAddresses),
+		"ip_sans":              MakeIpAddressCommaSeparatedString(csr.IPAddresses),
+		"uri_sans":             MakeUriCommaSeparatedString(csr.URIs),
 		"other_sans":           otherSans,
-		"signature_bits":       findSignatureBits(csr.SignatureAlgorithm),
-		"exclude_cn_from_sans": determineExcludeCnFromCsrSans(csr),
+		"signature_bits":       FindSignatureBits(csr.SignatureAlgorithm),
+		"exclude_cn_from_sans": DetermineExcludeCnFromCsrSans(csr),
 		"ou":                   makeCommaSeparatedString(csr.Subject.OrganizationalUnit),
 		"organization":         makeCommaSeparatedString(csr.Subject.Organization),
 		"country":              makeCommaSeparatedString(csr.Subject.Country),
@@ -1840,10 +1837,10 @@ func ParseCsrToFields(csr x509.CertificateRequest) (templateData map[string]inte
 		// There is no "TTL" on a CSR, that is always set by the signer
 		// max_path_length is handled below
 		// permitted_dns_domains is a CA thing, it generally does not appear on a CSR
-		"use_pss": isPSS(csr.SignatureAlgorithm),
+		"use_pss": IsPSS(csr.SignatureAlgorithm),
 		// skid could be calculated, but does not directly exist on a csr, so punting for now
-		"key_type": getKeyType(csr.PublicKeyAlgorithm.String()),
-		"key_bits": findBitLength(csr.PublicKey),
+		"key_type": GetKeyType(csr.PublicKeyAlgorithm.String()),
+		"key_bits": FindBitLength(csr.PublicKey),
 	}
 
 	// isCA is not a field in our data call - that is represented inside vault by using a different endpoint
@@ -1864,12 +1861,12 @@ func ParseCertificateToFields(certificate x509.Certificate) (templateData map[st
 
 	templateData = map[string]interface{}{
 		"common_name":           certificate.Subject.CommonName,
-		"alt_names":             makeAltNamesCommaSeparatedString(certificate.DNSNames, certificate.EmailAddresses),
-		"ip_sans":               makeIpAddressCommaSeparatedString(certificate.IPAddresses),
-		"uri_sans":              makeUriCommaSeparatedString(certificate.URIs),
+		"alt_names":             MakeAltNamesCommaSeparatedString(certificate.DNSNames, certificate.EmailAddresses),
+		"ip_sans":               MakeIpAddressCommaSeparatedString(certificate.IPAddresses),
+		"uri_sans":              MakeUriCommaSeparatedString(certificate.URIs),
 		"other_sans":            otherSans,
-		"signature_bits":        findSignatureBits(certificate.SignatureAlgorithm),
-		"exclude_cn_from_sans":  determineExcludeCnFromCertSans(certificate),
+		"signature_bits":        FindSignatureBits(certificate.SignatureAlgorithm),
+		"exclude_cn_from_sans":  DetermineExcludeCnFromCertSans(certificate),
 		"ou":                    makeCommaSeparatedString(certificate.Subject.OrganizationalUnit),
 		"organization":          makeCommaSeparatedString(certificate.Subject.Organization),
 		"country":               makeCommaSeparatedString(certificate.Subject.Country),
@@ -1881,10 +1878,10 @@ func ParseCertificateToFields(certificate x509.Certificate) (templateData map[st
 		"ttl":                   (certificate.NotAfter.Sub(certificate.NotBefore)).String(),
 		"max_path_length":       certificate.MaxPathLen,
 		"permitted_dns_domains": strings.Join(certificate.PermittedDNSDomains, ","),
-		"use_pss":               isPSS(certificate.SignatureAlgorithm),
+		"use_pss":               IsPSS(certificate.SignatureAlgorithm),
 		"skid":                  hex.EncodeToString(certificate.SubjectKeyId),
-		"key_type":              getKeyType(certificate.PublicKeyAlgorithm.String()),
-		"key_bits":              findBitLength(certificate.PublicKey),
+		"key_type":              GetKeyType(certificate.PublicKeyAlgorithm.String()),
+		"key_bits":              FindBitLength(certificate.PublicKey),
 	}
 
 	return templateData, nil
@@ -1904,11 +1901,11 @@ func getBasicConstraintsFromExtension(exts []pkix.Extension) (found bool, isCA b
 	return false, false, -1, nil
 }
 
-func makeAltNamesCommaSeparatedString(names []string, emails []string) string {
+func MakeAltNamesCommaSeparatedString(names []string, emails []string) string {
 	return strings.Join(append(names, emails...), ",")
 }
 
-func makeUriCommaSeparatedString(uris []*url.URL) string {
+func MakeUriCommaSeparatedString(uris []*url.URL) string {
 	stringAddresses := make([]string, len(uris))
 	for i, uri := range uris {
 		stringAddresses[i] = uri.String()
@@ -1916,7 +1913,7 @@ func makeUriCommaSeparatedString(uris []*url.URL) string {
 	return strings.Join(stringAddresses, ",")
 }
 
-func makeIpAddressCommaSeparatedString(addresses []net.IP) string {
+func MakeIpAddressCommaSeparatedString(addresses []net.IP) string {
 	stringAddresses := make([]string, len(addresses))
 	for i, address := range addresses {
 		stringAddresses[i] = address.String()
@@ -1928,7 +1925,7 @@ func makeCommaSeparatedString(values []string) string {
 	return strings.Join(values, ",")
 }
 
-func determineExcludeCnFromCertSans(certificate x509.Certificate) bool {
+func DetermineExcludeCnFromCertSans(certificate x509.Certificate) bool {
 	cn := certificate.Subject.CommonName
 	if cn == "" {
 		return false
@@ -1951,7 +1948,7 @@ func determineExcludeCnFromCertSans(certificate x509.Certificate) bool {
 	return true
 }
 
-func determineExcludeCnFromCsrSans(csr x509.CertificateRequest) bool {
+func DetermineExcludeCnFromCsrSans(csr x509.CertificateRequest) bool {
 	cn := csr.Subject.CommonName
 	if cn == "" {
 		return false
@@ -1974,7 +1971,7 @@ func determineExcludeCnFromCsrSans(csr x509.CertificateRequest) bool {
 	return true
 }
 
-func findBitLength(publicKey any) int {
+func FindBitLength(publicKey any) int {
 	if publicKey == nil {
 		return 0
 	}
@@ -1999,7 +1996,7 @@ func findBitLength(publicKey any) int {
 	}
 }
 
-func findSignatureBits(algo x509.SignatureAlgorithm) int {
+func FindSignatureBits(algo x509.SignatureAlgorithm) int {
 	switch algo {
 	case x509.MD2WithRSA, x509.MD5WithRSA, x509.SHA1WithRSA, x509.DSAWithSHA1, x509.ECDSAWithSHA1:
 		return -1
@@ -2016,7 +2013,7 @@ func findSignatureBits(algo x509.SignatureAlgorithm) int {
 	}
 }
 
-func getKeyType(goKeyType string) string {
+func GetKeyType(goKeyType string) string {
 	switch goKeyType {
 	case "RSA":
 		return "rsa"
@@ -2029,7 +2026,7 @@ func getKeyType(goKeyType string) string {
 	}
 }
 
-func isPSS(algorithm x509.SignatureAlgorithm) bool {
+func IsPSS(algorithm x509.SignatureAlgorithm) bool {
 	switch algorithm {
 	case x509.SHA384WithRSAPSS, x509.SHA512WithRSAPSS, x509.SHA256WithRSAPSS:
 		return true
