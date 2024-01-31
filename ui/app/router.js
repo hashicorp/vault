@@ -32,7 +32,6 @@ Router.map(function () {
           this.route('sync');
           this.route('token');
         });
-        this.route('dashboard'); // leaving for now to easily reference original implementation when testing
         this.route('config');
         this.route('edit');
       });
