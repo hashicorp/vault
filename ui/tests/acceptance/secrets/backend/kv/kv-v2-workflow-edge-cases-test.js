@@ -302,6 +302,42 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     assert.dom(FORM.toggleJson).isChecked();
     assert.false(codemirror().getValue().includes('*'), 'Values are not obscured on edit view');
   });
+
+  test('viewing advanced secret data versions displays the correct version data', async function (assert) {
+    assert.expect(2);
+    const obscuredDataV1 = `{
+  "foo1": {
+    "name": "********"
+  }
+}`;
+    const obscuredDataV2 = `{
+  "foo2": {
+    "name": "********"
+  }
+}`;
+
+    await visit(`/vault/secrets/${this.backend}/kv/create`);
+    await fillIn(FORM.inputByAttr('path'), 'complex_version_test');
+
+    await click(FORM.toggleJson);
+    codemirror().setValue('{ "foo1": { "name": "bar1" } }');
+    await click(FORM.saveBtn);
+
+    // Create another version
+    await click(PAGE.detail.createNewVersion);
+    codemirror().setValue('{ "foo2": { "name": "bar2" } }');
+    await click(FORM.saveBtn);
+
+    // View the first version and make sure it changes
+    await click(PAGE.detail.versionDropdown);
+    await click(`${PAGE.detail.version(1)} a`);
+    assert.strictEqual(codemirror().getValue(), obscuredDataV1, 'Version one data is displayed');
+
+    await click(PAGE.detail.versionDropdown);
+    await click(`${PAGE.detail.version(2)} a`);
+    assert.strictEqual(codemirror().getValue(), obscuredDataV2, 'Version two data is displayed');
+  });
+
   test('does not register as advanced when value includes {', async function (assert) {
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'not-advanced');
