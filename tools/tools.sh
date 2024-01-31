@@ -43,6 +43,7 @@ install_external() {
     golang.org/x/tools/cmd/goimports@latest
     google.golang.org/protobuf/cmd/protoc-gen-go@latest
     google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+    gotest.tools/gotestsum@latest
     honnef.co/go/tools/cmd/staticcheck@latest
     mvdan.cc/gofumpt@latest
   )
