@@ -268,6 +268,7 @@ func TestPki_PermitFQDNs(t *testing.T) {
 type parseCertificateTestCase struct {
 	name       string
 	data       map[string]interface{}
+	roleData   map[string]interface{} // if a role is to be created
 	ttl        time.Duration
 	wantParams certutil.CreationParameters
 	wantFields map[string]interface{}
@@ -458,6 +459,16 @@ func TestParseCertificate(t *testing.T) {
 				// remove_roots_from_chain
 				"user_ids": "humanoid,robot",
 			},
+			roleData: map[string]interface{}{
+				"allow_any_name": true,
+				"cn_validations":      "disabled",
+				"allow_ip_sans":       true,
+				"allowed_other_sans":  "1.3.6.1.4.1.311.20.2.3;utf8:*@example.com",
+				"allowed_uri_sans":    "https://example.com,https://www.example.com",
+				"allowed_user_ids":    "*",
+				"not_before_duration": "45s",
+				"signature_bits":      384,
+			},
 			ttl: 2 * time.Hour,
 			wantParams: certutil.CreationParameters{
 				Subject: pkix.Name{
@@ -477,14 +488,14 @@ func TestParseCertificate(t *testing.T) {
 				ExtKeyUsageOIDs:               nil,
 				PolicyIdentifiers:             nil,
 				BasicConstraintsValidForNonCA: false,
-				SignatureBits:                 256, // TODO(victorr): why is it 256?
+				SignatureBits:                 384,
 				UsePSS:                        false,
 				ForceAppendCaChain:            false,
 				UseCSRValues:                  false,
-				PermittedDNSDomains:           nil, //[]string{".example.com", ".www.example.com"},
+				PermittedDNSDomains:           nil,
 				URLs:                          nil,
 				MaxPathLength:                 0,
-				NotBeforeDuration:             30, // TODO(victorr): why is this 30?
+				NotBeforeDuration:             45,
 				SKID:                          []byte("We'll assert that it is not nil as an special case"),
 			},
 			wantFields: map[string]interface{}{
@@ -493,7 +504,7 @@ func TestParseCertificate(t *testing.T) {
 				"ip_sans":               "1.2.3.4,1.2.3.5",
 				"uri_sans":              "https://example.com,https://www.example.com",
 				"other_sans":            "1.3.6.1.4.1.311.20.2.3;UTF-8:caadmin@example.com",
-				"signature_bits":        256,
+				"signature_bits":        384,
 				"exclude_cn_from_sans":  true,
 				"ou":                    "",
 				"organization":          "",
@@ -503,7 +514,7 @@ func TestParseCertificate(t *testing.T) {
 				"street_address":        "",
 				"postal_code":           "",
 				"serial_number":         "",
-				"ttl":                   "2h0m30s",
+				"ttl":                   "2h0m45s",
 				"max_path_length":       0,
 				"permitted_dns_domains": "",
 				"use_pss":               false,
@@ -538,15 +549,7 @@ func TestParseCertificate(t *testing.T) {
 			require.NotNil(t, resp)
 
 			// create a role
-			resp, err = CBWrite(b, s, "roles/test", map[string]interface{}{
-				"allow_any_name": true,
-				//"allow_subdomains": true,
-				"cn_validations":     "disabled",
-				"allow_ip_sans":      true,
-				"allowed_other_sans": "1.3.6.1.4.1.311.20.2.3;utf8:*@example.com",
-				"allowed_uri_sans":   "https://example.com,https://www.example.com",
-				"allowed_user_ids":   "*",
-			})
+			resp, err = CBWrite(b, s, "roles/test", tt.roleData)
 			require.NoError(t, err)
 			require.NotNil(t, resp)
 
@@ -599,10 +602,13 @@ func testParseCertificateToCreationParameters(t *testing.T, issueTime time.Time,
 		}
 
 		require.NotNil(t, params.SKID)
-		require.GreaterOrEqual(t, params.NotBeforeDuration, tt.wantParams.NotBeforeDuration, "NotBeforeDuration")
+		require.GreaterOrEqual(t, params.NotBeforeDuration, tt.wantParams.NotBeforeDuration,
+			"NotBeforeDuration want: %s got: %s", tt.wantParams.NotBeforeDuration, params.NotBeforeDuration)
 
-		require.GreaterOrEqual(t, params.NotAfter, issueTime.Add(tt.ttl).Add(-1*time.Minute), "NotAfter")
-		require.LessOrEqual(t, params.NotAfter, issueTime.Add(tt.ttl).Add(1*time.Minute), "NotAfter")
+		require.GreaterOrEqual(t, params.NotAfter, issueTime.Add(tt.ttl).Add(-1*time.Minute),
+			"NotAfter want: %s got: %s", tt.wantParams.NotAfter, params.NotAfter)
+		require.LessOrEqual(t, params.NotAfter, issueTime.Add(tt.ttl).Add(1*time.Minute),
+			"NotAfter want: %s got: %s", tt.wantParams.NotAfter, params.NotAfter)
 	}
 }
 
@@ -628,7 +634,8 @@ func testParseCertificateToFields(t *testing.T, issueTime time.Time, tt *parseCe
 			if diff < 0 {
 				diff = -diff
 			}
-			require.LessOrEqual(t, diff, 1*time.Second, "ttl must be at most 1s off")
+			require.LessOrEqual(t, diff, 1*time.Second,
+				"ttl must be at most 1s off, want: %s got: %s", tt.wantFields["ttl"], fields["ttl"])
 			delete(fields, "ttl")
 			delete(tt.wantFields, "ttl")
 		}
