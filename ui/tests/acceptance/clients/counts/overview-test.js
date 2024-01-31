@@ -228,7 +228,7 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(SELECTORS.charts.statTextValue('Secrets sync clients'))
       .hasTextContaining(
         `${formatNumber([formatNumber([response.total.secret_syncs])])}`,
-        'total non-entity clients is back to unfiltered value'
+        'total sync clients is back to unfiltered value'
       );
     assert
       .dom('[data-test-attribution-clients]')
