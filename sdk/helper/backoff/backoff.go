@@ -96,12 +96,11 @@ func (b *Backoff) Retry(f func() error) error {
 		err := f()
 		if err == nil {
 			return nil
-		} else {
-			err2 := b.NextSleep()
-			if err2 != nil {
-				err = errors.Join(err2, err)
-				break
-			}
+		}
+
+		maxRetryErr := b.NextSleep()
+		if maxRetryErr != nil {
+			return errors.Join(maxRetryErr, err)
 		}
 	}
 	return nil // unreachable
