@@ -54,6 +54,8 @@ module('Acceptance | policies/acl', function (hooks) {
 
   test('it navigates to show when clicking on the link', async function (assert) {
     await visit('/vault/policies/acl');
+    await fillIn(SELECT.filterBar, 'default');
+    await waitFor(SELECT.policyByName('default'));
     await click(SELECT.policyByName('default'));
     assert.strictEqual(currentRouteName(), 'vault.cluster.policy.show');
     assert.strictEqual(currentURL(), '/vault/policy/acl/default');
@@ -65,6 +67,8 @@ module('Acceptance | policies/acl', function (hooks) {
     await runCmd(`write sys/policies/acl/${policyName} policy=${window.btoa(POLICY)}`);
     await settled();
     await visit('/vault/policies/acl');
+    await fillIn(SELECT.filterBar, policyName);
+    await waitFor(SELECT.policyByName(policyName));
     assert.dom(SELECT.policyByName(policyName)).exists('policy is shown in list');
     await click(`${SELECT.policyByName(policyName)} [data-test-popup-menu-trigger]`);
     await click(SELECT.delete);
@@ -116,6 +120,7 @@ module('Acceptance | policies/acl', function (hooks) {
       'navigates to policy show on successful save'
     );
     assert.dom(SELECT.policyTitle).hasText(policyLower, 'displays the policy name on the show page');
+    // will fail if you have a license about to expire.
     assert.dom('[data-test-flash-message].is-info').doesNotExist('no flash message is displayed on save');
     await click(SELECT.listBreadcrumb);
 

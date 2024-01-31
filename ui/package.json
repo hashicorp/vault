@@ -227,7 +227,7 @@
     "@embroider/macros": "^1.0.0"
   },
   "engines": {
-    "node": "16"
+    "node": "18"
   },
   "ember": {
     "edition": "octane"
