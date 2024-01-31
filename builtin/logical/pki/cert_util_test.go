@@ -471,6 +471,7 @@ func TestParseCertificate(t *testing.T) {
 				"signature_bits":      384,
 				"key_usage":           "KeyAgreement",
 				"ext_key_usage":       "ServerAuth",
+				"ext_key_usage_oids":  "1.3.6.1.5.5.7.3.67,1.3.6.1.5.5.7.3.68",
 				"client_flag":         false,
 				"server_flag":         false,
 				"policy_identifiers":  "1.2.3.4.5.6.7.8.9.0",
@@ -491,7 +492,7 @@ func TestParseCertificate(t *testing.T) {
 				NotAfter:                      time.Time{},
 				KeyUsage:                      x509.KeyUsageKeyAgreement,
 				ExtKeyUsage:                   0, // Please Ignore
-				ExtKeyUsageOIDs:               []string{"1.3.6.1.5.5.7.3.1"},
+				ExtKeyUsageOIDs:               []string{"1.3.6.1.5.5.7.3.1", "1.3.6.1.5.5.7.3.67", "1.3.6.1.5.5.7.3.68"},
 				PolicyIdentifiers:             []string{"1.2.3.4.5.6.7.8.9.0"},
 				BasicConstraintsValidForNonCA: false,
 				SignatureBits:                 384,
