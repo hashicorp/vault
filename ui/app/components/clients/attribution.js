@@ -48,7 +48,7 @@ export default class Attribution extends Component {
   attributionLegend = [
     { key: 'entity_clients', label: 'entity clients' },
     { key: 'non_entity_clients', label: 'non-entity clients' },
-    { key: 'secret_syncs', label: 'secrets sync clients' },
+    // { key: 'secret_syncs', label: 'secrets sync clients' }, * unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
   ];
 
   get formattedStartDate() {
@@ -161,13 +161,10 @@ export default class Attribution extends Component {
       'Total clients',
       'Entity clients',
       'Non-entity clients',
-      'Secrets sync clients',
     ];
 
     if (newAttribution) {
-      csvHeader.push(
-        'Total new clients, New entity clients, New non-entity clients, New secrets sync clients'
-      );
+      csvHeader.push('Total new clients, New entity clients, New non-entity clients');
     }
 
     totalAttribution.forEach((totalClientsObject) => {

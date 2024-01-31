@@ -70,8 +70,9 @@ module('Integration | Component | clients/usage-stats', function (hooks) {
     assert
       .dom('[data-test-stat-text="non-entity-clients"] .stat-value')
       .hasText('10', 'non entity clients shows passed value');
-    assert
-      .dom('[data-test-stat-text="secret-syncs"] .stat-value')
-      .hasText('5', 'secrets sync clients shows passed value');
+    // * unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
+    // assert
+    //   .dom('[data-test-stat-text="secret-syncs"] .stat-value')
+    //   .hasText('5', 'secrets sync clients shows passed value');
   });
 });
