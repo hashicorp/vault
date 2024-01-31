@@ -26,12 +26,10 @@ import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { disableReplication } from 'vault/tests/helpers/replication';
 import connectionPage from 'vault/tests/pages/secrets/backend/database/connection';
 import { v4 as uuidv4 } from 'uuid';
-import { runCmd, deleteEngineCmd } from 'vault/tests/helpers/commands';
+import { runCmd, deleteEngineCmd, createNS } from 'vault/tests/helpers/commands';
 
 import { SELECTORS } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 import { PAGE } from 'vault/tests/helpers/config-ui/message-selectors';
-
-const createNS = async (namespace) => await runCmd(`write sys/namespaces/${namespace} -f`, false);
 
 const authenticatedMessageResponse = {
   request_id: '664fbad0-fcd8-9023-4c5b-81a7962e9f4b',
@@ -223,7 +221,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'vault is enterprise');
       assert.dom(SELECTORS.cardName('configuration-details')).exists();
-      createNS('world');
+      await runCmd(createNS('world'), false);
       await visit('/vault/dashboard?namespace=world');
       assert.dom(SELECTORS.cardName('configuration-details')).doesNotExist();
     });
@@ -450,7 +448,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'vault is enterprise');
       assert.dom(SELECTORS.cardName('replication')).exists();
-      createNS('blah');
+      await runCmd(createNS('blah'), false);
       await visit('/vault/dashboard?namespace=blah');
       assert.dom(SELECTORS.cardName('replication')).doesNotExist();
     });
