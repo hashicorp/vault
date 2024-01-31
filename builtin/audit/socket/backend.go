@@ -6,11 +6,9 @@ package socket
 import (
 	"context"
 	"fmt"
-	"net"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -24,19 +22,14 @@ var _ audit.Backend = (*Backend)(nil)
 
 // Backend is the audit backend for the socket audit transport.
 type Backend struct {
-	sync.Mutex
-	address       string
-	connection    net.Conn
-	fallback      bool
-	name          string
-	nodeIDList    []eventlogger.NodeID
-	nodeMap       map[eventlogger.NodeID]eventlogger.Node
-	salt          *salt.Salt
-	saltConfig    *salt.Config
-	saltMutex     sync.RWMutex
-	saltView      logical.Storage
-	socketType    string
-	writeDuration time.Duration
+	fallback   bool
+	name       string
+	nodeIDList []eventlogger.NodeID
+	nodeMap    map[eventlogger.NodeID]eventlogger.Node
+	salt       *salt.Salt
+	saltConfig *salt.Config
+	saltMutex  sync.RWMutex
+	saltView   logical.Storage
 }
 
 func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.HeaderFormatter) (audit.Backend, error) {
@@ -65,14 +58,10 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 		writeDeadline = "2s"
 	}
 
-	writeDuration, err := parseutil.ParseDurationSecond(writeDeadline)
-	if err != nil {
-		return nil, fmt.Errorf("%s: failed to parse 'write_timeout': %w", op, err)
-	}
-
 	// The config options 'fallback' and 'filter' are mutually exclusive, a fallback
 	// device catches everything, so it cannot be allowed to filter.
 	var fallback bool
+	var err error
 	if fallbackRaw, ok := conf.Config["fallback"]; ok {
 		fallback, err = parseutil.ParseBool(fallbackRaw)
 		if err != nil {
@@ -85,15 +74,12 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 	}
 
 	b := &Backend{
-		fallback:      fallback,
-		address:       address,
-		name:          conf.MountPath,
-		saltConfig:    conf.SaltConfig,
-		saltView:      conf.SaltView,
-		socketType:    socketType,
-		writeDuration: writeDuration,
-		nodeIDList:    []eventlogger.NodeID{},
-		nodeMap:       make(map[eventlogger.NodeID]eventlogger.Node),
+		fallback:   fallback,
+		name:       conf.MountPath,
+		saltConfig: conf.SaltConfig,
+		saltView:   conf.SaltView,
+		nodeIDList: []eventlogger.NodeID{},
+		nodeMap:    make(map[eventlogger.NodeID]eventlogger.Node),
 	}
 
 	err = b.configureFilterNode(conf.Config["filter"])
@@ -108,6 +94,7 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 
 	opts := []audit.Option{
 		audit.WithHeaderFormatter(headersConfig),
+		audit.WithPrefix(conf.Config["prefix"]),
 	}
 
 	err = b.configureFormatterNode(cfg, opts...)

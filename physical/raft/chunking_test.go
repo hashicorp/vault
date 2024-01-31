@@ -186,8 +186,6 @@ func TestFSM_Chunking_TermChange(t *testing.T) {
 }
 
 func TestRaft_Chunking_AppliedIndex(t *testing.T) {
-	t.Parallel()
-
 	raft, dir := GetRaft(t, true, false)
 	defer os.RemoveAll(dir)
 

@@ -49,6 +49,7 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/osutil"
+	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -534,6 +535,9 @@ type Core struct {
 
 	// pluginDirectory is the location vault will look for plugin binaries
 	pluginDirectory string
+	// pluginTmpdir is the location vault will use for containerized plugin
+	// temporary files
+	pluginTmpdir string
 
 	// pluginFileUid is the uid of the plugin files and directory
 	pluginFileUid int
@@ -636,8 +640,6 @@ type Core struct {
 	// it is protected by activityLogLock
 	activityLogConfig ActivityLogCoreConfig
 
-	censusConfig atomic.Value
-
 	// activeTime is set on active nodes indicating the time at which this node
 	// became active.
 	activeTime time.Time
@@ -709,6 +711,9 @@ type Core struct {
 	periodicLeaderRefreshInterval time.Duration
 
 	clusterAddrBridge *raft.ClusterAddrBridge
+
+	limiterRegistry     *limits.LimiterRegistry
+	limiterRegistryLock sync.Mutex
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -717,6 +722,10 @@ func (c *Core) ActiveNodeClockSkewMillis() int64 {
 
 func (c *Core) EchoDuration() time.Duration {
 	return c.echoDuration.Load()
+}
+
+func (c *Core) GetRequestLimiter(key string) *limits.RequestLimiter {
+	return c.limiterRegistry.GetLimiter(key)
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -816,6 +825,7 @@ type CoreConfig struct {
 	EnableIntrospection bool
 
 	PluginDirectory string
+	PluginTmpdir    string
 
 	PluginFileUid int
 
@@ -832,9 +842,6 @@ type CoreConfig struct {
 	License         string
 	LicensePath     string
 	LicensingConfig *LicensingConfig
-
-	// Configured Census Agent
-	CensusAgent CensusReporter
 
 	DisablePerformanceStandby bool
 	DisableIndexing           bool
@@ -887,6 +894,9 @@ type CoreConfig struct {
 	PeriodicLeaderRefreshInterval time.Duration
 
 	ClusterAddrBridge *raft.ClusterAddrBridge
+
+	DisableRequestLimiter bool
+	LimiterRegistry       *limits.LimiterRegistry
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -987,6 +997,10 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		for k, v := range detectDeadlocks {
 			detectDeadlocks[k] = strings.ToLower(strings.TrimSpace(v))
 		}
+	}
+
+	if conf.LimiterRegistry == nil {
+		conf.LimiterRegistry = limits.NewLimiterRegistry(conf.Logger.Named("limits"))
 	}
 
 	// Use imported logging deadlock if requested
@@ -1230,6 +1244,12 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 			return nil, fmt.Errorf("core setup failed, could not verify plugin directory: %w", err)
 		}
 	}
+	if conf.PluginTmpdir != "" {
+		c.pluginTmpdir, err = filepath.Abs(conf.PluginTmpdir)
+		if err != nil {
+			return nil, fmt.Errorf("core setup failed, could not verify plugin tmpdir: %w", err)
+		}
+	}
 
 	if conf.PluginFileUid != 0 {
 		c.pluginFileUid = conf.PluginFileUid
@@ -1283,6 +1303,15 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	c.limiterRegistry = conf.LimiterRegistry
+	c.limiterRegistryLock.Lock()
+	if conf.DisableRequestLimiter {
+		c.limiterRegistry.Disable()
+	} else {
+		c.limiterRegistry.Enable()
+	}
+	c.limiterRegistryLock.Unlock()
 
 	err = c.adjustForSealMigration(conf.UnwrapSeal)
 	if err != nil {
@@ -2422,8 +2451,10 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	}
 
 	if !c.IsDRSecondary() {
-		if err := c.setupCensusAgent(); err != nil {
-			logger.Error("skipping reporting for nil agent", "error", err)
+		if !c.perfStandby {
+			if err := c.setupCensusManager(); err != nil {
+				logger.Error("failed to instantiate the license reporting agent", "error", err)
+			}
 		}
 
 		// not waiting on wg to avoid changing existing behavior
@@ -2431,6 +2462,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.setupActivityLog(ctx, &wg); err != nil {
 			return err
 		}
+
+		if !c.perfStandby {
+			c.StartManualCensusSnapshots()
+		}
+
 	} else {
 		broker, err := NewAuditBroker(logger)
 		if err != nil {
@@ -2491,7 +2527,15 @@ func (c *Core) setupPluginRuntimeCatalog(ctx context.Context) error {
 // this method can be included in the slice of functions returned by the
 // buildUnsealSetupFunctionsSlice function.
 func (c *Core) setupPluginCatalog(ctx context.Context) error {
-	pluginCatalog, err := plugincatalog.SetupPluginCatalog(ctx, c.logger, c.builtinRegistry, NewBarrierView(c.barrier, pluginCatalogPath), c.pluginDirectory, c.enableMlock, c.pluginRuntimeCatalog)
+	pluginCatalog, err := plugincatalog.SetupPluginCatalog(ctx, &plugincatalog.PluginCatalogInput{
+		Logger:               c.logger,
+		BuiltinRegistry:      c.builtinRegistry,
+		CatalogView:          NewBarrierView(c.barrier, pluginCatalogPath),
+		PluginDirectory:      c.pluginDirectory,
+		Tmpdir:               c.pluginTmpdir,
+		EnableMlock:          c.enableMlock,
+		PluginRuntimeCatalog: c.pluginRuntimeCatalog,
+	})
 	if err != nil {
 		return err
 	}
@@ -2792,8 +2836,8 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
 	c.stopActivityLog()
-	// Clean up the censusAgent on seal
-	if err := c.teardownCensusAgent(); err != nil {
+	// Clean up census on seal
+	if err := c.teardownCensusManager(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down reporting agent: %w", err))
 	}
 
@@ -2950,6 +2994,7 @@ func setPhysicalSealConfig(ctx context.Context, c *Core, label, configPath strin
 		Value: buf,
 	}
 
+	// nosemgrep: physical-storage-bypass-encryption
 	if err := c.physical.Put(ctx, pe); err != nil {
 		c.logger.Error(fmt.Sprintf("failed to write %s seal configuration", label), "error", err)
 		return fmt.Errorf("failed to write %s seal configuration: %w", label, err)
@@ -3543,16 +3588,17 @@ func (c *Core) readFeatureFlags(ctx context.Context) (*FeatureFlags, error) {
 // misconfigured. This allows users to recover from errors when starting Vault
 // with misconfigured plugins. It should not be possible for existing builtins
 // to be misconfigured, so that is a fatal error.
-func (c *Core) isMountable(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) bool {
-	return !c.isMountEntryBuiltin(ctx, entry, pluginType)
+func (c *Core) isMountable(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) (bool, error) {
+	builtin, err := c.isMountEntryBuiltin(ctx, entry, pluginType)
+	return !builtin, err
 }
 
 // isMountEntryBuiltin determines whether a mount entry is associated with a
 // builtin of the specified plugin type.
-func (c *Core) isMountEntryBuiltin(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) bool {
+func (c *Core) isMountEntryBuiltin(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) (bool, error) {
 	// Prevent a panic early on
 	if entry == nil || c.pluginCatalog == nil {
-		return false
+		return false, nil
 	}
 
 	// Allow type to be determined from mount entry when not otherwise specified
@@ -3566,12 +3612,16 @@ func (c *Core) isMountEntryBuiltin(ctx context.Context, entry *MountEntry, plugi
 		pluginName = alias
 	}
 
-	plug, err := c.pluginCatalog.Get(ctx, pluginName, pluginType, entry.Version)
+	pluginVersion, err := c.resolveMountEntryVersion(ctx, pluginType, entry)
+	if err != nil {
+		return false, err
+	}
+	plug, err := c.pluginCatalog.Get(ctx, pluginName, pluginType, pluginVersion)
 	if err != nil || plug == nil {
-		return false
+		return false, nil
 	}
 
-	return plug.Builtin
+	return plug.Builtin, nil
 }
 
 // MatchingMount returns the path of the mount that will be responsible for
@@ -4026,6 +4076,27 @@ func (c *Core) ReloadLogRequestsLevel() {
 		c.logRequestsLevel.Store(int32(log.LevelFromString(infoLevel)))
 	case infoLevel != "":
 		c.logger.Warn("invalid log_requests_level", "level", infoLevel)
+	}
+}
+
+func (c *Core) ReloadRequestLimiter() {
+	c.limiterRegistry.Logger.Info("reloading request limiter config")
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return
+	}
+
+	disable := false
+	requestLimiterConfig := conf.(*server.Config).RequestLimiter
+	if requestLimiterConfig != nil {
+		disable = requestLimiterConfig.Disable
+	}
+
+	switch disable {
+	case true:
+		c.limiterRegistry.Disable()
+	default:
+		c.limiterRegistry.Enable()
 	}
 }
 

@@ -725,6 +725,10 @@ func generateCSR(t *testing.T, csrTemplate *x509.CertificateRequest, keyType str
 		t.Fatalf("Got error generating private key for CSR: %v", err)
 	}
 
+	return generateCSRWithKey(t, csrTemplate, priv)
+}
+
+func generateCSRWithKey(t *testing.T, csrTemplate *x509.CertificateRequest, priv interface{}) (interface{}, []byte, string) {
 	csr, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, priv)
 	if err != nil {
 		t.Fatalf("Got error generating CSR: %v", err)

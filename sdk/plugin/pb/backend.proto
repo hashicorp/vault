@@ -63,6 +63,11 @@ message Paths {
   //
   // See note in /sdk/logical/logical.go.
   repeated string binary = 6;
+
+  // Limited paths are storage paths that require special-case request limiting.
+  //
+  // See note in /sdk/logical/logical.go.
+  repeated string limited = 7;
 }
 
 message Request {
