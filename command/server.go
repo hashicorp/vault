@@ -2571,8 +2571,9 @@ type SetSealResponse struct {
 	unwrapSeal  vault.Seal
 
 	// sealConfigError is present if there was an error configuring wrappers, other than KeyNotFound.
-	sealConfigError   error
-	sealConfigWarning error
+	sealConfigError          error
+	sealConfigWarning        error
+	hasPartiallyWrappedPaths bool
 }
 
 func (r *SetSealResponse) getCreatedSeals() []*vault.Seal {
@@ -2775,6 +2776,9 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 				return nil, err
 			}
 			unwrapSeal = vault.NewAutoSeal(a)
+		} else if sealGenerationInfo.Generation == 1 {
+			// First generation, and shamir, with no disabled wrapperrs, so there can be no wrapped values
+			sealGenerationInfo.SetRewrapped(true)
 		}
 
 	case len(disabledSealWrappers) == 1 && containsShamir(disabledSealWrappers):
@@ -2823,10 +2827,11 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	}
 
 	return &SetSealResponse{
-		barrierSeal:       barrierSeal,
-		unwrapSeal:        unwrapSeal,
-		sealConfigError:   sealConfigError,
-		sealConfigWarning: sealConfigWarning,
+		barrierSeal:              barrierSeal,
+		unwrapSeal:               unwrapSeal,
+		sealConfigError:          sealConfigError,
+		sealConfigWarning:        sealConfigWarning,
+		hasPartiallyWrappedPaths: hasPartiallyWrappedPaths,
 	}, nil
 }
 
@@ -3356,12 +3361,12 @@ func (c *ServerCommand) reloadSeals(ctx context.Context, core *vault.Core, confi
 		return nil, err
 	}
 
-	err = core.SetSeals(setSealResponse.barrierSeal, secureRandomReader)
+	newGen := setSealResponse.barrierSeal.GetAccess().GetSealGenerationInfo()
+
+	err = core.SetSeals(setSealResponse.barrierSeal, secureRandomReader, !newGen.IsRewrapped() || setSealResponse.hasPartiallyWrappedPaths)
 	if err != nil {
 		return nil, fmt.Errorf("error setting seal: %s", err)
 	}
-
-	newGen := setSealResponse.barrierSeal.GetAccess().GetSealGenerationInfo()
 
 	if err := core.SetPhysicalSealGenInfo(ctx, newGen); err != nil {
 		c.logger.Warn("could not update seal information in storage", "err", err)
