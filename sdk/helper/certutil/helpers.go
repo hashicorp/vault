@@ -1732,9 +1732,15 @@ func ParseCertificateToCreationParameters(certificate x509.Certificate) (creatio
 	}
 
 	extKeyUsageOIDS, err := getExtKeyUsageOids(certificate.Extensions)
+	if err != nil {
+		return CreationParameters{}, err
+	}
 	creationParameters.ExtKeyUsageOIDs = extKeyUsageOIDS
 
 	policyInformationOids, err := getPolicyIdentifiers(certificate.Extensions)
+	if err != nil {
+		return CreationParameters{}, err
+	}
 	creationParameters.PolicyIdentifiers = policyInformationOids
 
 	return creationParameters, err
