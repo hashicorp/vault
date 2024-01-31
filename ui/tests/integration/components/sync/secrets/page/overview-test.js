@@ -60,13 +60,13 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
   test('it should render landing cta component for enterprise', async function (assert) {
     this.set('destinations', []);
     await settled();
-    assert.dom(title).hasText('Secrets Sync', 'Page title renders');
+    assert.dom(title).hasText('Secrets Sync Beta', 'Page title renders');
     assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
     assert.dom(cta.summary).exists('CTA renders');
   });
 
   test('it should render header, tabs and toolbar for overview state', async function (assert) {
-    assert.dom(title).hasText('Secrets Sync', 'Page title renders');
+    assert.dom(title).hasText('Secrets Sync Beta', 'Page title renders');
     assert.dom(breadcrumb).exists({ count: 1 }, 'Correct number of breadcrumbs render');
     assert.dom(breadcrumb).includesText('Secrets Sync', 'Top level breadcrumb renders');
     assert.dom(cta.button).doesNotExist('CTA does not render');

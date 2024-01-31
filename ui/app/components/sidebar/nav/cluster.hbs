@@ -16,7 +16,7 @@
   <Nav.Link
     @route="vault.cluster.sync"
     @text="Secrets Sync"
-    @badge={{unless this.version.isEnterprise "Enterprise"}}
+    @badge={{if this.version.isEnterprise "Beta" "Enterprise"}}
     data-test-sidebar-nav-link="Secrets Sync"
   />
   {{#if (has-permission "access")}}
