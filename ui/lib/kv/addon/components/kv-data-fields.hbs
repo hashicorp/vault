@@ -36,8 +36,7 @@
     <InfoTableRow @label={{key}} @value={{value}} @alwaysRender={{true}}>
       <MaskedInput
         @name={{key}}
-        {{! ARG TODO stringify only if object }}
-        @value={{stringify value}}
+        @value={{value}}
         @displayOnly={{true}}
         @allowCopy={{true}}
         @allowDownload={{true}}
