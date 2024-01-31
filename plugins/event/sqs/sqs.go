@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/vault/sdk/event"
@@ -64,6 +65,7 @@ func newClient(sconfig *sqsConfig) (*sqs.SQS, error) {
 		options = append(options, awsutil.WithRegion(sconfig.Region))
 	}
 	options = append(options, awsutil.WithEnvironmentCredentials(true))
+	options = append(options, awsutil.WithSharedCredentials(true))
 	credConfig, err := awsutil.NewCredentialsConfig(options...)
 	if err != nil {
 		return nil, err
@@ -93,6 +95,13 @@ func (s *sqsBackend) subscribe(request *event.SubscribeRequest) error {
 		resp, err := client.CreateQueue(&sqs.CreateQueueInput{
 			QueueName: &sconfig.QueueName,
 		})
+		var aerr awserr.Error
+		if errors.As(err, &aerr) {
+			if aerr.Code() == sqs.ErrCodeQueueNameExists {
+				// that's okay
+				err = nil
+			}
+		}
 		if err != nil {
 			return err
 		}
@@ -139,7 +148,10 @@ func (s *sqsBackend) killConnection(subscriptionID string) {
 }
 
 func (s *sqsBackend) killConnectionWithLock(subscriptionID string) {
-	conn := s.connections[subscriptionID]
+	conn, ok := s.connections[subscriptionID]
+	if !ok {
+		return
+	}
 	conn.ctxCancelFunc()
 	delete(s.connections, subscriptionID)
 }

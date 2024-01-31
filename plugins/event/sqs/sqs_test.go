@@ -85,8 +85,9 @@ func TestSQS_SendOneMessage(t *testing.T) {
 		Subscribe: &event.SubscribeRequest{
 			SubscriptionID: subID,
 			Config: map[string]interface{}{
-				"queue_name": tempQueueName,
-				"region":     os.Getenv("AWS_REGION"),
+				"queue_name":   tempQueueName,
+				"region":       os.Getenv("AWS_REGION"),
+				"create_queue": true,
 			},
 			VerifyConnection: false,
 		},
