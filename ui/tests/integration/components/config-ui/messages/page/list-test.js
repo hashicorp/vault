@@ -10,6 +10,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { PAGE } from 'vault/tests/helpers/config-ui/message-selectors';
+import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 const META = {
   currentPage: 1,
@@ -26,7 +27,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.context = { owner: this.engine };
+    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.store = this.owner.lookup('service:store');
 
     this.store.pushPayload('config-ui/message', {
