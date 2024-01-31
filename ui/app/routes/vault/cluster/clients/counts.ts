@@ -69,6 +69,7 @@ export default class ClientsCountsRoute extends Route {
 
   async model(params: ClientsCountsRouteParams) {
     const { config, versionHistory } = this.modelFor('vault.cluster.clients') as ClientsRouteModel;
+    // we could potentially make an additional request to fetch the license and get the start date from there if the config request fails
     const startTimestamp = Number(params.start_time) || getUnixTime(config.billingStartTimestamp);
     const endTimestamp = Number(params.end_time) || getUnixTime(timestamp.now());
     const [activity, activityError] = await this.getActivity(startTimestamp, endTimestamp);
