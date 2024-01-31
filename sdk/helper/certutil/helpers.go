@@ -1599,7 +1599,7 @@ func (oraw *OtherNameRaw) ExtractUTF8String() (*OtherNameUtf8, error) {
 	return nil, fmt.Errorf("no UTF-8 string found in OtherName")
 }
 
-func getOtherSANsStringFromExtensions(exts []pkix.Extension) (otherSans string, err error) {
+func getOtherSANsStringFromExtensions(exts []pkix.Extension) (string, error) {
 	otherNames, err := GetOtherSANsFromX509Extensions(exts)
 	if err != nil {
 		return "", err
@@ -1610,18 +1610,18 @@ func getOtherSANsStringFromExtensions(exts []pkix.Extension) (otherSans string, 
 		otherSansList[i] = otherName.String()
 	}
 
-	otherSans = strings.Join(otherSansList, ",")
+	otherSans := strings.Join(otherSansList, ",")
 
 	return otherSans, nil
 }
 
-func getOtherSANsMapFromExtensions(exts []pkix.Extension) (otherSans map[string][]string, err error) {
+func getOtherSANsMapFromExtensions(exts []pkix.Extension) (map[string][]string, error) {
 	otherNames, err := GetOtherSANsFromX509Extensions(exts)
 	if err != nil {
 		return nil, err
 	}
 
-	otherSans = make(map[string][]string)
+	otherSans := make(map[string][]string)
 	for _, name := range otherNames {
 		if otherSans[name.Oid] == nil {
 			otherSans[name.Oid] = []string{name.Value}
@@ -1633,8 +1633,8 @@ func getOtherSANsMapFromExtensions(exts []pkix.Extension) (otherSans map[string]
 	return otherSans, nil
 }
 
-func getKeyUsage(exts []pkix.Extension) (keyUsage x509.KeyUsage, err error) {
-	keyUsage = 0
+func getKeyUsage(exts []pkix.Extension) (x509.KeyUsage, error) {
+	keyUsage := x509.KeyUsage(0)
 	for _, ext := range exts {
 		if ext.Id.Equal(KeyUsageOID) {
 			// ASN1 is Big Endian
@@ -1650,8 +1650,8 @@ func getKeyUsage(exts []pkix.Extension) (keyUsage x509.KeyUsage, err error) {
 	return keyUsage, nil
 }
 
-func getExtKeyUsageOids(exts []pkix.Extension) (keyUsageOidStrings []string, err error) {
-	keyUsageOidStrings = make([]string, 0)
+func getExtKeyUsageOids(exts []pkix.Extension) ([]string, error) {
+	keyUsageOidStrings := make([]string, 0)
 	keyUsageOids := make([]asn1.ObjectIdentifier, 0)
 	for _, ext := range exts {
 		if ext.Id.Equal(ExtendedKeyUsageOID) {
@@ -1668,8 +1668,8 @@ func getExtKeyUsageOids(exts []pkix.Extension) (keyUsageOidStrings []string, err
 	return nil, nil
 }
 
-func getPolicyIdentifiers(exts []pkix.Extension) (policyIdentifiers []string, err error) {
-	policyIdentifiers = make([]string, 0)
+func getPolicyIdentifiers(exts []pkix.Extension) ([]string, error) {
+	policyIdentifiers := make([]string, 0)
 	for _, ext := range exts {
 		if ext.Id.Equal(policyInformationOid) {
 			// PolicyInformation ::= SEQUENCE {
@@ -1751,13 +1751,13 @@ func removeNames(name pkix.Name) pkix.Name {
 	return name
 }
 
-func ParseCsrToCreationParameters(csr x509.CertificateRequest) (creationParameters CreationParameters, err error) {
+func ParseCsrToCreationParameters(csr x509.CertificateRequest) (CreationParameters, error) {
 	otherSANs, err := getOtherSANsMapFromExtensions(csr.Extensions)
 	if err != nil {
 		return CreationParameters{}, err
 	}
 
-	creationParameters = CreationParameters{
+	creationParameters := CreationParameters{
 		Subject:        removeNames(csr.Subject),
 		DNSNames:       csr.DNSNames,
 		EmailAddresses: csr.EmailAddresses,
@@ -1818,13 +1818,13 @@ func ParseCsrToCreationParameters(csr x509.CertificateRequest) (creationParamete
 	return creationParameters, err
 }
 
-func ParseCsrToFields(csr x509.CertificateRequest) (templateData map[string]interface{}, err error) {
+func ParseCsrToFields(csr x509.CertificateRequest) (map[string]interface{}, error) {
 	otherSans, err := getOtherSANsStringFromExtensions(csr.Extensions)
 	if err != nil {
-		return templateData, err
+		return nil, err
 	}
 
-	templateData = map[string]interface{}{
+	templateData := map[string]interface{}{
 		"common_name":          csr.Subject.CommonName,
 		"alt_names":            MakeAltNamesCommaSeparatedString(csr.DNSNames, csr.EmailAddresses),
 		"ip_sans":              MakeIpAddressCommaSeparatedString(csr.IPAddresses),
@@ -1859,13 +1859,13 @@ func ParseCsrToFields(csr x509.CertificateRequest) (templateData map[string]inte
 	return templateData, nil
 }
 
-func ParseCertificateToFields(certificate x509.Certificate) (templateData map[string]interface{}, err error) {
+func ParseCertificateToFields(certificate x509.Certificate) (map[string]interface{}, error) {
 	otherSans, err := getOtherSANsStringFromExtensions(certificate.Extensions)
 	if err != nil {
-		return templateData, err
+		return nil, err
 	}
 
-	templateData = map[string]interface{}{
+	templateData := map[string]interface{}{
 		"common_name":           certificate.Subject.CommonName,
 		"alt_names":             MakeAltNamesCommaSeparatedString(certificate.DNSNames, certificate.EmailAddresses),
 		"ip_sans":               MakeIpAddressCommaSeparatedString(certificate.IPAddresses),
