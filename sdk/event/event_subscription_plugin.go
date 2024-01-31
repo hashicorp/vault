@@ -11,7 +11,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-type EventSubscriptionPlugin interface {
+// SubscriptionPlugin is the interface implemented by plugins that can subscribe to and receive events.
+type SubscriptionPlugin interface {
 	Subscribe(ctx context.Context, request *SubscribeRequest) error
 	SendSubscriptionEvent(subscriptionID string, eventJson string) error
 	Unsubscribe(ctx context.Context, subscriptionID string) error

@@ -17,7 +17,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-var _ event.EventSubscriptionPlugin = (*sqsBackend)(nil)
+var _ event.SubscriptionPlugin = (*sqsBackend)(nil)
 
 const pluginName = "sqs"
 
@@ -25,7 +25,7 @@ const pluginName = "sqs"
 var ErrQueueRequired = errors.New("queue_name or queue_url must be specified")
 
 // New returns a new instance of the SQS plugin backend.
-func New() event.EventSubscriptionPlugin {
+func New() event.SubscriptionPlugin {
 	return &sqsBackend{
 		connections: map[string]*sqsConnection{},
 	}
