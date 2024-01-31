@@ -75,6 +75,7 @@ export const SELECTORS = {
   rangeDropdown: '[data-test-calendar-widget-trigger]',
   monthDropdown: '[data-test-toggle-month]',
   yearDropdown: '[data-test-toggle-year]',
+  currentBillingPeriod: '[data-test-current-billing-period]',
   dateDropdownSubmit: '[data-test-date-dropdown-submit]',
   runningTotalMonthStats: '[data-test-running-total="single-month-stats"]',
   runningTotalMonthlyCharts: '[data-test-running-total="monthly-charts"]',

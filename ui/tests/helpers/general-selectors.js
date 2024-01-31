@@ -70,4 +70,5 @@ export const SELECTORS = {
     input: '[data-test-kv-suggestion-input]',
     select: '[data-test-kv-suggestion-select]',
   },
+  navLink: (label) => `[data-test-sidebar-nav-link="${label}"]`,
 };

@@ -10,12 +10,33 @@ import { getUnixTime } from 'date-fns';
 
 import type StoreService from 'vault/services/store';
 import type { ClientsRouteModel } from '../clients';
+import type ClientsConfigModel from 'vault/models/clients/config';
+import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
+import type ClientsActivityModel from 'vault/models/clients/activity';
+import type Controller from '@ember/controller';
+import type AdapterError from 'ember-data/adapter'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
 
 export interface ClientsCountsRouteParams {
   start_time?: string | number | undefined;
   end_time?: string | number | undefined;
   ns?: string | undefined;
   mountPath?: string | undefined;
+}
+
+interface ClientsCountsRouteModel {
+  config: ClientsConfigModel;
+  versionHistory: ClientsVersionHistoryModel;
+  activity?: ClientsActivityModel;
+  activityError?: AdapterError;
+  startTimestamp: number;
+  endTimestamp: number;
+}
+interface ClientsCountsController extends Controller {
+  model: ClientsCountsRouteModel;
+  start_time: number | undefined;
+  end_time: number | undefined;
+  ns: string | undefined;
+  mountPath: string | undefined;
 }
 
 export default class ClientsCountsRoute extends Route {
@@ -59,5 +80,16 @@ export default class ClientsCountsRoute extends Route {
       startTimestamp,
       endTimestamp,
     };
+  }
+
+  resetController(controller: ClientsCountsController, isExiting: boolean) {
+    if (isExiting) {
+      controller.setProperties({
+        start_time: undefined,
+        end_time: undefined,
+        ns: undefined,
+        mountPath: undefined,
+      });
+    }
   }
 }

@@ -90,8 +90,6 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     assert
       .dom(ts.calendarWidget.trigger)
       .hasText('Oct 2023 - Jan 2024', 'Start and end months render in filter bar');
-    this.set('startTimestamp', null);
-    assert.dom(ts.counts.startDropdown).exists('Date dropdown renders when start time is not provided');
   });
 
   test('it should render no data empty state', async function (assert) {
@@ -206,6 +204,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     await this.renderComponent();
 
     assert.dom(ts.emptyStateTitle).hasText('No start date found', 'Empty state renders');
+    assert.dom(ts.counts.startDropdown).exists('Date dropdown renders when start time is not provided');
   });
 
   test('it should render catch all empty state', async function (assert) {

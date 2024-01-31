@@ -20,7 +20,7 @@ import ss from 'vault/tests/pages/components/search-select';
 
 const searchSelect = create(ss);
 
-module('Acceptance | clients | counts overview', function (hooks) {
+module('Acceptance | clients | overview', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 

@@ -11,7 +11,7 @@ import authPage from 'vault/tests/pages/auth';
 import { addMonths, formatRFC3339, startOfMonth, subMonths } from 'date-fns';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import clientsHandlers from 'vault/mirage/handlers/clients';
-import { SELECTORS, overrideResponse } from '../helpers/clients';
+import { SELECTORS, overrideResponse } from 'vault/tests/helpers/clients';
 import { create } from 'ember-cli-page-object';
 import ss from 'vault/tests/pages/components/search-select';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
