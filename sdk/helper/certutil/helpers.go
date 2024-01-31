@@ -1727,7 +1727,7 @@ func ParseCertificateToCreationParameters(certificate x509.Certificate) (creatio
 		PermittedDNSDomains: certificate.PermittedDNSDomains,
 		// URLs: punting on this for now
 		MaxPathLength:     certificate.MaxPathLen,
-		NotBeforeDuration: notBeforeDurationFromNotBefore(certificate.NotBefore), // Assumes Certificate was created this moment
+		NotBeforeDuration: time.Now().Sub(certificate.NotBefore), // Assumes Certificate was created this moment
 		SKID:              certificate.SubjectKeyId,
 	}
 
@@ -2039,9 +2039,4 @@ func IsPSS(algorithm x509.SignatureAlgorithm) bool {
 	default:
 		return false
 	}
-}
-
-func notBeforeDurationFromNotBefore(notBefore time.Time) time.Duration {
-	now := time.Now()
-	return now.Sub(notBefore)
 }
