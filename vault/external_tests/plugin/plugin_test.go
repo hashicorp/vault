@@ -202,7 +202,7 @@ func TestSystemBackend_Plugin_MissingBinary(t *testing.T) {
 			// since that's how we create the file for catalog registration in the test
 			// helper.
 			pluginFileName := filepath.Base(os.Args[0])
-			err = os.Remove(filepath.Join(cluster.TempDir, pluginFileName))
+			err = os.Remove(filepath.Join(cluster.Cores[0].CoreConfig.PluginDirectory, pluginFileName))
 			if err != nil {
 				t.Fatal(err)
 			}
