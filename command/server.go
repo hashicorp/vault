@@ -2542,8 +2542,9 @@ type SetSealResponse struct {
 	unwrapSeal  vault.Seal
 
 	// sealConfigError is present if there was an error configuring wrappers, other than KeyNotFound.
-	sealConfigError   error
-	sealConfigWarning error
+	sealConfigError          error
+	sealConfigWarning        error
+	hasPartiallyWrappedPaths bool
 }
 
 func (r *SetSealResponse) getCreatedSeals() []*vault.Seal {
@@ -2744,7 +2745,14 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		// autoSeal.
 		barrierSeal = vault.NewDefaultSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealWrappers))
 		if len(disabledSealWrappers) > 0 {
-			unwrapSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, disabledSealWrappers))
+			a, err = vaultseal.NewAccess(sealLogger, sealGenerationInfo, disabledSealWrappers)
+			if err != nil {
+				return nil, err
+			}
+			unwrapSeal = vault.NewAutoSeal(a)
+		} else if sealGenerationInfo.Generation == 1 {
+			// First generation, and shamir, with no disabled wrapperrs, so there can be no wrapped values
+			sealGenerationInfo.SetRewrapped(true)
 		}
 
 	case len(disabledSealWrappers) == 1 && containsShamir(disabledSealWrappers):
@@ -2773,10 +2781,11 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	}
 
 	return &SetSealResponse{
-		barrierSeal:       barrierSeal,
-		unwrapSeal:        unwrapSeal,
-		sealConfigError:   sealConfigError,
-		sealConfigWarning: sealConfigWarning,
+		barrierSeal:              barrierSeal,
+		unwrapSeal:               unwrapSeal,
+		sealConfigError:          sealConfigError,
+		sealConfigWarning:        sealConfigWarning,
+		hasPartiallyWrappedPaths: hasPartiallyWrappedPaths,
 	}, nil
 }
 

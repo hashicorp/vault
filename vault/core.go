@@ -4330,6 +4330,22 @@ func (c *Core) Events() *eventbus.EventBus {
 	return c.events
 }
 
+func (c *Core) GetWellKnownRedirect(ctx context.Context, path string) (string, error) {
+	if c.WellKnownRedirects == nil {
+		return "", nil
+	}
+	path = strings.TrimPrefix(path, WellKnownPrefix)
+	redir, remaining := c.WellKnownRedirects.Find(path)
+	if redir != nil {
+		dest, err := redir.Destination(remaining)
+		if err != nil {
+			return "", err
+		}
+		return paths.Join("/v1", dest), nil
+	}
+	return "", nil
+}
+
 func (c *Core) DetectStateLockDeadlocks() bool {
 	if _, ok := c.stateLock.(*locking.DeadlockRWMutex); ok {
 		return true
