@@ -705,15 +705,25 @@ func (f *EntryFormatter) excludeFields(entry any) (map[string]any, error) {
 			// 2. (ErrNotFound) Both Request and Response have a Data property which
 			// is flexible as it is described as map[string]interface{}, the
 			// following expression is valid but wouldn't run without error on
-			// every type of audit entry: "\"response/data/my-key\" is not empty"
+			// every type of audit entry: "\"response/data/my-key\" is not empty".
 			//
 			// 3. (ErrOutOfRange) Attempting to evaluate a part of an array/slice
 			// that doesn't exist shouldn't stop us from auditing, it should just
 			// mean that we don't redact fields as the condition failed, if we only
-			// have a single auth policy but use: "\"/auth/policies/1\" == bar"
+			// have a single auth policy but use: "\"/auth/policies/1\" == bar".
+			//
+			// 4. (ErrConvert) Attempting to use the wrong type of index for the
+			// structure. Auth policies are a slice of strings, so you cannot access
+			// them via a key: "\"/auth/policies/my-policy\ == bar".
+			//
+			// 5. (ErrInvalidKind) Attempting to access something that is a different
+			// type, for example, mount type is a string, so we cannot access it
+			// using a key as if it were a map: "\"/request/mount_type/test\ == bar".
 			case errors.Is(err, pointerstructure.ErrNotFound),
-				errors.Is(err, pointerstructure.ErrOutOfRange):
-				// We can ignore this error, we won't attempt to exclude fields
+				errors.Is(err, pointerstructure.ErrOutOfRange),
+				errors.Is(err, pointerstructure.ErrConvert),
+				errors.Is(err, pointerstructure.ErrInvalidKind):
+				// We can ignore these errors, we won't attempt to exclude fields
 				// as the condition failed.
 				// shouldRemoveFields will have been set to false as a result of
 				// the Evaluate call.
