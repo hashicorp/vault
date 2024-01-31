@@ -88,4 +88,6 @@ export const tokenWithPolicyCmd = function (name, policy) {
   return [createPolicyCmd(name, policy), createTokenCmd(name)];
 };
 
-export const createNS = async (namespace) => `write sys/namespaces/${namespace} -f`;
+export function createNS(namespace) {
+  return `write sys/namespaces/${namespace} -f`;
+}

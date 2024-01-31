@@ -17,7 +17,6 @@ import {
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { selectChoose } from 'ember-power-select/test-support/helpers';
-import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
 import authPage from 'vault/tests/pages/auth';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import clientsHandlers from 'vault/mirage/handlers/clients';
@@ -286,16 +285,14 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.expect(12);
       const backend = 'pki-dashboard';
       await mountSecrets.enable('pki', backend);
-      await runCommands([
+      await runCmd([
         `write ${backend}/roles/some-role \
       issuer_ref="default" \
       allowed_domains="example.com" \
       allow_subdomains=true \
       max_ttl="720h"`,
       ]);
-      await runCommands([
-        `write ${backend}/root/generate/internal issuer_name="Hashicorp" common_name="Hello"`,
-      ]);
+      await runCmd([`write ${backend}/root/generate/internal issuer_name="Hashicorp" common_name="Hello"`]);
       await settled();
       await visit('/vault/dashboard');
       await selectChoose(SELECTORS.searchSelect('secrets-engines'), backend);
@@ -354,7 +351,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       const databaseBackend = `database-${uuidv4()}`;
       await mountSecrets.enable('database', databaseBackend);
       await newConnection(databaseBackend);
-      await runCommands([
+      await runCmd([
         `write ${databaseBackend}/roles/my-role \
         db_name=mongodb-database-plugin \
         creation_statements='{ "db": "admin", "roles": [{ "role": "readWrite" }, {"role": "read", "db": "foo"}] }' \
