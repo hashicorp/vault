@@ -17,6 +17,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/pem"
 	"errors"
@@ -98,6 +99,16 @@ var CRLNumberOID = asn1.ObjectIdentifier([]int{2, 5, 29, 20})
 //
 // > id-ce-deltaCRLIndicator OBJECT IDENTIFIER ::= { id-ce 27 }
 var DeltaCRLIndicatorOID = asn1.ObjectIdentifier([]int{2, 5, 29, 27})
+
+// OID for KeyUsage from RFC 2459 : https://www.rfc-editor.org/rfc/rfc2459.html#section-4.2.1.3
+//
+// > id-ce-keyUsage OBJECT IDENTIFIER ::=  { id-ce 15 }
+var KeyUsageOID = asn1.ObjectIdentifier([]int{2, 5, 29, 15})
+
+// OID for Extended Key Usage from RFC 5280 : https://www.rfc-editor.org/rfc/rfc5280#section-4.2.1.12
+//
+// id-ce-extKeyUsage OBJECT IDENTIFIER ::= { id-ce 37 }
+var ExtendedKeyUsageOID = asn1.ObjectIdentifier([]int{2, 5, 29, 37})
 
 // GetHexFormatted returns the byte buffer formatted in hex with
 // the specified separator between bytes.
@@ -1625,6 +1636,67 @@ func getOtherSANsMapFromExtensions(exts []pkix.Extension) (otherSans map[string]
 	return otherSans, nil
 }
 
+func getKeyUsage(exts []pkix.Extension) (keyUsage x509.KeyUsage, err error) {
+	keyUsage = 0
+	for _, ext := range exts {
+		if ext.Id.Equal(KeyUsageOID) {
+			// ASN1 is Big Endian
+			// another example of equivalent code: https://cs.opensource.google/go/go/+/master:src/crypto/x509/parser.go;drc=dd84bb682482390bb8465482cb7b13d2e3b17297;l=319
+			buf := bytes.NewReader(ext.Value)
+			err := binary.Read(buf, binary.BigEndian, &keyUsage)
+			if err != nil {
+				return keyUsage, err
+			}
+			return keyUsage, nil
+		}
+	}
+	return keyUsage, nil
+}
+
+func getExtKeyUsageOids(exts []pkix.Extension) (keyUsageOidStrings []string, err error) {
+	keyUsageOidStrings = make([]string, 0)
+	keyUsageOids := make([]asn1.ObjectIdentifier, 0)
+	for _, ext := range exts {
+		if ext.Id.Equal(ExtendedKeyUsageOID) {
+			_, err := asn1.Unmarshal(ext.Value, keyUsageOids)
+			if err != nil {
+				return nil, fmt.Errorf("unable to unmarshal KeyUsageOid extension: %w", err)
+			}
+			for _, oid := range keyUsageOids {
+				keyUsageOidStrings = append(keyUsageOidStrings, oid.String())
+			}
+			return keyUsageOidStrings, nil
+		}
+	}
+	return keyUsageOidStrings, nil
+}
+
+func getPolicyIdentifiers(exts []pkix.Extension) (policyIdentifiers []string, err error) {
+	policyIdentifiers = make([]string, 0)
+	for _, ext := range exts {
+		if ext.Id.Equal(policyInformationOid) {
+			// PolicyInformation ::= SEQUENCE {
+			//        policyIdentifier   CertPolicyId,
+			//        policyQualifiers   SEQUENCE SIZE (1..MAX) OF
+			//                                PolicyQualifierInfo OPTIONAL }
+			type policyInformation struct {
+				policyIdentifier asn1.ObjectIdentifier `asn1:"explicit,tag:0"`
+				policyQualifier  any                   `asn1:"optional,tag:1"`
+			}
+			policies := make([]policyInformation, 0)
+			_, err := asn1.Unmarshal(ext.Value, &policies)
+			if err != nil {
+				return nil, err
+			}
+			for _, policy := range policies {
+				policyIdentifiers = append(policyIdentifiers, policy.policyIdentifier.String())
+			}
+			return policyIdentifiers, nil
+		}
+	}
+	return policyIdentifiers, nil
+}
+
 // Translate Certificates and CSRs into Certificate Template
 // Four "Types" Here: Certificates; Certificate Signing Requests; Fields map[string]interface{}; Creation Parameters
 
@@ -1646,9 +1718,9 @@ func ParseCertificateToCreationParameters(certificate x509.Certificate) (creatio
 		KeyBits:        findBitLength(certificate.PublicKey),
 		NotAfter:       certificate.NotAfter,
 		KeyUsage:       certificate.KeyUsage,
-		// TODO ExtKeyUsage: certificate.ExtKeyUsage,
-		// TODO ExtKeyUsageOIDs []string
-		// TODO: PolicyIdentifiers:             certificate.PolicyIdentifiers,
+		// ExtKeyUsage: We use ExtKeyUsageOIDs instead as the more general field
+		// ExtKeyUsageOIDs: this is an extension that may not be set, so is handled below
+		// PolicyIdentifiers: this is an extension that may not be set, so is handled below
 		BasicConstraintsValidForNonCA: certificate.BasicConstraintsValid,
 		SignatureBits:                 findSignatureBits(certificate.SignatureAlgorithm),
 		UsePSS:                        isPSS(certificate.SignatureAlgorithm),
@@ -1656,13 +1728,19 @@ func ParseCertificateToCreationParameters(certificate x509.Certificate) (creatio
 		// ForceAppendCaChain
 		// UseCSRValues
 		PermittedDNSDomains: certificate.PermittedDNSDomains,
-		// TODO URLs *URLEntries
+		// URLs: punting on this for now
 		MaxPathLength:     certificate.MaxPathLen,
 		NotBeforeDuration: notBeforeDurationFromNotBefore(certificate.NotBefore), // Assumes Certificate was created this moment
 		SKID:              certificate.SubjectKeyId,
 	}
 
-	return creationParameters, nil
+	extKeyUsageOIDS, err := getExtKeyUsageOids(certificate.Extensions)
+	creationParameters.ExtKeyUsageOIDs = extKeyUsageOIDS
+
+	policyInformationOids, err := getPolicyIdentifiers(certificate.Extensions)
+	creationParameters.PolicyIdentifiers = policyInformationOids
+
+	return creationParameters, err
 }
 
 func removeNames(name pkix.Name) pkix.Name {
@@ -1686,23 +1764,32 @@ func ParseCsrToCreationParameters(csr x509.CertificateRequest) (creationParamete
 		// IsCA: is handled below since the basic constraint it comes from might not be set on the CSR
 		KeyType: getKeyType(csr.PublicKeyAlgorithm.String()),
 		KeyBits: findBitLength(csr.PublicKey),
-		// TODO: NotAfter
-		// TODO: KeyUsage                      x509.KeyUsage
-		// TODO: ExtKeyUsage                   CertExtKeyUsage
-		// TODO: ExtKeyUsageOIDs               []string
-		// TODO: PolicyIdentifiers             []string
-		// TODO: BasicConstraintsValidForNonCA bool
+		// NotAfter: this is not set on a CSR
+		// KeyUsage: handled below since this may not be set
+		// ExtKeyUsage: We use exclusively ExtKeyUsageOIDs here
+		// ExtKeyUsageOIDs: handled below since this may not be set
+		// PolicyIdentifiers: handled below since this may not be set
+		// BasicConstraintsValidForNonCA is handled below, since it may or may not be set on the CSR
 		SignatureBits: findSignatureBits(csr.SignatureAlgorithm),
 		UsePSS:        isPSS(csr.SignatureAlgorithm),
 		// The following two values are on creation parameters, but are impossible to parse from the csr
 		// ForceAppendCaChain
 		// UseCSRValues
-		// TODO: PermittedDNSDomains           []string
-		// TODO: URLs                          *URLEntries
+		// PermittedDNSDomains : omitted, this generally isn't on a CSR
+		// URLs : omitted, this generally isn't on a CSR
 		// MaxPathLength is handled below since the basic constraint it comes from may not be set on the CSR
-		// TODO: NotBeforeDuration             time.Duration
-		// TODO: SKID                          []byte
+		// NotBeforeDuration : this is not set on a CSR
+		// SKID: this is generally not set on a CSR, but calculated from the Key information itself
 	}
+
+	keyUsage, err := getKeyUsage(csr.Extensions)
+	creationParameters.KeyUsage = keyUsage
+
+	extKeyUsageOIDS, err := getExtKeyUsageOids(csr.Extensions)
+	creationParameters.ExtKeyUsageOIDs = extKeyUsageOIDS
+
+	policyInformationOids, err := getPolicyIdentifiers(csr.Extensions)
+	creationParameters.PolicyIdentifiers = policyInformationOids
 
 	found, isCA, maxPathLength, err := getBasicConstraintsFromExtension(csr.Extensions)
 	if err != nil {
@@ -1716,7 +1803,7 @@ func ParseCsrToCreationParameters(csr x509.CertificateRequest) (creationParamete
 		}
 	}
 
-	return creationParameters, nil
+	return creationParameters, err
 }
 
 func ParseCsrToFields(csr x509.CertificateRequest) (templateData map[string]interface{}, err error) {
