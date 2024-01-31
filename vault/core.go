@@ -4490,13 +4490,8 @@ func (c *Core) SetSeals(barrierSeal Seal, secureRandomReader io.Reader, shouldRe
 
 	c.seal = barrierSeal
 
-	c.reloadSealsEnt(secureRandomReader, barrierSeal, c.logger)
+	c.reloadSealsEnt(secureRandomReader, barrierSeal, c.logger, shouldRewrap)
 
-	if server.IsMultisealSupported() && c.seal.SealWrapable() && shouldRewrap {
-		if err = c.sealRewrap.Start(c.activeContext); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
