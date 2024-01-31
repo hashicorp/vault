@@ -79,7 +79,6 @@ export const SELECTORS = {
   dateDropdownSubmit: '[data-test-date-dropdown-submit]',
   runningTotalMonthStats: '[data-test-running-total="single-month-stats"]',
   runningTotalMonthlyCharts: '[data-test-running-total="monthly-charts"]',
-  monthlyUsageBlock: '[data-test-monthly-usage]',
   selectedAuthMount: 'div#auth-method-search-select [data-test-selected-option] div',
   selectedNs: 'div#namespace-search-select [data-test-selected-option] div',
   upgradeWarning: '[data-test-clients-upgrade-warning]',
