@@ -3382,7 +3382,7 @@ func TestSetSeals(t *testing.T) {
 		Generation:   2,
 	})
 
-	err := testCore.SetSeals(newSeal, nil)
+	err := testCore.SetSeals(newSeal, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
