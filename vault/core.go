@@ -4452,7 +4452,7 @@ func (c *Core) Events() *eventbus.EventBus {
 	return c.events
 }
 
-func (c *Core) SetSeals(barrierSeal Seal, secureRandomReader io.Reader) error {
+func (c *Core) SetSeals(barrierSeal Seal, secureRandomReader io.Reader, shouldRewrap bool) error {
 	ctx, _ := c.GetContext()
 
 	c.stateLock.Lock()
@@ -4490,8 +4490,13 @@ func (c *Core) SetSeals(barrierSeal Seal, secureRandomReader io.Reader) error {
 
 	c.seal = barrierSeal
 
-	c.reloadSealsEnt(secureRandomReader, barrierSeal.GetAccess(), c.logger)
+	c.reloadSealsEnt(secureRandomReader, barrierSeal, c.logger)
 
+	if server.IsMultisealSupported() && c.seal.SealWrapable() && shouldRewrap {
+		if err = c.sealRewrap.Start(c.activeContext); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
