@@ -127,9 +127,20 @@ func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, 
 		"max_retries":       config.MaxRetries,
 		"username_template": config.UsernameTemplate,
 		"role_arn":          config.RoleARN,
-		"rotation_schedule": config.RotationSchedule,
-		"rotation_window":   config.RotationWindow,
-		"ttl":               config.TTL,
+		//"rotation_schedule": config.RotationSchedule,
+		//"rotation_window":   config.RotationWindow,
+		//"ttl":               config.TTL,
+	}
+	if config.RotationWindow != 0 {
+		configData["rotation_window"] = config.RotationWindow
+	}
+
+	if config.RotationSchedule != "" {
+		configData["rotation_schedule"] = config.RotationSchedule
+	}
+
+	if config.TTL != 0 {
+		configData["ttl"] = config.TTL
 	}
 
 	config.PopulatePluginIdentityTokenData(configData)
