@@ -919,6 +919,7 @@ func acquireLimiterListener(core *vault.Core, rawReq *http.Request, r *logical.R
 	if disableRequestLimiter != nil {
 		disable = disableRequestLimiter.(bool)
 	}
+	r.RequestLimiterDisabled = disable
 	if disable {
 		return &limits.RequestListener{}, true
 	}

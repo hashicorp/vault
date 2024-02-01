@@ -725,6 +725,8 @@ func (c *Core) EchoDuration() time.Duration {
 }
 
 func (c *Core) GetRequestLimiter(key string) *limits.RequestLimiter {
+	c.limiterRegistryLock.Lock()
+	defer c.limiterRegistryLock.Unlock()
 	return c.limiterRegistry.GetLimiter(key)
 }
 
