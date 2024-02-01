@@ -61,7 +61,7 @@ func TestExternalPluginInContainer_MountAndUnmount(t *testing.T) {
 		})
 
 		for _, plugin := range plugins {
-			t.Run(plugin.Type.String(), func(t *testing.T) {
+			t.Run(plugin.Typ.String(), func(t *testing.T) {
 				t.Run("default runtime", func(t *testing.T) {
 					if _, err := exec.LookPath("runsc"); err != nil {
 						t.Skip("Skipping test as runsc not found on path")
@@ -98,9 +98,9 @@ func mountAndUnmountContainerPlugin_WithRuntime(t *testing.T, c *TestClusterCore
 	if ociRuntime != "" {
 		registerPluginRuntime(t, c.systemBackend, ociRuntime, rootless)
 	}
-	registerContainerPlugin(t, c.systemBackend, plugin.Name, plugin.Type.String(), "1.0.0", plugin.ImageSha256, plugin.Image, ociRuntime)
+	registerContainerPlugin(t, c.systemBackend, plugin.Name, plugin.Typ.String(), "1.0.0", plugin.ImageSha256, plugin.Image, ociRuntime)
 
-	mountPlugin(t, c.systemBackend, plugin.Name, plugin.Type, "v1.0.0", "")
+	mountPlugin(t, c.systemBackend, plugin.Name, plugin.Typ, "v1.0.0", "")
 
 	expectTmpdirEntries := func(expected int) {
 		t.Helper()
@@ -116,7 +116,7 @@ func mountAndUnmountContainerPlugin_WithRuntime(t *testing.T, c *TestClusterCore
 
 	routeRequest := func(expectMatch bool) {
 		pluginPath := "foo/bar"
-		if plugin.Type == consts.PluginTypeCredential {
+		if plugin.Typ == consts.PluginTypeCredential {
 			pluginPath = "auth/foo/bar"
 		}
 		match := c.router.MatchingMount(namespace.RootContext(context.Background()), pluginPath)
@@ -129,7 +129,7 @@ func mountAndUnmountContainerPlugin_WithRuntime(t *testing.T, c *TestClusterCore
 	}
 
 	routeRequest(true)
-	unmountPlugin(t, c.systemBackend, plugin.Type, "foo")
+	unmountPlugin(t, c.systemBackend, plugin.Typ, "foo")
 	routeRequest(false)
 	expectTmpdirEntries(0)
 }

@@ -1079,7 +1079,7 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 			})
 
 		plugin.Image += "-will-not-be-found"
-		err := pluginTypeLoadsFailedErrMap[plugin.Type]
+		err := pluginTypeLoadsFailedErrMap[plugin.Typ]
 		testCases = append(testCases, struct {
 			plugin      pluginhelpers.TestPlugin
 			expectedErr *expectedErr
@@ -1090,7 +1090,7 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.plugin.Type.String(), func(t *testing.T) {
+		t.Run(tc.plugin.Typ.String(), func(t *testing.T) {
 			expectedErrTestName := "nil err"
 			if tc.expectedErr != nil {
 				expectedErrTestName = tc.expectedErr.name
@@ -1117,7 +1117,7 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 
 						var version logical.PluginVersion
 						var err error
-						if tc.plugin.Type == consts.PluginTypeDatabase {
+						if tc.plugin.Typ == consts.PluginTypeDatabase {
 							version, err = pluginCatalog.getDatabaseRunningVersion(context.Background(), entry)
 						} else {
 							version, err = pluginCatalog.getBackendRunningVersion(context.Background(), entry)

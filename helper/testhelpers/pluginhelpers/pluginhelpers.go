@@ -26,7 +26,7 @@ var (
 
 type TestPlugin struct {
 	Name        string
-	Type        consts.PluginType
+	Typ         consts.PluginType
 	Version     string
 	FileName    string
 	Sha256      string
@@ -142,7 +142,7 @@ func CompilePlugin(t testing.T, typ consts.PluginType, pluginVersion string, plu
 	}
 	return TestPlugin{
 		Name:     pluginName,
-		Type:     typ,
+		Typ:      typ,
 		Version:  pluginVersion,
 		FileName: path.Base(pluginPath),
 		Sha256:   fmt.Sprintf("%x", sha.Sum(nil)),
