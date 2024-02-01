@@ -412,7 +412,7 @@ jobs:
         run: vault-auth
       - id: secrets
         name: Fetch Vault Secrets
-        uses: hashicorp/vault-action@affa6f04da5c2d55e6e115b7d1b044a6b1af8c74
+        uses: hashicorp/vault-action@9f522b85981b491eab9a52c144d15aedbd0bf371
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
