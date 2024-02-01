@@ -6052,4 +6052,13 @@ This path responds to the following HTTP methods.
 			Returns the available and enabled experiments.
 		`,
 	},
+	"utilization": {
+		"This internal api will return manual license reporting report data.",
+		`
+This path responds to the following HTTP methods.
+
+	POST /
+		returns the manual license reporting data.
+		`,
+	},
 }
