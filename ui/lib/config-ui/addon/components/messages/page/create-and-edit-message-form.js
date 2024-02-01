@@ -59,7 +59,7 @@ export default class MessagesList extends Component {
       this.userConfirmation = '';
 
       const isValid = this.validate();
-      const modalMessages = this.args.messages.filter((message) => message.type === 'modal');
+      const modalMessages = this.args.messages?.filter((message) => message.type === 'modal') || [];
       const hasExpiredModalMessages = modalMessages.every((message) => {
         if (!message.endTime) return false;
         return isAfter(new Date(), new Date(message.endTime));
