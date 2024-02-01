@@ -255,6 +255,9 @@ type Request struct {
 
 	// Name of the chroot namespace for the listener that the request was made against
 	ChrootNamespace string `json:"chroot_namespace,omitempty"`
+
+	// RequestLimiterDisabled tells whether the request context has Request Limiter applied.
+	RequestLimiterDisabled bool `json:"request_limiter_disabled,omitempty"`
 }
 
 // Clone returns a deep copy (almost) of the request.

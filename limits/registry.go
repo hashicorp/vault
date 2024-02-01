@@ -67,8 +67,8 @@ func NewLimiterRegistry(logger hclog.Logger) *LimiterRegistry {
 // processEnvVars consults Limiter-specific environment variables and tells the
 // caller if the Limiter should be disabled. If not, it adjusts the passed-in
 // limiterFlags as appropriate.
-func (r *LimiterRegistry) processEnvVars(flags *LimiterFlags, envDisabled, envMin, envMax string) bool {
-	envFlagsLogger := r.Logger.With("name", flags.Name)
+func (r *LimiterRegistry) processEnvVars(name string, flags *LimiterFlags, envDisabled, envMin, envMax string) bool {
+	envFlagsLogger := r.Logger.With("name", name)
 	if disabledRaw := os.Getenv(envDisabled); disabledRaw != "" {
 		disabled, err := strconv.ParseBool(disabledRaw)
 		if err != nil {
@@ -147,20 +147,22 @@ func (r *LimiterRegistry) Enable() {
 
 	r.Logger.Info("enabling request limiters")
 	r.Limiters = map[string]*RequestLimiter{}
-	r.Register(DefaultWriteLimiterFlags)
-	r.Register(DefaultSpecialPathLimiterFlags)
+
+	for name, flags := range DefaultLimiterFlags {
+		r.Register(name, flags)
+	}
 
 	r.Enabled = true
 }
 
 // Register creates a new request limiter and assigns it a slot in the
 // LimiterRegistry. Locking should be done in the caller.
-func (r *LimiterRegistry) Register(flags LimiterFlags) {
+func (r *LimiterRegistry) Register(name string, flags LimiterFlags) {
 	var disabled bool
 
-	switch flags.Name {
+	switch name {
 	case WriteLimiter:
-		disabled = r.processEnvVars(&flags,
+		disabled = r.processEnvVars(name, &flags,
 			EnvVaultDisableWriteLimiter,
 			EnvVaultWriteLimiterMin,
 			EnvVaultWriteLimiterMax,
@@ -169,7 +171,7 @@ func (r *LimiterRegistry) Register(flags LimiterFlags) {
 			return
 		}
 	case SpecialPathLimiter:
-		disabled = r.processEnvVars(&flags,
+		disabled = r.processEnvVars(name, &flags,
 			EnvVaultDisableSpecialPathLimiter,
 			EnvVaultSpecialPathLimiterMin,
 			EnvVaultSpecialPathLimiterMax,
@@ -178,7 +180,7 @@ func (r *LimiterRegistry) Register(flags LimiterFlags) {
 			return
 		}
 	default:
-		r.Logger.Warn("skipping invalid limiter type", "key", flags.Name)
+		r.Logger.Warn("skipping invalid limiter type", "key", name)
 		return
 	}
 
@@ -186,18 +188,19 @@ func (r *LimiterRegistry) Register(flags LimiterFlags) {
 	// equilibrium, since max might be too high.
 	flags.InitialLimit = flags.MinLimit
 
-	limiter, err := NewRequestLimiter(r.Logger.Named(flags.Name), flags)
+	limiter, err := NewRequestLimiter(r.Logger.Named(name), name, flags)
 	if err != nil {
-		r.Logger.Error("failed to register limiter", "name", flags.Name, "error", err)
+		r.Logger.Error("failed to register limiter", "name", name, "error", err)
 		return
 	}
 
-	r.Limiters[flags.Name] = limiter
+	r.Limiters[name] = limiter
 }
 
 // Disable drops its references to underlying limiters.
 func (r *LimiterRegistry) Disable() {
 	r.Lock()
+	defer r.Unlock()
 
 	if !r.Enabled {
 		return
@@ -209,7 +212,6 @@ func (r *LimiterRegistry) Disable() {
 	// here and the garbage-collector should take care of the rest.
 	r.Limiters = map[string]*RequestLimiter{}
 	r.Enabled = false
-	r.Unlock()
 }
 
 // GetLimiter looks up a RequestLimiter by key in the LimiterRegistry.
