@@ -31,6 +31,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -3888,18 +3889,25 @@ func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
 	})
 	b := c.systemBackend
 
+	latestPlugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, "", c.pluginDirectory)
+	latestPlugin.Image, latestPlugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, latestPlugin, c.pluginDirectory)
+
+	const pluginVersion = "v1.0.0"
+	pluginV100 := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, pluginVersion, c.pluginDirectory)
+	pluginV100.Image, pluginV100.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, pluginV100, c.pluginDirectory)
+
 	for name, tc := range map[string]struct {
 		in, expected map[string]any
 	}{
 		"minimal": {
 			in: map[string]any{
-				"oci_image": "foo-image",
-				"sha256":    hex.EncodeToString([]byte{'1'}),
+				"oci_image": latestPlugin.Image,
+				"sha_256":   latestPlugin.ImageSha256,
 			},
 			expected: map[string]interface{}{
 				"name":      "test-plugin",
-				"oci_image": "foo-image",
-				"sha256":    "31",
+				"oci_image": latestPlugin.Image,
+				"sha256":    latestPlugin.ImageSha256,
 				"command":   "",
 				"args":      []string{},
 				"builtin":   false,
@@ -3908,21 +3916,21 @@ func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
 		},
 		"fully specified": {
 			in: map[string]any{
-				"oci_image": "foo-image",
-				"sha256":    hex.EncodeToString([]byte{'1'}),
-				"command":   "foo-command",
+				"oci_image": pluginV100.Image,
+				"sha256":    pluginV100.ImageSha256,
+				"command":   "plugin",
 				"args":      []string{"--a=1"},
-				"version":   "v1.0.0",
+				"version":   pluginVersion,
 				"env":       []string{"X=2"},
 			},
 			expected: map[string]interface{}{
 				"name":      "test-plugin",
-				"oci_image": "foo-image",
-				"sha256":    "31",
-				"command":   "foo-command",
+				"oci_image": pluginV100.Image,
+				"sha256":    pluginV100.ImageSha256,
+				"command":   "plugin",
 				"args":      []string{"--a=1"},
 				"builtin":   false,
-				"version":   "v1.0.0",
+				"version":   pluginVersion,
 			},
 		},
 	} {
