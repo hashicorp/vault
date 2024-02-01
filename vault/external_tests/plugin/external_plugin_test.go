@@ -483,7 +483,6 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 	// Register
 	testRegisterVersion(t, client, plugin, plugin.Version)
 
-
 	// define a group of parallel tests so we wait for their execution before
 	// continuing on to cleanup
 	// see: https://go.dev/blog/subtests

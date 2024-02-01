@@ -38,10 +38,10 @@ var (
 	ErrPluginNotFound                            = errors.New("plugin not found in the catalog")
 	ErrPluginConnectionNotFound                  = errors.New("plugin connection not found for client")
 	ErrPluginBadType                             = errors.New("unable to determine plugin type")
-  ErrPinnedVersion                             = errors.New("cannot delete a pinned version")
+	ErrPinnedVersion                             = errors.New("cannot delete a pinned version")
 	ErrPluginVersionMismatch                     = errors.New("plugin version mismatch")
 	ErrAllContainerizedBackendPluginLoadsFailed  = errors.New("failed to dispense all containerized backend plugins v4 through v5")
-	ErrAllContainerizedDatabasePluginLoadsFailed = errors.New("failed to load all containerized database plugins v4 through v5"
+	ErrAllContainerizedDatabasePluginLoadsFailed = errors.New("failed to load all containerized database plugins v4 through v5")
 )
 
 // PluginCatalog keeps a record of plugins known to vault. External plugins need
