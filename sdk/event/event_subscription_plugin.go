@@ -11,13 +11,14 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+type Factory func(context.Context) (SubscriptionPlugin, error)
+
 // SubscriptionPlugin is the interface implemented by plugins that can subscribe to and receive events.
 type SubscriptionPlugin interface {
 	// Send is used to set up a new connection and send events to that connection.
 	// The first call should have .Subscribe populated with the configuration.
 	// Other calls should populate .Event with the event being sent.
-	Send(request *Request) error
-	Unsubscribe(ctx context.Context, subscriptionID string) error
+	Send(ctx context.Context, request *Request) error
 	// PluginName returns the name for the particular event subscription plugin.
 	// This type name is usually set as a constant the backend, e.g., "sqs" for the
 	// AWS SQS backend.
@@ -27,14 +28,19 @@ type SubscriptionPlugin interface {
 }
 
 type Request struct {
-	Subscribe *SubscribeRequest
-	Event     *SendEventRequest
+	Subscribe   *SubscribeRequest
+	Unsubscribe *UnsubscribeRequest
+	Event       *SendEventRequest
 }
 
 type SubscribeRequest struct {
 	SubscriptionID   string
 	Config           map[string]interface{}
 	VerifyConnection bool
+}
+
+type UnsubscribeRequest struct {
+	SubscriptionID string
 }
 
 type SendEventRequest struct {

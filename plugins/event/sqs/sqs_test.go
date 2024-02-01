@@ -77,11 +77,11 @@ func TestSQS_SendOneMessage(t *testing.T) {
 		deleteQueue(t, sqsClient, tempQueueURL)
 	})
 
-	backend := New()
+	backend, _ := New(nil)
 	subID, err := uuid.GenerateUUID()
 	assert.Nil(t, err)
 
-	err = backend.Send(&event.Request{
+	err = backend.Send(nil, &event.Request{
 		Subscribe: &event.SubscribeRequest{
 			SubscriptionID: subID,
 			Config: map[string]interface{}{
@@ -94,7 +94,7 @@ func TestSQS_SendOneMessage(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	err = backend.Send(&event.Request{
+	err = backend.Send(nil, &event.Request{
 		Event: &event.SendEventRequest{
 			SubscriptionID: subID,
 			EventJSON:      "{}",
@@ -105,6 +105,6 @@ func TestSQS_SendOneMessage(t *testing.T) {
 	msg := receiveMessage(t, sqsClient, tempQueueURL)
 	assert.Equal(t, "{}", msg)
 
-	err = backend.Unsubscribe(context.Background(), subID)
+	err = backend.Send(nil, &event.Request{Unsubscribe: &event.UnsubscribeRequest{SubscriptionID: subID}})
 	assert.Nil(t, err)
 }

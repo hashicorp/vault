@@ -18,7 +18,10 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-var _ event.SubscriptionPlugin = (*sqsBackend)(nil)
+var (
+	_ event.Factory            = New
+	_ event.SubscriptionPlugin = (*sqsBackend)(nil)
+)
 
 const pluginName = "sqs"
 
@@ -26,10 +29,10 @@ const pluginName = "sqs"
 var ErrQueueRequired = errors.New("queue_name or queue_url must be specified")
 
 // New returns a new instance of the SQS plugin backend.
-func New() event.SubscriptionPlugin {
+func New(_ context.Context) (event.SubscriptionPlugin, error) {
 	return &sqsBackend{
 		connections: map[string]*sqsConnection{},
-	}
+	}, nil
 }
 
 type sqsBackend struct {
@@ -77,7 +80,7 @@ func newClient(sconfig *sqsConfig) (*sqs.SQS, error) {
 	return sqs.New(session), nil
 }
 
-func (s *sqsBackend) subscribe(request *event.SubscribeRequest) error {
+func (s *sqsBackend) subscribe(_ context.Context, request *event.SubscribeRequest) error {
 	var sconfig sqsConfig
 	err := mapstructure.Decode(request.Config, &sconfig)
 	if err != nil {
@@ -166,15 +169,17 @@ func (s *sqsBackend) getConn(subscriptionID string) (*sqsConnection, error) {
 	return conn, nil
 }
 
-func (s *sqsBackend) Send(request *event.Request) error {
+func (s *sqsBackend) Send(ctx context.Context, request *event.Request) error {
 	if request.Subscribe != nil {
-		return s.subscribe(request.Subscribe)
+		return s.subscribe(ctx, request.Subscribe)
+	} else if request.Unsubscribe != nil {
+		return s.Unsubscribe(ctx, request.Unsubscribe.SubscriptionID)
 	} else {
-		return s.sendEvent(request.Event)
+		return s.sendEvent(ctx, request.Event)
 	}
 }
 
-func (s *sqsBackend) sendEvent(send *event.SendEventRequest) error {
+func (s *sqsBackend) sendEvent(_ context.Context, send *event.SendEventRequest) error {
 	return s.sendSubscriptionEventInternal(send.SubscriptionID, send.EventJSON, false)
 }
 
