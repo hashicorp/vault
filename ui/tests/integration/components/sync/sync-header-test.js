@@ -41,11 +41,11 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
 
   test('it should just render title for enterprise version', async function (assert) {
     await this.renderComponent();
-    assert.dom(title).hasText('Secrets Sync');
+    assert.dom(title).hasText('Secrets Sync Beta');
   });
 
   test('it should render title and promotional enterprise badge for community version', async function (assert) {
-    this.version.type = null;
+    this.version.type = 'community';
     await this.renderComponent();
     assert.dom(title).hasText('Secrets Sync Enterprise feature');
   });

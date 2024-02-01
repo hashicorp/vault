@@ -6,7 +6,8 @@
 {{#if (gt @byMonthActivityData.length 1)}}
   <Clients::ChartContainer
     @title="Vault client counts"
-    @description="The total clients in the specified date range. This includes entity, non-entity, and secrets sync clients. The total client count number is an important consideration for Vault billing."
+    {{! * add "secrets sync" clients to list here - unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release }}
+    @description="The total clients in the specified date range. This includes entity and non-entity clients. The total client count number is an important consideration for Vault billing."
     @timestamp={{@responseTimestamp}}
     @hasChartData={{true}}
     data-test-chart="running total"
@@ -29,13 +30,15 @@
             @size="m"
             data-test-chart-stat="running total entity"
           />
+          {{!--  * unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
           <StatText
             @label="Secrets sync clients"
             @value={{@runningTotals.secret_syncs}}
             @size="m"
             class="has-left-margin-l"
             data-test-chart-stat="running total sync"
-          />
+          /> 
+          --}}
         </div>
       </div>
       <StatText
@@ -77,9 +80,11 @@
           <div class="single-month-breakdown-nonentity">
             <StatText @label="Non-entity clients" @value={{singleMonthData.new_clients.non_entity_clients}} @size="m" />
           </div>
+          {{!-- * unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
           <div class="single-month-breakdown-sync">
             <StatText @label="Secrets sync clients" @value={{singleMonthData.new_clients.secret_syncs}} @size="m" />
           </div>
+           --}}
         </div>
         <div class="single-month-stats" data-test-total>
           <div class="single-month-section-title">
@@ -96,9 +101,11 @@
           <div class="single-month-breakdown-nonentity">
             <StatText @label="Non-entity clients" @value={{singleMonthData.non_entity_clients}} @size="m" />
           </div>
+          {{!-- * unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
           <div class="single-month-breakdown-sync">
             <StatText @label="Secrets sync clients" @value={{singleMonthData.secret_syncs}} @size="m" />
           </div>
+           --}}
         </div>
       </div>
     {{else}}

@@ -89,6 +89,13 @@
     </M.Header>
     <M.Body>
       <p class="has-bottom-margin-s">
+        This export will include the namespace path, authentication method path, and the associated total, entity, and
+        non-entity clients for the
+        {{if this.formattedEndDate "date range" "month"}}
+        below.
+      </p>
+      {{!--  * SYNC BETA (1.16.0) - beta removal planned for 1.16.1 release, replace copy above with the following
+      <p class="has-bottom-margin-s">
         This export will include the namespace path, mount path and associated total, entity, non-entity and secrets sync
         clients for the
         {{if this.formattedEndDate "date range" "month"}}
@@ -100,6 +107,7 @@
         for secrets sync clients is the KV v2 engine path and for entity/non-entity clients is the corresponding
         authentication method path.
       </p>
+       --}}
       <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if this.formattedEndDate " RANGE"}}</p>
       <p class="has-bottom-margin-s" data-test-export-date-range>
         {{this.formattedStartDate}}

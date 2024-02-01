@@ -184,9 +184,10 @@ module('Acceptance | clients | overview', function (hooks) {
         `${formatNumber([topNamespace.non_entity_clients])}`,
         'total non-entity clients is accurate'
       );
-    assert
-      .dom(SELECTORS.charts.statTextValue('Secrets sync clients'))
-      .includesText(`${formatNumber([topNamespace.secret_syncs])}`, 'total sync clients is accurate');
+    // * unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
+    // assert
+    //   .dom(SELECTORS.charts.statTextValue('Secrets sync clients'))
+    //   .includesText(`${formatNumber([topNamespace.secret_syncs])}`, 'total sync clients is accurate');
     assert
       .dom('[data-test-attribution-clients] p')
       .includesText(`${formatNumber([topMount.clients])}`, 'top attribution clients accurate');
@@ -204,9 +205,10 @@ module('Acceptance | clients | overview', function (hooks) {
     assert
       .dom(SELECTORS.charts.statTextValue('Non-entity clients'))
       .includesText(`${formatNumber([topMount.non_entity_clients])}`, 'total non-entity clients is accurate');
-    assert
-      .dom(SELECTORS.charts.statTextValue('Secrets sync clients'))
-      .includesText(`${formatNumber([topMount.secret_syncs])}`, 'total sync clients is accurate');
+    // * unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
+    // assert
+    //   .dom(SELECTORS.charts.statTextValue('Secrets sync clients'))
+    //   .includesText(`${formatNumber([topMount.secret_syncs])}`, 'total sync clients is accurate');
     assert.dom(SELECTORS.attributionBlock).doesNotExist('Does not show attribution block');
 
     await click('#namespace-search-select [data-test-selected-list-button="delete"]');
@@ -224,12 +226,13 @@ module('Acceptance | clients | overview', function (hooks) {
         `${formatNumber([formatNumber([response.total.non_entity_clients])])}`,
         'total non-entity clients is back to unfiltered value'
       );
-    assert
-      .dom(SELECTORS.charts.statTextValue('Secrets sync clients'))
-      .hasTextContaining(
-        `${formatNumber([formatNumber([response.total.secret_syncs])])}`,
-        'total sync clients is back to unfiltered value'
-      );
+    // * unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
+    // assert
+    //   .dom(SELECTORS.charts.statTextValue('Secrets sync clients'))
+    //   .hasTextContaining(
+    //     `${formatNumber([formatNumber([response.total.secret_syncs])])}`,
+    //     'total sync clients is back to unfiltered value'
+    //   );
     assert
       .dom('[data-test-attribution-clients]')
       .hasTextContaining(
