@@ -707,13 +707,15 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 		},
 		"set container plugin": func(t *testing.T) {
 			// Should never error.
-			const image = "does-not-exist"
+			plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, "", tempDir)
+			plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, tempDir)
+
 			err := catalog.Set(context.Background(), pluginutil.SetPluginInput{
 				Name:     "container",
 				Type:     consts.PluginTypeDatabase,
-				OCIImage: image,
+				OCIImage: plugin.Image,
 			})
-			if err == nil {
+			if err != nil {
 				t.Fatal(err)
 			}
 			// Check we can get it back ok.
@@ -721,8 +723,8 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if p.OCIImage != image {
-				t.Fatalf("Expected %s, got %s", image, p.OCIImage)
+			if p.OCIImage != plugin.Image {
+				t.Fatalf("Expected %s, got %s", plugin.Image, p.OCIImage)
 			}
 			// Make sure we can still get builtins too
 			_, err = catalog.Get(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, "")
@@ -752,19 +754,22 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 // specified.
 func TestRuntimeConfigPopulatedIfSpecified(t *testing.T) {
 	pluginCatalog := testPluginCatalog(t)
-	const image = "does-not-exist"
+
+	plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, "", pluginCatalog.directory)
+	plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, pluginCatalog.directory)
+
 	const runtime = "custom-runtime"
 	err := pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
 		Name:     "container",
 		Type:     consts.PluginTypeDatabase,
-		OCIImage: image,
+		OCIImage: plugin.Image,
 		Runtime:  runtime,
 	})
 	if err == nil {
 		t.Fatal("specified runtime doesn't exist yet, should have failed")
 	}
 
-	const ociRuntime = "some-other-oci-runtime"
+	const ociRuntime = "runsc"
 	err = pluginCatalog.runtimeCatalog.Set(context.Background(), &pluginruntimeutil.PluginRuntimeConfig{
 		Name:       runtime,
 		Type:       consts.PluginRuntimeTypeContainer,
@@ -778,7 +783,7 @@ func TestRuntimeConfigPopulatedIfSpecified(t *testing.T) {
 	err = pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
 		Name:     "container",
 		Type:     consts.PluginTypeDatabase,
-		OCIImage: image,
+		OCIImage: plugin.Image,
 		Runtime:  runtime,
 	})
 	if err != nil {
