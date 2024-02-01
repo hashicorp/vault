@@ -597,8 +597,7 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 			return logical.ErrorResponse(err.Error()), nil
 		}
 
-		if errors.Is(err, plugincatalog.ErrAllContainerizedBackendPluginLoadsFailed) ||
-			errors.Is(err, plugincatalog.ErrAllContainerizedDatabasePluginLoadsFailed) {
+		if errors.Is(err, plugincatalog.ErrContainerizedPluginUnableToRun) {
 			return logical.ErrorResponse(errors.Unwrap(err).Error()), nil
 		}
 

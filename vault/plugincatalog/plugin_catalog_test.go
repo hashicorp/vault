@@ -1036,29 +1036,10 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 		t.Skip("Running plugins in containers is only supported on linux")
 	}
 
-	type expectedErr struct {
-		err  error
-		name string
-	}
-	pluginTypeLoadsFailedErrMap := map[consts.PluginType]expectedErr{
-		consts.PluginTypeCredential: {
-			err:  ErrAllContainerizedBackendPluginLoadsFailed,
-			name: "all containerized backend plugin loads failed",
-		},
-		consts.PluginTypeSecrets: {
-			err:  ErrAllContainerizedBackendPluginLoadsFailed,
-			name: "all containerized backend plugin loads failed",
-		},
-		consts.PluginTypeDatabase: {
-			err:  ErrAllContainerizedDatabasePluginLoadsFailed,
-			name: "all containerized database plugin loads failed",
-		},
-	}
-
 	pluginCatalog := testPluginCatalog(t)
 	var testCases []struct {
 		plugin      pluginhelpers.TestPlugin
-		expectedErr *expectedErr
+		expectedErr error
 	}
 
 	for _, pluginType := range []consts.PluginType{
@@ -1072,20 +1053,19 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 		testCases = append(testCases,
 			struct {
 				plugin      pluginhelpers.TestPlugin
-				expectedErr *expectedErr
+				expectedErr error
 			}{
 				plugin:      plugin,
 				expectedErr: nil,
 			})
 
 		plugin.Image += "-will-not-be-found"
-		err := pluginTypeLoadsFailedErrMap[plugin.Typ]
 		testCases = append(testCases, struct {
 			plugin      pluginhelpers.TestPlugin
-			expectedErr *expectedErr
+			expectedErr error
 		}{
 			plugin:      plugin,
-			expectedErr: &err,
+			expectedErr: ErrContainerizedPluginUnableToRun,
 		})
 	}
 
@@ -1093,8 +1073,9 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 		t.Run(tc.plugin.Typ.String(), func(t *testing.T) {
 			expectedErrTestName := "nil err"
 			if tc.expectedErr != nil {
-				expectedErrTestName = tc.expectedErr.name
+				expectedErrTestName = tc.expectedErr.Error()
 			}
+
 			t.Run(expectedErrTestName, func(t *testing.T) {
 				for _, ociRuntime := range []string{"runc", "runsc"} {
 					t.Run(ociRuntime, func(t *testing.T) {
@@ -1131,8 +1112,8 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 								t.Errorf("Expected to get version %v but got %v", tc.plugin.Version, version.Version)
 							}
 
-						} else if !errors.Is(err, tc.expectedErr.err) {
-							t.Errorf("Expected to get err %s but got %s", tc.expectedErr.err, err)
+						} else if !errors.Is(err, tc.expectedErr) {
+							t.Errorf("Expected to get err %s but got %s", tc.expectedErr, err)
 						}
 					})
 				}
