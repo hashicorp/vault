@@ -17,6 +17,8 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/binary"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -94,6 +96,16 @@ var CRLNumberOID = asn1.ObjectIdentifier([]int{2, 5, 29, 20})
 //
 // > id-ce-deltaCRLIndicator OBJECT IDENTIFIER ::= { id-ce 27 }
 var DeltaCRLIndicatorOID = asn1.ObjectIdentifier([]int{2, 5, 29, 27})
+
+// OID for KeyUsage from RFC 2459 : https://www.rfc-editor.org/rfc/rfc2459.html#section-4.2.1.3
+//
+// > id-ce-keyUsage OBJECT IDENTIFIER ::=  { id-ce 15 }
+var KeyUsageOID = asn1.ObjectIdentifier([]int{2, 5, 29, 15})
+
+// OID for Extended Key Usage from RFC 5280 : https://www.rfc-editor.org/rfc/rfc5280#section-4.2.1.12
+//
+// id-ce-extKeyUsage OBJECT IDENTIFIER ::= { id-ce 37 }
+var ExtendedKeyUsageOID = asn1.ObjectIdentifier([]int{2, 5, 29, 37})
 
 // GetHexFormatted returns the byte buffer formatted in hex with
 // the specified separator between bytes.
@@ -1585,4 +1597,446 @@ func (oraw *OtherNameRaw) ExtractUTF8String() (*OtherNameUtf8, error) {
 		return &OtherNameUtf8{Oid: oraw.TypeID.String(), Value: string(val)}, nil
 	}
 	return nil, fmt.Errorf("no UTF-8 string found in OtherName")
+}
+
+func getOtherSANsStringFromExtensions(exts []pkix.Extension) (string, error) {
+	otherNames, err := GetOtherSANsFromX509Extensions(exts)
+	if err != nil {
+		return "", err
+	}
+
+	otherSansList := make([]string, len(otherNames))
+	for i, otherName := range otherNames {
+		otherSansList[i] = otherName.String()
+	}
+
+	otherSans := strings.Join(otherSansList, ",")
+
+	return otherSans, nil
+}
+
+func getOtherSANsMapFromExtensions(exts []pkix.Extension) (map[string][]string, error) {
+	otherNames, err := GetOtherSANsFromX509Extensions(exts)
+	if err != nil {
+		return nil, err
+	}
+
+	otherSans := make(map[string][]string)
+	for _, name := range otherNames {
+		if otherSans[name.Oid] == nil {
+			otherSans[name.Oid] = []string{name.Value}
+		} else {
+			otherSans[name.Oid] = append(otherSans[name.Oid], name.Value)
+		}
+	}
+
+	return otherSans, nil
+}
+
+func getKeyUsage(exts []pkix.Extension) (x509.KeyUsage, error) {
+	keyUsage := x509.KeyUsage(0)
+	for _, ext := range exts {
+		if ext.Id.Equal(KeyUsageOID) {
+			// ASN1 is Big Endian
+			// another example of equivalent code: https://cs.opensource.google/go/go/+/master:src/crypto/x509/parser.go;drc=dd84bb682482390bb8465482cb7b13d2e3b17297;l=319
+			buf := bytes.NewReader(ext.Value)
+			err := binary.Read(buf, binary.BigEndian, &keyUsage)
+			if err != nil {
+				return keyUsage, err
+			}
+			return keyUsage, nil
+		}
+	}
+	return keyUsage, nil
+}
+
+func getExtKeyUsageOids(exts []pkix.Extension) ([]string, error) {
+	keyUsageOidStrings := make([]string, 0)
+	keyUsageOids := make([]asn1.ObjectIdentifier, 0)
+	for _, ext := range exts {
+		if ext.Id.Equal(ExtendedKeyUsageOID) {
+			_, err := asn1.Unmarshal(ext.Value, &keyUsageOids)
+			if err != nil {
+				return nil, fmt.Errorf("unable to unmarshal KeyUsageOid extension: %w", err)
+			}
+			for _, oid := range keyUsageOids {
+				keyUsageOidStrings = append(keyUsageOidStrings, oid.String())
+			}
+			return keyUsageOidStrings, nil
+		}
+	}
+	return nil, nil
+}
+
+func getPolicyIdentifiers(exts []pkix.Extension) ([]string, error) {
+	policyIdentifiers := make([]string, 0)
+	for _, ext := range exts {
+		if ext.Id.Equal(policyInformationOid) {
+			// PolicyInformation ::= SEQUENCE {
+			//        policyIdentifier   CertPolicyId,
+			//        policyQualifiers   SEQUENCE SIZE (1..MAX) OF
+			//                                PolicyQualifierInfo OPTIONAL }
+			type policyInformation struct {
+				PolicyIdentifier asn1.ObjectIdentifier `asn1:"optional"`
+				PolicyQualifier  any                   `asn1:"optional"`
+			}
+			policies := make([]policyInformation, 0)
+			_, err := asn1.Unmarshal(ext.Value, &policies)
+			if err != nil {
+				return nil, err
+			}
+			for _, policy := range policies {
+				policyIdentifiers = append(policyIdentifiers, policy.PolicyIdentifier.String())
+			}
+			return policyIdentifiers, nil
+		}
+	}
+	return nil, nil
+}
+
+// Translate Certificates and CSRs into Certificate Template
+// Four "Types" Here: Certificates; Certificate Signing Requests; Fields map[string]interface{}; Creation Parameters
+
+func ParseCertificateToCreationParameters(certificate x509.Certificate) (creationParameters CreationParameters, err error) {
+	otherSans, err := getOtherSANsMapFromExtensions(certificate.Extensions)
+	if err != nil {
+		return CreationParameters{}, err
+	}
+
+	creationParameters = CreationParameters{
+		Subject:        removeNames(certificate.Subject),
+		DNSNames:       certificate.DNSNames,
+		EmailAddresses: certificate.EmailAddresses,
+		IPAddresses:    certificate.IPAddresses,
+		URIs:           certificate.URIs,
+		OtherSANs:      otherSans,
+		IsCA:           certificate.IsCA,
+		KeyType:        GetKeyType(certificate.PublicKeyAlgorithm.String()),
+		KeyBits:        FindBitLength(certificate.PublicKey),
+		NotAfter:       certificate.NotAfter,
+		KeyUsage:       certificate.KeyUsage,
+		// ExtKeyUsage: We use ExtKeyUsageOIDs instead as the more general field
+		// ExtKeyUsageOIDs: this is an extension that may not be set, so is handled below
+		// PolicyIdentifiers: this is an extension that may not be set, so is handled below
+		BasicConstraintsValidForNonCA: certificate.BasicConstraintsValid,
+		SignatureBits:                 FindSignatureBits(certificate.SignatureAlgorithm),
+		UsePSS:                        IsPSS(certificate.SignatureAlgorithm),
+		// The following two values are on creation parameters, but are impossible to parse from the certificate
+		// ForceAppendCaChain
+		// UseCSRValues
+		PermittedDNSDomains: certificate.PermittedDNSDomains,
+		// URLs: punting on this for now
+		MaxPathLength:     certificate.MaxPathLen,
+		NotBeforeDuration: time.Now().Sub(certificate.NotBefore), // Assumes Certificate was created this moment
+		SKID:              certificate.SubjectKeyId,
+	}
+
+	extKeyUsageOIDS, err := getExtKeyUsageOids(certificate.Extensions)
+	if err != nil {
+		return CreationParameters{}, err
+	}
+	creationParameters.ExtKeyUsageOIDs = extKeyUsageOIDS
+
+	policyInformationOids, err := getPolicyIdentifiers(certificate.Extensions)
+	if err != nil {
+		return CreationParameters{}, err
+	}
+	creationParameters.PolicyIdentifiers = policyInformationOids
+
+	return creationParameters, err
+}
+
+func removeNames(name pkix.Name) pkix.Name {
+	name.Names = nil
+	return name
+}
+
+func ParseCsrToCreationParameters(csr x509.CertificateRequest) (CreationParameters, error) {
+	otherSANs, err := getOtherSANsMapFromExtensions(csr.Extensions)
+	if err != nil {
+		return CreationParameters{}, err
+	}
+
+	creationParameters := CreationParameters{
+		Subject:        removeNames(csr.Subject),
+		DNSNames:       csr.DNSNames,
+		EmailAddresses: csr.EmailAddresses,
+		IPAddresses:    csr.IPAddresses,
+		URIs:           csr.URIs,
+		OtherSANs:      otherSANs,
+		// IsCA: is handled below since the basic constraint it comes from might not be set on the CSR
+		KeyType: GetKeyType(csr.PublicKeyAlgorithm.String()),
+		KeyBits: FindBitLength(csr.PublicKey),
+		// NotAfter: this is not set on a CSR
+		// KeyUsage: handled below since this may not be set
+		// ExtKeyUsage: We use exclusively ExtKeyUsageOIDs here
+		// ExtKeyUsageOIDs: handled below since this may not be set
+		// PolicyIdentifiers: handled below since this may not be set
+		// BasicConstraintsValidForNonCA is handled below, since it may or may not be set on the CSR
+		SignatureBits: FindSignatureBits(csr.SignatureAlgorithm),
+		UsePSS:        IsPSS(csr.SignatureAlgorithm),
+		// The following two values are on creation parameters, but are impossible to parse from the csr
+		// ForceAppendCaChain
+		// UseCSRValues
+		// PermittedDNSDomains : omitted, this generally isn't on a CSR
+		// URLs : omitted, this generally isn't on a CSR
+		// MaxPathLength is handled below since the basic constraint it comes from may not be set on the CSR
+		// NotBeforeDuration : this is not set on a CSR
+		// SKID: this is generally not set on a CSR, but calculated from the Key information itself
+	}
+
+	keyUsage, err := getKeyUsage(csr.Extensions)
+	if err != nil {
+		return CreationParameters{}, err
+	}
+	creationParameters.KeyUsage = keyUsage
+
+	extKeyUsageOIDS, err := getExtKeyUsageOids(csr.Extensions)
+	if err != nil {
+		return CreationParameters{}, err
+	}
+	creationParameters.ExtKeyUsageOIDs = extKeyUsageOIDS
+
+	policyInformationOids, err := getPolicyIdentifiers(csr.Extensions)
+	if err != nil {
+		return CreationParameters{}, err
+	}
+	creationParameters.PolicyIdentifiers = policyInformationOids
+
+	found, isCA, maxPathLength, err := getBasicConstraintsFromExtension(csr.Extensions)
+	if err != nil {
+		return CreationParameters{}, err
+	}
+	if found {
+		creationParameters.IsCA = isCA
+		creationParameters.BasicConstraintsValidForNonCA = (isCA && maxPathLength != 0) || (!isCA && (maxPathLength == 0))
+		if isCA { // MaxPathLength Only Has a Meaning on a Certificate Authority
+			creationParameters.MaxPathLength = maxPathLength
+		}
+	}
+
+	return creationParameters, err
+}
+
+func ParseCsrToFields(csr x509.CertificateRequest) (map[string]interface{}, error) {
+	otherSans, err := getOtherSANsStringFromExtensions(csr.Extensions)
+	if err != nil {
+		return nil, err
+	}
+
+	templateData := map[string]interface{}{
+		"common_name":          csr.Subject.CommonName,
+		"alt_names":            MakeAltNamesCommaSeparatedString(csr.DNSNames, csr.EmailAddresses),
+		"ip_sans":              MakeIpAddressCommaSeparatedString(csr.IPAddresses),
+		"uri_sans":             MakeUriCommaSeparatedString(csr.URIs),
+		"other_sans":           otherSans,
+		"signature_bits":       FindSignatureBits(csr.SignatureAlgorithm),
+		"exclude_cn_from_sans": DetermineExcludeCnFromCsrSans(csr),
+		"ou":                   makeCommaSeparatedString(csr.Subject.OrganizationalUnit),
+		"organization":         makeCommaSeparatedString(csr.Subject.Organization),
+		"country":              makeCommaSeparatedString(csr.Subject.Country),
+		"locality":             makeCommaSeparatedString(csr.Subject.Locality),
+		"province":             makeCommaSeparatedString(csr.Subject.Province),
+		"street_address":       makeCommaSeparatedString(csr.Subject.StreetAddress),
+		"postal_code":          makeCommaSeparatedString(csr.Subject.PostalCode),
+		"serial_number":        csr.Subject.SerialNumber,
+		// There is no "TTL" on a CSR, that is always set by the signer
+		// max_path_length is handled below
+		// permitted_dns_domains is a CA thing, it generally does not appear on a CSR
+		"use_pss": IsPSS(csr.SignatureAlgorithm),
+		// skid could be calculated, but does not directly exist on a csr, so punting for now
+		"key_type": GetKeyType(csr.PublicKeyAlgorithm.String()),
+		"key_bits": FindBitLength(csr.PublicKey),
+	}
+
+	// isCA is not a field in our data call - that is represented inside vault by using a different endpoint
+	found, _, _, err := getBasicConstraintsFromExtension(csr.Extensions)
+	if err != nil {
+		return nil, err
+	}
+	templateData["add_basic_constraints"] = found
+
+	return templateData, nil
+}
+
+func ParseCertificateToFields(certificate x509.Certificate) (map[string]interface{}, error) {
+	otherSans, err := getOtherSANsStringFromExtensions(certificate.Extensions)
+	if err != nil {
+		return nil, err
+	}
+
+	templateData := map[string]interface{}{
+		"common_name":           certificate.Subject.CommonName,
+		"alt_names":             MakeAltNamesCommaSeparatedString(certificate.DNSNames, certificate.EmailAddresses),
+		"ip_sans":               MakeIpAddressCommaSeparatedString(certificate.IPAddresses),
+		"uri_sans":              MakeUriCommaSeparatedString(certificate.URIs),
+		"other_sans":            otherSans,
+		"signature_bits":        FindSignatureBits(certificate.SignatureAlgorithm),
+		"exclude_cn_from_sans":  DetermineExcludeCnFromCertSans(certificate),
+		"ou":                    makeCommaSeparatedString(certificate.Subject.OrganizationalUnit),
+		"organization":          makeCommaSeparatedString(certificate.Subject.Organization),
+		"country":               makeCommaSeparatedString(certificate.Subject.Country),
+		"locality":              makeCommaSeparatedString(certificate.Subject.Locality),
+		"province":              makeCommaSeparatedString(certificate.Subject.Province),
+		"street_address":        makeCommaSeparatedString(certificate.Subject.StreetAddress),
+		"postal_code":           makeCommaSeparatedString(certificate.Subject.PostalCode),
+		"serial_number":         certificate.Subject.SerialNumber,
+		"ttl":                   (certificate.NotAfter.Sub(certificate.NotBefore)).String(),
+		"max_path_length":       certificate.MaxPathLen,
+		"permitted_dns_domains": strings.Join(certificate.PermittedDNSDomains, ","),
+		"use_pss":               IsPSS(certificate.SignatureAlgorithm),
+		"skid":                  hex.EncodeToString(certificate.SubjectKeyId),
+		"key_type":              GetKeyType(certificate.PublicKeyAlgorithm.String()),
+		"key_bits":              FindBitLength(certificate.PublicKey),
+	}
+
+	return templateData, nil
+}
+
+func getBasicConstraintsFromExtension(exts []pkix.Extension) (found bool, isCA bool, maxPathLength int, err error) {
+	for _, ext := range exts {
+		if ext.Id.Equal(ExtensionBasicConstraintsOID) {
+			isCA, maxPathLength, err = ParseBasicConstraintExtension(ext)
+			if err != nil {
+				return false, false, -1, err
+			}
+			return true, isCA, maxPathLength, nil
+		}
+	}
+
+	return false, false, -1, nil
+}
+
+func MakeAltNamesCommaSeparatedString(names []string, emails []string) string {
+	return strings.Join(append(names, emails...), ",")
+}
+
+func MakeUriCommaSeparatedString(uris []*url.URL) string {
+	stringAddresses := make([]string, len(uris))
+	for i, uri := range uris {
+		stringAddresses[i] = uri.String()
+	}
+	return strings.Join(stringAddresses, ",")
+}
+
+func MakeIpAddressCommaSeparatedString(addresses []net.IP) string {
+	stringAddresses := make([]string, len(addresses))
+	for i, address := range addresses {
+		stringAddresses[i] = address.String()
+	}
+	return strings.Join(stringAddresses, ",")
+}
+
+func makeCommaSeparatedString(values []string) string {
+	return strings.Join(values, ",")
+}
+
+func DetermineExcludeCnFromCertSans(certificate x509.Certificate) bool {
+	cn := certificate.Subject.CommonName
+	if cn == "" {
+		return false
+	}
+
+	emails := certificate.EmailAddresses
+	for _, email := range emails {
+		if email == cn {
+			return false
+		}
+	}
+
+	dnses := certificate.DNSNames
+	for _, dns := range dnses {
+		if dns == cn {
+			return false
+		}
+	}
+
+	return true
+}
+
+func DetermineExcludeCnFromCsrSans(csr x509.CertificateRequest) bool {
+	cn := csr.Subject.CommonName
+	if cn == "" {
+		return false
+	}
+
+	emails := csr.EmailAddresses
+	for _, email := range emails {
+		if email == cn {
+			return false
+		}
+	}
+
+	dnses := csr.DNSNames
+	for _, dns := range dnses {
+		if dns == cn {
+			return false
+		}
+	}
+
+	return true
+}
+
+func FindBitLength(publicKey any) int {
+	if publicKey == nil {
+		return 0
+	}
+	switch pub := publicKey.(type) {
+	case *rsa.PublicKey:
+		return pub.N.BitLen()
+	case *ecdsa.PublicKey:
+		switch pub.Curve {
+		case elliptic.P224():
+			return 224
+		case elliptic.P256():
+			return 256
+		case elliptic.P384():
+			return 384
+		case elliptic.P521():
+			return 521
+		default:
+			return 0
+		}
+	default:
+		return 0
+	}
+}
+
+func FindSignatureBits(algo x509.SignatureAlgorithm) int {
+	switch algo {
+	case x509.MD2WithRSA, x509.MD5WithRSA, x509.SHA1WithRSA, x509.DSAWithSHA1, x509.ECDSAWithSHA1:
+		return -1
+	case x509.SHA256WithRSA, x509.DSAWithSHA256, x509.ECDSAWithSHA256, x509.SHA256WithRSAPSS:
+		return 256
+	case x509.SHA384WithRSA, x509.ECDSAWithSHA384, x509.SHA384WithRSAPSS:
+		return 384
+	case x509.SHA512WithRSA, x509.SHA512WithRSAPSS, x509.ECDSAWithSHA512:
+		return 512
+	case x509.PureEd25519:
+		return 0
+	default:
+		return -1
+	}
+}
+
+func GetKeyType(goKeyType string) string {
+	switch goKeyType {
+	case "RSA":
+		return "rsa"
+	case "ECDSA":
+		return "ec"
+	case "Ed25519":
+		return "ed25519"
+	default:
+		return ""
+	}
+}
+
+func IsPSS(algorithm x509.SignatureAlgorithm) bool {
+	switch algorithm {
+	case x509.SHA384WithRSAPSS, x509.SHA512WithRSAPSS, x509.SHA256WithRSAPSS:
+		return true
+	default:
+		return false
+	}
 }
