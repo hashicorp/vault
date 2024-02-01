@@ -882,7 +882,8 @@ module('Integration | Util | client count utils', function (hooks) {
     const byNamespaceKeyObject = namespaceArrayToObject(
       totalClientsByNamespace,
       newClientsByNamespace,
-      '10/21'
+      '10/21',
+      '2021-10-01T00:00:00Z'
     );
 
     assert.propEqual(
@@ -923,7 +924,7 @@ module('Integration | Util | client count utils', function (hooks) {
 
     assert.propEqual(
       {},
-      namespaceArrayToObject(null, null, '10/21'),
+      namespaceArrayToObject(null, null, '10/21', 'timestamp-here'),
       'returns an empty object when totalClientsByNamespace = null'
     );
   });

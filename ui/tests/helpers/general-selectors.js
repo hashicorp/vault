@@ -22,6 +22,22 @@ export const SELECTORS = {
   emptyStateActions: '[data-test-empty-state-actions]',
   menuTrigger: '[data-test-popup-menu-trigger]',
   listItem: '[data-test-list-item-link]',
+  calendarWidget: {
+    trigger: '[data-test-calendar-widget-trigger]',
+    currentMonth: '[data-test-current-month]',
+    currentBillingPeriod: '[data-test-current-billing-period]',
+    customEndMonth: '[data-test-show-calendar]',
+    previousYear: '[data-test-previous-year]',
+    nextYear: '[data-test-next-year]',
+    calendarMonth: (month) => `[data-test-calendar-month="${month}"]`,
+  },
+  dateDropdown: {
+    toggleMonth: '[data-test-toggle-month]',
+    toggleYear: '[data-test-toggle-year]',
+    selectMonth: (month) => `[data-test-dropdown-month="${month}"]`,
+    selectYear: (year) => `[data-test-dropdown-year="${year}"]`,
+    submit: '[data-test-date-dropdown-submit]',
+  },
   // FORMS
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   inputByAttr: (attr) => `[data-test-input="${attr}"]`,
@@ -54,4 +70,5 @@ export const SELECTORS = {
     input: '[data-test-kv-suggestion-input]',
     select: '[data-test-kv-suggestion-select]',
   },
+  navLink: (label) => `[data-test-sidebar-nav-link="${label}"]`,
 };

@@ -46,7 +46,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
 
   test('it renders empty state with no data', async function (assert) {
     await render(hbs`
-      <Clients::Attribution @chartLegend={{this.chartLegend}} />
+      <Clients::Attribution />
     `);
 
     assert.dom('[data-test-component="empty-state"]').exists();
@@ -59,7 +59,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
   test('it renders with data for namespaces', async function (assert) {
     await render(hbs`
       <Clients::Attribution
-        @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.totalClientAttribution}}
         @totalUsageCounts={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
@@ -92,7 +91,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
     this.end = formatRFC3339(subMonths(endOfMonth(this.mockNow), 1));
     await render(hbs`
       <Clients::Attribution
-        @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.totalClientAttribution}}
         @totalUsageCounts={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
@@ -145,7 +143,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
   test('it renders single chart for current month', async function (assert) {
     await render(hbs`
       <Clients::Attribution
-        @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.totalClientAttribution}}
         @totalUsageCounts={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
@@ -166,7 +163,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
   test('it renders single chart and correct text for for date range', async function (assert) {
     await render(hbs`
       <Clients::Attribution
-        @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.totalClientAttribution}}
         @totalUsageCounts={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
@@ -189,7 +185,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
     this.set('selectedNamespace', 'second');
     await render(hbs`
       <Clients::Attribution
-        @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.namespaceMountsData}}
         @totalUsageCounts={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
@@ -220,7 +215,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
   test('it renders modal', async function (assert) {
     await render(hbs`
       <Clients::Attribution
-        @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.namespaceMountsData}}
         @responseTimestamp={{this.timestamp}}
         @startTimestamp="2022-06-01T23:00:11.050Z"
