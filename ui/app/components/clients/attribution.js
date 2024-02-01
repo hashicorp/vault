@@ -125,11 +125,15 @@ export default class Attribution extends Component {
     }
   }
 
+  // secrets_syncs unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
+  // the three necessary CSV changes to add sync data are commented below
+
   destructureCountsToArray(object) {
     // destructure the namespace object  {label: 'some-namespace', entity_clients: 171, non_entity_clients: 20, secret_syncs: 10, clients: 201}
     // to get integers for CSV file
-    const { clients, entity_clients, non_entity_clients, secret_syncs } = object;
-    return [clients, entity_clients, non_entity_clients, secret_syncs];
+    // (1) SYNC BETA - add `secrets_syncs to destructured and returned object below
+    const { clients, entity_clients, non_entity_clients } = object;
+    return [clients, entity_clients, non_entity_clients];
   }
 
   constructCsvRow(namespaceColumn, mountColumn = null, totalColumns, newColumns = null) {
@@ -161,10 +165,11 @@ export default class Attribution extends Component {
       'Total clients',
       'Entity clients',
       'Non-entity clients',
+      // 'Secrets sync clients', * (2) SYNC BETA - add 'Secrets sync clients' as the last element of csvHeader
     ];
 
     if (newAttribution) {
-      csvHeader.push('Total new clients, New entity clients, New non-entity clients');
+      csvHeader.push('Total new clients, New entity clients, New non-entity clients'); // * (3) add 'New secrets sync clients' as last string pushed here
     }
 
     totalAttribution.forEach((totalClientsObject) => {
