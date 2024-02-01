@@ -28,13 +28,9 @@ import { stringify } from 'core/helpers/stringify';
 
 export default class KvDataFields extends Component {
   @tracked lintingErrors;
-  @tracked codeMirrorString;
 
-  constructor() {
-    super(...arguments);
-    this.codeMirrorString = this.args.secret?.secretData
-      ? stringify([this.args.secret.secretData], {})
-      : '{ "": "" }';
+  get stringifiedSecretData() {
+    return this.args.secret?.secretData ? stringify([this.args.secret.secretData], {}) : '{ "": "" }';
   }
 
   @action
@@ -44,6 +40,5 @@ export default class KvDataFields extends Component {
     if (!this.lintingErrors) {
       this.args.secret.secretData = JSON.parse(value);
     }
-    this.codeMirrorString = value;
   }
 }
