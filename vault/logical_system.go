@@ -5420,6 +5420,7 @@ type SealBackendStatusResponse struct {
 	Healthy        bool                `json:"healthy"`
 	UnhealthySince string              `json:"unhealthy_since,omitempty"`
 	Backends       []SealBackendStatus `json:"backends"`
+	FullyWrapped   bool                `json:"fully_wrapped"`
 }
 
 func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResponse, error) {
@@ -5545,6 +5546,13 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 		}
 		r.Healthy = true
 	}
+
+	pps, err := GetPartiallySealWrappedPaths(ctx, c.physical)
+	if err != nil {
+		return nil, fmt.Errorf("could not list partially seal wrapped values: %w", err)
+	}
+	genInfo := c.seal.GetAccess().GetSealGenerationInfo()
+	r.FullyWrapped = genInfo.IsRewrapped() && len(pps) == 0
 	return &r, nil
 }
 

@@ -724,25 +724,30 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 	}
 
 	// Start goroutines to decrypt the value
-
 	first := wrappersByPriority[0]
-	// First, if we only have one slot, try matching by keyId
-	if len(blobInfoMap) == 1 {
-	outer:
-		for k := range blobInfoMap {
-			for _, sealWrapper := range wrappersByPriority {
-				keyId, err := sealWrapper.Wrapper.KeyId(ctx)
-				if err != nil {
-					resultWg.Add(1)
-					go reportResult(sealWrapper.Name, nil, false, err)
-					continue
-				}
-				if keyId == k {
-					first = sealWrapper
-					break outer
-				}
+	found := false
+outer:
+	// This loop finds the highest priority seal with a keyId in common with the blobInfoMap,
+	// and ensures we'll use it first.  This should equal the highest priority wrapper in the nominal
+	// case, but may not if a seal is unhealthy.  This ensures we try the highest priority healthy
+	// seal first if available, and warn if we don't think we have one in common.
+	for k := range blobInfoMap {
+		for _, sealWrapper := range wrappersByPriority {
+			keyId, err := sealWrapper.Wrapper.KeyId(ctx)
+			if err != nil {
+				resultWg.Add(1)
+				go reportResult(sealWrapper.Name, nil, false, err)
+				continue
+			}
+			if keyId == k {
+				found = true
+				first = sealWrapper
+				break outer
 			}
 		}
+	}
+	if !found {
+		a.logger.Warn("while unwrapping, value has no key-id in common with currently healthy seals.  Trying all healthy seals")
 	}
 
 	resultWg.Add(1)
