@@ -6706,23 +6706,23 @@ func TestSystemBackend_pluginRuntime_CannotDeleteRuntimeWithReferencingPlugins(t
 	})
 	b := c.systemBackend
 
+	const runtime = "custom-runtime"
+	const ociRuntime = "runsc"
 	conf := pluginruntimeutil.PluginRuntimeConfig{
-		Name:         "foo",
-		Type:         consts.PluginRuntimeTypeContainer,
-		OCIRuntime:   "some-oci-runtime",
-		CgroupParent: "/cpulimit/",
-		CPU:          1,
-		Memory:       10000,
+		Name:       runtime,
+		Type:       consts.PluginRuntimeTypeContainer,
+		OCIRuntime: ociRuntime,
 	}
 
 	// Register the plugin runtime
 	req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/runtimes/catalog/%s/%s", conf.Type.String(), conf.Name))
 	req.Data = map[string]interface{}{
-		"oci_runtime":   conf.OCIRuntime,
-		"cgroup_parent": conf.CgroupParent,
-		"cpu_nanos":     conf.CPU,
-		"memory_bytes":  conf.Memory,
+		"oci_runtime": conf.OCIRuntime,
 	}
+
+	const pluginVersion = "v1.16.0"
+	plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, pluginVersion, c.pluginDirectory)
+	plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, c.pluginDirectory)
 
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
@@ -6734,18 +6734,17 @@ func TestSystemBackend_pluginRuntime_CannotDeleteRuntimeWithReferencingPlugins(t
 
 	// Register the plugin referencing the runtime.
 	req = logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
-	req.Data["version"] = "v0.16.0"
-	req.Data["sha_256"] = hex.EncodeToString([]byte{'1'})
-	req.Data["command"] = ""
-	req.Data["oci_image"] = "hashicorp/vault-plugin-auth-jwt"
-	req.Data["runtime"] = "foo"
+	req.Data["version"] = pluginVersion
+	req.Data["sha_256"] = plugin.ImageSha256
+	req.Data["oci_image"] = plugin.Image
+	req.Data["runtime"] = runtime
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || resp.Error() != nil {
 		t.Fatalf("err: %v %v", err, resp.Error())
 	}
 
 	// Expect to fail to delete the plugin runtime
-	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/runtimes/catalog/container/foo")
+	req = logical.TestRequest(t, logical.DeleteOperation, fmt.Sprintf("plugins/runtimes/catalog/container/%s", runtime))
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if resp == nil || !resp.IsError() || resp.Error() == nil {
 		t.Errorf("expected logical error but got none, resp: %#v", resp)
@@ -6756,14 +6755,14 @@ func TestSystemBackend_pluginRuntime_CannotDeleteRuntimeWithReferencingPlugins(t
 
 	// Delete the plugin.
 	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/catalog/database/test-plugin")
-	req.Data["version"] = "v0.16.0"
+	req.Data["version"] = pluginVersion
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || resp.Error() != nil {
 		t.Fatalf("err: %v %v", err, resp.Error())
 	}
 
 	// This time deleting the runtime should work.
-	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/runtimes/catalog/container/foo")
+	req = logical.TestRequest(t, logical.DeleteOperation, fmt.Sprintf("plugins/runtimes/catalog/container/%s", runtime))
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || resp.Error() != nil {
 		t.Fatalf("err: %v %v", err, resp.Error())
