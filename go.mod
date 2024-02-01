@@ -52,7 +52,7 @@ require (
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/denisenkom/go-mssqldb v0.12.3
-	github.com/docker/docker v25.0.1+incompatible
+	github.com/docker/docker v25.0.2+incompatible
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.16.0
@@ -107,7 +107,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.2
 	github.com/hashicorp/go-secure-stdlib/mlock v0.1.3
 	github.com/hashicorp/go-secure-stdlib/nonceutil v0.1.0
-	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.7
+	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.8
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
@@ -132,7 +132,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.16.1
 	github.com/hashicorp/vault-plugin-auth-azure v0.16.2
 	github.com/hashicorp/vault-plugin-auth-centrify v0.15.1
-	github.com/hashicorp/vault-plugin-auth-cf v0.15.1
+	github.com/hashicorp/vault-plugin-auth-cf v0.15.2-0.20240201193007-ecf6800199bb
 	github.com/hashicorp/vault-plugin-auth-gcp v0.16.1
 	github.com/hashicorp/vault-plugin-auth-jwt v0.19.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.10.1
@@ -156,7 +156,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.11.3
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.7.3
 	github.com/hashicorp/vault-testing-stepwise v0.1.4
-	github.com/hashicorp/vault/api v1.10.0
+	github.com/hashicorp/vault/api v1.11.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
 	github.com/hashicorp/vault/sdk v0.10.2
@@ -225,7 +225,7 @@ require (
 	golang.org/x/text v0.14.0
 	golang.org/x/tools v0.14.0
 	google.golang.org/api v0.154.0
-	google.golang.org/grpc v1.60.1
+	google.golang.org/grpc v1.61.0
 	google.golang.org/protobuf v1.32.0
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
@@ -311,7 +311,7 @@ require (
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/cloudfoundry-community/go-cfclient v0.0.0-20220930021109-9c4e6c59ccf1 // indirect
 	github.com/cncf/udpa/go v0.0.0-20220112060539-c52dc94e7fbe // indirect
-	github.com/cncf/xds/go v0.0.0-20230607035331-e9ce68804cb4 // indirect
+	github.com/cncf/xds/go v0.0.0-20231109132714-523115ebc101 // indirect
 	github.com/containerd/containerd v1.7.12 // indirect
 	github.com/containerd/continuity v0.4.2 // indirect
 	github.com/containerd/log v0.1.0 // indirect
