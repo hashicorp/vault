@@ -55,7 +55,7 @@ func (t *ToggleableWrapper) Encrypt(ctx context.Context, bytes []byte, opts ...w
 	return t.Wrapper.Encrypt(ctx, bytes, opts...)
 }
 
-func (t ToggleableWrapper) Decrypt(ctx context.Context, info *wrapping.BlobInfo, opts ...wrapping.Option) ([]byte, error) {
+func (t *ToggleableWrapper) Decrypt(ctx context.Context, info *wrapping.BlobInfo, opts ...wrapping.Option) ([]byte, error) {
 	t.l.RLock()
 	defer t.l.RUnlock()
 	if t.error != nil {
