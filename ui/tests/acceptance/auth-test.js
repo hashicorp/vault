@@ -69,22 +69,25 @@ module('Acceptance | auth', function (hooks) {
       }
       await component.login();
       const lastRequest = this.server.passthroughRequests[this.server.passthroughRequests.length - 1];
-      let body = JSON.parse(lastRequest.requestBody);
-      // Note: x-vault-token used to be lowercase prior to upgrade
+      const body = JSON.parse(lastRequest.requestBody);
+
+      let keys;
+      let included;
       if (backend.type === 'token') {
-        assert.ok(
-          Object.keys(lastRequest.requestHeaders).includes('X-Vault-Token'),
-          'token uses vault token header'
-        );
+        keys = lastRequest.requestHeaders;
+        included = 'X-Vault-Token';
       } else if (backend.type === 'github') {
-        assert.ok(Object.keys(body).includes('token'), 'GitHub includes token');
+        keys = body;
+        included = 'token';
       } else if (backend.type === 'jwt' || backend.type === 'oidc') {
         const authReq = this.server.passthroughRequests[this.server.passthroughRequests.length - 2];
-        body = JSON.parse(authReq.requestBody);
-        assert.ok(Object.keys(body).includes('role'), `${backend.type} includes role`);
+        keys = JSON.parse(authReq.requestBody);
+        included = 'role';
       } else {
-        assert.ok(Object.keys(body).includes('password'), `${backend.type} includes password`);
+        keys = body;
+        included = 'password';
       }
+      assert.ok(Object.keys(keys).includes(included), `${backend.type} includes ${included}`);
     }
   });
 

@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/go-bexpr"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internal/observability/event"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var _ eventlogger.Node = (*EntryFilter)(nil)
@@ -29,6 +30,15 @@ func NewEntryFilter(filter string) (*EntryFilter, error) {
 	eval, err := bexpr.CreateEvaluator(filter)
 	if err != nil {
 		return nil, fmt.Errorf("%s: cannot create new audit filter: %w", op, err)
+	}
+
+	// Validate the filter by attempting to evaluate it with an empty input.
+	// This prevents users providing a filter with a field that would error during
+	// matching, and block all auditable requests to Vault.
+	li := logical.LogInputBexpr{}
+	_, err = eval.Evaluate(li)
+	if err != nil {
+		return nil, fmt.Errorf("%s: filter references an unsupported field: %s", op, filter)
 	}
 
 	return &EntryFilter{evaluator: eval}, nil
