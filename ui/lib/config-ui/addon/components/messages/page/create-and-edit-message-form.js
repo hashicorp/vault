@@ -10,6 +10,7 @@ import errorMessage from 'vault/utils/error-message';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import Ember from 'ember';
+import { isAfter } from 'date-fns';
 
 /**
  * @module Page::CreateAndEditMessageForm
@@ -58,8 +59,10 @@ export default class MessagesList extends Component {
       this.userConfirmation = '';
 
       const isValid = this.validate();
-
-      if (this.args.hasSomeActiveModals && this.args.message.type === 'modal') {
+      const hasExpiredMessage = this.args?.messages?.some((message) => {
+        return isAfter(new Date(), new Date(message.endTime));
+      });
+      if (!hasExpiredMessage && this.args.hasSomeActiveModals && this.args.message.type === 'modal') {
         this.showMultipleModalsMessage = true;
         const isConfirmed = yield this.getUserConfirmation.perform();
         if (!isConfirmed) return;
