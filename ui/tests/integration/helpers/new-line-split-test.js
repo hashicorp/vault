@@ -14,4 +14,12 @@ module('Integration | Helper | new-line-split', function (hooks) {
     const lines = newLineSplit(['First new line.\nSecond new line.\nThird new line.']);
     assert.deepEqual(lines, ['First new line.', 'Second new line.', 'Third new line.']);
   });
+  test('it checks for some non-new line characters', async function (assert) {
+    let lines = newLineSplit(['First new line.<br />\nSecond new line.\nThird new line.']);
+    assert.deepEqual(lines, ['First new line.<br />', 'Second new line.', 'Third new line.']);
+    lines = newLineSplit(['First new line./n\nSecond new line.\nThird new line.']);
+    assert.deepEqual(lines, ['First new line./n', 'Second new line.', 'Third new line.']);
+    lines = newLineSplit(['First new line.\n\nSecond new line.\n\nThird new line.']);
+    assert.deepEqual(lines, ['First new line.', '', 'Second new line.', '', 'Third new line.']);
+  });
 });
