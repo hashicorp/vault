@@ -180,7 +180,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
     assertion = (params) =>
       assert.true(params.mountPath.includes('auth/'), 'Auth mount value sent on change');
-    await selectChoose(ts.counts.mountPaths, '.ember-power-select-option', 0);
+    await selectChoose(ts.counts.mountPaths, 'auth/authid0');
   });
 
   test('it should render start time discrepancy alert', async function (assert) {
