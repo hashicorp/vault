@@ -19,6 +19,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func init() {
+	if signed := os.Getenv("VAULT_LICENSE_CI"); signed != "" {
+		os.Setenv(command.EnvVaultLicense, signed)
+	}
+}
+
 const (
 	baseHCL = `
 		backend "inmem" { }
