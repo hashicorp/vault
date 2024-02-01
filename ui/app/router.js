@@ -29,7 +29,7 @@ Router.map(function () {
       this.route('clients', function () {
         this.route('counts', function () {
           this.route('overview');
-          this.route('sync');
+          // this.route('sync'); * unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
           this.route('token');
         });
         this.route('config');
