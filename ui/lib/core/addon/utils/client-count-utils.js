@@ -60,12 +60,10 @@ export const formatByNamespace = (namespaceArray) => {
     // if no mounts, mounts will be an empty array
     flattenedNs.mounts = [];
     if (ns?.mounts && ns.mounts.length > 0) {
-      flattenedNs.mounts = ns.mounts.map((mount) => {
-        return {
-          label: mount['mount_path'],
-          ...flattenDataset(mount),
-        };
-      });
+      flattenedNs.mounts = ns.mounts
+        .map((mount) => ({ label: mount['mount_path'], ...flattenDataset(mount) }))
+        // SYNC BETA - while sync clients are hidden, return only auth mount paths (entity/non-entity clients)
+        .filter((m) => m.label.includes('auth/'));
     }
     return {
       label,
