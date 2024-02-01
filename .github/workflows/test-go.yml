@@ -141,7 +141,7 @@ jobs:
         run: |
           # testonly tests need additional build tag though let's exclude them anyway for clarity
           (
-            go list ./... | grep -v "_binary" | grep -v "vault/integ" | grep -v "testonly" | gotestsum tool ci-matrix --debug \
+            make all-packages | grep -v "_binary" | grep -v "vault/integ" | grep -v "testonly" | gotestsum tool ci-matrix --debug \
               --partitions "${{ inputs.total-runners }}" \
               --timing-files 'test-results/go-test/*.json' > matrix.json
           )
@@ -156,7 +156,7 @@ jobs:
           # testonly tagged tests need an additional tag to be included
           # also running some extra tests for sanity checking with the testonly build tag
           (
-            go list -tags=testonly ./vault/external_tests/{kv,token,*replication-perf*,*testonly*} ./vault/ | gotestsum tool ci-matrix --debug \
+            go list -tags=testonly ./vault/external_tests/{kv,token,*replication-perf*,*testonly*} ./command/*testonly* ./vault/ | gotestsum tool ci-matrix --debug \
               --partitions "${{ inputs.total-runners }}" \
               --timing-files 'test-results/go-test/*.json' > matrix.json
           )
@@ -166,7 +166,7 @@ jobs:
         if: inputs.binary-tests
         id: list-binary-tests
         run: |
-          LIST="$(go list ./... | grep "_binary" | xargs)"
+          LIST="$(make all-packages | grep "_binary" | xargs)"
           echo "list=$LIST" >> "$GITHUB_OUTPUT"
       - name: Build complete matrix
         id: build

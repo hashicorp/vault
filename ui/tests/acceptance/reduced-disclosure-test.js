@@ -11,7 +11,7 @@ import authPage from 'vault/tests/pages/auth';
 import { createTokenCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
-import ENV from 'vault/config/environment';
+import reducedDisclosureHandlers from 'vault/mirage/handlers/reduced-disclosure';
 import { overrideResponse } from 'vault/tests/helpers/clients';
 
 const { unsealKeys } = VAULT_KEYS;
@@ -24,17 +24,12 @@ module('Acceptance | reduced disclosure test', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'reducedDisclosure';
-  });
   hooks.beforeEach(function () {
+    reducedDisclosureHandlers(this.server);
     this.unsealCount = 0;
     this.sealed = false;
     this.versionSvc = this.owner.lookup('service:version');
     return authPage.logout();
-  });
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
   });
 
   test('login works when reduced disclosure enabled', async function (assert) {
