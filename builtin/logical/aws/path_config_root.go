@@ -224,7 +224,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 
 	if ttlOk {
 		ttlSeconds := ttl.(int)
-		rc, err = logical.GetRootCredential("", "aws/config/root", "aws-root-creds", 0, ttlSeconds)
+		rCred, err = logical.GetRootCredential("", "aws/config/root", "aws-root-creds", 0, ttlSeconds)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
