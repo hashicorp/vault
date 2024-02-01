@@ -141,7 +141,8 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       },
       {
         cardTitle: 'Total sync associations',
-        subText: 'Total sync associations that count towards client count',
+        subText:
+          'The number of secrets with a configured sync destination. One secret synced to two unique destinations will count as two associations.',
         actionText: 'View billing',
         count: '7',
       },

@@ -61,7 +61,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     const links = [
       'Dashboard',
       'Secrets Engines',
-      'Secrets Sync',
+      'Secrets Sync Beta', // after SYNC BETA update
       'Access',
       'Policies',
       'Tools',

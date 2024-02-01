@@ -163,7 +163,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
       />
     `);
     assert.dom(ts.charts.lineChart).doesNotExist('line chart does not render');
-    assert.dom(statTextValue()).exists({ count: 8 }, 'renders stat text containers');
+    assert.dom(statTextValue()).exists({ count: 6 }, 'renders 6 stat text containers'); // after SYNC BETA update to 8
     assert
       .dom(`[data-test-new] ${statTextValue('New clients')}`)
       .hasText(`${expectedNewClients}`, `renders correct total new clients: ${expectedNewClients}`);
