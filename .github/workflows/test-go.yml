@@ -72,6 +72,10 @@ on:
         required: false
         default: ${{ github.ref }}
         type: string
+    outputs:
+      data-race-failures:
+        description: A list of failing tests as result of data races
+        value: ${{ jobs.data-race-failures.outputs.data_race_failures }}
 
 env: ${{ fromJSON(inputs.env-vars) }}
 
@@ -156,7 +160,7 @@ jobs:
           # testonly tagged tests need an additional tag to be included
           # also running some extra tests for sanity checking with the testonly build tag
           (
-            go list -tags=testonly ./vault/external_tests/{kv,token,*replication-perf*,*testonly*} ./vault/ | gotestsum tool ci-matrix --debug \
+            go list -tags=testonly ./vault/external_tests/{kv,token,*replication-perf*,*testonly*} ./command/*testonly* ./vault/ | gotestsum tool ci-matrix --debug \
               --partitions "${{ inputs.total-runners }}" \
               --timing-files 'test-results/go-test/*.json' > matrix.json
           )
@@ -495,6 +499,44 @@ jobs:
         with:
           name: failure-summary
           path: failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.md
+
+  data-race-failures:
+    if: ${{ ! cancelled() && needs.test-go.result == 'failure' && inputs.name == 'race' }}
+    needs: test-go
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    steps:
+      - uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        with:
+          name: test-results
+          path: race-results
+      - name: Check data race failure
+        id: data-race-failure
+        run: |
+          directory=race-results
+          
+          # Use a for loop to iterate over files in the directory
+          data_race_tests=()
+          for file in "$directory"/*.json; do
+            # Check if test results contains offending phrase
+            if grep -q "WARNING: DATA RACE" "$file"; then
+              test_number="$(grep -oE '[0-9]+' <<< "$file")"
+              data_race_tests+=("test-go (${test_number})")
+          
+              # Print failing matrix tests
+              echo "=============== test-go (${test_number}) ==========================="
+              sed -n '/WARNING: DATA RACE/,/==================/p' "$file" | jq -r -j '.Output'
+            fi   
+          done
+          
+          # Set variable
+          echo -n "data_race_failures=${data_race_tests[*]}" >> "$GITHUB_OUTPUT"
+          
+          # Fail the action if there were any failed race tests
+          if (("${#data_race_tests[@]}" > 0)); then
+            exit 1
+          fi
+    outputs:
+      data_race_failures : ${{ steps.data-race-failure.outputs.data_race_failures }}
 
   test-collect-reports:
     if: ${{ ! cancelled() && needs.test-go.result == 'success' && inputs.test-timing-cache-enabled }}
