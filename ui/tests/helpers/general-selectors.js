@@ -14,6 +14,7 @@ export const SELECTORS = {
   icon: (name) => `[data-test-icon="${name}"]`,
   tab: (name) => `[data-test-tab="${name}"]`,
   filter: (name) => `[data-test-filter="${name}"]`,
+  filterInput: '[data-test-filter-input]',
   confirmModalInput: '[data-test-confirmation-modal-input]',
   confirmButton: '[data-test-confirm-button]',
   emptyStateTitle: '[data-test-empty-state-title]',
@@ -21,12 +22,32 @@ export const SELECTORS = {
   emptyStateActions: '[data-test-empty-state-actions]',
   menuTrigger: '[data-test-popup-menu-trigger]',
   listItem: '[data-test-list-item-link]',
+  calendarWidget: {
+    trigger: '[data-test-calendar-widget-trigger]',
+    currentMonth: '[data-test-current-month]',
+    currentBillingPeriod: '[data-test-current-billing-period]',
+    customEndMonth: '[data-test-show-calendar]',
+    previousYear: '[data-test-previous-year]',
+    nextYear: '[data-test-next-year]',
+    calendarMonth: (month) => `[data-test-calendar-month="${month}"]`,
+  },
+  dateDropdown: {
+    toggleMonth: '[data-test-toggle-month]',
+    toggleYear: '[data-test-toggle-year]',
+    selectMonth: (month) => `[data-test-dropdown-month="${month}"]`,
+    selectYear: (year) => `[data-test-dropdown-year="${year}"]`,
+    submit: '[data-test-date-dropdown-submit]',
+  },
   // FORMS
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   inputByAttr: (attr) => `[data-test-input="${attr}"]`,
+  fieldByAttr: (attr) => `[data-test-field="${attr}"]`,
   validation: (attr) => `[data-test-field-validation=${attr}]`,
   validationWarning: (attr) => `[data-test-validation-warning=${attr}]`,
   messageError: '[data-test-message-error]',
+  kvObjectEditor: {
+    deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
+  },
   searchSelect: {
     options: '.ember-power-select-option',
     optionIndex: (text) => findAll('.ember-power-select-options li').findIndex((e) => e.innerText === text),
@@ -49,4 +70,5 @@ export const SELECTORS = {
     input: '[data-test-kv-suggestion-input]',
     select: '[data-test-kv-suggestion-select]',
   },
+  navLink: (label) => `[data-test-sidebar-nav-link="${label}"]`,
 };

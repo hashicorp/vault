@@ -99,6 +99,7 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			"-passthrough-request-headers", "www-authentication",
 			"-allowed-response-headers", "authorization",
 			"-listing-visibility", "unauth",
+			"-identity-token-key", "default",
 			"userpass",
 		})
 		if exp := 0; code != exp {
@@ -137,6 +138,9 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		}
 		if diff := deep.Equal([]string{"foo,bar"}, authInfo.Config.AuditNonHMACResponseKeys); len(diff) > 0 {
 			t.Errorf("Failed to find expected values in AuditNonHMACResponseKeys. Difference is: %v", diff)
+		}
+		if diff := deep.Equal("default", authInfo.Config.IdentityTokenKey); len(diff) > 0 {
+			t.Errorf("Failed to find expected values in IdentityTokenKey. Difference is: %v", diff)
 		}
 	})
 

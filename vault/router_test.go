@@ -581,7 +581,7 @@ func TestParseUnauthenticatedPaths(t *testing.T) {
 		{segments: []string{"+", "begin", ""}, isPrefix: true},
 		{segments: []string{"middle", "+", "bar"}, isPrefix: true},
 	}
-	expected := &loginPathsEntry{
+	expected := &specialPathsEntry{
 		paths:         pathsToRadix(paths),
 		wildcardPaths: wildcardPathsEntry,
 	}

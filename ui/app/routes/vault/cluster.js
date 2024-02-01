@@ -33,6 +33,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   permissions: service(),
   store: service(),
   auth: service(),
+  customMessages: service(),
   featureFlagService: service('featureFlag'),
   currentCluster: service(),
   modelTypes: computed(function () {
