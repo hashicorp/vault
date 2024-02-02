@@ -150,7 +150,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-azure v0.16.3
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.17.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.15.1
-	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.6.0
+	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.7.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.16.2
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.2
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.11.3
@@ -223,12 +223,12 @@ require (
 	golang.org/x/sys v0.16.0
 	golang.org/x/term v0.16.0
 	golang.org/x/text v0.14.0
-	golang.org/x/tools v0.14.0
+	golang.org/x/tools v0.16.1
 	google.golang.org/api v0.154.0
 	google.golang.org/grpc v1.61.0
 	google.golang.org/protobuf v1.32.0
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
-	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
+	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	layeh.com/radius v0.0.0-20190322222518-890bc1058917
 	nhooyr.io/websocket v1.8.7
 )
@@ -336,7 +336,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
-	github.com/emicklei/go-restful/v3 v3.10.1 // indirect
+	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/envoyproxy/go-control-plane v0.11.1 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.0.2 // indirect
@@ -516,7 +516,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.22.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect
-	golang.org/x/mod v0.13.0 // indirect
+	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
@@ -531,13 +531,13 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.28.1 // indirect
-	k8s.io/apimachinery v0.28.1 // indirect
-	k8s.io/client-go v0.28.1 // indirect
-	k8s.io/klog/v2 v2.100.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 // indirect
+	k8s.io/api v0.29.1 // indirect
+	k8s.io/apimachinery v0.29.1 // indirect
+	k8s.io/client-go v0.29.1 // indirect
+	k8s.io/klog/v2 v2.110.1 // indirect
+	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
