@@ -99,4 +99,19 @@ module('Integration | Component | sync | Secrets::DestinationHeader', function (
       .dom(`${PAGE.destinations.deleteBanner} ${PAGE.icon('alert-diamond')}`)
       .exists('banner renders critical icon');
   });
+
+  test('it should render refresh list button', async function (assert) {
+    assert.expect(1);
+
+    this.refreshList = () => assert.ok(true, 'Refresh list callback fires');
+
+    await render(
+      hbs`<Secrets::DestinationHeader @destination={{this.destination}} @refreshList={{this.refreshList}} />`,
+      {
+        owner: this.engine,
+      }
+    );
+
+    await click(PAGE.associations.list.refresh);
+  });
 });

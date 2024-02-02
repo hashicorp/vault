@@ -18,6 +18,7 @@ export const PAGE = {
       name: '[data-test-association-name]',
       status: '[data-test-association-status]',
       updated: '[data-test-association-updated]',
+      refresh: '[data-test-refresh-list]',
       menu: {
         sync: '[data-test-association-action="sync"]',
         view: '[data-test-association-action="view"]',
