@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { click, visit, fillIn } from '@ember/test-helpers';
+import { click, visit, fillIn, currentRouteName } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import { format, addDays, startOfDay } from 'date-fns';
@@ -19,10 +19,11 @@ module('Acceptance | config-ui', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    this.createMessage = async () => {
+    this.createMessage = async (messageType = 'banner') => {
       await visit('vault/config-ui/messages');
       await click(MESSAGE_SELECTORS.button('create message'));
       await fillIn(MESSAGE_SELECTORS.input('title'), 'Awesome custom message title');
+      await click(MESSAGE_SELECTORS.radio(messageType));
       await fillIn(
         MESSAGE_SELECTORS.input('message'),
         'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pulvinar mattis nunc sed blandit libero volutpat sed cras ornare.'
@@ -48,6 +49,7 @@ module('Acceptance | config-ui', function (hooks) {
   });
 
   test('it should show an empty state when no messages are created', async function (assert) {
+    assert.expect(4);
     await visit('vault/config-ui/messages');
     await assert.dom('[data-test-component="empty-state"]').exists();
     await assert.dom(GENERAL.emptyStateTitle).hasText('No messages yet');
@@ -57,7 +59,8 @@ module('Acceptance | config-ui', function (hooks) {
   });
 
   module('Authenticated messages', function () {
-    test('it should create and edit a message', async function (assert) {
+    test('it should create, edit, view, and delete a message', async function (assert) {
+      assert.expect(3);
       await this.createMessage();
       assert.dom(GENERAL.title).hasText('Awesome custom message title');
       await click('[data-test-link="edit"]');
@@ -66,15 +69,31 @@ module('Acceptance | config-ui', function (hooks) {
       assert.dom(GENERAL.title).hasText('Edited custom message title');
       await click('[data-test-confirm-action="Delete message"]');
       await click(GENERAL.confirmButton);
+      assert.strictEqual(
+        currentRouteName(),
+        'vault.cluster.config-ui.messages.index',
+        'redirects to messages page after delete'
+      );
     });
-    test('it should delete a message', async function (assert) {
-      this.createMessage();
-      await visit('vault/config-ui/messages');
-      await assert.dom('[data-test-component="empty-state"]').doesNotExist();
-      await click(GENERAL.menuTrigger);
-      await click(GENERAL.confirmTrigger);
+  });
+
+  module('Unauthenticated messages', function () {
+    test('it should create, edit, view, and delete a message', async function (assert) {
+      assert.expect(3);
+      await visit('vault/config-ui/messages?authenticated=false');
+      await this.createMessage();
+      assert.dom(GENERAL.title).hasText('Awesome custom message title');
+      await click('[data-test-link="edit"]');
+      await fillIn(MESSAGE_SELECTORS.input('title'), 'Edited custom message title');
+      await click(MESSAGE_SELECTORS.button('create-message'));
+      assert.dom(GENERAL.title).hasText('Edited custom message title');
+      await click('[data-test-confirm-action="Delete message"]');
       await click(GENERAL.confirmButton);
-      await assert.dom('[data-test-component="empty-state"]').exists();
+      assert.strictEqual(
+        currentRouteName(),
+        'vault.cluster.config-ui.messages.index',
+        'redirects to messages page after delete'
+      );
     });
   });
 });
