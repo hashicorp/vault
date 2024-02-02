@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/sdk/event"
+	"github.com/hashicorp/vault/plugins/event"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -81,30 +81,38 @@ func TestSQS_SendOneMessage(t *testing.T) {
 	subID, err := uuid.GenerateUUID()
 	assert.Nil(t, err)
 
-	err = backend.Send(nil, &event.Request{
-		Subscribe: &event.SubscribeRequest{
-			SubscriptionID: subID,
-			Config: map[string]interface{}{
-				"queue_name":   tempQueueName,
-				"region":       os.Getenv("AWS_REGION"),
-				"create_queue": true,
-			},
-			VerifyConnection: false,
+	err = backend.Subscribe(nil, &event.SubscribeRequest{
+		SubscriptionID: subID,
+		Config: map[string]interface{}{
+			"queue_name":   tempQueueName,
+			"region":       os.Getenv("AWS_REGION"),
+			"create_queue": true,
 		},
+		VerifyConnection: false,
 	})
 	assert.Nil(t, err)
 
-	err = backend.Send(nil, &event.Request{
-		Event: &event.SendEventRequest{
-			SubscriptionID: subID,
-			EventJSON:      "{}",
+	// create another subscription with the same queue to make sure we are okay with using an existing queue
+	err = backend.Subscribe(nil, &event.SubscribeRequest{
+		SubscriptionID: subID + "2",
+		Config: map[string]interface{}{
+			"queue_name":   tempQueueName,
+			"region":       os.Getenv("AWS_REGION"),
+			"create_queue": true,
 		},
+		VerifyConnection: false,
+	})
+	assert.Nil(t, err)
+
+	err = backend.Send(nil, &event.SendRequest{
+		SubscriptionID: subID,
+		EventJSON:      "{}",
 	})
 	assert.Nil(t, err)
 
 	msg := receiveMessage(t, sqsClient, tempQueueURL)
 	assert.Equal(t, "{}", msg)
 
-	err = backend.Send(nil, &event.Request{Unsubscribe: &event.UnsubscribeRequest{SubscriptionID: subID}})
+	err = backend.Unsubscribe(nil, &event.UnsubscribeRequest{SubscriptionID: subID})
 	assert.Nil(t, err)
 }

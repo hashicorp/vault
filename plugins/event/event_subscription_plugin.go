@@ -8,29 +8,30 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/backoff"
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type Factory func(context.Context) (SubscriptionPlugin, error)
 
 // SubscriptionPlugin is the interface implemented by plugins that can subscribe to and receive events.
 type SubscriptionPlugin interface {
-	// Send is used to set up a new connection and send events to that connection.
-	// The first call should have .Subscribe populated with the configuration.
-	// Other calls should populate .Event with the event being sent.
-	Send(ctx context.Context, request *Request) error
-	// PluginName returns the name for the particular event subscription plugin.
-	// This type name is usually set as a constant the backend, e.g., "sqs" for the
+	// Subscribe is used to set up a new connection.
+	Subscribe(context.Context, *SubscribeRequest) error
+	// Send is used to send events to a connection.
+	Send(context.Context, *SendRequest) error
+	// Unsubscribe is used to teardown a connection.
+	Unsubscribe(context.Context, *UnsubscribeRequest) error
+	// PluginMetadata returns the name and version for the particular event subscription plugin.
+	// The name is usually set as a constant the backend, e.g., "sqs" for the
 	// AWS SQS backend.
-	PluginName() string
-	PluginVersion() logical.PluginVersion
+	PluginMetadata() *PluginMetadata
+	// Close closes all connections.
 	Close(ctx context.Context) error
 }
 
 type Request struct {
 	Subscribe   *SubscribeRequest
 	Unsubscribe *UnsubscribeRequest
-	Event       *SendEventRequest
+	Event       *SendRequest
 }
 
 type SubscribeRequest struct {
@@ -43,9 +44,14 @@ type UnsubscribeRequest struct {
 	SubscriptionID string
 }
 
-type SendEventRequest struct {
+type SendRequest struct {
 	SubscriptionID string
 	EventJSON      string
+}
+
+type PluginMetadata struct {
+	Name    string
+	Version string
 }
 
 // SubscribeConfigDefaults defines configuration map keys for common default options.

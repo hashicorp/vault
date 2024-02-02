@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
-	"github.com/hashicorp/vault/sdk/event"
+	"github.com/hashicorp/vault/plugins/event"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
@@ -41,11 +41,9 @@ type sqsBackend struct {
 }
 
 type sqsConnection struct {
-	client        *sqs.SQS
-	config        *sqsConfig
-	queueURL      string
-	ctx           context.Context
-	ctxCancelFunc func() // used when we are destroying the connection or when there is an error
+	client   *sqs.SQS
+	config   *sqsConfig
+	queueURL string
 }
 
 type sqsConfig struct {
@@ -80,7 +78,7 @@ func newClient(sconfig *sqsConfig) (*sqs.SQS, error) {
 	return sqs.New(session), nil
 }
 
-func (s *sqsBackend) subscribe(_ context.Context, request *event.SubscribeRequest) error {
+func (s *sqsBackend) Subscribe(_ context.Context, request *event.SubscribeRequest) error {
 	var sconfig sqsConfig
 	err := mapstructure.Decode(request.Config, &sconfig)
 	if err != nil {
@@ -127,13 +125,10 @@ func (s *sqsBackend) subscribe(_ context.Context, request *event.SubscribeReques
 		queueURL = *resp.QueueUrl
 	}
 
-	connCtx, connCancel := context.WithCancel(context.Background())
 	conn := &sqsConnection{
-		client:        client,
-		config:        &sconfig,
-		queueURL:      queueURL,
-		ctx:           connCtx,
-		ctxCancelFunc: connCancel,
+		client:   client,
+		config:   &sconfig,
+		queueURL: queueURL,
 	}
 	s.clientLock.Lock()
 	defer s.clientLock.Unlock()
@@ -151,11 +146,6 @@ func (s *sqsBackend) killConnection(subscriptionID string) {
 }
 
 func (s *sqsBackend) killConnectionWithLock(subscriptionID string) {
-	conn, ok := s.connections[subscriptionID]
-	if !ok {
-		return
-	}
-	conn.ctxCancelFunc()
 	delete(s.connections, subscriptionID)
 }
 
@@ -169,17 +159,7 @@ func (s *sqsBackend) getConn(subscriptionID string) (*sqsConnection, error) {
 	return conn, nil
 }
 
-func (s *sqsBackend) Send(ctx context.Context, request *event.Request) error {
-	if request.Subscribe != nil {
-		return s.subscribe(ctx, request.Subscribe)
-	} else if request.Unsubscribe != nil {
-		return s.Unsubscribe(ctx, request.Unsubscribe.SubscriptionID)
-	} else {
-		return s.sendEvent(ctx, request.Event)
-	}
-}
-
-func (s *sqsBackend) sendEvent(_ context.Context, send *event.SendEventRequest) error {
+func (s *sqsBackend) Send(_ context.Context, send *event.SendRequest) error {
 	return s.sendSubscriptionEventInternal(send.SubscriptionID, send.EventJSON, false)
 }
 
@@ -227,13 +207,16 @@ func (s *sqsBackend) sendSubscriptionEventInternal(subscriptionID string, eventJ
 	return nil
 }
 
-func (s *sqsBackend) Unsubscribe(_ context.Context, subscriptionID string) error {
-	s.killConnection(subscriptionID)
+func (s *sqsBackend) Unsubscribe(_ context.Context, request *event.UnsubscribeRequest) error {
+	s.killConnection(request.SubscriptionID)
 	return nil
 }
 
-func (s *sqsBackend) PluginName() string {
-	return pluginName
+func (s *sqsBackend) PluginMetadata() *event.PluginMetadata {
+	return &event.PluginMetadata{
+		Name:    pluginName,
+		Version: version.GetVersion().Version,
+	}
 }
 
 func (s *sqsBackend) PluginVersion() logical.PluginVersion {
