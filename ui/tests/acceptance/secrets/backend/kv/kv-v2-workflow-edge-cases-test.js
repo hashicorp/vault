@@ -289,12 +289,12 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     assert.expect(2);
     const obscuredDataV1 = `{
   "foo1": {
-    "name": "********"
+    "name": "bar1"
   }
 }`;
     const obscuredDataV2 = `{
   "foo2": {
-    "name": "********"
+    "name": "bar2"
   }
 }`;
 
