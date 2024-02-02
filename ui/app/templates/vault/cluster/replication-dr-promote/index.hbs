@@ -14,16 +14,14 @@
           @icon="alert-circle"
           @bottomBorder={{true}}
         >
-          <Hds::ButtonSet>
-            <Hds::Link::Standalone @icon="chevron-left" @text="Go back" @route="vault.cluster.secrets.backends" />
-            <Hds::Link::Standalone
-              @icon="learn-link"
-              @iconPosition="trailing"
-              @color="secondary"
-              @text="Disaster recovery tutorial"
-              @href={{doc-link "/vault/tutorials/enterprise/disaster-recovery"}}
-            />
-          </Hds::ButtonSet>
+          <Hds::Link::Standalone @icon="chevron-left" @text="Go back" @route="vault.cluster.secrets.backends" />
+          <Hds::Link::Standalone
+            @icon="learn-link"
+            @iconPosition="trailing"
+            @color="secondary"
+            @text="Disaster recovery tutorial"
+            @href={{doc-link "/vault/tutorials/enterprise/disaster-recovery"}}
+          />
         </EmptyState>
       {{else}}
         <section>
