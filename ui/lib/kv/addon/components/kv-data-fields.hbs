@@ -15,7 +15,7 @@
 {{#if @showJson}}
   <JsonEditor
     @title="{{if (eq @type 'create') 'Secret' 'Version'}} data"
-    @value={{this.codeMirrorString}}
+    @value={{this.stringifiedSecretData}}
     @valueUpdated={{this.handleJson}}
     @readOnly={{eq @type "details"}}
   />
