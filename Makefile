@@ -162,11 +162,18 @@ ci-lint:
 # making every build run the formatter), we've removed that
 # dependency.
 prep:
-	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
+	@$(CURDIR)/scripts/go-helper.sh check-version $(GO_VERSION_MIN)
 	@GOARCH= GOOS= $(GO_CMD) generate $(MAIN_PACKAGES)
 	@GOARCH= GOOS= cd api && $(GO_CMD) generate $(API_PACKAGES)
 	@GOARCH= GOOS= cd sdk && $(GO_CMD) generate $(SDK_PACKAGES)
+
+# Git doesn't allow us to store shared hooks in .git. Instead, we make sure they're up-to-date
+# whenever a make target is invoked.
+.PHONY: hooks
+hooks:
 	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
+
+-include hooks # Make sure they're always up-to-date
 
 # bootstrap the build by downloading additional tools needed to build
 ci-bootstrap: .ci-bootstrap
@@ -249,7 +256,7 @@ proto: bootstrap
 	protoc-go-inject-tag -input=./helper/identity/mfa/types.pb.go
 
 fmtcheck:
-	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
+	@$(CURDIR)/scripts/go-helper.sh check-fmt
 
 fmt: ci-bootstrap
 	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs go run mvdan.cc/gofumpt -w
@@ -341,4 +348,4 @@ ci-copywriteheaders:
 
 .PHONY: all-packages
 all-packages:
-	@echo $(ALL_PACKAGES) | tr ' ' '\n' 
+	@echo $(ALL_PACKAGES) | tr ' ' '\n'
