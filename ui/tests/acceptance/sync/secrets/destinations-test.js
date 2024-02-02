@@ -12,7 +12,7 @@ import authPage from 'vault/tests/pages/auth';
 import { click, visit, fillIn, currentURL, currentRouteName } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 
-module('Acceptance | sync | destinations', function (hooks) {
+module('Acceptance | enterprise | sync | destinations', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
