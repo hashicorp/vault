@@ -30,6 +30,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pathmanager"
@@ -260,6 +261,10 @@ func handler(props *vault.HandlerProperties) http.Handler {
 	// a value indicating that the replication status endpoints are disabled.
 	if props.ListenerConfig != nil && props.ListenerConfig.DisableReplicationStatusEndpoints {
 		wrappedHandler = disableReplicationStatusEndpointWrapping(wrappedHandler)
+	}
+
+	if props.ListenerConfig != nil && props.ListenerConfig.DisableRequestLimiter {
+		wrappedHandler = wrapRequestLimiterHandler(wrappedHandler, props)
 	}
 
 	return wrappedHandler
@@ -908,10 +913,57 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	w.Write(retBytes)
 }
 
+func acquireLimiterListener(core *vault.Core, rawReq *http.Request, r *logical.Request) (*limits.RequestListener, bool) {
+	var disable bool
+	disableRequestLimiter := rawReq.Context().Value(logical.CtxKeyDisableRequestLimiter{})
+	if disableRequestLimiter != nil {
+		disable = disableRequestLimiter.(bool)
+	}
+	r.RequestLimiterDisabled = disable
+	if disable {
+		return &limits.RequestListener{}, true
+	}
+
+	lim := &limits.RequestLimiter{}
+	if r.PathLimited {
+		lim = core.GetRequestLimiter(limits.SpecialPathLimiter)
+	} else {
+		switch rawReq.Method {
+		case http.MethodGet, http.MethodHead, http.MethodTrace, http.MethodOptions:
+			// We're only interested in the inverse, so do nothing here.
+		default:
+			lim = core.GetRequestLimiter(limits.WriteLimiter)
+		}
+	}
+	return lim.Acquire(rawReq.Context())
+}
+
 // request is a helper to perform a request and properly exit in the
 // case of an error.
 func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool, bool) {
+	lsnr, ok := acquireLimiterListener(core, rawReq, r)
+	if !ok {
+		resp := &logical.Response{}
+		logical.RespondWithStatusCode(resp, r, http.StatusServiceUnavailable)
+		respondError(w, http.StatusServiceUnavailable, limits.ErrCapacity)
+		return resp, false, false
+	}
+
+	// To guard against leaking RequestListener slots, we should ignore Limiter
+	// measurements on panic. OnIgnore will check to see if a RequestListener
+	// slot has been acquired and not released, which could happen on
+	// recoverable panics.
+	defer lsnr.OnIgnore()
+
 	resp, err := core.HandleRequest(rawReq.Context(), r)
+
+	// Do the limiter measurement
+	if err != nil {
+		lsnr.OnDropped()
+	} else {
+		lsnr.OnSuccess()
+	}
+
 	if r.LastRemoteWAL() > 0 && !core.EntWaitUntilWALShipped(rawReq.Context(), r.LastRemoteWAL()) {
 		if resp == nil {
 			resp = &logical.Response{}

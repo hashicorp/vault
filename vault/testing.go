@@ -49,6 +49,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -232,7 +233,6 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.PluginDirectory = opts.PluginDirectory
 	conf.DetectDeadlocks = opts.DetectDeadlocks
 	conf.Experiments = opts.Experiments
-	conf.CensusAgent = opts.CensusAgent
 	conf.AdministrativeNamespacePath = opts.AdministrativeNamespacePath
 	conf.ImpreciseLeaseRoleTracking = opts.ImpreciseLeaseRoleTracking
 
@@ -520,7 +520,7 @@ func TestKeyCopy(key []byte) []byte {
 	return result
 }
 
-func TestDynamicSystemView(c *Core, ns *namespace.Namespace) *dynamicSystemView {
+func TestDynamicSystemView(c *Core, ns *namespace.Namespace) logical.SystemView {
 	me := &MountEntry{
 		Config: MountConfig{
 			DefaultLeaseTTL: 24 * time.Hour,
@@ -535,7 +535,9 @@ func TestDynamicSystemView(c *Core, ns *namespace.Namespace) *dynamicSystemView 
 		me.namespace = ns
 	}
 
-	return &dynamicSystemView{c, me, c.perfStandby}
+	return &extendedSystemViewImpl{
+		dynamicSystemView{c, me, c.perfStandby},
+	}
 }
 
 func TestAddTestPlugin(t testing.T, core *Core, name string, pluginType consts.PluginType, version string, testFunc string, env []string) {
@@ -1129,6 +1131,8 @@ type TestClusterOptions struct {
 
 	// ABCDLoggerNames names the loggers according to our ABCD convention when generating 4 clusters
 	ABCDLoggerNames bool
+
+	LimiterRegistry *limits.LimiterRegistry
 }
 
 type TestPluginConfig struct {
@@ -1419,6 +1423,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		EnableUI:           true,
 		EnableRaw:          true,
 		BuiltinRegistry:    corehelpers.NewMockBuiltinRegistry(),
+		LimiterRegistry:    limits.NewLimiterRegistry(testCluster.Logger),
 	}
 
 	if base != nil {
@@ -1430,6 +1435,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.MaxLeaseTTL = base.MaxLeaseTTL
 		coreConfig.CacheSize = base.CacheSize
 		coreConfig.PluginDirectory = base.PluginDirectory
+		coreConfig.PluginTmpdir = base.PluginTmpdir
 		coreConfig.Seal = base.Seal
 		coreConfig.UnwrapSeal = base.UnwrapSeal
 		coreConfig.DevToken = base.DevToken
@@ -1506,6 +1512,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.ExpirationRevokeRetryBase = base.ExpirationRevokeRetryBase
 		coreConfig.PeriodicLeaderRefreshInterval = base.PeriodicLeaderRefreshInterval
 		coreConfig.ClusterAddrBridge = base.ClusterAddrBridge
+
+		if base.LimiterRegistry != nil {
+			coreConfig.LimiterRegistry = base.LimiterRegistry
+		}
+
 		testApplyEntBaseConfig(coreConfig, base)
 	}
 	if coreConfig.ClusterName == "" {
@@ -1898,6 +1909,10 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 	}
 
 	localConfig.NumExpirationWorkers = numExpirationWorkersTest
+
+	if opts != nil && opts.LimiterRegistry != nil {
+		localConfig.LimiterRegistry = opts.LimiterRegistry
+	}
 
 	c, err := NewCore(&localConfig)
 	if err != nil {

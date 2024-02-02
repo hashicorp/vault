@@ -194,6 +194,10 @@ type Request struct {
 	// accessible.
 	Unauthenticated bool `json:"unauthenticated" structs:"unauthenticated" mapstructure:"unauthenticated"`
 
+	// PathLimited indicates that the request path is marked for special-case
+	// request limiting.
+	PathLimited bool `json:"path_limited" structs:"path_limited" mapstructure:"path_limited"`
+
 	// MFACreds holds the parsed MFA information supplied over the API as part of
 	// X-Vault-MFA header
 	MFACreds MFACreds `json:"mfa_creds" structs:"mfa_creds" mapstructure:"mfa_creds" sentinel:""`
@@ -251,6 +255,9 @@ type Request struct {
 
 	// Name of the chroot namespace for the listener that the request was made against
 	ChrootNamespace string `json:"chroot_namespace,omitempty"`
+
+	// RequestLimiterDisabled tells whether the request context has Request Limiter applied.
+	RequestLimiterDisabled bool `json:"request_limiter_disabled,omitempty"`
 }
 
 // Clone returns a deep copy (almost) of the request.
@@ -538,4 +545,10 @@ func ContextOriginalBodyValue(ctx context.Context) (io.ReadCloser, bool) {
 
 func CreateContextOriginalBody(parent context.Context, body io.ReadCloser) context.Context {
 	return context.WithValue(parent, ctxKeyOriginalBody{}, body)
+}
+
+type CtxKeyDisableRequestLimiter struct{}
+
+func (c CtxKeyDisableRequestLimiter) String() string {
+	return "disable_request_limiter"
 }
