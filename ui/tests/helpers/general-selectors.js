@@ -9,6 +9,7 @@ export const SELECTORS = {
   breadcrumb: '[data-test-breadcrumbs] li',
   breadcrumbAtIdx: (idx) => `[data-test-breadcrumbs] li:nth-child(${idx + 1}) a`,
   breadcrumbs: '[data-test-breadcrumbs]',
+  breadcrumbLink: (label) => `[data-test-breadcrumb="${label}"] a`,
   title: '[data-test-page-title]',
   headerContainer: 'header.page-header',
   icon: (name) => `[data-test-icon="${name}"]`,
@@ -39,6 +40,7 @@ export const SELECTORS = {
     submit: '[data-test-date-dropdown-submit]',
   },
   // FORMS
+  infoRowLabel: (label) => `[data-test-row-label="${label}"]`,
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   inputByAttr: (attr) => `[data-test-input="${attr}"]`,
   fieldByAttr: (attr) => `[data-test-field="${attr}"]`,
@@ -61,6 +63,7 @@ export const SELECTORS = {
     description: (title) => `[data-test-overview-card-subtitle="${title}"]`,
     content: (title) => `[data-test-overview-card-content="${title}"]`,
     action: (title) => `[data-test-overview-card-container="${title}"] [data-test-action-text]`,
+    actionLink: (label) => `[data-test-action-text="${label}"]`,
   },
   pagination: {
     next: '.hds-pagination-nav__arrow--direction-next',
@@ -71,4 +74,6 @@ export const SELECTORS = {
     select: '[data-test-kv-suggestion-select]',
   },
   navLink: (label) => `[data-test-sidebar-nav-link="${label}"]`,
+  cancelButton: '[data-test-cancel]',
+  saveButton: '[data-test-save]',
 };
