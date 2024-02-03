@@ -23,22 +23,23 @@ import (
 // VAULT_ACC=1
 // OKTA_ORG=dev-219337
 // OKTA_API_TOKEN=<generate via web UI, see Confluence for login details>
-// OKTA_USERNAME=test3@example.com
+// OKTA_USERNAME=<an MFA-enabled user account>
 // OKTA_PASSWORD=<find in 1password>
 //
 // You will need to install the Okta client app on your mobile device and
-// setup MFA in order to use the Okta web UI. This test does not exercise
-// MFA however (which is an enterprise feature), and therefore the test
-// user in OKTA_USERNAME should not be configured with it. Currently,
-// test3@example.com is not a member of testgroup, which is the group with
-// the profile that requires MFA. If you need to use a different group name
-// for the test group, you can set:
-// OKTA_TEST_GROUP=alttestgroup
+// setup MFA (Okta push verify and TOTP) for the okta user account.
+// Make sure that your Okta Application is configured with an
+// Authentication Policy that requires MFA.
 //
 // To test with Okta TOTP (instead of Okta push verify), set:
 // OKTA_USE_TOTP=1
 
 func TestOktaEngineMFA(t *testing.T) {
+	// For this test, the user needs to be a member of some test group,
+	// which defaults to "testgroup". If you need to use a different group
+	// name for the test group, you can set:
+	// OKTA_TEST_GROUP=alttestgroup
+
 	if os.Getenv(logicaltest.TestEnvVar) == "" {
 		t.Skip("This test requires manual intervention and OKTA verify on cellphone is needed")
 	}
@@ -332,7 +333,6 @@ func mfaGenerateOktaLoginMFATest(t *testing.T, client *api.Client, mountAccessor
 					time.Sleep(100 * time.Millisecond)
 					continue
 				}
-				// Should this Skip instead of Failing the test due to lack of user interaction?
 				return fmt.Errorf("the TOTP file did not exist after 5 min: %s", totpFile)
 			}
 
