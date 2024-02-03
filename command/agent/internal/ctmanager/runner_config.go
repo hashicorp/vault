@@ -34,6 +34,10 @@ func NewConfig(mc ManagerConfig, templates ctconfig.TemplateConfigs) (*ctconfig.
 	conf.Vault.Token = pointerutil.StringPtr("")
 	conf.Vault.Address = &mc.AgentConfig.Vault.Address
 
+	if mc.AgentConfig.Vault != nil && mc.AgentConfig.Vault.LeaseRenewalThreshold != 0 {
+		conf.Vault.LeaseRenewalThreshold = &mc.AgentConfig.Vault.LeaseRenewalThreshold
+	}
+
 	if mc.Namespace != "" {
 		conf.Vault.Namespace = &mc.Namespace
 	}

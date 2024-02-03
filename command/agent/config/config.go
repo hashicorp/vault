@@ -82,16 +82,16 @@ type Retry struct {
 
 // Vault contains configuration for connecting to Vault servers
 type Vault struct {
-	Address          string      `hcl:"address"`
-	CACert           string      `hcl:"ca_cert"`
-	CAPath           string      `hcl:"ca_path"`
-	TLSSkipVerify    bool        `hcl:"-"`
-	TLSSkipVerifyRaw interface{} `hcl:"tls_skip_verify"`
-	ClientCert       string      `hcl:"client_cert"`
-	ClientKey        string      `hcl:"client_key"`
-	TLSServerName    string      `hcl:"tls_server_name"`
-	Namespace        string      `hcl:"namespace"`
-	Retry            *Retry      `hcl:"retry"`
+	Address               string      `hcl:"address"`
+	CACert                string      `hcl:"ca_cert"`
+	CAPath                string      `hcl:"ca_path"`
+	TLSSkipVerify         bool        `hcl:"-"`
+	TLSSkipVerifyRaw      interface{} `hcl:"tls_skip_verify"`
+	ClientCert            string      `hcl:"client_cert"`
+	ClientKey             string      `hcl:"client_key"`
+	TLSServerName         string      `hcl:"tls_server_name"`
+	Retry                 *Retry      `hcl:"retry"`
+	LeaseRenewalThreshold float64     `hcl:"lease_renewal_threshold"`
 }
 
 // transportDialer is an interface that allows passing a custom dialer function
