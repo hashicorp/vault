@@ -13,6 +13,10 @@ inputs:
     description: "Whether or not to restore the Go module cache on a cache hit"
     type: boolean
     default: false
+  go-version:
+    description: "Override .go-version"
+    type: string
+    default: ""
 
 outputs:
   cache-key:
@@ -22,7 +26,7 @@ outputs:
     description: "The GOMODCACHE path"
     value: ${{ steps.metadata.outputs.cache-path }}
   go-version:
-    description: "The version of Go in the .go-version file"
+    description: "The version of Go used"
     value: ${{ steps.go-version.outputs.go-version }}
 
 runs:
@@ -30,7 +34,12 @@ runs:
   steps:
     - id: go-version
       shell: bash
-      run: echo "go-version=$(cat ./.go-version)" >> "$GITHUB_OUTPUT"
+      run: |
+        if [ "${{ inputs.go-version }}" = "" ]; then
+          echo "go-version=$(cat ./.go-version)" >> "$GITHUB_OUTPUT"
+        else
+          echo "go-version=${{ inputs.go-version }}" >> "$GITHUB_OUTPUT"
+        fi
     - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
       with:
         go-version: ${{ steps.go-version.outputs.go-version }}
@@ -63,6 +72,8 @@ runs:
     - if: steps.cache-modules.outputs.cache-hit != 'true'
       name: Download go modules
       shell: bash
+      env:
+        GOPRIVATE: github.com/hashicorp/*
       run: |
         git config --global url."https://${{ inputs.github-token }}@github.com".insteadOf https://github.com
         make go-mod-download

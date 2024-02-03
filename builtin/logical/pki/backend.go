@@ -147,6 +147,11 @@ func Backend(conf *logical.BackendConfig) *backend {
 				unifiedDeltaWALPath,
 			},
 
+			Limited: []string{
+				"issue",
+				"issue/*",
+			},
+
 			Binary: []string{
 				"ocsp",           // OCSP POST
 				"ocsp/*",         // OCSP GET

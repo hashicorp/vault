@@ -8,10 +8,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -53,12 +55,14 @@ func testPluginCatalog(t *testing.T) *PluginCatalog {
 	pluginRuntimeCatalog := testPluginRuntimeCatalog(t)
 	pluginCatalog, err := SetupPluginCatalog(
 		context.Background(),
-		logger,
-		corehelpers.NewMockBuiltinRegistry(),
-		logical.NewLogicalStorage(storage),
-		testDir,
-		false,
-		pluginRuntimeCatalog,
+		&PluginCatalogInput{
+			Logger:               logger,
+			BuiltinRegistry:      corehelpers.NewMockBuiltinRegistry(),
+			CatalogView:          logical.NewLogicalStorage(storage),
+			PluginDirectory:      testDir,
+			EnableMlock:          false,
+			PluginRuntimeCatalog: pluginRuntimeCatalog,
+		},
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -66,10 +70,150 @@ func testPluginCatalog(t *testing.T) *PluginCatalog {
 	return pluginCatalog
 }
 
+type warningCountLogger struct {
+	log.Logger
+	warnings int
+}
+
+func (l *warningCountLogger) Warn(msg string, args ...interface{}) {
+	l.warnings++
+	l.Logger.Warn(msg, args...)
+}
+
+func (l *warningCountLogger) reset() {
+	l.warnings = 0
+}
+
+// TestPluginCatalog_SetupPluginCatalog_WarningsWithLegacyEnvSetting ensures we
+// log the correct number of warnings during plugin catalog setup (which is run
+// during unseal) if users have set the flag to keep old behavior. This is to
+// help users migrate safely to the new default behavior.
+func TestPluginCatalog_SetupPluginCatalog_WarningsWithLegacyEnvSetting(t *testing.T) {
+	logger := &warningCountLogger{
+		Logger: log.New(&hclog.LoggerOptions{
+			Level: hclog.Trace,
+		}),
+	}
+	storage, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logicalStorage := logical.NewLogicalStorage(storage)
+
+	// prefix to avoid collisions with other tests.
+	const prefix = "TEST_PLUGIN_CATALOG_ENV_"
+	plugin := &pluginutil.PluginRunner{
+		Name:    "mysql-database-plugin",
+		Type:    consts.PluginTypeDatabase,
+		Version: "1.0.0",
+		Env: []string{
+			prefix + "A=1",
+			prefix + "VALUE_WITH_EQUALS=1=2",
+			prefix + "EMPTY_VALUE=",
+		},
+	}
+
+	// Insert a plugin into storage before the catalog is setup.
+	buf, err := json.Marshal(plugin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logicalEntry := logical.StorageEntry{
+		Key:   path.Join(plugin.Type.String(), plugin.Name, plugin.Version),
+		Value: buf,
+	}
+	if err := logicalStorage.Put(context.Background(), &logicalEntry); err != nil {
+		t.Fatal(err)
+	}
+
+	for name, tc := range map[string]struct {
+		sysEnv           map[string]string
+		expectedWarnings int
+	}{
+		"no env": {},
+		"colliding env, no flag": {
+			sysEnv: map[string]string{
+				prefix + "A": "10",
+			},
+			expectedWarnings: 0,
+		},
+		"colliding env, with flag": {
+			sysEnv: map[string]string{
+				pluginutil.PluginUseLegacyEnvLayering: "true",
+				prefix + "A":                          "10",
+			},
+			expectedWarnings: 2,
+		},
+		"all colliding env, with flag": {
+			sysEnv: map[string]string{
+				pluginutil.PluginUseLegacyEnvLayering: "true",
+				prefix + "A":                          "10",
+				prefix + "VALUE_WITH_EQUALS":          "1=2",
+				prefix + "EMPTY_VALUE":                "",
+			},
+			expectedWarnings: 4,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			logger.reset()
+			for k, v := range tc.sysEnv {
+				t.Setenv(k, v)
+			}
+
+			_, err := SetupPluginCatalog(
+				context.Background(),
+				&PluginCatalogInput{
+					Logger:               logger,
+					BuiltinRegistry:      corehelpers.NewMockBuiltinRegistry(),
+					CatalogView:          logicalStorage,
+					PluginDirectory:      "",
+					Tmpdir:               "",
+					EnableMlock:          false,
+					PluginRuntimeCatalog: nil,
+				},
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if tc.expectedWarnings != logger.warnings {
+				t.Fatalf("expected %d warnings, got %d", tc.expectedWarnings, logger.warnings)
+			}
+		})
+	}
+}
+
 func TestPluginCatalog_CRUD(t *testing.T) {
 	const pluginName = "mysql-database-plugin"
 
 	pluginCatalog := testPluginCatalog(t)
+
+	// Register a fake plugin in the catalog.
+	file, err := os.CreateTemp(pluginCatalog.directory, "temp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	err = pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+		Name:    pluginName,
+		Type:    consts.PluginTypeDatabase,
+		Version: "1.0.0",
+		Command: filepath.Base(file.Name()),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Register a pinned version, should not affect anything below.
+	err = pluginCatalog.SetPinnedVersion(context.Background(), &pluginutil.PinnedVersion{
+		Name:    pluginName,
+		Type:    consts.PluginTypeDatabase,
+		Version: "1.0.0",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Get builtin plugin
 	p, err := pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, "")
@@ -106,12 +250,6 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	}
 
 	// Set a plugin, test overwriting a builtin plugin
-	file, err := os.CreateTemp(pluginCatalog.directory, "temp")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer file.Close()
-
 	command := filepath.Base(file.Name())
 	err = pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
 		Name:    pluginName,
@@ -1057,6 +1195,58 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 				})
 			}
 		})
+	}
+}
+
+// TestPluginCatalog_CannotDeletePinnedVersion ensures we cannot delete a
+// plugin which is referred to in an active pinned version.
+func TestPluginCatalog_CannotDeletePinnedVersion(t *testing.T) {
+	pluginCatalog := testPluginCatalog(t)
+
+	// Register a fake plugin in the catalog.
+	file, err := os.CreateTemp(pluginCatalog.directory, "temp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	err = pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+		Name:    "my-plugin",
+		Type:    consts.PluginTypeSecrets,
+		Version: "1.0.0",
+		Command: filepath.Base(file.Name()),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Pin a version and check we can't delete it.
+	err = pluginCatalog.SetPinnedVersion(context.Background(), &pluginutil.PinnedVersion{
+		Name:    "my-plugin",
+		Type:    consts.PluginTypeSecrets,
+		Version: "1.0.0",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = pluginCatalog.Delete(context.Background(), "my-plugin", consts.PluginTypeSecrets, "1.0.0")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !errors.Is(err, ErrPinnedVersion) {
+		t.Fatal(err)
+	}
+
+	// Now delete the pinned version and we should be able to delete the plugin.
+	err = pluginCatalog.DeletePinnedVersion(context.Background(), consts.PluginTypeSecrets, "my-plugin")
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	err = pluginCatalog.Delete(context.Background(), "my-plugin", consts.PluginTypeSecrets, "1.0.0")
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

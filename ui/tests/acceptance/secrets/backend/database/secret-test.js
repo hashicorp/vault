@@ -558,7 +558,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('renders connections tab');
 
     await click('[data-test-secret-create="connections"]');
-    assert.strictEqual(currentURL(), `/vault/secrets/${backend}/create`);
+    assert.strictEqual(currentURL(), `/vault/secrets/${backend}/create?itemType=connection`);
 
     // Login with restricted policy
     await logout.visit();

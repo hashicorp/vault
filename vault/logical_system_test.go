@@ -433,6 +433,244 @@ func TestSystemBackend_mount_force_no_cache(t *testing.T) {
 	}
 }
 
+// TestSystemBackend_mount_secret_identity_token_key ensures that the identity
+// token key can be specified at secret mount enable time.
+func TestSystemBackend_mount_secret_identity_token_key(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	core, b, _ := testCoreSystemBackend(t)
+
+	// Create a test key
+	testKey := "test_key"
+	resp, err := core.identityStore.HandleRequest(ctx, &logical.Request{
+		Storage:   core.identityStore.view,
+		Path:      fmt.Sprintf("oidc/key/%s", testKey),
+		Operation: logical.CreateOperation,
+	})
+	require.NoError(t, err)
+	require.Nil(t, resp)
+
+	tests := []struct {
+		name      string
+		mountPath string
+		keyName   string
+		wantErr   bool
+	}{
+		{
+			name:      "enable secret mount with default key",
+			mountPath: "mounts/dev/",
+			keyName:   defaultKeyName,
+		},
+		{
+			name:      "enable secret mount with empty key",
+			mountPath: "mounts/test/",
+			keyName:   "",
+		},
+		{
+			name:      "enable secret mount with existing key",
+			mountPath: "mounts/int/",
+			keyName:   testKey,
+		},
+		{
+			name:      "enable secret mount with key that does not exist",
+			mountPath: "mounts/prod/",
+			keyName:   "does_not_exist_key",
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Enable the secret mount
+			req := logical.TestRequest(t, logical.UpdateOperation, tt.mountPath)
+			req.Data["type"] = "kv"
+			req.Data["config"] = map[string]interface{}{
+				"identity_token_key": tt.keyName,
+			}
+			resp, err := b.HandleRequest(ctx, req)
+			if tt.wantErr {
+				require.Nil(t, err)
+				require.Equal(t, fmt.Errorf("key %q does not exist", tt.keyName), resp.Error())
+				return
+			}
+			require.NoError(t, err)
+			require.Nil(t, resp)
+
+			// Expect identity token key set on the mount entry
+			mountEntry := core.router.MatchingMountEntry(ctx, strings.TrimPrefix(tt.mountPath, "mounts/"))
+			require.NotNil(t, mountEntry)
+			require.Equal(t, tt.keyName, mountEntry.Config.IdentityTokenKey)
+		})
+	}
+}
+
+// TestSystemBackend_mount_auth_identity_token_key ensures that the identity
+// token key can be specified at auth mount enable time.
+func TestSystemBackend_mount_auth_identity_token_key(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	core, b, _ := testCoreSystemBackend(t)
+	core.credentialBackends["userpass"] = credUserpass.Factory
+
+	// Create a test key
+	testKey := "test_key"
+	resp, err := core.identityStore.HandleRequest(ctx, &logical.Request{
+		Storage:   core.identityStore.view,
+		Path:      fmt.Sprintf("oidc/key/%s", testKey),
+		Operation: logical.CreateOperation,
+	})
+	require.NoError(t, err)
+	require.Nil(t, resp)
+
+	tests := []struct {
+		name      string
+		mountPath string
+		keyName   string
+		wantErr   bool
+	}{
+		{
+			name:      "enable auth mount with default key",
+			mountPath: "auth/dev/",
+			keyName:   defaultKeyName,
+		},
+		{
+			name:      "enable auth mount with empty key",
+			mountPath: "auth/test/",
+			keyName:   "",
+		},
+		{
+			name:      "enable auth mount with existing key",
+			mountPath: "auth/int/",
+			keyName:   testKey,
+		},
+		{
+			name:      "enable auth mount with key that does not exist",
+			mountPath: "auth/prod/",
+			keyName:   "does_not_exist_key",
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Enable the auth mount
+			req := logical.TestRequest(t, logical.UpdateOperation, tt.mountPath)
+			req.Data["type"] = "userpass"
+			req.Data["config"] = map[string]interface{}{
+				"identity_token_key": tt.keyName,
+			}
+			resp, err := b.HandleRequest(ctx, req)
+			if tt.wantErr {
+				require.Nil(t, err)
+				require.Equal(t, fmt.Errorf("key %q does not exist", tt.keyName), resp.Error())
+				return
+			}
+			require.NoError(t, err)
+			require.Nil(t, resp)
+
+			// Expect identity token key set on the mount entry
+			mountEntry := core.router.MatchingMountEntry(ctx, tt.mountPath)
+			require.NotNil(t, mountEntry)
+			require.Equal(t, tt.keyName, mountEntry.Config.IdentityTokenKey)
+		})
+	}
+}
+
+// TestSystemBackend_tune_identity_token_key ensures that the identity
+// token key can be tuned for existing auth and secret mounts.
+func TestSystemBackend_tune_identity_token_key(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	core, b, _ := testCoreSystemBackend(t)
+	core.credentialBackends["userpass"] = credUserpass.Factory
+
+	// Enable an auth mount with an empty identity token key
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/dev/")
+	req.Data["type"] = "userpass"
+	resp, err := b.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.Nil(t, resp)
+
+	// Enable a secret mount with the default key
+	req = logical.TestRequest(t, logical.UpdateOperation, "mounts/test/")
+	req.Data["type"] = "kv"
+	req.Data["config"] = map[string]interface{}{
+		"identity_token_key": defaultKeyName,
+	}
+	resp, err = b.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.Nil(t, resp)
+
+	// Create a test key
+	testKey := "test_key"
+	resp, err = core.identityStore.HandleRequest(ctx, &logical.Request{
+		Storage:   core.identityStore.view,
+		Path:      fmt.Sprintf("oidc/key/%s", testKey),
+		Operation: logical.CreateOperation,
+	})
+	require.NoError(t, err)
+	require.Nil(t, resp)
+
+	tests := []struct {
+		name    string
+		keyName string
+		wantErr bool
+	}{
+		{
+			name:    "tune mounts to default key",
+			keyName: defaultKeyName,
+		},
+		{
+			name:    "tune mounts to empty key",
+			keyName: "",
+		},
+		{
+			name:    "tune mounts with existing key",
+			keyName: testKey,
+		},
+		{
+			name:    "tune mounts with key that does not exist",
+			keyName: "does_not_exist_key",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Tune the auth mount
+			req = logical.TestRequest(t, logical.UpdateOperation, "auth/dev/tune")
+			req.Data["identity_token_key"] = tt.keyName
+			resp, err := b.HandleRequest(ctx, req)
+			if tt.wantErr {
+				require.Nil(t, err)
+				require.Equal(t, fmt.Errorf("key %q does not exist", tt.keyName), resp.Error())
+				return
+			}
+			require.NoError(t, err)
+			require.Nil(t, resp)
+
+			// Expect identity token key set on the auth mount entry
+			mountEntry := core.router.MatchingMountEntry(ctx, "auth/dev/")
+			require.NotNil(t, mountEntry)
+			require.Equal(t, tt.keyName, mountEntry.Config.IdentityTokenKey)
+
+			// Tune the secret mount
+			req = logical.TestRequest(t, logical.UpdateOperation, "mounts/test/tune")
+			req.Data["identity_token_key"] = tt.keyName
+			resp, err = b.HandleRequest(ctx, req)
+			if tt.wantErr {
+				require.Nil(t, err)
+				require.Equal(t, fmt.Errorf("key %q does not exist", tt.keyName), resp.Error())
+				return
+			}
+			require.NoError(t, err)
+			require.Nil(t, resp)
+
+			// Expect identity token key set on the secret mount entry
+			mountEntry = core.router.MatchingMountEntry(ctx, "test/")
+			require.NotNil(t, mountEntry)
+			require.Equal(t, tt.keyName, mountEntry.Config.IdentityTokenKey)
+		})
+	}
+}
+
 func TestSystemBackend_mount_invalid(t *testing.T) {
 	b := testSystemBackend(t)
 
@@ -3499,6 +3737,142 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if resp != nil || err != nil {
 		t.Fatalf("expected nil response, plugin not deleted correctly got resp: %v, err: %v", resp, err)
+	}
+}
+
+// TestSystemBackend_PluginCatalogPins_CRUD tests CRUD operations for pinning
+// plugin versions.
+func TestSystemBackend_PluginCatalogPins_CRUD(t *testing.T) {
+	sym, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		PluginDirectory: sym,
+	})
+	b := c.systemBackend
+	ctx := namespace.RootContext(context.Background())
+
+	// List pins.
+	req := logical.TestRequest(t, logical.ReadOperation, "plugins/pins")
+	resp, err := b.HandleRequest(ctx, req)
+	if err != nil || resp.IsError() {
+		t.Fatal(resp, err)
+	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	if len(resp.Data["pinned_versions"].([]map[string]any)) != 0 {
+		t.Fatalf("Wrong number of plugins, expected %d, got %d", 0, len(resp.Data["pins"].([]string)))
+	}
+
+	// Set a plugin so we can pin to it.
+	file, err := os.CreateTemp(sym, "temp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	req = logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
+	req.Data["sha_256"] = hex.EncodeToString([]byte{'1'})
+	req.Data["command"] = filepath.Base(file.Name())
+	req.Data["version"] = "v1.0.0"
+	resp, err = b.HandleRequest(ctx, req)
+	if err != nil || resp.IsError() {
+		t.Fatal(resp, err)
+	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	// Now create a pin.
+	req = logical.TestRequest(t, logical.UpdateOperation, "plugins/pins/database/test-plugin")
+	req.Data["version"] = "v1.0.0"
+	resp, err = b.HandleRequest(ctx, req)
+	if err != nil || resp.IsError() {
+		t.Fatal(resp, err)
+	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	// Read the pin.
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/pins/database/test-plugin")
+	resp, err = b.HandleRequest(ctx, req)
+	if err != nil || resp.Error() != nil {
+		t.Fatal(resp, err)
+	}
+
+	expected := map[string]interface{}{
+		"name":    "test-plugin",
+		"type":    "database",
+		"version": "v1.0.0",
+	}
+
+	actual := resp.Data
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actual, expected)
+	}
+
+	// List pins again.
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/pins/")
+	resp, err = b.HandleRequest(ctx, req)
+	if err != nil || resp.IsError() {
+		t.Fatal(resp, err)
+	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	pinnedVersions := resp.Data["pinned_versions"].([]map[string]any)
+	if len(pinnedVersions) != 1 {
+		t.Fatalf("Wrong number of plugins, expected %d, got %d", 1, len(resp.Data["pins"].([]string)))
+	}
+	// Check the pin is correct.
+	actual = pinnedVersions[0]
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actual, expected)
+	}
+
+	// Delete the pin.
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/pins/database/test-plugin")
+	resp, err = b.HandleRequest(ctx, req)
+	if err != nil || resp.IsError() {
+		t.Fatal(resp, err)
+	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	// Should now get a 404 when reading the pin.
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/pins/database/test-plugin")
+	_, err = b.HandleRequest(ctx, req)
+	var codedErr logical.HTTPCodedError
+	if !errors.As(err, &codedErr) {
+		t.Fatal(err)
+	}
+	if codedErr.Code() != http.StatusNotFound {
+		t.Fatal(codedErr)
 	}
 }
 
