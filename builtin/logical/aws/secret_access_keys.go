@@ -5,7 +5,12 @@ package aws
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"net/url"
 	"regexp"
 	"time"
 
@@ -239,8 +244,10 @@ func (b *backend) getSessionToken(ctx context.Context, s logical.Storage, serial
 
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	displayName, roleName, roleArn, policy string, policyARNs []string,
-	iamGroups []string, lifeTimeInSeconds int64, roleSessionName string) (*logical.Response, error,
+	iamGroups []string, lifeTimeInSeconds int64, roleSessionName string, consoleLogin bool, consoleDuration string) (*logical.Response, error,
 ) {
+
+	var console_url string
 	// grab any IAM group policies associated with the vault role, both inline
 	// and managed
 	groupPolicies, groupPolicyARNs, err := b.getGroupPolicies(ctx, s, iamGroups)
@@ -301,6 +308,15 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 		return logical.ErrorResponse("Error assuming role: %s", err), awsutil.CheckAWSError(err)
 	}
 
+	if consoleLogin {
+
+		console_url, err = genConsoleUrl(tokenResp, consoleDuration)
+		log.Println("console_url", console_url)
+		if err != nil {
+			return logical.ErrorResponse("Error assuming role: %s", err), err
+		}
+	}
+
 	// While STS credentials cannot be revoked/renewed, we will still create a lease since users are
 	// relying on a non-zero `lease_duration` in order to manage their lease lifecycles manually.
 	//
@@ -311,6 +327,7 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 		"security_token": *tokenResp.Credentials.SessionToken,
 		"session_token":  *tokenResp.Credentials.SessionToken,
 		"arn":            *tokenResp.AssumedRoleUser.Arn,
+		"console_login":  console_url, //return the console_login url in the response
 		"ttl":            uint64(ttl.Seconds()),
 	}, map[string]interface{}{
 		"username": roleSessionName,
@@ -578,4 +595,73 @@ type UsernameMetadata struct {
 	Type        string
 	DisplayName string
 	PolicyName  string
+}
+
+// genConsoleUrl generates the AWS console URL for the given credentials and session duration.
+// It assumes that the credentials are obtained by assuming a role using the AWS Security Token Service (STS).
+// The function first creates a federation struct containing the session ID, session key, and session token.
+// It then marshals the struct into JSON and URL encodes it.
+// Next, it calls the federation endpoint to retrieve a signin token by providing the necessary request parameters.
+// The signin token is unmarshaled from the response body.
+// Finally, the function builds the AWS console URL by appending the signin token to the federation endpoint.
+// The generated URL can be used to directly access the AWS console with the assumed role.
+func genConsoleUrl(creds *sts.AssumeRoleOutput, sessionDuration string) (string, error) {
+
+	federationEndpoint := "https://signin.aws.amazon.com/federation"
+
+	fed := federation{
+		SessionId:    *creds.Credentials.AccessKeyId,
+		SessionKey:   *creds.Credentials.SecretAccessKey,
+		SessionToken: *creds.Credentials.SessionToken,
+	}
+
+	jsonData, err := json.Marshal(fed)
+
+	encoded := url.QueryEscape(string(jsonData))
+
+	// call federation endpoint to retreive SigninToken
+	var requestParameters = "?Action=getSigninToken"
+	requestParameters += "&SessionDuration=" + sessionDuration
+	requestParameters += "&Session=" + encoded
+
+	getTokenLink := federationEndpoint + requestParameters
+
+	resp, err := http.Get(getTokenLink)
+
+	if err != nil {
+		return "error", err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "error", err
+	}
+
+	var token signinToken
+
+	err = json.Unmarshal([]byte(body), &token)
+
+	if err != nil {
+		return "error", err
+	}
+
+	// build out the aws console url
+	requestParameters = "?Action=login"
+	requestParameters += "&Issuer=" + url.QueryEscape("Vault")
+	requestParameters += "&Destination=" + url.QueryEscape("https://console.aws.amazon.com/")
+	requestParameters += "&SigninToken=" + token.SigninToken
+
+	return federationEndpoint + requestParameters, nil
+
+}
+
+type federation struct {
+	SessionId    string `json:"sessionId"`
+	SessionKey   string `json:"sessionKey"`
+	SessionToken string `json:"sessionToken"`
+}
+
+type signinToken struct {
+	SigninToken string
 }

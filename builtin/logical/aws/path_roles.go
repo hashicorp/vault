@@ -170,6 +170,14 @@ when credential_type is %s. This is only required when the IAM user has an MFA d
 					Name: "MFA Device Serial Number",
 				},
 			},
+			"console_login": {
+				Type:        framework.TypeBool,
+				Description: "Generate URL for AWS Console access, can only be used when the credential_type is " + assumedRoleCred,
+			},
+			"console_duration": {
+				Type:        framework.TypeString,
+				Description: "Sets TTL for AWS Console access, can only be used when the credential_type is " + assumedRoleCred,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -349,6 +357,14 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		resp.AddWarning("Detected use of legacy role or policy parameter. Please upgrade to use the new parameters.")
 	} else {
 		roleEntry.ProhibitFlexibleCredPath = false
+	}
+
+	if consoleLogin, ok := d.GetOk("console_login"); ok {
+		roleEntry.ConsoleLogin = consoleLogin.(bool)
+	}
+
+	if consoleDuration, ok := d.GetOk("console_duration"); ok {
+		roleEntry.ConsoleDuration = consoleDuration.(string)
 	}
 
 	err = roleEntry.validate()
@@ -535,6 +551,8 @@ type awsRoleEntry struct {
 	UserPath                 string            `json:"user_path"`                             // The path for the IAM user when using "iam_user" credential type
 	PermissionsBoundaryARN   string            `json:"permissions_boundary_arn"`              // ARN of an IAM policy to attach as a permissions boundary
 	SerialNumber             string            `json:"mfa_serial_number"`                     // Serial number or ARN of the MFA device
+	ConsoleLogin             bool              `json:"console_login"`                         // generate AWS Console URL
+	ConsoleDuration          string            `json:"console_duration"`                      // TTL on console URL before expiring
 }
 
 func (r *awsRoleEntry) toResponseData() map[string]interface{} {
@@ -550,6 +568,8 @@ func (r *awsRoleEntry) toResponseData() map[string]interface{} {
 		"user_path":                r.UserPath,
 		"permissions_boundary_arn": r.PermissionsBoundaryARN,
 		"mfa_serial_number":        r.SerialNumber,
+		"console_login":            r.ConsoleLogin,
+		"console_duration":         r.ConsoleDuration,
 	}
 
 	if r.InvalidData != "" {
