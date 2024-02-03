@@ -37,7 +37,6 @@ export const SELECTORS = {
   scopeEditButton: '[data-test-oidc-scope-edit]',
   scopeDetailsTab: '[data-test-oidc-scope-details]',
   scopeEmptyState: '[data-test-oidc-scope-empty-state]',
-  scopeCreateButtonEmptyState: '[data-test-oidc-scope-create-empty-state]',
   scopeCreateButton: '[data-test-oidc-scope-create]',
 
   // key route

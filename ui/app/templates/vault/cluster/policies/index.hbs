@@ -161,16 +161,21 @@
         this.policyType
       }} policy to get started."
     >
-      <LinkTo @route="vault.cluster.policies.create" class="link">
-        Create
-        {{uppercase this.policyType}}
-        policy
-        <Chevron />
-      </LinkTo>
-      <DocLink @path="/vault/tutorials/getting-started/getting-started-policies">
-        Learn more
-        <Chevron />
-      </DocLink>
+      {{#if (eq this.policyType "acl")}}
+        <Hds::Link::Standalone
+          @iconPosition="trailing"
+          @icon="learn-link"
+          @text="Getting started with policies"
+          @href={{doc-link "/vault/tutorials/getting-started/getting-started-policies"}}
+        />
+      {{else}}
+        <Hds::Link::Standalone
+          @iconPosition="trailing"
+          @icon="learn-link"
+          @text="Sentinel policies tutorial"
+          @href={{doc-link "/vault/tutorials/policies/sentinel"}}
+        />
+      {{/if}}
     </EmptyState>
   {{/if}}
 {{else}}
