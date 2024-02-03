@@ -53,12 +53,12 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     assert
       .dom(SELECTORS.scopeEmptyState)
       .hasText(
-        `No scopes yet Use scope to define identity information about the authenticated user. Learn more. Create scope`,
+        `No scopes yet Use scope to define identity information about the authenticated user. OIDC provider scopes`,
         'renders empty state no scopes are configured'
       );
     assert
-      .dom(SELECTORS.scopeCreateButtonEmptyState)
-      .hasAttribute('href', '/ui/vault/access/oidc/scopes/create', 'empty state renders create scope link');
+      .dom(SELECTORS.scopeCreateButton)
+      .hasAttribute('href', '/ui/vault/access/oidc/scopes/create', 'toolbar renders create scope link');
   });
 
   // LIST SCOPE EXIST

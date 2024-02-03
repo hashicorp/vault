@@ -76,7 +76,6 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
         'When created, roles will be listed here. Create a role to start generating service account tokens.',
         'Message renders'
       );
-    assert.dom('[data-test-empty-state-actions] a').hasText('Create role', 'Action renders');
   });
 
   test('it should render no matches filter message', async function (assert) {

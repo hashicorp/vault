@@ -89,7 +89,6 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
         'Roles in Vault will allow you to manage LDAP credentials. Create a role to get started.',
         'Message renders'
       );
-    assert.dom('[data-test-empty-state-actions] a').hasText('Create role', 'Action renders');
   });
 
   test('it should render roles list', async function (assert) {

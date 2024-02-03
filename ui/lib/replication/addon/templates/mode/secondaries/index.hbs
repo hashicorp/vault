@@ -68,14 +68,12 @@
       @title="No known {{this.performanceMode}} secondary clusters associated with this cluster"
       @message="Associated secondary clusters will be listed here. Add your first secondary cluster to get started."
     >
-      {{#if this.model.canAddSecondary}}
-        <LinkTo @route="mode.secondaries.add" @model={{this.replicationMode}} class="link">
-          Add secondary
-        </LinkTo>
-      {{/if}}
-      <DocLink @path="/vault/docs/internals/replication">
-        Learn more
-      </DocLink>
+      <Hds::Link::Standalone
+        @icon="docs-link"
+        @iconPosition="trailing"
+        @text="Replication documentation"
+        @href={{doc-link "/vault/docs/internals/replication"}}
+      />
     </EmptyState>
   {{/if}}
 {{/if}}

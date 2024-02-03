@@ -61,18 +61,16 @@
     </LinkedBlock>
   {{/each}}
 {{else}}
-  <EmptyState @title="No scopes yet" data-test-oidc-scope-empty-state>
-    <div>
-      <p>Use scope to define identity information about the authenticated user.
-        <DocLink @path="/vault/docs/concepts/oidc-provider#scopes">
-          Learn more.
-        </DocLink>
-      </p>
-      <div class="has-top-margin-m">
-        <LinkTo @route="vault.cluster.access.oidc.scopes.create" data-test-oidc-scope-create-empty-state>
-          Create scope
-        </LinkTo>
-      </div>
-    </div>
+  <EmptyState
+    @title="No scopes yet"
+    @message="Use scope to define identity information about the authenticated user."
+    data-test-oidc-scope-empty-state
+  >
+    <Hds::Link::Standalone
+      @iconPosition="trailing"
+      @icon="docs-link"
+      @text="OIDC provider scopes"
+      @href={{doc-link "/vault/docs/concepts/oidc-provider#scopes"}}
+    />
   </EmptyState>
 {{/if}}
