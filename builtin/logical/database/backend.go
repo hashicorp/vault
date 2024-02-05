@@ -5,8 +5,10 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/rpc"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -396,6 +398,28 @@ func (b *databaseBackend) clean(_ context.Context) {
 		}
 		b.gaugeCollectionProcess = nil
 	})
+}
+
+func (b *databaseBackend) dbEvent(ctx context.Context,
+	operation string,
+	path string,
+	name string,
+	modified bool,
+	additionalMetadataPairs ...string,
+) {
+	metadata := []string{
+		logical.EventMetadataModified, strconv.FormatBool(modified),
+		logical.EventMetadataOperation, operation,
+		"path", path,
+	}
+	if name != "" {
+		metadata = append(metadata, "name", name)
+	}
+	metadata = append(metadata, additionalMetadataPairs...)
+	err := logical.SendEvent(ctx, b, fmt.Sprintf("database/%s", operation), metadata...)
+	if err != nil && !errors.Is(err, framework.ErrNoEvents) {
+		b.Logger().Error("Error sending event", "error", err)
+	}
 }
 
 const backendHelp = `

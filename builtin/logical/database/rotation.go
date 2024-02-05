@@ -252,6 +252,16 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 		return false
 	}
 
+	// send an event indicating if the rotation was a success or failure
+	rotated := false
+	defer func() {
+		if rotated {
+			b.dbEvent(ctx, "rotate", "", roleName, true)
+		} else {
+			b.dbEvent(ctx, "rotate-fail", "", roleName, false)
+		}
+	}()
+
 	// If there is a WAL entry related to this Role, the corresponding WAL ID
 	// should be stored in the Item's Value field.
 	if walID, ok := item.Value.(string); ok {
@@ -291,6 +301,7 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 	if err := b.pushItem(item); err != nil {
 		logger.Warn("unable to push item on to queue", "error", err)
 	}
+	rotated = true
 	return true
 }
 
@@ -350,10 +361,19 @@ type setStaticAccountOutput struct {
 //
 // This method does not perform any operations on the priority queue. Those
 // tasks must be handled outside of this method.
-func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storage, input *setStaticAccountInput) (*setStaticAccountOutput, error) {
+func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storage, input *setStaticAccountInput) (_ *setStaticAccountOutput, err error) {
 	if input == nil || input.Role == nil || input.RoleName == "" {
 		return nil, errors.New("input was empty when attempting to set credentials for static account")
 	}
+	modified := false
+	defer func() {
+		if err == nil {
+			b.dbEvent(ctx, "static-creds-create", "", input.RoleName, modified)
+		} else {
+			b.dbEvent(ctx, "static-creds-create-fail", "", input.RoleName, modified)
+		}
+	}()
+
 	// Re-use WAL ID if present, otherwise PUT a new WAL
 	output := &setStaticAccountOutput{WALID: input.WALID}
 
@@ -507,6 +527,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		b.CloseIfShutdown(dbi, err)
 		return output, fmt.Errorf("error setting credentials: %w", err)
 	}
+	modified = true
 
 	// Store updated role information
 	// lvr is the known LastVaultRotation
