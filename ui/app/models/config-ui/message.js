@@ -95,7 +95,7 @@ export default class MessageModel extends Model {
   @attr('object', {
     editType: 'kv',
     keyPlaceholder: 'Display text (e.g. Learn more)',
-    valuePlaceholder: 'Link URL (e.g. https://www.learnmore.com)',
+    valuePlaceholder: 'Link URL (e.g. https://www.hashicorp.com/)',
     label: 'Link (optional)',
     isSingleRow: true,
     allowWhiteSpace: true,
