@@ -621,8 +621,8 @@ message RegisterRotationJobResponse {
 message RotationJobInput {
   google.protobuf.Struct schedule = 1;
   string rotation_id = 2;
-  string path       =3;
-  string name       =4;
+  string path =3;
+  string name =4;
 }
 
 //message RotationScheduleInput {
