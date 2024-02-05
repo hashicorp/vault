@@ -1501,15 +1501,16 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		config.DelegatedAuthAccessors = apiConfig.DelegatedAuthAccessors
 	}
 
-	// Ensure that the mount's identity token key exists
-	identityStore := b.Core.IdentityStore()
 	storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
 	if storage == nil {
 		return nil, errors.New("failed to find identity storage")
 	}
+
+	// Ensure that the mount's identity token key exists
+	identityStore := b.Core.IdentityStore()
+	identityStore.oidcLock.Lock()
+	defer identityStore.oidcLock.Unlock()
 	if apiConfig.IdentityTokenKey != "" {
-		identityStore.oidcLock.Lock()
-		defer identityStore.oidcLock.Unlock()
 		k, err := identityStore.getNamedKey(ctx, storage, apiConfig.IdentityTokenKey)
 		if err != nil {
 			return nil, fmt.Errorf("failed getting key %q: %w", apiConfig.IdentityTokenKey, err)
@@ -2309,17 +2310,18 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("identity_token_key"); ok {
-		// Ensure that the mount's identity token key exists
-		identityStore := b.Core.IdentityStore()
+		identityTokenKey := rawVal.(string)
+
 		storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
 		if storage == nil {
 			return nil, errors.New("failed to find identity storage")
 		}
 
-		identityTokenKey := rawVal.(string)
+		// Ensure that the mount's identity token key exists
+		identityStore := b.Core.IdentityStore()
+		identityStore.oidcLock.Lock()
+		defer identityStore.oidcLock.Unlock()
 		if identityTokenKey != "" {
-			identityStore.oidcLock.Lock()
-			defer identityStore.oidcLock.Unlock()
 			k, err := identityStore.getNamedKey(ctx, storage, identityTokenKey)
 			if err != nil {
 				return nil, fmt.Errorf("failed getting key %q: %w", identityTokenKey, err)
@@ -3114,15 +3116,16 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		config.AllowedManagedKeys = apiConfig.AllowedManagedKeys
 	}
 
-	// Ensure that the mount's identity token key exists
-	identityStore := b.Core.IdentityStore()
 	storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
 	if storage == nil {
 		return nil, errors.New("failed to find identity storage")
 	}
+
+	// Ensure that the mount's identity token key exists
+	identityStore := b.Core.IdentityStore()
+	identityStore.oidcLock.Lock()
+	defer identityStore.oidcLock.Unlock()
 	if apiConfig.IdentityTokenKey != "" {
-		identityStore.oidcLock.Lock()
-		defer identityStore.oidcLock.Unlock()
 		k, err := identityStore.getNamedKey(ctx, storage, apiConfig.IdentityTokenKey)
 		if err != nil {
 			return nil, fmt.Errorf("failed getting key %q: %w", apiConfig.IdentityTokenKey, err)
