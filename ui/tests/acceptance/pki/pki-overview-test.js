@@ -12,8 +12,8 @@ import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, currentRouteName, visit } from '@ember/test-helpers';
 import { SELECTORS } from 'vault/tests/helpers/pki/overview';
-import { tokenWithPolicy, clearRecords } from 'vault/tests/helpers/pki/pki-run-commands';
-import { runCmd } from 'vault/tests/helpers/commands';
+import { clearRecords } from 'vault/tests/helpers/pki/pki-run-commands';
+import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 
 module('Acceptance | pki overview', function (hooks) {
   setupApplicationTest(hooks);
@@ -42,9 +42,9 @@ module('Acceptance | pki overview', function (hooks) {
     },
     `;
 
-    this.pkiRolesList = await tokenWithPolicy('pki-roles-list', pki_roles_list_policy);
-    this.pkiIssuersList = await tokenWithPolicy('pki-issuers-list', pki_issuers_list_policy);
-    this.pkiAdminToken = await tokenWithPolicy('pki-admin', pki_admin_policy);
+    this.pkiRolesList = await runCmd(tokenWithPolicyCmd('pki-roles-list', pki_roles_list_policy));
+    this.pkiIssuersList = await runCmd(tokenWithPolicyCmd('pki-issuers-list', pki_issuers_list_policy));
+    this.pkiAdminToken = await runCmd(tokenWithPolicyCmd('pki-admin', pki_admin_policy));
     await logout.visit();
     clearRecords(this.store);
   });

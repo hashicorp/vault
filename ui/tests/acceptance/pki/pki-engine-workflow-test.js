@@ -13,7 +13,7 @@ import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, fillIn, find, isSettled, visit } from '@ember/test-helpers';
 import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/policy-generator/pki';
-import { tokenWithPolicy, clearRecords } from 'vault/tests/helpers/pki/pki-run-commands';
+import { clearRecords } from 'vault/tests/helpers/pki/pki-run-commands';
 import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { unsupportedPem } from 'vault/tests/helpers/pki/values';
 import { create } from 'ember-cli-page-object';
@@ -49,7 +49,7 @@ module('Acceptance | pki workflow', function (hooks) {
     hooks.beforeEach(async function () {
       await authPage.login();
       const pki_admin_policy = adminPolicy(this.mountPath, 'roles');
-      this.pkiAdminToken = await tokenWithPolicy(`pki-admin-${this.mountPath}`, pki_admin_policy);
+      this.pkiAdminToken = await runCmd(tokenWithPolicyCmd(`pki-admin-${this.mountPath}`, pki_admin_policy));
       await logout.visit();
       clearRecords(this.store);
     });
@@ -246,9 +246,9 @@ module('Acceptance | pki workflow', function (hooks) {
       const pki_admin_policy = adminPolicy(this.mountPath);
       const pki_reader_policy = readerPolicy(this.mountPath, 'keys', true);
       const pki_editor_policy = updatePolicy(this.mountPath, 'keys');
-      this.pkiKeyReader = await tokenWithPolicy(`pki-reader-${this.mountPath}`, pki_reader_policy);
-      this.pkiKeyEditor = await tokenWithPolicy(`pki-editor-${this.mountPath}`, pki_editor_policy);
-      this.pkiAdminToken = await tokenWithPolicy(`pki-admin-${this.mountPath}`, pki_admin_policy);
+      this.pkiKeyReader = await runCmd(tokenWithPolicyCmd(`pki-reader-${this.mountPath}`, pki_reader_policy));
+      this.pkiKeyEditor = await runCmd(tokenWithPolicyCmd(`pki-editor-${this.mountPath}`, pki_editor_policy));
+      this.pkiAdminToken = await runCmd(tokenWithPolicyCmd(`pki-admin-${this.mountPath}`, pki_admin_policy));
       await logout.visit();
       clearRecords(this.store);
     });
@@ -365,7 +365,7 @@ module('Acceptance | pki workflow', function (hooks) {
     hooks.beforeEach(async function () {
       await authPage.login();
       const pki_admin_policy = adminPolicy(this.mountPath);
-      this.pkiAdminToken = await tokenWithPolicy(`pki-admin-${this.mountPath}`, pki_admin_policy);
+      this.pkiAdminToken = await runCmd(tokenWithPolicyCmd(`pki-admin-${this.mountPath}`, pki_admin_policy));
       // Configure engine with a default issuer
       await runCmd([
         `write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test" name="Hashicorp Test"`,
@@ -401,9 +401,8 @@ module('Acceptance | pki workflow', function (hooks) {
         capabilities = ["deny"]
       }
       `;
-      this.token = await tokenWithPolicy(
-        `pki-issuer-denied-policy-${this.mountPath}`,
-        pki_issuer_denied_policy
+      this.token = await runCmd(
+        tokenWithPolicyCmd(`pki-issuer-denied-policy-${this.mountPath}`, pki_issuer_denied_policy)
       );
       await logout.visit();
       await authPage.login(this.token);
