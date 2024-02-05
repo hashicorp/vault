@@ -182,16 +182,26 @@ func applyChange(s sets.Set[pattern], change *FilterChange) {
 	case FilterChangeAdd:
 		nsPatterns := slices.Clone(change.NamespacePatterns)
 		sort.Strings(nsPatterns)
-		p := pattern{eventTypePattern: change.EventTypePattern, namespacePatterns: strings.Join(nsPatterns, " ")}
+		p := pattern{eventTypePattern: change.EventTypePattern, namespacePatterns: cleanJoinNamespaces(nsPatterns)}
 		s.Insert(p)
 	case FilterChangeRemove:
 		nsPatterns := slices.Clone(change.NamespacePatterns)
 		sort.Strings(nsPatterns)
-		check := pattern{eventTypePattern: change.EventTypePattern, namespacePatterns: strings.Join(nsPatterns, " ")}
+		check := pattern{eventTypePattern: change.EventTypePattern, namespacePatterns: cleanJoinNamespaces(nsPatterns)}
 		s.Delete(check)
 	case FilterChangeClear:
 		s.Clear()
 	}
+}
+
+func cleanJoinNamespaces(nsPatterns []string) string {
+	trimmed := make([]string, len(nsPatterns))
+	for i := 0; i < len(nsPatterns); i++ {
+		trimmed[i] = strings.TrimSpace(nsPatterns[i])
+	}
+	// sort and uniq
+	trimmed = sets.NewString(trimmed...).List()
+	return strings.Join(trimmed, " ")
 }
 
 // addPattern adds a pattern to a node's list.
@@ -206,7 +216,7 @@ func (f *Filters) addPattern(c clusterID, namespacePatterns []string, eventTypeP
 	}
 	nsPatterns := slices.Clone(namespacePatterns)
 	sort.Strings(nsPatterns)
-	p := pattern{eventTypePattern: eventTypePattern, namespacePatterns: strings.Join(nsPatterns, " ")}
+	p := pattern{eventTypePattern: eventTypePattern, namespacePatterns: cleanJoinNamespaces(namespacePatterns)}
 	f.filters[c].patterns.Insert(p)
 }
 
@@ -215,7 +225,7 @@ func (f *Filters) removePattern(c clusterID, namespacePatterns []string, eventTy
 	defer f.notify(c)
 	nsPatterns := slices.Clone(namespacePatterns)
 	sort.Strings(nsPatterns)
-	check := pattern{eventTypePattern: eventTypePattern, namespacePatterns: strings.Join(nsPatterns, " ")}
+	check := pattern{eventTypePattern: eventTypePattern, namespacePatterns: cleanJoinNamespaces(nsPatterns)}
 	f.lock.Lock()
 	defer f.lock.Unlock()
 	filters, ok := f.filters[c]

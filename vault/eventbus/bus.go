@@ -325,14 +325,21 @@ func (bus *EventBus) NotifyOnGlobalFilterChanges(ctx context.Context) (<-chan []
 
 // NotifyOnLocalFilterChanges returns a channel that receives changes to the filter for the current cluster.
 func (bus *EventBus) NotifyOnLocalFilterChanges(ctx context.Context) (<-chan []FilterChange, context.CancelFunc, error) {
-	return bus.filters.watch(ctx, bus.filters.self)
+	return bus.NotifyOnClusterFilterChanges(ctx, string(bus.filters.self))
 }
 
+// NotifyOnClusterFilterChanges returns a channel that receives changes to the filter for the given cluster.
+func (bus *EventBus) NotifyOnClusterFilterChanges(ctx context.Context, cluster string) (<-chan []FilterChange, context.CancelFunc, error) {
+	return bus.filters.watch(ctx, clusterID(cluster))
+}
+
+// NewGlobalSubscription creates a new subscription to all events that match the global filter.
 func (bus *EventBus) NewGlobalSubscription(ctx context.Context) (<-chan *eventlogger.Event, context.CancelFunc, error) {
 	g := globalCluster
 	return bus.subscribeInternal(ctx, nil, "", "", &g)
 }
 
+// NewClusterSubscription creates a new subscription to all events that match the given cluster's filter.
 func (bus *EventBus) NewClusterSubscription(ctx context.Context, cluster string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
 	return bus.subscribeInternal(ctx, nil, "", "", &cluster)
 }

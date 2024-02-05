@@ -6,6 +6,7 @@ package eventbus
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -13,6 +14,16 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/stretchr/testify/assert"
 )
+
+// TestCleanJoinNamespaces tests some cases in cleanJoinNamespaces.
+func TestCleanJoinNamespaces(t *testing.T) {
+	assert.Equal(t, "", cleanJoinNamespaces([]string{""}))
+	assert.Equal(t, " abc", cleanJoinNamespaces([]string{"", "abc"}))
+	// just checking that inverting works as expected
+	assert.Equal(t, []string{"", "abc"}, strings.Split(" abc", " "))
+	assert.Equal(t, "abc", cleanJoinNamespaces([]string{"abc"}))
+	assert.Equal(t, "abc def", cleanJoinNamespaces([]string{"def", "abc"}))
+}
 
 // TestFilters_AddRemoveMatchLocal checks that basic matching, adding, and removing of patterns all work.
 func TestFilters_AddRemoveMatchLocal(t *testing.T) {
@@ -113,4 +124,26 @@ func TestFilters_WatchCancel(t *testing.T) {
 	default:
 		t.Fatal("Channel should be closed")
 	}
+}
+
+// TestFilters_AddRemoveClear tests that add/remove/clear works as expected.
+func TestFilters_AddRemoveClear(t *testing.T) {
+	f := NewFilters("self")
+	f.addPattern("somecluster", []string{"ns1"}, "abc")
+	f.removePattern("somecluster", []string{"ns1"}, "abcd")
+	assert.Equal(t, "{ns=ns1,ev=abc}", f.filters["somecluster"].String())
+	f.removePattern("somecluster", []string{"ns1"}, "abc")
+	assert.Equal(t, "", f.filters["somecluster"].String())
+	f.addPattern("somecluster", []string{"ns1"}, "abc")
+	f.clearClusterPatterns("somecluster")
+	assert.NotContains(t, f.filters, "somecluster")
+
+	f.addGlobalPattern([]string{"ns1"}, "abc")
+	f.removeGlobalPattern([]string{"ns1"}, "abcd")
+	assert.Equal(t, "{ns=ns1,ev=abc}", f.filters[globalCluster].String())
+	f.removeGlobalPattern([]string{"ns1"}, "abc")
+	assert.Equal(t, "", f.filters[globalCluster].String())
+	f.addGlobalPattern([]string{"ns1"}, "abc")
+	f.clearGlobalPatterns()
+	assert.NotContains(t, f.filters, globalCluster)
 }
