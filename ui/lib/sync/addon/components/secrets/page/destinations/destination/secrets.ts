@@ -36,6 +36,17 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   }
 
   @action
+  refreshRoute() {
+    // refresh route to update displayed secrets
+    this.store.clearDataset('sync/association');
+    this.router.transitionTo(
+      'vault.cluster.sync.secrets.destinations.destination.secrets',
+      this.args.destination.type,
+      this.args.destination.name
+    );
+  }
+
+  @action
   async update(association: SyncAssociationModel, operation: string) {
     try {
       await association.save({ adapterOptions: { action: operation } });
@@ -44,13 +55,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
     } catch (error) {
       this.flashMessages.danger(`Sync operation error: \n ${errorMessage(error)}`);
     } finally {
-      // refresh route to update displayed secrets
-      this.store.clearDataset('sync/association');
-      this.router.transitionTo(
-        'vault.cluster.sync.secrets.destinations.destination.secrets',
-        this.args.destination.type,
-        this.args.destination.name
-      );
+      this.refreshRoute();
     }
   }
 }
