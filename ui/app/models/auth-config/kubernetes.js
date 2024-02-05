@@ -26,6 +26,7 @@ export default AuthConfig.extend({
     helpText:
       'A service account JWT used to access the TokenReview API to validate other JWTs during login. If not set the JWT used for login will be used to access the API',
   }),
+  useAnnotationsAsAliasMetadata: attr('boolean'),
 
   pemKeys: attr({
     editType: 'stringArray',
@@ -37,7 +38,7 @@ export default AuthConfig.extend({
         default: ['kubernetesHost', 'kubernetesCaCert'],
       },
       {
-        'Kubernetes Options': ['tokenReviewerJwt', 'pemKeys'],
+        'Kubernetes Options': ['tokenReviewerJwt', 'pemKeys', 'useAnnotationsAsAliasMetadata'],
       },
     ];
     if (this.newFields) {

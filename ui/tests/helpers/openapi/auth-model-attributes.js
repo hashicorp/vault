@@ -605,6 +605,14 @@ const kubernetes = {
       label: 'Token Reviewer JWT',
       type: 'string',
     },
+    useAnnotationsAsAliasMetadata: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText:
+        'Use annotations from the client token\'s associated service account as alias metadata for the Vault entity. Only annotations with the prefix "vault.hashicorp.com/alias-metadata-" will be used. Note that Vault will need permission to read service accounts from the Kubernetes API.',
+      label: 'Use annotations of JWT service account as alias metadata',
+      type: 'boolean',
+    },
   },
   role: {
     name: {
