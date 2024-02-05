@@ -3,8 +3,11 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+import { SELECTORS as GENERAL } from 'vault/tests/helpers/general-selectors';
+
 export const PAGE = {
   // General selectors that are common between pages
+  ...GENERAL,
   inlineErrorMessage: `[data-test-inline-error-message]`,
   unauthCreateFormInfo: '[data-test-unauth-info]',
   radio: (radioName) => `[data-test-radio="${radioName}"]`,
