@@ -16,7 +16,7 @@
   <JsonEditor
     @title="{{if (eq @type 'create') 'Secret' 'Version'}} data"
     @value={{this.stringifiedSecretData}}
-    @obscure={{@obscureJson}}
+    @allowObscure={{true}}
     @valueUpdated={{this.handleJson}}
     @readOnly={{eq @type "details"}}
   />
