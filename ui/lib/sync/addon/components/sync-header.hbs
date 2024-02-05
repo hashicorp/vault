@@ -17,6 +17,9 @@
       {{#if this.version.isCommunity}}
         <Hds::Badge @text="Enterprise feature" @color="highlight" @size="large" />
       {{/if}}
+      {{#if this.version.isEnterprise}}
+        <Hds::Badge @text="Beta" @color="highlight" @size="large" />
+      {{/if}}
     </h1>
   </p.levelLeft>
 
