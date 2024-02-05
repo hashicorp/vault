@@ -50,9 +50,7 @@
       @title="KMIP Secrets Engine"
       @message="First, let's create a scope that our roles and credentials will belong to. A client can only access objects within their role's scope."
     >
-      <LinkTo @route="scopes.create">
-        Create a scope
-      </LinkTo>
+      <Hds::Link::Standalone @icon="plus" @text="Create a scope" @route="scopes.create" />
     </list.empty>
   {{else if list.item}}
     <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "scope.roles" list.item.id}} as |Item|>
