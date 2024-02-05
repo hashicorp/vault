@@ -79,7 +79,6 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     );
     await fillIn('[data-test-kv-key="0"]', 'Learn more');
     await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
-
     await click(PAGE.button('create-message'));
   });
 
