@@ -80,11 +80,18 @@ mounts of the same type.
 ### Request
 
 A request being made to Vault contains all relevant parameters and context in order
-for Vault to be able to act accordingly.
+for Vault to be able to act accordingly. Vault represents this request internally
+in a way that understands:
+
+* Mount Point - used to generate relative paths.
+* Mount Type - the type of mount the request is interacting with.
+* Namespace - the [namespace](/vault/docs/enterprise/namespaces) the request is taking place within.
+* Operation - see [the operation description](#operation) below for the supported operations.
+* Path - the full path of the request.
 
 <Note title="Request's Namespace">
-  The Namespace on a request may be specified either as part of the path or the
-  Vault Namespace header.
+  The Namespace a request is targeting may be specified either as part of the path
+  or the Vault Namespace header.
 </Note>
 
 Please see our Enterprise documentation for further information on how
@@ -93,21 +100,9 @@ as part of a request.
 
 #### Operation
 
-The requested operation, one of the following:
-
-* `alias-lookahead`
-* `create`
-* `delete`
-* `header`
-* `help`
-* `list`
-* `patch`
-* `read`
-* `renew`
-* `resolve-role`
-* `revoke`
-* `rollback`
-* `update`
+The requested operation, can be one of the following: `alias-lookahead`, `create`, `delete`,
+`header`, `help`, `list`, `patch`, `read`, `renew`, `resolve-role`, `revoke`, `rollback`
+`update`.
 
 ### Secret
 
