@@ -375,6 +375,10 @@ type MountConfig struct {
 	PluginName string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 }
 
+func (c *MountConfig) usingOIDCDefaultKey() bool {
+	return c.IdentityTokenKey == "" || c.IdentityTokenKey == defaultKeyName
+}
+
 type UserLockoutConfig struct {
 	LockoutThreshold    uint64        `json:"lockout_threshold,omitempty" structs:"lockout_threshold" mapstructure:"lockout_threshold"`
 	LockoutDuration     time.Duration `json:"lockout_duration,omitempty" structs:"lockout_duration" mapstructure:"lockout_duration"`

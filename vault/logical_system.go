@@ -1501,15 +1501,15 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		config.DelegatedAuthAccessors = apiConfig.DelegatedAuthAccessors
 	}
 
+	// Ensure that the mount's identity token key exists
+	identityStore := b.Core.IdentityStore()
+	storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+	if storage == nil {
+		return nil, errors.New("failed to find identity storage")
+	}
 	if apiConfig.IdentityTokenKey != "" {
-		storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
-		if storage == nil {
-			return nil, errors.New("failed to find identity storage")
-		}
-
-		identityStore := b.Core.IdentityStore()
-		identityStore.oidcLock.RLock()
-		defer identityStore.oidcLock.RUnlock()
+		identityStore.oidcLock.Lock()
+		defer identityStore.oidcLock.Unlock()
 		k, err := identityStore.getNamedKey(ctx, storage, apiConfig.IdentityTokenKey)
 		if err != nil {
 			return nil, fmt.Errorf("failed getting key %q: %w", apiConfig.IdentityTokenKey, err)
@@ -1519,6 +1519,15 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		}
 
 		config.IdentityTokenKey = apiConfig.IdentityTokenKey
+	}
+
+	// Don't lazily generate the default OIDC key for KV mounts. A default KV mount
+	// is enabled in dev and test servers. We don't want to pay the cost of key
+	// generation for that KV mount in all tests.
+	if config.usingOIDCDefaultKey() && logicalType != mountTypeKV {
+		if err := identityStore.lazyGenerateDefaultKey(ctx, storage); err != nil {
+			return nil, fmt.Errorf("failed to generate default key: %w", err)
+		}
 	}
 
 	// Create the mount entry
@@ -2300,17 +2309,17 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("identity_token_key"); ok {
+		// Ensure that the mount's identity token key exists
+		identityStore := b.Core.IdentityStore()
+		storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+		if storage == nil {
+			return nil, errors.New("failed to find identity storage")
+		}
+
 		identityTokenKey := rawVal.(string)
-
 		if identityTokenKey != "" {
-			storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
-			if storage == nil {
-				return nil, errors.New("failed to find identity storage")
-			}
-
-			identityStore := b.Core.IdentityStore()
-			identityStore.oidcLock.RLock()
-			defer identityStore.oidcLock.RUnlock()
+			identityStore.oidcLock.Lock()
+			defer identityStore.oidcLock.Unlock()
 			k, err := identityStore.getNamedKey(ctx, storage, identityTokenKey)
 			if err != nil {
 				return nil, fmt.Errorf("failed getting key %q: %w", identityTokenKey, err)
@@ -2322,6 +2331,13 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 		oldVal := mountEntry.Config.IdentityTokenKey
 		mountEntry.Config.IdentityTokenKey = identityTokenKey
+
+		if mountEntry.Config.usingOIDCDefaultKey() {
+			if err := identityStore.lazyGenerateDefaultKey(ctx, storage); err != nil {
+				mountEntry.Config.IdentityTokenKey = oldVal
+				return nil, fmt.Errorf("failed to generate default key: %w", err)
+			}
+		}
 
 		// Update the mount table
 		var err error
@@ -3098,15 +3114,15 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		config.AllowedManagedKeys = apiConfig.AllowedManagedKeys
 	}
 
+	// Ensure that the mount's identity token key exists
+	identityStore := b.Core.IdentityStore()
+	storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+	if storage == nil {
+		return nil, errors.New("failed to find identity storage")
+	}
 	if apiConfig.IdentityTokenKey != "" {
-		storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
-		if storage == nil {
-			return nil, errors.New("failed to find identity storage")
-		}
-
-		identityStore := b.Core.IdentityStore()
-		identityStore.oidcLock.RLock()
-		defer identityStore.oidcLock.RUnlock()
+		identityStore.oidcLock.Lock()
+		defer identityStore.oidcLock.Unlock()
 		k, err := identityStore.getNamedKey(ctx, storage, apiConfig.IdentityTokenKey)
 		if err != nil {
 			return nil, fmt.Errorf("failed getting key %q: %w", apiConfig.IdentityTokenKey, err)
@@ -3116,6 +3132,11 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		}
 
 		config.IdentityTokenKey = apiConfig.IdentityTokenKey
+	}
+	if config.usingOIDCDefaultKey() {
+		if err := identityStore.lazyGenerateDefaultKey(ctx, storage); err != nil {
+			return nil, fmt.Errorf("failed to generate default key: %w", err)
+		}
 	}
 
 	// Create the mount entry
