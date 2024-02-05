@@ -111,15 +111,15 @@ func (rm *RotationManager) CheckQueue() error {
 			break // this item is not ripe yet, which means all later items are also unripe, so exit the check loop
 		}
 
-		var re *rotationEntry
-		entry, ok := i.Value.(*rotationEntry)
+		// var re *rotationEntry
+		re, ok := i.Value.(*rotationEntry)
 		if !ok {
 			return fmt.Errorf("error parsing rotation entry from queue")
 		}
 
-		re = entry
+		// re = entry
 
-		rm.logger.Debug("check", "window", re.RotationJob.Schedule.RotationWindow, "time", re.RootCredential.Schedule.NextVaultRotation)
+		rm.logger.Debug("check", "window", re.RotationJob.Schedule.RotationWindow, "time", re.RotationJob.Schedule.NextVaultRotation)
 		if !logical.DefaultScheduler.IsInsideRotationWindow(re.RotationJob.Schedule, now) {
 			rm.logger.Debug("Not inside rotation window, pushing back to queue")
 			err := rm.queue.Push(i)
@@ -178,13 +178,13 @@ func (rm *RotationManager) Register(ctx context.Context, reqPath string, job *lo
 
 	issueTime := time.Now()
 	expireTime := time.Now()
-	if resp.RootCredential.Schedule.Schedule != nil {
-		expireTime = logical.DefaultScheduler.NextRotationTimeFromInput(resp.RootCredential.Schedule, time.Now())
-		resp.RootCredential.Schedule.NextVaultRotation = expireTime
+	if job.Schedule.Schedule != nil {
+		expireTime = logical.DefaultScheduler.NextRotationTimeFromInput(job.Schedule, time.Now())
+		job.Schedule.NextVaultRotation = expireTime
 	}
-	rm.logger.Debug("SCHEDULE", "VALUE", resp.RootCredential.Schedule.RotationSchedule)
-	rm.logger.Debug("WINDOW", "VALUE", resp.RootCredential.Schedule.RotationWindow)
-	rm.logger.Debug("TTL", "VALUE", resp.RootCredential.Schedule.TTL)
+	rm.logger.Debug("SCHEDULE", "VALUE", job.Schedule.RotationSchedule)
+	rm.logger.Debug("WINDOW", "VALUE", job.Schedule.RotationWindow)
+	rm.logger.Debug("TTL", "VALUE", job.Schedule.TTL)
 	re := &rotationEntry{
 		RotationID:  rotationID,
 		Path:        reqPath,
@@ -309,8 +309,8 @@ func (j *rotationJob) Execute() error {
 	// success
 	j.rm.logger.Debug("Successfully called rotate root code for backend")
 	issueTime := time.Now()
-	j.entry.RootCredential.Schedule.LastVaultRotation = issueTime
-	expireTime := logical.DefaultScheduler.NextRotationTime(j.entry.RootCredential.Schedule)
+	j.entry.RotationJob.Schedule.LastVaultRotation = issueTime
+	expireTime := logical.DefaultScheduler.NextRotationTime(j.entry.RotationJob.Schedule)
 	newEntry := &rotationEntry{
 		RotationID:  j.entry.RotationID,
 		Path:        j.entry.Path,

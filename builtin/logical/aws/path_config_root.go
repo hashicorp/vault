@@ -243,7 +243,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 
 	if ttlOk {
 		ttlSeconds := ttl.(int)
-		rCred, err = logical.GetRotationJob("", "aws/config/root", "aws-root-creds", 0, ttlSeconds)
+		rCred, err = logical.GetRotationJob(ctx, "", "aws/"+req.Path, "aws-root-creds", 0, ttlSeconds)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
@@ -251,14 +251,14 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		rotationWindow = 0
 	}
 
-	if rc != nil {
+	if rCred != nil {
 		b.Logger().Debug("Injecting Root Credential over system view")
-		rotationID, err := b.System().RegisterRotationJob(ctx, rc.Path, rc)
+		rotationID, err := b.System().RegisterRotationJob(ctx, rCred.Path, rCred)
 		if err != nil {
 			return nil, err
 		}
 
-		rc.RotationID = rotationID
+		rCred.RotationID = rotationID
 	}
 
 	return nil, nil

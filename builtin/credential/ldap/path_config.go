@@ -238,8 +238,8 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	ttl, ttlOk := d.GetOk("ttl")
 	rotationSchedule, rotationScheduleOk := d.GetOk("rotation_schedule")
 	rotationWindow, rotationWindowOk := d.GetOk("rotation_window")
-  
-  if rotationScheduleOk && ttlOk {
+
+	if rotationScheduleOk && ttlOk {
 		return logical.ErrorResponse("mutually exclusive fields rotation_schedule and ttl were both specified; only one of them can be provided"), nil
 	} else if rotationWindowOk && ttlOk {
 		return logical.ErrorResponse("rotation_window does not apply to ttl"), nil
@@ -250,19 +250,19 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	if rotationScheduleOk && rotationWindowOk {
 		cfg.RotationSchedule = rotationSchedule.(string)
 		cfg.RotationWindow = rotationWindow.(int)
-  }
-  
-  if ttlOk {
+	}
+
+	if ttlOk {
 		cfg.TTL = ttl.(int)
-  }
+	}
 
 	var rc *logical.RotationJob
 	rc, err = logical.GetRotationJob(ctx, cfg.RotationSchedule, "ldap/config",
-			"ldap-root-creds", cfg.RotationWindow, cfg.TTL)
-  if err != nil {
-    return logical.ErrorResponse(err.Error()), nil
-  }
-	
+		"ldap-root-creds", cfg.RotationWindow, cfg.TTL)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
 	entry, err := logical.StorageEntryJSON("config", cfg)
 	if err != nil {
 		return nil, err

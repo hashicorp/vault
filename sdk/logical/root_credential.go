@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"time"
 
-
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/robfig/cron/v3"
 )
