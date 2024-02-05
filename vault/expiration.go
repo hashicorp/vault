@@ -1038,9 +1038,13 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 			if err != nil {
 				return err
 			}
-			// If it's a non-orphan batch token, assign the secondary index to its
-			// parent
-			indexToken = te.Parent
+			// lookupBatchTokenInternal can return nil, nil in the case of
+			// a token decrypt error. We add this check to prevent nil panic.
+			if te != nil {
+				// If it's a non-orphan batch token, assign the secondary index to its
+				// parent
+				indexToken = te.Parent
+			}
 		default:
 			indexToken = le.ClientToken
 		}
