@@ -19,8 +19,8 @@ module('Acceptance | config-ui', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    this.createMessage = async (messageType = 'banner') => {
-      await visit('vault/config-ui/messages');
+    this.createMessage = async (messageType = 'banner', endTime = '2023-12-12', authenticated = true) => {
+      await visit(`vault/config-ui/messages?authenticated=${authenticated}`);
       await click(MESSAGE_SELECTORS.button('create message'));
       await fillIn(MESSAGE_SELECTORS.input('title'), 'Awesome custom message title');
       await click(MESSAGE_SELECTORS.radio(messageType));
@@ -32,11 +32,13 @@ module('Acceptance | config-ui', function (hooks) {
         MESSAGE_SELECTORS.input('startTime'),
         format(addDays(startOfDay(new Date('2023-12-12')), 1), datetimeLocalStringFormat)
       );
-      await click('#specificDate');
-      await fillIn(
-        MESSAGE_SELECTORS.input('endTime'),
-        format(addDays(startOfDay(new Date('2023-12-12')), 10), datetimeLocalStringFormat)
-      );
+      if (endTime) {
+        await click('#specificDate');
+        await fillIn(
+          MESSAGE_SELECTORS.input('endTime'),
+          format(addDays(startOfDay(new Date('2023-12-12')), 10), datetimeLocalStringFormat)
+        );
+      }
       await fillIn('[data-test-kv-key="0"]', 'Learn more');
       await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
 
@@ -62,12 +64,12 @@ module('Acceptance | config-ui', function (hooks) {
     test('it should create, edit, view, and delete a message', async function (assert) {
       assert.expect(3);
       await this.createMessage();
-      assert.dom(GENERAL.title).hasText('Awesome custom message title');
+      assert.dom(GENERAL.title).hasText('Awesome custom message title', 'on the details screen');
       await click('[data-test-link="edit"]');
       await fillIn(MESSAGE_SELECTORS.input('title'), 'Edited custom message title');
       await click(MESSAGE_SELECTORS.button('create-message'));
       assert.dom(GENERAL.title).hasText('Edited custom message title');
-      await click('[data-test-confirm-action="Delete message"]');
+      await click(MESSAGE_SELECTORS.confirmActionButton('Delete message'));
       await click(GENERAL.confirmButton);
       assert.strictEqual(
         currentRouteName(),
@@ -75,25 +77,54 @@ module('Acceptance | config-ui', function (hooks) {
         'redirects to messages page after delete'
       );
     });
+    test('it should show multiple messages modal', async function (assert) {
+      assert.expect(3);
+      await this.createMessage('modal', null);
+      assert.dom(GENERAL.title).hasText('Awesome custom message title');
+      await this.createMessage('modal', null);
+      assert.dom(MESSAGE_SELECTORS.modal('multiple modal messages')).exists();
+      assert
+        .dom(MESSAGE_SELECTORS.modalTitle('Warning: more than one modal'))
+        .hasText('Warning: more than one modal after the user logs in');
+      await click(MESSAGE_SELECTORS.modalButton('cancel'));
+      await visit('vault/config-ui/messages');
+      await click(MESSAGE_SELECTORS.listItem('Awesome custom message title'));
+      await click(MESSAGE_SELECTORS.confirmActionButton('Delete message'));
+      await click(GENERAL.confirmButton);
+    });
   });
 
   module('Unauthenticated messages', function () {
     test('it should create, edit, view, and delete a message', async function (assert) {
       assert.expect(3);
-      await visit('vault/config-ui/messages?authenticated=false');
-      await this.createMessage();
-      assert.dom(GENERAL.title).hasText('Awesome custom message title');
+      await this.createMessage('banner', null, false);
+      assert.dom(GENERAL.title).hasText('Awesome custom message title', 'on the details screen');
       await click('[data-test-link="edit"]');
       await fillIn(MESSAGE_SELECTORS.input('title'), 'Edited custom message title');
       await click(MESSAGE_SELECTORS.button('create-message'));
       assert.dom(GENERAL.title).hasText('Edited custom message title');
-      await click('[data-test-confirm-action="Delete message"]');
+      await click(MESSAGE_SELECTORS.confirmActionButton('Delete message'));
       await click(GENERAL.confirmButton);
       assert.strictEqual(
         currentRouteName(),
         'vault.cluster.config-ui.messages.index',
         'redirects to messages page after delete'
       );
+    });
+    test('it should show multiple messages modal', async function (assert) {
+      assert.expect(3);
+      await this.createMessage('modal', null, false);
+      assert.dom(GENERAL.title).hasText('Awesome custom message title');
+      await this.createMessage('modal', null, false);
+      assert.dom(MESSAGE_SELECTORS.modal('multiple modal messages')).exists();
+      assert
+        .dom(MESSAGE_SELECTORS.modalTitle('Warning: more than one modal'))
+        .hasText('Warning: more than one modal on the login page');
+      await click(MESSAGE_SELECTORS.modalButton('cancel'));
+      await visit('vault/config-ui/messages?authenticated=false');
+      await click(MESSAGE_SELECTORS.listItem('Awesome custom message title'));
+      await click(MESSAGE_SELECTORS.confirmActionButton('Delete message'));
+      await click(GENERAL.confirmButton);
     });
   });
 });

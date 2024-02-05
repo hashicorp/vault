@@ -21,4 +21,6 @@ export const PAGE = {
   alertAction: (name) => `[data-test-custom-alert-action="${name}"]`,
   badge: (name) => `[data-test-badge="${name}"]`,
   tab: (name) => `[data-test-custom-messages-tab="${name}"]`,
+  confirmActionButton: (name) => `[data-test-confirm-action="${name}"]`,
+  listItem: (name) => `[data-test-list-item="${name}"]`,
 };
