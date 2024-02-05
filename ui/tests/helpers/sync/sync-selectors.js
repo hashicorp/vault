@@ -18,6 +18,7 @@ export const PAGE = {
       name: '[data-test-association-name]',
       status: '[data-test-association-status]',
       updated: '[data-test-association-updated]',
+      refresh: '[data-test-refresh-list]',
       menu: {
         sync: '[data-test-association-action="sync"]',
         view: '[data-test-association-action="view"]',
@@ -43,6 +44,10 @@ export const PAGE = {
       type: '[data-test-destination-type]',
       deleteAction: '[data-test-delete]',
       create: '[data-test-create-destination]',
+      menu: {
+        details: '[data-test-details]',
+        edit: '[data-test-edit]',
+      },
     },
   },
   overview: {
@@ -63,7 +68,7 @@ export const PAGE = {
     text: '.hds-badge__text',
   },
   selectType: (type) => `[data-test-select-destination="${type}"]`,
-  cancelButton: '[data-test-cancel]',
+  createCancel: '[data-test-destination-create-cancel]',
   saveButton: '[data-test-save]',
   toolbar: (btnText) => `[data-test-toolbar="${btnText}"]`,
   form: {
