@@ -1,0 +1,3 @@
+```release-note:feature
+**Plugin Identity Tokens**: Gives plugins a source of identity that can be used for secret-less configuring using workload identity federation.
+```
