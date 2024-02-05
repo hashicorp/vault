@@ -1039,7 +1039,7 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 				return err
 			}
 			// lookupBatchTokenInternal can return nil, nil in the case of
-			// a token decrypt error. It's
+			// a token decrypt error. We add this check to prevent nil panic.
 			if te != nil {
 				// If it's a non-orphan batch token, assign the secondary index to its
 				// parent
