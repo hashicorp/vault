@@ -50,7 +50,7 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
   test('it should render tab page header and config cta', async function (assert) {
     this.promptConfig = true;
     await this.renderComponent();
-    assert.dom('.title svg').hasClass('flight-icon-kubernetes', 'Kubernetes icon renders in title');
+    assert.dom('.title svg').hasClass('flight-icon-kubernetes-color', 'Kubernetes icon renders in title');
     assert.dom('.title').hasText('kubernetes-test', 'Mount path renders in title');
     assert
       .dom('[data-test-toolbar-roles-action]')

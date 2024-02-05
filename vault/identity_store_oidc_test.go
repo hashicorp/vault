@@ -6,6 +6,8 @@ package vault
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -20,6 +22,8 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	gocache "github.com/patrickmn/go-cache"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestOIDC_Path_OIDC_RoleNoKeyParameter tests that a role cannot be created
@@ -1039,13 +1043,11 @@ func testNamedKey(name string) *namedKey {
 // rotations and expiration actions.
 func TestOIDC_PeriodicFunc(t *testing.T) {
 	type testCase struct {
-		cycle         int
-		numKeys       int
-		numPublicKeys int
+		expectedKeyRingLen   int
+		expectedPublicKeyLen int
 	}
 	testSets := []struct {
 		namedKey          *namedKey
-		expectedKeyCount  int
 		setSigningKey     bool
 		setNextSigningKey bool
 		testCases         []testCase
@@ -1056,10 +1058,10 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setNextSigningKey: true,
 			testCases: []testCase{
 				// Each cycle results in a key going in/out of its verification_ttl period
-				{1, 2, 2},
-				{2, 3, 3},
-				{3, 2, 2},
-				{4, 3, 3},
+				{2, 2},
+				{3, 3},
+				{2, 2},
+				{3, 3},
 			},
 		},
 		{
@@ -1068,11 +1070,11 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     false,
 			setNextSigningKey: true,
 			testCases: []testCase{
-				{1, 1, 1},
+				{1, 1},
 
 				// key counts jump from 1 to 2 because the next signing key becomes
 				// the signing key, and no key is in its verification_ttl period
-				{2, 2, 2},
+				{2, 2},
 			},
 		},
 		{
@@ -1081,11 +1083,11 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     true,
 			setNextSigningKey: false,
 			testCases: []testCase{
-				{1, 1, 1},
+				{1, 1},
 
 				// key counts jump from 1 to 3 because the original signing key is
 				// still published and within its verification_ttl period
-				{2, 3, 3},
+				{3, 3},
 			},
 		},
 		{
@@ -1094,8 +1096,8 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     false,
 			setNextSigningKey: false,
 			testCases: []testCase{
-				{1, 0, 0},
-				{2, 2, 2},
+				{0, 0},
+				{2, 2},
 			},
 		},
 	}
@@ -1105,46 +1107,41 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 		t.Run(testSet.namedKey.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Prepare a storage to run through periodicFunc
 			c, _, _ := TestCoreUnsealed(t)
 			ctx := namespace.RootContext(nil)
 			storage := c.router.MatchingStorageByAPIPath(ctx, "identity/oidc")
 
+			// Stop the core's rollback manager so that periodic function testing
+			// doesn't race with the rollback manager.
+			c.rollback.StopTicker()
+
+			// Generate current and next keys as needed by the test. This ensures
+			// we can rotate a key when either are unset.
 			if testSet.setSigningKey {
-				if err := testSet.namedKey.generateAndSetKey(ctx, hclog.NewNullLogger(), storage); err != nil {
-					t.Fatalf("failed to set signing key")
-				}
+				require.NoError(t, testSet.namedKey.generateAndSetKey(ctx, hclog.NewNullLogger(), storage))
 			}
 			if testSet.setNextSigningKey {
-				if err := testSet.namedKey.generateAndSetNextKey(ctx, hclog.NewNullLogger(), storage); err != nil {
-					t.Fatalf("failed to set next signing key")
-				}
+				require.NoError(t, testSet.namedKey.generateAndSetNextKey(ctx, hclog.NewNullLogger(), storage))
 			}
 			testSet.namedKey.NextRotation = time.Now().Add(testSet.namedKey.RotationPeriod)
 
-			// Store namedKey
+			// Store the named key so it can be rotated by the periodic func
 			entry, _ := logical.StorageEntryJSON(namedKeyConfigPath+testSet.namedKey.name, testSet.namedKey)
-			if err := storage.Put(ctx, entry); err != nil {
-				t.Fatalf("writing to in mem storage failed")
-			}
+			require.NoError(t, storage.Put(ctx, entry))
+			t.Cleanup(func() {
+				require.NoError(t, storage.Delete(ctx, namedKeyConfigPath+testSet.namedKey.name))
+			})
 
-			currentCycle := 1
-			numCases := len(testSet.testCases)
-			lastCycle := testSet.testCases[numCases-1].cycle
-			namedKeySamples := make([]*logical.StorageEntry, numCases)
-			publicKeysSamples := make([][]string, numCases)
-
-			i := 0
-			for currentCycle <= lastCycle {
+			// Manually execute the periodic func to rotate keys and collect
+			// both the key ring and public keys.
+			namedKeySamples := make([]*logical.StorageEntry, len(testSet.testCases))
+			publicKeysSamples := make([][]string, len(testSet.testCases))
+			for i := range testSet.testCases {
 				c.identityStore.oidcPeriodicFunc(ctx)
-				if currentCycle == testSet.testCases[i].cycle {
-					namedKeyEntry, _ := storage.Get(ctx, namedKeyConfigPath+testSet.namedKey.name)
-					publicKeysEntry, _ := storage.List(ctx, publicKeysConfigPath)
-					namedKeySamples[i] = namedKeyEntry
-					publicKeysSamples[i] = publicKeysEntry
-					i = i + 1
-				}
-				currentCycle = currentCycle + 1
+				namedKeyEntry, _ := storage.Get(ctx, namedKeyConfigPath+testSet.namedKey.name)
+				publicKeysEntry, _ := storage.List(ctx, publicKeysConfigPath)
+				namedKeySamples[i] = namedKeyEntry
+				publicKeysSamples[i] = publicKeysEntry
 
 				// sleep until we are in the next cycle - where a next run will happen
 				v, _, _ := c.identityStore.oidcCache.Get(noNamespace, "nextRun")
@@ -1152,39 +1149,21 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 				now := time.Now()
 				diff := nextRun.Sub(now)
 				if now.Before(nextRun) {
-					time.Sleep(diff)
+					time.Sleep(diff + 100*time.Millisecond)
 				}
 			}
 
-			// measure collected samples
-			for i := range testSet.testCases {
-				expectedKeyCount := testSet.testCases[i].numKeys
-				namedKeySamples[i].DecodeJSON(&testSet.namedKey)
+			// Assert that the key lengths through each rotation match expectations
+			for i, tc := range testSet.testCases {
+				require.NoError(t, namedKeySamples[i].DecodeJSON(&testSet.namedKey))
+
 				actualKeyRingLen := len(testSet.namedKey.KeyRing)
-				if actualKeyRingLen != expectedKeyCount {
-					t.Errorf(
-						"For key: %s at cycle: %d expected namedKey's KeyRing to be at least of length %d but was: %d",
-						testSet.namedKey.name,
-						testSet.testCases[i].cycle,
-						expectedKeyCount,
-						actualKeyRingLen,
-					)
-				}
-				expectedPublicKeyCount := testSet.testCases[i].numPublicKeys
-				actualPubKeysLen := len(publicKeysSamples[i])
-				if actualPubKeysLen != expectedPublicKeyCount {
-					t.Errorf(
-						"For key: %s at cycle: %d expected public keys to be at least of length %d but was: %d",
-						testSet.namedKey.name,
-						testSet.testCases[i].cycle,
-						expectedPublicKeyCount,
-						actualPubKeysLen,
-					)
-				}
-			}
+				assert.Equal(t, tc.expectedKeyRingLen, actualKeyRingLen,
+					"Key ring length mismatch for key %q at test case index %d", testSet.namedKey.name, i)
 
-			if err := storage.Delete(ctx, namedKeyConfigPath+testSet.namedKey.name); err != nil {
-				t.Fatalf("deleting from in mem storage failed")
+				actualPubKeysLen := len(publicKeysSamples[i])
+				assert.Equal(t, tc.expectedPublicKeyLen, actualPubKeysLen,
+					"Public key length mismatch for key %q at test case index %d", testSet.namedKey.name, i)
 			}
 		})
 	}
@@ -1283,7 +1262,7 @@ func TestOIDC_pathOIDCKeyExistenceCheck(t *testing.T) {
 		t.Fatalf("Expected existence check to return false but instead returned: %t", exists)
 	}
 
-	// Populte storage with a namedKey
+	// Populate storage with a namedKey
 	namedKey := &namedKey{}
 	entry, _ := logical.StorageEntryJSON(namedKeyConfigPath+keyName, namedKey)
 	if err := storage.Put(ctx, entry); err != nil {
@@ -1724,5 +1703,144 @@ func expectStrings(t *testing.T, actualStrings []string, expectedStrings map[str
 		if !ok {
 			t.Fatalf("the string %q was not expected", actualString)
 		}
+	}
+}
+
+// Test_oidcConfig_fullIssuer tests that the full issuer matches expectations
+// given different issuer bases and children.
+func Test_oidcConfig_fullIssuer(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	tests := []struct {
+		name    string
+		issuer  string
+		child   string
+		want    string
+		wantErr bool
+	}{
+		{
+			name:   "issuer with valid empty child",
+			issuer: "https://vault.dev",
+			child:  baseIdentityTokenIssuer,
+			want:   fmt.Sprintf("https://vault.dev/v1/%s", issuerPath),
+		},
+		{
+			name:   "issuer with valid plugin child",
+			issuer: "http://127.0.0.1:8200",
+			child:  pluginIdentityTokenIssuer,
+			want:   fmt.Sprintf("http://127.0.0.1:8200/v1/%s/%s", issuerPath, pluginIdentityTokenIssuer),
+		},
+		{
+			name:    "issuer with invalid child",
+			issuer:  "http://127.0.0.1:8200",
+			child:   "invalid",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+				Path:      "oidc/config",
+				Operation: logical.UpdateOperation,
+				Storage:   storage,
+				Data: map[string]interface{}{
+					"issuer": tt.issuer,
+				},
+			})
+			expectSuccess(t, resp, err)
+
+			config, err := c.identityStore.getOIDCConfig(ctx, storage)
+			require.NoError(t, err)
+
+			got, err := config.fullIssuer(tt.child)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equalf(t, tt.want, got, "fullIssuer(%v)", tt.child)
+		})
+	}
+}
+
+// Test_validChildIssuer tests that only valid child issuers are accepted.
+func Test_validChildIssuer(t *testing.T) {
+	tests := []struct {
+		name  string
+		child string
+		want  bool
+	}{
+		{
+			name:  "valid child issuer",
+			child: baseIdentityTokenIssuer,
+			want:  true,
+		},
+		{
+			name:  "valid child issuer",
+			child: pluginIdentityTokenIssuer,
+			want:  true,
+		},
+		{
+			name:  "invalid child issuer",
+			child: "test",
+			want:  false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equalf(t, tt.want, validChildIssuer(tt.child), "validChildIssuer(%v)", tt.child)
+		})
+	}
+}
+
+// Test_optionalChildIssuerRegex tests that the regex returned from
+// optionalChildIssuerRegex produces the expected captures given different
+// input paths.
+func Test_optionalChildIssuerRegex(t *testing.T) {
+	tests := []struct {
+		name     string
+		pattern  string
+		path     string
+		captures map[string]string
+	}{
+		{
+			name:     "valid match with capture",
+			pattern:  "oidc" + optionalChildIssuerRegex("child") + "/.well-known/keys",
+			path:     "oidc/plugins/.well-known/keys",
+			captures: map[string]string{"child": "plugins"},
+		},
+		{
+			name:     "valid match with capture name, segment, and path change",
+			pattern:  "oidc" + optionalChildIssuerRegex("name") + "/.well-known/openid-configuration",
+			path:     "oidc/test/.well-known/openid-configuration",
+			captures: map[string]string{"name": "test"},
+		},
+		{
+			name:     "valid match with empty capture",
+			pattern:  "oidc" + optionalChildIssuerRegex("child") + "/.well-known/keys",
+			path:     "oidc/.well-known/keys",
+			captures: map[string]string{"child": ""},
+		},
+		{
+			name:     "invalid match with multiple path segments",
+			pattern:  "oidc" + optionalChildIssuerRegex("child") + "/.well-known/keys",
+			path:     "oidc/plugins/invalid/.well-known/keys",
+			captures: map[string]string{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			re := regexp.MustCompile(tt.pattern)
+			matches := re.FindStringSubmatch(tt.path)
+			actualCaptures := make(map[string]string)
+			for i, name := range re.SubexpNames() {
+				if name != "" && i < len(matches) {
+					actualCaptures[name] = matches[i]
+				}
+			}
+			require.Equal(t, tt.captures, actualCaptures)
+		})
 	}
 }

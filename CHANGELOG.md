@@ -2,6 +2,48 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.15.5
+### January 31, 2024
+
+CHANGES:
+
+* core: Bump Go version to 1.21.5.
+* database/snowflake: Update plugin to v0.9.1 [[GH-25020](https://github.com/hashicorp/vault/pull/25020)]
+* secrets/ad: Update plugin to v0.16.2 [[GH-25058](https://github.com/hashicorp/vault/pull/25058)]
+* secrets/openldap: Update plugin to v0.11.3 [[GH-25040](https://github.com/hashicorp/vault/pull/25040)]
+
+IMPROVEMENTS:
+
+* command/server: display logs on startup immediately if disable-gated-logs flag is set [[GH-24280](https://github.com/hashicorp/vault/pull/24280)]
+* core/activity: Include secret_syncs in activity log responses [[GH-24710](https://github.com/hashicorp/vault/pull/24710)]
+* oidc/provider: Adds `code_challenge_methods_supported` to OpenID Connect Metadata [[GH-24979](https://github.com/hashicorp/vault/pull/24979)]
+* storage/raft: Upgrade to bbolt 1.3.8, along with an extra patch to reduce time scanning large freelist maps. [[GH-24010](https://github.com/hashicorp/vault/pull/24010)]
+* sys (enterprise): Adds the chroot_namespace field to this sys/internal/ui/resultant-acl endpoint, which exposes the value of the chroot namespace from the
+listener config.
+* ui: latest version of chrome does not automatically redirect back to the app after authentication unless triggered by the user, hence added a link to redirect back to the app. [[GH-18513](https://github.com/hashicorp/vault/pull/18513)]
+
+BUG FIXES:
+
+* audit/socket: Provide socket based audit backends with 'prefix' configuration option when supplied. [[GH-25004](https://github.com/hashicorp/vault/pull/25004)]
+* audit: Fix bug where use of 'log_raw' option could result in other devices logging raw audit data [[GH-24968](https://github.com/hashicorp/vault/pull/24968)]
+* auth/saml (enterprise): Fixes support for Microsoft Entra ID enterprise applications
+* core (enterprise): fix a potential deadlock if an error is received twice from underlying storage for the same key
+* core: upgrade github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 to 
+support azure workload identities. [[GH-24954](https://github.com/hashicorp/vault/pull/24954)]
+* helper/pkcs7: Fix slice out-of-bounds panic [[GH-24891](https://github.com/hashicorp/vault/pull/24891)]
+* kmip (enterprise): Only return a Server Correlation Value to clients using KMIP version 1.4.
+* plugins: fix panic when registering containerized plugin with a custom runtime on a perf standby
+* ui: Allows users to dismiss the resultant-acl banner. [[GH-25106](https://github.com/hashicorp/vault/pull/25106)]
+* ui: Correctly handle redirects from pre 1.15.0 Kv v2 edit, create, and show urls. [[GH-24339](https://github.com/hashicorp/vault/pull/24339)]
+* ui: Fixed minor bugs with database secrets engine [[GH-24947](https://github.com/hashicorp/vault/pull/24947)]
+* ui: Fixes input for jwks_ca_pem when configuring a JWT auth method [[GH-24697](https://github.com/hashicorp/vault/pull/24697)]
+* ui: Fixes policy input toolbar scrolling by default [[GH-23297](https://github.com/hashicorp/vault/pull/23297)]
+* ui: The UI can now be used to create or update database roles by operator without permission on the database connection. [[GH-24660](https://github.com/hashicorp/vault/pull/24660)]
+* ui: fix KV v2 details view defaulting to JSON view when secret value includes `{` [[GH-24513](https://github.com/hashicorp/vault/pull/24513)]
+* ui: fix incorrectly calculated capabilities on PKI issuer endpoints [[GH-24686](https://github.com/hashicorp/vault/pull/24686)]
+* ui: fix issue where kv v2 capabilities checks were not passing in the full secret path if secret was inside a directory. [[GH-24404](https://github.com/hashicorp/vault/pull/24404)]
+* ui: fix navigation items shown to user when chroot_namespace configured [[GH-24492](https://github.com/hashicorp/vault/pull/24492)]
+  
 ## 1.15.4
 ### December 06, 2023
 
@@ -392,6 +434,30 @@ sdk/ldaputil: use EscapeLDAPValue implementation from cap/ldap [[GH-22249](https
 * ui: fixes long namespace names overflow in the sidebar
 * ui: fixes model defaults overwriting input value when user tries to clear form input [[GH-22458](https://github.com/hashicorp/vault/pull/22458)]
 * ui: fixes text readability issue in revoke token confirmation dialog [[GH-22390](https://github.com/hashicorp/vault/pull/22390)]
+
+## 1.14.9
+### January 31, 2024
+
+CHANGES:
+
+* core: Bump Go version to 1.20.12.
+* database/snowflake: Update plugin to v0.9.2 [[GH-25057](https://github.com/hashicorp/vault/pull/25057)]
+
+IMPROVEMENTS:
+
+* command/server: display logs on startup immediately if disable-gated-logs flag is set [[GH-24280](https://github.com/hashicorp/vault/pull/24280)]
+* oidc/provider: Adds `code_challenge_methods_supported` to OpenID Connect Metadata [[GH-24979](https://github.com/hashicorp/vault/pull/24979)]
+* storage/raft: Upgrade to bbolt 1.3.8, along with an extra patch to reduce time scanning large freelist maps. [[GH-24010](https://github.com/hashicorp/vault/pull/24010)]
+* ui: latest version of chrome does not automatically redirect back to the app after authentication unless triggered by the user, hence added a link to redirect back to the app. [[GH-18513](https://github.com/hashicorp/vault/pull/18513)]
+
+BUG FIXES:
+
+* helper/pkcs7: Fix slice out-of-bounds panic [[GH-24891](https://github.com/hashicorp/vault/pull/24891)]
+* kmip (enterprise): Only return a Server Correlation Value to clients using KMIP version 1.4.
+* ui: Fixed minor bugs with database secrets engine [[GH-24947](https://github.com/hashicorp/vault/pull/24947)]
+* ui: Fixes input for jwks_ca_pem when configuring a JWT auth method [[GH-24697](https://github.com/hashicorp/vault/pull/24697)]
+* ui: The UI can now be used to create or update database roles by operator without permission on the database connection. [[GH-24660](https://github.com/hashicorp/vault/pull/24660)]
+* ui: fix incorrectly calculated capabilities on PKI issuer endpoints [[GH-24686](https://github.com/hashicorp/vault/pull/24686)]
 
 ## 1.14.8
 ### December 06, 2023
@@ -904,6 +970,28 @@ with a new entity alias to be incorrectly forwarded from perf standbys. [[GH-211
 * ui: fixes key_bits and signature_bits reverting to default values when editing a pki role [[GH-20907](https://github.com/hashicorp/vault/pull/20907)]
 * ui: wait for wanted message event during OIDC callback instead of using the first message event [[GH-18521](https://github.com/hashicorp/vault/pull/18521)]
 
+## 1.13.13
+### January 31, 2024
+
+CHANGES:
+
+* core: Bump Go version to 1.20.12.
+* database/snowflake: Update plugin to v0.7.4 [[GH-25059](https://github.com/hashicorp/vault/pull/25059)]
+
+IMPROVEMENTS:
+
+* command/server: display logs on startup immediately if disable-gated-logs flag is set [[GH-24280](https://github.com/hashicorp/vault/pull/24280)]
+* storage/raft: Upgrade to bbolt 1.3.8, along with an extra patch to reduce time scanning large freelist maps. [[GH-24010](https://github.com/hashicorp/vault/pull/24010)]
+* ui: latest version of chrome does not automatically redirect back to the app after authentication unless triggered by the user, hence added a link to redirect back to the app. [[GH-18513](https://github.com/hashicorp/vault/pull/18513)]
+
+BUG FIXES:
+
+* helper/pkcs7: Fix slice out-of-bounds panic [[GH-24891](https://github.com/hashicorp/vault/pull/24891)]
+* kmip (enterprise): Only return a Server Correlation Value to clients using KMIP version 1.4.
+* ui: Fixed minor bugs with database secrets engine [[GH-24947](https://github.com/hashicorp/vault/pull/24947)]
+* ui: Fixes input for jwks_ca_pem when configuring a JWT auth method [[GH-24697](https://github.com/hashicorp/vault/pull/24697)]
+* ui: fix incorrectly calculated capabilities on PKI issuer endpoints [[GH-24686](https://github.com/hashicorp/vault/pull/24686)]
+  
 ## 1.13.12
 ### December 06, 2023
 

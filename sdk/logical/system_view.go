@@ -98,6 +98,9 @@ type SystemView interface {
 	// in for the {{cluterId}} sentinel.
 	ClusterID(ctx context.Context) (string, error)
 
+	// GenerateIdentityToken returns an identity token for the requesting plugin.
+	GenerateIdentityToken(ctx context.Context, req *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error)
+
 	RegisterRotationJob(ctx context.Context, reqPath string, job *RotationJob) (rotationID string, err error)
 }
 
@@ -106,7 +109,20 @@ type PasswordPolicy interface {
 	Generate(context.Context, io.Reader) (string, error)
 }
 
+type WellKnownSystemView interface {
+	// RequestWellKnownRedirect registers a redirect from .well-known/src
+	// to dest, where dest is a sub-path of the mount. An error
+	// is returned if that source path is already taken
+	RequestWellKnownRedirect(ctx context.Context, src, dest string) error
+
+	// DeregisterWellKnownRedirect unregisters a specific redirect. Returns
+	// true if that redirect source was found
+	DeregisterWellKnownRedirect(ctx context.Context, src string) bool
+}
+
 type ExtendedSystemView interface {
+	WellKnownSystemView
+
 	Auditor() Auditor
 	ForwardGenericRequest(context.Context, *Request) (*Response, error)
 
@@ -114,11 +130,8 @@ type ExtendedSystemView interface {
 	// mount is locked and should be blocked
 	APILockShouldBlockRequest() (bool, error)
 
-	// Register a redirect from .well-known/src to dest, where dest is a subpath of the mount.  An error
-	// is returned if that source path is already taken
-	RequestWellKnownRedirect(ctx context.Context, src, dest string) error
-	// Deregister a specific redirect.  Returns true if that redirect source was found
-	DeregisterWellKnownRedirect(ctx context.Context, src string) bool
+	// GetPinnedPluginVersion returns the pinned version for the given plugin, if any.
+	GetPinnedPluginVersion(ctx context.Context, pluginType consts.PluginType, pluginName string) (*pluginutil.PinnedVersion, error)
 }
 
 type PasswordGenerator func() (password string, err error)
@@ -265,6 +278,10 @@ func (d *StaticSystemView) DeletePasswordPolicy(name string) (existed bool) {
 
 func (d StaticSystemView) ClusterID(ctx context.Context) (string, error) {
 	return d.ClusterUUID, nil
+}
+
+func (d StaticSystemView) GenerateIdentityToken(_ context.Context, _ *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error) {
+	return nil, errors.New("GenerateIdentityToken is not implemented in StaticSystemView")
 }
 
 func (d StaticSystemView) APILockShouldBlockRequest() (bool, error) {

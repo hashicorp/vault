@@ -161,6 +161,11 @@ func (e extendedSystemViewImpl) DeregisterWellKnownRedirect(ctx context.Context,
 	return e.core.WellKnownRedirects.DeregisterSource(e.mountEntry.UUID, src)
 }
 
+// GetPinnedPluginVersion implements logical.ExtendedSystemView.
+func (e extendedSystemViewImpl) GetPinnedPluginVersion(ctx context.Context, pluginType consts.PluginType, pluginName string) (*pluginutil.PinnedVersion, error) {
+	return e.core.pluginCatalog.GetPinnedVersion(ctx, pluginType, pluginName)
+}
+
 func (d dynamicSystemView) DefaultLeaseTTL() time.Duration {
 	def, _ := d.fetchTTLs()
 	return def
@@ -451,6 +456,14 @@ func (d dynamicSystemView) ClusterID(ctx context.Context) (string, error) {
 	}
 
 	return clusterInfo.ID, nil
+}
+
+func (d dynamicSystemView) GenerateIdentityToken(_ context.Context, _ *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error) {
+	// TODO: implement plugin identity token generation using identity store
+	return &pluginutil.IdentityTokenResponse{
+		Token: "unimplemented",
+		TTL:   time.Duration(0),
+	}, nil
 }
 
 func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, reqPath string, job *logical.RotationJob) (rotationID string, err error) {

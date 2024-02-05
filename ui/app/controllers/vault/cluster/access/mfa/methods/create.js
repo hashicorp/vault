@@ -16,7 +16,12 @@ export default class MfaMethodCreateController extends Controller {
   @service router;
 
   queryParams = ['type'];
-  methodNames = ['TOTP', 'Duo', 'Okta', 'PingID'];
+  methods = [
+    { name: 'TOTP', icon: 'history' },
+    { name: 'Duo', icon: 'duo' },
+    { name: 'Okta', icon: 'okta-color' },
+    { name: 'PingID', icon: 'pingid' },
+  ];
 
   @tracked type = null;
   @tracked method = null;

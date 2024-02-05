@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/pluginidentityutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -16,7 +17,7 @@ import (
 const defaultUserNameTemplate = `{{ if (eq .Type "STS") }}{{ printf "vault-%s-%s"  (unix_time) (random 20) | truncate 32 }}{{ else }}{{ printf "vault-%s-%s-%s" (printf "%s-%s" (.DisplayName) (.PolicyName) | truncate 42) (unix_time) (random 20) | truncate 64 }}{{ end }}`
 
 func pathConfigRoot(b *backend) *framework.Path {
-	return &framework.Path{
+	p := &framework.Path{
 		Pattern: "config/root",
 
 		DisplayAttrs: &framework.DisplayAttributes{
@@ -55,6 +56,10 @@ func pathConfigRoot(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Template to generate custom IAM usernames",
 			},
+			"role_arn": {
+				Type:        framework.TypeString,
+				Description: "Role ARN to assume for plugin identity token federation",
+			},
 			"rotation_schedule": {
 				Type: framework.TypeString,
 				Description: "CRON-style string that will define the schedule on which " +
@@ -91,6 +96,9 @@ func pathConfigRoot(b *backend) *framework.Path {
 		HelpSynopsis:    pathConfigRootHelpSyn,
 		HelpDescription: pathConfigRootHelpDesc,
 	}
+	pluginidentityutil.AddPluginIdentityTokenFields(p.Fields)
+
+	return p
 }
 
 func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -118,10 +126,24 @@ func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, 
 		"sts_endpoint":      config.STSEndpoint,
 		"max_retries":       config.MaxRetries,
 		"username_template": config.UsernameTemplate,
-		"rotation_schedule": config.RotationSchedule,
-		"rotation_window":   config.RotationWindow,
-		"ttl":               config.TTL,
+		"role_arn":          config.RoleARN,
+		//"rotation_schedule": config.RotationSchedule,
+		//"rotation_window":   config.RotationWindow,
+		//"ttl":               config.TTL,
 	}
+	if config.RotationWindow != 0 {
+		configData["rotation_window"] = config.RotationWindow
+	}
+
+	if config.RotationSchedule != "" {
+		configData["rotation_schedule"] = config.RotationSchedule
+	}
+
+	if config.TTL != 0 {
+		configData["ttl"] = config.TTL
+	}
+
+	config.PopulatePluginIdentityTokenData(configData)
 	return &logical.Response{
 		Data: configData,
 	}, nil
@@ -132,6 +154,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	iamendpoint := data.Get("iam_endpoint").(string)
 	stsendpoint := data.Get("sts_endpoint").(string)
 	maxretries := data.Get("max_retries").(int)
+	roleARN := data.Get("role_arn").(string)
 	usernameTemplate := data.Get("username_template").(string)
 	if usernameTemplate == "" {
 		usernameTemplate = defaultUserNameTemplate
@@ -145,7 +168,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	b.clientMutex.Lock()
 	defer b.clientMutex.Unlock()
 
-	rootConfigEntry := rootConfig{
+	rc := rootConfig{
 		AccessKey:        data.Get("access_key").(string),
 		SecretKey:        data.Get("secret_key").(string),
 		IAMEndpoint:      iamendpoint,
@@ -153,19 +176,31 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		Region:           region,
 		MaxRetries:       maxretries,
 		UsernameTemplate: usernameTemplate,
+		RoleARN:          roleARN,
+	}
+	if err := rc.ParsePluginIdentityTokenFields(data); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	if rc.IdentityTokenAudience != "" && rc.AccessKey != "" {
+		return logical.ErrorResponse("only one of 'access_key' or 'identity_token_audience' can be set"), nil
+	}
+
+	if rc.IdentityTokenAudience != "" && rc.RoleARN == "" {
+		return logical.ErrorResponse("missing required 'role_arn' when 'identity_token_audience' is set"), nil
 	}
 
 	if rotationScheduleOk {
-		rootConfigEntry.RotationSchedule = rotationSchedule
+		rc.RotationSchedule = rotationSchedule
 	}
 	if rotationWindowOk {
-		rootConfigEntry.RotationWindow = rotationWindow.(int)
+		rc.RotationWindow = rotationWindow.(int)
 	}
 	if ttlOk {
-		rootConfigEntry.TTL = ttl.(int)
+		rc.TTL = ttl.(int)
 	}
-  
-  if rotationScheduleOk && ttlOk {
+
+	if rotationScheduleOk && ttlOk {
 		return logical.ErrorResponse("mutually exclusive fields rotation_schedule and ttl were both specified; only one of them can be provided"), nil
 	} else if rotationWindowOk && ttlOk {
 		return logical.ErrorResponse("rotation_window does not apply to ttl"), nil
@@ -173,7 +208,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse("must include both schedule and window"), nil
 	}
 
-	entry, err := logical.StorageEntryJSON("config/root", rootConfigEntry)
+	entry, err := logical.StorageEntryJSON("config/root", rc)
 	if err != nil {
 		return nil, err
 	}
@@ -187,12 +222,35 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	b.iamClient = nil
 	b.stsClient = nil
 
-	var rc *logical.RotationJob
-  rc, err = logical.GetRotationJob(ctx, rotationSchedule, "aws/"+req.Path, "aws-root-creds", rotationWindow.(int), ttl.(int))
-  if err != nil {
-    return logical.ErrorResponse(err.Error()), nil
-  }
-	
+	var rCred *logical.RotationJob
+	if rotationScheduleOk && ttlOk {
+		return logical.ErrorResponse("mutually exclusive fields rotation_schedule and ttl were both specified; only one of them can be provided"), nil
+	} else if rotationWindowOk && ttlOk {
+		return logical.ErrorResponse("rotation_window does not apply to ttl"), nil
+	} else if rotationScheduleOk && !rotationWindowOk || rotationWindowOk && !rotationScheduleOk {
+		return logical.ErrorResponse("must include both schedule and window"), nil
+	}
+
+	if rotationScheduleOk && rotationWindowOk {
+		rotationWindowSeconds := rotationWindow.(int)
+		rCred, err = logical.GetRotationJob(ctx, rotationSchedule, "aws/"+req.Path, "aws-root-creds", rotationWindowSeconds, 0)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		// unset ttl if rotation_schedule is set since these are mutually exclusive
+		ttl = 0
+	}
+
+	if ttlOk {
+		ttlSeconds := ttl.(int)
+		rCred, err = logical.GetRotationJob("", "aws/config/root", "aws-root-creds", 0, ttlSeconds)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		rotationSchedule = ""
+		rotationWindow = 0
+	}
+
 	if rc != nil {
 		b.Logger().Debug("Injecting Root Credential over system view")
 		rotationID, err := b.System().RegisterRotationJob(ctx, rc.Path, rc)
@@ -207,6 +265,8 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 }
 
 type rootConfig struct {
+	pluginidentityutil.PluginIdentityTokenParams
+
 	AccessKey        string `json:"access_key"`
 	SecretKey        string `json:"secret_key"`
 	IAMEndpoint      string `json:"iam_endpoint"`
@@ -214,6 +274,7 @@ type rootConfig struct {
 	Region           string `json:"region"`
 	MaxRetries       int    `json:"max_retries"`
 	UsernameTemplate string `json:"username_template"`
+	RoleARN          string `json:"role_arn"`
 	RotationSchedule string `json:"rotation_schedule"`
 	RotationWindow   int    `json:"rotation_window"`
 	TTL              int    `json:"ttl"`

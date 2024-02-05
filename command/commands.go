@@ -68,6 +68,7 @@ import (
 	physFile "github.com/hashicorp/vault/sdk/physical/file"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 
+	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	csr "github.com/hashicorp/vault/serviceregistration/consul"
 	ksr "github.com/hashicorp/vault/serviceregistration/kubernetes"
@@ -96,6 +97,9 @@ const (
 	// logged at startup _per node_. This was initially introduced for the events
 	// system being developed over multiple release cycles.
 	EnvVaultExperiments = "VAULT_EXPERIMENTS"
+	// EnvVaultPluginTmpdir sets the folder to use for Unix sockets when setting
+	// up containerized plugins.
+	EnvVaultPluginTmpdir = "VAULT_PLUGIN_TMPDIR"
 
 	// flagNameAddress is the flag used in the base command to read in the
 	// address of the Vault server.
@@ -136,6 +140,8 @@ const (
 	flagNameAllowedManagedKeys = "allowed-managed-keys"
 	// flagNamePluginVersion selects what version of a plugin should be used.
 	flagNamePluginVersion = "plugin-version"
+	// flagNameIdentityTokenKey selects the key used to sign plugin identity tokens
+	flagNameIdentityTokenKey = "identity-token-key"
 	// flagNameUserLockoutThreshold is the flag name used for tuning the auth mount lockout threshold parameter
 	flagNameUserLockoutThreshold = "user-lockout-threshold"
 	// flagNameUserLockoutDuration is the flag name used for tuning the auth mount lockout duration parameter
@@ -250,10 +256,11 @@ var (
 func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
 	getBaseCommand := func() *BaseCommand {
 		return &BaseCommand{
-			UI:          ui,
-			tokenHelper: runOpts.TokenHelper,
-			flagAddress: runOpts.Address,
-			client:      runOpts.Client,
+			UI:             ui,
+			tokenHelper:    runOpts.TokenHelper,
+			flagAddress:    runOpts.Address,
+			client:         runOpts.Client,
+			hcpTokenHelper: runOpts.HCPTokenHelper,
 		}
 	}
 
@@ -524,6 +531,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		},
 		"operator usage": func() (cli.Command, error) {
 			return &OperatorUsageCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator utilization": func() (cli.Command, error) {
+			return &OperatorUtilizationCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -915,7 +927,22 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 	}
 
 	entInitCommands(ui, serverCmdUi, runOpts, commands)
+	initHCPCommands(ui, commands)
+
 	return commands
+}
+
+func initHCPCommands(ui cli.Ui, commands map[string]cli.CommandFactory) {
+	for cmd, cmdFactory := range hcpvlib.InitHCPCommand(ui) {
+		// check for conflicts and only put command in the map in case it doesn't conflict with existing one
+		_, ok := commands[cmd]
+		if !ok {
+			commands[cmd] = cmdFactory
+		} else {
+			ui.Error("Failed to initialize HCP commands.")
+			break
+		}
+	}
 }
 
 // MakeShutdownCh returns a channel that can be used for shutdown

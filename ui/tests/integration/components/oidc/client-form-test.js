@@ -11,7 +11,7 @@ import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import ENV from 'vault/config/environment';
+import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
 import {
   OIDC_BASE_URL,
   SELECTORS,
@@ -26,15 +26,8 @@ module('Integration | Component | oidc/client-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'oidcConfig';
-  });
-
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
-  });
-
   hooks.beforeEach(function () {
+    oidcConfigHandlers(this.server);
     this.store = this.owner.lookup('service:store');
     this.server.post('/sys/capabilities-self', () => {});
     this.server.get('/identity/oidc/key', () => {

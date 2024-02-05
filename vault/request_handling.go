@@ -25,8 +25,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
-	uberAtomic "go.uber.org/atomic"
-
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
@@ -42,6 +40,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/quotas"
 	"github.com/hashicorp/vault/vault/tokens"
+	uberAtomic "go.uber.org/atomic"
 )
 
 const (
@@ -703,7 +702,6 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 			requestBodyToken = token.(string)
 			if IsSSCToken(token.(string)) {
 				token, err = c.CheckSSCToken(ctx, token.(string), c.isLoginRequest(ctx, req), c.perfStandby)
-
 				// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
 				// should receive a 403 bad token error like they do for all other invalid tokens, unless the error
 				// specifies that we should forward the request or retry the request.
@@ -898,7 +896,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 				NonHMACReqDataKeys:  nonHMACReqDataKeys,
 				NonHMACRespDataKeys: nonHMACRespDataKeys,
 			}
-			if auditErr := c.auditBroker.LogResponse(ctx, logInput, c.auditedHeaders); auditErr != nil {
+			if auditErr := c.auditBroker.LogResponse(ctx, logInput); auditErr != nil {
 				c.logger.Error("failed to audit response", "request_path", req.Path, "error", auditErr)
 				return nil, ErrInternalError
 			}
@@ -1088,7 +1086,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 				OuterErr:           ctErr,
 				NonHMACReqDataKeys: nonHMACReqDataKeys,
 			}
-			if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+			if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 				c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			}
 		}
@@ -1109,7 +1107,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			Request:            req,
 			NonHMACReqDataKeys: nonHMACReqDataKeys,
 		}
-		if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+		if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 			c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
@@ -1451,7 +1449,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			OuterErr:           ctErr,
 			NonHMACReqDataKeys: nonHMACReqDataKeys,
 		}
-		if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+		if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 			c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			return nil, nil, ErrInternalError
 		}
@@ -1475,7 +1473,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			Request:            req,
 			NonHMACReqDataKeys: nonHMACReqDataKeys,
 		}
-		if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+		if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 			c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			return nil, nil, ErrInternalError
 		}
@@ -1921,6 +1919,11 @@ func (c *Core) handleDelegatedAuth(ctx context.Context, origReq *logical.Request
 	if err != nil || authResp.IsError() {
 		// see if the backend wishes to handle the failed auth
 		if da.AuthErrorHandler() != nil {
+			if err != nil && errors.Is(err, logical.ErrInvalidCredentials) {
+				// We purposefully ignore the error here as the handler will
+				// always return the original error we passed in.
+				_, _, _ = invalidCredHandler(err)
+			}
 			resp, err := da.AuthErrorHandler()(ctx, origReq, authReq, authResp, err)
 			return resp, nil, err
 		}

@@ -56,6 +56,7 @@ export default ApplicationAdapter.extend({
       return {
         data: {
           id,
+          name: id,
           ...data,
         },
       };

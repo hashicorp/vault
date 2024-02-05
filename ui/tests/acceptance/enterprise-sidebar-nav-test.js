@@ -45,7 +45,7 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/replication/dr', 'Replication dr route renders');
 
     await click(link('Client Count'));
-    assert.strictEqual(currentURL(), '/vault/clients/dashboard', 'Client counts route renders');
+    assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'Client counts route renders');
 
     await click(link('License'));
     assert.strictEqual(currentURL(), '/vault/license', 'License route renders');

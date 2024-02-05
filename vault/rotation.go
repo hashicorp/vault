@@ -118,7 +118,8 @@ func (rm *RotationManager) CheckQueue() error {
 		}
 
 		re = entry
-		// if not in window, do we check the next credential?
+
+		rm.logger.Debug("check", "window", re.RotationJob.Schedule.RotationWindow, "time", re.RootCredential.Schedule.NextVaultRotation)
 		if !logical.DefaultScheduler.IsInsideRotationWindow(re.RotationJob.Schedule, now) {
 			rm.logger.Debug("Not inside rotation window, pushing back to queue")
 			err := rm.queue.Push(i)
@@ -127,7 +128,8 @@ func (rm *RotationManager) CheckQueue() error {
 				// errors on malformed items, which shouldn't be possible here
 				return err
 			}
-			break
+			// don't break here, since the heap is keyed on priority, which is just timestamp.
+			// it's possible for a later item to be ready for rotation, so we need to keep going
 		}
 		rm.logger.Debug("Item ready for rotation; making rotation request to sdk/backend")
 		// do rotation
@@ -189,7 +191,7 @@ func (rm *RotationManager) Register(ctx context.Context, reqPath string, job *lo
 		RotationJob: job,
 		IssueTime:   issueTime,
 		// expires the next time the schedule is activated from the issue time
-    ExpireTime: expireTime,
+		ExpireTime: expireTime,
 		Namespace:  ns,
 	}
 
@@ -316,9 +318,8 @@ func (j *rotationJob) Execute() error {
 		RotationJob: j.entry.RotationJob,
 		IssueTime:   issueTime,
 		// expires the next time the schedule is activated from the issue time
-    ExpireTime:  expireTime,
-		Namespace:   j.entry.Namespace,
-
+		ExpireTime: expireTime,
+		Namespace:  j.entry.Namespace,
 	}
 	j.entry.RotationJob.Schedule.NextVaultRotation = newEntry.ExpireTime
 

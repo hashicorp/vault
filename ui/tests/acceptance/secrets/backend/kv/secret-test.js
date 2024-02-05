@@ -4,7 +4,6 @@
  */
 
 import { click, visit, settled, currentURL, currentRouteName, fillIn } from '@ember/test-helpers';
-import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -16,17 +15,15 @@ import listPage from 'vault/tests/pages/secrets/backend/list';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import { runCmd } from 'vault/tests/helpers/commands';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
-
-const consoleComponent = create(consoleClass);
 
 const deleteEngine = async function (enginePath, assert) {
   await logout.visit();
   await authPage.login();
-  await consoleComponent.runCommands([`delete sys/mounts/${enginePath}`]);
-  const response = consoleComponent.lastLogOutput;
+
+  const response = await runCmd([`delete sys/mounts/${enginePath}`]);
   assert.strictEqual(
     response,
     `Success! Data deleted (if it existed) at: sys/mounts/${enginePath}`,
@@ -76,11 +73,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     // https://github.com/hashicorp/vault/issues/5994
     test('v1 key named keys', async function (assert) {
       assert.expect(2);
-      await consoleComponent.runCommands([
-        'vault write sys/mounts/test type=kv',
-        'refresh',
-        'vault write test/a keys=a keys=b',
-      ]);
+      await runCmd(['vault write sys/mounts/test type=kv', 'refresh', 'vault write test/a keys=a keys=b']);
       await showPage.visit({ backend: 'test', id: 'a' });
       assert.ok(showPage.editIsPresent, 'renders the page properly');
       await deleteEngine('test', assert);
@@ -90,16 +83,16 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   module('kv v2', function (hooks) {
     hooks.beforeEach(async function () {
       this.backend = `kvv2-${this.uid}`;
-      await consoleComponent.runCommands([`write sys/mounts/${this.backend} type=kv options=version=2`]);
+      await runCmd([`write sys/mounts/${this.backend} type=kv options=version=2`]);
     });
     hooks.afterEach(async function () {
-      await consoleComponent.runCommands([`delete sys/mounts/${this.backend}`]);
+      await runCmd([`delete sys/mounts/${this.backend}`]);
     });
     test('it can create a secret when check-and-set is required', async function (assert) {
       const secretPath = 'foo/bar';
-      await consoleComponent.runCommands(`write ${this.backend}/config cas_required=true`);
+      const output = await runCmd(`write ${this.backend}/config cas_required=true`);
       assert.strictEqual(
-        consoleComponent.lastLogOutput,
+        output,
         `Success! Data written to: ${this.backend}/config`,
         'Engine successfully updated'
       );
@@ -142,7 +135,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await mountSecrets.path(this.backend).toggleOptions().version(1).submit();
     });
     hooks.afterEach(async function () {
-      await consoleComponent.runCommands([`delete sys/mounts/${this.backend}`]);
+      await runCmd([`delete sys/mounts/${this.backend}`]);
     });
     test('version 1 performs the correct capabilities lookup', async function (assert) {
       // TODO: while this should pass it doesn't really do anything anymore for us as v1 and v2 are completely separate.
@@ -241,7 +234,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       assert.expect(paths.length * 2 + 1);
       const secretPath = '2';
       const commands = paths.map((path) => `write '${backend}/${path}/${secretPath}' 3=4`);
-      await consoleComponent.runCommands([...commands, 'refresh']);
+      await runCmd([...commands, 'refresh']);
       for (const path of paths) {
         await listPage.visit({ backend, id: path });
         assert.ok(listPage.secrets.filterBy('text', '2')[0], `${path}: secret is displayed properly`);
@@ -260,8 +253,9 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       const secretPath = 'per%cent/%fu ll';
       const [firstPath, secondPath] = secretPath.split('/');
       const commands = [`write '${enginePath}/${secretPath}' 3=4`, `refresh`];
-      await consoleComponent.runCommands(commands);
+      await runCmd(commands);
       await listPage.visitRoot({ backend: enginePath });
+      await settled();
 
       assert.dom(`[data-test-secret-link="${firstPath}/"]`).exists('First section item exists');
       await click(`[data-test-secret-link="${firstPath}/"]`);
@@ -293,7 +287,6 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     test('creating a secret with a single or double quote works properly', async function (assert) {
       assert.expect(6);
       const backend = this.backend;
-      // await consoleComponent.runCommands(`write sys/mounts/${backend} type=kv`);
       const paths = ["'some", '"some'];
       for (const path of paths) {
         await listPage.visitRoot({ backend });
@@ -313,7 +306,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
     test('filter clears on nav', async function (assert) {
       const backend = this.backend;
-      await consoleComponent.runCommands([
+      await runCmd([
         `vault write sys/mounts/${backend} type=kv`,
         `refresh`,
         `vault write ${backend}/filter/foo keys=a keys=b`,

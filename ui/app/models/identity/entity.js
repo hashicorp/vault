@@ -23,6 +23,7 @@ export default IdentityModel.extend({
   mergedEntityIds: attr(),
   metadata: attr({
     editType: 'kv',
+    isSectionHeader: true,
   }),
   policies: attr({
     editType: 'yield',
@@ -34,7 +35,7 @@ export default IdentityModel.extend({
   lastUpdateTime: attr('string', {
     readOnly: true,
   }),
-  aliases: hasMany('identity/entity-alias', { async: false, readOnly: true }),
+  aliases: hasMany('identity/entity-alias', { async: false, readOnly: true, inverse: 'entity' }),
   groupIds: attr({
     readOnly: true,
   }),
