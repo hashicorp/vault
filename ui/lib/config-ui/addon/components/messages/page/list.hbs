@@ -100,17 +100,7 @@
   <EmptyState
     @title="No messages yet"
     @message="Add a custom message for all users after they log into Vault. Create message to get started."
-  >
-    <Hds::Link::Standalone
-      @icon="plus"
-      @iconPosition="leading"
-      @text="Create message"
-      @route="messages.create"
-      @query={{hash authenticated=@authenticated}}
-      class="is-no-underline"
-      data-test-action-text="Create message"
-    />
-  </EmptyState>
+  />
 {{/if}}
 
 {{#if this.showMaxMessageModal}}
