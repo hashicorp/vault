@@ -124,7 +124,7 @@ are enabled.
 [Enabling the fallback audit device](/vault/docs/audit#fallback) requires supplying the `fallback` option:
 
 ```shell-session
-vault audit enable -path=my-fallback file file_path=/var/audit.fallback.log fallback=true
+vault audit enable -path=my-fallback -description="fallback device" file file_path=/tmp/audit.fallback.log fallback=true
 ```
 
 ### Metrics
