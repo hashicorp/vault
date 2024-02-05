@@ -459,15 +459,9 @@ func (d dynamicSystemView) ClusterID(ctx context.Context) (string, error) {
 }
 
 func (d dynamicSystemView) GenerateIdentityToken(ctx context.Context, req *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error) {
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	identityMountPath := ns.Path + mountPathIdentity
-	storage := d.core.router.MatchingStorageByAPIPath(ctx, identityMountPath)
+	storage := d.core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
 	if storage == nil {
-		return nil, fmt.Errorf("failed to find storage entry for identity mount at %s", identityMountPath)
+		return nil, fmt.Errorf("failed to find storage entry for identity mount")
 	}
 
 	token, ttl, err := d.core.IdentityStore().generatePluginIdentityToken(ctx, storage, d.mountEntry, req.Audience, req.TTL)
