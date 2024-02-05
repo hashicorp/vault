@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -601,33 +602,22 @@ func TestBackend_basic(t *testing.T) {
 		}
 	}
 	assert.Equal(t, 9, len(eventSender.Events))
-	assert.Equal(t, "database/config-write", string(eventSender.Events[0].Type))
-	assert.Equal(t, "config/plugin-test", eventSender.Events[0].Event.Metadata.AsMap()["path"])
-	assert.Equal(t, "plugin-test", eventSender.Events[0].Event.Metadata.AsMap()["name"])
-	assert.Equal(t, "database/role-update", string(eventSender.Events[1].Type))
-	assert.Equal(t, "plugin-role-test", eventSender.Events[1].Event.Metadata.AsMap()["name"])
-	assert.Equal(t, "roles/plugin-role-test", eventSender.Events[1].Event.Metadata.AsMap()["path"])
-	assert.Equal(t, "database/creds-create", string(eventSender.Events[2].Type))
-	assert.Equal(t, "creds/plugin-role-test", eventSender.Events[2].Event.Metadata.AsMap()["path"])
-	assert.Equal(t, "plugin-role-test", eventSender.Events[2].Event.Metadata.AsMap()["name"])
-	assert.Equal(t, "database/role-update", string(eventSender.Events[3].Type))
-	assert.Equal(t, "roles/plugin-role-test", eventSender.Events[3].Event.Metadata.AsMap()["path"])
-	assert.Equal(t, "plugin-role-test", eventSender.Events[3].Event.Metadata.AsMap()["name"])
-	assert.Equal(t, "database/creds-create", string(eventSender.Events[4].Type))
-	assert.Equal(t, "creds/plugin-role-test", eventSender.Events[4].Event.Metadata.AsMap()["path"])
-	assert.Equal(t, "plugin-role-test", eventSender.Events[4].Event.Metadata.AsMap()["name"])
-	assert.Equal(t, "database/role-update", string(eventSender.Events[5].Type))
-	assert.Equal(t, "roles/plugin-role-test", eventSender.Events[5].Event.Metadata.AsMap()["path"])
-	assert.Equal(t, "plugin-role-test", eventSender.Events[5].Event.Metadata.AsMap()["name"])
-	assert.Equal(t, "database/creds-create", string(eventSender.Events[6].Type))
-	assert.Equal(t, "creds/plugin-role-test", eventSender.Events[6].Event.Metadata.AsMap()["path"])
-	assert.Equal(t, "plugin-role-test", eventSender.Events[6].Event.Metadata.AsMap()["name"])
-	assert.Equal(t, "database/creds-create", string(eventSender.Events[7].Type))
-	assert.Equal(t, "creds/plugin-role-test", eventSender.Events[7].Event.Metadata.AsMap()["path"])
-	assert.Equal(t, "plugin-role-test", eventSender.Events[7].Event.Metadata.AsMap()["name"])
-	assert.Equal(t, "database/role-delete", string(eventSender.Events[8].Type))
-	assert.Equal(t, "roles/plugin-role-test", eventSender.Events[8].Event.Metadata.AsMap()["path"])
-	assert.Equal(t, "plugin-role-test", eventSender.Events[8].Event.Metadata.AsMap()["name"])
+
+	assertEvent := func(t *testing.T, typ, name, path string) {
+		t.Helper()
+		assert.Equal(t, typ, string(eventSender.Events[0].Type))
+		assert.Equal(t, name, eventSender.Events[0].Event.Metadata.AsMap()["name"])
+		assert.Equal(t, path, eventSender.Events[0].Event.Metadata.AsMap()["path"])
+		eventSender.Events = slices.Delete(eventSender.Events, 0, 1)
+	}
+
+	assertEvent(t, "database/config-write", "plugin-test", "config/plugin-test")
+	for i := 0; i < 3; i++ {
+		assertEvent(t, "database/role-update", "plugin-role-test", "roles/plugin-role-test")
+		assertEvent(t, "database/creds-create", "plugin-role-test", "creds/plugin-role-test")
+	}
+	assertEvent(t, "database/creds-create", "plugin-role-test", "creds/plugin-role-test")
+	assertEvent(t, "database/role-delete", "plugin-role-test", "roles/plugin-role-test")
 }
 
 // singletonDBFactory allows us to reach into the internals of a databaseBackend

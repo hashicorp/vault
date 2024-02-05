@@ -365,11 +365,12 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	if input == nil || input.Role == nil || input.RoleName == "" {
 		return nil, errors.New("input was empty when attempting to set credentials for static account")
 	}
+	modified := false
 	defer func() {
 		if err == nil {
-			b.dbEvent(ctx, "static-creds-create", "", input.RoleName, true)
+			b.dbEvent(ctx, "static-creds-create", "", input.RoleName, modified)
 		} else {
-			b.dbEvent(ctx, "static-creds-create-fail", "", input.RoleName, false)
+			b.dbEvent(ctx, "static-creds-create-fail", "", input.RoleName, modified)
 		}
 	}()
 
@@ -526,6 +527,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		b.CloseIfShutdown(dbi, err)
 		return output, fmt.Errorf("error setting credentials: %w", err)
 	}
+	modified = true
 
 	// Store updated role information
 	// lvr is the known LastVaultRotation

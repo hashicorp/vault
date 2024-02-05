@@ -69,11 +69,12 @@ func pathCredsCreate(b *databaseBackend) []*framework.Path {
 func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
 		name := data.Get("name").(string)
+		modified := false
 		defer func() {
 			if err == nil && (resp == nil || !resp.IsError()) {
-				b.dbEvent(ctx, "creds-create", req.Path, name, true)
+				b.dbEvent(ctx, "creds-create", req.Path, name, modified)
 			} else {
-				b.dbEvent(ctx, "creds-create-fail", req.Path, name, false)
+				b.dbEvent(ctx, "creds-create-fail", req.Path, name, modified)
 			}
 		}()
 
@@ -209,6 +210,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			b.CloseIfShutdown(dbi, err)
 			return nil, err
 		}
+		modified = true
 		respData["username"] = newUserResp.Username
 
 		// Database plugins using the v4 interface generate and return the password.
