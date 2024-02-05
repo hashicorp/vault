@@ -18,6 +18,7 @@ export const SELECTORS = {
   filterInput: '[data-test-filter-input]',
   confirmModalInput: '[data-test-confirmation-modal-input]',
   confirmButton: '[data-test-confirm-button]',
+  confirmTrigger: '[data-test-confirm-action-trigger]',
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateMessage: '[data-test-empty-state-message]',
   emptyStateActions: '[data-test-empty-state-actions]',
