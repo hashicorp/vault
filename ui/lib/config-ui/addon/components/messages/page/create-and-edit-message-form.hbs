@@ -23,7 +23,8 @@
       </FormField>
       {{#if (and (eq attr.name "message") (not @message.authenticated))}}
         <Hds::Alert class="has-top-margin-negative-m has-bottom-margin-l" @type="compact" @color="highlight" as |A|>
-          <A.Description>Note: Do not include sensitive info in this message since users are unauthenticated at this stage.</A.Description>
+          <A.Description data-test-unauth-info>Note: Do not include sensitive info in this message since users are
+            unauthenticated at this stage.</A.Description>
         </Hds::Alert>
       {{/if}}
     {{/each}}

@@ -92,6 +92,41 @@ module('Acceptance | config-ui', function (hooks) {
       await click(MESSAGE_SELECTORS.confirmActionButton('Delete message'));
       await click(GENERAL.confirmButton);
     });
+    test('it should display preview a message when all required fields are filled out', async function (assert) {
+      assert.expect(2);
+      await visit(`vault/config-ui/messages`);
+      await click(MESSAGE_SELECTORS.button('create message'));
+      await fillIn(MESSAGE_SELECTORS.input('title'), 'Awesome custom message title');
+      await click(MESSAGE_SELECTORS.radio('banner'));
+      await fillIn(
+        MESSAGE_SELECTORS.input('message'),
+        'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pulvinar mattis nunc sed blandit libero volutpat sed cras ornare.'
+      );
+      await fillIn('[data-test-kv-key="0"]', 'Learn more');
+      await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
+      await click(MESSAGE_SELECTORS.button('preview'));
+      assert.dom(MESSAGE_SELECTORS.modal('preview image')).exists();
+      await click(MESSAGE_SELECTORS.modalButton('Close'));
+      await click(MESSAGE_SELECTORS.radio('modal'));
+      await click(MESSAGE_SELECTORS.button('preview'));
+      assert.dom(MESSAGE_SELECTORS.modal('preview modal')).exists();
+      await click(MESSAGE_SELECTORS.modalButton('Close'));
+    });
+    test('it should not display preview a message when all required fields are not filled out', async function (assert) {
+      assert.expect(2);
+      await visit(`vault/config-ui/messages`);
+      await click(MESSAGE_SELECTORS.button('create message'));
+      await click(MESSAGE_SELECTORS.radio('banner'));
+      await fillIn(
+        MESSAGE_SELECTORS.input('message'),
+        'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pulvinar mattis nunc sed blandit libero volutpat sed cras ornare.'
+      );
+      await fillIn('[data-test-kv-key="0"]', 'Learn more');
+      await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
+      await click(MESSAGE_SELECTORS.button('preview'));
+      assert.dom(MESSAGE_SELECTORS.modal('preview image')).doesNotExist();
+      assert.dom(MESSAGE_SELECTORS.input('title')).hasClass('has-error-border');
+    });
   });
 
   module('Unauthenticated messages', function () {
@@ -125,6 +160,51 @@ module('Acceptance | config-ui', function (hooks) {
       await click(MESSAGE_SELECTORS.listItem('Awesome custom message title'));
       await click(MESSAGE_SELECTORS.confirmActionButton('Delete message'));
       await click(GENERAL.confirmButton);
+    });
+    test('it should show info message on create and edit form', async function (assert) {
+      assert.expect(1);
+      await visit('vault/config-ui/messages?authenticated=false');
+      await click(MESSAGE_SELECTORS.button('create message'));
+      assert
+        .dom(MESSAGE_SELECTORS.unauthCreateFormInfo)
+        .hasText(
+          'Note: Do not include sensitive info in this message since users are unauthenticated at this stage.'
+        );
+    });
+    test('it should display preview a message when all required fields are filled out', async function (assert) {
+      assert.expect(2);
+      await visit('vault/config-ui/messages?authenticated=false');
+      await click(MESSAGE_SELECTORS.button('create message'));
+      await fillIn(MESSAGE_SELECTORS.input('title'), 'Awesome custom message title');
+      await click(MESSAGE_SELECTORS.radio('banner'));
+      await fillIn(
+        MESSAGE_SELECTORS.input('message'),
+        'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pulvinar mattis nunc sed blandit libero volutpat sed cras ornare.'
+      );
+      await fillIn('[data-test-kv-key="0"]', 'Learn more');
+      await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
+      await click(MESSAGE_SELECTORS.button('preview'));
+      assert.dom(MESSAGE_SELECTORS.modal('preview image')).exists();
+      await click(MESSAGE_SELECTORS.modalButton('Close'));
+      await click(MESSAGE_SELECTORS.radio('modal'));
+      await click(MESSAGE_SELECTORS.button('preview'));
+      assert.dom(MESSAGE_SELECTORS.modal('preview modal')).exists();
+      await click(MESSAGE_SELECTORS.modalButton('Close'));
+    });
+    test('it should not display preview a message when all required fields are not filled out', async function (assert) {
+      assert.expect(2);
+      await visit('vault/config-ui/messages?authenticated=false');
+      await click(MESSAGE_SELECTORS.button('create message'));
+      await click(MESSAGE_SELECTORS.radio('banner'));
+      await fillIn(
+        MESSAGE_SELECTORS.input('message'),
+        'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pulvinar mattis nunc sed blandit libero volutpat sed cras ornare.'
+      );
+      await fillIn('[data-test-kv-key="0"]', 'Learn more');
+      await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
+      await click(MESSAGE_SELECTORS.button('preview'));
+      assert.dom(MESSAGE_SELECTORS.modal('preview image')).doesNotExist();
+      assert.dom(MESSAGE_SELECTORS.input('title')).hasClass('has-error-border');
     });
   });
 });
