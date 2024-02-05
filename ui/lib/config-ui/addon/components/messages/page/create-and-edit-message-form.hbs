@@ -94,7 +94,15 @@
         {{@message.title}}
       </M.Header>
       <M.Body data-test-modal-body={{@message.title}}>
-        {{@message.message}}
+        {{#each (new-line-split @message.message) as |msg|}}
+          {{#if (eq msg "")}}
+            <br />
+          {{else}}
+            <div>
+              {{msg}}
+            </div>
+          {{/if}}
+        {{/each}}
         {{#unless (is-empty-value @message.link)}}
           {{#each-in @message.link as |title href|}}
             <Hds::Link::Inline @icon="external-link" @isHrefExternal={{true}} @href={{href}}>{{title}}</Hds::Link::Inline>
