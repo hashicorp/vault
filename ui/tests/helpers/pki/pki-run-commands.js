@@ -16,25 +16,6 @@ export const tokenWithPolicy = async function (name, policy) {
   return consoleComponent.lastLogOutput;
 };
 
-export const runCommands = async function (commands) {
-  try {
-    await consoleComponent.runCommands(commands);
-    const res = consoleComponent.lastLogOutput;
-    if (res.includes('Error')) {
-      throw new Error(res);
-    }
-    return res;
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error(
-      `The following occurred when trying to run the command(s):\n ${commands.join('\n')} \n\n ${
-        consoleComponent.lastLogOutput
-      }`
-    );
-    throw error;
-  }
-};
-
 // Clears pki-related data and capabilities so that admin
 // capabilities from setup don't rollover
 export function clearRecords(store) {
