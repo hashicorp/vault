@@ -96,6 +96,24 @@ However, only two of them had a `mount_type` of `kv` (steps 3 and 4).
 Viewing the contents of the file audit log at `/var/audit.log` will show that only audit
 entries related to steps 3 and 4, with a request and response audit entry for each.
 
+### Test message
+
+When enabling an audit device, Vault will (by default) attempt to send a test message
+to the device. In cases where filtering is configured on a device, it may be possible
+for the evaluation of the filter to result in the test message failing to meet the specified
+predicate expression, and therefore not being written to the audit device's sink.
+
+The properties of the test message are as follows:
+
+* `mount_point` - not present
+* `mount_type` - not present.
+* `namespace` - not present.
+* `operation` - `update`.
+* `path` - `sys/audit/test`.
+
+Vault Operators should use this when trying to understand when they should, or
+should not expect a test message to appear in the sink for a newly enabled audit device.
+
 ## Fallback device
 
 The ability to filter audit entries can provide great flexibility to your workflows,
