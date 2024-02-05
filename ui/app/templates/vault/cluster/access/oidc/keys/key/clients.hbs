@@ -12,8 +12,11 @@
     @title="No applications allowed"
     @message="Access to this key has been limited, and no applications are allowed to use it. Edit the key to allow access."
   >
-    <LinkTo @route="vault.cluster.access.oidc.keys.key.edit">
-      Edit key
-    </LinkTo>
+    <Hds::Link::Standalone
+      @icon="chevron-right"
+      @iconPosition="trailing"
+      @text="Edit key"
+      @route="vault.cluster.access.oidc.keys.key.edit"
+    />
   </EmptyState>
 {{/if}}
