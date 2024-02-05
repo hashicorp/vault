@@ -75,14 +75,13 @@ export default class DestinationsCreateForm extends Component<Args> {
         if (destination.dirtyType as unknown as string) {
           const verb = destination.isNew ? 'created' : 'updated';
           yield destination.save();
+          this.flashMessages.success(`Successfully ${verb} the destination ${destination.name}`);
           // when saving a record the server returns all credentials as ******
           // Ember Data observes this as a change, marks the model as dirty and the field will be returned from changedAttributes
           // if the user then attempts to update the record the credential will get overwritten with the masked placeholder value
           // since the record will be fetched from the details route we can safely unload it to avoid the aforementioned issue
           destination.unloadRecord();
-          this.flashMessages.success(`Successfully ${verb} the destination ${destination.name}`);
           this.store.clearDataset('sync/destination');
-          this.store.unloadAll('sync/destination');
         }
         this.router.transitionTo(
           'vault.cluster.sync.secrets.destinations.destination.details',
