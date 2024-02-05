@@ -133,8 +133,6 @@ var (
 	// pseudo-namespace for cache items that don't belong to any real namespace.
 	noNamespace = &namespace.Namespace{ID: "__NO_NAMESPACE"}
 
-	deleteKeyErrorFmt = "unable to delete key %q because it is currently referenced by these %s: %s"
-
 	reservedClaims = []string{
 		"iat", "aud", "exp", "iss",
 		"sub", "namespace", "nonce",
@@ -149,7 +147,6 @@ var (
 		string(jose.ES512),
 		string(jose.EdDSA),
 	}
-	privateClaimVault = "vaultproject.io"
 )
 
 const (
@@ -164,6 +161,10 @@ const (
 	// Identity tokens have a base issuer and plugin issuer
 	baseIdentityTokenIssuer   = ""
 	pluginIdentityTokenIssuer = "plugins"
+
+	pluginTokenSubjectPrefix   = "plugin-identity"
+	pluginTokenPrivateClaimKey = "vaultproject.io"
+	deleteKeyErrorFmt          = "unable to delete key %q because it is currently referenced by these %s: %s"
 )
 
 // optionalChildIssuerRegex is a regex for optionally accepting a field in an
@@ -1150,12 +1151,12 @@ func (i *IdentityStore) generatePluginIdentityToken(ctx context.Context, storage
 	now := time.Now()
 	claims := map[string]any{
 		"iss": issuer,
-		"sub": fmt.Sprintf("plugin-identity:%s:%s:%s", nsID, me.Table, me.Accessor),
+		"sub": fmt.Sprintf("%s:%s:%s:%s", pluginTokenSubjectPrefix, nsID, me.Table, me.Accessor),
 		"aud": []string{audience},
 		"nbf": now.Unix(),
 		"iat": now.Unix(),
 		"exp": now.Add(ttl).Unix(),
-		privateClaimVault: map[string]any{
+		pluginTokenPrivateClaimKey: map[string]any{
 			"namespace_id":   ns.ID,
 			"namespace_path": ns.Path,
 			"class":          me.Table,

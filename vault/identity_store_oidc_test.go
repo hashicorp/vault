@@ -2025,7 +2025,7 @@ func TestIdentityStore_generatePluginIdentityToken(t *testing.T) {
 			require.NoError(t, err)
 			expected := capjwt.Expected{
 				Issuer: fmt.Sprintf("%s/v1/identity/oidc/plugins", identityStore.redirectAddr),
-				Subject: fmt.Sprintf("plugin-identity:%s:%s:%s", namespace.RootNamespace.ID,
+				Subject: fmt.Sprintf("%s:%s:%s:%s", pluginTokenSubjectPrefix, namespace.RootNamespace.ID,
 					tt.mountEntry.Table, tt.mountEntry.Accessor),
 				Audiences:         []string{tt.audience},
 				SigningAlgorithms: []capjwt.Alg{capjwt.RS256},
@@ -2033,10 +2033,10 @@ func TestIdentityStore_generatePluginIdentityToken(t *testing.T) {
 
 			claims, err := validator.Validate(ctx, token, expected)
 			require.NoError(t, err)
-			require.Contains(t, claims, privateClaimVault)
-			require.IsType(t, map[string]interface{}{}, claims[privateClaimVault])
+			require.Contains(t, claims, pluginTokenPrivateClaimKey)
+			require.IsType(t, map[string]interface{}{}, claims[pluginTokenPrivateClaimKey])
 
-			vaultSubClaims := claims[privateClaimVault].(map[string]interface{})
+			vaultSubClaims := claims[pluginTokenPrivateClaimKey].(map[string]interface{})
 			require.Equal(t, namespace.RootNamespace.ID, vaultSubClaims["namespace_id"])
 			require.Equal(t, namespace.RootNamespace.Path, vaultSubClaims["namespace_path"])
 			require.Equal(t, tt.mountEntry.Table, vaultSubClaims["class"])
