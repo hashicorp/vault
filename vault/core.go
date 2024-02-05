@@ -3626,6 +3626,8 @@ func (c *Core) checkBarrierAutoRotate(ctx context.Context) {
 			lf := c.logger.Error
 			if strings.HasSuffix(err.Error(), "context canceled") {
 				lf = c.logger.Debug
+			} else if strings.HasSuffix(err.Error(), "context deadline exceeded") {
+				lf = c.logger.Warn
 			}
 			lf("error in barrier auto rotation", "error", err)
 			return
