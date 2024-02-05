@@ -1925,6 +1925,8 @@ func Test_optionalChildIssuerRegex(t *testing.T) {
 	}
 }
 
+// TestIdentityStore_generatePluginIdentityToken tests generation of plugin identity
+// tokens by verifying signatures and validating claims.
 func TestIdentityStore_generatePluginIdentityToken(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
 	core.credentialBackends["userpass"] = credUserpass.Factory
