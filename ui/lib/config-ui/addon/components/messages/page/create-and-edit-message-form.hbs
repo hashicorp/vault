@@ -33,8 +33,7 @@
         @text="Preview"
         @color="tertiary"
         @icon="eye"
-        disabled={{and (not @message.title @message.message)}}
-        {{on "click" (fn (mut this.showMessagePreviewModal) true)}}
+        {{on "click" this.displayPreviewModal}}
         data-test-button="preview"
       />
 
@@ -95,7 +94,15 @@
         {{@message.title}}
       </M.Header>
       <M.Body data-test-modal-body={{@message.title}}>
-        {{@message.message}}
+        {{#each (new-line-split @message.message) as |msg|}}
+          {{#if (eq msg "")}}
+            <br />
+          {{else}}
+            <div>
+              {{msg}}
+            </div>
+          {{/if}}
+        {{/each}}
         {{#unless (is-empty-value @message.link)}}
           {{#each-in @message.link as |title href|}}
             <Hds::Link::Inline @icon="external-link" @isHrefExternal={{true}} @href={{href}}>{{title}}</Hds::Link::Inline>
