@@ -8,6 +8,7 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import { isDeleted } from 'kv/utils/kv-deleted';
+import { isAdvancedSecret } from 'core/utils/advanced-secret';
 
 /* sample response
 {
@@ -63,6 +64,10 @@ export default class KvSecretDataModel extends Model {
   @attr('number') version;
   // Set in adapter if read failed
   @attr('number') failReadErrorCode;
+
+  get isAdvanced() {
+    return isAdvancedSecret(this.secretData);
+  }
 
   // if creating a new version this value is set in the edit route's
   // model hook from metadata or secret version, pending permissions
