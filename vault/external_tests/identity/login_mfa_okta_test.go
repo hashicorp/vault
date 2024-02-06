@@ -29,7 +29,7 @@ import (
 // You will need to install the Okta client app on your mobile device and
 // setup MFA (Okta push verify and TOTP) for the okta user account.
 // Make sure that your Okta Application is configured with an
-// Authentication Policy that requires MFA.
+// Authentication Policy that requires MFA, or that the Global Session Policy requires MFA.
 //
 // To test with Okta TOTP (instead of Okta push verify), set:
 // OKTA_USE_TOTP=1
