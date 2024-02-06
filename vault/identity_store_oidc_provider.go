@@ -2629,15 +2629,15 @@ func (i *IdentityStore) lazyGenerateDefaultKey(ctx context.Context, storage logi
 			return err
 		}
 
-		if err := i.oidcCache.Delete(ns, namedKeyCachePrefix+defaultKeyName); err != nil {
-			return err
-		}
-
 		entry, err := logical.StorageEntryJSON(namedKeyConfigPath+defaultKeyName, defaultKey)
 		if err != nil {
 			return err
 		}
 		if err := storage.Put(ctx, entry); err != nil {
+			return err
+		}
+
+		if err := i.oidcCache.Flush(ns); err != nil {
 			return err
 		}
 	}

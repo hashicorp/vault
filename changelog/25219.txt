@@ -1,0 +1,3 @@
+```release-note:feature
+**Plugin Workload Identity**: Vault can generate identity tokens for plugins to use in workload identity federation auth flows.
+```
