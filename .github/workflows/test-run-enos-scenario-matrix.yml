@@ -123,7 +123,7 @@ jobs:
           chmod 600 "./enos/support/private_key.pem"
           echo "debug_data_artifact_name=enos-debug-data_$(echo "${{ matrix.scenario }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')" >> "$GITHUB_OUTPUT"
       - if: contains(inputs.sample-name, 'build')
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
         with:
           name: ${{ inputs.build-artifact-name }}
           path: ./enos/support/downloads
