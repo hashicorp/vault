@@ -35,13 +35,18 @@ export default class MessageExpirationDateForm extends Component {
   @action
   specificDateChange() {
     this.groupValue = 'specificDate';
-    this.args.message.endTime = this.messageEndTime;
+    this.updateEndTime();
   }
 
   @action
   onFocusOut(e) {
-    this.args.message.endTime = e.target.value;
     this.messageEndTime = e.target.value;
+    this.updateEndTime();
     this.groupValue = 'specificDate';
+  }
+
+  @action
+  updateEndTime() {
+    this.args.onUpdateEndTime(this.messageEndTime);
   }
 }

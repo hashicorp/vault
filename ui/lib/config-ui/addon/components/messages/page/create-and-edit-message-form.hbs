@@ -18,6 +18,7 @@
         <Messages::MessageExpirationDateForm
           @message={{@message}}
           @attr={{attr}}
+          @onUpdateEndTime={{this.onUpdateEndTime}}
           @isEndTimeValid={{or (not this.modelValidations) this.modelValidations.endTime.isValid}}
         />
       </FormField>
