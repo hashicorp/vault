@@ -239,7 +239,6 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	rotationSchedule, rotationScheduleOk := d.GetOk("rotation_schedule")
 	rotationWindow, rotationWindowOk := d.GetOk("rotation_window")
 
-	var rc *logical.RootCredential
 	if rotationScheduleOk && ttlOk {
 		return logical.ErrorResponse("mutually exclusive fields rotation_schedule and ttl were both specified; only one of them can be provided"), nil
 	} else if rotationWindowOk && ttlOk {
@@ -251,31 +250,17 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	if rotationScheduleOk && rotationWindowOk {
 		cfg.RotationSchedule = rotationSchedule.(string)
 		cfg.RotationWindow = rotationWindow.(int)
-
-		rc, err = logical.GetRootCredential(cfg.RotationSchedule, "ldap/config",
-			"ldap-root-creds", cfg.RotationWindow, 0)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
-		}
-		// unset ttl if rotation_schedule is set since these are mutually exclusive
-		cfg.TTL = 0
-
-		b.Logger().Info("rotation", "window", cfg.RotationWindow, "schedule", cfg.RotationSchedule, "ttl", cfg.TTL)
 	}
 
 	if ttlOk {
 		cfg.TTL = ttl.(int)
+	}
 
-		rc, err = logical.GetRootCredential("", "ldap/config",
-			"ldap-root-creds", 0, cfg.TTL)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
-		}
-
-		cfg.RotationSchedule = ""
-		cfg.RotationWindow = 0
-
-		b.Logger().Info("rotation", "window", cfg.RotationWindow, "schedule", cfg.RotationSchedule, "ttl", cfg.TTL)
+	var rc *logical.RotationJob
+	rc, err = logical.GetRotationJob(ctx, cfg.RotationSchedule, "auth/ldap/config",
+		"ldap-root-creds", cfg.RotationWindow, cfg.TTL)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	entry, err := logical.StorageEntryJSON("config", cfg)
@@ -286,19 +271,23 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		return nil, err
 	}
 
+	if rc != nil {
+		b.Logger().Debug("Injecting Root Credential into system backend")
+		rotationID, err := b.System().RegisterRotationJob(ctx, rc.Path, rc)
+		if err != nil {
+			return nil, err
+		}
+
+		rc.RotationID = rotationID
+	}
+
 	if warnings := b.checkConfigUserFilter(cfg); len(warnings) > 0 {
 		return &logical.Response{
 			Warnings: warnings,
 		}, nil
 	}
 
-	if rc != nil {
-		return &logical.Response{
-			RootCredential: rc,
-		}, nil
-	} else {
-		return nil, nil
-	}
+	return nil, nil
 }
 
 /*

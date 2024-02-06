@@ -200,6 +200,14 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		rc.TTL = ttl.(int)
 	}
 
+	if rotationScheduleOk && ttlOk {
+		return logical.ErrorResponse("mutually exclusive fields rotation_schedule and ttl were both specified; only one of them can be provided"), nil
+	} else if rotationWindowOk && ttlOk {
+		return logical.ErrorResponse("rotation_window does not apply to ttl"), nil
+	} else if rotationScheduleOk && !rotationWindowOk || rotationWindowOk && !rotationScheduleOk {
+		return logical.ErrorResponse("must include both schedule and window"), nil
+	}
+
 	entry, err := logical.StorageEntryJSON("config/root", rc)
 	if err != nil {
 		return nil, err
@@ -214,7 +222,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	b.iamClient = nil
 	b.stsClient = nil
 
-	var rCred *logical.RootCredential
+	var rCred *logical.RotationJob
 	if rotationScheduleOk && ttlOk {
 		return logical.ErrorResponse("mutually exclusive fields rotation_schedule and ttl were both specified; only one of them can be provided"), nil
 	} else if rotationWindowOk && ttlOk {
@@ -225,7 +233,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 
 	if rotationScheduleOk && rotationWindowOk {
 		rotationWindowSeconds := rotationWindow.(int)
-		rCred, err = logical.GetRootCredential(rotationSchedule, "aws/config/root", "aws-root-creds", rotationWindowSeconds, 0)
+		rCred, err = logical.GetRotationJob(ctx, rotationSchedule, "aws/"+req.Path, "aws-root-creds", rotationWindowSeconds, 0)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
@@ -235,7 +243,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 
 	if ttlOk {
 		ttlSeconds := ttl.(int)
-		rCred, err = logical.GetRootCredential("", "aws/config/root", "aws-root-creds", 0, ttlSeconds)
+		rCred, err = logical.GetRotationJob(ctx, "", "aws/"+req.Path, "aws-root-creds", 0, ttlSeconds)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
@@ -244,10 +252,13 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	}
 
 	if rCred != nil {
-		b.Logger().Debug("Injecting Root Credential into system backend")
-		return &logical.Response{
-			RootCredential: rCred,
-		}, nil
+		b.Logger().Debug("Injecting Root Credential over system view")
+		rotationID, err := b.System().RegisterRotationJob(ctx, rCred.Path, rCred)
+		if err != nil {
+			return nil, err
+		}
+
+		rCred.RotationID = rotationID
 	}
 
 	return nil, nil

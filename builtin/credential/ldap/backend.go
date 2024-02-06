@@ -62,19 +62,6 @@ func Backend() *backend {
 
 		AuthRenew:   b.pathLoginRenew,
 		BackendType: logical.TypeCredential,
-		//RotatePasswordGetSchedule: func(ctx context.Context, req *logical.Request) (*logical.RootSchedule, error) {
-		//	d := &framework.DefaultSchedule{}
-		//	cron, err := d.Parse("0 0 0 0 0")
-		//	if err != nil {
-		//		return nil, err
-		//	}
-		//	return &framework.RootSchedule{
-		//		Schedule:          cron,
-		//		RotationWindow:    15 * time.Second,
-		//		RotationSchedule:  "0 0 0 0 0",
-		//		NextVaultRotation: cron.Next(time.Now()),
-		//	}, nil
-		//},
 		RotatePassword: func(ctx context.Context, req *logical.Request) error {
 			// lock the backend's state - really just the config state - for mutating
 			b.mu.Lock()

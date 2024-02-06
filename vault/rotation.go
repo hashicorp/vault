@@ -44,14 +44,14 @@ type RotationManager struct {
 // rotationEntry is used to structure the values the expiration
 // manager stores. This is used to handle renew and revocation.
 type rotationEntry struct {
-	RotationID     string                  `json:"rotation_id"`
-	Path           string                  `json:"path"`
-	Data           map[string]interface{}  `json:"data"`
-	RootCredential *logical.RootCredential `json:"static_secret"`
-	IssueTime      time.Time               `json:"issue_time"`
-	ExpireTime     time.Time               `json:"expire_time"`
+	RotationID  string                 `json:"rotation_id"`
+	Path        string                 `json:"path"`
+	Data        map[string]interface{} `json:"data"`
+	RotationJob *logical.RotationJob   `json:"static_secret"`
+	IssueTime   time.Time              `json:"issue_time"`
+	ExpireTime  time.Time              `json:"expire_time"`
 
-	namespace *namespace.Namespace
+	Namespace *namespace.Namespace
 }
 
 func (rm *RotationManager) Start() error {
@@ -97,7 +97,7 @@ func (rm *RotationManager) CheckQueue() error {
 		now := time.Now()
 		i, err := rm.queue.Pop()
 		if err != nil {
-			rm.logger.Info("automated rotation queue empty")
+			rm.logger.Info("automated rotation queue empty", "err", err)
 			return nil
 		}
 
@@ -112,16 +112,16 @@ func (rm *RotationManager) CheckQueue() error {
 			break // this item is not ripe yet, which means all later items are also unripe, so exit the check loop
 		}
 
-		var re *rotationEntry
-		entry, ok := i.Value.(*rotationEntry)
+		// var re *rotationEntry
+		re, ok := i.Value.(*rotationEntry)
 		if !ok {
 			return fmt.Errorf("error parsing rotation entry from queue")
 		}
 
-		re = entry
+		// re = entry
 
-		rm.logger.Debug("check", "window", re.RootCredential.Schedule.RotationWindow, "time", re.RootCredential.Schedule.NextVaultRotation)
-		if !logical.DefaultScheduler.IsInsideRotationWindow(re.RootCredential.Schedule, now) {
+		rm.logger.Debug("check", "window", re.RotationJob.Schedule.RotationWindow, "time", re.RotationJob.Schedule.NextVaultRotation)
+		if !logical.DefaultScheduler.IsInsideRotationWindow(re.RotationJob.Schedule, now) {
 			rm.logger.Debug("Not inside rotation window, pushing back to queue")
 			err := rm.queue.Push(i)
 			if err != nil {
@@ -138,8 +138,7 @@ func (rm *RotationManager) CheckQueue() error {
 			Operation: logical.RotationOperation,
 			Path:      re.Path,
 		}
-		// TODO figure out how to get namespace with context here
-		// ctx := namespace.ContextWithNamespace(rm.quitContext, n)
+
 		rm.jobManager.AddJob(&rotationJob{
 			rm:    rm,
 			req:   req,
@@ -153,23 +152,23 @@ func (rm *RotationManager) CheckQueue() error {
 // Register takes a request and response with an associated StaticSecret. The
 // secret gets assigned a RotationID and the management of the rotation is
 // assumed by the rotation manager.
-func (rm *RotationManager) Register(ctx context.Context, req *logical.Request, resp *logical.Response) (id string, retErr error) {
+func (rm *RotationManager) Register(ctx context.Context, reqPath string, job *logical.RotationJob) (id string, retErr error) {
 	rm.logger.Debug("Starting registration")
 
-	// Ignore if there is no root cred
-	if resp == nil || resp.RootCredential == nil {
+	// Ignore if there is no rotation job
+	if job == nil {
 		return "", nil
 	}
 
-	rotationID := resp.RootCredential.RotationID
+	rotationID := job.RotationID
 	var re *rotationEntry
 
 	// either create a new rotationEntry or get the existing one
 	if rotationID != "" {
 		rm.logger.Debug("rotationID detected, this is an update", "rotationID", rotationID)
-		entry, err := rm.queue.PopByKey(resp.RootCredential.RotationID)
+		entry, err := rm.queue.PopByKey(rotationID)
 		if err != nil {
-			rm.logger.Warn("error popping item", "rotation_id", resp.RootCredential.RotationID, "err", err)
+			rm.logger.Warn("error popping item", "rotation_id", rotationID, "err", err)
 			return "", err
 		}
 		if entry != nil {
@@ -187,29 +186,27 @@ func (rm *RotationManager) Register(ctx context.Context, req *logical.Request, r
 			return "", err
 		}
 		ns, err := namespace.FromContext(ctx)
-		rotationID = path.Join(req.Path, rotationRand)
+		rotationID = path.Join(reqPath, rotationRand)
 		if ns.ID != namespace.RootNamespaceID {
 			rotationID = fmt.Sprintf("%s.%s", rotationID, ns.ID)
 		}
 		re = &rotationEntry{
-			RotationID:     rotationID,
-			Path:           req.Path,
-			Data:           resp.Data,
-			RootCredential: resp.RootCredential,
-			namespace:      ns,
+			RotationID:  rotationID,
+			Path:        reqPath,
+			RotationJob: job,
+			Namespace:   ns,
 		}
 	}
 
 	issueTime := time.Now()
 	expireTime := time.Now()
-	if resp.RootCredential.Schedule.Schedule != nil {
-		expireTime = logical.DefaultScheduler.NextRotationTimeFromInput(resp.RootCredential.Schedule, time.Now())
-		resp.RootCredential.Schedule.NextVaultRotation = expireTime
+	if job.Schedule.Schedule != nil {
+		expireTime = logical.DefaultScheduler.NextRotationTimeFromInput(job.Schedule, time.Now())
+		job.Schedule.NextVaultRotation = expireTime
 	}
-	rm.logger.Debug("SCHEDULE", "VALUE", resp.RootCredential.Schedule.RotationSchedule)
-	rm.logger.Debug("WINDOW", "VALUE", resp.RootCredential.Schedule.RotationWindow)
-	rm.logger.Debug("TTL", "VALUE", resp.RootCredential.Schedule.TTL)
-
+	rm.logger.Debug("SCHEDULE", "VALUE", job.Schedule.RotationSchedule)
+	rm.logger.Debug("WINDOW", "VALUE", job.Schedule.RotationWindow)
+	rm.logger.Debug("TTL", "VALUE", job.Schedule.TTL)
 	re.ExpireTime = expireTime
 	re.IssueTime = issueTime
 
@@ -310,8 +307,10 @@ type rotationJob struct {
 // the backend. It will return an error both in the case of a direct error, and in the case of certain kinds
 // of error-shaped logical.Response returns.
 func (j *rotationJob) Execute() error {
-	j.rm.logger.Info("in execute")
-	_, err := j.rm.router.Route(j.rm.quitContext, j.req)
+	j.rm.logger.Debug("path", "path", j.entry.Path)
+	j.rm.logger.Debug("rpath", "rpath", j.req.Path)
+	ctx := namespace.ContextWithNamespace(j.rm.quitContext, j.entry.Namespace)
+	_, err := j.rm.router.Route(ctx, j.req)
 
 	// TODO: clean up this branch
 	if errors.Is(err, logical.ErrUnsupportedOperation) {
@@ -328,18 +327,19 @@ func (j *rotationJob) Execute() error {
 	// success
 	j.rm.logger.Debug("Successfully called rotate root code for backend")
 	issueTime := time.Now()
-	j.entry.RootCredential.Schedule.LastVaultRotation = issueTime
-	expireTime := logical.DefaultScheduler.NextRotationTime(j.entry.RootCredential.Schedule)
+	j.entry.RotationJob.Schedule.LastVaultRotation = issueTime
+	expireTime := logical.DefaultScheduler.NextRotationTime(j.entry.RotationJob.Schedule)
 	newEntry := &rotationEntry{
-		RotationID:     j.entry.RotationID,
-		Path:           j.entry.Path,
-		Data:           j.entry.Data,
-		RootCredential: j.entry.RootCredential,
-		IssueTime:      issueTime,
-		ExpireTime:     expireTime,
-		namespace:      j.entry.namespace,
+		RotationID:  j.entry.RotationID,
+		Path:        j.entry.Path,
+		Data:        j.entry.Data,
+		RotationJob: j.entry.RotationJob,
+		IssueTime:   issueTime,
+		// expires the next time the schedule is activated from the issue time
+		ExpireTime: expireTime,
+		Namespace:  j.entry.Namespace,
 	}
-	j.entry.RootCredential.Schedule.NextVaultRotation = newEntry.ExpireTime
+	j.entry.RotationJob.Schedule.NextVaultRotation = newEntry.ExpireTime
 
 	// lock and populate the queue
 	j.rm.mu.Lock()

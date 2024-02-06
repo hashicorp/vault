@@ -4,8 +4,11 @@
 package logical
 
 import (
+	"context"
+	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/robfig/cron/v3"
 )
 
@@ -16,8 +19,8 @@ type RotationOptions struct {
 	Schedule *RootSchedule
 }
 
-// RootCredential represents the secret part of a response.
-type RootCredential struct {
+// RotationJob represents the secret part of a response.
+type RotationJob struct {
 	RotationOptions
 
 	// RotationID is the ID returned to the user to manage this secret.
@@ -26,18 +29,19 @@ type RootCredential struct {
 	RotationID string `sentinel:""`
 	Path       string
 	Name       string
+	Namespace  *namespace.Namespace
 }
 
-func (s *RootCredential) Validate() error {
+func (s *RotationJob) Validate() error {
 	// TODO: validation?
 	return nil
 }
 
-// GetRootCredential initializes a root credential structure based on the passed in rotation_schedule or ttl
+// GetRotationJob initializes a root credential structure based on the passed in rotation_schedule or ttl
 // If rotation schedule is empty, the included spec schedule would be nil
 // NextVaultRotation and LastVaultRotation are set to zero value; it's the responsibility of callers to set these
 // values appropriately
-func GetRootCredential(rotationSchedule, path, credentialName string, rotationWindow int, ttl int) (*RootCredential, error) {
+func GetRotationJob(ctx context.Context, rotationSchedule, path, credentialName string, rotationWindow, ttl int) (*RotationJob, error) {
 	var cronSc *cron.SpecSchedule
 	if rotationSchedule != "" {
 		var err error
@@ -59,12 +63,17 @@ func GetRootCredential(rotationSchedule, path, credentialName string, rotationWi
 		LastVaultRotation: time.Time{},
 	}
 
-	return &RootCredential{
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error obtaining namespace from context: %s", err)
+	}
+	return &RotationJob{
 		RotationOptions: RotationOptions{
 			Schedule: rs,
 		},
 		// Figure out how to get mount info
-		Path: path,
-		Name: credentialName,
+		Path:      path,
+		Name:      credentialName,
+		Namespace: ns,
 	}, nil
 }
