@@ -291,6 +291,8 @@ type rotationJob struct {
 // the backend. It will return an error both in the case of a direct error, and in the case of certain kinds
 // of error-shaped logical.Response returns.
 func (j *rotationJob) Execute() error {
+	j.rm.logger.Debug("path", "path", j.entry.Path)
+	j.rm.logger.Debug("rpath", "rpath", j.req.Path)
 	ctx := namespace.ContextWithNamespace(j.rm.quitContext, j.entry.Namespace)
 	_, err := j.rm.router.Route(ctx, j.req)
 

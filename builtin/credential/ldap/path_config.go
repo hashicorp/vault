@@ -257,7 +257,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	}
 
 	var rc *logical.RotationJob
-	rc, err = logical.GetRotationJob(ctx, cfg.RotationSchedule, "ldap/config",
+	rc, err = logical.GetRotationJob(ctx, cfg.RotationSchedule, "auth/ldap/config",
 		"ldap-root-creds", cfg.RotationWindow, cfg.TTL)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
