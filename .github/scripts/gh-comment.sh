@@ -2,16 +2,14 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-
 set -e
-
 
 function update_or_create_comment {
   REPO=$1
   PR_NUMBER=$2
   SEARCH_KEY=$3
   BODY=$4
-  
+
   # We only want for the GH bot to place one comment to report build failures
   # and if we rerun a job, that comment needs to be updated.
   # Let's try to find if the GH bot has placed a similar comment
