@@ -1,0 +1,109 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+---
+name: Containerize Binary
+description: |
+  Containerize vault binaries and annotate them with the correct registry tags. Artifacts will be
+  uploaded to the Github artifact store. This action is used for both CE and Ent and thus needs to
+  stay compatible for both repository contexts.
+
+inputs:
+  docker:
+    type: boolean
+    description: |
+      Package the binary into a Docker container suitable for the Docker and AWS registries. We'll
+      automatically determine the correct tags and target depending on the vault edition.
+    default: true
+  goarch:
+    type: string
+    description: The Go GOARCH value environment variable to set during the build.
+  goos:
+    type: string
+    description: The Go GOOS value environment variable to set during the build.
+  redhat:
+    type: boolean
+    description: Package the binary into a UBI container suitable for the Redhat Quay registry.
+    default: false
+  vault-binary-path:
+    type: string
+    description: The path to the vault binary.
+    default: dist/vault
+  vault-edition:
+    type: string
+    description: The edition of vault to build.
+    default: ce
+  vault-version:
+    type: string
+    description: The vault version.
+
+outputs:
+  vault-binary-path:
+    description: The location of the binary after containerization
+    value: ${{ inputs.vault-binary-path }}
+
+runs:
+  using: composite
+  steps:
+    - id: vars
+      shell: bash
+      run: |
+        if [[ '${{ inputs.vault-edition }}' =~ 'ce' ]]; then
+          # CE containers
+          container_version='${{ inputs.vault-version }}'
+          docker_container_tags='docker.io/hashicorp/vault:${{ inputs.vault-version }} public.ecr.aws/hashicorp/vault:${{ inputs.vault-version }}'
+          docker_container_target='default'
+          redhat_container_tags='quay.io/redhat-isv-containers/5f89bb5e0b94cf64cfeb500a:${{ inputs.vault-version }}-ubi'
+          redhat_container_target='ubi'
+        else
+          # Ent containers
+          container_version='${{ inputs.vault-version }}+${{ inputs.vault-edition }}'
+
+          if [[ '${{ inputs.vault-edition }}' =~ 'fips' ]]; then
+            # Ent FIPS 140-2 containers
+            docker_container_tags='docker.io/hashicorp/vault-enterprise-fips:${{ inputs.vault-version }}-${{ inputs.vault-edition }} public.ecr.aws/hashicorp/vault-enterprise-fips:${{ inputs.vault-version }}-${{ inputs.vault-edition }}'
+            docker_container_target='ubi-fips'
+            redhat_container_tags='quay.io/redhat-isv-containers/6283f645d02c6b16d9caeb8e:${{ inputs.vault-version }}-${{ inputs.vault-edition }}-ubi'
+            redhat_container_target='ubi-fips'
+          else
+            # All other Ent containers
+            docker_container_tags='docker.io/hashicorp/vault-enterprise:${{ inputs.vault-version }}-${{ inputs.vault-edition}} public.ecr.aws/hashicorp/vault-enterprise:${{ inputs.vault-version }}-${{ inputs.vault-edition }}'
+            docker_container_target='default'
+            redhat_container_tags='quay.io/redhat-isv-containers/5f89bb9242e382c85087dce2:${{ inputs.vault-version }}-${{ inputs.vault-edition }}-ubi'
+            redhat_container_target='ubi'
+          fi
+        fi
+        {
+          echo "container-version=${container_version}"
+          echo "docker-container-tags=${docker_container_tags}"
+          echo "docker-container-target=${docker_container_target}"
+          echo "redhat-container-tags=${redhat_container_tags}"
+          echo "redhat-container-target=${redhat_container_target}"
+          echo "revision=$(make ci-get-revision)"
+        } | tee -a "$GITHUB_OUTPUT"
+    - if: inputs.docker == 'true' || inputs.redhat == 'true'
+      id: copy-binary
+      shell: bash
+      run: |
+        dest_path='dist/${{ inputs.goos }}/${{ inputs.goarch }}/vault'
+        dest_dir=$(dirname "$dest_path")
+        [[ ! -d "$dest_dir" ]] && mkdir -p "$dest_dir"
+        [[ ! -f "$dest_path" ]] && cp ${{ inputs.vault-binary-path }} "${dest_path}"
+    - if: inputs.docker == 'true'
+      uses: hashicorp/actions-docker-build@v1
+      with:
+        arch: ${{ inputs.goarch }}
+        do_zip_extract_step: 'false' # Don't download and extract an already present binary
+        target: ${{ steps.vars.outputs.docker-container-target }}
+        tags: ${{ steps.vars.outputs.docker-container-tags }}
+        revision: ${{ steps.vars.outputs.revision }}
+        version: ${{ steps.vars.outputs.container-version }}
+    - if: inputs.redhat == 'true'
+      uses: hashicorp/actions-docker-build@v1
+      with:
+        arch: ${{ inputs.goarch }}
+        do_zip_extract_step: 'false' # Don't download and extract an already present binary
+        redhat_tag: ${{ steps.vars.outputs.redhat-container-tags }}
+        target: ${{ steps.vars.outputs.redhat-container-target }}
+        revision: ${{ steps.vars.outputs.revision }}
+        version: ${{ steps.vars.outputs.container-version }}

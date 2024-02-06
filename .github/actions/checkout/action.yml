@@ -1,0 +1,77 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+---
+name: Check out the correct git reference.
+description: |
+  Determine and checkout the correct Git reference depending on the actions event type and tags.
+
+inputs:
+  checkout-head:
+    description: |
+      Whether or not to check out HEAD on a pull request. This can also be triggered with a
+      `checkout-head` tag.
+    default: 'false'
+  path:
+    description: Relative path to $GITHUB_WORKSPACE to check out to
+    default: ""
+
+outputs:
+  ref:
+    description: The git reference that was checked out.
+    value: ${{ steps.ref.outputs.ref }}
+  depth:
+    description: The fetch depth that was checked out.
+    value: ${{ steps.ref.outputs.ref }}
+
+runs:
+  using: composite
+  steps:
+    - id: ref
+      shell: bash
+      run: |
+        # Determine our desired checkout ref and fetch depth. Depending our our workflow event
+        # trigger, inputs, and tags, we'll check out different references at different depths.
+        #
+        # * If the trigger event is a pull request we will default to a magical merge SHA that Github
+        #   creates. Essentially, this SHA is the product of merging our PR into the merge target
+        #   branch at some point in time. When you push a change to a PR branch Github updates this
+        #   branch if it can.
+        # * If the trigger event is a pull request and a `checkout-head` tag is present or the
+        #   checkout-head input is set, we'll use HEAD of the PR branch instead of the magical
+        #   merge SHA.
+        # * If the trigger event is a push (merge) then we'll get the latest commit that was pushed.
+        # * For anything any other event type we'll default to whatever is default in Github.
+        #
+        # Our fetch depth will varies depending on what our chosen SHA is. We normally want to do
+        # the most shallow clone possible for speed, but we also need to support getting history
+        # for determining what files have changed, etc. We'll always check out one level deep for
+        # merges or standard pull requests. If checking out HEAD is requested we'll fetch a deeper
+        # history because we need all commits on the branch.
+        #
+        if [ '${{ github.event_name }}' = 'pull_request' ]; then
+          if [ '${{ contains(github.event.pull_request.labels.*.name, 'checkout-head') || inputs.checkout-head == 'true' }}' = 'true' ]; then
+            checkout_ref='${{ github.event.pull_request.head.sha }}'
+            fetch_depth=0
+          else
+            checkout_ref='${{ github.ref }}'
+            fetch_depth=1
+          fi
+        elif [ '${{ github.event_name }}' = 'push' ]; then
+          # Our checkout ref for any other event type should default to the github ref.
+          checkout_ref='${{ github.event.push.after }}'
+          fetch_depth=1
+        else
+          checkout_ref='${{ github.ref }}'
+          fetch_depth=0
+        fi
+
+        {
+          echo "ref=${checkout_ref}"
+          echo "depth=${fetch_depth}"
+        } | tee -a "$GITHUB_OUTPUT"
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      with:
+        path: ${{ inputs.path }}
+        fetch-depth: ${{ steps.ref.outputs.depth }}
+        ref: ${{ steps.ref.outputs.ref }}

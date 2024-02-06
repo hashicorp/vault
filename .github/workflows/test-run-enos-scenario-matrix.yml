@@ -32,7 +32,7 @@ on:
       vault-edition:
         required: false
         type: string
-        default: oss
+        default: ce
       # The Git commit SHA used as the revision when building vault
       vault-revision:
         required: true
@@ -57,18 +57,21 @@ jobs:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - id: metadata
         run: |
-          echo "build-date=$(make ci-get-date)" >> "$GITHUB_OUTPUT"
-          sample="$(enos scenario sample observe ${{ inputs.sample-name }} --chdir ./enos --min 1 --max ${{ inputs.sample-max }} --seed "$(date +%s%N)" --format json | jq -c ".observation.elements")"
-          echo "sample=$sample"
-          echo "sample=$sample" >> "$GITHUB_OUTPUT"
-          if [[ "${{ inputs.vault-edition }}" == "oss" ]]; then
-            echo "vault-version=${{ inputs.vault-version }}" >> "$GITHUB_OUTPUT"
+          build_date=$(make ci-get-date)
+          sample_seed=$(date +%s%N)
+          sample=$(enos scenario sample observe "${{ inputs.sample-name }}" --chdir ./enos --min 1 --max "${{ inputs.sample-max }}" --seed "${sample_seed}" --format json | jq -c ".observation.elements")
+          if [[ "${{ inputs.vault-edition }}" == "ce" ]]; then
+            vault_version="${{ inputs.vault-version }}"
           else
             # shellcheck disable=2001
             vault_version="$(sed 's/+ent/+${{ inputs.vault-edition }}/g' <<< '${{ inputs.vault-version }}')"
-            echo "vault-version=$vault_version"
-            echo "vault-version=$vault_version" >> "$GITHUB_OUTPUT"
           fi
+          {
+            echo "build-date=${build_date}"
+            echo "vault-version=${vault_version}"
+            echo "sample=${sample}"
+            echo "sample-seed=${sample_seed}" # This isn't used outside of here but is nice to know for duplicating observations
+          } | tee -a "$GITHUB_OUTPUT"
 
   # Run the Enos test scenario(s)
   run:
@@ -123,6 +126,7 @@ jobs:
           chmod 600 "./enos/support/private_key.pem"
           echo "debug_data_artifact_name=enos-debug-data_$(echo "${{ matrix.scenario }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')" >> "$GITHUB_OUTPUT"
       - if: contains(inputs.sample-name, 'build')
+        # Use actions/download-artifact @3.x until https://hashicorp.atlassian.net/browse/HREL-99 is resolved
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: ${{ inputs.build-artifact-name }}
@@ -141,7 +145,7 @@ jobs:
         run: enos scenario launch --timeout 60m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
       - name: Upload Debug Data
         if: failure()
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         with:
           # The name of the artifact is the same as the matrix scenario name with the spaces replaced with underscores and colons replaced by equals.
           name: ${{ steps.prepare_scenario.outputs.debug_data_artifact_name }}
