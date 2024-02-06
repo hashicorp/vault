@@ -5,6 +5,9 @@
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
+import { stringify } from 'core/helpers/stringify';
+import { obfuscateData } from 'core/utils/advanced-secret';
 
 /**
  * @module JsonEditor
@@ -30,8 +33,16 @@ import { action } from '@ember/object';
  */
 
 export default class JsonEditorComponent extends Component {
+  @tracked revealValues = false;
   get getShowToolbar() {
     return this.args.showToolbar === false ? false : true;
+  }
+
+  get showObfuscatedData() {
+    return this.args.readOnly && this.args.allowObscure && !this.revealValues;
+  }
+  get obfuscatedData() {
+    return stringify([obfuscateData(JSON.parse(this.args.value))], {});
   }
 
   @action

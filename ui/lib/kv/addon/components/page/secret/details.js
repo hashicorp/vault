@@ -36,12 +36,14 @@ export default class KvSecretDetails extends Component {
 
   @tracked showJsonView = false;
   @tracked wrappedData = null;
-  secretDataIsAdvanced;
 
   constructor() {
     super(...arguments);
     this.originalSecret = JSON.stringify(this.args.secret.secretData || {});
-    this.secretDataIsAdvanced = isAdvancedSecret(this.originalSecret);
+    if (isAdvancedSecret(this.originalSecret)) {
+      // Default to JSON view if advanced
+      this.showJsonView = true;
+    }
   }
 
   @action
