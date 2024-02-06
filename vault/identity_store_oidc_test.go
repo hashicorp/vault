@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	gocache "github.com/patrickmn/go-cache"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -2028,7 +2029,7 @@ func TestIdentityStore_generatePluginIdentityToken(t *testing.T) {
 			expected := capjwt.Expected{
 				Issuer: fmt.Sprintf("%s/v1/identity/oidc/plugins", identityStore.redirectAddr),
 				Subject: fmt.Sprintf("%s:%s:%s:%s", pluginTokenSubjectPrefix, namespace.RootNamespace.ID,
-					tt.mountEntry.Table, tt.mountEntry.Accessor),
+					translateTableClaim(tt.mountEntry.Table), tt.mountEntry.Accessor),
 				Audiences:         []string{tt.audience},
 				SigningAlgorithms: []capjwt.Alg{capjwt.RS256},
 			}
@@ -2041,7 +2042,7 @@ func TestIdentityStore_generatePluginIdentityToken(t *testing.T) {
 			vaultSubClaims := claims[pluginTokenPrivateClaimKey].(map[string]interface{})
 			require.Equal(t, namespace.RootNamespace.ID, vaultSubClaims["namespace_id"])
 			require.Equal(t, namespace.RootNamespace.Path, vaultSubClaims["namespace_path"])
-			require.Equal(t, tt.mountEntry.Table, vaultSubClaims["class"])
+			require.Equal(t, translateTableClaim(tt.mountEntry.Table), vaultSubClaims["class"])
 			require.Equal(t, tt.mountEntry.Type, vaultSubClaims["plugin"])
 			require.Equal(t, tt.mountEntry.RunningVersion, vaultSubClaims["version"])
 			require.Equal(t, tt.mountEntry.Path, vaultSubClaims["path"])
@@ -2066,4 +2067,33 @@ func createMountEntryWithKey(t *testing.T, ctx context.Context, sys *SystemBacke
 		},
 	})
 	expectSuccess(t, resp, err)
+}
+
+func Test_translateTableClaim(t *testing.T) {
+	tests := []struct {
+		name  string
+		table string
+		want  string
+	}{
+		{
+			name:  "given mounts table returns secret",
+			table: mountTableType,
+			want:  secretTableValue,
+		},
+		{
+			name:  "given auth table returns auth",
+			table: "auth",
+			want:  "auth",
+		},
+		{
+			name:  "given any value returns itself",
+			table: "other",
+			want:  "other",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, translateTableClaim(tt.table), "translateTableClaim(%v)", tt.table)
+		})
+	}
 }

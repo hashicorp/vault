@@ -164,6 +164,7 @@ const (
 
 	pluginTokenSubjectPrefix   = "plugin-identity"
 	pluginTokenPrivateClaimKey = "vaultproject.io"
+	secretTableValue           = "secret"
 	deleteKeyErrorFmt          = "unable to delete key %q because it is currently referenced by these %s: %s"
 )
 
@@ -1143,10 +1144,14 @@ func (i *IdentityStore) generatePluginIdentityToken(ctx context.Context, storage
 		return "", 0, err
 	}
 
+	// The subject uniquely identifies the plugin
+	subject := fmt.Sprintf("%s:%s:%s:%s", pluginTokenSubjectPrefix, ns.ID,
+		translateTableClaim(me.Table), me.Accessor)
+
 	now := time.Now()
 	claims := map[string]any{
 		"iss": issuer,
-		"sub": fmt.Sprintf("%s:%s:%s:%s", pluginTokenSubjectPrefix, ns.ID, me.Table, me.Accessor),
+		"sub": subject,
 		"aud": []string{audience},
 		"nbf": now.Unix(),
 		"iat": now.Unix(),
@@ -1154,7 +1159,7 @@ func (i *IdentityStore) generatePluginIdentityToken(ctx context.Context, storage
 		pluginTokenPrivateClaimKey: map[string]any{
 			"namespace_id":   ns.ID,
 			"namespace_path": ns.Path,
-			"class":          me.Table,
+			"class":          translateTableClaim(me.Table),
 			"plugin":         me.Type,
 			"version":        me.RunningVersion,
 			"path":           me.Path,
@@ -1173,6 +1178,15 @@ func (i *IdentityStore) generatePluginIdentityToken(ctx context.Context, storage
 	}
 
 	return signedToken, ttl, nil
+}
+
+func translateTableClaim(table string) string {
+	switch table {
+	case mountTableType:
+		return secretTableValue
+	default:
+		return table
+	}
 }
 
 func (i *IdentityStore) getNamedKey(ctx context.Context, s logical.Storage, name string) (*namedKey, error) {
