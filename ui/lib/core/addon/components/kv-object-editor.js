@@ -87,11 +87,11 @@ export default class KvObjectEditor extends Component {
       this.args.onKeyUp(event.target.value);
     }
   }
-  keyHasWhitespace = (name) => {
+  showWhitespaceWarning = (name) => {
     if (this.args.allowWhiteSpace) return false;
     return new RegExp('\\s', 'g').test(name);
   };
-  parsesToNonString = (value) => {
+  showNonStringWarning = (value) => {
     if (!this.args.warnNonStringValues) return false;
     try {
       JSON.parse(value);
