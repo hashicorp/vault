@@ -24,6 +24,7 @@ export default class KvEngine extends Engine {
       'secret-mount-path',
       'flash-messages',
       'control-group',
+      'user-preference',
     ],
     externalRoutes: ['secrets', 'syncDestination'],
   };

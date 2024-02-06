@@ -85,6 +85,7 @@ export default class App extends Application {
           'secret-mount-path',
           'flash-messages',
           'control-group',
+          'user-preference',
         ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
