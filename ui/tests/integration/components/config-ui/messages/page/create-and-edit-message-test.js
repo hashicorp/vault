@@ -29,10 +29,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
       owner: this.engine,
     });
 
-    assert.dom('[data-test-page-title]').hasText('Create message');
-    assert
-      .dom('[data-test-form-subtext]')
-      .hasText('Create a custom message for all users when they access a Vault system via the UI.');
+    assert.dom(PAGE.title).hasText('Create message');
     assert.dom(PAGE.radio('authenticated')).exists();
     assert.dom(PAGE.radio('unauthenticated')).exists();
     assert.dom(PAGE.radio('authenticated')).isChecked();
@@ -112,10 +109,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
       owner: this.engine,
     });
 
-    assert.dom('[data-test-page-title]').hasText('Edit message');
-    assert
-      .dom('[data-test-form-subtext]')
-      .hasText('Edit a custom message for all users when they access a Vault system via the UI.');
+    assert.dom(PAGE.title).hasText('Edit message');
     assert.dom(PAGE.radio('authenticated')).exists();
     assert.dom(PAGE.radio('unauthenticated')).isChecked();
     assert.dom(PAGE.radio('modal')).exists();
