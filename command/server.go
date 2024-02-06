@@ -52,6 +52,7 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
+	"github.com/hashicorp/vault/plugins/event"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -96,6 +97,7 @@ type ServerCommand struct {
 	CredentialBackends map[string]logical.Factory
 	LogicalBackends    map[string]logical.Factory
 	PhysicalBackends   map[string]physical.Factory
+	EventBackends      map[string]event.Factory
 
 	ServiceRegistrations map[string]sr.Factory
 
@@ -3079,6 +3081,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		AuditBackends:                  c.AuditBackends,
 		CredentialBackends:             c.CredentialBackends,
 		LogicalBackends:                c.LogicalBackends,
+		EventBackends:                  c.EventBackends,
 		LogLevel:                       config.LogLevel,
 		Logger:                         c.logger,
 		DetectDeadlocks:                config.DetectDeadlocks,

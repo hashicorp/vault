@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/plugin"
+	"github.com/hashicorp/vault/plugins/event"
+	"github.com/hashicorp/vault/plugins/event/sqs"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/version"
@@ -183,6 +185,10 @@ var (
 
 	credentialBackends = map[string]logical.Factory{
 		"plugin": plugin.Factory,
+	}
+
+	eventBackends = map[string]event.Factory{
+		"sqs": sqs.New,
 	}
 
 	logicalBackends = map[string]logical.Factory{
@@ -742,6 +748,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				},
 				AuditBackends:      auditBackends,
 				CredentialBackends: credentialBackends,
+				EventBackends:      eventBackends,
 				LogicalBackends:    logicalBackends,
 				PhysicalBackends:   physicalBackends,
 
