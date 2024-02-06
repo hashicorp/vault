@@ -135,6 +135,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     await click(FORM.toggleMasked);
     assert.dom(PAGE.infoRowValue('foo')).hasText('bar', 'renders secret value');
     await click(FORM.toggleJson);
+    await click(FORM.toggleJsonValues);
     assert.propEqual(parseJsonEditor(find), this.secretData, 'json editor renders secret data');
     assert
       .dom(PAGE.detail.versionTimestamp)
