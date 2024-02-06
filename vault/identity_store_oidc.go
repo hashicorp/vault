@@ -1143,15 +1143,10 @@ func (i *IdentityStore) generatePluginIdentityToken(ctx context.Context, storage
 		return "", 0, err
 	}
 
-	var nsID string
-	if me.Namespace() != nil {
-		nsID = me.Namespace().ID
-	}
-
 	now := time.Now()
 	claims := map[string]any{
 		"iss": issuer,
-		"sub": fmt.Sprintf("%s:%s:%s:%s", pluginTokenSubjectPrefix, nsID, me.Table, me.Accessor),
+		"sub": fmt.Sprintf("%s:%s:%s:%s", pluginTokenSubjectPrefix, ns.ID, me.Table, me.Accessor),
 		"aud": []string{audience},
 		"nbf": now.Unix(),
 		"iat": now.Unix(),
