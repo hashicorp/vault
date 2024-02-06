@@ -44,14 +44,14 @@ type RotationManager struct {
 // rotationEntry is used to structure the values the expiration
 // manager stores. This is used to handle renew and revocation.
 type rotationEntry struct {
-	RotationID     string                  `json:"rotation_id"`
-	Path           string                  `json:"path"`
-	Data           map[string]interface{}  `json:"data"`
-	RootCredential *logical.RotationJob    `json:"static_secret"`
-	IssueTime      time.Time               `json:"issue_time"`
-	ExpireTime     time.Time               `json:"expire_time"`
+	RotationID  string                 `json:"rotation_id"`
+	Path        string                 `json:"path"`
+	Data        map[string]interface{} `json:"data"`
+	RotationJob *logical.RotationJob   `json:"static_secret"`
+	IssueTime   time.Time              `json:"issue_time"`
+	ExpireTime  time.Time              `json:"expire_time"`
 
-	namespace *namespace.Namespace
+	Namespace *namespace.Namespace
 }
 
 func (rm *RotationManager) Start() error {
@@ -191,10 +191,10 @@ func (rm *RotationManager) Register(ctx context.Context, reqPath string, job *lo
 			rotationID = fmt.Sprintf("%s.%s", rotationID, ns.ID)
 		}
 		re = &rotationEntry{
-			RotationID:     rotationID,
-			Path:           reqPath,
-			RotationJob:    job,
-			Namespace:      ns,
+			RotationID:  rotationID,
+			Path:        reqPath,
+			RotationJob: job,
+			Namespace:   ns,
 		}
 	}
 
