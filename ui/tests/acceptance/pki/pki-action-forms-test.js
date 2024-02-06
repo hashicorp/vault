@@ -12,7 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
-import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
+import { runCmd } from 'vault/tests/helpers/commands';
 import { SELECTORS as S } from 'vault/tests/helpers/pki/workflow';
 import { issuerPemBundle } from 'vault/tests/helpers/pki/values';
 
@@ -32,7 +32,7 @@ module('Acceptance | pki action forms test', function (hooks) {
     await logout.visit();
     await authPage.login();
     // Cleanup engine
-    await runCommands([`delete sys/mounts/${this.mountPath}`]);
+    await runCmd([`delete sys/mounts/${this.mountPath}`]);
   });
 
   module('import', function (hooks) {
