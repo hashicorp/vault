@@ -5,8 +5,10 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/rpc"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -40,9 +42,10 @@ type dbPluginInstance struct {
 	sync.RWMutex
 	database databaseVersionWrapper
 
-	id     string
-	name   string
-	closed bool
+	id                   string
+	name                 string
+	runningPluginVersion string
+	closed               bool
 }
 
 func (dbi *dbPluginInstance) ID() string {
@@ -324,9 +327,10 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 	}
 
 	dbi = &dbPluginInstance{
-		database: dbw,
-		id:       id,
-		name:     name,
+		database:             dbw,
+		id:                   id,
+		name:                 name,
+		runningPluginVersion: pluginVersion,
 	}
 	oldConn := b.connections.Put(name, dbi)
 	if oldConn != nil {
@@ -394,6 +398,28 @@ func (b *databaseBackend) clean(_ context.Context) {
 		}
 		b.gaugeCollectionProcess = nil
 	})
+}
+
+func (b *databaseBackend) dbEvent(ctx context.Context,
+	operation string,
+	path string,
+	name string,
+	modified bool,
+	additionalMetadataPairs ...string,
+) {
+	metadata := []string{
+		logical.EventMetadataModified, strconv.FormatBool(modified),
+		logical.EventMetadataOperation, operation,
+		"path", path,
+	}
+	if name != "" {
+		metadata = append(metadata, "name", name)
+	}
+	metadata = append(metadata, additionalMetadataPairs...)
+	err := logical.SendEvent(ctx, b, fmt.Sprintf("database/%s", operation), metadata...)
+	if err != nil && !errors.Is(err, framework.ErrNoEvents) {
+		b.Logger().Error("Error sending event", "error", err)
+	}
 }
 
 const backendHelp = `

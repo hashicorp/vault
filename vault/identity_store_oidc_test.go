@@ -1097,13 +1097,11 @@ func testNamedKey(name string) *namedKey {
 // rotations and expiration actions.
 func TestOIDC_PeriodicFunc(t *testing.T) {
 	type testCase struct {
-		cycle         int
-		numKeys       int
-		numPublicKeys int
+		expectedKeyRingLen   int
+		expectedPublicKeyLen int
 	}
 	testSets := []struct {
 		namedKey          *namedKey
-		expectedKeyCount  int
 		setSigningKey     bool
 		setNextSigningKey bool
 		testCases         []testCase
@@ -1114,10 +1112,10 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setNextSigningKey: true,
 			testCases: []testCase{
 				// Each cycle results in a key going in/out of its verification_ttl period
-				{1, 2, 2},
-				{2, 3, 3},
-				{3, 2, 2},
-				{4, 3, 3},
+				{2, 2},
+				{3, 3},
+				{2, 2},
+				{3, 3},
 			},
 		},
 		{
@@ -1126,11 +1124,11 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     false,
 			setNextSigningKey: true,
 			testCases: []testCase{
-				{1, 1, 1},
+				{1, 1},
 
 				// key counts jump from 1 to 2 because the next signing key becomes
 				// the signing key, and no key is in its verification_ttl period
-				{2, 2, 2},
+				{2, 2},
 			},
 		},
 		{
@@ -1139,11 +1137,11 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     true,
 			setNextSigningKey: false,
 			testCases: []testCase{
-				{1, 1, 1},
+				{1, 1},
 
 				// key counts jump from 1 to 3 because the original signing key is
 				// still published and within its verification_ttl period
-				{2, 3, 3},
+				{3, 3},
 			},
 		},
 		{
@@ -1152,8 +1150,8 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     false,
 			setNextSigningKey: false,
 			testCases: []testCase{
-				{1, 0, 0},
-				{2, 2, 2},
+				{0, 0},
+				{2, 2},
 			},
 		},
 	}
@@ -1161,50 +1159,43 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 	for _, testSet := range testSets {
 		testSet := testSet
 		t.Run(testSet.namedKey.name, func(t *testing.T) {
-			// We've disabled parallelism because this test is sensitive to timing and not running it in parallel
-			// makes it less flaky.
-			// t.Parallel()
+			t.Parallel()
 
-			// Prepare a storage to run through periodicFunc
 			c, _, _ := TestCoreUnsealed(t)
 			ctx := namespace.RootContext(nil)
 			storage := c.router.MatchingStorageByAPIPath(ctx, "identity/oidc")
 
+			// Stop the core's rollback manager so that periodic function testing
+			// doesn't race with the rollback manager.
+			c.rollback.StopTicker()
+
+			// Generate current and next keys as needed by the test. This ensures
+			// we can rotate a key when either are unset.
 			if testSet.setSigningKey {
-				if err := testSet.namedKey.generateAndSetKey(ctx, hclog.NewNullLogger(), storage); err != nil {
-					t.Fatalf("failed to set signing key")
-				}
+				require.NoError(t, testSet.namedKey.generateAndSetKey(ctx, hclog.NewNullLogger(), storage))
 			}
 			if testSet.setNextSigningKey {
-				if err := testSet.namedKey.generateAndSetNextKey(ctx, hclog.NewNullLogger(), storage); err != nil {
-					t.Fatalf("failed to set next signing key")
-				}
+				require.NoError(t, testSet.namedKey.generateAndSetNextKey(ctx, hclog.NewNullLogger(), storage))
 			}
 			testSet.namedKey.NextRotation = time.Now().Add(testSet.namedKey.RotationPeriod)
 
-			// Store namedKey
+			// Store the named key so it can be rotated by the periodic func
 			entry, _ := logical.StorageEntryJSON(namedKeyConfigPath+testSet.namedKey.name, testSet.namedKey)
-			if err := storage.Put(ctx, entry); err != nil {
-				t.Fatalf("writing to in mem storage failed")
-			}
+			require.NoError(t, storage.Put(ctx, entry))
+			t.Cleanup(func() {
+				require.NoError(t, storage.Delete(ctx, namedKeyConfigPath+testSet.namedKey.name))
+			})
 
-			currentCycle := 1
-			numCases := len(testSet.testCases)
-			lastCycle := testSet.testCases[numCases-1].cycle
-			namedKeySamples := make([]*logical.StorageEntry, numCases)
-			publicKeysSamples := make([][]string, numCases)
-
-			i := 0
-			for currentCycle <= lastCycle {
+			// Manually execute the periodic func to rotate keys and collect
+			// both the key ring and public keys.
+			namedKeySamples := make([]*logical.StorageEntry, len(testSet.testCases))
+			publicKeysSamples := make([][]string, len(testSet.testCases))
+			for i := range testSet.testCases {
 				c.identityStore.oidcPeriodicFunc(ctx)
-				if currentCycle == testSet.testCases[i].cycle {
-					namedKeyEntry, _ := storage.Get(ctx, namedKeyConfigPath+testSet.namedKey.name)
-					publicKeysEntry, _ := storage.List(ctx, publicKeysConfigPath)
-					namedKeySamples[i] = namedKeyEntry
-					publicKeysSamples[i] = publicKeysEntry
-					i = i + 1
-				}
-				currentCycle = currentCycle + 1
+				namedKeyEntry, _ := storage.Get(ctx, namedKeyConfigPath+testSet.namedKey.name)
+				publicKeysEntry, _ := storage.List(ctx, publicKeysConfigPath)
+				namedKeySamples[i] = namedKeyEntry
+				publicKeysSamples[i] = publicKeysEntry
 
 				// sleep until we are in the next cycle - where a next run will happen
 				v, _, _ := c.identityStore.oidcCache.Get(noNamespace, "nextRun")
@@ -1216,35 +1207,17 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 				}
 			}
 
-			// measure collected samples
-			for i := range testSet.testCases {
-				expectedKeyCount := testSet.testCases[i].numKeys
-				namedKeySamples[i].DecodeJSON(&testSet.namedKey)
-				actualKeyRingLen := len(testSet.namedKey.KeyRing)
-				if actualKeyRingLen != expectedKeyCount {
-					t.Errorf(
-						"For key: %s at cycle: %d expected namedKey's KeyRing to be at least of length %d but was: %d",
-						testSet.namedKey.name,
-						testSet.testCases[i].cycle,
-						expectedKeyCount,
-						actualKeyRingLen,
-					)
-				}
-				expectedPublicKeyCount := testSet.testCases[i].numPublicKeys
-				actualPubKeysLen := len(publicKeysSamples[i])
-				if actualPubKeysLen != expectedPublicKeyCount {
-					t.Errorf(
-						"For key: %s at cycle: %d expected public keys to be at least of length %d but was: %d",
-						testSet.namedKey.name,
-						testSet.testCases[i].cycle,
-						expectedPublicKeyCount,
-						actualPubKeysLen,
-					)
-				}
-			}
+			// Assert that the key lengths through each rotation match expectations
+			for i, tc := range testSet.testCases {
+				require.NoError(t, namedKeySamples[i].DecodeJSON(&testSet.namedKey))
 
-			if err := storage.Delete(ctx, namedKeyConfigPath+testSet.namedKey.name); err != nil {
-				t.Fatalf("deleting from in mem storage failed")
+				actualKeyRingLen := len(testSet.namedKey.KeyRing)
+				assert.Equal(t, tc.expectedKeyRingLen, actualKeyRingLen,
+					"Key ring length mismatch for key %q at test case index %d", testSet.namedKey.name, i)
+
+				actualPubKeysLen := len(publicKeysSamples[i])
+				assert.Equal(t, tc.expectedPublicKeyLen, actualPubKeysLen,
+					"Public key length mismatch for key %q at test case index %d", testSet.namedKey.name, i)
 			}
 		})
 	}

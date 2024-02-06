@@ -198,6 +198,8 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	b.Backend.Paths = append(b.Backend.Paths, b.statusPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogListPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogCRUDPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogPinsListPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogPinsCRUDPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsReloadPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRootReloadPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogCRUDPath())
@@ -223,6 +225,10 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	b.Backend.Paths = append(b.Backend.Paths, b.loginMFAPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.experimentPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.introspectionPaths()...)
+
+	if requestLimiterRead := b.requestLimiterReadPath(); requestLimiterRead != nil {
+		b.Backend.Paths = append(b.Backend.Paths, b.requestLimiterReadPath())
+	}
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
@@ -847,6 +853,118 @@ func (b *SystemBackend) handleRootPluginReloadUpdate(ctx context.Context, req *l
 		return logical.RespondWithStatusCode(&resp, req, http.StatusAccepted)
 	}
 	return &resp, nil
+}
+
+func (b *SystemBackend) handlePluginCatalogPinUpdate(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginType, pluginName, resp := requirePluginTypeAndName(d)
+	if resp != nil {
+		return resp, nil
+	}
+
+	pluginVersion, builtin, err := getVersion(d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+	if pluginVersion == "" {
+		return logical.ErrorResponse("missing plugin version"), nil
+	}
+	if builtin {
+		return logical.ErrorResponse("cannot pin a builtin plugin: %q", pluginVersion), nil
+	}
+
+	err = b.Core.pluginCatalog.SetPinnedVersion(ctx, &pluginutil.PinnedVersion{
+		Name:    pluginName,
+		Type:    pluginType,
+		Version: pluginVersion,
+	})
+	if err != nil {
+		if errors.Is(err, plugincatalog.ErrPluginNotFound) {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		return nil, err
+	}
+
+	return &logical.Response{}, nil
+}
+
+func (b *SystemBackend) handlePluginCatalogPinRead(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginType, pluginName, resp := requirePluginTypeAndName(d)
+	if resp != nil {
+		return resp, nil
+	}
+
+	pin, err := b.Core.pluginCatalog.GetPinnedVersion(ctx, pluginType, pluginName)
+	if errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
+		return nil, logical.CodedError(http.StatusNotFound, "no pinned version for this plugin")
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"name":    pin.Name,
+			"type":    pin.Type.String(),
+			"version": pin.Version,
+		},
+	}, nil
+}
+
+func (b *SystemBackend) handlePluginCatalogPinDelete(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginType, pluginName, resp := requirePluginTypeAndName(d)
+	if resp != nil {
+		return resp, nil
+	}
+
+	if err := b.Core.pluginCatalog.DeletePinnedVersion(ctx, pluginType, pluginName); err != nil {
+		if errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
+			return &logical.Response{}, nil
+		}
+
+		return nil, err
+	}
+
+	return &logical.Response{}, nil
+}
+
+func requirePluginTypeAndName(d *framework.FieldData) (consts.PluginType, string, *logical.Response) {
+	pluginName := d.Get("name").(string)
+	if pluginName == "" {
+		return consts.PluginTypeUnknown, "", logical.ErrorResponse("missing plugin name")
+	}
+
+	pluginTypeStr := d.Get("type").(string)
+	if pluginTypeStr == "" {
+		return consts.PluginTypeUnknown, "", logical.ErrorResponse("missing plugin type")
+	}
+	pluginType, err := consts.ParsePluginType(pluginTypeStr)
+	if err != nil {
+		return consts.PluginTypeUnknown, "", logical.ErrorResponse("invalid plugin type: %s", err)
+	}
+
+	return pluginType, pluginName, nil
+}
+
+func (b *SystemBackend) handlePluginCatalogPinList(ctx context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	pins, err := b.Core.pluginCatalog.ListPinnedVersions(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	pinnedVersions := []map[string]any{}
+	for _, pin := range pins {
+		pinnedVersions = append(pinnedVersions, map[string]any{
+			"name":    pin.Name,
+			"type":    pin.Type.String(),
+			"version": pin.Version,
+		})
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"pinned_versions": pinnedVersions,
+		},
+	}, nil
 }
 
 func (b *SystemBackend) handlePluginRuntimeCatalogUpdate(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -1609,9 +1727,20 @@ func (b *SystemBackend) handleReadMount(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse("No secret engine mount at %s", path), nil
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: b.mountInfo(ctx, entry),
-	}, nil
+	}
+	if entry.Version != "" && entry.Version != entry.RunningVersion {
+		warning := fmt.Sprintf("Plugin version is configured as %q, but running %q", entry.Version, entry.RunningVersion)
+		if pin, _ := b.Core.pluginCatalog.GetPinnedVersion(ctx, consts.PluginTypeSecrets, entry.Type); pin != nil && pin.Version == entry.RunningVersion {
+			warning += " because that version is pinned"
+		} else {
+			warning += " either due to a pinned version or because the plugin was upgraded and not yet reloaded"
+		}
+		resp.AddWarning(warning)
+	}
+
+	return resp, nil
 }
 
 // used to intercept an HTTPCodedError so it goes back to callee
@@ -5315,6 +5444,7 @@ type SealBackendStatusResponse struct {
 	Healthy        bool                `json:"healthy"`
 	UnhealthySince string              `json:"unhealthy_since,omitempty"`
 	Backends       []SealBackendStatus `json:"backends"`
+	FullyWrapped   bool                `json:"fully_wrapped"`
 }
 
 func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResponse, error) {
@@ -5440,6 +5570,13 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 		}
 		r.Healthy = true
 	}
+
+	pps, err := GetPartiallySealWrappedPaths(ctx, c.physical)
+	if err != nil {
+		return nil, fmt.Errorf("could not list partially seal wrapped values: %w", err)
+	}
+	genInfo := c.seal.GetAccess().GetSealGenerationInfo()
+	r.FullyWrapped = genInfo.IsRewrapped() && len(pps) == 0
 	return &r, nil
 }
 
@@ -6553,6 +6690,28 @@ Must already be present on the machine.`,
 	"plugin-catalog_runtime": {
 		`The Vault plugin runtime to use when running the plugin.`,
 		"",
+	},
+	"plugin-catalog-pins": {
+		"Configures pinned plugin versions from the plugin catalog",
+		`
+This path responds to the following HTTP methods.
+		GET /<type>/<name>
+			Retrieve the pinned version for the named plugin.
+
+		PUT /<type>/<name>
+			Add or update a pinned version for the named plugin. Does not trigger changes until the plugin is reloaded.
+
+		DELETE /<type>/<name>
+			Delete the pinned version for the named plugin. Does not trigger changes until the plugin is reloaded.
+		`,
+	},
+	"plugin-catalog-pins-list-all": {
+		"Lists all the pinned plugin versions known to Vault",
+		`
+This path responds to the following HTTP methods.
+		LIST /
+			Returns a list of configured pinned versions.
+		`,
 	},
 	"plugin-runtime-catalog": {
 		"Configures plugin runtimes",

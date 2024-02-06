@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/plugin"
+	"github.com/hashicorp/vault/plugins/event"
+	"github.com/hashicorp/vault/plugins/event/sqs"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/version"
@@ -97,6 +99,9 @@ const (
 	// logged at startup _per node_. This was initially introduced for the events
 	// system being developed over multiple release cycles.
 	EnvVaultExperiments = "VAULT_EXPERIMENTS"
+	// EnvVaultPluginTmpdir sets the folder to use for Unix sockets when setting
+	// up containerized plugins.
+	EnvVaultPluginTmpdir = "VAULT_PLUGIN_TMPDIR"
 
 	// flagNameAddress is the flag used in the base command to read in the
 	// address of the Vault server.
@@ -180,6 +185,10 @@ var (
 
 	credentialBackends = map[string]logical.Factory{
 		"plugin": plugin.Factory,
+	}
+
+	eventBackends = map[string]event.Factory{
+		"sqs": sqs.New,
 	}
 
 	logicalBackends = map[string]logical.Factory{
@@ -739,6 +748,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				},
 				AuditBackends:      auditBackends,
 				CredentialBackends: credentialBackends,
+				EventBackends:      eventBackends,
 				LogicalBackends:    logicalBackends,
 				PhysicalBackends:   physicalBackends,
 

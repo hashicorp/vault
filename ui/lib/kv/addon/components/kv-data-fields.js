@@ -24,18 +24,13 @@ import { stringify } from 'core/helpers/stringify';
  * @param {object} [modelValidations] - object of errors.  If attr.name is in object and has error message display in AlertInline.
  * @param {callback} [pathValidations] - callback function fired for the path input on key up
  * @param {boolean} [type=null] - can be edit, create, or details. Used to change text for some form labels
- * @param {boolean} [obscureJson=false] - used to obfuscate json values in JsonEditor
  */
 
 export default class KvDataFields extends Component {
   @tracked lintingErrors;
-  @tracked codeMirrorString;
 
-  constructor() {
-    super(...arguments);
-    this.codeMirrorString = this.args.secret?.secretData
-      ? stringify([this.args.secret.secretData], {})
-      : '{ "": "" }';
+  get stringifiedSecretData() {
+    return this.args.secret?.secretData ? stringify([this.args.secret.secretData], {}) : '{ "": "" }';
   }
 
   @action
@@ -45,6 +40,5 @@ export default class KvDataFields extends Component {
     if (!this.lintingErrors) {
       this.args.secret.secretData = JSON.parse(value);
     }
-    this.codeMirrorString = value;
   }
 }
