@@ -318,6 +318,8 @@ type ldapConfigEntry struct {
 	RotationSchedule string `json:"rotation_schedule"`
 	RotationWindow   int    `json:"rotation_window"`
 	TTL              int    `json:"ttl"`
+
+	rotationID string // used to track the rotation entry in the rotation manager for the root password
 }
 
 const pathConfigHelpSyn = `

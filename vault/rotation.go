@@ -44,13 +44,14 @@ type RotationManager struct {
 // rotationEntry is used to structure the values the expiration
 // manager stores. This is used to handle renew and revocation.
 type rotationEntry struct {
-	RotationID  string                 `json:"rotation_id"`
-	Path        string                 `json:"path"`
-	Data        map[string]interface{} `json:"data"`
-	RotationJob *logical.RotationJob   `json:"static_secret"`
-	IssueTime   time.Time              `json:"issue_time"`
-	ExpireTime  time.Time              `json:"expire_time"`
-	Namespace   *namespace.Namespace   `json:"namespace"`
+	RotationID     string                  `json:"rotation_id"`
+	Path           string                  `json:"path"`
+	Data           map[string]interface{}  `json:"data"`
+	RootCredential *logical.RotationJob    `json:"static_secret"`
+	IssueTime      time.Time               `json:"issue_time"`
+	ExpireTime     time.Time               `json:"expire_time"`
+
+	namespace *namespace.Namespace
 }
 
 func (rm *RotationManager) Start() error {
@@ -159,21 +160,42 @@ func (rm *RotationManager) Register(ctx context.Context, reqPath string, job *lo
 		return "", nil
 	}
 
-	// TODO: Check if we need to validate the root credential
+	rotationID := job.RotationID
+	var re *rotationEntry
 
-	// Create a rotation entry. We use TokenLength because that is what is used
-	// by ExpirationManager
-	rm.logger.Debug("Generating random rotation ID")
-	rotationRand, err := base62.Random(TokenLength)
-	if err != nil {
-		return "", err
-	}
+	// either create a new rotationEntry or get the existing one
+	if rotationID != "" {
+		rm.logger.Debug("rotationID detected, this is an update", "rotationID", rotationID)
+		entry, err := rm.queue.PopByKey(rotationID)
+		if err != nil {
+			rm.logger.Warn("error popping item", "rotation_id", rotationID, "err", err)
+			return "", err
+		}
+		if entry != nil {
+			// this is an update
+			re = entry.Value.(*rotationEntry)
+		}
+	} else {
+		// Create a rotation entry. We use TokenLength because that is what is used
+		// by ExpirationManager
 
-	rotationID := path.Join(reqPath, rotationRand)
+		// TODO: Check if we need to validate the root credential
 
-	ns := job.Namespace
-	if ns.ID != namespace.RootNamespaceID {
-		rotationID = fmt.Sprintf("%s.%s", rotationID, ns.ID)
+		rotationRand, err := base62.Random(TokenLength)
+		if err != nil {
+			return "", err
+		}
+		ns, err := namespace.FromContext(ctx)
+		rotationID = path.Join(reqPath, rotationRand)
+		if ns.ID != namespace.RootNamespaceID {
+			rotationID = fmt.Sprintf("%s.%s", rotationID, ns.ID)
+		}
+		re = &rotationEntry{
+			RotationID:     rotationID,
+			Path:           reqPath,
+			RotationJob:    job,
+			Namespace:      ns,
+		}
 	}
 
 	issueTime := time.Now()
@@ -185,15 +207,8 @@ func (rm *RotationManager) Register(ctx context.Context, reqPath string, job *lo
 	rm.logger.Debug("SCHEDULE", "VALUE", job.Schedule.RotationSchedule)
 	rm.logger.Debug("WINDOW", "VALUE", job.Schedule.RotationWindow)
 	rm.logger.Debug("TTL", "VALUE", job.Schedule.TTL)
-	re := &rotationEntry{
-		RotationID:  rotationID,
-		Path:        reqPath,
-		RotationJob: job,
-		IssueTime:   issueTime,
-		// expires the next time the schedule is activated from the issue time
-		ExpireTime: expireTime,
-		Namespace:  ns,
-	}
+	re.ExpireTime = expireTime
+	re.IssueTime = issueTime
 
 	// lock and populate the queue
 	// @TODO figure out why locking is leading to infinite loop
@@ -219,6 +234,7 @@ func (rm *RotationManager) Register(ctx context.Context, reqPath string, job *lo
 	}
 
 	// r.core.stateLock.Unlock()
+	rm.logger.Debug("", "rotationID", re.RotationID)
 	return re.RotationID, nil
 }
 
