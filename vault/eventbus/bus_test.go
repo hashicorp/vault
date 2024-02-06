@@ -961,20 +961,27 @@ func TestNotifyOnGlobalFilterChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(cancel2)
-	go func() {
-		bus.ApplyGlobalFilterChanges([]FilterChange{
-			{
-				Operation:         FilterChangeAdd,
-				NamespacePatterns: []string{""},
-				EventTypePattern:  "abc*",
-			},
-		})
-	}()
+	bus.ApplyGlobalFilterChanges([]FilterChange{
+		{
+			Operation:         FilterChangeAdd,
+			NamespacePatterns: []string{""},
+			EventTypePattern:  "abc*",
+		},
+	})
 
 	select {
 	case changes := <-ch:
-		assert.Len(t, changes, 2)
-		assert.Equal(t, []FilterChange{{Operation: FilterChangeClear}, {Operation: FilterChangeAdd, NamespacePatterns: []string{""}, EventTypePattern: "abc*"}}, changes)
+		if len(changes) == 2 {
+			assert.Len(t, changes, 2)
+			assert.Equal(t, []FilterChange{{Operation: FilterChangeClear}, {Operation: FilterChangeAdd, NamespacePatterns: []string{""}, EventTypePattern: "abc*"}}, changes)
+		} else {
+			// could be split into two updates
+			assert.Len(t, changes, 1)
+			assert.Equal(t, []FilterChange{{Operation: FilterChangeClear}}, changes)
+			changes := <-ch
+			assert.Len(t, changes, 1)
+			assert.Equal(t, []FilterChange{{Operation: FilterChangeAdd, NamespacePatterns: []string{""}, EventTypePattern: "abc*"}}, changes)
+		}
 	case <-time.After(100 * time.Millisecond):
 		t.Fatal("We expected to get a global filter notification")
 	}
@@ -997,20 +1004,27 @@ func TestNotifyOnLocalFilterChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(cancel2)
-	go func() {
-		bus.ApplyClusterFilterChanges("somecluster", []FilterChange{
-			{
-				Operation:         FilterChangeAdd,
-				NamespacePatterns: []string{""},
-				EventTypePattern:  "abc*",
-			},
-		})
-	}()
+	bus.ApplyClusterFilterChanges("somecluster", []FilterChange{
+		{
+			Operation:         FilterChangeAdd,
+			NamespacePatterns: []string{""},
+			EventTypePattern:  "abc*",
+		},
+	})
 
 	select {
 	case changes := <-ch:
-		assert.Len(t, changes, 2)
-		assert.Equal(t, []FilterChange{{Operation: FilterChangeClear}, {Operation: FilterChangeAdd, NamespacePatterns: []string{""}, EventTypePattern: "abc*"}}, changes)
+		if len(changes) == 2 {
+			assert.Len(t, changes, 2)
+			assert.Equal(t, []FilterChange{{Operation: FilterChangeClear}, {Operation: FilterChangeAdd, NamespacePatterns: []string{""}, EventTypePattern: "abc*"}}, changes)
+		} else {
+			// could be split into two updates
+			assert.Len(t, changes, 1)
+			assert.Equal(t, []FilterChange{{Operation: FilterChangeClear}}, changes)
+			changes := <-ch
+			assert.Len(t, changes, 1)
+			assert.Equal(t, []FilterChange{{Operation: FilterChangeAdd, NamespacePatterns: []string{""}, EventTypePattern: "abc*"}}, changes)
+		}
 	case <-time.After(100 * time.Millisecond):
 		t.Fatal("We expected to get a global filter notification")
 	}
