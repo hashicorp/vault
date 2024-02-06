@@ -91,7 +91,7 @@ export default class KvObjectEditor extends Component {
     if (this.args.allowWhiteSpace) return false;
     return new RegExp('\\s', 'g').test(name);
   };
-  isObject = (value) => {
+  parsesToNonString = (value) => {
     if (!this.args.warnNonStringValues) return false;
     try {
       JSON.parse(value);

@@ -79,7 +79,7 @@
           />
         </div>
       {{/if}}
-      {{#if (this.isObject row.value)}}
+      {{#if (this.parsesToNonString row.value)}}
         <div class="has-bottom-margin-s">
           <AlertInline
             @type="warning"
