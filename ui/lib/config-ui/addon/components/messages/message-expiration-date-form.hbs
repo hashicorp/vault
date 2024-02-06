@@ -30,7 +30,7 @@
     id="specificDate"
     value="specificDate"
     @value="specificDate"
-    @onChange={{fn (mut @message.endTime) this.formDateTime}}
+    @onChange={{this.specificDateChange}}
     @groupValue={{this.groupValue}}
   />
   <label for="specificDate" class="has-left-margin-xs has-text-black is-size-7">
@@ -43,11 +43,11 @@
     <div class="has-left-margin-xs control">
       <Input
         @type="datetime-local"
-        @value={{if this.formDateTime (date-format this.formDateTime this.datetimeLocalStringFormat) ""}}
-        class="input has-top-margin-xs is-auto-width"
+        @value={{if this.messageEndTime (date-format this.messageEndTime this.datetimeLocalStringFormat) ""}}
+        class="input has-top-margin-xs is-auto-width {{unless @isEndTimeValid 'has-error-border'}}"
         name="endTime"
         data-test-input="endTime"
-        {{on "change" (pipe (pick "target.value") (fn (mut @message.endTime)))}}
+        {{on "focusout" this.onFocusOut}}
       />
     </div>
   </label>

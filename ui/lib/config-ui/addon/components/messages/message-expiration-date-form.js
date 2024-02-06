@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { action } from '@ember/object';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
@@ -20,14 +21,27 @@ import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
 export default class MessageExpirationDateForm extends Component {
   datetimeLocalStringFormat = datetimeLocalStringFormat;
   @tracked groupValue = 'never';
-  @tracked formDateTime = '';
+  @tracked messageEndTime = '';
 
   constructor() {
     super(...arguments);
 
     if (this.args.message.endTime) {
       this.groupValue = 'specificDate';
-      this.formDateTime = this.args.message.endTime;
+      this.messageEndTime = this.args.message.endTime;
     }
+  }
+
+  @action
+  specificDateChange() {
+    this.groupValue = 'specificDate';
+    this.args.message.endTime = this.messageEndTime;
+  }
+
+  @action
+  onFocusOut(e) {
+    this.args.message.endTime = e.target.value;
+    this.messageEndTime = e.target.value;
+    this.groupValue = 'specificDate';
   }
 }

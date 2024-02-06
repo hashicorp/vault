@@ -4,7 +4,7 @@
  */
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import { isAfter, addDays, startOfDay, parseISO } from 'date-fns';
+import { isAfter, addDays, startOfDay, parseISO, isBefore } from 'date-fns';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 
@@ -20,6 +20,28 @@ const validations = {
         return title || href ? !!(title && href) : true;
       },
       message: 'Link title and url are required.',
+    },
+  ],
+  startTime: [
+    {
+      validator(model) {
+        if (!model.endTime) return true;
+        const start = new Date(model.startTime);
+        const end = new Date(model.endTime);
+        return isBefore(start, end);
+      },
+      message: 'Start time is after end time.',
+    },
+  ],
+  endTime: [
+    {
+      validator(model) {
+        if (!model.endTime) return true;
+        const start = new Date(model.startTime);
+        const end = new Date(model.endTime);
+        return isAfter(end, start);
+      },
+      message: 'End time is before start time.',
     },
   ],
 };

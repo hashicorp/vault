@@ -15,7 +15,11 @@
 
     {{#each @message.formFields as |attr|}}
       <FormField @attr={{attr}} @model={{@message}} @modelValidations={{this.modelValidations}} class="has-bottom-margin-m">
-        <Messages::MessageExpirationDateForm @message={{@message}} @attr={{attr}} />
+        <Messages::MessageExpirationDateForm
+          @message={{@message}}
+          @attr={{attr}}
+          @isEndTimeValid={{or (not this.modelValidations) this.modelValidations.endTime.isValid}}
+        />
       </FormField>
       {{#if (and (eq attr.name "message") (not @message.authenticated))}}
         <Hds::Alert class="has-top-margin-negative-m has-bottom-margin-l" @type="compact" @color="highlight" as |A|>
