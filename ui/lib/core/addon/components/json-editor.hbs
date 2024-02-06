@@ -30,7 +30,12 @@
           {{#if (and @allowObscure @readOnly)}}
             {{! For safety we only use obscured values in readonly mode }}
             <div>
-              <Toggle @name="revealValues" @checked={{this.revealValues}} @onChange={{fn (mut this.revealValues)}}>
+              <Toggle
+                @name="revealValues"
+                @checked={{this.revealValues}}
+                @size="small"
+                @onChange={{fn (mut this.revealValues)}}
+              >
                 <span class="has-text-grey">Reveal values</span>
               </Toggle>
             </div>
