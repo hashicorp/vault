@@ -2042,6 +2042,8 @@ func createMountEntryWithKey(t *testing.T, ctx context.Context, sys *SystemBacke
 	expectSuccess(t, resp, err)
 }
 
+// Test_translateTableClaim tests that we convert mount entry table
+// values to expected claim values.
 func Test_translateTableClaim(t *testing.T) {
 	tests := []struct {
 		name  string
