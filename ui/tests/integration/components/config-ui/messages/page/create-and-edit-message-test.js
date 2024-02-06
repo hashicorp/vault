@@ -25,6 +25,8 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
   });
 
   test('it should display all the create form fields and default radio button values', async function (assert) {
+    assert.expect(17);
+
     await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {
       owner: this.engine,
     });
@@ -48,6 +50,31 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
       .hasValue(format(addDays(startOfDay(new Date()), 1), datetimeLocalStringFormat));
     assert.dom(PAGE.input('endTime')).exists();
     assert.dom(PAGE.input('endTime')).hasValue('');
+  });
+
+  test('it should display validation errors for invalid form fields', async function (assert) {
+    assert.expect(8);
+    await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {
+      owner: this.engine,
+    });
+
+    await fillIn(PAGE.input('startTime'), '2024-01-20T00:00');
+    await fillIn(PAGE.input('endTime'), '2024-01-01T00:00');
+    await click(PAGE.button('create-message'));
+    assert.dom(PAGE.input('title')).hasClass('has-error-border');
+    assert.dom(`${PAGE.fieldValidation('title')} ${PAGE.inlineErrorMessage}`).hasText('Title is required.');
+    assert.dom(PAGE.input('message')).hasClass('has-error-border');
+    assert
+      .dom(`${PAGE.fieldValidation('message')} ${PAGE.inlineErrorMessage}`)
+      .hasText('Message is required.');
+    assert.dom(PAGE.input('startTime')).hasClass('has-error-border');
+    assert
+      .dom(`${PAGE.fieldValidation('startTime')} ${PAGE.inlineErrorMessage}`)
+      .hasText('Start time is after end time.');
+    assert.dom(PAGE.input('endTime')).hasClass('has-error-border');
+    assert
+      .dom(`${PAGE.fieldValidation('endTime')} ${PAGE.inlineErrorMessage}`)
+      .hasText('End time is before start time.');
   });
 
   test('it should create new message', async function (assert) {
@@ -80,19 +107,21 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
   });
 
   test('it should have form vaildations', async function (assert) {
+    assert.expect(4);
     await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {
       owner: this.engine,
     });
     await click(PAGE.button('create-message'));
     assert.dom(PAGE.input('title')).hasClass('has-error-border', 'show error border for title field');
-    assert.dom(`${PAGE.fieldVaildation('title')} ${PAGE.inlineErrorMessage}`).hasText('Title is required.');
+    assert.dom(`${PAGE.fieldValidation('title')} ${PAGE.inlineErrorMessage}`).hasText('Title is required.');
     assert.dom(PAGE.input('message')).hasClass('has-error-border', 'show error border for message field');
     assert
-      .dom(`${PAGE.fieldVaildation('message')} ${PAGE.inlineErrorMessage}`)
+      .dom(`${PAGE.fieldValidation('message')} ${PAGE.inlineErrorMessage}`)
       .hasText('Message is required.');
   });
 
   test('it should prepopulate form if form is in edit mode', async function (assert) {
+    assert.expect(13);
     this.store.pushPayload('config-ui/message', {
       modelName: 'config-ui/message',
       id: 'hhhhh-iiii-lllll-dddd',
@@ -130,6 +159,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
   });
 
   test('it should show a preview image modal when preview is clicked', async function (assert) {
+    assert.expect(6);
     await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {
       owner: this.engine,
     });
@@ -155,6 +185,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
   });
 
   test('it should show a preview modal when preview is clicked', async function (assert) {
+    assert.expect(4);
     await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {
       owner: this.engine,
     });
@@ -169,6 +200,8 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
   });
 
   test('it should show multiple modal message', async function (assert) {
+    assert.expect(2);
+
     this.store.pushPayload('config-ui/message', {
       modelName: 'config-ui/message',
       id: '01234567-89ab-cdef-0123-456789abcdef',
