@@ -972,7 +972,6 @@ func TestNotifyOnGlobalFilterChanges(t *testing.T) {
 	select {
 	case changes := <-ch:
 		if len(changes) == 2 {
-			assert.Len(t, changes, 2)
 			assert.Equal(t, []FilterChange{{Operation: FilterChangeClear}, {Operation: FilterChangeAdd, NamespacePatterns: []string{""}, EventTypePattern: "abc*"}}, changes)
 		} else {
 			// could be split into two updates
@@ -1015,7 +1014,6 @@ func TestNotifyOnLocalFilterChanges(t *testing.T) {
 	select {
 	case changes := <-ch:
 		if len(changes) == 2 {
-			assert.Len(t, changes, 2)
 			assert.Equal(t, []FilterChange{{Operation: FilterChangeClear}, {Operation: FilterChangeAdd, NamespacePatterns: []string{""}, EventTypePattern: "abc*"}}, changes)
 		} else {
 			// could be split into two updates
