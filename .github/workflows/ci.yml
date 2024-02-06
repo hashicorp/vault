@@ -275,7 +275,13 @@ jobs:
       - if: |
           always() &&
           needs.setup.outputs.workflow-trigger == 'push' &&
-          steps.status.outputs.result != 'success'
+          (
+            needs.test-go.result == 'failure' ||
+            needs.test-go-race.result == 'failure' ||
+            needs.test-go-race.outputs.data-race-result == 'failure' ||
+            needs.test-go-testonly.result == 'failure' ||
+            needs.test-ui.result == 'failure'
+          )
         name: Notify build failures in Slack
         uses: slackapi/slack-github-action@6c661ce58804a1a20f6dc5fbee7f0381b469e001 # v1.25.0
         # We intentionally aren't using the following here since it's from an internal repo
