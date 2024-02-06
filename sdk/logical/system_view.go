@@ -289,5 +289,6 @@ func (d StaticSystemView) APILockShouldBlockRequest() (bool, error) {
 }
 
 func (d StaticSystemView) RegisterRotationJob(ctx context.Context, reqPath string, job *RotationJob) (rotationID string, err error) {
-	return "", errors.New("RegisterRotationJob is not implemented in StaticSystemView")
+	return "", nil
+	// return "", errors.New("RegisterRotationJob is not implemented in StaticSystemView")
 }

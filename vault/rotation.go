@@ -96,7 +96,7 @@ func (rm *RotationManager) CheckQueue() error {
 		now := time.Now()
 		i, err := rm.queue.Pop()
 		if err != nil {
-			rm.logger.Info("automated rotation queue empty")
+			rm.logger.Info("automated rotation queue empty", "err", err)
 			return nil
 		}
 

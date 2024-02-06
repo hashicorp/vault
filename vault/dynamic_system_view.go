@@ -467,11 +467,14 @@ func (d dynamicSystemView) GenerateIdentityToken(_ context.Context, _ *pluginuti
 }
 
 func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, reqPath string, job *logical.RotationJob) (rotationID string, err error) {
+	fmt.Printf("!!!!! path: %s\n !!!!!", reqPath)
 	ns := job.Namespace
 	path := reqPath
 	if ns != namespace.RootNamespace {
 		path = ns.Path + "/" + reqPath
 	}
+
+	fmt.Printf("!!!!! path: %s\n !!!!!", path)
 
 	id, err := d.core.rotationManager.Register(namespace.ContextWithNamespace(ctx, job.Namespace), path, job)
 	if err != nil {
