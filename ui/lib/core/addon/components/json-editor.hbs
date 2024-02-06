@@ -50,7 +50,7 @@
   {{/if}}
   <div
     {{code-mirror
-      content=(or @value @example)
+      content=(if this.showObfuscatedData this.obfuscatedData (or @value @example))
       extraKeys=@extraKeys
       gutters=@gutters
       lineNumbers=(if @readOnly false true)
