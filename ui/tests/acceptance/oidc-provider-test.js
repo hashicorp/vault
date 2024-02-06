@@ -13,12 +13,15 @@ import logout from 'vault/tests/pages/logout';
 import authForm from 'vault/tests/pages/components/auth-form';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import { visit, settled, currentURL, waitFor } from '@ember/test-helpers';
+import { clearRecord } from 'vault/tests/helpers/oidc-config';
 import { runCmd } from 'vault/tests/helpers/commands';
 
 const authFormComponent = create(authForm);
 
 const OIDC_USER = 'end-user';
 const USER_PASSWORD = 'mypassword';
+const PROVIDER_NAME = `my-provider-${uuidv4()}`;
+const WEB_APP_NAME = `my-webapp-${uuidv4()}`;
 const OIDC_POLICY = `path "identity/oidc/provider/+/userinfo" {
   capabilities = ["read", "update"]
 }`;
@@ -71,7 +74,7 @@ const entityAlias = async function (entityId, accessor, groupId) {
 
 const setupProvider = async function (clientId) {
   await runCmd(
-    `write identity/oidc/provider/my-provider allowed_client_ids="${clientId}" scopes="user,groups"`
+    `write identity/oidc/provider/${PROVIDER_NAME} allowed_client_ids="${clientId}" scopes="user,groups"`
   );
 };
 
@@ -102,17 +105,17 @@ const setupOidc = async function (uid) {
   const accessor = await authAccessor(authMethodPath);
   await entityAlias(entityId, accessor, groupId);
   await runCmd([
-    `delete identity/oidc/client/my-webapp`,
-    `write identity/oidc/client/my-webapp redirect_uris="${callback}" assignments="my-assignment" key="sigkey" id_token_ttl="30m" access_token_ttl="1h"`,
+    `delete identity/oidc/client/${WEB_APP_NAME}`,
+    `write identity/oidc/client/${WEB_APP_NAME} redirect_uris="${callback}" assignments="my-assignment" key="sigkey" id_token_ttl="30m" access_token_ttl="1h"`,
     `clear`,
-    `read -field=client_id identity/oidc/client/my-webapp`,
+    `read -field=client_id identity/oidc/client/${WEB_APP_NAME}`,
   ]);
   await settled();
 
-  const clientId = await runCmd([`read -field=client_id identity/oidc/client/my-webapp`]);
+  const clientId = await runCmd([`read -field=client_id identity/oidc/client/${WEB_APP_NAME}`]);
   await setupProvider(clientId);
   return {
-    providerName: 'my-provider',
+    providerName: PROVIDER_NAME,
     callback,
     clientId,
     authMethodPath,
@@ -139,7 +142,7 @@ module('Acceptance | oidc provider', function (hooks) {
     const { providerName, callback, clientId, authMethodPath } = this.oidcSetupInformation;
     await visit('/vault/access/oidc');
     assert
-      .dom(`[data-test-oidc-client-linked-block='my-webapp']`)
+      .dom(`[data-test-oidc-client-linked-block='${WEB_APP_NAME}']`)
       .exists({ count: 1 }, 'shows webapp in oidc provider list');
     await logout.visit();
     await settled();
@@ -171,6 +174,10 @@ module('Acceptance | oidc provider', function (hooks) {
       .hasTextContaining(`click here to go back to app`, 'Shows link back to app');
     const link = document.querySelector('[data-test-oidc-redirect]').getAttribute('href');
     assert.ok(link.includes('/callback?code='), 'Redirects to correct url');
+
+    //* clean up test state
+    await clearRecord(this.store, 'oidc/client', WEB_APP_NAME);
+    await clearRecord(this.store, 'oidc/provider', PROVIDER_NAME);
   });
 
   test('OIDC Provider redirects to auth if current token and prompt = login', async function (assert) {
@@ -212,5 +219,9 @@ module('Acceptance | oidc provider', function (hooks) {
     );
     await waitFor('[data-test-consent-form]');
     assert.dom('[data-test-consent-form]').exists('Consent form exists');
+
+    //* clean up test state
+    await clearRecord(this.store, 'oidc/client', WEB_APP_NAME);
+    await clearRecord(this.store, 'oidc/provider', PROVIDER_NAME);
   });
 });
