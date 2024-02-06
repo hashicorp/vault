@@ -9,7 +9,6 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { inject as service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
-import { isAdvancedSecret } from 'core/utils/advanced-secret';
 
 /**
  * @module KvSecretEdit is used for creating a new version of a secret
@@ -32,6 +31,7 @@ export default class KvSecretEdit extends Component {
   @service controlGroup;
   @service flashMessages;
   @service router;
+  @service userPreference;
 
   @tracked showJsonView = false;
   @tracked showDiff = false;
@@ -43,10 +43,7 @@ export default class KvSecretEdit extends Component {
   constructor() {
     super(...arguments);
     this.originalSecret = JSON.stringify(this.args.secret.secretData || {});
-    if (isAdvancedSecret(this.originalSecret)) {
-      // Default to JSON view if advanced
-      this.showJsonView = true;
-    }
+    this.showJsonView = this.userPreference.calculateInitialKvJson(this.args.secret.isAdvanced);
   }
 
   get showOldVersionAlert() {
@@ -98,6 +95,12 @@ export default class KvSecretEdit extends Component {
       this.errorMessage = message;
       this.invalidFormAlert = 'There was an error submitting this form.';
     }
+  }
+
+  @action toggleAdvancedEdit() {
+    const newVal = !this.showJsonView;
+    this.showJsonView = newVal;
+    this.userPreference.setKvDisplayPreference(newVal);
   }
 
   @action

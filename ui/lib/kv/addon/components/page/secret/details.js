@@ -11,7 +11,6 @@ import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { isDeleted } from 'kv/utils/kv-deleted';
-import { isAdvancedSecret } from 'core/utils/advanced-secret';
 
 /**
  * @module KvSecretDetails renders the key/value data of a KV secret.
@@ -33,6 +32,7 @@ export default class KvSecretDetails extends Component {
   @service flashMessages;
   @service router;
   @service store;
+  @service userPreference;
 
   @tracked showJsonView = false;
   @tracked wrappedData = null;
@@ -42,10 +42,7 @@ export default class KvSecretDetails extends Component {
     super(...arguments);
     this.fetchSyncStatus.perform();
     this.originalSecret = JSON.stringify(this.args.secret.secretData || {});
-    if (isAdvancedSecret(this.originalSecret)) {
-      // Default to JSON view if advanced
-      this.showJsonView = true;
-    }
+    this.showJsonView = this.userPreference.calculateInitialKvJson(this.args.secret.isAdvanced);
   }
 
   @action
@@ -118,6 +115,12 @@ export default class KvSecretDetails extends Component {
         )}.`
       );
     }
+  }
+
+  @action toggleAdvancedEdit() {
+    const newVal = !this.showJsonView;
+    this.showJsonView = newVal;
+    this.userPreference.setKvDisplayPreference(newVal);
   }
 
   refreshRoute() {
