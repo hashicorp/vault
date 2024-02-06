@@ -91,52 +91,34 @@
               </LinkTo>
             </div>
             <div class="column has-text-right">
-              <PopupMenu name="policy-nav">
-                <nav class="menu">
-                  <ul class="menu-list">
-                    {{#if item.updatePath.isPending}}
-                      <li class="action">
-                        <LoadingDropdownOption />
-                      </li>
-                      <li class="action">
-                        <LoadingDropdownOption />
-                      </li>
-                    {{else}}
-                      {{#if item.canRead}}
-                        <li class="action">
-                          <LinkTo
-                            @route="vault.cluster.policy.show"
-                            @models={{array this.policyType item.id}}
-                            data-test-policy-link="show"
-                          >
-                            Details
-                          </LinkTo>
-                        </li>
-                      {{/if}}
-                      {{#if item.canEdit}}
-                        <li class="action">
-                          <LinkTo
-                            @route="vault.cluster.policy.edit"
-                            @models={{array this.policyType item.id}}
-                            data-test-policy-link="edit"
-                          >
-                            Edit
-                          </LinkTo>
-                        </li>
-                      {{/if}}
-                      {{#if item.canDelete}}
-                        <ConfirmAction
-                          @isInDropdown={{true}}
-                          @buttonText="Delete"
-                          @confirmTitle="Delete this policy?"
-                          @confirmMessage="This will permanently delete this policy and may affect access to some data"
-                          @onConfirmAction={{action "deletePolicy" item}}
-                        />
-                      {{/if}}
-                    {{/if}}
-                  </ul>
-                </nav>
-              </PopupMenu>
+              <Hds::Dropdown @isInline={{true}} @listPosition="bottom-left" as |dd|>
+                <dd.ToggleIcon @icon="more-horizontal" @text="Policy nav menu" @hasChevron={{false}} />
+                {{#if item.updatePath.isPending}}
+                  <dd.Generic class="has-text-center">
+                    <LoadingDropdownOption />
+                  </dd.Generic>
+                {{else}}
+                  {{#if item.canRead}}
+                    <dd.Interactive
+                      @text="Details"
+                      @route="vault.cluster.policy.show"
+                      @models={{array this.policyType item.id}}
+                      data-test-policy-link="show"
+                    />
+                  {{/if}}
+                  {{#if item.canEdit}}
+                    <dd.Interactive
+                      @text="Edit"
+                      @route="vault.cluster.policy.edit"
+                      @models={{array this.policyType item.id}}
+                      data-test-policy-link="edit"
+                    />
+                  {{/if}}
+                  {{#if (and item.canDelete (not-eq item.name "default"))}}
+                    <dd.Interactive @text="Delete" @color="critical" {{on "click" (fn (mut this.itemToDelete) item)}} />
+                  {{/if}}
+                {{/if}}
+              </Hds::Dropdown>
             </div>
           </div>
         </LinkedBlock>
@@ -180,4 +162,14 @@
   {{/if}}
 {{else}}
   <UpgradePage @title="Sentinel" @minimumEdition="Vault Enterprise Premium" />
+{{/if}}
+
+{{#if this.itemToDelete}}
+  <ConfirmModal
+    @color="critical"
+    @confirmTitle="Delete this policy?"
+    @confirmMessage="This will permanently delete this policy and may affect access to some data."
+    @onClose={{fn (mut this.itemToDelete) null}}
+    @onConfirm={{action "deletePolicy"}}
+  />
 {{/if}}
