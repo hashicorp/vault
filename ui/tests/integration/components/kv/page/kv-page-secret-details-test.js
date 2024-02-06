@@ -131,6 +131,10 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
     assert.dom(FORM.toggleJson).isChecked();
     assert.dom(FORM.toggleJson).isNotDisabled();
+    assert
+      .dom('[data-test-component="code-mirror-modifier"]')
+      .includesText(`{ "foo": { "bar": "********" }}`);
+    await click(FORM.toggleJsonValues);
     assert.dom('[data-test-component="code-mirror-modifier"]').includesText(`{ "foo": { "bar": "baz" }}`);
   });
 

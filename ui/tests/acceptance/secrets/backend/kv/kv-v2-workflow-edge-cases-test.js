@@ -302,6 +302,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await fillIn(FORM.inputByAttr('path'), 'complex_version_test');
 
     await click(FORM.toggleJson);
+    await click(FORM.toggleJsonValues);
     codemirror().setValue('{ "foo1": { "name": "bar1" } }');
     await click(FORM.saveBtn);
 
