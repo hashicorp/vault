@@ -286,7 +286,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await click(FORM.saveBtn);
 
     // Details view
-    assert.dom(FORM.toggleJson).isDisabled();
+    assert.dom(FORM.toggleJson).isNotDisabled();
     assert.dom(FORM.toggleJson).isChecked();
     assert.strictEqual(
       codemirror().getValue(),
@@ -298,7 +298,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
     // New version view
     await click(PAGE.detail.createNewVersion);
-    assert.dom(FORM.toggleJson).isDisabled();
+    assert.dom(FORM.toggleJson).isNotDisabled();
     assert.dom(FORM.toggleJson).isChecked();
     assert.false(codemirror().getValue().includes('*'), 'Values are not obscured on edit view');
   });

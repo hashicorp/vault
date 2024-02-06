@@ -39,12 +39,14 @@ export default class KvSecretEdit extends Component {
   @tracked modelValidations;
   @tracked invalidFormAlert;
   originalSecret;
-  secretDataIsAdvanced;
 
   constructor() {
     super(...arguments);
     this.originalSecret = JSON.stringify(this.args.secret.secretData || {});
-    this.secretDataIsAdvanced = isAdvancedSecret(this.originalSecret);
+    if (isAdvancedSecret(this.originalSecret)) {
+      // Default to JSON view if advanced
+      this.showJsonView = true;
+    }
   }
 
   get showOldVersionAlert() {
