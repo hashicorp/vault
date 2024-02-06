@@ -26,7 +26,7 @@ module('Integration | Component | page/userpass-reset-password', function (hooks
   });
 
   test('form works -- happy path', async function (assert) {
-    assert.expect(5);
+    assert.expect(4);
     this.server.post(`/auth/${this.backend}/users/${this.username}/password`, (schema, req) => {
       const body = JSON.parse(req.requestBody);
       assert.ok(true, 'correct endpoint called for update (once)');
