@@ -35,6 +35,8 @@ import KVObject from 'vault/lib/kv-object';
  * @param {string} [subText] - placed under label.
  * @param {string} [keyPlaceholder] - placeholder for key input
  * @param {string} [valuePlaceholder] - placeholder for value input
+ * @param {boolean} [allowWhiteSpace = false] - when true, allows whitespace in the key input
+ * @param {boolean} [warnNonStringValues = false] - when true, shows a warning if the value is a non-string
  */
 
 export default class KvObjectEditor extends Component {
@@ -90,6 +92,7 @@ export default class KvObjectEditor extends Component {
     return new RegExp('\\s', 'g').test(name);
   };
   isObject = (value) => {
+    if (!this.args.warnNonStringValues) return false;
     try {
       JSON.parse(value);
       return true;
