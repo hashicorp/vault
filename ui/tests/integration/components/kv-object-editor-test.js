@@ -110,4 +110,15 @@ module('Integration | Component | kv-object-editor', function (hooks) {
     await click('[data-test-kv-delete-row="0"]');
     assert.dom('[data-test-kv-whitespace-warning="0"]').doesNotExist();
   });
+
+  test('it should display object warning for values', async function (assert) {
+    const objValue = `{
+      "a": "b"
+    }`;
+    await render(hbs`<KvObjectEditor @onChange={{this.spy}} />`);
+    await fillIn('[data-test-kv-value="0"]', 'test ');
+    assert.dom('[data-test-kv-object-warning="0"]').doesNotExist();
+    await fillIn('[data-test-kv-value="0"]', objValue);
+    assert.dom('[data-test-kv-object-warning="0"]').exists();
+  });
 });
