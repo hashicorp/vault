@@ -115,7 +115,7 @@
                     />
                   {{/if}}
                   {{#if (and item.canDelete (not-eq item.name "default"))}}
-                    <dd.Interactive @text="Delete" @color="critical" {{on "click" (fn (mut this.itemToDelete) item)}} />
+                    <dd.Interactive @text="Delete" @color="critical" {{on "click" (fn (mut this.policyToDelete) item)}} />
                   {{/if}}
                 {{/if}}
               </Hds::Dropdown>
@@ -164,12 +164,12 @@
   <UpgradePage @title="Sentinel" @minimumEdition="Vault Enterprise Premium" />
 {{/if}}
 
-{{#if this.itemToDelete}}
+{{#if this.policyToDelete}}
   <ConfirmModal
     @color="critical"
     @confirmTitle="Delete this policy?"
     @confirmMessage="This will permanently delete this policy and may affect access to some data."
-    @onClose={{fn (mut this.itemToDelete) null}}
-    @onConfirm={{action "deletePolicy"}}
+    @onClose={{fn (mut this.policyToDelete) null}}
+    @onConfirm={{action "deletePolicy" this.policyToDelete}}
   />
 {{/if}}
