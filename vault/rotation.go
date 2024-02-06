@@ -161,25 +161,43 @@ func (rm *RotationManager) Register(ctx context.Context, req *logical.Request, r
 		return "", nil
 	}
 
-	// TODO: Check if we need to validate the root credential
+	rotationID := resp.RootCredential.RotationID
+	var re *rotationEntry
 
-	// Create a rotation entry. We use TokenLength because that is what is used
-	// by ExpirationManager
-	rm.logger.Debug("Generating random rotation ID")
-	rotationRand, err := base62.Random(TokenLength)
-	if err != nil {
-		return "", err
-	}
+	// either create a new rotationEntry or get the existing one
+	if rotationID != "" {
+		rm.logger.Debug("rotationID detected, this is an update", "rotationID", rotationID)
+		entry, err := rm.queue.PopByKey(resp.RootCredential.RotationID)
+		if err != nil {
+			rm.logger.Warn("error popping item", "rotation_id", resp.RootCredential.RotationID, "err", err)
+			return "", err
+		}
+		if entry != nil {
+			// this is an update
+			re = entry.Value.(*rotationEntry)
+		}
+	} else {
+		// Create a rotation entry. We use TokenLength because that is what is used
+		// by ExpirationManager
 
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return "", err
-	}
+		// TODO: Check if we need to validate the root credential
 
-	rotationID := path.Join(req.Path, rotationRand)
-
-	if ns.ID != namespace.RootNamespaceID {
-		rotationID = fmt.Sprintf("%s.%s", rotationID, ns.ID)
+		rotationRand, err := base62.Random(TokenLength)
+		if err != nil {
+			return "", err
+		}
+		ns, err := namespace.FromContext(ctx)
+		rotationID = path.Join(req.Path, rotationRand)
+		if ns.ID != namespace.RootNamespaceID {
+			rotationID = fmt.Sprintf("%s.%s", rotationID, ns.ID)
+		}
+		re = &rotationEntry{
+			RotationID:     rotationID,
+			Path:           req.Path,
+			Data:           resp.Data,
+			RootCredential: resp.RootCredential,
+			namespace:      ns,
+		}
 	}
 
 	issueTime := time.Now()
@@ -191,16 +209,9 @@ func (rm *RotationManager) Register(ctx context.Context, req *logical.Request, r
 	rm.logger.Debug("SCHEDULE", "VALUE", resp.RootCredential.Schedule.RotationSchedule)
 	rm.logger.Debug("WINDOW", "VALUE", resp.RootCredential.Schedule.RotationWindow)
 	rm.logger.Debug("TTL", "VALUE", resp.RootCredential.Schedule.TTL)
-	re := &rotationEntry{
-		RotationID:     rotationID,
-		Path:           req.Path,
-		Data:           resp.Data,
-		RootCredential: resp.RootCredential,
-		IssueTime:      issueTime,
-		// expires the next time the schedule is activated from the issue time
-		ExpireTime: expireTime,
-		namespace:  ns,
-	}
+
+	re.ExpireTime = expireTime
+	re.IssueTime = issueTime
 
 	// lock and populate the queue
 	// @TODO figure out why locking is leading to infinite loop
@@ -226,6 +237,7 @@ func (rm *RotationManager) Register(ctx context.Context, req *logical.Request, r
 	}
 
 	// r.core.stateLock.Unlock()
+	rm.logger.Debug("", "rotationID", re.RotationID)
 	return re.RotationID, nil
 }
 
