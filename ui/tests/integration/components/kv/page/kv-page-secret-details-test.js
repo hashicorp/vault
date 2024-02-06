@@ -117,7 +117,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
   });
 
   test('it renders json view when secret is complex', async function (assert) {
-    assert.expect(4);
+    assert.expect(5);
     await render(
       hbs`
        <Page::Secret::Details

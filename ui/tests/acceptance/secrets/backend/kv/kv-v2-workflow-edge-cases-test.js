@@ -302,7 +302,6 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await fillIn(FORM.inputByAttr('path'), 'complex_version_test');
 
     await click(FORM.toggleJson);
-    await click(FORM.toggleJsonValues);
     codemirror().setValue('{ "foo1": { "name": "bar1" } }');
     await click(FORM.saveBtn);
 
@@ -314,6 +313,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     // View the first version and make sure the secret data is correct
     await click(PAGE.detail.versionDropdown);
     await click(`${PAGE.detail.version(1)} a`);
+    await click(FORM.toggleJsonValues);
     assert.strictEqual(codemirror().getValue(), obscuredDataV1, 'Version one data is displayed');
 
     // Navigate back the second version and make sure the secret data is correct
