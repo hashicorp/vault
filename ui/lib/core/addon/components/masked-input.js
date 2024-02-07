@@ -71,4 +71,11 @@ export default class MaskedInputComponent extends Component {
   @action toggleStringifyDownload(event) {
     this.stringifyDownload = event.target.checked;
   }
+
+  get copyValue() {
+    // Value must be a string to be copied
+    if (typeof this.args.value === 'string') return this.args.value;
+    if (typeof this.args.value === 'object') return JSON.stringify(this.args.value);
+    return this.args.value.toString();
+  }
 }
