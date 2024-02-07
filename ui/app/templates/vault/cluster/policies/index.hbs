@@ -92,7 +92,12 @@
             </div>
             <div class="column has-text-right">
               <Hds::Dropdown @isInline={{true}} as |dd|>
-                <dd.ToggleIcon @icon="more-horizontal" @text="Policy nav menu" @hasChevron={{false}} />
+                <dd.ToggleIcon
+                  @icon="more-horizontal"
+                  @text="Policy nav menu"
+                  @hasChevron={{false}}
+                  data-test-popup-menu-trigger
+                />
                 {{#if item.updatePath.isPending}}
                   <dd.Generic class="has-text-center">
                     <LoadingDropdownOption />
