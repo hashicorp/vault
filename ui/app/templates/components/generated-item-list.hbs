@@ -96,25 +96,23 @@
           />
         </Hds::Dropdown>
       </Item.menu>
-      {{! Modal inside <ListItem> because we need access to Item.callMethod }}
-      {{#if this.itemToDelete}}
-        <ConfirmModal
-          @color="critical"
-          @confirmTitle="Delete {{singularize this.itemType}}?"
-          @confirmMessage="Are you sure you want to delete {{singularize this.itemType}} {{this.itemToDelete.id}}?"
-          @onClose={{fn (mut this.itemToDelete) null}}
-          @onConfirm={{action
-            (perform
-              Item.callMethod
-              "destroyRecord"
-              this.itemToDelete
-              (concat "Successfully deleted " (singularize this.itemType) " " this.itemToDelete.id ".")
-              (concat "There was an error deleting this " (singularize this.itemType))
-              (action "refreshItemList")
-            )
-          }}
-        />
-      {{/if}}
     </ListItem>
   {{/if}}
 </ListView>
+
+{{#if this.itemToDelete}}
+  <ConfirmModal
+    @color="critical"
+    @confirmTitle="Delete {{singularize this.itemType}}?"
+    @confirmMessage="Are you sure you want to delete {{singularize this.itemType}} {{this.itemToDelete.id}}?"
+    @onClose={{fn (mut this.itemToDelete) null}}
+    @onConfirm={{perform
+      this.taskMethod
+      "destroyRecord"
+      this.itemToDelete
+      (concat "Successfully deleted " (singularize this.itemType) " " this.itemToDelete.id ".")
+      (concat "There was an error deleting this " (singularize this.itemType))
+      (action "refreshItemList")
+    }}
+  />
+{{/if}}
