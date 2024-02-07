@@ -136,10 +136,10 @@ jobs:
     name: Test UI
     # Run the UI tests if our UI has changed, or a 'ui' label is present, or our workflow trigger
     # was triggered by a merge to main or releases/*.
-    if: |
-      needs.setup.outputs.ui-changed == 'true' ||
-      needs.setup.outputs.workflow-trigger == 'push' ||
-      contains(github.event.pull_request.labels.*.name, 'ui')
+#     if: |
+#       needs.setup.outputs.ui-changed == 'true' ||
+#       needs.setup.outputs.workflow-trigger == 'push' ||
+#       contains(github.event.pull_request.labels.*.name, 'ui')
     needs: setup
     permissions:
       id-token: write
@@ -223,12 +223,15 @@ jobs:
       - test-ui
     if: always()
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
+    permissions: write-all # Ensure we have id-token:write access for vault-auth.
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       # Determine the overall status of our required test jobs.
       - name: Determine status
         id: status
         run: |
+          gh_needs='${{ toJSON(needs.*) }}'
+          echo $gh_needs
           # Decode our test results and filter out unrequired jobs. Reformat the JSON
           # body that we get from Github into a more useful shape.
           if results=$(jq -er 'del(.["test-go-fips"], .["test-go-race"]) as $required
