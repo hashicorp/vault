@@ -100,6 +100,7 @@ func (b *databaseBackend) pathConnectionReset() framework.OperationFunc {
 			return nil, err
 		}
 
+		b.dbEvent(ctx, "reset", req.Path, name, false)
 		return nil, nil
 	}
 }
@@ -196,7 +197,7 @@ func (b *databaseBackend) reloadPlugin() framework.OperationFunc {
 		if len(reloaded) == 0 {
 			resp.AddWarning(fmt.Sprintf("no connections were found with plugin_name %q", pluginName))
 		}
-
+		b.dbEvent(ctx, "reload", req.Path, "", true, "plugin_name", pluginName)
 		return resp, nil
 	}
 }
@@ -413,6 +414,7 @@ func (b *databaseBackend) connectionDeleteHandler() framework.OperationFunc {
 			return nil, err
 		}
 
+		b.dbEvent(ctx, "config-delete", req.Path, name, true)
 		return nil, nil
 	}
 }
@@ -559,6 +561,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 				"Vault (or the sdk if using a custom plugin) to gain password policy support", config.PluginName))
 		}
 
+		b.dbEvent(ctx, "config-write", req.Path, name, true)
 		if len(resp.Warnings) == 0 {
 			return nil, nil
 		}

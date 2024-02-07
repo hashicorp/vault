@@ -57,4 +57,41 @@ module('Acceptance | enterprise | sync | destination', function (hooks) {
     await click(ts.confirmButton);
     assert.dom(ts.destinations.deleteBanner).exists('Delete banner renders');
   });
+
+  test('it should not save placeholder values for credentials and only save when there are changes', async function (assert) {
+    assert.expect(2);
+
+    const handler = this.server.patch(
+      '/sys/sync/destinations/vercel-project/destination-vercel',
+      (schema, req) => {
+        assert.deepEqual(
+          JSON.parse(req.requestBody),
+          { access_token: 'foobar' },
+          'Updated access token sent in patch request'
+        );
+        const { deployment_environments, project_id, team_id, name, type, secret_name_template } =
+          this.server.create('sync-destination', 'vercel-project');
+        return {
+          data: {
+            connection_details: { access_token: '*****', deployment_environments, project_id, team_id },
+            name,
+            options: { custom_tags: {}, secret_name_template },
+            type,
+          },
+        };
+      }
+    );
+
+    await visit('vault/sync/secrets/destinations/vercel-project/destination-vercel/edit');
+    await click(ts.enableField('accessToken'));
+    await fillIn(ts.inputByAttr('accessToken'), 'foobar');
+    await click(ts.saveButton);
+    await click(ts.toolbar('Edit destination'));
+    await click(ts.saveButton);
+    assert.strictEqual(
+      handler.numberOfCalls,
+      1,
+      'Model is not dirty after server returns masked value for credentials and save request is not made when there are no changes'
+    );
+  });
 });
