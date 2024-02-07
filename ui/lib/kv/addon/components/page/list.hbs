@@ -101,7 +101,7 @@
                     <dd.Interactive
                       @text="Permanently delete"
                       @color="critical"
-                      {{on "click" (fn (mut this.deleteSecretModal) metadata)}}
+                      {{on "click" (fn (mut this.metadataToDelete) metadata)}}
                       data-test-popup-metadata-delete
                     />
                   {{/if}}
@@ -112,11 +112,11 @@
         </div>
       </LinkedBlock>
     {{/each}}
-    {{#if this.deleteSecretModal}}
+    {{#if this.metadataToDelete}}
       <ConfirmModal
         @color="critical"
-        @onClose={{fn (mut this.deleteSecretModal) null}}
-        @onConfirm={{fn this.onDelete this.deleteSecretModal}}
+        @onClose={{fn (mut this.metadataToDelete) null}}
+        @onConfirm={{fn this.onDelete this.metadataToDelete}}
         @confirmMessage="This will permanently delete this secret and all its versions."
       />
     {{/if}}
