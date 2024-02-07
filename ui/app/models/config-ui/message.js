@@ -26,8 +26,8 @@ const validations = {
     {
       validator(model) {
         if (!model.endTime) return true;
-        const start = new Date(model.startTime);
-        const end = new Date(model.endTime);
+        const start = model.startTime;
+        const end = model.endTime;
         return isBefore(start, end);
       },
       message: 'Start time is after end time.',
@@ -37,8 +37,8 @@ const validations = {
     {
       validator(model) {
         if (!model.endTime) return true;
-        const start = new Date(model.startTime);
-        const end = new Date(model.endTime);
+        const start = model.startTime;
+        const end = model.endTime;
         return isAfter(end, start);
       },
       message: 'End time is before start time.',
