@@ -40,7 +40,11 @@
           <dd.Interactive @text="Edit Role" @route="vault.cluster.secrets.backend.edit" @model={{concat "role/" @item.id}} />
         {{/if}}
         {{#if @item.canReset}}
-          <dd.Interactive @text="Reset connection" {{on "click" (fn this.resetConnection @item.id)}} />
+          <dd.Interactive
+            @text="Reset connection"
+            @icon={{if (eq this.actionRunning "reset") "loading"}}
+            {{on "click" (fn this.resetConnection @item.id)}}
+          />
         {{/if}}
         {{#if (and (eq @item.type "dynamic") @item.canGenerateCredentials)}}
           <dd.Interactive
@@ -58,10 +62,18 @@
           />
         {{/if}}
         {{#if (and @item.canRotateRoleCredentials (eq this.keyTypeValue "static"))}}
-          <dd.Interactive @text="Rotate credentials" {{on "click" (fn this.rotateRoleCred @item.id)}} />
+          <dd.Interactive
+            @text="Rotate credentials"
+            @icon={{if (eq this.actionRunning "rotateRole") "loading"}}
+            {{on "click" (fn this.rotateRoleCred @item.id)}}
+          />
         {{/if}}
         {{#if @item.canRotateRoot}}
-          <dd.Interactive @text="Rotate root credentials" {{on "click" (fn this.rotateRootCred @item.id)}} />
+          <dd.Interactive
+            @text="Rotate root credentials"
+            @icon={{if (eq this.actionRunning "rotateRoot") "loading"}}
+            {{on "click" (fn this.rotateRootCred @item.id)}}
+          />
         {{/if}}
       </Hds::Dropdown>
     </div>
