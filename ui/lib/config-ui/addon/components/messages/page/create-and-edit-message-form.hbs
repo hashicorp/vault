@@ -10,7 +10,7 @@
 
 <form id="message-create-edit-form" {{on "submit" (perform this.save)}} data-test-form="create-and-edit">
   <div class="box is-sideless is-fullwidth is-marginless">
-    <NamespaceReminder @mode="create" @noun="message" />
+    <NamespaceReminder @mode={{if @message.isNew "create" "edit"}} @noun="message" />
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
 
     {{#each @message.formFields as |attr|}}
@@ -18,8 +18,7 @@
         <Messages::MessageExpirationDateForm
           @message={{@message}}
           @attr={{attr}}
-          @onUpdateEndTime={{this.onUpdateEndTime}}
-          @isEndTimeValid={{or (not this.modelValidations) this.modelValidations.endTime.isValid}}
+          @modelValidations={{this.modelValidations}}
         />
       </FormField>
       {{#if (and (eq attr.name "message") (not @message.authenticated))}}

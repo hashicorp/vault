@@ -32,21 +32,22 @@ export default class MessageExpirationDateForm extends Component {
     }
   }
 
+  get validationError() {
+    const validations = this.args.modelValidations || {};
+    const state = validations[this.args.attr.name];
+    return state && !state.isValid ? state.errors.join(' ') : null;
+  }
+
   @action
   specificDateChange() {
     this.groupValue = 'specificDate';
-    this.updateEndTime();
+    this.args.message.endTime = this.messageEndTime;
   }
 
   @action
   onFocusOut(e) {
     this.messageEndTime = e.target.value;
-    this.updateEndTime();
+    this.args.message.endTime = this.messageEndTime;
     this.groupValue = 'specificDate';
-  }
-
-  @action
-  updateEndTime() {
-    this.args.onUpdateEndTime(this.messageEndTime);
   }
 }

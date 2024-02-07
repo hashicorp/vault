@@ -4,14 +4,9 @@
  */
 
 import Controller from '@ember/controller';
-import { action } from '@ember/object';
+
 export default class MessagesCreateController extends Controller {
   queryParams = ['authenticated'];
 
   authenticated = true;
-
-  @action
-  onUpdateEndTime(endTime) {
-    this.model.message.endTime = endTime;
-  }
 }

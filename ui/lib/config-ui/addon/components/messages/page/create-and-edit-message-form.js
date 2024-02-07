@@ -120,9 +120,4 @@ export default class MessagesList extends Component {
       this.router.transitionTo('vault.cluster.config-ui.messages.message.details', this.args.message.id);
     }
   }
-
-  @action
-  onUpdateEndTime(endTime) {
-    this.args.onUpdateEndTime(endTime);
-  }
 }
