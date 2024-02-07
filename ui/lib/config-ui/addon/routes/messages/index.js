@@ -52,4 +52,10 @@ export default class MessagesRoute extends Route {
     const label = controller.authenticated ? 'After User Logs In' : 'On Login Page';
     controller.breadcrumbs = [{ label: 'Messages' }, { label }];
   }
+
+  resetController(controller, isExiting) {
+    if (isExiting) {
+      controller.set('pageFilter', null);
+    }
+  }
 }
