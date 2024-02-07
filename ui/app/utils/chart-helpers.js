@@ -7,29 +7,24 @@ import { format } from 'd3-format';
 import { mean } from 'd3-array';
 
 // COLOR THEME:
-export const LIGHT_AND_DARK_BLUE = ['#BFD4FF', '#1563FF'];
+export const BLUE_PALETTE = ['#cce3fe', '#0c56e9', '#1c345f']; // blues from https://helios.hashicorp.design/foundations/colors?tab=palette#core-palette
 export const UPGRADE_WARNING = '#FDEEBA';
-export const BAR_COLOR_HOVER = ['#1563FF', '#0F4FD1'];
 export const GREY = '#EBEEF2';
 
 // TRANSLATIONS:
 export const TRANSLATE = { left: -11 };
 export const SVG_DIMENSIONS = { height: 190, width: 500 };
 
+export const BAR_WIDTH = 7; // data bar width is 7 pixels
+
 // Reference for tickFormat https://www.youtube.com/watch?v=c3MCROTNN8g
 export function formatNumbers(number) {
   if (number < 1000) return number;
+  if (number < 1100) return format('.1s')(number);
+  if (number < 2000) return format('.2s')(number); // between 1k and 2k, show 2 decimals
   if (number < 10000) return format('.1s')(number);
   // replace SI prefix of 'G' for billions to 'B'
   return format('.2s')(number).replace('G', 'B');
-}
-
-export function formatTooltipNumber(value) {
-  if (typeof value !== 'number') {
-    return value;
-  }
-  // formats a number according to the locale
-  return new Intl.NumberFormat().format(value);
 }
 
 export function calculateAverage(dataset, objectKey) {
@@ -42,4 +37,11 @@ export function calculateAverage(dataset, objectKey) {
   const integers = dataset.map((d) => (d[objectKey] ? d[objectKey] : 0));
   const checkIntegers = integers.every((n) => Number.isInteger(n)); // decimals will be false
   return checkIntegers ? Math.round(mean(integers)) : null;
+}
+
+export function calculateSum(integerArray) {
+  if (!Array.isArray(integerArray) || integerArray.some((n) => typeof n !== 'number')) {
+    return null;
+  }
+  return integerArray.reduce((a, b) => a + b, 0);
 }

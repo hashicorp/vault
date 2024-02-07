@@ -89,6 +89,8 @@ func (c *Core) createSecondaries(_ hclog.Logger)    {}
 
 func (c *Core) addExtraLogicalBackends(_ string) {}
 
+func (c *Core) addExtraEventBackends() {}
+
 func (c *Core) addExtraCredentialBackends() {}
 
 func preUnsealInternal(context.Context, *Core) error { return nil }

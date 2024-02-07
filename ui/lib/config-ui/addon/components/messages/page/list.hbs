@@ -13,9 +13,9 @@
       <FilterInput
         aria-label="Search by message title"
         placeholder="Search by message title"
+        id="message-filter"
         value={{@pageFilter}}
         @autofocus={{true}}
-        @wait={{200}}
         @onInput={{this.onFilterChange}}
       />
     {{/if}}
@@ -36,7 +36,7 @@
 {{#if @messages.length}}
   {{#each this.formattedMessages as |message|}}
     <LinkedBlock
-      data-test-list-item={{message.id}}
+      data-test-list-item={{message.title}}
       class="list-item-row"
       @params={{array "messages.message.details" message.id}}
       @linkPrefix="vault.cluster.config-ui"
@@ -100,17 +100,7 @@
   <EmptyState
     @title="No messages yet"
     @message="Add a custom message for all users after they log into Vault. Create message to get started."
-  >
-    <Hds::Link::Standalone
-      @icon="plus"
-      @iconPosition="leading"
-      @text="Create message"
-      @route="messages.create"
-      @query={{hash authenticated=@authenticated}}
-      class="is-no-underline"
-      data-test-action-text="Create message"
-    />
-  </EmptyState>
+  />
 {{/if}}
 
 {{#if this.showMaxMessageModal}}

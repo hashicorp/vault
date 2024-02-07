@@ -50,22 +50,19 @@
     {{/each}}
   </:list>
   <:empty>
-    <EmptyState @title="No roles yet">
-      <div>
-        <p>When created, roles will be listed here. Create a role to start generating certificates.</p>
-        <div class="has-top-margin-m">
-          <LinkTo @route="roles.create">
-            Create role
-          </LinkTo>
-        </div>
-      </div>
-    </EmptyState>
+    <EmptyState
+      @title="No roles yet"
+      @message="When created, roles will be listed here. Create a role to start generating certificates."
+    />
   </:empty>
   <:configure>
     <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
-      <LinkTo @route="configuration.create">
-        Configure PKI
-      </LinkTo>
+      <Hds::Link::Standalone
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        @text="Configure PKI"
+        @route="configuration.create"
+      />
     </EmptyState>
   </:configure>
 </PkiPaginatedList>

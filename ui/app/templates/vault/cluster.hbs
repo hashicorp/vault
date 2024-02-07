@@ -13,9 +13,11 @@
       as |A|
     >
       <A.Title data-test-custom-alert-title={{bannerMessage.id}}>{{bannerMessage.title}}</A.Title>
-      <A.Description data-test-custom-alert-description={{bannerMessage.id}}>
-        {{bannerMessage.message}}
-      </A.Description>
+      {{#each (new-line-split bannerMessage.message) as |msg|}}
+        <A.Description data-test-custom-alert-description={{bannerMessage.id}}>
+          {{msg}}
+        </A.Description>
+      {{/each}}
       {{#unless (is-empty-value bannerMessage.link)}}
         {{#each-in bannerMessage.link as |title href|}}
           <A.Link::Standalone
@@ -38,13 +40,22 @@
       {{modalMessage.title}}
     </M.Header>
     <M.Body data-test-modal-body={{modalMessage.id}}>
-      {{modalMessage.message}}
+      {{#each (new-line-split modalMessage.message) as |msg|}}
+        {{#if (eq msg "")}}
+          <br />
+        {{else}}
+          <div>
+            {{msg}}
+          </div>
+        {{/if}}
+      {{/each}}
       {{#unless (is-empty-value modalMessage.link)}}
         {{#each-in modalMessage.link as |title href|}}
           <Hds::Link::Inline @icon="external-link" @isHrefExternal={{true}} @href={{href}}>{{title}}</Hds::Link::Inline>
         {{/each-in}}
       {{/unless}}
     </M.Body>
+
     <M.Footer as |F|>
       <Hds::Button @text="Confirm" {{on "click" F.close}} data-test-modal-button={{modalMessage.id}} />
     </M.Footer>
