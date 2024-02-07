@@ -62,7 +62,12 @@
               />
             {{/if}}
             {{#if @item.canDelete}}
-              <dd.Interactive @text="Delete" @color="critical" {{on "click" (fn (mut this.showConfirmModal) true)}} />
+              <dd.Interactive
+                @text="Delete"
+                @color="critical"
+                data-test-confirm-action-trigger
+                {{on "click" (fn (mut this.showConfirmModal) true)}}
+              />
             {{/if}}
           {{/if}}
         {{/if}}
