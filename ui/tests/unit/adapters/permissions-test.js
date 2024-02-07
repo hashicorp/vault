@@ -15,7 +15,7 @@ module('Unit | Adapter | permissions', function (hooks) {
     assert.expect(1);
     const adapter = this.owner.lookup('adapter:permissions');
     const nsService = this.owner.lookup('service:namespace');
-    nsService.path = 'admin/foo';
+    nsService.setNamespace('admin/foo');
     nsService.reopen({
       userRootNamespace: 'admin/bar',
     });
