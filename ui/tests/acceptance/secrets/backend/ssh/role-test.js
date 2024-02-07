@@ -15,6 +15,9 @@ import listPage from 'vault/tests/pages/secrets/backend/list';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import authPage from 'vault/tests/pages/auth';
 
+const SELECTORS = {
+  popupMenu: '[data-test-role-menu]',
+};
 module('Acceptance | secrets/ssh', function (hooks) {
   setupApplicationTest(hooks);
 
@@ -59,7 +62,7 @@ module('Acceptance | secrets/ssh', function (hooks) {
     assert.strictEqual(listPage.secrets.length, 1, 'shows role in the list');
     const secret = listPage.secrets.objectAt(0);
     await secret.menuToggle();
-    assert.ok(listPage.menuItems.length > 0, 'shows links in the menu');
+    assert.dom(`${SELECTORS.popupMenu} li`).exists({ count: 5 }, 'Renders 5 popup menu items');
   });
 
   test('it deletes a role', async function (assert) {
