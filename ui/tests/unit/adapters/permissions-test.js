@@ -5,28 +5,33 @@
 
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 module('Unit | Adapter | permissions', function (hooks) {
   setupTest(hooks);
+  setupMirage(hooks);
 
-  test('it correctly calculates namespace access', function (assert) {
-    assert.expect(7);
+  test('it calls resultant-acl with the users root namespace', async function (assert) {
+    assert.expect(1);
     const adapter = this.owner.lookup('adapter:permissions');
-    const combinations = [
-      { rootNs: 'ns1', currentNs: 'ns1', expected: true },
-      { rootNs: 'ns2', currentNs: 'ns1', expected: false },
-      { rootNs: '', currentNs: '', expected: true },
-      { rootNs: '', currentNs: 'ns1', expected: true },
-      { rootNs: 'ns1', currentNs: '', expected: false },
-      { rootNs: 'ns1', currentNs: 'ns1/ns2', expected: true },
-      { rootNs: 'ns1/ns2', currentNs: 'ns1/ns3', expected: false },
-    ];
-    combinations.forEach((c) => {
-      assert.strictEqual(
-        adapter.allowNsAccess(c.rootNs, c.currentNs),
-        c.expected,
-        `accessing ${c.currentNs} from ${c.rootNs} should be ${c.expected ? 'allowed' : 'denied'}`
-      );
+    const nsService = this.owner.lookup('service:namespace');
+    nsService.path = 'admin/foo';
+    nsService.reopen({
+      userRootNamespace: 'admin/bar',
     });
+    this.server.get('/sys/internal/ui/resultant-acl', (schema, request) => {
+      assert.strictEqual(
+        request.requestHeaders['X-Vault-Namespace'],
+        'admin/bar',
+        'Namespace is users root not current path'
+      );
+      return {
+        data: {
+          exact_paths: {},
+          glob_paths: {},
+        },
+      };
+    });
+    await adapter.query();
   });
 });
