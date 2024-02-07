@@ -10,6 +10,9 @@ import ListController from 'core/mixins/list-controller';
 export default Controller.extend(ListController, {
   flashMessages: service(),
 
+  entityToDisable: null,
+  itemToDelete: null,
+
   // callback from HDS pagination to set the queryParams page
   get paginationQueryParams() {
     return (page) => {
@@ -33,6 +36,9 @@ export default Controller.extend(ListController, {
           this.flashMessages.success(
             `There was a problem deleting ${type}: ${id} - ${e.errors.join(' ') || e.message}`
           );
+        })
+        .finally(() => {
+          this.set('itemToDelete', null);
         });
     },
 
@@ -51,7 +57,8 @@ export default Controller.extend(ListController, {
           this.flashMessages.success(
             `There was a problem ${action[1]} ${type}: ${id} - ${e.errors.join(' ') || e.message}`
           );
-        });
+        })
+        .finally(() => this.set('entityToDisable', null));
     },
     reloadRecord(model) {
       model.reload();
