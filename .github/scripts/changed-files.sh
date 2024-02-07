@@ -34,7 +34,7 @@ if ! files="$(git diff "${base_commit}...${head_commit}" --name-only)"; then
   exit 1
 fi
 
-for file in $(awk -F "/" '{ print $2}' <<< "$files" | uniq); do
+for file in $(awk -F "/" '{ print $1}' <<< "$files" | uniq); do
   if [[ "$file" =~ "changelog" ]]; then
     continue
   fi
