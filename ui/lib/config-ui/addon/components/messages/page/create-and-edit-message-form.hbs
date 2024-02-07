@@ -23,7 +23,8 @@
       </FormField>
       {{#if (and (eq attr.name "message") (not @message.authenticated))}}
         <Hds::Alert class="has-top-margin-negative-m has-bottom-margin-l" @type="compact" @color="highlight" as |A|>
-          <A.Description>Note: Do not include sensitive info in this message since users are unauthenticated at this stage.</A.Description>
+          <A.Description data-test-unauth-info>Note: Do not include sensitive info in this message since users are
+            unauthenticated at this stage.</A.Description>
         </Hds::Alert>
       {{/if}}
     {{/each}}
@@ -33,8 +34,7 @@
         @text="Preview"
         @color="tertiary"
         @icon="eye"
-        disabled={{and (not @message.title @message.message)}}
-        {{on "click" (fn (mut this.showMessagePreviewModal) true)}}
+        {{on "click" this.displayPreviewModal}}
         data-test-button="preview"
       />
 
@@ -49,7 +49,7 @@
       @size="large"
       @color="warning"
       @onClose={{fn (mut this.showMultipleModalsMessage) false}}
-      data-test-modal="preview modal"
+      data-test-modal="multiple modal messages"
       as |M|
     >
       <M.Header data-test-modal-title="Warning: more than one modal">
@@ -95,7 +95,15 @@
         {{@message.title}}
       </M.Header>
       <M.Body data-test-modal-body={{@message.title}}>
-        {{@message.message}}
+        {{#each (new-line-split @message.message) as |msg|}}
+          {{#if (eq msg "")}}
+            <br />
+          {{else}}
+            <div>
+              {{msg}}
+            </div>
+          {{/if}}
+        {{/each}}
         {{#unless (is-empty-value @message.link)}}
           {{#each-in @message.link as |title href|}}
             <Hds::Link::Inline @icon="external-link" @isHrefExternal={{true}} @href={{href}}>{{title}}</Hds::Link::Inline>

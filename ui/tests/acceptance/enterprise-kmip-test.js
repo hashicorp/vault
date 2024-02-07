@@ -6,9 +6,7 @@
 import { currentURL, currentRouteName, settled, fillIn, waitUntil, find } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { create } from 'ember-cli-page-object';
 
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import authPage from 'vault/tests/pages/auth';
 import scopesPage from 'vault/tests/pages/secrets/backend/kmip/scopes';
 import rolesPage from 'vault/tests/pages/secrets/backend/kmip/roles';
@@ -16,8 +14,7 @@ import credentialsPage from 'vault/tests/pages/secrets/backend/kmip/credentials'
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
-
-const uiConsole = create(consoleClass);
+import { runCmd } from 'vault/tests/helpers/commands';
 
 const getRandomPort = () => {
   let a = Math.floor(100000 + Math.random() * 900000);
@@ -33,9 +30,8 @@ const mount = async (shouldConfig = true) => {
   const commands = shouldConfig
     ? [`write sys/mounts/${path} type=kmip`, `write ${path}/config listen_addrs=${addr}`]
     : [`write sys/mounts/${path} type=kmip`];
-  await uiConsole.runCommands(commands);
+  const res = await runCmd(commands);
   await settled();
-  const res = uiConsole.lastLogOutput;
   if (res.includes('Error')) {
     throw new Error(`Error mounting secrets engine: ${res}`);
   }
@@ -47,9 +43,8 @@ const createScope = async () => {
   await settled();
   const scope = `scope-${Date.now()}`;
   await settled();
-  await uiConsole.runCommands([`write ${path}/scope/${scope} -force`]);
+  const res = await runCmd([`write ${path}/scope/${scope} -force`]);
   await settled();
-  const res = uiConsole.lastLogOutput;
   if (res.includes('Error')) {
     throw new Error(`Error creating scope: ${res}`);
   }
@@ -60,9 +55,8 @@ const createRole = async () => {
   const { path, scope } = await createScope();
   await settled();
   const role = `role-${Date.now()}`;
-  await uiConsole.runCommands([`write ${path}/scope/${scope}/role/${role} operation_all=true`]);
+  const res = await runCmd([`write ${path}/scope/${scope}/role/${role} operation_all=true`]);
   await settled();
-  const res = uiConsole.lastLogOutput;
   if (res.includes('Error')) {
     throw new Error(`Error creating role: ${res}`);
   }
@@ -72,10 +66,10 @@ const createRole = async () => {
 const generateCreds = async () => {
   const { path, scope, role } = await createRole();
   await settled();
-  await uiConsole.runCommands([
+  const serial = await runCmd([
     `write ${path}/scope/${scope}/role/${role}/credential/generate format=pem -field=serial_number`,
   ]);
-  const serial = uiConsole.lastLogOutput;
+  await settled();
   if (serial.includes('Error')) {
     throw new Error(`Credential generation failed with error: ${serial}`);
   }
@@ -94,7 +88,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     const engine = allEngines().find((e) => e.type === 'kmip');
     assert.expect(1);
 
-    await uiConsole.runCommands([
+    await runCmd([
       // delete any previous mount with same name
       `delete sys/mounts/${engine.type}`,
     ]);
@@ -106,7 +100,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       `vault.cluster.secrets.backend.${engine.engineRoute}`,
       `Transitions to ${engine.displayName} route on mount success`
     );
-    await uiConsole.runCommands([
+    await runCmd([
       // cleanup after
       `delete sys/mounts/${engine.type}`,
     ]);
@@ -221,9 +215,8 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     const scope = `scope-for-can-create-role`;
     await settled();
-    await uiConsole.runCommands([`write ${path}/scope/${scope} -force`]);
+    const res = await runCmd([`write ${path}/scope/${scope} -force`]);
     await settled();
-    const res = uiConsole.lastLogOutput;
     if (res.includes('Error')) {
       throw new Error(`Error creating scope: ${res}`);
     }
