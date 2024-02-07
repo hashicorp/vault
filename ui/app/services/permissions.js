@@ -67,6 +67,21 @@ const API_PATHS_TO_ROUTE_PARAMS = {
   It fetches a users' policy from the resultant-acl endpoint and stores their
   allowed exact and glob paths as state. It also has methods for checking whether
   a user has permission for a given path.
+  The data from the resultant-acl endpoint has the following shape:
+  {
+    exact_paths: {
+      [key: string]: {
+        capabilities: string[];
+      };
+    };
+    glob_paths: {
+      [key: string]: {
+        capabilities: string[];
+      };
+    };
+    root: boolean;
+    chroot_namespace?: string;
+  };
 */
 
 export default class PermissionsService extends Service {
