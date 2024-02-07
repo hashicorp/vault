@@ -91,7 +91,7 @@ type Vault struct {
 	ClientKey             string      `hcl:"client_key"`
 	TLSServerName         string      `hcl:"tls_server_name"`
 	Retry                 *Retry      `hcl:"retry"`
-	LeaseRenewalThreshold float64     `hcl:"lease_renewal_threshold"`
+	LeaseRenewalThreshold *float64     `hcl:"lease_renewal_threshold"`
 }
 
 // transportDialer is an interface that allows passing a custom dialer function
