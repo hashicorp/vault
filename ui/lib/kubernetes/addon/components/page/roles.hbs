@@ -37,7 +37,7 @@
           <span data-test-role={{role.name}}>{{role.name}}</span>
         </Item.content>
         <Item.menu>
-          <Hds::Dropdown @isInline={{true}} as |dd|>
+          <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
             <dd.ToggleIcon
               @icon="more-horizontal"
               @text="Roles popup menu"

@@ -29,7 +29,7 @@
           </div>
           <div class="column has-text-right">
             {{#if (or (eq this.replicationMode "performance") this.model.canRevokeSecondary)}}
-              <Hds::Dropdown @isInline={{true}} as |dd|>
+              <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
                 <dd.ToggleIcon
                   @icon="more-horizontal"
                   @text="Secondary popup nav menu"

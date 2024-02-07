@@ -72,7 +72,7 @@
         <Icon @name="folder" class="has-text-grey-light" />{{list.item.id}}
       </Item.content>
       <Item.menu>
-        <Hds::Dropdown @isInline={{true}} as |dd|>
+        <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
           <dd.ToggleIcon
             @icon="more-horizontal"
             @text="Item popup nav menu"
@@ -107,7 +107,7 @@
             (perform
               Item.callMethod
               "destroyRecord"
-              list.item
+              this.itemToDelete
               (concat "Successfully deleted " (singularize this.itemType) " " this.itemToDelete.id ".")
               (concat "There was an error deleting this " (singularize this.itemType))
               (action "refreshItemList")

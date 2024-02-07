@@ -50,7 +50,7 @@
           <Hds::Badge @text={{role.type}} data-test-role-type-badge={{role.name}} />
         </Item.content>
         <Item.menu>
-          <Hds::Dropdown @isInline={{true}} as |dd|>
+          <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
             <dd.ToggleIcon
               @icon="more-horizontal"
               @text="Roles popup menu"
