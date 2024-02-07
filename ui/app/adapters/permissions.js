@@ -8,12 +8,7 @@ import ApplicationAdapter from './application';
 export default ApplicationAdapter.extend({
   query() {
     const namespace = this.namespaceService.userRootNamespace || this.namespaceService.path;
-    return this.ajax(this.urlForQuery(), 'GET', {
-      namespace,
-    }).then((resp) => {
-      resp.data.validNamespace = true;
-      return resp;
-    });
+    return this.ajax(this.urlForQuery(), 'GET', { namespace });
   },
 
   urlForQuery() {
