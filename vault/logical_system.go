@@ -1645,12 +1645,13 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	// generation for that KV mount in all tests.
 	if config.usingOIDCDefaultKey() && logicalType != mountTypeKV {
 		err := identityStore.lazyGenerateDefaultKey(ctx, storage)
-		if err != nil && !errors.Is(err, logical.ErrReadOnly) {
-			return nil, fmt.Errorf("failed to generate default key: %w", err)
+		if err != nil {
+			if !errors.Is(err, logical.ErrReadOnly) {
+				return nil, fmt.Errorf("failed to generate default key: %w", err)
+			}
+			b.Logger().Warn("skipping default OIDC key generation for local mount",
+				"name", logicalType, "path", path)
 		}
-
-		b.Logger().Warn("skipping default OIDC key generation for local mount",
-			"name", logicalType, "path", path)
 	}
 
 	// Create the mount entry
@@ -2469,13 +2470,14 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 		if mountEntry.Config.usingOIDCDefaultKey() {
 			err := identityStore.lazyGenerateDefaultKey(ctx, storage)
-			if err != nil && !errors.Is(err, logical.ErrReadOnly) {
-				mountEntry.Config.IdentityTokenKey = oldVal
-				return nil, fmt.Errorf("failed to generate default key: %w", err)
+			if err != nil {
+				if !errors.Is(err, logical.ErrReadOnly) {
+					mountEntry.Config.IdentityTokenKey = oldVal
+					return nil, fmt.Errorf("failed to generate default key: %w", err)
+				}
+				b.Logger().Warn("skipping default OIDC key generation for local mount",
+					"name", mountEntry.Type, "path", mountEntry.Path)
 			}
-
-			b.Logger().Warn("skipping default OIDC key generation for local mount",
-				"name", mountEntry.Type, "path", mountEntry.Path)
 		}
 
 		// Update the mount table
@@ -3275,12 +3277,13 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 	if config.usingOIDCDefaultKey() {
 		err := identityStore.lazyGenerateDefaultKey(ctx, storage)
-		if err != nil && !errors.Is(err, logical.ErrReadOnly) {
-			return nil, fmt.Errorf("failed to generate default key: %w", err)
+		if err != nil {
+			if !errors.Is(err, logical.ErrReadOnly) {
+				return nil, fmt.Errorf("failed to generate default key: %w", err)
+			}
+			b.Logger().Warn("skipping default OIDC key generation for local mount",
+				"name", logicalType, "path", path)
 		}
-
-		b.Logger().Warn("skipping default OIDC key generation for local mount",
-			"name", logicalType, "path", path)
 	}
 
 	// Create the mount entry
