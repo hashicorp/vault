@@ -5,6 +5,10 @@
 ## 1.15.5
 ### January 31, 2024
 
+SECURITY:
+
+* audit: Fix bug where use of 'log_raw' option could result in other devices logging raw audit data [[GH-24968](https://github.com/hashicorp/vault/pull/24968)] [[HCSEC-2024-01](https://discuss.hashicorp.com/t/hcsec-2024-01-vault-may-expose-sensitive-information-when-configuring-an-audit-log-device/62311)]
+
 CHANGES:
 
 * core: Bump Go version to 1.21.5.
@@ -25,7 +29,6 @@ listener config.
 BUG FIXES:
 
 * audit/socket: Provide socket based audit backends with 'prefix' configuration option when supplied. [[GH-25004](https://github.com/hashicorp/vault/pull/25004)]
-* audit: Fix bug where use of 'log_raw' option could result in other devices logging raw audit data [[GH-24968](https://github.com/hashicorp/vault/pull/24968)]
 * auth/saml (enterprise): Fixes support for Microsoft Entra ID enterprise applications
 * core (enterprise): fix a potential deadlock if an error is received twice from underlying storage for the same key
 * core: upgrade github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 to 
