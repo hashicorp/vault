@@ -1649,8 +1649,10 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 			if !errors.Is(err, logical.ErrReadOnly) {
 				return nil, fmt.Errorf("failed to generate default key: %w", err)
 			}
-			b.Logger().Warn("skipping default OIDC key generation for local mount",
-				"name", logicalType, "path", path)
+			if local {
+				b.Logger().Warn("skipping default OIDC key generation for local mount",
+					"name", logicalType, "path", path)
+			}
 		}
 	}
 
@@ -2475,8 +2477,10 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 					mountEntry.Config.IdentityTokenKey = oldVal
 					return nil, fmt.Errorf("failed to generate default key: %w", err)
 				}
-				b.Logger().Warn("skipping default OIDC key generation for local mount",
-					"name", mountEntry.Type, "path", mountEntry.Path)
+				if mountEntry.Local {
+					b.Logger().Warn("skipping default OIDC key generation for local mount",
+						"name", mountEntry.Type, "path", path)
+				}
 			}
 		}
 
@@ -3281,8 +3285,10 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 			if !errors.Is(err, logical.ErrReadOnly) {
 				return nil, fmt.Errorf("failed to generate default key: %w", err)
 			}
-			b.Logger().Warn("skipping default OIDC key generation for local mount",
-				"name", logicalType, "path", path)
+			if local {
+				b.Logger().Warn("skipping default OIDC key generation for local mount",
+					"name", logicalType, "path", path)
+			}
 		}
 	}
 
