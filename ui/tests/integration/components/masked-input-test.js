@@ -57,8 +57,6 @@ module('Integration | Component | masked input', function (hooks) {
 
     await click('[data-test-download-icon]');
     assert.ok(component.downloadButtonIsPresent, 'clicking download icon opens modal with download button');
-
-    assert;
   });
 
   test('it shortens all outputs when displayOnly and masked', async function (assert) {
