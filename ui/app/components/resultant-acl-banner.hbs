@@ -11,13 +11,9 @@
     data-test-resultant-acl-banner
     as |A|
   >
-    <A.Title>Resultant ACL check failed</A.Title>
+    <A.Title>{{this.title}}</A.Title>
     <A.Description>
-      {{if
-        @isEnterprise
-        "You do not have access to resources in this namespace."
-        "Links might be shown that you don't have access to. Contact your administrator to update your policy."
-      }}
+      {{this.message}}
     </A.Description>
     {{#if @isEnterprise}}
       <A.Link::Standalone
