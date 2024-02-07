@@ -14,7 +14,7 @@ export const PAGE = {
   field: (fieldName) => `[data-test-field="${fieldName}"]`,
   input: (input) => `[data-test-input="${input}"]`,
   button: (buttonName) => `[data-test-button="${buttonName}"]`,
-  fieldVaildation: (fieldName) => `[data-test-field-validation="${fieldName}"]`,
+  fieldValidation: (fieldName) => `[data-test-field-validation="${fieldName}"]`,
   modal: (name) => `[data-test-modal="${name}"]`,
   modalTitle: (title) => `[data-test-modal-title="${title}"]`,
   modalBody: (name) => `[data-test-modal-body="${name}"]`,

@@ -4,7 +4,8 @@
  */
 
 import Controller from '@ember/controller';
-export default class MessagesController extends Controller {
+
+export default class MessagesCreateController extends Controller {
   queryParams = ['authenticated'];
 
   authenticated = true;

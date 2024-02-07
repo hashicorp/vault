@@ -10,6 +10,7 @@ import { capitalize } from 'vault/helpers/capitalize';
 import { humanize } from 'vault/helpers/humanize';
 import { dasherize } from 'vault/helpers/dasherize';
 import { assert } from '@ember/debug';
+
 /**
  * @module FormField
  * `FormField` components are field elements associated with a particular model.

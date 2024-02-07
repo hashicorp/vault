@@ -9,21 +9,21 @@
 />
 
 <form id="message-create-edit-form" {{on "submit" (perform this.save)}} data-test-form="create-and-edit">
-  <div class="box is-sideless is-fullwidth is-marginless has-top-padding-s">
-    <Hds::Text::Body @tag="p" class="has-bottom-margin-l" data-test-form-subtext>
-      {{if @message.isNew "Create" "Edit"}}
-      a custom message for all users when they access a Vault system via the UI.
-    </Hds::Text::Body>
-
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <NamespaceReminder @mode={{if @message.isNew "create" "edit"}} @noun="message" />
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
 
     {{#each @message.formFields as |attr|}}
       <FormField @attr={{attr}} @model={{@message}} @modelValidations={{this.modelValidations}} class="has-bottom-margin-m">
-        <Messages::MessageExpirationDateForm @message={{@message}} @attr={{attr}} />
+        <Messages::MessageExpirationDateForm
+          @message={{@message}}
+          @attr={{attr}}
+          @modelValidations={{this.modelValidations}}
+        />
       </FormField>
       {{#if (and (eq attr.name "message") (not @message.authenticated))}}
         <Hds::Alert class="has-top-margin-negative-m has-bottom-margin-l" @type="compact" @color="highlight" as |A|>
-          <A.Description data-test-unauth-info>Note: Do not include sensitive info in this message since users are
+          <A.Description data-test-unauth-info>Note: Do not include sensitive information in this message since users are
             unauthenticated at this stage.</A.Description>
         </Hds::Alert>
       {{/if}}
