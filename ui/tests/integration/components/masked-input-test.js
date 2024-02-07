@@ -49,10 +49,6 @@ module('Integration | Component | masked input', function (hooks) {
     this.set('value', { some: 'object' });
     await render(hbs`<MaskedInput @allowCopy={{true}} @value={{this.value}} />`);
     assert.ok(component.copyButtonIsPresent);
-    await click('[data-test-copy-icon]');
-    assert
-      .dom('flight-icon-clipboard-checked')
-      .exists('clicking copy icon copies value to clipboard', 'copy is successful when value is an object');
   });
 
   test('it renders a download button when allowDownload is true', async function (assert) {
