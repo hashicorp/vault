@@ -1646,12 +1646,11 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	if config.usingOIDCDefaultKey() && logicalType != mountTypeKV {
 		err := identityStore.lazyGenerateDefaultKey(ctx, storage)
 		if err != nil {
-			if !errors.Is(err, logical.ErrReadOnly) {
-				return nil, fmt.Errorf("failed to generate default key: %w", err)
-			}
-			if local {
+			if local && errors.Is(err, logical.ErrReadOnly) {
 				b.Logger().Warn("skipping default OIDC key generation for local mount",
 					"name", logicalType, "path", path)
+			} else {
+				return nil, fmt.Errorf("failed to generate default key: %w", err)
 			}
 		}
 	}
@@ -2473,13 +2472,12 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		if mountEntry.Config.usingOIDCDefaultKey() {
 			err := identityStore.lazyGenerateDefaultKey(ctx, storage)
 			if err != nil {
-				if !errors.Is(err, logical.ErrReadOnly) {
-					mountEntry.Config.IdentityTokenKey = oldVal
-					return nil, fmt.Errorf("failed to generate default key: %w", err)
-				}
-				if mountEntry.Local {
+				if mountEntry.Local && errors.Is(err, logical.ErrReadOnly) {
 					b.Logger().Warn("skipping default OIDC key generation for local mount",
 						"name", mountEntry.Type, "path", path)
+				} else {
+					mountEntry.Config.IdentityTokenKey = oldVal
+					return nil, fmt.Errorf("failed to generate default key: %w", err)
 				}
 			}
 		}
@@ -3282,12 +3280,11 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	if config.usingOIDCDefaultKey() {
 		err := identityStore.lazyGenerateDefaultKey(ctx, storage)
 		if err != nil {
-			if !errors.Is(err, logical.ErrReadOnly) {
-				return nil, fmt.Errorf("failed to generate default key: %w", err)
-			}
-			if local {
+			if local && errors.Is(err, logical.ErrReadOnly) {
 				b.Logger().Warn("skipping default OIDC key generation for local mount",
 					"name", logicalType, "path", path)
+			} else {
+				return nil, fmt.Errorf("failed to generate default key: %w", err)
 			}
 		}
 	}
