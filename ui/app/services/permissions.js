@@ -78,6 +78,13 @@ export default Service.extend({
   auth: service(),
   namespace: service(),
 
+  get baseNs() {
+    const currentNs = this.namespace.path;
+    return this.chrootNamespace
+      ? `${sanitizePath(this.chrootNamespace)}/${sanitizePath(currentNs)}`
+      : sanitizePath(currentNs);
+  },
+
   getPaths: task(function* () {
     if (this.paths) {
       return;
@@ -99,10 +106,7 @@ export default Service.extend({
       this.set('permissionsBanner', null);
       return;
     }
-    const currentNs = this.namespace.path;
-    const namespace = this.chrootNamespace
-      ? `${sanitizePath(this.chrootNamespace)}/${sanitizePath(currentNs)}`
-      : sanitizePath(currentNs);
+    const namespace = this.baseNs;
     const allowed =
       Object.keys(this.globPaths).any((k) => k.startsWith(namespace)) ||
       Object.keys(this.exactPaths).any((k) => k.startsWith(namespace));
@@ -150,9 +154,7 @@ export default Service.extend({
   },
 
   pathNameWithNamespace(pathName) {
-    const namespace = this.chrootNamespace
-      ? `${sanitizePath(this.chrootNamespace)}/${sanitizePath(this.namespace.path)}`
-      : sanitizePath(this.namespace.path);
+    const namespace = this.baseNs;
     if (namespace) {
       return `${sanitizePath(namespace)}/${sanitizeStart(pathName)}`;
     } else {
