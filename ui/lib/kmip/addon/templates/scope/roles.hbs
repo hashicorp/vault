@@ -82,7 +82,12 @@
             <dd.Interactive @text="Edit role" @route="role.edit" @models={{array this.scope list.item.id}} />
           {{/if}}
           {{#if list.item.updatePath.canDelete}}
-            <dd.Interactive @text="Delete role" @color="critical" {{on "click" (fn (mut this.roleToDelete) list.item)}} />
+            <dd.Interactive
+              @text="Delete role"
+              @color="critical"
+              data-test-confirm-action-trigger
+              {{on "click" (fn (mut this.roleToDelete) list.item)}}
+            />
           {{/if}}
         </Hds::Dropdown>
       </Item.menu>
