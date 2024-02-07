@@ -35,32 +35,51 @@
           {{list.item.id}}
         </Item.content>
         <Item.menu>
-          {{#let (concat this.currentNamespace (if this.currentNamespace "/") list.item.id) as |targetNamespace|}}
-            {{#if (includes targetNamespace this.accessibleNamespaces)}}
-              <li class="action">
-                <NamespaceLink @targetNamespace={{targetNamespace}} @unparsed={{true}} @class="is-block">
-                  Switch to Namespace
-                </NamespaceLink>
-              </li>
-            {{/if}}
-          {{/let}}
-          <ConfirmAction
-            @isInDropdown={{true}}
-            @buttonText="Delete"
+          <Hds::Dropdown @isInline={{true}} as |dd|>
+            <dd.ToggleIcon
+              @icon="more-horizontal"
+              @text="Namespaces nav menu"
+              @hasChevron={{false}}
+              data-test-popup-menu-trigger
+            />
+            {{#let (concat this.currentNamespace (if this.currentNamespace "/") list.item.id) as |targetNamespace|}}
+              {{#if (includes targetNamespace this.accessibleNamespaces)}}
+                <dd.Generic>
+                  <NamespaceLink
+                    @targetNamespace={{targetNamespace}}
+                    @unparsed={{true}}
+                    @class="hds-link-standalone hds-link-standalone--size-medium hds-link-standalone--color-primary"
+                  >
+                    <span class="hds-link-standalone__text">
+                      Switch to Namespace
+                      <Icon @name="external-link" />
+                    </span>
+                  </NamespaceLink>
+                </dd.Generic>
+              {{/if}}
+            {{/let}}
+            <dd.Interactive @text="Delete" @color="critical" {{on "click" (fn (mut this.namespaceToDelete) list.item)}} />
+          </Hds::Dropdown>
+        </Item.menu>
+        {{! Modal inside <ListItem> because we need access to Item.callMethod }}
+        {{#if this.namespaceToDelete}}
+          <ConfirmModal
+            @color="critical"
             @confirmTitle="Delete this namespace?"
             @confirmMessage="Any engines or mounts in this namespace will also be removed."
-            @onConfirmAction={{action
+            @onClose={{fn (mut this.namespaceToDelete) null}}
+            @onConfirm={{action
               (perform
                 Item.callMethod
                 "destroyRecord"
-                list.item
-                (concat "Successfully deleted namespace: " list.item.id)
+                this.namespaceToDelete
+                (concat "Successfully deleted namespace: " this.namespaceToDelete.id)
                 "There was an error deleting this namespace: "
                 (action "refreshNamespaceList")
               )
             }}
           />
-        </Item.menu>
+        {{/if}}
       </ListItem>
     {{/if}}
   </ListView>

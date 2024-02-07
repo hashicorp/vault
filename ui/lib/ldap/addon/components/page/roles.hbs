@@ -50,66 +50,57 @@
           <Hds::Badge @text={{role.type}} data-test-role-type-badge={{role.name}} />
         </Item.content>
         <Item.menu>
-          {{#if role.rolePath.isLoading}}
-            <li class="action">
-              <Hds::Button disabled @color="tertiary" @icon="loading" @text="loading" @isIconOnly={{true}} />
-            </li>
-          {{else}}
-            <li class="action">
-              <LinkTo
-                class="has-text-black has-text-weight-semibold"
+          <Hds::Dropdown @isInline={{true}} as |dd|>
+            <dd.ToggleIcon
+              @icon="more-horizontal"
+              @text="Roles popup menu"
+              @hasChevron={{false}}
+              data-test-popup-menu-trigger
+            />
+            {{#if role.rolePath.isLoading}}
+              <dd.Generic class="has-text-center">
+                <LoadingDropdownOption />
+              </dd.Generic>
+            {{else}}
+              <dd.Interactive
                 data-test-edit
                 @route="roles.role.edit"
                 @models={{array role.type role.name}}
                 @disabled={{not role.canEdit}}
-              >
-                Edit
-              </LinkTo>
-            </li>
-            <li class="action">
-              <LinkTo
-                class="has-text-black has-text-weight-semibold"
+                @text="Edit"
+              />
+              <dd.Interactive
                 data-test-get-creds
                 @route="roles.role.credentials"
                 @models={{array role.type role.name}}
                 @disabled={{not role.canReadCreds}}
-              >
-                Get credentials
-              </LinkTo>
-            </li>
-            {{#if role.canRotateStaticCreds}}
-              <ConfirmAction
-                data-test-rotate-creds
-                @isInDropdown={{true}}
-                @id={{concat "rotate-" role.id}}
-                @buttonText="Rotate credentials"
-                @confirmMessage="When manually rotating credentials, the rotation period will start over."
-                @modalColor="warning"
-                @onConfirmAction={{fn this.onRotate role}}
+                @text="Get credentials"
               />
-            {{/if}}
-            <li class="action">
-              <LinkTo
-                class="has-text-black has-text-weight-semibold"
+              {{#if role.canRotateStaticCreds}}
+                <dd.Interactive
+                  data-test-rotate-creds
+                  @text="Rotate credentials"
+                  {{on "click" (fn (mut this.roleToRotate) role)}}
+                />
+              {{/if}}
+              <dd.Interactive
                 data-test-details
                 @route="roles.role.details"
                 {{! this will force the roles.role model hook to fire since we may only have a partial model loaded in the list view }}
                 @models={{array role.type role.name}}
                 @disabled={{not role.canRead}}
-              >
-                Details
-              </LinkTo>
-            </li>
-            {{#if role.canDelete}}
-              <ConfirmAction
-                data-test-delete
-                @isInDropdown={{true}}
-                @buttonText="Delete"
-                @confirmMessage="Deleting this role means that you’ll need to recreate it in order to generate credentials again."
-                @onConfirmAction={{fn this.onDelete role}}
+                @text="Details"
               />
+              {{#if role.canDelete}}
+                <dd.Interactive
+                  data-test-delete
+                  @text="Delete"
+                  @color="critical"
+                  {{on "click" (fn (mut this.roleToDelete) role)}}
+                />
+              {{/if}}
             {{/if}}
-          {{/if}}
+          </Hds::Dropdown>
         </Item.menu>
       </ListItem>
     {{/each}}
@@ -124,4 +115,21 @@
       data-test-pagination
     />
   </div>
+{{/if}}
+
+{{#if this.roleToRotate}}
+  <ConfirmModal
+    @confirmMessage="When manually rotating credentials, the rotation period will start over."
+    @onClose={{fn (mut this.roleToRotate) null}}
+    @onConfirm={{fn this.onRotate this.roleToRotate}}
+  />
+{{/if}}
+
+{{#if this.roleToDelete}}
+  <ConfirmModal
+    @color="critical"
+    @confirmMessage="Deleting this role means that you’ll need to recreate it in order to generate credentials again."
+    @onClose={{fn (mut this.roleToDelete) null}}
+    @onConfirm={{fn this.onDelete this.roleToDelete}}
+  />
 {{/if}}

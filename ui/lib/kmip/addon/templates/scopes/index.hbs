@@ -58,35 +58,43 @@
         <Icon @name="folder" class="has-text-grey-light" />{{list.item.id}}
       </Item.content>
       <Item.menu>
-        <li class="action">
-          <LinkTo @route="scope" @model={{list.item.id}} class="is-block">
-            View scope
-          </LinkTo>
-        </li>
-        {{#if list.item.updatePath.isPending}}
-          <li class="action">
-            <LoadingDropdownOption />
-          </li>
-        {{else if list.item.updatePath.canDelete}}
-          <ConfirmAction
-            @isInDropdown={{true}}
-            @buttonText="Delete scope"
-            @confirmTitle="Delete scope {{list.item.id}}?"
-            @confirmMessage="This will permanently delete this scope and all roles and credentials contained within"
-            @onConfirmAction={{action
-              (perform
-                Item.callMethod
-                "destroyRecord"
-                list.item
-                (concat "Successfully deleted scope " list.item.id)
-                (concat "There was an error deleting the scope " list.item.id)
-                (action "refresh")
-              )
-            }}
-            data-test-scope-delete
+        <Hds::Dropdown @isInline={{true}} as |dd|>
+          <dd.ToggleIcon
+            @icon="more-horizontal"
+            @text="Scope popup menu"
+            @hasChevron={{false}}
+            data-test-popup-menu-trigger
           />
-        {{/if}}
+          <dd.Interactive @text="View scope" @route="scope" @model={{list.item.id}} />
+          {{#if list.item.updatePath.canDelete}}
+            <dd.Interactive
+              @text="Delete scope"
+              @color="critical"
+              {{on "click" (fn (mut this.scopeToDelete) list.item)}}
+              data-test-scope-delete
+            />
+          {{/if}}
+        </Hds::Dropdown>
       </Item.menu>
+      {{! Modal inside <ListItem> because we need access to Item.callMethod }}
+      {{#if this.scopeToDelete}}
+        <ConfirmModal
+          @color="critical"
+          @confirmTitle="Delete scope {{this.scopeToDelete.id}}?"
+          @confirmMessage="This will permanently delete this scope and all roles and credentials contained within"
+          @onClose={{fn (mut this.scopeToDelete) null}}
+          @onConfirm={{action
+            (perform
+              Item.callMethod
+              "destroyRecord"
+              this.scopeToDelete
+              (concat "Successfully deleted scope " this.scopeToDelete.id)
+              (concat "There was an error deleting the scope " this.scopeToDelete.id)
+              (action "refresh")
+            )
+          }}
+        />
+      {{/if}}
     </ListItem>
   {{else}}
     <ListItem as |Item|>

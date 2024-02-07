@@ -49,46 +49,54 @@
           <span data-test-library={{library.name}}>{{library.name}}</span>
         </Item.content>
         <Item.menu>
-          {{#if library.libraryPath.isLoading}}
-            <li class="action">
-              <Hds::Button disabled @color="tertiary" @icon="loading" @text="loading" @isIconOnly={{true}} />
-            </li>
-          {{else}}
-            <li class="action">
-              <LinkTo
-                class="has-text-black has-text-weight-semibold"
+          <Hds::Dropdown @isInline={{true}} as |dd|>
+            <dd.ToggleIcon
+              @icon="more-horizontal"
+              @text="Libraries popup menu"
+              @hasChevron={{false}}
+              data-test-popup-menu-trigger
+            />
+            {{#if library.libraryPath.isLoading}}
+              <dd.Generic class="has-text-center">
+                <LoadingDropdownOption />
+              </dd.Generic>
+            {{else}}
+              <dd.Interactive
                 data-test-edit
                 @route="libraries.library.edit"
                 @model={{library}}
                 @disabled={{not library.canEdit}}
-              >
-                Edit
-              </LinkTo>
-            </li>
-            <li class="action">
-              <LinkTo
-                class="has-text-black has-text-weight-semibold"
+                @text="Edit"
+              />
+              <dd.Interactive
                 data-test-details
                 @route="libraries.library.details"
                 @model={{library}}
                 @disabled={{not library.canRead}}
-              >
-                Details
-              </LinkTo>
-            </li>
-            {{#if library.canDelete}}
-              <ConfirmAction
-                data-test-delete
-                @id={{library.id}}
-                @isInDropdown={{true}}
-                @buttonText="Delete"
-                @confirmMessage="This library and associated accounts will be permanently deleted. You will not be able to recover it."
-                @onConfirmAction={{fn this.onDelete library}}
+                @text="Details"
               />
+              {{#if library.canDelete}}
+                <dd.Interactive
+                  data-test-delete
+                  @id={{library.id}}
+                  @text="Delete"
+                  @color="critical"
+                  {{on "click" (fn (mut this.libraryToDelete) library)}}
+                />
+              {{/if}}
             {{/if}}
-          {{/if}}
+          </Hds::Dropdown>
         </Item.menu>
       </ListItem>
     {{/each}}
   </div>
+{{/if}}
+
+{{#if this.libraryToDelete}}
+  <ConfirmModal
+    @color="critical"
+    @confirmMessage="This library and associated accounts will be permanently deleted. You will not be able to recover it."
+    @onClose={{fn (mut this.libraryToDelete) null}}
+    @onConfirm={{fn this.onDelete this.libraryToDelete}}
+  />
 {{/if}}

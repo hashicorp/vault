@@ -37,43 +37,51 @@
           <span data-test-role={{role.name}}>{{role.name}}</span>
         </Item.content>
         <Item.menu>
-          {{#if role.rolesPath.isLoading}}
-            <li class="action">
-              <Hds::Button disabled @color="tertiary" @icon="loading" @text="loading" @isIconOnly={{true}} />
-            </li>
-          {{else}}
-            <li class="action">
-              <LinkTo
-                class="has-text-black has-text-weight-semibold"
+          <Hds::Dropdown @isInline={{true}} as |dd|>
+            <dd.ToggleIcon
+              @icon="more-horizontal"
+              @text="Roles popup menu"
+              @hasChevron={{false}}
+              data-test-popup-menu-trigger
+            />
+            {{#if role.rolesPath.isLoading}}
+              <dd.Generic class="has-text-center">
+                <LoadingDropdownOption />
+              </dd.Generic>
+            {{else}}
+              <dd.Interactive
                 data-test-details
                 @route="roles.role.details"
                 @model={{role}}
                 @disabled={{eq role.canRead false}}
-              >
-                Details
-              </LinkTo>
-            </li>
-            <li class="action">
-              <LinkTo
-                class="has-text-black has-text-weight-semibold"
+                @text="Details"
+              />
+              <dd.Interactive
                 data-test-edit
                 @route="roles.role.edit"
                 @model={{role}}
                 @disabled={{not role.canEdit}}
-              >
-                Edit
-              </LinkTo>
-            </li>
-            <ConfirmAction
-              data-test-delete
-              @isInDropdown={{true}}
-              @buttonText="Delete"
-              @confirmMessage="Deleting this role means that you’ll need to recreate it in order to generate credentials again."
-              @onConfirmAction={{fn this.onDelete role}}
-            />
-          {{/if}}
+                @text="Edit"
+              />
+              <dd.Interactive
+                data-test-delete
+                @color="critical"
+                @text="Delete"
+                {{on "click" (fn (mut this.roleToDelete) role)}}
+              />
+            {{/if}}
+          </Hds::Dropdown>
         </Item.menu>
       </ListItem>
     {{/each}}
   </div>
+{{/if}}
+
+{{#if this.roleToDelete}}
+  <ConfirmModal
+    @color="critical"
+    @confirmMessage="Deleting this role means that you’ll need to recreate it in order to generate credentials again."
+    @onClose={{fn (mut this.roleToDelete) null}}
+    @onConfirm={{fn this.onDelete this.roleToDelete}}
+  />
 {{/if}}
