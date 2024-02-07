@@ -131,7 +131,7 @@ require (
 	github.com/hashicorp/raft-wal v0.4.0
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20240126195955-473e9a48e7b7
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.17.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.16.2
+	github.com/hashicorp/vault-plugin-auth-azure v0.17.0
 	github.com/hashicorp/vault-plugin-auth-centrify v0.15.1
 	github.com/hashicorp/vault-plugin-auth-cf v0.16.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.16.2
@@ -147,14 +147,14 @@ require (
 	github.com/hashicorp/vault-plugin-database-snowflake v0.10.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.17.0
-	github.com/hashicorp/vault-plugin-secrets-alicloud v0.15.1
+	github.com/hashicorp/vault-plugin-secrets-alicloud v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.17.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.18.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.7.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.16.2
-	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.2
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.11.3
+	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.11.0
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.12.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.7.3
 	github.com/hashicorp/vault-testing-stepwise v0.1.4
 	github.com/hashicorp/vault/api v1.11.0
@@ -251,8 +251,8 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/keyvault/internal v0.7.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v2 v2.2.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4 v4.2.1 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi v1.1.0 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.1.1 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi v1.2.0 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.2.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.0.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
