@@ -34,6 +34,7 @@ function getTotalCounts(array) {
     entity_clients: getSum(array, 'entity_clients'),
     non_entity_tokens: getSum(array, 'non_entity_clients'),
     non_entity_clients: getSum(array, 'non_entity_clients'),
+    secret_syncs: getSum(array, 'secret_syncs'),
     clients: getSum(array, 'clients'),
   };
 }
@@ -60,8 +61,27 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
     namespace_id: ns?.namespace_id || (idx === 0 ? 'root' : Math.random().toString(36).slice(2, 7) + idx),
     namespace_path: ns?.namespace_path || (idx === 0 ? '' : `ns/${idx}`),
     counts: {},
+    mounts: {},
   };
   const mounts = [];
+
+  Array.from(Array(5)).forEach((mount, index) => {
+    const [secretSyncs] = arrayOfCounts(randomBetween(min, max), 1);
+    mounts.push({
+      mount_path: `kvv2-engine-${index}`,
+      counts: {
+        clients: secretSyncs,
+        // TODO test with live backend to confirm entity keys are present (and 0) for kv mounts
+        entity_clients: 0,
+        non_entity_clients: 0,
+        distinct_entities: 0,
+        non_entity_tokens: 0,
+        secret_syncs: secretSyncs,
+      },
+    });
+  });
+
+  // generate auth mounts array
   Array.from(Array(10)).forEach((mount, index) => {
     const mountClients = randomBetween(min, max);
     const [nonEntity, entity] = arrayOfCounts(mountClients, 2);
@@ -73,6 +93,8 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
         non_entity_clients: nonEntity,
         distinct_entities: entity,
         non_entity_tokens: nonEntity,
+        // TODO test with live backend to confirm this key is present (and 0) for auth mounts (non-kv mounts)
+        secret_syncs: 0,
       },
     });
   });
@@ -104,7 +126,7 @@ function generateMonths(startDate, endDate, namespaces) {
       continue;
     }
 
-    const monthNs = namespaces.map((ns, idx) => generateNamespaceBlock(idx, true, ns));
+    const monthNs = namespaces.map((ns, idx) => generateNamespaceBlock(idx, false, ns));
     const newClients = namespaces.map((ns, idx) => generateNamespaceBlock(idx, true, ns));
     months.push({
       timestamp: formatRFC3339(month),
@@ -151,6 +173,7 @@ export default function (server) {
         enabled: 'default-enable',
         queries_available: true,
         retention_months: 24,
+        billing_start_timestamp: formatRFC3339(LICENSE_START),
       },
     };
   });

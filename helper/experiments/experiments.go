@@ -7,6 +7,7 @@ import "slices"
 
 const (
 	VaultExperimentCoreAuditEventsAlpha1 = "core.audit.events.alpha1"
+	VaultExperimentSecretsImport         = "secrets.import.alpha1"
 
 	// Unused experiments. We keep them so that we don't break users who include them in their
 	// flags or configs, but they no longer have any effect.
@@ -16,6 +17,7 @@ const (
 var validExperiments = []string{
 	VaultExperimentEventsAlpha1,
 	VaultExperimentCoreAuditEventsAlpha1,
+	VaultExperimentSecretsImport,
 }
 
 var unusedExperiments = []string{

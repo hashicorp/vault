@@ -111,12 +111,6 @@
     }} in this namespace will be listed here. Create your first {{this.identityType}} to get started."
   >
     <Hds::Link::Standalone
-      @text="Create {{this.identityType}}"
-      @icon="plus"
-      @route="vault.cluster.access.identity.create"
-      @model={{pluralize this.identityType}}
-    />
-    <Hds::Link::Standalone
       @text="Identity: entities and groups tutorial"
       @href={{doc-link "/vault/tutorials/auth-methods/identity"}}
       @icon="learn-link"

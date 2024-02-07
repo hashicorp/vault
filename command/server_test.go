@@ -22,11 +22,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/sdk/physical"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/seal"
@@ -96,29 +94,6 @@ cloud {
 }
 `
 )
-
-func testServerCommand(tb testing.TB) (*cli.MockUi, *ServerCommand) {
-	tb.Helper()
-
-	ui := cli.NewMockUi()
-	return ui, &ServerCommand{
-		BaseCommand: &BaseCommand{
-			UI: ui,
-		},
-		ShutdownCh: MakeShutdownCh(),
-		SighupCh:   MakeSighupCh(),
-		SigUSR2Ch:  MakeSigUSR2Ch(),
-		PhysicalBackends: map[string]physical.Factory{
-			"inmem":    physInmem.NewInmem,
-			"inmem_ha": physInmem.NewInmemHA,
-		},
-
-		// These prevent us from random sleep guessing...
-		startedCh:         make(chan struct{}, 5),
-		reloadedCh:        make(chan struct{}, 5),
-		licenseReloadedCh: make(chan error),
-	}
-}
 
 func TestServer_ReloadListener(t *testing.T) {
 	t.Parallel()
