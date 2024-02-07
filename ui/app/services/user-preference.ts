@@ -21,4 +21,9 @@ export default class UserPreferenceService extends Service {
   @action setKvDisplayPreference(jsonToggle: boolean) {
     this.kvDisplaySetting = jsonToggle ? KvSecretDisplay.Json : KvSecretDisplay.KeyValue;
   }
+
+  @action
+  reset() {
+    this.kvDisplaySetting = KvSecretDisplay.Unset;
+  }
 }
