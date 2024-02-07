@@ -73,6 +73,7 @@ jobs:
     #   * The workflow was triggered by pull request and the pull request is not a draft.
     #   * The workflow was triggered by on schedule to test building all artifacts.
     if: |
+      false ||
       github.event_name == 'push' ||
       github.event_name == 'schedule' ||
       (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
