@@ -68,8 +68,8 @@
       @autoloaded={{eq this.activeCluster.licenseState "autoloaded"}}
     />
   {{/if}}
-  {{#if this.permissionReadFailed}}
-    <ResultantAclBanner @isEnterprise={{this.activeCluster.version.isEnterprise}} />
+  {{#if this.permissionBanner}}
+    <ResultantAclBanner @isEnterprise={{this.activeCluster.version.isEnterprise}} @failType={{this.permissionBanner}} />
   {{/if}}
 </div>
 <div class="global-flash">
