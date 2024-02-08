@@ -120,7 +120,12 @@
                     />
                   {{/if}}
                   {{#if (and item.canDelete (not-eq item.name "default"))}}
-                    <dd.Interactive @text="Delete" @color="critical" {{on "click" (fn (mut this.policyToDelete) item)}} />
+                    <dd.Interactive
+                      @text="Delete"
+                      @color="critical"
+                      {{on "click" (fn (mut this.policyToDelete) item)}}
+                      data-test-confirm-action-trigger
+                    />
                   {{/if}}
                 {{/if}}
               </Hds::Dropdown>
