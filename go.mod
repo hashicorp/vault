@@ -44,7 +44,7 @@ require (
 	github.com/armon/go-metrics v0.4.1
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
-	github.com/aws/aws-sdk-go v1.49.22
+	github.com/aws/aws-sdk-go v1.50.13
 	github.com/aws/aws-sdk-go-v2/config v1.18.19
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.29.1
 	github.com/axiomhq/hyperloglog v0.0.0-20220105174342-98591331716a
@@ -139,11 +139,11 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.11.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.18.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.15.1
-	github.com/hashicorp/vault-plugin-database-couchbase v0.10.0
+	github.com/hashicorp/vault-plugin-database-couchbase v0.10.1
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.14.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.11.0
 	github.com/hashicorp/vault-plugin-database-redis v0.2.3
-	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.2.3
+	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.3.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.10.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.17.0
@@ -211,9 +211,9 @@ require (
 	go.etcd.io/etcd/client/v3 v3.5.7
 	go.mongodb.org/atlas v0.36.0
 	go.mongodb.org/mongo-driver v1.13.1
-	go.opentelemetry.io/otel v1.22.0
-	go.opentelemetry.io/otel/sdk v1.22.0
-	go.opentelemetry.io/otel/trace v1.22.0
+	go.opentelemetry.io/otel v1.23.1
+	go.opentelemetry.io/otel/sdk v1.23.1
+	go.opentelemetry.io/otel/trace v1.23.1
 	go.uber.org/atomic v1.11.0
 	go.uber.org/goleak v1.2.1
 	golang.org/x/crypto v0.18.0
@@ -522,7 +522,7 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.47.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.47.0 // indirect
-	go.opentelemetry.io/otel/metric v1.22.0 // indirect
+	go.opentelemetry.io/otel/metric v1.23.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/mod v0.15.0 // indirect
