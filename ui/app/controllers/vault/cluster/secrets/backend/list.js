@@ -5,7 +5,7 @@
 
 import { or } from '@ember/object/computed';
 import { computed } from '@ember/object';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Controller from '@ember/controller';
 import BackendCrumbMixin from 'vault/mixins/backend-crumb';
 import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';

@@ -5,7 +5,7 @@
 
 import NamedPathAdapter from 'vault/adapters/named-path';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import AdapterError from '@ember-data/adapter/error';
 
 export default class LdapRoleAdapter extends NamedPathAdapter {
