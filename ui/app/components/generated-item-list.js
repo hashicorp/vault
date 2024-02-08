@@ -6,10 +6,7 @@
 import { inject as service } from '@ember/service';
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/application';
-import { task } from 'ember-concurrency';
-import { waitFor } from '@ember/test-waiters';
 
 /**
  * @module GeneratedItemList
@@ -29,9 +26,6 @@ import { waitFor } from '@ember/test-waiters';
 export default class GeneratedItemList extends Component {
   @service router;
   @service store;
-  @service flashMessages;
-
-  @tracked itemToDelete = null;
 
   get model() {
     return this.args.model || null;
@@ -45,23 +39,5 @@ export default class GeneratedItemList extends Component {
     const route = getOwner(this).lookup(`route:${this.router.currentRouteName}`);
     this.store.clearAllDatasets();
     route.refresh();
-  }
-
-  // template originally called callMethod from the list-item.js contextual component
-  @task
-  @waitFor
-  *taskMethod(method, model, successMessage, failureMessage, successCallback = () => {}) {
-    const flash = this.flashMessages;
-    try {
-      yield model[method]();
-      flash.success(successMessage);
-      successCallback();
-    } catch (e) {
-      const errString = e.errors.join(' ');
-      flash.danger(failureMessage + ' ' + errString);
-      model.rollbackAttributes();
-    } finally {
-      this.itemToDelete = null;
-    }
   }
 }
