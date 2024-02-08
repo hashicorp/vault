@@ -3,7 +3,16 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentURL, currentRouteName, settled, fillIn, waitUntil, find } from '@ember/test-helpers';
+import {
+  click,
+  currentURL,
+  currentRouteName,
+  settled,
+  fillIn,
+  waitUntil,
+  find,
+  visit,
+} from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 
@@ -203,8 +212,9 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     await scopesPage.delete();
     await settled();
-    await scopesPage.confirmDelete();
-    await settled();
+    await click('[data-test-confirm-button]');
+    await visit('/vault/secrets'); // leave then return to list view so test has time to remove element from DOM
+    await scopesPage.visit({ backend: path });
     assert.strictEqual(scopesPage.listItemLinks.length, 0, 'no scopes');
     assert.ok(scopesPage.isEmpty, 'renders the empty state');
   });
@@ -329,7 +339,8 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await credentialsPage.listItemLinks.objectAt(0).menuToggle();
     await settled();
     await credentialsPage.delete().confirmDelete();
-    await settled();
+    await visit('/vault/secrets/kmip/kmip/configuration');
+    await credentialsPage.visit({ backend: path, scope, role });
     assert.strictEqual(credentialsPage.listItemLinks.length, 0, 'renders no credentials');
     assert.ok(credentialsPage.isEmpty, 'renders empty');
   });

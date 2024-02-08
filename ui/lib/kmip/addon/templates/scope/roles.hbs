@@ -91,24 +91,6 @@
           {{/if}}
         </Hds::Dropdown>
       </Item.menu>
-      {{! Modal inside <ListItem> because we need access to Item.callMethod }}
-      {{#if this.roleToDelete}}
-        <ConfirmModal
-          @color="critical"
-          @confirmMessage="Are you sure you want to delete {{this.roleToDelete.id}}?"
-          @onClose={{fn (mut this.roleToDelete) null}}
-          @onConfirm={{action
-            (perform
-              Item.callMethod
-              "destroyRecord"
-              this.roleToDelete
-              (concat "Successfully deleted role " this.roleToDelete.id)
-              (concat "There was an error deleting the role " this.roleToDelete.id)
-              (action "refresh")
-            )
-          }}
-        />
-      {{/if}}
     </ListItem>
   {{else}}
     <ListItem as |Item|>
@@ -121,3 +103,21 @@
     </ListItem>
   {{/if}}
 </ListView>
+
+{{#if this.roleToDelete}}
+  <ConfirmModal
+    @color="critical"
+    @confirmMessage="Are you sure you want to delete {{this.roleToDelete.id}}?"
+    @onClose={{fn (mut this.roleToDelete) null}}
+    @onConfirm={{action
+      (perform
+        this.callMethod
+        "destroyRecord"
+        this.roleToDelete
+        (concat "Successfully deleted role " this.roleToDelete.id)
+        (concat "There was an error deleting the role " this.roleToDelete.id)
+        (action "refresh")
+      )
+    }}
+  />
+{{/if}}
