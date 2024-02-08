@@ -638,7 +638,7 @@ func testParseCertificateToFields(t *testing.T, issueTime time.Time, tt *parseCe
 			require.NoError(t, err)
 
 			diff := expectedTTL - actualTTL
-			require.GreaterOrEqual(t, diff, 0,
+			require.LessOrEqual(t, actualTTL, expectedTTL, // NotAfter is generated before NotBefore so the time.Now of notBefore may be later, shrinking our calculated TTL during very slow tests
 				"ttl should be, if off, smaller than expected want: %s got: %s", tt.wantFields["ttl"], fields["ttl"])
 			require.LessOrEqual(t, diff, 30*time.Second, // Test can be slow, allow more off in the other direction
 				"ttl must be at most 30s off, want: %s got: %s", tt.wantFields["ttl"], fields["ttl"])
