@@ -101,7 +101,8 @@ entries related to steps 3 and 4, with a request and response audit entry for ea
 When enabling an audit device, Vault will (by default) attempt to send a test message
 to the device. In cases where filtering is configured on a device, it may be possible
 for the evaluation of the filter to result in the test message failing to meet the specified
-predicate expression, and therefore not being written to the audit device's sink.
+predicate expression, and therefore not being written to the audit device's sink. This test
+message will always be present in `fallback` devices (described below).
 
 The properties of the test message are as follows:
 
