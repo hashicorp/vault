@@ -415,10 +415,13 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/robots.txt", r.URL.Path == "/":
 			// RFC 5785
 		case strings.HasPrefix(r.URL.Path, "/.well-known/"):
+			perfStandby := core.PerfStandby()
 			standby, err := core.Standby()
 			if err != nil {
 				core.Logger().Warn("error resolving standby status handling .well-known path", "error", err)
-			} else if standby {
+			} else if standby && !perfStandby {
+				// Standby nodes, not performance standbys, don't start plugins
+				// so registration can not happen, instead redirect to active
 				respondStandby(core, w, r.URL)
 				cancelFunc()
 				return
@@ -429,6 +432,8 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 				} else {
 					if redir != "" {
 						newReq := r.Clone(ctx)
+						// Save the original path for audit logging.
+						newReq.RequestURI = newReq.URL.Path
 						newReq.URL.Path = redir
 						hf(w, newReq)
 						cancelFunc()
