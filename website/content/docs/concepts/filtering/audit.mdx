@@ -17,6 +17,10 @@ is used to evaluate audit entries and determine if they should be written to a p
 audit log. Please ensure you are familiar with the [filtering concept](/vault/docs/concepts/filtering) before
 attempting to configure an audit device with a filter.
 
+Audit devices with and without filtering configured, will all function simultaneously
+in Vault. Using a filtered audit device does not restrict Operators from *only* using
+the filter and fallback type devices described on this page.
+
 <Note title="Advanced audit feature">
   The use of filtering in Vault's audit system should be considered an advanced feature.
   Whilst it has been designed to be simple and flexible, exclusively enabling filtered
@@ -37,12 +41,12 @@ Only audit entries that match the filter should then be written to the device's 
 
 Filters can reference the following properties of an audit entry:
 
-* `mount_point` - path to the mount (e.g. [auth method](/vault/docs/auth), [secret engine](/vault/docs/secrets)),
+* `mount_point` - Path to the mount (e.g. [auth method](/vault/docs/auth), [secret engine](/vault/docs/secrets)),
 including namespaces.
-* `mount_type` - type of mount being interacted with.
-* `namespace` - [namespace](/vault/docs/enterprise/namespaces) 'path' that the request is taking place within.
-* `operation` - [operation](/vault/docs/glossary#operation) being performed.
-* `path` - full path of the request.
+* `mount_type` - Type of mount being interacted with.
+* `namespace` - [Namespace](/vault/docs/enterprise/namespaces) 'path' that the request is taking place within.
+* `operation` - [Operation](/vault/docs/glossary#operation) being performed.
+* `path` - Full path of the request.
 
 ### Example filters
 
