@@ -40,6 +40,7 @@ const setupUser = async function (path) {
   await click('[data-test-save-config="true"]');
 };
 
+// skipping because this commit caused unrelated test failures https://github.com/hashicorp/vault/pull/25237/commits/ba914883f150c58c8e3b244cf77d0c0510658c3c
 module('Acceptance | mfa-setup', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
