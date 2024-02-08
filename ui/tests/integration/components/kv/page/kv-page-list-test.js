@@ -90,7 +90,7 @@ module('Integration | Component | kv | Page::List', function (hooks) {
 
     const popupSelector = `${PAGE.list.item('my-secret-0')} ${PAGE.popup}`;
     await click(popupSelector);
-    await click('[data-test-confirm-action-trigger]');
+    await click(PAGE.list.listMenuDelete);
     await click('[data-test-confirm-button]');
     assert.dom(PAGE.list.item('my-secret-0')).doesNotExist('deleted the first record from the list');
   });
