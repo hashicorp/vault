@@ -515,7 +515,9 @@ jobs:
           fi
           echo "data-race-result=${result}" | tee -a "$GITHUB_OUTPUT"
       - name: Upload data race detector failure log
-        if: steps.data-race-check.outputs.data-race-result == 'failure'
+        if: |
+          (success() || failure()) &&
+          steps.data-race-check.outputs.data-race-result == 'failure'
         uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         with:
           name: ${{ steps.metadata.outputs.data-race-log-upload-key }}
