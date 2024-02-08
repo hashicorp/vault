@@ -39,7 +39,7 @@ Only audit entries that match the filter should then be written to the device's 
 
 ### Valid `filter` properties
 
-Filters can reference the following properties of an audit entry:
+Filters can **only** reference the following properties of an audit entry:
 
 * `mount_point` - Path to the mount (e.g. [auth method](/vault/docs/auth), [secret engine](/vault/docs/secrets)),
 including namespaces.
@@ -105,7 +105,8 @@ entries related to steps 3 and 4, with a request and response audit entry for ea
 When enabling an audit device, Vault will (by default) attempt to send a test message
 to the device. In cases where filtering is configured on a device, it may be possible
 for the evaluation of the filter to result in the test message failing to meet the specified
-predicate expression, and therefore not being written to the audit device's sink.
+predicate expression, and therefore not being written to the audit device's sink. This test
+message will always be present in `fallback` devices (described below).
 
 The properties of the test message are as follows:
 
@@ -121,7 +122,7 @@ should not expect a test message to appear in the sink for a newly enabled audit
 ## Fallback device
 
 The ability to filter audit entries can provide great flexibility to your workflows,
-however the additional complexity could mean that a Vault Operator configures their
+however the additional complexity can make it possible for a Vault Operator to configure their
 audit devices in such a way that some audit entries are missed out from audit logs entirely.
 
 The `fallback` audit device is the (non-mandatory) mechanism by which Vault can
