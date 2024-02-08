@@ -92,7 +92,12 @@
             </div>
             <div class="column has-text-right">
               <Hds::Dropdown @isInline={{true}} as |dd|>
-                <dd.ToggleIcon @icon="more-horizontal" @text="Policy nav menu" @hasChevron={{false}} />
+                <dd.ToggleIcon
+                  @icon="more-horizontal"
+                  @text="Policy nav menu"
+                  @hasChevron={{false}}
+                  data-test-popup-menu-trigger
+                />
                 {{#if item.updatePath.isPending}}
                   <dd.Generic class="has-text-center">
                     <LoadingDropdownOption />
@@ -115,7 +120,12 @@
                     />
                   {{/if}}
                   {{#if (and item.canDelete (not-eq item.name "default"))}}
-                    <dd.Interactive @text="Delete" @color="critical" {{on "click" (fn (mut this.policyToDelete) item)}} />
+                    <dd.Interactive
+                      @text="Delete"
+                      @color="critical"
+                      data-test-confirm-action-trigger
+                      {{on "click" (fn (mut this.policyToDelete) item)}}
+                    />
                   {{/if}}
                 {{/if}}
               </Hds::Dropdown>
