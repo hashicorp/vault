@@ -20,7 +20,7 @@ check_fmt() {
 
       if echo "$file" | grep -v pb.go | grep -v vendor > /dev/null; then
         local output
-        if ! output=$(go run mvdan.cc/gofumpt -l "$file") || [ "$output" != "" ]; then
+        if ! output=$(gofumpt -l "$file") || [ "$output" != "" ]; then
           echo "--> ${file} ✖"
           malformed+=("$file")
           continue
@@ -31,7 +31,7 @@ check_fmt() {
     done
   else
     echo "--> Checking all files..."
-    IFS=" " read -r -a malformed <<< "$(find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs go run mvdan.cc/gofumpt -l)"
+    IFS=" " read -r -a malformed <<< "$(find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -l)"
   fi
 
   if [ "${#malformed[@]}" -ne 0 ] && [ -n "${malformed[0]}" ] ; then
@@ -39,7 +39,7 @@ check_fmt() {
     printf '%s\n' "${malformed[@]}"
     echo "Run \`make fmt\` to reformat code."
     for file in "${malformed[@]}"; do
-      go run mvdan.cc/gofumpt -w "$file"
+      gofumpt -w "$file"
       echo "$(git diff --no-color "$file")"
     done
     exit 1

@@ -2,14 +2,14 @@
 # SPDX-License-Identifier: BUSL-1.1
 
 ---
-name: Set up gotestsum from Github releases
-description: Set up gotestsum from Github releases
+name: Set up misspell from Github releases
+description: Set up misspell from Github releases
 
 inputs:
   destination:
-    description: "Where to install the gotestsum binary (default: $HOME/bin/gotestsum)"
+    description: "Where to install the misspell binary (default: $HOME/bin/misspell)"
     type: boolean
-    default: "$HOME/bin/gotestsum"
+    default: "$HOME/bin/misspell"
   version:
     description: "The version to install (default: latest)"
     type: string
@@ -17,13 +17,13 @@ inputs:
 
 outputs:
   destination:
-    description: Where the installed gotestsum binary is
+    description: Where the installed misspell binary is
     value: ${{ steps.install.outputs.destination }}
   destination-dir:
-    description: The directory where the installed gotestsum binary is
+    description: The directory where the installed misspell binary is
     value: ${{ steps.install.outputs.destination-dir }}
   version:
-    description: The installed version of gotestsum
+    description: The installed version of misspell
     value: ${{ steps.install.outputs.version }}
 
 runs:
@@ -34,7 +34,7 @@ runs:
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        VERSION=$(gh release list -R gotestyourself/gotestsum --exclude-drafts --exclude-pre-releases | grep ${{ inputs.version }} | cut -f1)
+        VERSION=$(gh release list -R golangci/misspell --exclude-drafts --exclude-pre-releases | grep ${{ inputs.version }} | cut -f1)
 
         mkdir -p $(dirname ${{ inputs.destination }})
         DESTINATION="$(readlink -f "${{ inputs.destination }}")"
@@ -43,18 +43,21 @@ runs:
 
         {
           echo "destination=$DESTINATION"
-          echo "destination-dir=$DESTINATION_DIR"
           echo "version=$VERSION"
+          echo "destination-dir=$DESTINATION_DIR"
         } | tee -a "$GITHUB_OUTPUT"
 
-        OS="$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')"
         ARCH="$(echo "$RUNNER_ARCH" | tr '[:upper:]' '[:lower:]')"
+        OS="$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')"
         if [ "$ARCH" = "x64" ]; then
-          export ARCH="amd64"
+          export ARCH="64bit"
+        fi
+        if [ "$OS" = "macos" ]; then
+          export OS="mac"
         fi
 
         mkdir -p tmp
-        gh release download "$VERSION" -p "*${OS}_${ARCH}.tar.gz" -O tmp/gotestsum.tgz -R gotestyourself/gotestsum
-        pushd tmp && tar -xvf gotestsum.tgz && popd
-        mv tmp/gotestsum "$DESTINATION"
+        gh release download "$VERSION" -p "misspell_*_${OS}_${ARCH}.tar.gz" -O tmp/misspell.tgz -R golangci/misspell
+        pushd tmp && tar -xvf misspell.tgz && popd
+        mv tmp/misspell "$DESTINATION"
         rm -rf tmp

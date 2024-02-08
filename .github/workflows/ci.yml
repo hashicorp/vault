@@ -183,7 +183,7 @@ jobs:
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
-            kv/data/github/hashicorp/vault-enterprise/github-token token | PRIVATE_REPO_GITHUB_TOKEN;
+            kv/data/github/hashicorp/vault-enterprise/github-token username-and-token | PRIVATE_REPO_GITHUB_TOKEN;
             kv/data/github/hashicorp/vault-enterprise/license license_1 | VAULT_LICENSE;
       - if: needs.setup.outputs.is-enterprise == 'true'
         name: Set up Git
@@ -223,26 +223,31 @@ jobs:
       - test-ui
     if: always()
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
+    permissions: write-all # Ensure we have id-token:write access for vault-auth.
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       # Determine the overall status of our required test jobs.
       - name: Determine status
         id: status
         run: |
-          # Decode our test results and filter out unrequired jobs. Reformat the JSON
-          # body that we get from Github into a more useful shape.
-          if results=$(jq -er 'del(.["test-go-fips"], .["test-go-race"]) as $required
-            | $required | keys as $jobs
-            | reduce $jobs[] as $job ([]; . + [{job: $job}+$required[$job]])'
-          ) <<< '${{ toJSON(needs.*.result) }}'; then
+          # Determine the overall status of the job. We allow fips and race tests to fail so we
+          # don't consider their result here.
+          #
+          # Encode the needs context into JSON, filter out unrequired workflows, shape the result
+          # into a more useful schema. Determine the overall status by comparing the total number of
+          # successful results with the number of required jobs.
+          if results=$(jq -rec 'del(.["test-go-fips"], .["test-go-race"]) as $required
+              | $required | keys as $jobs
+              | reduce $jobs[] as $job ([]; . + [{job: $job}+$required[$job]])' <<< '${{ toJSON(needs) }}'
+          ); then
             # Determine if all of our required jobs have succeeded.
-            if jq -er 'length as $expected_length
-              | [.[] | select(.result == "success")]
-              | length == $expected_length' <<< "$results"; then
-              msg=$(echo -e "All required test jobs succeeded!\n$results")
+            if jq -rec 'length as $expected
+              | [.[] | select((.result == "success") or (.result == "skipped"))] | length as $got
+              | $expected == $got' <<< "$results"; then
+              msg="All required test jobs succeeded!"
               result="success"
             else
-              msg=$(echo -e "One or more required test jobs failed!\n$results")
+              msg="One or more required test jobs failed!"
               result="failed"
             fi
           else
@@ -253,7 +258,7 @@ jobs:
           {
             echo "msg=${msg}"
             echo "result=${result}"
-            echo "results=${results}"
+            echo "results<<EOFRESULTS"$'\n'"${results}"$'\n'EOFRESULTS
           } | tee -a "$GITHUB_OUTPUT"
       - if: needs.setup.outputs.is-enterprise == 'true'
         id: vault-auth
@@ -262,7 +267,7 @@ jobs:
       - if: needs.setup.outputs.is-enterprise == 'true'
         id: secrets
         name: Fetch Vault Secrets
-        uses: hashicorp/vault-action@affa6f04da5c2d55e6e115b7d1b044a6b1af8c74
+        uses: hashicorp/vault-action@9f522b85981b491eab9a52c144d15aedbd0bf371 # v2.8.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -275,7 +280,13 @@ jobs:
       - if: |
           always() &&
           needs.setup.outputs.workflow-trigger == 'push' &&
-          steps.status.outputs.result != 'success'
+          (
+            needs.test-go.result == 'failure' ||
+            needs.test-go-race.result == 'failure' ||
+            needs.test-go-race.outputs.data-race-result == 'failure' ||
+            needs.test-go-testonly.result == 'failure' ||
+            needs.test-ui.result == 'failure'
+          )
         name: Notify build failures in Slack
         uses: slackapi/slack-github-action@6c661ce58804a1a20f6dc5fbee7f0381b469e001 # v1.25.0
         # We intentionally aren't using the following here since it's from an internal repo
@@ -347,9 +358,9 @@ jobs:
             echo "### All Go tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
           fi
           {
-            echo 'table-test-results<<EOF'
+            echo 'table-test-results<<EOFTABLE'
             cat "$temp_file_name"
-            echo EOF
+            echo EOFTABLE
           } | tee -a "$GITHUB_OUTPUT"
       - name: Create comment
         if: github.head_ref != '' && needs.setup.outputs.is-fork == 'false'
