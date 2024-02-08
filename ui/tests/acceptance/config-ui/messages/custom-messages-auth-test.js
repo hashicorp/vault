@@ -9,10 +9,9 @@ import { click, visit, fillIn, currentRouteName } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/config-ui/message-selectors';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import authPage from 'vault/tests/pages/auth';
-// import logout from 'vault/tests/pages/logout';
 import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
 import { format, addDays, startOfDay } from 'date-fns';
-import { createNS, runCmd } from '../helpers/commands';
+import { createNS, runCmd } from '../../../helpers/commands';
 
 const unauthenticatedMessageResponse = {
   request_id: '664fbad0-fcd8-9023-4c5b-81a7962e9f4b',
@@ -119,8 +118,8 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
     });
   });
 
-  test('it should display an active authenticated message after creation', async function (assert) {
-    assert.expect(3);
+  test('it should display an active authenticated message after creation on enterprise', async function (assert) {
+    assert.expect(4);
     await authPage.login();
     await visit('vault/config-ui/messages');
     await click(PAGE.button('create message'));
@@ -140,11 +139,10 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
     await click(PAGE.button('create-message'));
     assert.dom(PAGE.title).hasText('Awesome custom message title', 'on the details screen');
     assert.dom('.hds-alert').exists('active custom message displays on authenticated.');
-
     await runCmd(createNS('world'), false);
     await visit('vault/config-ui/messages');
     assert.dom('.hds-alert').exists('active custom message displays on namespace authenticated.');
-
+    await click(PAGE.listItem('Awesome custom message title'));
     await click(PAGE.confirmActionButton('Delete message'));
     await click(PAGE.confirmButton);
     assert.strictEqual(
