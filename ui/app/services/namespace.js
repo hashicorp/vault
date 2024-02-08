@@ -6,16 +6,18 @@
 import Service, { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { getRelativePath } from 'core/utils/sanitize-path';
+import { tracked } from '@glimmer/tracking';
 
 const ROOT_NAMESPACE = '';
 export default class NamespaceService extends Service {
   @service store;
   @service auth;
+
   //populated by the query param on the cluster route
-  path = '';
+  @tracked path = '';
   // list of namespaces available to the current user under the
   // current namespace
-  accessibleNamespaces = null;
+  @tracked accessibleNamespaces = null;
 
   get userRootNamespace() {
     return this.auth.authData?.userRootNamespace;
