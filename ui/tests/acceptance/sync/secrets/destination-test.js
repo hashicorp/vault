@@ -55,7 +55,7 @@ module('Acceptance | enterprise | sync | destination', function (hooks) {
     await click(ts.toolbar('Delete destination'));
     await fillIn(ts.confirmModalInput, 'DELETE');
     await click(ts.confirmButton);
-    assert.dom(ts.destinations.deleteBanner).exists('Delete banner renders');
+    assert.strictEqual(currentURL(), '/vault/sync/secrets/overview', 'navigates back to overview on delete');
   });
 
   test('it should not save placeholder values for credentials and only save when there are changes', async function (assert) {
