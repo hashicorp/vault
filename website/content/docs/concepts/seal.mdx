@@ -218,7 +218,7 @@ any downtime.
 1. Edit the Vault configuration, and add the new, target seal configuration.
 1. Send the Vault process the SIGHUP signal, triggering a configuration reload.
 1. Monitor the [`sys/sealwrap/rewrap`](/vault/api-docs/system/sealwrap-rewrap) endpoints,
-to see that rewrap is running, and/or [`sys/seal-backend-status`](https://developer.hashicorp.com/vault/api-docs/system/seal-backend-status),
+to see that rewrap is running, and/or [`sys/seal-backend-status`](/vault/api-docs/system/seal-backend-status),
 endpoints, waiting for `fully_wrapped` to be true, indicating all seal wrapped values are now
 wrapped by the new seal.  The logs also contain information about the rewrap progress.
 1. Edit the Vault configuration, removing the old seal configuration.
