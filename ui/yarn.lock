@@ -266,7 +266,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/core@npm:^7.21.4, @babel/core@npm:^7.22.19, @babel/core@npm:^7.23.6":
+"@babel/core@npm:^7.21.4, @babel/core@npm:^7.23.6":
   version: 7.23.7
   resolution: "@babel/core@npm:7.23.7"
   dependencies:
@@ -3013,7 +3013,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/plugin-transform-block-scoping@npm:^7.21.0, @babel/plugin-transform-block-scoping@npm:^7.22.15, @babel/plugin-transform-block-scoping@npm:^7.23.4":
+"@babel/plugin-transform-block-scoping@npm:^7.21.0, @babel/plugin-transform-block-scoping@npm:^7.23.4":
   version: 7.23.4
   resolution: "@babel/plugin-transform-block-scoping@npm:7.23.4"
   dependencies:
@@ -4978,15 +4978,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/runtime@npm:^7.22.15":
-  version: 7.23.8
-  resolution: "@babel/runtime@npm:7.23.8"
-  dependencies:
-    regenerator-runtime: ^0.14.0
-  checksum: 0bd5543c26811153822a9f382fd39886f66825ff2a397a19008011376533747cd05c33a91f6248c0b8b0edf0448d7c167ebfba34786088f1b7eb11c65be7dfc3
-  languageName: node
-  linkType: hard
-
 "@babel/runtime@npm:^7.8.4":
   version: 7.16.3
   resolution: "@babel/runtime@npm:7.16.3"
@@ -5395,7 +5386,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ember-data/legacy-compat@npm:4.12.5":
+"@ember-data/legacy-compat@npm:4.12.5, @ember-data/legacy-compat@npm:~4.12.4":
   version: 4.12.5
   resolution: "@ember-data/legacy-compat@npm:4.12.5"
   dependencies:
@@ -5411,26 +5402,6 @@ __metadata:
     "@ember-data/json-api":
       optional: true
   checksum: e9cfa9f05534217f0eaa433f152251714937fcaead62beaf5e51a59b470bb8cbac4598abd6ba014ed39cd61ce35a033c78f0b9dfcd6c90cb62531ef098dfa8ce
-  languageName: node
-  linkType: hard
-
-"@ember-data/legacy-compat@npm:^5.2.0":
-  version: 5.3.0
-  resolution: "@ember-data/legacy-compat@npm:5.3.0"
-  dependencies:
-    "@ember-data/private-build-infra": 5.3.0
-    "@embroider/macros": ^1.13.1
-    ember-cli-babel: ^8.0.0
-  peerDependencies:
-    "@ember-data/graph": 5.3.0
-    "@ember-data/json-api": 5.3.0
-    "@ember-data/request": 5.3.0
-  peerDependenciesMeta:
-    "@ember-data/graph":
-      optional: true
-    "@ember-data/json-api":
-      optional: true
-  checksum: 591c978eab6081d4dcb97c78fa2655dce132247386a37090e60b67fc7c01dd51370d98c426aad6f01ede69055b61cfc5edccad46031ba19d94fa21fdc11128fc
   languageName: node
   linkType: hard
 
@@ -5496,36 +5467,6 @@ __metadata:
     semver: ^7.3.8
     silent-error: ^1.1.1
   checksum: 0f16a66c7086ba263af43703e163a3a0d4d4701b3dbd0fd67236ea7247f6950263b878782c137c300610a3fae041f0d037908c435464a55fd2a8462ac6bc8af6
-  languageName: node
-  linkType: hard
-
-"@ember-data/private-build-infra@npm:5.3.0":
-  version: 5.3.0
-  resolution: "@ember-data/private-build-infra@npm:5.3.0"
-  dependencies:
-    "@babel/core": ^7.22.19
-    "@babel/plugin-transform-block-scoping": ^7.22.15
-    "@babel/runtime": ^7.22.15
-    "@ember/edition-utils": ^1.2.0
-    "@embroider/macros": ^1.13.1
-    babel-import-util: ^1.4.1
-    babel-plugin-debug-macros: ^0.3.4
-    babel-plugin-filter-imports: ^4.0.0
-    babel6-plugin-strip-class-callcheck: ^6.0.0
-    broccoli-debug: ^0.6.5
-    broccoli-file-creator: ^2.1.1
-    broccoli-merge-trees: ^4.2.0
-    calculate-cache-key-for-tree: ^2.0.0
-    chalk: ^4.1.2
-    ember-cli-babel: ^8.0.0
-    ember-cli-path-utils: ^1.0.0
-    ember-cli-string-utils: ^1.1.0
-    ember-cli-version-checker: ^5.1.2
-    git-repo-info: ^2.1.1
-    npm-git-info: ^1.0.3
-    semver: ^7.5.4
-    silent-error: ^1.1.1
-  checksum: 5b3a22d4bf47100cf0983c07590928c2659f7838dc74874a370f5118fbd45fef47bd12740984bd86eefa074fd8e3a2f49d921d31292f54b730185db1aa1cd28b
   languageName: node
   linkType: hard
 
@@ -9131,7 +9072,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"babel-import-util@npm:^1.2.2, babel-import-util@npm:^1.4.1":
+"babel-import-util@npm:^1.2.2":
   version: 1.4.1
   resolution: "babel-import-util@npm:1.4.1"
   checksum: a7f43a10141f62f05c0b4b3c80ee31f5f362d5f7a7d614fcef836f3eca2ec3ae0a732f8550674542d1821e87c3fd3d986fea94ed12e2a283a1571b6d1249380a
@@ -14424,7 +14365,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-cli-babel@npm:^8.0.0, ember-cli-babel@npm:^8.2.0":
+"ember-cli-babel@npm:^8.2.0":
   version: 8.2.0
   resolution: "ember-cli-babel@npm:8.2.0"
   dependencies:
@@ -25580,17 +25521,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"semver@npm:^7.5.4":
-  version: 7.5.4
-  resolution: "semver@npm:7.5.4"
-  dependencies:
-    lru-cache: ^6.0.0
-  bin:
-    semver: bin/semver.js
-  checksum: 12d8ad952fa353b0995bf180cdac205a4068b759a140e5d3c608317098b3575ac2f1e09182206bf2eb26120e1c0ed8fb92c48c592f6099680de56bb071423ca3
-  languageName: node
-  linkType: hard
-
 "send@npm:0.17.1":
   version: 0.17.1
   resolution: "send@npm:0.17.1"
@@ -28084,7 +28014,7 @@ __metadata:
     "@babel/plugin-proposal-decorators": ^7.21.0
     "@babel/plugin-proposal-object-rest-spread": ^7.12.1
     "@babel/plugin-transform-block-scoping": ^7.12.1
-    "@ember-data/legacy-compat": ^5.2.0
+    "@ember-data/legacy-compat": ~4.12.4
     "@ember/legacy-built-in-components": ^0.4.1
     "@ember/optional-features": ^2.0.0
     "@ember/render-modifiers": ^1.0.2
