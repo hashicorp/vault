@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+/* eslint-disable ember/no-settled-after-test-helper */
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { click, currentURL, fillIn, visit, isSettled, waitUntil, find } from '@ember/test-helpers';
+import { click, currentURL, fillIn, visit, settled, find, waitFor, waitUntil } from '@ember/test-helpers';
 import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
@@ -44,7 +45,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
       await click(SELECTORS.configuration.configureButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
-      await isSettled();
+      await settled();
       await click(SELECTORS.configuration.generateRootOption);
       await fillIn(SELECTORS.configuration.typeField, 'exported');
       await fillIn(SELECTORS.configuration.generateRootCommonNameField, 'issuer-common-0');
@@ -52,15 +53,19 @@ module('Acceptance | pki configuration test', function (hooks) {
       await click(SELECTORS.configuration.generateRootSave);
       await click(SELECTORS.configuration.doneButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
-      await isSettled();
+      await settled();
       await click(SELECTORS.configTab);
-      await isSettled();
+      await settled();
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
       await click(SELECTORS.configuration.issuerLink);
-      await isSettled();
+      await settled();
+      await waitFor(SELECTORS.configuration.deleteAllIssuerModal, { timeout: 5000 });
       assert.dom(SELECTORS.configuration.deleteAllIssuerModal).exists();
       await fillIn(SELECTORS.configuration.deleteAllIssuerInput, 'delete-all');
       await click(SELECTORS.configuration.deleteAllIssuerButton);
+      await settled();
+      await waitUntil(() => !find(SELECTORS.configuration.deleteAllIssuerModal));
+
       assert.dom(SELECTORS.configuration.deleteAllIssuerModal).doesNotExist();
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
     });
@@ -92,10 +97,11 @@ module('Acceptance | pki configuration test', function (hooks) {
         'goes to configuration page'
       );
       await click(SELECTORS.configuration.issuerLink);
+      await waitFor(SELECTORS.configuration.deleteAllIssuerModal);
       assert.dom(SELECTORS.configuration.deleteAllIssuerModal).exists();
       await fillIn(SELECTORS.configuration.deleteAllIssuerInput, 'delete-all');
       await click(SELECTORS.configuration.deleteAllIssuerButton);
-      await isSettled();
+      await waitUntil(() => !find(SELECTORS.configuration.deleteAllIssuerModal));
       assert
         .dom(SELECTORS.configuration.deleteAllIssuerModal)
         .doesNotExist('delete all issuers modal closes');
@@ -104,10 +110,9 @@ module('Acceptance | pki configuration test', function (hooks) {
         `/vault/secrets/${this.mountPath}/pki/configuration`,
         'is still on configuration page'
       );
-      await isSettled();
+      await settled();
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-      await waitUntil(() => currentURL() === `/vault/secrets/${this.mountPath}/pki/overview`);
-      await isSettled();
+      await settled();
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.mountPath}/pki/overview`,
@@ -120,25 +125,25 @@ module('Acceptance | pki configuration test', function (hooks) {
         );
 
       await visit(`/vault/secrets/${this.mountPath}/pki/roles`);
-      await isSettled();
+      await settled();
       assert
         .dom(SELECTORS.emptyStateMessage)
         .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
 
       await visit(`/vault/secrets/${this.mountPath}/pki/issuers`);
-      await isSettled();
+      await settled();
       assert
         .dom(SELECTORS.emptyStateMessage)
         .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
 
       await visit(`/vault/secrets/${this.mountPath}/pki/keys`);
-      await isSettled();
+      await settled();
       assert
         .dom(SELECTORS.emptyStateMessage)
         .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
 
       await visit(`/vault/secrets/${this.mountPath}/pki/certificates`);
-      await isSettled();
+      await settled();
       assert
         .dom(SELECTORS.emptyStateMessage)
         .hasText(
@@ -148,6 +153,7 @@ module('Acceptance | pki configuration test', function (hooks) {
 
     test('it shows the correct empty state message if roles and certificates exists after delete all issuers', async function (assert) {
       await authPage.login(this.pkiAdminToken);
+      // Configure PKI
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
       await click(SELECTORS.configuration.configureButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
@@ -157,6 +163,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await fillIn(SELECTORS.configuration.generateRootIssuerNameField, 'issuer-0');
       await click(SELECTORS.configuration.generateRootSave);
       await click(SELECTORS.configuration.doneButton);
+      // Create role and root CA"
       await runCmd([
         `write ${this.mountPath}/roles/some-role \
         issuer_ref="default" \
@@ -169,16 +176,17 @@ module('Acceptance | pki configuration test', function (hooks) {
       await click(SELECTORS.configTab);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
       await click(SELECTORS.configuration.issuerLink);
+      await waitFor(SELECTORS.configuration.deleteAllIssuerModal);
       assert.dom(SELECTORS.configuration.deleteAllIssuerModal).exists();
       await fillIn(SELECTORS.configuration.deleteAllIssuerInput, 'delete-all');
       await click(SELECTORS.configuration.deleteAllIssuerButton);
-      await isSettled();
+      await settled();
+      await waitUntil(() => !find(SELECTORS.configuration.deleteAllIssuerModal));
       assert.dom(SELECTORS.configuration.deleteAllIssuerModal).doesNotExist();
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
-      await isSettled();
+      await settled();
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-      await waitUntil(() => currentURL() === `/vault/secrets/${this.mountPath}/pki/overview`);
-      await isSettled();
+      await settled();
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
       assert
         .dom(SELECTORS.emptyStateMessage)
@@ -187,7 +195,7 @@ module('Acceptance | pki configuration test', function (hooks) {
         );
 
       await visit(`/vault/secrets/${this.mountPath}/pki/roles`);
-      await isSettled();
+      await settled();
       assert
         .dom(SELECTORS.emptyStateMessage)
         .hasText(
@@ -195,19 +203,19 @@ module('Acceptance | pki configuration test', function (hooks) {
         );
 
       await visit(`/vault/secrets/${this.mountPath}/pki/issuers`);
-      await isSettled();
+      await settled();
       assert
         .dom(SELECTORS.emptyStateMessage)
         .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
 
       await visit(`/vault/secrets/${this.mountPath}/pki/keys`);
-      await isSettled();
+      await settled();
       assert
         .dom(SELECTORS.emptyStateMessage)
         .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
 
       await visit(`/vault/secrets/${this.mountPath}/pki/certificates`);
-      await isSettled();
+      await settled();
       assert
         .dom(SELECTORS.emptyStateMessage)
         .hasText(
