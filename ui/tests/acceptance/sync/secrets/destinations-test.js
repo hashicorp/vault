@@ -12,7 +12,8 @@ import authPage from 'vault/tests/pages/auth';
 import { click, visit, fillIn, currentURL, currentRouteName } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 
-module('Acceptance | enterprise | sync | destinations', function (hooks) {
+// sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
+module('Acceptance | sync | destinations', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
