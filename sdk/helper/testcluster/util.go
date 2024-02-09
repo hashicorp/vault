@@ -281,7 +281,7 @@ func WaitForActiveNodeAndPerfStandbys(ctx context.Context, cluster VaultCluster)
 	// this call to WaitForActiveNode by reworking the logic in this method.
 	leaderIdx, err := WaitForActiveNode(ctx, cluster)
 	if err != nil {
-		return err
+		return fmt.Errorf("did not find leader: %w", err)
 	}
 
 	if len(cluster.Nodes()) == 1 {
@@ -302,7 +302,7 @@ func WaitForActiveNodeAndPerfStandbys(ctx context.Context, cluster VaultCluster)
 			Local: true,
 		})
 		if err == nil {
-			break
+			return fmt.Errorf("unable to mount kv engine: %w", err)
 		}
 		time.Sleep(1 * time.Second)
 	}
@@ -381,9 +381,17 @@ func WaitForActiveNodeAndPerfStandbys(ctx context.Context, cluster VaultCluster)
 		time.Sleep(time.Second)
 	}
 	if err != nil {
-		return fmt.Errorf("unable to unmount KV engine on primary")
+		return fmt.Errorf("unable to unmount KV engine: %w", err)
 	}
 	return nil
+}
+
+func Clients(vc VaultCluster) []*api.Client {
+	var ret []*api.Client
+	for _, n := range vc.Nodes() {
+		ret = append(ret, n.APIClient())
+	}
+	return ret
 }
 
 type GenerateRootKind int
