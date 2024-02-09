@@ -9,8 +9,6 @@ import ApplicationSerializer from '../application';
 export default class MessageSerializer extends ApplicationSerializer {
   attrs = {
     active: { serialize: false },
-    start_time: { serialize: false },
-    end_time: { serialize: false },
   };
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {

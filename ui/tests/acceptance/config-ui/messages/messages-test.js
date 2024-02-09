@@ -168,7 +168,7 @@ module('Acceptance | config-ui', function (hooks) {
       assert
         .dom(PAGE.unauthCreateFormInfo)
         .hasText(
-          'Note: Do not include sensitive info in this message since users are unauthenticated at this stage.'
+          'Note: Do not include sensitive information in this message since users are unauthenticated at this stage.'
         );
     });
     test('it should display preview a message when all required fields are filled out', async function (assert) {
