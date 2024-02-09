@@ -440,7 +440,17 @@ jobs:
         if: (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise') && (success() || failure())
         continue-on-error: true
         run: |
-          curl -L --fail "https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64" --output "/usr/local/bin/datadog-ci"
+          if type datadog-ci > /dev/null 2>&1; then
+            exit 0
+          fi
+          # Curl does not always exit 1 if things go wrong. To determine if this is successful we'll
+          # we'll silence all non-error output and check the results to determine success.
+          if ! out="$(curl -sSL --fail https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64 --output /usr/local/bin/datadog-ci 2>&1)"; then
+            printf "failed to download datadog-ci: %s" "$out"
+          fi
+          if [[ -n "$out" ]]; then
+            printf "failed to download datadog-ci: %s" "$out"
+          fi
           chmod +x /usr/local/bin/datadog-ci
       - name: Upload test results to DataDog
         continue-on-error: true
@@ -505,7 +515,9 @@ jobs:
           fi
           echo "data-race-result=${result}" | tee -a "$GITHUB_OUTPUT"
       - name: Upload data race detector failure log
-        if: steps.data-race-check.outputs.data-race-result == 'failure'
+        if: |
+          (success() || failure()) &&
+          steps.data-race-check.outputs.data-race-result == 'failure'
         uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         with:
           name: ${{ steps.metadata.outputs.data-race-log-upload-key }}
