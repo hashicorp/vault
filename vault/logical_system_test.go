@@ -3880,6 +3880,10 @@ func TestSystemBackend_PluginCatalogPins_CRUD(t *testing.T) {
 // TestSystemBackend_PluginCatalog_ContainerCRUD tests that plugins registered
 // with oci_image set get recorded properly in the catalog.
 func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Containerized plugins only supported on Linux")
+	}
+
 	sym, err := filepath.EvalSymlinks(os.TempDir())
 	if err != nil {
 		t.Fatalf("error: %v", err)
@@ -3942,15 +3946,6 @@ func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
 			}
 
 			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-
-			// We should get a nice error back from the API if we're not on linux, but
-			// that's all we can test on non-linux.
-			if runtime.GOOS != "linux" {
-				if err != nil || resp.Error() == nil {
-					t.Fatalf("err: %v %v", err, resp.Error())
-				}
-				return
-			}
 
 			if err != nil || resp.Error() != nil {
 				t.Fatalf("err: %v %v", err, resp.Error())
@@ -6695,7 +6690,7 @@ func TestGetSealBackendStatus(t *testing.T) {
 
 func TestSystemBackend_pluginRuntime_CannotDeleteRuntimeWithReferencingPlugins(t *testing.T) {
 	if runtime.GOOS != "linux" {
-		t.Skip("Currently plugincontainer only supports linux")
+		t.Skip("Containerized plugins only supported on Linux")
 	}
 	sym, err := filepath.EvalSymlinks(os.TempDir())
 	if err != nil {
@@ -6707,7 +6702,7 @@ func TestSystemBackend_pluginRuntime_CannotDeleteRuntimeWithReferencingPlugins(t
 	b := c.systemBackend
 
 	const runtime = "custom-runtime"
-	const ociRuntime = "runsc"
+	const ociRuntime = "runc"
 	conf := pluginruntimeutil.PluginRuntimeConfig{
 		Name:       runtime,
 		Type:       consts.PluginRuntimeTypeContainer,

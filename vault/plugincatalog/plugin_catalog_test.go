@@ -729,6 +729,10 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 			}
 		},
 		"set container plugin": func(t *testing.T) {
+			if runtime.GOOS != "linux" {
+				t.Skip("Containerized plugins only supported on Linux")
+			}
+
 			// Should never error.
 			plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, "", tempDir)
 			plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, tempDir)
@@ -776,6 +780,10 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 // are returned with their container runtime config populated if it was
 // specified.
 func TestRuntimeConfigPopulatedIfSpecified(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Containerized plugins only supported on Linux")
+	}
+
 	pluginCatalog := testPluginCatalog(t)
 
 	plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, "", pluginCatalog.directory)
@@ -792,7 +800,7 @@ func TestRuntimeConfigPopulatedIfSpecified(t *testing.T) {
 		t.Fatal("specified runtime doesn't exist yet, should have failed")
 	}
 
-	const ociRuntime = "runsc"
+	const ociRuntime = "runc"
 	err = pluginCatalog.runtimeCatalog.Set(context.Background(), &pluginruntimeutil.PluginRuntimeConfig{
 		Name:       runtime,
 		Type:       consts.PluginRuntimeTypeContainer,
@@ -1033,14 +1041,16 @@ func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
 
 func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 	if runtime.GOOS != "linux" {
-		t.Skip("Running plugins in containers is only supported on linux")
+		t.Skip("Containerized plugins only supported on Linux")
 	}
 
 	pluginCatalog := testPluginCatalog(t)
-	var testCases []struct {
+
+	type testCase struct {
 		plugin      pluginhelpers.TestPlugin
 		expectedErr error
 	}
+	var testCases []testCase
 
 	for _, pluginType := range []consts.PluginType{
 		consts.PluginTypeCredential,
@@ -1050,20 +1060,13 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 		plugin := pluginhelpers.CompilePlugin(t, pluginType, "v1.2.3", pluginCatalog.directory)
 		plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, pluginCatalog.directory)
 
-		testCases = append(testCases,
-			struct {
-				plugin      pluginhelpers.TestPlugin
-				expectedErr error
-			}{
-				plugin:      plugin,
-				expectedErr: nil,
-			})
+		testCases = append(testCases, testCase{
+			plugin:      plugin,
+			expectedErr: nil,
+		})
 
 		plugin.Image += "-will-not-be-found"
-		testCases = append(testCases, struct {
-			plugin      pluginhelpers.TestPlugin
-			expectedErr error
-		}{
+		testCases = append(testCases, testCase{
 			plugin:      plugin,
 			expectedErr: ErrPluginUnableToRun,
 		})
