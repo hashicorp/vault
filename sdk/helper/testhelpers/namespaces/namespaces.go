@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package namespaces
 
 import (
@@ -20,7 +23,7 @@ const RootNamespaceID = "root"
 
 // ErrNotFound is returned by funcs in this package when something isn't found,
 // instead of returning (nil, nil).
-var ErrNotFound = errors.New("not found")
+var ErrNotFound = errors.New("no namespaces found")
 
 // folderPath transforms an input path that refers to a namespace or mount point,
 // such that it adheres to the norms Vault prefers.  The result will have any
