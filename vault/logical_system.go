@@ -593,11 +593,8 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 	})
 	if err != nil {
 		if errors.Is(err, plugincatalog.ErrPluginNotFound) ||
-			errors.Is(err, plugincatalog.ErrPluginVersionMismatch) {
-			return logical.ErrorResponse(err.Error()), nil
-		}
-
-		if errors.Is(err, plugincatalog.ErrContainerizedPluginUnableToRun) {
+			errors.Is(err, plugincatalog.ErrPluginVersionMismatch) ||
+			errors.Is(err, plugincatalog.ErrPluginUnableToRun) {
 			return logical.ErrorResponse(err.Error()), nil
 		}
 

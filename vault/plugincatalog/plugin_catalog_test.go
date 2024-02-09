@@ -1065,7 +1065,7 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 			expectedErr error
 		}{
 			plugin:      plugin,
-			expectedErr: ErrContainerizedPluginUnableToRun,
+			expectedErr: ErrPluginUnableToRun,
 		})
 	}
 
