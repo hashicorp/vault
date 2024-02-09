@@ -54,7 +54,7 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  module('teset', function (hooks) {
+  module('auth and unauth messages', function (hooks) {
     hooks.beforeEach(function () {
       return this.server.get('/sys/internal/ui/mounts', () => ({}));
     });
