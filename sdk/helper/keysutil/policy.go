@@ -1108,6 +1108,8 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 		return nil, errutil.UserError{Err: "requested version for signing is negative"}
 	case ver > p.LatestVersion:
 		return nil, errutil.UserError{Err: "requested version for signing is higher than the latest key version"}
+	case p.MinEncryptionVersion == 0 && ver < p.MinDecryptionVersion:
+		return nil, errutil.UserError{Err: fmt.Sprintf("requested version for signing is less than the implicit minimum available key version (%d)", p.MinDecryptionVersion)}
 	case p.MinEncryptionVersion > 0 && ver < p.MinEncryptionVersion:
 		return nil, errutil.UserError{Err: "requested version for signing is less than the minimum encryption key version"}
 	}
@@ -1998,7 +2000,9 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 		return "", errutil.UserError{Err: "requested version for encryption is negative"}
 	case ver > p.LatestVersion:
 		return "", errutil.UserError{Err: "requested version for encryption is higher than the latest key version"}
-	case ver < p.MinEncryptionVersion:
+	case p.MinEncryptionVersion == 0 && ver < p.MinDecryptionVersion:
+		return "", errutil.UserError{Err: fmt.Sprintf("requested version for encryption is less than the implicit minimum available key version (%d)", p.MinDecryptionVersion)}
+	case p.MinEncryptionVersion > 0 && ver < p.MinEncryptionVersion:
 		return "", errutil.UserError{Err: "requested version for encryption is less than the minimum encryption key version"}
 	}
 
