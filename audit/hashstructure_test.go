@@ -430,4 +430,16 @@ func Test_hashWalker_Primitive_TypeDefinition(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "value1", m["key"].(S).Value)
 	})
+	t.Run("map-with-pointer-struct-with-custom-type", func(t *testing.T) {
+		type Foo string
+		type S struct {
+			Value Foo
+		}
+		m := map[string]interface{}{
+			"key": &S{Value: "value1"},
+		}
+		err := hashMap(callback, m, nil)
+		require.NoError(t, err)
+		require.Equal(t, Foo("***"), m["key"].(S).Value)
+	})
 }

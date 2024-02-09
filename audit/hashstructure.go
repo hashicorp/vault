@@ -381,9 +381,16 @@ func (w *hashWalker) Primitive(v reflect.Value) error {
 		si := int(w.csKey[len(w.cs)-1].Int())
 		s.Slice(si, si+1).Index(0).Set(resultVal)
 	default:
+		// If the value is cannot be set, return early
 		if !setV.CanSet() {
 			return nil
 		}
+
+		// For custom type definitions, a conversion is necessary to avoid panic
+		if setV.Type() != resultVal.Type() {
+			resultVal = resultVal.Convert(setV.Type())
+		}
+
 		// Otherwise, we should be addressable
 		setV.Set(resultVal)
 	}
