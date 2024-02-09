@@ -15,7 +15,6 @@ export default class VaultClusterAccessMethodsController extends Controller {
   @tracked authMethodOptions = [];
   @tracked selectedAuthType = null;
   @tracked selectedAuthName = null;
-  @tracked methodToDisable = null;
 
   queryParams = ['page, pageFilter'];
 
@@ -81,8 +80,6 @@ export default class VaultClusterAccessMethodsController extends Controller {
       this.flashMessages.danger(
         `There was an error disabling Auth Method at ${path}: ${err.errors.join(' ')}.`
       );
-    } finally {
-      this.methodToDisable = null;
     }
   }
 }
