@@ -15,9 +15,7 @@ description: >-
 
 Data bundles include collections of JSON snapshots that contain license
 utilization information. This data will not be transmitted to HashiCorp
-automatically if manual reporting is enabled.
-
-#### Option 1. Use the CLI
+automatically if manual reporting is enabled
 
 1. Login into your [cluster node](/vault/tutorials/cloud/vault-access-cluster).
 1. Run this CLI command to generate a data bundle:
@@ -26,41 +24,65 @@ automatically if manual reporting is enabled.
    $ vault operator utilization
    ```
 
-  By default, the bundle will include all historical snapshots. You are required
-  to report at the minimum [x days] of data, but no more than 400 days. 
+   By default, the bundle will include all historical snapshots. You are
+   required to report at the minimum [x days] of data, but no more than 400
+   days. 
 
-  You can provide context about the conditions under which the report was
-  generated and submitted by providing a comment. This optional comment will not
-  be included in the license utilization bundle, but will be included in the
-  product audit logs. [example comment]
+   You can provide context about the conditions under which the report was
+   generated and submitted by providing a comment. This optional comment will
+   not be included in the license utilization bundle, but will be included in
+   the product audit logs. 
 
-1. Run this CLI command to send your data bundle to Hashicorp.
+   **Example:**
 
-  ```shell-session
-  $ 
-  ```
+   ```shell-session
+   $ vault operator utilization -message=”Change Control 654987” \
+        -output=”/utilization/reports/latest.json”
+   ```
 
-#### Option 2. Use the Web Portal
+   This command will export all the persisted snapshots into a bundle. The
+   message “Change Control 654987” will not be included in the bundle but will
+   be included in Vault server logs. The `-output` flags specifies the output
+   location of the JSON bundle. 
 
-1. Login to the web portal.
-1. Go to [destination e.g User Licenses]
-1. Under [Quick Links] click on **Export license usage**. Your data bundle
-should download.
+   **Available command flags:**
 
-### Send the data bundle to Hashicorp
+   - `-message` `(string: “”)` - Provide context about the conditions under
+   which the report was generated and   submitted. This message is not included
+   in the license utilization bundle but will be included in the   vault server
+   logs. (optional)
 
-1. Go to [directory]  and find the file named `output.json`. Copy this file.
+   - `-today-only` `(bool: false)` - To include only today’s snapshot, no
+   historical snapshots. If no snapshots   were persisted in the last 24 hrs, it
+   takes a snapshot and exports it to a bundle. (optional)    
+   
+   - `-output` `(string: “”)` - Specifies the output path for the bundle.
+   Defaults to a time-based generated file name. (optional)
+
+
+   <Note title="Vault API">
+
+    The equivalent API endpoint to generate a snapshot bundle is:
+
+    `GET sys/utilization?today-only=:today-only-boolean-value`
+    
+   </Note>
+
+
+### Send the data bundle to HashiCorp
+
+1. Go to [directory] and find the file named `output.json`. Copy this file.
 1. Go to https://portal.cloud.hashicorp.com/license-utilization/reports/create
-1. Click on **Choose Files**, or drop your file(s) into the container.
+1. Click on **Choose files**, or drop your file(s) into the container.
 
-    a. If the upload  succeeded, The HCP user interface will change the file
+    a. If the upload succeeded, the HCP user interface will change the file
     status to **Uploaded** in green.
     
-    b. If the upload failed, the file Status will say **Failed** in red, and
+    b. If the upload failed, the file status will say **Failed** in red, and
     will include error information. 
 
 If the upload fails make sure you haven’t modified the file signature. If the
-error persists, please contact your [Account Representative]. 
+error persists, please contact your account representative. 
 
 
 ## Enable manual reporting
@@ -79,9 +101,13 @@ Administrators can manage disk space for storing snapshots by defining the
 number of days snapshots can be retained. The minimum requirement is [x days] of
 data.
 
-Go to [config file / section] and [add/ change fields]
+```hcl
+reporting {
+    snapshot_retention_time = "2400h"
+}
+```
 
-## Data File Content
+## Data file content
 
 <CodeBlockConfig hideClipboard>
 
