@@ -31,6 +31,7 @@ export default Controller.extend(copy(DEFAULTS, true), {
   store: service(),
   rm: service('replication-mode'),
   replicationMode: alias('rm.mode'),
+  secondaryToRevoke: null,
 
   submitError(e) {
     if (e.errors) {
@@ -114,7 +115,8 @@ export default Controller.extend(copy(DEFAULTS, true), {
           });
         },
         (...args) => this.submitError(...args)
-      );
+      )
+      .finally(() => this.set('secondaryToRevoke', null));
   },
 
   actions: {

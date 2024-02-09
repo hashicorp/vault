@@ -12,7 +12,8 @@ import authPage from 'vault/tests/pages/auth';
 import { click, visit, currentURL, fillIn } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 
-module('Acceptance | enterprise | sync | destination', function (hooks) {
+// sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
+module('Acceptance | sync | destination', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
@@ -55,7 +56,7 @@ module('Acceptance | enterprise | sync | destination', function (hooks) {
     await click(ts.toolbar('Delete destination'));
     await fillIn(ts.confirmModalInput, 'DELETE');
     await click(ts.confirmButton);
-    assert.dom(ts.destinations.deleteBanner).exists('Delete banner renders');
+    assert.strictEqual(currentURL(), '/vault/sync/secrets/overview', 'navigates back to overview on delete');
   });
 
   test('it should not save placeholder values for credentials and only save when there are changes', async function (assert) {
