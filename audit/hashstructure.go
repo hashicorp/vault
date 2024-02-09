@@ -381,10 +381,10 @@ func (w *hashWalker) Primitive(v reflect.Value) error {
 		si := int(w.csKey[len(w.cs)-1].Int())
 		s.Slice(si, si+1).Index(0).Set(resultVal)
 	default:
-		// Otherwise, we should be addressable
 		if !setV.CanSet() {
 			return nil
 		}
+		// Otherwise, we should be addressable
 		setV.Set(resultVal)
 	}
 
