@@ -13,13 +13,12 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/mitchellh/copystructure"
-	"github.com/stretchr/testify/require"
-
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/mitchellh/copystructure"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCopy_auth(t *testing.T) {
