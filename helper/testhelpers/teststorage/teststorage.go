@@ -4,6 +4,7 @@
 package teststorage
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -18,7 +19,7 @@ import (
 	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 	"github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -233,6 +234,28 @@ func FileBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	opts.PhysicalFactory = SharedPhysicalFactory(MakeFileBackend)
 }
 
+func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
+	leader := cluster.Cores[0]
+
+	leaderInfos := []*raft.LeaderJoinInfo{
+		{
+			LeaderAPIAddr: leader.Client.Address(),
+			TLSConfig:     leader.TLSConfig(),
+		},
+	}
+
+	// Join followers
+	for i := 1; i < len(cluster.Cores); i++ {
+		core := cluster.Cores[i]
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		cluster.UnsealCore(t, core)
+	}
+}
+
 func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	opts.KeepStandbysSealed = true
 	var bridge *raft.ClusterAddrBridge
@@ -252,7 +275,7 @@ func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	}
 	opts.SetupFunc = func(t testing.T, c *vault.TestCluster) {
 		if opts.NumCores != 1 {
-			testhelpers.RaftClusterJoinNodes(t, c)
+			RaftClusterJoinNodes(t, c)
 			time.Sleep(15 * time.Second)
 		}
 	}
