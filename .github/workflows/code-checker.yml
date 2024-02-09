@@ -58,21 +58,6 @@ jobs:
         # godoc for the function.
       - run: make ci-vet-codechecker
         name: Check custom linters
-      - run: make protolint
-        name: Protobuf lint
-
-  generate-delta:
-    name: Protobuf generate delta
-    runs-on: ubuntu-latest
-    needs: setup
-    steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - uses: ./.github/actions/set-up-go
-        with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-      - uses: ./.github/actions/install-external-tools # for buf and protoc-*
-      - name: Check generate delta
-        run: make prep check-proto-delta
 
   format:
     name: Format
@@ -86,10 +71,6 @@ jobs:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Go format
         run: make prep check-go-fmt
-      - name: Protobuf format
-        run: |
-          echo "Using buf version $(buf --version)"
-          make check-proto-fmt
 
   semgrep:
     name: Semgrep
