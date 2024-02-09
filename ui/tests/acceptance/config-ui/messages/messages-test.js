@@ -76,6 +76,7 @@ module('Acceptance | config-ui', function (hooks) {
         'redirects to messages page after delete'
       );
     });
+
     test('it should show multiple messages modal', async function (assert) {
       assert.expect(4);
       await this.createMessage('modal', null);
