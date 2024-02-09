@@ -460,6 +460,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
 	}
+	defer p.Unlock()
 
 	// Process batch request items. If encryption of any request
 	// item fails, respectively mark the error in the response
@@ -547,8 +548,6 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	} else {
 		if batchResponseItems[0].Error != "" {
-			p.Unlock()
-
 			if internalErrorInBatch {
 				return nil, errutil.InternalError{Err: batchResponseItems[0].Error}
 			}
@@ -569,8 +568,6 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	if req.Operation == logical.CreateOperation && !upserted {
 		resp.AddWarning("Attempted creation of the key during the encrypt operation, but it was created beforehand")
 	}
-
-	p.Unlock()
 
 	return batchRequestResponse(d, resp, req, successesInBatch, userErrorInBatch, internalErrorInBatch)
 }

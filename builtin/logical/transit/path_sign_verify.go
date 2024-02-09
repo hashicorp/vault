@@ -367,9 +367,9 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
 	}
+	defer p.Unlock()
 
 	if !p.Type.SigningSupported() {
-		p.Unlock()
 		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support signing", p.Type)), logical.ErrInvalidRequest
 	}
 
@@ -385,12 +385,10 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	if batchInputRaw != nil {
 		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
-			p.Unlock()
 			return nil, fmt.Errorf("failed to parse batch input: %w", err)
 		}
 
 		if len(batchInputItems) == 0 {
-			p.Unlock()
 			return logical.ErrorResponse("missing batch input to process"), logical.ErrInvalidRequest
 		}
 	} else {
@@ -403,7 +401,6 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	response := make([]batchResponseSignItem, len(batchInputItems))
-
 	for i, item := range batchInputItems {
 
 		rawInput, ok := item["input"]
@@ -491,7 +488,6 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	} else {
 		if response[0].Error != "" || response[0].err != nil {
-			p.Unlock()
 			if response[0].Error != "" {
 				return logical.ErrorResponse(response[0].Error), response[0].err
 			}
@@ -509,7 +505,6 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
-	p.Unlock()
 	return resp, nil
 }
 
@@ -625,9 +620,9 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
 	}
+	defer p.Unlock()
 
 	if !p.Type.SigningSupported() {
-		p.Unlock()
 		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support verification", p.Type)), logical.ErrInvalidRequest
 	}
 
@@ -732,7 +727,6 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		}
 	} else {
 		if response[0].Error != "" || response[0].err != nil {
-			p.Unlock()
 			if response[0].Error != "" {
 				return logical.ErrorResponse(response[0].Error), response[0].err
 			}
@@ -743,7 +737,6 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		}
 	}
 
-	p.Unlock()
 	return resp, nil
 }
 
