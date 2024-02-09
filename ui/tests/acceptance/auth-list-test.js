@@ -27,25 +27,24 @@ const SELECTORS = {
 module('Acceptance | auth backend list', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
-    return authPage.login();
-  });
-
-  // hooks.afterEach(async function () {
-  //   await authPage.login();
-  //   await runCmd([deleteAuthCmd(this.path1), deleteAuthCmd(this.path2)], false);
-  //   return;
-  // });
-
-  test('userpass secret backend', async function (assert) {
-    assert.expect(5);
+  hooks.beforeEach(async function () {
+    await authPage.login();
     this.path1 = `userpass-${uuidv4()}`;
     this.path2 = `userpass-${uuidv4()}`;
     this.user1 = 'user1';
     this.user2 = 'user2';
 
     await runCmd([mountAuthCmd('userpass', this.path1), mountAuthCmd('userpass', this.path2)], false);
+  });
 
+  hooks.afterEach(async function () {
+    await authPage.login();
+    await runCmd([deleteAuthCmd(this.path1), deleteAuthCmd(this.path2)], false);
+    return;
+  });
+
+  test('userpass secret backend', async function (assert) {
+    assert.expect(5);
     // enable a user in first userpass backend
     await visit('/vault/access');
     await click(SELECTORS.backendLink(this.path1));
@@ -73,8 +72,6 @@ module('Acceptance | auth backend list', function (hooks) {
     await click(SELECTORS.methods);
     await click(SELECTORS.backendLink(this.path1));
     assert.dom(SELECTORS.listItem).hasText(this.user1, 'user1 exists in the list');
-
-    await runCmd([deleteAuthCmd(this.path1), deleteAuthCmd(this.path2)], false);
   });
 
   test('auth methods are linkable and link to correct view', async function (assert) {
