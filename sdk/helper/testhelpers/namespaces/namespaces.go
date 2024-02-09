@@ -129,12 +129,12 @@ LOOP:
 	return ctx.Err()
 }
 
-// DeleteAllNamespacesAndMounts uses WalkNamespaces to delete all namespaces,
+// DeleteAllNamespaces uses WalkNamespaces to delete all namespaces,
 // waiting for deletion to complete before returning.  The same caveats about
 // namespaces changing underneath us apply as in WalkNamespaces.
 // Traversal is depth-first pre-order, but we must do the deletion in the reverse
 // order, since a namespace containing namespaces cannot be deleted.
-func DeleteAllNamespacesAndMounts(ctx context.Context, client *api.Client) error {
+func DeleteAllNamespaces(ctx context.Context, client *api.Client) error {
 	var nss []string
 	err := WalkNamespaces(client, func(id, apiPath string) error {
 		if apiPath != RootNamespacePath {
