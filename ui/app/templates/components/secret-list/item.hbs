@@ -50,7 +50,7 @@
                 @text="Details"
                 @route="vault.cluster.secrets.backend.show"
                 @model={{@item.id}}
-                @queryParams={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
+                @query={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
               />
             {{/if}}
             {{#if @item.canEdit}}
@@ -58,7 +58,7 @@
                 @text="Edit"
                 @route="vault.cluster.secrets.backend.edit"
                 @model={{@item.id}}
-                @queryParams={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
+                @query={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
               />
             {{/if}}
             {{#if @item.canDelete}}
