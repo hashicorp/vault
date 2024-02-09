@@ -30,7 +30,7 @@
     id="specificDate"
     value="specificDate"
     @value="specificDate"
-    @onChange={{fn (mut @message.endTime) this.formDateTime}}
+    @onChange={{this.specificDateChange}}
     @groupValue={{this.groupValue}}
   />
   <label for="specificDate" class="has-left-margin-xs has-text-black is-size-7">
@@ -38,16 +38,16 @@
       Specific date
     </span>
     <p class="has-left-margin-xs has-text-grey is-size-8">
-      This message will expire at midnight (local timezone) at the specific date.
+      This message will expire at the specified time (local timezone) and date.
     </p>
     <div class="has-left-margin-xs control">
       <Input
         @type="datetime-local"
-        @value={{if this.formDateTime (date-format this.formDateTime this.datetimeLocalStringFormat) ""}}
-        class="input has-top-margin-xs is-auto-width"
+        @value={{if this.messageEndTime (date-format this.messageEndTime this.datetimeLocalStringFormat) ""}}
+        class="input has-top-margin-xs is-auto-width {{if this.validationError 'has-error-border'}}"
         name="endTime"
         data-test-input="endTime"
-        {{on "change" (pipe (pick "target.value") (fn (mut @message.endTime)))}}
+        {{on "focusout" this.onFocusOut}}
       />
     </div>
   </label>

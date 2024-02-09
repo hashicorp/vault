@@ -99,7 +99,11 @@ module('Acceptance | database workflow', function (hooks) {
       await visit(`/vault/secrets/${this.backend}/overview`);
       assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
       await click(PAGE.emptyStateAction);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.backend}/create`, 'Takes you to create page');
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.backend}/create?itemType=connection`,
+        'Takes you to create page'
+      );
 
       // fill in connection details
       await fillOutConnection(`connect-${this.backend}`);
@@ -128,7 +132,11 @@ module('Acceptance | database workflow', function (hooks) {
       await visit(`/vault/secrets/${this.backend}/overview`);
       assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
       await click(PAGE.emptyStateAction);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.backend}/create`, 'Takes you to create page');
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.backend}/create?itemType=connection`,
+        'Takes you to create page'
+      );
 
       // fill in connection details
       await fillOutConnection(`connect-${this.backend}`);
@@ -158,7 +166,11 @@ module('Acceptance | database workflow', function (hooks) {
       await visit(`/vault/secrets/${this.backend}/overview`);
       assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
       await click(PAGE.emptyStateAction);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.backend}/create`, 'Takes you to create page');
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.backend}/create?itemType=connection`,
+        'Takes you to create page'
+      );
 
       // fill in connection details
       await fillOutConnection(`bad-connection`);
@@ -189,7 +201,11 @@ module('Acceptance | database workflow', function (hooks) {
       await visit(`/vault/secrets/${this.backend}/overview`);
       assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
       await click(PAGE.emptyStateAction);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.backend}/create`, 'Takes you to create page');
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.backend}/create?itemType=connection`,
+        'Takes you to create page'
+      );
 
       // fill in connection details
       await fillOutConnection(`fail-rotate`);

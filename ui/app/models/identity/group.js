@@ -84,13 +84,5 @@ export default IdentityModel.extend({
   canEdit: alias('updatePath.canUpdate'),
 
   aliasPath: lazyCapabilities(apiPath`identity/group-alias`),
-  canAddAlias: computed('aliasPath.canCreate', 'type', 'alias', function () {
-    const type = this.type;
-    const alias = this.alias;
-    // internal groups can't have aliases, and external groups can only have one
-    if (type === 'internal' || alias) {
-      return false;
-    }
-    return this.aliasPath.canCreate;
-  }),
+  canAddAlias: alias('aliasPath.canCreate'),
 });
