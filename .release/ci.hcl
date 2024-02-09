@@ -174,3 +174,15 @@ event "update-ironbank" {
     on = "fail"
   }
 }
+
+event "crt-generate-sbom" {
+  depends = ["promote-production"]
+  action "crt-generate-sbom" {
+	organization = "hashicorp"
+	repository = "security-generate-release-sbom"
+	workflow = "crt-generate-sbom"
+  }
+  notification {
+	on = "fail"
+  }
+}
