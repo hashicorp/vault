@@ -36,7 +36,7 @@
 {{#if @messages.length}}
   {{#each this.formattedMessages as |message|}}
     <LinkedBlock
-      data-test-list-item={{message.id}}
+      data-test-list-item={{message.title}}
       class="list-item-row"
       @params={{array "messages.message.details" message.id}}
       @linkPrefix="vault.cluster.config-ui"
@@ -50,11 +50,7 @@
             </Hds::Text::Display>
             <div class="has-top-margin-xs">
               <Hds::Badge @text={{message.badgeDisplayText}} @color={{message.badgeColor}} data-test-badge={{message.id}} />
-              <Hds::Badge
-                @text={{(capitalize message.type)}}
-                @color={{message.badgeColor}}
-                data-test-badge={{message.type}}
-              />
+              <Hds::Badge @text={{(capitalize message.type)}} data-test-badge={{message.type}} />
             </div>
           </div>
         </div>
@@ -100,17 +96,7 @@
   <EmptyState
     @title="No messages yet"
     @message="Add a custom message for all users after they log into Vault. Create message to get started."
-  >
-    <Hds::Link::Standalone
-      @icon="plus"
-      @iconPosition="leading"
-      @text="Create message"
-      @route="messages.create"
-      @query={{hash authenticated=@authenticated}}
-      class="is-no-underline"
-      data-test-action-text="Create message"
-    />
-  </EmptyState>
+  />
 {{/if}}
 
 {{#if this.showMaxMessageModal}}

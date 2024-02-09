@@ -9,21 +9,22 @@
 />
 
 <form id="message-create-edit-form" {{on "submit" (perform this.save)}} data-test-form="create-and-edit">
-  <div class="box is-sideless is-fullwidth is-marginless has-top-padding-s">
-    <Hds::Text::Body @tag="p" class="has-bottom-margin-l" data-test-form-subtext>
-      {{if @message.isNew "Create" "Edit"}}
-      a custom message for all users when they access a Vault system via the UI.
-    </Hds::Text::Body>
-
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <NamespaceReminder @mode={{if @message.isNew "create" "edit"}} @noun="message" />
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
 
     {{#each @message.formFields as |attr|}}
       <FormField @attr={{attr}} @model={{@message}} @modelValidations={{this.modelValidations}} class="has-bottom-margin-m">
-        <Messages::MessageExpirationDateForm @message={{@message}} @attr={{attr}} />
+        <Messages::MessageExpirationDateForm
+          @message={{@message}}
+          @attr={{attr}}
+          @modelValidations={{this.modelValidations}}
+        />
       </FormField>
       {{#if (and (eq attr.name "message") (not @message.authenticated))}}
         <Hds::Alert class="has-top-margin-negative-m has-bottom-margin-l" @type="compact" @color="highlight" as |A|>
-          <A.Description>Note: Do not include sensitive info in this message since users are unauthenticated at this stage.</A.Description>
+          <A.Description data-test-unauth-info>Note: Do not include sensitive information in this message since users are
+            unauthenticated at this stage.</A.Description>
         </Hds::Alert>
       {{/if}}
     {{/each}}
@@ -48,7 +49,7 @@
       @size="large"
       @color="warning"
       @onClose={{fn (mut this.showMultipleModalsMessage) false}}
-      data-test-modal="preview modal"
+      data-test-modal="multiple modal messages"
       as |M|
     >
       <M.Header data-test-modal-title="Warning: more than one modal">
@@ -94,7 +95,15 @@
         {{@message.title}}
       </M.Header>
       <M.Body data-test-modal-body={{@message.title}}>
-        {{@message.message}}
+        {{#each (new-line-split @message.message) as |msg|}}
+          {{#if (eq msg "")}}
+            <br />
+          {{else}}
+            <div>
+              {{msg}}
+            </div>
+          {{/if}}
+        {{/each}}
         {{#unless (is-empty-value @message.link)}}
           {{#each-in @message.link as |title href|}}
             <Hds::Link::Inline @icon="external-link" @isHrefExternal={{true}} @href={{href}}>{{title}}</Hds::Link::Inline>

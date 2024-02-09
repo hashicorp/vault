@@ -43,7 +43,7 @@ export default class JsonEditorComponent extends Component {
   }
 
   get showObfuscatedData() {
-    return this.args.readOnly && this.args.obscure && !this.revealValues;
+    return this.args.readOnly && this.args.allowObscure && !this.revealValues;
   }
   get obfuscatedData() {
     return stringify([obfuscateData(JSON.parse(this.args.value))], {});

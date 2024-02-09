@@ -60,7 +60,7 @@ module('Integration | Component | sync | Secrets::DestinationHeader', function (
 
     assert.propEqual(
       transitionStub.lastCall.args,
-      ['vault.cluster.sync.secrets.destinations.destination.secrets', 'aws-sm', 'us-west-1'],
+      ['vault.cluster.sync.secrets.overview'],
       'Transition is triggered on delete success'
     );
     assert.propEqual(
@@ -98,5 +98,20 @@ module('Integration | Component | sync | Secrets::DestinationHeader', function (
     assert
       .dom(`${PAGE.destinations.deleteBanner} ${PAGE.icon('alert-diamond')}`)
       .exists('banner renders critical icon');
+  });
+
+  test('it should render refresh list button', async function (assert) {
+    assert.expect(1);
+
+    this.refreshList = () => assert.ok(true, 'Refresh list callback fires');
+
+    await render(
+      hbs`<Secrets::DestinationHeader @destination={{this.destination}} @refreshList={{this.refreshList}} />`,
+      {
+        owner: this.engine,
+      }
+    );
+
+    await click(PAGE.associations.list.refresh);
   });
 });
