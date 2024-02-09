@@ -8,6 +8,7 @@ import { inject as service } from '@ember/service';
 
 import type Store from '@ember-data/store';
 import type RouterService from '@ember/routing/router-service';
+import type FlashMessageService from 'vault/services/flash-messages';
 import type Transition from '@ember/routing/transition';
 import type SyncDestinationModel from 'vault/models/sync/destination';
 
@@ -19,6 +20,7 @@ interface RouteParams {
 export default class SyncSecretsDestinationsDestinationRoute extends Route {
   @service declare readonly store: Store;
   @service declare readonly router: RouterService;
+  @service declare readonly flashMessages: FlashMessageService;
 
   model(params: RouteParams) {
     const { name, type } = params;
@@ -33,6 +35,10 @@ export default class SyncSecretsDestinationsDestinationRoute extends Route {
     const baseRoute = 'vault.cluster.sync.secrets.destinations.destination';
     const routes = [`${baseRoute}.edit`, `${baseRoute}.sync`];
     if (routes.includes(transition.to.name) && model.purgeInitiatedAt) {
+      // const target = transition.to.name.
+      // this.flashMessages.info('Actions are ')
+      const action = transition.to.localName === 'edit' ? 'Editing a destination' : 'Syncing secrets';
+      this.flashMessages.info(`${action} is not permitted once a purge has been initiated.`);
       this.router.replaceWith('vault.cluster.sync.secrets.destinations.destination.secrets');
     }
   }
