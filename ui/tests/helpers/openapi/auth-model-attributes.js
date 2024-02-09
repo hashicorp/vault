@@ -489,6 +489,12 @@ const jwt = {
       fieldGroup: 'default',
       type: 'string',
     },
+    jwksPairs: {
+      editType: 'objectArray',
+      fieldGroup: 'default',
+      helpText:
+        'Set of JWKS Url and CA certificate (or chain of certificates) pairs. CA certificates must be in PEM format. Cannot be used with "jwks_url" or "jwks_ca_pem".',
+    },
     jwksUrl: {
       editType: 'string',
       helpText:
