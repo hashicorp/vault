@@ -91,8 +91,8 @@ module('Integration | Component | pki key list page', function (hooks) {
     assert.dom(SELECTORS.popupMenuEdit).exists('edit link exists');
   });
 
-  test('it hides or disables actions when permission denied', async function (assert) {
-    assert.expect(4);
+  test('it hides actions when permission denied', async function (assert) {
+    assert.expect(3);
     await render(
       hbs`
         <Page::PkiKeyList
@@ -108,8 +108,6 @@ module('Integration | Component | pki key list page', function (hooks) {
     );
     assert.dom(SELECTORS.importKey).doesNotExist('renders import action');
     assert.dom(SELECTORS.generateKey).doesNotExist('renders generate action');
-    await click(SELECTORS.popupMenuTrigger);
-    assert.dom(SELECTORS.popupMenuDetails).hasClass('disabled', 'details link enabled');
-    assert.dom(SELECTORS.popupMenuEdit).hasClass('disabled', 'edit link enabled');
+    assert.dom(SELECTORS.popupMenuTrigger).doesNotExist('does not render popup menu when no permission');
   });
 });

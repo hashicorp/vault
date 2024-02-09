@@ -5,7 +5,8 @@
 import Component from '@glimmer/component';
 /**
  * @module ConfirmationModal
- * ConfirmationModal components wrap the <Hds::Modal> component to present a critical (red) type-to-confirm modal.
+ * ConfirmationModal components wrap the <Hds::Modal> component to present a critical (red) type-to-confirm modal
+ * which require the user to type something to confirm the action.
  * They are used for extremely destructive actions that require extra consideration before confirming.
  *
  * @example

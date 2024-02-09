@@ -30,6 +30,7 @@ export default class KvListPageComponent extends Component {
   @service store;
 
   @tracked secretPath;
+  @tracked metadataToDelete = null; // set to the metadata intended to delete
 
   get mountPoint() {
     // mountPoint tells transition where to start. In this case, mountPoint will always be vault.cluster.secrets.backend.kv.
@@ -71,6 +72,8 @@ export default class KvListPageComponent extends Component {
     } catch (error) {
       const message = errorMessage(error, 'Error deleting secret. Please try again or contact support.');
       this.flashMessages.danger(message);
+    } finally {
+      this.metadataToDelete = null;
     }
   }
 

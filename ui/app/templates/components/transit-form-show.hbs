@@ -151,21 +151,15 @@
             </div>
           </div>
           <div class="column is-1 is-flex-end">
-            <PopupMenu name="secret-menu">
-              <nav class="menu" aria-label="copy public key">
-                <ul class="menu-list">
-                  <li class="action">
-                    <Hds::Copy::Button
-                      @text="Copy Public Key"
-                      @textToCopy={{meta.public_key}}
-                      @isFullWidth={{true}}
-                      class="in-dropdown link is-flex-start"
-                      {{on "click" (action (set-flash-message "Public key copied!"))}}
-                    />
-                  </li>
-                </ul>
-              </nav>
-            </PopupMenu>
+            <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+              <dd.ToggleIcon
+                @icon="more-horizontal"
+                @text="Public key options"
+                @hasChevron={{false}}
+                data-test-popup-menu-trigger
+              />
+              <dd.CopyItem @text={{meta.public_key}} @copyItemTitle="Copy Public Key" />
+            </Hds::Dropdown>
           </div>
         </div>
       </div>
