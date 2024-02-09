@@ -13,9 +13,8 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/stretchr/testify/require"
-
 	"github.com/mitchellh/copystructure"
+	"github.com/stretchr/testify/require"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -395,6 +394,7 @@ func TestHashWalker_TimeStructs(t *testing.T) {
 	}
 }
 
+// Test_hashWalker_Primitive_TypeDefinition is to avoid future regression in the hashWalker.Primitive method.
 func Test_hashWalker_Primitive_TypeDefinition(t *testing.T) {
 	callback := func(input string) string { return "***" }
 	t.Run("simple-map", func(t *testing.T) {
@@ -440,6 +440,6 @@ func Test_hashWalker_Primitive_TypeDefinition(t *testing.T) {
 		}
 		err := hashMap(callback, m, nil)
 		require.NoError(t, err)
-		require.Equal(t, Foo("***"), m["key"].(S).Value)
+		require.Equal(t, Foo("***"), m["key"].(*S).Value)
 	})
 }
