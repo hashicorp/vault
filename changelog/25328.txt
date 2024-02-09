@@ -1,0 +1,3 @@
+```release-note:bug
+audit: Fixes a panic in hashwalker when traversing through struct values
+```
