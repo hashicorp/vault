@@ -5,7 +5,7 @@
 
 <div class="wizard-header">
   {{#unless this.hidePopup}}
-    <Hds::Dropdown @isInline={{true}} as |dd|>
+    <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
       <dd.ToggleIcon @icon="more-horizontal" @text="Wizard dismiss menu" @hasChevron={{false}} class="wizard-dismiss-menu" />
       <dd.Interactive @text="Dismiss" {{on "click" (action "dismissWizard")}} />
     </Hds::Dropdown>

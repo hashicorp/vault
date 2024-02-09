@@ -57,7 +57,7 @@
         <div class="level-right is-flex is-paddingless is-marginless">
           <div class="level-item">
             {{#if (or message.canEditCustomMessages message.canDeleteCustomMessages)}}
-              <Hds::Dropdown @isInline={{true}} as |dd|>
+              <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
                 <dd.ToggleIcon
                   @icon="more-horizontal"
                   @text="Message popup menu"
