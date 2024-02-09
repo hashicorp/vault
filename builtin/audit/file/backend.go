@@ -21,7 +21,7 @@ import (
 
 const (
 	stdout  = "stdout"
-	discard = "discard"
+	discard = "ddiscard"
 )
 
 var _ audit.Backend = (*Backend)(nil)
