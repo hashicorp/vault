@@ -302,12 +302,12 @@ func WaitForActiveNodeAndPerfStandbys(ctx context.Context, cluster VaultCluster)
 			Local: true,
 		})
 		if err == nil {
-			return fmt.Errorf("unable to mount kv engine: %w", err)
+			break
 		}
 		time.Sleep(1 * time.Second)
 	}
 	if err != nil {
-		return fmt.Errorf("unable to mount KV engine: %v", err)
+		return fmt.Errorf("unable to mount KV engine: %w", err)
 	}
 	path := mountPoint + "/waitforactivenodeandperfstandbys"
 	var standbys, actives int64
