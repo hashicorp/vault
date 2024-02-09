@@ -37,14 +37,6 @@ export default AuthConfig.extend({
     editType: 'file',
   }),
 
-  jwksPairs: attr('jwksPair', {
-    editType: 'kv',
-    keyPlaceholder: 'JWKS URL',
-    valuePlaceholder: 'JWKS CA PEM',
-    label: 'JWKS pairs',
-    allowWhiteSpace: true,
-  }),
-
   jwksUrl: attr('string', {
     label: 'JWKS URL',
   }),
@@ -79,7 +71,6 @@ export default AuthConfig.extend({
           'defaultRole',
           'jwksCaPem',
           'jwksUrl',
-          'jwksPairs',
           'oidcResponseMode',
           'oidcResponseTypes',
         ],
