@@ -433,30 +433,6 @@ func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]by
 	return newKeys
 }
 
-func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
-	leader := cluster.Cores[0]
-
-	leaderInfos := []*raft.LeaderJoinInfo{
-		{
-			LeaderAPIAddr: leader.Client.Address(),
-			TLSConfig:     leader.TLSConfig(),
-		},
-	}
-
-	// Join followers
-	for i := 1; i < len(cluster.Cores); i++ {
-		core := cluster.Cores[i]
-		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		cluster.UnsealCore(t, core)
-	}
-
-	WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
-}
-
 // HardcodedServerAddressProvider is a ServerAddressProvider that uses
 // a hardcoded map of raft node addresses.
 //
