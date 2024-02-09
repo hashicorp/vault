@@ -29,34 +29,29 @@
           </div>
           <div class="column has-text-right">
             {{#if (or (eq this.replicationMode "performance") this.model.canRevokeSecondary)}}
-              <PopupMenu @name="secondary-details">
-                <nav class="menu">
-                  <ul class="menu-list">
-                    {{#if (eq this.replicationMode "performance")}}
-                      <li class="action">
-                        <LinkTo
-                          @route="mode.secondaries.config-show"
-                          @models={{array this.replicationMode secondary}}
-                          data-test-replication-path-filter-link={{true}}
-                        >
-                          Path filter config
-                        </LinkTo>
-                      </li>
-                    {{/if}}
-                    {{#if this.model.canRevokeSecondary}}
-                      <li class="action">
-                        <ConfirmAction
-                          @buttonText="Revoke"
-                          @isInDropdown={{true}}
-                          @confirmTitle="Revoke token?"
-                          @confirmMessage="This will revoke this secondary token."
-                          @onConfirmAction={{action "onSubmit" "revoke-secondary" "primary" (hash id=secondary)}}
-                        />
-                      </li>
-                    {{/if}}
-                  </ul>
-                </nav>
-              </PopupMenu>
+              <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+                <dd.ToggleIcon
+                  @icon="more-horizontal"
+                  @text="Secondary popup nav menu"
+                  @hasChevron={{false}}
+                  data-test-popup-menu-trigger
+                />
+                {{#if (eq this.replicationMode "performance")}}
+                  <dd.Interactive
+                    @text="Path filter config"
+                    @route="mode.secondaries.config-show"
+                    @models={{array this.replicationMode secondary}}
+                    data-test-replication-path-filter-link={{true}}
+                  />
+                {{/if}}
+                {{#if this.model.canRevokeSecondary}}
+                  <dd.Interactive
+                    @text="Revoke"
+                    @color="critical"
+                    {{on "click" (fn (mut this.secondaryToRevoke) secondary)}}
+                  />
+                {{/if}}
+              </Hds::Dropdown>
             {{/if}}
           </div>
         </div>
@@ -76,4 +71,14 @@
       />
     </EmptyState>
   {{/if}}
+{{/if}}
+
+{{#if this.secondaryToRevoke}}
+  <ConfirmModal
+    @color="critical"
+    @confirmTitle="Revoke token?"
+    @confirmMessage="This will revoke this secondary token."
+    @onClose={{fn (mut this.secondaryToRevoke) null}}
+    @onConfirm={{action "onSubmit" "revoke-secondary" "primary" (hash id=this.secondaryToRevoke)}}
+  />
 {{/if}}
