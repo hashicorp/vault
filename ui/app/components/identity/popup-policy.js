@@ -17,7 +17,7 @@ export default class IdentityPopupPolicy extends Component {
     if (this.args.onSuccess) {
       this.args.onSuccess();
     }
-    this.flashMessages.success(`Successfully removed '${policyName}' policy from ${modelId} `);
+    this.flashMessages.success(`Successfully removed '${policyName}' policy from ${modelId}`);
   }
   onError(err, policyName) {
     if (this.args.onError) {
