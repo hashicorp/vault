@@ -989,7 +989,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 			return nil, versionErr
 		}
 	} else if plugin.Version != "" && runningVersion.Version != "" && plugin.Version != runningVersion.Version {
-		c.logger.Warn("Plugin self-reported version did not match requested version",
+		c.logger.Error("Plugin self-reported version did not match requested version",
 			"plugin", plugin.Name, "requestedVersion", plugin.Version, "reportedVersion", runningVersion.Version)
 		return nil, fmt.Errorf("%w: %s reported version (%s) did not match requested version (%s)",
 			ErrPluginVersionMismatch, plugin.Name, runningVersion.Version, plugin.Version)
