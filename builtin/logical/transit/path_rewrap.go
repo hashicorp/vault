@@ -142,6 +142,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
 	}
+	defer p.Unlock()
 
 	warnAboutNonceUsage := false
 	for i, item := range batchInputItems {
@@ -161,7 +162,6 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 				batchResponseItems[i].Error = err.Error()
 				continue
 			default:
-				p.Unlock()
 				return nil, err
 			}
 		}
@@ -177,16 +177,13 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 				batchResponseItems[i].Error = err.Error()
 				continue
 			case errutil.InternalError:
-				p.Unlock()
 				return nil, err
 			default:
-				p.Unlock()
 				return nil, err
 			}
 		}
 
 		if ciphertext == "" {
-			p.Unlock()
 			return nil, fmt.Errorf("empty ciphertext returned for input item %d", i)
 		}
 
@@ -210,7 +207,6 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 		}
 	} else {
 		if batchResponseItems[0].Error != "" {
-			p.Unlock()
 			return logical.ErrorResponse(batchResponseItems[0].Error), logical.ErrInvalidRequest
 		}
 		resp.Data = map[string]interface{}{
@@ -223,7 +219,6 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS 140 compliance.")
 	}
 
-	p.Unlock()
 	return resp, nil
 }
 
