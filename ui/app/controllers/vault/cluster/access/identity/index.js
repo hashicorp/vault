@@ -37,9 +37,7 @@ export default Controller.extend(ListController, {
             `There was a problem deleting ${type}: ${id} - ${e.errors.join(' ') || e.message}`
           );
         })
-        .finally(() => {
-          this.set('itemToDelete', null);
-        });
+        .finally(() => this.set('itemToDelete', null));
     },
 
     toggleDisabled(model) {
