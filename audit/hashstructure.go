@@ -11,10 +11,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/vault/sdk/helper/wrapping"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
 	"github.com/mitchellh/reflectwalk"
+
+	"github.com/hashicorp/vault/sdk/helper/wrapping"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // HashString hashes the given opaque string and returns it
@@ -381,6 +382,9 @@ func (w *hashWalker) Primitive(v reflect.Value) error {
 		s.Slice(si, si+1).Index(0).Set(resultVal)
 	default:
 		// Otherwise, we should be addressable
+		if !setV.CanSet() {
+			return nil
+		}
 		setV.Set(resultVal)
 	}
 

@@ -13,12 +13,14 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/stretchr/testify/require"
+
+	"github.com/mitchellh/copystructure"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/mitchellh/copystructure"
 )
 
 func TestCopy_auth(t *testing.T) {
@@ -391,4 +393,41 @@ func TestHashWalker_TimeStructs(t *testing.T) {
 			t.Fatalf("bad:\n\n%#v\n\n%#v", tc.Input, tc.Output)
 		}
 	}
+}
+
+func Test_hashWalker_Primitive_TypeDefinition(t *testing.T) {
+	callback := func(input string) string { return "***" }
+	t.Run("simple-map", func(t *testing.T) {
+		m := map[string]interface{}{"key": "value1"}
+		err := hashMap(callback, m, nil)
+		require.NoError(t, err)
+		require.Equal(t, "***", m["key"])
+	})
+	t.Run("map-with-anon-struct", func(t *testing.T) {
+		m := map[string]interface{}{
+			"key": struct{ Value string }{Value: "value1"},
+		}
+		err := hashMap(callback, m, nil)
+		require.NoError(t, err)
+		require.Equal(t, "value1", m["key"].(struct{ Value string }).Value)
+	})
+	t.Run("map-with-pointer-struct", func(t *testing.T) {
+		m := map[string]interface{}{
+			"key": &struct{ Value string }{Value: "value1"},
+		}
+		err := hashMap(callback, m, nil)
+		require.NoError(t, err)
+		require.Equal(t, "***", m["key"].(*struct{ Value string }).Value)
+	})
+	t.Run("map-with-struct", func(t *testing.T) {
+		type S struct {
+			Value string
+		}
+		m := map[string]interface{}{
+			"key": S{Value: "value1"},
+		}
+		err := hashMap(callback, m, nil)
+		require.NoError(t, err)
+		require.Equal(t, "value1", m["key"].(S).Value)
+	})
 }
