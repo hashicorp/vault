@@ -17,7 +17,6 @@ export default class VaultClusterSecretsBackendController extends Controller {
   @tracked secretEngineOptions = [];
   @tracked selectedEngineType = null;
   @tracked selectedEngineName = null;
-  @tracked engineToDisable = null;
 
   get sortedDisplayableBackends() {
     // show supported secret engines first and then organize those by id.
@@ -81,8 +80,6 @@ export default class VaultClusterSecretsBackendController extends Controller {
       this.flashMessages.danger(
         `There was an error disabling the ${engineType} Secrets Engine at ${path}: ${err.errors.join(' ')}.`
       );
-    } finally {
-      this.engineToDisable = null;
     }
   }
 }
