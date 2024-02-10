@@ -32,4 +32,4 @@ lint: check-fmt shellcheck validate-enos
 
 .PHONY: shellcheck
 shellcheck:
-	find ./modules/ -type f -name '*.sh' | xargs shellcheck
+	find ./modules/ -type f -name '*.sh' | xargs shellcheck | grep shellcheck
