@@ -46,9 +46,7 @@ utilization information.
    $ vault operator utilization
    ```
 
-   By default, the bundle will include all historical snapshots. You are
-   required to report at the minimum [x days] of data, but no more than 400
-   days. 
+   By default, the bundle will include all historical snapshots. 
 
    You can provide context about the conditions under which the report was
    generated and submitted by providing a comment. This optional comment will
@@ -84,7 +82,6 @@ utilization information.
 
 ### Send the data bundle to HashiCorp
 
-1. Go to [directory] and find the file named `output.json`. Copy this file.
 1. Go to https://portal.cloud.hashicorp.com/license-utilization/reports/create
 1. Click on **Choose files**, or drop your file(s) into the container.
 
@@ -111,14 +108,15 @@ releases include:
 ## Configuration
 
 Administrators can manage disk space for storing snapshots by defining the
-number of days snapshots can be retained. The minimum requirement is [x days] of
-data.
+number of days snapshots can be retained. 
 
 ```hcl
 reporting {
     snapshot_retention_time = "2400h"
 }
 ```
+
+The default retention period is 400 days. 
 
 ## Data file content
 
