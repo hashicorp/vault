@@ -1736,8 +1736,13 @@ github.com/coreos/pkg v0.0.0-20160727233714-3ac0863d7acf/go.mod h1:E3G3o1h8I7cfc
 github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f/go.mod h1:E3G3o1h8I7cfcXa63jLwjI0eiQQMgzzUDFVpN/nH/eA=
 github.com/coreos/pkg v0.0.0-20220810130054-c7d1c02cb6cf h1:GOPo6vn/vTN+3IwZBvXX0y5doJfSC7My0cdzelyOCsQ=
 github.com/coreos/pkg v0.0.0-20220810130054-c7d1c02cb6cf/go.mod h1:E3G3o1h8I7cfcXa63jLwjI0eiQQMgzzUDFVpN/nH/eA=
+github.com/couchbase/gocb/v2 v2.6.5 h1:xaZu29o8UJEV1ZQ3n2s9jcRCUHz/JsQ6+y6JBnVsy5A=
+github.com/couchbase/gocb/v2 v2.6.5/go.mod h1:0vFM09y+VPhnXeNrIb8tS0wKHGpJvjJBrJnriWEiwGs=
+github.com/couchbase/gocb/v2 v2.7.0 h1:zU/Eh9+RIS1TvQFiEF4JBajMm9VTjkeQssE9ov7F87c=
+github.com/couchbase/gocb/v2 v2.7.0/go.mod h1:IHq/c3cnrqKq9scFQJ8OyD/xhqZ0b4mHYVH6VEMnsnw=
 github.com/couchbase/gocb/v2 v2.7.1 h1:Wy5IufpGWDStErhe9bNxXdiHpXf4LIhEpWnR7gJcme0=
 github.com/couchbase/gocb/v2 v2.7.1/go.mod h1:tn/jNMSMGwEB2Dd1uHW/aTwScx1lXZqb9oM0zyWeEUg=
+github.com/couchbase/gocbcore/v10 v10.2.9/go.mod h1:lYQIIk+tzoMcwtwU5GzPbDdqEkwkH3isI2rkSpfL0oM=
 github.com/couchbase/gocbcore/v10 v10.3.1 h1:dx+lub02eDYiQXavtF0EwYMppVUcbjCxAAqa6/nQldg=
 github.com/couchbase/gocbcore/v10 v10.3.1/go.mod h1:lYQIIk+tzoMcwtwU5GzPbDdqEkwkH3isI2rkSpfL0oM=
 github.com/couchbase/gocbcoreps v0.1.1 h1:H5Q/TVmRqEpcdTDlepwAmLW7cemP9Di6Lp91Qa9oz1A=

@@ -324,7 +324,7 @@ require (
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/coreos/pkg v0.0.0-20220810130054-c7d1c02cb6cf // indirect
-	github.com/couchbase/gocb/v2 v2.7.1 // indirect
+	github.com/couchbase/gocb/v2 v2.6.5 // indirect
 	github.com/couchbase/gocbcore/v10 v10.3.1 // indirect
 	github.com/couchbase/gocbcoreps v0.1.1 // indirect
 	github.com/couchbase/goprotostellar v1.0.1 // indirect
