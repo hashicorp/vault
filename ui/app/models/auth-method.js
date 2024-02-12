@@ -4,14 +4,13 @@
  */
 
 import Model, { belongsTo, hasMany, attr } from '@ember-data/model';
-import { alias } from '@ember/object/computed'; // eslint-disable-line
-import { action, computed } from '@ember/object'; // eslint-disable-line
 import { inject as service } from '@ember/service';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import apiPath from 'vault/utils/api-path';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { allMethods } from 'vault/helpers/mountable-auth-methods';
 import lazyCapabilities from 'vault/macros/lazy-capabilities';
+import { action } from '@ember/object';
 
 const validations = {
   path: [
@@ -25,8 +24,6 @@ const validations = {
   ],
 };
 
-// unsure if ember-api-actions will work on native JS class model
-// for now create class to use validations and then use classic extend pattern
 @withModelValidations(validations)
 export default class AuthMethodModel extends Model {
   @service store;
