@@ -319,7 +319,7 @@ module('Acceptance | pki workflow', function (hooks) {
       );
     });
 
-    test('it hide corrects actions for user with read policy', async function (assert) {
+    test('it hides correct actions for user with read policy', async function (assert) {
       await authPage.login(this.pkiKeyReader);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(SELECTORS.keysTab);
@@ -330,7 +330,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom('.linked-block').exists({ count: 1 }, 'One key is in list');
       const keyId = find(SELECTORS.keyPages.keyId).innerText;
       await click(SELECTORS.keyPages.popupMenuTrigger);
-      assert.dom(SELECTORS.keyPages.popupMenuEdit).hasClass('disabled', 'popup menu edit link is disabled');
+      assert.dom(SELECTORS.keyPages.popupMenuEdit).doesNotExist('popup menu edit link is not shown');
       await click(SELECTORS.keyPages.popupMenuDetails);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`);
       assert.dom(SELECTORS.keyPages.keyDeleteButton).doesNotExist('Delete key button is not shown');
