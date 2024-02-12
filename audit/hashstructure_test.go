@@ -393,7 +393,7 @@ func TestHashWalker_TimeStructs(t *testing.T) {
 	}
 }
 
-// Test_hashWalker_Primitive_TypeDefinition is to avoid future regression in the hashWalker.Primitive method.
+// Test_hashWalker_Primitive_TypeDefinition assures the behaviour of hashWalker.Primitive method when dealing with non-assignable values. These used to cause a panic, so we added it to avoid future regressions.
 func Test_hashWalker_Primitive_TypeDefinition(t *testing.T) {
 	callback := func(input string) string { return "***" }
 	t.Run("simple-map", func(t *testing.T) {
