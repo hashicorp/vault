@@ -3,14 +3,4 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-{{#if this.hasMenu}}
-  <PopupMenu>
-    <nav class="menu">
-      <ul class="menu-list">
-        {{yield}}
-      </ul>
-    </nav>
-  </PopupMenu>
-{{else}}
-  {{yield this.item}}
-{{/if}}
+{{yield this.item}}
