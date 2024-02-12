@@ -60,7 +60,7 @@
             @buttonText="Unseal"
             @onLicenseError={{action "handleLicenseError"}}
             @checkComplete={{action "isUnsealed"}}
-            @onShamirSuccess={{action "transitionToCluster"}}
+            @onShamirSuccess={{transition-to "vault.cluster" this.model.name}}
             class="has-top-margin-m"
           />
         {{/if}}
