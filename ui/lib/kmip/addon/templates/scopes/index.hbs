@@ -66,7 +66,12 @@
               <LoadingDropdownOption />
             </dd.Generic>
           {{else if list.item.updatePath.canDelete}}
-            <dd.Interactive @text="Delete scope" @color="critical" {{on "click" (fn (mut this.showConfirmModal) true)}} />
+            <dd.Interactive
+              @text="Delete scope"
+              @color="critical"
+              {{on "click" (fn (mut this.showConfirmModal) true)}}
+              data-test-confirm-action-trigger
+            />
           {{/if}}
         </Hds::Dropdown>
         {{#if this.showConfirmModal}}
