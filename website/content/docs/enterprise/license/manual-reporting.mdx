@@ -37,8 +37,7 @@ reporting in favor of manual reporting.
 ### Generate a data bundle
 
 Data bundles include collections of JSON snapshots that contain license
-utilization information. This data will not be transmitted to HashiCorp
-automatically if manual reporting is enabled
+utilization information.  
 
 1. Login into your [cluster node](/vault/tutorials/cloud/vault-access-cluster).
 1. Run this CLI command to generate a data bundle:
@@ -81,14 +80,6 @@ automatically if manual reporting is enabled
    
    - `-output` `(string: “”)` - Specifies the output path for the bundle.
    Defaults to a time-based generated file name. (optional)
-
-   <Note title="Vault API">
-
-   The equivalent API endpoint to generate a snapshot bundle is:
-
-   `GET sys/utilization?today-only=:today-only-boolean-value`
-    
-   </Note>
 
 
 ### Send the data bundle to HashiCorp
