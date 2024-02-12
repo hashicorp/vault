@@ -9,6 +9,29 @@ description: >-
 
 @include 'alerts/enterprise-only.mdx'
 
+Manual license utilization reporting allows you to export, review, and send
+license utilization data to HashiCorp via the CLI or HCP Web Portal. Use these
+reports to understand how much more you can deploy under your current contract,
+protect against overutilization, and budget for predicted consumption. Manual
+reporting shares the minimum data required to validate license utilization as
+defined in our contracts. The reports consist of mostly computed metrics and
+will never contain Personal Identifiable Information (PII) or other sensitive
+information. 
+
+Manual license utilization shares the same data as automated license utilization
+but is more time consuming. Unless you are running in an air-gapped environment
+or have another reason to report data manually, we strongly recommend using
+automated reporting instead. If you have disabled automated license reporting,
+you can re-enable it by reversing the opt-out process described in the
+[documentation](/vault/docs/enterprise/license/utilization-reporting#opt-out). 
+
+If you are considering manual reporting because you’re worried about your data,
+we strongly recommend that you review the [example
+payloads](#data-file-content), which are the same for automated and manual
+reporting. If you have further concerns with any of the automatically-reported
+data please bring them to your account manager before opting out of automated
+reporting in favor of manual reporting.
+
 ## How to manually send data reports
 
 ### Generate a data bundle
@@ -59,12 +82,11 @@ automatically if manual reporting is enabled
    - `-output` `(string: “”)` - Specifies the output path for the bundle.
    Defaults to a time-based generated file name. (optional)
 
-
    <Note title="Vault API">
 
-    The equivalent API endpoint to generate a snapshot bundle is:
+   The equivalent API endpoint to generate a snapshot bundle is:
 
-    `GET sys/utilization?today-only=:today-only-boolean-value`
+   `GET sys/utilization?today-only=:today-only-boolean-value`
     
    </Note>
 
