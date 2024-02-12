@@ -6750,10 +6750,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tsconfig/ember@npm:^1.0.1":
-  version: 1.0.1
-  resolution: "@tsconfig/ember@npm:1.0.1"
-  checksum: e53968a3ebcb099f13da1377c3216a48af7e20d5489f7dbb2e3297def30b5cc5390db7b632fa6d0fa98e52e6e3c636c5fb2a2b6b1850c2475d5e87a26739b2e6
+"@tsconfig/ember@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "@tsconfig/ember@npm:2.0.0"
+  checksum: 03ec9113bb454c61b1f06b843f14d53526f2e0cc111b347bc18bdb6dba2de40429e2b34baa66a408e6b7af3ebbb8d75cf1cb8ede948b329f18abb87016d11678
   languageName: node
   linkType: hard
 
@@ -7335,10 +7335,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/qunit@npm:*, @types/qunit@npm:^2.19.3":
+"@types/qunit@npm:*":
   version: 2.19.3
   resolution: "@types/qunit@npm:2.19.3"
   checksum: bbcea1082a2827f81ddb43f53abf6e6698cb690fa5a1cd59649eee5e9ecf0fe04fae7fb2aaf3015681ac8036f251f4d268819a4935ec5b38832056957ccfb265
+  languageName: node
+  linkType: hard
+
+"@types/qunit@npm:^2.19.4":
+  version: 2.19.10
+  resolution: "@types/qunit@npm:2.19.10"
+  checksum: 039d53d6397361da440616215202b42d4595d22ee9907c96d3ab9c10d01b78d5efaaf788f2d3d7e36f80bc8d3a3bc78e8d169861efad501d64c0d1c287bcfa6e
   languageName: node
   linkType: hard
 
@@ -15502,7 +15509,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-qunit@npm:^6.0.2":
+"ember-qunit@npm:^6.2.0":
   version: 6.2.0
   resolution: "ember-qunit@npm:6.2.0"
   dependencies:
@@ -27489,7 +27496,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:^4.5.4, typescript@npm:^4.8.4":
+"typescript@npm:^4.5.4":
   version: 4.8.4
   resolution: "typescript@npm:4.8.4"
   bin:
@@ -27499,13 +27506,33 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@^4.5.4#~builtin<compat/typescript>, typescript@patch:typescript@^4.8.4#~builtin<compat/typescript>":
+"typescript@npm:^4.9.5":
+  version: 4.9.5
+  resolution: "typescript@npm:4.9.5"
+  bin:
+    tsc: bin/tsc
+    tsserver: bin/tsserver
+  checksum: ee000bc26848147ad423b581bd250075662a354d84f0e06eb76d3b892328d8d4440b7487b5a83e851b12b255f55d71835b008a66cbf8f255a11e4400159237db
+  languageName: node
+  linkType: hard
+
+"typescript@patch:typescript@^4.5.4#~builtin<compat/typescript>":
   version: 4.8.4
   resolution: "typescript@patch:typescript@npm%3A4.8.4#~builtin<compat/typescript>::version=4.8.4&hash=1a91c8"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
   checksum: c981e82b77a5acdcc4e69af9c56cdecf5b934a87a08e7b52120596701e389a878b8e3f860e73ffb287bf649cc47a8c741262ce058148f71de4cdd88bb9c75153
+  languageName: node
+  linkType: hard
+
+"typescript@patch:typescript@^4.9.5#~builtin<compat/typescript>":
+  version: 4.9.5
+  resolution: "typescript@patch:typescript@npm%3A4.9.5#~builtin<compat/typescript>::version=4.9.5&hash=23ec76"
+  bin:
+    tsc: bin/tsc
+    tsserver: bin/tsserver
+  checksum: ab417a2f398380c90a6cf5a5f74badd17866adf57f1165617d6a551f059c3ba0a3e4da0d147b3ac5681db9ac76a303c5876394b13b3de75fdd5b1eaa06181c9d
   languageName: node
   linkType: hard
 
@@ -27974,14 +28001,14 @@ __metadata:
     "@ember/render-modifiers": ^1.0.2
     "@ember/string": ^3.0.1
     "@ember/test-helpers": ^2.9.3
-    "@ember/test-waiters": ^3.0.0
+    "@ember/test-waiters": ^3.1.0
     "@glimmer/component": ^1.1.2
     "@glimmer/tracking": ^1.1.2
     "@hashicorp/design-system-components": ^3.4.0
     "@hashicorp/ember-flight-icons": ^4.0.5
     "@icholy/duration": ^5.1.0
     "@lineal-viz/lineal": ^0.5.1
-    "@tsconfig/ember": ^1.0.1
+    "@tsconfig/ember": ^2.0.0
     "@types/ember": ^4.0.2
     "@types/ember-data": ^4.4.6
     "@types/ember-data__adapter": ^4.0.1
@@ -28008,7 +28035,7 @@ __metadata:
     "@types/ember__test": ^4.0.1
     "@types/ember__test-helpers": ^2.8.2
     "@types/ember__utils": ^4.0.2
-    "@types/qunit": ^2.19.3
+    "@types/qunit": ^2.19.4
     "@types/rsvp": ^4.0.4
     "@types/shell-quote": ^1.7.1
     "@typescript-eslint/eslint-plugin": ^5.19.0
@@ -28068,7 +28095,7 @@ __metadata:
     ember-page-title: ^7.0.0
     ember-power-select: 6.0.1
     ember-qrcode-shim: ^0.4.0
-    ember-qunit: ^6.0.2
+    ember-qunit: ^6.2.0
     ember-resolver: ^10.0.0
     ember-responsive: 5.0.0
     ember-router-helpers: ^0.4.0
@@ -28119,7 +28146,7 @@ __metadata:
     swagger-ui-dist: ^5.9.0
     text-encoder-lite: 2.0.0
     tracked-built-ins: ^3.1.1
-    typescript: ^4.8.4
+    typescript: ^4.9.5
     uuid: ^9.0.0
     walk-sync: ^2.0.2
     webpack: 5.78.0
