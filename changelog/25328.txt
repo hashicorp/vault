@@ -1,3 +1,3 @@
 ```release-note:bug
-audit: Fixes a panic in hashwalker when traversing through struct values
+audit: Fixes a panic in hashwalker when encountering a non-assignable value when traversing through a struct.
 ```
