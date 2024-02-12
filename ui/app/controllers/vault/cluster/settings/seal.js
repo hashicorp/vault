@@ -10,6 +10,7 @@ export default Controller.extend({
   auth: service(),
   router: service(),
   version: service(),
+  store: service(),
 
   actions: {
     seal() {
@@ -17,7 +18,7 @@ export default Controller.extend({
         .adapterFor('cluster')
         .seal()
         .then(() => {
-          this.model.cluster.get('leaderNode').set('sealed', true);
+          this.store.peekAll('cluster')[0].reload();
           this.auth.deleteCurrentToken();
           // Reset version so it doesn't show on footer
           this.version.version = null;
