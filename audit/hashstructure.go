@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -382,7 +383,7 @@ func (w *hashWalker) Primitive(v reflect.Value) error {
 	default:
 		// If the value cannot be set, return early
 		if !setV.CanSet() {
-			return nil
+			return fmt.Errorf("unable to set unaddressable value of type %v", setV.Type())
 		}
 
 		// For custom type definitions, a conversion is necessary to avoid panic

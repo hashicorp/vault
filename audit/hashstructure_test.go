@@ -393,7 +393,8 @@ func TestHashWalker_TimeStructs(t *testing.T) {
 	}
 }
 
-// Test_hashWalker_Primitive_TypeDefinition assures the behaviour of hashWalker.Primitive method when dealing with non-assignable values. These used to cause a panic, so we added it to avoid future regressions.
+// Test_hashWalker_Primitive_TypeDefinition assures the behaviour of hashWalker.Primitive method when dealing with non-assignable values.
+// These used to cause a panic, so we added it to avoid future regressions.
 func Test_hashWalker_Primitive_TypeDefinition(t *testing.T) {
 	callback := func(input string) string { return "***" }
 	t.Run("simple-map", func(t *testing.T) {
@@ -407,8 +408,7 @@ func Test_hashWalker_Primitive_TypeDefinition(t *testing.T) {
 			"key": struct{ Value string }{Value: "value1"},
 		}
 		err := hashMap(callback, m, nil)
-		require.NoError(t, err)
-		require.Equal(t, "value1", m["key"].(struct{ Value string }).Value)
+		require.EqualError(t, err, "unable to set unaddressable value of type string")
 	})
 	t.Run("map-with-pointer-struct", func(t *testing.T) {
 		m := map[string]interface{}{
@@ -426,8 +426,7 @@ func Test_hashWalker_Primitive_TypeDefinition(t *testing.T) {
 			"key": S{Value: "value1"},
 		}
 		err := hashMap(callback, m, nil)
-		require.NoError(t, err)
-		require.Equal(t, "value1", m["key"].(S).Value)
+		require.EqualError(t, err, "unable to set unaddressable value of type string")
 	})
 	t.Run("map-with-pointer-struct-with-custom-type", func(t *testing.T) {
 		type Foo string
