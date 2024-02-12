@@ -21,24 +21,24 @@
       <SearchSelect
         @id="filter-by-message-status"
         class="has-left-margin-s"
-        @options={{this.activeFilterOptions}}
+        @options={{this.statusFilterOptions}}
         @selectLimit="1"
         @searchEnabled={{false}}
         @fallbackComponent="select"
-        @onChange={{this.onMessageStatusChange}}
+        @onChange={{fn this.onFilterChange "status"}}
         @placeholder="Filter by message status"
-        @inputValue={{if @params.active (array @params.active)}}
+        @inputValue={{if @params.status (array @params.status)}}
         data-test-filter-by-message-status
       />
     </div>
     <SearchSelect
       @id="filter-by-message-type"
       class="has-left-margin-s"
-      @options={{this.messageTypeFilterOptions}}
+      @options={{this.typeFilterOptions}}
       @selectLimit="1"
       @searchEnabled={{false}}
       @fallbackComponent="select"
-      @onChange={{this.onMessageTypeChange}}
+      @onChange={{fn this.onFilterChange "type"}}
       @placeholder="Filter by message type"
       @inputValue={{if @params.type (array @params.type)}}
       data-test-filter-by-message-type
@@ -92,7 +92,7 @@
                   <dd.Interactive @text="Edit" @route="messages.message.edit" @model={{message.id}} />
                 {{/if}}
                 {{#if message.canDeleteCustomMessages}}
-                  <dd.Interactive @text="Disable" @color="critical" {{on "click" (fn (mut this.messageToDelete) message)}} />
+                  <dd.Interactive @text="Delete" @color="critical" {{on "click" (fn (mut this.messageToDelete) message)}} />
                 {{/if}}
               </Hds::Dropdown>
             {{/if}}

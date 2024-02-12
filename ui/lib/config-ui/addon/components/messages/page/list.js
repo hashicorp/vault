@@ -91,17 +91,17 @@ export default class MessagesList extends Component {
     return [{ label: 'Messages' }, { label }];
   }
 
-  get activeFilterOptions() {
+  get statusFilterOptions() {
     return [
       { id: 'active', name: 'active' },
       { id: 'inactive', name: 'inactive' },
     ];
   }
 
-  get messageTypeFilterOptions() {
+  get typeFilterOptions() {
     return [
-      { id: 'modal', name: 'modal', value: 'modal' },
-      { id: 'banner', name: 'banner', value: 'banner' },
+      { id: 'modal', name: 'modal' },
+      { id: 'banner', name: 'banner' },
     ];
   }
 
@@ -142,13 +142,10 @@ export default class MessagesList extends Component {
   }
 
   @action
-  onMessageStatusChange([messageStatus]) {
-    this.transitionToMessagesWithParams({ active: messageStatus });
-  }
-
-  @action
-  onMessageTypeChange([type]) {
-    this.transitionToMessagesWithParams({ type });
+  onFilterChange(filterType, [filterOption]) {
+    const param = {};
+    param[filterType] = filterOption;
+    this.transitionToMessagesWithParams(param);
   }
 
   @action
