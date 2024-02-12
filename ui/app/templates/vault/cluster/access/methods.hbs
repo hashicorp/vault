@@ -103,7 +103,6 @@
     @color="critical"
     @confirmTitle="Disable method?"
     @confirmMessage="This may affect access to Vault data."
-    @buttonText="Disable"
     @onClose={{fn (mut this.methodToDisable) null}}
     @onConfirm={{perform this.disableMethod this.methodToDisable}}
   />
