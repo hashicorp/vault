@@ -15,6 +15,7 @@ import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { EngineOwner } from 'vault/vault/app-types';
+import { tracked } from '@glimmer/tracking';
 
 interface Args {
   destination: SyncDestinationModel;
@@ -25,6 +26,8 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @service declare readonly router: RouterService;
   @service declare readonly store: StoreService;
   @service declare readonly flashMessages: FlashMessageService;
+
+  @tracked associationToUnsync: SyncAssociationModel | null = null;
 
   get mountPoint(): string {
     const owner = getOwner(this) as EngineOwner;
