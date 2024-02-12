@@ -20,17 +20,30 @@ export default class MessagesRoute extends Route {
     pageFilter: {
       refreshModel: true,
     },
+    active: {
+      refreshModel: true,
+    },
+    type: {
+      refreshModel: true,
+    },
   };
 
   model(params) {
-    const { authenticated, page, pageFilter } = params;
+    const { authenticated, page, pageFilter, active, type } = params;
     const filter = pageFilter
       ? (dataset) => dataset.filter((item) => item?.title.toLowerCase().includes(pageFilter.toLowerCase()))
       : null;
+    let isActive;
+
+    if (active === 'active') isActive = true;
+    if (active === 'inactive') isActive = false;
+
     const messages = this.store
       .lazyPaginatedQuery('config-ui/message', {
         authenticated,
         pageFilter: filter,
+        active: isActive,
+        type,
         responsePath: 'data.keys',
         page: page || 1,
         size: 10,
@@ -42,7 +55,7 @@ export default class MessagesRoute extends Route {
         throw e;
       });
     return hash({
-      pageFilter,
+      params,
       messages,
     });
   }

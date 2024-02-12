@@ -91,6 +91,20 @@ export default class MessagesList extends Component {
     return [{ label: 'Messages' }, { label }];
   }
 
+  get activeFilterOptions() {
+    return [
+      { id: 'active', name: 'active' },
+      { id: 'inactive', name: 'inactive' },
+    ];
+  }
+
+  get messageTypeFilterOptions() {
+    return [
+      { id: 'modal', name: 'modal', value: 'modal' },
+      { id: 'banner', name: 'banner', value: 'banner' },
+    ];
+  }
+
   // callback from HDS pagination to set the queryParams page
   get paginationQueryParams() {
     return (page) => {
@@ -98,6 +112,12 @@ export default class MessagesList extends Component {
         page,
       };
     };
+  }
+
+  transitionToMessagesWithParams(queryParams) {
+    this.router.transitionTo('vault.cluster.config-ui.messages', {
+      queryParams,
+    });
   }
 
   @task
@@ -117,10 +137,18 @@ export default class MessagesList extends Component {
   }
 
   @action
-  onFilterChange(pageFilter) {
-    this.router.transitionTo('vault.cluster.config-ui.messages', {
-      queryParams: { pageFilter },
-    });
+  onFilterInputChange(pageFilter) {
+    this.transitionToMessagesWithParams({ pageFilter });
+  }
+
+  @action
+  onMessageStatusChange([messageStatus]) {
+    this.transitionToMessagesWithParams({ active: messageStatus });
+  }
+
+  @action
+  onMessageTypeChange([type]) {
+    this.transitionToMessagesWithParams({ type });
   }
 
   @action
