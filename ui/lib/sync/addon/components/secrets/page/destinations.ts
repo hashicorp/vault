@@ -18,6 +18,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type { EngineOwner } from 'vault/vault/app-types';
 import type { SyncDestinationName, SyncDestinationType } from 'vault/vault/helpers/sync-destinations';
 import type Transition from '@ember/routing/transition';
+import { tracked } from '@glimmer/tracking';
 
 interface Args {
   destinations: Array<SyncDestinationModel>;
@@ -29,6 +30,8 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @service declare readonly router: RouterService;
   @service declare readonly store: StoreService;
   @service declare readonly flashMessages: FlashMessageService;
+
+  @tracked destinationToDelete: SyncDestinationModel | null = null;
 
   // for some reason there isn't a full page refresh happening when transitioning on filter change
   // when the transition happens it causes the FilterInput component to lose focus since it can only focus on didInsert
@@ -101,6 +104,8 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
       this.flashMessages.success(message);
     } catch (error) {
       this.flashMessages.danger(`Error deleting destination \n ${errorMessage(error)}`);
+    } finally {
+      this.destinationToDelete = null;
     }
   }
 }
