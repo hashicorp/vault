@@ -22,7 +22,7 @@ export default Route.extend({
         set(error, 'httpStatus', 404);
         throw error;
       }
-      const supportManaged = supportedManagedAuthBackends().map((backend) => backend.type);
+      const supportManaged = supportedManagedAuthBackends();
       if (!supportManaged.includes(model.methodType)) {
         // do not fetch path-help for unmanaged auth types
         model.set('paths', {
