@@ -60,7 +60,7 @@ module('Integration | Component | sync | Secrets::DestinationHeader', function (
 
     assert.propEqual(
       transitionStub.lastCall.args,
-      ['vault.cluster.sync.secrets.destinations.destination.secrets', 'aws-sm', 'us-west-1'],
+      ['vault.cluster.sync.secrets.overview'],
       'Transition is triggered on delete success'
     );
     assert.propEqual(
@@ -70,8 +70,8 @@ module('Integration | Component | sync | Secrets::DestinationHeader', function (
     );
   });
 
-  test('it should render delete progress banner', async function (assert) {
-    assert.expect(2);
+  test('it should render delete progress banner and hide actions', async function (assert) {
+    assert.expect(5);
     this.destination.set('purgeInitiatedAt', '2024-01-09T16:54:28.463879');
     await settled();
     assert
@@ -82,6 +82,9 @@ module('Integration | Component | sync | Secrets::DestinationHeader', function (
     assert
       .dom(`${PAGE.destinations.deleteBanner} ${PAGE.icon('loading-static')}`)
       .exists('banner renders loading icon');
+    assert.dom(PAGE.toolbar('Sync secrets')).doesNotExist('Sync action is hidden');
+    assert.dom(PAGE.toolbar('Edit destination')).doesNotExist('Edit action is hidden');
+    assert.dom('.toolbar-separator').doesNotExist('Divider is hidden when only delete action is available');
   });
 
   test('it should render delete error banner', async function (assert) {
