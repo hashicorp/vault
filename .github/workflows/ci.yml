@@ -355,7 +355,9 @@ jobs:
               cat "$temp_file_name"
             } >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "### All Go tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
+            if [ "${{ steps.status.outputs.result }}" == 'success' ]; then
+              echo "### All required Go tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
+            fi
           fi
           {
             echo 'table-test-results<<EOFTABLE'
@@ -369,6 +371,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           RUN_ID: ${{ github.run_id }}
           REPO: ${{ github.event.repository.name }}
+          RESULT: ${{ steps.status.outputs.result }}
           TABLE_DATA: ${{ steps.prepare-failure-summary.outputs.table-test-results }}
         run: ./.github/scripts/report-ci-status.sh
       - if: always() && steps.status.outputs.result != 'success'

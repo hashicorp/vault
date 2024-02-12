@@ -338,7 +338,8 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ steps.slackbot-token.outputs.slackbot-token }}
         with:
-          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official, use "C05Q4D5V89W"/test-vault-ci-slack-integration for testing
+          channel-id: "C05AABYEA9Y" # Notify #feed-vault-ci-official
+          # channel-id: "C05Q4D5V89W" # Notify #test-vault-ci-slack-integration
           payload: |
             {
               "text": "${{ github.repository }} build failures on ${{ github.ref_name }}",
@@ -359,8 +360,6 @@ jobs:
                   "text": {
                     "type": "mrkdwn",
                     "text": "${{ needs.setup.result != 'failure' && ':white_check_mark:' || ':x:' }} Setup\n${{ needs.ui.result != 'failure' && ':white_check_mark:' || ':x:' }} Build UI\n${{ needs.artifacts.result != 'failure' && ':white_check_mark:' || ':x:' }} Build Vault Artifacts\n${{ needs.test.result != 'failure' && ':white_check_mark:' || ':x:' }} Enos package test scenarios\n${{ needs.test-containers.result != 'failure' && ':white_check_mark:' || ':x:' }} Enos container test scenarios"
-                  },
-                    "text": "':x:'"
                   },
                   "accessory": {
                     "type": "button",
