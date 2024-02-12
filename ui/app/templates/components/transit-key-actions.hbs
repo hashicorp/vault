@@ -88,7 +88,7 @@
       @keyIsRSA={{this.keyIsRSA}}
       @isModalActive={{this.isModalActive}}
       @doSubmit={{perform this.doSubmit}}
-      @submitIsRunning={{this.submitIsRunning}}
+      @submitIsRunning={{this.doSubmit.isRunning}}
       @clearSpecificProps={{this.clearSpecificProps}}
       data-test-transit-action={{@selectedAction}}
     />
@@ -106,7 +106,7 @@
       @toggleEncodeBase64={{this.toggleEncodeBase64}}
       @isModalActive={{this.isModalActive}}
       @doSubmit={{perform this.doSubmit}}
-      @submitIsRunning={{this.submitIsRunning}}
+      @submitIsRunning={{this.doSubmit.isRunning}}
       data-test-transit-action={{@selectedAction}}
     />
   {{else if (or (eq @selectedAction "export") (eq @key.supportedActions.firstObject "export"))}}

@@ -4,8 +4,9 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import service from '@ember/service';
 import { action } from '@ember/object';
+import errorMessage from 'vault/utils/error-message';
 
 export default class TransitFormShow extends Component {
   @service store;
@@ -20,7 +21,7 @@ export default class TransitFormShow extends Component {
       // must refresh to see the updated versions, a model refresh does not trigger the change.
       await this.router.refresh();
     } catch (e) {
-      this.flashMessages.danger(e.errors);
+      this.flashMessages.danger(errorMessage(e));
     }
   }
 }

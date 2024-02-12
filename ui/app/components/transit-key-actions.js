@@ -17,7 +17,6 @@ import { encodeString } from 'vault/utils/b64';
  * TransitKeyActions component handles the actions a user can take on a transit key model. The model and props are updated on every tab change
  *
  * @example
- * ```js
  * <TransitKeyActions
  * @key={{this.model}}
  * @selectedAction="hmac"
@@ -86,7 +85,6 @@ export default class TransitKeyActions extends Component {
   @tracked isModalActive = false;
   @tracked errors = null;
   @tracked props = { ...STARTING_TRANSIT_PROPS }; // Shallow copy of the object. We don't want to mutate the original.
-  @tracked submitIsRunning = this.doSubmit.isRunning;
 
   constructor() {
     super(...arguments);
