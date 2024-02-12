@@ -6,6 +6,7 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/application';
 import errorMessage from 'vault/utils/error-message';
 
@@ -20,6 +21,7 @@ import errorMessage from 'vault/utils/error-message';
  */
 export default class RolesPageComponent extends Component {
   @service flashMessages;
+  @tracked roleToDelete = null;
 
   get mountPoint() {
     return getOwner(this).mountPoint;
