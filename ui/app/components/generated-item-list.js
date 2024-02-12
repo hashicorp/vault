@@ -7,6 +7,7 @@ import { inject as service } from '@ember/service';
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { getOwner } from '@ember/application';
+import { tracked } from '@glimmer/tracking';
 
 /**
  * @module GeneratedItemList
@@ -26,6 +27,7 @@ import { getOwner } from '@ember/application';
 export default class GeneratedItemList extends Component {
   @service router;
   @service store;
+  @tracked showConfirmModal = false;
 
   get model() {
     return this.args.model || null;
