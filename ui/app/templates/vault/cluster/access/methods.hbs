@@ -77,7 +77,7 @@
                     View configuration
                   </LinkTo>
                 </li>
-                {{#if method.canEdit}}
+                {{#if (or method.canEdit (and (eq method.methodType "aws") method.canEditAws))}}
                   <li>
                     <LinkTo @route="vault.cluster.settings.auth.configure" @model={{method.id}}>
                       Edit configuration
