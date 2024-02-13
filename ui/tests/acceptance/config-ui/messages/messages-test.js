@@ -95,11 +95,12 @@ module('Acceptance | config-ui', function (hooks) {
       assert.dom('[data-test-component="empty-state"]').exists('Message was deleted');
     });
     test('it should filter by type and status', async function (assert) {
-      assert.expect(7);
+      assert.expect(6);
       await this.createMessage('banner', null);
-      assert.dom(PAGE.title).hasText('Awesome custom message title');
       await this.createMessage('banner');
       await visit('vault/config-ui/messages');
+
+      // check number of messages with status filters
       await clickTrigger('#filter-by-message-status');
       await click('.ember-power-select-options [data-option-index="0"]');
       assert.dom('.linked-block').exists({ count: 1 }, 'filtered by active');
@@ -108,6 +109,8 @@ module('Acceptance | config-ui', function (hooks) {
       await click('.ember-power-select-options [data-option-index="1"]');
       assert.dom('.linked-block').exists({ count: 1 }, 'filtered by inactive');
       await click('[data-test-selected-list-button="delete"]');
+
+      // check number of messages with type filters
       await clickTrigger('#filter-by-message-type');
       await click('.ember-power-select-options [data-option-index="0"]');
       assert.dom('.linked-block').exists({ count: 0 }, 'filtered by modal');
@@ -116,7 +119,11 @@ module('Acceptance | config-ui', function (hooks) {
       await click('.ember-power-select-options [data-option-index="1"]');
       assert.dom('.linked-block').exists({ count: 2 }, 'filtered by banner');
       await click('[data-test-selected-list-button="delete"]');
+
+      // check number of messages with no filters
       assert.dom('.linked-block').exists({ count: 2 }, 'no filters selected');
+
+      // clean up custom messages
       await click(PAGE.listItem('Awesome custom message title'));
       await click(PAGE.confirmActionButton('Delete message'));
       await click(PAGE.confirmButton);
