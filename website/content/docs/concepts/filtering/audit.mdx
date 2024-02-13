@@ -17,7 +17,7 @@ is used to evaluate audit entries and determine if they should be written to a p
 audit log. Please ensure you are familiar with the [filtering concept](/vault/docs/concepts/filtering) before
 attempting to configure an audit device with a filter.
 
-Audit devices with and without filtering configured, will all function simultaneously
+Audit devices with and without filtering configured will all function simultaneously
 in Vault. Using a filtered audit device does not restrict Operators from *only* using
 the filter and fallback type devices described on this page.
 
@@ -30,13 +30,14 @@ the filter and fallback type devices described on this page.
 Please see the [Vault security model](/vault/docs/internals/security) for further
 information about how all requests and responses to Vault are usually audited.
 
+
 ## `filter` option
 
 All audit device types ([file](/vault/docs/audit/file), [socket](/vault/docs/audit/socket)
 and [syslog](/vault/docs/audit/syslog)) support the `filter` option at the time they
 are enabled. After successfully enabling a device with a filter, every audit entry
 that Vault sends to that audit device will be compared to the expression in the filter.
-Only audit entries that match the filter should then be written to the device's audit log.
+Only audit entries that match the filter will then be written to the device's audit log.
 
 ### Valid `filter` properties
 
@@ -117,7 +118,7 @@ The properties of the test message are as follows:
 * `operation` - `update`.
 * `path` - `sys/audit/test`.
 
-Vault Operators should use this when trying to understand when they should, or
+Vault Operators should use this when trying to understand when they should or
 should not expect a test message to appear in the sink for a newly enabled audit device.
 
 ## Fallback device
@@ -125,15 +126,16 @@ should not expect a test message to appear in the sink for a newly enabled audit
 The ability to filter audit entries can provide great flexibility to your workflows,
 however the additional complexity can make it possible for a Vault Operator to configure their
 audit devices in such a way that some audit entries are missed out from audit logs entirely.
+Therefore, we strongly encourage you to test out audit configurations in your non-production
+environments before deploying them to production.
 
 The `fallback` audit device is the (non-mandatory) mechanism by which Vault can
 continue to adhere to Vault's [security model](/vault/docs/internals/security),
 that all requests and responses are successfully logged before the client receives
 any secret material.
 
-When exclusively using filtered audit devices, enabling the fallback audit device
-results in any audit entry which would have been ignored/missed due to filter settings
-being sent to the fallback device to be written to an audit log.
+When exclusively using filtered audit devices, enable the fallback audit device to
+catch any audit entries that would otherwise be missed.
 
 This means Vault is able to provide the same guarantee that 'at least one device must
 successfully write an audit entry' as when only standard/non-filtered audit devices
