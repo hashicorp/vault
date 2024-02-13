@@ -4,7 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { allMethods, methods } from 'vault/helpers/mountable-auth-methods';
 import { allEngines, mountableEngines } from 'vault/helpers/mountable-secret-engines';
 

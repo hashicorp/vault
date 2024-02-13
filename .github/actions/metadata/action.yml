@@ -68,9 +68,9 @@ outputs:
   vault-version:
     description: The version of vault.
     value: ${{ inputs.vault-version }}
-  vault-version-test:
-    description: The version of vault required for testing artifacts.
-    value: ${{ steps.workflow-metadata.outputs.vault-version-test }}
+  vault-version-metadata:
+    description: The version of vault includiting edition and other metadata.
+    value: ${{ steps.workflow-metadata.outputs.vault-version-metadata }}
   vault-version-package:
     description: The version of vault formatted for Linux distro packages.
     value: ${{ steps.vault-metadata.outputs.vault-version-package }}
@@ -139,7 +139,7 @@ runs:
             echo 'compute-small=["self-hosted","linux","small"]'
             echo 'go-tags=ent,enterprise'
             echo 'is-enterprise=true'
-            echo 'vault-version-test=${{ inputs.vault-version }}+ent'
+            echo 'vault-version-metadata=${{ inputs.vault-version }}+ent'
           } | tee -a "$GITHUB_OUTPUT"
         else
           {
@@ -151,6 +151,6 @@ runs:
             echo 'compute-small="ubuntu-latest"'
             echo 'go-tags='
             echo 'is-enterprise=false'
-            echo 'vault-version-test=${{ inputs.vault-version }}'
+            echo 'vault-version-metadata=${{ inputs.vault-version }}'
           } | tee -a "$GITHUB_OUTPUT"
         fi
