@@ -3900,6 +3900,9 @@ func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
 	pluginV100 := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, pluginVersion, c.pluginDirectory)
 	pluginV100.Image, pluginV100.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, pluginV100, c.pluginDirectory)
 
+	const runtime = "custom-runtime"
+	const ociRuntime = "runc"
+
 	for name, tc := range map[string]struct {
 		in, expected map[string]any
 	}{
@@ -3907,6 +3910,7 @@ func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
 			in: map[string]any{
 				"oci_image": latestPlugin.Image,
 				"sha_256":   latestPlugin.ImageSha256,
+				"runtime":   runtime,
 			},
 			expected: map[string]interface{}{
 				"name":      "test-plugin",
@@ -3922,6 +3926,7 @@ func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
 			in: map[string]any{
 				"oci_image": pluginV100.Image,
 				"sha256":    pluginV100.ImageSha256,
+				"runtime":   runtime,
 				"command":   "plugin",
 				"args":      []string{"--a=1"},
 				"version":   pluginVersion,
@@ -3939,8 +3944,20 @@ func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
+			conf := pluginruntimeutil.PluginRuntimeConfig{
+				Name:       runtime,
+				Type:       consts.PluginRuntimeTypeContainer,
+				OCIRuntime: ociRuntime,
+			}
+
+			// Register the plugin runtime
+			req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/runtimes/catalog/%s/%s", conf.Type.String(), conf.Name))
+			req.Data = map[string]interface{}{
+				"oci_runtime": conf.OCIRuntime,
+			}
+
 			// Add a container plugin.
-			req := logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
+			req = logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
 			for k, v := range tc.in {
 				req.Data[k] = v
 			}
