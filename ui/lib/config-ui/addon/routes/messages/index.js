@@ -69,6 +69,9 @@ export default class MessagesRoute extends Route {
   resetController(controller, isExiting) {
     if (isExiting) {
       controller.set('pageFilter', null);
+      controller.set('page', 1);
+      controller.set('status', null);
+      controller.set('type', null);
     }
   }
 }
