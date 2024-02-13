@@ -4,7 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { kvMetadataPath, kvDataPath } from 'vault/utils/kv-path';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 

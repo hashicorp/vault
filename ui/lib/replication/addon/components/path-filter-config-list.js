@@ -5,7 +5,7 @@
 
 import Component from '@ember/component';
 import { set, computed } from '@ember/object';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { readOnly } from '@ember/object/computed';
 import { task, timeout } from 'ember-concurrency';
 

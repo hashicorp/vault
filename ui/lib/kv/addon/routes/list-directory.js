@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { hash } from 'rsvp';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
 import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
