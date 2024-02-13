@@ -1,0 +1,61 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+---
+name: Set up gofumpt from Github releases
+description: Set up gofumpt from Github releases
+
+inputs:
+  destination:
+    description: "Where to install the gofumpt binary (default: $HOME/bin/gofumpt)"
+    type: boolean
+    default: "$HOME/bin/gofumpt"
+  version:
+    description: "The version to install (default: latest)"
+    type: string
+    default: Latest
+
+outputs:
+  destination:
+    description: Where the installed gofumpt binary is
+    value: ${{ steps.install.outputs.destination }}
+  destination-dir:
+    description: The directory where the installed gofumpt binary is
+    value: ${{ steps.install.outputs.destination-dir }}
+  version:
+    description: The installed version of gofumpt
+    value: ${{ steps.install.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - id: install
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        VERSION=$(gh release list -R mvdan/gofumpt --exclude-drafts --exclude-pre-releases | grep ${{ inputs.version }} | cut -f1)
+
+        mkdir -p $(dirname ${{ inputs.destination }})
+        DESTINATION="$(readlink -f "${{ inputs.destination }}")"
+        DESTINATION_DIR="$(dirname "$DESTINATION")"
+        echo "$DESTINATION_DIR" >> "$GITHUB_PATH"
+
+        {
+          echo "destination=$DESTINATION"
+          echo "destination-dir=$DESTINATION_DIR"
+          echo "version=$VERSION"
+        } | tee -a "$GITHUB_OUTPUT"
+
+        ARCH="$(echo "$RUNNER_ARCH" | tr '[:upper:]' '[:lower:]')"
+        OS="$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')"
+        if [ "$ARCH" = "x64" ]; then
+          export ARCH="amd64"
+        fi
+        if [ "$OS" = "macos" ]; then
+          export OS="darwin"
+        fi
+
+        gh release download "$VERSION" -p "gofumpt_*_${OS}_${ARCH}" -O gofumpt -R mvdan/gofumpt
+        chmod +x gofumpt
+        mv gofumpt "$DESTINATION"
