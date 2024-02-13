@@ -41,6 +41,8 @@ var (
 	ErrPluginConnectionNotFound = errors.New("plugin connection not found for client")
 	ErrPluginBadType            = errors.New("unable to determine plugin type")
 	ErrPinnedVersion            = errors.New("cannot delete a pinned version")
+	ErrPluginVersionMismatch    = errors.New("plugin version mismatch")
+	ErrPluginUnableToRun        = errors.New("unable to run plugin")
 )
 
 // PluginCatalog keeps a record of plugins known to vault. External plugins need
@@ -631,7 +633,7 @@ func (c *PluginCatalog) getBackendRunningVersion(ctx context.Context, pluginRunn
 			}
 			return logical.EmptyPluginVersion, nil
 		}
-		merr = multierror.Append(merr, fmt.Errorf("failed to dispense plugin as backend v5: %w", err))
+		merr = multierror.Append(merr, err)
 	}
 	c.logger.Debug("failed to dispense v5 backend plugin", "name", pluginRunner.Name, "error", err)
 	config.AutoMTLS = false
@@ -639,8 +641,11 @@ func (c *PluginCatalog) getBackendRunningVersion(ctx context.Context, pluginRunn
 	// attempt to run as a v4 backend plugin
 	client, err = backendplugin.NewPluginClient(ctx, c.wrapper, pluginRunner, log.NewNullLogger(), true)
 	if err != nil {
-		merr = multierror.Append(merr, fmt.Errorf("failed to dispense v4 backend plugin: %w", err))
-		c.logger.Debug("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", merr)
+		merr = multierror.Append(merr, err)
+		c.logger.Debug("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", err)
+		if pluginRunner.OCIImage != "" {
+			return logical.EmptyPluginVersion, fmt.Errorf("%w: %w", ErrPluginUnableToRun, merr.ErrorOrNil())
+		}
 		return logical.EmptyPluginVersion, merr.ErrorOrNil()
 	}
 	c.logger.Debug("successfully dispensed v4 backend plugin", "name", pluginRunner.Name)
@@ -696,7 +701,7 @@ func (c *PluginCatalog) getDatabaseRunningVersion(ctx context.Context, pluginRun
 		}
 		return logical.EmptyPluginVersion, nil
 	}
-	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v5: %w", err))
+	merr = multierror.Append(merr, err)
 
 	c.logger.Debug("attempting to load database plugin as v4", "name", pluginRunner.Name)
 	v4Client, err := v4.NewPluginClient(ctx, c.wrapper, pluginRunner, log.NewNullLogger(), true)
@@ -715,8 +720,13 @@ func (c *PluginCatalog) getDatabaseRunningVersion(ctx context.Context, pluginRun
 
 		return logical.EmptyPluginVersion, nil
 	}
-	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v4: %w", err))
-	return logical.EmptyPluginVersion, merr
+
+	merr = multierror.Append(merr, err)
+	if pluginRunner.OCIImage != "" {
+		return logical.EmptyPluginVersion, fmt.Errorf("%w: %w", ErrPluginUnableToRun, merr.ErrorOrNil())
+	}
+
+	return logical.EmptyPluginVersion, merr.ErrorOrNil()
 }
 
 // isDatabasePlugin returns an error if the plugin is not a database plugin.
@@ -1014,16 +1024,20 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 	}
 	if versionErr != nil {
 		c.logger.Warn("Error determining plugin version", "error", versionErr)
+		if errors.Is(versionErr, ErrPluginUnableToRun) {
+			return nil, versionErr
+		}
 	} else if plugin.Version != "" && runningVersion.Version != "" && plugin.Version != runningVersion.Version {
-		c.logger.Warn("Plugin self-reported version did not match requested version", "plugin", plugin.Name, "requestedVersion", plugin.Version, "reportedVersion", runningVersion.Version)
-		return nil, fmt.Errorf("plugin version mismatch: %s reported version (%s) did not match requested version (%s)", plugin.Name, runningVersion.Version, plugin.Version)
+		c.logger.Error("Plugin self-reported version did not match requested version",
+			"plugin", plugin.Name, "requestedVersion", plugin.Version, "reportedVersion", runningVersion.Version)
+		return nil, fmt.Errorf("%w: %s reported version (%s) did not match requested version (%s)",
+			ErrPluginVersionMismatch, plugin.Name, runningVersion.Version, plugin.Version)
 	} else if plugin.Version == "" && runningVersion.Version != "" {
 		plugin.Version = runningVersion.Version
 		_, err := semver.NewVersion(plugin.Version)
 		if err != nil {
 			return nil, fmt.Errorf("plugin self-reported version %q is not a valid semantic version: %w", plugin.Version, err)
 		}
-
 	}
 
 	entry := &pluginutil.PluginRunner{
