@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { setProperties } from '@ember/object';
 import { hash } from 'rsvp';
 import Route from '@ember/routing/route';

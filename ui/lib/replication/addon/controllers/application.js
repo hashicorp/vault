@@ -5,7 +5,7 @@
 
 import { isPresent } from '@ember/utils';
 import { alias } from '@ember/object/computed';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Controller from '@ember/controller';
 import { copy } from 'ember-copy';
 import { resolve } from 'rsvp';

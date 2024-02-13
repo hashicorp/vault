@@ -6,7 +6,7 @@
 import { set } from '@ember/object';
 import Ember from 'ember';
 import { resolve } from 'rsvp';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import { encodePath, normalizePath } from 'vault/utils/path-encoding-helpers';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';

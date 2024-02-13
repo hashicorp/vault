@@ -4,7 +4,7 @@
  */
 
 import { isPresent } from '@ember/utils';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Controller from '@ember/controller';
 
 const CONFIG_ATTRS = {

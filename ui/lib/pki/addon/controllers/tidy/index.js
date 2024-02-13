@@ -6,7 +6,7 @@ import Ember from 'ember';
 import Controller from '@ember/controller';
 import { task, timeout } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 const POLL_INTERVAL_MS = 5000;
 

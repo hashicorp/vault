@@ -6,7 +6,7 @@
 import { hash } from 'rsvp';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 
