@@ -1,0 +1,4 @@
+```release-note:improvement
+command/server: Removed environment variable requirement to generate pprof 
+files using SIGUSR2. Added CPU profile support.
+```
