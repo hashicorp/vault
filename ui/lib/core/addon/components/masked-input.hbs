@@ -39,9 +39,9 @@
     <Hds::Copy::Button
       @text="Copy"
       @isIconOnly={{true}}
-      @textToCopy={{this.copyValue}}
+      @textToCopy={{format-copy-value @value}}
       class="transparent has-padding-xxs"
-      data-test-copy-button={{or this.copyValue true}}
+      data-test-copy-button={{or (format-copy-value @value) true}}
     />
   {{/if}}
   {{#if @allowDownload}}

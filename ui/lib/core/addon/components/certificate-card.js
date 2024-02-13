@@ -17,12 +17,11 @@ import Component from '@glimmer/component';
  *  <CertificateCard @data={{value}} @isPem={{true}} />
  * ```
  * @param {string} data - the data to be displayed in the component (usually in PEM or DER format)
- * @param {boolean} isPem - optional argument for if the data is required to be in PEM format (and should thus have the PEM Format label)
+ * @param {boolean} [isPem] - optional argument for if the data is required to be in PEM format (and should thus have the PEM Format label)
  */
 
 export default class CertificateCardComponent extends Component {
-  // Returns the format the data is in: PEM, DER, or no format if no data is provided
-  get format() {
+  get certLabel() {
     if (!this.args.data) return '';
 
     let value;
