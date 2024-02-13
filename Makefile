@@ -224,7 +224,11 @@ proto: check-tools-external
 	protoc-go-inject-tag -input=./helper/identity/types.pb.go
 	protoc-go-inject-tag -input=./helper/identity/mfa/types.pb.go
 
-fmt:
+importfmt:
+	go install github.com/rinchsan/gosimports/cmd/gosimports@latest
+	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gosimports -w
+
+fmt: importfmt
 	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
 
 fmtcheck: check-go-fmt

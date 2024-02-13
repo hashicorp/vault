@@ -12,10 +12,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/sdk/helper/roottoken"
-
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/roottoken"
 )
 
 func testOperatorRekeyCommand(tb testing.TB) (*cli.MockUi, *OperatorRekeyCommand) {

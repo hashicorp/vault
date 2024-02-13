@@ -12,12 +12,10 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/constants"
-
-	"golang.org/x/crypto/ed25519"
-
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
+	"golang.org/x/crypto/ed25519"
 )
 
 // The outcome of processing a request includes

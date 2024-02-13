@@ -11,13 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"layeh.com/radius"
-	. "layeh.com/radius/rfc2865"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"layeh.com/radius"
+	. "layeh.com/radius/rfc2865"
 )
 
 func pathLogin(b *backend) *framework.Path {

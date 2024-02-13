@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/helper/versions"
@@ -36,8 +37,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	backendplugin "github.com/hashicorp/vault/sdk/plugin"
-
-	"github.com/hashicorp/vault/helper/builtinplugins"
 )
 
 func testPluginCatalog(t *testing.T) *PluginCatalog {

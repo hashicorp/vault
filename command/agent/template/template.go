@@ -14,16 +14,14 @@ import (
 	"fmt"
 	"io"
 
-	"go.uber.org/atomic"
-
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/internal/ctmanager"
 	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
+	"go.uber.org/atomic"
 )
 
 // ServerConfig is a config struct for setting up the basic parts of the
