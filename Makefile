@@ -224,7 +224,7 @@ proto: check-tools-external
 	protoc-go-inject-tag -input=./helper/identity/types.pb.go
 	protoc-go-inject-tag -input=./helper/identity/mfa/types.pb.go
 
-importfmt:
+importfmt: check-tools-external
 	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gosimports -w
 
 fmt: importfmt
