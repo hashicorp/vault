@@ -3893,15 +3893,33 @@ func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
 	})
 	b := c.systemBackend
 
+	const runtime = "custom-runtime"
+	const ociRuntime = "runc"
+	conf := pluginruntimeutil.PluginRuntimeConfig{
+		Name:       runtime,
+		Type:       consts.PluginRuntimeTypeContainer,
+		OCIRuntime: ociRuntime,
+	}
+
+	// Register the plugin runtime
+	req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/runtimes/catalog/%s/%s", conf.Type.String(), conf.Name))
+	req.Data = map[string]interface{}{
+		"oci_runtime": conf.OCIRuntime,
+	}
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v %#v", err, resp)
+	}
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
+		t.Fatalf("bad: %#v", resp)
+	}
+
 	latestPlugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, "", c.pluginDirectory)
 	latestPlugin.Image, latestPlugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, latestPlugin, c.pluginDirectory)
 
 	const pluginVersion = "v1.0.0"
 	pluginV100 := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, pluginVersion, c.pluginDirectory)
 	pluginV100.Image, pluginV100.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, pluginV100, c.pluginDirectory)
-
-	const runtime = "custom-runtime"
-	const ociRuntime = "runc"
 
 	for name, tc := range map[string]struct {
 		in, expected map[string]any
@@ -3946,20 +3964,8 @@ func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			conf := pluginruntimeutil.PluginRuntimeConfig{
-				Name:       runtime,
-				Type:       consts.PluginRuntimeTypeContainer,
-				OCIRuntime: ociRuntime,
-			}
-
-			// Register the plugin runtime
-			req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/runtimes/catalog/%s/%s", conf.Type.String(), conf.Name))
-			req.Data = map[string]interface{}{
-				"oci_runtime": conf.OCIRuntime,
-			}
-
 			// Add a container plugin.
-			req = logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
+			req := logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
 			for k, v := range tc.in {
 				req.Data[k] = v
 			}
@@ -6733,11 +6739,6 @@ func TestSystemBackend_pluginRuntime_CannotDeleteRuntimeWithReferencingPlugins(t
 	req.Data = map[string]interface{}{
 		"oci_runtime": conf.OCIRuntime,
 	}
-
-	const pluginVersion = "v1.16.0"
-	plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, pluginVersion, c.pluginDirectory)
-	plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, c.pluginDirectory)
-
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v %#v", err, resp)
@@ -6745,6 +6746,10 @@ func TestSystemBackend_pluginRuntime_CannotDeleteRuntimeWithReferencingPlugins(t
 	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
 		t.Fatalf("bad: %#v", resp)
 	}
+
+	const pluginVersion = "v1.16.0"
+	plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, pluginVersion, c.pluginDirectory)
+	plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, c.pluginDirectory)
 
 	// Register the plugin referencing the runtime.
 	req = logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
