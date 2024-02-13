@@ -196,12 +196,10 @@ jobs:
     #   # Trigger the setup workflow if any of the following conditions are true:
     #
     #   * The workflow was triggered by on schedule to test building all artifacts.
-    #   * The build/all label is present on a pull request or push.
-    #   * The UI was changed.
     #   * The Go app was changed.
+    #   * The build/all label is present on a pull request or push.
     if: |
       needs.setup.outputs.workflow-trigger == 'schedule' ||
-      needs.setup.outputs.ui-changed == 'true' ||
       needs.setup.outputs.app-changed == 'true' ||
       contains(fromJSON(needs.setup.outputs.labels), 'build/all')
     needs:
