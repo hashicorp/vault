@@ -380,19 +380,13 @@ func (m *RollbackManager) Rollback(ctx context.Context, path string) error {
 		// operation under the protection of our write lock.
 		rs.cancelLockGrabCtxCancel()
 
-		runnable := false
 		select {
 		case <-rs.isRunning:
-			runnable = true
-		default:
-			runnable = m.runner.WaitingQueueSize() == 0
-		}
-
-		// if the rollback has started then we should wait for it to complete
-		if runnable {
+			// if the rollback has started then we should wait for it to complete
 			m.inflightLock.Unlock()
 			rs.Wait()
 			return rs.lastError
+		default:
 		}
 
 		// if the rollback hasn't started and there's no capacity, we could
