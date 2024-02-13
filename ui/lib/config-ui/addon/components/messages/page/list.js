@@ -145,6 +145,7 @@ export default class MessagesList extends Component {
   onFilterChange(filterType, [filterOption]) {
     const param = {};
     param[filterType] = filterOption;
+    param.page = 1;
     this.transitionToMessagesWithParams(param);
   }
 
