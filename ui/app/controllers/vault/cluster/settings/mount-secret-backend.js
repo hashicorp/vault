@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Controller from '@ember/controller';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
