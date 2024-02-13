@@ -46,10 +46,12 @@ module('Unit | Adapter | capabilities', function (hooks) {
 
   test('enterprise calls the correct url within namespace when userRoot is not root', function (assert) {
     const namespaceSvc = this.owner.lookup('service:namespace');
+    const auth = this.owner.lookup('service:auth');
     namespaceSvc.setNamespace('admin/bar/baz');
-    namespaceSvc.reopen({
-      userRootNamespace: 'admin/bar',
-    });
+    // Set user root namespace
+    auth.setCluster('1');
+    auth.set('tokens', ['vault-_root_☃1']);
+    auth.setTokenData('vault-_root_☃1', { userRootNamespace: 'admin/bar', backend: { mountPath: 'token' } });
 
     let url, method, options;
     const adapter = this.owner.factoryFor('adapter:capabilities').create({
