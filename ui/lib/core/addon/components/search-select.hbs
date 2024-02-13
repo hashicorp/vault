@@ -38,7 +38,7 @@
       <PowerSelect
         @eventType="click"
         @placeholder={{@placeholder}}
-        @searchEnabled={{if (eq @searchEnabled undefined) true @searchEnabled}}
+        @searchEnabled={{this.searchEnabled}}
         @search={{this.searchAndSuggest}}
         @options={{this.dropdownOptions}}
         @onChange={{this.selectOrCreate}}

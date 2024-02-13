@@ -14,7 +14,7 @@ export default class MessageAdapter extends ApplicationAdapter {
     const { authenticated, type: messageType, active } = query;
     const params = { authenticated, list: true };
     if (messageType) params.type = messageType;
-    if (typeof active === 'boolean' && typeof active !== 'undefined') params.active = active;
+    if (typeof active === 'boolean') params.active = active;
     return super.query(store, type, params);
   }
 

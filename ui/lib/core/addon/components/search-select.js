@@ -93,6 +93,11 @@ export default class SearchSelect extends Component {
     return this.args.nameKey || 'name';
   }
 
+  get searchEnabled() {
+    if (typeof this.args.searchEnabled === 'boolean') return this.args.searchEnabled;
+    return true;
+  }
+
   addSearchText(optionsToFormat) {
     // maps over array of objects or response from query
     return optionsToFormat.toArray().map((option) => {
