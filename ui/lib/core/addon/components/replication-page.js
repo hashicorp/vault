@@ -6,7 +6,7 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import layout from '../templates/components/replication-page';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 
 /**

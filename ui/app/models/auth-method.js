@@ -6,7 +6,7 @@
 import Model, { belongsTo, hasMany, attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed'; // eslint-disable-line
 import { computed } from '@ember/object'; // eslint-disable-line
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import apiPath from 'vault/utils/api-path';
 import attachCapabilities from 'vault/lib/attach-capabilities';
