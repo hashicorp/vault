@@ -52,7 +52,12 @@
                 <dd.Interactive @text="Edit" data-test-edit @route="roles.role.edit" @model={{role}} />
               {{/if}}
               {{#if role.canDelete}}
-                <dd.Interactive @text="Delete" @color="critical" {{on "click" (fn (mut this.roleToDelete) role)}} />
+                <dd.Interactive
+                  @text="Delete"
+                  data-test-delete
+                  @color="critical"
+                  {{on "click" (fn (mut this.roleToDelete) role)}}
+                />
               {{/if}}
             </Hds::Dropdown>
           {{/if}}

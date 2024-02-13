@@ -64,7 +64,12 @@
                 <dd.Interactive @text="Details" data-test-details @route="libraries.library.details" @model={{library}} />
               {{/if}}
               {{#if library.canDelete}}
-                <dd.Interactive @text="Delete" @color="critical" {{on "click" (fn (mut this.libraryToDelete) library)}} />
+                <dd.Interactive
+                  @text="Delete"
+                  data-test-delete
+                  @color="critical"
+                  {{on "click" (fn (mut this.libraryToDelete) library)}}
+                />
               {{/if}}
             </Hds::Dropdown>
           {{/if}}
