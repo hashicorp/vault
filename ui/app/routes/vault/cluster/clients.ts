@@ -5,7 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { hash } from 'rsvp';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 import type StoreService from 'vault/services/store';
 import type ClientsConfigModel from 'vault/models/clients/config';

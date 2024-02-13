@@ -5,7 +5,7 @@
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
 import timestamp from 'vault/utils/timestamp';
 import { tracked } from '@glimmer/tracking';

@@ -117,7 +117,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert.dom(PAGE.secretTab('Metadata')).doesNotHaveClass('active');
       assert.dom(PAGE.secretTab('Version History')).hasText('Version History');
       assert.dom(PAGE.secretTab('Version History')).doesNotHaveClass('active');
-      assert.dom(PAGE.toolbarAction).exists({ count: 5 }, 'toolbar renders all actions');
+      assert.dom(PAGE.toolbarAction).exists({ count: 4 }, 'toolbar renders all actions');
     });
 
     test('it navigates back to engine index route via breadcrumbs from secret details', async function (assert) {
@@ -286,7 +286,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await click(FORM.saveBtn);
 
     // Details view
-    assert.dom(FORM.toggleJson).isDisabled();
+    assert.dom(FORM.toggleJson).isNotDisabled();
     assert.dom(FORM.toggleJson).isChecked();
     assert.strictEqual(
       codemirror().getValue(),
@@ -298,7 +298,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
     // New version view
     await click(PAGE.detail.createNewVersion);
-    assert.dom(FORM.toggleJson).isDisabled();
+    assert.dom(FORM.toggleJson).isNotDisabled();
     assert.dom(FORM.toggleJson).isChecked();
     assert.false(codemirror().getValue().includes('*'), 'Values are not obscured on edit view');
   });

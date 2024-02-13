@@ -4,7 +4,7 @@
  */
 /* eslint ember/no-computed-properties-in-native-classes: 'warn' */
 import Controller from '@ember/controller';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { filterBy } from '@ember/object/computed';
@@ -17,6 +17,7 @@ export default class VaultClusterSecretsBackendController extends Controller {
   @tracked secretEngineOptions = [];
   @tracked selectedEngineType = null;
   @tracked selectedEngineName = null;
+  @tracked engineToDisable = null;
 
   get sortedDisplayableBackends() {
     // show supported secret engines first and then organize those by id.
@@ -80,6 +81,8 @@ export default class VaultClusterSecretsBackendController extends Controller {
       this.flashMessages.danger(
         `There was an error disabling the ${engineType} Secrets Engine at ${path}: ${err.errors.join(' ')}.`
       );
+    } finally {
+      this.engineToDisable = null;
     }
   }
 }

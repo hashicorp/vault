@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { hash } from 'rsvp';
 
 export default class MessagesRoute extends Route {
@@ -51,5 +51,11 @@ export default class MessagesRoute extends Route {
     super.setupController(controller, resolvedModel);
     const label = controller.authenticated ? 'After User Logs In' : 'On Login Page';
     controller.breadcrumbs = [{ label: 'Messages' }, { label }];
+  }
+
+  resetController(controller, isExiting) {
+    if (isExiting) {
+      controller.set('pageFilter', null);
+    }
   }
 }

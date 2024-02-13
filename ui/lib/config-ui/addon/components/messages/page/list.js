@@ -4,7 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { dateFormat } from 'core/helpers/date-format';
 import { action } from '@ember/object';
@@ -30,6 +30,7 @@ export default class MessagesList extends Component {
   @service customMessages;
 
   @tracked showMaxMessageModal = false;
+  @tracked messageToDelete = null;
 
   // This follows the pattern in sync/addon/components/secrets/page/destinations for FilterInput.
   // Currently, FilterInput doesn't do a full page refresh causing it to lose focus.
@@ -110,6 +111,8 @@ export default class MessagesList extends Component {
     } catch (e) {
       const message = errorMessage(e);
       this.flashMessages.danger(message);
+    } finally {
+      this.messageToDelete = null;
     }
   }
 
