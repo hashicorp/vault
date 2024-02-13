@@ -15,7 +15,6 @@ import (
 	raftchunkingtypes "github.com/hashicorp/go-raftchunking/types"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
-	"github.com/hashicorp/raft-boltdb/v2"
 	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/stretchr/testify/assert"
