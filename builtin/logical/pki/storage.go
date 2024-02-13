@@ -14,13 +14,12 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
-
-	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
-	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
 )
 
 var ErrStorageItemNotFound = errors.New("storage item not found")

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-sockaddr"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"

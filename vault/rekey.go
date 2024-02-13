@@ -13,7 +13,6 @@ import (
 	"net/http"
 
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
-
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/sdk/helper/consts"

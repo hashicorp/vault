@@ -16,11 +16,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/command/config"
-
 	"github.com/hashicorp/cli"
 	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/mattn/go-isatty"

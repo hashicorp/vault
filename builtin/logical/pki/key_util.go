@@ -10,11 +10,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
-
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 )
 
 func comparePublicKey(sc *storageContext, key *issuing.KeyEntry, publicKey crypto.PublicKey) (bool, error) {

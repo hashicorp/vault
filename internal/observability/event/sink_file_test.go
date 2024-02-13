@@ -9,10 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/namespace"
-
 	"github.com/hashicorp/eventlogger"
-
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/stretchr/testify/require"
 )
 

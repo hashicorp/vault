@@ -8,19 +8,13 @@ import (
 	"testing"
 
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
-	"github.com/hashicorp/vault/sdk/logical"
-
-	"github.com/hashicorp/vault/helper/testhelpers"
-
-	vaulthttp "github.com/hashicorp/vault/http"
-
-	"github.com/hashicorp/vault/vault"
-
-	"github.com/hashicorp/vault/helper/testhelpers/minimal"
-
-	"github.com/stretchr/testify/require"
-
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 // TestKVV1Get tests an end-to-end KVV1 get, and checks the response
