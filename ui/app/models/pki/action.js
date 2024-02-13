@@ -4,7 +4,7 @@
  */
 
 import Model, { attr } from '@ember-data/model';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withFormFields } from 'vault/decorators/model-form-fields';

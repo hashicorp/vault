@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { hash } from 'rsvp';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import camelizeKeys from 'vault/utils/camelize-object-keys';

@@ -4,7 +4,7 @@
  */
 
 /* eslint-disable ember/no-observers */
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { isArray } from '@ember/array';
 import Helper from '@ember/component/helper';
 import { observer } from '@ember/object';
