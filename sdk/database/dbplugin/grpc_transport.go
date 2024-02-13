@@ -9,12 +9,11 @@ import (
 	"errors"
 	"time"
 
+	"github.com/golang/protobuf/ptypes"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	"github.com/golang/protobuf/ptypes"
-	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
 var (

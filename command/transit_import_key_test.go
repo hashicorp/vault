@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-
 	"github.com/stretchr/testify/require"
 )
 

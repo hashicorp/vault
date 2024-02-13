@@ -6,7 +6,7 @@
 import Component from '@ember/component';
 import { getOwner } from '@ember/application';
 import config from '../config/environment';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default Component.extend({
   flashMessages: service(),

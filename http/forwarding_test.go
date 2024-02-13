@@ -17,8 +17,6 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/net/http2"
-
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
@@ -27,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"golang.org/x/net/http2"
 )
 
 func TestHTTP_Fallback_Bad_Address(t *testing.T) {

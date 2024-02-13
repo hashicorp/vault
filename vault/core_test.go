@@ -14,26 +14,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/command/server"
-
-	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
-	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
-
-	"github.com/hashicorp/vault/builtin/plugin"
-
-	"github.com/hashicorp/vault/builtin/audit/syslog"
-
-	"github.com/hashicorp/vault/builtin/audit/file"
-	"github.com/hashicorp/vault/builtin/audit/socket"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
+	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/builtin/audit/file"
+	"github.com/hashicorp/vault/builtin/audit/socket"
+	"github.com/hashicorp/vault/builtin/audit/syslog"
+	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
+	"github.com/hashicorp/vault/builtin/plugin"
+	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -46,6 +39,8 @@ import (
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
 	"github.com/sasha-s/go-deadlock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // invalidKey is used to test Unseal

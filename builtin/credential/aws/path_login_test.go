@@ -16,9 +16,8 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBackend_pathLogin_getCallerIdentityResponse(t *testing.T) {

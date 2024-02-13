@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/cli"
-
 	"github.com/hashicorp/vault/command/token"
 )
 

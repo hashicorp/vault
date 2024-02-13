@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -21,8 +22,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-
-	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 )
 
