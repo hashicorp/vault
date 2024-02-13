@@ -245,17 +245,21 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 
 	// JSON encode the entry and write it
 	fullPath := filepath.Join(path, key)
-	tempPath := fullPath + ".temp"
-	f, err := os.OpenFile(
-		tempPath,
-		os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
-		0o600)
+	f, err := os.CreateTemp(path, key)
 	if err != nil {
 		if f != nil {
 			f.Close()
 		}
 		return err
 	}
+
+	if err = os.Chmod(f.Name(), 0o600); err != nil {
+		if f != nil {
+			f.Close()
+		}
+		return err
+	}
+
 	if f == nil {
 		return errors.New("could not successfully get a file handle")
 	}
@@ -266,7 +270,7 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 	})
 	f.Close()
 	if encErr == nil {
-		err = os.Rename(tempPath, fullPath)
+		err = os.Rename(f.Name(), fullPath)
 		if err != nil {
 			return err
 		}
@@ -278,7 +282,7 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 	// See if we ended up with a zero-byte file and if so delete it, might be a
 	// case of disk being full but the file info is in metadata that is
 	// reserved.
-	fi, err := os.Stat(tempPath)
+	fi, err := os.Stat(f.Name())
 	if err != nil {
 		return encErr
 	}
@@ -286,7 +290,7 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 		return encErr
 	}
 	if fi.Size() == 0 {
-		os.Remove(tempPath)
+		os.Remove(f.Name())
 	}
 	return encErr
 }
