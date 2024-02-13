@@ -846,6 +846,10 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 				t.Skip("Containerized plugins only supported on Linux")
 			}
 
+			if _, err := exec.LookPath("runsc"); err != nil {
+				t.Skip("Skipping test as runsc not found on path")
+			}
+
 			// Should never error.
 			plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, "", tempDir)
 			plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, tempDir)
