@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { assert } from '@ember/debug';
@@ -55,6 +56,16 @@ const STARTING_TRANSIT_PROPS = {
   verification: 'Signature',
 };
 
+const PROPS_TO_KEEP = {
+  encrypt: ['plaintext', 'context', 'nonce', 'key_version'],
+  decrypt: ['ciphertext', 'context', 'nonce'],
+  sign: ['input', 'hash_algorithm', 'key_version', 'prehashed', 'signature_algorithm'],
+  verify: ['input', 'hmac', 'signature', 'hash_algorithm', 'prehashed'],
+  hmac: ['input', 'algorithm', 'key_version'],
+  rewrap: ['ciphertext', 'context', 'nonce', 'key_version'],
+  datakey: [],
+};
+
 const SUCCESS_MESSAGE_FOR_ACTION = {
   sign: 'Signed your data.',
   // the verify action doesn't trigger a success message
@@ -64,16 +75,6 @@ const SUCCESS_MESSAGE_FOR_ACTION = {
   rewrap: 'Created a new token for your data.',
   datakey: 'Generated your key.',
   export: 'Exported your key.',
-};
-
-const PROPS_TO_KEEP = {
-  encrypt: ['plaintext', 'context', 'nonce', 'key_version'],
-  decrypt: ['ciphertext', 'context', 'nonce'],
-  sign: ['input', 'hash_algorithm', 'key_version', 'prehashed', 'signature_algorithm'],
-  verify: ['input', 'hmac', 'signature', 'hash_algorithm', 'prehashed'],
-  hmac: ['input', 'algorithm', 'key_version'],
-  rewrap: ['ciphertext', 'context', 'nonce', 'key_version'],
-  datakey: [],
 };
 
 export default class TransitKeyActions extends Component {
@@ -95,8 +96,32 @@ export default class TransitKeyActions extends Component {
     }
   }
 
+  get keyIsRSA() {
+    const { type } = this.args.key;
+    return type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
+  }
+
   get firstSupportedAction() {
     return this.args.key.supportedActions[0];
+  }
+
+  handleSuccess(resp, options, action) {
+    if (resp && resp.data) {
+      if (action === 'export' && resp.data.keys) {
+        const { keys, type, name } = resp.data;
+        resp.data.keys = { keys, type, name };
+      }
+      this.props = { ...this.props, ...resp.data };
+    }
+    if (options.wrapTTL) {
+      this.props = { ...this.props, ...{ wrappedToken: resp.wrap_info.token } };
+    }
+    // open the modal
+    this.isModalActive = !this.isModalActive;
+    // verify doesn't trigger a success message
+    if (this.selectedAction !== 'verify') {
+      this.flashMessages.success(SUCCESS_MESSAGE_FOR_ACTION[action]);
+    }
   }
 
   @action updateProps() {
@@ -109,11 +134,6 @@ export default class TransitKeyActions extends Component {
       {}
     );
     this.props = { ...STARTING_TRANSIT_PROPS, ...transferredProps };
-  }
-
-  get keyIsRSA() {
-    const { type } = this.args.key;
-    return type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
   }
 
   compactData(data) {
@@ -164,25 +184,6 @@ export default class TransitKeyActions extends Component {
       this.handleSuccess(resp, options, action);
     } catch (e) {
       this.errors = e.errors;
-    }
-  }
-
-  handleSuccess(resp, options, action) {
-    if (resp && resp.data) {
-      if (action === 'export' && resp.data.keys) {
-        const { keys, type, name } = resp.data;
-        resp.data.keys = { keys, type, name };
-      }
-      this.props = { ...this.props, ...resp.data };
-    }
-    if (options.wrapTTL) {
-      this.props = { ...this.props, ...{ wrappedToken: resp.wrap_info.token } };
-    }
-    // open the modal
-    this.isModalActive = !this.isModalActive;
-    // verify doesn't trigger a success message
-    if (this.selectedAction !== 'verify') {
-      this.flashMessages.success(SUCCESS_MESSAGE_FOR_ACTION[action]);
     }
   }
 }
