@@ -3893,10 +3893,10 @@ func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
 	})
 	b := c.systemBackend
 
-	const runtime = "custom-runtime"
+	const pluginRuntime = "custom-runtime"
 	const ociRuntime = "runc"
 	conf := pluginruntimeutil.PluginRuntimeConfig{
-		Name:       runtime,
+		Name:       pluginRuntime,
 		Type:       consts.PluginRuntimeTypeContainer,
 		OCIRuntime: ociRuntime,
 	}
@@ -3928,13 +3928,13 @@ func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
 			in: map[string]any{
 				"oci_image": latestPlugin.Image,
 				"sha_256":   latestPlugin.ImageSha256,
-				"runtime":   runtime,
+				"runtime":   pluginRuntime,
 			},
 			expected: map[string]interface{}{
 				"name":      "test-plugin",
 				"oci_image": latestPlugin.Image,
 				"sha256":    latestPlugin.ImageSha256,
-				"runtime":   runtime,
+				"runtime":   pluginRuntime,
 				"command":   "",
 				"args":      []string{},
 				"builtin":   false,
@@ -3945,7 +3945,7 @@ func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
 			in: map[string]any{
 				"oci_image": pluginV100.Image,
 				"sha256":    pluginV100.ImageSha256,
-				"runtime":   runtime,
+				"runtime":   pluginRuntime,
 				"command":   "plugin",
 				"args":      []string{"--a=1"},
 				"version":   pluginVersion,
@@ -3955,7 +3955,7 @@ func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
 				"name":      "test-plugin",
 				"oci_image": pluginV100.Image,
 				"sha256":    pluginV100.ImageSha256,
-				"runtime":   runtime,
+				"runtime":   pluginRuntime,
 				"command":   "plugin",
 				"args":      []string{"--a=1"},
 				"builtin":   false,
@@ -6726,10 +6726,10 @@ func TestSystemBackend_pluginRuntime_CannotDeleteRuntimeWithReferencingPlugins(t
 	})
 	b := c.systemBackend
 
-	const runtime = "custom-runtime"
+	const pluginRuntime = "custom-runtime"
 	const ociRuntime = "runc"
 	conf := pluginruntimeutil.PluginRuntimeConfig{
-		Name:       runtime,
+		Name:       pluginRuntime,
 		Type:       consts.PluginRuntimeTypeContainer,
 		OCIRuntime: ociRuntime,
 	}
@@ -6756,14 +6756,14 @@ func TestSystemBackend_pluginRuntime_CannotDeleteRuntimeWithReferencingPlugins(t
 	req.Data["version"] = pluginVersion
 	req.Data["sha_256"] = plugin.ImageSha256
 	req.Data["oci_image"] = plugin.Image
-	req.Data["runtime"] = runtime
+	req.Data["runtime"] = pluginRuntime
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || resp.Error() != nil {
 		t.Fatalf("err: %v %v", err, resp.Error())
 	}
 
 	// Expect to fail to delete the plugin runtime
-	req = logical.TestRequest(t, logical.DeleteOperation, fmt.Sprintf("plugins/runtimes/catalog/container/%s", runtime))
+	req = logical.TestRequest(t, logical.DeleteOperation, fmt.Sprintf("plugins/runtimes/catalog/container/%s", pluginRuntime))
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if resp == nil || !resp.IsError() || resp.Error() == nil {
 		t.Errorf("expected logical error but got none, resp: %#v", resp)
@@ -6781,7 +6781,7 @@ func TestSystemBackend_pluginRuntime_CannotDeleteRuntimeWithReferencingPlugins(t
 	}
 
 	// This time deleting the runtime should work.
-	req = logical.TestRequest(t, logical.DeleteOperation, fmt.Sprintf("plugins/runtimes/catalog/container/%s", runtime))
+	req = logical.TestRequest(t, logical.DeleteOperation, fmt.Sprintf("plugins/runtimes/catalog/container/%s", pluginRuntime))
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || resp.Error() != nil {
 		t.Fatalf("err: %v %v", err, resp.Error())
