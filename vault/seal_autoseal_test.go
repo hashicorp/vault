@@ -11,15 +11,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
-
 	"github.com/armon/go-metrics"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/helper/metricsutil"
-
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
+	"github.com/stretchr/testify/require"
 )
 
 // phy implements physical.Backend. It maps keys to a slice of entries.

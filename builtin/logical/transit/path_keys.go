@@ -13,12 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/crypto/ed25519"
-
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/crypto/ed25519"
 )
 
 func (b *backend) pathListKeys() *framework.Path {

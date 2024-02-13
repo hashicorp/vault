@@ -11,10 +11,8 @@ import (
 	"sync/atomic"
 
 	"github.com/hashicorp/vault/command/server"
-
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
-
 	"github.com/hashicorp/vault/vault/seal"
 )
 

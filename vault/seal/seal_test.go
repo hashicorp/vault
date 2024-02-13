@@ -8,9 +8,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_keyIdSet(t *testing.T) {

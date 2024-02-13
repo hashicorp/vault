@@ -9,12 +9,11 @@ import (
 	"path"
 	"testing"
 
-	"github.com/mitchellh/mapstructure"
-
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
+	"github.com/mitchellh/mapstructure"
 )
 
 // TestRecovery_Docker exercises recovery mode.  It starts a single node raft
