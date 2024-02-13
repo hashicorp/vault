@@ -24,7 +24,6 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	vaultjwt "github.com/hashicorp/vault-plugin-auth-jwt"
-	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
@@ -3183,7 +3182,7 @@ func TestAgent_DeleteAfterVersion_Rendering(t *testing.T) {
 		&vault.CoreConfig{
 			Logger: logger,
 			LogicalBackends: map[string]logical.Factory{
-				"kv": kv.VersionedKVFactory,
+				"kv": logicalKv.VersionedKVFactory,
 			},
 		},
 
