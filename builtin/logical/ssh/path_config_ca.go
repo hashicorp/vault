@@ -20,9 +20,8 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	"golang.org/x/crypto/ssh"
-
 	"github.com/mikesmitty/edkey"
+	"golang.org/x/crypto/ssh"
 )
 
 const (

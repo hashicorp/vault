@@ -14,15 +14,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/net/idna"
-
-	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 )
 
 var maxAcmeCertTTL = 90 * (24 * time.Hour)

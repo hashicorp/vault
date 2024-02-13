@@ -12,7 +12,6 @@ import (
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"

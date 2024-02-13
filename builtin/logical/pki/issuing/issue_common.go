@@ -16,15 +16,14 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/ryanuber/go-glob"
 	"golang.org/x/net/idna"
-
-	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
-	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 )
 
 var (

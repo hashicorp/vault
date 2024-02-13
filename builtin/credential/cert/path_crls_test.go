@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"

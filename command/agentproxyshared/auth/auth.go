@@ -14,9 +14,8 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/backoff"
-
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/backoff"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 

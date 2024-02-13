@@ -21,12 +21,11 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/crypto/ed25519"
-
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
+	"golang.org/x/crypto/ed25519"
 )
 
 func TestPolicy_KeyEntryMapUpgrade(t *testing.T) {

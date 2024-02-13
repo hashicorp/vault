@@ -19,16 +19,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/stretchr/testify/require"
-
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/versions"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHandler_parseMFAHandler(t *testing.T) {

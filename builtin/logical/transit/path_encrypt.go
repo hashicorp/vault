@@ -13,7 +13,6 @@ import (
 	"reflect"
 
 	"github.com/hashicorp/vault/helper/constants"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"

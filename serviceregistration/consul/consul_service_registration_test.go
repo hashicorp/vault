@@ -10,8 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/go-test/deep"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
@@ -21,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 type consulConf map[string]string

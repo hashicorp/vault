@@ -14,12 +14,11 @@ import (
 
 	"github.com/go-errors/errors"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 )
 
 func TestPki_RoleGenerateLease(t *testing.T) {

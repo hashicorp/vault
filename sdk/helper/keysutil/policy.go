@@ -32,18 +32,16 @@ import (
 	"sync/atomic"
 	"time"
 
-	"golang.org/x/crypto/chacha20poly1305"
-	"golang.org/x/crypto/ed25519"
-	"golang.org/x/crypto/hkdf"
-
+	"github.com/google/tink/go/kwp/subtle"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/kdf"
 	"github.com/hashicorp/vault/sdk/logical"
-
-	"github.com/google/tink/go/kwp/subtle"
+	"golang.org/x/crypto/chacha20poly1305"
+	"golang.org/x/crypto/ed25519"
+	"golang.org/x/crypto/hkdf"
 )
 
 // Careful with iota; don't put anything before it in this const block because

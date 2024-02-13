@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/ptypes"
@@ -21,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIdentityStore_DeleteEntityAlias(t *testing.T) {

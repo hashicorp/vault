@@ -11,10 +11,9 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-
-	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 )
 
 type acmeContext struct {

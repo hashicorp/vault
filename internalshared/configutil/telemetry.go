@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
 	monitoring "cloud.google.com/go/monitoring/apiv3"
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
@@ -20,6 +18,7 @@ import (
 	stackdrivervault "github.com/google/go-metrics-stackdriver/vault"
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/metricsutil"

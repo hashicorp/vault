@@ -7,9 +7,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/go-test/deep"
+	"github.com/stretchr/testify/require"
 )
 
 func testContextInfo() *ContextInfo {

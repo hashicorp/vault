@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"

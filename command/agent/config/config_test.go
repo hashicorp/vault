@@ -11,11 +11,10 @@ import (
 
 	"github.com/go-test/deep"
 	ctconfig "github.com/hashicorp/consul-template/config"
-	"golang.org/x/exp/slices"
-
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
+	"golang.org/x/exp/slices"
 )
 
 func TestLoadConfigFile_AgentCache(t *testing.T) {

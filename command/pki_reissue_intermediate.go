@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-
 	"github.com/posener/complete"
 )
 
