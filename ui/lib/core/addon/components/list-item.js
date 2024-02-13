@@ -24,8 +24,8 @@ export default class ListItemComponent extends Component {
   }
 
   get link() {
-    if (!Array.isArray(this.linkParams) || !this.linkParams.length) return {};
-    const [route, ...models] = this.linkParams;
+    if (!Array.isArray(this.args.linkParams) || !this.args.linkParams.length) return {};
+    const [route, ...models] = this.args.linkParams;
     return { route, models };
   }
 }
