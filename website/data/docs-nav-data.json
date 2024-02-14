@@ -2054,7 +2054,7 @@
                 ]
               },
               {
-                "title": "Secret data transformation",
+                "title": "Secret Data Transformation",
                 "path": "platform/k8s/vso/secret-transformation"
               },
               {
