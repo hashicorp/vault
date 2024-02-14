@@ -1,0 +1,35 @@
+<ListView @items={{@items}} @itemNoun="namespace" @paginationRouteName="vault.cluster.access.namespaces" as |list|>
+  {{#if list.empty}}
+    <list.empty>
+      <Hds::Link::Standalone
+        @icon="learn-link"
+        @text="Secure multi-tenancy with namespaces tutorial"
+        @href={{doc-link "/vault/tutorials/enterprise/namespaces"}}
+      />
+    </list.empty>
+  {{else}}
+    <ListItem as |Item|>
+      <Item.content>
+        {{list.item.id}}
+      </Item.content>
+      <Item.menu>
+        {{#let (concat @currentNamespace (if @currentNamespace "/") list.item.id) as |targetNamespace|}}
+          {{#if (includes targetNamespace @accessibleNamespaces)}}
+            <li class="action">
+              <NamespaceLink @targetNamespace={{targetNamespace}} @unparsed={{true}} @class="is-block">
+                Switch to Namespace
+              </NamespaceLink>
+            </li>
+          {{/if}}
+        {{/let}}
+        <ConfirmAction
+          @isInDropdown={{true}}
+          @buttonText="Delete"
+          @confirmTitle="Delete this namespace?"
+          @confirmMessage="Any engines or mounts in this namespace will also be removed."
+          @onConfirmAction={{perform this.destroyNamespace list.item}}
+        />
+      </Item.menu>
+    </ListItem>
+  {{/if}}
+</ListView>
