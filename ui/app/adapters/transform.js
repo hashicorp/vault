@@ -62,7 +62,7 @@ export default ApplicationAdapter.extend({
     const queryAjax = this.ajax(this.urlForTransformations(backend, id), 'GET', this.optionsForQuery(id));
 
     return allSettled([queryAjax]).then((results) => {
-      // query result 404d, so throw the adapterError
+      // query result 404, so throw the adapterError
       if (!results[0].value) {
         throw results[0].reason;
       }

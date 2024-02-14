@@ -29,7 +29,7 @@ module('Unit | Adapter | transform', function (hooks) {
       assert.propEqual(req.queryParams, { list: 'true' }, 'query params include list: true');
       return { data: { key_info: {}, keys: [] } };
     });
-    await this.store.adapterFor('transform').query();
+    await this.store.query('transform', { backend: this.backend });
   });
 
   test('it should make request to correct endpoint when querying a record', async function (assert) {
