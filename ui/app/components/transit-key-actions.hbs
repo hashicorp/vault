@@ -47,7 +47,7 @@
       data-test-transit-action={{@selectedAction}}
     />
   {{else if (eq @selectedAction "rewrap")}}
-    <TransitKeyAction::rewrap
+    <TransitKeyAction::Rewrap
       @key={{@key}}
       @param={{this.props.param}}
       @context={{this.props.context}}
@@ -59,7 +59,7 @@
       data-test-transit-action={{@selectedAction}}
     />
   {{else if (eq @selectedAction "hmac")}}
-    <TransitKeyAction::hmac
+    <TransitKeyAction::Hmac
       @key={{@key}}
       @trackedInput={{this.props.input}}
       @algorithm={{this.props.algorithm}}
@@ -72,7 +72,7 @@
       data-test-transit-action={{@selectedAction}}
     />
   {{else if (eq @selectedAction "verify")}}
-    <TransitKeyAction::verify
+    <TransitKeyAction::Verify
       @key={{@key}}
       @trackedInput={{this.props.input}}
       @signature={{this.props.signature}}
@@ -93,7 +93,7 @@
       data-test-transit-action={{@selectedAction}}
     />
   {{else if (eq @selectedAction "sign")}}
-    <TransitKeyAction::sign
+    <TransitKeyAction::Sign
       @key={{@key}}
       @trackedInput={{this.props.input}}
       @hash_algorithm={{this.props.hash_algorithm}}
@@ -110,7 +110,7 @@
       data-test-transit-action={{@selectedAction}}
     />
   {{else if (or (eq @selectedAction "export") (eq @key.supportedActions.firstObject "export"))}}
-    <TransitKeyAction::export
+    <TransitKeyAction::Export
       @key={{@key}}
       @keys={{this.props.keys}}
       @trackedInput={{this.props.input}}
