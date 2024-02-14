@@ -17,24 +17,35 @@ import Component from '@glimmer/component';
  *  <CertificateCard @data={{value}} @isPem={{true}} />
  * ```
  * @param {string} data - the data to be displayed in the component (usually in PEM or DER format)
- * @param {boolean} isPem - optional argument for if the data is required to be in PEM format (and should thus have the PEM Format label)
+ * @param {boolean} [isPem] - optional argument for if the data is required to be in PEM format (and should thus have the PEM Format label)
  */
 
 export default class CertificateCardComponent extends Component {
-  // Returns the format the data is in: PEM, DER, or no format if no data is provided
-  get format() {
+  get certLabel() {
     if (!this.args.data) return '';
 
-    let value;
-    if (typeof this.args.data === 'object') {
-      value = this.args.data[0];
-    } else {
-      value = this.args.data;
-    }
+    const value = Array.isArray(this.args.data) ? this.args.data[0] : this.args.data;
 
     if (value.substring(0, 11) === '-----BEGIN ' || this.args.isPem === true) {
       return 'PEM Format';
     }
     return 'DER Format';
+  }
+
+  get copyValue() {
+    const { data } = this.args;
+    if (!data) return data;
+    const type = Array.isArray(data) ? 'array' : typeof data;
+    switch (type) {
+      case 'string':
+        return data;
+      case 'array':
+        return data.join('\n');
+      case 'object':
+        // unlikely for certificates but just in case
+        return JSON.stringify(data);
+      default:
+        return data.toString();
+    }
   }
 }
