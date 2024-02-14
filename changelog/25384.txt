@@ -1,3 +1,0 @@
-```release-note:improvement
-ui: adds custom message filter by message type and/or message status.
-```
