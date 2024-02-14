@@ -7,7 +7,7 @@ description: >-
 
 <!--
   copied from docs/api/api-reference.md in the vault-secrets-operator repo.
-  commit SHA=ac57655e8b3c3b2094a065fd9d8d723a6155c65a
+  commit SHA=513441e0a912dbae2ddd7dc6bcee6a562f8d52e1
 -->
 # API Reference
 
@@ -272,7 +272,7 @@ _Appears in:_
 
 
 
-StorageEncryption provides the necessary configuration need to encrypt the storage cache entries using Vault's Transit engine. It only supports Kubernetes Auth for now.
+StorageEncryption provides the necessary configuration need to encrypt the storage cache entries using Vault's Transit engine.
 
 _Appears in:_
 - [VaultAuthSpec](#vaultauthspec)
@@ -671,6 +671,7 @@ _Appears in:_
 | `ipSans` _string array_ | IPSans to include in the request. |
 | `uriSans` _string array_ | The requested URI SANs. |
 | `otherSans` _string array_ | Requested other SANs, in an array with the format oid;type:value for each entry. |
+| `userIDs` _string array_ | User ID (OID 0.9.2342.19200300.100.1.1) Subject values to be placed on the signed certificate. |
 | `ttl` _string_ | TTL for the certificate; sets the expiration date. If not specified the Vault role's default, backend default, or system default TTL is used, in that order. Cannot be larger than the mount's max TTL. Note: this only has an effect when generating a CA cert or signing a CA cert, not when generating a CSR for an intermediate CA. Should be in duration notation e.g. 120s, 2h, etc. |
 | `format` _string_ | Format for the certificate. Choices: "pem", "der", "pem_bundle". If "pem_bundle", any private key and issuing cert will be appended to the certificate pem. If "der", the value will be base64 encoded. Default: pem |
 | `privateKeyFormat` _string_ | PrivateKeyFormat, generally the default will be controlled by the Format parameter as either base64-encoded DER or PEM-encoded DER. However, this can be set to "pkcs8" to have the returned private key contain base64-encoded pkcs8 or PEM-encoded pkcs8 instead. Default: der |
@@ -768,7 +769,3 @@ _Appears in:_
 | `hmacSecretData` _boolean_ | HMACSecretData determines whether the Operator computes the HMAC of the Secret's data. The MAC value will be stored in the resource's Status.SecretMac field, and will be used for drift detection and during incoming Vault secret comparison. Enabling this feature is recommended to ensure that Secret's data stays consistent with Vault. |
 | `rolloutRestartTargets` _[RolloutRestartTarget](#rolloutrestarttarget) array_ | RolloutRestartTargets should be configured whenever the application(s) consuming the Vault secret does not support dynamically reloading a rotated secret. In that case one, or more RolloutRestartTarget(s) can be configured here. The Operator will trigger a "rollout-restart" for each target whenever the Vault secret changes between reconciliation events. All configured targets wil be ignored if HMACSecretData is set to false. See RolloutRestartTarget for more details. |
 | `destination` _[Destination](#destination)_ | Destination provides configuration necessary for syncing the Vault secret to Kubernetes. |
-
-
-
-
