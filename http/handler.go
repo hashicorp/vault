@@ -339,9 +339,9 @@ func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 			respondError(w, status, logicalResp.Error())
 		}
 
+		// Update the response on the entry and attempt to audit the response.
 		input.Response = logicalResp
 		err = core.AuditLogger().AuditResponse(r.Context(), input)
-
 		if err != nil {
 			respondError(w, status, err)
 		}
