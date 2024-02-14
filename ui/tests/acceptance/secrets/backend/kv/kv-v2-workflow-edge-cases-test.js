@@ -281,7 +281,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await click(FORM.saveBtn);
     // Future: test that json is automatic on details too
     await click(PAGE.detail.createNewVersion);
-    assert.dom(FORM.toggleJson).isDisabled();
+    assert.dom(FORM.toggleJson).isNotDisabled();
     assert.dom(FORM.toggleJson).isChecked();
   });
 
@@ -313,6 +313,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     // View the first version and make sure the secret data is correct
     await click(PAGE.detail.versionDropdown);
     await click(`${PAGE.detail.version(1)} a`);
+    await click(FORM.toggleJsonValues);
     assert.strictEqual(codemirror().getValue(), obscuredDataV1, 'Version one data is displayed');
 
     // Navigate back the second version and make sure the secret data is correct
