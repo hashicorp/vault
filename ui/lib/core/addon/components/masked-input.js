@@ -74,8 +74,9 @@ export default class MaskedInputComponent extends Component {
 
   get copyValue() {
     // Value must be a string to be copied
-    if (typeof this.args.value === 'string') return this.args.value;
-    if (typeof this.args.value === 'object') return JSON.stringify(this.args.value);
-    return this.args.value.toString();
+    const { value } = this.args;
+    if (!value || typeof value === 'string') return value;
+    if (typeof value === 'object') return JSON.stringify(value);
+    return value.toString();
   }
 }
