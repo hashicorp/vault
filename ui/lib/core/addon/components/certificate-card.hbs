@@ -24,9 +24,9 @@
     <Hds::Copy::Button
       @text="Copy"
       @isIconOnly={{true}}
-      @textToCopy={{@data}}
+      @textToCopy={{this.copyValue}}
       class="transparent"
-      data-test-copy-button={{or @data true}}
+      data-test-copy-button={{or this.copyValue true}}
     />
   </div>
 </Hds::Card::Container>
