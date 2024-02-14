@@ -7,15 +7,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/namespace"
-
-	"github.com/hashicorp/go-uuid"
-
-	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/hashicorp/eventlogger"
-
+	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internal/observability/event"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
 )
 

@@ -4,7 +4,7 @@
  */
 
 import Model, { belongsTo, hasMany, attr } from '@ember-data/model';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import apiPath from 'vault/utils/api-path';
 import { withModelValidations } from 'vault/decorators/model-validations';

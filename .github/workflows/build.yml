@@ -100,8 +100,8 @@ jobs:
       vault-binary-name: ${{ steps.metadata.outputs.vault-binary-name }}
       vault-revision: ${{ steps.metadata.outputs.vault-revision }}
       vault-version: ${{ steps.metadata.outputs.vault-version }}
+      vault-version-metadata: ${{ steps.metadata.outputs.vault-version-metadata }}
       vault-version-package: ${{ steps.metadata.outputs.vault-version-package }}
-      vault-version-test: ${{ steps.metadata.outputs.vault-version-test }}
       workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
     steps:
       # Run the changed-files action to determine what Git reference we should check out
@@ -193,8 +193,15 @@ jobs:
     # workflow is triggered by a push to main CRT will take these artifacts from Github and perform
     # all of the necessary notarizing and signing before uploading them to Artifactory.
     #
-    # Build the Vault artifacts if our UI job was triggered and our Go app has changed.
-    if: needs.setup.outputs.app-changed == 'true'
+    #   # Trigger the setup workflow if any of the following conditions are true:
+    #
+    #   * The workflow was triggered by on schedule to test building all artifacts.
+    #   * The Go app was changed.
+    #   * The build/all label is present on a pull request or push.
+    if: |
+      needs.setup.outputs.workflow-trigger == 'schedule' ||
+      needs.setup.outputs.app-changed == 'true' ||
+      contains(fromJSON(needs.setup.outputs.labels), 'build/all')
     needs:
       - setup
       - ui # Don't build and test artifacts unless the UI build was triggered.
@@ -236,7 +243,7 @@ jobs:
       ssh-key-name: ${{ github.event.repository.name }}-ci-ssh-key
       vault-edition: ${{ matrix.edition }}
       vault-revision: ${{ needs.setup.outputs.vault-revision }}
-      vault-version: ${{ needs.setup.outputs.vault-version-test }}
+      vault-version: ${{ needs.setup.outputs.vault-version-metadata }}
     secrets: inherit
 
   test-containers:
@@ -257,7 +264,7 @@ jobs:
       artifact-build-date: ${{ needs.setup.outputs.build-date }}
       artifact-name: ${{ matrix.artifact }}
       artifact-revision: ${{ needs.setup.outputs.vault-revision }}
-      artifact-version: ${{ needs.setup.outputs.vault-version-test }}
+      artifact-version: ${{ needs.setup.outputs.vault-version-metadata }}
     secrets: inherit
 
   completed-successfully:
@@ -376,7 +383,7 @@ jobs:
       - uses: hashicorp/actions-generate-metadata@v1
         id: generate-metadata-file
         with:
-          version: ${{ needs.setup.outputs.vault-version }}
+          version: ${{ needs.setup.outputs.vault-version-metadata }}
           product: ${{ needs.setup.outputs.vault-binary-name }}
       # Use actions/upload-artifact @3.x until https://hashicorp.atlassian.net/browse/HREL-99 is resolved
       - uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3

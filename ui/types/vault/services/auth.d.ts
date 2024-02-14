@@ -9,7 +9,12 @@
 import Service from '@ember/service';
 
 export interface AuthData {
+  userRootNamespace: string;
+  token: string;
+  policies: string[];
+  renewable: boolean;
   entity_id: string;
+  displayName?: string;
 }
 
 export default class AuthService extends Service {

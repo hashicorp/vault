@@ -46,6 +46,7 @@ install_external() {
     gotest.tools/gotestsum@latest
     honnef.co/go/tools/cmd/staticcheck@latest
     mvdan.cc/gofumpt@latest
+    github.com/rinchsan/gosimports/cmd/gosimports@latest
   )
 
   echo "==> Installing external tools..."
@@ -72,6 +73,7 @@ check_external() {
     protoc-go-inject-tag
     revgrep
     staticcheck
+    gosimports
   )
 
   echo "==> Checking for external tools..."
