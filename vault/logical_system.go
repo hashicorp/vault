@@ -92,11 +92,12 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	}
 
 	b := &SystemBackend{
-		Core:        core,
-		db:          db,
-		logger:      logger,
-		mfaBackend:  NewPolicyMFABackend(core, logger),
-		syncBackend: syncBackend,
+		Core:               core,
+		db:                 db,
+		logger:             logger,
+		mfaBackend:         NewPolicyMFABackend(core, logger),
+		syncBackend:        syncBackend,
+		eventSubscriptions: newEventSubscriptions(),
 	}
 
 	b.Backend = &framework.Backend{
@@ -225,6 +226,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	b.Backend.Paths = append(b.Backend.Paths, b.loginMFAPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.experimentPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.introspectionPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.eventPaths()...)
 
 	if requestLimiterRead := b.requestLimiterReadPath(); requestLimiterRead != nil {
 		b.Backend.Paths = append(b.Backend.Paths, b.requestLimiterReadPath())
@@ -268,11 +270,12 @@ func (b *SystemBackend) rawPaths() []*framework.Path {
 // prefix. Conceptually it is similar to procfs on Linux.
 type SystemBackend struct {
 	*framework.Backend
-	Core        *Core
-	db          *memdb.MemDB
-	logger      log.Logger
-	mfaBackend  *PolicyMFABackend
-	syncBackend *SecretsSyncBackend
+	Core               *Core
+	db                 *memdb.MemDB
+	logger             log.Logger
+	mfaBackend         *PolicyMFABackend
+	syncBackend        *SecretsSyncBackend
+	eventSubscriptions *eventSubscriptions
 }
 
 // handleConfigStateSanitized returns the current configuration state. The configuration

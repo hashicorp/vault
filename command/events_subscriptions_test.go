@@ -10,19 +10,19 @@ import (
 	"github.com/hashicorp/cli"
 )
 
-func testEventsSubscribeCommand(tb testing.TB) (*cli.MockUi, *EventsSubscribeCommands) {
+func testEventsSubscriptionsCommand(tb testing.TB) (*cli.MockUi, *EventsSubscriptionCreateCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &EventsSubscribeCommands{
+	return ui, &EventsSubscriptionCreateCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
 	}
 }
 
-// TestEventsSubscribeCommand_Run tests that the command argument parsing is working as expected.
-func TestEventsSubscribeCommand_Run(t *testing.T) {
+// TestEventsSubscriptionsCommand_Run tests that the command argument parsing is working as expected.
+func TestEventsSubscriptionsCommand_Run(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -38,8 +38,14 @@ func TestEventsSubscribeCommand_Run(t *testing.T) {
 			1,
 		},
 		{
+			"not_enough_args",
+			[]string{"foo"},
+			"Not enough arguments",
+			1,
+		},
+		{
 			"too_many_args",
-			[]string{"foo", "bar"},
+			[]string{"foo", "bar", "baz"},
 			"Too many arguments",
 			1,
 		},
@@ -54,7 +60,7 @@ func TestEventsSubscribeCommand_Run(t *testing.T) {
 			client, closer := testVaultServer(t)
 			defer closer()
 
-			ui, cmd := testEventsSubscribeCommand(t)
+			ui, cmd := testEventsSubscriptionsCommand(t)
 			cmd.client = client
 
 			code := cmd.Run(tc.args)

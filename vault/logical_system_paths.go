@@ -5100,29 +5100,56 @@ func (b *SystemBackend) eventPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "events/subscriptions$",
-
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "subscriptions",
-				OperationVerb:   "create",
 			},
-
 			Fields: map[string]*framework.FieldSchema{
+				"event_type": {
+					Type: framework.TypeString,
+				},
+				"filter": {
+					Type: framework.TypeString,
+				},
 				"config": {
-					Type:     framework.TypeMap,
-					Required: true,
+					Type: framework.TypeMap,
 					// Description: strings.TrimSpace(sysHelp["mount_accessor"][0]),
 				},
 				"plugin": {
-					Type:     framework.TypeString,
-					Required: true,
+					Type: framework.TypeString,
 				},
-				//"alias_identifier": {
-				//	Type: framework.TypeString,
-				//	// Description: strings.TrimSpace(sysHelp["alias_identifier"][0]),
-				//},
+				"list": {
+					Type: framework.TypeBool,
+				},
 			},
-
 			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleEventsListSubscriptions,
+					Summary:  "",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"subscriptions": {
+									Type: framework.TypeSlice,
+								},
+							},
+						}},
+					},
+				},
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handleEventsListSubscriptions,
+					Summary:  "",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"subscriptions": {
+									Type: framework.TypeSlice,
+								},
+							},
+						}},
+					},
+				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleEventsSubscribe,
 					Summary:  "",
@@ -5131,6 +5158,10 @@ func (b *SystemBackend) eventPaths() []*framework.Path {
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"id": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"plugin": {
 									Type:     framework.TypeString,
 									Required: true,
 								},
@@ -5167,21 +5198,20 @@ func (b *SystemBackend) eventPaths() []*framework.Path {
 				//},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ListOperation: &framework.PathOperation{
-					Callback: b.handleEventsListSubscriptions,
-					Summary:  "",
-					Responses: map[int][]framework.Response{
-						http.StatusNoContent: {{
-							Description: "OK",
-						}},
-					},
-				},
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.handleEventsListSubscriptions,
+					Callback: b.handleEventsReadSubscription,
 					Summary:  "",
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"id": {
+									Type: framework.TypeString,
+								},
+								"plugin": {
+									Type: framework.TypeString,
+								},
+							},
 						}},
 					},
 				},

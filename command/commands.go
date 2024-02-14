@@ -342,7 +342,27 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 			}, nil
 		},
 		"events subscribe": func() (cli.Command, error) {
-			return &EventsSubscribeCommands{
+			return &EventsWebSocketCommands{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"events subscriptions create": func() (cli.Command, error) {
+			return &EventsSubscriptionCreateCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"events subscriptions delete": func() (cli.Command, error) {
+			return &EventsSubscriptionDeleteCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"events subscriptions get": func() (cli.Command, error) {
+			return &EventsSubscriptionGetCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"events subscriptions list": func() (cli.Command, error) {
+			return &EventsSubscriptionListCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

@@ -18,22 +18,22 @@ import (
 )
 
 var (
-	_ cli.Command             = (*EventsSubscribeCommands)(nil)
-	_ cli.CommandAutocomplete = (*EventsSubscribeCommands)(nil)
+	_ cli.Command             = (*EventsWebSocketCommands)(nil)
+	_ cli.CommandAutocomplete = (*EventsWebSocketCommands)(nil)
 )
 
-type EventsSubscribeCommands struct {
+type EventsWebSocketCommands struct {
 	*BaseCommand
 
 	namespaces  []string
 	bexprFilter string
 }
 
-func (c *EventsSubscribeCommands) Synopsis() string {
-	return "Subscribe to events"
+func (c *EventsWebSocketCommands) Synopsis() string {
+	return "Subscribe to events by creating a WebSocket"
 }
 
-func (c *EventsSubscribeCommands) Help() string {
+func (c *EventsWebSocketCommands) Help() string {
 	helpText := `
 Usage: vault events subscribe [-namespaces=ns1] [-timeout=XYZs] [-filter=filterExpression] eventType
 
@@ -47,9 +47,9 @@ Usage: vault events subscribe [-namespaces=ns1] [-timeout=XYZs] [-filter=filterE
 	return strings.TrimSpace(helpText)
 }
 
-func (c *EventsSubscribeCommands) Flags() *FlagSets {
+func (c *EventsWebSocketCommands) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP)
-	f := set.NewFlagSet("Subscribe Options")
+	f := set.NewFlagSet("Subscription Options")
 	f.StringVar(&StringVar{
 		Name: "filter",
 		Usage: `A boolean expression to use to filter events. Only events matching
@@ -73,15 +73,15 @@ func (c *EventsSubscribeCommands) Flags() *FlagSets {
 	return set
 }
 
-func (c *EventsSubscribeCommands) AutocompleteArgs() complete.Predictor {
+func (c *EventsWebSocketCommands) AutocompleteArgs() complete.Predictor {
 	return nil
 }
 
-func (c *EventsSubscribeCommands) AutocompleteFlags() complete.Flags {
+func (c *EventsWebSocketCommands) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *EventsSubscribeCommands) Run(args []string) int {
+func (c *EventsWebSocketCommands) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
@@ -105,7 +105,7 @@ func (c *EventsSubscribeCommands) Run(args []string) int {
 		return 2
 	}
 
-	err = c.subscribeRequest(client, "sys/events/subscribe/"+args[0])
+	err = c.subscribeRequest(client, "sys/events/subscriptions/"+args[0])
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -129,7 +129,7 @@ func cleanNamespaces(namespaces []string) []string {
 	return cleaned
 }
 
-func (c *EventsSubscribeCommands) subscribeRequest(client *api.Client, path string) error {
+func (c *EventsWebSocketCommands) subscribeRequest(client *api.Client, path string) error {
 	r := client.NewRequest("GET", "/v1/"+path)
 	u := r.URL
 	if u.Scheme == "http" {
