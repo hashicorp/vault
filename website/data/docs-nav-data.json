@@ -317,8 +317,9 @@
             "title": "Overview",
             "path": "configuration/seal"
           },
-          { "title": "High Availability",
-           "badge": {
+          {
+            "title": "High Availability",
+            "badge": {
               "text": "ENTERPRISE",
               "type": "outlined",
               "color": "highlight"
@@ -1204,6 +1205,15 @@
             "path": "agent-and-proxy/agent/versions"
           }
         ]
+      }
+    ]
+  },
+  {
+    "title": "Vault UI",
+    "routes": [
+      {
+        "title": "Custom Messages",
+        "path": "ui/custom-messages"
       }
     ]
   },
