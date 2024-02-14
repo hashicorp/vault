@@ -82,20 +82,22 @@ The following placeholders are available:
 
 Let's assume we want to sync the following secret:
 
-```shell-session
-$ VAULT_NAMESPACE=ns1/ns2 vault kv get -mount=path/to/kv1 path/to/secret1
+  <CodeBlockConfig hideClipboard>
 
-========== Secret Path ==========
-path/to/kv1/data/path/to/secret1
+    $ VAULT_NAMESPACE=ns1/ns2 vault kv get -mount=path/to/kv1 path/to/secret1
 
-======= Metadata =======
-(...)
+    ========== Secret Path ==========
+    path/to/kv1/data/path/to/secret1
 
-=== Data ===
-Key    Value
----    -----
-foo    bar
-```
+    ======= Metadata =======
+    (...)
+
+    === Data ===
+    Key    Value
+    ---    -----
+    foo    bar
+
+  </CodeBlockConfig>
 
 Let's look at some name template examples and the resulting secret name at the sync destination.
 
