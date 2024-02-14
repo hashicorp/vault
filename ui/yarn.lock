@@ -7400,10 +7400,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/shell-quote@npm:^1.7.1":
-  version: 1.7.1
-  resolution: "@types/shell-quote@npm:1.7.1"
-  checksum: 51e58326b8c6dcb72846b94cebe3dc4c84f3514469a8e52bd29c52c601e784b427b851d7477acbeef47bfcccf25d2a5768684d27e7fc95fdd003393c1bbb7bc3
+"@types/shell-quote@npm:^1.7.3":
+  version: 1.7.5
+  resolution: "@types/shell-quote@npm:1.7.5"
+  checksum: 32b4d697c7d23dbadf40713692c47f1595f083a3b3deea76cb18e30a05d197aa9205d2b87f6d92edb60cda120b51e35d32bda96ed9b0a7e32921eed2deb4559e
   languageName: node
   linkType: hard
 
@@ -28037,7 +28037,7 @@ __metadata:
     "@types/ember__utils": ^4.0.2
     "@types/qunit": ^2.19.4
     "@types/rsvp": ^4.0.4
-    "@types/shell-quote": ^1.7.1
+    "@types/shell-quote": ^1.7.3
     "@typescript-eslint/eslint-plugin": ^5.19.0
     "@typescript-eslint/parser": ^5.19.0
     asn1js: ^2.2.0
