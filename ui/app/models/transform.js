@@ -111,7 +111,7 @@ export default Model.extend({
   max_ttl: attr({
     editType: 'ttl',
     defaultValue: '0',
-    label: 'Maximum TTL of a token',
+    label: 'Maximum TTL (time-to-live) of a token',
     helperTextDisabled: 'If "0" or unspecified, tokens may have no expiration.',
   }),
 
