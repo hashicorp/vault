@@ -11,6 +11,7 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { encodeString } from 'vault/utils/b64';
+import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module TransitKeyActions
@@ -129,7 +130,7 @@ export default class TransitKeyActions extends Component {
     // There are specific props we want to carry over from the previous tab.
     // Ex: carrying over this.props.context from the encrypt tab to the decrypt tab, but not carrying over this.props.plaintext.
     // To do this, we make a new object that contains the old this.props key/values from the previous tab that we want to keep. We then merge that new object into the STARTING_TRANSIT_PROPS object to come up with our new this.props tracked property.
-    const transferredProps = PROPS_TO_KEEP[this.args.selectedAction].reduce(
+    const transferredProps = PROPS_TO_KEEP[this.args.selectedAction]?.reduce(
       (obj, key) => ({ ...obj, [key]: this.props[key] }),
       {}
     );
@@ -159,6 +160,7 @@ export default class TransitKeyActions extends Component {
   @task
   @waitFor
   *doSubmit(data, options = {}, maybeEvent) {
+    this.errors = null;
     const event = options.type === 'submit' ? options : maybeEvent;
     if (event) {
       event.preventDefault();
@@ -183,7 +185,7 @@ export default class TransitKeyActions extends Component {
 
       this.handleSuccess(resp, options, action);
     } catch (e) {
-      this.errors = e.errors;
+      this.errors = errorMessage(e);
     }
   }
 }

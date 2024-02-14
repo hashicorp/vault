@@ -13,15 +13,10 @@
         as the named key.
       </p>
     </div>
-    <KeyVersionSelect @key={{@key}} @onVersionChange={{action (mut @key_version)}} @key_version={{@key_version}} />
+    <KeyVersionSelect @key={{@key}} @onVersionChange={{fn (mut @key_version)}} @key_version={{@key_version}} />
     <div class="field">
       <div id="input-control" class="control is-relative">
-        <JsonEditor
-          @title="Input"
-          @valueUpdated={{action (mut @trackedInput)}}
-          @mode="ruby"
-          @data-test-transit-input="input"
-        />
+        <JsonEditor @title="Input" @valueUpdated={{fn (mut @trackedInput)}} @mode="ruby" @data-test-transit-input="input" />
       </div>
     </div>
     <div class="field">

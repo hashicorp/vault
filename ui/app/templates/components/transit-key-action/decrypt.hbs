@@ -12,7 +12,7 @@
       <div id="ciphertext-control" class="control">
         <JsonEditor
           @title="Ciphertext"
-          @valueUpdated={{action (mut @ciphertext)}}
+          @valueUpdated={{fn (mut @ciphertext)}}
           @mode="ruby"
           @data-test-transit-input="ciphertext"
         />

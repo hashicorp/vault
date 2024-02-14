@@ -16,10 +16,10 @@
         as the encryption key.
       </p>
     </div>
-    <KeyVersionSelect @key={{@key}} @onVersionChange={{action (mut @key_version)}} @key_version={{@key_version}} />
+    <KeyVersionSelect @key={{@key}} @onVersionChange={{fn (mut @key_version)}} @key_version={{@key_version}} />
     <div class="field">
       <div class="control is-expanded">
-        <JsonEditor @title="Ciphertext" @valueUpdated={{action (mut @ciphertext)}} @mode="ruby" />
+        <JsonEditor @title="Ciphertext" @valueUpdated={{fn (mut @ciphertext)}} @mode="ruby" />
       </div>
     </div>
     {{#if @key.derived}}

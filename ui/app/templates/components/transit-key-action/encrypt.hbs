@@ -12,13 +12,13 @@
     <div class="content has-bottom-margin-l">
       <p>You can encrypt plaintext data using <code>{{@key.name}}</code> as the encryption key.</p>
     </div>
-    <KeyVersionSelect @key={{@key}} @onVersionChange={{action (mut @key_version)}} @key_version={{@key_version}} />
+    <KeyVersionSelect @key={{@key}} @onVersionChange={{fn (mut @key_version)}} @key_version={{@key_version}} />
     <div class="field">
       <div id="plaintext-control" class="control is-relative">
         <JsonEditor
           @title="Plaintext"
           @value={{@plaintext}}
-          @valueUpdated={{action (mut @plaintext)}}
+          @valueUpdated={{fn (mut @plaintext)}}
           @mode="ruby"
           @data-test-transit-input="plaintext"
         />

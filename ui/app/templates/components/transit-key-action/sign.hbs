@@ -30,13 +30,13 @@
         as the encryption key and the specified hash algorithm.
       </p>
     </div>
-    <KeyVersionSelect @key={{@key}} @onVersionChange={{action (mut @key_version)}} @key_version={{@key_version}} />
+    <KeyVersionSelect @key={{@key}} @onVersionChange={{fn (mut @key_version)}} @key_version={{@key_version}} />
     <div class="field">
       <div class="control is-relative">
         <JsonEditor
           @title="Input"
           @value={{@trackedInput}}
-          @valueUpdated={{action (mut @trackedInput)}}
+          @valueUpdated={{fn (mut @trackedInput)}}
           @mode="ruby"
           @data-test-transit-input="input"
         />

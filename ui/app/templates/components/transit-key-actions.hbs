@@ -4,7 +4,7 @@
 ~}}
 
 <div {{did-update this.updateProps @selectedAction}}>
-  <MessageError @errors={{this.errors}} />
+  <MessageError @errorMessage={{this.errors}} />
 
   {{#if (eq @selectedAction "encrypt")}}
     <TransitKeyAction::Encrypt

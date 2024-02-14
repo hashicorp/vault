@@ -31,7 +31,7 @@
         <JsonEditor
           @title="Input"
           @value={{@trackedInput}}
-          @valueUpdated={{action (mut @trackedInput)}}
+          @valueUpdated={{fn (mut @trackedInput)}}
           @mode="ruby"
           @data-test-transit-input="input"
         />
@@ -74,7 +74,7 @@
                   id="verification"
                   onchange={{queue
                     (action (mut @verification) value="target.value")
-                    (action @clearSpecificProps (array "hmac" "signature"))
+                    (fn @clearSpecificProps (array "hmac" "signature"))
                   }}
                 >
                   {{#each (array "Signature" "HMAC") as |type|}}
@@ -155,18 +155,13 @@
           {{#if (or (and @verification (eq @verification "HMAC")) @hmac)}}
             <div class="field is-flex-column is-flex-grow-1">
               <div class="control is-flex-column is-flex-grow-1">
-                <JsonEditor @title="HMAC" @value={{@hmac}} @valueUpdated={{action (mut @hmac)}} @mode="ruby" />
+                <JsonEditor @title="HMAC" @value={{@hmac}} @valueUpdated={{fn (mut @hmac)}} @mode="ruby" />
               </div>
             </div>
           {{else}}
             <div class="field is-flex-column is-flex-grow-1">
               <div class="control is-flex-column is-flex-grow-1">
-                <JsonEditor
-                  @title="Signature"
-                  @value={{@signature}}
-                  @valueUpdated={{action (mut @signature)}}
-                  @mode="ruby"
-                />
+                <JsonEditor @title="Signature" @value={{@signature}} @valueUpdated={{fn (mut @signature)}} @mode="ruby" />
               </div>
             </div>
           {{/if}}
@@ -175,7 +170,7 @@
     {{else}}
       <div class="field">
         <div class="control">
-          <JsonEditor @title="HMAC" @value={{@hmac}} @valueUpdated={{action (mut @hmac)}} @mode="ruby" />
+          <JsonEditor @title="HMAC" @value={{@hmac}} @valueUpdated={{fn (mut @hmac)}} @mode="ruby" />
         </div>
       </div>
       <div class="field">
