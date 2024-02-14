@@ -587,7 +587,7 @@ func (b *backend) getTrustedCerts(ctx context.Context, storage logical.Storage, 
 	b.trustedLock.RLock()
 	if trusted, found := b.trustedCache[certName]; found {
 		b.trustedLock.RUnlock()
-		return trusted.pool, trusted.trusted, trusted.trustedNonCAs, trusted.conf
+		return trusted.pool, trusted.trusted, trusted.trustedNonCAs, trusted.ocspConf
 	}
 	b.trustedLock.RUnlock()
 	return b.loadTrustedCerts(ctx, storage, certName)
@@ -667,7 +667,7 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 		pool:          pool,
 		trusted:       trustedCerts,
 		trustedNonCAs: trustedNonCAs,
-		conf:          conf,
+		ocspConf:      conf,
 	}
 	return
 }

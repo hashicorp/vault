@@ -68,7 +68,7 @@ type trusted struct {
 	pool          *x509.CertPool
 	trusted       []*ParsedCert
 	trustedNonCAs []*ParsedCert
-	conf          *ocsp.VerifyConfig
+	ocspConf      *ocsp.VerifyConfig
 }
 
 type backend struct {
