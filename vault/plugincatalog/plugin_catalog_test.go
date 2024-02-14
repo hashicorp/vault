@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/helper/versions"
@@ -36,8 +37,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	backendplugin "github.com/hashicorp/vault/sdk/plugin"
-
-	"github.com/hashicorp/vault/helper/builtinplugins"
 )
 
 func testPluginCatalog(t *testing.T) *PluginCatalog {
@@ -804,6 +803,17 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 	tempDir := catalog.directory
 	catalog.directory = ""
 
+	const pluginRuntime = "custom-runtime"
+	const ociRuntime = "runc"
+	err := catalog.runtimeCatalog.Set(context.Background(), &pluginruntimeutil.PluginRuntimeConfig{
+		Name:       pluginRuntime,
+		Type:       consts.PluginRuntimeTypeContainer,
+		OCIRuntime: ociRuntime,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tests := map[string]func(t *testing.T){
 		"set binary plugin": func(t *testing.T) {
 			file, err := os.CreateTemp(tempDir, "temp")
@@ -855,6 +865,7 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 				Name:     "container",
 				Type:     consts.PluginTypeDatabase,
 				OCIImage: plugin.Image,
+				Runtime:  pluginRuntime,
 			})
 			if err != nil {
 				t.Fatal(err)
