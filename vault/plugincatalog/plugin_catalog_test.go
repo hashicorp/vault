@@ -803,6 +803,17 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 	tempDir := catalog.directory
 	catalog.directory = ""
 
+	const pluginRuntime = "custom-runtime"
+	const ociRuntime = "runc"
+	err := catalog.runtimeCatalog.Set(context.Background(), &pluginruntimeutil.PluginRuntimeConfig{
+		Name:       pluginRuntime,
+		Type:       consts.PluginRuntimeTypeContainer,
+		OCIRuntime: ociRuntime,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tests := map[string]func(t *testing.T){
 		"set binary plugin": func(t *testing.T) {
 			file, err := os.CreateTemp(tempDir, "temp")
@@ -854,6 +865,7 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 				Name:     "container",
 				Type:     consts.PluginTypeDatabase,
 				OCIImage: plugin.Image,
+				Runtime:  pluginRuntime,
 			})
 			if err != nil {
 				t.Fatal(err)
