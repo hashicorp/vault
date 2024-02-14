@@ -9,16 +9,40 @@
   @breadcrumbs={{this.breadcrumbs}}
 >
   <:toolbarFilters>
-    {{#if @messages.meta.total}}
-      <FilterInput
-        aria-label="Search by message title"
-        placeholder="Search by message title"
-        id="message-filter"
-        value={{@pageFilter}}
-        @autofocus={{true}}
-        @onInput={{this.onFilterChange}}
+    <FilterInput
+      aria-label="Search by message title"
+      placeholder="Search by message title"
+      id="message-filter"
+      value={{@params.pageFilter}}
+      @autofocus={{true}}
+      @onInput={{this.onFilterInputChange}}
+    />
+    <div>
+      <SearchSelect
+        @id="filter-by-message-status"
+        class="has-left-margin-s"
+        @options={{this.statusFilterOptions}}
+        @selectLimit="1"
+        @searchEnabled={{false}}
+        @fallbackComponent="select"
+        @onChange={{fn this.onFilterChange "status"}}
+        @placeholder="Filter by message status"
+        @inputValue={{if @params.status (array @params.status)}}
+        data-test-filter-by-message-status
       />
-    {{/if}}
+    </div>
+    <SearchSelect
+      @id="filter-by-message-type"
+      class="has-left-margin-s"
+      @options={{this.typeFilterOptions}}
+      @selectLimit="1"
+      @searchEnabled={{false}}
+      @fallbackComponent="select"
+      @onChange={{fn this.onFilterChange "type"}}
+      @placeholder="Filter by message type"
+      @inputValue={{if @params.type (array @params.type)}}
+      data-test-filter-by-message-type
+    />
   </:toolbarFilters>
   <:toolbarActions>
     <Hds::Button
@@ -68,7 +92,7 @@
                   <dd.Interactive @text="Edit" @route="messages.message.edit" @model={{message.id}} />
                 {{/if}}
                 {{#if message.canDeleteCustomMessages}}
-                  <dd.Interactive @text="Disable" @color="critical" {{on "click" (fn (mut this.messageToDelete) message)}} />
+                  <dd.Interactive @text="Delete" @color="critical" {{on "click" (fn (mut this.messageToDelete) message)}} />
                 {{/if}}
               </Hds::Dropdown>
             {{/if}}

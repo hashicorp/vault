@@ -11,8 +11,11 @@ export default class MessageAdapter extends ApplicationAdapter {
   }
 
   query(store, type, query) {
-    const { authenticated } = query;
-    return super.query(store, type, { authenticated, list: true });
+    const { authenticated, type: messageType, active } = query;
+    const params = { authenticated, list: true };
+    if (messageType) params.type = messageType;
+    if (typeof active === 'boolean') params.active = active;
+    return super.query(store, type, params);
   }
 
   queryRecord(store, type, id) {
