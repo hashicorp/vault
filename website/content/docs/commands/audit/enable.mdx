@@ -38,6 +38,10 @@ flags](/vault/docs/commands) included on all commands.
   must be unique across all audit devices. This defaults to the "type" of the
   audit device.
 
-All audit devices support a [common set of options](/vault/docs/audit#common-configuration-options),
-for more details, refer to the specific audit device type page under the [Audit Devices](/vault/docs/audit)
+All audit devices support the following common options which can be supplied after
+the flags documented above:
+
+@include 'audit-options-common.mdx'
+
+For device specific options, refer to the relevant audit device type under the [Audit Devices](/vault/docs/audit)
 overview.

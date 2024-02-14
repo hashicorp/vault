@@ -67,7 +67,7 @@ single word name or a more complex, nested path.
   audit device.
 
 - `options` `(map<string|string>: nil)` – Specifies configuration options to pass to the audit device itself.
-  There are a set of [common options](/vault/docs/audit#common-configuration-options)
+  There are a set of [common options](#common-configuration-options)
   which can be applied to all types of audit device.
   For more details, please see the relevant page for an audit device `type`,
   under [Audit Devices docs](/vault/docs/audit).
@@ -80,6 +80,10 @@ relevant functionality is only supported in Vault Enterprise:
 
 - `local` `(bool: false)` – Applies exclusively to performance replication. Specifies if the audit device is local within the cluster only. Local
   audit devices are not replicated nor (if a secondary) removed by replication.
+
+#### Common configuration options
+
+@include 'audit-options-common.mdx'
 
 ### Sample payload
 
