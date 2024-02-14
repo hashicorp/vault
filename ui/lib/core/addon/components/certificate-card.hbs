@@ -24,7 +24,7 @@
     <Hds::Copy::Button
       @text="Copy"
       @isIconOnly={{true}}
-      @textToCopy={{format-copy-value @data}}
+      @textToCopy={{@data}}
       class="transparent"
       data-test-copy-button={{or @data true}}
     />
