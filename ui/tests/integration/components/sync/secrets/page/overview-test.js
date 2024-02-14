@@ -33,7 +33,8 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    this.owner.lookup('service:version').type = 'enterprise';
+    this.version = this.owner.lookup('service:version');
+    this.version.type = 'enterprise';
     syncScenario(this.server);
     syncHandlers(this.server);
 
@@ -48,16 +49,24 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     );
   });
 
-  test('it should render landing cta component', async function (assert) {
+  test('it should render landing cta component for community', async function (assert) {
+    this.version.type = 'community';
     this.set('destinations', []);
     await settled();
-    assert.dom(title).hasText('Secrets Sync', 'Page title renders');
+    assert.dom(title).hasText('Secrets Sync Enterprise feature', 'Page title renders');
+    assert.dom(cta.button).doesNotExist('Create first destination button does not render');
+  });
+
+  test('it should render landing cta component for enterprise', async function (assert) {
+    this.set('destinations', []);
+    await settled();
+    assert.dom(title).hasText('Secrets Sync Beta', 'Page title renders');
     assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
     assert.dom(cta.summary).exists('CTA renders');
   });
 
   test('it should render header, tabs and toolbar for overview state', async function (assert) {
-    assert.dom(title).hasText('Secrets Sync', 'Page title renders');
+    assert.dom(title).hasText('Secrets Sync Beta', 'Page title renders');
     assert.dom(breadcrumb).exists({ count: 1 }, 'Correct number of breadcrumbs render');
     assert.dom(breadcrumb).includesText('Secrets Sync', 'Top level breadcrumb renders');
     assert.dom(cta.button).doesNotExist('CTA does not render');
@@ -96,7 +105,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     await click(actionToggle(0));
     assert.dom(action('sync')).hasText('Sync secrets', 'Sync action renders');
-    assert.dom(action('details')).hasText('Details', 'Details action renders');
+    assert.dom(action('details')).hasText('View synced secrets', 'View synced secrets action renders');
   });
 
   test('it should paginate secrets by destination table', async function (assert) {
@@ -132,8 +141,9 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       },
       {
         cardTitle: 'Total sync associations',
-        subText: 'Total sync associations that count towards client count',
-        actionText: 'View billing',
+        subText:
+          'The number of secrets with a configured sync destination. One secret synced to two unique destinations will count as two associations.',
+        // actionText: 'View billing',
         count: '7',
       },
     ];
@@ -141,8 +151,9 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     cardData.forEach(({ cardTitle, subText, actionText, count }) => {
       assert.dom(title(cardTitle)).hasText(cardTitle, 'Overview card title renders');
       assert.dom(description(cardTitle)).hasText(subText, 'Destinations overview card description renders');
-      assert.dom(action(cardTitle)).hasText(actionText, 'Card action renders');
       assert.dom(content(cardTitle)).hasText(count, 'Total count renders');
+      if (cardTitle === 'Total sync associations') return; // uncomment 'actionText' above and this return after SYNC BETA
+      assert.dom(action(cardTitle)).hasText(actionText, 'Card action renders');
     });
   });
 });

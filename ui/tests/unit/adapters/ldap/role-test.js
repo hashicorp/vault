@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -64,7 +64,7 @@ module('Unit | Adapter | ldap/role', function (hooks) {
   });
 
   test('it should throw error for query when requests to both endpoints fail', async function (assert) {
-    assert.expect(1);
+    assert.expect(2);
 
     this.server.get('/ldap-test/:path', (schema, req) => {
       const errors = {
@@ -78,12 +78,14 @@ module('Unit | Adapter | ldap/role', function (hooks) {
       await this.store.query('ldap/role', { backend: 'ldap-test' });
     } catch (error) {
       assert.deepEqual(
-        error,
-        {
-          message: 'Error fetching roles:',
-          errors: ['/v1/ldap-test/static-role: permission denied', '/v1/ldap-test/role: server error'],
-        },
-        'Error is thrown with correct payload from query'
+        error.errors,
+        ['/v1/ldap-test/static-role: permission denied', '/v1/ldap-test/role: server error'],
+        'Error messages is thrown with correct payload from query.'
+      );
+      assert.strictEqual(
+        error.message,
+        'Error fetching roles:',
+        'Error message is thrown with correct payload from query.'
       );
     }
   });
@@ -117,30 +119,50 @@ module('Unit | Adapter | ldap/role', function (hooks) {
     assert.strictEqual(this.model.name, 'test-role', 'Name value is set on records returned from query');
   });
 
-  test('it should make request to correct endpoints when creating new record', async function (assert) {
-    assert.expect(2);
+  test('it should make request to correct endpoints when creating new dynamic role record', async function (assert) {
+    assert.expect(1);
 
-    this.server.post('/ldap-test/:path/test-role', (schema, req) => {
+    this.server.post('/ldap-test/:path/:name', (schema, req) => {
       assert.strictEqual(
         req.params.path,
         this.path,
-        'POST request made to correct endpoint when creating new record'
+        'POST request made to correct endpoint when creating new record for a dynamic role'
       );
     });
 
-    const getModel = (type) => {
+    const getModel = (type, name) => {
       return this.store.createRecord('ldap/role', {
         backend: 'ldap-test',
-        name: 'test-role',
+        name,
         type,
       });
     };
 
-    for (const type of ['dynamic', 'static']) {
-      const model = getModel(type);
-      await model.save();
-      this.path = 'static-role';
-    }
+    const model = getModel('dynamic-role', 'dynamic-role-name');
+    await model.save();
+  });
+
+  test('it should make request to correct endpoints when creating new static role record', async function (assert) {
+    assert.expect(1);
+
+    this.server.post('/ldap-test/:path/:name', (schema, req) => {
+      assert.strictEqual(
+        req.params.path,
+        this.path,
+        'POST request made to correct endpoint when creating new record for a static role'
+      );
+    });
+
+    const getModel = (type, name) => {
+      return this.store.createRecord('ldap/role', {
+        backend: 'ldap-test',
+        name,
+        type,
+      });
+    };
+
+    const model = getModel('static-role', 'static-role-name');
+    await model.save();
   });
 
   test('it should make request to correct endpoints when updating record', async function (assert) {

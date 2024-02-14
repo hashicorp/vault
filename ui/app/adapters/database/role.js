@@ -144,7 +144,7 @@ export default ApplicationAdapter.extend({
 
   async _updateAllowedRoles(store, { role, backend, db, type = 'add' }) {
     const connection = await store.queryRecord('database/connection', { backend, id: db });
-    const roles = [...connection.allowed_roles];
+    const roles = [...(connection.allowed_roles || [])];
     const allowedRoles = type === 'add' ? addToArray([roles, role]) : removeFromArray([roles, role]);
     connection.allowed_roles = allowedRoles;
     return connection.save();
@@ -164,7 +164,7 @@ export default ApplicationAdapter.extend({
         db: db[0],
       });
     } catch (e) {
-      throw new Error('Could not update allowed roles for selected database. Check Vault logs for details');
+      this.checkError(e);
     }
 
     return this.ajax(this.urlFor(backend, id, roleType), 'POST', { data }).then(() => {
@@ -180,12 +180,16 @@ export default ApplicationAdapter.extend({
     const backend = snapshot.attr('backend');
     const id = snapshot.attr('name');
     const db = snapshot.attr('database');
-    await this._updateAllowedRoles(store, {
-      role: id,
-      backend,
-      db: db[0],
-      type: 'remove',
-    });
+    try {
+      await this._updateAllowedRoles(store, {
+        role: id,
+        backend,
+        db: db[0],
+        type: 'remove',
+      });
+    } catch (e) {
+      this.checkError(e);
+    }
 
     return this.ajax(this.urlFor(backend, id, roleType), 'DELETE');
   },
@@ -198,5 +202,15 @@ export default ApplicationAdapter.extend({
     const id = snapshot.attr('name');
 
     return this.ajax(this.urlFor(backend, id, roleType), 'POST', { data }).then(() => data);
+  },
+
+  checkError(e) {
+    if (e.httpStatus === 403) {
+      // The user does not have the permission to update the connection. This
+      // can happen if their permissions are limited to the role. In that case
+      // we ignore the error and continue updating the role.
+      return;
+    }
+    throw new Error(`Could not update allowed roles for selected database: ${e.errors.join(', ')}`);
   },
 });

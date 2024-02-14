@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/quotas"
 	"github.com/hashicorp/vault/vault/replication"
+	uicustommessages "github.com/hashicorp/vault/vault/ui_custom_messages"
 )
 
 const (
@@ -87,6 +88,8 @@ func (c *Core) teardownReplicationResolverHandler() {}
 func (c *Core) createSecondaries(_ hclog.Logger)    {}
 
 func (c *Core) addExtraLogicalBackends(_ string) {}
+
+func (c *Core) addExtraEventBackends() {}
 
 func (c *Core) addExtraCredentialBackends() {}
 
@@ -201,4 +204,12 @@ func (c *Core) MissingRequiredState(raw []string, perfStandby bool) bool {
 
 func DiagnoseCheckLicense(ctx context.Context, vaultCore *Core, coreConfig CoreConfig, generate bool) (bool, []string) {
 	return false, nil
+}
+
+// createCustomMessageManager is a function implemented differently for the
+// community edition and the enterprise edition. This is the community
+// edition implementation. It simply constructs a uicustommessages.Manager
+// instance and returns a pointer to it.
+func createCustomMessageManager(storage logical.Storage, _ *Core) CustomMessagesManager {
+	return uicustommessages.NewManager(storage)
 }

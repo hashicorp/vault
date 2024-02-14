@@ -8,7 +8,8 @@
     "ember-cli-htmlbars": "*",
     "ember-cli-babel": "*",
     "ember-concurrency": "*",
-    "@ember/test-waiters": "*"
+    "@ember/test-waiters": "*",
+    "ember-inflector": "*"
   },
   "ember-addon": {
     "paths": [

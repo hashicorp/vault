@@ -28,7 +28,7 @@ module('Integration | Component | sync | Secrets::LandingCta', function (hooks) 
     assert
       .dom(PAGE.cta.summary)
       .hasText(
-        'This enterprise feature allows you to sync secrets to platforms and tools across your stack to get secrets when and where you need them.'
+        'This enterprise feature allows you to sync secrets to platforms and tools across your stack to get secrets when and where you need them. Learn more about secrets sync'
       );
     assert.dom(PAGE.cta.link).hasText('Learn more about secrets sync');
   });

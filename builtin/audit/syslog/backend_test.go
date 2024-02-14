@@ -4,10 +4,14 @@
 package syslog
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/internal/observability/event"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
 )
 
@@ -123,7 +127,7 @@ func TestBackend_configureFilterNode(t *testing.T) {
 		expectedErrorMsg string
 	}{
 		"happy": {
-			filter: "foo == bar",
+			filter: "namespace == bar",
 		},
 		"empty": {
 			filter:         "",
@@ -137,6 +141,11 @@ func TestBackend_configureFilterNode(t *testing.T) {
 			filter:           "___qwerty",
 			wantErr:          true,
 			expectedErrorMsg: "syslog.(Backend).configureFilterNode: error creating filter node: audit.NewEntryFilter: cannot create new audit filter",
+		},
+		"unsupported-field": {
+			filter:           "foo == bar",
+			wantErr:          true,
+			expectedErrorMsg: "filter references an unsupported field: foo == bar",
 		},
 	}
 	for name, tc := range tests {
@@ -264,9 +273,9 @@ func TestBackend_configureSinkNode(t *testing.T) {
 				id := b.nodeIDList[0]
 				node := b.nodeMap[id]
 				require.Equal(t, eventlogger.NodeTypeSink, node.Type())
-				sw, ok := node.(*audit.SinkWrapper)
+				mc, ok := node.(*event.MetricsCounter)
 				require.True(t, ok)
-				require.Equal(t, tc.expectedName, sw.Name)
+				require.Equal(t, tc.expectedName, mc.Name)
 			}
 		})
 	}
@@ -287,7 +296,7 @@ func TestBackend_configureFilterFormatterSink(t *testing.T) {
 	formatConfig, err := audit.NewFormatterConfig()
 	require.NoError(t, err)
 
-	err = b.configureFilterNode("foo == bar")
+	err = b.configureFilterNode("mount_type == kv")
 	require.NoError(t, err)
 
 	err = b.configureFormatterNode(formatConfig)
@@ -310,4 +319,126 @@ func TestBackend_configureFilterFormatterSink(t *testing.T) {
 	id = b.nodeIDList[2]
 	node = b.nodeMap[id]
 	require.Equal(t, eventlogger.NodeTypeSink, node.Type())
+}
+
+// TestBackend_Factory_Conf is used to ensure that any configuration which is
+// supplied, is validated and tested.
+func TestBackend_Factory_Conf(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	tests := map[string]struct {
+		backendConfig        *audit.BackendConfig
+		isErrorExpected      bool
+		expectedErrorMessage string
+	}{
+		"nil-salt-config": {
+			backendConfig: &audit.BackendConfig{
+				SaltConfig: nil,
+			},
+			isErrorExpected:      true,
+			expectedErrorMessage: "syslog.Factory: nil salt config",
+		},
+		"nil-salt-view": {
+			backendConfig: &audit.BackendConfig{
+				SaltConfig: &salt.Config{},
+			},
+			isErrorExpected:      true,
+			expectedErrorMessage: "syslog.Factory: nil salt view",
+		},
+		"non-fallback-device-with-filter": {
+			backendConfig: &audit.BackendConfig{
+				MountPath:  "discard",
+				SaltConfig: &salt.Config{},
+				SaltView:   &logical.InmemStorage{},
+				Config: map[string]string{
+					"fallback": "false",
+					"filter":   "mount_type == kv",
+				},
+			},
+			isErrorExpected: false,
+		},
+		"fallback-device-with-filter": {
+			backendConfig: &audit.BackendConfig{
+				MountPath:  "discard",
+				SaltConfig: &salt.Config{},
+				SaltView:   &logical.InmemStorage{},
+				Config: map[string]string{
+					"fallback": "true",
+					"filter":   "mount_type == kv",
+				},
+			},
+			isErrorExpected:      true,
+			expectedErrorMessage: "syslog.Factory: cannot configure a fallback device with a filter: invalid parameter",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			be, err := Factory(ctx, tc.backendConfig, nil)
+
+			switch {
+			case tc.isErrorExpected:
+				require.Error(t, err)
+				require.EqualError(t, err, tc.expectedErrorMessage)
+			default:
+				require.NoError(t, err)
+				require.NotNil(t, be)
+			}
+		})
+	}
+}
+
+// TestBackend_IsFallback ensures that the 'fallback' config setting is parsed
+// and set correctly, then exposed via the interface method IsFallback().
+func TestBackend_IsFallback(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	tests := map[string]struct {
+		backendConfig      *audit.BackendConfig
+		isFallbackExpected bool
+	}{
+		"fallback": {
+			backendConfig: &audit.BackendConfig{
+				MountPath:  "qwerty",
+				SaltConfig: &salt.Config{},
+				SaltView:   &logical.InmemStorage{},
+				Config: map[string]string{
+					"fallback": "true",
+				},
+			},
+			isFallbackExpected: true,
+		},
+		"no-fallback": {
+			backendConfig: &audit.BackendConfig{
+				MountPath:  "qwerty",
+				SaltConfig: &salt.Config{},
+				SaltView:   &logical.InmemStorage{},
+				Config: map[string]string{
+					"fallback": "false",
+				},
+			},
+			isFallbackExpected: false,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			be, err := Factory(ctx, tc.backendConfig, nil)
+			require.NoError(t, err)
+			require.NotNil(t, be)
+			require.Equal(t, tc.isFallbackExpected, be.IsFallback())
+		})
+	}
 }

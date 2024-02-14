@@ -19,9 +19,9 @@ cluster_addr  = "https://127.0.0.1:8201"
 api_addr      = "https://127.0.0.1:8200"
 disable_mlock = true
 
-storage "consul" {
-  address = "127.0.0.1:8500"
-  path    = "vault/"
+storage "raft" {
+  path = "/path/to/raft/data"
+  node_id = "raft_node_id"
 }
 
 listener "tcp" {
@@ -129,6 +129,16 @@ to specify where the configuration is.
 - `plugin_directory` `(string: "")` – A directory from which plugins are
   allowed to be loaded. Vault must have permission to read files in this
   directory to successfully load plugins, and the value cannot be a symbolic link.
+
+- `plugin_tmpdir` `(string: "")` - A directory that Vault can create temporary
+  files in to support Unix socket communication with containerized plugins. If
+  not set, Vault will use the system's default directory for temporary files.
+  Generally not necessary unless you are using
+  [containerized plugins](/vault/docs/plugins/containerized-plugins) and Vault
+  does not share a temporary folder with other processes, such as if using
+  systemd's [PrivateTmp](https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#PrivateTmp=)
+  setting. This can also be specified via the `VAULT_PLUGIN_TMPDIR` environment
+  variable.
 
   @include 'plugin-file-permissions-check.mdx'
 

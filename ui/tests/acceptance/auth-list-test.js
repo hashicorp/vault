@@ -13,7 +13,7 @@ import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { supportedManagedAuthBackends } from 'vault/helpers/supported-managed-auth-backends';
-import { deleteAuthCmd, mountAuthCmd, runCmd } from 'vault/tests/helpers/commands';
+import { deleteAuthCmd, mountAuthCmd, runCmd, createNS } from 'vault/tests/helpers/commands';
 
 const SELECTORS = {
   backendLink: (path) => `[data-test-auth-backend-link="${path}"]`,
@@ -34,14 +34,12 @@ module('Acceptance | auth backend list', function (hooks) {
     this.user1 = 'user1';
     this.user2 = 'user2';
 
-    await runCmd(mountAuthCmd('userpass', this.path1));
-    await runCmd(mountAuthCmd('userpass', this.path2));
+    await runCmd([mountAuthCmd('userpass', this.path1), mountAuthCmd('userpass', this.path2)], false);
   });
 
   hooks.afterEach(async function () {
     await authPage.login();
-    await runCmd(deleteAuthCmd(this.path1));
-    await runCmd(deleteAuthCmd(this.path2));
+    await runCmd([deleteAuthCmd(this.path1), deleteAuthCmd(this.path2)], false);
     return;
   });
 
@@ -154,7 +152,8 @@ module('Acceptance | auth backend list', function (hooks) {
 
   test('enterprise: token config within namespace', async function (assert) {
     const ns = 'ns-wxyz';
-    await runCmd(`write sys/namespaces/${ns} -f`);
+    await runCmd(createNS(ns), false);
+    await settled();
     await authPage.loginNs(ns);
     // go directly to token configure route
     await visit('/vault/settings/auth/configure/token/options');

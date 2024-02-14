@@ -170,6 +170,10 @@
         "path": "concepts/lease"
       },
       {
+        "title": "Lease Explosions",
+        "path": "concepts/lease-explosions"
+      },
+      {
         "title": "Authentication",
         "path": "concepts/auth"
       },
@@ -315,7 +319,7 @@
           },
           { "title": "High Availability",
            "badge": {
-              "text": "ENTERPRISE | BETA",
+              "text": "ENTERPRISE",
               "type": "outlined",
               "color": "highlight"
             },
@@ -522,6 +526,10 @@
         "path": "commands"
       },
       {
+        "title": "Web REPL",
+        "path": "commands/web"
+      },
+      {
         "title": "<code>agent</code>",
         "path": "commands/agent"
       },
@@ -590,6 +598,23 @@
       {
         "title": "<code>events</code>",
         "path": "commands/events"
+      },
+      {
+        "title": "<code>hcp</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/hcp"
+          },
+          {
+            "title": "<code>connect</code>",
+            "path": "commands/hcp/connect"
+          },
+          {
+            "title": "<code>disconnect</code>",
+            "path": "commands/hcp/disconnect"
+          }
+        ]
       },
       {
         "title": "<code>kv</code>",
@@ -1607,6 +1632,10 @@
                 "path": "auth/jwt/oidc-providers"
               },
               {
+                "title": "ADFS",
+                "path": "auth/jwt/oidc-providers/adfs"
+              },
+              {
                 "title": "Auth0",
                 "path": "auth/jwt/oidc-providers/auth0"
               },
@@ -1754,13 +1783,27 @@
         "path": "plugins/plugin-management"
       },
       {
-        "title": "Containerized Plugins",
-        "path": "plugins/containerized-plugins",
-        "badge": {
-          "text": "BETA",
-          "type": "outlined",
-          "color": "highlight"
-        }
+        "title": "Containerized plugins",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "plugins/containerized-plugins",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            }
+          },
+          {
+            "title": "Add a containerized plugin",
+            "path": "plugins/containerized-plugins/add-a-containerized-plugin",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            }
+          }
+        ]
       },
       {
         "title": "Integrations Library",
@@ -2579,6 +2622,15 @@
           {
             "title": "Create an administrative namespace",
             "path": "enterprise/namespaces/create-admin-namespace"
+          },
+          {
+            "title": "Run Vault with many namespaces",
+            "path": "enterprise/namespaces/namespace-limits",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            }
           }
         ]
       },

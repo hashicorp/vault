@@ -34,14 +34,38 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/patrickmn/go-cache"
 	"golang.org/x/crypto/ed25519"
+	"golang.org/x/exp/maps"
 )
 
 type oidcConfig struct {
+	// Issuer is the scheme://host:port component of the issuer set as
+	// configuration in the Vault API. It is the URL base.
 	Issuer string `json:"issuer"`
 
 	// effectiveIssuer is a calculated field and will be either Issuer (if
-	// that's set) or the Vault instance's api_addr.
+	// that's set) or the Vault instance's api_addr, followed by the path
+	// /v1/<namespace_path>/identity/oidc.
 	effectiveIssuer string
+}
+
+// fullIssuer returns the full issuer for the config, suitable for OpenID metadata and
+// token claims. It takes an optional child, which must be of the value "" or "plugins".
+// The child will be appended as the last path segment on the returned issuer URL.
+func (c *oidcConfig) fullIssuer(child string) (string, error) {
+	if !validChildIssuer(child) {
+		return "", fmt.Errorf("invalid child issuer %q", child)
+	}
+
+	issuer, err := url.JoinPath(c.effectiveIssuer, child)
+	if err != nil {
+		return "", fmt.Errorf("failed to join issuer: %w", err)
+	}
+
+	return issuer, nil
+}
+
+func validChildIssuer(child string) bool {
+	return child == baseIdentityTokenIssuer || child == pluginIdentityTokenIssuer
 }
 
 type expireableKey struct {
@@ -103,19 +127,12 @@ type oidcCache struct {
 	c *cache.Cache
 }
 
-var errNilNamespace = errors.New("nil namespace in oidc cache request")
-
-const (
-	issuerPath           = "identity/oidc"
-	oidcTokensPrefix     = "oidc_tokens/"
-	namedKeyCachePrefix  = "namedKeys/"
-	oidcConfigStorageKey = oidcTokensPrefix + "config/"
-	namedKeyConfigPath   = oidcTokensPrefix + "named_keys/"
-	publicKeysConfigPath = oidcTokensPrefix + "public_keys/"
-	roleConfigPath       = oidcTokensPrefix + "roles/"
-)
-
 var (
+	errNilNamespace = errors.New("nil namespace in oidc cache request")
+
+	// pseudo-namespace for cache items that don't belong to any real namespace.
+	noNamespace = &namespace.Namespace{ID: "__NO_NAMESPACE"}
+
 	reservedClaims = []string{
 		"iat", "aud", "exp", "iss",
 		"sub", "namespace", "nonce",
@@ -132,8 +149,31 @@ var (
 	}
 )
 
-// pseudo-namespace for cache items that don't belong to any real namespace.
-var noNamespace = &namespace.Namespace{ID: "__NO_NAMESPACE"}
+const (
+	issuerPath           = "identity/oidc"
+	oidcTokensPrefix     = "oidc_tokens/"
+	namedKeyCachePrefix  = "namedKeys/"
+	oidcConfigStorageKey = oidcTokensPrefix + "config/"
+	namedKeyConfigPath   = oidcTokensPrefix + "named_keys/"
+	publicKeysConfigPath = oidcTokensPrefix + "public_keys/"
+	roleConfigPath       = oidcTokensPrefix + "roles/"
+
+	// Identity tokens have a base issuer and plugin issuer
+	baseIdentityTokenIssuer   = ""
+	pluginIdentityTokenIssuer = "plugins"
+
+	pluginTokenSubjectPrefix   = "plugin-identity"
+	pluginTokenPrivateClaimKey = "vaultproject.io"
+	secretTableValue           = "secret"
+	deleteKeyErrorFmt          = "unable to delete key %q because it is currently referenced by these %s: %s"
+)
+
+// optionalChildIssuerRegex is a regex for optionally accepting a field in an
+// API request as a single path segment. Adapted from framework.OptionalParamRegex
+// to not include additional forward slashes.
+func optionalChildIssuerRegex(name string) string {
+	return fmt.Sprintf(`(/(?P<%s>[^/]+))?`, name)
+}
 
 func oidcPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
@@ -252,10 +292,16 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "List all named OIDC keys",
 		},
 		{
-			Pattern: "oidc/\\.well-known/openid-configuration/?$",
+			Pattern: "oidc" + optionalChildIssuerRegex("child") + "/\\.well-known/openid-configuration/?$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "oidc",
 				OperationSuffix: "open-id-configuration",
+			},
+			Fields: map[string]*framework.FieldSchema{
+				"child": {
+					Type:        framework.TypeString,
+					Description: "Name of the child issuer",
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: i.pathOIDCDiscovery,
@@ -264,10 +310,16 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "Query this path to retrieve the configured OIDC Issuer and Keys endpoints, response types, subject types, and signing algorithms used by the OIDC backend.",
 		},
 		{
-			Pattern: "oidc/\\.well-known/keys/?$",
+			Pattern: "oidc" + optionalChildIssuerRegex("child") + "/\\.well-known/keys/?$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "oidc",
 				OperationSuffix: "public-keys",
+			},
+			Fields: map[string]*framework.FieldSchema{
+				"child": {
+					Type:        framework.TypeString,
+					Description: "Name of the child issuer",
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: i.pathOIDCReadPublicKeys,
@@ -738,6 +790,56 @@ func (i *IdentityStore) roleNamesReferencingTargetKeyName(ctx context.Context, r
 	return names, nil
 }
 
+// listMounts returns all mount entries in the namespace.
+// Returns an error if the namespace is nil.
+func (i *IdentityStore) listMounts(ns *namespace.Namespace) ([]*MountEntry, error) {
+	if ns == nil {
+		return nil, errors.New("namespace must not be nil")
+	}
+
+	secretMounts, err := i.mountLister.ListMounts()
+	if err != nil {
+		return nil, err
+	}
+	authMounts, err := i.mountLister.ListAuths()
+	if err != nil {
+		return nil, err
+	}
+
+	var allMounts []*MountEntry
+	for _, mount := range append(authMounts, secretMounts...) {
+		if mount.NamespaceID == ns.ID {
+			allMounts = append(allMounts, mount)
+		}
+	}
+
+	return allMounts, nil
+}
+
+// mountsReferencingKey returns a sorted list of all mount entry paths referencing
+// the key in the namespace. Returns an error if the namespace is nil.
+func (i *IdentityStore) mountsReferencingKey(ns *namespace.Namespace, key string) ([]string, error) {
+	if ns == nil {
+		return nil, errors.New("namespace must not be nil")
+	}
+
+	allMounts, err := i.listMounts(ns)
+	if err != nil {
+		return nil, err
+	}
+
+	pathsWithKey := make(map[string]struct{})
+	for _, mount := range allMounts {
+		if mount.Config.IdentityTokenKey == key {
+			pathsWithKey[mount.Path] = struct{}{}
+		}
+	}
+
+	paths := maps.Keys(pathsWithKey)
+	sort.Strings(paths)
+	return paths, nil
+}
+
 // handleOIDCDeleteKey is used to delete a key
 func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	ns, err := namespace.FromContext(ctx)
@@ -761,8 +863,8 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 	}
 
 	if len(roleNames) > 0 {
-		errorMessage := fmt.Sprintf("unable to delete key %q because it is currently referenced by these roles: %s",
-			targetKeyName, strings.Join(roleNames, ", "))
+		errorMessage := fmt.Sprintf(deleteKeyErrorFmt,
+			targetKeyName, "roles", strings.Join(roleNames, ", "))
 		i.oidcLock.Unlock()
 		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
 	}
@@ -774,8 +876,20 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 	}
 
 	if len(clientNames) > 0 {
-		errorMessage := fmt.Sprintf("unable to delete key %q because it is currently referenced by these clients: %s",
-			targetKeyName, strings.Join(clientNames, ", "))
+		errorMessage := fmt.Sprintf(deleteKeyErrorFmt,
+			targetKeyName, "clients", strings.Join(clientNames, ", "))
+		i.oidcLock.Unlock()
+		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
+	}
+
+	mounts, err := i.mountsReferencingKey(ns, targetKeyName)
+	if err != nil {
+		i.oidcLock.Unlock()
+		return nil, err
+	}
+	if len(mounts) > 0 {
+		errorMessage := fmt.Sprintf(deleteKeyErrorFmt,
+			targetKeyName, "mounts", strings.Join(mounts, ", "))
 		i.oidcLock.Unlock()
 		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
 	}
@@ -920,9 +1034,14 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 			"than the verification_ttl of the key it references, setting token ttl to %d", expiry))
 	}
 
+	issuer, err := config.fullIssuer(baseIdentityTokenIssuer)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
 	now := time.Now()
 	idToken := idToken{
-		Issuer:    config.effectiveIssuer,
+		Issuer:    issuer,
 		Namespace: ns.ID,
 		Subject:   req.EntityID,
 		Audience:  role.ClientID,
@@ -975,6 +1094,99 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 		"ttl":       int64(role.TokenTTL.Seconds()),
 	}
 	return retResp, nil
+}
+
+func (i *IdentityStore) generatePluginIdentityToken(ctx context.Context, storage logical.Storage, me *MountEntry, audience string, ttl time.Duration) (string, time.Duration, error) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return "", 0, err
+	}
+
+	if me == nil {
+		i.Logger().Error("unexpected nil mount entry when generating plugin identity token")
+		return "", 0, errors.New("mount entry must not be nil")
+	}
+
+	key := defaultKeyName
+	if me.Config.IdentityTokenKey != "" {
+		key = me.Config.IdentityTokenKey
+	}
+	if ttl == 0 {
+		ttl = time.Hour
+	}
+	namedKey, err := i.getNamedKey(ctx, storage, key)
+	if err != nil {
+		return "", 0, err
+	}
+	if namedKey == nil {
+		return "", 0, fmt.Errorf("key %q not found", key)
+	}
+
+	// Validate that the role is allowed to sign with its key (the key could have been updated)
+	if !strutil.StrListContains(namedKey.AllowedClientIDs, "*") && !strutil.StrListContains(namedKey.AllowedClientIDs, audience) {
+		return "", 0, fmt.Errorf("the key %q does not list %q as an allowed audience", key, audience)
+	}
+
+	config, err := i.getOIDCConfig(ctx, storage)
+	if err != nil {
+		return "", 0, err
+	}
+
+	// Cap the TTL to the key's verification TTL. This is the maximum amount of
+	// time the key will remain in the JWKS after it's been rotated.
+	if ttl > namedKey.VerificationTTL {
+		ttl = namedKey.VerificationTTL
+	}
+
+	// Tokens for plugins have a distinct issuer from Vault's identity token issuer
+	issuer, err := config.fullIssuer(pluginIdentityTokenIssuer)
+	if err != nil {
+		return "", 0, err
+	}
+
+	// The subject uniquely identifies the plugin
+	subject := fmt.Sprintf("%s:%s:%s:%s", pluginTokenSubjectPrefix, ns.ID,
+		translateTableClaim(me.Table), me.Accessor)
+
+	now := time.Now()
+	claims := map[string]any{
+		"iss": issuer,
+		"sub": subject,
+		"aud": []string{audience},
+		"nbf": now.Unix(),
+		"iat": now.Unix(),
+		"exp": now.Add(ttl).Unix(),
+		pluginTokenPrivateClaimKey: map[string]any{
+			"namespace_id":   ns.ID,
+			"namespace_path": ns.Path,
+			"class":          translateTableClaim(me.Table),
+			"plugin":         me.Type,
+			"version":        me.RunningVersion,
+			"path":           me.Path,
+			"accessor":       me.Accessor,
+			"local":          me.Local,
+		},
+	}
+	payload, err := json.Marshal(claims)
+	if err != nil {
+		return "", 0, err
+	}
+
+	signedToken, err := namedKey.signPayload(payload)
+	if err != nil {
+		return "", 0, fmt.Errorf("error signing plugin identity token: %w", err)
+	}
+
+	return signedToken, ttl, nil
+}
+
+func translateTableClaim(table string) string {
+	switch table {
+	case mountTableType:
+		return secretTableValue
+	default:
+		return table
+	}
 }
 
 func (i *IdentityStore) getNamedKey(ctx context.Context, s logical.Storage, name string) (*namedKey, error) {
@@ -1339,7 +1551,13 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
-	v, ok, err := i.oidcCache.Get(ns, "discoveryResponse")
+	var child string
+	if childRaw, ok := d.GetOk("child"); ok {
+		child = childRaw.(string)
+	}
+
+	cacheKey := fmt.Sprintf("%s/discoveryResponse", child)
+	v, ok, err := i.oidcCache.Get(ns, cacheKey)
 	if err != nil {
 		return nil, err
 	}
@@ -1352,9 +1570,14 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 			return nil, err
 		}
 
+		issuer, err := c.fullIssuer(child)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
 		disc := discovery{
-			Issuer:        c.effectiveIssuer,
-			Keys:          c.effectiveIssuer + "/.well-known/keys",
+			Issuer:        issuer,
+			Keys:          issuer + "/.well-known/keys",
 			ResponseTypes: []string{"id_token"},
 			Subjects:      []string{"public"},
 			IDTokenAlgs:   supportedAlgs,
@@ -1365,7 +1588,7 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 			return nil, err
 		}
 
-		if err := i.oidcCache.SetDefault(ns, "discoveryResponse", data); err != nil {
+		if err := i.oidcCache.SetDefault(ns, cacheKey, data); err != nil {
 			return nil, err
 		}
 	}
@@ -1424,6 +1647,14 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	var child string
+	if childRaw, ok := d.GetOk("child"); ok {
+		child = childRaw.(string)
+	}
+	if !validChildIssuer(child) {
+		return logical.ErrorResponse("invalid child issuer %q", child), nil
 	}
 
 	v, ok, err := i.oidcCache.Get(ns, "jwksResponse")
@@ -1539,8 +1770,13 @@ func (i *IdentityStore) pathOIDCIntrospect(ctx context.Context, req *logical.Req
 		return nil, err
 	}
 
+	issuer, err := c.fullIssuer(baseIdentityTokenIssuer)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
 	expected := jwt.Expected{
-		Issuer: c.effectiveIssuer,
+		Issuer: issuer,
 		Time:   time.Now(),
 	}
 
@@ -1729,14 +1965,16 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 		return nil, err
 	}
 
-	// only return keys that are associated with a role
+	// Only return keys that are associated with a role or plugin mount
+	// by collecting and de-duplicating keys and key IDs for each
+	keyNames := make(map[string]struct{})
+	keyIDs := make(map[string]struct{})
+
+	// First collect the set of unique key names
 	roleNames, err := s.List(ctx, roleConfigPath)
 	if err != nil {
 		return nil, err
 	}
-
-	// collect and deduplicate the key IDs for all roles
-	keyIDs := make(map[string]struct{})
 	for _, roleName := range roleNames {
 		role, err := i.getOIDCRole(ctx, s, roleName)
 		if err != nil {
@@ -1746,13 +1984,30 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 			continue
 		}
 
-		roleKeyIDs, err := i.keyIDsByName(ctx, s, role.Key)
+		keyNames[role.Key] = struct{}{}
+	}
+	mounts, err := i.listMounts(ns)
+	if err != nil {
+		return nil, err
+	}
+	for _, me := range mounts {
+		key := defaultKeyName
+		if me.Config.IdentityTokenKey != "" {
+			key = me.Config.IdentityTokenKey
+		}
+
+		keyNames[key] = struct{}{}
+	}
+
+	// Second collect the set of unique key IDs for each key name
+	for name := range keyNames {
+		ids, err := i.keyIDsByName(ctx, s, name)
 		if err != nil {
 			return nil, err
 		}
 
-		for _, keyID := range roleKeyIDs {
-			keyIDs[keyID] = struct{}{}
+		for _, id := range ids {
+			keyIDs[id] = struct{}{}
 		}
 	}
 

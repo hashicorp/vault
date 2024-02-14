@@ -6,11 +6,12 @@
 import Model, { belongsTo, hasMany, attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed'; // eslint-disable-line
 import { computed } from '@ember/object'; // eslint-disable-line
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import apiPath from 'vault/utils/api-path';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
+import { allMethods } from 'vault/helpers/mountable-auth-methods';
 
 const validations = {
   path: [
@@ -41,6 +42,11 @@ const ModelExport = AuthMethodModel.extend({
   // so we need to strip that to normalize the type
   methodType: computed('type', function () {
     return this.type.replace(/^ns_/, '');
+  }),
+  icon: computed('methodType', function () {
+    const authMethods = allMethods().find((backend) => backend.type === this.methodType);
+
+    return authMethods?.glyph || 'users';
   }),
   description: attr('string', {
     editType: 'textarea',

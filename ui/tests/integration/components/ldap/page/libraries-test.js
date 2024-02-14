@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -87,7 +87,6 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
         'Use libraries to manage a set of highly privileged accounts that can be shared among a team.',
         'Message renders'
       );
-    assert.dom('[data-test-empty-state-actions] a').hasText('Create library', 'Action renders');
   });
 
   test('it should render libraries list', async function (assert) {

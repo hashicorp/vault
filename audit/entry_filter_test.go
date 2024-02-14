@@ -39,8 +39,29 @@ func TestEntryFilter_NewEntryFilter(t *testing.T) {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.NewEntryFilter: cannot create new audit filter",
 		},
-		"good-filter": {
-			Filter:          "foo == bar",
+		"unsupported-field-filter": {
+			Filter:               "foo == bar",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "audit.NewEntryFilter: filter references an unsupported field: foo == bar",
+		},
+		"good-filter-operation": {
+			Filter:          "operation == create",
+			IsErrorExpected: false,
+		},
+		"good-filter-mount_type": {
+			Filter:          "mount_type == kv",
+			IsErrorExpected: false,
+		},
+		"good-filter-mount_point": {
+			Filter:          "mount_point == \"/auth/userpass\"",
+			IsErrorExpected: false,
+		},
+		"good-filter-namespace": {
+			Filter:          "namespace == juan",
+			IsErrorExpected: false,
+		},
+		"good-filter-path": {
+			Filter:          "path == foo",
 			IsErrorExpected: false,
 		},
 	}
@@ -54,6 +75,7 @@ func TestEntryFilter_NewEntryFilter(t *testing.T) {
 			f, err := NewEntryFilter(tc.Filter)
 			switch {
 			case tc.IsErrorExpected:
+				require.Error(t, err)
 				require.ErrorContains(t, err, tc.ExpectedErrorMessage)
 				require.Nil(t, f)
 			default:
@@ -91,7 +113,7 @@ func TestEntryFilter_Process_ContextDone(t *testing.T) {
 	// Explicitly cancel the context
 	cancel()
 
-	l, err := NewEntryFilter("foo == bar")
+	l, err := NewEntryFilter("operation == foo")
 	require.NoError(t, err)
 
 	// Fake audit event
@@ -120,7 +142,7 @@ func TestEntryFilter_Process_ContextDone(t *testing.T) {
 func TestEntryFilter_Process_NilEvent(t *testing.T) {
 	t.Parallel()
 
-	l, err := NewEntryFilter("foo == bar")
+	l, err := NewEntryFilter("operation == foo")
 	require.NoError(t, err)
 	e, err := l.Process(context.Background(), nil)
 	require.Error(t, err)
@@ -136,7 +158,7 @@ func TestEntryFilter_Process_NilEvent(t *testing.T) {
 func TestEntryFilter_Process_BadPayload(t *testing.T) {
 	t.Parallel()
 
-	l, err := NewEntryFilter("foo == bar")
+	l, err := NewEntryFilter("operation == foo")
 	require.NoError(t, err)
 
 	e := &eventlogger.Event{
@@ -159,7 +181,7 @@ func TestEntryFilter_Process_BadPayload(t *testing.T) {
 func TestEntryFilter_Process_NoAuditDataInPayload(t *testing.T) {
 	t.Parallel()
 
-	l, err := NewEntryFilter("foo == bar")
+	l, err := NewEntryFilter("operation == foo")
 	require.NoError(t, err)
 
 	a, err := NewEvent(RequestType)

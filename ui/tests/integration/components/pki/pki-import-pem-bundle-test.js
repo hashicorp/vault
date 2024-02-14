@@ -60,6 +60,7 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
         'sends params in correct type'
       );
       return {
+        request_id: 'test',
         data: {
           mapping: { 'issuer-id': 'key-id' },
         },
@@ -100,6 +101,7 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
         'sends params in correct type'
       );
       return {
+        request_id: 'test',
         data: {
           mapping: {},
         },
@@ -131,6 +133,7 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
     assert.expect(9);
     this.server.post(`/${this.backend}/issuers/import/bundle`, () => {
       return {
+        request_id: 'test',
         data: {
           imported_issuers: ['issuer-id', 'another-issuer'],
           imported_keys: ['key-id', 'another-key'],

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -16,42 +16,74 @@ import {
 } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { create } from 'ember-cli-page-object';
 import { selectChoose } from 'ember-power-select/test-support/helpers';
-import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
-import { deleteEngineCmd } from 'vault/tests/helpers/commands';
 import authPage from 'vault/tests/pages/auth';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import ENV from 'vault/config/environment';
+import clientsHandlers from 'vault/mirage/handlers/clients';
 import { formatNumber } from 'core/helpers/format-number';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { disableReplication } from 'vault/tests/helpers/replication';
 import connectionPage from 'vault/tests/pages/secrets/backend/database/connection';
+import { v4 as uuidv4 } from 'uuid';
+import { runCmd, deleteEngineCmd, createNS } from 'vault/tests/helpers/commands';
 
 import { SELECTORS } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
+import { PAGE } from 'vault/tests/helpers/config-ui/message-selectors';
 
-const consoleComponent = create(consoleClass);
-
-const createNS = async (name) => consoleComponent.runCommands(`write sys/namespaces/${name} -force`);
+const authenticatedMessageResponse = {
+  request_id: '664fbad0-fcd8-9023-4c5b-81a7962e9f4b',
+  lease_id: '',
+  renewable: false,
+  lease_duration: 0,
+  data: {
+    key_info: {
+      'some-awesome-id-2': {
+        authenticated: true,
+        end_time: null,
+        link: {
+          'some link title': 'www.link.com',
+        },
+        message: 'aGVsbG8gd29ybGQgaGVsbG8gd29scmQ=',
+        options: null,
+        start_time: '2024-01-04T08:00:00Z',
+        title: 'Banner title',
+        type: 'banner',
+      },
+      'some-awesome-id-1': {
+        authenticated: true,
+        end_time: null,
+        message: 'aGVyZSBpcyBhIGNvb2wgbWVzc2FnZQ==',
+        options: null,
+        start_time: '2024-01-01T08:00:00Z',
+        title: 'Modal title',
+        type: 'modal',
+      },
+    },
+    keys: ['some-awesome-id-2', 'some-awesome-id-1'],
+  },
+  wrap_info: null,
+  warnings: null,
+  auth: null,
+  mount_type: '',
+};
 
 module('Acceptance | landing page dashboard', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
   test('navigate to dashboard on login', async function (assert) {
+    assert.expect(1);
     await authPage.login();
     assert.strictEqual(currentURL(), '/vault/dashboard');
   });
 
   test('display the version number for the title', async function (assert) {
+    assert.expect(1);
     await authPage.login();
     await visit('/vault/dashboard');
     const version = this.owner.lookup('service:version');
-    const versionName = version.version;
-    const versionText = version.isEnterprise
-      ? `Vault v${versionName.slice(0, versionName.indexOf('+'))} root`
-      : `Vault v${versionName}`;
+    // Since we're using mirage, version is mocked static value
+    const versionText = version.isEnterprise ? `Vault v1.9.0 root` : `Vault v1.9.0`;
 
     assert.dom(SELECTORS.cardHeader('Vault version')).hasText(versionText);
   });
@@ -62,21 +94,23 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('shows a secrets engine card', async function (assert) {
+      assert.expect(1);
       await mountSecrets.enable('pki', 'pki');
       await settled();
       await visit('/vault/dashboard');
       assert.dom(SELECTORS.cardHeader('Secrets engines')).hasText('Secrets engines');
       // cleanup engine mount
-      await consoleComponent.runCommands(deleteEngineCmd('pki'));
+      await runCmd(deleteEngineCmd('pki'));
     });
 
     test('it adds disabled css styling to unsupported secret engines', async function (assert) {
+      assert.expect(1);
       await mountSecrets.enable('nomad', 'nomad');
       await settled();
       await visit('/vault/dashboard');
       assert.dom('[data-test-secrets-engines-row="nomad"] [data-test-view]').doesNotExist();
       // cleanup engine mount
-      await consoleComponent.runCommands(deleteEngineCmd('nomad'));
+      await runCmd(deleteEngineCmd('nomad'));
     });
   });
 
@@ -180,17 +214,19 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('hides the configuration details card on a non-root namespace enterprise version', async function (assert) {
+      assert.expect(3);
       await authPage.login();
       await visit('/vault/dashboard');
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'vault is enterprise');
       assert.dom(SELECTORS.cardName('configuration-details')).exists();
-      createNS('world');
+      await runCmd(createNS('world'), false);
       await visit('/vault/dashboard?namespace=world');
       assert.dom(SELECTORS.cardName('configuration-details')).doesNotExist();
     });
 
     test('shows the configuration details card', async function (assert) {
+      assert.expect(8);
       await authPage.login();
       await visit('/vault/dashboard');
       assert.dom(SELECTORS.cardHeader('configuration')).hasText('Configuration details');
@@ -206,6 +242,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('it should show tls as enabled if tls_disable, tls_cert_file and tls_key_file are in the config', async function (assert) {
+      assert.expect(1);
       this.data.listeners[0].config.tls_disable = false;
       this.data.listeners[0].config.tls_cert_file = './cert.pem';
       this.data.listeners[0].config.tls_key_file = './key.pem';
@@ -216,6 +253,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('it should show tls as enabled if only cert and key exist in config', async function (assert) {
+      assert.expect(1);
       delete this.data.listeners[0].config.tls_disable;
       this.data.listeners[0].config.tls_cert_file = './cert.pem';
       this.data.listeners[0].config.tls_key_file = './key.pem';
@@ -225,6 +263,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('it should show tls as disabled if there is no tls information in the config', async function (assert) {
+      assert.expect(1);
       this.data.listeners = [];
       await authPage.login();
       await visit('/vault/dashboard');
@@ -238,22 +277,22 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('shows the default state of the quick actions card', async function (assert) {
+      assert.expect(1);
       assert.dom(SELECTORS.emptyState('no-mount-selected')).exists();
     });
 
     test('shows the correct actions and links associated with pki', async function (assert) {
+      assert.expect(12);
       const backend = 'pki-dashboard';
       await mountSecrets.enable('pki', backend);
-      await runCommands([
+      await runCmd([
         `write ${backend}/roles/some-role \
       issuer_ref="default" \
       allowed_domains="example.com" \
       allow_subdomains=true \
       max_ttl="720h"`,
       ]);
-      await runCommands([
-        `write ${backend}/root/generate/internal issuer_name="Hashicorp" common_name="Hello"`,
-      ]);
+      await runCmd([`write ${backend}/root/generate/internal issuer_name="Hashicorp" common_name="Hello"`]);
       await settled();
       await visit('/vault/dashboard');
       await selectChoose(SELECTORS.searchSelect('secrets-engines'), backend);
@@ -292,7 +331,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.issuers.issuer.details');
 
       // cleanup engine mount
-      await consoleComponent.runCommands(deleteEngineCmd(backend));
+      await runCmd(deleteEngineCmd(backend));
     });
 
     const newConnection = async (backend, plugin = 'mongodb-database-plugin') => {
@@ -308,10 +347,12 @@ module('Acceptance | landing page dashboard', function (hooks) {
     };
 
     test('shows the correct actions and links associated with database', async function (assert) {
-      await mountSecrets.enable('database', 'database');
-      await newConnection('database');
-      await runCommands([
-        `write database/roles/my-role \
+      assert.expect(4);
+      const databaseBackend = `database-${uuidv4()}`;
+      await mountSecrets.enable('database', databaseBackend);
+      await newConnection(databaseBackend);
+      await runCmd([
+        `write ${databaseBackend}/roles/my-role \
         db_name=mongodb-database-plugin \
         creation_statements='{ "db": "admin", "roles": [{ "role": "readWrite" }, {"role": "read", "db": "foo"}] }' \
         default_ttl="1h" \
@@ -319,7 +360,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       ]);
       await settled();
       await visit('/vault/dashboard');
-      await selectChoose(SELECTORS.searchSelect('secrets-engines'), 'database');
+      await selectChoose(SELECTORS.searchSelect('secrets-engines'), databaseBackend);
       await fillIn(SELECTORS.selectEl, 'Generate credentials for database');
       assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
       assert.dom(SELECTORS.subtitle('param')).hasText('Role to use');
@@ -327,38 +368,34 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await selectChoose(SELECTORS.searchSelect('params'), '.ember-power-select-option', 0);
       await click(SELECTORS.actionButton('Generate credentials'));
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.credentials');
-      await consoleComponent.runCommands(deleteEngineCmd('database'));
+      await runCmd(deleteEngineCmd(databaseBackend));
     });
 
-    test('shows the correct actions and links associated with kv v1', async function (assert) {
-      await runCommands(['write sys/mounts/kv type=kv', 'write kv/foo bar=baz']);
+    test('does not show kv1 mounts', async function (assert) {
+      assert.expect(1);
+      // delete before in case you are rerunning the test and it fails without deleting
+      await runCmd(deleteEngineCmd('kv1'));
+      await runCmd([`write sys/mounts/kv1 type=kv`]);
       await settled();
       await visit('/vault/dashboard');
-      await selectChoose(SELECTORS.searchSelect('secrets-engines'), 'kv');
-      await fillIn(SELECTORS.selectEl, 'Find KV secrets');
-      assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
-      assert.dom(SELECTORS.subtitle('param')).hasText('Secret path');
-      assert.dom(SELECTORS.actionButton('Read secrets')).exists({ count: 1 });
-      await consoleComponent.runCommands(deleteEngineCmd('kv'));
+      await click('[data-test-component="search-select"] .ember-basic-dropdown-trigger');
+      assert
+        .dom('.ember-power-select-option')
+        .doesNotHaveTextContaining('kv1', 'dropdown does not show kv1 mount');
+      await runCmd(deleteEngineCmd('kv1'));
     });
   });
 
   module('client counts card enterprise', function (hooks) {
-    hooks.before(async function () {
-      ENV['ember-cli-mirage'].handler = 'clients';
-    });
-
     hooks.beforeEach(async function () {
+      clientsHandlers(this.server);
       this.store = this.owner.lookup('service:store');
 
       await authPage.login();
     });
 
-    hooks.after(function () {
-      ENV['ember-cli-mirage'].handler = null;
-    });
-
     test('shows the client count card for enterprise', async function (assert) {
+      assert.expect(9);
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'version is enterprise');
       assert.strictEqual(currentURL(), '/vault/dashboard');
@@ -390,6 +427,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('shows the replication card empty state in enterprise version', async function (assert) {
+      assert.expect(5);
       await visit('/vault/dashboard');
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'vault is enterprise');
@@ -402,16 +440,18 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('hides the replication card on a non-root namespace enterprise version', async function (assert) {
+      assert.expect(3);
       await visit('/vault/dashboard');
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'vault is enterprise');
       assert.dom(SELECTORS.cardName('replication')).exists();
-      createNS('blah');
+      await runCmd(createNS('blah'), false);
       await visit('/vault/dashboard?namespace=blah');
       assert.dom(SELECTORS.cardName('replication')).doesNotExist();
     });
 
     test('it should show replication status if both dr and performance replication are enabled as features in enterprise', async function (assert) {
+      assert.expect(9);
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'vault is enterprise');
       await visit('/vault/replication');
@@ -431,6 +471,73 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(SELECTORS.title('Performance primary')).hasText('Performance primary');
       assert.dom(SELECTORS.tooltipTitle('Performance primary')).hasText('running');
       assert.dom(SELECTORS.tooltipIcon('dr-perf', 'Performance primary', 'check-circle')).exists();
+    });
+  });
+
+  module('custom messages auth tests', function (hooks) {
+    hooks.beforeEach(function () {
+      return this.server.get('/sys/internal/ui/mounts', () => ({}));
+    });
+
+    test('it shows the alert banner and modal message', async function (assert) {
+      this.server.get('/sys/internal/ui/unauthenticated-messages', function () {
+        return authenticatedMessageResponse;
+      });
+      assert.expect(7);
+      await visit('/vault/dashboard');
+      const modalId = 'some-awesome-id-1';
+      const alertId = 'some-awesome-id-2';
+      assert.dom(PAGE.modal(modalId)).exists();
+      assert.dom(PAGE.modalTitle(modalId)).hasText('Modal title');
+      assert.dom(PAGE.modalBody(modalId)).exists();
+      assert.dom(PAGE.modalBody(modalId)).hasText('here is a cool message');
+      await click(PAGE.modalButton(modalId));
+      assert.dom(PAGE.alertTitle(alertId)).hasText('Banner title');
+      assert.dom(PAGE.alertDescription(alertId)).hasText('hello world hello wolrd');
+      assert.dom(PAGE.alertAction('link')).hasText('some link title');
+    });
+    test('it shows the multiple modal messages', async function (assert) {
+      assert.expect(8);
+      const modalIdOne = 'some-awesome-id-2';
+      const modalIdTwo = 'some-awesome-id-1';
+
+      this.server.get('/sys/internal/ui/unauthenticated-messages', function () {
+        authenticatedMessageResponse.data.key_info[modalIdOne].type = 'modal';
+        authenticatedMessageResponse.data.key_info[modalIdOne].title = 'Modal title 1';
+        authenticatedMessageResponse.data.key_info[modalIdTwo].type = 'modal';
+        authenticatedMessageResponse.data.key_info[modalIdTwo].title = 'Modal title 2';
+        return authenticatedMessageResponse;
+      });
+      await visit('/vault/dashboard');
+      assert.dom(PAGE.modal(modalIdOne)).exists();
+      assert.dom(PAGE.modalTitle(modalIdOne)).hasText('Modal title 1');
+      assert.dom(PAGE.modalBody(modalIdOne)).exists();
+      assert.dom(PAGE.modalBody(modalIdOne)).hasText('hello world hello wolrd some link title');
+      await click(PAGE.modalButton(modalIdOne));
+      assert.dom(PAGE.modal(modalIdTwo)).exists();
+      assert.dom(PAGE.modalTitle(modalIdTwo)).hasText('Modal title 2');
+      assert.dom(PAGE.modalBody(modalIdTwo)).exists();
+      assert.dom(PAGE.modalBody(modalIdTwo)).hasText('here is a cool message');
+      await click(PAGE.modalButton(modalIdTwo));
+    });
+    test('it shows the multiple banner messages', async function (assert) {
+      assert.expect(5);
+      const bannerIdOne = 'some-awesome-id-2';
+      const bannerIdTwo = 'some-awesome-id-1';
+
+      this.server.get('/sys/internal/ui/unauthenticated-messages', function () {
+        authenticatedMessageResponse.data.key_info[bannerIdOne].type = 'banner';
+        authenticatedMessageResponse.data.key_info[bannerIdOne].title = 'Banner title 1';
+        authenticatedMessageResponse.data.key_info[bannerIdTwo].type = 'banner';
+        authenticatedMessageResponse.data.key_info[bannerIdTwo].title = 'Banner title 2';
+        return authenticatedMessageResponse;
+      });
+      await visit('/vault/dashboard');
+      assert.dom(PAGE.alertTitle(bannerIdOne)).hasText('Banner title 1');
+      assert.dom(PAGE.alertDescription(bannerIdOne)).hasText('hello world hello wolrd');
+      assert.dom(PAGE.alertAction('link')).hasText('some link title');
+      assert.dom(PAGE.alertTitle(bannerIdTwo)).hasText('Banner title 2');
+      assert.dom(PAGE.alertDescription(bannerIdTwo)).hasText('here is a cool message');
     });
   });
 });

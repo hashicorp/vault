@@ -61,9 +61,7 @@
       @title="No roles in this scope yet"
       @message="Roles let you generate credentials with a specified set of KMIP operations permissions that clients are allowed to perform."
     >
-      <LinkTo @route="scope.roles.create">
-        Create a role
-      </LinkTo>
+      <Hds::Link::Standalone @icon="plus" @text="Create a role" @route="scope.roles.create" />
     </list.empty>
   {{else if list.item}}
     <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "credentials" this.scope list.item.id}} as |Item|>

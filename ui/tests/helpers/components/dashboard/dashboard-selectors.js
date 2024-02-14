@@ -12,6 +12,7 @@ export const SELECTORS = {
   cardHeader: (name) => `[data-test-dashboard-card-header="${name}"]`,
   tableRow: (name) => `[data-test-dashboard-table="${name}"] tr`,
   searchSelect: (name) => `[data-test-search-select="${name}"]`,
+  kvSearchSelect: `[data-test-kv-suggestion-input]`,
   actionButton: (action) => `[data-test-button="${action}"]`,
   title: (name) => `[data-test-title="${name}"]`,
   subtitle: (name) => `[data-test-card-subtitle="${name}"]`,

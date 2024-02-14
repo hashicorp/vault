@@ -6,14 +6,9 @@
 import { click, settled, visit, fillIn, currentURL } from '@ember/test-helpers';
 import { module, test, skip } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { create } from 'ember-cli-page-object';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+import { runCmd, createNS } from 'vault/tests/helpers/commands';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
-
-const shell = create(consoleClass);
-
-const createNS = (name) => shell.runCommands(`write sys/namespaces/${name} -force`);
 
 module('Acceptance | Enterprise | namespaces', function (hooks) {
   setupApplicationTest(hooks);
@@ -24,9 +19,8 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
 
   test('it clears namespaces when you log out', async function (assert) {
     const ns = 'foo';
-    await createNS(ns);
-    await shell.runCommands(`write -field=client_token auth/token/create policies=default`);
-    const token = shell.lastLogOutput;
+    await runCmd(createNS(ns), false);
+    const token = await runCmd(`write -field=client_token auth/token/create policies=default`);
     await logout.visit();
     await authPage.login(token);
     await click('[data-test-namespace-toggle]');
@@ -45,7 +39,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
 
     const nses = ['beep', 'boop', 'bop'];
     for (const [i, ns] of nses.entries()) {
-      await createNS(ns);
+      await runCmd(createNS(ns), false);
       await settled();
       // the namespace path will include all of the namespaces up to this point
       const targetNamespace = nses.slice(0, i + 1).join('/');

@@ -180,14 +180,17 @@ func TestManagerPutEntry(t *testing.T) {
 
 	// Check that when an entry is put successfully, the entry is stored with
 	// correct key.
+	now := time.Now()
+	later := now.Add(time.Hour)
+
 	testEntry.Messages["test"] = Message{
 		ID:            "test",
 		Title:         "title",
 		Message:       "message",
 		Authenticated: true,
 		Type:          ModalMessageType,
-		StartTime:     time.Now(),
-		EndTime:       time.Now().Add(time.Hour),
+		StartTime:     now,
+		EndTime:       &later,
 	}
 
 	storage := &logical.InmemStorage{}
@@ -211,15 +214,42 @@ func TestManagerPutEntry(t *testing.T) {
 // context (e.g. checking that the list contains 1 element and that it's equal
 // to namespace.RootNamespace).
 func TestGetNamespacesToSearch(t *testing.T) {
-	list, err := getNamespacesToSearch(context.Background(), FindFilter{})
+	testManager := &Manager{nsManager: &CommunityEditionNamespaceManager{}}
+
+	list, err := testManager.getNamespacesToSearch(context.Background(), FindFilter{})
 	assert.Error(t, err)
 	assert.Nil(t, list)
 
-	list, err = getNamespacesToSearch(namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace), FindFilter{})
+	list, err = testManager.getNamespacesToSearch(namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace), FindFilter{})
 	assert.NoError(t, err)
-	assert.NotNil(t, list)
-	assert.Equal(t, 1, len(list))
+	assert.Len(t, list, 1)
 	assert.Equal(t, namespace.RootNamespace, list[0])
+
+	testManager.nsManager = &testNamespaceManager{
+		results: []namespace.Namespace{
+			{
+				ID:   "ccc",
+				Path: "c/",
+			},
+			{
+				ID:   "bbb",
+				Path: "b/",
+			},
+			{
+				ID:   "aaa",
+				Path: "a/",
+			},
+		},
+	}
+
+	list, err = testManager.getNamespacesToSearch(namespace.ContextWithNamespace(context.Background(), &namespace.Namespace{ID: "ddd", Path: "d/"}), FindFilter{IncludeAncestors: true})
+	assert.NoError(t, err)
+	assert.Len(t, list, 5)
+	assert.Equal(t, list[0].Path, "d/")
+	assert.Equal(t, list[1].Path, "c/")
+	assert.Equal(t, list[2].Path, "b/")
+	assert.Equal(t, list[3].Path, "a/")
+	assert.Equal(t, list[4].Path, "")
 }
 
 // TestStorageKeyForNamespace verifies that the storageKeyForNamespace function
@@ -292,15 +322,18 @@ func TestManagerCreateMessage(t *testing.T) {
 	var (
 		testManager = NewManager(nil)
 
+		now   = time.Now()
+		later = now.Add(time.Hour)
+
 		validMessageTpl = Message{
-			StartTime: time.Now(),
-			EndTime:   time.Now().Add(time.Hour),
+			StartTime: now,
+			EndTime:   &later,
 			Message:   "created message",
 			Type:      BannerMessageType,
 		}
 		invalidMessageTpl = Message{
-			StartTime: time.Now().Add(time.Hour),
-			EndTime:   time.Now(),
+			StartTime: later,
+			EndTime:   &now,
 		}
 
 		nsCtx = namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
@@ -421,6 +454,10 @@ func TestManagerUpdateMessage(t *testing.T) {
 	var (
 		testManager = NewManager(nil)
 
+		now     = time.Now()
+		later   = now.Add(time.Hour)
+		earlier = now.Add(-1 * time.Hour)
+
 		nsCtx = namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
 	)
 
@@ -442,8 +479,8 @@ func TestManagerUpdateMessage(t *testing.T) {
 			storage: buildStorageWithEntry(t, "sys/config/ui/custom-messages", `{"messages":{"abc":{"id":"abc"}}}`),
 			message: Message{
 				ID:        "abc",
-				StartTime: time.Now().Add(time.Hour),
-				EndTime:   time.Now().Add(-1 * time.Hour),
+				StartTime: later,
+				EndTime:   &now,
 			},
 			errorAssertion:   assert.Error,
 			messageAssertion: assert.Nil,
@@ -453,8 +490,8 @@ func TestManagerUpdateMessage(t *testing.T) {
 			storage: &logical.InmemStorage{},
 			message: Message{
 				ID:        "abc",
-				StartTime: time.Now().Add(-1 * time.Hour),
-				EndTime:   time.Now().Add(3 * time.Hour),
+				StartTime: earlier,
+				EndTime:   &later,
 			},
 			errorAssertion:   assert.Error,
 			messageAssertion: assert.Nil,
@@ -464,8 +501,8 @@ func TestManagerUpdateMessage(t *testing.T) {
 			storage: &testingStorage{putFails: true, getResponseValue: `{"messages":{"abc":{"id":"abc"}}}`},
 			message: Message{
 				ID:        "abc",
-				StartTime: time.Now().Add(-5 * time.Hour),
-				EndTime:   time.Now().Add(time.Hour),
+				StartTime: earlier,
+				EndTime:   &later,
 				Type:      BannerMessageType,
 			},
 			errorAssertion:   assert.Error,
@@ -476,8 +513,8 @@ func TestManagerUpdateMessage(t *testing.T) {
 			storage: buildStorageWithEntry(t, "sys/config/ui/custom-messages", `{"messages":{"abc":{"id":"abc"}}}`),
 			message: Message{
 				ID:        "abc",
-				StartTime: time.Now(),
-				EndTime:   time.Now().Add(time.Hour),
+				StartTime: now,
+				EndTime:   &later,
 				Message:   "updated value",
 				Type:      BannerMessageType,
 			},
@@ -622,4 +659,25 @@ func (s *testingStorage) Put(_ context.Context, _ *logical.StorageEntry) error {
 	}
 
 	return nil
+}
+
+// testNamespaceManager is a perculiar type of NamespaceManager where it can be
+// instantiated with the results that successive calls to its GetParentNamespace
+// method will return.
+type testNamespaceManager struct {
+	results []namespace.Namespace
+}
+
+// GetParentNamespace effectively pops namespaces from the results field in the
+// receiver testNamespaceManager struct and returns them. Once all namespaces
+// have been returns, it returns namespace.RootNamespace.
+func (n *testNamespaceManager) GetParentNamespace(_ string) *namespace.Namespace {
+	if len(n.results) == 0 {
+		return namespace.RootNamespace
+	}
+
+	ns := n.results[0]
+	n.results = n.results[1:]
+
+	return &ns
 }

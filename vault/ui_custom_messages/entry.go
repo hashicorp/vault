@@ -45,11 +45,11 @@ func (e *Entry) addMessage(message *Message) error {
 		return err
 	}
 
-	if !message.HasValidateStartAndEndTimes() {
+	if !message.HasValidStartAndEndTimes() {
 		return errors.New("message start time must occur before end time")
 	}
 
-	if !message.HasValidateMessageType() {
+	if !message.HasValidMessageType() {
 		return errors.New("unrecognized message type")
 	}
 
@@ -83,11 +83,11 @@ func (e *Entry) updateMessage(message *Message) error {
 		return fmt.Errorf("custom message %w", logical.ErrNotFound)
 	}
 
-	if !message.HasValidateStartAndEndTimes() {
+	if !message.HasValidStartAndEndTimes() {
 		return errors.New("message start time must occur before end time")
 	}
 
-	if !message.HasValidateMessageType() {
+	if !message.HasValidMessageType() {
 		return errors.New("unrecognized message type")
 	}
 

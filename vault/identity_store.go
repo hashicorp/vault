@@ -64,6 +64,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		groupUpdater:  core,
 		tokenStorer:   core,
 		entityCreator: core,
+		mountLister:   core,
 		mfaBackend:    core.loginMFABackend,
 	}
 
@@ -104,6 +105,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"oidc/.well-known/*",
+				"oidc/+/.well-known/*",
 				"oidc/provider/+/.well-known/*",
 				"oidc/provider/+/token",
 			},

@@ -308,11 +308,13 @@
     @message="This database type cannot be viewed in the UI. You will have to use the API or CLI to perform actions here."
     @bottomBorder={{true}}
   >
-    <LinkTo @route="vault.cluster.secrets.backend.list-root" class="link">
-      <Chevron @direction="left" />
-      Go back
-    </LinkTo>
-    <DocLink @path="/api/secret/databases">Documentation</DocLink>
+    <Hds::Link::Standalone @icon="chevron-left" @text="Go back" @route="vault.cluster.secrets.backend.list-root" />
+    <Hds::Link::Standalone
+      @icon="docs-link"
+      @iconPosition="trailing"
+      @text="Database API docs"
+      @href={{doc-link "/vault/api-docs/secret/databases"}}
+    />
   </EmptyState>
 {{else}}
   {{#each @model.showAttrs as |attr|}}

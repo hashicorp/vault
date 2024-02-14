@@ -32,19 +32,22 @@ type Manager struct {
 	view logical.Storage
 
 	l sync.RWMutex
+
+	nsManager NamespaceManager
 }
 
 // NewManager creates a new Manager struct that has been fully initialized.
 func NewManager(storage logical.Storage) *Manager {
 	return &Manager{
-		view: storage,
+		view:      storage,
+		nsManager: &CommunityEditionNamespaceManager{},
 	}
 }
 
 // FindMessages handles getting a list of existing messages that match the
 // criteria set in the provided FindFilter struct.
 func (m *Manager) FindMessages(ctx context.Context, filters FindFilter) ([]Message, error) {
-	nsList, err := getNamespacesToSearch(ctx, filters)
+	nsList, err := m.getNamespacesToSearch(ctx, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +215,7 @@ func (m *Manager) putEntry(ctx context.Context, entry *Entry) error {
 // This function handles the complexity of gathering all of the applicable
 // namespaces depending on the namespace set in the context and whether the
 // IncludeAncestors criterion is set to true in the provided FindFilter struct.
-func getNamespacesToSearch(ctx context.Context, filters FindFilter) ([]*namespace.Namespace, error) {
+func (m *Manager) getNamespacesToSearch(ctx context.Context, filters FindFilter) ([]*namespace.Namespace, error) {
 	var nsList []*namespace.Namespace
 
 	ns, err := namespace.FromContext(ctx)
@@ -223,10 +226,13 @@ func getNamespacesToSearch(ctx context.Context, filters FindFilter) ([]*namespac
 	// Add the current namespace based on the context.Context to nsList.
 	nsList = append(nsList, ns)
 
-	//if filters.IncludeAncestors {
-	// Add the parent, grand-parent, etc... namespaces all the way back up
-	// to the root namespace to nsList.
-	//}
+	if filters.IncludeAncestors {
+		parentNs := m.nsManager.GetParentNamespace(ns.Path)
+		for ; parentNs.ID != ns.ID; parentNs = m.nsManager.GetParentNamespace(ns.Path) {
+			ns = parentNs
+			nsList = append(nsList, ns)
+		}
+	}
 
 	return nsList, nil
 }

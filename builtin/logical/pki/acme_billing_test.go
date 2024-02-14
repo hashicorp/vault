@@ -15,16 +15,14 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/crypto/acme"
-
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki/dnstest"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/activity"
-
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/acme"
 )
 
 // TestACMEBilling is a basic test that will validate client counts created via ACME workflows.

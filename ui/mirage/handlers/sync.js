@@ -6,6 +6,7 @@
 import { Response } from 'miragejs';
 import { camelize } from '@ember/string';
 import { findDestination } from 'core/helpers/sync-destinations';
+import clientsHandler from './clients';
 
 export const associationsResponse = (schema, req) => {
   const { type, name } = req.params;
@@ -29,7 +30,7 @@ export const associationsResponse = (schema, req) => {
 };
 
 export const syncStatusResponse = (schema, req) => {
-  const { mount, name: secret_name } = req.params;
+  const { mount, secret_name } = req.queryParams;
   const records = schema.db.syncAssociations.where({ mount, secret_name });
   if (!records.length) {
     return new Response(404, {}, { errors: [] });
@@ -133,8 +134,22 @@ export default function (server) {
   });
   server.delete(uri, (schema, req) => {
     const { type, name } = req.params;
-    schema.db.syncDestinations.remove({ type, name });
-    return new Response(204);
+    schema.db.syncDestinations.update(
+      { type, name },
+      // these parameters are added after a purge delete is initiated
+      // if only `purge_initiated_at` exists the delete progress banner renders
+      // if `purge_error` also has a value then delete failed banner renders
+      {
+        purge_initiated_at: '2024-01-09T16:54:28.463879-07:00',
+        // WIP (backend hasn't added yet) update when we have a realistic error message)
+        // purge_error: '1 error occurred: association could for some confusing reason not be un-synced!',
+      }
+    );
+    const record = schema.db.syncDestinations.findBy({ type, name });
+    return destinationResponse(record);
+    // return the following instead to test immediate deletion
+    // schema.db.syncDestinations.remove({ type, name });
+    // return new Response(204);
   });
   // associations
   server.get('/sys/sync/associations', (schema) => {
@@ -187,4 +202,296 @@ export default function (server) {
   server.get('sys/sync/associations/:mount/*name', (schema, req) => {
     return syncStatusResponse(schema, req);
   });
+
+  // SYNC CLIENTS ACTIVITY RESPONSE
+
+  // DYNAMIC RESPONSE (with date querying)
+  clientsHandler(server); // imports all of the endpoints defined in mirage/handlers/clients file
+
+  // STATIC RESPONSE (0 entity/non-entity clients)
+  /*
+  server.get('/sys/internal/counters/activity', (schema, req) => {
+    let { start_time, end_time } = req.queryParams;
+    // backend returns a timestamp if given unix time, so first convert to timestamp string here
+    if (!start_time.includes('T')) start_time = fromUnixTime(start_time).toISOString();
+    if (!end_time.includes('T')) end_time = fromUnixTime(end_time).toISOString();
+    return {
+      request_id: 'some-activity-id',
+      lease_id: '',
+      renewable: false,
+      lease_duration: 0,
+      data: {
+        start_time, // set by query params
+        end_time, // set by query params
+        total: {
+          clients: 15,
+          distinct_entities: 0,
+          entity_clients: 0,
+          non_entity_clients: 0,
+          non_entity_tokens: 0,
+          secret_syncs: 15,
+        },
+        by_namespace: [
+          {
+            counts: {
+              clients: 15,
+              distinct_entities: 0,
+              entity_clients: 0,
+              non_entity_clients: 0,
+              non_entity_tokens: 0,
+              secret_syncs: 15,
+            },
+            mounts: [
+              {
+                counts: {
+                  clients: 15,
+                  distinct_entities: 0,
+                  entity_clients: 0,
+                  non_entity_clients: 0,
+                  non_entity_tokens: 0,
+                  secret_syncs: 15,
+                },
+                mount_path: 'sys/',
+              },
+            ],
+            namespace_id: 'root',
+            namespace_path: '',
+          },
+        ],
+        months: [
+          { counts: null, namespaces: null, new_clients: null, timestamp: '2023-09-01T00:00:00Z' },
+          {
+            counts: {
+              clients: 10,
+              distinct_entities: 0,
+              entity_clients: 0,
+              non_entity_clients: 0,
+              non_entity_tokens: 0,
+              secret_syncs: 10,
+            },
+            namespaces: [
+              {
+                counts: {
+                  clients: 10,
+                  distinct_entities: 0,
+                  entity_clients: 0,
+                  non_entity_clients: 0,
+                  non_entity_tokens: 0,
+                  secret_syncs: 10,
+                },
+                mounts: [
+                  {
+                    counts: {
+                      clients: 10,
+                      distinct_entities: 0,
+                      entity_clients: 0,
+                      non_entity_clients: 0,
+                      non_entity_tokens: 0,
+                      secret_syncs: 10,
+                    },
+                    mount_path: 'sys/',
+                  },
+                ],
+                namespace_id: 'root',
+                namespace_path: '',
+              },
+            ],
+            new_clients: {
+              counts: {
+                clients: 10,
+                distinct_entities: 0,
+                entity_clients: 0,
+                non_entity_clients: 0,
+                non_entity_tokens: 0,
+                secret_syncs: 10,
+              },
+              namespaces: [
+                {
+                  counts: {
+                    clients: 10,
+                    distinct_entities: 0,
+                    entity_clients: 0,
+                    non_entity_clients: 0,
+                    non_entity_tokens: 0,
+                    secret_syncs: 10,
+                  },
+                  mounts: [
+                    {
+                      counts: {
+                        clients: 10,
+                        distinct_entities: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
+                        non_entity_tokens: 0,
+                        secret_syncs: 10,
+                      },
+                      mount_path: 'sys/',
+                    },
+                  ],
+                  namespace_id: 'root',
+                  namespace_path: '',
+                },
+              ],
+            },
+            timestamp: '2023-10-01T00:00:00Z',
+          },
+          {
+            counts: {
+              clients: 7,
+              distinct_entities: 0,
+              entity_clients: 0,
+              non_entity_clients: 0,
+              non_entity_tokens: 0,
+              secret_syncs: 7,
+            },
+            namespaces: [
+              {
+                counts: {
+                  clients: 7,
+                  distinct_entities: 0,
+                  entity_clients: 0,
+                  non_entity_clients: 0,
+                  non_entity_tokens: 0,
+                  secret_syncs: 7,
+                },
+                mounts: [
+                  {
+                    counts: {
+                      clients: 7,
+                      distinct_entities: 0,
+                      entity_clients: 0,
+                      non_entity_clients: 0,
+                      non_entity_tokens: 0,
+                      secret_syncs: 7,
+                    },
+                    mount_path: 'sys/',
+                  },
+                ],
+                namespace_id: 'root',
+                namespace_path: '',
+              },
+            ],
+            new_clients: {
+              counts: {
+                clients: 3,
+                distinct_entities: 0,
+                entity_clients: 0,
+                non_entity_clients: 0,
+                non_entity_tokens: 0,
+                secret_syncs: 3,
+              },
+              namespaces: [
+                {
+                  counts: {
+                    clients: 3,
+                    distinct_entities: 0,
+                    entity_clients: 0,
+                    non_entity_clients: 0,
+                    non_entity_tokens: 0,
+                    secret_syncs: 3,
+                  },
+                  mounts: [
+                    {
+                      counts: {
+                        clients: 3,
+                        distinct_entities: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
+                        non_entity_tokens: 0,
+                        secret_syncs: 3,
+                      },
+                      mount_path: 'sys/',
+                    },
+                  ],
+                  namespace_id: 'root',
+                  namespace_path: '',
+                },
+              ],
+            },
+            timestamp: '2023-11-01T00:00:00Z',
+          },
+          {
+            counts: {
+              clients: 7,
+              distinct_entities: 0,
+              entity_clients: 0,
+              non_entity_clients: 0,
+              non_entity_tokens: 0,
+              secret_syncs: 7,
+            },
+            namespaces: [
+              {
+                counts: {
+                  clients: 7,
+                  distinct_entities: 0,
+                  entity_clients: 0,
+                  non_entity_clients: 0,
+                  non_entity_tokens: 0,
+                  secret_syncs: 7,
+                },
+                mounts: [
+                  {
+                    counts: {
+                      clients: 7,
+                      distinct_entities: 0,
+                      entity_clients: 0,
+                      non_entity_clients: 0,
+                      non_entity_tokens: 0,
+                      secret_syncs: 7,
+                    },
+                    mount_path: 'sys/',
+                  },
+                ],
+                namespace_id: 'root',
+                namespace_path: '',
+              },
+            ],
+            new_clients: {
+              counts: {
+                clients: 2,
+                distinct_entities: 0,
+                entity_clients: 0,
+                non_entity_clients: 0,
+                non_entity_tokens: 0,
+                secret_syncs: 2,
+              },
+              namespaces: [
+                {
+                  counts: {
+                    clients: 2,
+                    distinct_entities: 0,
+                    entity_clients: 0,
+                    non_entity_clients: 0,
+                    non_entity_tokens: 0,
+                    secret_syncs: 2,
+                  },
+                  mounts: [
+                    {
+                      counts: {
+                        clients: 2,
+                        distinct_entities: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
+                        non_entity_tokens: 0,
+                        secret_syncs: 2,
+                      },
+                      mount_path: 'sys/',
+                    },
+                  ],
+                  namespace_id: 'root',
+                  namespace_path: '',
+                },
+              ],
+            },
+            timestamp: '2023-12-01T00:00:00Z',
+          },
+        ],
+      },
+      wrap_info: null,
+      warnings: null,
+      auth: null,
+    };
+  });
+
+  */
 }

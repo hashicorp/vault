@@ -17,7 +17,7 @@
       </div>
       <div class="column has-text-right">
         {{#if @model.canEdit}}
-          <Identity::PopupPolicy @params={{array @model policyName}} />
+          <Identity::PopupPolicy @model={{@model}} @policyName={{policyName}} />
         {{/if}}
       </div>
     </div>

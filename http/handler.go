@@ -30,6 +30,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pathmanager"
@@ -262,6 +263,10 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		wrappedHandler = disableReplicationStatusEndpointWrapping(wrappedHandler)
 	}
 
+	if props.ListenerConfig != nil && props.ListenerConfig.DisableRequestLimiter {
+		wrappedHandler = wrapRequestLimiterHandler(wrappedHandler, props)
+	}
+
 	return wrappedHandler
 }
 
@@ -358,7 +363,8 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 	// return an HTTP error here. This information is best effort.
 	hostname, _ := os.Hostname()
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var hf func(w http.ResponseWriter, r *http.Request)
+	hf = func(w http.ResponseWriter, r *http.Request) {
 		// This block needs to be here so that upon sending SIGHUP, custom response
 		// headers are also reloaded into the handlers.
 		var customHeaders map[string][]*logical.CustomHeader
@@ -420,10 +426,13 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/robots.txt", r.URL.Path == "/":
 			// RFC 5785
 		case strings.HasPrefix(r.URL.Path, "/.well-known/"):
+			perfStandby := core.PerfStandby()
 			standby, err := core.Standby()
 			if err != nil {
 				core.Logger().Warn("error resolving standby status handling .well-known path", "error", err)
-			} else if standby {
+			} else if standby && !perfStandby {
+				// Standby nodes, not performance standbys, don't start plugins
+				// so registration can not happen, instead redirect to active
 				respondStandby(core, w, r.URL)
 				cancelFunc()
 				return
@@ -433,16 +442,11 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 					core.Logger().Warn("error resolving potential API redirect", "error", err)
 				} else {
 					if redir != "" {
-						dest := url.URL{
-							Path:     redir,
-							RawQuery: r.URL.RawQuery,
-						}
-						w.Header().Set("Location", dest.String())
-						if r.Method == http.MethodGet || r.Proto == "HTTP/1.0" {
-							w.WriteHeader(http.StatusFound)
-						} else {
-							w.WriteHeader(http.StatusTemporaryRedirect)
-						}
+						newReq := r.Clone(ctx)
+						// Save the original path for audit logging.
+						newReq.RequestURI = newReq.URL.Path
+						newReq.URL.Path = redir
+						hf(w, newReq)
 						cancelFunc()
 						return
 					}
@@ -498,7 +502,8 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		h.ServeHTTP(nw, r)
 
 		cancelFunc()
-	})
+	}
+	return http.HandlerFunc(hf)
 }
 
 func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handler {
@@ -924,10 +929,57 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	w.Write(retBytes)
 }
 
+func acquireLimiterListener(core *vault.Core, rawReq *http.Request, r *logical.Request) (*limits.RequestListener, bool) {
+	var disable bool
+	disableRequestLimiter := rawReq.Context().Value(logical.CtxKeyDisableRequestLimiter{})
+	if disableRequestLimiter != nil {
+		disable = disableRequestLimiter.(bool)
+	}
+	r.RequestLimiterDisabled = disable
+	if disable {
+		return &limits.RequestListener{}, true
+	}
+
+	lim := &limits.RequestLimiter{}
+	if r.PathLimited {
+		lim = core.GetRequestLimiter(limits.SpecialPathLimiter)
+	} else {
+		switch rawReq.Method {
+		case http.MethodGet, http.MethodHead, http.MethodTrace, http.MethodOptions:
+			// We're only interested in the inverse, so do nothing here.
+		default:
+			lim = core.GetRequestLimiter(limits.WriteLimiter)
+		}
+	}
+	return lim.Acquire(rawReq.Context())
+}
+
 // request is a helper to perform a request and properly exit in the
 // case of an error.
 func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool, bool) {
+	lsnr, ok := acquireLimiterListener(core, rawReq, r)
+	if !ok {
+		resp := &logical.Response{}
+		logical.RespondWithStatusCode(resp, r, http.StatusServiceUnavailable)
+		respondError(w, http.StatusServiceUnavailable, limits.ErrCapacity)
+		return resp, false, false
+	}
+
+	// To guard against leaking RequestListener slots, we should ignore Limiter
+	// measurements on panic. OnIgnore will check to see if a RequestListener
+	// slot has been acquired and not released, which could happen on
+	// recoverable panics.
+	defer lsnr.OnIgnore()
+
 	resp, err := core.HandleRequest(rawReq.Context(), r)
+
+	// Do the limiter measurement
+	if err != nil {
+		lsnr.OnDropped()
+	} else {
+		lsnr.OnSuccess()
+	}
+
 	if r.LastRemoteWAL() > 0 && !core.EntWaitUntilWALShipped(rawReq.Context(), r.LastRemoteWAL()) {
 		if resp == nil {
 			resp = &logical.Response{}

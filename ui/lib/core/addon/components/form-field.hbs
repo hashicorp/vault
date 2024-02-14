@@ -94,11 +94,12 @@
     <Input
       @type="datetime-local"
       @value={{date-format (get @model this.valuePath) "yyyy-MM-dd'T'HH:mm"}}
-      class="input has-top-margin-xs is-auto-width is-block"
       name={{@attr.name}}
       id={{@attr.name}}
       data-test-input={{@attr.name}}
-      {{on "change" this.onChangeWithEvent}}
+      class="input has-top-margin-xs has-bottom-margin-xs is-auto-width is-block
+        {{if this.validationError 'has-error-border'}}"
+      {{on "focusout" this.onChangeWithEvent}}
     />
   {{else if (eq @attr.options.editType "searchSelect")}}
     <div class="form-section">
@@ -133,12 +134,15 @@
       @value={{get @model this.valuePath}}
       @onChange={{this.setAndBroadcast}}
       @label={{this.labelString}}
-      @labelClass="title {{if (eq @mode 'create') 'is-5' 'is-4'}}"
+      @labelClass={{if @attr.options.isSectionHeader "title is-4" "is-label"}}
       @helpText={{@attr.options.helpText}}
       @subText={{@attr.options.subText}}
       @onKeyUp={{this.handleKeyUp}}
-      @validationError={{this.validationError}}
-      class="form-section"
+      @keyPlaceholder={{@attr.options.keyPlaceholder}}
+      @valuePlaceholder={{@attr.options.valuePlaceholder}}
+      @isSingleRow={{@attr.options.isSingleRow}}
+      @allowWhiteSpace={{@attr.options.allowWhiteSpace}}
+      class="{{if this.validationError 'error-border-child-inputs'}} {{if @attr.options.isSectionHeader 'form-section'}}"
     />
   {{else if (eq @attr.options.editType "file")}}
     {{! File Input }}

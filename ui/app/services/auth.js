@@ -252,8 +252,8 @@ export default Service.extend({
     const [firstArg, resp] = arguments;
     const tokens = this.tokens;
     const currentNamespace = this.namespaceService.path || '';
-    // Tab vs dropdown format
-    const mountPath = firstArg?.selectedAuth || firstArg?.data?.path;
+    // dropdown vs tab format
+    const mountPath = firstArg?.data?.path || firstArg?.selectedAuth;
     let tokenName;
     let options;
     let backend;

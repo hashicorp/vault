@@ -7,14 +7,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"math/rand"
 	"net/http"
 	"time"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/backoff"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
@@ -113,19 +114,15 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 	return ah
 }
 
-func backoff(ctx context.Context, backoff *autoAuthBackoff) bool {
-	if backoff.exitOnErr {
+func backoffSleep(ctx context.Context, backoff *autoAuthBackoff) bool {
+	nextSleep, err := backoff.backoff.Next()
+	if err != nil {
 		return false
 	}
-
 	select {
-	case <-time.After(backoff.current):
+	case <-time.After(nextSleep):
 	case <-ctx.Done():
 	}
-
-	// Increase exponential backoff for the next time if we don't
-	// successfully auth/renew/etc.
-	backoff.next()
 	return true
 }
 
@@ -137,12 +134,13 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	if ah.minBackoff <= 0 {
 		ah.minBackoff = defaultMinBackoff
 	}
-
-	backoffCfg := newAutoAuthBackoff(ah.minBackoff, ah.maxBackoff, ah.exitOnError)
-
-	if backoffCfg.min >= backoffCfg.max {
+	if ah.maxBackoff <= 0 {
+		ah.maxBackoff = defaultMaxBackoff
+	}
+	if ah.minBackoff > ah.maxBackoff {
 		return errors.New("auth handler: min_backoff cannot be greater than max_backoff")
 	}
+	backoffCfg := newAutoAuthBackoff(ah.minBackoff, ah.maxBackoff, ah.exitOnError)
 
 	ah.logger.Info("starting auth handler")
 	defer func() {
@@ -204,10 +202,10 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		case AuthMethodWithClient:
 			clientToUse, err = am.(AuthMethodWithClient).AuthClient(ah.client)
 			if err != nil {
-				ah.logger.Error("error creating client for authentication call", "error", err, "backoff", backoff)
+				ah.logger.Error("error creating client for authentication call", "error", err, "backoff", backoffCfg)
 				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
 
-				if backoff(ctx, backoffCfg) {
+				if backoffSleep(ctx, backoffCfg) {
 					continue
 				}
 
@@ -234,7 +232,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				ah.logger.Error("could not look up token", "err", err, "backoff", backoffCfg)
 				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
 
-				if backoff(ctx, backoffCfg) {
+				if backoffSleep(ctx, backoffCfg) {
 					continue
 				}
 				return err
@@ -254,7 +252,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				ah.logger.Error("error getting path or data from method", "error", err, "backoff", backoffCfg)
 				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
 
-				if backoff(ctx, backoffCfg) {
+				if backoffSleep(ctx, backoffCfg) {
 					continue
 				}
 				return err
@@ -262,12 +260,12 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		}
 
 		if ah.wrapTTL > 0 {
-			wrapClient, err := clientToUse.Clone()
+			wrapClient, err := clientToUse.CloneWithHeaders()
 			if err != nil {
 				ah.logger.Error("error creating client for wrapped call", "error", err, "backoff", backoffCfg)
 				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
 
-				if backoff(ctx, backoffCfg) {
+				if backoffSleep(ctx, backoffCfg) {
 					continue
 				}
 				return err
@@ -289,7 +287,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			isTokenFileMethod = path == "auth/token/lookup-self"
 			if isTokenFileMethod {
 				token, _ := data["token"].(string)
-				lookupSelfClient, err := clientToUse.Clone()
+				lookupSelfClient, err := clientToUse.CloneWithHeaders()
 				if err != nil {
 					ah.logger.Error("failed to clone client to perform token lookup")
 					return err
@@ -305,7 +303,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				ah.logger.Error("error authenticating", "error", err, "backoff", backoffCfg)
 				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
 
-				if backoff(ctx, backoffCfg) {
+				if backoffSleep(ctx, backoffCfg) {
 					continue
 				}
 				return err
@@ -320,7 +318,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				ah.logger.Error("authentication returned nil wrap info", "backoff", backoffCfg)
 				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
 
-				if backoff(ctx, backoffCfg) {
+				if backoffSleep(ctx, backoffCfg) {
 					continue
 				}
 				return err
@@ -329,7 +327,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				ah.logger.Error("authentication returned empty wrapped client token", "backoff", backoffCfg)
 				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
 
-				if backoff(ctx, backoffCfg) {
+				if backoffSleep(ctx, backoffCfg) {
 					continue
 				}
 				return err
@@ -339,7 +337,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				ah.logger.Error("failed to encode wrapinfo", "error", err, "backoff", backoffCfg)
 				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
 
-				if backoff(ctx, backoffCfg) {
+				if backoffSleep(ctx, backoffCfg) {
 					continue
 				}
 				return err
@@ -354,7 +352,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			}
 
 			am.CredSuccess()
-			backoffCfg.reset()
+			backoffCfg.backoff.Reset()
 
 			select {
 			case <-ctx.Done():
@@ -378,7 +376,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 					ah.logger.Error("token file validation failed, token may be invalid", "backoff", backoffCfg)
 					metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
 
-					if backoff(ctx, backoffCfg) {
+					if backoffSleep(ctx, backoffCfg) {
 						continue
 					}
 					return err
@@ -388,7 +386,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 					ah.logger.Error("token file validation returned empty client token", "backoff", backoffCfg)
 					metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
 
-					if backoff(ctx, backoffCfg) {
+					if backoffSleep(ctx, backoffCfg) {
 						continue
 					}
 					return err
@@ -420,7 +418,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 					ah.logger.Error("authentication returned nil auth info", "backoff", backoffCfg)
 					metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
 
-					if backoff(ctx, backoffCfg) {
+					if backoffSleep(ctx, backoffCfg) {
 						continue
 					}
 					return err
@@ -429,7 +427,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 					ah.logger.Error("authentication returned empty client token", "backoff", backoffCfg)
 					metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
 
-					if backoff(ctx, backoffCfg) {
+					if backoffSleep(ctx, backoffCfg) {
 						continue
 					}
 					return err
@@ -447,7 +445,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			}
 
 			am.CredSuccess()
-			backoffCfg.reset()
+			backoffCfg.backoff.Reset()
 		}
 
 		if watcher != nil {
@@ -461,7 +459,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			ah.logger.Error("error creating lifetime watcher", "error", err, "backoff", backoffCfg)
 			metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
 
-			if backoff(ctx, backoffCfg) {
+			if backoffSleep(ctx, backoffCfg) {
 				continue
 			}
 			return err
@@ -507,10 +505,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 
 // autoAuthBackoff tracks exponential backoff state.
 type autoAuthBackoff struct {
-	min       time.Duration
-	max       time.Duration
-	current   time.Duration
-	exitOnErr bool
+	backoff *backoff.Backoff
 }
 
 func newAutoAuthBackoff(min, max time.Duration, exitErr bool) *autoAuthBackoff {
@@ -522,32 +517,18 @@ func newAutoAuthBackoff(min, max time.Duration, exitErr bool) *autoAuthBackoff {
 		min = defaultMinBackoff
 	}
 
+	retries := math.MaxInt
+	if exitErr {
+		retries = 0
+	}
+
+	b := backoff.NewBackoff(retries, min, max)
+
 	return &autoAuthBackoff{
-		current:   min,
-		max:       max,
-		min:       min,
-		exitOnErr: exitErr,
+		backoff: b,
 	}
-}
-
-// next determines the next backoff duration that is roughly twice
-// the current value, capped to a max value, with a measure of randomness.
-func (b *autoAuthBackoff) next() {
-	maxBackoff := 2 * b.current
-
-	if maxBackoff > b.max {
-		maxBackoff = b.max
-	}
-
-	// Trim a random amount (0-25%) off the doubled duration
-	trim := rand.Int63n(int64(maxBackoff) / 4)
-	b.current = maxBackoff - time.Duration(trim)
-}
-
-func (b *autoAuthBackoff) reset() {
-	b.current = b.min
 }
 
 func (b autoAuthBackoff) String() string {
-	return b.current.Truncate(10 * time.Millisecond).String()
+	return b.backoff.Current().Truncate(10 * time.Millisecond).String()
 }

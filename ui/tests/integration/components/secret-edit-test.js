@@ -91,7 +91,7 @@ module('Integration | Component | secret edit', function (hooks) {
         float: '1.234',
       },
     });
-    await render(hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} key=this.key />`);
+    await render(hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} key="this.key" />`);
     assert.dom('[data-test-secret-save]').isNotDisabled();
   });
 

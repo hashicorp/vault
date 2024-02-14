@@ -12,24 +12,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
-	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
-
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAudit_ReadOnlyViewDuringMount(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 		err := config.SaltView.Put(ctx, &logical.StorageEntry{
 			Key:   "bar",
 			Value: []byte("baz"),
@@ -38,7 +36,7 @@ func TestAudit_ReadOnlyViewDuringMount(t *testing.T) {
 			t.Fatalf("expected a read-only error")
 		}
 		factory := corehelpers.NoopAuditFactory(nil)
-		return factory(ctx, config, false, nil)
+		return factory(ctx, config, nil)
 	}
 
 	me := &MountEntry{
@@ -105,7 +103,7 @@ func TestCore_EnableAudit(t *testing.T) {
 func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
-	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
+	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 		return nil, fmt.Errorf("failing enabling")
 	}
 
@@ -154,7 +152,7 @@ func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 func TestCore_EnableAudit_Local(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
-	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
+	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 		return nil, fmt.Errorf("failing enabling")
 	}
 
@@ -235,6 +233,69 @@ func TestCore_EnableAudit_Local(t *testing.T) {
 	if len(c.audit.Entries) != 2 {
 		t.Fatalf("expected two audit entries, got %#v", localAuditTable)
 	}
+}
+
+// TestAudit_enableAudit_fallback_invalid ensures that supplying a bad value for
+// 'fallback' in options gives us the correct error.
+func TestAudit_enableAudit_fallback_invalid(t *testing.T) {
+	entry := &MountEntry{
+		Path: "noop/",
+		Options: map[string]string{
+			"fallback": "juan",
+		},
+	}
+
+	cluster := NewTestCluster(t, nil, nil)
+	cluster.Start()
+	defer cluster.Cleanup()
+	core := cluster.Cores[0]
+	core.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
+	err := core.enableAudit(context.Background(), entry, false)
+	require.Error(t, err)
+	require.EqualError(t, err, "unable to enable audit device 'noop/', cannot parse supplied 'fallback' setting: cannot parse '' as bool: strconv.ParseBool: parsing \"juan\": invalid syntax")
+}
+
+// TestAudit_enableAudit_fallback_two ensures trying to enable a second fallback
+// device returns the correct error.
+func TestAudit_enableAudit_fallback_two(t *testing.T) {
+	entry1 := &MountEntry{
+		Table:       auditTableType,
+		Path:        "noop1/",
+		Type:        "noop",
+		UUID:        "abcd",
+		Accessor:    "noop1-abcd",
+		NamespaceID: namespace.RootNamespaceID,
+		Options: map[string]string{
+			"fallback": "TRUE",
+		},
+		namespace: namespace.RootNamespace,
+	}
+
+	entry2 := &MountEntry{
+		Table:       auditTableType,
+		Path:        "noop2/",
+		Type:        "noop",
+		UUID:        "abcd",
+		Accessor:    "noop2-abcd",
+		NamespaceID: namespace.RootNamespaceID,
+		Options: map[string]string{
+			"fallback": "1",
+		},
+		namespace: namespace.RootNamespace,
+	}
+
+	cluster := NewTestCluster(t, nil, nil)
+	cluster.Start()
+	defer cluster.Cleanup()
+	core := cluster.Cores[0]
+	core.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
+	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+	err := core.enableAudit(ctx, entry1, false)
+	require.NoError(t, err)
+
+	err = core.enableAudit(ctx, entry2, false)
+	require.Error(t, err)
+	require.EqualError(t, err, "unable to enable audit device 'noop2/', a fallback device already exists 'noop1/'")
 }
 
 func TestCore_DisableAudit(t *testing.T) {
@@ -342,7 +403,7 @@ func verifyDefaultAuditTable(t *testing.T, table *MountTable) {
 
 func TestAuditBroker_LogRequest(t *testing.T) {
 	l := logging.NewVaultLogger(log.Trace)
-	b, err := NewAuditBroker(l, true)
+	b, err := NewAuditBroker(l)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -388,17 +449,13 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 
 	reqErrs := errors.New("errs")
 
-	headersConf := &AuditedHeadersConfig{
-		Headers: make(map[string]*auditedHeaderSettings),
-	}
-
 	logInput := &logical.LogInput{
 		Auth:     authCopy,
 		Request:  reqCopy,
 		OuterErr: reqErrs,
 	}
 	ctx := namespace.RootContext(context.Background())
-	err = b.LogRequest(ctx, logInput, headersConf)
+	err = b.LogRequest(ctx, logInput)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -421,20 +478,20 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 		Auth:    auth,
 		Request: req,
 	}
-	if err := b.LogRequest(ctx, logInput, headersConf); err != nil {
+	if err := b.LogRequest(ctx, logInput); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should FAIL work with both failing backends
 	a2.ReqErr = fmt.Errorf("failed")
-	if err := b.LogRequest(ctx, logInput, headersConf); !errwrap.Contains(err, "event not processed by enough 'sink' nodes") {
+	if err := b.LogRequest(ctx, logInput); !errwrap.Contains(err, "event not processed by enough 'sink' nodes") {
 		t.Fatalf("err: %v", err)
 	}
 }
 
 func TestAuditBroker_LogResponse(t *testing.T) {
 	l := logging.NewVaultLogger(log.Trace)
-	b, err := NewAuditBroker(l, true)
+	b, err := NewAuditBroker(l)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -490,10 +547,6 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 	}
 	respCopy := respCopyRaw.(*logical.Response)
 
-	headersConf := &AuditedHeadersConfig{
-		Headers: make(map[string]*auditedHeaderSettings),
-	}
-
 	logInput := &logical.LogInput{
 		Auth:     authCopy,
 		Request:  reqCopy,
@@ -501,7 +554,7 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 		OuterErr: respErr,
 	}
 	ctx := namespace.RootContext(context.Background())
-	err = b.LogResponse(ctx, logInput, headersConf)
+	err = b.LogResponse(ctx, logInput)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -529,12 +582,12 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 		Response: resp,
 		OuterErr: respErr,
 	}
-	err = b.LogResponse(ctx, logInput, headersConf)
+	err = b.LogResponse(ctx, logInput)
 	require.NoError(t, err)
 
 	// Should FAIL work with both failing backends
 	a2.RespErr = fmt.Errorf("failed")
-	err = b.LogResponse(ctx, logInput, headersConf)
+	err = b.LogResponse(ctx, logInput)
 	require.Error(t, err)
 	require.ErrorContains(t, err, "event not processed by enough 'sink' nodes")
 }
@@ -542,7 +595,7 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 func TestAuditBroker_AuditHeaders(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Trace)
 
-	b, err := NewAuditBroker(logger, true)
+	b, err := NewAuditBroker(logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -597,7 +650,7 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 		OuterErr: respErr,
 	}
 	ctx := namespace.RootContext(context.Background())
-	err = b.LogRequest(ctx, logInput, nil)
+	err = b.LogRequest(ctx, logInput)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -620,14 +673,14 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 		Request:  req,
 		OuterErr: respErr,
 	}
-	err = b.LogRequest(ctx, logInput, headersConf)
+	err = b.LogRequest(ctx, logInput)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should FAIL work with both failing backends
 	a2.ReqErr = fmt.Errorf("failed")
-	err = b.LogRequest(ctx, logInput, headersConf)
+	err = b.LogRequest(ctx, logInput)
 	if !errwrap.Contains(err, "event not processed by enough 'sink' nodes") {
 		t.Fatalf("err: %v", err)
 	}

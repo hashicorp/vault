@@ -5,7 +5,10 @@ package vault
 
 import (
 	"context"
+	"crypto"
 	"encoding/json"
+	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -14,12 +17,16 @@ import (
 	"github.com/go-jose/go-jose/v3"
 	"github.com/go-jose/go-jose/v3/jwt"
 	"github.com/go-test/deep"
+	capjwt "github.com/hashicorp/cap/jwt"
 	"github.com/hashicorp/go-hclog"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	gocache "github.com/patrickmn/go-cache"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestOIDC_Path_OIDC_RoleNoKeyParameter tests that a role cannot be created
@@ -386,8 +393,60 @@ func TestOIDC_Path_OIDCRole(t *testing.T) {
 	expectStrings(t, respListRoleAfterDelete.Data["keys"].([]string), expectedStrings)
 }
 
-// TestOIDC_Path_OIDCKeyKey tests CRUD operations for keys
-func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
+// TestOIDC_DeleteKeyWithMountReference ensures that keys cannot be deleted
+// if they're referenced by mounts for plugin identity tokens.
+func TestOIDC_DeleteKeyWithMountReference(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	core, _, _ := TestCoreUnsealed(t)
+	core.credentialBackends["userpass"] = credUserpass.Factory
+	idStorage := core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+	require.NotNil(t, idStorage)
+
+	tests := []struct {
+		name        string
+		mountPrefix string
+		mountType   string
+		keyName     string
+	}{
+		{
+			name:        "delete key referenced by auth mount does not succeed",
+			mountPrefix: "auth/",
+			mountType:   "userpass/",
+			keyName:     "test-key-1",
+		},
+		{
+			name:        "delete key referenced by secret mount does not succeed",
+			mountPrefix: "mounts/",
+			mountType:   "kv/",
+			keyName:     "test-key-2",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := core.identityStore.HandleRequest(ctx, testKeyReq(idStorage, tt.keyName,
+				[]string{"*"}, "RS256"))
+			expectSuccess(t, resp, err)
+
+			createMountEntryWithKey(t, ctx, core.systemBackend, tt.mountPrefix, tt.mountType, tt.keyName)
+			require.NoError(t, err)
+			require.Nil(t, resp)
+
+			// Deleting the key must not succeed
+			resp, err = core.identityStore.HandleRequest(ctx, &logical.Request{
+				Path:      fmt.Sprintf("oidc/key/%s", tt.keyName),
+				Operation: logical.DeleteOperation,
+				Storage:   idStorage,
+			})
+			expectError(t, resp, err)
+			require.Equal(t, fmt.Sprintf(deleteKeyErrorFmt, tt.keyName, "mounts", tt.mountType),
+				resp.Error().Error())
+		})
+	}
+}
+
+// TestOIDC_Path_CRUDKey tests CRUD operations for keys
+func TestOIDC_Path_CRUDKey(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
@@ -457,7 +516,6 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		Storage: storage,
 	})
 	expectSuccess(t, resp, err)
-	// fmt.Printf("resp is:\n%#v", resp)
 
 	// Delete test-key -- should fail because test-role depends on test-key
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -554,8 +612,8 @@ func TestOIDC_Path_OIDCKey_InvalidTokenTTL(t *testing.T) {
 	expectError(t, resp, err)
 }
 
-// TestOIDC_Path_OIDCKey tests the List operation for keys
-func TestOIDC_Path_OIDCKey(t *testing.T) {
+// TestOIDC_Path_ListKey tests the List operation for keys
+func TestOIDC_Path_ListKey(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
@@ -1039,13 +1097,11 @@ func testNamedKey(name string) *namedKey {
 // rotations and expiration actions.
 func TestOIDC_PeriodicFunc(t *testing.T) {
 	type testCase struct {
-		cycle         int
-		numKeys       int
-		numPublicKeys int
+		expectedKeyRingLen   int
+		expectedPublicKeyLen int
 	}
 	testSets := []struct {
 		namedKey          *namedKey
-		expectedKeyCount  int
 		setSigningKey     bool
 		setNextSigningKey bool
 		testCases         []testCase
@@ -1056,10 +1112,10 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setNextSigningKey: true,
 			testCases: []testCase{
 				// Each cycle results in a key going in/out of its verification_ttl period
-				{1, 2, 2},
-				{2, 3, 3},
-				{3, 2, 2},
-				{4, 3, 3},
+				{2, 2},
+				{3, 3},
+				{2, 2},
+				{3, 3},
 			},
 		},
 		{
@@ -1068,11 +1124,11 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     false,
 			setNextSigningKey: true,
 			testCases: []testCase{
-				{1, 1, 1},
+				{1, 1},
 
 				// key counts jump from 1 to 2 because the next signing key becomes
 				// the signing key, and no key is in its verification_ttl period
-				{2, 2, 2},
+				{2, 2},
 			},
 		},
 		{
@@ -1081,11 +1137,11 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     true,
 			setNextSigningKey: false,
 			testCases: []testCase{
-				{1, 1, 1},
+				{1, 1},
 
 				// key counts jump from 1 to 3 because the original signing key is
 				// still published and within its verification_ttl period
-				{2, 3, 3},
+				{3, 3},
 			},
 		},
 		{
@@ -1094,8 +1150,8 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     false,
 			setNextSigningKey: false,
 			testCases: []testCase{
-				{1, 0, 0},
-				{2, 2, 2},
+				{0, 0},
+				{2, 2},
 			},
 		},
 	}
@@ -1105,46 +1161,41 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 		t.Run(testSet.namedKey.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Prepare a storage to run through periodicFunc
 			c, _, _ := TestCoreUnsealed(t)
 			ctx := namespace.RootContext(nil)
 			storage := c.router.MatchingStorageByAPIPath(ctx, "identity/oidc")
 
+			// Stop the core's rollback manager so that periodic function testing
+			// doesn't race with the rollback manager.
+			c.rollback.StopTicker()
+
+			// Generate current and next keys as needed by the test. This ensures
+			// we can rotate a key when either are unset.
 			if testSet.setSigningKey {
-				if err := testSet.namedKey.generateAndSetKey(ctx, hclog.NewNullLogger(), storage); err != nil {
-					t.Fatalf("failed to set signing key")
-				}
+				require.NoError(t, testSet.namedKey.generateAndSetKey(ctx, hclog.NewNullLogger(), storage))
 			}
 			if testSet.setNextSigningKey {
-				if err := testSet.namedKey.generateAndSetNextKey(ctx, hclog.NewNullLogger(), storage); err != nil {
-					t.Fatalf("failed to set next signing key")
-				}
+				require.NoError(t, testSet.namedKey.generateAndSetNextKey(ctx, hclog.NewNullLogger(), storage))
 			}
 			testSet.namedKey.NextRotation = time.Now().Add(testSet.namedKey.RotationPeriod)
 
-			// Store namedKey
+			// Store the named key so it can be rotated by the periodic func
 			entry, _ := logical.StorageEntryJSON(namedKeyConfigPath+testSet.namedKey.name, testSet.namedKey)
-			if err := storage.Put(ctx, entry); err != nil {
-				t.Fatalf("writing to in mem storage failed")
-			}
+			require.NoError(t, storage.Put(ctx, entry))
+			t.Cleanup(func() {
+				require.NoError(t, storage.Delete(ctx, namedKeyConfigPath+testSet.namedKey.name))
+			})
 
-			currentCycle := 1
-			numCases := len(testSet.testCases)
-			lastCycle := testSet.testCases[numCases-1].cycle
-			namedKeySamples := make([]*logical.StorageEntry, numCases)
-			publicKeysSamples := make([][]string, numCases)
-
-			i := 0
-			for currentCycle <= lastCycle {
+			// Manually execute the periodic func to rotate keys and collect
+			// both the key ring and public keys.
+			namedKeySamples := make([]*logical.StorageEntry, len(testSet.testCases))
+			publicKeysSamples := make([][]string, len(testSet.testCases))
+			for i := range testSet.testCases {
 				c.identityStore.oidcPeriodicFunc(ctx)
-				if currentCycle == testSet.testCases[i].cycle {
-					namedKeyEntry, _ := storage.Get(ctx, namedKeyConfigPath+testSet.namedKey.name)
-					publicKeysEntry, _ := storage.List(ctx, publicKeysConfigPath)
-					namedKeySamples[i] = namedKeyEntry
-					publicKeysSamples[i] = publicKeysEntry
-					i = i + 1
-				}
-				currentCycle = currentCycle + 1
+				namedKeyEntry, _ := storage.Get(ctx, namedKeyConfigPath+testSet.namedKey.name)
+				publicKeysEntry, _ := storage.List(ctx, publicKeysConfigPath)
+				namedKeySamples[i] = namedKeyEntry
+				publicKeysSamples[i] = publicKeysEntry
 
 				// sleep until we are in the next cycle - where a next run will happen
 				v, _, _ := c.identityStore.oidcCache.Get(noNamespace, "nextRun")
@@ -1152,39 +1203,21 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 				now := time.Now()
 				diff := nextRun.Sub(now)
 				if now.Before(nextRun) {
-					time.Sleep(diff)
+					time.Sleep(diff + 100*time.Millisecond)
 				}
 			}
 
-			// measure collected samples
-			for i := range testSet.testCases {
-				expectedKeyCount := testSet.testCases[i].numKeys
-				namedKeySamples[i].DecodeJSON(&testSet.namedKey)
+			// Assert that the key lengths through each rotation match expectations
+			for i, tc := range testSet.testCases {
+				require.NoError(t, namedKeySamples[i].DecodeJSON(&testSet.namedKey))
+
 				actualKeyRingLen := len(testSet.namedKey.KeyRing)
-				if actualKeyRingLen != expectedKeyCount {
-					t.Errorf(
-						"For key: %s at cycle: %d expected namedKey's KeyRing to be at least of length %d but was: %d",
-						testSet.namedKey.name,
-						testSet.testCases[i].cycle,
-						expectedKeyCount,
-						actualKeyRingLen,
-					)
-				}
-				expectedPublicKeyCount := testSet.testCases[i].numPublicKeys
-				actualPubKeysLen := len(publicKeysSamples[i])
-				if actualPubKeysLen != expectedPublicKeyCount {
-					t.Errorf(
-						"For key: %s at cycle: %d expected public keys to be at least of length %d but was: %d",
-						testSet.namedKey.name,
-						testSet.testCases[i].cycle,
-						expectedPublicKeyCount,
-						actualPubKeysLen,
-					)
-				}
-			}
+				assert.Equal(t, tc.expectedKeyRingLen, actualKeyRingLen,
+					"Key ring length mismatch for key %q at test case index %d", testSet.namedKey.name, i)
 
-			if err := storage.Delete(ctx, namedKeyConfigPath+testSet.namedKey.name); err != nil {
-				t.Fatalf("deleting from in mem storage failed")
+				actualPubKeysLen := len(publicKeysSamples[i])
+				assert.Equal(t, tc.expectedPublicKeyLen, actualPubKeysLen,
+					"Public key length mismatch for key %q at test case index %d", testSet.namedKey.name, i)
 			}
 		})
 	}
@@ -1283,7 +1316,7 @@ func TestOIDC_pathOIDCKeyExistenceCheck(t *testing.T) {
 		t.Fatalf("Expected existence check to return false but instead returned: %t", exists)
 	}
 
-	// Populte storage with a namedKey
+	// Populate storage with a namedKey
 	namedKey := &namedKey{}
 	entry, _ := logical.StorageEntryJSON(namedKeyConfigPath+keyName, namedKey)
 	if err := storage.Put(ctx, entry); err != nil {
@@ -1724,5 +1757,318 @@ func expectStrings(t *testing.T, actualStrings []string, expectedStrings map[str
 		if !ok {
 			t.Fatalf("the string %q was not expected", actualString)
 		}
+	}
+}
+
+// Test_oidcConfig_fullIssuer tests that the full issuer matches expectations
+// given different issuer bases and children.
+func Test_oidcConfig_fullIssuer(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	tests := []struct {
+		name    string
+		issuer  string
+		child   string
+		want    string
+		wantErr bool
+	}{
+		{
+			name:   "issuer with valid empty child",
+			issuer: "https://vault.dev",
+			child:  baseIdentityTokenIssuer,
+			want:   fmt.Sprintf("https://vault.dev/v1/%s", issuerPath),
+		},
+		{
+			name:   "issuer with valid plugin child",
+			issuer: "http://127.0.0.1:8200",
+			child:  pluginIdentityTokenIssuer,
+			want:   fmt.Sprintf("http://127.0.0.1:8200/v1/%s/%s", issuerPath, pluginIdentityTokenIssuer),
+		},
+		{
+			name:    "issuer with invalid child",
+			issuer:  "http://127.0.0.1:8200",
+			child:   "invalid",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+				Path:      "oidc/config",
+				Operation: logical.UpdateOperation,
+				Storage:   storage,
+				Data: map[string]interface{}{
+					"issuer": tt.issuer,
+				},
+			})
+			expectSuccess(t, resp, err)
+
+			config, err := c.identityStore.getOIDCConfig(ctx, storage)
+			require.NoError(t, err)
+
+			got, err := config.fullIssuer(tt.child)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equalf(t, tt.want, got, "fullIssuer(%v)", tt.child)
+		})
+	}
+}
+
+// Test_validChildIssuer tests that only valid child issuers are accepted.
+func Test_validChildIssuer(t *testing.T) {
+	tests := []struct {
+		name  string
+		child string
+		want  bool
+	}{
+		{
+			name:  "valid child issuer",
+			child: baseIdentityTokenIssuer,
+			want:  true,
+		},
+		{
+			name:  "valid child issuer",
+			child: pluginIdentityTokenIssuer,
+			want:  true,
+		},
+		{
+			name:  "invalid child issuer",
+			child: "test",
+			want:  false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equalf(t, tt.want, validChildIssuer(tt.child), "validChildIssuer(%v)", tt.child)
+		})
+	}
+}
+
+// Test_optionalChildIssuerRegex tests that the regex returned from
+// optionalChildIssuerRegex produces the expected captures given different
+// input paths.
+func Test_optionalChildIssuerRegex(t *testing.T) {
+	tests := []struct {
+		name     string
+		pattern  string
+		path     string
+		captures map[string]string
+	}{
+		{
+			name:     "valid match with capture",
+			pattern:  "oidc" + optionalChildIssuerRegex("child") + "/.well-known/keys",
+			path:     "oidc/plugins/.well-known/keys",
+			captures: map[string]string{"child": "plugins"},
+		},
+		{
+			name:     "valid match with capture name, segment, and path change",
+			pattern:  "oidc" + optionalChildIssuerRegex("name") + "/.well-known/openid-configuration",
+			path:     "oidc/test/.well-known/openid-configuration",
+			captures: map[string]string{"name": "test"},
+		},
+		{
+			name:     "valid match with empty capture",
+			pattern:  "oidc" + optionalChildIssuerRegex("child") + "/.well-known/keys",
+			path:     "oidc/.well-known/keys",
+			captures: map[string]string{"child": ""},
+		},
+		{
+			name:     "invalid match with multiple path segments",
+			pattern:  "oidc" + optionalChildIssuerRegex("child") + "/.well-known/keys",
+			path:     "oidc/plugins/invalid/.well-known/keys",
+			captures: map[string]string{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			re := regexp.MustCompile(tt.pattern)
+			matches := re.FindStringSubmatch(tt.path)
+			actualCaptures := make(map[string]string)
+			for i, name := range re.SubexpNames() {
+				if name != "" && i < len(matches) {
+					actualCaptures[name] = matches[i]
+				}
+			}
+			require.Equal(t, tt.captures, actualCaptures)
+		})
+	}
+}
+
+// TestIdentityStore_generatePluginIdentityToken tests generation of plugin identity
+// tokens by verifying signatures and validating claims.
+func TestIdentityStore_generatePluginIdentityToken(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	core.credentialBackends["userpass"] = credUserpass.Factory
+	identityStore := core.IdentityStore()
+	identityStore.redirectAddr = "http://localhost:8200"
+	ctx := namespace.RootContext(nil)
+	storage := core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+	require.NotNil(t, storage)
+
+	// Create a key
+	testKey := "test-key"
+	testAudience := "allowed-audience"
+	resp, err := core.identityStore.HandleRequest(ctx, testKeyReq(storage, testKey,
+		[]string{testAudience}, "RS256"))
+	expectSuccess(t, resp, err)
+
+	// Enable a secret mount using the test key
+	createMountEntryWithKey(t, ctx, core.systemBackend, "mounts/", "kv/", testKey)
+	expectSuccess(t, resp, err)
+	secretMountEntry := core.router.MatchingMountEntry(ctx, "kv/")
+	require.NotNil(t, secretMountEntry)
+
+	// Enable an auth mount using the default key
+	createMountEntryWithKey(t, ctx, core.systemBackend, "auth/", "userpass/", defaultKeyName)
+	expectSuccess(t, resp, err)
+	authMountEntry := core.router.MatchingMountEntry(ctx, "auth/userpass/")
+	require.NotNil(t, authMountEntry)
+
+	tests := []struct {
+		name       string
+		ctx        context.Context
+		mountEntry *MountEntry
+		audience   string
+		ttl        time.Duration
+		wantErr    bool
+	}{
+		{
+			name:    "expect error with nil context",
+			ctx:     nil,
+			wantErr: true,
+		},
+		{
+			name:       "expect error with nil mount entry",
+			ctx:        ctx,
+			mountEntry: nil,
+			wantErr:    true,
+		},
+		{
+			name: "expect error with key that doesn't exist",
+			ctx:  ctx,
+			mountEntry: &MountEntry{
+				Config: MountConfig{
+					IdentityTokenKey: "does-not-exist",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name:       "expect error with audience that's not allowed by the key",
+			ctx:        ctx,
+			mountEntry: secretMountEntry,
+			audience:   "not-allowed-audience",
+			wantErr:    true,
+		},
+		{
+			name:       "expect valid identity token with secret mount using test key",
+			ctx:        ctx,
+			mountEntry: secretMountEntry,
+			audience:   testAudience,
+		},
+		{
+			name:       "expect valid identity token with auth mount using default key",
+			ctx:        ctx,
+			mountEntry: authMountEntry,
+			audience:   testAudience,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			token, _, err := identityStore.generatePluginIdentityToken(tt.ctx, storage, tt.mountEntry,
+				tt.audience, tt.ttl)
+			if tt.wantErr {
+				require.Error(t, err)
+				require.Empty(t, token)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotEmpty(t, token)
+
+			// Verify the signature and claims of the token
+			key, err := identityStore.getNamedKey(ctx, storage, tt.mountEntry.Config.IdentityTokenKey)
+			require.NoError(t, err)
+			keySet, err := capjwt.NewStaticKeySet([]crypto.PublicKey{key.SigningKey.Public()})
+			require.NoError(t, err)
+
+			validator, err := capjwt.NewValidator(keySet)
+			require.NoError(t, err)
+			expected := capjwt.Expected{
+				Issuer: fmt.Sprintf("%s/v1/identity/oidc/plugins", identityStore.redirectAddr),
+				Subject: fmt.Sprintf("%s:%s:%s:%s", pluginTokenSubjectPrefix, namespace.RootNamespace.ID,
+					translateTableClaim(tt.mountEntry.Table), tt.mountEntry.Accessor),
+				Audiences:         []string{tt.audience},
+				SigningAlgorithms: []capjwt.Alg{capjwt.RS256},
+			}
+
+			claims, err := validator.Validate(ctx, token, expected)
+			require.NoError(t, err)
+			require.Contains(t, claims, pluginTokenPrivateClaimKey)
+			require.IsType(t, map[string]interface{}{}, claims[pluginTokenPrivateClaimKey])
+
+			vaultSubClaims := claims[pluginTokenPrivateClaimKey].(map[string]interface{})
+			require.Equal(t, namespace.RootNamespace.ID, vaultSubClaims["namespace_id"])
+			require.Equal(t, namespace.RootNamespace.Path, vaultSubClaims["namespace_path"])
+			require.Equal(t, translateTableClaim(tt.mountEntry.Table), vaultSubClaims["class"])
+			require.Equal(t, tt.mountEntry.Type, vaultSubClaims["plugin"])
+			require.Equal(t, tt.mountEntry.RunningVersion, vaultSubClaims["version"])
+			require.Equal(t, tt.mountEntry.Path, vaultSubClaims["path"])
+			require.Equal(t, tt.mountEntry.Accessor, vaultSubClaims["accessor"])
+			require.Equal(t, tt.mountEntry.Local, vaultSubClaims["local"])
+		})
+	}
+}
+
+func createMountEntryWithKey(t *testing.T, ctx context.Context, sys *SystemBackend, mountPrefix, mountType, key string) {
+	t.Helper()
+
+	resp, err := sys.HandleRequest(ctx, &logical.Request{
+		Path:      mountPrefix + mountType,
+		Operation: logical.UpdateOperation,
+		Storage:   new(logical.InmemStorage),
+		Data: map[string]interface{}{
+			"type": strings.TrimSuffix(mountType, "/"),
+			"config": map[string]interface{}{
+				"identity_token_key": key,
+			},
+		},
+	})
+	expectSuccess(t, resp, err)
+}
+
+// Test_translateTableClaim tests that we convert mount entry table
+// values to expected claim values.
+func Test_translateTableClaim(t *testing.T) {
+	tests := []struct {
+		name  string
+		table string
+		want  string
+	}{
+		{
+			name:  "given mounts table returns secret",
+			table: mountTableType,
+			want:  secretTableValue,
+		},
+		{
+			name:  "given auth table returns auth",
+			table: "auth",
+			want:  "auth",
+		},
+		{
+			name:  "given any value returns itself",
+			table: "other",
+			want:  "other",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, translateTableClaim(tt.table), "translateTableClaim(%v)", tt.table)
+		})
 	}
 }
