@@ -235,7 +235,7 @@ certificate.`,
 }
 
 func (b *backend) Cert(ctx context.Context, s logical.Storage, n string) (*CertEntry, error) {
-	entry, err := s.Get(ctx, "cert/"+strings.ToLower(n))
+	entry, err := s.Get(ctx, trustedCertPath+strings.ToLower(n))
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +268,8 @@ func (b *backend) Cert(ctx context.Context, s logical.Storage, n string) (*CertE
 }
 
 func (b *backend) pathCertDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete(ctx, "cert/"+strings.ToLower(d.Get("name").(string)))
+	defer b.flushTrustedCache()
+	err := req.Storage.Delete(ctx, trustedCertPath+strings.ToLower(d.Get("name").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +277,7 @@ func (b *backend) pathCertDelete(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) pathCertList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	certs, err := req.Storage.List(ctx, "cert/")
+	certs, err := req.Storage.List(ctx, trustedCertPath)
 	if err != nil {
 		return nil, err
 	}
@@ -333,6 +334,7 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 }
 
 func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defer b.flushTrustedCache()
 	name := strings.ToLower(d.Get("name").(string))
 
 	cert, err := b.Cert(ctx, req.Storage, name)
@@ -475,7 +477,7 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	// Store it
-	entry, err := logical.StorageEntryJSON("cert/"+name, cert)
+	entry, err := logical.StorageEntryJSON(trustedCertPath+name, cert)
 	if err != nil {
 		return nil, err
 	}

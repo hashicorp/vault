@@ -21,7 +21,10 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const operationPrefixCert = "cert"
+const (
+	operationPrefixCert = "cert"
+	trustedCertPath     = "cert/"
+)
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
@@ -32,7 +35,9 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 }
 
 func Backend() *backend {
-	var b backend
+	b := backend{
+		trustedCache: make(map[string]*trusted),
+	}
 	b.Backend = &framework.Backend{
 		Help: backendHelp,
 		PathsSpecial: &logical.Paths{
@@ -59,6 +64,13 @@ func Backend() *backend {
 	return &b
 }
 
+type trusted struct {
+	pool          *x509.CertPool
+	trusted       []*ParsedCert
+	trustedNonCAs []*ParsedCert
+	conf          *ocsp.VerifyConfig
+}
+
 type backend struct {
 	*framework.Backend
 	MapCertId *framework.PathMap
@@ -68,6 +80,9 @@ type backend struct {
 	ocspClientMutex sync.RWMutex
 	ocspClient      *ocsp.Client
 	configUpdated   atomic.Bool
+
+	trustedLock  sync.RWMutex
+	trustedCache map[string]*trusted
 }
 
 func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
@@ -98,6 +113,7 @@ func (b *backend) invalidate(_ context.Context, key string) {
 	case key == "config":
 		b.configUpdated.Store(true)
 	}
+	b.flushTrustedCache()
 }
 
 func (b *backend) initOCSPClient(cacheSize int) {
@@ -111,6 +127,7 @@ func (b *backend) updatedConfig(config *config) {
 	defer b.ocspClientMutex.Unlock()
 	b.initOCSPClient(config.OcspCacheSize)
 	b.configUpdated.Store(false)
+	b.flushTrustedCache()
 	return
 }
 
@@ -159,6 +176,12 @@ func (b *backend) storeConfig(ctx context.Context, storage logical.Storage, conf
 	}
 	b.updatedConfig(config)
 	return nil
+}
+
+func (b *backend) flushTrustedCache() {
+	b.trustedLock.Lock()
+	defer b.trustedLock.Unlock()
+	b.trustedCache = make(map[string]*trusted)
 }
 
 const backendHelp = `

@@ -205,6 +205,7 @@ func (b *backend) pathCRLDelete(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	delete(b.crls, name)
+	b.flushTrustedCache()
 
 	return nil, nil
 }
@@ -313,6 +314,8 @@ func (b *backend) setCRL(ctx context.Context, storage logical.Storage, certList 
 	}
 
 	b.crls[name] = crlInfo
+	b.flushTrustedCache()
+
 	return err
 }
 
