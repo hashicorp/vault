@@ -20,6 +20,10 @@ const TYPES = [
     value: 'masking',
     displayName: 'Masking',
   },
+  {
+    value: 'tokenization',
+    displayName: 'Tokenization',
+  },
 ];
 
 const TWEAK_SOURCE = [
@@ -83,12 +87,49 @@ export default Model.extend({
     subText: 'Search for an existing role, type a new role to create it, or use a wildcard (*).',
     wildcardLabel: 'role',
   }),
-  transformAttrs: computed('type', function () {
-    if (this.type === 'masking') {
-      return ['name', 'type', 'masking_character', 'template', 'allowed_roles'];
-    }
-    return ['name', 'type', 'tweak_source', 'template', 'allowed_roles'];
+  deletion_allowed: attr('boolean', {
+    label: 'Allow deletion',
+    subText:
+      'If checked, this transform can be deleted otherwise deletion is blocked. Note that deleting the transform deletes the underlying key which makes decoding of tokenized values impossible without restoring from a backup.',
   }),
+  convergent: attr('boolean', {
+    label: 'Use convergent tokenization',
+    subText:
+      "This cannot be edited later. If checked, tokenization of the same plaintext more than once results in the same token. Defaults to false as unique tokens are more desirable from a security standpoint if there isn't a use-case need for convergence.",
+  }),
+  stores: attr('array', {
+    label: 'Stores',
+    editType: 'stringArray',
+    subText:
+      "The list of tokenization stores to use for tokenization state. Vault's internal storage is used by default.",
+  }),
+  mapping_mode: attr('string', {
+    defaultValue: 'default',
+    subText:
+      'Specifies the mapping mode for stored tokenization values. "default" is strongly recommended for highest security, "exportable" allows for all plaintexts to be decoded via the export-decoded endpoint in an emergency.',
+  }),
+  max_ttl: attr({
+    editType: 'ttl',
+    defaultValue: '0',
+    label: 'Maximum TTL of a token',
+    helperTextDisabled: 'If "0" or unspecified, tokens may have no expiration.',
+  }),
+
+  transformAttrs: computed('type', function () {
+    // allowed_roles not included so it displays at the bottom of the form
+    const baseAttrs = ['name', 'type', 'deletion_allowed'];
+    switch (this.type) {
+      case 'fpe':
+        return [...baseAttrs, 'tweak_source', 'template', 'allowed_roles'];
+      case 'masking':
+        return [...baseAttrs, 'masking_character', 'template', 'allowed_roles'];
+      case 'tokenization':
+        return [...baseAttrs, 'mapping_mode', 'convergent', 'max_ttl', 'stores', 'allowed_roles'];
+      default:
+        return [...baseAttrs];
+    }
+  }),
+
   transformFieldAttrs: computed('transformAttrs', function () {
     return expandAttributeMeta(this, this.transformAttrs);
   }),
