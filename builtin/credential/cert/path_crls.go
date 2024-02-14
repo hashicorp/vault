@@ -190,6 +190,7 @@ func (b *backend) pathCRLDelete(ctx context.Context, req *logical.Request, d *fr
 
 	b.crlUpdateMutex.Lock()
 	defer b.crlUpdateMutex.Unlock()
+	defer b.flushTrustedCache()
 
 	_, ok := b.crls[name]
 	if !ok {
@@ -205,7 +206,6 @@ func (b *backend) pathCRLDelete(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	delete(b.crls, name)
-	b.flushTrustedCache()
 
 	return nil, nil
 }
