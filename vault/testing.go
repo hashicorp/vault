@@ -34,11 +34,6 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
-	"github.com/mitchellh/copystructure"
-	"github.com/mitchellh/go-testing-interface"
-	"golang.org/x/crypto/ed25519"
-	"golang.org/x/net/http2"
-
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
@@ -60,6 +55,10 @@ import (
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/vault/seal"
+	"github.com/mitchellh/copystructure"
+	"github.com/mitchellh/go-testing-interface"
+	"golang.org/x/crypto/ed25519"
+	"golang.org/x/net/http2"
 )
 
 // This file contains a number of methods that are useful for unit
@@ -717,6 +716,9 @@ type TestCluster struct {
 
 func (c *TestCluster) SetRootToken(token string) {
 	c.RootToken = token
+	for _, c := range c.Cores {
+		c.Client.SetToken(token)
+	}
 }
 
 func (c *TestCluster) Start() {

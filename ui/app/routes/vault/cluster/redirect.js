@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { AUTH, CLUSTER } from 'vault/lib/route-paths';
 
 export default class VaultClusterRedirectRoute extends Route {

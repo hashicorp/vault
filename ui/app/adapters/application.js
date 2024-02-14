@@ -5,7 +5,7 @@
 
 import AdapterError from '@ember-data/adapter/error';
 import RESTAdapter from '@ember-data/adapter/rest';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { set } from '@ember/object';
 import RSVP from 'rsvp';
 import config from '../config/environment';

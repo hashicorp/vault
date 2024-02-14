@@ -11,13 +11,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/go-test/deep"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/hcl/hcl/token"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/stretchr/testify/require"
 )
 
 var DefaultCustomHeaders = map[string]map[string]string{

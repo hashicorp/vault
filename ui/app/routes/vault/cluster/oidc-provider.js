@@ -5,7 +5,7 @@
 
 import Ember from 'ember';
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 const AUTH = 'vault.cluster.auth';
 const PROVIDER = 'vault.cluster.oidc-provider';

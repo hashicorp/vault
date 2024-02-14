@@ -14,7 +14,6 @@ import (
 	"github.com/fatih/structs"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/go-version"
-
 	"github.com/hashicorp/vault/helper/versions"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"

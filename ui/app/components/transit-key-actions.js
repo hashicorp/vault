@@ -5,7 +5,7 @@
 
 import { copy } from 'ember-copy';
 import { assert } from '@ember/debug';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Component from '@ember/component';
 import { set, get, computed } from '@ember/object';
 import { encodeString } from 'vault/utils/b64';

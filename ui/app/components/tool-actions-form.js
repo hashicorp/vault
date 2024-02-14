@@ -4,7 +4,7 @@
  */
 
 import { match } from '@ember/object/computed';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Component from '@ember/component';
 import { setProperties, computed, set } from '@ember/object';
 import { addSeconds, parseISO } from 'date-fns';
