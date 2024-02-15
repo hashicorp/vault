@@ -11,15 +11,20 @@ description: |-
 
 Custom messages allow operators to configure system-wide messages and for vault users to view these messages.
 
-# Configure a custom message
+# Configure a Custom Message
 
 -> You must be a Vault operator or have capabilities to create a message.
 
 1. To create a message, navigate to the Settings section in the sidebar called **Custom Messages**.
+   ![custom messages sidebar link](/img/custom-messages-sidebar.png)
 2. On the **custom messages** page, each tab indicates where you would like the custom message to be created.
 3. Select the tab you want to create the message and click the **Create message** button in the toolbar.
+   ![custom messages create message button](/img/custom-messages-create.png)
 4. After clicking the **Create message** button, you are brought to the Create message form.
 5. On the **Create message** form:
+
+   ~> Note: When creating a message on a parent namespace, the child namespaces will inherit those messages.
+
    - Select the location in which you want to create your message.
    - Select the type of message you want to create.
    - Fill in the message details like title, message, as well as an optional link that you might want to include at the end of your message.
@@ -28,22 +33,30 @@ Custom messages allow operators to configure system-wide messages and for vault 
    - You may preview the message by clicking **Preview**.
    - Click **Create message** to create the message. Now, the message will appear on the specified location at the specified date and time.
 
-# Edit a custom message
+# Edit a Custom Message
 
 -> You must be a Vault operator or have capabilities to create or edit a message.
 
 There are two ways to navigate to the edit custom message screen:
 
 - Navigate to the main screen of Custom messages. Find the custom message you want to edit and click the three dots on the right - it will prompt a dropdown with an option to select **Edit**.
+  ![custom messages edit message button on main screen](/img/custom-messages-edit-option-1.png)
 - Click the message you want to delete on the Custom message main screen and there should be a button called **Edit message**.
+  ![custom messages edit message button on message details screen](/img/custom-messages-edit-option-2.png)
+
   After clicking **Edit message** in either of the options, fill in the information that you would like to edit for the custom message.
 
-# Delete a custom message
+# Delete a Custom Message
 
 -> You must be a Vault operator or have capabilities to delete a message. The deletion of a message is a **permanent** action.
 
 There are two ways to delete a custom message:
 
 - Navigate to the Custom Messages main screen and click on the three dots to delete a message. It will ask you to confirm deletion of the message.
-
+  ![custom messages delete message button on main screen](/img/custom-messages-delete-option-1.png)
 - Click on a custom message on the main screen and click on the **Delete message** button in the toolbar. It will ask you to confirm deletion of the message.
+  ![custom messages delete message message details screen](/img/custom-messages-delete-option-2.png)
+
+# Viewing a Configured Custom Message
+
+Any vault user will be able to view custom messages configured by the Vault operator. Messages can be dismissed by clicking "X" on a banner or "Confirm" for a modal.
