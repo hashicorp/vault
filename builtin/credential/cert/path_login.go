@@ -92,10 +92,29 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 		return nil, fmt.Errorf("no client certificate found")
 	}
 
+	config, err := b.Config(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	certAlias := ""
+	switch config.CertAlias {
+	case identityAliasCommonName:
+		certAlias = clientCerts[0].Subject.CommonName
+	case identityAliasOrganizationalUnit:
+		orgUnits := clientCerts[0].Subject.OrganizationalUnit
+		if len(orgUnits) == 0 {
+			return nil, fmt.Errorf("no organizational units found")
+		}
+		certAlias = orgUnits[0]
+	default:
+		certAlias = clientCerts[0].Subject.CommonName
+	}
+
 	return &logical.Response{
 		Auth: &logical.Auth{
 			Alias: &logical.Alias{
-				Name: clientCerts[0].Subject.CommonName,
+				Name: certAlias,
 			},
 		},
 	}, nil
@@ -154,6 +173,20 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 		metadata[k] = v
 	}
 
+	certAlias := ""
+	switch config.CertAlias {
+	case identityAliasCommonName:
+		certAlias = clientCerts[0].Subject.CommonName
+	case identityAliasOrganizationalUnit:
+		orgUnits := clientCerts[0].Subject.OrganizationalUnit
+		if len(orgUnits) == 0 {
+			return logical.ErrorResponse("no organizational units found"), nil
+		}
+		certAlias = orgUnits[0]
+	default:
+		certAlias = clientCerts[0].Subject.CommonName
+	}
+
 	auth := &logical.Auth{
 		InternalData: map[string]interface{}{
 			"subject_key_id":   skid,
@@ -162,7 +195,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 		DisplayName: matched.Entry.DisplayName,
 		Metadata:    metadata,
 		Alias: &logical.Alias{
-			Name: clientCerts[0].Subject.CommonName,
+			Name: certAlias,
 		},
 	}
 
