@@ -257,7 +257,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 	}
 
 	// Load the trusted certificates and other details
-	roots, trusted, trustedNonCAs, verifyConf := b.loadTrustedCerts(ctx, req.Storage, certName)
+	roots, trusted, trustedNonCAs, verifyConf := b.getTrustedCerts(ctx, req.Storage, certName)
 
 	// Get the list of full chains matching the connection and validates the
 	// certificate itself
@@ -581,10 +581,21 @@ func (b *backend) certificateExtensionsMetadata(clientCert *x509.Certificate, co
 	return metadata
 }
 
+// getTrustedCerts is used to load all the trusted certificates from the backend, cached
+
+func (b *backend) getTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert, conf *ocsp.VerifyConfig) {
+	if !b.trustedCacheDisabled.Load() {
+		if trusted, found := b.trustedCache.Get(certName); found {
+			return trusted.pool, trusted.trusted, trusted.trustedNonCAs, trusted.ocspConf
+		}
+	}
+	return b.loadTrustedCerts(ctx, storage, certName)
+}
+
 // loadTrustedCerts is used to load all the trusted certificates from the backend
-func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert, conf *ocsp.VerifyConfig) {
+func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trustedCerts []*ParsedCert, trustedNonCAs []*ParsedCert, conf *ocsp.VerifyConfig) {
 	pool = x509.NewCertPool()
-	trusted = make([]*ParsedCert, 0)
+	trustedCerts = make([]*ParsedCert, 0)
 	trustedNonCAs = make([]*ParsedCert, 0)
 
 	var names []string
@@ -592,7 +603,7 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 		names = append(names, certName)
 	} else {
 		var err error
-		names, err = storage.List(ctx, "cert/")
+		names, err = storage.List(ctx, trustedCertPath)
 		if err != nil {
 			b.Logger().Error("failed to list trusted certs", "error", err)
 			return
@@ -601,7 +612,7 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 
 	conf = &ocsp.VerifyConfig{}
 	for _, name := range names {
-		entry, err := b.Cert(ctx, storage, strings.TrimPrefix(name, "cert/"))
+		entry, err := b.Cert(ctx, storage, strings.TrimPrefix(name, trustedCertPath))
 		if err != nil {
 			b.Logger().Error("failed to load trusted cert", "name", name, "error", err)
 			continue
@@ -630,7 +641,7 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 			}
 
 			// Create a ParsedCert entry
-			trusted = append(trusted, &ParsedCert{
+			trustedCerts = append(trustedCerts, &ParsedCert{
 				Entry:        entry,
 				Certificates: parsed,
 			})
@@ -645,6 +656,15 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 			}
 			conf.QueryAllServers = conf.QueryAllServers || entry.OcspQueryAllServers
 		}
+	}
+
+	if !b.trustedCacheDisabled.Load() {
+		b.trustedCache.Add(certName, &trusted{
+			pool:          pool,
+			trusted:       trustedCerts,
+			trustedNonCAs: trustedNonCAs,
+			ocspConf:      conf,
+		})
 	}
 	return
 }
