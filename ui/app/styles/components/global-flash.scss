@@ -4,8 +4,8 @@
  */
 
 .global-flash {
-  bottom: 32px;
-  right: 24px;
+  bottom: $spacing-32;
+  right: $spacing-24;
   margin: 10px;
   max-width: 360px;
   position: fixed;
