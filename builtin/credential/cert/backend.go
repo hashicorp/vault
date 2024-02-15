@@ -16,6 +16,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/ocsp"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -24,6 +25,9 @@ import (
 const (
 	operationPrefixCert = "cert"
 	trustedCertPath     = "cert/"
+
+	defaultRoleCacheSize = 200
+	maxRoleCacheSize     = 10000
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -35,8 +39,10 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 }
 
 func Backend() *backend {
+	// ignoring the error as it only can occur with <= 0 size
+	cache, _ := lru.New[string, *trusted](defaultRoleCacheSize)
 	b := backend{
-		trustedCache: make(map[string]*trusted),
+		trustedCache: cache,
 	}
 	b.Backend = &framework.Backend{
 		Help: backendHelp,
@@ -81,8 +87,8 @@ type backend struct {
 	ocspClient      *ocsp.Client
 	configUpdated   atomic.Bool
 
-	trustedLock  sync.RWMutex
-	trustedCache map[string]*trusted
+	trustedCache         *lru.Cache[string, *trusted]
+	trustedCacheDisabled bool
 }
 
 func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
@@ -125,10 +131,21 @@ func (b *backend) initOCSPClient(cacheSize int) {
 func (b *backend) updatedConfig(config *config) {
 	b.ocspClientMutex.Lock()
 	defer b.ocspClientMutex.Unlock()
+
+	switch {
+	case config.RoleCacheSize < 0:
+		// Just to clean up memory
+		b.trustedCache.Purge()
+		b.trustedCacheDisabled = true
+	case config.RoleCacheSize == 0:
+		config.RoleCacheSize = defaultRoleCacheSize
+		fallthrough
+	default:
+		b.trustedCache.Resize(config.RoleCacheSize)
+		b.trustedCacheDisabled = false
+	}
 	b.initOCSPClient(config.OcspCacheSize)
 	b.configUpdated.Store(false)
-	b.flushTrustedCache()
-	return
 }
 
 func (b *backend) fetchCRL(ctx context.Context, storage logical.Storage, name string, crl *CRLInfo) error {
@@ -179,9 +196,9 @@ func (b *backend) storeConfig(ctx context.Context, storage logical.Storage, conf
 }
 
 func (b *backend) flushTrustedCache() {
-	b.trustedLock.Lock()
-	defer b.trustedLock.Unlock()
-	b.trustedCache = make(map[string]*trusted)
+	if b.trustedCache != nil { // defensive
+		b.trustedCache.Purge()
+	}
 }
 
 const backendHelp = `

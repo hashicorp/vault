@@ -584,12 +584,11 @@ func (b *backend) certificateExtensionsMetadata(clientCert *x509.Certificate, co
 // getTrustedCerts is used to load all the trusted certificates from the backend, cached
 
 func (b *backend) getTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert, conf *ocsp.VerifyConfig) {
-	b.trustedLock.RLock()
-	if trusted, found := b.trustedCache[certName]; found {
-		b.trustedLock.RUnlock()
-		return trusted.pool, trusted.trusted, trusted.trustedNonCAs, trusted.ocspConf
+	if !b.trustedCacheDisabled {
+		if trusted, found := b.trustedCache.Get(certName); found {
+			return trusted.pool, trusted.trusted, trusted.trustedNonCAs, trusted.ocspConf
+		}
 	}
-	b.trustedLock.RUnlock()
 	return b.loadTrustedCerts(ctx, storage, certName)
 }
 
@@ -659,16 +658,12 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 		}
 	}
 
-	// In order not to hold the lock long, we're okay with this work getting duplicated so that only caching the value
-	// holds the lock
-	b.trustedLock.Lock()
-	defer b.trustedLock.Unlock()
-	b.trustedCache[certName] = &trusted{
+	b.trustedCache.Add(certName, &trusted{
 		pool:          pool,
 		trusted:       trustedCerts,
 		trustedNonCAs: trustedNonCAs,
 		ocspConf:      conf,
-	}
+	})
 	return
 }
 
