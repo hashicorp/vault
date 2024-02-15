@@ -17,7 +17,6 @@ IF YOUR TOKEN HAS THE PROPER CAPABILITIES, THIS WILL CREATE AND DELETE ITEMS ON 
 Your token will also be shown on the screen in the example curl command output.`;
     this.flashMessages.warning(warning, {
       sticky: true,
-      preformatted: true,
     });
   }
 }
