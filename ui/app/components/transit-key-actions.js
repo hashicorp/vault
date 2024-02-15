@@ -24,6 +24,7 @@ import errorMessage from 'vault/utils/error-message';
  * />
  *
  * @param {string} selectedAction - This is the query param "action" value. Ex: hmac, verify, decrypt, etc. The only time this param can be empty is if a user is exporting a key
+ * @param {object} key - This is the transit key model.
  */
 
 const STARTING_TRANSIT_PROPS = {
@@ -117,10 +118,9 @@ export default class TransitKeyActions extends Component {
     if (options.wrapTTL) {
       this.props = { ...this.props, ...{ wrappedToken: resp.wrap_info.token } };
     }
-    // open the modal
-    this.isModalActive = !this.isModalActive;
+    this.isModalActive = true;
     // verify doesn't trigger a success message
-    if (this.selectedAction !== 'verify') {
+    if (this.args.selectedAction !== 'verify') {
       this.flashMessages.success(SUCCESS_MESSAGE_FOR_ACTION[action]);
     }
   }
@@ -130,6 +130,7 @@ export default class TransitKeyActions extends Component {
     // There are specific props we want to carry over from the previous tab.
     // Ex: carrying over this.props.context from the encrypt tab to the decrypt tab, but not carrying over this.props.plaintext.
     // To do this, we make a new object that contains the old this.props key/values from the previous tab that we want to keep. We then merge that new object into the STARTING_TRANSIT_PROPS object to come up with our new this.props tracked property.
+    // This action is passed to did-update in the component.
     const transferredProps = PROPS_TO_KEEP[this.args.selectedAction]?.reduce(
       (obj, key) => ({ ...obj, [key]: this.props[key] }),
       {}
