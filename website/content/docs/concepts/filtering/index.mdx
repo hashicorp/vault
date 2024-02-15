@@ -36,13 +36,13 @@ product/name == "Vault"
 Complex filter expressions also allow Boolean logic and parenthesis. For example:
 
 ```text
-(product/name == "Vault") and (timestamp < "2024-02-01") 
+(product/name == "Vault") and (timestamp < "2024-02-01")
 ```
 
 When parsing filter expressions, Vault ignores whitespace unless the whitespace
 is part of a literal string.
 
-Filter expression 
+Filter expression
 `product/name=="Vault"` and `product/name == "Vault"` generate the same results
 while `product/name == " Vault "` and `product/name == "Vault"` generate
 different results.
@@ -138,7 +138,7 @@ the following two expressions would be equivalent.
 
 ## Performance
 
-Filters consume a portion  of CPU time on the Vault node where they run.
+Filters consume a portion of CPU time on the Vault node where they run.
 
 <Note title="Regular expressions">
   Using multiple/complex expressions including regular expressions
