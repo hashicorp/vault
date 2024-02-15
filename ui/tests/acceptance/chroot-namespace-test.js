@@ -29,6 +29,21 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
     assert.dom('[data-test-badge-namespace]').includesText('root', 'Shows root namespace badge');
   });
 
+  test('root-only nav items are unavailable', async function (assert) {
+    await authPage.login();
+
+    ['Dashboard', 'Secrets Engines', 'Access', 'Tools', 'Policies', 'Client Count'].forEach((nav) => {
+      assert.dom(navLink(nav)).exists(`Shows ${nav} nav item in chroot listener`);
+    });
+    ['Replication', 'Raft Storage', 'License', 'Seal Vault'].forEach((nav) => {
+      assert.dom(navLink(nav)).doesNotExist(`Does not show ${nav} nav item in chroot listener`);
+    });
+
+    // cleanup namespace
+    await authPage.login();
+    await runCmd(`delete sys/namespaces/${namespace}`);
+  });
+
   test('a user with default policy should see nav items', async function (assert) {
     await authPage.login();
     // Create namespace
