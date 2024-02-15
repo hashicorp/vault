@@ -1,0 +1,6 @@
+<Hds::Toast @color={{this.color}} @onDismiss={{@close}} class="has-bottom-margin-s" as |T|>
+  <T.Title>{{this.title}}</T.Title>
+  <T.Description data-test-flash-message-body>
+    <p class="is-word-break">{{@flash.message}}</p>
+  </T.Description>
+</Hds::Toast>
