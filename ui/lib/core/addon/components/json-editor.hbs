@@ -27,6 +27,19 @@
               <Icon @name="reload" />
             </button>
           {{/if}}
+          {{#if (and @allowObscure @readOnly)}}
+            {{! For safety we only use obscured values in readonly mode }}
+            <div>
+              <Toggle
+                @name="revealValues"
+                @checked={{this.revealValues}}
+                @size="small"
+                @onChange={{fn (mut this.revealValues)}}
+              >
+                <span class="has-text-grey">Reveal values</span>
+              </Toggle>
+            </div>
+          {{/if}}
           <div class="toolbar-separator"></div>
           <CopyButton
             class="button is-transparent"
@@ -42,7 +55,7 @@
   {{/if}}
   <div
     {{code-mirror
-      content=(or @value @example)
+      content=(if this.showObfuscatedData this.obfuscatedData (or @value @example))
       extraKeys=@extraKeys
       gutters=@gutters
       lineNumbers=(if @readOnly false true)
