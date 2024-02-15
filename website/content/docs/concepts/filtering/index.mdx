@@ -158,13 +158,11 @@ not <Expression 1>
 <Matching Expression 1>
 ```
 
-Standard operator precedence can be expected for the various forms. For example,
-the following two expressions would be equivalent.
-
-```text
-<Expression 1> and not <Expression 2> or <Expression 3>
-
-( <Expression 1> and (not <Expression 2> )) or <Expression 3>
+Vault uses standard operator precedence when  resolving complex
+expressions. For example, the expression
+`<Expression 1> and not <Expression 2> or <Expression 3>` resolves
+the same as
+`( <Expression 1> and (not <Expression 2> )) or <Expression 3>`.
 ```
 
 ## Performance
