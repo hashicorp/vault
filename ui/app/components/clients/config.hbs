@@ -15,20 +15,40 @@
             month.
           </p>
           <div class="control is-flex has-bottom-margin-l">
-            <input
-              data-test-input="enabled"
-              type="checkbox"
-              id="enabled"
-              name="enabled"
-              class="toggle is-success is-small"
-              disabled={{@model.reportingEnabled}}
-              checked={{eq @model.enabled "On"}}
-              {{on "change" this.toggleEnabled}}
-            />
-            <label for="enabled" class="has-text-weight-bold is-size-8">
-              Data collection is
-              {{lowercase @model.enabled}}
-            </label>
+            {{#if @model.reportingEnabled}}
+              <Hds::TooltipButton
+                @text="Client tracking cannot be disabled for enterprise versions of Vault."
+                aria-label="More information about why this input is disabled"
+              >
+                <input
+                  data-test-input="enabled"
+                  type="checkbox"
+                  id="enabled"
+                  name="enabled"
+                  class="toggle is-success is-small"
+                  disabled={{true}}
+                  checked={{true}}
+                />
+                <label for="enabled" class="has-text-weight-bold is-size-8">
+                  Data collection is
+                  {{lowercase @model.enabled}}
+                </label>
+              </Hds::TooltipButton>
+            {{else}}
+              <input
+                data-test-input="enabled"
+                type="checkbox"
+                id="enabled"
+                name="enabled"
+                class="toggle is-success is-small"
+                checked={{eq @model.enabled "On"}}
+                {{on "change" this.toggleEnabled}}
+              />
+              <label for="enabled" class="has-text-weight-bold is-size-8">
+                Data collection is
+                {{lowercase @model.enabled}}
+              </label>
+            {{/if}}
           </div>
         {{else}}
           <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.validations}} />
