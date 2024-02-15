@@ -122,7 +122,7 @@ field.
 The `secret-path` granularity syncs the entire JSON content of the Vault secret as a single entry at the destination. If
 the destination does not support multi-value secret the JSON is encoded as a single-value JSON-string.
 
-The `secret-key` syncs each Vault key-value pair as a distinct entry at the destination. If the value itself is a list or map
+The `secret-key` granularity syncs each Vault key-value pair as a distinct entry at the destination. If the value itself is a list or map
 it is encoded as a JSON blob.
 
 Granularity can be updated. The new granularity only affects secrets newly associated with the destination and does
