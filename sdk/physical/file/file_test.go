@@ -242,11 +242,7 @@ func TestFileBackend(t *testing.T) {
 }
 
 func TestFileBackendCreateTempKey(t *testing.T) {
-	dir, err := ioutil.TempDir("", "vault")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	logger := logging.NewVaultLogger(log.Debug)
 
