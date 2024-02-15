@@ -872,8 +872,7 @@ next time a token, with that policy attached, is used to make a call to Vault.
 
 ## UI Related
 
-The Vault UI has a few considerations that are different to the capabilities 
-granted to all other CLI or API paths. When the [UI is `enabled`](/vault/docs/configuration/ui#activating-the-vault-ui) 
+The Vault UI may require different ACL capabilities compared to the CLI. When [enabled](/vault/docs/configuration/ui#activating-the-vault-ui) 
 and using the `default` policy the following paths are automatically included:
 
  - [/sys/internal/ui/mounts](/vault/api-docs/system/internal-ui-mounts) 
