@@ -37,7 +37,7 @@ All audit device types ([file](/vault/docs/audit/file), [socket](/vault/docs/aud
 and [syslog](/vault/docs/audit/syslog)) support the `filter` option at the time they
 are enabled. After successfully enabling a device with a filter, every audit entry
 that Vault sends to that audit device will be compared to the expression in the filter.
-Only audit entries that match the filter will then be written to the device's audit log.
+Only audit entries that match the filter will be written to the device's audit log.
 
 ### Valid `filter` properties
 
