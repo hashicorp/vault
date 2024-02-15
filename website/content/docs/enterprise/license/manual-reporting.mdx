@@ -123,54 +123,51 @@ The default retention period is 400 days.
 
 ```json
 {
-    "payload_version": "1",
-    "license_id": "934b62bd-7e7b-7872-7341-9683ecd9acb4",
-    "product": "vault",
-    "product_version": "1.14.0",
-    "export_timestamp": "2023-05-24T10:11:12Z",
-    "snapshots": [
-        {
-            "snapshot_version": 1,
-            "snapshot_id": "01GW2Y117Z2BZ7MGS9YQXPF2A4",
-            "process_id": "01GVKT7533WF8TBNSJYZV0T10F",
-            "timestamp": "2023-06-23T20:33:32.927Z",
-            "schema_version": "1.0.0",
-            "service": "vault",
-            "metrics": {
-                "vault.clientcount.current_month_estimate": {
-                    "key": "vault.clientcount.current_month_estimate",
-                    "kind": "sum",
-                    "mode": "write",
-                    "value": 40,
-                    "labels": {
-                        "type": {
-                            "entity": 30,
-                            "nonentity": 10
-                        }
-                    }
-                },
-                "vault.clientcount.previous_month_complete": {
-                    "key": "vault.clientcount.previous_month_complete",
-                    "kind": "sum",
-                    "mode": "write",
-                    "value": 20,
-                    "labels": {
-                        "type": {
-                            "entity": 15,
-                            "nonentity": 5
-                        }
-                    }
-                }
-            }
-        }
-    ],
-    "metadata": {
-        "vault": {
-            "billing_start": "2023-01-20T00:00:00Z",
-            "cluster_id": "e9828fd7-23e9-4393-aa37-60ed77b944c2"
-        }
+  "snapshot_version": 2,
+  "id": "0001JWAY00BRF8TEXC9CVRHBAC",
+  "timestamp": "2024-02-08T16:55:28.085215-08:00",
+  "schema_version": "2.0.0",
+  "product": "vault",
+  "process_id": "01HP5NJS21HN50FY0CBS0SYGCH",
+  "metrics": {
+    "clientcount.current_month_estimate.type.entity": {
+      "key": "clientcount.current_month_estimate.type.entity",
+      "value": 20,
+      "mode": "write"
+    },
+    "clientcount.current_month_estimate.type.nonentity": {
+      "key": "clientcount.current_month_estimate.type.nonentity",
+      "value": 11,
+      "mode": "write"
+    },
+    "clientcount.current_month_estimate.type.secret_sync": {
+      "key": "clientcount.current_month_estimate.type.secret_sync",
+      "value": 0,
+      "mode": "write"
+    },
+    "clientcount.previous_month_complete.type.entity": {
+      "key": "clientcount.previous_month_complete.type.entity",
+      "value": 0,
+      "mode": "write"
+    },
+    "clientcount.previous_month_complete.type.nonentity": {
+      "key": "clientcount.previous_month_complete.type.nonentity",
+      "value": 0,
+      "mode": "write"
+    },
+    "clientcount.previous_month_complete.type.secret_sync": {
+      "key": "clientcount.previous_month_complete.type.secret_sync",
+      "value": 0,
+      "mode": "write"
     }
-}
+  },
+  "product_version": "1.16.0+ent",
+  "license_id": "7d68b16a-74fe-3b9f-a1a7-08cf461fff1c",
+  "checksum": 6861637915450723051,
+  "metadata": {
+    "billing_start": "2023-05-04T00:00:00Z",
+    "cluster_id": "16d0ff5b-9d40-d7a7-384c-c9b95320c60e"
+  }
 ```
 
 </CodeBlockConfig>
