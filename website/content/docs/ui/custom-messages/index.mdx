@@ -5,7 +5,15 @@ description: |-
   Custom messages allow operators to configure system-wide messages.
 ---
 
+# Custom Messages
+
+-> You must have **Vault 1.16.0 or higher** installed.
+
+Custom messages allow operators to configure system-wide messages and for vault users to view these messages.
+
 # Configure a custom message
+
+-> You must be a Vault operator or have capabilities to create a message.
 
 1. To create a message, navigate to the Settings section in the sidebar called **Custom Messages**.
 2. On the **custom messages** page, each tab indicates where you would like the custom message to be created.
@@ -17,3 +25,25 @@ description: |-
    - Fill in the message details like title, message, as well as an optional link that you might want to include at the end of your message.
    - Select the message start time. The current message start time will default to the following day at 12am your local timezone.
    - Select a message end time. By default messages will be never expire, however, there is also an option to set a specific expiration date.
+   - You may preview the message by clicking **Preview**.
+   - Click **Create message** to create the message. Now, the message will appear on the specified location at the specified date and time.
+
+# Edit a custom message
+
+-> You must be a Vault operator or have capabilities to create or edit a message.
+
+There are two ways to navigate to the edit custom message screen:
+
+- Navigate to the main screen of Custom messages. Find the custom message you want to edit and click the three dots on the right - it will prompt a dropdown with an option to select **Edit**.
+- Click the message you want to delete on the Custom message main screen and there should be a button called **Edit message**.
+  After clicking **Edit message** in either of the options, fill in the information that you would like to edit for the custom message.
+
+# Delete a custom message
+
+-> You must be a Vault operator or have capabilities to delete a message. The deletion of a message is a **permanent** action.
+
+There are two ways to delete a custom message:
+
+- Navigate to the Custom Messages main screen and click on the three dots to delete a message. It will ask you to confirm deletion of the message.
+
+- Click on a custom message on the main screen and click on the **Delete message** button in the toolbar. It will ask you to confirm deletion of the message.
