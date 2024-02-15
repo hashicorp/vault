@@ -2025,12 +2025,16 @@
                 ]
               },
               {
-                "title": "Examples",
-                "path": "platform/k8s/vso/examples"
+                "title": "Secret Data Transformation",
+                "path": "platform/k8s/vso/secret-transformation"
               },
               {
                 "title": "Helm Chart",
                 "path": "platform/k8s/vso/helm"
+              },
+              {
+                "title": "Examples",
+                "path": "platform/k8s/vso/examples"
               },
               {
                 "title": "Telemetry",
