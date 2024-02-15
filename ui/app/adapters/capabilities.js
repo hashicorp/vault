@@ -22,12 +22,8 @@ export default ApplicationAdapter.extend({
     return [`${relativeNamespace}/${path.replace(/^\//, '')}`];
   },
 
-  findRecord(store, type, id) {
-    const paths = this.formatPaths(id);
-    return this.ajax(this.buildURL(type), 'POST', {
-      data: { paths },
-      namespace: sanitizePath(this.namespaceService.userRootNamespace),
-    }).catch((e) => {
+  async findRecord(store, type, id) {
+    return this.ajax(this.buildURL(type), 'POST', { data: { paths: [id] } }).catch((e) => {
       if (e instanceof AdapterError) {
         set(e, 'policyPath', 'sys/capabilities-self');
       }
