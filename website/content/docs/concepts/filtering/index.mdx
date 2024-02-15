@@ -85,7 +85,7 @@ different results.
 <Tab heading="Selectors">
 
 
-Selectors must be valid JSON pointers enclosed in quotes with a  leading slash (`/`).
+Selectors must be valid JSON pointers enclosed in quotes with a leading slash (`/`).
 
 
 JSON pointers use forward slashes to define paths through a JSON block. For
@@ -119,18 +119,19 @@ string. Numbers and strings should be quoted in double quotes or backticks.
 Strings quoted in backticks are treated as literal values and escape sequences
 like `\n` are not expanded.
 
-Value             | Type    | Expanded value
------------------ | ------- | ------------------------------ 
-"Vault\tBoundary" | string  | "Vault	Boundary"
-`Vault\tBoundary` | string  | "Vault\tBoundary"
-"10"              | integer | "10"
-`10`              | integer | "10"
-"0.75"            | float   | "0.75"
+| Value             | Type    | Expanded value    |
+|-------------------|---------|-------------------|
+| "Vault\tBoundary" | string  | "Vault	Boundary" |
+| `Vault\tBoundary` | string  | "Vault\tBoundary" |
+| "10"              | integer | "10"              |
+| `10`              | integer | "10"              |
+| "0.75"            | float   | "0.75"            |
 
 
 </Tab>
 
 </Tabs>
+
 ## Complex expressions
 
 There are several methods for connecting expressions, including
@@ -158,12 +159,12 @@ not <Expression 1>
 <Matching Expression 1>
 ```
 
-Vault uses standard operator precedence when  resolving complex
+Vault uses standard operator precedence when resolving complex
 expressions. For example, the expression
 `<Expression 1> and not <Expression 2> or <Expression 3>` resolves
 the same as
 `( <Expression 1> and (not <Expression 2> )) or <Expression 3>`.
-```
+
 
 ## Performance
 
