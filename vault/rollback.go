@@ -265,7 +265,9 @@ func (m *RollbackManager) finishRollback(rs *rollbackState, err error, fullPath 
 		m.inflightLock.Lock()
 		defer m.inflightLock.Unlock()
 	}
-	delete(m.inflight, fullPath)
+	if _, ok := m.inflight[fullPath]; ok {
+		delete(m.inflight, fullPath)
+	}
 }
 
 // attemptRollback invokes a RollbackOperation for the given path
