@@ -16,12 +16,19 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/ocsp"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const operationPrefixCert = "cert"
+const (
+	operationPrefixCert = "cert"
+	trustedCertPath     = "cert/"
+
+	defaultRoleCacheSize = 200
+	maxRoleCacheSize     = 10000
+)
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
@@ -32,7 +39,11 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 }
 
 func Backend() *backend {
-	var b backend
+	// ignoring the error as it only can occur with <= 0 size
+	cache, _ := lru.New[string, *trusted](defaultRoleCacheSize)
+	b := backend{
+		trustedCache: cache,
+	}
 	b.Backend = &framework.Backend{
 		Help: backendHelp,
 		PathsSpecial: &logical.Paths{
@@ -59,6 +70,13 @@ func Backend() *backend {
 	return &b
 }
 
+type trusted struct {
+	pool          *x509.CertPool
+	trusted       []*ParsedCert
+	trustedNonCAs []*ParsedCert
+	ocspConf      *ocsp.VerifyConfig
+}
+
 type backend struct {
 	*framework.Backend
 	MapCertId *framework.PathMap
@@ -68,6 +86,9 @@ type backend struct {
 	ocspClientMutex sync.RWMutex
 	ocspClient      *ocsp.Client
 	configUpdated   atomic.Bool
+
+	trustedCache         *lru.Cache[string, *trusted]
+	trustedCacheDisabled atomic.Bool
 }
 
 func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
@@ -98,6 +119,7 @@ func (b *backend) invalidate(_ context.Context, key string) {
 	case key == "config":
 		b.configUpdated.Store(true)
 	}
+	b.flushTrustedCache()
 }
 
 func (b *backend) initOCSPClient(cacheSize int) {
@@ -109,9 +131,21 @@ func (b *backend) initOCSPClient(cacheSize int) {
 func (b *backend) updatedConfig(config *config) {
 	b.ocspClientMutex.Lock()
 	defer b.ocspClientMutex.Unlock()
+
+	switch {
+	case config.RoleCacheSize < 0:
+		// Just to clean up memory
+		b.trustedCacheDisabled.Store(true)
+		b.trustedCache.Purge()
+	case config.RoleCacheSize == 0:
+		config.RoleCacheSize = defaultRoleCacheSize
+		fallthrough
+	default:
+		b.trustedCache.Resize(config.RoleCacheSize)
+		b.trustedCacheDisabled.Store(false)
+	}
 	b.initOCSPClient(config.OcspCacheSize)
 	b.configUpdated.Store(false)
-	return
 }
 
 func (b *backend) fetchCRL(ctx context.Context, storage logical.Storage, name string, crl *CRLInfo) error {
@@ -159,6 +193,12 @@ func (b *backend) storeConfig(ctx context.Context, storage logical.Storage, conf
 	}
 	b.updatedConfig(config)
 	return nil
+}
+
+func (b *backend) flushTrustedCache() {
+	if b.trustedCache != nil { // defensive
+		b.trustedCache.Purge()
+	}
 }
 
 const backendHelp = `
