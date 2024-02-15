@@ -8,7 +8,7 @@ import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { allEngines, isAddonEngine } from 'vault/helpers/mountable-secret-engines';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
 import { assert } from '@ember/debug';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
