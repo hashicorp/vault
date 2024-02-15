@@ -8,8 +8,7 @@ import { computed } from '@ember/object';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
-// these arrays define the order in which the fields will be displayed
-// see
+// these arrays define the order in which the fields will be displayed, see:
 // https://developer.hashicorp.com/vault/api-docs/secret/transform#create-update-transformation-deprecated-1-6
 const TYPES = [
   {
