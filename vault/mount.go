@@ -761,7 +761,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 
 		unlock()
 		// We failed to evaluate filtered paths so we are undoing the mount operation
-		if unmountInternalErr := c.unmountInternal(ctx, entry.Path, MountTableUpdateStorage, true); unmountInternalErr != nil {
+		if unmountInternalErr := c.unmountInternal(ctx, entry.Path, MountTableUpdateStorage); unmountInternalErr != nil {
 			c.logger.Error("failed to unmount", "error", unmountInternalErr)
 		}
 		return err
@@ -843,7 +843,7 @@ func (c *Core) unmount(ctx context.Context, path string) error {
 	}
 
 	// Unmount mount internally
-	if err := c.unmountInternal(ctx, path, MountTableUpdateStorage, true); err != nil {
+	if err := c.unmountInternal(ctx, path, MountTableUpdateStorage); err != nil {
 		return err
 	}
 
@@ -855,7 +855,7 @@ func (c *Core) unmount(ctx context.Context, path string) error {
 	return nil
 }
 
-func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage, doRollback bool) error {
+func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage bool) error {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return err
@@ -888,7 +888,7 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage, 
 	}
 
 	rCtx := namespace.ContextWithNamespace(c.activeContext, ns)
-	if backend != nil && c.rollback != nil && doRollback {
+	if backend != nil && c.rollback != nil {
 		// Invoke the rollback manager a final time. This is not fatal as
 		// various periodic funcs (e.g., PKI) can legitimately error; the
 		// periodic rollback manager logs these errors rather than failing
@@ -1087,7 +1087,7 @@ func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry
 // remountForceInternal takes a copy of the mount entry for the path and fully unmounts
 // and remounts the backend to pick up any changes, such as filtered paths.
 // Should be only used for internal usage.
-func (c *Core) remountForceInternal(ctx context.Context, path string, updateStorage, doRollback bool) error {
+func (c *Core) remountForceInternal(ctx context.Context, path string, updateStorage bool) error {
 	me := c.router.MatchingMountEntry(ctx, path)
 	if me == nil {
 		return fmt.Errorf("cannot find mount for path %q", path)
@@ -1098,7 +1098,7 @@ func (c *Core) remountForceInternal(ctx context.Context, path string, updateStor
 		return err
 	}
 
-	if err := c.unmountInternal(ctx, path, updateStorage, doRollback); err != nil {
+	if err := c.unmountInternal(ctx, path, updateStorage); err != nil {
 		return err
 	}
 
@@ -1118,11 +1118,11 @@ func (c *Core) remountSecretsEngineCurrentNamespace(ctx context.Context, src, ds
 
 	srcPathDetails := c.splitNamespaceAndMountFromPath(ns.Path, src)
 	dstPathDetails := c.splitNamespaceAndMountFromPath(ns.Path, dst)
-	return c.remountSecretsEngine(ctx, srcPathDetails, dstPathDetails, updateStorage, true)
+	return c.remountSecretsEngine(ctx, srcPathDetails, dstPathDetails, updateStorage)
 }
 
 // remountSecretsEngine is used to remount a path at a new mount point.
-func (c *Core) remountSecretsEngine(ctx context.Context, src, dst namespace.MountPathDetails, updateStorage, doRollback bool) error {
+func (c *Core) remountSecretsEngine(ctx context.Context, src, dst namespace.MountPathDetails, updateStorage bool) error {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return err
@@ -1168,7 +1168,7 @@ func (c *Core) remountSecretsEngine(ctx context.Context, src, dst namespace.Moun
 		// periodic rollback manager logs these errors rather than failing
 		// replication like returning this error would do.
 		rCtx := namespace.ContextWithNamespace(c.activeContext, ns)
-		if c.rollback != nil && c.router.MatchingBackend(ctx, srcRelativePath) != nil && doRollback {
+		if c.rollback != nil && c.router.MatchingBackend(ctx, srcRelativePath) != nil {
 			if err := c.rollback.Rollback(rCtx, srcRelativePath); err != nil {
 				c.logger.Error("ignoring rollback error during remount", "error", err, "path", src.Namespace.Path+src.MountPath)
 				err = nil

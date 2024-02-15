@@ -510,7 +510,7 @@ func (c *Core) remountCredential(ctx context.Context, src, dst namespace.MountPa
 // remountCredEntryForceInternal takes a copy of the mount entry for the path and fully
 // unmounts and remounts the backend to pick up any changes, such as filtered
 // paths. This should be only used internal.
-func (c *Core) remountCredEntryForceInternal(ctx context.Context, path string, updateStorage, _ bool) error {
+func (c *Core) remountCredEntryForceInternal(ctx context.Context, path string, updateStorage bool) error {
 	fullPath := credentialRoutePrefix + path
 	me := c.router.MatchingMountEntry(ctx, fullPath)
 	if me == nil {
