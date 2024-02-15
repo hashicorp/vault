@@ -112,14 +112,21 @@ The selector would be `/product/name`.
 
 <Tab heading="Selector values">
 
-Values are used by matching operators to create an expression. Values can be any
-valid selector, a number, or a string. It is best practice to quote values.
 
-Numbers can be base 10 integers or floating point numbers.
+Selector values can be any valid selector, integer, floating point number, or
+string. Numbers and strings should be quoted in double quotes or backticks.
 
-When quoting strings, they may either be enclosed in double quotes or backticks.
-When enclosed in backticks they are treated as raw strings and escape sequences
-such as `\n` will not be expanded.
+Strings quoted in backticks are treated as literal values and escape sequences
+like `\n` are not expanded.
+
+Value             | Type    | Expanded value
+----------------- | ------- | ------------------------------ 
+"Vault\tBoundary" | string  | "Vault	Boundary"
+`Vault\tBoundary` | string  | "Vault\tBoundary"
+"10"              | integer | "10"
+`10`              | integer | "10"
+"0.75"            | float   | "0.75"
+
 
 ## Connect expressions
 
