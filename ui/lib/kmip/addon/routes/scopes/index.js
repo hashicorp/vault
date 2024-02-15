@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import ListRoute from 'core/mixins/list-route';
 
 export default Route.extend(ListRoute, {

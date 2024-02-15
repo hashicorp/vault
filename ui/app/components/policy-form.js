@@ -5,7 +5,7 @@
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import trimRight from 'vault/utils/trim-right';
 import { tracked } from '@glimmer/tracking';

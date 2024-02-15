@@ -40,6 +40,7 @@ install_external() {
     github.com/favadi/protoc-go-inject-tag@latest
     github.com/golangci/misspell/cmd/misspell@latest
     github.com/golangci/revgrep/cmd/revgrep@latest
+    github.com/rinchsan/gosimports/cmd/gosimports@latest
     golang.org/x/tools/cmd/goimports@latest
     google.golang.org/protobuf/cmd/protoc-gen-go@latest
     google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
@@ -65,6 +66,7 @@ check_external() {
     buf
     gofumpt
     goimports
+    gosimports
     gotestsum
     misspell
     protoc-gen-go

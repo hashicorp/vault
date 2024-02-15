@@ -5,7 +5,7 @@
 
 import AdapterError from '@ember-data/adapter/error';
 import AuthConfigComponent from './config';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 

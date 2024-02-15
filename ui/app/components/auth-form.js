@@ -5,7 +5,7 @@
 
 import Ember from 'ember';
 import { next } from '@ember/runloop';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { match, alias, or } from '@ember/object/computed';
 import { dasherize } from '@ember/string';
 import Component from '@ember/component';

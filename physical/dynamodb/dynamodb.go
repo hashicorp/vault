@@ -18,21 +18,19 @@ import (
 	"sync/atomic"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
-
 	metrics "github.com/armon/go-metrics"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/cenkalti/backoff/v3"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/physical"
-
-	"github.com/cenkalti/backoff/v3"
 )
 
 const (
