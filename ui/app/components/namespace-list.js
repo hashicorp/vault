@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { next } from '@ember/runloop';
 import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { task } from 'ember-concurrency';
@@ -10,7 +16,9 @@ export default class NamespaceListComponent extends Component {
     try {
       yield namespace.destroyRecord();
       this.flashMessages.success(`Successfully deleted namespace: ${id}`);
-      this.args.onSuccess();
+      next(() => {
+        this.args.onSuccess();
+      });
     } catch (e) {
       const errString = errorMessage(e);
       this.flashMessages.danger(`There was an error deleting this namespace: ${errString}`);

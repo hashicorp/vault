@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <ListView @items={{@items}} @itemNoun="namespace" @paginationRouteName="vault.cluster.access.namespaces" as |list|>
   {{#if list.empty}}
     <list.empty>
