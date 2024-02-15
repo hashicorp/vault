@@ -82,11 +82,7 @@ different results.
 
 ### Selectors
 
-Selectors are used by matching operators to create an expression. Inputs to
-filter expressions are JSON (or JSON-derived); selectors therefore use [JSON
-Pointer](https://tools.ietf.org/html/rfc6901) to select values from the input.
-Each selector must be enclosed in quotes and contain a valid JSON Pointer path,
-including leading slash (`/`).
+Selectors must be valid JSON pointers enclosed in quotes with a  leading slash (`/`).
 
 ```text
 // Selects the value `zipzap` from the input `{ "foo": { "bar": "zipzap" } }`
