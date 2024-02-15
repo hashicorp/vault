@@ -209,25 +209,15 @@ func (a *AuditBroker) GetHash(ctx context.Context, name string, input string) (s
 // LogRequest is used to ensure all the audit backends have an opportunity to
 // log the given request and that *at least one* succeeds.
 func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput) (ret error) {
+	a.RLock()
+	defer a.RUnlock()
+
 	// If no backends are registered then we have no devices to log the request.
 	if len(a.backends) < 1 {
 		return nil
 	}
 
 	defer metrics.MeasureSince([]string{"audit", "log_request"}, time.Now())
-
-	a.RLock()
-	defer a.RUnlock()
-
-	if in.Request.InboundSSCToken != "" {
-		if in.Auth != nil {
-			reqAuthToken := in.Auth.ClientToken
-			in.Auth.ClientToken = in.Request.InboundSSCToken
-			defer func() {
-				in.Auth.ClientToken = reqAuthToken
-			}()
-		}
-	}
 
 	var retErr *multierror.Error
 
@@ -243,11 +233,6 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput) (ret
 			failure = 1.0
 		}
 		metrics.IncrCounter([]string{"audit", "log_request_failure"}, failure)
-	}()
-
-	headers := in.Request.Headers
-	defer func() {
-		in.Request.Headers = headers
 	}()
 
 	e, err := audit.NewEvent(audit.RequestType)
@@ -299,21 +284,15 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput) (ret
 // LogResponse is used to ensure all the audit backends have an opportunity to
 // log the given response and that *at least one* succeeds.
 func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput) (ret error) {
+	a.RLock()
+	defer a.RUnlock()
+
 	// If no backends are registered then we have no devices to send audit entries to.
 	if len(a.backends) < 1 {
 		return nil
 	}
 
 	defer metrics.MeasureSince([]string{"audit", "log_response"}, time.Now())
-
-	a.RLock()
-	defer a.RUnlock()
-
-	if in.Request.InboundSSCToken != "" && in.Auth != nil {
-		reqAuthToken := in.Auth.ClientToken
-		in.Auth.ClientToken = in.Request.InboundSSCToken
-		defer func() { in.Auth.ClientToken = reqAuthToken }()
-	}
 
 	var retErr *multierror.Error
 
@@ -329,11 +308,6 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput) (re
 			failure = 1.0
 		}
 		metrics.IncrCounter([]string{"audit", "log_response_failure"}, failure)
-	}()
-
-	headers := in.Request.Headers
-	defer func() {
-		in.Request.Headers = headers
 	}()
 
 	e, err := audit.NewEvent(audit.ResponseType)
