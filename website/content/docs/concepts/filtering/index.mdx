@@ -87,10 +87,26 @@ different results.
 
 Selectors must be valid JSON pointers enclosed in quotes with a  leading slash (`/`).
 
-```text
-// Selects the value `zipzap` from the input `{ "foo": { "bar": "zipzap" } }`
-"/foo/bar"
+
+JSON pointers use forward slashes to define paths through a JSON block. For
+example, to target the product name in:
+
+```json
+{ "product":
+  {
+    "name": "Vault",
+    "version": "1.16.0"
+  },
+  {
+    "name": "Boundary",
+    "version": "0.15.0"
+  }
+}
+
 ```
+
+The selector would be `/product/name`.
+
 
 ### Values
 
