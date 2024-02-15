@@ -108,7 +108,7 @@ Let's look at some name template examples and the resulting secret name at the s
 | {{ .MountAccessor }}_{{ .SecretKey }}    | kv_1234_foo            |
 | {{ .SecretPath \| replace \"/\" \"_\" }} | path_to_secret1        |
 
-Name templates can be updated. The new template only effective for new secrets associated with the destination and does
+Name templates can be updated. The new template is only effective for new secrets associated with the destination and does
 not affect the secrets synced with the previous template. It is possible to update an association to force a recreate operation.
 The secret synced with the old template will be deleted and a new secret using the new template version will be synced.
 
