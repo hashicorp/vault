@@ -138,6 +138,10 @@ For example, enable the "foo" auth method will make it accessible at
     unversioned plugin that may have been registered, the latest versioned plugin
     registered, or a built-in plugin in that order of precedence.
 
+  - `identity_token_key` `(string: "")` - The key to use for signing identity tokens.
+    If not provided, this will default to Vault's OIDC
+    [default key](/vault/docs/concepts/oidc-provider#keys).
+
 Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:
 
