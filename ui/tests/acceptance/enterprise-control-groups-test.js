@@ -124,7 +124,7 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
     await settled();
     await setupControlGroup(this);
     await settled();
-    await visit('/vault/secrets/kv-v2-mount/show/foo');
+    await visit('/vault/secrets/kv-v2-mount/kv/foo/details');
 
     assert.ok(
       await waitUntil(() => currentRouteName() === 'vault.cluster.access.control-group-accessor'),
