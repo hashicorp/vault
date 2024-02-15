@@ -204,7 +204,6 @@ func (m *RollbackManager) lookupRollbackLocked(fullPath string) *rollbackState {
 	defer metrics.SetGauge([]string{"rollback", "inflight"}, float32(len(m.inflight)))
 	rsInflight := m.inflight[fullPath]
 	return rsInflight
-
 }
 
 // newRollbackLocked creates a new rollback state and adds it to the inflight
