@@ -88,7 +88,7 @@ type backend struct {
 	configUpdated   atomic.Bool
 
 	trustedCache         *lru.Cache[string, *trusted]
-	trustedCacheDisabled bool
+	trustedCacheDisabled atomic.Bool
 }
 
 func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
@@ -135,14 +135,14 @@ func (b *backend) updatedConfig(config *config) {
 	switch {
 	case config.RoleCacheSize < 0:
 		// Just to clean up memory
+		b.trustedCacheDisabled.Store(true)
 		b.trustedCache.Purge()
-		b.trustedCacheDisabled = true
 	case config.RoleCacheSize == 0:
 		config.RoleCacheSize = defaultRoleCacheSize
 		fallthrough
 	default:
 		b.trustedCache.Resize(config.RoleCacheSize)
-		b.trustedCacheDisabled = false
+		b.trustedCacheDisabled.Store(false)
 	}
 	b.initOCSPClient(config.OcspCacheSize)
 	b.configUpdated.Store(false)
