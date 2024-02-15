@@ -23,7 +23,11 @@ export default ApplicationAdapter.extend({
   },
 
   async findRecord(store, type, id) {
-    return this.ajax(this.buildURL(type), 'POST', { data: { paths: [id] } }).catch((e) => {
+    const paths = this.formatPaths(id);
+    return this.ajax(this.buildURL(type), 'POST', {
+      data: { paths },
+      namespace: sanitizePath(this.namespaceService.userRootNamespace),
+    }).catch((e) => {
       if (e instanceof AdapterError) {
         set(e, 'policyPath', 'sys/capabilities-self');
       }
