@@ -13,9 +13,39 @@ expressions to control how Vault processes results.
 
 ## Filter expression syntax
 
-A single expression is a matching operator with a selector and value. They are
-written in plain text format, and Boolean logic and parenthesization are
-supported. In general whitespace is ignored, except within literal strings.
+Basic filter expressions are always written in plain text with a
+**matching operator**, a **selector**, and a **selector value**.
+
+- the **matching operator** tells Vault how to compare the selector and selector
+  value.
+- the **selector** is a [JSON pointer](https://tools.ietf.org/html/rfc6901) that
+  indicates which field or parameter in a JSON object to consider.
+- the **selector value** is a JSON pointer, number, or string that defines a
+  pattern Vault can filter against.
+
+For example, in the filter expression:
+
+```text
+product/name == "Vault"
+```
+
+- Equality (`==`) is the matching operator.
+- The JSON pointer `product/name` is the selector.
+- The string "Vault" is the selector value.
+
+Complex filter expressions also allow Boolean logic and parenthesis. For example:
+
+```text
+(product/name == "Vault") and (timestamp < "2024-02-01") 
+```
+
+When parsing filter expressions, Vault ignores whitespace unless the whitespace
+is part of a literal string.
+
+Filter expression 
+`product/name=="Vault"` and `product/name == "Vault"` generate the same results
+while `product/name == " Vault "` and `product/name == "Vault"` generate
+different results.
 
 ### Matching operators
 
