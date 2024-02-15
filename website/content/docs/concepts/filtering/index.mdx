@@ -145,8 +145,7 @@ Filters consume a portion of CPU time on the Vault node where they run.
   (regex) will have a larger impact on performance than fewer/simpler filters.
 </Note>
 
-We recommend that all filters are tested in pre-production environments in order
-to ensure correctness.
+Always test your filters in pre-production environments to ensure correctness.
 
 Ideally you should [codify your management of Vault](/vault/tutorials/operations/codify-mgmt-vault-terraform)
 using tools such as [Terraform](https://www.terraform.io/), to prevent accidentally enabling an audit device
