@@ -86,10 +86,18 @@
           @textToCopy={{@plaintext}}
           @color="secondary"
           @container="#transit-datakey-modal"
+          @isFullWidth={{true}}
+          @isTruncated={{true}}
         />
       {{/if}}
       <h2 class="has-text-weight-semibold is-6">Ciphertext</h2>
-      <Hds::Copy::Snippet @textToCopy={{@ciphertext}} @color="secondary" @container="#transit-datakey-modal" />
+      <Hds::Copy::Snippet
+        @textToCopy={{@ciphertext}}
+        @color="secondary"
+        @container="#transit-datakey-modal"
+        @isFullWidth={{true}}
+        @isTruncated={{true}}
+      />
     </M.Body>
     <M.Footer as |F|>
       <Hds::Button @text="Close" {{on "click" F.close}} />

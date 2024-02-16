@@ -116,7 +116,7 @@ export default class TransitKeyActions extends Component {
       this.props = { ...this.props, ...resp.data };
 
       // While we do not pass ciphertext as a value to the JsonEditor, so that navigating from rewrap to decrypt will not show ciphertext in the editor, we still want to clear it from the props after rewrapping.
-      if (action === 'rewrap' && !this.key.supportsEncryption) {
+      if (action === 'rewrap' && !this.args.key.supportsEncryption) {
         this.props.ciphertext = null;
       }
     }

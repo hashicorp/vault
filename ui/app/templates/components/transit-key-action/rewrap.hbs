@@ -71,7 +71,13 @@
     </M.Header>
     <M.Body>
       <h2 class="title is-6">Ciphertext</h2>
-      <Hds::Copy::Snippet @textToCopy={{@ciphertext}} @color="secondary" @container="#transit-rewrap-modal" />
+      <Hds::Copy::Snippet
+        @textToCopy={{@ciphertext}}
+        @color="secondary"
+        @container="#transit-rewrap-modal"
+        @isFullWidth={{true}}
+        @isTruncated={{true}}
+      />
     </M.Body>
     <M.Footer as |F|>
       <Hds::Button @text="Close" {{on "click" F.close}} />
