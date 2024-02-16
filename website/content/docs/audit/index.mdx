@@ -137,20 +137,7 @@ docs](/vault/api-docs/system/audit) for more details.
 
 ## Common configuration options
 
-- `elide_list_responses` `(bool: false)` - See [Eliding list response
-  bodies](/vault/docs/audit#eliding-list-response-bodies) below.
-
-- `format` `(string: "json")` - Allows selecting the output format. Valid values
-  are `"json"` and `"jsonx"`, which formats the normal log entries as XML.
-
-- `hmac_accessor` `(bool: true)` - If enabled, enables the hashing of token
-  accessor.
-
-- `log_raw` `(bool: false)` - If enabled, logs the security sensitive
-  information without hashing, in the raw format.
-
-- `prefix` `(string: "")` - A customizable string prefix to write before the
-  actual log line.
+@include 'audit-options-common.mdx'
 
 ## Eliding list response bodies
 
