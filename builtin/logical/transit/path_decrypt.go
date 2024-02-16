@@ -198,7 +198,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			continue
 		}
 
-		paddingScheme := d.Get("padding_scheme").(string)
+		paddingScheme := d.Get("padding_scheme").(keysutil.PaddingScheme)
 		var factory interface{}
 		if item.AssociatedData != "" {
 			if !p.Type.AssociatedDataSupported() {
@@ -225,7 +225,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			}
 		}
 
-		plaintext, err := p.DecryptWithFactory(item.DecodedContext, item.DecodedNonce, item.Ciphertext, factory, managedKeyFactory)
+		plaintext, err := p.DecryptWithFactory(item.DecodedContext, item.DecodedNonce, item.Ciphertext, factory, managedKeyFactory, paddingScheme)
 		if err != nil {
 			switch err.(type) {
 			case errutil.InternalError:

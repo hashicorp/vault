@@ -148,7 +148,7 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 		return nil, err
 	}
 
-	paddingScheme := d.Get("padding_scheme").(string)
+	paddingScheme := d.Get("padding_scheme").(keysutil.PaddingScheme)
 	var managedKeyFactory ManagedKeyFactory
 	if p.Type == keysutil.KeyType_MANAGED_KEY {
 		managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
@@ -165,7 +165,7 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
-	ciphertext, err := p.EncryptWithFactory(ver, context, nonce, base64.StdEncoding.EncodeToString(newKey), nil, managedKeyFactory)
+	ciphertext, err := p.EncryptWithFactory(ver, context, nonce, base64.StdEncoding.EncodeToString(newKey), nil, managedKeyFactory, paddingScheme)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
