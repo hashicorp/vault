@@ -13,7 +13,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
+	"github.com/cenkalti/backoff/v3"
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
@@ -143,6 +145,10 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	}
 	ts.lookupMap = lookupMap
 
+	// Create exponential backoff object to calculate backoff time before restarting a failed
+	// consul template server
+	restartBackoff := backoff.NewExponentialBackOff()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -190,6 +196,13 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			if ts.config.AgentConfig.TemplateConfig != nil && ts.config.AgentConfig.TemplateConfig.ExitOnRetryFailure {
 				return fmt.Errorf("template server: %w", err)
 			}
+
+			// Calculate the amount of time to backoff using exponential backoff
+			sleep := restartBackoff.NextBackOff()
+
+			// Sleep for the calculated backoff time then attempt to create a new runner
+			ts.logger.Warn(fmt.Sprintf("template server restart: retry attempt after %s", sleep))
+			time.Sleep(sleep)
 
 			ts.runner, err = manager.NewRunner(runnerConfig, false)
 			if err != nil {
