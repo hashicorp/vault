@@ -80,7 +80,7 @@ export default ApplicationAdapter.extend({
       results.forEach((result) => {
         if (result.value) {
           if (result.value.data.roles) {
-            resp.data = { ...resp.data, ...{ zero_address_roles: result.value.data.roles } };
+            resp.data = { ...resp.data, zero_address_roles: result.value.data.roles };
           } else {
             resp.data = { ...resp.data, ...result.value.data };
           }
