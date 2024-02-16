@@ -109,7 +109,7 @@ module('Integration | Component | client count config', function (hooks) {
   });
 
   test('it should be hidden in edit mode when reporting is enabled', async function (assert) {
-    assert.expect(6);
+    assert.expect(4);
 
     this.server.put('/sys/internal/counters/config', (schema, req) => {
       const { enabled, retention_months } = JSON.parse(req.requestBody);
