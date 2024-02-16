@@ -95,7 +95,7 @@ export default Component.extend(DEFAULTS, {
     props = { ...props, ...secret };
     if (resp && resp.wrap_info) {
       const keyName = action === 'rewrap' ? 'rewrap_token' : 'token';
-      props = { ...props, ...{ [keyName]: resp.wrap_info.token } };
+      props = { ...props, [keyName]: resp.wrap_info.token };
     }
     setProperties(this, props);
     this.flashMessages.success(`${capitalize(action)} was successful.`);
