@@ -162,7 +162,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			continue
 		}
 
-		paddingScheme := d.Get("padding_scheme").(string)
+		paddingScheme := d.Get("padding_scheme").(keysutil.PaddingScheme)
 		if item.Nonce != "" && !nonceAllowed(p) {
 			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
 			continue
@@ -183,7 +183,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			warnAboutNonceUsage = true
 		}
 
-		ciphertext, err := p.Encrypt(item.KeyVersion, item.DecodedContext, item.DecodedNonce, plaintext, paddingScheme)
+		ciphertext, err := p.EncryptWithFactory(item.KeyVersion, item.DecodedContext, item.DecodedNonce, plaintext, paddingScheme)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
