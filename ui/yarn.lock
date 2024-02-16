@@ -13264,13 +13264,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"date-fns@npm:^2.16.1":
-  version: 2.21.1
-  resolution: "date-fns@npm:2.21.1"
-  checksum: 4ff90f6ab6b9e92d4605530704303aa269f40a4a2fe3624628e2a0310b06bd36d8a18867c2ddf88844afa54bc71a33b5b93c97c927da8989e9d05d32471dbd75
-  languageName: node
-  linkType: hard
-
 "date-fns@npm:^2.29.2, date-fns@npm:^2.30.0":
   version: 2.30.0
   resolution: "date-fns@npm:2.30.0"
@@ -27960,7 +27953,7 @@ __metadata:
     d3-time-format: ^2.1.1
     d3-tip: ^0.9.1
     d3-transition: ^1.2.0
-    date-fns: ^2.16.1
+    date-fns: ^2.30.0
     date-fns-tz: ^1.2.2
     deepmerge: ^4.0.0
     doctoc: ^2.2.0
