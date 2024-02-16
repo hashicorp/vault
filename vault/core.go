@@ -1317,9 +1317,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	c.limiterRegistry = conf.LimiterRegistry
 	c.limiterRegistryLock.Lock()
-	if conf.DisableRequestLimiter {
-		c.limiterRegistry.Disable()
-	} else {
+	c.limiterRegistry.Disable()
+	if !conf.DisableRequestLimiter {
 		c.limiterRegistry.Enable()
 	}
 	c.limiterRegistryLock.Unlock()
@@ -4112,7 +4111,7 @@ func (c *Core) ReloadRequestLimiter() {
 		return
 	}
 
-	disable := false
+	disable := true
 	requestLimiterConfig := conf.(*server.Config).RequestLimiter
 	if requestLimiterConfig != nil {
 		disable = requestLimiterConfig.Disable

@@ -86,31 +86,6 @@ func TestServer_ReloadRequestLimiter(t *testing.T) {
 		expectedResponse *vault.RequestLimiterResponse
 	}{
 		{
-			"enable after default",
-			baseHCL + requestLimiterEnableHCL,
-			enabledResponse,
-		},
-		{
-			"enable after enable",
-			baseHCL + requestLimiterEnableHCL,
-			enabledResponse,
-		},
-		{
-			"disable after enable",
-			baseHCL + requestLimiterDisableHCL,
-			disabledResponse,
-		},
-		{
-			"default after disable",
-			baseHCL,
-			enabledResponse,
-		},
-		{
-			"default after default",
-			baseHCL,
-			enabledResponse,
-		},
-		{
 			"disable after default",
 			baseHCL + requestLimiterDisableHCL,
 			disabledResponse,
@@ -119,6 +94,31 @@ func TestServer_ReloadRequestLimiter(t *testing.T) {
 			"disable after disable",
 			baseHCL + requestLimiterDisableHCL,
 			disabledResponse,
+		},
+		{
+			"enable after disable",
+			baseHCL + requestLimiterEnableHCL,
+			enabledResponse,
+		},
+		{
+			"default after enable",
+			baseHCL,
+			disabledResponse,
+		},
+		{
+			"default after default",
+			baseHCL,
+			disabledResponse,
+		},
+		{
+			"enable after default",
+			baseHCL + requestLimiterEnableHCL,
+			enabledResponse,
+		},
+		{
+			"enable after enable",
+			baseHCL + requestLimiterEnableHCL,
+			enabledResponse,
 		},
 	}
 
@@ -166,7 +166,7 @@ func TestServer_ReloadRequestLimiter(t *testing.T) {
 	cli.SetToken(initResp.RootToken)
 
 	output = ui.ErrorWriter.String() + ui.OutputWriter.String()
-	require.Contains(t, output, "Request Limiter: enabled")
+	require.Contains(t, output, "Request Limiter: disabled")
 
 	verifyLimiters := func(t *testing.T, expectedResponse *vault.RequestLimiterResponse) {
 		t.Helper()
@@ -187,8 +187,8 @@ func TestServer_ReloadRequestLimiter(t *testing.T) {
 		require.Equal(t, expectedResponse, limiters)
 	}
 
-	// Start off with default enabled
-	verifyLimiters(t, enabledResponse)
+	// Start off with default disabled
+	verifyLimiters(t, disabledResponse)
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

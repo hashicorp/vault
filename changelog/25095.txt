@@ -1,3 +1,3 @@
 ```release-note:improvement
-limits: Introduce a reloadable disable configuration for the Request Limiter.
+limits: Introduce a reloadable opt-in configuration for the Request Limiter.
 ```

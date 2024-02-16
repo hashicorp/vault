@@ -112,7 +112,7 @@ request_limiter {
 			name: "invalid disable",
 			inConfig: `
 request_limiter {
-	disable = "whywouldyoudothis"
+	disable = "people make mistakes"
 }`,
 			outErr: true,
 		},
