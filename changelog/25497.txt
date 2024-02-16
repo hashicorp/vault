@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Use exponential backoff to sleep and then attempt a restart of the consul template server
+```
