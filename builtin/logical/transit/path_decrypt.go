@@ -198,34 +198,35 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			continue
 		}
 
-		paddingScheme := d.Get("padding_scheme").(keysutil.PaddingScheme)
-		var factory interface{}
+		factories := make([]any, 0)
+		if ps, ok := d.GetOk("padding_scheme"); ok {
+			factories = append(factories, keysutil.PaddingScheme(ps.(string)))
+		}
 		if item.AssociatedData != "" {
 			if !p.Type.AssociatedDataSupported() {
 				batchResponseItems[i].Error = fmt.Sprintf("'[%d].associated_data' provided for non-AEAD cipher suite %v", i, p.Type.String())
 				continue
 			}
 
-			factory = AssocDataFactory{item.AssociatedData}
+			factories = append(factories, AssocDataFactory{item.AssociatedData})
 		}
 
-		var managedKeyFactory ManagedKeyFactory
 		if p.Type == keysutil.KeyType_MANAGED_KEY {
 			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
 			if !ok {
 				batchResponseItems[i].Error = errors.New("unsupported system view").Error()
 			}
 
-			managedKeyFactory = ManagedKeyFactory{
+			factories = append(factories, ManagedKeyFactory{
 				managedKeyParams: keysutil.ManagedKeyParameters{
 					ManagedKeySystemView: managedKeySystemView,
 					BackendUUID:          b.backendUUID,
 					Context:              ctx,
 				},
-			}
+			})
 		}
 
-		plaintext, err := p.DecryptWithFactory(item.DecodedContext, item.DecodedNonce, item.Ciphertext, factory, managedKeyFactory, paddingScheme)
+		plaintext, err := p.DecryptWithFactory(item.DecodedContext, item.DecodedNonce, item.Ciphertext, factories...)
 		if err != nil {
 			switch err.(type) {
 			case errutil.InternalError:

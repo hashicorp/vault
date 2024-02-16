@@ -39,9 +39,15 @@ func (b *backend) pathRewrap() *framework.Path {
 				Description: "Ciphertext value to rewrap",
 			},
 
-			"padding_scheme": {
+			"encrypt_padding_scheme": {
 				Type: framework.TypeString,
-				Description: `The padding scheme to use for decrypt. Currently only applies to RSA key types.
+				Description: `The padding scheme to use for rewrap's encrypt step. Currently only applies to RSA key types.
+Options are 'oaep' or 'pkcs1v15'. Defaults to 'oaep'`,
+			},
+
+			"decrypt_padding_scheme": {
+				Type: framework.TypeString,
+				Description: `The padding scheme to use for rewrap's decrypt step. Currently only applies to RSA key types.
 Options are 'oaep' or 'pkcs1v15'. Defaults to 'oaep'`,
 			},
 
@@ -162,13 +168,16 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			continue
 		}
 
-		paddingScheme := d.Get("padding_scheme").(keysutil.PaddingScheme)
+		factories := make([]any, 0)
+		if ps, ok := d.GetOk("decrypt_padding_scheme"); ok {
+			factories = append(factories, keysutil.PaddingScheme(ps.(string)))
+		}
 		if item.Nonce != "" && !nonceAllowed(p) {
 			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
 			continue
 		}
 
-		plaintext, err := p.Decrypt(item.DecodedContext, item.DecodedNonce, item.Ciphertext)
+		plaintext, err := p.DecryptWithFactory(item.DecodedContext, item.DecodedNonce, item.Ciphertext, factories...)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
@@ -179,11 +188,15 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			}
 		}
 
+		factories = make([]any, 0)
+		if ps, ok := d.GetOk("encrypt_padding_scheme"); ok {
+			factories = append(factories, keysutil.PaddingScheme(ps.(string)))
+		}
 		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce) {
 			warnAboutNonceUsage = true
 		}
 
-		ciphertext, err := p.EncryptWithFactory(item.KeyVersion, item.DecodedContext, item.DecodedNonce, plaintext, paddingScheme)
+		ciphertext, err := p.EncryptWithFactory(item.KeyVersion, item.DecodedContext, item.DecodedNonce, plaintext, factories...)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
