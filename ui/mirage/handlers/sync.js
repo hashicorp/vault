@@ -21,9 +21,10 @@ export const associationsResponse = (schema, req) => {
         return associations;
       }, {})
     : {};
-  // this is a sample association response with sub keys
-  // keys are added to the association response even though they are not individual associations
-  // the secret itself is as a single association
+
+  // if a destination has granularity: 'secret-key' keys of the secret
+  // are added to the association response but they are not individual associations
+  // the secret itself is still a single association
   const subKeys = {
     'my-kv/my-granular-secret/key1': {
       mount: 'my-kv',
