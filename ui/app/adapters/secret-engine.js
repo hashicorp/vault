@@ -75,7 +75,7 @@ export default ApplicationAdapter.extend({
         // we do not handle the error here because we want the secret-engine to mount successfully and to continue the flow.
       }
       return {
-        data: { ...data, ...{ path: path + '/', id: path } },
+        data: { ...data, path: path + '/', id: path },
       };
     } else {
       return this.ajax(this.url(path), 'POST', { data }).then(() => {
