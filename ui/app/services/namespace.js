@@ -6,7 +6,9 @@
 import { alias, equal } from '@ember/object/computed';
 import Service, { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
+import { buildWaiter } from '@ember/test-waiters';
 
+const waiter = buildWaiter('namespaces');
 const ROOT_NAMESPACE = '';
 export default Service.extend({
   store: service(),
@@ -29,6 +31,7 @@ export default Service.extend({
   },
 
   findNamespacesForUser: task(function* () {
+    const waiterToken = waiter.beginAsync();
     // uses the adapter and the raw response here since
     // models get wiped when switching namespaces and we
     // want to keep track of these separately
@@ -59,6 +62,8 @@ export default Service.extend({
       );
     } catch (e) {
       //do nothing here
+    } finally {
+      waiter.endAsync(waiterToken);
     }
   }).drop(),
 

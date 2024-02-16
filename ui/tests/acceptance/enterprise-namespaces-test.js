@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, settled, visit, fillIn, currentURL } from '@ember/test-helpers';
+import { click, settled, visit, fillIn, currentURL, waitFor } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -49,6 +49,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       const url = `/vault/secrets?namespace=${targetNamespace}`;
       // this is usually triggered when creating a ns in the form -- trigger a reload of the namespaces manually
       await click('[data-test-refresh-namespaces]');
+      await waitFor(`[data-test-namespace-link="${targetNamespace}"]`);
       // check that the single namespace "beep" or "boop" not "beep/boop" shows in the toggle display
       assert
         .dom(`[data-test-namespace-link="${targetNamespace}"]`)
@@ -64,7 +65,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await authPage.tokenInput('root').submit();
     await settled();
     await click('[data-test-namespace-toggle]');
-
+    await waitFor('[data-test-current-namespace]');
     assert.dom('[data-test-current-namespace]').hasText('/beep/boop/', 'current namespace begins with a /');
     assert
       .dom('[data-test-namespace-link="beep/boop/bop"]')
