@@ -172,7 +172,7 @@ export default Component.extend(TRANSIT_PARAMS, {
       props = { ...props, ...resp.data };
     }
     if (options.wrapTTL) {
-      props = { ...props, ...{ wrappedToken: resp.wrap_info.token } };
+      props = { ...props, wrappedToken: resp.wrap_info.token };
     }
     if (!this.isDestroyed && !this.isDestroying) {
       this.toggleProperty('isModalActive');
