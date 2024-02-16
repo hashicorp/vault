@@ -15,7 +15,14 @@
       <p class="help has-text-grey has-bottom-margin-xs">
         This is a one-time token that will be used to generate the operation token. Please save it.
       </p>
-      <Hds::Copy::Snippet @textToCopy={{this.encodedToken}} @container="#shamir-flow-modal" data-test-shamir-encoded-token />
+      <Hds::Copy::Snippet
+        @textToCopy={{this.encodedToken}}
+        @container="#shamir-flow-modal"
+        @onError={{(fn
+          (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+        )}}
+        data-test-shamir-encoded-token
+      />
     </div>
     {{#if this.otp}}
       <div class="has-bottom-margin-xl">
@@ -25,7 +32,13 @@
         <p class="help has-text-grey has-bottom-margin-xs">
           This OTP will be used to decode the generated operation token. Please save it.
         </p>
-        <Hds::Copy::Snippet @textToCopy={{this.otp}} @container="#shamir-flow-modal" />
+        <Hds::Copy::Snippet
+          @textToCopy={{this.otp}}
+          @container="#shamir-flow-modal"
+          @onError={{(fn
+            (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+          )}}
+        />
       </div>
     {{/if}}
     <div class="has-bottom-margin-xl">

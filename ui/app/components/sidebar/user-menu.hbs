@@ -53,7 +53,12 @@
                 @isFullWidth={{true}}
                 @container="#container"
                 class="in-dropdown link is-flex-start"
-                {{on "click" (fn (set-flash-message "Token copied!"))}}
+                @onSuccess={{(fn (set-flash-message "Token copied!"))}}
+                @onError={{(fn
+                  (set-flash-message
+                    "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger"
+                  )
+                )}}
                 data-test-copy-button={{this.auth.currentToken}}
               />
             </li>

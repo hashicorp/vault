@@ -29,6 +29,9 @@
           @text="Copy"
           @isIconOnly={{true}}
           @textToCopy={{stringify this.unwrapData}}
+          @onError={{(fn
+            (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+          )}}
           class="transparent top-right-absolute"
         />
       </div>

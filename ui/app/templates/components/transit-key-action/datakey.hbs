@@ -86,10 +86,20 @@
           @textToCopy={{@plaintext}}
           @color="secondary"
           @container="#transit-datakey-modal"
+          @onError={{(fn
+            (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+          )}}
         />
       {{/if}}
       <h2 class="has-text-weight-semibold is-6">Ciphertext</h2>
-      <Hds::Copy::Snippet @textToCopy={{@ciphertext}} @color="secondary" @container="#transit-datakey-modal" />
+      <Hds::Copy::Snippet
+        @textToCopy={{@ciphertext}}
+        @color="secondary"
+        @container="#transit-datakey-modal"
+        @onError={{(fn
+          (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+        )}}
+      />
     </M.Body>
     <M.Footer as |F|>
       <Hds::Button @text="Close" {{on "click" F.close}} />
