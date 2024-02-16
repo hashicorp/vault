@@ -90,7 +90,7 @@ export default Component.extend(DEFAULTS, {
         Renewable: resp.renewable ? 'Yes' : 'No',
         'Lease Duration': resp.lease_duration || 'None',
       };
-      props = { ...props, ...{ unwrap_data: secret }, ...{ details: details } };
+      props = { ...props, unwrap_data: secret, details: details };
     }
     props = { ...props, ...secret };
     if (resp && resp.wrap_info) {
