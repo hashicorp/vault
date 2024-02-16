@@ -82,6 +82,9 @@
           @container="#transit-export-modal"
           @isFullWidth={{true}}
           @isTruncated={{true}}
+          @onError={{(fn
+            (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+          )}}
           data-test-encrypted-value="export"
         />
       {{else}}
@@ -94,6 +97,9 @@
             @isIconOnly={{true}}
             @textToCopy={{stringify @keys}}
             @container="#transit-export-modal"
+            @onError={{(fn
+              (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+            )}}
             class="transparent top-right-absolute"
           />
         </div>

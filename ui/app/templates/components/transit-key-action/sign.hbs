@@ -141,6 +141,9 @@
         @container="#transit-sign-modal"
         @isFullWidth={{true}}
         @isTruncated={{true}}
+        @onError={{(fn
+          (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+        )}}
         data-test-encrypted-value="signature"
       />
     </M.Body>

@@ -88,6 +88,9 @@
           @container="#transit-datakey-modal"
           @isFullWidth={{true}}
           @isTruncated={{true}}
+          @onError={{(fn
+            (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+          )}}
         />
       {{/if}}
       <h2 class="has-text-weight-semibold is-6">Ciphertext</h2>
@@ -97,6 +100,9 @@
         @container="#transit-datakey-modal"
         @isFullWidth={{true}}
         @isTruncated={{true}}
+        @onError={{(fn
+          (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+        )}}
       />
     </M.Body>
     <M.Footer as |F|>
