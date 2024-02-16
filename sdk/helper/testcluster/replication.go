@@ -72,7 +72,7 @@ func WaitForPerfReplicationState(ctx context.Context, cluster VaultCluster, stat
 func EnablePerformanceSecondaryNoWait(ctx context.Context, perfToken string, pri, sec VaultCluster, updatePrimary bool) error {
 	postData := map[string]interface{}{
 		"token":   perfToken,
-		"ca_file": DefaultCAFile,
+		"ca_file": pri.GetCACertPEMFile(),
 	}
 	path := "sys/replication/performance/secondary/enable"
 	if updatePrimary {
@@ -466,7 +466,7 @@ func WaitForDRSecondary(ctx context.Context, pri, sec VaultCluster, skipPoisonPi
 func EnableDRSecondaryNoWait(ctx context.Context, sec VaultCluster, drToken string) error {
 	postData := map[string]interface{}{
 		"token":   drToken,
-		"ca_file": DefaultCAFile,
+		"ca_file": sec.GetCACertPEMFile(),
 	}
 
 	_, err := sec.Nodes()[0].APIClient().Logical().Write("sys/replication/dr/secondary/enable", postData)
@@ -734,7 +734,7 @@ func UpdatePrimary(ctx context.Context, pri, sec VaultCluster) error {
 	resp, err := secClient.Logical().Write("sys/replication/dr/secondary/update-primary", map[string]interface{}{
 		"dr_operation_token": rootToken,
 		"token":              drToken,
-		"ca_file":            DefaultCAFile,
+		"ca_file":            sec.GetCACertPEMFile(),
 	})
 	if err != nil {
 		return err
