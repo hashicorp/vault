@@ -79,6 +79,20 @@ const (
 	DefaultVersionTemplate = "vault:v{{version}}:"
 )
 
+type PaddingScheme string
+
+const (
+	PaddingScheme_OAEP     = PaddingScheme("oaep")
+	PaddingScheme_PKCS1v15 = PaddingScheme("pkcs1v15")
+)
+
+func (p PaddingScheme) GetPaddingScheme() (PaddingScheme, error) {
+	if p == "" {
+		return PaddingScheme_OAEP, nil
+	}
+	return p, nil
+}
+
 type AEADFactory interface {
 	GetAEAD(iv []byte) (cipher.AEAD, error)
 }
@@ -89,6 +103,10 @@ type AssociatedDataFactory interface {
 
 type ManagedKeyFactory interface {
 	GetManagedKeyParameters() ManagedKeyParameters
+}
+
+type PaddingSchemeFactory interface {
+	GetPaddingScheme() (PaddingScheme, error)
 }
 
 type RestoreInfo struct {
@@ -908,7 +926,7 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 	return p.DecryptWithFactory(context, nonce, value, nil)
 }
 
-func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factories ...interface{}) (string, error) {
+func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factories ...any) (string, error) {
 	if !p.Type.DecryptionSupported() {
 		return "", errutil.UserError{Err: fmt.Sprintf("message decryption not supported for key type %v", p.Type)}
 	}
@@ -1003,15 +1021,24 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factori
 			return "", err
 		}
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+		paddingScheme, err := getPaddingScheme(factories)
+		if err != nil {
+			return "", err
+		}
 		keyEntry, err := p.safeGetKeyEntry(ver)
 		if err != nil {
 			return "", err
 		}
 		key := keyEntry.RSAKey
-		if key == nil {
-			return "", errutil.InternalError{Err: fmt.Sprintf("cannot decrypt ciphertext, key version does not have a private counterpart")}
+
+		switch paddingScheme {
+		case PaddingScheme_PKCS1v15:
+			plain, err = rsa.DecryptPKCS1v15(rand.Reader, key, decoded)
+		case PaddingScheme_OAEP:
+			plain, err = rsa.DecryptOAEP(sha256.New(), rand.Reader, key, decoded, nil)
+		default:
+			return "", errutil.InternalError{Err: fmt.Sprintf("unsupported RSA padding scheme %s", paddingScheme)}
 		}
-		plain, err = rsa.DecryptOAEP(sha256.New(), rand.Reader, key, decoded, nil)
 		if err != nil {
 			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA decrypt the ciphertext: %v", err)}
 		}
@@ -1978,7 +2005,7 @@ func (p *Policy) SymmetricDecryptRaw(encKey, ciphertext []byte, opts SymmetricOp
 	return plain, nil
 }
 
-func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value string, factories ...interface{}) (string, error) {
+func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value string, factories ...any) (string, error) {
 	if !p.Type.EncryptionSupported() {
 		return "", errutil.UserError{Err: fmt.Sprintf("message encryption not supported for key type %v", p.Type)}
 	}
@@ -2073,6 +2100,10 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 			return "", err
 		}
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+		paddingScheme, err := getPaddingScheme(factories)
+		if err != nil {
+			return "", err
+		}
 		keyEntry, err := p.safeGetKeyEntry(ver)
 		if err != nil {
 			return "", err
@@ -2083,7 +2114,15 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 		} else {
 			publicKey = keyEntry.RSAPublicKey
 		}
-		ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, publicKey, plaintext, nil)
+		switch paddingScheme {
+		case PaddingScheme_PKCS1v15:
+			ciphertext, err = rsa.EncryptPKCS1v15(rand.Reader, publicKey, plaintext)
+		case PaddingScheme_OAEP:
+			ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, publicKey, plaintext, nil)
+		default:
+			return "", errutil.InternalError{Err: fmt.Sprintf("unsupported RSA padding scheme %s", paddingScheme)}
+		}
+
 		if err != nil {
 			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA encrypt the plaintext: %v", err)}
 		}
@@ -2127,6 +2166,24 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 	encoded = p.getVersionPrefix(ver) + encoded
 
 	return encoded, nil
+}
+
+func getPaddingScheme(factories []any) (PaddingScheme, error) {
+	for index, rawFactory := range factories {
+		if rawFactory == nil {
+			continue
+		}
+
+		switch factory := rawFactory.(type) {
+		case PaddingSchemeFactory:
+			paddingScheme, err := factory.GetPaddingScheme()
+			if err != nil {
+				return "", errutil.InternalError{Err: fmt.Sprintf("unable to get padding scheme from factory[%d]: %v", index, err)}
+			}
+			return paddingScheme, nil
+		}
+	}
+	return PaddingScheme_OAEP, nil
 }
 
 func (p *Policy) KeyVersionCanBeUpdated(keyVersion int, isPrivateKey bool) error {
@@ -2324,7 +2381,7 @@ func (ke *KeyEntry) parseFromKey(PolKeyType KeyType, parsedKey any) error {
 	return nil
 }
 
-func (p *Policy) WrapKey(ver int, targetKey interface{}, targetKeyType KeyType, hash hash.Hash) (string, error) {
+func (p *Policy) WrapKey(ver int, targetKey any, targetKeyType KeyType, hash hash.Hash) (string, error) {
 	if !p.Type.SigningSupported() {
 		return "", fmt.Errorf("message signing not supported for key type %v", p.Type)
 	}
@@ -2348,7 +2405,7 @@ func (p *Policy) WrapKey(ver int, targetKey interface{}, targetKeyType KeyType, 
 	return keyEntry.WrapKey(targetKey, targetKeyType, hash)
 }
 
-func (ke *KeyEntry) WrapKey(targetKey interface{}, targetKeyType KeyType, hash hash.Hash) (string, error) {
+func (ke *KeyEntry) WrapKey(targetKey any, targetKeyType KeyType, hash hash.Hash) (string, error) {
 	// Presently this method implements a CKM_RSA_AES_KEY_WRAP-compatible
 	// wrapping interface and only works on RSA keyEntries as a result.
 	if ke.RSAPublicKey == nil {

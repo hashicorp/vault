@@ -39,6 +39,12 @@ func (b *backend) pathDatakey() *framework.Path {
 ciphertext; "wrapped" will return the ciphertext only.`,
 			},
 
+			"padding_scheme": {
+				Type: framework.TypeString,
+				Description: `The padding scheme to use for decrypt. Currently only applies to RSA key types.
+Options are 'oaep' or 'pkcs1v15'. Defaults to 'oaep'`,
+			},
+
 			"context": {
 				Type:        framework.TypeString,
 				Description: "Context for key derivation. Required for derived keys.",
@@ -142,6 +148,7 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 		return nil, err
 	}
 
+	paddingScheme := d.Get("padding_scheme").(string)
 	var managedKeyFactory ManagedKeyFactory
 	if p.Type == keysutil.KeyType_MANAGED_KEY {
 		managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)

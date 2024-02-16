@@ -39,6 +39,12 @@ func (b *backend) pathRewrap() *framework.Path {
 				Description: "Ciphertext value to rewrap",
 			},
 
+			"padding_scheme": {
+				Type: framework.TypeString,
+				Description: `The padding scheme to use for decrypt. Currently only applies to RSA key types.
+Options are 'oaep' or 'pkcs1v15'. Defaults to 'oaep'`,
+			},
+
 			"context": {
 				Type:        framework.TypeString,
 				Description: "Base64 encoded context for key derivation. Required for derived keys.",
@@ -156,6 +162,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			continue
 		}
 
+		paddingScheme := d.Get("padding_scheme").(string)
 		if item.Nonce != "" && !nonceAllowed(p) {
 			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
 			continue
@@ -176,7 +183,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			warnAboutNonceUsage = true
 		}
 
-		ciphertext, err := p.Encrypt(item.KeyVersion, item.DecodedContext, item.DecodedNonce, plaintext)
+		ciphertext, err := p.Encrypt(item.KeyVersion, item.DecodedContext, item.DecodedNonce, plaintext, paddingScheme)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:

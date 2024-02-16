@@ -105,6 +105,12 @@ func (b *backend) pathEncrypt() *framework.Path {
 				Description: "Base64 encoded plaintext value to be encrypted",
 			},
 
+			"padding_scheme": {
+				Type: framework.TypeString,
+				Description: `The padding scheme to use for decrypt. Currently only applies to RSA key types.
+Options are 'oaep' or 'pkcs1v15'. Defaults to 'oaep'`,
+			},
+
 			"context": {
 				Type:        framework.TypeString,
 				Description: "Base64 encoded context for key derivation. Required if key derivation is enabled",
@@ -482,6 +488,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			warnAboutNonceUsage = true
 		}
 
+		paddingScheme := d.Get("padding_scheme").(string)
 		var factory interface{}
 		if item.AssociatedData != "" {
 			if !p.Type.AssociatedDataSupported() {

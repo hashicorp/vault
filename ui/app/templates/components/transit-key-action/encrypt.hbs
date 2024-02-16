@@ -6,7 +6,14 @@
 <form
   onsubmit={{action
     @doSubmit
-    (hash plaintext=@plaintext context=@context nonce=@nonce key_version=@key_version encodedBase64=@encodedBase64)
+    (hash
+      plaintext=@plaintext
+      padding_scheme=@padding_scheme
+      context=@context
+      nonce=@nonce
+      key_version=@key_version
+      encodedBase64=@encodedBase64
+    )
   }}
 >
   <div class="box is-sideless is-fullwidth is-marginless">
@@ -41,6 +48,27 @@
           </div>
           <div class="control">
             <B64Toggle @value={{@context}} @data-test-transit-b64-toggle="context" />
+          </div>
+        </div>
+      </div>
+    {{/if}}
+    {{#if (or (eq @key.type "rsa-2048") (eq @key.type "rsa-3072") (eq @key.type "rsa-4096"))}}
+      <div class="field">
+        <label for="padding_scheme" class="is-label">Padding Scheme</label>
+        <div class="control is-expanded">
+          <div class="select is-fullwidth">
+            <select
+              name="padding_scheme"
+              id="padding_scheme"
+              data-test-padding-scheme="true"
+              onchange={{action (mut @padding_scheme) value="target.value"}}
+            >
+              {{#each (array "oaep" "pkcs1v15") as |scheme|}}
+                <option selected={{if @padding_scheme (eq @padding_scheme scheme) (eq scheme "oaep")}} value={{scheme}}>
+                  {{scheme}}
+                </option>
+              {{/each}}
+            </select>
           </div>
         </div>
       </div>

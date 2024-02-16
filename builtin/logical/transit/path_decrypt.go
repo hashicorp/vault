@@ -50,6 +50,12 @@ func (b *backend) pathDecrypt() *framework.Path {
 The ciphertext to decrypt, provided as returned by encrypt.`,
 			},
 
+			"padding_scheme": {
+				Type: framework.TypeString,
+				Description: `The padding scheme to use for decrypt. Currently only applies to RSA key types.
+Options are 'oaep' or 'pkcs1v15'. Defaults to 'oaep'`,
+			},
+
 			"context": {
 				Type: framework.TypeString,
 				Description: `
@@ -192,6 +198,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			continue
 		}
 
+		paddingScheme := d.Get("padding_scheme").(string)
 		var factory interface{}
 		if item.AssociatedData != "" {
 			if !p.Type.AssociatedDataSupported() {
