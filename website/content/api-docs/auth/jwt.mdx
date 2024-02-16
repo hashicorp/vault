@@ -41,7 +41,7 @@ set.
 - `jwks_ca_pem` `(string: <optional>)` - The contents of a CA certificate or chain of certificates, in PEM format, to use to validate connections to the JWKS URL. If not set, system certificates are used.
 - `jwks_pairs` `(list of JSON object: <optional>)` - List of JWKS URL and optional CA certificate pairs. CA certificates must be in PEM format. Must be a list of JSON objects with format `[{"jwks_url": "", "jwks_ca_pem": ""}]`. Cannot be used with "jwks_url" or "jwks_ca_pem".
 - `jwt_validation_pubkeys` `(comma-separated string, or array of strings: <optional>)` - A list of PEM-encoded public keys to use to authenticate signatures locally. Cannot be used with "jwks_url" or "oidc_discovery_url".
-- `bound_issuer` `(string: <optional>)` - The value against which to match the `iss` claim in a JWT.
+- `bound_issuer` `(string: <optional>)` - The value against which to match the `iss` claim in a JWT. Cannot be configured when `jwks_pairs` is set.
 - `jwt_supported_algs` `(comma-separated string, or array of strings: <optional>)` - A list of supported signing algorithms. Defaults to [RS256] for OIDC roles. Defaults to all [available algorithms](https://github.com/hashicorp/cap/blob/main/jwt/algs.go) for JWT roles.
 - `default_role` `(string: <optional>)` - The default role to use if none is provided during login.
 - `provider_config` `(map: <optional>)` - Configuration options for provider-specific handling. Providers with specific handling include: Azure, Google, SecureAuth, IBM ISAM. The options are described in each provider's section in [OIDC Provider Setup](/vault/docs/auth/jwt/oidc-providers).
