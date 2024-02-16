@@ -171,6 +171,12 @@ const cert = {
       fieldGroup: 'default',
       type: 'number',
     },
+    roleCacheSize: {
+      editType: 'number',
+      fieldGroup: 'default',
+      helpText: 'The size of the in memory role cache',
+      type: 'number',
+    },
   },
   cert: {
     name: {
