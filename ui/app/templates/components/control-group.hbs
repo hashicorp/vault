@@ -98,7 +98,14 @@
         We’ve saved your request token, but you may want to copy it just in case:
       </p>
       <div>
-        <Hds::Copy::Snippet data-test-token-value @textToCopy={{this.controlGroupResponse.token}} @color="secondary" />
+        <Hds::Copy::Snippet
+          data-test-token-value
+          @textToCopy={{this.controlGroupResponse.token}}
+          @color="secondary"
+          @onError={{(fn
+            (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+          )}}
+        />
       </div>
     </div>
   {{/if}}
