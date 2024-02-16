@@ -7,7 +7,9 @@ import Service, { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { getRelativePath } from 'core/utils/sanitize-path';
 import { tracked } from '@glimmer/tracking';
+import { buildWaiter } from '@ember/test-waiters';
 
+const waiter = buildWaiter('namespaces');
 const ROOT_NAMESPACE = '';
 export default class NamespaceService extends Service {
   @service store;
@@ -51,6 +53,7 @@ export default class NamespaceService extends Service {
 
   @task({ drop: true })
   *findNamespacesForUser() {
+    const waiterToken = waiter.beginAsync();
     // uses the adapter and the raw response here since
     // models get wiped when switching namespaces and we
     // want to keep track of these separately
@@ -78,6 +81,8 @@ export default class NamespaceService extends Service {
       });
     } catch (e) {
       //do nothing here
+    } finally {
+      waiter.endAsync(waiterToken);
     }
   }
 
