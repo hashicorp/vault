@@ -26,26 +26,26 @@ export const associationsResponse = (schema, req) => {
   // are added to the association response but they are not individual associations
   // the secret itself is still a single association
   const subKeys = {
-    'my-kv/my-granular-secret/key1': {
+    'my-kv/my-granular-secret/foo': {
       mount: 'my-kv',
       secret_name: 'my-granular-secret',
       sync_status: 'SYNCED',
       updated_at: '2023-09-20T10:51:53.961861096-04:00',
-      sub_key: 'key1',
+      sub_key: 'foo',
     },
-    'my-kv/my-granular-secret/key2': {
+    'my-kv/my-granular-secret/bar': {
       mount: 'my-kv',
       secret_name: 'my-granular-secret',
       sync_status: 'SYNCED',
       updated_at: '2023-09-20T10:51:53.961861096-04:00',
-      sub_key: 'key2',
+      sub_key: 'bar',
     },
-    'my-kv/my-granular-secret/key3': {
+    'my-kv/my-granular-secret/baz': {
       mount: 'my-kv',
       secret_name: 'my-granular-secret',
       sync_status: 'SYNCED',
       updated_at: '2023-09-20T10:51:53.961861096-04:00',
-      sub_key: 'key3',
+      sub_key: 'baz',
     },
   };
 
