@@ -10,19 +10,47 @@ import clientsHandler from './clients';
 
 export const associationsResponse = (schema, req) => {
   const { type, name } = req.params;
+  const [destination] = schema.db.syncDestinations.where({ type, name });
   const records = schema.db.syncAssociations.where({ type, name });
+  const associations = records.length
+    ? records.reduce((associations, association) => {
+        const key = `${association.mount}/${association.secret_name}`;
+        delete association.type;
+        delete association.name;
+        associations[key] = association;
+        return associations;
+      }, {})
+    : {};
+  // this is a sample association response with sub keys
+  // keys are added to the association response even though they are not individual associations
+  // the secret itself is as a single association
+  const subKeys = {
+    'my-kv/my-granular-secret/key1': {
+      mount: 'my-kv',
+      secret_name: 'my-granular-secret',
+      sync_status: 'SYNCED',
+      updated_at: '2023-09-20T10:51:53.961861096-04:00',
+      sub_key: 'key1',
+    },
+    'my-kv/my-granular-secret/key2': {
+      mount: 'my-kv',
+      secret_name: 'my-granular-secret',
+      sync_status: 'SYNCED',
+      updated_at: '2023-09-20T10:51:53.961861096-04:00',
+      sub_key: 'key2',
+    },
+    'my-kv/my-granular-secret/key3': {
+      mount: 'my-kv',
+      secret_name: 'my-granular-secret',
+      sync_status: 'SYNCED',
+      updated_at: '2023-09-20T10:51:53.961861096-04:00',
+      sub_key: 'key3',
+    },
+  };
 
   return {
     data: {
-      associated_secrets: records.length
-        ? records.reduce((associations, association) => {
-            const key = `${association.mount}/${association.secret_name}`;
-            delete association.type;
-            delete association.name;
-            associations[key] = association;
-            return associations;
-          }, {})
-        : {},
+      associated_secrets: destination.granularity === 'secret-path' ? associations : subKeys,
       store_name: name,
       store_type: type,
     },
