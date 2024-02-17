@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+// TestGetMount tests that we can get a single secret mount
 func TestGetMount(t *testing.T) {
 	t.Parallel()
 

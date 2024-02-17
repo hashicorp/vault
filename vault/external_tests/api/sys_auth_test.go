@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+// TestGetAuth tests that we can get a single auth mount
 func TestGetAuth(t *testing.T) {
 	t.Parallel()
 
