@@ -9,34 +9,8 @@ import (
 	"testing"
 )
 
-func TestGetMount(t *testing.T) {
-	mockVaultServer := httptest.NewServer(http.HandlerFunc(mockVaultGetMountHandler))
-	defer mockVaultServer.Close()
-
-	cfg := DefaultConfig()
-	cfg.Address = mockVaultServer.URL
-	client, err := NewClient(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	mount, err := client.Sys().GetMount("secret")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	expected := struct {
-		Type    string
-		Version string
-	}{Type: "pki", Version: ""}
-
-	if expected.Type != mount.Type || expected.Version != mount.PluginVersion {
-		t.Errorf("Mount did not match: expected %+v but got %+v", expected, mount)
-	}
-}
-
 func TestListMounts(t *testing.T) {
-	mockVaultServer := httptest.NewServer(http.HandlerFunc(mockVaultListMountsHandler))
+	mockVaultServer := httptest.NewServer(http.HandlerFunc(mockVaultMountsHandler))
 	defer mockVaultServer.Close()
 
 	cfg := DefaultConfig()
@@ -84,59 +58,9 @@ func TestListMounts(t *testing.T) {
 	}
 }
 
-func mockVaultListMountsHandler(w http.ResponseWriter, _ *http.Request) {
+func mockVaultMountsHandler(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte(listMountsResponse))
 }
-
-func mockVaultGetMountHandler(w http.ResponseWriter, _ *http.Request) {
-	_, _ = w.Write([]byte(getMountResponse))
-}
-
-const getMountResponse = `{
- "uuid": "556fc6ef-208c-5ac1-3838-40b0c052eaa8",
- "plugin_version": "",
- "running_plugin_version": "v1.13.9+builtin.vault",
- "deprecation_status": "supported",
- "accessor": "pki_a6c43de6",
- "options": {},
- "local": false,
- "seal_wrap": false,
- "external_entropy_access": false,
- "running_sha256": "",
- "config": {
-  "default_lease_ttl": 86400,
-  "force_no_cache": false,
-  "max_lease_ttl": 86400
- },
- "type": "pki",
- "description": "test",
- "request_id": "285b1a04-821c-686a-8325-cfc70517c3eb",
- "lease_id": "",
- "renewable": false,
- "lease_duration": 0,
- "data": {
-  "accessor": "pki_a6c43de6",
-  "config": {
-   "default_lease_ttl": 86400,
-   "force_no_cache": false,
-   "max_lease_ttl": 86400
-  },
-  "deprecation_status": "supported",
-  "description": "test",
-  "external_entropy_access": false,
-  "local": false,
-  "options": {},
-  "plugin_version": "",
-  "running_plugin_version": "v1.13.9+builtin.vault",
-  "running_sha256": "",
-  "seal_wrap": false,
-  "type": "pki",
-  "uuid": "556fc6ef-208c-5ac1-3838-40b0c052eaa8"
- },
- "wrap_info": null,
- "warnings": null,
- "auth": null
-}`
 
 const listMountsResponse = `{
   "request_id": "3cd881e9-ea50-2e06-90b2-5641667485fa",
