@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';

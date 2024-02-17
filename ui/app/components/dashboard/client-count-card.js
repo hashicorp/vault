@@ -9,7 +9,7 @@ import timestamp from 'core/utils/timestamp';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 /**
  * @module DashboardClientCountCard

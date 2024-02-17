@@ -13,7 +13,7 @@ import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
 import { format, addDays, startOfDay } from 'date-fns';
 import { PAGE } from 'vault/tests/helpers/config-ui/message-selectors';
 
-module('Integration | Component | messages/page/create-and-edit-message', function (hooks) {
+module('Integration | Component | messages/page/create-and-edit', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'config-ui');
   setupMirage(hooks);
@@ -27,7 +27,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
   test('it should display all the create form fields and default radio button values', async function (assert) {
     assert.expect(17);
 
-    await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {
+    await render(hbs`<Messages::Page::CreateAndEdit @message={{this.message}} />`, {
       owner: this.engine,
     });
 
@@ -54,7 +54,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
 
   test('it should display validation errors for invalid form fields', async function (assert) {
     assert.expect(8);
-    await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {
+    await render(hbs`<Messages::Page::CreateAndEdit @message={{this.message}} />`, {
       owner: this.engine,
     });
 
@@ -84,7 +84,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
       assert.ok(true, 'POST request made to create message');
     });
 
-    await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {
+    await render(hbs`<Messages::Page::CreateAndEdit @message={{this.message}} />`, {
       owner: this.engine,
     });
     await fillIn(PAGE.input('title'), 'Awesome custom message title');
@@ -108,7 +108,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
 
   test('it should have form vaildations', async function (assert) {
     assert.expect(4);
-    await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {
+    await render(hbs`<Messages::Page::CreateAndEdit @message={{this.message}} />`, {
       owner: this.engine,
     });
     await click(PAGE.button('create-message'));
@@ -134,7 +134,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
       link: { 'Learn more': 'www.learnmore.com' },
     });
     this.message = this.store.peekRecord('config-ui/message', 'hhhhh-iiii-lllll-dddd');
-    await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {
+    await render(hbs`<Messages::Page::CreateAndEdit @message={{this.message}} />`, {
       owner: this.engine,
     });
 
@@ -160,7 +160,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
 
   test('it should show a preview image modal when preview is clicked', async function (assert) {
     assert.expect(6);
-    await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {
+    await render(hbs`<Messages::Page::CreateAndEdit @message={{this.message}} />`, {
       owner: this.engine,
     });
     await fillIn(PAGE.input('title'), 'Awesome custom message title');
@@ -186,7 +186,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
 
   test('it should show a preview modal when preview is clicked', async function (assert) {
     assert.expect(4);
-    await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {
+    await render(hbs`<Messages::Page::CreateAndEdit @message={{this.message}} />`, {
       owner: this.engine,
     });
     await click(PAGE.radio('modal'));
@@ -230,7 +230,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     this.messages = this.store.peekAll('config-ui/message');
 
     await render(
-      hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} @messages={{this.messages}} @hasSomeActiveModals={{true}} />`,
+      hbs`<Messages::Page::CreateAndEdit @message={{this.message}} @messages={{this.messages}} @hasSomeActiveModals={{true}} />`,
       {
         owner: this.engine,
       }

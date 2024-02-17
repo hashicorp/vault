@@ -42,8 +42,7 @@ on:
         description: |
           A unique identifier to use for labeling artifacts and workflows. It is commonly used to
           specify context, e.g: fips, race, testonly, standard.
-        required: false
-        default: ''
+        required: true
         type: string
       go-test-parallelism:
         description: The parallelism parameter for Go tests
@@ -245,23 +244,23 @@ jobs:
           #   - needs.test-matrix.outputs.go-test-dir == test-results/go-test
           #   - inputs.name == testonly
           #   - matrix.id == 1
-          name='${{ matrix.id }}-${{ inputs.name }}'                                    # 1-testonly
+          name='${{ inputs.name }}-${{ matrix.id }}'                                    # testonly-1
           go_test_dir='${{ needs.test-matrix.outputs.go-test-dir }}'                    # test-results/go-test
           test_results_dir="$(dirname "$go_test_dir")"                                  # test-results
           go_test_dir_absolute="$(pwd)/${go_test_dir}"                                  # /home/runner/work/vault/vault/test-results/go-test
           go_test_log_dir="${go_test_dir}/logs"                                         # test-results/go-test/logs
           go_test_log_dir_absolute="${go_test_dir_absolute}/logs"                       # /home/runner/work/vault/vault/test-results/go-test/logs
-          go_test_log_archive_name="test-logs-${name}.tar"                              # test-logs-1-testonly.tar
-          go_test_results_upload_key="${test_results_dir}-${name}"                      # test-results/go-test-1-testonly
-          go_test_results_download_pattern="${test_results_dir}-*"                      # test-results/go-test-*
+          go_test_log_archive_name="test-logs-${name}.tar"                              # test-logs-testonly-1.tar
+          go_test_results_upload_key="${test_results_dir}-${name}"                      # test-results/go-test-testonly-1
+          go_test_results_download_pattern="${test_results_dir}-${{ inputs.name }}-*"   # test-results/go-test-testonly-*
           gotestsum_results_prefix="results"                                            # results
-          gotestsum_junitfile=${go_test_dir}/${gotestsum_results_prefix}-${name}.xml    # test-results/go-test/results-1-testonly.xml
-          gotestsum_jsonfile=${go_test_dir}/${gotestsum_results_prefix}-${name}.json    # test-results/go-test/results-1-testonly.json
-          gotestsum_timing_events=failure-summary-${name}.json                          # failure-summary-1-testonly.json
-          failure_summary_file_name="failure-summary-${name}.md"                        # failure-summary-1-testonly.md
+          gotestsum_junitfile=${go_test_dir}/${gotestsum_results_prefix}-${name}.xml    # test-results/go-test/results-testonly-1.xml
+          gotestsum_jsonfile=${go_test_dir}/${gotestsum_results_prefix}-${name}.json    # test-results/go-test/results-testonly-1.json
+          gotestsum_timing_events=failure-summary-${name}.json                          # failure-summary-testonly-1.json
+          failure_summary_file_name="failure-summary-${name}.md"                        # failure-summary-testonly-1.md
           data_race_log_file="data-race.log"                                            # data-race.log
-          data_race_log_download_pattern="data-race-*.log"                              # data-race-*.log
-          data_race_log_upload_key="data-race-${name}.log"                              # data-race-1-testonly.log
+          data_race_log_download_pattern="data-race-${{ inputs.name }}*.log"            # data-race-testonly-*.log
+          data_race_log_upload_key="data-race-${name}.log"                              # data-race-testonly-1.log
           {
             echo "name=${name}"
             echo "failure-summary-file-name=${failure_summary_file_name}"
@@ -440,7 +439,17 @@ jobs:
         if: (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise') && (success() || failure())
         continue-on-error: true
         run: |
-          curl -L --fail "https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64" --output "/usr/local/bin/datadog-ci"
+          if type datadog-ci > /dev/null 2>&1; then
+            exit 0
+          fi
+          # Curl does not always exit 1 if things go wrong. To determine if this is successful we'll
+          # we'll silence all non-error output and check the results to determine success.
+          if ! out="$(curl -sSL --fail https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64 --output /usr/local/bin/datadog-ci 2>&1)"; then
+            printf "failed to download datadog-ci: %s" "$out"
+          fi
+          if [[ -n "$out" ]]; then
+            printf "failed to download datadog-ci: %s" "$out"
+          fi
           chmod +x /usr/local/bin/datadog-ci
       - name: Upload test results to DataDog
         continue-on-error: true
@@ -505,7 +514,9 @@ jobs:
           fi
           echo "data-race-result=${result}" | tee -a "$GITHUB_OUTPUT"
       - name: Upload data race detector failure log
-        if: steps.data-race-check.outputs.data-race-result == 'failure'
+        if: |
+          (success() || failure()) &&
+          steps.data-race-check.outputs.data-race-result == 'failure'
         uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         with:
           name: ${{ steps.metadata.outputs.data-race-log-upload-key }}
@@ -631,7 +642,7 @@ jobs:
 
           # Write Go and data race results to outputs.
           {
-            echo "data-race-output=${data_race_output}"
+            echo "data-race-output<<EOFDATARACEOUTPUT"$'\n'"${data_race_output}"$'\n'EOFDATARACEOUTPUT
             echo "data-race-result=${data_race_result}"
             echo "result=${result}"
             echo "test-go-result=${test_go_result}"
