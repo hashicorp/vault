@@ -122,12 +122,13 @@ or the association in Vault will delete the secret in GitHub as well.
 <Note>
 
 GitHub only supports single value secrets, so KVv2 secrets from Vault will be stored as a JSON string.
-In the example above, the value for secret "my-secret" will be synced to GitHub as the JSON string `{"foo":"bar"}`.
+In the example above, the value for secret "my-secret" will be synced to GitHub as the JSON string `{"foo":"bar"}` if the
+destination is configured to use the `secret-path` [granularity level](/vault/docs/sync#granularity).
 
 </Note>
 
-It is strongly advised to mask individual values for each sub-key to prevent the unintended disclosure of secrets
-in any GitHub Action outputs. The following snippet illustrates how to mask each secret values:
+If using the secret-path granularity, it is strongly advised to mask individual values for each sub-key to prevent the
+unintended disclosure of secrets in any GitHub Action outputs. The following snippet illustrates how to mask each secret values:
 
   ```yaml
   name: Mask synced secret values
@@ -145,6 +146,8 @@ in any GitHub Action outputs. The following snippet illustrates how to mask each
               echo "::add-mask::$v"
             done
   ```
+
+If the GitHub destination uses the default `secret-key` granularity, the values are masked by GitHub automatically.
 
 ## API
 
