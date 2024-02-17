@@ -266,6 +266,9 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
   }
 
   // EDIT FORM ASSERTIONS FOR EACH DESTINATION TYPE
+  // * test updates: if editable, add param here
+  //  if it is not a string type, add case to EXPECTED_VALUE and update
+  //  fillInByAttr() (in sync-selectors) to interact with the form
   const EDITABLE_FIELDS = {
     'aws-sm': ['accessKeyId', 'secretAccessKey', 'granularity', 'secretNameTemplate', 'customTags'],
     'azure-kv': ['clientId', 'clientSecret', 'granularity', 'secretNameTemplate', 'customTags'],
