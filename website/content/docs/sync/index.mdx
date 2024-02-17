@@ -106,7 +106,7 @@ Let's look at some name template examples and the resulting secret name at the s
 | {{ .MountAccessor }}_{{ .SecretKey }}    | kv_1234_foo            |
 | {{ .SecretPath \| replace \"/\" \"_\" }} | path_to_secret1        |
 
-Name templates can be updated. The new template only effective for new secrets associated with the destination and does
+Name templates can be updated. The new template is only effective for new secrets associated with the destination and does
 not affect the secrets synced with the previous template. It is possible to update an association to force a recreate operation.
 The secret synced with the old template will be deleted and a new secret using the new template version will be synced.
 
@@ -120,7 +120,7 @@ field.
 The `secret-path` granularity syncs the entire JSON content of the Vault secret as a single entry at the destination. If
 the destination does not support multi-value secret the JSON is encoded as a single-value JSON-string.
 
-The `secret-key` syncs each Vault key-value pair as a distinct entry at the destination. If the value itself is a list or map
+The `secret-key` granularity syncs each Vault key-value pair as a distinct entry at the destination. If the value itself is a list or map
 it is encoded as a JSON blob.
 
 Granularity can be updated. The new granularity only affects secrets newly associated with the destination and does
