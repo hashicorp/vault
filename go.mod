@@ -24,6 +24,11 @@ replace github.com/hashicorp/vault/api/auth/userpass => ./api/auth/userpass
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
+// This tag has since been deleted, but it's referenced by sentinel, so we use a replace directive
+// so that the build works and Go does not complain. Note that while an IDE may say that this is an
+// unused dependency, removing this will cause `go list -m all` to fail.
+replace rsc.io/script v0.0.0-00010101000000-000000000000 => rsc.io/script v0.0.2-0.20231205190631-334f6c18cff3
+
 require (
 	cloud.google.com/go/cloudsqlconn v1.4.3
 	cloud.google.com/go/monitoring v1.17.0
@@ -118,6 +123,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hashicorp/golang-lru v1.0.2
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/hashicorp/hcl v1.0.1-vault-5
 	github.com/hashicorp/hcl/v2 v2.16.2
 	github.com/hashicorp/hcp-link v0.2.1
