@@ -14,8 +14,8 @@ const displayFields = [
   'accessKeyId',
   'secretAccessKey',
   // sync config options
-  'secretNameTemplate',
   'granularity',
+  'secretNameTemplate',
   'customTags',
 ];
 const formFieldGroups = [

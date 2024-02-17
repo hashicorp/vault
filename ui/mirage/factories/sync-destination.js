@@ -14,7 +14,7 @@ export default Factory.extend({
     secret_access_key: '*****',
     region: 'us-west-1',
     // options
-    granularity: 'secret-key',
+    granularity: 'secret-path', // default option (same for all destinations) so edit test can update to 'secret-key'
     secret_name_template: 'vault-{{ .MountAccessor | replace "_" "-" }}-{{ .SecretPath }}',
     custom_tags: { foo: 'bar' },
   }),
