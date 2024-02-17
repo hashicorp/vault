@@ -43,17 +43,15 @@ There are several sync statuses which relay information about the outcome of the
 operation to have occurred on that secret. The status information is stored inside each
 association object returned by the endpoint and, upon failure, includes an error code describing the cause of the failure.
 
-* `SYNCING` - The sync operation for the secret is currently in-progress.
-* `SYNCED` - The sync operation was successful and sent the secret to the external destination.
-* `UNSYNCING` - The unsync operation for the secret is currently in-progress.
-* `UNSYNCED` - The unsync operation was successful and removed the secret from the external destination.
-	This is returned when a secret itself is deleted but the association is not.
-* `INTERNAL_VAULT_ERROR` - The sync or unsync operation failed due to an issue internal to Vault.
-* `CLIENT_SIDE_ERROR` - The sync or unsync operation failed due to a configuration error.
-	For example, the credentials used to configure the destination expired or were revoked.
-* `EXTERNAL_SERVICE_ERROR` - The sync or unsync operation failed due to an issue with the
-	external service provider's side.
-* `UNKNOWN` - Vault is unable to determine the current state of the secret in regard to the external service.
+| Status                   | Description                                                                                     |
+|:-------------------------|:------------------------------------------------------------------------------------------------|
+| `UNKNOWN`                | Vault is unable to determine the current state of the secret in regard to the external service. |
+| `PENDING`                | An operation is queued for that secret and has not been processed yet.                          |
+| `SYNCED`                 | The sync operation was successful and sent the secret to the external destination.              |
+| `UNSYNCED`               | The unsync operation was successful and removed the secret from the external destination.       |
+| `INTERNAL_VAULT_ERROR`   | The operation failed due to an issue internal to Vault.                                         |
+| `CLIENT_SIDE_ERROR`      | The operation failed due to a configuration error such as invalid privileges.                   |
+| `EXTERNAL_SERVICE_ERROR` | The operation failed due to an issue with the external service such as a temporary downtime.    |
 
 ## Name template
 
