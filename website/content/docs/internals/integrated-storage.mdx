@@ -31,8 +31,8 @@ Raft is a consensus algorithm that is based on
 to Paxos, Raft is designed to have fewer states and a simpler, more
 understandable algorithm.
 
-The Raft protocol will not be fully covered here. However, a high level description is 
-provided to help you build a mental model. Refer to the 
+The Raft protocol will not be fully covered here. However, a high level description is
+provided to help you build a mental model. Refer to the
 complete specification that's described in [this paper](https://raft.github.io/raft.pdf).
 
 #### Terminology
@@ -82,14 +82,14 @@ are blocked until they are _committed_ and _applied_.
 #### Compacting logs
 
 It would be undesirable to allow a replicated log to grow in an unbounded
-fashion. Raft provides a mechanism by which the current state is saved to 
-snapshots and its related logs are compacted. Because of the FSM abstraction, 
-restoring the state of the FSM must result in the same state as a replay of old 
-logs. This allows Raft to capture the FSM state at a point in time and then remove 
-all the logs that were used to reach that state. This is performed automatically 
-without user intervention and prevents unbounded disk usage while also minimizing 
-the time spent replaying logs. One of the advantages of using BoltDB is that it 
-allows Vault's snapshots to be very light weight. Since Vault's data is already 
+fashion. Raft provides a mechanism by which the current state is saved to
+snapshots and its related logs are compacted. Because of the FSM abstraction,
+restoring the state of the FSM must result in the same state as a replay of old
+logs. This allows Raft to capture the FSM state at a point in time and then remove
+all the logs that were used to reach that state. This is performed automatically
+without user intervention and prevents unbounded disk usage while also minimizing
+the time spent replaying logs. One of the advantages of using BoltDB is that it
+allows Vault's snapshots to be very lightweight. Since Vault's data is already
 persisted to disk in BoltDB, the snapshot process just needs to truncate the raft logs.
 
 #### Quorum
@@ -138,48 +138,96 @@ forwarded to the leader.
 Similar to other storage backends, data that is written to the Raft log and FSM
 will be encrypted by Vault's barrier.
 
+### Configurable Raft Log Store
+
+By default, Vault uses BoltDB to store raft logs. Starting in 1.16.0, Vault can
+be configured to use [raft-wal](https://github.com/hashicorp/raft-wal) instead.
+
+When Vault is configured to use BoltDB, the raft logs are stored in a file called
+`raft.db`, located inside the `raft` subdirectory of Vault's main storage directory.
+When configured to use raft-wal, Vault will instead store logs inside a `wal`
+subdirectory, again located inside the `raft` subdirectory.
+
+Why would someone want to enable raft-wal for raft's log store instead of using the
+default of BoltDB? There are a few reasons.
+
+First, consider BoltDB's freelist. BoltDB is a single file database. When data is
+deleted, it's not possible to shrink the file on disk to recover the deleted space.
+Instead, BoltDB marks the pages that the data was stored on as free for use. This
+means in the future, when writes happen and new pages need to be allocated, BoltDB
+will first consult the freelist and attempt to reuse old pages before allocating
+new ones. Normally, this works reasonably well, but if you're operating a cluster
+with high churn, e.g. lots of deletes, the freelist can grow large over time.
+The larger the freelist grows, the slower BoltDB becomes.
+
+raft-wal is designed specifically for storing raft logs, and does not use a freelist.
+raft-wal maintains a directory of files as its data store and is able to compact
+data over time to free up space when it's no longer needed.
+
+Second, consider a particular failure mode for busy Vault clusters. In some cases,
+a fresh follower joining an existing raft cluster (or an existing follower that's
+rebooted) is never able to fully join the cluster because the time it takes them
+to install a raft snapshot is great enough that by the time it's finished, the leader
+has already truncated its existing logs and needs to send the follower a new snapshot.
+In the pathological case, this repeats indefinitely, with the follower never able to
+join.
+
+The straightforward solution to this problem is to increase the number of logs that
+leaders retain before they truncate their log store. However, setting this too high
+causes the BoltDB file to grow large and be more susceptible to sudden bursts of writes,
+causing a large freelist and subsequent poor write performance. Operators have to
+carefully tune this value to be large enough for their future growth in write throughput
+and snapshot size, but no larger than necessary, as it increases the risk of poor
+performance.
+
+When using raft-wal, this number can be increased without risking poor performance
+from explosive freelist growth.
+
+Please note that raft-wal is considered experimental in the 1.16.0 release, as
+it has not yet been proven through heavy production use.
+
 ### Quorum management
 
 #### Autopilot
 
-An [Autopilot feature](/vault/docs/concepts/integrated-storage/autopilot) 
-is available since 1.7.x & later versions that include configurable parameters 
-for when a node is treated as healthy before it's considered an eligible voter in the 
-quorum list. Other features which may be enabled include the ability to remove nodes 
+An [Autopilot feature](/vault/docs/concepts/integrated-storage/autopilot)
+is available since 1.7.x & later versions that include configurable parameters
+for when a node is treated as healthy before it's considered an eligible voter in the
+quorum list. Other features which may be enabled include the ability to remove nodes
 considered as dead from the quorum list after a certain period.
 
-Autopilot is enabled by default in Vault 1.7+. The default configuration values 
+Autopilot is enabled by default in Vault 1.7+. The default configuration values
 should work well for most Vault deployments, but they can be changed if needed.
 
 Autopilot includes stabilization logic for nodes joining the cluster.
-Recently joined nodes are 
-accepted as non-voter initially until they are in sync with matching Raft index 
+Recently joined nodes are
+accepted as non-voter initially until they are in sync with matching Raft index
 and only after a stability thresholds are they then full voting members.
 Setting the stability threshold too low can result in cluster instability as nodes will be
 counted as voters before they are capable of voting.
 
-As of Vault 1.7, a dead server cleanup capability is available. With this feature 
-enabled, unhealthy nodes are automatically removed from the Raft cluster without 
+As of Vault 1.7, a dead server cleanup capability is available. With this feature
+enabled, unhealthy nodes are automatically removed from the Raft cluster without
 manual operator intervention. This is enabled via the [Autopilot API](/vault/api-docs/system/storage/raftautopilot).
-If you wish to decommission a node manually, this can be done with the 
+If you wish to decommission a node manually, this can be done with the
 `remove peer` [command](/vault/docs/commands/operator/raft#remove-peer).
 
 #### Without autopilot
 
-Older versions of Vault, 1.6.x & lower, as well as cases where Autopilot may be 
+Older versions of Vault, 1.6.x & lower, as well as cases where Autopilot may be
 disabled or misconfigured, behave differently.
 
-In scenarios involving those when a node joins a Raft cluster, it attempts to 
-catch up with the rest of the nodes through the data that it's replicating from 
-the leader. While in this initial synchronisation state, the node cannot 
-vote but is counted for the purposes of quorum. If a number of new nodes join 
+In scenarios involving those when a node joins a Raft cluster, it attempts to
+catch up with the rest of the nodes through the data that it's replicating from
+the leader. While in this initial synchronisation state, the node cannot
+vote but is counted for the purposes of quorum. If a number of new nodes join
 the cluster simultaneously or at similar times, and thereby exceeding the failure
 tolerance of the cluster, quorum may be lost and the cluster can fail.
 
-For example, consider a scenario where there is a 3-node cluster with a large 
-amount of data and a failure tolerance of 1. An additional 3 new nodes then 
-join the cluster. The cluster now consists of 6 nodes with a failure tolerance 
-of 2, but since all 3 nodes are still catching up, this will result in a loss of 
+For example, consider a scenario where there is a 3-node cluster with a large
+amount of data and a failure tolerance of 1. An additional 3 new nodes then
+join the cluster. The cluster now consists of 6 nodes with a failure tolerance
+of 2, but since all 3 nodes are still catching up, this will result in a loss of
 quorum.
 
 * A 3 node cluster with a large amount of data that's at a failure tolerance of 1.
@@ -246,26 +294,26 @@ in a failure scenario.
 
 ### Minimums & scaling
 
-The [Vault Reference Architecture](/vault/tutorials/day-one-raft/raft-reference-architecture#recommended-architecture) 
+The [Vault Reference Architecture](/vault/tutorials/day-one-raft/raft-reference-architecture#recommended-architecture)
 recommends a 5 node cluster to ensure a minimum failure tolerance of at least 2.
 
-It is good practise, wherever possible, to retain a failure tolerance of 2 or 
+It is good practise, wherever possible, to retain a failure tolerance of 2 or
 more.
 
-A scaling approach can be pursued in the event of maintenance and other changes 
-where an additional pair of nodes (ie two) are added in an existing 5 node cluster 
-making for a 7 node cluster. Once new joiners are confirmed to be in sync then 
-the 2 older nodes can be stopped and or destroyed with the same processes being 
-repeated until all other nodes have been replaced. This use of additional nodes 
-on a temporary basis of a 7 node cluster arrangement, concluding back to 5 nodes, 
-may be one way to ensure sufficient failure tolerance is maintained and that 
-changes are made progressively in proportion to the cluster failure tolerance and 
+A scaling approach can be pursued in the event of maintenance and other changes
+where an additional pair of nodes (ie two) are added in an existing 5 node cluster
+making for a 7 node cluster. Once new joiners are confirmed to be in sync then
+the 2 older nodes can be stopped and or destroyed with the same processes being
+repeated until all other nodes have been replaced. This use of additional nodes
+on a temporary basis of a 7 node cluster arrangement, concluding back to 5 nodes,
+may be one way to ensure sufficient failure tolerance is maintained and that
+changes are made progressively in proportion to the cluster failure tolerance and
 never exceeding the available failure tolerance in any given time.
 
-The intent with any change or scaling ought to be with the lose of quorum and 
-reduction of the quorum failure tolerances at the forefront and discouraging 
+The intent with any change or scaling ought to be with the lose of quorum and
+reduction of the quorum failure tolerances at the forefront and discouraging
 any practises that compromise that.
 
-Scaling clusters up or down in pairs with 2 nodes each time also has the added 
-advantage of avoiding even numbers and it is always recommended to 
+Scaling clusters up or down in pairs with 2 nodes each time also has the added
+advantage of avoiding even numbers and it is always recommended to
 allow for an odd number of total voters in any cluster.
