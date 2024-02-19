@@ -1808,6 +1808,8 @@ func testAccStepLoginWithMetadata(t *testing.T, connState tls.ConnectionState, c
 			// Check for fixed metadata too
 			metadata["cert_name"] = certName
 			metadata["common_name"] = connState.PeerCertificates[0].Subject.CommonName
+			metadata["org"] = fmt.Sprint(connState.PeerCertificates[0].Subject.Organization)
+			metadata["org_unit"] = fmt.Sprint(connState.PeerCertificates[0].Subject.OrganizationalUnit)
 			metadata["serial_number"] = connState.PeerCertificates[0].SerialNumber.String()
 			metadata["subject_key_id"] = certutil.GetHexFormatted(connState.PeerCertificates[0].SubjectKeyId, ":")
 			metadata["authority_key_id"] = certutil.GetHexFormatted(connState.PeerCertificates[0].AuthorityKeyId, ":")

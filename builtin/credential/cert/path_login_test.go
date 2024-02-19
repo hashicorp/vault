@@ -59,7 +59,9 @@ func TestMain(m *testing.M) {
 func TestCert_RoleResolve(t *testing.T) {
 	certTemplate := &x509.Certificate{
 		Subject: pkix.Name{
-			CommonName: "example.com",
+			CommonName:         "example.com",
+			Organization:       []string{"Example.com"},
+			OrganizationalUnit: []string{"Test Division"},
 		},
 		DNSNames:    []string{"example.com"},
 		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
