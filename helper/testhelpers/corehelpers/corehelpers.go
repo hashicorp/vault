@@ -315,6 +315,10 @@ type noopWrapper struct {
 	backend *NoopAudit
 }
 
+// NoopAuditEventListener is a callback used by noopWrapper.Process() to notify
+// of each received audit event.
+type NoopAuditEventListener func(*audit.AuditEvent)
+
 type NoopAudit struct {
 	Config *audit.BackendConfig
 
@@ -339,6 +343,8 @@ type NoopAudit struct {
 
 	nodeIDList []eventlogger.NodeID
 	nodeMap    map[eventlogger.NodeID]eventlogger.Node
+
+	listener NoopAuditEventListener
 }
 
 // Process handles the contortions required by older test code to ensure behavior.
@@ -356,6 +362,10 @@ func (n *noopWrapper) Process(ctx context.Context, e *eventlogger.Event) (*event
 	a, ok := e.Payload.(*audit.AuditEvent)
 	if !ok {
 		return nil, errors.New("cannot parse payload as an audit event")
+	}
+
+	if n.backend.listener != nil {
+		n.backend.listener(a)
 	}
 
 	in := a.Data
@@ -493,6 +503,10 @@ func (n *NoopAudit) RegisterNodesAndPipeline(broker *eventlogger.Broker, name st
 	}
 
 	return broker.RegisterPipeline(pipeline)
+}
+
+func (n *NoopAudit) SetListener(listener NoopAuditEventListener) {
+	n.listener = listener
 }
 
 type TestLogger struct {
