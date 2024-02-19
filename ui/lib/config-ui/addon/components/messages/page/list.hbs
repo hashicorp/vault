@@ -1,0 +1,147 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+<Messages::TabPageHeader
+  @authenticated={{@authenticated}}
+  @pageTitle="Custom messages"
+  @showTabs={{true}}
+  @breadcrumbs={{this.breadcrumbs}}
+>
+  <:toolbarFilters>
+    <FilterInput
+      aria-label="Search by message title"
+      placeholder="Search by message title"
+      id="message-filter"
+      value={{@params.pageFilter}}
+      @autofocus={{true}}
+      @onInput={{this.onFilterInputChange}}
+    />
+    <div>
+      <SearchSelect
+        @id="filter-by-message-status"
+        class="has-left-margin-s"
+        @options={{this.statusFilterOptions}}
+        @selectLimit="1"
+        @searchEnabled={{false}}
+        @fallbackComponent="select"
+        @onChange={{fn this.onFilterChange "status"}}
+        @placeholder="Filter by message status"
+        @inputValue={{if @params.status (array @params.status)}}
+        data-test-filter-by-message-status
+      />
+    </div>
+    <SearchSelect
+      @id="filter-by-message-type"
+      class="has-left-margin-s"
+      @options={{this.typeFilterOptions}}
+      @selectLimit="1"
+      @searchEnabled={{false}}
+      @fallbackComponent="select"
+      @onChange={{fn this.onFilterChange "type"}}
+      @placeholder="Filter by message type"
+      @inputValue={{if @params.type (array @params.type)}}
+      data-test-filter-by-message-type
+    />
+  </:toolbarFilters>
+  <:toolbarActions>
+    <Hds::Button
+      @text="Create message"
+      @icon="plus"
+      @color="secondary"
+      class="toolbar-button"
+      {{on "click" this.createMessage}}
+      data-test-button="create message"
+      aria-label="create message"
+    />
+  </:toolbarActions>
+</Messages::TabPageHeader>
+
+{{#if @messages.length}}
+  {{#each this.formattedMessages as |message|}}
+    <LinkedBlock
+      data-test-list-item={{message.title}}
+      class="list-item-row"
+      @params={{array "messages.message.details" message.id}}
+      @linkPrefix="vault.cluster.config-ui"
+    >
+      <div class="level is-mobile">
+        <div class="level-left">
+          <div>
+            <Hds::Text::Display @tag="h2" data-linked-block-title={{message.id}}>
+              <Icon @name="message-circle" class="auto-width" aria-label="message" />
+              {{message.title}}
+            </Hds::Text::Display>
+            <div class="has-top-margin-xs">
+              <Hds::Badge @text={{message.badgeDisplayText}} @color={{message.badgeColor}} data-test-badge={{message.id}} />
+              <Hds::Badge @text={{(capitalize message.type)}} data-test-badge={{message.type}} />
+            </div>
+          </div>
+        </div>
+        <div class="level-right is-flex is-paddingless is-marginless">
+          <div class="level-item">
+            {{#if (or message.canEditCustomMessages message.canDeleteCustomMessages)}}
+              <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+                <dd.ToggleIcon
+                  @icon="more-horizontal"
+                  @text="Message popup menu"
+                  @hasChevron={{false}}
+                  data-test-popup-menu-trigger
+                />
+                {{#if message.canEditCustomMessages}}
+                  <dd.Interactive @text="Edit" @route="messages.message.edit" @model={{message.id}} />
+                {{/if}}
+                {{#if message.canDeleteCustomMessages}}
+                  <dd.Interactive @text="Delete" @color="critical" {{on "click" (fn (mut this.messageToDelete) message)}} />
+                {{/if}}
+              </Hds::Dropdown>
+            {{/if}}
+          </div>
+        </div>
+      </div>
+    </LinkedBlock>
+  {{/each}}
+  <Hds::Pagination::Numbered
+    class="has-top-margin-m has-bottom-margin-m"
+    @currentPage={{@messages.meta.currentPage}}
+    @currentPageSize={{@messages.meta.pageSize}}
+    @route="messages.index"
+    @showSizeSelector={{false}}
+    @totalItems={{@messages.meta.total}}
+    @queryFunction={{this.paginationQueryParams}}
+  />
+{{else}}
+  <EmptyState
+    @title="No messages yet"
+    @message="Add a custom message for all users after they log into Vault. Create message to get started."
+  />
+{{/if}}
+
+{{#if this.showMaxMessageModal}}
+  <Hds::Modal
+    id="maximum-message-modal"
+    @color="warning"
+    @onClose={{fn (mut this.showMaxMessageModal) false}}
+    data-test-modal="maximum-message-modal"
+    as |M|
+  >
+    <M.Header data-test-modal-title="maximum-message-modal">
+      Maximum number of messages reached
+    </M.Header>
+    <M.Body data-test-modal-body="maximum-message-modal">
+      Vault can only store up to 100 messages. To create a message, delete one of your messages to clear up space.
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button @text="Close" {{on "click" F.close}} data-test-modal-button="maximum-message-modal" />
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}
+
+{{#if this.messageToDelete}}
+  <ConfirmModal
+    @color="critical"
+    @confirmMessage="This will delete this message permanently. You cannot undo this action."
+    @onClose={{fn (mut this.messageToDelete) null}}
+    @onConfirm={{perform this.deleteMessage this.messageToDelete}}
+  />
+{{/if}}

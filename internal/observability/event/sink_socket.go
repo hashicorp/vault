@@ -11,9 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-multierror"
-
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-multierror"
 )
 
 var _ eventlogger.Node = (*SocketSink)(nil)

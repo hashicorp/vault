@@ -127,7 +127,7 @@ func TestBackend_configureFilterNode(t *testing.T) {
 		expectedErrorMsg string
 	}{
 		"happy": {
-			filter: "foo == bar",
+			filter: "namespace == bar",
 		},
 		"empty": {
 			filter:         "",
@@ -141,6 +141,11 @@ func TestBackend_configureFilterNode(t *testing.T) {
 			filter:           "___qwerty",
 			wantErr:          true,
 			expectedErrorMsg: "syslog.(Backend).configureFilterNode: error creating filter node: audit.NewEntryFilter: cannot create new audit filter",
+		},
+		"unsupported-field": {
+			filter:           "foo == bar",
+			wantErr:          true,
+			expectedErrorMsg: "filter references an unsupported field: foo == bar",
 		},
 	}
 	for name, tc := range tests {
@@ -291,7 +296,7 @@ func TestBackend_configureFilterFormatterSink(t *testing.T) {
 	formatConfig, err := audit.NewFormatterConfig()
 	require.NoError(t, err)
 
-	err = b.configureFilterNode("foo == bar")
+	err = b.configureFilterNode("mount_type == kv")
 	require.NoError(t, err)
 
 	err = b.configureFormatterNode(formatConfig)

@@ -4,7 +4,7 @@
  */
 
 import { hash } from 'rsvp';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Base from '../../replication-base';
 
 export default Base.extend({

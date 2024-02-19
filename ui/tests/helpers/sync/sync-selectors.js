@@ -18,6 +18,7 @@ export const PAGE = {
       name: '[data-test-association-name]',
       status: '[data-test-association-status]',
       updated: '[data-test-association-updated]',
+      refresh: '[data-test-refresh-list]',
       menu: {
         sync: '[data-test-association-action="sync"]',
         view: '[data-test-association-action="view"]',
@@ -27,6 +28,9 @@ export const PAGE = {
   },
   destinations: {
     deleteBanner: '[data-test-delete-status-banner]',
+    details: {
+      sectionHeader: '[data-test-section-header]',
+    },
     sync: {
       mountSelect: '[data-test-sync-mount-select]',
       mountInput: '[data-test-sync-mount-input]',
@@ -40,6 +44,10 @@ export const PAGE = {
       type: '[data-test-destination-type]',
       deleteAction: '[data-test-delete]',
       create: '[data-test-create-destination]',
+      menu: {
+        details: '[data-test-details]',
+        edit: '[data-test-edit]',
+      },
     },
   },
   overview: {
@@ -60,7 +68,7 @@ export const PAGE = {
     text: '.hds-badge__text',
   },
   selectType: (type) => `[data-test-select-destination="${type}"]`,
-  cancelButton: '[data-test-cancel]',
+  createCancel: '[data-test-destination-create-cancel]',
   saveButton: '[data-test-save]',
   toolbar: (btnText) => `[data-test-toolbar="${btnText}"]`,
   form: {
@@ -71,6 +79,9 @@ export const PAGE = {
         case 'credentials':
           await click('[data-test-text-toggle]');
           return fillIn('[data-test-text-file-textarea]', value);
+        case 'customTags':
+          await fillIn('[data-test-kv-key="0"]', 'foo');
+          return fillIn('[data-test-kv-value="0"]', value);
         case 'deploymentEnvironments':
           await click('[data-test-input="deploymentEnvironments"] input#development');
           await click('[data-test-input="deploymentEnvironments"] input#preview');

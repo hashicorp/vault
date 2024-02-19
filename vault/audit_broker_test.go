@@ -9,12 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/builtin/audit/file"
-	"github.com/hashicorp/vault/helper/namespace"
-
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/builtin/audit/syslog"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -66,7 +65,7 @@ func TestAuditBroker_Register_SuccessThresholdSinks(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, a)
 
-	filterBackend := testAuditBackend(t, "b1-filter", map[string]string{"filter": "foo == bar"})
+	filterBackend := testAuditBackend(t, "b1-filter", map[string]string{"filter": "operation == create"})
 	noFilterBackend := testAuditBackend(t, "b2-no-filter", map[string]string{})
 
 	// Should be set to 0 for required sinks (and not found, as we've never registered before).
@@ -108,7 +107,7 @@ func TestAuditBroker_Deregister_SuccessThresholdSinks(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, a)
 
-	filterBackend := testAuditBackend(t, "b1-filter", map[string]string{"filter": "foo == bar"})
+	filterBackend := testAuditBackend(t, "b1-filter", map[string]string{"filter": "operation == create"})
 	noFilterBackend := testAuditBackend(t, "b2-no-filter", map[string]string{})
 
 	err = a.Register("b1-filter", filterBackend, false)

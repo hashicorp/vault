@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Mixin from '@ember/object/mixin';
 import RSVP from 'rsvp';
 import {

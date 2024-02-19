@@ -133,7 +133,7 @@ func (dc *DockerCluster) SetRecoveryKeys(keys [][]byte) {
 }
 
 func (dc *DockerCluster) GetCACertPEMFile() string {
-	return dc.CACertPEMFile
+	return testcluster.DefaultCAFile
 }
 
 func (dc *DockerCluster) Cleanup() {
@@ -1254,6 +1254,18 @@ COPY vault /bin/vault
 	}
 	dc.builtTags[tag] = struct{}{}
 	return tag, nil
+}
+
+func (dc *DockerCluster) GetActiveClusterNode() *DockerClusterNode {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	node, err := testcluster.WaitForActiveNode(ctx, dc)
+	if err != nil {
+		panic(fmt.Sprintf("no cluster node became active in timeout window: %v", err))
+	}
+
+	return dc.ClusterNodes[node]
 }
 
 /* Notes on testing the non-bridge network case:

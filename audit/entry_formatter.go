@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/jefferai/jsonx"
 )
@@ -106,6 +107,13 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		data.Request.Headers = adjustedHeaders
 	}
 
+	// If the request contains a Server-Side Consistency Token (SSCT), and we
+	// have an auth response, overwrite the existing client token with the SSCT,
+	// so that the SSCT appears in the audit log for this entry.
+	if data.Request != nil && data.Request.InboundSSCToken != "" && data.Auth != nil {
+		data.Auth.ClientToken = data.Request.InboundSSCToken
+	}
+
 	var result []byte
 
 	switch a.Subtype {
@@ -152,10 +160,26 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		result = append([]byte(f.prefix), result...)
 	}
 
-	// Store the final format.
-	e.FormattedAs(f.config.RequiredFormat.String(), result)
+	// Copy some properties from the event (and audit event) and store the
+	// format for the next (sink) node to Process.
+	a2 := &AuditEvent{
+		ID:        a.ID,
+		Version:   a.Version,
+		Subtype:   a.Subtype,
+		Timestamp: a.Timestamp,
+		Data:      data, // Use the cloned data here rather than a pointer to the original.
+	}
 
-	return e, nil
+	e2 := &eventlogger.Event{
+		Type:      e.Type,
+		CreatedAt: e.CreatedAt,
+		Formatted: make(map[string][]byte), // we are about to set this ourselves.
+		Payload:   a2,
+	}
+
+	e2.FormattedAs(f.config.RequiredFormat.String(), result)
+
+	return e2, nil
 }
 
 // FormatRequest attempts to format the specified logical.LogInput into a RequestEntry.
@@ -252,6 +276,10 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 			Headers:                       req.Headers,
 			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
 		},
+	}
+
+	if req.HTTPRequest != nil && req.HTTPRequest.RequestURI != req.Path {
+		reqEntry.Request.RequestURI = req.HTTPRequest.RequestURI
 	}
 
 	if !auth.IssueTime.IsZero() {
@@ -471,6 +499,10 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 		},
 	}
 
+	if req.HTTPRequest != nil && req.HTTPRequest.RequestURI != req.Path {
+		respEntry.Request.RequestURI = req.HTTPRequest.RequestURI
+	}
+
 	if auth.PolicyResults != nil {
 		respEntry.Auth.PolicyResults = &PolicyResults{
 			Allowed: auth.PolicyResults.Allowed,
@@ -592,4 +624,9 @@ func newTemporaryEntryFormatter(n *EntryFormatter) *EntryFormatter {
 		config:          n.config,
 		prefix:          n.prefix,
 	}
+}
+
+// Salt returns a new salt with default configuration and no storage usage, and no error.
+func (s *nonPersistentSalt) Salt(_ context.Context) (*salt.Salt, error) {
+	return salt.NewNonpersistentSalt(), nil
 }

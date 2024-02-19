@@ -11,9 +11,9 @@
  */
 export function isAdvancedSecret(value) {
   try {
-    const json = JSON.parse(value);
-    if (Array.isArray(json)) return false;
-    return Object.values(json).some((value) => typeof value !== 'string');
+    const obj = typeof value === 'string' ? JSON.parse(value) : value;
+    if (Array.isArray(obj)) return false;
+    return Object.values(obj).any((value) => typeof value !== 'string');
   } catch (e) {
     return false;
   }

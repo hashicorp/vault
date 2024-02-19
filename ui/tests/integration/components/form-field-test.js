@@ -209,6 +209,8 @@ module('Integration | Component | form field', function (hooks) {
       "[data-test-input='bar']",
       format(startOfDay(new Date('2023-12-17T03:24:00')), "yyyy-MM-dd'T'HH:mm")
     );
+    // add a click label to focus out the date we filled in above
+    await click('.is-label');
     assert.deepEqual(model.get('bar'), '2023-12-17T00:00', 'sets the value on the model');
   });
 

@@ -6,9 +6,19 @@
 import SyncDestinationModel from '../destination';
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
-const displayFields = ['name', 'keyVaultUri', 'tenantId', 'cloud', 'clientId', 'clientSecret'];
+
+const displayFields = [
+  'name',
+  'keyVaultUri',
+  'tenantId',
+  'cloud',
+  'clientId',
+  'clientSecret',
+  'secretNameTemplate',
+  'customTags',
+];
 const formFieldGroups = [
-  { default: ['name', 'keyVaultUri', 'tenantId', 'cloud', 'clientId'] },
+  { default: ['name', 'keyVaultUri', 'tenantId', 'cloud', 'clientId', 'secretNameTemplate', 'customTags'] },
   { Credentials: ['clientSecret'] },
 ];
 @withFormFields(displayFields, formFieldGroups)
@@ -47,4 +57,11 @@ export default class SyncDestinationsAzureKeyVaultModel extends SyncDestinationM
     editDisabled: true,
   })
   cloud;
+
+  @attr('object', {
+    subText:
+      'An optional set of informational key-value pairs added as additional metadata on secrets synced to this destination. Custom tags are merged with built-in tags.',
+    editType: 'kv',
+  })
+  customTags;
 }

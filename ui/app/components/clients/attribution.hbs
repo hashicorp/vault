@@ -1,0 +1,144 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{! only show side-by-side horizontal bar charts if data is from a single, historical month }}
+<div
+  class={{concat "chart-wrapper" (if @isHistoricalMonth " dual-chart-grid" " single-chart-grid")}}
+  data-test-clients-attribution
+>
+  <div class="chart-header has-header-link has-bottom-margin-m">
+    <div class="header-left">
+      <h2 class="chart-title">Attribution</h2>
+      <p class="chart-description" data-test-attribution-description>{{this.chartText.description}}</p>
+    </div>
+    <div class="header-right">
+      {{#if this.hasCsvData}}
+        <Hds::Button
+          data-test-attribution-export-button
+          @text="Export attribution data"
+          @color="secondary"
+          {{on "click" (fn (mut this.showCSVDownloadModal) true)}}
+        />
+      {{/if}}
+    </div>
+  </div>
+  {{#if this.barChartTotalClients}}
+    {{#if @isHistoricalMonth}}
+      <div class="chart-container-left" data-test-chart-container="new-clients">
+        <h2 class="chart-title">New clients</h2>
+        <p class="chart-description">{{this.chartText.newCopy}}</p>
+        <Clients::HorizontalBarChart
+          @dataset={{this.barChartNewClients}}
+          @chartLegend={{this.attributionLegend}}
+          @totalCounts={{@newUsageCounts}}
+          @noDataMessage="There are no new clients for this namespace during this time period."
+        />
+      </div>
+
+      <div class="chart-container-right" data-test-chart-container="total-clients">
+        <h2 class="chart-title">Total clients</h2>
+        <p class="chart-description">{{this.chartText.totalCopy}}</p>
+        <Clients::HorizontalBarChart @dataset={{this.barChartTotalClients}} @chartLegend={{this.attributionLegend}} />
+      </div>
+    {{else}}
+      <div
+        class={{concat (unless this.barChartTotalClients "chart-empty-state ") "chart-container-wide"}}
+        data-test-chart-container="single-chart"
+      >
+        <Clients::HorizontalBarChart @dataset={{this.barChartTotalClients}} @chartLegend={{this.attributionLegend}} />
+      </div>
+      <div class="chart-subTitle">
+        <p class="chart-subtext" data-test-attribution-subtext>{{this.chartText.totalCopy}}</p>
+      </div>
+
+      <div class="data-details-top" data-test-top-attribution>
+        <h3 class="data-details">Top {{this.attributionBreakdown}}</h3>
+        <p class="data-details">{{this.topClientCounts.label}}</p>
+      </div>
+
+      <div class="data-details-bottom" data-test-attribution-clients>
+        <h3 class="data-details">Clients in {{this.attributionBreakdown}}</h3>
+        <p class="data-details">{{format-number this.topClientCounts.clients}}</p>
+      </div>
+    {{/if}}
+    <div class="legend">
+      {{#each this.attributionLegend as |legend idx|}}
+        <span class="legend-colors dot-{{idx}}"></span><span class="legend-label">{{capitalize legend.label}}</span>
+      {{/each}}
+    </div>
+  {{else}}
+    <div class="chart-empty-state">
+      <EmptyState @icon="skip" @title="No data found" @bottomBorder={{true}} />
+    </div>
+  {{/if}}
+  <div class="timestamp" data-test-attribution-timestamp>
+    {{#if @responseTimestamp}}
+      Updated
+      {{date-format @responseTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
+    {{/if}}
+  </div>
+</div>
+
+{{! MODAL FOR CSV DOWNLOAD }}
+{{#if this.showCSVDownloadModal}}
+  <Hds::Modal id="attribution-csv-download-modal" @onClose={{fn (mut this.showCSVDownloadModal) false}} as |M|>
+    <M.Header @icon="info" data-test-export-modal-title>
+      Export attribution data
+    </M.Header>
+    <M.Body>
+      <p class="has-bottom-margin-s">
+        This export will include the namespace path, authentication method path, and the associated total, entity, and
+        non-entity clients for the
+        {{if this.formattedEndDate "date range" "month"}}
+        below.
+      </p>
+      {{!--  * SYNC BETA (1.16.0) - beta removal planned for 1.16.1 release, replace copy above with the following
+      <p class="has-bottom-margin-s">
+        This export will include the namespace path, mount path and associated total, entity, non-entity and secrets sync
+        clients for the
+        {{if this.formattedEndDate "date range" "month"}}
+        below.
+      </p>
+      <p class="has-bottom-margin-s">
+        The
+        <code>mount_path</code>
+        for secrets sync clients is the KV v2 engine path and for entity/non-entity clients is the corresponding
+        authentication method path.
+      </p>
+       --}}
+      <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if this.formattedEndDate " RANGE"}}</p>
+      <p class="has-bottom-margin-s" data-test-export-date-range>
+        {{this.formattedStartDate}}
+        {{if this.formattedEndDate "-"}}
+        {{this.formattedEndDate}}</p>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Export" {{on "click" (fn this.exportChartData this.formattedCsvFileName)}} />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
+      </Hds::ButtonSet>
+      {{#if @upgradeExplanation}}
+        <Hds::Alert class="has-top-padding-m" @type="compact" @color="warning" as |A|>
+          <A.Description>
+            <strong>Your data contains an upgrade.</strong>
+            {{@upgradeExplanation}}
+            Visit our
+            <Hds::Link::Inline
+              @icon="docs-link"
+              @iconPosition="trailing"
+              @isHrefExternal={{true}}
+              @href={{doc-link
+                "/vault/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
+              }}
+            >
+              Client count FAQ
+            </Hds::Link::Inline>
+            for more information.
+          </A.Description>
+        </Hds::Alert>
+      {{/if}}
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

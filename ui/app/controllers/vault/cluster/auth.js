@@ -2,7 +2,7 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Controller, { inject as controller } from '@ember/controller';
 import { task, timeout } from 'ember-concurrency';
@@ -17,6 +17,7 @@ export default Controller.extend({
   version: service(),
   auth: service(),
   router: service(),
+  customMessages: service(),
   queryParams: [{ authMethod: 'with', oidcProvider: 'o' }],
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
   wrappedToken: alias('vaultController.wrappedToken'),
@@ -52,6 +53,7 @@ export default Controller.extend({
     yield timeout(500);
     const ns = this.fullNamespaceFromInput(value);
     this.namespaceService.setNamespace(ns, true);
+    this.customMessages.fetchMessages(ns);
     this.set('namespaceQueryParam', ns);
   }).restartable(),
 
@@ -67,6 +69,8 @@ export default Controller.extend({
       transition = this.router.transitionTo('vault.cluster', { queryParams: { namespace } });
     }
     transition.followRedirects().then(() => {
+      this.customMessages.fetchMessages(namespace);
+
       if (isRoot) {
         this.auth.set('isRootToken', true);
         this.flashMessages.warning(

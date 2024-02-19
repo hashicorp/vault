@@ -4,7 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default class SidebarNavClusterComponent extends Component {
   @service currentCluster;
@@ -18,6 +18,6 @@ export default class SidebarNavClusterComponent extends Component {
 
   get isRootNamespace() {
     // should only return true if we're in the true root namespace
-    return this.namespace.inRootNamespace && !this.currentCluster.hasChrootNamespace;
+    return this.namespace.inRootNamespace && !this.cluster?.hasChrootNamespace;
   }
 }

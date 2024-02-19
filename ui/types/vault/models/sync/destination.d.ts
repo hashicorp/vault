@@ -8,6 +8,10 @@ import type { WithFormFieldsAndValidationsModel } from 'vault/app-types';
 export default interface SyncDestinationModel extends WithFormFieldsAndValidationsModel {
   name: string;
   type: string;
+  secretNameTemplate: string;
+  purgeInitiatedAt: string;
+  purgeError: string;
+
   get icon(): string;
   get typeDisplayName(): string;
   get maskedParams(): string[];
@@ -37,4 +41,10 @@ export default interface SyncDestinationModel extends WithFormFieldsAndValidatio
   projectId?: string;
   teamId?: string;
   deploymentEnvironments?: array;
+
+  get canCreate(): boolean;
+  get canDelete(): boolean;
+  get canEdit(): boolean;
+  get canRead(): boolean;
+  get canSync(): boolean;
 }

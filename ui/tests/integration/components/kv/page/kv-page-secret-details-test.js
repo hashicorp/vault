@@ -135,6 +135,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     await click(FORM.toggleMasked);
     assert.dom(PAGE.infoRowValue('foo')).hasText('bar', 'renders secret value');
     await click(FORM.toggleJson);
+    await click(FORM.toggleJsonValues);
     assert.propEqual(parseJsonEditor(find), this.secretData, 'json editor renders secret data');
     assert
       .dom(PAGE.detail.versionTimestamp)
@@ -142,7 +143,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
   });
 
   test('it renders json view when secret is complex', async function (assert) {
-    assert.expect(3);
+    assert.expect(4);
     await render(
       hbs`
        <Page::Secret::Details
@@ -154,7 +155,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       { owner: this.engine }
     );
     assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
-    assert.dom(FORM.toggleJson).isDisabled();
+    assert.dom(FORM.toggleJson).isChecked();
+    assert.dom(FORM.toggleJson).isNotDisabled();
     assert.dom('[data-test-component="code-mirror-modifier"]').exists('shows json editor');
   });
 
