@@ -13,15 +13,17 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"time"
 
-	"github.com/cenkalti/backoff/v3"
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/internal/ctmanager"
+	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/helper/useragent"
+	"github.com/hashicorp/vault/sdk/helper/backoff"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 	"go.uber.org/atomic"
 )
@@ -145,9 +147,9 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	}
 	ts.lookupMap = lookupMap
 
-	// Create exponential backoff object to calculate backoff time before restarting a failed
+	// Create  backoff object to calculate backoff time before restarting a failed
 	// consul template server
-	restartBackoff := backoff.NewExponentialBackOff()
+	restartBackoff := backoff.NewBackoff(math.MaxInt, agentproxyshared.DefaultMinBackoff, agentproxyshared.DefaultMaxBackoff)
 
 	for {
 		select {
@@ -198,7 +200,11 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			}
 
 			// Calculate the amount of time to backoff using exponential backoff
-			sleep := restartBackoff.NextBackOff()
+			sleep, err := restartBackoff.Next()
+			if err != nil {
+				ts.logger.Error("template server: reached maximum number of restart attempts")
+				restartBackoff.Reset()
+			}
 
 			// Sleep for the calculated backoff time then attempt to create a new runner
 			ts.logger.Warn(fmt.Sprintf("template server restart: retry attempt after %s", sleep))

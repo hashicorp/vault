@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
@@ -30,6 +31,11 @@ import (
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cacheboltdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/keymanager"
+)
+
+const (
+	DefaultMinBackoff = 1 * time.Second
+	DefaultMaxBackoff = 5 * time.Minute
 )
 
 // GetAutoAuthMethodFromConfig Calls the appropriate NewAutoAuthMethod function, initializing

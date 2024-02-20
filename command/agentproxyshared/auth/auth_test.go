@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/command/agentproxyshared"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -110,10 +111,10 @@ consumption:
 
 func TestAgentBackoff(t *testing.T) {
 	max := 1024 * time.Second
-	backoff := newAutoAuthBackoff(defaultMinBackoff, max, false)
+	backoff := newAutoAuthBackoff(agentproxyshared.DefaultMinBackoff, max, false)
 
 	// Test initial value
-	if backoff.backoff.Current() > defaultMinBackoff || backoff.backoff.Current() < defaultMinBackoff*3/4 {
+	if backoff.backoff.Current() > agentproxyshared.DefaultMinBackoff || backoff.backoff.Current() < agentproxyshared.DefaultMinBackoff*3/4 {
 		t.Fatalf("expected 1s initial backoff, got: %v", backoff.backoff.Current())
 	}
 
@@ -141,7 +142,7 @@ func TestAgentBackoff(t *testing.T) {
 
 	// Test reset
 	backoff.backoff.Reset()
-	if backoff.backoff.Current() > defaultMinBackoff || backoff.backoff.Current() < defaultMinBackoff*3/4 {
+	if backoff.backoff.Current() > agentproxyshared.DefaultMinBackoff || backoff.backoff.Current() < agentproxyshared.DefaultMinBackoff*3/4 {
 		t.Fatalf("expected 1s backoff after reset, got: %v", backoff.backoff.Current())
 	}
 }

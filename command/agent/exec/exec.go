@@ -7,19 +7,21 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"sort"
 	"sync"
 	"time"
 
-	"github.com/cenkalti/backoff/v3"
 	"github.com/hashicorp/consul-template/child"
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/internal/ctmanager"
+	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/helper/useragent"
+	"github.com/hashicorp/vault/sdk/helper/backoff"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 	"golang.org/x/exp/slices"
 )
@@ -170,7 +172,7 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 
 	// create exponential backoff object to calculate backoff time before restarting a failed
 	// consul template server
-	restartBackoff := backoff.NewExponentialBackOff()
+	restartBackoff := backoff.NewBackoff(math.MaxInt, agentproxyshared.DefaultMinBackoff, agentproxyshared.DefaultMaxBackoff)
 
 	for {
 		select {
@@ -222,7 +224,15 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 			}
 
 			// Calculate the amount of time to backoff using exponential backoff
-			sleep := restartBackoff.NextBackOff()
+			sleep, err := restartBackoff.Next()
+			if err != nil {
+				ts.logger.Error("template server: reached maximum number restart attempts")
+				restartBackoff.Reset()
+			}
+
+			// Sleep for the calculated backoff time then attempt to create a new runner
+			ts.logger.Warn(fmt.Sprintf("template server restart: retry attempt after %s", sleep))
+			time.Sleep(sleep)
 
 			// Sleep for the calculated backoff time then attempt to create a new runner
 			s.logger.Warn(fmt.Sprintf("template server restart: retry attempt after %s", sleep))
