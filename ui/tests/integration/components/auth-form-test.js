@@ -244,7 +244,7 @@ module('Integration | Component | auth form', function (hooks) {
       'makes call to unwrap the token'
     );
     assert.strictEqual(
-      server.handledRequests[0].requestHeaders['X-Vault-Token'],
+      server.handledRequests[0].requestHeaders['x-vault-token'],
       wrappedToken,
       'uses passed wrapped token for the unwrap'
     );

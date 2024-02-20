@@ -6,7 +6,7 @@
 import sinon from 'sinon';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, render } from '@ember/test-helpers';
+import { click, fillIn, find, render, waitUntil } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
@@ -54,8 +54,13 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
     assert.dom('[data-test-dr-token-flow-step="begin"]').exists('First step shows');
     assert.dom('[data-test-use-pgp-key-cta]').hasText('Provide PGP Key');
     assert.dom('[data-test-generate-token-cta]').hasText('Generate operation token');
+
     await click('[data-test-generate-token-cta]');
-    assert.dom('[data-test-dr-token-flow-step="shamir"]').exists('Shows shamir step after start');
+
+    assert.ok(
+      await waitUntil(() => find('[data-test-dr-token-flow-step="shamir"]')),
+      'shows shamir step after start'
+    );
     assert
       .dom('.shamir-progress')
       .hasText('0/3 keys provided', 'progress shows reflecting checkStatus response with defaults');
@@ -64,13 +69,15 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
     // Fill in shamir key and submit
     await fillIn('[data-test-shamir-key-input]', 'some-key');
     await click('[data-test-shamir-submit]');
-    assert.dom('.shamir-progress').hasText('1/3 keys provided', 'progress shows reflecting attempt response');
-    assert
-      .dom('[data-test-otp-info]')
-      .exists('OTP info still banner shows even when attempt response does not include it');
+
+    assert.ok(
+      await waitUntil(() => find('[data-test-otp-info]')),
+      'OTP info still banner shows even when attempt response does not include it'
+    );
     assert
       .dom('[data-test-otp]')
       .hasText('otp-9876', 'Still shows OTP in copy banner when attempt response does not include it');
+    assert.dom('.shamir-progress').hasText('1/3 keys provided', 'progress shows reflecting attempt response');
   });
 
   test('middle to finish flow works', async function (assert) {
@@ -107,7 +114,11 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
       };
     });
     await render(hbs`<Shamir::DrTokenFlow @action="generate-dr-operation-token" />`);
-    assert.dom('[data-test-dr-token-flow-step="shamir"]').exists('Shows shamir step on load');
+
+    assert.ok(
+      await waitUntil(() => find('[data-test-dr-token-flow-step="shamir"]')),
+      'shows shamir step after start'
+    );
     assert
       .dom('.shamir-progress')
       .hasText('2/3 keys provided', 'progress shows reflecting checkStatus response');
@@ -115,9 +126,11 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
     assert.dom('[data-test-otp]').doesNotExist('otp-9876', 'OTP copy banner not shown');
     await fillIn('[data-test-shamir-key-input]', 'some-key');
     await click('[data-test-shamir-submit]');
-    assert
-      .dom('[data-test-dr-token-flow-step="show-token"]')
-      .exists('updates to show encoded token on complete');
+
+    assert.ok(
+      await waitUntil(() => find('[data-test-dr-token-flow-step="show-token"]')),
+      'updates to show encoded token on complete'
+    );
     assert
       .dom('[data-test-shamir-encoded-token]')
       .hasText('encoded-token-here', 'shows encoded token from /update response');
@@ -148,7 +161,10 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
     await fillIn('[data-test-pgp-file-textarea]', 'some-key-here');
     await click('[data-test-use-pgp-key-button]');
     await click('[data-test-confirm-pgp-key-submit]');
-    assert.dom('[data-test-dr-token-flow-step="shamir"]').exists('Renders shamir step after PGP key chosen');
+    assert.ok(
+      await waitUntil(() => find('[data-test-dr-token-flow-step="shamir"]')),
+      'Renders shamir step after PGP key chosen'
+    );
   });
 
   test('it cancels correctly when generation not started', async function (assert) {
@@ -170,11 +186,14 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
     await click('[data-test-shamir-modal-cancel-button]');
     assert.ok(cancelSpy.calledOnce, 'cancel spy called on click');
   });
+
   test('it cancels correctly when generation has started but not finished', async function (assert) {
-    assert.expect(3);
-    const cancelSpy = sinon.spy();
+    assert.expect(6);
+    const cancelSpy = sinon.spy(() => {
+      assert.ok(true, 'passed cancel method called');
+    });
     this.set('onCancel', cancelSpy);
-    this.server.get('/sys/replication/dr/secondary/generate-operation-token/attempt', function () {
+    this.server.get('sys/replication/dr/secondary/generate-operation-token/attempt', function () {
       return {
         started: true,
         progress: 1,
@@ -183,17 +202,24 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
       };
     });
     this.server.delete('/sys/replication/dr/secondary/generate-operation-token/attempt', function () {
-      assert.ok('delete endpoint is queried');
+      assert.ok(true, 'delete endpoint is queried');
       return {};
     });
     await render(
       hbs`<Shamir::DrTokenFlow @action="generate-dr-operation-token" @onCancel={{this.onCancel}} />`
     );
-
     assert.dom('[data-test-shamir-modal-cancel-button]').hasText('Cancel', 'Close button has correct copy');
+    assert.ok(await waitUntil(() => find('[data-test-shamir-key-input]')), 'shows shamir key input');
+
     await click('[data-test-shamir-modal-cancel-button]');
-    assert.ok(cancelSpy.calledOnce, 'cancel spy called on click');
+
+    assert.ok(
+      await waitUntil(() => find('[data-test-generate-token-cta]')),
+      'shows generate token button again'
+    );
+    assert.dom('[data-test-shamir-key-input]').doesNotExist('Does not render input for shamir key');
   });
+
   test('it closes correctly when generation is completed', async function (assert) {
     assert.expect(2);
     const cancelSpy = sinon.spy();
@@ -215,6 +241,7 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
       hbs`<Shamir::DrTokenFlow @action="generate-dr-operation-token" @onCancel={{this.onCancel}} />`
     );
 
+    await waitUntil(() => find('[data-test-dr-token-flow-step="show-token"]'));
     assert.dom('[data-test-shamir-modal-cancel-button]').hasText('Close', 'Close button has correct copy');
     await click('[data-test-shamir-modal-cancel-button]');
     assert.ok(cancelSpy.calledOnce, 'cancel spy called on click');
