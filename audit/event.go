@@ -131,6 +131,7 @@ func (f format) String() string {
 }
 
 // MetricTag returns a tag corresponding to this subtype to include in metrics.
+// If a tag cannot be found the value is returned 'as-is' in string format.
 func (t subtype) MetricTag() string {
 	switch t {
 	case RequestType:
@@ -139,7 +140,7 @@ func (t subtype) MetricTag() string {
 		return "log_response"
 	}
 
-	return ""
+	return string(t)
 }
 
 // String returns the subtype as a human-readable string.
