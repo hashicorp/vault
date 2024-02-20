@@ -5,7 +5,6 @@ package audit
 
 import (
 	"context"
-	"io"
 
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -27,15 +26,6 @@ type Formatter interface {
 	FormatResponse(context.Context, *logical.LogInput) (*ResponseEntry, error)
 }
 
-// Writer is an interface that provides a way to write request and response audit entries.
-// Formatters write their output to an io.Writer.
-type Writer interface {
-	// WriteRequest writes the request entry to the writer or returns an error.
-	WriteRequest(io.Writer, *RequestEntry) error
-	// WriteResponse writes the response entry to the writer or returns an error.
-	WriteResponse(io.Writer, *ResponseEntry) error
-}
-
 // HeaderFormatter is an interface defining the methods of the
 // vault.AuditedHeadersConfig structure needed in this package.
 type HeaderFormatter interface {
@@ -43,13 +33,6 @@ type HeaderFormatter interface {
 	// intersection of the provided set of header values with a configured
 	// set of headers and will hash headers that have been configured as such.
 	ApplyConfig(context.Context, map[string][]string, Salter) (map[string][]string, error)
-}
-
-// EntryFormatterWriter should be used to format and write out audit requests and responses.
-type EntryFormatterWriter struct {
-	Formatter
-	Writer
-	config FormatterConfig
 }
 
 // FormatterConfig is used to provide basic configuration to a formatter.
