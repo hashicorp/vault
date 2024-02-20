@@ -28,12 +28,6 @@ type SubscriptionPlugin interface {
 	Close(ctx context.Context) error
 }
 
-type Request struct {
-	Subscribe   *SubscribeRequest
-	Unsubscribe *UnsubscribeRequest
-	Event       *SendRequest
-}
-
 type SubscribeRequest struct {
 	SubscriptionID   string
 	Config           map[string]interface{}

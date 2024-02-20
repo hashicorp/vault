@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/vault/plugins/event"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
 )
@@ -215,12 +214,6 @@ func (s *sqsBackend) Unsubscribe(_ context.Context, request *event.UnsubscribeRe
 func (s *sqsBackend) PluginMetadata() *event.PluginMetadata {
 	return &event.PluginMetadata{
 		Name:    pluginName,
-		Version: version.GetVersion().Version,
-	}
-}
-
-func (s *sqsBackend) PluginVersion() logical.PluginVersion {
-	return logical.PluginVersion{
 		Version: version.GetVersion().Version,
 	}
 }
