@@ -1441,9 +1441,9 @@ func (c *ServerCommand) Run(args []string) int {
 	info["administrative namespace"] = config.AdministrativeNamespacePath
 
 	infoKeys = append(infoKeys, "request limiter")
-	info["request limiter"] = "enabled"
-	if config.RequestLimiter != nil && config.RequestLimiter.Disable {
-		info["request limiter"] = "disabled"
+	info["request limiter"] = "disabled"
+	if config.RequestLimiter != nil && !config.RequestLimiter.Disable {
+		info["request limiter"] = "enabled"
 	}
 
 	sort.Strings(infoKeys)
@@ -3120,6 +3120,8 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 
 	if config.RequestLimiter != nil {
 		coreConfig.DisableRequestLimiter = config.RequestLimiter.Disable
+	} else {
+		coreConfig.DisableRequestLimiter = true
 	}
 
 	if c.flagDev {

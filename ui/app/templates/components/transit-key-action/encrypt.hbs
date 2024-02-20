@@ -78,6 +78,9 @@
         @textToCopy={{@ciphertext}}
         @color="secondary"
         @container="#transit-encrypt-modal"
+        @onError={{(fn
+          (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+        )}}
         data-test-encrypted-value="ciphertext"
       />
     </M.Body>

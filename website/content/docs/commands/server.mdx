@@ -60,18 +60,18 @@ flags](/vault/docs/commands) included on all commands.
   are `standard` and `json`. This can also be specified via the
   `VAULT_LOG_FORMAT` environment variable.
 
-- `-log-file` ((#\_log_file)) - the absolute path where Vault should save log
+- `-log-file` ((#\_log_file)) - The absolute path where Vault should save log
   messages in addition to other, existing outputs like journald / stdout. Paths
   that end with a path separator use the default file name, `vault.log`. Paths
   that do not end with a file extension use the default `.log` extension. If the
   log file rotates, Vault appends the current timestamp to the file name
   at the time of rotation. For example:
 
-  `log-file` | Full log file | Rotated log file
-  ---------- | ------------- | ----------------
-  `/var/log` | `/var/log/vault.log` | `/var/log/vault-{timestamp}.log`
-  `/var/log/my-diary` | `/var/log/my-diary.log` | `/var/log/my-diary-{timestamp}.log`
-  `/var/log/my-diary.txt` | `/var/log/my-diary.txt` | `/var/log/my-diary-{timestamp}.txt`
+  | `log-file`              | Full log file           | Rotated log file                    |
+  |-------------------------|-------------------------|-------------------------------------|
+  | `/var/log`              | `/var/log/vault.log`    | `/var/log/vault-{timestamp}.log`    |
+  | `/var/log/my-diary`     | `/var/log/my-diary.log` | `/var/log/my-diary-{timestamp}.log` |
+  | `/var/log/my-diary.txt` | `/var/log/my-diary.txt` | `/var/log/my-diary-{timestamp}.txt` |
 
 - `-log-rotate-bytes` ((#\_log_rotate_bytes)) - to specify the number of
   bytes that should be written to a log before it needs to be rotated. Unless specified,

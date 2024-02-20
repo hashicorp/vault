@@ -26,6 +26,14 @@ var (
 	_ eventlogger.Node = (*EntryFormatter)(nil)
 )
 
+// EntryFormatter should be used to format audit requests and responses.
+type EntryFormatter struct {
+	salter          Salter
+	headerFormatter HeaderFormatter
+	config          FormatterConfig
+	prefix          string
+}
+
 // NewEntryFormatter should be used to create an EntryFormatter.
 // Accepted options: WithHeaderFormatter, WithPrefix.
 func NewEntryFormatter(config FormatterConfig, salter Salter, opt ...Option) (*EntryFormatter, error) {
@@ -105,6 +113,13 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		}
 
 		data.Request.Headers = adjustedHeaders
+	}
+
+	// If the request contains a Server-Side Consistency Token (SSCT), and we
+	// have an auth response, overwrite the existing client token with the SSCT,
+	// so that the SSCT appears in the audit log for this entry.
+	if data.Request != nil && data.Request.InboundSSCToken != "" && data.Auth != nil {
+		data.Auth.ClientToken = data.Request.InboundSSCToken
 	}
 
 	var result []byte

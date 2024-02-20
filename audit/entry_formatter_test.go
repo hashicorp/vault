@@ -59,6 +59,8 @@ const testFormatJSONReqBasicStrFmt = `
 
 // TestNewEntryFormatter ensures we can create new EntryFormatter structs.
 func TestNewEntryFormatter(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		UseStaticSalt        bool
 		Options              []Option // Only supports WithPrefix
@@ -154,6 +156,8 @@ func TestNewEntryFormatter(t *testing.T) {
 
 // TestEntryFormatter_Reopen ensures that we do not get an error when calling Reopen.
 func TestEntryFormatter_Reopen(t *testing.T) {
+	t.Parallel()
+
 	ss := newStaticSalt(t)
 	cfg, err := NewFormatterConfig()
 	require.NoError(t, err)
@@ -166,6 +170,8 @@ func TestEntryFormatter_Reopen(t *testing.T) {
 
 // TestEntryFormatter_Type ensures that the node is a 'formatter' type.
 func TestEntryFormatter_Type(t *testing.T) {
+	t.Parallel()
+
 	ss := newStaticSalt(t)
 	cfg, err := NewFormatterConfig()
 	require.NoError(t, err)
@@ -179,6 +185,8 @@ func TestEntryFormatter_Type(t *testing.T) {
 // TestEntryFormatter_Process attempts to run the Process method to convert the
 // logical.LogInput within an audit event to JSON and JSONx (RequestEntry or ResponseEntry).
 func TestEntryFormatter_Process(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
@@ -409,6 +417,8 @@ func BenchmarkAuditFileSink_Process(b *testing.B) {
 // TestEntryFormatter_FormatRequest exercises EntryFormatter.FormatRequest with
 // varying inputs.
 func TestEntryFormatter_FormatRequest(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Input                *logical.LogInput
 		IsErrorExpected      bool
@@ -476,6 +486,8 @@ func TestEntryFormatter_FormatRequest(t *testing.T) {
 // TestEntryFormatter_FormatResponse exercises EntryFormatter.FormatResponse with
 // varying inputs.
 func TestEntryFormatter_FormatResponse(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Input                *logical.LogInput
 		IsErrorExpected      bool
@@ -543,6 +555,8 @@ func TestEntryFormatter_FormatResponse(t *testing.T) {
 // TestEntryFormatter_Process_JSON ensures that the JSON output we get matches what
 // we expect for the specified LogInput.
 func TestEntryFormatter_Process_JSON(t *testing.T) {
+	t.Parallel()
+
 	ss := newStaticSalt(t)
 
 	expectedResultStr := fmt.Sprintf(testFormatJSONReqBasicStrFmt, ss.salt.GetIdentifiedHMAC("foo"))
@@ -683,6 +697,8 @@ func TestEntryFormatter_Process_JSON(t *testing.T) {
 // TestEntryFormatter_Process_JSONx ensures that the JSONx output we get matches what
 // we expect for the specified LogInput.
 func TestEntryFormatter_Process_JSONx(t *testing.T) {
+	t.Parallel()
+
 	s, err := salt.NewSalt(context.Background(), nil, nil)
 	require.NoError(t, err)
 	tempStaticSalt := &staticSalt{salt: s}
@@ -826,11 +842,7 @@ func TestEntryFormatter_Process_JSONx(t *testing.T) {
 // TestEntryFormatter_FormatResponse_ElideListResponses ensures that we correctly
 // elide data in responses to LIST operations.
 func TestEntryFormatter_FormatResponse_ElideListResponses(t *testing.T) {
-	type test struct {
-		name         string
-		inputData    map[string]any
-		expectedData map[string]any
-	}
+	t.Parallel()
 
 	tests := map[string]struct {
 		inputData    map[string]any
@@ -957,6 +969,8 @@ func TestEntryFormatter_FormatResponse_ElideListResponses(t *testing.T) {
 // TestEntryFormatter_Process_NoMutation tests that the event returned by an
 // EntryFormatter.Process method is not the same as the one that it accepted.
 func TestEntryFormatter_Process_NoMutation(t *testing.T) {
+	t.Parallel()
+
 	// Create the formatter node.
 	cfg, err := NewFormatterConfig()
 	require.NoError(t, err)
