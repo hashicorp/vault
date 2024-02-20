@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"

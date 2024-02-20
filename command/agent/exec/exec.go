@@ -226,7 +226,7 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 			// Calculate the amount of time to backoff using exponential backoff
 			sleep, err := restartBackoff.Next()
 			if err != nil {
-				ts.logger.Error("template server: reached maximum number restart attempts")
+				s.logger.Error("template server: reached maximum number restart attempts")
 				restartBackoff.Reset()
 			}
 
