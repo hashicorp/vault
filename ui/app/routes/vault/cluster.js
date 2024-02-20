@@ -48,7 +48,8 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
 
   getClusterId(params) {
     const { cluster_name } = params;
-    const cluster = this.modelFor('vault').findBy('name', cluster_name);
+    const records = this.store.peekAll('cluster');
+    const cluster = records.find((record) => record.name === cluster_name);
     return cluster ? cluster.get('id') : null;
   },
 
