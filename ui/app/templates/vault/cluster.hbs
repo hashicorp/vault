@@ -13,9 +13,11 @@
       as |A|
     >
       <A.Title data-test-custom-alert-title={{bannerMessage.id}}>{{bannerMessage.title}}</A.Title>
-      <A.Description data-test-custom-alert-description={{bannerMessage.id}}>
-        {{bannerMessage.message}}
-      </A.Description>
+      {{#each (new-line-split bannerMessage.message) as |msg|}}
+        <A.Description data-test-custom-alert-description={{bannerMessage.id}}>
+          {{msg}}
+        </A.Description>
+      {{/each}}
       {{#unless (is-empty-value bannerMessage.link)}}
         {{#each-in bannerMessage.link as |title href|}}
           <A.Link::Standalone
@@ -38,13 +40,22 @@
       {{modalMessage.title}}
     </M.Header>
     <M.Body data-test-modal-body={{modalMessage.id}}>
-      {{modalMessage.message}}
+      {{#each (new-line-split modalMessage.message) as |msg|}}
+        {{#if (eq msg "")}}
+          <br />
+        {{else}}
+          <div>
+            {{msg}}
+          </div>
+        {{/if}}
+      {{/each}}
       {{#unless (is-empty-value modalMessage.link)}}
         {{#each-in modalMessage.link as |title href|}}
           <Hds::Link::Inline @icon="external-link" @isHrefExternal={{true}} @href={{href}}>{{title}}</Hds::Link::Inline>
         {{/each-in}}
       {{/unless}}
     </M.Body>
+
     <M.Footer as |F|>
       <Hds::Button @text="Confirm" {{on "click" F.close}} data-test-modal-button={{modalMessage.id}} />
     </M.Footer>
@@ -57,31 +68,14 @@
       @autoloaded={{eq this.activeCluster.licenseState "autoloaded"}}
     />
   {{/if}}
-  {{#if this.permissionReadFailed}}
-    <ResultantAclBanner @isEnterprise={{this.activeCluster.version.isEnterprise}} />
+  {{#if this.permissionBanner}}
+    <ResultantAclBanner @isEnterprise={{this.activeCluster.version.isEnterprise}} @failType={{this.permissionBanner}} />
   {{/if}}
 </div>
 <div class="global-flash">
   {{#each this.flashMessages.queue as |flash|}}
     <FlashMessage data-test-flash-message={{true}} @flash={{flash}} as |customComponent flash close|>
-      {{#if flash.componentName}}
-        {{component flash.componentName content=flash.content}}
-      {{else}}
-        {{#let (hash info="highlight" success="success" danger="critical" warning="warning") as |color|}}
-          <Hds::Alert @type="inline" @color={{get color flash.type}} class="has-bottom-margin-s" @onDismiss={{close}} as |A|>
-            {{#let (hash info="Info" success="Success" danger="Error" warning="Warning") as |title|}}
-              <A.Title class="alert-title">{{get title flash.type}}</A.Title>
-            {{/let}}
-            <A.Description data-test-flash-message-body>
-              {{#if flash.preformatted}}
-                <p class="is-word-break">{{flash.message}}</p>
-              {{else}}
-                {{flash.message}}
-              {{/if}}
-            </A.Description>
-          </Hds::Alert>
-        {{/let}}
-      {{/if}}
+      <FlashToast @flash={{flash}} @close={{close}} />
     </FlashMessage>
   {{/each}}
 </div>

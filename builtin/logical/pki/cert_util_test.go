@@ -17,13 +17,12 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/stretchr/testify/require"
-
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPki_FetchCertBySerial(t *testing.T) {
@@ -638,11 +637,10 @@ func testParseCertificateToFields(t *testing.T, issueTime time.Time, tt *parseCe
 			require.NoError(t, err)
 
 			diff := expectedTTL - actualTTL
-			if diff < 0 {
-				diff = -diff
-			}
-			require.LessOrEqual(t, diff, 1*time.Second,
-				"ttl must be at most 1s off, want: %s got: %s", tt.wantFields["ttl"], fields["ttl"])
+			require.LessOrEqual(t, actualTTL, expectedTTL, // NotAfter is generated before NotBefore so the time.Now of notBefore may be later, shrinking our calculated TTL during very slow tests
+				"ttl should be, if off, smaller than expected want: %s got: %s", tt.wantFields["ttl"], fields["ttl"])
+			require.LessOrEqual(t, diff, 30*time.Second, // Test can be slow, allow more off in the other direction
+				"ttl must be at most 30s off, want: %s got: %s", tt.wantFields["ttl"], fields["ttl"])
 			delete(fields, "ttl")
 			delete(tt.wantFields, "ttl")
 		}

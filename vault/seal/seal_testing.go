@@ -8,12 +8,10 @@ import (
 	"fmt"
 	"sync"
 
-	UUID "github.com/hashicorp/go-uuid"
-
-	"github.com/hashicorp/vault/sdk/helper/logging"
-
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
+	UUID "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
 type TestSealOpts struct {

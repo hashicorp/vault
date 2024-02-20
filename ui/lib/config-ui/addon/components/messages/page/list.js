@@ -4,7 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { dateFormat } from 'core/helpers/date-format';
 import { action } from '@ember/object';
@@ -30,6 +30,7 @@ export default class MessagesList extends Component {
   @service customMessages;
 
   @tracked showMaxMessageModal = false;
+  @tracked messageToDelete = null;
 
   // This follows the pattern in sync/addon/components/secrets/page/destinations for FilterInput.
   // Currently, FilterInput doesn't do a full page refresh causing it to lose focus.
@@ -90,6 +91,20 @@ export default class MessagesList extends Component {
     return [{ label: 'Messages' }, { label }];
   }
 
+  get statusFilterOptions() {
+    return [
+      { id: 'active', name: 'active' },
+      { id: 'inactive', name: 'inactive' },
+    ];
+  }
+
+  get typeFilterOptions() {
+    return [
+      { id: 'modal', name: 'modal' },
+      { id: 'banner', name: 'banner' },
+    ];
+  }
+
   // callback from HDS pagination to set the queryParams page
   get paginationQueryParams() {
     return (page) => {
@@ -97,6 +112,12 @@ export default class MessagesList extends Component {
         page,
       };
     };
+  }
+
+  transitionToMessagesWithParams(queryParams) {
+    this.router.transitionTo('vault.cluster.config-ui.messages', {
+      queryParams,
+    });
   }
 
   @task
@@ -110,14 +131,22 @@ export default class MessagesList extends Component {
     } catch (e) {
       const message = errorMessage(e);
       this.flashMessages.danger(message);
+    } finally {
+      this.messageToDelete = null;
     }
   }
 
   @action
-  onFilterChange(pageFilter) {
-    this.router.transitionTo('vault.cluster.config-ui.messages', {
-      queryParams: { pageFilter },
-    });
+  onFilterInputChange(pageFilter) {
+    this.transitionToMessagesWithParams({ pageFilter });
+  }
+
+  @action
+  onFilterChange(filterType, [filterOption]) {
+    const param = {};
+    param[filterType] = filterOption;
+    param.page = 1;
+    this.transitionToMessagesWithParams(param);
   }
 
   @action

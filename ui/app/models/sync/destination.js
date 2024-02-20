@@ -54,12 +54,12 @@ export default class SyncDestinationModel extends Model {
     return this.destinationPath.get('canDelete') !== false;
   }
   get canEdit() {
-    return this.destinationPath.get('canUpdate') !== false;
+    return this.destinationPath.get('canUpdate') !== false && !this.purgeInitiatedAt;
   }
   get canRead() {
     return this.destinationPath.get('canRead') !== false;
   }
   get canSync() {
-    return this.setAssociationPath.get('canUpdate') !== false;
+    return this.setAssociationPath.get('canUpdate') !== false && !this.purgeInitiatedAt;
   }
 }
