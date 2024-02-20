@@ -4,30 +4,34 @@
 ~}}
 
 <form
-  onsubmit={{action
-    @doSubmit
-    (hash plaintext=@plaintext context=@context nonce=@nonce key_version=@key_version encodedBase64=@encodedBase64)
-  }}
+  {{on "submit" (fn @doSubmit (hash plaintext=@plaintext context=@context nonce=@nonce key_version=@key_version))}}
+  ...attributes
 >
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="encryption" />
     <div class="content has-bottom-margin-l">
       <p>You can encrypt plaintext data using <code>{{@key.name}}</code> as the encryption key.</p>
     </div>
-    <KeyVersionSelect @key={{@key}} @onVersionChange={{action (mut @key_version)}} @key_version={{@key_version}} />
+    <KeyVersionSelect @key={{@key}} @onVersionChange={{fn (mut @key_version)}} @key_version={{@key_version}} />
     <div class="field">
       <div id="plaintext-control" class="control is-relative">
         <JsonEditor
           @title="Plaintext"
           @value={{@plaintext}}
-          @valueUpdated={{action (mut @plaintext)}}
+          @valueUpdated={{fn (mut @plaintext)}}
           @mode="ruby"
           @data-test-transit-input="plaintext"
         />
       </div>
     </div>
     <div class="field">
-      <Input @type="checkbox" id="encodedBase64" @checked={{@encodedBase64}} data-test-transit-input="encodedBase64" />
+      <Input
+        @type="checkbox"
+        id="encodedBase64"
+        @checked={{@encodedBase64}}
+        {{on "change" @toggleEncodeBase64}}
+        data-test-transit-input="encodedBase64"
+      />
       <label for="encodedBase64">This data is already encoded in base64</label>
     </div>
     {{#if @key.derived}}
@@ -78,6 +82,8 @@
         @textToCopy={{@ciphertext}}
         @color="secondary"
         @container="#transit-encrypt-modal"
+        @isFullWidth={{true}}
+        @isTruncated={{true}}
         @onError={{(fn
           (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
         )}}

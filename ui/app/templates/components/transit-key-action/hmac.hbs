@@ -3,12 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form
-  onsubmit={{action
-    @doSubmit
-    (hash input=@input algorithm=@algorithm key_version=@key_version encodedBase64=@encodedBase64)
-  }}
->
+<form {{on "submit" (fn @doSubmit (hash input=@trackedInput algorithm=@algorithm key_version=@key_version))}} ...attributes>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="HMAC creation" />
     <div class="content has-bottom-margin-l">
@@ -18,14 +13,20 @@
         as the named key.
       </p>
     </div>
-    <KeyVersionSelect @key={{@key}} @onVersionChange={{action (mut @key_version)}} @key_version={{@key_version}} />
+    <KeyVersionSelect @key={{@key}} @onVersionChange={{fn (mut @key_version)}} @key_version={{@key_version}} />
     <div class="field">
       <div id="input-control" class="control is-relative">
-        <JsonEditor @title="Input" @valueUpdated={{action (mut @input)}} @mode="ruby" @data-test-transit-input="input" />
+        <JsonEditor @title="Input" @valueUpdated={{fn (mut @trackedInput)}} @mode="ruby" @data-test-transit-input="input" />
       </div>
     </div>
     <div class="field">
-      <Input @type="checkbox" id="encodedBase64" @checked={{@encodedBase64}} data-test-transit-input="encodedBase64" />
+      <Input
+        @type="checkbox"
+        id="encodedBase64"
+        @checked={{@encodedBase64}}
+        {{on "change" @toggleEncodeBase64}}
+        data-test-transit-input="encodedBase64"
+      />
       <label for="encodedBase64">This data is already encoded in base64</label>
     </div>
     <div class="field">
@@ -60,6 +61,8 @@
         @textToCopy={{@hmac}}
         @color="secondary"
         @container="#transit-hmac-modal"
+        @isFullWidth={{true}}
+        @isTruncated={{true}}
         @onError={{(fn
           (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
         )}}
