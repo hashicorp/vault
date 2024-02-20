@@ -8,17 +8,21 @@ description: |-
 
 # `request_limiter`
 
-The `request_limiter` stanza allows operators to turn off the adaptive
-concurrency limiter, which is on by default. This is a reloadable config.
+The `request_limiter` stanza allows operators to turn on the adaptive
+concurrency limiter, which is off by default. This is a reloadable config.
 
 ```hcl
 request_limiter {
-  disable = true
+  disable = false
 }
 ```
 
-~> **Warning** Turning off the Request Limiter while Vault is experiencing high
-levels of traffic could result in immediate overload of the server. Great care
-should be taken when using this configuration to avoid adverse affects in
+~> **Warning** This feature is still in Tech Preview. Turning the Request
+Limiter *on* may have negative effects on request success rates. Please test
+your workloads before turning this on in production.
+
+~> **Warning** Turning the Request Limiter *off* while Vault is experiencing
+high levels of traffic could result in immediate overload of the server. Great
+care should be taken when using this configuration to avoid adverse effects in
 optimal request servicing. It is strongly advised NOT to use this configuration
 unless there is a very good reason.
