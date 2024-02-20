@@ -95,9 +95,7 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
     }));
     await this.renderComponent();
     assert.dom('[data-test-list-item-content] svg').hasClass('flight-icon-user', 'List item icon renders');
-    assert
-      .dom('[data-test-list-item-content]')
-      .hasText(this.roles.firstObject.name, 'List item name renders');
+    assert.dom('[data-test-list-item-content]').hasText(this.roles[0].name, 'List item name renders');
     await click('[data-test-popup-menu-trigger]');
     assert.dom('[data-test-details]').hasText('Details', 'Details link renders in menu');
     assert.dom('[data-test-edit]').hasText('Edit', 'Edit link renders in menu');
