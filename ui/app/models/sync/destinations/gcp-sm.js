@@ -7,9 +7,17 @@ import SyncDestinationModel from '../destination';
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 
-const displayFields = ['name', 'credentials', 'secretNameTemplate', 'customTags'];
+const displayFields = [
+  // connection details
+  'name',
+  'credentials',
+  // vault sync config options
+  'granularity',
+  'secretNameTemplate',
+  'customTags',
+];
 const formFieldGroups = [
-  { default: ['name', 'secretNameTemplate', 'customTags'] },
+  { default: ['name', 'granularity', 'secretNameTemplate', 'customTags'] },
   { Credentials: ['credentials'] },
 ];
 @withFormFields(displayFields, formFieldGroups)

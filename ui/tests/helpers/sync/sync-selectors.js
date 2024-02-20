@@ -76,6 +76,8 @@ export const PAGE = {
     fillInByAttr: async (attr, value) => {
       // for handling more complex form input elements by attr name
       switch (attr) {
+        case 'granularity':
+          return await click(`[data-test-radio="secret-key"]`);
         case 'credentials':
           await click('[data-test-text-toggle]');
           return fillIn('[data-test-text-file-textarea]', value);

@@ -8,15 +8,18 @@ import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 
 const displayFields = [
+  // connection details
   'name',
   'region',
   'accessKeyId',
   'secretAccessKey',
+  // sync config options
+  'granularity',
   'secretNameTemplate',
   'customTags',
 ];
 const formFieldGroups = [
-  { default: ['name', 'region', 'secretNameTemplate', 'customTags'] },
+  { default: ['name', 'region', 'granularity', 'secretNameTemplate', 'customTags'] },
   { Credentials: ['accessKeyId', 'secretAccessKey'] },
 ];
 @withFormFields(displayFields, formFieldGroups)
