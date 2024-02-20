@@ -1086,10 +1086,10 @@ func TestEntryFormatter_NewEntryFormatter_Exclusions(t *testing.T) {
 	}
 }
 
-// TestEntryFormatter_Process_Redaction tests that we can successfully redact/exclude
+// TestEntryFormatter_Process_Exclusion tests that we can successfully redact/exclude
 // data from our audit entries when the EntryFormatter is configured WithExclusions
 // and runs its Process method.
-func TestEntryFormatter_Process_Redaction(t *testing.T) {
+func TestEntryFormatter_Process_Exclusion(t *testing.T) {
 	t.Parallel()
 
 	jsonExclusion := `[
@@ -1159,7 +1159,7 @@ func TestEntryFormatter_Process_Redaction(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, req)
 
-	// The values should be redacted
+	// The values should be excluded
 	require.Nil(t, req.Request.Data)
 	require.Empty(t, req.Auth.EntityID)
 }
@@ -1216,7 +1216,7 @@ func TestEntryFormatter_excludeFields(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, res)
 
-	// Pass in a real deal ResponseEntry and make sure we redact stuff.
+	// Pass in a real deal ResponseEntry and make sure we exclude things.
 	resp := &ResponseEntry{
 		Auth: &Auth{
 			ClientToken: "hmac:sdfghgfdsdfgt6543456543",
@@ -1268,7 +1268,7 @@ func TestEntryFormatter_excludeFields_condition_data(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, formatter)
 
-	// Pass in a real deal ResponseEntry and make sure we redact stuff.
+	// Pass in a real deal ResponseEntry and make sure we exclude things
 	resp := &ResponseEntry{
 		Auth: &Auth{
 			ClientToken: "hmac:sdfghgfdsdfgt6543456543",
@@ -1323,7 +1323,7 @@ func TestEntryFormatter_excludeFields_condition_slice(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, formatter)
 
-	// Pass in a real deal ResponseEntry and make sure we redact stuff.
+	// Pass in a real deal ResponseEntry and make sure we exclude things
 	resp := &ResponseEntry{
 		Auth: &Auth{
 			ClientToken: "hmac:sdfghgfdsdfgt6543456543",
