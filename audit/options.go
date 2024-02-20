@@ -293,7 +293,7 @@ func (e *exclusion) UnmarshalJSON(b []byte) error {
 	// Create the evaluator and use the current JSON struct tags.
 	eval, err = bexpr.CreateEvaluator(condition, bexpr.WithTagName("json"))
 	if err != nil {
-		return fmt.Errorf("unable to parse expression '%s': %w", condition, err)
+		return fmt.Errorf("unable to parse expression '%s' from '%s': %w", condition, keyCondition, err)
 	}
 
 	// Set the condition to the new evaluator.

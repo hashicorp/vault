@@ -484,7 +484,7 @@ func TestOptions_WithExclusions(t *testing.T) {
 			  }
 			]`,
 			isErrorExpected:      true,
-			expectedErrorMessage: "unable to parse exclusions: unable to parse expression 'qwerty': 1:7 (6): no match found, expected: \"!=\", \".\", \"==\", \"[\", [ \\t\\r\\n] or [a-zA-Z0-9_/]",
+			expectedErrorMessage: "unable to parse exclusions: unable to parse expression 'qwerty' from 'condition': 1:7 (6): no match found, expected: \"!=\", \".\", \"==\", \"[\", [ \\t\\r\\n] or [a-zA-Z0-9_/]",
 		},
 		"empty-conditions": {
 			json: `[
