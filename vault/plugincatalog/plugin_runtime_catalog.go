@@ -12,7 +12,6 @@ import (
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"
@@ -40,9 +39,7 @@ func SetupPluginRuntimeCatalog(ctx context.Context, logger log.Logger, catalogVi
 		logger:      logger,
 	}
 
-	if logger.IsInfo() {
-		logger.Info("successfully setup plugin runtime catalog")
-	}
+	logger.Info("successfully setup plugin runtime catalog")
 
 	return pluginRuntimeCatalog, nil
 }

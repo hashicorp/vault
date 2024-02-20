@@ -244,7 +244,7 @@ module('Acceptance | transit (flaky)', function (hooks) {
     assert.dom(SELECTORS.infoRow('Convergent encryption')).hasText('Yes');
     await click(SELECTORS.rootCrumb(this.path));
     await click(SELECTORS.popupMenu);
-    const actions = findAll('.ember-basic-dropdown-content li');
+    const actions = findAll('.hds-dropdown__list li');
     assert.strictEqual(actions.length, 2, 'shows 2 items in popup menu');
 
     await click(SELECTORS.secretLink);

@@ -2184,6 +2184,36 @@ func TestProxy_LogFile_Config(t *testing.T) {
 	assert.Equal(t, 1048576, cfg.LogRotateBytes)
 }
 
+// TestProxy_EnvVar_Overrides tests that environment variables are properly
+// parsed and override defaults.
+func TestProxy_EnvVar_Overrides(t *testing.T) {
+	configFile := populateTempFile(t, "proxy-config.hcl", BasicHclConfig)
+
+	cfg, err := proxyConfig.LoadConfigFile(configFile.Name())
+	if err != nil {
+		t.Fatal("Cannot load config to test update/merge", err)
+	}
+
+	assert.Equal(t, false, cfg.Vault.TLSSkipVerify)
+
+	t.Setenv("VAULT_SKIP_VERIFY", "true")
+	// Parse the cli flags (but we pass in an empty slice)
+	cmd := &ProxyCommand{BaseCommand: &BaseCommand{}}
+	f := cmd.Flags()
+	err = f.Parse([]string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cmd.applyConfigOverrides(f, cfg)
+	assert.Equal(t, true, cfg.Vault.TLSSkipVerify)
+
+	t.Setenv("VAULT_SKIP_VERIFY", "false")
+
+	cmd.applyConfigOverrides(f, cfg)
+	assert.Equal(t, false, cfg.Vault.TLSSkipVerify)
+}
+
 // TestProxy_Config_NewLogger_Default Tests defaults for log level and
 // specifically cmd.newLogger()
 func TestProxy_Config_NewLogger_Default(t *testing.T) {

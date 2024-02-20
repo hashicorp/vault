@@ -26,7 +26,7 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     type: 'azure-kv',
     icon: 'azure-color',
     category: 'cloud',
-    maskedParams: ['clientSecret', 'keyVaultUri'],
+    maskedParams: ['clientSecret'],
   },
   {
     name: 'Google Secret Manager',

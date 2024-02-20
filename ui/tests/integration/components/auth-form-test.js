@@ -43,6 +43,7 @@ module('Integration | Component | auth form', function (hooks) {
   hooks.beforeEach(function () {
     this.owner.register('service:router', routerService);
     this.router = this.owner.lookup('service:router');
+    this.onSuccess = sinon.spy();
   });
 
   const CSP_ERR_TEXT = `Error This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`;
@@ -232,7 +233,9 @@ module('Integration | Component | auth form', function (hooks) {
     const wrappedToken = '54321';
     this.set('wrappedToken', wrappedToken);
     this.set('cluster', EmberObject.create({}));
-    await render(hbs`<AuthForm @cluster={{this.cluster}} @wrappedToken={{this.wrappedToken}} />`);
+    await render(
+      hbs`<AuthForm @cluster={{this.cluster}} @wrappedToken={{this.wrappedToken}} @onSuccess={{this.onSuccess}} />`
+    );
     later(() => cancelTimers(), 50);
     await settled();
     assert.strictEqual(

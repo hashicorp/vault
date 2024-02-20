@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/jefferai/jsonx"
 )
@@ -24,6 +25,14 @@ var (
 	_ Formatter        = (*EntryFormatter)(nil)
 	_ eventlogger.Node = (*EntryFormatter)(nil)
 )
+
+// EntryFormatter should be used to format audit requests and responses.
+type EntryFormatter struct {
+	salter          Salter
+	headerFormatter HeaderFormatter
+	config          FormatterConfig
+	prefix          string
+}
 
 // NewEntryFormatter should be used to create an EntryFormatter.
 // Accepted options: WithHeaderFormatter, WithPrefix.
@@ -82,15 +91,19 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		return nil, fmt.Errorf("%s: cannot parse event payload: %w", op, event.ErrInvalidParameter)
 	}
 
-	var result []byte
-	data := new(logical.LogInput)
-	headers := make(map[string][]string)
+	if a.Data == nil {
+		return nil, fmt.Errorf("%s: cannot audit event (%s) with no data: %w", op, a.Subtype, event.ErrInvalidParameter)
+	}
 
-	if a.Data != nil {
-		*data = *a.Data
-		if a.Data.Request != nil && a.Data.Request.Headers != nil {
-			headers = a.Data.Request.Headers
-		}
+	// Take a copy of the event data before we modify anything.
+	data, err := a.Data.Clone()
+	if err != nil {
+		return nil, fmt.Errorf("%s: unable to copy audit event data: %w", op, err)
+	}
+
+	var headers map[string][]string
+	if data.Request != nil && data.Request.Headers != nil {
+		headers = data.Request.Headers
 	}
 
 	if f.headerFormatter != nil {
@@ -101,6 +114,15 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 
 		data.Request.Headers = adjustedHeaders
 	}
+
+	// If the request contains a Server-Side Consistency Token (SSCT), and we
+	// have an auth response, overwrite the existing client token with the SSCT,
+	// so that the SSCT appears in the audit log for this entry.
+	if data.Request != nil && data.Request.InboundSSCToken != "" && data.Auth != nil {
+		data.Auth.ClientToken = data.Request.InboundSSCToken
+	}
+
+	var result []byte
 
 	switch a.Subtype {
 	case RequestType:
@@ -146,10 +168,26 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		result = append([]byte(f.prefix), result...)
 	}
 
-	// Store the final format.
-	e.FormattedAs(f.config.RequiredFormat.String(), result)
+	// Copy some properties from the event (and audit event) and store the
+	// format for the next (sink) node to Process.
+	a2 := &AuditEvent{
+		ID:        a.ID,
+		Version:   a.Version,
+		Subtype:   a.Subtype,
+		Timestamp: a.Timestamp,
+		Data:      data, // Use the cloned data here rather than a pointer to the original.
+	}
 
-	return e, nil
+	e2 := &eventlogger.Event{
+		Type:      e.Type,
+		CreatedAt: e.CreatedAt,
+		Formatted: make(map[string][]byte), // we are about to set this ourselves.
+		Payload:   a2,
+	}
+
+	e2.FormattedAs(f.config.RequiredFormat.String(), result)
+
+	return e2, nil
 }
 
 // FormatRequest attempts to format the specified logical.LogInput into a RequestEntry.
@@ -246,6 +284,10 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 			Headers:                       req.Headers,
 			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
 		},
+	}
+
+	if req.HTTPRequest != nil && req.HTTPRequest.RequestURI != req.Path {
+		reqEntry.Request.RequestURI = req.HTTPRequest.RequestURI
 	}
 
 	if !auth.IssueTime.IsZero() {
@@ -465,6 +507,10 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 		},
 	}
 
+	if req.HTTPRequest != nil && req.HTTPRequest.RequestURI != req.Path {
+		respEntry.Request.RequestURI = req.HTTPRequest.RequestURI
+	}
+
 	if auth.PolicyResults != nil {
 		respEntry.Auth.PolicyResults = &PolicyResults{
 			Allowed: auth.PolicyResults.Allowed,
@@ -586,4 +632,9 @@ func newTemporaryEntryFormatter(n *EntryFormatter) *EntryFormatter {
 		config:          n.config,
 		prefix:          n.prefix,
 	}
+}
+
+// Salt returns a new salt with default configuration and no storage usage, and no error.
+func (s *nonPersistentSalt) Salt(_ context.Context) (*salt.Salt, error) {
+	return salt.NewNonpersistentSalt(), nil
 }

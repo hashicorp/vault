@@ -59,10 +59,12 @@
         this.itemType
       }} will be listed here. Create your first {{this.itemType}} to get started."
     >
-      <LinkTo @route="vault.cluster.access.method.item.create" @model={{this.itemType}} class="link">
-        Create
-        {{singularize this.itemType}}
-      </LinkTo>
+      <Hds::Link::Standalone
+        @icon="plus"
+        @text="Create {{singularize this.itemType}}"
+        @route="vault.cluster.access.method.item.create"
+        @model={{this.itemType}}
+      />
     </list.empty>
   {{else if list.item}}
     <ListItem @linkParams={{array "vault.cluster.access.method.item.show" this.itemType list.item.id}} as |Item|>

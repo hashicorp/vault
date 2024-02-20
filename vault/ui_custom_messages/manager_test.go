@@ -214,23 +214,18 @@ func TestManagerPutEntry(t *testing.T) {
 // context (e.g. checking that the list contains 1 element and that it's equal
 // to namespace.RootNamespace).
 func TestGetNamespacesToSearch(t *testing.T) {
-	list, err := getNamespacesToSearch(context.Background(), FindFilter{})
+	testManager := &Manager{nsManager: &CommunityEditionNamespaceManager{}}
+
+	list, err := testManager.getNamespacesToSearch(context.Background(), FindFilter{})
 	assert.Error(t, err)
 	assert.Nil(t, list)
 
-	list, err = getNamespacesToSearch(namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace), FindFilter{})
+	list, err = testManager.getNamespacesToSearch(namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace), FindFilter{})
 	assert.NoError(t, err)
 	assert.Len(t, list, 1)
 	assert.Equal(t, namespace.RootNamespace, list[0])
 
-	// Verify with nsManager set to an instance of testNamespaceManager to
-	// ensure that it is used to calculate the list of namespaces.
-	currentNsManager := nsManager
-	defer func() {
-		nsManager = currentNsManager
-	}()
-
-	nsManager = &testNamespaceManager{
+	testManager.nsManager = &testNamespaceManager{
 		results: []namespace.Namespace{
 			{
 				ID:   "ccc",
@@ -247,7 +242,7 @@ func TestGetNamespacesToSearch(t *testing.T) {
 		},
 	}
 
-	list, err = getNamespacesToSearch(namespace.ContextWithNamespace(context.Background(), &namespace.Namespace{ID: "ddd", Path: "d/"}), FindFilter{IncludeAncestors: true})
+	list, err = testManager.getNamespacesToSearch(namespace.ContextWithNamespace(context.Background(), &namespace.Namespace{ID: "ddd", Path: "d/"}), FindFilter{IncludeAncestors: true})
 	assert.NoError(t, err)
 	assert.Len(t, list, 5)
 	assert.Equal(t, list[0].Path, "d/")

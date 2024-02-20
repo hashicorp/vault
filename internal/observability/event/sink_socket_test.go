@@ -50,7 +50,7 @@ func TestNewSocketSink(t *testing.T) {
 			format:         "json",
 			opts:           []Option{WithMaxDuration("bar")},
 			wantErr:        true,
-			expectedErrMsg: "event.NewSocketSink: error applying options: time: invalid duration \"bar\"",
+			expectedErrMsg: "event.NewSocketSink: error applying options: unable to parse max duration: time: invalid duration \"bar\"",
 		},
 		"happy": {
 			address: "wss://foo",

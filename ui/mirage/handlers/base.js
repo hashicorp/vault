@@ -37,6 +37,14 @@ export default function (server) {
     };
   });
 
+  server.get('/sys/internal/ui/version', function () {
+    return {
+      data: {
+        version: '1.9.0+ent',
+      },
+    };
+  });
+
   server.get('/sys/license/status', function () {
     return {
       data: {

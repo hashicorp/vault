@@ -249,31 +249,32 @@ func NewNoopAudit(config *audit.BackendConfig, opts ...audit.Option) (*NoopAudit
 		MountPath: config.MountPath,
 	}
 
-	n := &NoopAudit{Config: backendConfig}
+	noopBackend := &NoopAudit{
+		Config:     backendConfig,
+		nodeIDList: make([]eventlogger.NodeID, 2),
+		nodeMap:    make(map[eventlogger.NodeID]eventlogger.Node, 2),
+	}
 
 	cfg, err := audit.NewFormatterConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	f, err := audit.NewEntryFormatter(cfg, n, opts...)
-	if err != nil {
-		return nil, fmt.Errorf("error creating formatter: %w", err)
-	}
-
-	n.nodeIDList = make([]eventlogger.NodeID, 2)
-	n.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node, 2)
-
 	formatterNodeID, err := event.GenerateNodeID()
 	if err != nil {
 		return nil, fmt.Errorf("error generating random NodeID for formatter node: %w", err)
 	}
 
-	// Wrap the formatting node, so we can get any bytes that were formatted etc.
-	wrappedFormatter := &noopWrapper{format: "json", node: f, backend: n}
+	formatterNode, err := audit.NewEntryFormatter(cfg, noopBackend, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("error creating formatter: %w", err)
+	}
 
-	n.nodeIDList[0] = formatterNodeID
-	n.nodeMap[formatterNodeID] = wrappedFormatter
+	// Wrap the formatting node, so we can get any bytes that were formatted etc.
+	wrappedFormatter := &noopWrapper{format: "json", node: formatterNode, backend: noopBackend}
+
+	noopBackend.nodeIDList[0] = formatterNodeID
+	noopBackend.nodeMap[formatterNodeID] = wrappedFormatter
 
 	sinkNode := event.NewNoopSink()
 	sinkNodeID, err := event.GenerateNodeID()
@@ -281,17 +282,17 @@ func NewNoopAudit(config *audit.BackendConfig, opts ...audit.Option) (*NoopAudit
 		return nil, fmt.Errorf("error generating random NodeID for sink node: %w", err)
 	}
 
-	n.nodeIDList[1] = sinkNodeID
-	n.nodeMap[sinkNodeID] = sinkNode
+	noopBackend.nodeIDList[1] = sinkNodeID
+	noopBackend.nodeMap[sinkNodeID] = sinkNode
 
-	return n, nil
+	return noopBackend, nil
 }
 
 // NoopAuditFactory should be used when the test needs a way to access bytes that
 // have been formatted by the pipeline during audit requests.
 // The records parameter will be repointed to the one used within the pipeline.
 func NoopAuditFactory(records **[][]byte) audit.Factory {
-	return func(_ context.Context, config *audit.BackendConfig, _ bool, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
+	return func(_ context.Context, config *audit.BackendConfig, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
 		n, err := NewNoopAudit(config, audit.WithHeaderFormatter(headerFormatter))
 		if err != nil {
 			return nil, err
@@ -313,6 +314,10 @@ type noopWrapper struct {
 	node    eventlogger.Node
 	backend *NoopAudit
 }
+
+// NoopAuditEventListener is a callback used by noopWrapper.Process() to notify
+// of each received audit event.
+type NoopAuditEventListener func(*audit.AuditEvent)
 
 type NoopAudit struct {
 	Config *audit.BackendConfig
@@ -338,6 +343,8 @@ type NoopAudit struct {
 
 	nodeIDList []eventlogger.NodeID
 	nodeMap    map[eventlogger.NodeID]eventlogger.Node
+
+	listener NoopAuditEventListener
 }
 
 // Process handles the contortions required by older test code to ensure behavior.
@@ -355,6 +362,10 @@ func (n *noopWrapper) Process(ctx context.Context, e *eventlogger.Event) (*event
 	a, ok := e.Payload.(*audit.AuditEvent)
 	if !ok {
 		return nil, errors.New("cannot parse payload as an audit event")
+	}
+
+	if n.backend.listener != nil {
+		n.backend.listener(a)
 	}
 
 	in := a.Data
@@ -429,65 +440,10 @@ func (n *noopWrapper) Type() eventlogger.NodeType {
 	return n.node.Type()
 }
 
-// Deprecated: use eventlogger.
-func (n *NoopAudit) LogRequest(ctx context.Context, in *logical.LogInput) error {
-	return nil
-}
-
-// Deprecated: use eventlogger.
-func (n *NoopAudit) LogResponse(ctx context.Context, in *logical.LogInput) error {
-	return nil
-}
-
 // LogTestMessage will manually crank the handle on the nodes associated with this backend.
-func (n *NoopAudit) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
-	n.l.Lock()
-	defer n.l.Unlock()
-
-	// Fake event for test purposes.
-	e := &eventlogger.Event{
-		Type:      eventlogger.EventType(event.AuditType.String()),
-		CreatedAt: time.Now(),
-		Formatted: make(map[string][]byte),
-		Payload:   in,
-	}
-
-	// Try to get the required format from config and default to JSON.
-	format, ok := config["format"]
-	if !ok {
-		format = "json"
-	}
-	cfg, err := audit.NewFormatterConfig(audit.WithFormat(format))
-	if err != nil {
-		return fmt.Errorf("cannot create config for formatter node: %w", err)
-	}
-	// Create a temporary formatter node for reuse.
-	f, err := audit.NewEntryFormatter(cfg, n, audit.WithPrefix(config["prefix"]))
-
-	// Go over each node in order from our list.
-	for _, id := range n.nodeIDList {
-		node, ok := n.nodeMap[id]
-		if !ok {
-			return fmt.Errorf("node not found: %v", id)
-		}
-
-		switch node.Type() {
-		case eventlogger.NodeTypeFormatter:
-			// Use a temporary formatter node which doesn't persist its salt anywhere.
-			if formatNode, ok := node.(*audit.EntryFormatter); ok && formatNode != nil {
-				e, err = f.Process(ctx, e)
-
-				// Housekeeping, we should update that we processed some bytes.
-				if e != nil {
-					b, ok := e.Format(format)
-					if ok {
-						n.records = append(n.records, b)
-					}
-				}
-			}
-		default:
-			e, err = node.Process(ctx, e)
-		}
+func (n *NoopAudit) LogTestMessage(ctx context.Context, in *logical.LogInput) error {
+	if len(n.nodeIDList) > 0 {
+		return audit.ProcessManual(ctx, in, n.nodeIDList, n.nodeMap)
 	}
 
 	return nil
@@ -547,6 +503,10 @@ func (n *NoopAudit) RegisterNodesAndPipeline(broker *eventlogger.Broker, name st
 	}
 
 	return broker.RegisterPipeline(pipeline)
+}
+
+func (n *NoopAudit) SetListener(listener NoopAuditEventListener) {
+	n.listener = listener
 }
 
 type TestLogger struct {

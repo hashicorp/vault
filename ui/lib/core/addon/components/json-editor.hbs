@@ -25,7 +25,7 @@
               data-test-restore-example
             />
           {{/if}}
-          {{#if (and @obscure @readOnly)}}
+          {{#if (and @allowObscure @readOnly)}}
             {{! For safety we only use obscured values in readonly mode }}
             <div>
               <Toggle @name="revealValues" @checked={{this.revealValues}} @onChange={{fn (mut this.revealValues)}}>
@@ -39,6 +39,9 @@
             @text="Copy"
             @isIconOnly={{true}}
             @textToCopy={{@value}}
+            @onError={{(fn
+              (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+            )}}
             class="transparent"
             data-test-copy-button={{@value}}
           />

@@ -28,6 +28,7 @@ const MOUNTABLE_AUTH_METHODS = [
     value: 'approle',
     type: 'approle',
     category: 'generic',
+    glyph: 'cpu',
   },
   {
     displayName: 'AWS',
@@ -61,14 +62,14 @@ const MOUNTABLE_AUTH_METHODS = [
     displayName: 'JWT',
     value: 'jwt',
     type: 'jwt',
-    glyph: 'auth',
+    glyph: 'jwt',
     category: 'generic',
   },
   {
     displayName: 'OIDC',
     value: 'oidc',
     type: 'oidc',
-    glyph: 'auth',
+    glyph: 'openid-color',
     category: 'generic',
   },
   {
@@ -82,7 +83,7 @@ const MOUNTABLE_AUTH_METHODS = [
     displayName: 'LDAP',
     value: 'ldap',
     type: 'ldap',
-    glyph: 'auth',
+    glyph: 'folder-users',
     category: 'infra',
   },
   {
@@ -96,7 +97,7 @@ const MOUNTABLE_AUTH_METHODS = [
     displayName: 'RADIUS',
     value: 'radius',
     type: 'radius',
-    glyph: 'auth',
+    glyph: 'mainframe',
     category: 'infra',
   },
   {
@@ -104,6 +105,7 @@ const MOUNTABLE_AUTH_METHODS = [
     value: 'cert',
     type: 'cert',
     category: 'generic',
+    glyph: 'certificate',
   },
   {
     displayName: 'Username & Password',

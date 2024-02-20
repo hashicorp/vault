@@ -846,155 +846,89 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	}
 }
 
-// TestActivityLog_API_ConfigCRUD performs various CRUD operations on internal/counters/config.
-func TestActivityLog_API_ConfigCRUD(t *testing.T) {
+// TestActivityLog_API_ConfigCRUD_Census performs various CRUD operations on internal/counters/config
+// depending on license reporting
+func TestActivityLog_API_ConfigCRUD_Census(t *testing.T) {
 	core, b, _ := testCoreSystemBackend(t)
 	view := core.systemBarrierView
 
-	// Test reading the defaults
-	{
-		req := logical.TestRequest(t, logical.ReadOperation, "internal/counters/config")
-		req.Storage = view
-		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	req := logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
+	req.Storage = view
+	req.Data["retention_months"] = 2
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if core.ManualLicenseReportingEnabled() {
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if resp.Data["error"] != `retention_months must be at least 24 while Reporting is enabled` {
+			t.Fatalf("bad: %v", resp)
+		}
+	} else {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		defaults := map[string]interface{}{
-			"default_report_months":    12,
-			"retention_months":         24,
-			"enabled":                  activityLogEnabledDefaultValue,
-			"queries_available":        false,
-			"reporting_enabled":        core.CensusLicensingEnabled(),
-			"billing_start_timestamp":  core.BillingStart(),
-			"minimum_retention_months": core.activityLog.configOverrides.MinimumRetentionMonths,
-		}
-
-		if diff := deep.Equal(resp.Data, defaults); len(diff) > 0 {
-			t.Fatalf("diff: %v", diff)
-		}
 	}
 
-	// Check Error Cases
-	{
-		req := logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
-		req.Storage = view
-		req.Data["default_report_months"] = 0
-		_, err := b.HandleRequest(namespace.RootContext(nil), req)
-		if err == nil {
-			t.Fatal("expected error")
-		}
-
-		req = logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
-		req.Storage = view
-		req.Data["enabled"] = "bad-value"
-		_, err = b.HandleRequest(namespace.RootContext(nil), req)
-		if err == nil {
-			t.Fatal("expected error")
-		}
-
-		req = logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
-		req.Storage = view
-		req.Data["retention_months"] = 0
-		req.Data["enabled"] = "enable"
-		_, err = b.HandleRequest(namespace.RootContext(nil), req)
-		if err == nil {
-			t.Fatal("expected error")
-		}
+	req = logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
+	req.Storage = view
+	req.Data["retention_months"] = 26
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
 	}
 
-	// Test single key updates
-	{
-		req := logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
-		req.Storage = view
-		req.Data["default_report_months"] = 1
-		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	req = logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
+	req.Storage = view
+	req.Data["enabled"] = "disable"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if core.ManualLicenseReportingEnabled() {
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if resp.Data["error"] != `cannot disable the activity log while Reporting is enabled` {
+			t.Fatalf("bad: %v", resp)
+		}
+	} else {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
 		if resp != nil {
 			t.Fatalf("bad: %#v", resp)
 		}
-
-		req = logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
-		req.Storage = view
-		req.Data["retention_months"] = 2
-		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-		if resp != nil {
-			t.Fatalf("bad: %#v", resp)
-		}
-
-		req = logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
-		req.Storage = view
-		req.Data["enabled"] = "enable"
-		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-		if resp != nil {
-			t.Fatalf("bad: %#v", resp)
-		}
-
-		req = logical.TestRequest(t, logical.ReadOperation, "internal/counters/config")
-		req.Storage = view
-		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-		expected := map[string]interface{}{
-			"default_report_months":    1,
-			"retention_months":         2,
-			"enabled":                  "enable",
-			"queries_available":        false,
-			"reporting_enabled":        core.CensusLicensingEnabled(),
-			"billing_start_timestamp":  core.BillingStart(),
-			"minimum_retention_months": core.activityLog.configOverrides.MinimumRetentionMonths,
-		}
-
-		if diff := deep.Equal(resp.Data, expected); len(diff) > 0 {
-			t.Fatalf("diff: %v", diff)
-		}
 	}
 
-	// Test updating all keys
-	{
-		req := logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
-		req.Storage = view
-		req.Data["enabled"] = "default"
-		req.Data["retention_months"] = 24
-		req.Data["default_report_months"] = 12
+	req = logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
+	req.Storage = view
+	req.Data["enabled"] = "enable"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
 
-		originalEnabled := core.activityLog.GetEnabled()
-		newEnabled := activityLogEnabledDefault
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/counters/config")
+	req.Storage = view
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	expected := map[string]interface{}{
+		"default_report_months":    12,
+		"retention_months":         26,
+		"enabled":                  "enable",
+		"queries_available":        false,
+		"reporting_enabled":        core.AutomatedLicenseReportingEnabled(),
+		"billing_start_timestamp":  core.BillingStart(),
+		"minimum_retention_months": core.activityLog.configOverrides.MinimumRetentionMonths,
+	}
 
-		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-		checkAPIWarnings(t, originalEnabled, newEnabled, resp)
-
-		req = logical.TestRequest(t, logical.ReadOperation, "internal/counters/config")
-		req.Storage = view
-		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-
-		defaults := map[string]interface{}{
-			"default_report_months":    12,
-			"retention_months":         24,
-			"enabled":                  activityLogEnabledDefaultValue,
-			"queries_available":        false,
-			"reporting_enabled":        core.CensusLicensingEnabled(),
-			"billing_start_timestamp":  core.BillingStart(),
-			"minimum_retention_months": core.activityLog.configOverrides.MinimumRetentionMonths,
-		}
-
-		if diff := deep.Equal(resp.Data, defaults); len(diff) > 0 {
-			t.Fatalf("diff: %v", diff)
-		}
+	if diff := deep.Equal(resp.Data, expected); len(diff) > 0 {
+		t.Fatalf("diff: %v", diff)
 	}
 }
 
@@ -2172,7 +2106,8 @@ func checkAPIWarnings(t *testing.T, originalEnabled, newEnabled bool, resp *logi
 }
 
 // TestActivityLog_EnableDisable writes a segment, adds an entity to the in-memory fragment, then disables the activity
-// log. The test verifies that the segment doesn't exist. The activity log is enabled, then verified that an empty
+// log. The test verifies that activity log cannot be disabled if manual reporting is enabled and no segment data is lost.
+// If manual reporting is not enabled(OSS), The test verifies that the segment doesn't exist. The activity log is enabled, then verified that an empty
 // segment is written and new clients can be added and written to segments.
 func TestActivityLog_EnableDisable(t *testing.T) {
 	timeutil.SkipAtEndOfMonth(t)
@@ -2204,10 +2139,19 @@ func TestActivityLog_EnableDisable(t *testing.T) {
 		req.Storage = view
 		req.Data["enabled"] = "disable"
 		resp, err := b.HandleRequest(ctx, req)
-		if err != nil {
-			t.Fatalf("err: %v", err)
+		if a.core.ManualLicenseReportingEnabled() {
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if resp.Data["error"] != `cannot disable the activity log while Reporting is enabled` {
+				t.Fatalf("bad: %v", resp)
+			}
+		} else {
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+			checkAPIWarnings(t, originalEnabled, false, resp)
 		}
-		checkAPIWarnings(t, originalEnabled, false, resp)
 	}
 
 	// enable (if not already) and write a segment
@@ -2233,33 +2177,35 @@ func TestActivityLog_EnableDisable(t *testing.T) {
 	// Add in-memory fragment
 	a.AddEntityToFragment(id3, "root", time.Now().Unix())
 
-	// disable and verify segment no longer exists
+	// disable and verify segment exists
 	disableRequest()
 
-	timeout := time.After(20 * time.Second)
-	select {
-	case <-a.deleteDone:
-		break
-	case <-timeout:
-		t.Fatalf("timed out")
+	if !a.core.ManualLicenseReportingEnabled() {
+		timeout := time.After(20 * time.Second)
+		select {
+		case <-a.deleteDone:
+			break
+		case <-timeout:
+			t.Fatalf("timed out")
+		}
+
+		expectMissingSegment(t, core, path)
+		a.ExpectCurrentSegmentRefreshed(t, 0, false)
+
+		// enable (if not already) which force-writes an empty segment
+		enableRequest()
+
+		seg2 := a.GetStartTimestamp()
+		if seg1 >= seg2 {
+			t.Errorf("bad second segment timestamp, %v >= %v", seg1, seg2)
+		}
+
+		// Verify empty segments are present
+		path = fmt.Sprintf("%ventity/%v/0", ActivityLogPrefix, seg2)
+		readSegmentFromStorage(t, core, path)
+
+		path = fmt.Sprintf("%vdirecttokens/%v/0", ActivityLogPrefix, seg2)
 	}
-
-	expectMissingSegment(t, core, path)
-	a.ExpectCurrentSegmentRefreshed(t, 0, false)
-
-	// enable (if not already) which force-writes an empty segment
-	enableRequest()
-
-	seg2 := a.GetStartTimestamp()
-	if seg1 >= seg2 {
-		t.Errorf("bad second segment timestamp, %v >= %v", seg1, seg2)
-	}
-
-	// Verify empty segments are present
-	path = fmt.Sprintf("%ventity/%v/0", ActivityLogPrefix, seg2)
-	readSegmentFromStorage(t, core, path)
-
-	path = fmt.Sprintf("%vdirecttokens/%v/0", ActivityLogPrefix, seg2)
 	readSegmentFromStorage(t, core, path)
 }
 
@@ -4801,4 +4747,97 @@ func TestActivityLog_HandleEndOfMonth(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, now, pq.StartTime)
 	require.Equal(t, timeutil.EndOfMonth(now), pq.EndTime)
+}
+
+// TestAddActivityToFragment calls AddActivityToFragment for different types of
+// clients and verifies that they are added correctly to the tracking data
+// structures
+func TestAddActivityToFragment(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	a := core.activityLog
+	a.SetEnable(true)
+
+	mount := "mount"
+	namespace := "root"
+	id := "id1"
+	a.AddActivityToFragment(id, namespace, 0, entityActivityType, mount)
+
+	testCases := []struct {
+		name         string
+		id           string
+		activityType string
+		isAdded      bool
+		expectedID   string
+		isNonEntity  bool
+	}{
+		{
+			name:         "duplicate",
+			id:           id,
+			activityType: entityActivityType,
+			isAdded:      false,
+			expectedID:   id,
+		},
+		{
+			name:         "new entity",
+			id:           "new-id",
+			activityType: entityActivityType,
+			isAdded:      true,
+			expectedID:   "new-id",
+		},
+		{
+			name:         "new nonentity",
+			id:           "new-nonentity",
+			activityType: nonEntityTokenActivityType,
+			isAdded:      true,
+			expectedID:   "new-nonentity",
+			isNonEntity:  true,
+		},
+		{
+			name:         "new acme",
+			id:           "new-acme",
+			activityType: ACMEActivityType,
+			isAdded:      true,
+			expectedID:   "pki-acme.new-acme",
+			isNonEntity:  true,
+		},
+		{
+			name:         "new secret sync",
+			id:           "new-secret-sync",
+			activityType: secretSyncActivityType,
+			isAdded:      true,
+			expectedID:   "new-secret-sync",
+			isNonEntity:  true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.activityType == secretSyncActivityType && !core.HasFeature(FeatureSecretSyncBilling) {
+				t.Skip()
+			}
+			a.fragmentLock.RLock()
+			numClientsBefore := len(a.fragment.Clients)
+			a.fragmentLock.RUnlock()
+
+			a.AddActivityToFragment(tc.id, namespace, 0, tc.activityType, mount)
+			a.fragmentLock.RLock()
+			defer a.fragmentLock.RUnlock()
+			numClientsAfter := len(a.fragment.Clients)
+
+			if tc.isAdded {
+				require.Equal(t, numClientsBefore+1, numClientsAfter)
+			} else {
+				require.Equal(t, numClientsBefore, numClientsAfter)
+			}
+
+			require.Contains(t, a.partialMonthClientTracker, tc.expectedID)
+			require.True(t, proto.Equal(&activity.EntityRecord{
+				ClientID:      tc.expectedID,
+				NamespaceID:   namespace,
+				Timestamp:     0,
+				NonEntity:     tc.isNonEntity,
+				MountAccessor: mount,
+				ClientType:    tc.activityType,
+			}, a.partialMonthClientTracker[tc.expectedID]))
+		})
+	}
 }

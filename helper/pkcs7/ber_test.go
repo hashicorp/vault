@@ -9,6 +9,38 @@ import (
 	"testing"
 )
 
+// FuzzReadObject is a fuzz test that will generate random input data in an
+// attempt to find crash-causing inputs
+// https://go.dev/doc/security/fuzz
+func FuzzReadObject(f *testing.F) {
+	// seed corpus used to guide the fuzzing engine
+	seedCorpus := []struct {
+		input  []byte
+		offset int
+	}{
+		{[]byte{0x30, 0x85}, 0},
+		{[]byte{0x30, 0x84, 0x80, 0x0, 0x0, 0x0}, 0},
+		{[]byte{0x30, 0x82, 0x0, 0x1}, 0},
+		{[]byte{0x30, 0x80, 0x1, 0x2, 0x1, 0x2}, 0},
+		{[]byte{0x30, 0x80, 0x1, 0x2}, 0},
+		{[]byte{0x30, 0x03, 0x01, 0x02}, 0},
+		{[]byte{0x30}, 0},
+		{[]byte("?0"), 0},
+	}
+	for _, tc := range seedCorpus {
+		f.Add(tc.input, tc.offset) // Use f.Add to provide a seed corpus
+	}
+	f.Fuzz(func(t *testing.T, ber []byte, offset int) {
+		if offset < 0 {
+			return
+		}
+		_, _, err := readObject(ber, offset)
+		if err != nil {
+			t.Log(ber, offset)
+		}
+	})
+}
+
 func TestBer2Der(t *testing.T) {
 	// indefinite length fixture
 	ber := []byte{0x30, 0x80, 0x02, 0x01, 0x01, 0x00, 0x00}
@@ -44,13 +76,14 @@ func TestBer2Der_Negatives(t *testing.T) {
 		Input         []byte
 		ErrorContains string
 	}{
-		{[]byte{0x30, 0x85}, "tag length too long"},
+		{[]byte{0x30, 0x85}, "end of ber data reached"},
 		{[]byte{0x30, 0x84, 0x80, 0x0, 0x0, 0x0}, "length is negative"},
 		{[]byte{0x30, 0x82, 0x0, 0x1}, "length has leading zero"},
 		{[]byte{0x30, 0x80, 0x1, 0x2, 0x1, 0x2}, "Invalid BER format"},
-		{[]byte{0x30, 0x80, 0x1, 0x2}, "BER tag length is more than available data"},
+		{[]byte{0x30, 0x80, 0x1, 0x2}, "end of ber data reached"},
 		{[]byte{0x30, 0x03, 0x01, 0x02}, "length is more than available data"},
 		{[]byte{0x30}, "end of ber data reached"},
+		{[]byte("?0"), "end of ber data reached"},
 	}
 
 	for _, fixture := range fixtures {

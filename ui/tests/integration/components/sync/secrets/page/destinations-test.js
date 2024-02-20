@@ -70,7 +70,7 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
   test('it should render header and tabs', async function (assert) {
     await this.renderComponent();
     assert.dom(breadcrumb).includesText('Secrets Sync', 'Breadcrumb renders');
-    assert.dom(title).hasText('Secrets Sync', 'Page title renders');
+    assert.dom(title).hasText('Secrets Sync Beta', 'Page title renders');
     assert.dom(tab('Overview')).exists('Overview tab renders');
     assert.dom(tab('Destinations')).exists('Destinations tab renders');
   });
@@ -154,7 +154,7 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
 
     assert.propEqual(
       this.transitionStub.lastCall.args,
-      ['vault.cluster.sync.secrets.destinations'],
+      ['vault.cluster.sync.secrets.destinations.destination.secrets', 'aws-sm', 'destination-aws'],
       'Transition is triggered on delete success'
     );
     assert.propEqual(

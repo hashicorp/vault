@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { withConfig } from 'pki/decorators/check-issuers';
 import { hash } from 'rsvp';
 import { PKI_DEFAULT_EMPTY_STATE_MSG } from 'pki/routes/overview';
@@ -23,7 +23,7 @@ export default class ConfigurationIndexRoute extends Route {
   model() {
     const { acme, cluster, urls, crl, engine } = this.modelFor('configuration');
     return hash({
-      hasConfig: this.shouldPromptConfig,
+      hasConfig: this.pkiMountHasConfig,
       engine,
       acme,
       cluster,

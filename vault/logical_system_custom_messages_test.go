@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"testing"
@@ -228,7 +229,7 @@ func TestHandleCreateCustomMessage(t *testing.T) {
 	// it to test different conditions.
 	fieldRaw := map[string]any{
 		"title":      "title",
-		"message":    "message",
+		"message":    base64.StdEncoding.EncodeToString([]byte("message")),
 		"start_time": "2023-01-01T00:00:00Z",
 	}
 
@@ -273,6 +274,13 @@ func TestHandleCreateCustomMessage(t *testing.T) {
 			name: "message-parameter-invalid",
 			fieldRawUpdate: map[string]any{
 				"message": map[int]string{},
+			},
+			errorExpected: true,
+		},
+		{
+			name: "message-parameter-invalid-not-base64",
+			fieldRawUpdate: map[string]any{
+				"message": "The message not base64 encoded.",
 			},
 			errorExpected: true,
 		},
@@ -427,6 +435,160 @@ func TestHandleCreateCustomMessage(t *testing.T) {
 	assert.NotNil(t, resp)
 	assert.NotNil(t, resp.Data)
 	assert.Contains(t, resp.Data, "error")
+}
+
+// TestHandleCreateAndUpdateCustomMessageLinkProperty verifies some particular
+// cases in the handleCreateCustomMessage method surrounding the link property
+// of the custom message. Because the link property is modeled as a JSON object,
+// the possibility of an empty or partially constructed object is provided, so
+// this test function verifies that each of these cases is appropriately
+// handled.
+func TestHandleCreateAndUpdateCustomMessageLinkProperty(t *testing.T) {
+	testBackend := &SystemBackend{
+		Core: &Core{
+			customMessageManager: uicustommessages.NewManager(&logical.InmemStorage{}),
+		},
+	}
+
+	fieldData := &framework.FieldData{
+		Schema: map[string]*framework.FieldSchema{
+			"title": {
+				Type:     framework.TypeString,
+				Required: true,
+			},
+			"message": {
+				Type:     framework.TypeString,
+				Required: true,
+			},
+			"authenticated": {
+				Type:    framework.TypeBool,
+				Default: true,
+			},
+			"type": {
+				Type:    framework.TypeString,
+				Default: "banner",
+			},
+			"start_time": {
+				Type:     framework.TypeTime,
+				Required: true,
+			},
+			"end_time": {
+				Type: framework.TypeTime,
+			},
+			"link": {
+				Type: framework.TypeMap,
+			},
+			"options": {
+				Type: framework.TypeMap,
+			},
+		},
+		Raw: map[string]any{
+			"title":      "The title",
+			"message":    "VGhlIG1lc3NhZ2UK",
+			"start_time": "2024-01-01T00:00:00.000Z",
+		},
+	}
+
+	for _, testcase := range []struct {
+		name                  string
+		linkField             any
+		responseErrorExpected bool
+	}{
+		// First group of testcases, setup an incomplete link parameter,
+		// which result in a CustomMessage with a Link field set to nil
+		{
+			name:      "nil-link",
+			linkField: nil,
+		},
+		{
+			name:      "empty-link-map",
+			linkField: map[string]any{},
+		},
+		{
+			name: "empty-key-and-value-link-map",
+			linkField: map[string]any{
+				"": "",
+			},
+		},
+		{
+			name: "empty-value-link-map",
+			linkField: map[string]any{
+				"Click me": "",
+			},
+		},
+		{
+			name: "empty-key-nil-value-link-map",
+			linkField: map[string]any{
+				"": nil,
+			},
+		},
+		// Second group of testcases, setup an invalid link parameter,
+		// which result in an error being returned and the message not being
+		// created or updated.
+		{
+			name: "nil-value-link-map",
+			linkField: map[string]any{
+				"Click me": nil,
+			},
+			responseErrorExpected: true,
+		},
+		{
+			name: "invalid-value-link-map",
+			linkField: map[string]any{
+				"Click me": []int{},
+			},
+			responseErrorExpected: true,
+		},
+		{
+			name: "empty-key-link-map",
+			linkField: map[string]any{
+				"": "https://www.example.org",
+			},
+			responseErrorExpected: true,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			delete(fieldData.Raw, "link")
+
+			// Create a custom message with no link to be used to test the
+			// handleUpdateCustomMessage case.
+			resp, err := testBackend.handleCreateCustomMessages(namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace), &logical.Request{}, fieldData)
+			require.NoError(t, err)
+			require.Contains(t, resp.Data, "id")
+			updatableMessageId := resp.Data["id"]
+
+			// Update the fieldData to include the testcase
+			fieldData.Raw["link"] = testcase.linkField
+			fieldData.Schema["id"] = &framework.FieldSchema{
+				Type:     framework.TypeString,
+				Required: true,
+			}
+			fieldData.Raw["id"] = updatableMessageId
+
+			// Test the Update operation
+			resp, err = testBackend.handleUpdateCustomMessage(namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace), &logical.Request{}, fieldData)
+			assert.NoError(t, err, "UpdateCustomMessage")
+
+			if testcase.responseErrorExpected {
+				assert.Contains(t, resp.Data, "error", "UpdateCustomMessage")
+			} else {
+				assert.Nil(t, resp.Data["link"], "UpdateCustomMessage")
+			}
+
+			// Reset for testing the Create operation
+			delete(fieldData.Schema, "id")
+			delete(fieldData.Raw, "id")
+
+			resp, err = testBackend.handleCreateCustomMessages(namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace), &logical.Request{}, fieldData)
+			assert.NoError(t, err, "CreateCustomMessage")
+
+			if testcase.responseErrorExpected {
+				assert.Contains(t, resp.Data, "error", "CreateCustomMessage")
+			} else {
+				assert.Nil(t, resp.Data["link"], "CreateCustomMessage")
+			}
+		})
+	}
 }
 
 // TestHandleReadCustomMessage verifies the proper functioning of the
@@ -625,7 +787,7 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 		Raw: map[string]any{
 			"id":            "abc",
 			"title":         "title",
-			"message":       "message",
+			"message":       base64.StdEncoding.EncodeToString([]byte("message")),
 			"authenticated": "true",
 			"type":          uicustommessages.ModalMessageType,
 			"start_time":    startTime,
@@ -703,6 +865,12 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 			name: "message-parameter-invalid",
 			fieldRawUpdate: map[string]any{
 				"message": []bool{},
+			},
+		},
+		{
+			name: "message-parameter-invalid-not-base64",
+			fieldRawUpdate: map[string]any{
+				"message": "The message not base64 encoded.",
 			},
 		},
 		{

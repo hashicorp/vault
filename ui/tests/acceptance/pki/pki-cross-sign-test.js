@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
-import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
+import { runCmd } from 'vault/tests/helpers/commands';
 import { SELECTORS } from 'vault/tests/helpers/pki/pki-issuer-cross-sign';
 import { verifyCertificates } from 'vault/utils/parse-pki-cert';
 module('Acceptance | pki/pki cross sign', function (hooks) {
@@ -27,7 +27,7 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     await enablePage.enable('pki', this.parentMountPath);
     await enablePage.enable('pki', this.intMountPath);
 
-    await runCommands([
+    await runCmd([
       `write "${this.parentMountPath}/root/generate/internal" common_name="Long-Lived Root X1" ttl=8960h issuer_name="${this.oldParentIssuerName}"`,
       `write "${this.parentMountPath}/root/generate/internal" common_name="Long-Lived Root X2" ttl=8960h issuer_name="${this.parentIssuerName}"`,
       `write "${this.parentMountPath}/config/issuers" default="${this.parentIssuerName}"`,
@@ -36,8 +36,8 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
 
   hooks.afterEach(async function () {
     // Cleanup engine
-    await runCommands([`delete sys/mounts/${this.intMountPath}`]);
-    await runCommands([`delete sys/mounts/${this.parentMountPath}`]);
+    await runCmd([`delete sys/mounts/${this.intMountPath}`]);
+    await runCmd([`delete sys/mounts/${this.parentMountPath}`]);
   });
 
   test('it cross-signs an issuer', async function (assert) {
@@ -88,7 +88,7 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
 
     // verify cross-sign was accurate by creating a role to issue a leaf certificate
     const myRole = 'some-role';
-    await runCommands([
+    await runCmd([
       `write ${this.intMountPath}/roles/${myRole} \
     issuer_ref=${this.newlySignedIssuer}\
     allow_any_name=true \

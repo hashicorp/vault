@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -36,6 +37,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 	_ "github.com/jackc/pgx/v4"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/assert"
 )
 
 func getClusterPostgresDBWithFactory(t *testing.T, factory logical.Factory) (*vault.TestCluster, logical.SystemView) {
@@ -151,6 +153,8 @@ func TestBackend_config_connection(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
+	eventSender := logical.NewMockEventSender()
+	config.EventsSender = eventSender
 	lb, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -329,6 +333,16 @@ func TestBackend_config_connection(t *testing.T) {
 	if key != "plugin-test" {
 		t.Fatalf("bad key: %q", key)
 	}
+	assert.Equal(t, 3, len(eventSender.Events))
+	assert.Equal(t, "database/config-write", string(eventSender.Events[0].Type))
+	assert.Equal(t, "config/plugin-test", eventSender.Events[0].Event.Metadata.AsMap()["path"])
+	assert.Equal(t, "plugin-test", eventSender.Events[0].Event.Metadata.AsMap()["name"])
+	assert.Equal(t, "database/config-write", string(eventSender.Events[1].Type))
+	assert.Equal(t, "config/plugin-test", eventSender.Events[1].Event.Metadata.AsMap()["path"])
+	assert.Equal(t, "plugin-test", eventSender.Events[1].Event.Metadata.AsMap()["name"])
+	assert.Equal(t, "database/config-write", string(eventSender.Events[2].Type))
+	assert.Equal(t, "config/plugin-test", eventSender.Events[2].Event.Metadata.AsMap()["path"])
+	assert.Equal(t, "plugin-test", eventSender.Events[2].Event.Metadata.AsMap()["name"])
 }
 
 func TestBackend_BadConnectionString(t *testing.T) {
@@ -387,6 +401,8 @@ func TestBackend_basic(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
+	eventSender := logical.NewMockEventSender()
+	config.EventsSender = eventSender
 
 	b, err := Factory(context.Background(), config)
 	if err != nil {
@@ -585,6 +601,23 @@ func TestBackend_basic(t *testing.T) {
 			t.Fatalf("Creds should not exist")
 		}
 	}
+	assert.Equal(t, 9, len(eventSender.Events))
+
+	assertEvent := func(t *testing.T, typ, name, path string) {
+		t.Helper()
+		assert.Equal(t, typ, string(eventSender.Events[0].Type))
+		assert.Equal(t, name, eventSender.Events[0].Event.Metadata.AsMap()["name"])
+		assert.Equal(t, path, eventSender.Events[0].Event.Metadata.AsMap()["path"])
+		eventSender.Events = slices.Delete(eventSender.Events, 0, 1)
+	}
+
+	assertEvent(t, "database/config-write", "plugin-test", "config/plugin-test")
+	for i := 0; i < 3; i++ {
+		assertEvent(t, "database/role-update", "plugin-role-test", "roles/plugin-role-test")
+		assertEvent(t, "database/creds-create", "plugin-role-test", "creds/plugin-role-test")
+	}
+	assertEvent(t, "database/creds-create", "plugin-role-test", "creds/plugin-role-test")
+	assertEvent(t, "database/role-delete", "plugin-role-test", "roles/plugin-role-test")
 }
 
 // singletonDBFactory allows us to reach into the internals of a databaseBackend

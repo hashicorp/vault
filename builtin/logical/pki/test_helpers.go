@@ -59,6 +59,19 @@ func mountPKIEndpoint(t testing.TB, client *api.Client, path string) {
 	require.NoError(t, err, "failed mounting pki endpoint")
 }
 
+func mountCertEndpoint(t testing.TB, client *api.Client, path string) {
+	t.Helper()
+
+	err := client.Sys().EnableAuthWithOptions(path, &api.MountInput{
+		Type: "cert",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	require.NoError(t, err, "failed mounting cert endpoint")
+}
+
 // Signing helpers
 func requireSignedBy(t *testing.T, cert *x509.Certificate, signingCert *x509.Certificate) {
 	t.Helper()

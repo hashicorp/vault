@@ -27,6 +27,7 @@ The following features are supported by the Vault Secrets Operator:
 - Prometheus specific instrumentation for [monitoring](/vault/docs/platform/k8s/vso/telemetry) the Operator.
 - Support for installing using: `Helm` or `Kustomize`<br />
 *see the [installation](/vault/docs/platform/k8s/vso/installation) docs for more details*
+- Support for [secret data transformation](/vault/docs/platform/k8s/vso/secret-transformation).
 
 ## Supported secret sources
 
@@ -46,8 +47,13 @@ The Vault Secrets Operator has been tested successfully in the following hosted 
 Basic integration tests are available in the project repository.
 Please report any issues [here](https://github.com/hashicorp/vault-secrets-operator/issues).
 
+## Threat model and security considerations
+HashiCorp takes security seriously and strives to enable users to configure their systems
+with security and safety in mind. Please see the Vault Secrets Operator's
+[Threat Model](https://github.com/hashicorp/vault-secrets-operator/blob/main/docs/threat-model/README.md)
+for highlights on how using the Vault Secrets Operator affects users' security posture and recommendations for running securely.
+
 ## Tutorial
 
-Refer to the [Vault Secrets Operator on
-Kubernetes](/vault/tutorials/kubernetes/vault-secrets-operator) tutorial to
-learn the end-to-end workflow using the Vault Secrets Operator.
+Refer to the [Vault Secrets Operator on Kubernetes](/vault/tutorials/kubernetes/vault-secrets-operator)
+tutorial to learn the end-to-end workflow using the Vault Secrets Operator.

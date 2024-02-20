@@ -5,7 +5,7 @@
 terraform {
   required_providers {
     enos = {
-      version = ">= 0.1.17"
+      version = "> 0.4.0"
       source  = "app.terraform.io/hashicorp-qti/enos"
     }
   }

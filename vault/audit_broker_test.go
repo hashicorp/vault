@@ -7,10 +7,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/builtin/audit/syslog"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -42,7 +45,7 @@ func testAuditBackend(t *testing.T, path string, config map[string]string) audit
 		MountPath: path,
 	}
 
-	be, err := syslog.Factory(context.Background(), cfg, true, headersCfg)
+	be, err := syslog.Factory(context.Background(), cfg, headersCfg)
 	require.NoError(t, err)
 	require.NotNil(t, be)
 
@@ -58,11 +61,11 @@ func testAuditBackend(t *testing.T, path string, config map[string]string) audit
 func TestAuditBroker_Register_SuccessThresholdSinks(t *testing.T) {
 	t.Parallel()
 	l := corehelpers.NewTestLogger(t)
-	a, err := NewAuditBroker(l, true)
+	a, err := NewAuditBroker(l)
 	require.NoError(t, err)
 	require.NotNil(t, a)
 
-	filterBackend := testAuditBackend(t, "b1-filter", map[string]string{"filter": "foo == bar"})
+	filterBackend := testAuditBackend(t, "b1-filter", map[string]string{"filter": "operation == create"})
 	noFilterBackend := testAuditBackend(t, "b2-no-filter", map[string]string{})
 
 	// Should be set to 0 for required sinks (and not found, as we've never registered before).
@@ -100,11 +103,11 @@ func TestAuditBroker_Register_SuccessThresholdSinks(t *testing.T) {
 func TestAuditBroker_Deregister_SuccessThresholdSinks(t *testing.T) {
 	t.Parallel()
 	l := corehelpers.NewTestLogger(t)
-	a, err := NewAuditBroker(l, true)
+	a, err := NewAuditBroker(l)
 	require.NoError(t, err)
 	require.NotNil(t, a)
 
-	filterBackend := testAuditBackend(t, "b1-filter", map[string]string{"filter": "foo == bar"})
+	filterBackend := testAuditBackend(t, "b1-filter", map[string]string{"filter": "operation == create"})
 	noFilterBackend := testAuditBackend(t, "b2-no-filter", map[string]string{})
 
 	err = a.Register("b1-filter", filterBackend, false)
@@ -147,7 +150,7 @@ func TestAuditBroker_Register_Fallback(t *testing.T) {
 	t.Parallel()
 
 	l := corehelpers.NewTestLogger(t)
-	a, err := NewAuditBroker(l, true)
+	a, err := NewAuditBroker(l)
 	require.NoError(t, err)
 	require.NotNil(t, a)
 
@@ -168,7 +171,7 @@ func TestAuditBroker_Register_FallbackMultiple(t *testing.T) {
 	t.Parallel()
 
 	l := corehelpers.NewTestLogger(t)
-	a, err := NewAuditBroker(l, true)
+	a, err := NewAuditBroker(l)
 	require.NoError(t, err)
 	require.NotNil(t, a)
 
@@ -194,7 +197,7 @@ func TestAuditBroker_Deregister_Fallback(t *testing.T) {
 	t.Parallel()
 
 	l := corehelpers.NewTestLogger(t)
-	a, err := NewAuditBroker(l, true)
+	a, err := NewAuditBroker(l)
 	require.NoError(t, err)
 	require.NotNil(t, a)
 
@@ -225,7 +228,7 @@ func TestAuditBroker_Deregister_Multiple(t *testing.T) {
 	t.Parallel()
 
 	l := corehelpers.NewTestLogger(t)
-	a, err := NewAuditBroker(l, true)
+	a, err := NewAuditBroker(l)
 	require.NoError(t, err)
 	require.NotNil(t, a)
 
@@ -242,7 +245,7 @@ func TestAuditBroker_Register_MultipleFails(t *testing.T) {
 	t.Parallel()
 
 	l := corehelpers.NewTestLogger(t)
-	a, err := NewAuditBroker(l, true)
+	a, err := NewAuditBroker(l)
 	require.NoError(t, err)
 	require.NotNil(t, a)
 
@@ -255,4 +258,74 @@ func TestAuditBroker_Register_MultipleFails(t *testing.T) {
 	err = a.Register(path, noFilterBackend, false)
 	require.Error(t, err)
 	require.EqualError(t, err, "vault.(AuditBroker).Register: backend already registered 'b2-no-filter'")
+}
+
+// BenchmarkAuditBroker_File_Request_DevNull Attempts to register a single `file`
+// audit device on the broker, which points at /dev/null.
+// It will then attempt to benchmark how long it takes Vault to complete logging
+// a request, this really only shows us how Vault can handle lots of calls to the
+// broker to trigger the eventlogger pipelines that audit devices are configured as.
+// Since we aren't writing anything to file or doing any I/O.
+// This test used to live in the file package for the file backend, but once the
+// move to eventlogger was complete, there wasn't a way to create a file backend
+// and manually just write to the underlying file itself, the old code used to do
+// formatting and writing all together, but we've split this up with eventlogger
+// with different nodes in a pipeline (think 1 audit device:1 pipeline) each
+// handling a responsibility, for example:
+// filter nodes filter events, so you can select which ones make it to your audit log
+// formatter nodes format the events (to JSON/JSONX and perform HMACing etc)
+// sink nodes handle sending the formatted data to a file, syslog or socket.
+func BenchmarkAuditBroker_File_Request_DevNull(b *testing.B) {
+	backendConfig := &audit.BackendConfig{
+		Config: map[string]string{
+			"path": "/dev/null",
+		},
+		MountPath:  "test",
+		SaltConfig: &salt.Config{},
+		SaltView:   &logical.InmemStorage{},
+	}
+
+	sink, err := file.Factory(context.Background(), backendConfig, nil)
+	require.NoError(b, err)
+
+	broker, err := NewAuditBroker(nil)
+	require.NoError(b, err)
+
+	err = broker.Register("test", sink, false)
+	require.NoError(b, err)
+
+	in := &logical.LogInput{
+		Auth: &logical.Auth{
+			ClientToken:     "foo",
+			Accessor:        "bar",
+			EntityID:        "foobarentity",
+			DisplayName:     "testtoken",
+			NoDefaultPolicy: true,
+			Policies:        []string{"root"},
+			TokenType:       logical.TokenTypeService,
+		},
+		Request: &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "/foo",
+			Connection: &logical.Connection{
+				RemoteAddr: "127.0.0.1",
+			},
+			WrapInfo: &logical.RequestWrapInfo{
+				TTL: 60 * time.Second,
+			},
+			Headers: map[string][]string{
+				"foo": {"bar"},
+			},
+		},
+	}
+
+	ctx := namespace.RootContext(context.Background())
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			if err := broker.LogRequest(ctx, in); err != nil {
+				panic(err)
+			}
+		}
+	})
 }

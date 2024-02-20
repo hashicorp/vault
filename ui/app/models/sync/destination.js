@@ -10,13 +10,25 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 
 // Base model for all secret sync destination types
 const validations = {
-  name: [{ type: 'presence', message: 'Name is required.' }],
+  name: [
+    { type: 'presence', message: 'Name is required.' },
+    { type: 'containsWhiteSpace', message: 'Name cannot contain whitespace.' },
+  ],
 };
 
 @withModelValidations(validations)
 export default class SyncDestinationModel extends Model {
   @attr('string', { subText: 'Specifies the name for this destination.', editDisabled: true }) name;
   @attr type;
+  @attr('string', {
+    subText:
+      'Go-template string that indicates how to format the secret name at the destination. The default template varies by destination type but is generally in the form of "vault-<accessor_id>-<secret_path>" e.g. "vault-kv-1234-my-secret-1".',
+  })
+  secretNameTemplate;
+
+  // only present if delete action has been initiated
+  @attr('string') purgeInitiatedAt;
+  @attr('string') purgeError;
 
   // findDestination returns static attributes for each destination type
   get icon() {
@@ -42,12 +54,12 @@ export default class SyncDestinationModel extends Model {
     return this.destinationPath.get('canDelete') !== false;
   }
   get canEdit() {
-    return this.destinationPath.get('canUpdate') !== false;
+    return this.destinationPath.get('canUpdate') !== false && !this.purgeInitiatedAt;
   }
   get canRead() {
     return this.destinationPath.get('canRead') !== false;
   }
   get canSync() {
-    return this.setAssociationPath.get('canUpdate') !== false;
+    return this.setAssociationPath.get('canUpdate') !== false && !this.purgeInitiatedAt;
   }
 }

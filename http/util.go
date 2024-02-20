@@ -13,9 +13,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/quotas"
 )
@@ -40,6 +39,19 @@ func wrapMaxRequestSizeHandler(handler http.Handler, props *vault.HandlerPropert
 		r = r.WithContext(ctx)
 
 		handler.ServeHTTP(w, r)
+	})
+}
+
+func wrapRequestLimiterHandler(handler http.Handler, props *vault.HandlerProperties) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		request := r.WithContext(
+			context.WithValue(
+				r.Context(),
+				logical.CtxKeyDisableRequestLimiter{},
+				props.ListenerConfig.DisableRequestLimiter,
+			),
+		)
+		handler.ServeHTTP(w, request)
 	})
 }
 

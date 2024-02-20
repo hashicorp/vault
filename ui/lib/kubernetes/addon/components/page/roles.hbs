@@ -26,11 +26,7 @@
       data-test-config-cta
       @title="No roles yet"
       @message="When created, roles will be listed here. Create a role to start generating service account tokens."
-    >
-      <LinkTo class="has-top-margin-xs" @route="roles.create">
-        Create role
-      </LinkTo>
-    </EmptyState>
+    />
   {{/if}}
 {{else}}
   <div class="has-bottom-margin-s">
