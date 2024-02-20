@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+/* eslint-disable ember/no-settled-after-test-helper */
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
@@ -114,6 +115,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     assert.dom(name(0)).hasText('destination-aws', 'First destination renders on page 1');
 
     await click(pagination.next);
+    await settled();
     assert.dom(overview.table.row).exists({ count: 3 }, 'New items are fetched and rendered on page change');
     assert.dom(name(0)).hasText('destination-gcp', 'First destination renders on page 2');
   });
@@ -124,6 +126,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
     // since the request resolved trigger a page change and return an error from the associations endpoint
     await click(pagination.next);
+    await settled();
     assert.dom(emptyStateTitle).hasText('Error fetching information', 'Empty state title renders');
     assert
       .dom(emptyStateMessage)
