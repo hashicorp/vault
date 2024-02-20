@@ -121,7 +121,7 @@ export default Service.extend({
       backend: {
         // add mount path for password reset
         mountPath: stored.backend.mountPath,
-        ...BACKENDS.findBy('type', backend),
+        ...BACKENDS.find((b) => b.type === backend),
       },
     });
   }),
@@ -267,7 +267,7 @@ export default Service.extend({
 
     const currentBackend = {
       mountPath,
-      ...BACKENDS.findBy('type', backend),
+      ...BACKENDS.find((backend) => backend.type === backend),
     };
     let displayName;
     if (isArray(currentBackend.displayNamePath)) {

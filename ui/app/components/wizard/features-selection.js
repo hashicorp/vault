@@ -26,7 +26,7 @@ export default Component.extend({
     });
 
     if (this.showReplication === false) {
-      const feature = this.allFeatures.findBy('key', 'replication');
+      const feature = this.allFeatures.find((feature) => feature.key === 'replication');
       feature.show = false;
     }
   },
