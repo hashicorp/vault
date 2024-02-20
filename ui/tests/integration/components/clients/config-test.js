@@ -108,8 +108,8 @@ module('Integration | Component | client count config', function (hooks) {
     assert.dom('[data-test-clients-config-modal]').doesNotExist('Modal is hidden on cancel');
   });
 
-  test('it should function in edit mode when reporting is enabled', async function (assert) {
-    assert.expect(6);
+  test('it should be hidden in edit mode when reporting is enabled', async function (assert) {
+    assert.expect(4);
 
     this.server.put('/sys/internal/counters/config', (schema, req) => {
       const { enabled, retention_months } = JSON.parse(req.requestBody);
@@ -124,13 +124,7 @@ module('Integration | Component | client count config', function (hooks) {
       <Clients::Config @model={{this.model}} @mode="edit" />
     `);
 
-    assert.dom('[data-test-input="enabled"]').isChecked('Data collection input is checked');
-    assert
-      .dom('[data-test-input="enabled"]')
-      .isDisabled('Data collection input disabled when reporting is enabled');
-    assert
-      .dom('label[for="enabled"]')
-      .hasText('Data collection is on', 'Correct label renders when data collection is on');
+    assert.dom('[data-test-input="enabled"]').doesNotExist('Data collection input not shown ');
     assert.dom('[data-test-input="retentionMonths"]').hasValue('24', 'Retention months render');
 
     await fillIn('[data-test-input="retentionMonths"]', 5);
