@@ -4,7 +4,6 @@
  */
 
 import Component from '@glimmer/component';
-import { copy } from 'ember-copy';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { assert } from '@ember/debug';
