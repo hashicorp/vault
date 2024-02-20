@@ -33,11 +33,6 @@ import (
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/keymanager"
 )
 
-const (
-	DefaultMinBackoff = 1 * time.Second
-	DefaultMaxBackoff = 5 * time.Minute
-)
-
 // GetAutoAuthMethodFromConfig Calls the appropriate NewAutoAuthMethod function, initializing
 // the auto-auth method, based on the auto-auth method type. Returns an error if one happens or
 // the method type is invalid.

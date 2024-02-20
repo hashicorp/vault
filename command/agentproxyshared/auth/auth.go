@@ -15,8 +15,8 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/sdk/helper/backoff"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
@@ -128,10 +128,10 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	}
 
 	if ah.minBackoff <= 0 {
-		ah.minBackoff = agentproxyshared.DefaultMinBackoff
+		ah.minBackoff = consts.DefaultMinBackoff
 	}
 	if ah.maxBackoff <= 0 {
-		ah.maxBackoff = agentproxyshared.DefaultMaxBackoff
+		ah.maxBackoff = consts.DefaultMaxBackoff
 	}
 	if ah.minBackoff > ah.maxBackoff {
 		return errors.New("auth handler: min_backoff cannot be greater than max_backoff")
@@ -506,11 +506,11 @@ type autoAuthBackoff struct {
 
 func newAutoAuthBackoff(min, max time.Duration, exitErr bool) *autoAuthBackoff {
 	if max <= 0 {
-		max = agentproxyshared.DefaultMaxBackoff
+		max = consts.DefaultMaxBackoff
 	}
 
 	if min <= 0 {
-		min = agentproxyshared.DefaultMinBackoff
+		min = consts.DefaultMinBackoff
 	}
 
 	retries := math.MaxInt

@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/sdk/helper/backoff"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 	"go.uber.org/atomic"
 )
@@ -149,7 +150,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 
 	// Create  backoff object to calculate backoff time before restarting a failed
 	// consul template server
-	restartBackoff := backoff.NewBackoff(math.MaxInt, agentproxyshared.DefaultMinBackoff, agentproxyshared.DefaultMaxBackoff)
+	restartBackoff := backoff.NewBackoff(math.MaxInt, consts.DefaultMinBackoff, consts.DefaultMaxBackoff)
 
 	for {
 		select {
