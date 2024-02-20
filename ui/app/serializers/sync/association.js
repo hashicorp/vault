@@ -12,6 +12,7 @@ export default class SyncAssociationSerializer extends ApplicationSerializer {
     destinationType: { serialize: false },
     syncStatus: { serialize: false },
     updatedAt: { serialize: false },
+    subKey: { serialize: false },
   };
 
   extractLazyPaginatedData(payload) {

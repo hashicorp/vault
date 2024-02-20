@@ -12,6 +12,8 @@ import (
 
 // TestAuditEvent_new exercises the newEvent func to create audit events.
 func TestAuditEvent_new(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Options              []Option
 		Subtype              subtype
@@ -107,6 +109,8 @@ func TestAuditEvent_new(t *testing.T) {
 
 // TestAuditEvent_Validate exercises the validation for an audit event.
 func TestAuditEvent_Validate(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value                *AuditEvent
 		IsErrorExpected      bool
@@ -198,6 +202,8 @@ func TestAuditEvent_Validate(t *testing.T) {
 
 // TestAuditEvent_Validate_Subtype exercises the validation for an audit event's subtype.
 func TestAuditEvent_Validate_Subtype(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value                string
 		IsErrorExpected      bool
@@ -243,6 +249,8 @@ func TestAuditEvent_Validate_Subtype(t *testing.T) {
 
 // TestAuditEvent_Validate_Format exercises the validation for an audit event's format.
 func TestAuditEvent_Validate_Format(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value                string
 		IsErrorExpected      bool
@@ -282,6 +290,45 @@ func TestAuditEvent_Validate_Format(t *testing.T) {
 			default:
 				require.NoError(t, err)
 			}
+		})
+	}
+}
+
+// TestAuditEvent_Subtype_MetricTag is used to ensure that we get the string value
+// we expect for a subtype when we want to use it as a metrics tag.
+// In some strange scenario where the subtype was never validated, it is technically
+// possible to get a value that isn't related to request/response, but this shouldn't
+// really be happening, so we will return it as is.
+func TestAuditEvent_Subtype_MetricTag(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		input          string
+		expectedOutput string
+	}{
+		"request": {
+			input:          "AuditRequest",
+			expectedOutput: "log_request",
+		},
+		"response": {
+			input:          "AuditResponse",
+			expectedOutput: "log_response",
+		},
+		"non-validated": {
+			input:          "juan",
+			expectedOutput: "juan",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			st := subtype(tc.input)
+			tag := st.MetricTag()
+			require.Equal(t, tc.expectedOutput, tag)
 		})
 	}
 }
