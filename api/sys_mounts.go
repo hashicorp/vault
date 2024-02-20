@@ -13,6 +13,39 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+func (c *Sys) GetMount(path string) (*MountOutput, error) {
+	return c.GetMountWithContext(context.Background(), path)
+}
+
+func (c *Sys) GetMountWithContext(ctx context.Context, path string) (*MountOutput, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	r := c.c.NewRequest(http.MethodGet, fmt.Sprintf("/v1/sys/mounts/%s", path))
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	secret, err := ParseSecret(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if secret == nil || secret.Data == nil {
+		return nil, errors.New("data from server response is empty")
+	}
+
+	mount := MountOutput{}
+	err = mapstructure.Decode(secret.Data, &mount)
+	if err != nil {
+		return nil, err
+	}
+
+	return &mount, nil
+}
+
 func (c *Sys) ListMounts() (map[string]*MountOutput, error) {
 	return c.ListMountsWithContext(context.Background())
 }
