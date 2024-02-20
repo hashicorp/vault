@@ -24,19 +24,19 @@ export default RESTSerializer.extend(EmbeddedRecordsMixin, {
 
   nodeFromObject(name, payload) {
     const nodeObj = payload.nodes[name];
-    return {
-      ...nodeObj,
+    return Object.assign(
+      nodeObj,
       ...{
         name,
         id: name,
-      },
-    };
+      }
+    );
   },
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const nodes = payload.nodes
       ? Object.keys(payload.nodes).map((name) => this.nodeFromObject(name, payload))
-      : [{ ...payload, ...{ id: '1' } }];
+      : [Object.assign(payload, { id: '1' })];
 
     const transformedPayload = { nodes: nodes };
 

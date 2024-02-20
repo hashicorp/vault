@@ -22,10 +22,10 @@ module('Unit | Mixin | cluster route', function () {
     clusterModel = {},
     methods = { router: {}, hasKeyData: () => false, authToken: () => null, transitionTo: () => {} }
   ) {
-    const ClusterRouteObject = EmberObject.extend(ClusterRouteMixin, {
-      ...methods,
-      ...{ clusterModel: () => clusterModel },
-    });
+    const ClusterRouteObject = EmberObject.extend(
+      ClusterRouteMixin,
+      Object.assign(methods, { clusterModel: () => clusterModel })
+    );
     return ClusterRouteObject.create();
   }
 

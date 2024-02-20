@@ -52,7 +52,7 @@ export default RESTAdapter.extend({
     if (namespace && !NAMESPACE_ROOT_URLS.some((str) => url.includes(str))) {
       headers['X-Vault-Namespace'] = namespace;
     }
-    options.headers = { ...(options.headers || {}), ...headers };
+    options.headers = Object.assign(options.headers || {}, headers);
   },
 
   _preRequest(url, options, method) {
