@@ -40,6 +40,8 @@ func TestProcessManual_NilData(t *testing.T) {
 // TestProcessManual_BadIDs tests ProcessManual when different bad values are
 // supplied for the ID parameter.
 func TestProcessManual_BadIDs(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		IDs                  []eventlogger.NodeID
 		ExpectedErrorMessage string

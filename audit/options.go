@@ -10,6 +10,23 @@ import (
 	"time"
 )
 
+// Option is how options are passed as arguments.
+type Option func(*options) error
+
+// options are used to represent configuration for a audit related nodes.
+type options struct {
+	withID              string
+	withNow             time.Time
+	withSubtype         subtype
+	withFormat          format
+	withPrefix          string
+	withRaw             bool
+	withElision         bool
+	withOmitTime        bool
+	withHMACAccessor    bool
+	withHeaderFormatter HeaderFormatter
+}
+
 // getDefaultOptions returns options with their default values.
 func getDefaultOptions() options {
 	return options{

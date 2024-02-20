@@ -26,6 +26,14 @@ var (
 	_ eventlogger.Node = (*EntryFormatter)(nil)
 )
 
+// EntryFormatter should be used to format audit requests and responses.
+type EntryFormatter struct {
+	salter          Salter
+	headerFormatter HeaderFormatter
+	config          FormatterConfig
+	prefix          string
+}
+
 // NewEntryFormatter should be used to create an EntryFormatter.
 // Accepted options: WithHeaderFormatter, WithPrefix.
 func NewEntryFormatter(config FormatterConfig, salter Salter, opt ...Option) (*EntryFormatter, error) {
