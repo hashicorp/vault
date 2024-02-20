@@ -504,6 +504,10 @@
         "path": "configuration/telemetry"
       },
       {
+        "title": "<code>Request Limiter</code>",
+        "path": "configuration/request-limiter"
+      },
+      {
         "title": "<code>ui</code>",
         "path": "configuration/ui"
       },
