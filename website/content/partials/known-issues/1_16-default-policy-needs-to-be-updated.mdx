@@ -1,0 +1,43 @@
+### Default policy needs to be updated in order for the version to appear in the Vault UI
+
+#### Affected versions
+
+- 1.16.0
+
+#### Issue
+
+Since the version information in both the `sys/health` and `sys/seal-status` un-authenticated
+endpoints can now be redacted with the use of the **redact_version** TCP listener parameter,
+the Vault UI uses a new authenticated endpoint `sys/internal/ui/version` to obtain the Vault
+server's version.
+
+The following rule has been added to the **default** policy that is automatically generated on
+new Vault server.
+
+```
+# Allow a token to look up the Vault version. This path is not subject to
+# redaction like the unauthenticated endpoints that provide the Vault version.
+path "sys/internal/ui/version" {
+    capabilities = ["read"]
+}
+```
+
+However, the **default** policy in existing Vault servers is not updated automatically. It
+must be updated manually be an operator with sufficient privileges in order for the Vault
+version to be displayed in the Vault UI. No other functionality in the Vault UI is affected
+be this issue.
+
+To update the **default** policy, use the following commands:
+```shell-session
+$ vault policy read default | cat - <<< '
+# Allow a token to look up the Vault version. This path is not subject to
+# redaction like the unauthenticated endpoints that provide the Vault version.
+path "sys/internal/ui/version" {
+    capabilities = ["read"]
+}
+' > default-policy.hcl
+$ vault policy write default ./default-policy.hcl
+```
+
+This change to the default policy will allow the Vault UI to successfully query
+the Vault server version and display it to the users.
