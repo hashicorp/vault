@@ -1663,7 +1663,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 					// Only create a new entity if the error was a readonly error and the creation flag is true
 					// i.e the entity was in the middle of being created
 					if entityCreated && errors.Is(err, logical.ErrReadOnly) {
-						entity, err = registerLocalAlias(ctx, c, auth.Alias, entity, err)
+						entity, err = registerLocalAlias(ctx, c, auth.Alias)
 						if err != nil {
 							if strings.Contains(err.Error(), errCreateEntityUnimplemented) {
 								resp.AddWarning("primary cluster doesn't yet issue entities for local auth mounts; falling back to not issuing entities for local auth mounts")
