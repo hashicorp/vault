@@ -119,10 +119,16 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		data.Request.Headers = adjustedHeaders
 	}
 
+	// If the request contains a Server-Side Consistency Token (SSCT), and we
+	// have an auth response, overwrite the existing client token with the SSCT,
+	// so that the SSCT appears in the audit log for this entry.
+	if data.Request != nil && data.Request.InboundSSCToken != "" && data.Auth != nil {
+		data.Auth.ClientToken = data.Request.InboundSSCToken
+	}
+
 	// Using any as we have two different types that we can get back from either
 	// FormatRequest or FormatResponse.
 	var entry any
-	var result []byte
 
 	switch a.Subtype {
 	case RequestType:
@@ -144,7 +150,7 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 	}
 
 	// Convert map m into a slice of bytes
-	result, err = jsonutil.EncodeJSON(m)
+	result, err := jsonutil.EncodeJSON(m)
 	if err != nil {
 		return nil, fmt.Errorf("%s: unable to format %s: %w", op, a.Subtype.String(), err)
 	}

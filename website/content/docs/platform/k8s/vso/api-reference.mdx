@@ -7,7 +7,7 @@ description: >-
 
 <!--
   copied from docs/api/api-reference.md in the vault-secrets-operator repo.
-  commit SHA=52673cce7858d2c074ca6375f90561fd9f011646
+  commit SHA=513441e0a912dbae2ddd7dc6bcee6a562f8d52e1
 -->
 # API Reference
 
@@ -24,6 +24,8 @@ Package v1beta1 contains API Schema definitions for the secrets v1beta1 API grou
 - [HCPAuthList](#hcpauthlist)
 - [HCPVaultSecretsApp](#hcpvaultsecretsapp)
 - [HCPVaultSecretsAppList](#hcpvaultsecretsapplist)
+- [SecretTransformation](#secrettransformation)
+- [SecretTransformationList](#secrettransformationlist)
 - [VaultAuth](#vaultauth)
 - [VaultAuthList](#vaultauthlist)
 - [VaultConnection](#vaultconnection)
@@ -53,9 +55,11 @@ _Appears in:_
 | --- | --- |
 | `name` _string_ | Name of the Secret |
 | `create` _boolean_ | Create the destination Secret. If the Secret already exists this should be set to false. |
+| `overwrite` _boolean_ | Overwrite the destination Secret if it exists and Create is true. This is useful when migrating to VSO from a previous secret deployment strategy. |
 | `labels` _object (keys:string, values:string)_ | Labels to apply to the Secret. Requires Create to be set to true. |
 | `annotations` _object (keys:string, values:string)_ | Annotations to apply to the Secret. Requires Create to be set to true. |
 | `type` _[SecretType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#secrettype-v1-core)_ | Type of Kubernetes Secret. Requires Create to be set to true. Defaults to Opaque. |
+| `transformation` _[Transformation](#transformation)_ | Transformation provides configuration for transforming the secret data before it is stored in the Destination. |
 
 
 #### HCPAuth
@@ -197,11 +201,78 @@ _Appears in:_
 | `name` _string_ |  |
 
 
+#### SecretTransformation
+
+
+
+SecretTransformation is the Schema for the secrettransformations API
+
+_Appears in:_
+- [SecretTransformationList](#secrettransformationlist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `secrets.hashicorp.com/v1beta1`
+| `kind` _string_ | `SecretTransformation`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[SecretTransformationSpec](#secrettransformationspec)_ |  |
+
+
+#### SecretTransformationList
+
+
+
+SecretTransformationList contains a list of SecretTransformation
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `secrets.hashicorp.com/v1beta1`
+| `kind` _string_ | `SecretTransformationList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[SecretTransformation](#secrettransformation) array_ |  |
+
+
+#### SecretTransformationSpec
+
+
+
+SecretTransformationSpec defines the desired state of SecretTransformation
+
+_Appears in:_
+- [SecretTransformation](#secrettransformation)
+
+| Field | Description |
+| --- | --- |
+| `templates` _object (keys:string, values:[Template](#template))_ | Templates maps a template name to its Template. Templates are always included in the rendered K8s Secret with the specified key. |
+| `sourceTemplates` _[SourceTemplate](#sourcetemplate) array_ | SourceTemplates are never included in the rendered K8s Secret, they can be used to provide common template definitions, etc. |
+| `includes` _string array_ | Includes contains regex patterns used to filter top-level source secret data fields for inclusion in the final K8s Secret data. These pattern filters are never applied to templated fields as defined in Templates. They are always applied last. |
+| `excludes` _string array_ | Excludes contains regex patterns used to filter top-level source secret data fields for exclusion from the final K8s Secret data. These pattern filters are never applied to templated fields as defined in Templates. They are always applied before any inclusion patterns. To exclude all source secret data fields, you can configure the single pattern ".*". |
+
+
+
+
+#### SourceTemplate
+
+
+
+SourceTemplate provides source templating configuration.
+
+_Appears in:_
+- [SecretTransformationSpec](#secrettransformationspec)
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ |  |
+| `text` _string_ | Text contains the Go text template format. The template references attributes from the data structure of the source secret. Refer to https://pkg.go.dev/text/template for more information. |
+
+
 #### StorageEncryption
 
 
 
-StorageEncryption provides the necessary configuration need to encrypt the storage cache entries using Vault's Transit engine. It only supports Kubernetes Auth for now.
+StorageEncryption provides the necessary configuration need to encrypt the storage cache entries using Vault's Transit engine.
 
 _Appears in:_
 - [VaultAuthSpec](#vaultauthspec)
@@ -210,6 +281,73 @@ _Appears in:_
 | --- | --- |
 | `mount` _string_ | Mount path of the Transit engine in Vault. |
 | `keyName` _string_ | KeyName to use for encrypt/decrypt operations via Vault Transit. |
+
+
+#### Template
+
+
+
+Template provides templating configuration.
+
+_Appears in:_
+- [SecretTransformationSpec](#secrettransformationspec)
+- [Transformation](#transformation)
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name of the Template |
+| `text` _string_ | Text contains the Go text template format. The template references attributes from the data structure of the source secret. Refer to https://pkg.go.dev/text/template for more information. |
+
+
+#### TemplateRef
+
+
+
+TemplateRef points to templating text that is stored in a SecretTransformation custom resource.
+
+_Appears in:_
+- [TransformationRef](#transformationref)
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name of the Template in SecretTransformationSpec.Templates. the rendered secret data. |
+| `keyOverride` _string_ | KeyOverride to the rendered template in the Destination secret. If Key is empty, then the Key from reference spec will be used. Set this to override the Key set from the reference spec. |
+
+
+#### Transformation
+
+
+
+
+
+_Appears in:_
+- [Destination](#destination)
+
+| Field | Description |
+| --- | --- |
+| `templates` _object (keys:string, values:[Template](#template))_ | Templates maps a template name to its Template. Templates are always included in the rendered K8s Secret, and take precedence over templates defined in a SecretTransformation. |
+| `transformationRefs` _[TransformationRef](#transformationref) array_ | TransformationRefs contain references to template configuration from SecretTransformation. |
+| `includes` _string array_ | Includes contains regex patterns used to filter top-level source secret data fields for inclusion in the final K8s Secret data. These pattern filters are never applied to templated fields as defined in Templates. They are always applied last. |
+| `excludes` _string array_ | Excludes contains regex patterns used to filter top-level source secret data fields for exclusion from the final K8s Secret data. These pattern filters are never applied to templated fields as defined in Templates. They are always applied before any inclusion patterns. To exclude all source secret data fields, you can configure the single pattern ".*". |
+| `excludeRaw` _boolean_ | ExcludeRaw data from the destination Secret. Exclusion policy can be set globally by including 'exclude-raw` in the '--global-transformation-options' command line flag. If set, the command line flag always takes precedence over this configuration. |
+
+
+#### TransformationRef
+
+
+
+TransformationRef contains the configuration for accessing templates from an SecretTransformation resource. TransformationRefs can be shared across all syncable secret custom resources.
+
+_Appears in:_
+- [Transformation](#transformation)
+
+| Field | Description |
+| --- | --- |
+| `namespace` _string_ | Namespace of the SecretTransformation resource. |
+| `name` _string_ | Name of the SecretTransformation resource. |
+| `templateRefs` _[TemplateRef](#templateref) array_ | TemplateRefs map to a Template found in this TransformationRef. If empty, then all templates from the SecretTransformation will be rendered to the K8s Secret. |
+| `ignoreIncludes` _boolean_ | IgnoreIncludes controls whether to use the SecretTransformation's Includes data key filters. |
+| `ignoreExcludes` _boolean_ | IgnoreExcludes controls whether to use the SecretTransformation's Excludes data key filters. |
 
 
 #### VaultAuth
@@ -524,7 +662,7 @@ _Appears in:_
 | `role` _string_ | Role in Vault to use when issuing TLS certificates. |
 | `revoke` _boolean_ | Revoke the certificate when the resource is deleted. |
 | `clear` _boolean_ | Clear the Kubernetes secret when the resource is deleted. |
-| `expiryOffset` _string_ | ExpiryOffset to use for computing when the certificate should be renewed. The rotation time will be difference between the expiration and the offset. Should be in duration notation e.g. 30s, 120s, etc. Set to empty string "" to prevent certificate rotation. |
+| `expiryOffset` _string_ | ExpiryOffset to use for computing when the certificate should be renewed. The rotation time will be difference between the expiration and the offset. Should be in duration notation e.g. 30s, 120s, etc. |
 | `issuerRef` _string_ | IssuerRef reference to an existing PKI issuer, either by Vault-generated identifier, the literal string default to refer to the currently configured default issuer, or the name assigned to an issuer. This parameter is part of the request URL. |
 | `rolloutRestartTargets` _[RolloutRestartTarget](#rolloutrestarttarget) array_ | RolloutRestartTargets should be configured whenever the application(s) consuming the Vault secret does not support dynamically reloading a rotated secret. In that case one, or more RolloutRestartTarget(s) can be configured here. The Operator will trigger a "rollout-restart" for each target whenever the Vault secret changes between reconciliation events. See RolloutRestartTarget for more details. |
 | `destination` _[Destination](#destination)_ | Destination provides configuration necessary for syncing the Vault secret to Kubernetes. If the type is set to "kubernetes.io/tls", "tls.key" will be set to the "private_key" response from Vault, and "tls.crt" will be set to "certificate" + "ca_chain" from the Vault response ("issuing_ca" is used when "ca_chain" is empty). The "remove_roots_from_chain=true" option is used with Vault to exclude the root CA from the Vault response. |
@@ -533,6 +671,7 @@ _Appears in:_
 | `ipSans` _string array_ | IPSans to include in the request. |
 | `uriSans` _string array_ | The requested URI SANs. |
 | `otherSans` _string array_ | Requested other SANs, in an array with the format oid;type:value for each entry. |
+| `userIDs` _string array_ | User ID (OID 0.9.2342.19200300.100.1.1) Subject values to be placed on the signed certificate. |
 | `ttl` _string_ | TTL for the certificate; sets the expiration date. If not specified the Vault role's default, backend default, or system default TTL is used, in that order. Cannot be larger than the mount's max TTL. Note: this only has an effect when generating a CA cert or signing a CA cert, not when generating a CSR for an intermediate CA. Should be in duration notation e.g. 120s, 2h, etc. |
 | `format` _string_ | Format for the certificate. Choices: "pem", "der", "pem_bundle". If "pem_bundle", any private key and issuing cert will be appended to the certificate pem. If "der", the value will be base64 encoded. Default: pem |
 | `privateKeyFormat` _string_ | PrivateKeyFormat, generally the default will be controlled by the Format parameter as either base64-encoded DER or PEM-encoded DER. However, this can be set to "pkcs8" to have the returned private key contain base64-encoded pkcs8 or PEM-encoded pkcs8 instead. Default: der |
@@ -630,7 +769,3 @@ _Appears in:_
 | `hmacSecretData` _boolean_ | HMACSecretData determines whether the Operator computes the HMAC of the Secret's data. The MAC value will be stored in the resource's Status.SecretMac field, and will be used for drift detection and during incoming Vault secret comparison. Enabling this feature is recommended to ensure that Secret's data stays consistent with Vault. |
 | `rolloutRestartTargets` _[RolloutRestartTarget](#rolloutrestarttarget) array_ | RolloutRestartTargets should be configured whenever the application(s) consuming the Vault secret does not support dynamically reloading a rotated secret. In that case one, or more RolloutRestartTarget(s) can be configured here. The Operator will trigger a "rollout-restart" for each target whenever the Vault secret changes between reconciliation events. All configured targets wil be ignored if HMACSecretData is set to false. See RolloutRestartTarget for more details. |
 | `destination` _[Destination](#destination)_ | Destination provides configuration necessary for syncing the Vault secret to Kubernetes. |
-
-
-
-

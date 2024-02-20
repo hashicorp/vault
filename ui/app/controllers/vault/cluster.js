@@ -4,7 +4,7 @@
  */
 
 /* eslint-disable ember/no-observers */
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Controller from '@ember/controller';
 import { observer } from '@ember/object';
@@ -39,7 +39,7 @@ export default Controller.extend({
   consoleOpen: alias('console.isOpen'),
   activeCluster: alias('auth.activeCluster'),
 
-  permissionReadFailed: alias('permissions.readFailed'),
+  permissionBanner: alias('permissions.permissionsBanner'),
 
   actions: {
     toggleConsole() {

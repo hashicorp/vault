@@ -12,6 +12,7 @@ import logout from 'vault/tests/pages/logout';
 import { format, addDays, startOfDay } from 'date-fns';
 import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
 import { PAGE } from 'vault/tests/helpers/config-ui/message-selectors';
+import { clickTrigger } from 'ember-power-select/test-support/helpers';
 
 module('Acceptance | config-ui', function (hooks) {
   setupApplicationTest(hooks);
@@ -76,6 +77,7 @@ module('Acceptance | config-ui', function (hooks) {
         'redirects to messages page after delete'
       );
     });
+
     test('it should show multiple messages modal', async function (assert) {
       assert.expect(4);
       await this.createMessage('modal', null);
@@ -87,6 +89,44 @@ module('Acceptance | config-ui', function (hooks) {
         .hasText('Warning: more than one modal after the user logs in');
       await click(PAGE.modalButton('cancel'));
       await visit('vault/config-ui/messages');
+      await click(PAGE.listItem('Awesome custom message title'));
+      await click(PAGE.confirmActionButton('Delete message'));
+      await click(PAGE.confirmButton);
+      assert.dom('[data-test-component="empty-state"]').exists('Message was deleted');
+    });
+    test('it should filter by type and status', async function (assert) {
+      assert.expect(6);
+      await this.createMessage('banner', null);
+      await this.createMessage('banner');
+      await visit('vault/config-ui/messages');
+
+      // check number of messages with status filters
+      await clickTrigger('#filter-by-message-status');
+      await click('.ember-power-select-options [data-option-index="0"]');
+      assert.dom('.linked-block').exists({ count: 1 }, 'filtered by active');
+      await click('[data-test-selected-list-button="delete"]');
+      await clickTrigger('#filter-by-message-status');
+      await click('.ember-power-select-options [data-option-index="1"]');
+      assert.dom('.linked-block').exists({ count: 1 }, 'filtered by inactive');
+      await click('[data-test-selected-list-button="delete"]');
+
+      // check number of messages with type filters
+      await clickTrigger('#filter-by-message-type');
+      await click('.ember-power-select-options [data-option-index="0"]');
+      assert.dom('.linked-block').exists({ count: 0 }, 'filtered by modal');
+      await click('[data-test-selected-list-button="delete"]');
+      await clickTrigger('#filter-by-message-type');
+      await click('.ember-power-select-options [data-option-index="1"]');
+      assert.dom('.linked-block').exists({ count: 2 }, 'filtered by banner');
+      await click('[data-test-selected-list-button="delete"]');
+
+      // check number of messages with no filters
+      assert.dom('.linked-block').exists({ count: 2 }, 'no filters selected');
+
+      // clean up custom messages
+      await click(PAGE.listItem('Awesome custom message title'));
+      await click(PAGE.confirmActionButton('Delete message'));
+      await click(PAGE.confirmButton);
       await click(PAGE.listItem('Awesome custom message title'));
       await click(PAGE.confirmActionButton('Delete message'));
       await click(PAGE.confirmButton);
@@ -168,7 +208,7 @@ module('Acceptance | config-ui', function (hooks) {
       assert
         .dom(PAGE.unauthCreateFormInfo)
         .hasText(
-          'Note: Do not include sensitive info in this message since users are unauthenticated at this stage.'
+          'Note: Do not include sensitive information in this message since users are unauthenticated at this stage.'
         );
     });
     test('it should display preview a message when all required fields are filled out', async function (assert) {
