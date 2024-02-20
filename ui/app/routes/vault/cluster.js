@@ -49,7 +49,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   getClusterId(params) {
     const { cluster_name } = params;
     const records = this.store.peekAll('cluster');
-    const cluster = records.filter((record) => record.name === cluster_name)[0];
+    const cluster = records.find((record) => record.name === cluster_name);
     return cluster ? cluster.get('id') : null;
   },
 
