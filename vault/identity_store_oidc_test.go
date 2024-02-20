@@ -1097,8 +1097,8 @@ func testNamedKey(name string) *namedKey {
 // rotations and expiration actions.
 func TestOIDC_PeriodicFunc(t *testing.T) {
 	type testCase struct {
-		expectedKeyRingLen   int
-		expectedPublicKeyLen int
+		minKeyRingLen int
+		maxKeyRingLen int
 	}
 	testSets := []struct {
 		namedKey          *namedKey
@@ -1111,11 +1111,12 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     true,
 			setNextSigningKey: true,
 			testCases: []testCase{
-				// Each cycle results in a key going in/out of its verification_ttl period
-				{2, 2},
-				{3, 3},
-				{2, 2},
-				{3, 3},
+				// we must always have at least 2 keys and at most 3 through rotation cycles, since
+				// each rotation cycle results in a key going in/out of its verification_ttl period.
+				{2, 3},
+				{2, 3},
+				{2, 3},
+				{2, 3},
 			},
 		},
 		{
@@ -1139,9 +1140,9 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			testCases: []testCase{
 				{1, 1},
 
-				// key counts jump from 1 to 3 because the original signing key is
-				// still published and within its verification_ttl period
-				{3, 3},
+				// max key counts jump from 1 to 3 because the original signing
+				// key could still be within its verification_ttl period
+				{2, 3},
 			},
 		},
 		{
@@ -1151,6 +1152,8 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setNextSigningKey: false,
 			testCases: []testCase{
 				{0, 0},
+
+				// First rotation populates both current/next signing keys
 				{2, 2},
 			},
 		},
@@ -1212,12 +1215,16 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 				require.NoError(t, namedKeySamples[i].DecodeJSON(&testSet.namedKey))
 
 				actualKeyRingLen := len(testSet.namedKey.KeyRing)
-				assert.Equal(t, tc.expectedKeyRingLen, actualKeyRingLen,
-					"Key ring length mismatch for key %q at test case index %d", testSet.namedKey.name, i)
+				assert.LessOrEqual(t, actualKeyRingLen, tc.maxKeyRingLen,
+					"test case index %d: key ring length must be at most %d", i, tc.maxKeyRingLen)
+				assert.GreaterOrEqual(t, actualKeyRingLen, tc.minKeyRingLen,
+					"test case index %d: key ring length must be at least %d", i, tc.minKeyRingLen)
 
 				actualPubKeysLen := len(publicKeysSamples[i])
-				assert.Equal(t, tc.expectedPublicKeyLen, actualPubKeysLen,
-					"Public key length mismatch for key %q at test case index %d", testSet.namedKey.name, i)
+				assert.LessOrEqual(t, actualPubKeysLen, tc.maxKeyRingLen,
+					"test case index %d: public key ring length must be at most %d", i, tc.maxKeyRingLen)
+				assert.GreaterOrEqual(t, actualPubKeysLen, tc.minKeyRingLen,
+					"test case index %d: public key ring length must be at least %d", i, tc.minKeyRingLen)
 			}
 		})
 	}
