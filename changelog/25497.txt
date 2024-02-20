@@ -1,3 +1,3 @@
-```release-note:improvement
-agent: Use exponential backoff to sleep and then attempt a restart of the consul template server
+```release-note:bug
+agent: Fixed a high Vault load issue, by restarting the Conusl template server after backing off, instead of in immediate succession.
 ```
