@@ -7,15 +7,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/namespace"
-
-	"github.com/hashicorp/go-uuid"
-
-	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/hashicorp/eventlogger"
-
+	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internal/observability/event"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,6 +40,8 @@ func TestProcessManual_NilData(t *testing.T) {
 // TestProcessManual_BadIDs tests ProcessManual when different bad values are
 // supplied for the ID parameter.
 func TestProcessManual_BadIDs(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		IDs                  []eventlogger.NodeID
 		ExpectedErrorMessage string

@@ -1,0 +1,51 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{! Replaces ConfirmAction in dropdowns, instead use dd.Interactive + this modal }}
+{{! Destructive action confirmation modal that asks "Are you sure?" or similar @confirmTitle }}
+{{! If a tracked property is used to pass the list item to the destructive action,  }}
+{{! remember to reset item to null via the @onClose action }}
+
+<Hds::Modal
+  id="confirm-action-modal"
+  class="has-text-left"
+  @color={{or @color "warning"}}
+  @size="small"
+  @onClose={{@onClose}}
+  data-test-confirm-modal
+  as |M|
+>
+  {{#if @disabledMessage}}
+    <M.Header data-test-confirm-action-title @icon="x-circle">
+      Not allowed
+    </M.Header>
+    <M.Body data-test-confirm-action-message>
+      {{@disabledMessage}}
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button data-test-confirm-cancel-button @text="Close" {{on "click" F.close}} />
+    </M.Footer>
+  {{else}}
+    <M.Header data-test-confirm-action-title @icon="alert-circle">
+      {{or @confirmTitle "Are you sure?"}}
+    </M.Header>
+    <M.Body data-test-confirm-action-message>
+      {{or @confirmMessage "You will not be able to recover it later."}}
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button
+          data-test-confirm-button
+          disabled={{@isRunning}}
+          @icon={{if @isRunning "loading"}}
+          @color={{if (eq @color "critical") "critical" "primary"}}
+          @text="Confirm"
+          {{on "click" @onConfirm}}
+        />
+        <Hds::Button data-test-confirm-cancel-button @color="secondary" @text="Cancel" {{on "click" F.close}} />
+      </Hds::ButtonSet>
+    </M.Footer>
+  {{/if}}
+</Hds::Modal>

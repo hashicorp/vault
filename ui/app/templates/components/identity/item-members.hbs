@@ -18,7 +18,7 @@
         </div>
         <div class="column has-text-right">
           {{#if @model.canEdit}}
-            <Identity::PopupMembers @params={{array @model "memberGroupIds" gid}} />
+            <Identity::PopupMembers @model={{@model}} @groupArray="memberGroupIds" @memberId={{gid}} />
           {{/if}}
         </div>
       </div>
@@ -38,7 +38,7 @@
         </div>
         <div class="column has-text-right">
           {{#if @model.canEdit}}
-            <Identity::PopupMembers @params={{array @model "memberEntityIds" gid}} />
+            <Identity::PopupMembers @model={{@model}} @groupArray="memberEntityIds" @memberId={{gid}} />
           {{/if}}
         </div>
       </div>

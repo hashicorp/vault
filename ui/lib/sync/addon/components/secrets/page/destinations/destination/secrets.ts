@@ -6,6 +6,7 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/application';
 import errorMessage from 'vault/utils/error-message';
 
@@ -25,6 +26,8 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @service declare readonly router: RouterService;
   @service declare readonly store: StoreService;
   @service declare readonly flashMessages: FlashMessageService;
+
+  @tracked secretToUnsync = null;
 
   get mountPoint(): string {
     const owner = getOwner(this) as EngineOwner;
@@ -55,6 +58,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
     } catch (error) {
       this.flashMessages.danger(`Sync operation error: \n ${errorMessage(error)}`);
     } finally {
+      this.secretToUnsync = null;
       this.refreshRoute();
     }
   }

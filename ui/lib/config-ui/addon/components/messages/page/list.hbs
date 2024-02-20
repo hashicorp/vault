@@ -9,16 +9,40 @@
   @breadcrumbs={{this.breadcrumbs}}
 >
   <:toolbarFilters>
-    {{#if @messages.meta.total}}
-      <FilterInput
-        aria-label="Search by message title"
-        placeholder="Search by message title"
-        id="message-filter"
-        value={{@pageFilter}}
-        @autofocus={{true}}
-        @onInput={{this.onFilterChange}}
+    <FilterInput
+      aria-label="Search by message title"
+      placeholder="Search by message title"
+      id="message-filter"
+      value={{@params.pageFilter}}
+      @autofocus={{true}}
+      @onInput={{this.onFilterInputChange}}
+    />
+    <div>
+      <SearchSelect
+        @id="filter-by-message-status"
+        class="has-left-margin-s"
+        @options={{this.statusFilterOptions}}
+        @selectLimit="1"
+        @searchEnabled={{false}}
+        @fallbackComponent="select"
+        @onChange={{fn this.onFilterChange "status"}}
+        @placeholder="Filter by message status"
+        @inputValue={{if @params.status (array @params.status)}}
+        data-test-filter-by-message-status
       />
-    {{/if}}
+    </div>
+    <SearchSelect
+      @id="filter-by-message-type"
+      class="has-left-margin-s"
+      @options={{this.typeFilterOptions}}
+      @selectLimit="1"
+      @searchEnabled={{false}}
+      @fallbackComponent="select"
+      @onChange={{fn this.onFilterChange "type"}}
+      @placeholder="Filter by message type"
+      @inputValue={{if @params.type (array @params.type)}}
+      data-test-filter-by-message-type
+    />
   </:toolbarFilters>
   <:toolbarActions>
     <Hds::Button
@@ -36,7 +60,7 @@
 {{#if @messages.length}}
   {{#each this.formattedMessages as |message|}}
     <LinkedBlock
-      data-test-list-item={{message.id}}
+      data-test-list-item={{message.title}}
       class="list-item-row"
       @params={{array "messages.message.details" message.id}}
       @linkPrefix="vault.cluster.config-ui"
@@ -50,38 +74,28 @@
             </Hds::Text::Display>
             <div class="has-top-margin-xs">
               <Hds::Badge @text={{message.badgeDisplayText}} @color={{message.badgeColor}} data-test-badge={{message.id}} />
-              <Hds::Badge
-                @text={{(capitalize message.type)}}
-                @color={{message.badgeColor}}
-                data-test-badge={{message.type}}
-              />
+              <Hds::Badge @text={{(capitalize message.type)}} data-test-badge={{message.type}} />
             </div>
           </div>
         </div>
         <div class="level-right is-flex is-paddingless is-marginless">
           <div class="level-item">
-            <PopupMenu @name="engine-menu">
-              <nav class="menu">
-                <ul class="menu-list">
-                  {{#if message.canEditCustomMessages}}
-                    <li class="action">
-                      <LinkTo @route="messages.message.edit" @model={{message.id}}>
-                        Edit
-                      </LinkTo>
-                    </li>
-                  {{/if}}
-                  {{#if message.canDeleteCustomMessages}}
-                    <ConfirmAction
-                      @isInDropdown={{true}}
-                      @buttonText="Delete"
-                      @confirmTitle="Are you sure?"
-                      @confirmMessage="This will delete this message permanently. You cannot undo this action."
-                      @onConfirmAction={{perform this.deleteMessage message}}
-                    />
-                  {{/if}}
-                </ul>
-              </nav>
-            </PopupMenu>
+            {{#if (or message.canEditCustomMessages message.canDeleteCustomMessages)}}
+              <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+                <dd.ToggleIcon
+                  @icon="more-horizontal"
+                  @text="Message popup menu"
+                  @hasChevron={{false}}
+                  data-test-popup-menu-trigger
+                />
+                {{#if message.canEditCustomMessages}}
+                  <dd.Interactive @text="Edit" @route="messages.message.edit" @model={{message.id}} />
+                {{/if}}
+                {{#if message.canDeleteCustomMessages}}
+                  <dd.Interactive @text="Delete" @color="critical" {{on "click" (fn (mut this.messageToDelete) message)}} />
+                {{/if}}
+              </Hds::Dropdown>
+            {{/if}}
           </div>
         </div>
       </div>
@@ -121,4 +135,13 @@
       <Hds::Button @text="Close" {{on "click" F.close}} data-test-modal-button="maximum-message-modal" />
     </M.Footer>
   </Hds::Modal>
+{{/if}}
+
+{{#if this.messageToDelete}}
+  <ConfirmModal
+    @color="critical"
+    @confirmMessage="This will delete this message permanently. You cannot undo this action."
+    @onClose={{fn (mut this.messageToDelete) null}}
+    @onConfirm={{perform this.deleteMessage this.messageToDelete}}
+  />
 {{/if}}

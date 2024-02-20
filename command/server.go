@@ -52,6 +52,7 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
+	"github.com/hashicorp/vault/plugins/event"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -96,6 +97,7 @@ type ServerCommand struct {
 	CredentialBackends map[string]logical.Factory
 	LogicalBackends    map[string]logical.Factory
 	PhysicalBackends   map[string]physical.Factory
+	EventBackends      map[string]event.Factory
 
 	ServiceRegistrations map[string]sr.Factory
 
@@ -1439,9 +1441,9 @@ func (c *ServerCommand) Run(args []string) int {
 	info["administrative namespace"] = config.AdministrativeNamespacePath
 
 	infoKeys = append(infoKeys, "request limiter")
-	info["request limiter"] = "enabled"
-	if config.RequestLimiter != nil && config.RequestLimiter.Disable {
-		info["request limiter"] = "disabled"
+	info["request limiter"] = "disabled"
+	if config.RequestLimiter != nil && !config.RequestLimiter.Disable {
+		info["request limiter"] = "enabled"
 	}
 
 	sort.Strings(infoKeys)
@@ -3079,6 +3081,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		AuditBackends:                  c.AuditBackends,
 		CredentialBackends:             c.CredentialBackends,
 		LogicalBackends:                c.LogicalBackends,
+		EventBackends:                  c.EventBackends,
 		LogLevel:                       config.LogLevel,
 		Logger:                         c.logger,
 		DetectDeadlocks:                config.DetectDeadlocks,
@@ -3117,6 +3120,8 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 
 	if config.RequestLimiter != nil {
 		coreConfig.DisableRequestLimiter = config.RequestLimiter.Disable
+	} else {
+		coreConfig.DisableRequestLimiter = true
 	}
 
 	if c.flagDev {

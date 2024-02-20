@@ -60,7 +60,9 @@ func NewRouter() *Router {
 
 // routeEntry is used to represent a mount point in the router
 type routeEntry struct {
-	tainted       atomic.Bool
+	tainted atomic.Bool
+	// backend is the actual backend instance for this route entry; lock l must
+	// be held to access this field.
 	backend       logical.Backend
 	mountEntry    *MountEntry
 	storageView   logical.Storage
@@ -69,7 +71,8 @@ type routeEntry struct {
 	loginPaths    atomic.Value
 	binaryPaths   atomic.Value
 	limitedPaths  atomic.Value
-	l             sync.RWMutex
+	// l is the lock used to protect access to backend during reloads
+	l sync.RWMutex
 }
 
 type wildcardPath struct {
@@ -495,27 +498,11 @@ func (r *Router) MatchingBackend(ctx context.Context, path string) logical.Backe
 
 // MatchingSystemView returns the SystemView used for a path
 func (r *Router) MatchingSystemView(ctx context.Context, path string) logical.SystemView {
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
+	backend := r.MatchingBackend(ctx, path)
+	if backend == nil {
 		return nil
 	}
-	path = ns.Path + path
-
-	r.l.RLock()
-	_, raw, ok := r.root.LongestPrefix(path)
-	r.l.RUnlock()
-	if !ok || raw.(*routeEntry).backend == nil {
-		return nil
-	}
-	return raw.(*routeEntry).backend.System()
-}
-
-func (r *Router) MatchingMountByAPIPath(ctx context.Context, path string) string {
-	me, _, _ := r.matchingMountEntryByPath(ctx, path, true)
-	if me == nil {
-		return ""
-	}
-	return me.Path
+	return backend.System()
 }
 
 // MatchingStoragePrefixByAPIPath the storage prefix for the given api path
@@ -526,13 +513,13 @@ func (r *Router) MatchingStoragePrefixByAPIPath(ctx context.Context, path string
 	}
 	path = ns.Path + path
 
-	_, prefix, found := r.matchingMountEntryByPath(ctx, path, true)
+	_, prefix, found := r.matchingMountEntryByPath(path, true)
 	return prefix, found
 }
 
 // MatchingAPIPrefixByStoragePath the api path information for the given storage path
 func (r *Router) MatchingAPIPrefixByStoragePath(ctx context.Context, path string) (*namespace.Namespace, string, string, bool) {
-	me, prefix, found := r.matchingMountEntryByPath(ctx, path, false)
+	me, prefix, found := r.matchingMountEntryByPath(path, false)
 	if !found {
 		return nil, "", "", found
 	}
@@ -546,7 +533,7 @@ func (r *Router) MatchingAPIPrefixByStoragePath(ctx context.Context, path string
 	return me.Namespace(), mountPath, prefix, found
 }
 
-func (r *Router) matchingMountEntryByPath(ctx context.Context, path string, apiPath bool) (*MountEntry, string, bool) {
+func (r *Router) matchingMountEntryByPath(path string, apiPath bool) (*MountEntry, string, bool) {
 	var raw interface{}
 	var ok bool
 	r.l.RLock()

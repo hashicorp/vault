@@ -248,6 +248,7 @@ func (b *backend) autoRotateKeys(ctx context.Context, req *logical.Request) erro
 			continue
 		}
 
+		// rotateIfRequired properly acquires/releases the lock on p
 		err = b.rotateIfRequired(ctx, req, key, p)
 		if err != nil {
 			errs = multierror.Append(errs, err)

@@ -4,7 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
@@ -91,6 +91,11 @@ export default class SearchSelect extends Component {
 
   get nameKey() {
     return this.args.nameKey || 'name';
+  }
+
+  get searchEnabled() {
+    if (typeof this.args.searchEnabled === 'boolean') return this.args.searchEnabled;
+    return true;
   }
 
   addSearchText(optionsToFormat) {

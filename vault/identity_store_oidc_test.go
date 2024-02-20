@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"crypto"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -16,7 +17,9 @@ import (
 	"github.com/go-jose/go-jose/v3"
 	"github.com/go-jose/go-jose/v3/jwt"
 	"github.com/go-test/deep"
+	capjwt "github.com/hashicorp/cap/jwt"
 	"github.com/hashicorp/go-hclog"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -390,8 +393,60 @@ func TestOIDC_Path_OIDCRole(t *testing.T) {
 	expectStrings(t, respListRoleAfterDelete.Data["keys"].([]string), expectedStrings)
 }
 
-// TestOIDC_Path_OIDCKeyKey tests CRUD operations for keys
-func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
+// TestOIDC_DeleteKeyWithMountReference ensures that keys cannot be deleted
+// if they're referenced by mounts for plugin identity tokens.
+func TestOIDC_DeleteKeyWithMountReference(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	core, _, _ := TestCoreUnsealed(t)
+	core.credentialBackends["userpass"] = credUserpass.Factory
+	idStorage := core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+	require.NotNil(t, idStorage)
+
+	tests := []struct {
+		name        string
+		mountPrefix string
+		mountType   string
+		keyName     string
+	}{
+		{
+			name:        "delete key referenced by auth mount does not succeed",
+			mountPrefix: "auth/",
+			mountType:   "userpass/",
+			keyName:     "test-key-1",
+		},
+		{
+			name:        "delete key referenced by secret mount does not succeed",
+			mountPrefix: "mounts/",
+			mountType:   "kv/",
+			keyName:     "test-key-2",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := core.identityStore.HandleRequest(ctx, testKeyReq(idStorage, tt.keyName,
+				[]string{"*"}, "RS256"))
+			expectSuccess(t, resp, err)
+
+			createMountEntryWithKey(t, ctx, core.systemBackend, tt.mountPrefix, tt.mountType, tt.keyName)
+			require.NoError(t, err)
+			require.Nil(t, resp)
+
+			// Deleting the key must not succeed
+			resp, err = core.identityStore.HandleRequest(ctx, &logical.Request{
+				Path:      fmt.Sprintf("oidc/key/%s", tt.keyName),
+				Operation: logical.DeleteOperation,
+				Storage:   idStorage,
+			})
+			expectError(t, resp, err)
+			require.Equal(t, fmt.Sprintf(deleteKeyErrorFmt, tt.keyName, "mounts", tt.mountType),
+				resp.Error().Error())
+		})
+	}
+}
+
+// TestOIDC_Path_CRUDKey tests CRUD operations for keys
+func TestOIDC_Path_CRUDKey(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
@@ -461,7 +516,6 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		Storage: storage,
 	})
 	expectSuccess(t, resp, err)
-	// fmt.Printf("resp is:\n%#v", resp)
 
 	// Delete test-key -- should fail because test-role depends on test-key
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -558,8 +612,8 @@ func TestOIDC_Path_OIDCKey_InvalidTokenTTL(t *testing.T) {
 	expectError(t, resp, err)
 }
 
-// TestOIDC_Path_OIDCKey tests the List operation for keys
-func TestOIDC_Path_OIDCKey(t *testing.T) {
+// TestOIDC_Path_ListKey tests the List operation for keys
+func TestOIDC_Path_ListKey(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
@@ -1848,6 +1902,180 @@ func Test_optionalChildIssuerRegex(t *testing.T) {
 				}
 			}
 			require.Equal(t, tt.captures, actualCaptures)
+		})
+	}
+}
+
+// TestIdentityStore_generatePluginIdentityToken tests generation of plugin identity
+// tokens by verifying signatures and validating claims.
+func TestIdentityStore_generatePluginIdentityToken(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	core.credentialBackends["userpass"] = credUserpass.Factory
+	identityStore := core.IdentityStore()
+	identityStore.redirectAddr = "http://localhost:8200"
+	ctx := namespace.RootContext(nil)
+	storage := core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+	require.NotNil(t, storage)
+
+	// Create a key
+	testKey := "test-key"
+	testAudience := "allowed-audience"
+	resp, err := core.identityStore.HandleRequest(ctx, testKeyReq(storage, testKey,
+		[]string{testAudience}, "RS256"))
+	expectSuccess(t, resp, err)
+
+	// Enable a secret mount using the test key
+	createMountEntryWithKey(t, ctx, core.systemBackend, "mounts/", "kv/", testKey)
+	expectSuccess(t, resp, err)
+	secretMountEntry := core.router.MatchingMountEntry(ctx, "kv/")
+	require.NotNil(t, secretMountEntry)
+
+	// Enable an auth mount using the default key
+	createMountEntryWithKey(t, ctx, core.systemBackend, "auth/", "userpass/", defaultKeyName)
+	expectSuccess(t, resp, err)
+	authMountEntry := core.router.MatchingMountEntry(ctx, "auth/userpass/")
+	require.NotNil(t, authMountEntry)
+
+	tests := []struct {
+		name       string
+		ctx        context.Context
+		mountEntry *MountEntry
+		audience   string
+		ttl        time.Duration
+		wantErr    bool
+	}{
+		{
+			name:    "expect error with nil context",
+			ctx:     nil,
+			wantErr: true,
+		},
+		{
+			name:       "expect error with nil mount entry",
+			ctx:        ctx,
+			mountEntry: nil,
+			wantErr:    true,
+		},
+		{
+			name: "expect error with key that doesn't exist",
+			ctx:  ctx,
+			mountEntry: &MountEntry{
+				Config: MountConfig{
+					IdentityTokenKey: "does-not-exist",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name:       "expect error with audience that's not allowed by the key",
+			ctx:        ctx,
+			mountEntry: secretMountEntry,
+			audience:   "not-allowed-audience",
+			wantErr:    true,
+		},
+		{
+			name:       "expect valid identity token with secret mount using test key",
+			ctx:        ctx,
+			mountEntry: secretMountEntry,
+			audience:   testAudience,
+		},
+		{
+			name:       "expect valid identity token with auth mount using default key",
+			ctx:        ctx,
+			mountEntry: authMountEntry,
+			audience:   testAudience,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			token, _, err := identityStore.generatePluginIdentityToken(tt.ctx, storage, tt.mountEntry,
+				tt.audience, tt.ttl)
+			if tt.wantErr {
+				require.Error(t, err)
+				require.Empty(t, token)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotEmpty(t, token)
+
+			// Verify the signature and claims of the token
+			key, err := identityStore.getNamedKey(ctx, storage, tt.mountEntry.Config.IdentityTokenKey)
+			require.NoError(t, err)
+			keySet, err := capjwt.NewStaticKeySet([]crypto.PublicKey{key.SigningKey.Public()})
+			require.NoError(t, err)
+
+			validator, err := capjwt.NewValidator(keySet)
+			require.NoError(t, err)
+			expected := capjwt.Expected{
+				Issuer: fmt.Sprintf("%s/v1/identity/oidc/plugins", identityStore.redirectAddr),
+				Subject: fmt.Sprintf("%s:%s:%s:%s", pluginTokenSubjectPrefix, namespace.RootNamespace.ID,
+					translateTableClaim(tt.mountEntry.Table), tt.mountEntry.Accessor),
+				Audiences:         []string{tt.audience},
+				SigningAlgorithms: []capjwt.Alg{capjwt.RS256},
+			}
+
+			claims, err := validator.Validate(ctx, token, expected)
+			require.NoError(t, err)
+			require.Contains(t, claims, pluginTokenPrivateClaimKey)
+			require.IsType(t, map[string]interface{}{}, claims[pluginTokenPrivateClaimKey])
+
+			vaultSubClaims := claims[pluginTokenPrivateClaimKey].(map[string]interface{})
+			require.Equal(t, namespace.RootNamespace.ID, vaultSubClaims["namespace_id"])
+			require.Equal(t, namespace.RootNamespace.Path, vaultSubClaims["namespace_path"])
+			require.Equal(t, translateTableClaim(tt.mountEntry.Table), vaultSubClaims["class"])
+			require.Equal(t, tt.mountEntry.Type, vaultSubClaims["plugin"])
+			require.Equal(t, tt.mountEntry.RunningVersion, vaultSubClaims["version"])
+			require.Equal(t, tt.mountEntry.Path, vaultSubClaims["path"])
+			require.Equal(t, tt.mountEntry.Accessor, vaultSubClaims["accessor"])
+			require.Equal(t, tt.mountEntry.Local, vaultSubClaims["local"])
+		})
+	}
+}
+
+func createMountEntryWithKey(t *testing.T, ctx context.Context, sys *SystemBackend, mountPrefix, mountType, key string) {
+	t.Helper()
+
+	resp, err := sys.HandleRequest(ctx, &logical.Request{
+		Path:      mountPrefix + mountType,
+		Operation: logical.UpdateOperation,
+		Storage:   new(logical.InmemStorage),
+		Data: map[string]interface{}{
+			"type": strings.TrimSuffix(mountType, "/"),
+			"config": map[string]interface{}{
+				"identity_token_key": key,
+			},
+		},
+	})
+	expectSuccess(t, resp, err)
+}
+
+// Test_translateTableClaim tests that we convert mount entry table
+// values to expected claim values.
+func Test_translateTableClaim(t *testing.T) {
+	tests := []struct {
+		name  string
+		table string
+		want  string
+	}{
+		{
+			name:  "given mounts table returns secret",
+			table: mountTableType,
+			want:  secretTableValue,
+		},
+		{
+			name:  "given auth table returns auth",
+			table: "auth",
+			want:  "auth",
+		},
+		{
+			name:  "given any value returns itself",
+			table: "other",
+			want:  "other",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, translateTableClaim(tt.table), "translateTableClaim(%v)", tt.table)
 		})
 	}
 }
