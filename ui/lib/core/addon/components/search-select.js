@@ -170,7 +170,7 @@ export default class SearchSelect extends Component {
         const options = yield this.store.query(modelType, queryParams);
 
         // store both select + unselected options in tracked property used by wildcard filter
-        this.allOptions = [...this.allOptions, ...options.mapBy('id')];
+        this.allOptions = [...this.allOptions, ...options.map((option) => option.id)];
 
         // add to dropdown options
         this.dropdownOptions = [...this.dropdownOptions, ...this.addSearchText(options)];

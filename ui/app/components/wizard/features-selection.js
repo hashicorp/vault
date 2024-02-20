@@ -134,7 +134,7 @@ export default Component.extend({
   showReplication: or('version.hasPerfReplication', 'version.hasDRReplication'),
 
   selectedFeatures: computed('allFeatures.@each.selected', function () {
-    return this.allFeatures.filterBy('selected').mapBy('key');
+    return this.allFeatures.filter((feature) => feature.selected === true).map((feature) => feature.key);
   }),
 
   cannotStartWizard: not('selectedFeatures.length'),

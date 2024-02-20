@@ -91,7 +91,7 @@ export default class MfaLoginEnforcementForm extends Component {
   }
   async fetchAuthMethods() {
     const mounts = (await this.store.findAll('auth-method')).toArray();
-    this.authMethods = mounts.mapBy('type');
+    this.authMethods = mounts.map((auth) => auth.type);
   }
 
   get selectedTarget() {
