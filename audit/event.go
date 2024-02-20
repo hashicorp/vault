@@ -140,7 +140,7 @@ func (t subtype) MetricTag() string {
 		return "log_response"
 	}
 
-	return string(t)
+	return t.String()
 }
 
 // String returns the subtype as a human-readable string.
