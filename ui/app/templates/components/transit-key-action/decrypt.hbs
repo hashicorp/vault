@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form onsubmit={{action @doSubmit (hash ciphertext=@ciphertext context=@context nonce=@nonce)}}>
+<form {{on "submit" (fn @doSubmit (hash ciphertext=@ciphertext context=@context nonce=@nonce))}} ...attributes>
   <div class="box is-sideless is-fullwidth is-marginless">
     <div class="content has-bottom-margin-l">
       <p>You can decrypt ciphertext using <code>{{@key.name}}</code> as the encryption key.</p>
@@ -12,7 +12,7 @@
       <div id="ciphertext-control" class="control">
         <JsonEditor
           @title="Ciphertext"
-          @valueUpdated={{action (mut @ciphertext)}}
+          @valueUpdated={{fn (mut @ciphertext)}}
           @mode="ruby"
           @data-test-transit-input="ciphertext"
         />
@@ -60,11 +60,13 @@
     </M.Header>
     <M.Body>
       <h2 class="has-text-weight-semibold is-6">Plaintext</h2>
-      <p class="sub-text">Plaintext is base64 encoded</p>
+      <p class="sub-text">Plaintext is base64 encoded.</p>
       <Hds::Copy::Snippet
         @textToCopy={{@plaintext}}
         @color="secondary"
         @container="#transit-decrypt-modal"
+        @isFullWidth={{true}}
+        @isTruncated={{true}}
         @onError={{(fn
           (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
         )}}
