@@ -14,6 +14,7 @@ export default Factory.extend({
     secret_access_key: '*****',
     region: 'us-west-1',
     // options
+    granularity: 'secret-path', // default option (same for all destinations) so edit test can update to 'secret-key'
     secret_name_template: 'vault-{{ .MountAccessor | replace "_" "-" }}-{{ .SecretPath }}',
     custom_tags: { foo: 'bar' },
   }),
@@ -28,6 +29,7 @@ export default Factory.extend({
     client_secret: '*****',
     cloud: 'Azure Public Cloud',
     // options
+    granularity: 'secret-path',
     secret_name_template: 'vault-{{ .MountAccessor | replace "_" "-" }}-{{ .SecretPath }}',
     custom_tags: { foo: 'bar' },
   }),
@@ -37,6 +39,7 @@ export default Factory.extend({
     // connection_details
     credentials: '*****',
     // options
+    granularity: 'secret-path',
     secret_name_template: 'vault-{{ .MountAccessor | replace "_" "-" }}-{{ .SecretPath }}',
     custom_tags: { foo: 'bar' },
   }),
@@ -48,6 +51,7 @@ export default Factory.extend({
     repository_owner: 'my-organization-or-username',
     repository_name: 'my-repository',
     // options
+    granularity: 'secret-path',
     secret_name_template: 'vault-{{ .MountAccessor | replace "_" "-" }}-{{ .SecretPath }}',
   }),
   ['vercel-project']: trait({
