@@ -231,10 +231,6 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 			}
 
 			// Sleep for the calculated backoff time then attempt to create a new runner
-			ts.logger.Warn(fmt.Sprintf("template server restart: retry attempt after %s", sleep))
-			time.Sleep(sleep)
-
-			// Sleep for the calculated backoff time then attempt to create a new runner
 			s.logger.Warn(fmt.Sprintf("template server restart: retry attempt after %s", sleep))
 			time.Sleep(sleep)
 
