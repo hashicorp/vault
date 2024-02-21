@@ -677,11 +677,6 @@ func (f *EntryFormatter) excludeFields(entry any) (map[string]any, error) {
 		return nil, fmt.Errorf("%s: error decoding entry: %w", op, err)
 	}
 
-	// If there are no exclusions to process then return the map.
-	if len(f.exclusions) < 1 {
-		return resultMap, nil
-	}
-
 	// Take another copy which will be the original we use for all evaluations.
 	sourceMap := make(map[string]any, len(resultMap))
 	decoder, err = mapDecoderJSON(&sourceMap)
