@@ -52,6 +52,6 @@ export default class MfaLoginEnforcementHeaderComponent extends Component {
   onEnforcementSelect([name]) {
     // search select returns array of strings, in this case enforcement name
     // lookup model and pass to callback
-    this.args.onEnforcementSelect(this._enforcements.findBy('name', name));
+    this.args.onEnforcementSelect(this._enforcements.find((enf) => enf.name === name));
   }
 }
