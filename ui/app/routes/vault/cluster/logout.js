@@ -42,8 +42,9 @@ export default Route.extend(ModelBoundaryRoute, {
       queryParams.namespace = ns;
     }
     if (Ember.testing) {
+      // TODO: cleanup this replaceWith instance. Using router.replaceWith causes test failures
       // Don't redirect on the test
-      this.router.replaceWith('vault.cluster.auth', { queryParams });
+      this.replaceWith('vault.cluster.auth', { queryParams });
     } else {
       const { cluster_name } = this.paramsFor('vault.cluster');
       location.assign(this.router.urlFor('vault.cluster.auth', cluster_name, { queryParams }));
