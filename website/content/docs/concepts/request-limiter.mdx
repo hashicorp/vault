@@ -1,0 +1,69 @@
+---
+layout: docs
+page_title: 'Request Limiter'
+description: >-
+  Vault provides an adaptive concurrency limiter to protect the Vault server
+  from overload.
+---
+
+# Request Limiter
+
+This document contains conceptual information about the **Request Limiter** and
+its user-facing effects.
+
+## Preventing overload
+
+The Request Limiter aims to prevent overload by proactively detecting latency
+and adapting the number of allowed in-flight requests.
+
+This is done in two phases at the beginning of an HTTP request:
+
+1. Consult the current number of allowed in-flight requests. If the new request
+would exceed this limit, immediately reject it, indicating that the client
+should retry later.
+
+2. If the request is allowed, begin a measurement of its latency, allowing the
+Request Limiter to calculate a new limit.
+
+## Telemetry
+
+The Request Limiter exposes several new 
+
+## Resource constraints
+
+The Request Limiter intentionally focuses on preventing overload derived from
+resource-constrained operations on the Vault server. There are two known
+resource-constrained request paths in Vault:
+
+1. Back pressure from the storage backend, resulting in bufferbloat in the WAL
+system (enterprise) for `Write`-based HTTP methods.
+
+2. Back pressure from CPU over-utilization via PKI issue requests (specifically
+for RSA keys), resulting in failed heartbeats.
+
+Storage constraints can be accounted for by limiting logical requests according
+to their `http.Method`. We only limit requests with write-based methods, since
+these will result in storage Puts and exhibit the aforementioned bufferbloat.
+
+CPU constraints are accounted for using the same underlying library and
+technique; however, they require special treatment. The maximum number of
+concurrent pki/issue requests found in testing (again, specifically for RSA
+keys) is far lower than the minimum tolerable write request rate.
+
+In both cases, utilization will be effectively throttled before Vault reaches
+any degraded state. The resulting `503 - Service Unavailable` is a retryable
+HTTP response code, which can be handled to gracefully retry and eventually
+succeed.  Clients should handle this by retrying with jitter and exponential
+backoff. This is done within Vault's API, using the go-retryablehttp library.
+
+## `503 - Service Unavailable`
+
+When Vault has reached capacity, the new requests will be immediately rejected
+with a new retryable `503` error: `Vault server temporarily overloaded`.
+
+This error indicates that the server is at capacity and the client should wait to retry.
+
+~> **NOTE**:  `429 - Too Many Requests` is typically used to indicate that a
+specific client is issuing too many requests. The choice of `503: Service
+Unavailable` over `429: Too Many Requests` emphasizes that that the server is
+temporarily under excess load, which may not be related to a specific client.
