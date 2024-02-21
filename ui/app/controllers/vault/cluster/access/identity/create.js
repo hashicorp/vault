@@ -4,9 +4,11 @@
  */
 
 import Controller from '@ember/controller';
+import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 
 export default Controller.extend({
+  router: service(),
   showRoute: 'vault.cluster.access.identity.show',
   showTab: 'details',
   navAfterSave: task(function* ({ saveType, model }) {
@@ -20,9 +22,9 @@ export default Controller.extend({
     };
     const routeName = listRoutes[type];
     if (!isDelete) {
-      yield this.transitionToRoute(this.showRoute, model.id, this.showTab);
+      yield this.router.transitionTo(this.showRoute, model.id, this.showTab);
       return;
     }
-    yield this.transitionToRoute(routeName);
+    yield this.router.transitionTo(routeName);
   }),
 });
