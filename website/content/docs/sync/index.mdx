@@ -127,6 +127,16 @@ Granularity can be updated. The new granularity only affects secrets newly assoc
 not modify the previously synced secrets. It is possible to update an association to force a recreate operation.
 The secret synced with the old granularity will be deleted and new secrets will be synced according to the new granularity.
 
+
+## Reconciliation
+
+Vault Secrets Sync is designed to be resilient to transient failures and automatically recover from them.
+If a sync operation fails, Vault will retry the operation a few times with exponential backoff.
+Every so often, Vault will also perform a scan of all secrets that are managed by the sync system and attempt to reconcile
+any out-of-date secrets to ensure that configured destinations are up-to-date.
+This can be useful in situations like dropped update events or external service downtime.
+The reconciliation process is automatic and happens in a background thread. No action is required by the user to opt-in to this behavior.
+
 ## API
 
 Please see the [secrets sync API](/vault/api-docs/system/secrets-sync) for more details.
