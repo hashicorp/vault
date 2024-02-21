@@ -152,24 +152,55 @@ If the GitHub destination uses the default `secret-key` granularity, the values 
 
 ## GitHub application
 
-If you prefer to use a GitHub application instead of a personal access token, you can configure a GitHub application with Vault.
-Follow this guide to create a GitHub application: [Registering a GitHub App](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app).
-Your GitHub application will need permissions to read and write secrets. No callback or redirect URL is required at this time.
-From here, take note of your Application ID and generate a private key.
+Instead of authenticating with a personal access token, you can choose to
+authenticate with a
+[custom GitHub application](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app).
+
+Start by following the GitHub instructions for
+[installing a GitHub app](https://docs.github.com/en/apps/using-github-apps/installing-your-own-github-app).
+to install your GitHub application on a specified repository and note the
+assigned installation ID.
+
+<Tip title="Your installation ID is in the app URL>
+
+  You can find your assigned installation ID in the URL path parameter:
+  `https://github.com/settings/installations/<INSTALLATION_ID>`
+
+</Tip>
+
+Then add your GitHub application to your Vault instance.
+
+To use your GitHub application with Vault:
+
+- the application must have permission to read and write secrets to Vault.
+- you must know the application ID assigned by GitHub.
+- you must generate a private key on GitHub.
+
+Callback and redirect URLs are not required at this time.
+
+To configure the application in Vault, use `vault write` with the
+`sys/sync/github-apps` endpoint to assign a unique name and set the relevant
+information:
+
 ```shell-session
-$ vault write sys/sync/github-apps/my-app-1 \
-  app_id=$APP_ID \
-  private_key=@$PATH_TO_PRIVATE_KEY
+$ vault write sys/sync/github-apps/<APP_NAME> \
+  app_id=<APP_ID> \
+  private_key=<PATH_TO_PRIVATE_KEY>
 ```
 
-**Output:**
+For example:
 
 <CodeBlockConfig hideClipboard>
 
-```plaintext
+
+```shell-session
+$ vault write sys/sync/github-apps/my-app-1 \
+  app_id=12345678 \
+  private_key=@${PATH_TO_PRIVATE_KEY}
+
 Key            Value
 ---            -----
-app_id         123456
+app_id         12345678
 fingerprint    <fingerprint>
 name           my-app-1
 private_key    *****
@@ -177,24 +208,30 @@ private_key    *****
 
 </CodeBlockConfig>
 
-Follow this guide to install your GitHub application on a specified repository: [Installing a GitHub App](https://docs.github.com/en/apps/using-github-apps/installing-your-own-github-app).
-Take note of your installation ID. This can be found in the URL path parameter:
-`https://github.com/settings/installations/<INSTALLATION_ID>`
 
-Now you can configure a GitHub destination referencing the GitHub application:
+Next, use `vault write` with the `sys/sync/destinations/gh` endpoint to
+configure a GitHub destination that references your new GitHub application:
+
+
+```shell-session
+$ vault write sys/sync/destinations/gh/<DESTINATION_NAME> \
+installation_id=<APP_ID>                                  \
+repository_owner=<GITHUB_USER>                            \
+repository_name=<MY_REPO_NAME>                            \
+app_name=<APP_NAME>
+```
+
+For example:
+
+<CodeBlockConfig hideClipboard>
 
 ```shell-session
 $ vault write sys/sync/destinations/gh/my-dest \
-installation_id=$INSTALLATION_ID \
-repository_owner=$GITHUB_OWNER \
-repository_name=$GITHUB_REPO \
+installation_id=${INSTALLATION_ID}             \
+repository_owner=${GITHUB_OWNER}               \
+repository_name=${GITHUB_REPO}                 \
 app_name=my-app-1
-```
 
-**Output:**
-<CodeBlockConfig hideClipboard>
-
-```plaintext
 Key                   Value
 ---                   -----
 connection_details    map[app_config:map[app_name:my-app-1] installation_id:123456 repository_name:<repo-name> repository_owner:<repo-owner>]
@@ -204,8 +241,7 @@ type                  gh
 ```
 </CodeBlockConfig>
 
-At this point, you've set up a GitHub destination that references a GitHub application to sync secrets.
-Proceed with the [Usage](#usage) from above to continue syncing secrets to your GitHub repository.
+You can now [use your GitHub application to sync secrets with your GitHub repository](#usage).
 
 ## API
 
