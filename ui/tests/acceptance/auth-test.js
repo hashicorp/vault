@@ -75,7 +75,7 @@ module('Acceptance | auth', function (hooks) {
       let included;
       if (backend.type === 'token') {
         keys = lastRequest.requestHeaders;
-        included = 'X-Vault-Token';
+        included = 'x-vault-token';
       } else if (backend.type === 'github') {
         keys = body;
         included = 'token';

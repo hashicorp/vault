@@ -188,9 +188,9 @@ module('Integration | Component | form field', function (hooks) {
     assert.ok(component.hasRadio, 'renders radio buttons');
     const selectedValue = 'SHA256';
     await component.selectRadioInput(selectedValue);
-    assert.dom('[data-test-radio-label="Label 1"] span').hasText('Label 1');
-    assert.dom('[data-test-radio-label="Label 2"] span').hasText('Label 2');
-    assert.dom('[data-test-radio-label="SHA256"] span').hasText('SHA256');
+    assert.dom('[data-test-radio-label="Label 1"]').hasTextContaining('Label 1');
+    assert.dom('[data-test-radio-label="Label 2"]').hasTextContaining('Label 2');
+    assert.dom('[data-test-radio-label="SHA256"]').hasTextContaining('SHA256');
     assert.dom('[data-test-radio-subText="Some subtext 1"]').hasText('Some subtext 1');
     assert.dom('[data-test-radio-subText="Some subtext 2"]').hasText('Some subtext 2');
     assert.dom('[data-test-radio-subText="Some subtext 3"]').hasText('Some subtext 3');

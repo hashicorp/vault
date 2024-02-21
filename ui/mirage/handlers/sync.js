@@ -10,19 +10,48 @@ import clientsHandler from './clients';
 
 export const associationsResponse = (schema, req) => {
   const { type, name } = req.params;
+  const [destination] = schema.db.syncDestinations.where({ type, name });
   const records = schema.db.syncAssociations.where({ type, name });
+  const associations = records.length
+    ? records.reduce((associations, association) => {
+        const key = `${association.mount}/${association.secret_name}`;
+        delete association.type;
+        delete association.name;
+        associations[key] = association;
+        return associations;
+      }, {})
+    : {};
+
+  // if a destination has granularity: 'secret-key' keys of the secret
+  // are added to the association response but they are not individual associations
+  // the secret itself is still a single association
+  const subKeys = {
+    'my-kv/my-granular-secret/foo': {
+      mount: 'my-kv',
+      secret_name: 'my-granular-secret',
+      sync_status: 'SYNCED',
+      updated_at: '2023-09-20T10:51:53.961861096-04:00',
+      sub_key: 'foo',
+    },
+    'my-kv/my-granular-secret/bar': {
+      mount: 'my-kv',
+      secret_name: 'my-granular-secret',
+      sync_status: 'SYNCED',
+      updated_at: '2023-09-20T10:51:53.961861096-04:00',
+      sub_key: 'bar',
+    },
+    'my-kv/my-granular-secret/baz': {
+      mount: 'my-kv',
+      secret_name: 'my-granular-secret',
+      sync_status: 'SYNCED',
+      updated_at: '2023-09-20T10:51:53.961861096-04:00',
+      sub_key: 'baz',
+    },
+  };
 
   return {
     data: {
-      associated_secrets: records.length
-        ? records.reduce((associations, association) => {
-            const key = `${association.mount}/${association.secret_name}`;
-            delete association.type;
-            delete association.name;
-            associations[key] = association;
-            return associations;
-          }, {})
-        : {},
+      associated_secrets: destination.granularity === 'secret-path' ? associations : subKeys,
       store_name: name,
       store_type: type,
     },
@@ -75,8 +104,15 @@ const createOrUpdateDestination = (schema, req) => {
     }
   }
   const data = { ...apiResponse, type, name };
-  schema.db.syncDestinations.firstOrCreate({ type, name }, data);
-  return schema.db.syncDestinations.update({ type, name }, data);
+  // issue with mirages' update method not returning an id on the payload which causes ember data to error after 4.12.x upgrade.
+  // to work around this, determine if we're creating or updating a record first
+  const records = schema.db.syncDestinations.where({ type, name });
+
+  if (!records.length) {
+    return schema.db.syncDestinations.firstOrCreate({ type, name }, data);
+  } else {
+    return schema.db.syncDestinations.update({ type, name }, data);
+  }
 };
 
 export default function (server) {
