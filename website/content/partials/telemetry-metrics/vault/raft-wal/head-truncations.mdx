@@ -1,0 +1,8 @@
+### vault.raft.wal.head-truncations ((#vault-raft-wal-head-truncations))
+
+Metric type | Value   | Description
+----------- | ------- | -----------
+counter     | number  | Number of log entries that have been truncated from the head.
+
+`vault.raft.wal.head-truncations` counts how many log entries have been truncated from the head - i.e. the oldest
+entries. By graphing the rate of change over time, you can see individual truncate calls as spikes.

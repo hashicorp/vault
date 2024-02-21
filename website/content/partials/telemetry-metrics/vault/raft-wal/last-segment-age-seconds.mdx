@@ -1,0 +1,8 @@
+### vault.raft.wal.last-segment-age-seconds ((#vault-raft-wal-last-segment-age-seconds))
+
+Metric type | Value   | Description
+----------- |---------| -----------
+gauge     | seconds | Number of seconds between segment creation and seal.
+
+This gauge is set each time we rotate a segment and shows how many seconds elapsed between when the segment
+was created and when it was sealed. This gives a rough estimate of how quickly writes are filling the disk.

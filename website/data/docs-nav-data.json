@@ -2165,6 +2165,10 @@
         "path": "upgrading/plugins"
       },
       {
+        "title": "Upgrade to raft-wal",
+        "path": "upgrading/raft-wal"
+      },
+      {
         "title": "Upgrade to 1.15.x",
         "path": "upgrading/upgrade-to-1.15.x"
       },

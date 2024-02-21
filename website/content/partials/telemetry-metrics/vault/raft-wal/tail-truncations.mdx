@@ -1,0 +1,8 @@
+### vault.raft.wal.tail-truncations ((#vault-raft-wal-tail-truncations))
+
+Metric type | Value   | Description
+----------- | ------- | -----------
+counter     | number  | Number of log entries that have been truncated from the tail
+
+`vault.raft.wal.tail-truncations` counts how many log entries have been truncated from the tail - i.e. the newest
+entries. By graphing the rate of change over time, you can see individual truncate calls as spikes.

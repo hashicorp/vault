@@ -1,0 +1,7 @@
+### vault.raft.wal.log-appends ((#vault-raft-wal-log-appends))
+
+Metric type | Value   | Description
+----------- | ------- | -----------
+counter     | number  | Number of calls to StoreLog()
+
+This counts the number of calls to `StoreLog()`, i.e. the number of batches of entries appended.

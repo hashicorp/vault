@@ -1,0 +1,52 @@
+---
+layout: docs
+page_title: Upgrading integrated storage to raft-wal
+description: These are instructions for how to upgrade integrated storage to use the raft-wal log store.
+---
+
+# Upgrading integrated storage to use raft-wal
+
+## What is it?
+
+This document will cover how to upgrade your Vault cluster that's using integrated storage with the raft-boltdb
+library, which has been the default since integrated storage's inception, to use the new raft-wal log store
+introduced in 1.16.0. It will also cover how to revert an upgrade of raft-wal back to using raft-boltdb, if
+desired. This document will not cover what raft-wal is or why you might want to upgrade to it.
+For further information on those types of questions, please refer to the
+[internals](/vault/docs/internals/integrated-storage#configurable-raft-log-store) page.
+
+## How to upgrade from raft-boltdb to raft-wal
+
+Migrating from raft-boltdb to raft-wal can be done on a node-by-node basis. The steps to perform on each node are:
+1. Gracefully shut down the Vault process.
+1. Rename the existing Vault storage directory to something else.
+   1. For example, if the `path` in Vault's `storage` config is
+   `/opt/vault/data` then you'd do something like: `mv /opt/vault/data /opt/vault/data.old`
+1. Add the new config
+   1. Add `raft_wal = "true"` to the existing storage stanza in the Vault config file.
+   1. Optionally enable log verification by setting `raft_log_verifier_enabled = "true"`.
+   1. If log verification was enabled, optionally choose a verification interval, if the default of one minute is not optimal.
+      1. This can be set by adding e.g. `raft_log_verification_interval = "30s"` to the storage stanza.
+      1. Choose your own interval instead of `30s` as demonstrated here. Note that `10s` is the minimum allowed value.
+1. Start the Vault process back up, and let it sync with the cluster leader.
+1. Observe metrics and verification log output, if enabled.
+1. Monitor this node for a few days to a week or so, depending on how much traffic the node receives.
+1. If all seems well, repeat this process with the other follower nodes.
+1. Migrate the cluster leader last.
+1. If any issues or errors are encountered, roll back upgraded servers by repeating this process but removing the
+   config lines that were added earlier, instead of adding any new lines.
+
+Note that snapshots taken before migration can be restored after migration without issue. Snapshots are completely
+separate from log storage, and restoring one wipes all logs anyway, so there are no compatibility issues here.
+
+## How to downgrade from raft-wal to raft-boltdb
+
+If, for some reason, it's desired to move nodes back to raft-boltdb after using raft-wal for some time, one can
+take the following steps for each node that needs to be migrated:
+
+1. Gracefully shut down the Vault process.
+1. Remove the extra lines that were added to Vault's `storage` config in the steps above.
+1. Start the Vault process back up, and let it sync with the cluster leader.
+
+Note that `raft_log_verifier_enabled` and `raft_log_verification_interval` are not exclusive to raft-wal. These
+options are available for use with raft-boltdb as well, starting with 1.16.0.

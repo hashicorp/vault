@@ -1,0 +1,8 @@
+### vault.raft.wal.log-entry-bytes-read ((#vault-raft-wal-log-entry-bytes-read))
+
+Metric type | Value   | Description
+----------- | ------- | -----------
+counter     | number  | Number of bytes of log entries read from segments before decoding.
+
+Actual bytes read from disk might be higher, as it includes headers and index entries and possible secondary
+reads for large entries that don't fit in buffers.
