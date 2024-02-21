@@ -91,11 +91,11 @@ export default class MfaLoginEnforcementForm extends Component {
   }
   async fetchAuthMethods() {
     const mounts = (await this.store.findAll('auth-method')).toArray();
-    this.authMethods = mounts.mapBy('type');
+    this.authMethods = mounts.map((auth) => auth.type);
   }
 
   get selectedTarget() {
-    return this.targetTypes.findBy('type', this.selectedTargetType);
+    return this.targetTypes.find((tt) => tt.type === this.selectedTargetType);
   }
   get errors() {
     return this.args.modelErrors || this.modelErrors;

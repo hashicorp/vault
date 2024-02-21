@@ -126,7 +126,11 @@ module('Acceptance | init', function (hooks) {
       'shows all of the recovery keys'
     );
     assert.strictEqual(initPage.buttonText, 'Continue to Authenticate', 'links to authenticate');
-    assertRequest(this.server.handledRequests.findBy('url', '/v1/sys/init'), assert, true);
+    assertRequest(
+      this.server.handledRequests.find((req) => req.url === '/v1/sys/init'),
+      assert,
+      true
+    );
   });
 
   test('shamir seal init', async function (assert) {
@@ -139,6 +143,10 @@ module('Acceptance | init', function (hooks) {
 
     assert.strictEqual(initPage.keys.length, SEAL_RESPONSE.keys.length, 'shows all of the recovery keys');
     assert.strictEqual(initPage.buttonText, 'Continue to Unseal', 'links to unseal');
-    assertRequest(this.server.handledRequests.findBy('url', '/v1/sys/init'), assert, false);
+    assertRequest(
+      this.server.handledRequests.find((r) => r.url === '/v1/sys/init'),
+      assert,
+      false
+    );
   });
 });

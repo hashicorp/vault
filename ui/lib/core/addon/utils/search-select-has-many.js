@@ -28,7 +28,7 @@ export default function handleHasManySelection(selectedIds, modelCollection, sto
     }
   });
   // now check for selected items that don't exist and add them to the model
-  const modelIds = modelCollection.mapBy('id');
+  const modelIds = modelCollection.map((model) => model.id);
   selectedIds.forEach((id) => {
     if (!modelIds.includes(id)) {
       const model = store.peekRecord(modelRecord, id);
