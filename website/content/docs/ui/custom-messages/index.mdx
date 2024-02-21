@@ -7,13 +7,34 @@ description: >-
 
 # Manage custom messages in the Vault UI
 
-Use custom banners and modals in the Vault UI to share system-wide alerts for all Vault UI users. Users can then dismiss messages by clicking "X" on a banner or "Confirm" for a modal.
-![Vault UI sidebar. The "Custom Messages" button in Settings section is outlined with a red box](/img/custom-messages-sidebar.png)
+Use custom banners and modals in the Vault UI to share system-wide alerts for all Vault UI users.
+
+<Tip title="Best practices for UI messages">
+
+1. **Messages are sticky**. Users can only dismiss messages **temporarily**.
+   The message reappears if the user refreshes their browser window or logs out
+   of the current session.
+
+1. **Messages are intrusive**. Limit the number of active messages to minimize
+   the intrusion on users and reduce the chances that they will dismiss the
+   message without reading it.
+
+1. **Messages are inheritable**. Child namespaces inherit all messages created
+   on the parent namespace. Take advantage of inheritance to reach the greatest
+   number of users with the smallest number of messages.
+
+1. **Delete old messages**. Vault supports a maximum of 100 messages at a
+   time. Practice good message hygiene by regularly deleting expired and outdated
+   messages.
+
+</Tip>
 
 ## Before you start
 
 - **You must have Vault 1.16.0 or higher installed**.
-- **You must have admin-level permission for the Vault UI**.
+- **You must have permission to call the `sys/config/ui/custom-message` endpoint**:
+  - To **create or edit messages** you must have `read`, `list`, and `create` permissions.
+  - To **delete messages** you must have `list` and `delete` permissions.
 
 ## Add a custom message
 
