@@ -87,7 +87,6 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
         'Use libraries to manage a set of highly privileged accounts that can be shared among a team.',
         'Message renders'
       );
-    assert.dom('[data-test-empty-state-actions] a').hasText('Create library', 'Action renders');
   });
 
   test('it should render libraries list', async function (assert) {

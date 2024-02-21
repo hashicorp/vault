@@ -71,57 +71,55 @@
           </div>
           <div class="level-right is-flex is-paddingless is-marginless">
             <div class="level-item">
-              <PopupMenu>
-                <nav class="menu" aria-label="menu items for managing {{metadata.path}}">
-                  <ul class="menu-list">
-                    {{#if metadata.pathIsDirectory}}
-                      <li>
-                        <LinkTo @route="list-directory" @model={{metadata.fullSecretPath}}>
-                          Content
-                        </LinkTo>
-                      </li>
-                    {{else}}
-                      <li>
-                        <LinkTo @route="secret.details" @model={{metadata.fullSecretPath}}>
-                          Details
-                        </LinkTo>
-                      </li>
-                      {{#if metadata.canReadMetadata}}
-                        <li>
-                          <LinkTo @route="secret.metadata.versions" @model={{metadata.fullSecretPath}}>
-                            View version history
-                          </LinkTo>
-                        </li>
-                      {{/if}}
-                      {{#if metadata.canCreateVersionData}}
-                        <li>
-                          <LinkTo
-                            @route="secret.details.edit"
-                            @model={{metadata.fullSecretPath}}
-                            data-test-popup-create-new-version
-                          >
-                            Create new version
-                          </LinkTo>
-                        </li>
-                      {{/if}}
-                      {{#if metadata.canDeleteMetadata}}
-                        <ConfirmAction
-                          @buttonText="Permanently delete"
-                          @isInDropdown={{true}}
-                          @onConfirmAction={{fn this.onDelete metadata}}
-                          @confirmMessage="This will permanently delete this secret and all its versions."
-                          data-test-popup-metadata-delete
-                        />
-                      {{/if}}
-                    {{/if}}
-                  </ul>
-                </nav>
-              </PopupMenu>
+              <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+                <dd.ToggleIcon
+                  @icon="more-horizontal"
+                  @text="Manage secret"
+                  @hasChevron={{false}}
+                  data-test-popup-menu-trigger
+                />
+                {{#if metadata.pathIsDirectory}}
+                  <dd.Interactive @text="Content" @route="list-directory" @model={{metadata.fullSecretPath}} />
+                {{else}}
+                  <dd.Interactive @text="Details" @route="secret.details" @model={{metadata.fullSecretPath}} />
+                  {{#if metadata.canReadMetadata}}
+                    <dd.Interactive
+                      @text="View version history"
+                      @route="secret.metadata.versions"
+                      @model={{metadata.fullSecretPath}}
+                    />
+                  {{/if}}
+                  {{#if metadata.canCreateVersionData}}
+                    <dd.Interactive
+                      @text="Create new version"
+                      @route="secret.details.edit"
+                      @model={{metadata.fullSecretPath}}
+                      data-test-popup-create-new-version
+                    />
+                  {{/if}}
+                  {{#if metadata.canDeleteMetadata}}
+                    <dd.Interactive
+                      @text="Permanently delete"
+                      @color="critical"
+                      {{on "click" (fn (mut this.metadataToDelete) metadata)}}
+                      data-test-popup-metadata-delete
+                    />
+                  {{/if}}
+                {{/if}}
+              </Hds::Dropdown>
             </div>
           </div>
         </div>
       </LinkedBlock>
     {{/each}}
+    {{#if this.metadataToDelete}}
+      <ConfirmModal
+        @color="critical"
+        @onClose={{fn (mut this.metadataToDelete) null}}
+        @onConfirm={{fn this.onDelete this.metadataToDelete}}
+        @confirmMessage="This will permanently delete this secret and all its versions."
+      />
+    {{/if}}
     {{! Pagination }}
     <Hds::Pagination::Numbered
       @currentPage={{@secrets.meta.currentPage}}
@@ -134,17 +132,13 @@
     />
   {{else}}
     {{#if @filterValue}}
-      <EmptyState @title="There are no secrets matching &quot;{{@filterValue}}&quot;." />
+      <EmptyState @title='There are no secrets matching "{{@filterValue}}".' />
     {{else}}
       <EmptyState
         data-test-secret-list-empty-state
         @title="No secrets yet"
         @message="When created, secrets will be listed here. Create a secret to get started."
-      >
-        <LinkTo class="has-top-margin-xs" @route="create">
-          Create secret
-        </LinkTo>
-      </EmptyState>
+      />
     {{/if}}
   {{/if}}
 {{/if}}

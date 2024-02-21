@@ -6,7 +6,7 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { format, isSameMonth } from 'date-fns';
 
@@ -18,7 +18,6 @@ import { format, isSameMonth } from 'date-fns';
  * @example
  * ```js
  *  <Clients::Attribution
- *    @chartLegend={{this.chartLegend}}
  *    @totalUsageCounts={{this.totalUsageCounts}}
  *    @newUsageCounts={{this.newUsageCounts}}
  *    @totalClientAttribution={{this.totalClientAttribution}}
@@ -31,7 +30,6 @@ import { format, isSameMonth } from 'date-fns';
  *    @upgradeExplanation="We added monthly breakdowns and mount level attribution starting in 1.10, so keep that in mind when looking at the data."
  *  />
  * ```
- * @param {array} chartLegend - (passed to child) array of objects with key names 'key' and 'label' so data can be stacked
  * @param {object} totalUsageCounts - object with total client counts for chart tooltip text
  * @param {object} newUsageCounts - object with new client counts for chart tooltip text
  * @param {array} totalClientAttribution - array of objects containing a label and breakdown of client counts for total clients
@@ -47,6 +45,11 @@ import { format, isSameMonth } from 'date-fns';
 export default class Attribution extends Component {
   @tracked showCSVDownloadModal = false;
   @service download;
+  attributionLegend = [
+    { key: 'entity_clients', label: 'entity clients' },
+    { key: 'non_entity_clients', label: 'non-entity clients' },
+    // { key: 'secret_syncs', label: 'secrets sync clients' }, * unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
+  ];
 
   get formattedStartDate() {
     if (!this.args.startTimestamp) return null;
@@ -122,9 +125,13 @@ export default class Attribution extends Component {
     }
   }
 
+  // secrets_syncs unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
+  // the three necessary CSV changes to add sync data are commented below
+
   destructureCountsToArray(object) {
-    // destructure the namespace object  {label: 'some-namespace', entity_clients: 171, non_entity_clients: 20, clients: 191}
+    // destructure the namespace object  {label: 'some-namespace', entity_clients: 171, non_entity_clients: 20, secret_syncs: 10, clients: 201}
     // to get integers for CSV file
+    // (1) SYNC BETA - add `secrets_syncs to destructured and returned object below
     const { clients, entity_clients, non_entity_clients } = object;
     return [clients, entity_clients, non_entity_clients];
   }
@@ -146,19 +153,23 @@ export default class Attribution extends Component {
     const csvData = [];
     // added to clarify that the row of namespace totals without an auth method (blank) are not additional clients
     // but indicate the total clients for that ns, including its auth methods
+    const upgrade = this.args.upgradeExplanation
+      ? `\n **data contains an upgrade, mount summation may not equal namespace totals`
+      : '';
     const descriptionOfBlanks = this.isSingleNamespace
       ? ''
-      : `\n  *namespace totals, inclusive of auth method clients`;
+      : `\n  *namespace totals, inclusive of mount clients ${upgrade}`;
     const csvHeader = [
       'Namespace path',
-      `"Authentication method ${descriptionOfBlanks}"`,
+      `"Mount path ${descriptionOfBlanks}"`,
       'Total clients',
       'Entity clients',
       'Non-entity clients',
+      // 'Secrets sync clients', * (2) SYNC BETA - add 'Secrets sync clients' as the last element of csvHeader
     ];
 
     if (newAttribution) {
-      csvHeader.push('Total new clients, New entity clients, New non-entity clients');
+      csvHeader.push('Total new clients, New entity clients, New non-entity clients'); // * (3) add 'New secrets sync clients' as last string pushed here
     }
 
     totalAttribution.forEach((totalClientsObject) => {
@@ -199,7 +210,7 @@ export default class Attribution extends Component {
     const endRange = this.formattedEndDate ? `-${this.formattedEndDate}` : '';
     const csvDateRange = this.formattedStartDate + endRange;
     return this.isSingleNamespace
-      ? `clients_by_auth_method_${csvDateRange}`
+      ? `clients_by_mount_path_${csvDateRange}`
       : `clients_by_namespace_${csvDateRange}`;
   }
 

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { computed } from '@ember/object';
 import { reject } from 'rsvp';
 import Route from '@ember/routing/route';
@@ -48,7 +48,8 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
 
   getClusterId(params) {
     const { cluster_name } = params;
-    const cluster = this.modelFor('vault').findBy('name', cluster_name);
+    const records = this.store.peekAll('cluster');
+    const cluster = records.find((record) => record.name === cluster_name);
     return cluster ? cluster.get('id') : null;
   },
 

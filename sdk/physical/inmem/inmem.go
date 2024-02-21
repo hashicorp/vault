@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/armon/go-radix"
 	log "github.com/hashicorp/go-hclog"
@@ -53,6 +54,7 @@ type InmemBackend struct {
 	failGetInTxn *uint32
 	logOps       bool
 	maxValueSize int
+	writeLatency time.Duration
 }
 
 type TransactionalInmemBackend struct {
@@ -129,6 +131,17 @@ func NewTransactionalInmem(conf map[string]string, logger log.Logger) (physical.
 	}, nil
 }
 
+// SetWriteLatency add a sleep to each Put/Delete operation (and each op in a
+// transaction for a TransactionalInmemBackend). It's not so much to simulate
+// real disk latency as much as to make the go runtime schedule things more like
+// a real disk where concurrent write operations are more likely to interleave
+// as each one blocks on disk IO. Set to 0 to disable again (the default).
+func (i *InmemBackend) SetWriteLatency(latency time.Duration) {
+	i.Lock()
+	defer i.Unlock()
+	i.writeLatency = latency
+}
+
 // Put is used to insert or update an entry
 func (i *InmemBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	i.permitPool.Acquire()
@@ -159,6 +172,9 @@ func (i *InmemBackend) PutInternal(ctx context.Context, entry *physical.Entry) e
 	}
 
 	i.root.Insert(entry.Key, entry.Value)
+	if i.writeLatency > 0 {
+		time.Sleep(i.writeLatency)
+	}
 	return nil
 }
 
@@ -245,6 +261,9 @@ func (i *InmemBackend) DeleteInternal(ctx context.Context, key string) error {
 	}
 
 	i.root.Delete(key)
+	if i.writeLatency > 0 {
+		time.Sleep(i.writeLatency)
+	}
 	return nil
 }
 

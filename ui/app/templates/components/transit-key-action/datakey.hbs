@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form onsubmit={{action @doSubmit (hash param=@param context=@context nonce=@nonce bits=@bits)}}>
+<form {{on "submit" (fn @doSubmit (hash param=@param context=@context nonce=@nonce bits=@bits))}} ...attributes>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="datakey creation" />
     <div class="content has-bottom-margin-l">
@@ -78,7 +78,7 @@
       Copy your generated key
     </M.Header>
     <M.Body>
-      {{#if (eq @param "plaintext")}}
+      {{#if @plaintext}}
         <h2 class="has-text-weight-semibold is-6">Plaintext</h2>
         <p class="sub-text">Plaintext is base64 encoded</p>
         <Hds::Copy::Snippet
@@ -86,10 +86,24 @@
           @textToCopy={{@plaintext}}
           @color="secondary"
           @container="#transit-datakey-modal"
+          @isFullWidth={{true}}
+          @isTruncated={{true}}
+          @onError={{(fn
+            (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+          )}}
         />
       {{/if}}
       <h2 class="has-text-weight-semibold is-6">Ciphertext</h2>
-      <Hds::Copy::Snippet @textToCopy={{@ciphertext}} @color="secondary" @container="#transit-datakey-modal" />
+      <Hds::Copy::Snippet
+        @textToCopy={{@ciphertext}}
+        @color="secondary"
+        @container="#transit-datakey-modal"
+        @isFullWidth={{true}}
+        @isTruncated={{true}}
+        @onError={{(fn
+          (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+        )}}
+      />
     </M.Body>
     <M.Footer as |F|>
       <Hds::Button @text="Close" {{on "click" F.close}} />

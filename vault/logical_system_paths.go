@@ -2051,6 +2051,126 @@ func (b *SystemBackend) pluginsCatalogListPaths() []*framework.Path {
 	}
 }
 
+func (b *SystemBackend) pluginsCatalogPinsCRUDPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "plugins/pins/(?P<type>auth|database|secret)/" + framework.GenericNameRegex("name") + "$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: "plugins-catalog-pins",
+		},
+
+		Fields: map[string]*framework.FieldSchema{
+			"name": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_name"][0]),
+			},
+			"type": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_type"][0]),
+			},
+			"version": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+			},
+		},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.handlePluginCatalogPinUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "create",
+					OperationSuffix: "pinned-version",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+					}},
+				},
+				Summary: "Create or update the pinned version for a plugin with a given type and name.",
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.handlePluginCatalogPinDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "remove",
+					OperationSuffix: "pinned-version",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields:      map[string]*framework.FieldSchema{},
+					}},
+				},
+				Summary: "Remove any pinned version for the plugin with the given type and name.",
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.handlePluginCatalogPinRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "read",
+					OperationSuffix: "pinned-version",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"name": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-catalog_name"][0]),
+								Required:    true,
+							},
+							"type": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-catalog_type"][0]),
+								Required:    true,
+							},
+							"version": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+								Required:    true,
+							},
+						},
+					}},
+				},
+				Summary: "Return the pinned version for the plugin with the given type and name.",
+			},
+		},
+
+		HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog-pins"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog-pins"][1]),
+	}
+}
+
+func (b *SystemBackend) pluginsCatalogPinsListPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "plugins/pins/?$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: "plugins-catalog-pins",
+			OperationVerb:   "list",
+			OperationSuffix: "pinned-versions",
+		},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.handlePluginCatalogPinList,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"pinned_versions": {
+								Type:     framework.TypeMap,
+								Required: true,
+							},
+						},
+					}},
+				},
+			},
+		},
+
+		HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog-pins-list-all"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog-pins-list-all"][1]),
+	}
+}
+
 func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "plugins/reload/backend$",
@@ -4972,6 +5092,111 @@ func (b *SystemBackend) lockedUserPaths() []*framework.Path {
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["locked_users"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["locked_users"][1]),
+		},
+	}
+}
+
+func (b *SystemBackend) eventPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "events/subscriptions$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "subscriptions",
+				OperationVerb:   "create",
+			},
+
+			Fields: map[string]*framework.FieldSchema{
+				"config": {
+					Type:     framework.TypeMap,
+					Required: true,
+					// Description: strings.TrimSpace(sysHelp["mount_accessor"][0]),
+				},
+				"plugin": {
+					Type:     framework.TypeString,
+					Required: true,
+				},
+				//"alias_identifier": {
+				//	Type: framework.TypeString,
+				//	// Description: strings.TrimSpace(sysHelp["alias_identifier"][0]),
+				//},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleEventsSubscribe,
+					Summary:  "",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"id": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
+			},
+			// HelpSynopsis:    strings.TrimSpace(sysHelp["unlock_user"][0]),
+			// HelpDescription: strings.TrimSpace(sysHelp["unlock_user"][1]),
+		},
+		{
+			Pattern: "events/subscriptions/(?P<plugin>.+)/(?P<id>.+)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "subscriptions",
+				OperationVerb:   "create",
+			},
+
+			Fields: map[string]*framework.FieldSchema{
+				"plugin": {
+					Type: framework.TypeString,
+				},
+				"id": {
+					Type: framework.TypeString,
+					// Description: strings.TrimSpace(sysHelp["mount_accessor"][0]),
+				},
+				"list": {
+					Type: framework.TypeBool,
+				},
+				//"alias_identifier": {
+				//	Type: framework.TypeString,
+				//	// Description: strings.TrimSpace(sysHelp["alias_identifier"][0]),
+				//},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handleEventsListSubscriptions,
+					Summary:  "",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleEventsListSubscriptions,
+					Summary:  "",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.handleEventsUnsubscribe,
+					Summary:  "",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
+				},
+			},
+			// HelpSynopsis:    strings.TrimSpace(sysHelp["unlock_user"][0]),
+			// HelpDescription: strings.TrimSpace(sysHelp["unlock_user"][1]),
 		},
 	}
 }

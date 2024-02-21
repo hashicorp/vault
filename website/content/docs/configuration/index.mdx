@@ -130,6 +130,16 @@ to specify where the configuration is.
   allowed to be loaded. Vault must have permission to read files in this
   directory to successfully load plugins, and the value cannot be a symbolic link.
 
+- `plugin_tmpdir` `(string: "")` - A directory that Vault can create temporary
+  files in to support Unix socket communication with containerized plugins. If
+  not set, Vault will use the system's default directory for temporary files.
+  Generally not necessary unless you are using
+  [containerized plugins](/vault/docs/plugins/containerized-plugins) and Vault
+  does not share a temporary folder with other processes, such as if using
+  systemd's [PrivateTmp](https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#PrivateTmp=)
+  setting. This can also be specified via the `VAULT_PLUGIN_TMPDIR` environment
+  variable.
+
   @include 'plugin-file-permissions-check.mdx'
 
 - `plugin_file_uid` `(integer: 0)` – Uid of the plugin directories and plugin binaries if they

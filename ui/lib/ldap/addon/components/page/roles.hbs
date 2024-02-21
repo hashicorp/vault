@@ -38,11 +38,7 @@
       data-test-config-cta
       @title="No roles created yet"
       @message="Roles in Vault will allow you to manage LDAP credentials. Create a role to get started."
-    >
-      <LinkTo class="has-top-margin-xs" @route="roles.create">
-        Create role
-      </LinkTo>
-    </EmptyState>
+    />
   {{/if}}
 {{else}}
   <div class="has-bottom-margin-s">

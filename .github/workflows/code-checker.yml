@@ -95,7 +95,7 @@ jobs:
     name: Semgrep
     runs-on: ubuntu-latest
     container:
-      image: returntocorp/semgrep@sha256:ffc6f3567654f9431456d49fd059dfe548f007c494a7eb6cd5a1a3e50d813fb3
+      image: returntocorp/semgrep@sha256:cfad18cfb6536aa48ad5a71017207a10320b4e17e3b2bd7b7de27b42dc9651e7 #v1.58
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - name: Run Semgrep Rules

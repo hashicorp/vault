@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+/* eslint-disable ember/no-settled-after-test-helper */
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
@@ -60,13 +61,13 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
   test('it should render landing cta component for enterprise', async function (assert) {
     this.set('destinations', []);
     await settled();
-    assert.dom(title).hasText('Secrets Sync', 'Page title renders');
+    assert.dom(title).hasText('Secrets Sync Beta', 'Page title renders');
     assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
     assert.dom(cta.summary).exists('CTA renders');
   });
 
   test('it should render header, tabs and toolbar for overview state', async function (assert) {
-    assert.dom(title).hasText('Secrets Sync', 'Page title renders');
+    assert.dom(title).hasText('Secrets Sync Beta', 'Page title renders');
     assert.dom(breadcrumb).exists({ count: 1 }, 'Correct number of breadcrumbs render');
     assert.dom(breadcrumb).includesText('Secrets Sync', 'Top level breadcrumb renders');
     assert.dom(cta.button).doesNotExist('CTA does not render');
@@ -114,6 +115,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     assert.dom(name(0)).hasText('destination-aws', 'First destination renders on page 1');
 
     await click(pagination.next);
+    await settled();
     assert.dom(overview.table.row).exists({ count: 3 }, 'New items are fetched and rendered on page change');
     assert.dom(name(0)).hasText('destination-gcp', 'First destination renders on page 2');
   });
@@ -124,6 +126,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
     // since the request resolved trigger a page change and return an error from the associations endpoint
     await click(pagination.next);
+    await settled();
     assert.dom(emptyStateTitle).hasText('Error fetching information', 'Empty state title renders');
     assert
       .dom(emptyStateMessage)
@@ -141,8 +144,9 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       },
       {
         cardTitle: 'Total sync associations',
-        subText: 'Total sync associations that count towards client count',
-        actionText: 'View billing',
+        subText:
+          'The number of secrets with a configured sync destination. One secret synced to two unique destinations will count as two associations.',
+        // actionText: 'View billing',
         count: '7',
       },
     ];
@@ -150,8 +154,9 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     cardData.forEach(({ cardTitle, subText, actionText, count }) => {
       assert.dom(title(cardTitle)).hasText(cardTitle, 'Overview card title renders');
       assert.dom(description(cardTitle)).hasText(subText, 'Destinations overview card description renders');
-      assert.dom(action(cardTitle)).hasText(actionText, 'Card action renders');
       assert.dom(content(cardTitle)).hasText(count, 'Total count renders');
+      if (cardTitle === 'Total sync associations') return; // uncomment 'actionText' above and this return after SYNC BETA
+      assert.dom(action(cardTitle)).hasText(actionText, 'Card action renders');
     });
   });
 });

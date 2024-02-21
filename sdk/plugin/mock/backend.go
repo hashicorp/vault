@@ -59,6 +59,7 @@ func Backend() *backend {
 				pathInternal(&b),
 				pathSpecial(&b),
 				pathRaw(&b),
+				pathEnv(&b),
 			},
 		),
 		PathsSpecial: &logical.Paths{

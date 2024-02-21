@@ -92,9 +92,12 @@
       @message="Access secret engine actions easily. Enable a compatible secret engine (such as database, KV version 2, or PKI) to get started."
       data-test-empty-state="quick-actions"
     >
-      <div>
-        <LinkTo @route="vault.cluster.settings.mount-secret-backend">Enable a secret engine</LinkTo>
-      </div>
+      <Hds::Link::Standalone
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        @text="Enable a secrets engine"
+        @route="vault.cluster.settings.mount-secret-backend"
+      />
     </EmptyState>
   {{/if}}
 </Hds::Card::Container>

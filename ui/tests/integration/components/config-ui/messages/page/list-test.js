@@ -10,6 +10,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { PAGE } from 'vault/tests/helpers/config-ui/message-selectors';
+import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 const META = {
   currentPage: 1,
@@ -26,7 +27,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.context = { owner: this.engine };
+    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.store = this.owner.lookup('service:store');
 
     this.store.pushPayload('config-ui/message', {
@@ -78,7 +79,6 @@ module('Integration | Component | messages/page/list', function (hooks) {
       .hasText(
         'Add a custom message for all users after they log into Vault. Create message to get started.'
       );
-    assert.dom('[data-test-empty-state-actions] a').hasText('Create message');
   });
 
   test('it should show the list of custom messages', async function (assert) {
@@ -89,7 +89,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
     });
     assert.dom('[data-test-icon="message-circle"]').exists();
     for (const message of this.messages) {
-      assert.dom(`[data-test-list-item="${message.id}"]`).exists();
+      assert.dom(PAGE.listItem('Message title 1')).exists();
       assert.dom(`[data-linked-block-title="${message.id}"]`).hasText(message.title);
     }
   });

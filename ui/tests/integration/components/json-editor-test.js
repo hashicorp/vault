@@ -114,7 +114,7 @@ module('Integration | Component | json-editor', function (hooks) {
     this.set('readOnly', true);
     await render(hbs`<JsonEditor
       @value={{this.json_blob}}
-      @obscure={{true}}
+      @allowObscure={{true}}
       @readOnly={{this.readOnly}}
       @valueUpdated={{this.valueUpdated}}
       @onFocusOut={{this.onFocusOut}}
