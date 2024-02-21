@@ -25,10 +25,6 @@ should retry later.
 2. If the request is allowed, begin a measurement of its latency, allowing the
 Request Limiter to calculate a new limit.
 
-## Telemetry
-
-The Request Limiter exposes several new 
-
 ## Resource constraints
 
 The Request Limiter intentionally focuses on preventing overload derived from
@@ -56,10 +52,22 @@ HTTP response code, which can be handled to gracefully retry and eventually
 succeed.  Clients should handle this by retrying with jitter and exponential
 backoff. This is done within Vault's API, using the go-retryablehttp library.
 
+## Read requests
+
+HTTP methods, such as `GET` and `LIST` are currently not subject to request
+limiting. This allows operators to continue querying server state without
+needing to retry. This decision was based on the observation that read-based
+requests are not as likely to cause untenable load than their
+resource-constrained counterparts.
+
 ## `503 - Service Unavailable`
 
 When Vault has reached capacity, the new requests will be immediately rejected
-with a new retryable `503` error: `Vault server temporarily overloaded`.
+with a new retryable `503` error:
+
+```
+* Vault server temporarily overloaded
+```
 
 This error indicates that the server is at capacity and the client should wait to retry.
 
