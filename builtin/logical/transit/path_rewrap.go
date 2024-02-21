@@ -112,6 +112,9 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			Nonce:      d.Get("nonce").(string),
 			KeyVersion: d.Get("key_version").(int),
 		}
+		if ps, ok := d.GetOk("padding_scheme"); ok {
+			batchInputItems[0].PaddingScheme = ps.(string)
+		}
 	}
 
 	batchResponseItems := make([]EncryptBatchResponseItem, len(batchInputItems))
@@ -168,9 +171,9 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			continue
 		}
 
-		factories := make([]any, 0)
-		if ps, ok := d.GetOk("decrypt_padding_scheme"); ok {
-			factories = append(factories, keysutil.PaddingScheme(ps.(string)))
+		var factories []any
+		if item.PaddingScheme != "" {
+			factories = append(factories, keysutil.PaddingScheme(item.PaddingScheme))
 		}
 		if item.Nonce != "" && !nonceAllowed(p) {
 			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()

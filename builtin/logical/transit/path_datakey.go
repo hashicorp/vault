@@ -43,6 +43,7 @@ ciphertext; "wrapped" will return the ciphertext only.`,
 				Type: framework.TypeString,
 				Description: `The padding scheme to use for decrypt. Currently only applies to RSA key types.
 Options are 'oaep' or 'pkcs1v15'. Defaults to 'oaep'`,
+				Default: keysutil.PaddingScheme_OAEP,
 			},
 
 			"context": {

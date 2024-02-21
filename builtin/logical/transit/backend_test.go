@@ -227,6 +227,10 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		decryptReq.Data = map[string]interface{}{
 			"ciphertext": ciphertext2,
 		}
+		if padding != "" {
+			decryptReq.Data["padding_scheme"] = padding
+		}
+
 		resp, err = b.HandleRequest(context.Background(), decryptReq)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("bad: err: %v\nresp: %#v", err, resp)

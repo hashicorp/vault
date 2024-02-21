@@ -34,6 +34,9 @@ type BatchRequestItem struct {
 	// Ciphertext for decryption
 	Ciphertext string `json:"ciphertext" structs:"ciphertext" mapstructure:"ciphertext"`
 
+	// PaddingScheme for encryption/decryption
+	PaddingScheme string `json:"padding_scheme" structs:"padding_scheme" mapstructure:"padding_scheme"`
+
 	// Nonce to be used when v1 convergent encryption is used
 	Nonce string `json:"nonce" structs:"nonce" mapstructure:"nonce"`
 
@@ -109,6 +112,7 @@ func (b *backend) pathEncrypt() *framework.Path {
 				Type: framework.TypeString,
 				Description: `The padding scheme to use for decrypt. Currently only applies to RSA key types.
 Options are 'oaep' or 'pkcs1v15'. Defaults to 'oaep'`,
+				Default: keysutil.PaddingScheme_OAEP,
 			},
 
 			"context": {
@@ -265,6 +269,13 @@ func decodeBatchRequestItems(src interface{}, requirePlaintext bool, requireCiph
 		} else if requirePlaintext {
 			errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].plaintext' missing plaintext to encrypt", i))
 		}
+		if v, has := item["padding_scheme"]; has {
+			if casted, ok := v.(string); ok {
+				(*dst)[i].PaddingScheme = casted
+			} else {
+				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].padding_scheme' expected type 'string', got unconvertible type '%T'", i, item["padding_scheme"]))
+			}
+		}
 
 		if v, has := item["nonce"]; has {
 			if !reflect.ValueOf(v).IsValid() {
@@ -363,6 +374,9 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			Nonce:          d.Get("nonce").(string),
 			KeyVersion:     d.Get("key_version").(int),
 			AssociatedData: d.Get("associated_data").(string),
+		}
+		if ps, ok := d.GetOk("padding_scheme"); ok {
+			batchInputItems[0].PaddingScheme = ps.(string)
 		}
 	}
 
@@ -488,9 +502,9 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			warnAboutNonceUsage = true
 		}
 
-		factories := make([]any, 0)
-		if ps, ok := d.GetOk("padding_scheme"); ok {
-			factories = append(factories, keysutil.PaddingScheme(ps.(string)))
+		var factories []any
+		if item.PaddingScheme != "" {
+			factories = append(factories, keysutil.PaddingScheme(item.PaddingScheme))
 		}
 		if item.AssociatedData != "" {
 			if !p.Type.AssociatedDataSupported() {

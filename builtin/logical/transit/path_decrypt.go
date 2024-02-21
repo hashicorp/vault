@@ -54,6 +54,7 @@ The ciphertext to decrypt, provided as returned by encrypt.`,
 				Type: framework.TypeString,
 				Description: `The padding scheme to use for decrypt. Currently only applies to RSA key types.
 Options are 'oaep' or 'pkcs1v15'. Defaults to 'oaep'`,
+				Default: keysutil.PaddingScheme_OAEP,
 			},
 
 			"context": {
@@ -136,6 +137,9 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			Nonce:          d.Get("nonce").(string),
 			AssociatedData: d.Get("associated_data").(string),
 		}
+		if ps, ok := d.GetOk("padding_scheme"); ok {
+			batchInputItems[0].PaddingScheme = ps.(string)
+		}
 	}
 
 	batchResponseItems := make([]DecryptBatchResponseItem, len(batchInputItems))
@@ -198,9 +202,9 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			continue
 		}
 
-		factories := make([]any, 0)
-		if ps, ok := d.GetOk("padding_scheme"); ok {
-			factories = append(factories, keysutil.PaddingScheme(ps.(string)))
+		var factories []any
+		if item.PaddingScheme != "" {
+			factories = append(factories, keysutil.PaddingScheme(item.PaddingScheme))
 		}
 		if item.AssociatedData != "" {
 			if !p.Type.AssociatedDataSupported() {
