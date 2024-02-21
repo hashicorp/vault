@@ -70,7 +70,7 @@ export default class StringList extends Component {
   }
 
   toVal() {
-    const inputs = this.inputList.filter((x) => x.value).option('value');
+    const inputs = this.inputList.filter((x) => x.value).map((x) => x.value);
     if (this.args.type === 'string') {
       return inputs.join(',');
     }

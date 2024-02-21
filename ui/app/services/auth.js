@@ -267,7 +267,7 @@ export default Service.extend({
 
     const currentBackend = {
       mountPath,
-      ...BACKENDS.find((backend) => backend.type === backend),
+      ...BACKENDS.find((b) => b.type === backend),
     };
     let displayName;
     if (isArray(currentBackend.displayNamePath)) {

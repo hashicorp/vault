@@ -37,7 +37,7 @@ export default class MfaForm extends Component {
     super(...arguments);
     // trigger validation immediately when passcode is not required
     const passcodeOrSelect = this.constraints.filter((constraint) => {
-      return constraint.methods.length > 1 || constraint.methods.find((method) => method === 'uses_passcode');
+      return constraint.methods.length > 1 || constraint.methods.find((m) => m.uses_passcode);
     });
     if (!passcodeOrSelect.length) {
       this.validate.perform();
