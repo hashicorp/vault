@@ -295,6 +295,15 @@
             "path": "concepts/filtering/audit"
           }
         ]
+      },
+      {
+        "title": "Request Limiter",
+        "path": "concepts/request-limiter",
+        "badge": {
+          "text": "BETA",
+          "type": "outlined",
+          "color": "highlight"
+        }
       }
     ]
   },
