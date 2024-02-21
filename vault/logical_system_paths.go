@@ -739,12 +739,12 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 
 func (b *SystemBackend) rekeyPaths() []*framework.Path {
 	respFields := map[string]*framework.FieldSchema{
-		"nounce": {
+		"nonce": {
 			Type:     framework.TypeString,
 			Required: true,
 		},
 		"started": {
-			Type:     framework.TypeString,
+			Type:     framework.TypeBool,
 			Required: true,
 		},
 		"t": {
@@ -984,7 +984,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"nounce": {
+								"nonce": {
 									Type:     framework.TypeString,
 									Required: true,
 								},
@@ -992,7 +992,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 									Type: framework.TypeBool,
 								},
 								"started": {
-									Type: framework.TypeString,
+									Type: framework.TypeBool,
 								},
 								"t": {
 									Type: framework.TypeInt,
@@ -1061,12 +1061,12 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"nounce": {
+								"nonce": {
 									Type:     framework.TypeString,
 									Required: true,
 								},
 								"started": {
-									Type:     framework.TypeString,
+									Type:     framework.TypeBool,
 									Required: true,
 								},
 								"t": {
@@ -1094,12 +1094,12 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"nounce": {
+								"nonce": {
 									Type:     framework.TypeString,
 									Required: true,
 								},
 								"started": {
-									Type:     framework.TypeString,
+									Type:     framework.TypeBool,
 									Required: true,
 								},
 								"t": {
@@ -1128,7 +1128,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"nounce": {
+								"nonce": {
 									Type:     framework.TypeString,
 									Required: true,
 								},
