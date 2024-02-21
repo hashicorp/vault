@@ -270,9 +270,17 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
   //  if it is not a string type, add case to EXPECTED_VALUE and update
   //  fillInByAttr() (in sync-selectors) to interact with the form
   const EDITABLE_FIELDS = {
-    'aws-sm': ['accessKeyId', 'secretAccessKey', 'granularity', 'secretNameTemplate', 'customTags'],
+    'aws-sm': [
+      'accessKeyId',
+      'secretAccessKey',
+      'roleArn',
+      'externalId',
+      'granularity',
+      'secretNameTemplate',
+      'customTags',
+    ],
     'azure-kv': ['clientId', 'clientSecret', 'granularity', 'secretNameTemplate', 'customTags'],
-    'gcp-sm': ['credentials', 'granularity', 'secretNameTemplate', 'customTags'],
+    'gcp-sm': ['projectId', 'credentials', 'granularity', 'secretNameTemplate', 'customTags'],
     gh: ['accessToken', 'granularity', 'secretNameTemplate'],
     'vercel-project': [
       'accessToken',

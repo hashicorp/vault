@@ -68,6 +68,11 @@ export default class SyncDestinationSerializer extends ApplicationSerializer {
       data.id = data.name;
       delete data.connection_details;
       delete data.options;
+      // granularity keys differ from payload to response -- normalize to payload format
+      if (options) {
+        options.granularity = options.granularity_level;
+        delete options.granularity_level;
+      }
       return { data: { ...data, ...connection_details, ...options } };
     }
     return payload;
