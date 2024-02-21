@@ -1,3 +1,3 @@
 ```release-note:feature
-**Audit Entry Exclusion**: Audit devices support removing fields from entries being written to them, with expression-based rules (powered by go-bexpr) to determine when the specific fields are excluded.
+**Audit Entry Exclusion**: Audit devices support excluding fields from entries being written to them, with expression-based rules (powered by go-bexpr) to determine when the specific fields are excluded.
 ```
