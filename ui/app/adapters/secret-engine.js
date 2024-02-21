@@ -134,7 +134,7 @@ export default ApplicationAdapter.extend({
     const path = encodePath(snapshot.id);
     const roles = store
       .peekAll('role-ssh')
-      .filter((role) => role.zeroAddress === true)
+      .filter((role) => role.zeroAddress)
       .map((role) => role.id)
       .join(',');
     const url = `/v1/${path}/config/zeroaddress`;
