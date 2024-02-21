@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/plugins/event"
-	"github.com/hashicorp/vault/plugins/event/sqs"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/version"
@@ -187,9 +186,7 @@ var (
 		"plugin": plugin.Factory,
 	}
 
-	eventBackends = map[string]event.Factory{
-		"sqs": sqs.New,
-	}
+	eventBackends = map[string]event.Factory{}
 
 	logicalBackends = map[string]logical.Factory{
 		"plugin":   plugin.Factory,
