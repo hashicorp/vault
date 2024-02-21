@@ -17,6 +17,13 @@ import (
 
 var _ eventlogger.Node = (*EntryFilter)(nil)
 
+// EntryFilter should be used to filter audit requests and responses which should
+// make it to a sink.
+type EntryFilter struct {
+	// the evaluator for the bexpr expression that should be applied by the node.
+	evaluator *bexpr.Evaluator
+}
+
 // NewEntryFilter should be used to create an EntryFilter node.
 // The filter supplied should be in bexpr format and reference fields from logical.LogInputBexpr.
 func NewEntryFilter(filter string) (*EntryFilter, error) {

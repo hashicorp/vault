@@ -28,7 +28,7 @@ func (r *RequestLimiter) GoString() string {
 }
 
 var DefaultRequestLimiter = &RequestLimiter{
-	Disable: false,
+	Disable: true,
 }
 
 func parseRequestLimiter(result *SharedConfig, list *ast.ObjectList) error {
@@ -45,14 +45,13 @@ func parseRequestLimiter(result *SharedConfig, list *ast.ObjectList) error {
 		return multierror.Prefix(err, "request_limiter:")
 	}
 
+	result.RequestLimiter.Disable = true
 	if result.RequestLimiter.DisableRaw != nil {
 		var err error
 		if result.RequestLimiter.Disable, err = parseutil.ParseBool(result.RequestLimiter.DisableRaw); err != nil {
 			return err
 		}
 		result.RequestLimiter.DisableRaw = nil
-	} else {
-		result.RequestLimiter.Disable = false
 	}
 
 	return nil

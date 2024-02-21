@@ -279,6 +279,19 @@
           "type": "outlined",
           "color": "highlight"
         }
+      },
+      {
+        "title": "Filtering",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "concepts/filtering"
+          },
+          {
+            "title": "Audit Filtering",
+            "path": "concepts/filtering/audit"
+          }
+        ]
       }
     ]
   },
@@ -317,8 +330,9 @@
             "title": "Overview",
             "path": "configuration/seal"
           },
-          { "title": "High Availability",
-           "badge": {
+          {
+            "title": "High Availability",
+            "badge": {
               "text": "ENTERPRISE",
               "type": "outlined",
               "color": "highlight"
@@ -777,6 +791,10 @@
           {
             "title": "<code>usage</code>",
             "path": "commands/operator/usage"
+          },
+          {
+            "title": "<code>utilization</code>",
+            "path": "commands/operator/utilization"
           }
         ]
       },
