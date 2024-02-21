@@ -80,8 +80,8 @@ func (*EntryFormatter) Type() eventlogger.NodeType {
 func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	const op = "audit.(EntryFormatter).Process"
 
-	// Bail early if the context was cancelled, eventlogger will not carry on asking
-	// nodes to process, so any sink node in the pipeline won't be called.
+	// Return early if the context was cancelled, eventlogger will not carry on
+	// asking nodes to process, so any sink node in the pipeline won't be called.
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
