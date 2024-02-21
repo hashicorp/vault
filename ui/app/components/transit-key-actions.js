@@ -65,7 +65,14 @@ const PROPS_TO_KEEP = {
   sign: ['input', 'hash_algorithm', 'key_version', 'prehashed', 'signature_algorithm'],
   verify: ['input', 'hmac', 'signature', 'hash_algorithm', 'prehashed'],
   hmac: ['input', 'algorithm', 'key_version'],
-  rewrap: ['ciphertext', 'context', 'decrypt_padding_scheme', 'encrypt_padding_scheme', 'nonce', 'key_version'],
+  rewrap: [
+    'ciphertext',
+    'context',
+    'decrypt_padding_scheme',
+    'encrypt_padding_scheme',
+    'nonce',
+    'key_version',
+  ],
   datakey: [],
 };
 
