@@ -126,8 +126,8 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		data.Auth.ClientToken = data.Request.InboundSSCToken
 	}
 
-	// Using any as we have two different types that we can get back from either
-	// FormatRequest or FormatResponse.
+	// Using 'any' as we have two different types that we can get back from either
+	// FormatRequest or FormatResponse, but the JSON encoder doesn't care about types.
 	var entry any
 
 	switch a.Subtype {
