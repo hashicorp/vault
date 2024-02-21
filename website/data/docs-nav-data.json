@@ -273,12 +273,7 @@
       },
       {
         "title": "Events",
-        "path": "concepts/events",
-        "badge": {
-          "text": "BETA",
-          "type": "outlined",
-          "color": "highlight"
-        }
+        "path": "concepts/events"
       },
       {
         "title": "Filtering",
