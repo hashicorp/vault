@@ -86,6 +86,21 @@ cluster through various
 [metrics](/vault/docs/internals/telemetry/metrics/core-system#quota-metrics)
 and through enabling optional audit logging.
 
+## Lease count quota exceeded
+
+When the Lease Count Quota is exceeded, Vault will emit a `429 - Too Many
+Requests`, indicating that new leases are in violation of the quota.
+
+```
+* lease count quota exceeded
+```
+
+This error is a call to action to identify the root cause and either:
+
+1. Address any client-side errors leading to excessive lease creation.
+2. Properly tune the Lease Count Quota to accomodate any expected increase in
+   lease creation.
+
 ## Tutorial
 
 Refer to [Protecting Vault with Resource
