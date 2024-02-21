@@ -169,7 +169,7 @@ export default ApplicationAdapter.extend({
     return this.ajax(this.urlFor(backend, id, roleType), 'POST', { data }).then(() => {
       // ember data doesn't like 204s if it's not a DELETE
       return {
-        data: { ...data, ...{ id } },
+        data: { ...data, ...id },
       };
     });
   },
