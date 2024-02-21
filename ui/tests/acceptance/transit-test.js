@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, find, currentURL, settled, visit, waitUntil, findAll } from '@ember/test-helpers';
+import { click, fillIn, find, currentURL, settled, visit, findAll } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -345,17 +345,14 @@ module('Acceptance | transit (flaky)', function (hooks) {
     await click(SELECTORS.versionsTab);
     assert.dom(SELECTORS.versionRow(1)).hasTextContaining('Version 1', `${name}: only one key version`);
 
-    await waitUntil(() => find(SELECTORS.rotate.trigger));
     await click(SELECTORS.rotate.trigger);
     await click(SELECTORS.rotate.confirm);
-    // wait for rotate call
-    await waitUntil(() => find(SELECTORS.versionRow(2)));
+
     assert.dom(SELECTORS.versionRow(2)).exists('two key versions after rotate');
 
     // navigate back to actions tab
     await click(SELECTORS.actionsTab);
 
-    await waitUntil(() => find(SELECTORS.card('encrypt')));
     assert.dom(SELECTORS.card('encrypt')).exists(`renders encrypt action card for ${name}`);
     await click(SELECTORS.card('encrypt'));
     assert
@@ -468,12 +465,9 @@ module('Acceptance | transit (flaky)', function (hooks) {
       // wait for capabilities
 
       assert.dom('[data-test-transit-version]').exists({ count: 1 }, `${name}: only one key version`);
-      await waitUntil(() => find(SELECTORS.rotate.trigger));
       await click(SELECTORS.rotate.trigger);
 
       await click(SELECTORS.rotate.confirm);
-      // wait for rotate call
-      await waitUntil(() => findAll('[data-test-transit-version]').length >= 2);
       assert
         .dom('[data-test-transit-version]')
         .exists({ count: 2 }, `${name}: two key versions after rotate`);
@@ -486,7 +480,6 @@ module('Acceptance | transit (flaky)', function (hooks) {
       );
 
       const keyAction = key.supportsEncryption ? 'encrypt' : 'sign';
-      await waitUntil(() => find(`[data-test-transit-action-title=${keyAction}]`));
 
       assert
         .dom(`[data-test-transit-action-title=${keyAction}]`)
