@@ -121,7 +121,7 @@ export default class TransitKeyActions extends Component {
       }
     }
     if (options.wrapTTL) {
-      this.props = { ...this.props, ...{ wrappedToken: resp.wrap_info.token } };
+      this.props = { ...this.props, wrappedToken: resp.wrap_info.token };
     }
     this.isModalActive = true;
     // verify doesn't trigger a success message

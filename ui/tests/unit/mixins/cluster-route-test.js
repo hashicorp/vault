@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { assign } from '@ember/polyfills';
 import EmberObject from '@ember/object';
 import ClusterRouteMixin from 'vault/mixins/cluster-route';
 import {
@@ -25,7 +24,7 @@ module('Unit | Mixin | cluster route', function () {
   ) {
     const ClusterRouteObject = EmberObject.extend(
       ClusterRouteMixin,
-      assign(methods, { clusterModel: () => clusterModel })
+      Object.assign(methods, { clusterModel: () => clusterModel })
     );
     return ClusterRouteObject.create();
   }
