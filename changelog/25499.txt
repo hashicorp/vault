@@ -1,0 +1,3 @@
+```release-note:improvement
+api: Add wrapper functions for GET /sys/mounts/:path and GET /sys/auth/:path
+```

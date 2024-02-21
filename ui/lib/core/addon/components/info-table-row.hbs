@@ -40,6 +40,9 @@
           @text="Copy"
           @isIconOnly={{true}}
           @textToCopy={{@value}}
+          @onError={{(fn
+            (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+          )}}
           class="transparent has-padding-xxs"
           data-test-copy-button={{@value}}
         />
@@ -94,6 +97,11 @@
                       @text="Copy"
                       @isIconOnly={{true}}
                       @textToCopy={{@tooltipText}}
+                      @onError={{(fn
+                        (set-flash-message
+                          "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger"
+                        )
+                      )}}
                       class="transparent white-icon"
                       data-test-tooltip-copy={{@tooltipText}}
                     />
