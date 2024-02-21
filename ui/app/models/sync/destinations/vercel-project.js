@@ -23,15 +23,18 @@ const validations = {
 };
 
 const displayFields = [
+  // connection details
   'name',
   'accessToken',
   'projectId',
   'teamId',
   'deploymentEnvironments',
+  // vault sync config options
+  'granularity',
   'secretNameTemplate',
 ];
 const formFieldGroups = [
-  { default: ['name', 'projectId', 'teamId', 'deploymentEnvironments', 'secretNameTemplate'] },
+  { default: ['name', 'projectId', 'teamId', 'deploymentEnvironments', 'granularity', 'secretNameTemplate'] },
   { Credentials: ['accessToken'] },
 ];
 @withModelValidations(validations)
