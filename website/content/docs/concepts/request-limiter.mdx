@@ -74,6 +74,6 @@ with a new retryable `503` error:
 This error indicates that the server is at capacity and the client should wait to retry.
 
 ~> **NOTE**:  `429 - Too Many Requests` is typically used to indicate that a
-specific client is issuing too many requests. The choice of `503: Service
-Unavailable` over `429: Too Many Requests` emphasizes that that the server is
-temporarily under excess load, which may not be related to a specific client.
+specific client is issuing too many requests. The choice of `503 - Service
+Unavailable` for this feature emphasizes that that the server is temporarily
+under excess load, which may not be related to a specific client.
