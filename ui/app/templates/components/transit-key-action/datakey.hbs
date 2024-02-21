@@ -3,7 +3,10 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form {{on "submit" (fn @doSubmit (hash param=@param context=@context padding_scheme=@padding_scheme nonce=@nonce bits=@bits))}} ...attributes>
+<form
+  {{on "submit" (fn @doSubmit (hash param=@param context=@context padding_scheme=@padding_scheme nonce=@nonce bits=@bits))}}
+  ...attributes
+>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="datakey creation" />
     <div class="content has-bottom-margin-l">

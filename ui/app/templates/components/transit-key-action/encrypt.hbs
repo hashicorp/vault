@@ -4,7 +4,13 @@
 ~}}
 
 <form
-  {{on "submit" (fn @doSubmit (hash plaintext=@plaintext padding_scheme=@padding_scheme context=@context nonce=@nonce key_version=@key_version))}}
+  {{on
+    "submit"
+    (fn
+      @doSubmit
+      (hash plaintext=@plaintext padding_scheme=@padding_scheme context=@context nonce=@nonce key_version=@key_version)
+    )
+  }}
   ...attributes
 >
   <div class="box is-sideless is-fullwidth is-marginless">
