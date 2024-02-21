@@ -131,9 +131,10 @@ export default ApplicationAdapter.extend({
 
       resp.data = {
         ...resp.data,
-        ...{ keys: [...staticRoles, ...dynamicRoles] },
-        ...{ backend },
-        ...{ staticRoles, dynamicRoles },
+        keys: [...staticRoles, ...dynamicRoles],
+        backend,
+        staticRoles,
+        dynamicRoles,
       };
 
       return resp;
