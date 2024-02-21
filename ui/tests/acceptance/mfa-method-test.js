@@ -90,7 +90,7 @@ module('Acceptance | mfa-method', function (hooks) {
     // ensure methods are tied to an enforcement
     this.server.get('/identity/mfa/login-enforcement', () => {
       const record = this.server.create('mfa-login-enforcement', {
-        mfa_method_ids: this.getMethods().mapBy('id'),
+        mfa_method_ids: this.getMethods().map((m) => m.id),
       });
       return {
         data: {
