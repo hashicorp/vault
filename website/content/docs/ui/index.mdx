@@ -1,0 +1,56 @@
+---
+layout: docs
+page_title: Vault UI
+description: Interact with Vault using the UI.
+---
+
+# Vault UI
+
+Vault features a web-based user interface (UI) that enables you to unseal,
+authenticate, manage policies and secrets engines.
+
+## Server configuration
+
+To activate the UI, define the [`ui` stanza](/vault/docs/configuration/ui)
+option in the Vault server configuration. The UI runs on the same port as the
+Vault listener. As such, you must configure at least one `listener` stanza in
+order to access the UI.
+
+**Example:**
+
+<CodeBlockConfig hideClipboard>
+
+```hcl
+ui = true
+
+listener "tcp" {
+  address = "10.0.1.35:8200"
+
+  # If bound to localhost, the Vault UI is only
+  # accessible from the local machine!
+  # address = "127.0.0.1:8200"
+}
+# ...
+```
+
+</CodeBlockConfig>
+
+In this case, the UI is accessible at the following URL from any machine on the
+subnet (provided no network firewalls are in place): `https://10.0.1.35:8200/ui`
+
+It is also accessible at any DNS entry that resolves to that IP address, such as
+the Consul service address (if using Consul):
+`https://vault.service.consul:8200/ui`
+
+<Note>
+
+When you start the Vault server in dev mode, Vault UI is automatically enabled
+and ready to use.
+
+</Note>
+
+
+## Tutorial
+
+Refer to the [UI quick start](/vault/tutorials/getting-started-ui) tutorials to
+get familiar with Vault UI.
