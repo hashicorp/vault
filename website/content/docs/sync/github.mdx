@@ -161,7 +161,7 @@ Start by following the GitHub instructions for
 to install your GitHub application on a specified repository and note the
 assigned installation ID.
 
-<Tip title="Your installation ID is in the app URL>
+<Tip title="Your installation ID is in the app URL">
 
   You can find your assigned installation ID in the URL path parameter:
   `https://github.com/settings/installations/<INSTALLATION_ID>`
@@ -234,7 +234,7 @@ app_name=my-app-1
 
 Key                   Value
 ---                   -----
-connection_details    map[app_config:map[app_name:my-app-1] installation_id:123456 repository_name:<repo-name> repository_owner:<repo-owner>]
+connection_details    map[app_config:map[app_name:my-app-1] installation_id:12345678 repository_name:<repo-name> repository_owner:<repo-owner>]
 name                  my-dest
 options               map[custom_tags:map[] granularity_level:secret-key secret_name_template:VAULT_{{ .MountAccessor | uppercase }}_{{ .SecretPath | uppercase }}_{{ .SecretKey | uppercase }}]
 type                  gh
