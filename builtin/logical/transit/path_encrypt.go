@@ -454,6 +454,12 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			polReq.KeyType = keysutil.KeyType_AES256_GCM96
 		case "chacha20-poly1305":
 			polReq.KeyType = keysutil.KeyType_ChaCha20_Poly1305
+		case "rsa-2048":
+			polReq.KeyType = keysutil.KeyType_RSA2048
+		case "rsa-3072":
+			polReq.KeyType = keysutil.KeyType_RSA3072
+		case "rsa-4096":
+			polReq.KeyType = keysutil.KeyType_RSA4096
 		case "ecdsa-p256", "ecdsa-p384", "ecdsa-p521":
 			return logical.ErrorResponse(fmt.Sprintf("key type %v not supported for this operation", keyType)), logical.ErrInvalidRequest
 		case "managed_key":

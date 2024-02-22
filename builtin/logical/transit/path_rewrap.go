@@ -19,6 +19,39 @@ import (
 
 var ErrNonceNotAllowed = errors.New("provided nonce not allowed for this key")
 
+type RewrapBatchRequestItem struct {
+	// Context for key derivation. This is required for derived keys.
+	Context string `json:"context" structs:"context" mapstructure:"context"`
+
+	// DecodedContext is the base64 decoded version of Context
+	DecodedContext []byte
+
+	// Ciphertext for decryption
+	Ciphertext string `json:"ciphertext" structs:"ciphertext" mapstructure:"ciphertext"`
+
+	// Nonce to be used when v1 convergent encryption is used
+	Nonce string `json:"nonce" structs:"nonce" mapstructure:"nonce"`
+
+	// The key version to be used for encryption
+	KeyVersion int `json:"key_version" structs:"key_version" mapstructure:"key_version"`
+
+	// DecodedNonce is the base64 decoded version of Nonce
+	DecodedNonce []byte
+
+	// Associated Data for AEAD ciphers
+	AssociatedData string `json:"associated_data" struct:"associated_data" mapstructure:"associated_data"`
+
+	// Reference is an arbitrary caller supplied string value that will be placed on the
+	// batch response to ease correlation between inputs and outputs
+	Reference string `json:"reference" structs:"reference" mapstructure:"reference"`
+
+	// EncryptPaddingScheme specifies the RSA padding scheme for encryption
+	EncryptPaddingScheme string `json:"encrypt_padding_scheme" structs:"encrypt_padding_scheme" mapstructure:"encrypt_padding_scheme"`
+
+	// DecryptPaddingScheme specifies the RSA padding scheme for decryption
+	DecryptPaddingScheme string `json:"decrypt_padding_scheme" structs:"decrypt_padding_scheme" mapstructure:"decrypt_padding_scheme"`
+}
+
 func (b *backend) pathRewrap() *framework.Path {
 	return &framework.Path{
 		Pattern: "rewrap/" + framework.GenericNameRegex("name"),
@@ -88,7 +121,7 @@ Any batch output will preserve the order of the batch input.`,
 
 func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	batchInputRaw := d.Raw["batch_input"]
-	var batchInputItems []BatchRequestItem
+	var batchInputItems []RewrapBatchRequestItem
 	var err error
 	if batchInputRaw != nil {
 		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
@@ -105,15 +138,18 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			return logical.ErrorResponse("missing ciphertext to decrypt"), logical.ErrInvalidRequest
 		}
 
-		batchInputItems = make([]BatchRequestItem, 1)
-		batchInputItems[0] = BatchRequestItem{
+		batchInputItems = make([]RewrapBatchRequestItem, 1)
+		batchInputItems[0] = RewrapBatchRequestItem{
 			Ciphertext: ciphertext,
 			Context:    d.Get("context").(string),
 			Nonce:      d.Get("nonce").(string),
 			KeyVersion: d.Get("key_version").(int),
 		}
-		if ps, ok := d.GetOk("padding_scheme"); ok {
-			batchInputItems[0].PaddingScheme = ps.(string)
+		if ps, ok := d.GetOk("decrypt_padding_scheme"); ok {
+			batchInputItems[0].DecryptPaddingScheme = ps.(string)
+		}
+		if ps, ok := d.GetOk("encrypt_padding_scheme"); ok {
+			batchInputItems[0].EncryptPaddingScheme = ps.(string)
 		}
 	}
 
@@ -172,8 +208,8 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 		}
 
 		var factories []any
-		if item.PaddingScheme != "" {
-			factories = append(factories, keysutil.PaddingScheme(item.PaddingScheme))
+		if item.DecryptPaddingScheme != "" {
+			factories = append(factories, keysutil.PaddingScheme(item.DecryptPaddingScheme))
 		}
 		if item.Nonce != "" && !nonceAllowed(p) {
 			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
@@ -192,8 +228,8 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 		}
 
 		factories = make([]any, 0)
-		if ps, ok := d.GetOk("encrypt_padding_scheme"); ok {
-			factories = append(factories, keysutil.PaddingScheme(ps.(string)))
+		if item.EncryptPaddingScheme != "" {
+			factories = append(factories, keysutil.PaddingScheme(item.EncryptPaddingScheme))
 		}
 		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce) {
 			warnAboutNonceUsage = true
