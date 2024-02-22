@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { assign } from '@ember/polyfills';
 import ApplicationSerializer from '../application';
 
 export default ApplicationSerializer.extend({
@@ -19,7 +18,7 @@ export default ApplicationSerializer.extend({
         return model;
       });
     }
-    assign(payload, payload.data);
+    Object.assign(payload, payload.data);
     delete payload.data;
     return payload;
   },

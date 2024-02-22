@@ -12,7 +12,6 @@ import Model from '@ember-data/model';
 import Service from '@ember/service';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { getOwner } from '@ember/application';
-import { assign } from '@ember/polyfills';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve, reject } from 'rsvp';
@@ -183,7 +182,7 @@ export default Service.extend({
       }
       // put url params (e.g. {name}, {role})
       // at the front of the props list
-      const newProps = assign({}, paramProp, props);
+      const newProps = { ...paramProp, ...props };
       return expandOpenApiProps(newProps);
     });
   },

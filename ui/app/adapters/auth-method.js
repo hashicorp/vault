@@ -4,7 +4,6 @@
  */
 
 import AdapterError from '@ember-data/adapter/error';
-import { assign } from '@ember/polyfills';
 import { set } from '@ember/object';
 import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
@@ -55,7 +54,7 @@ export default ApplicationAdapter.extend({
       // ember data doesn't like 204s if it's not a DELETE
       data.config.id = path; // config relationship needs an id so use path for now
       return {
-        data: assign({}, data, { path: path + '/', id: path }),
+        data: { ...data, path: path + '/', id: path },
       };
     });
   },
