@@ -130,12 +130,20 @@ The secret synced with the old granularity will be deleted and new secrets will 
 
 ## Reconciliation
 
-Vault Secrets Sync is designed to be resilient to transient failures and automatically recover from them.
-If a sync operation fails, Vault will retry the operation a few times with exponential backoff.
-Every so often, Vault will also perform a scan of all secrets that are managed by the sync system and attempt to reconcile
-any out-of-date secrets to ensure that configured destinations are up-to-date.
-This can be useful in situations like dropped update events or external service downtime.
-The reconciliation process is automatic and happens in a background thread. No action is required by the user to opt-in to this behavior.
+Vault Secrets Sync is designed to automatically recover from transient failures
+in two ways: operation retries and reconciliation scans.
+
+Operation retries happen when a sync operation fails. Vault automatically
+retries the operation with exponential backoff. Operation retries help in
+situations where your network becomes unreliable or overwhelmed.
+
+Reconciliation scans happen periodically in a background thread. Vault scans all
+secrets currently managed by the sync system to identify and update out-of-date
+secrets, and to ensure that any configured destinations are up-to-date.
+Reconciliation scans help in situations where you have dropped update events or
+external service downtimes that are outside of your control.
+
+Operation retries and reconciliation scans are both enabled by default.
 
 ## API
 
