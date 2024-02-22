@@ -140,10 +140,14 @@ situations where your network becomes unreliable or overwhelmed.
 Reconciliation scans happen periodically in a background thread. Vault scans all
 secrets currently managed by the sync system to identify and update out-of-date
 secrets, and to ensure that any configured destinations are up-to-date.
-Reconciliation scans help in situations where you have dropped update events or
-external service downtimes that are outside of your control.
+Reconciliation scans help in situations where there are external service downtimes
+that are outside of your control and provide a way to automatically recover and self-heal.
 
 Operation retries and reconciliation scans are both enabled by default.
+
+Note that reconciliation process do not protect from out-of-band updates
+that occur directly in the external service. The secrets sync system is designed to be
+one-way and does not support bidirectional sync at this time.
 
 ## API
 
