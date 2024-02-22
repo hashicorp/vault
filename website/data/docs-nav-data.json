@@ -2169,6 +2169,10 @@
         "path": "upgrading/plugins"
       },
       {
+        "title": "Upgrade to 1.16.x",
+        "path": "upgrading/upgrade-to-1.16.x"
+      },
+      {
         "title": "Upgrade to 1.15.x",
         "path": "upgrading/upgrade-to-1.15.x"
       },
@@ -2419,6 +2423,10 @@
       {
         "title": "Overview",
         "path": "release-notes"
+      },
+      {
+        "title": "1.16.0",
+        "path": "release-notes/1.16.0"
       },
       {
         "title": "1.15.0",
