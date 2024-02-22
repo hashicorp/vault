@@ -13,8 +13,8 @@ no longer be available under some configurations. As a result, the Vault UI now
 uses a new, **authenticated** endpoint (`sys/internal/ui/version`) to fetch
 version information.
 
-The following rule has been added to the **default** policy that is automatically generated on
-new Vault server.
+By default, all **new** Vault servers created with v1.16+ include the following rule, in the 
+automatically-generated policy:
 
 ```
 # Allow a token to look up the Vault version. This path is not subject to
