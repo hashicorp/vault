@@ -20,21 +20,27 @@ Execute an import config file named import.hcl to generate an import plan:
 
 ```shell-session
 $ vault operator import -config import.hcl plan
-
------------
-Import plan
------------
-The following namespaces are missing:
-  * ns-1/
-
-The following mounts are missing:
-  * ns1/mount-1
-
-Secrets to be imported from the source "my-dest-1":
-  * secret1
-  * secret2
-...
 ```
+
+Output:
+
+<CodeBlockConfig hideClipboard>
+
+	-----------
+	Import plan
+	-----------
+	The following namespaces are missing:
+	* ns-1/
+
+	The following mounts are missing:
+	* ns1/mount-1
+
+	Secrets to be imported from the source "my-dest-1":
+	* secret1
+	* secret2
+	...
+
+</CodeBlockConfig>
 
 ## Configuration
 
@@ -55,12 +61,11 @@ destination_vault {
   mount = "mount-1"
 }
 
-mapping_regex {
+mapping_passthrough {
   name = "my-map-1"
-  source = "my-gcp-source-1"
+  source = "my-gcp-1"
   destination = "my-dest-1"
   priority = 1
-  expression = "^database/.*$"
 }
 ```
 
