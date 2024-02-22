@@ -103,7 +103,7 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 		audit.WithPrefix(conf.Config["prefix"]),
 	}
 
-	err = b.configureFormatterNode(cfg, conf.Logger, opts...)
+	err = b.configureFormatterNode(conf.MountPath, cfg, conf.Logger, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("%s: error configuring formatter node: %w", op, err)
 	}
@@ -231,7 +231,7 @@ func (b *Backend) configureFilterNode(filter string) error {
 }
 
 // configureFormatterNode is used to configure a formatter node and associated ID on the Backend.
-func (b *Backend) configureFormatterNode(formatConfig audit.FormatterConfig, logger hclog.Logger, opts ...audit.Option) error {
+func (b *Backend) configureFormatterNode(name string, formatConfig audit.FormatterConfig, logger hclog.Logger, opts ...audit.Option) error {
 	const op = "socket.(Backend).configureFormatterNode"
 
 	formatterNodeID, err := event.GenerateNodeID()
@@ -239,7 +239,7 @@ func (b *Backend) configureFormatterNode(formatConfig audit.FormatterConfig, log
 		return fmt.Errorf("%s: error generating random NodeID for formatter node: %w", op, err)
 	}
 
-	formatterNode, err := audit.NewEntryFormatter(formatConfig, b, logger, opts...)
+	formatterNode, err := audit.NewEntryFormatter(name, formatConfig, b, logger, opts...)
 	if err != nil {
 		return fmt.Errorf("%s: error creating formatter: %w", op, err)
 	}

@@ -36,13 +36,19 @@ type EntryFormatter struct {
 	salter          Salter
 	logger          hclog.Logger
 	headerFormatter HeaderFormatter
+	name            string
 	prefix          string
 }
 
 // NewEntryFormatter should be used to create an EntryFormatter.
 // Accepted options: WithHeaderFormatter, WithPrefix.
-func NewEntryFormatter(config FormatterConfig, salter Salter, logger hclog.Logger, opt ...Option) (*EntryFormatter, error) {
+func NewEntryFormatter(name string, config FormatterConfig, salter Salter, logger hclog.Logger, opt ...Option) (*EntryFormatter, error) {
 	const op = "audit.NewEntryFormatter"
+
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, fmt.Errorf("%s: name is required: %w", op, event.ErrInvalidParameter)
+	}
 
 	if salter == nil {
 		return nil, fmt.Errorf("%s: cannot create a new audit formatter with nil salter: %w", op, event.ErrInvalidParameter)
@@ -67,6 +73,7 @@ func NewEntryFormatter(config FormatterConfig, salter Salter, logger hclog.Logge
 		salter:          salter,
 		logger:          logger,
 		headerFormatter: opts.withHeaderFormatter,
+		name:            name,
 		prefix:          opts.withPrefix,
 	}, nil
 }
@@ -121,10 +128,9 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 		// an entry formatter in every pipeline that processed the event.
 		// So for a single request or response attempt via the broker, we might
 		// have a load of warnings (errors) returned.
-		// Do we want to add an ID to the message (audit device path AKA mount path)?
 
 		// Ensure that we add this error onto any pre-existing error that was being returned.
-		retErr = multierror.Append(retErr, fmt.Errorf("%s: panic generating audit log", op)).ErrorOrNil()
+		retErr = multierror.Append(retErr, fmt.Errorf("%s: panic generating audit log: %q", op, f.name)).ErrorOrNil()
 	}()
 
 	// Take a copy of the event data before we modify anything.

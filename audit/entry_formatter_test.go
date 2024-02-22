@@ -63,6 +63,7 @@ func TestNewEntryFormatter(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
+		Name                 string
 		UseStaticSalt        bool
 		Logger               hclog.Logger
 		Options              []Option // Only supports WithPrefix
@@ -71,18 +72,31 @@ func TestNewEntryFormatter(t *testing.T) {
 		ExpectedFormat       format
 		ExpectedPrefix       string
 	}{
+		"empty-name": {
+			Name:                 "",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "audit.NewEntryFormatter: name is required: invalid parameter",
+		},
+		"spacey-name": {
+			Name:                 "   ",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "audit.NewEntryFormatter: name is required: invalid parameter",
+		},
 		"nil-salter": {
+			Name:                 "juan",
 			UseStaticSalt:        false,
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.NewEntryFormatter: cannot create a new audit formatter with nil salter: invalid parameter",
 		},
 		"nil-logger": {
+			Name:                 "juan",
 			UseStaticSalt:        true,
 			Logger:               nil,
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.NewEntryFormatter: cannot create a new audit formatter with nil logger: invalid parameter",
 		},
 		"static-salter": {
+			Name:            "juan",
 			UseStaticSalt:   true,
 			Logger:          hclog.NewNullLogger(),
 			IsErrorExpected: false,
@@ -92,12 +106,14 @@ func TestNewEntryFormatter(t *testing.T) {
 			ExpectedFormat: JSONFormat,
 		},
 		"default": {
+			Name:            "juan",
 			UseStaticSalt:   true,
 			Logger:          hclog.NewNullLogger(),
 			IsErrorExpected: false,
 			ExpectedFormat:  JSONFormat,
 		},
 		"config-json": {
+			Name:          "juan",
 			UseStaticSalt: true,
 			Logger:        hclog.NewNullLogger(),
 			Options: []Option{
@@ -107,6 +123,7 @@ func TestNewEntryFormatter(t *testing.T) {
 			ExpectedFormat:  JSONFormat,
 		},
 		"config-jsonx": {
+			Name:          "juan",
 			UseStaticSalt: true,
 			Logger:        hclog.NewNullLogger(),
 			Options: []Option{
@@ -116,6 +133,7 @@ func TestNewEntryFormatter(t *testing.T) {
 			ExpectedFormat:  JSONxFormat,
 		},
 		"config-json-prefix": {
+			Name:          "juan",
 			UseStaticSalt: true,
 			Logger:        hclog.NewNullLogger(),
 			Options: []Option{
@@ -127,6 +145,7 @@ func TestNewEntryFormatter(t *testing.T) {
 			ExpectedPrefix:  "foo",
 		},
 		"config-jsonx-prefix": {
+			Name:          "juan",
 			UseStaticSalt: true,
 			Logger:        hclog.NewNullLogger(),
 			Options: []Option{
@@ -151,7 +170,7 @@ func TestNewEntryFormatter(t *testing.T) {
 
 			cfg, err := NewFormatterConfig(tc.Options...)
 			require.NoError(t, err)
-			f, err := NewEntryFormatter(cfg, ss, tc.Logger, tc.Options...)
+			f, err := NewEntryFormatter(tc.Name, cfg, ss, tc.Logger, tc.Options...)
 
 			switch {
 			case tc.IsErrorExpected:
@@ -176,7 +195,7 @@ func TestEntryFormatter_Reopen(t *testing.T) {
 	cfg, err := NewFormatterConfig()
 	require.NoError(t, err)
 
-	f, err := NewEntryFormatter(cfg, ss, hclog.NewNullLogger())
+	f, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 	require.NoError(t, err)
 	require.NotNil(t, f)
 	require.NoError(t, f.Reopen())
@@ -190,7 +209,7 @@ func TestEntryFormatter_Type(t *testing.T) {
 	cfg, err := NewFormatterConfig()
 	require.NoError(t, err)
 
-	f, err := NewEntryFormatter(cfg, ss, hclog.NewNullLogger())
+	f, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 	require.NoError(t, err)
 	require.NotNil(t, f)
 	require.Equal(t, eventlogger.NodeTypeFormatter, f.Type())
@@ -335,7 +354,7 @@ func TestEntryFormatter_Process(t *testing.T) {
 			cfg, err := NewFormatterConfig(WithFormat(tc.RequiredFormat.String()))
 			require.NoError(t, err)
 
-			f, err := NewEntryFormatter(cfg, ss, hclog.NewNullLogger())
+			f, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 			require.NoError(t, err)
 			require.NotNil(t, f)
 
@@ -400,7 +419,7 @@ func BenchmarkAuditFileSink_Process(b *testing.B) {
 	cfg, err := NewFormatterConfig()
 	require.NoError(b, err)
 	ss := newStaticSalt(b)
-	formatter, err := NewEntryFormatter(cfg, ss, hclog.NewNullLogger())
+	formatter, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 	require.NoError(b, err)
 	require.NotNil(b, formatter)
 
@@ -471,7 +490,7 @@ func TestEntryFormatter_FormatRequest(t *testing.T) {
 			ss := newStaticSalt(t)
 			cfg, err := NewFormatterConfig()
 			require.NoError(t, err)
-			f, err := NewEntryFormatter(cfg, ss, hclog.NewNullLogger())
+			f, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 			require.NoError(t, err)
 
 			var ctx context.Context
@@ -540,7 +559,7 @@ func TestEntryFormatter_FormatResponse(t *testing.T) {
 			ss := newStaticSalt(t)
 			cfg, err := NewFormatterConfig()
 			require.NoError(t, err)
-			f, err := NewEntryFormatter(cfg, ss, hclog.NewNullLogger())
+			f, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 			require.NoError(t, err)
 
 			var ctx context.Context
@@ -650,7 +669,7 @@ func TestEntryFormatter_Process_JSON(t *testing.T) {
 	for name, tc := range cases {
 		cfg, err := NewFormatterConfig(WithHMACAccessor(false))
 		require.NoError(t, err)
-		formatter, err := NewEntryFormatter(cfg, ss, hclog.NewNullLogger(), WithPrefix(tc.Prefix))
+		formatter, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger(), WithPrefix(tc.Prefix))
 		require.NoError(t, err)
 
 		in := &logical.LogInput{
@@ -811,7 +830,7 @@ func TestEntryFormatter_Process_JSONx(t *testing.T) {
 			WithFormat(JSONxFormat.String()),
 		)
 		require.NoError(t, err)
-		formatter, err := NewEntryFormatter(cfg, tempStaticSalt, hclog.NewNullLogger(), WithPrefix(tc.Prefix))
+		formatter, err := NewEntryFormatter("juan", cfg, tempStaticSalt, hclog.NewNullLogger(), WithPrefix(tc.Prefix))
 		require.NoError(t, err)
 		require.NotNil(t, formatter)
 
@@ -927,7 +946,7 @@ func TestEntryFormatter_FormatResponse_ElideListResponses(t *testing.T) {
 	var err error
 
 	format := func(t *testing.T, config FormatterConfig, operation logical.Operation, inputData map[string]any) *ResponseEntry {
-		formatter, err = NewEntryFormatter(config, ss, hclog.NewNullLogger())
+		formatter, err = NewEntryFormatter("juan", config, ss, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, formatter)
 
@@ -989,7 +1008,7 @@ func TestEntryFormatter_Process_NoMutation(t *testing.T) {
 	cfg, err := NewFormatterConfig()
 	require.NoError(t, err)
 	ss := newStaticSalt(t)
-	formatter, err := NewEntryFormatter(cfg, ss, hclog.NewNullLogger())
+	formatter, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 	require.NoError(t, err)
 	require.NotNil(t, formatter)
 
