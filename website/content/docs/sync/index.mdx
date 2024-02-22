@@ -110,7 +110,7 @@ Name templates can be updated. The new template is only effective for new secret
 not affect the secrets synced with the previous template. It is possible to update an association to force a recreate operation.
 The secret synced with the old template will be deleted and a new secret using the new template version will be synced.
 
-## Sync granularity
+## Granularity
 
 Vault KV-v2 secrets are multi-value and their data is represented in JSON. Multi-value secrets are useful to bundle closely
 related information together like a username & password pair. However, most secret management systems only support single-value
@@ -126,6 +126,140 @@ it is encoded as a JSON blob.
 Granularity can be updated. The new granularity only affects secrets newly associated with the destination and does
 not modify the previously synced secrets. It is possible to update an association to force a recreate operation.
 The secret synced with the old granularity will be deleted and new secrets will be synced according to the new granularity.
+
+## Security
+
+### Vault access requirements
+
+Vault verifies the client has read access on the secret before syncing it with any destination. This additional check is
+there to prevent users from maliciously or unintentionally leveraging elevated permissions on an external system to access
+secrets they normally wouldn't be able to.
+
+Let's assume we have a secret located at `path/to/data/secret1` and a user with write access to the sync feature,
+but no read access to that secret. This scenario is equivalent to this ACL policy:
+
+  <CodeBlockConfig hideClipboard>
+
+    # Allow full access to the sync feature
+    path "sys/sync/*" {
+      capabilities = ["read", "list", "create", "update", "delete"]
+    }
+
+    # Allow read access to the secret mount path/to
+    path "path/to/*" {
+      capabilities = ["read"]
+    }
+
+    # Deny access to a specific secret
+    path "path/to/data/my-secret-1" {
+      capabilities = ["deny"]
+    }
+
+  </CodeBlockConfig>
+
+If a client with this policy tries to read this secret they will receive an unauthorized error:
+
+  <CodeBlockConfig hideClipboard>
+
+    $ vault kv get -mount=path/to my-secret-1
+
+    Error reading path/to/data/my-secret-1: Error making API request.
+
+    URL: GET http://127.0.0.1:8200/v1/path/to/data/my-secret-1
+    Code: 403. Errors:
+
+    * 1 error occurred:
+      * permission denied
+
+  </CodeBlockConfig>
+
+Likewise, if the client tries to sync this secret to any destination they will receive a similar unauthorized error:
+
+  <CodeBlockConfig hideClipboard>
+
+    $ vault write sys/sync/destinations/$TYPE/$NAME/associations/set \
+    mount="path/to" \
+    secret_name="my-secret-1"
+
+    Error writing data to sys/sync/destinations/$TYPE/$NAME/associations/set: Error making API request.
+
+    URL: PUT http://127.0.0.1:8200/v1/sys/sync/destinations/$TYPE/$NAME/associations/set
+    Code: 403. Errors:
+
+    * permission denied to read the content of the secret my-secret-1 in mount path/to
+
+  </CodeBlockConfig>
+
+This read access verification is only done when creating or updating an association. Once the association is created, revoking
+read access to the policy that was used to sync the secret has no effect.
+
+Vault does not control the permissions at the destination. It is the responsibility of the operator to configure proper
+read access on the external system so synced secrets are not accessed unintentionally.
+
+### Collisions and overwrites
+
+Secrets Sync operates with a last-write-wins strategy. If a secret with the same name already exists at the destination,
+Vault overwrites it when syncing a secret. There are also no automatic mechanisms to prevent a principal with sufficient
+privileges at the destination from overwriting a secret synced by Vault.
+
+To prevent Vault from accidentally overwriting existing secrets, it is recommended to use either the name pattern or
+built-in tag as an extra policy condition on the role used to configure a Vault sync destination. For example, the
+following AWS IAM policy prevents Vault from being able to modify secrets that were not created by a sync operation:
+
+  <CodeBlockConfig hideClipboard>
+
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "secretsmanager:*",
+          ],
+          "Resource": "*",
+          "Condition": {
+            "StringEquals": {
+              "secretsmanager:ResourceTag/hashicorp:vault": "" # This tag is automatically added by Vault on every synced secrets
+            }
+          }
+        }
+      ]
+    }
+
+  </CodeBlockConfig>
+
+Likewise, is it recommended to add a negative condition on other policies not used by Vault that grant write access to
+secrets to prevent out-of-band overwrites:
+
+  <CodeBlockConfig hideClipboard>
+
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Deny",
+          "Action": [
+            "secretsmanager:*"
+          ],
+          "Resource": "*",
+          "Condition": {
+            "StringNotEquals": {
+              "secretsmanager:ResourceTag/hashicorp:vault": "" # This tag is automatically added by Vault on every synced secrets
+            }
+          }
+        }
+      ]
+    }
+
+  </CodeBlockConfig>
+
+  <Note>
+  Wildcards are used in the example above for brevity, but it is recommended to use the least privilege principle and restrict
+  the actions and resources to the minimum requirements for each use case.
+  </Note>
+
+This policy condition strategy is also applicable to most other destination types. Please refer to the specific destination's
+access management documentation for more details.
 
 
 ## Reconciliation
