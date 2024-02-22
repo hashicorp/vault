@@ -34,10 +34,9 @@ Use custom banners and modals in the Vault UI to share system-wide alerts for al
 - **You must have Vault 1.16.0 or higher installed**.
 - **You must have the appropriate permissions**:
   - You must have `list` permission for the `sys/config/ui/custom-messages` endpoint.
-  - To **create or edit messages**, you must have `read` and `update` permissions
-    for the `sys/config/ui/custom-messages/:id` endpoint
-  - To **delete messages**, `delete` permission for the
-    `sys/config/ui/custom-messages/:id` endpoint.
+  - To **create messages**, you must have `read` permission for the `sys/config/ui/custom-messages/:id` endpoint and `create` permission for the `sys/config/ui/custom-messages` endpoint.
+  - To **edit messages**, you must have `read` and `update` permission for the `sys/config/ui/custom-messages/:id` endpoint.
+  - To **delete messages**, `delete` permission for the `sys/config/ui/custom-messages/:id` endpoint.
 
 ## Add a custom message
 
