@@ -752,6 +752,10 @@
             "path": "commands/operator/generate-root"
           },
           {
+            "title": "<code>import</code>",
+            "path": "commands/operator/import"
+          },
+          {
             "title": "<code>init</code>",
             "path": "commands/operator/init"
           },
@@ -1600,6 +1604,29 @@
       {
         "title": "Vercel Project",
         "path": "sync/vercelproject"
+      }
+    ]
+  },
+  {
+    "title": "Secrets Import",
+    "badge": {
+      "text": "ENTERPRISE",
+      "type": "outlined",
+      "color": "neutral"
+    },
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "import",
+        "badge": {
+          "text": "BETA",
+          "type": "outlined",
+          "color": "highlight"
+        }
+      },
+      {
+        "title": "GCP Secret Manager",
+        "path": "import/gcpsm"
       }
     ]
   },
