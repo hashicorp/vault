@@ -6,10 +6,12 @@
 
 #### Issue
 
-Since the version information in both the `sys/health` and `sys/seal-status` un-authenticated
-endpoints can now be redacted with the use of the **redact_version** TCP listener parameter,
-the Vault UI uses a new authenticated endpoint `sys/internal/ui/version` to obtain the Vault
-server's version.
+Previous versions of the Vault UI fetched version information from
+un-authenticated endpoints like `sys/health` and `sys/seal-status`. Since
+introducing the `redact_version` TCP listener parameter, version information may
+no longer be available under some configurations. As a result, the Vault UI now
+uses a new, **authenticated** endpoint (`sys/internal/ui/version`) to fetch
+version information.
 
 The following rule has been added to the **default** policy that is automatically generated on
 new Vault server.
