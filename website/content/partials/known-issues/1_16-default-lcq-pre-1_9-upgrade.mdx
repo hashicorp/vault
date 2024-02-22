@@ -8,8 +8,8 @@
 
 Vault began tracking version history as of version 1.9. As of version 1.16, new
 Vault installs automatically enable a lease count quota by consulting the
-version history. If the version history is empty on upgrade, Vault assumes the
-upgrade is a new install and automatically enables a default lease count quota.
+version history. If the version history is empty on upgrade, Vault treats the
+upgrade as a new install and automatically enables a default lease count quota.
 
 Before you upgrade Vault from a version prior to 1.9 to versions 1.16+,
 you should check the current number of unexpired leases via the
@@ -28,7 +28,8 @@ lease count quota:
    version store.
 2. Upgrade to Vault version 1.16+.
 
-You can review, modify, and delete the global default quota with the
+You can review, modify, and delete the global default quota at any point with
+the
 [`/sys/quotas/lease-count/default`](/vault/api-docs/system/lease-count-quotas)
 endpoint:
 
