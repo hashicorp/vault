@@ -6,7 +6,7 @@
 import Component from '@glimmer/component';
 import { assert } from '@ember/debug';
 import flightIconMap from '@hashicorp/flight-icons/catalog.json';
-const flightIconNames = flightIconMap.assets.mapBy('iconName').uniq();
+const flightIconNames = flightIconMap.assets.map((asset) => asset.iconName).uniq();
 
 /**
  * @module Icon

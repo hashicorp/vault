@@ -112,6 +112,10 @@
                 "path": "internals/telemetry/metrics/raft"
               },
               {
+                "title": "Secrets Sync metrics",
+                "path": "internals/telemetry/metrics/secrets-sync"
+              },
+              {
                 "title": "Secrets metrics",
                 "path": "internals/telemetry/metrics/secrets"
               },
@@ -273,12 +277,7 @@
       },
       {
         "title": "Events",
-        "path": "concepts/events",
-        "badge": {
-          "text": "BETA",
-          "type": "outlined",
-          "color": "highlight"
-        }
+        "path": "concepts/events"
       },
       {
         "title": "Filtering",
@@ -330,8 +329,9 @@
             "title": "Overview",
             "path": "configuration/seal"
           },
-          { "title": "High Availability",
-           "badge": {
+          {
+            "title": "High Availability",
+            "badge": {
               "text": "ENTERPRISE",
               "type": "outlined",
               "color": "highlight"
@@ -790,6 +790,10 @@
           {
             "title": "<code>usage</code>",
             "path": "commands/operator/usage"
+          },
+          {
+            "title": "<code>utilization</code>",
+            "path": "commands/operator/utilization"
           }
         ]
       },
