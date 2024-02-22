@@ -97,6 +97,12 @@ Many tools and libraries automatically consume `HTTP_PROXY`, `HTTPS_PROXY`, and
 Go standard library's default HTTP client. You can use these environment
 variables to configure different network proxies for different plugins:
 
+-> You must be using an external plugin to take advantage of custom environment
+variables. If you are using a builtin plugin, you can still download and register
+an external version of it in order to use this workflow. Check the
+[releases](https://releases.hashicorp.com/) page for the latest prebuilt plugin
+binaries.
+
 ```shell-session
 $ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
     -env HTTP_PROXY=eu.example.com \
