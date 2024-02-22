@@ -8,7 +8,14 @@
     "submit"
     (fn
       @doSubmit
-      (hash ciphertext=@ciphertext padding_scheme=@padding_scheme context=@context nonce=@nonce key_version=@key_version)
+      (hash
+        ciphertext=@ciphertext
+        decrypt_padding_scheme=@decrypt_padding_scheme
+        encrypt_padding_scheme=@encrypt_padding_scheme
+        context=@context
+        nonce=@nonce
+        key_version=@key_version
+      )
     )
   }}
   ...attributes
@@ -45,17 +52,42 @@
     {{/if}}
     {{#if (or (eq @key.type "rsa-2048") (eq @key.type "rsa-3072") (eq @key.type "rsa-4096"))}}
       <div class="field">
-        <label for="padding_scheme" class="is-label">Padding Scheme</label>
+        <label for="decrypt_padding_scheme" class="is-label">Decrypt Padding Scheme</label>
         <div class="control is-expanded">
           <div class="select is-fullwidth">
             <select
-              name="padding_scheme"
-              id="padding_scheme"
-              data-test-padding-scheme="true"
-              onchange={{action (mut @padding_scheme) value="target.value"}}
+              name="decrypt_padding_scheme"
+              id="decrypt_padding_scheme"
+              data-test-decrypt-padding-scheme="true"
+              onchange={{action (mut @decrypt_padding_scheme) value="target.value"}}
             >
               {{#each (array "oaep" "pkcs1v15") as |scheme|}}
-                <option selected={{if @padding_scheme (eq @padding_scheme scheme) (eq scheme "oaep")}} value={{scheme}}>
+                <option
+                  selected={{if @decrypt_padding_scheme (eq @decrypt_padding_scheme scheme) (eq scheme "oaep")}}
+                  value={{scheme}}
+                >
+                  {{scheme}}
+                </option>
+              {{/each}}
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="encrypt_padding_scheme" class="is-label">Encrypt Padding Scheme</label>
+        <div class="control is-expanded">
+          <div class="select is-fullwidth">
+            <select
+              name="encrypt_padding_scheme"
+              id="encrypt_padding_scheme"
+              data-test-encrypt-padding-scheme="true"
+              onchange={{action (mut @encrypt_padding_scheme) value="target.value"}}
+            >
+              {{#each (array "oaep" "pkcs1v15") as |scheme|}}
+                <option
+                  selected={{if @encrypt_padding_scheme (eq @encrypt_padding_scheme scheme) (eq scheme "oaep")}}
+                  value={{scheme}}
+                >
                   {{scheme}}
                 </option>
               {{/each}}
