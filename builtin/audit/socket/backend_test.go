@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -196,7 +197,7 @@ func TestBackend_configureFormatterNode(t *testing.T) {
 	formatConfig, err := audit.NewFormatterConfig()
 	require.NoError(t, err)
 
-	err = b.configureFormatterNode(formatConfig)
+	err = b.configureFormatterNode(formatConfig, hclog.NewNullLogger())
 
 	require.NoError(t, err)
 	require.Len(t, b.nodeIDList, 1)
@@ -317,7 +318,7 @@ func TestBackend_configureFilterFormatterSink(t *testing.T) {
 	err = b.configureFilterNode("mount_type == kv")
 	require.NoError(t, err)
 
-	err = b.configureFormatterNode(formatConfig)
+	err = b.configureFormatterNode(formatConfig, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	err = b.configureSinkNode("foo", "https://hashicorp.com", "json")
@@ -365,11 +366,22 @@ func TestBackend_Factory_Conf(t *testing.T) {
 			isErrorExpected:      true,
 			expectedErrorMessage: "socket.Factory: nil salt view",
 		},
+		"nil-logger": {
+			backendConfig: &audit.BackendConfig{
+				MountPath:  "discard",
+				SaltConfig: &salt.Config{},
+				SaltView:   &logical.InmemStorage{},
+				Logger:     nil,
+			},
+			isErrorExpected:      true,
+			expectedErrorMessage: "socket.Factory: nil logger",
+		},
 		"no-address": {
 			backendConfig: &audit.BackendConfig{
 				MountPath:  "discard",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config:     map[string]string{},
 			},
 			isErrorExpected:      true,
@@ -380,6 +392,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				MountPath:  "discard",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config: map[string]string{
 					"address": "",
 				},
@@ -392,6 +405,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				MountPath:  "discard",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config: map[string]string{
 					"address": "    ",
 				},
@@ -404,6 +418,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				MountPath:  "discard",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config: map[string]string{
 					"address":       "hashicorp.com",
 					"write_timeout": "5s",
@@ -416,6 +431,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				MountPath:  "discard",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config: map[string]string{
 					"address":       "hashicorp.com",
 					"write_timeout": "qwerty",
@@ -429,6 +445,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				MountPath:  "discard",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config: map[string]string{
 					"address":       "hashicorp.com",
 					"write_timeout": "5s",
@@ -443,6 +460,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				MountPath:  "discard",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config: map[string]string{
 					"address":       "hashicorp.com",
 					"write_timeout": "2s",
@@ -491,6 +509,7 @@ func TestBackend_IsFallback(t *testing.T) {
 				MountPath:  "qwerty",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config: map[string]string{
 					"fallback":      "true",
 					"address":       "hashicorp.com",
@@ -504,6 +523,7 @@ func TestBackend_IsFallback(t *testing.T) {
 				MountPath:  "qwerty",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config: map[string]string{
 					"fallback":      "false",
 					"address":       "hashicorp.com",

@@ -6,10 +6,13 @@ package file
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -48,8 +51,13 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 	if conf.SaltConfig == nil {
 		return nil, fmt.Errorf("%s: nil salt config", op)
 	}
+
 	if conf.SaltView == nil {
 		return nil, fmt.Errorf("%s: nil salt view", op)
+	}
+
+	if conf.Logger == nil || reflect.ValueOf(conf.Logger).IsNil() {
+		return nil, fmt.Errorf("%s: nil logger", op)
 	}
 
 	// The config options 'fallback' and 'filter' are mutually exclusive, a fallback
@@ -115,7 +123,7 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 		audit.WithPrefix(conf.Config["prefix"]),
 	}
 
-	err = b.configureFormatterNode(cfg, formatterOpts...)
+	err = b.configureFormatterNode(cfg, conf.Logger, formatterOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("%s: error configuring formatter node: %w", op, err)
 	}
@@ -242,7 +250,7 @@ func (b *Backend) configureFilterNode(filter string) error {
 }
 
 // configureFormatterNode is used to configure a formatter node and associated ID on the Backend.
-func (b *Backend) configureFormatterNode(formatConfig audit.FormatterConfig, opts ...audit.Option) error {
+func (b *Backend) configureFormatterNode(formatConfig audit.FormatterConfig, logger hclog.Logger, opts ...audit.Option) error {
 	const op = "file.(Backend).configureFormatterNode"
 
 	formatterNodeID, err := event.GenerateNodeID()
@@ -250,7 +258,7 @@ func (b *Backend) configureFormatterNode(formatConfig audit.FormatterConfig, opt
 		return fmt.Errorf("%s: error generating random NodeID for formatter node: %w", op, err)
 	}
 
-	formatterNode, err := audit.NewEntryFormatter(formatConfig, b, opts...)
+	formatterNode, err := audit.NewEntryFormatter(formatConfig, b, logger, opts...)
 	if err != nil {
 		return fmt.Errorf("%s: error creating formatter: %w", op, err)
 	}

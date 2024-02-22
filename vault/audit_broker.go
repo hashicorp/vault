@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -218,22 +217,13 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput) (ret
 	}
 
 	defer metrics.MeasureSince([]string{"audit", "log_request"}, time.Now())
+	defer func() {
+		if ret != nil {
+			metrics.IncrCounter([]string{"audit", "log_request_failure"}, 1.0)
+		}
+	}()
 
 	var retErr *multierror.Error
-
-	defer func() {
-		if r := recover(); r != nil {
-			a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r, "stacktrace", string(debug.Stack()))
-			retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log"))
-		}
-
-		ret = retErr.ErrorOrNil()
-		failure := float32(0.0)
-		if ret != nil {
-			failure = 1.0
-		}
-		metrics.IncrCounter([]string{"audit", "log_request_failure"}, failure)
-	}()
 
 	e, err := audit.NewEvent(audit.RequestType)
 	if err != nil {
@@ -293,22 +283,13 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput) (re
 	}
 
 	defer metrics.MeasureSince([]string{"audit", "log_response"}, time.Now())
+	defer func() {
+		if ret != nil {
+			metrics.IncrCounter([]string{"audit", "log_response_failure"}, 1.0)
+		}
+	}()
 
 	var retErr *multierror.Error
-
-	defer func() {
-		if r := recover(); r != nil {
-			a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r, "stacktrace", string(debug.Stack()))
-			retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log"))
-		}
-
-		ret = retErr.ErrorOrNil()
-		failure := float32(0.0)
-		if ret != nil {
-			failure = 1.0
-		}
-		metrics.IncrCounter([]string{"audit", "log_response_failure"}, failure)
-	}()
 
 	e, err := audit.NewEvent(audit.ResponseType)
 	if err != nil {
