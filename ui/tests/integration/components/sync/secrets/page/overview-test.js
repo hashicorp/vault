@@ -95,10 +95,10 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     assert.dom(badge(2)).hasText('1 Unsynced', 'Unsynced badge renders');
     assert.dom(badge(2)).hasClass('hds-badge--color-neutral', 'Correct color renders for unsynced badge');
 
-    assert.dom(total(0)).hasText('1', '# of secrets renders');
+    assert.dom(total(0)).hasText('1', '# of external secrets renders');
     assert.dom(updated(0)).hasText(updatedDate, 'Last updated datetime renders');
 
-    assert.dom(total(1)).hasText('0', '# of secrets render for destination with no associations');
+    assert.dom(total(1)).hasText('0', '# of external secrets renders for destination with no associations');
     assert
       .dom(updated(1))
       .hasText('—', 'Last updated placeholder renders for destination with no associations');
