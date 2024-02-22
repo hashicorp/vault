@@ -68,7 +68,7 @@ const AES = {
 
 module('Unit | Serializer | transit-key', function (hooks) {
   setupTest(hooks);
-  test('it expands the timestamp for aes and chacha-poly keys', async function (assert) {
+  test('it expands the timestamp for aes and chacha-poly keys', function (assert) {
     const serializer = this.owner.lookup('serializer:transit-key');
     const aesExpected = AES.data.keys[1] * 1000;
     const chachaExpected = CHACHA.data.keys[1] * 1000;
