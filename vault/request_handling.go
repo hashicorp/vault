@@ -2275,50 +2275,53 @@ func (c *Core) LocalGetUserFailedLoginInfo(ctx context.Context, userKey FailedLo
 // LocalUpdateUserFailedLoginInfo updates the failed login information for a user based on alias name and mountAccessor
 func (c *Core) LocalUpdateUserFailedLoginInfo(ctx context.Context, userKey FailedLoginUser, failedLoginInfo *FailedLoginInfo, deleteEntry bool) error {
 	c.userFailedLoginInfoLock.Lock()
-	switch deleteEntry {
-	case false:
-		// update entry in the map
-		c.userFailedLoginInfo[userKey] = failedLoginInfo
+	err := func() error {
+		switch deleteEntry {
+		case false:
+			// update entry in the map
+			c.userFailedLoginInfo[userKey] = failedLoginInfo
 
-		// get the user lockout configuration for the user
-		mountEntry := c.router.MatchingMountByAccessor(userKey.mountAccessor)
-		if mountEntry == nil {
-			mountEntry = &MountEntry{}
-			mountEntry.NamespaceID = namespace.RootNamespaceID
+			// get the user lockout configuration for the user
+			mountEntry := c.router.MatchingMountByAccessor(userKey.mountAccessor)
+			if mountEntry == nil {
+				mountEntry = &MountEntry{}
+				mountEntry.NamespaceID = namespace.RootNamespaceID
+			}
+			userLockoutConfiguration := c.getUserLockoutConfiguration(mountEntry)
+
+			// if failed login count has reached threshold, create a storage entry as the user got locked
+			if failedLoginInfo.count >= uint(userLockoutConfiguration.LockoutThreshold) {
+				// user locked
+				storageUserLockoutPath := fmt.Sprintf(coreLockedUsersPath+"%s/%s/%s", mountEntry.NamespaceID, userKey.mountAccessor, userKey.aliasName)
+
+				compressedBytes, err := jsonutil.EncodeJSONAndCompress(failedLoginInfo.lastFailedLoginTime, nil)
+				if err != nil {
+					c.logger.Error("failed to encode or compress failed login user entry", "error", err)
+					return err
+				}
+
+				// Create an entry
+				entry := &logical.StorageEntry{
+					Key:   storageUserLockoutPath,
+					Value: compressedBytes,
+				}
+
+				// Write to the physical backend
+				if err := c.barrier.Put(ctx, entry); err != nil {
+					c.logger.Error("failed to persist failed login user entry", "error", err)
+					return err
+				}
+
+			}
+
+		default:
+			// delete the entry from the map, if no key exists it is no-op
+			delete(c.userFailedLoginInfo, userKey)
 		}
-		userLockoutConfiguration := c.getUserLockoutConfiguration(mountEntry)
-
-		// if failed login count has reached threshold, create a storage entry as the user got locked
-		if failedLoginInfo.count >= uint(userLockoutConfiguration.LockoutThreshold) {
-			// user locked
-			storageUserLockoutPath := fmt.Sprintf(coreLockedUsersPath+"%s/%s/%s", mountEntry.NamespaceID, userKey.mountAccessor, userKey.aliasName)
-
-			compressedBytes, err := jsonutil.EncodeJSONAndCompress(failedLoginInfo.lastFailedLoginTime, nil)
-			if err != nil {
-				c.logger.Error("failed to encode or compress failed login user entry", "error", err)
-				return err
-			}
-
-			// Create an entry
-			entry := &logical.StorageEntry{
-				Key:   storageUserLockoutPath,
-				Value: compressedBytes,
-			}
-
-			// Write to the physical backend
-			if err := c.barrier.Put(ctx, entry); err != nil {
-				c.logger.Error("failed to persist failed login user entry", "error", err)
-				return err
-			}
-
-		}
-
-	default:
-		// delete the entry from the map, if no key exists it is no-op
-		delete(c.userFailedLoginInfo, userKey)
+		return nil
 	}
 	c.userFailedLoginInfoLock.Unlock()
-	return nil
+	return err
 }
 
 // PopulateTokenEntry looks up req.ClientToken in the token store and uses
