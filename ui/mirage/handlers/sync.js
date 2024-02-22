@@ -182,23 +182,25 @@ export default function (server) {
   });
   // associations
   server.get('/sys/sync/associations', (schema) => {
-    const records = schema.db.syncAssociations.where({});
-    if (!records.length) {
+    const associations = schema.db.syncAssociations.where({});
+    if (!associations.length) {
       return new Response(404, {}, { errors: [] });
     }
-    // for now we only care about the total_associations value
+
+    const secrets = associations.reduce((secrets, association) => {
+      const secretPath = `${association.mount}/${association.secret_name}`;
+      if (!secrets.includes(secretPath)) {
+        secrets.push(secretPath);
+      }
+      return secrets;
+    }, []);
+
     return {
       data: {
         key_info: {},
         keys: [],
-        total_associations: records.length,
-        total_secrets: records.reduce((secrets, association) => {
-          const secretPath = `${association.mount}/${association.secret_name}`;
-          if (!secrets.includes(secretPath)) {
-            secrets.push(secretPath);
-          }
-          return secrets;
-        }, []),
+        total_associations: associations.length, // link between a secret and a destination
+        total_secrets: secrets.length, // number of secrets synced from vault (one secret can be synced to multiple destinations)
       },
     };
   });
