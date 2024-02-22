@@ -143,9 +143,8 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
         count: '6',
       },
       {
-        cardTitle: 'total vault secrets',
-        subText:
-          'The number of secrets with a configured sync destination. One secret synced to two unique destinations will count as two associations.',
+        cardTitle: 'Total secrets',
+        subText: 'The total number of secrets synced from Vault.',
         // actionText: 'View billing',
         count: '7',
       },
@@ -155,7 +154,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       assert.dom(title(cardTitle)).hasText(cardTitle, 'Overview card title renders');
       assert.dom(description(cardTitle)).hasText(subText, 'Destinations overview card description renders');
       assert.dom(content(cardTitle)).hasText(count, 'Total count renders');
-      if (cardTitle === 'total vault secrets') return; // uncomment 'actionText' above and this return after SYNC BETA
+      if (cardTitle === 'Total secrets') return; // uncomment 'actionText' above and this return after SYNC BETA
       assert.dom(action(cardTitle)).hasText(actionText, 'Card action renders');
     });
   });
