@@ -1036,6 +1036,19 @@
     ]
   },
   {
+    "title": "Vault UI",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "ui"
+      },
+      {
+        "title": "Custom Messages",
+        "path": "ui/custom-messages"
+      }
+    ]
+  },
+  {
     "title": "Vault Agent and Vault Proxy",
     "routes": [
       {
@@ -1222,15 +1235,6 @@
             "path": "agent-and-proxy/agent/versions"
           }
         ]
-      }
-    ]
-  },
-  {
-    "title": "Vault UI",
-    "routes": [
-      {
-        "title": "Custom Messages",
-        "path": "ui/custom-messages"
       }
     ]
   },
