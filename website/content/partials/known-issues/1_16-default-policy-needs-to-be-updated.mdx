@@ -30,7 +30,8 @@ for the Vault version to be displayed in the Vault UI.
 
 No other functionality in the Vault UI is affected be this issue.
 
-To update the **default** policy, use the following commands:
+You can use the Vault CLI to update the **default** policy and allow the Vault IU to query the Vault server for version information:
+
 ```shell-session
 $ vault policy read default | cat - <<< '
 # Allow a token to look up the Vault version. This path is not subject to
