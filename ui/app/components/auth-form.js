@@ -139,9 +139,9 @@ export default Component.extend(DEFAULTS, {
     }
     // if type is provided we can ignore path since we are attempting to lookup a specific backend by type
     if (keyIsPath && !type) {
-      return methods.findBy('path', selected);
+      return methods.find((m) => m.path === selected);
     }
-    return this.authMethods.findBy('type', selected);
+    return this.authMethods.find((m) => m.type === selected);
   },
 
   selectedAuthIsPath: match('selectedAuth', /\/$/),
