@@ -132,7 +132,7 @@ The secret synced with the old granularity will be deleted and new secrets will 
 ### Vault access requirements
 
 Vault verifies the client has read access on the secret before syncing it with any destination. This additional check is
-there to prevent users from maliciously or unintentionally leverage elevated permissions on an external system to access
+there to prevent users from maliciously or unintentionally leveraging elevated permissions on an external system to access
 secrets they normally wouldn't be able to.
 
 Let's assume we have a secret located at `path/to/data/secret1` and a user with write access to the sync feature,
