@@ -16,7 +16,9 @@ option in the Vault server configuration. The UI runs on the same port as the
 Vault listener. As such, you must configure at least one `listener` stanza in
 order to access the UI.
 
-**Example:**
+For example, the following configuration block enables the UI at
+`https://10.0.1.35:8200/ui` for any machine on the same subnet as long as there
+are no network firewalls in place that explicitly block communication:
 
 <CodeBlockConfig hideClipboard>
 
