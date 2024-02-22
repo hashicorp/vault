@@ -183,6 +183,8 @@ module('Acceptance | oidc provider', function (hooks) {
   test('OIDC Provider redirects to auth if current token and prompt = login', async function (assert) {
     const { providerName, callback, clientId, authMethodPath } = this.oidcSetupInformation;
     await settled();
+    await visit('/vault/dashboard');
+    assert.strictEqual(currentURL(), '/vault/dashboard', 'User is logged in before oidc login attempt');
     const url = getAuthzUrl(providerName, callback, clientId, { prompt: 'login' });
     await visit(url);
 

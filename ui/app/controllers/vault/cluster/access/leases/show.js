@@ -21,11 +21,12 @@ export default Controller.extend({
   }),
 
   flashMessages: service(),
+  router: service(),
 
   actions: {
     revokeLease(model) {
       return model.destroyRecord().then(() => {
-        return this.transitionToRoute('vault.cluster.access.leases.list-root');
+        return this.router.transitionTo('vault.cluster.access.leases.list-root');
       });
     },
 
