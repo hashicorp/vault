@@ -12,7 +12,6 @@ import (
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-	gsyslog "github.com/hashicorp/go-syslog"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -24,7 +23,6 @@ var _ audit.Backend = (*Backend)(nil)
 // Backend is the audit backend for the syslog-based audit store.
 type Backend struct {
 	fallback   bool
-	logger     gsyslog.Syslogger
 	name       string
 	nodeIDList []eventlogger.NodeID
 	nodeMap    map[eventlogger.NodeID]eventlogger.Node
@@ -72,15 +70,8 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 		return nil, fmt.Errorf("%s: cannot configure a fallback device with a filter: %w", op, event.ErrInvalidParameter)
 	}
 
-	// Get the logger
-	logger, err := gsyslog.NewLogger(gsyslog.LOG_INFO, facility, tag)
-	if err != nil {
-		return nil, fmt.Errorf("%s: cannot create logger: %w", op, err)
-	}
-
 	b := &Backend{
 		fallback:   fallback,
-		logger:     logger,
 		name:       conf.MountPath,
 		saltConfig: conf.SaltConfig,
 		saltView:   conf.SaltView,
