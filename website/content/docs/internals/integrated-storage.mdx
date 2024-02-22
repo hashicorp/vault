@@ -140,7 +140,7 @@ will be encrypted by Vault's barrier.
 
 ### Configurable Raft Log Store
 
-By default, Vault uses BoltDB to store raft logs. Starting in 1.16.0, Vault can
+By default, Vault uses BoltDB, via the raft-boltdb library, to store raft logs. Starting in 1.16.0, Vault can
 be configured to use [raft-wal](https://github.com/hashicorp/raft-wal) instead.
 
 When Vault is configured to use BoltDB, the raft logs are stored in a file called
@@ -184,7 +184,9 @@ When using raft-wal, this number can be increased without risking poor performan
 from explosive freelist growth.
 
 Please note that raft-wal is considered experimental in the 1.16.0 release, as
-it has not yet been proven through heavy production use.
+it has not yet been proven through heavy production use. Refer to the
+[raft-wal upgrade guide](/vault/docs/upgrading/raft-wal) for steps on how to enable
+raft-wal.
 
 ### Quorum management
 

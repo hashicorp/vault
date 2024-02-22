@@ -33,18 +33,18 @@ Migrating from raft-boltdb to raft-wal can be done on a node-by-node basis. The 
 1. Monitor this node for a few days to a week or so, depending on how much traffic the node receives.
 1. If all seems well, repeat this process with the other follower nodes.
 1. Migrate the cluster leader last.
-1. If any issues or errors are encountered, roll back upgraded servers by repeating this process but removing the
-   config lines that were added earlier, instead of adding any new lines.
+1. If any issues or errors are encountered, roll back upgraded servers by using the procedure outlined below.
 
 Note that snapshots taken before migration can be restored after migration without issue. Snapshots are completely
 separate from log storage, and restoring one wipes all logs anyway, so there are no compatibility issues here.
 
 ## How to downgrade from raft-wal to raft-boltdb
 
-If, for some reason, it's desired to move nodes back to raft-boltdb after using raft-wal for some time, one can
+If, for some reason, it's desired to move nodes back to raft-boltdb after using raft-wal, one can
 take the following steps for each node that needs to be migrated:
 
 1. Gracefully shut down the Vault process.
+1. Rename the existing Vault storage directory, as outlined above.
 1. Remove the extra lines that were added to Vault's `storage` config in the steps above.
 1. Start the Vault process back up, and let it sync with the cluster leader.
 
