@@ -16,6 +16,9 @@ additional lease creations will be forbidden for all clients until the
 an operator modifies the configured limit, or a lease has been revoked or
 expired.
 
+Lease count quotas guard against [lease
+explosions](/vault/docs/concepts/lease-explosions).
+
 ## Root tokens
 
 It is important to note that lease count quotas do not apply to the root tokens.
@@ -86,27 +89,11 @@ cluster through various
 [metrics](/vault/docs/internals/telemetry/metrics/core-system#quota-metrics)
 and through enabling optional audit logging.
 
-# Lease count quota exceeded
+## Lease count quota exceeded
 
 Vault returns a `429 - Too Many Requests` response if a new lease request
-violates the quota limit.
-
-```
-Error making API request.
-
-URL: PUT https://127.0.0.1:61555/v1/auth/userpass/login/foo
-Code: 429. Errors:
-
-* 1 error occurred:
-	* request path "auth/userpass/login/foo": lease count quota exceeded
-```
-
-To resolve the error:
-
-1. Check for client-side errors that result in excessive lease creation and
-   correct them.
-1. Tune your lease count quota to accommodate any expected increases in lease
-   creation. For example, due to new feature releases or an increase in users.
+violates the quota limit. For more information on this error, refer to [the
+error document](/vault/docs/concepts/lease-count-quota-exceeded).
 
 ## Tutorial
 
