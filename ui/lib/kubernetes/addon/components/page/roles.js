@@ -37,6 +37,8 @@ export default class RolesPageComponent extends Component {
     } catch (error) {
       const message = errorMessage(error, 'Error deleting role. Please try again or contact support');
       this.flashMessages.danger(message);
+    } finally {
+      this.roleToDelete = null;
     }
   }
 }
