@@ -199,7 +199,7 @@ Secrets Sync operates with a last-write-wins strategy. If a secret with the same
 Vault overwrites it when syncing a secret. There are also no automatic mechanisms to prevent a principal with sufficient
 privileges at the destination from overwriting a secret synced by Vault.
 
-To prevent Vault from accidentally overwriting existing secrets, it is recommended to use either the name pattern of
+To prevent Vault from accidentally overwriting existing secrets, it is recommended to use either the name pattern or
 built-in tag as an extra policy condition on the role used to configure a Vault sync destination. For example, the
 following AWS IAM policy prevents Vault from being able to modify secrets that were not created by a sync operation:
 
