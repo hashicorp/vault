@@ -26,6 +26,7 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
 
   @tracked filterValue = '';
+  @tracked libraryToDelete: LdapLibraryModel | null = null;
 
   get mountPoint(): string {
     const owner = getOwner(this) as EngineOwner;

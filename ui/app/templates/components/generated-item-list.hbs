@@ -72,21 +72,36 @@
         <Icon @name="folder" class="has-text-grey-light" />{{list.item.id}}
       </Item.content>
       <Item.menu>
-        <li class="action">
-          <LinkTo @route="vault.cluster.access.method.item.show" @model={{list.item.id}} class="is-block">
-            View
-            {{singularize this.itemType}}
-          </LinkTo>
-        </li>
-        <li class="action">
-          <LinkTo @route="vault.cluster.access.method.item.edit" @model={{list.item.id}} class="is-block">
-            Edit
-            {{singularize this.itemType}}
-          </LinkTo>
-        </li>
-        <ConfirmAction
-          @isInDropdown={{true}}
-          @onConfirmAction={{action
+        <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+          <dd.ToggleIcon
+            @icon="more-horizontal"
+            @text="Overflow options"
+            @hasChevron={{false}}
+            data-test-popup-menu-trigger
+          />
+          <dd.Interactive
+            @text="View {{singularize this.itemType}}"
+            @route="vault.cluster.access.method.item.show"
+            @model={{list.item.id}}
+          />
+          <dd.Interactive
+            @text="Edit {{singularize this.itemType}}"
+            @route="vault.cluster.access.method.item.edit"
+            @model={{list.item.id}}
+          />
+          <dd.Interactive
+            @text="Delete {{singularize this.itemType}}"
+            @color="critical"
+            {{on "click" (fn (mut this.showConfirmModal) true)}}
+          />
+        </Hds::Dropdown>
+      </Item.menu>
+
+      {{#if this.showConfirmModal}}
+        <ConfirmModal
+          @color="critical"
+          @onClose={{fn (mut this.showConfirmModal) false}}
+          @onConfirm={{action
             (perform
               Item.callMethod
               "destroyRecord"
@@ -98,9 +113,8 @@
           }}
           @confirmTitle="Delete {{singularize this.itemType}}?"
           @confirmMessage="Are you sure you want to delete {{singularize this.itemType}} {{list.item.id}}?"
-          @buttonText="Delete {{singularize this.itemType}}"
         />
-      </Item.menu>
+      {{/if}}
     </ListItem>
   {{/if}}
 </ListView>

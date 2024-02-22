@@ -58,22 +58,29 @@
         <Icon @name="folder" class="has-text-grey-light" />{{list.item.id}}
       </Item.content>
       <Item.menu>
-        <li class="action">
-          <LinkTo @route="scope" @model={{list.item.id}} class="is-block">
-            View scope
-          </LinkTo>
-        </li>
-        {{#if list.item.updatePath.isPending}}
-          <li class="action">
-            <LoadingDropdownOption />
-          </li>
-        {{else if list.item.updatePath.canDelete}}
-          <ConfirmAction
-            @isInDropdown={{true}}
-            @buttonText="Delete scope"
+        <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+          <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
+          <dd.Interactive @text="View scope" @route="scope" @model={{list.item.id}} />
+          {{#if list.item.updatePath.isPending}}
+            <dd.Generic>
+              <LoadingDropdownOption />
+            </dd.Generic>
+          {{else if list.item.updatePath.canDelete}}
+            <dd.Interactive
+              @text="Delete scope"
+              @color="critical"
+              {{on "click" (fn (mut this.showConfirmModal) true)}}
+              data-test-confirm-action-trigger
+            />
+          {{/if}}
+        </Hds::Dropdown>
+        {{#if this.showConfirmModal}}
+          <ConfirmModal
+            @color="critical"
             @confirmTitle="Delete scope {{list.item.id}}?"
             @confirmMessage="This will permanently delete this scope and all roles and credentials contained within"
-            @onConfirmAction={{action
+            @onClose={{fn (mut this.showConfirmModal) false}}
+            @onConfirm={{action
               (perform
                 Item.callMethod
                 "destroyRecord"

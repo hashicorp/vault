@@ -176,3 +176,18 @@
     }
   }
 }
+
+// Match HDS styling for namespace ink
+a.ns-dropdown-item {
+  color: var(--token-color-foreground-primary);
+  display: flex;
+  align-items: flex-start;
+  padding: 7px 9px 7px 0px;
+  border: 1px solid transparent;
+  outline-style: solid;
+  outline-color: transparent;
+  text-decoration: none;
+  &:hover {
+    color: var(--token-color-foreground-action-hover);
+  }
+}
