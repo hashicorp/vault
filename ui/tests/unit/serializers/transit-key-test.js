@@ -68,19 +68,15 @@ const AES = {
 
 module('Unit | Serializer | transit-key', function (hooks) {
   setupTest(hooks);
-  test('it expands the timestamp for aes and chacha-poly keys', function (assert) {
+  test('it expands the timestamp for aes and chacha-poly keys', async function (assert) {
     const serializer = this.owner.lookup('serializer:transit-key');
     const aesExpected = AES.data.keys[1] * 1000;
     const chachaExpected = CHACHA.data.keys[1] * 1000;
     const aesData = serializer.normalizeSecrets({ ...AES });
-    assert.strictEqual(aesData.firstObject.keys[1], aesExpected, 'converts seconds to millis for aes keys');
+    assert.strictEqual(aesData[0].keys[1], aesExpected, 'converts seconds to millis for aes keys');
 
     const chachaData = serializer.normalizeSecrets({ ...CHACHA });
-    assert.strictEqual(
-      chachaData.firstObject.keys[1],
-      chachaExpected,
-      'converts seconds to millis for chacha keys'
-    );
+    assert.strictEqual(chachaData[0].keys[1], chachaExpected, 'converts seconds to millis for chacha keys');
   });
 
   test('it includes backend from the payload on the normalized data', function (assert) {

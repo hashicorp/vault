@@ -121,7 +121,7 @@ export default Component.extend(DEFAULTS, {
   },
 
   firstMethod() {
-    const firstMethod = this.methodsToShow.firstObject;
+    const firstMethod = this.methodsToShow[0];
     if (!firstMethod) return;
     // prefer backends with a path over those with a type
     return firstMethod.path || firstMethod.type;

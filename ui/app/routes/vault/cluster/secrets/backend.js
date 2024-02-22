@@ -20,7 +20,7 @@ export default Route.extend({
       })
       .then((model) => {
         if (model) {
-          return model.get('firstObject');
+          return model[0];
         }
       });
   },
