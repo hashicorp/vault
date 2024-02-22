@@ -12,17 +12,23 @@ to connect directly with Vault. This guide walks you through the configuration p
 
 Prerequisites:
 * Ability to read or create KVv2 secrets
-* Ability to create GitHub fine-grained or personal tokens with access to modify repository secrets
+* Ability to create GitHub fine-grained or personal tokens (or a GitHub application) with access to modify repository secrets
 * Ability to create sync destinations and associations on your Vault server
 
 ## Setup
 
-1. To get started with syncing Vault secrets to your GitHub repository, you will need an
+1. To get started with syncing Vault secrets to your GitHub repository, you will need a configured [GitHub application](#github-application) or an
   [access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
   which has access to the repository you want to manage secrets for and write permissions on the repository's actions secrets.
   In the list of GitHub permissions, this is simply called "Secrets". Choosing this will automatically include read-only Metadata.
 
-1. Configure a sync destination with the access token created in the previous step.
+<Warning title="Pitfalls of using an access token">
+  Access tokens are tied to a user account and can be revoked at any time, causing disruptions to the sync process.
+  GitHub applications are long-lived and do not expire. Using a GitHub application for authentication is preferred over using a personal access token.
+</Warning>
+
+
+If you decide to go with an access token, here's how you can configure a sync destination:
 
   ```shell-session
   $ vault write sys/sync/destinations/gh/my-dest \
@@ -148,6 +154,80 @@ unintended disclosure of secrets in any GitHub Action outputs. The following sni
   ```
 
 If the GitHub destination uses the default `secret-key` granularity, the values are masked by GitHub automatically.
+
+## GitHub application
+
+Instead of authenticating with a personal access token, you can choose to
+authenticate with a
+[custom GitHub application](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app).
+
+Start by following the GitHub instructions for
+[installing a GitHub app](https://docs.github.com/en/apps/using-github-apps/installing-your-own-github-app).
+to install your GitHub application on a specified repository and note the
+assigned installation ID.
+
+<Tip title="Your installation ID is in the app URL">
+
+  You can find your assigned installation ID in the URL path parameter:
+  `https://github.com/settings/installations/<INSTALLATION_ID>`
+
+</Tip>
+
+Then add your GitHub application to your Vault instance.
+
+To use your GitHub application with Vault:
+
+- the application must have permission to read and write secrets.
+- you must generate a private key for the application on GitHub.
+- the application must be installed on the repository you want to sync secrets with.
+- you must know the application ID assigned by GitHub.
+- you must know the installation ID assigned by GitHub.
+
+Callback, redirect URLs, and webhooks are not required at this time.
+
+To configure the application in Vault, use `vault write` with the
+`sys/sync/github-apps` endpoint to assign a unique name and set the relevant
+information:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault write sys/sync/github-apps/<APP_NAME> \
+  app_id=<APP_ID> \
+  private_key=<PATH_TO_PRIVATE_KEY>
+
+Key            Value
+---            -----
+app_id         <app-id>
+fingerprint    <fingerprint>
+name           <app-name>
+private_key    *****
+```
+</CodeBlockConfig>
+
+
+Next, use `vault write` with the `sys/sync/destinations/gh` endpoint to
+configure a GitHub destination that references your new GitHub application:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault write sys/sync/destinations/gh/<DESTINATION_NAME> \
+installation_id=<INSTALLATION_ID>                         \
+repository_owner=<GITHUB_USER>                            \
+repository_name=<MY_REPO_NAME>                            \
+app_name=<APP_NAME>
+
+Key                   Value
+---                   -----
+connection_details    map[app_config:map[app_name:<app-name>] installation_id:<installation-id> repository_name:<repo-name> repository_owner:<repo-owner>]
+name                  my-dest
+options               map[custom_tags:map[] granularity_level:secret-key secret_name_template:VAULT_{{ .MountAccessor | uppercase }}_{{ .SecretPath | uppercase }}_{{ .SecretKey | uppercase }}]
+type                  gh
+```
+</CodeBlockConfig>
+
+You can now [use your GitHub application to sync secrets with your GitHub repository](#usage).
 
 ## API
 
