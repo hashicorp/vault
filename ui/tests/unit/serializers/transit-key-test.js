@@ -82,10 +82,6 @@ module('Unit | Serializer | transit-key', function (hooks) {
   test('it includes backend from the payload on the normalized data', function (assert) {
     const serializer = this.owner.lookup('serializer:transit-key');
     const data = serializer.normalizeSecrets({ ...AES });
-    assert.strictEqual(
-      data.firstObject.backend,
-      'its-a-transit',
-      'pulls backend from the payload onto the data'
-    );
+    assert.strictEqual(data[0].backend, 'its-a-transit', 'pulls backend from the payload onto the data');
   });
 });

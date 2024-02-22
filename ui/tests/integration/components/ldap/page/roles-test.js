@@ -98,7 +98,7 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
     assert.dom('[data-test-role="static-test"]').hasText(this.roles[0].name, 'List item name renders');
     assert
       .dom('[data-test-role-type-badge="static-test"]')
-      .hasText(this.roles.firstObject.type, 'List item type badge renders');
+      .hasText(this.roles[0].type, 'List item type badge renders');
 
     await click('[data-test-popup-menu-trigger]');
     assert.dom('[data-test-edit]').hasText('Edit', 'Edit link renders in menu');
