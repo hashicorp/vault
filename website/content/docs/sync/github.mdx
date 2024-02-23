@@ -205,6 +205,15 @@ private_key    *****
 ```
 </CodeBlockConfig>
 
+<Tip title="Fingerprint verification">
+
+Vault returns the fingerprint of the private_key provided to ensure that the
+correct private key was configured and that it was not tampered with along the way.
+You can compare the fingerprint to the one provided by GitHub.
+For more information, see [Verifying private keys](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/managing-private-keys-for-github-apps#verifying-private-keys).
+
+</Tip>
+
 
 Next, use `vault write` with the `sys/sync/destinations/gh` endpoint to
 configure a GitHub destination that references your new GitHub application:
