@@ -7,7 +7,13 @@ description: >-
 
 # Enable the encrypted Vault client cache
 
-The Vault Secrets Operator supports storing and encrypting its Vault client cache using Vault Server's [transit secrets engine](/vault/docs/secrets/transit). By default client cache storage is not enabled, since it requires extra Vault Server setup, but enabling encrypted client cache storage is recommended especially when using [VaultDynamicSecrets](/vault/docs/platform/k8s/vso/api-reference#vaultdynamicsecret).
+The Vault Secrets Operator supports storing and encrypting its Vault client cache using Vault Server's [transit secrets engine](/vault/docs/secrets/transit). By default client cache storage is not enabled, since it requires extra Vault Server setup, but this guide will walk you through the steps to enable and configure it.
+
+<Highlight>
+
+Enabling encrypted client cache storage is recommended especially when using [VaultDynamicSecrets](/vault/docs/platform/k8s/vso/api-reference#vaultdynamicsecret).
+
+</Highlight>
 
 ## Step 1: Configure transit
 
@@ -91,7 +97,9 @@ vault write auth/kubernetes/config kubernetes_host=https://kubernetes.default.sv
 vault write auth/kubernetes/role/operator \
   bound_service_account_names=vault-secrets-operator-controller-manager \
   bound_service_account_namespaces=vault-secrets-operator \
-  token_period="24h" token_policies=operator audience="vault"
+  token_period="24h" \
+  token_policies=operator \
+  audience="vault"
 ```
 
 </CodeBlockConfig>
@@ -105,9 +113,9 @@ vault write auth/kubernetes/role/operator \
 }
 
 resource "vault_kubernetes_auth_backend_config" "local" {
-  namespace              = vault_auth_backend.kubernetes.namespace
-  backend                = vault_auth_backend.kubernetes.path
-  kubernetes_host        = "https://kubernetes.default.svc"
+  namespace       = vault_auth_backend.kubernetes.namespace
+  backend         = vault_auth_backend.kubernetes.path
+  kubernetes_host = "https://kubernetes.default.svc"
 }
 
 resource "vault_kubernetes_auth_backend_role" "operator" {
@@ -200,7 +208,7 @@ For [OpenShift OperatorHub](/vault/docs/platform/k8s/vso/openshift#operatorhub) 
   Using the OpenShift web console:
     - Navigate to Operators -> Installed Operators
     - Select the "Vault Secrets Operator"
-    - Edit subscription in the top right action menu
+    - "Edit Subscription" in the top right action menu
 
   Using the OpenShift CLI:
 
@@ -221,3 +229,38 @@ For [OpenShift OperatorHub](/vault/docs/platform/k8s/vso/openshift#operatorhub) 
   ```
 
   The pod in the operator deployment will be restarted once the new environment variable is applied.
+
+## Step 6: Verify the client cache storage is enabled
+
+On startup, the operator should log the following:
+
+<CodeBlockConfig hideClipboard>
+
+```json
+Starting manager    {"clientCachePersistenceModel": "direct-encrypted",
+    "clientCacheSize": 10000}
+```
+
+</CodeBlockConfig>
+
+When authenticating to Vault on behalf of a user, the operator should log a "Setting up Vault Client for storage encryption" message:
+
+<CodeBlockConfig hideClipboard>
+
+```json
+{"level":"info","ts":"2024-02-22T00:41:46Z","logger":"clientCacheFactory",
+ "msg":"Setting up Vault Client for storage encryption","persist":true,
+ "enforceEncryption":true,"cacheKey":"kubernetes-59ebf88ccb963a22226bad"}
+```
+
+</CodeBlockConfig>
+
+The encrypted cache is stored as Kubernetes secrets in the operator's namespace, named with the prefix `vso-cc-<auth method>`. For example:
+
+```shell-session
+$ kubectl get secrets -n vault-secrets-operator
+...
+NAME                                       TYPE     DATA   AGE
+vso-cc-kubernetes-0147431c618992b6adfed1   Opaque   2      73s
+...
+```
