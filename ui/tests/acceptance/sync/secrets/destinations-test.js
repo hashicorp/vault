@@ -11,6 +11,9 @@ import syncHandlers from 'vault/mirage/handlers/sync';
 import authPage from 'vault/tests/pages/auth';
 import { click, visit, fillIn, currentURL, currentRouteName } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
+import { syncDestinations } from 'vault/helpers/sync-destinations';
+
+const SYNC_DESTINATIONS = syncDestinations();
 
 // sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
 module('Acceptance | sync | destinations', function (hooks) {
@@ -42,6 +45,24 @@ module('Acceptance | sync | destinations', function (hooks) {
       'Toolbar action navigates to destinations create view'
     );
   });
+
+  for (const destination of SYNC_DESTINATIONS) {
+    const { type, defaultValues } = destination;
+    test(`it should render default values for destination: ${type}`, async function (assert) {
+      // remove destinations from mirage so cta shows when 404 is returned
+      this.server.db.syncDestinations.remove();
+
+      await click(ts.navLink('Secrets Sync'));
+      await click(ts.cta.button);
+      await click(ts.selectType(type));
+
+      // check default values
+      const attr = 'granularity';
+      assert
+        .dom(`${ts.inputByAttr(attr)} input#${defaultValues[attr]}`)
+        .isChecked(`${defaultValues[attr]} is checked`);
+    });
+  }
 
   test('it should filter destinations list', async function (assert) {
     await visit('vault/sync/secrets/destinations');

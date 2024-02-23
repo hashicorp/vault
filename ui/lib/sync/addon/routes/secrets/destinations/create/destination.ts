@@ -5,11 +5,13 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { findDestination } from 'core/helpers/sync-destinations';
 
 import type StoreService from 'vault/services/store';
+import type { SyncDestinationType } from 'vault/vault/helpers/sync-destinations';
 
 interface Params {
-  type: string;
+  type: SyncDestinationType;
 }
 
 export default class SyncSecretsDestinationsCreateDestinationRoute extends Route {
@@ -17,6 +19,7 @@ export default class SyncSecretsDestinationsCreateDestinationRoute extends Route
 
   model(params: Params) {
     const { type } = params;
-    return this.store.createRecord(`sync/destinations/${type}`, { type });
+    const defaultValues = findDestination(type)?.defaultValues;
+    return this.store.createRecord(`sync/destinations/${type}`, { type, ...defaultValues });
   }
 }

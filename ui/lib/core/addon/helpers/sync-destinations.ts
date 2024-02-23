@@ -8,8 +8,7 @@ import { helper as buildHelper } from '@ember/component/helper';
 import type { SyncDestination, SyncDestinationType } from 'vault/vault/helpers/sync-destinations';
 
 /* 
-This helper is referenced in the base sync destination model
-to return static display attributes that rely on type
+This helper is referenced in the base sync destination model and elsewhere to set attributes that rely on type
 maskedParams: attributes for sensitive data, the API returns these values as '*****'
 */
 
@@ -20,6 +19,9 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     icon: 'aws-color',
     category: 'cloud',
     maskedParams: ['accessKeyId', 'secretAccessKey'],
+    defaultValues: {
+      granularity: 'secret-path',
+    },
   },
   {
     name: 'Azure Key Vault',
@@ -27,6 +29,9 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     icon: 'azure-color',
     category: 'cloud',
     maskedParams: ['clientSecret'],
+    defaultValues: {
+      granularity: 'secret-path',
+    },
   },
   {
     name: 'Google Secret Manager',
@@ -34,6 +39,9 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     icon: 'gcp-color',
     category: 'cloud',
     maskedParams: ['credentials'],
+    defaultValues: {
+      granularity: 'secret-path',
+    },
   },
   {
     name: 'Github Actions',
@@ -41,6 +49,9 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     icon: 'github-color',
     category: 'dev-tools',
     maskedParams: ['accessToken'],
+    defaultValues: {
+      granularity: 'secret-key',
+    },
   },
   {
     name: 'Vercel Project',
@@ -48,6 +59,9 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     icon: 'vercel-color',
     category: 'dev-tools',
     maskedParams: ['accessToken'],
+    defaultValues: {
+      granularity: 'secret-key',
+    },
   },
 ];
 
