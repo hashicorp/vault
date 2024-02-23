@@ -40,8 +40,8 @@ Use custom banners and modals in the Vault UI to share system-wide alerts for al
 
 ## Add a custom message
 
-1. Navigate to the **Settings** section in the Vault UI sidebar and select "Custom
-   Messages".
+1. Navigate to the **Settings** section in the Vault UI sidebar and select **Custom
+   Messages**.
 
 1. On the **Custom messages** page, select whether you want the message
    to appear on the Vault UI login page or after a user logs in.
@@ -63,6 +63,51 @@ Use custom banners and modals in the Vault UI to share system-wide alerts for al
 1. Click **Preview** to see how your message will appear to users.
 
 1. Click **Create message** to save your new message.
+
+### Namespaces consideration
+
+When you are running Vault Enterprise or [HCP Vault](/hcp/docs/vault) clusters,
+the custom messages created on a [namespace](/vault/docs/enterprise/namespaces)
+are inherited by its child namespaces. 
+
+For example, your cluster has the following namespace hierarchy. 
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+─ admin
+    ├── finance
+    └── marketing
+        ├── digital-marketing
+        └── events
+```
+
+</CodeBlockConfig>
+
+Custom messages created on the `admin` namespace apply to all child namespaces:
+`fiance`, `marketing`, `marketing/digital-marketing` and `marketing/events`.
+
+To create a custom message intended to the marketing team but not for `finance`,
+you must log into the `marketing` namespace to create a message.
+
+1. On the Vault UI login page, enter `marketing` in the **Namespace** text
+   field, and select an authentication method to log in. 
+
+1. Select **Custom Messages**.
+
+1. Select the **+ Create message** button in the toolbar to open  and fill out
+   the **Create message** form.
+
+   ![Custom message](/img/ui-custom-msg.png)
+
+1. Click **Preview** to see how your message will appear to users.
+
+1. Click **Create message** to save your new message.
+
+The message banner will only appear when a user logged into the `marketing`
+namespace and its child namespaces. To verify, log into the `admin` or `finance`
+namespace to make sure that the banner does not show.
+
 
 ## Edit a custom message
 
