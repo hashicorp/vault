@@ -37,37 +37,30 @@
   <ToolbarActions>
     <ToolbarLink
       @route="vault.cluster.access.method.item.create"
-      @model={{this.itemType}}
+      @model={{@itemType}}
       @type="add"
-      data-test-entity-create-link={{this.itemType}}
+      data-test-entity-create-link={{@itemType}}
     >
       Create
-      {{singularize this.itemType}}
+      {{singularize @itemType}}
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
-<ListView
-  @items={{this.model}}
-  @itemNoun={{this.itemType}}
-  @paginationRouteName="vault.cluster.access.method.item.list"
-  as |list|
->
+<ListView @items={{@model}} @itemNoun={{@itemType}} @paginationRouteName="vault.cluster.access.method.item.list" as |list|>
   {{#if list.empty}}
     <list.empty
-      @title="No {{pluralize this.itemType}} yet"
-      @message="A list of {{pluralize
-        this.itemType
-      }} will be listed here. Create your first {{this.itemType}} to get started."
+      @title="No {{pluralize @itemType}} yet"
+      @message="A list of {{pluralize @itemType}} will be listed here. Create your first {{@itemType}} to get started."
     >
       <Hds::Link::Standalone
         @icon="plus"
-        @text="Create {{singularize this.itemType}}"
+        @text="Create {{singularize @itemType}}"
         @route="vault.cluster.access.method.item.create"
-        @model={{this.itemType}}
+        @model={{@itemType}}
       />
     </list.empty>
   {{else if list.item}}
-    <ListItem @linkParams={{array "vault.cluster.access.method.item.show" this.itemType list.item.id}} as |Item|>
+    <ListItem @linkParams={{array "vault.cluster.access.method.item.show" @itemType list.item.id}} as |Item|>
       <Item.content>
         <Icon @name="folder" class="has-text-grey-light" />{{list.item.id}}
       </Item.content>
@@ -80,39 +73,38 @@
             data-test-popup-menu-trigger
           />
           <dd.Interactive
-            @text="View {{singularize this.itemType}}"
+            @text="View {{singularize @itemType}}"
             @route="vault.cluster.access.method.item.show"
             @model={{list.item.id}}
           />
           <dd.Interactive
-            @text="Edit {{singularize this.itemType}}"
+            @text="Edit {{singularize @itemType}}"
             @route="vault.cluster.access.method.item.edit"
             @model={{list.item.id}}
           />
           <dd.Interactive
-            @text="Delete {{singularize this.itemType}}"
+            @text="Delete {{singularize @itemType}}"
             @color="critical"
-            {{on "click" (fn (mut this.showConfirmModal) true)}}
+            {{on "click" (fn (mut this.itemToDelete) list.item)}}
           />
         </Hds::Dropdown>
       </Item.menu>
-
-      {{#if this.showConfirmModal}}
+      {{#if (eq list.item this.itemToDelete)}}
         <ConfirmModal
           @color="critical"
-          @onClose={{fn (mut this.showConfirmModal) false}}
+          @onClose={{fn (mut this.itemToDelete) null}}
           @onConfirm={{action
             (perform
               Item.callMethod
               "destroyRecord"
-              list.item
-              (concat "Successfully deleted " (singularize this.itemType) " " list.item.id ".")
-              (concat "There was an error deleting this " (singularize this.itemType))
+              this.itemToDelete
+              (concat "Successfully deleted " (singularize @itemType) " " this.itemToDelete.id ".")
+              (concat "There was an error deleting this " (singularize @itemType))
               (action "refreshItemList")
             )
           }}
-          @confirmTitle="Delete {{singularize this.itemType}}?"
-          @confirmMessage="Are you sure you want to delete {{singularize this.itemType}} {{list.item.id}}?"
+          @confirmTitle="Delete {{singularize @itemType}}?"
+          @confirmMessage="Are you sure you want to delete {{singularize @itemType}} {{this.itemToDelete.id}}?"
         />
       {{/if}}
     </ListItem>
