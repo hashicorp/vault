@@ -1315,7 +1315,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Apply any enterprise configuration onto the coreConfig.
-	entAdjustCoreConfig(config, &coreConfig, info, &infoKeys)
+	entAdjustCoreConfig(config, &coreConfig, &info, &infoKeys)
 
 	if !entCheckStorageType(&coreConfig) {
 		c.UI.Warn("")

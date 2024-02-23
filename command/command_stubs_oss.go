@@ -21,7 +21,7 @@ func entEnableFourClusterDev(c *ServerCommand, base *vault.CoreConfig, info map[
 	return 1
 }
 
-func entAdjustCoreConfig(config *server.Config, coreConfig *vault.CoreConfig) {
+func entAdjustCoreConfig(config *server.Config, coreConfig *vault.CoreConfig, info *map[string]string, infoKeys *[]string) {
 }
 
 func entCheckStorageType(coreConfig *vault.CoreConfig) bool {
