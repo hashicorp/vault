@@ -13,8 +13,11 @@ export default Factory.extend({
     access_key_id: '*****',
     secret_access_key: '*****',
     region: 'us-west-1',
+    role_arn: 'test-role',
+    external_id: 'id12345',
     // options
-    secret_name_template: 'vault-{{ .MountAccessor | replace "_" "-" }}-{{ .SecretPath }}',
+    granularity: 'secret-path', // default option (same for all destinations) so edit test can update to 'secret-key'
+    secret_name_template: 'vault-{{ .MountAccessor }}-{{ .SecretPath }}',
     custom_tags: { foo: 'bar' },
   }),
   ['azure-kv']: trait({
@@ -28,16 +31,19 @@ export default Factory.extend({
     client_secret: '*****',
     cloud: 'Azure Public Cloud',
     // options
-    secret_name_template: 'vault-{{ .MountAccessor | replace "_" "-" }}-{{ .SecretPath }}',
+    granularity: 'secret-path',
+    secret_name_template: 'vault-{{ .MountAccessor }}-{{ .SecretPath }}',
     custom_tags: { foo: 'bar' },
   }),
   ['gcp-sm']: trait({
     type: 'gcp-sm',
     name: 'destination-gcp',
+    project_id: 'id12345',
     // connection_details
     credentials: '*****',
     // options
-    secret_name_template: 'vault-{{ .MountAccessor | replace "_" "-" }}-{{ .SecretPath }}',
+    granularity: 'secret-path',
+    secret_name_template: 'vault-{{ .MountAccessor }}-{{ .SecretPath }}',
     custom_tags: { foo: 'bar' },
   }),
   gh: trait({
@@ -48,7 +54,8 @@ export default Factory.extend({
     repository_owner: 'my-organization-or-username',
     repository_name: 'my-repository',
     // options
-    secret_name_template: 'vault-{{ .MountAccessor | replace "_" "-" }}-{{ .SecretPath }}',
+    granularity: 'secret-path',
+    secret_name_template: 'vault-{{ .MountAccessor }}-{{ .SecretPath }}',
   }),
   ['vercel-project']: trait({
     type: 'vercel-project',
@@ -59,6 +66,6 @@ export default Factory.extend({
     team_id: 'team_12345',
     deployment_environments: ['development', 'preview'], // 'production' is also an option, but left out for testing to assert form changes value
     // options
-    secret_name_template: 'vault-{{ .MountAccessor | replace "_" "-" }}-{{ .SecretPath }}',
+    secret_name_template: 'vault-{{ .MountAccessor }}-{{ .SecretPath }}',
   }),
 });
