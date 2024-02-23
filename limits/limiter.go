@@ -7,9 +7,10 @@ package limits
 
 import (
 	"context"
+	"errors"
 )
 
-var ErrCapacity error
+var ErrCapacity = errors.New("Vault server temporarily overloaded")
 
 type RequestLimiter struct{}
 
