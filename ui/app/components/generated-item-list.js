@@ -27,14 +27,7 @@ import { tracked } from '@glimmer/tracking';
 export default class GeneratedItemList extends Component {
   @service router;
   @service store;
-  @tracked showConfirmModal = false;
-
-  get model() {
-    return this.args.model || null;
-  }
-  get itemType() {
-    return this.args.itemType || null;
-  }
+  @tracked itemToDelete = null;
 
   @action
   refreshItemList() {

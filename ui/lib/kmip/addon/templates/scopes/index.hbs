@@ -69,24 +69,24 @@
             <dd.Interactive
               @text="Delete scope"
               @color="critical"
-              {{on "click" (fn (mut this.showConfirmModal) true)}}
+              {{on "click" (fn (mut this.scopeToDelete) list.item)}}
               data-test-confirm-action-trigger
             />
           {{/if}}
         </Hds::Dropdown>
-        {{#if this.showConfirmModal}}
+        {{#if (eq this.scopeToDelete list.item)}}
           <ConfirmModal
             @color="critical"
-            @confirmTitle="Delete scope {{list.item.id}}?"
+            @confirmTitle="Delete scope {{this.scopeToDelete.id}}?"
             @confirmMessage="This will permanently delete this scope and all roles and credentials contained within"
-            @onClose={{fn (mut this.showConfirmModal) false}}
+            @onClose={{fn (mut this.scopeToDelete) null}}
             @onConfirm={{action
               (perform
                 Item.callMethod
                 "destroyRecord"
-                list.item
-                (concat "Successfully deleted scope " list.item.id)
-                (concat "There was an error deleting the scope " list.item.id)
+                this.scopeToDelete
+                (concat "Successfully deleted scope " this.scopeToDelete.id)
+                (concat "There was an error deleting the scope " this.scopeToDelete.id)
                 (action "refresh")
               )
             }}
