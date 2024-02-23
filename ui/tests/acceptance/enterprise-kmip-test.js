@@ -169,7 +169,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
   });
 
   test('it can create a scope', async function (assert) {
-    const path = await mount(this);
+    const path = await mount();
     await scopesPage.visit({ backend: path });
     await settled();
     await scopesPage.createLink();
@@ -210,7 +210,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
 
   test('it can create a role', async function (assert) {
     // moving create scope here to help with flaky test
-    const path = await mount(this);
+    const path = await mount();
     await settled();
     const scope = `scope-for-can-create-role`;
     await settled();
