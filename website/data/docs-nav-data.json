@@ -298,12 +298,22 @@
       },
       {
         "title": "Request Limiter",
-        "path": "concepts/request-limiter",
         "badge": {
-          "text": "BETA",
+          "text": "ENTERPRISE",
           "type": "outlined",
-          "color": "highlight"
-        }
+          "color": "neutral"
+        },
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "concepts/request-limiter",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            }
+          }
+        ]
       }
     ]
   },
