@@ -25,7 +25,7 @@ export default class SyncDestinationModel extends Model {
 
   @attr('string', {
     subText:
-      'Go-template string that indicates how to format the secret name at the destination. The default template varies by destination type but is generally in the form of "vault-<accessor_id>-<secret_path>" e.g. "vault-kv-1234-my-secret-1".',
+      'Go-template string that indicates how to format the secret name at the destination. The default template varies by destination type but is generally in the form of "vault-{{ .MountAccessor }}-{{ .SecretPath }}" e.g. "vault-kv_9a8f68ad-my-secret-1". Optional.',
   })
   secretNameTemplate;
 
