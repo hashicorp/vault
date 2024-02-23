@@ -42,9 +42,18 @@ export default class SyncDestinationModel extends Model {
         value: 'secret-key',
       },
     ],
-    defaultValue: 'secret-path',
+    fieldValue: 'defaultGranularity', // get/set granularity because default depends on type
   })
   granularity;
+
+  get defaultGranularity() {
+    if (this.granularity) return this.granularity;
+    return ['gh', 'vercel-project'].includes(this?.type) ? 'secret-key' : 'secret-path';
+  }
+
+  set defaultGranularity(value) {
+    this.granularity = value;
+  }
 
   // only present if delete action has been initiated
   @attr('string') purgeInitiatedAt;
