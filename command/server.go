@@ -1315,7 +1315,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Apply any enterprise configuration onto the coreConfig.
-	entAdjustCoreConfig(config, &coreConfig)
+	entAdjustCoreConfig(config, &coreConfig, info, &infoKeys)
 
 	if !entCheckStorageType(&coreConfig) {
 		c.UI.Warn("")
@@ -1439,12 +1439,6 @@ func (c *ServerCommand) Run(args []string) int {
 
 	infoKeys = append(infoKeys, "administrative namespace")
 	info["administrative namespace"] = config.AdministrativeNamespacePath
-
-	infoKeys = append(infoKeys, "request limiter")
-	info["request limiter"] = "disabled"
-	if config.RequestLimiter != nil && !config.RequestLimiter.Disable {
-		info["request limiter"] = "enabled"
-	}
 
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
@@ -3116,12 +3110,6 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		DisableSSCTokens:               config.DisableSSCTokens,
 		Experiments:                    config.Experiments,
 		AdministrativeNamespacePath:    config.AdministrativeNamespacePath,
-	}
-
-	if config.RequestLimiter != nil {
-		coreConfig.DisableRequestLimiter = config.RequestLimiter.Disable
-	} else {
-		coreConfig.DisableRequestLimiter = true
 	}
 
 	if c.flagDev {

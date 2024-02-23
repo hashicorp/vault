@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -213,3 +214,9 @@ func DiagnoseCheckLicense(ctx context.Context, vaultCore *Core, coreConfig CoreC
 func createCustomMessageManager(storage logical.Storage, _ *Core) CustomMessagesManager {
 	return uicustommessages.NewManager(storage)
 }
+
+func (c *Core) GetRequestLimiter(key string) *limits.RequestLimiter {
+	return nil
+}
+
+func (c *Core) ReloadRequestLimiter() {}

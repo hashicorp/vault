@@ -613,7 +613,6 @@ func testLoadConfigFile_json(t *testing.T) {
 					Type:                  "tcp",
 					Address:               "127.0.0.1:443",
 					CustomResponseHeaders: DefaultCustomHeaders,
-					DisableRequestLimiter: false,
 				},
 			},
 
@@ -894,7 +893,6 @@ listener "tcp" {
   redact_addresses = true
   redact_cluster_name = true
   redact_version = true
-  disable_request_limiter = true
 }
 listener "unix" {
   address = "/var/run/vault.sock"
@@ -957,7 +955,6 @@ listener "unix" {
 					RedactAddresses:       true,
 					RedactClusterName:     true,
 					RedactVersion:         true,
-					DisableRequestLimiter: true,
 				},
 				{
 					Type:              "unix",
