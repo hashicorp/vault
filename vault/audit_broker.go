@@ -218,9 +218,11 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput) (ret
 
 	defer metrics.MeasureSince([]string{"audit", "log_request"}, time.Now())
 	defer func() {
+		metricVal := float32(0.0)
 		if ret != nil {
-			metrics.IncrCounter([]string{"audit", "log_request_failure"}, 1.0)
+			metricVal = 1.0
 		}
+		metrics.IncrCounter([]string{"audit", "log_request_failure"}, metricVal)
 	}()
 
 	var retErr *multierror.Error
@@ -284,9 +286,11 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput) (re
 
 	defer metrics.MeasureSince([]string{"audit", "log_response"}, time.Now())
 	defer func() {
+		metricVal := float32(0.0)
 		if ret != nil {
-			metrics.IncrCounter([]string{"audit", "log_response_failure"}, 1.0)
+			metricVal = 1.0
 		}
+		metrics.IncrCounter([]string{"audit", "log_response_failure"}, metricVal)
 	}()
 
 	var retErr *multierror.Error
