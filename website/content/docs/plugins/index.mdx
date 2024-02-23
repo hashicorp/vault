@@ -57,12 +57,19 @@ registering an external plugin. Multiple versions of a plugin can be registered
 in the catalog simultaneously, and a version can be selected when mounting a
 plugin or tuning an existing mount in-place.
 
+Alternatively, users can select pinned versions to enforce uniform cluster-wide
+version selection. When a pinned version is in effect, versions can not be
+specified in mount config, and existing mounts that specify a version will
+ignore the locally configured version. See the
+[pinned versions](/vault/api-docs/system/plugins-pins) API for more details.
+
 If no version is specified when creating a new mount, the following precedence is used
 for any available plugins whose type and name match:
 
-* The plugin registered with no version
-* The plugin with the most recent semantic version among any registered versions
-* The plugin built into Vault
+* The pinned version of the plugin, if any exists.
+* The plugin registered with no version.
+* The plugin with the most recent semantic version among any registered versions.
+* The plugin built into Vault.
 
 ### Built-In versions
 
