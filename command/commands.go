@@ -54,7 +54,6 @@ import (
 	physSwift "github.com/hashicorp/vault/physical/swift"
 	physZooKeeper "github.com/hashicorp/vault/physical/zookeeper"
 	"github.com/hashicorp/vault/plugins/event"
-	"github.com/hashicorp/vault/plugins/event/sqs"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	physFile "github.com/hashicorp/vault/sdk/physical/file"
@@ -176,9 +175,7 @@ var (
 		"plugin": plugin.Factory,
 	}
 
-	eventBackends = map[string]event.Factory{
-		"sqs": sqs.New,
-	}
+	eventBackends = map[string]event.Factory{}
 
 	logicalBackends = map[string]logical.Factory{
 		"plugin":   plugin.Factory,

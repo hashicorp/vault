@@ -40,7 +40,12 @@
                 class="has-left-margin-xs has-text-black is-size-7"
                 data-test-radio-label={{or val.label val.value val}}
               >
-                <span>{{or val.label val.value val}}</span>
+                {{or val.label val.value val}}
+                {{#if val.helpText}}
+                  <Hds::TooltipButton @text={{val.helpText}} aria-label="More information">
+                    <FlightIcon @name="info" />
+                  </Hds::TooltipButton>
+                {{/if}}
                 {{#if this.hasRadioSubText}}
                   <p class="has-left-margin-xs has-text-grey is-size-8" data-test-radio-subText={{val.subText}}>
                     {{val.subText}}

@@ -133,7 +133,7 @@ func (dc *DockerCluster) SetRecoveryKeys(keys [][]byte) {
 }
 
 func (dc *DockerCluster) GetCACertPEMFile() string {
-	return dc.CACertPEMFile
+	return testcluster.DefaultCAFile
 }
 
 func (dc *DockerCluster) Cleanup() {
