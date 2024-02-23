@@ -327,7 +327,7 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 	}
 }
 
-// Batch rewrap leveraging RSA padding schemes
+// TestTransit_BatchRewrapCase4 batch rewrap leveraging RSA padding schemes
 func TestTransit_BatchRewrapCase4(t *testing.T) {
 	var resp *logical.Response
 	var err error
