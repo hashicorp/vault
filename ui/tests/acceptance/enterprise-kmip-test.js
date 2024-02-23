@@ -13,7 +13,6 @@ import rolesPage from 'vault/tests/pages/secrets/backend/kmip/roles';
 import credentialsPage from 'vault/tests/pages/secrets/backend/kmip/credentials';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { runCmd } from 'vault/tests/helpers/commands';
 
 const getRandomPort = () => {
@@ -316,12 +315,6 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
   });
 
   test('it can revoke a credential from the list', async function (assert) {
-    // Popup menu causes flakiness
-    setRunOptions({
-      rules: {
-        'color-contrast': { enabled: false },
-      },
-    });
     const { path, scope, role } = await generateCreds();
     await credentialsPage.visit({ backend: path, scope, role });
     // revoke the credentials
