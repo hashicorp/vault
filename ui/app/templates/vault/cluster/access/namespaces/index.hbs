@@ -46,18 +46,18 @@
                 </dd.Generic>
               {{/if}}
             {{/let}}
-            <dd.Interactive @text="Delete" @color="critical" {{on "click" (fn (mut this.showConfirmModal) true)}} />
+            <dd.Interactive @text="Delete" @color="critical" {{on "click" (fn (mut this.nsToDelete) list.item)}} />
           </Hds::Dropdown>
-          {{#if this.showConfirmModal}}
+          {{#if (eq this.nsToDelete list.item)}}
             <ConfirmModal
               @color="critical"
-              @onClose={{fn (mut this.showConfirmModal) false}}
+              @onClose={{fn (mut this.nsToDelete) null}}
               @onConfirm={{action
                 (perform
                   Item.callMethod
                   "destroyRecord"
-                  list.item
-                  (concat "Successfully deleted namespace: " list.item.id)
+                  this.nsToDelete
+                  (concat "Successfully deleted namespace: " this.nsToDelete.id)
                   "There was an error deleting this namespace: "
                   (action "refreshNamespaceList")
                 )

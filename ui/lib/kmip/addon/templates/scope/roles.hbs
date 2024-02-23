@@ -85,27 +85,27 @@
               <dd.Interactive
                 @text="Delete role"
                 @color="critical"
-                {{on "click" (fn (mut this.showConfirmModal) true)}}
+                {{on "click" (fn (mut this.roleToDelete) list.item)}}
                 data-test-confirm-action-trigger
               />
             {{/if}}
           {{/if}}
         </Hds::Dropdown>
-        {{#if this.showConfirmModal}}
+        {{#if (eq this.roleToDelete list.item)}}
           <ConfirmModal
             @color="critical"
-            @confirmMessage="Are you sure you want to delete {{list.item.id}}?"
+            @confirmMessage="Are you sure you want to delete {{this.roleToDelete.id}}?"
             @onConfirm={{action
               (perform
                 Item.callMethod
                 "destroyRecord"
-                list.item
-                (concat "Successfully deleted role " list.item.id)
-                (concat "There was an error deleting the role " list.item.id)
+                this.roleToDelete
+                (concat "Successfully deleted role " this.roleToDelete.id)
+                (concat "There was an error deleting the role " this.roleToDelete.id)
                 (action "refresh")
               )
             }}
-            @onClose={{fn (mut this.showConfirmModal) false}}
+            @onClose={{fn (mut this.roleToDelete) null}}
           />
         {{/if}}
       </Item.menu>
