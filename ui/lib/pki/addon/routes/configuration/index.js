@@ -16,7 +16,7 @@ export default class ConfigurationIndexRoute extends Route {
   async fetchMountConfig(backend) {
     const mountConfig = await this.store.query('secret-engine', { path: backend });
     if (mountConfig) {
-      return mountConfig.get('firstObject');
+      return mountConfig[0];
     }
   }
 

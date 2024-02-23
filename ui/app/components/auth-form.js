@@ -121,7 +121,7 @@ export default Component.extend(DEFAULTS, {
   },
 
   firstMethod() {
-    const firstMethod = this.methodsToShow.firstObject;
+    const firstMethod = this.methodsToShow[0];
     if (!firstMethod) return;
     // prefer backends with a path over those with a type
     return firstMethod.path || firstMethod.type;
@@ -166,7 +166,7 @@ export default Component.extend(DEFAULTS, {
     return templateName;
   }),
 
-  hasCSPError: alias('csp.connectionViolations.firstObject'),
+  hasCSPError: alias('csp.connectionViolations'),
 
   cspErrorText: `This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`,
 

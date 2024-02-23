@@ -37,7 +37,7 @@
         <hr />
         <div class="is-flex">
           <div class="kmip-role-allowed-operations">
-            {{#each-in this.model.operationFormFields.firstObject as |groupName fieldsInGroup|}}
+            {{#each-in (get this.model.operationFormFields 0) as |groupName fieldsInGroup|}}
               <h4 class="title is-7">{{groupName}}</h4>
               {{#each fieldsInGroup as |attr|}}
                 <FormField

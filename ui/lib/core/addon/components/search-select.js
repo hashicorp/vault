@@ -196,7 +196,7 @@ export default class SearchSelect extends Component {
 
   @action
   handleChange() {
-    if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
+    if (this.selectedOptions.length && typeof this.selectedOptions[0] === 'object') {
       this.args.onChange(
         Array.from(this.selectedOptions, (option) =>
           this.args.passObject ? this.customizeObject(option) : option.id
@@ -208,7 +208,7 @@ export default class SearchSelect extends Component {
   }
 
   shouldShowCreate(id, searchResults) {
-    if (searchResults && searchResults.length && searchResults.firstObject.groupName) {
+    if (searchResults && searchResults.length && searchResults[0].groupName) {
       return !searchResults.some((group) => group.options.find((opt) => opt.id === id));
     }
     const existingOption =
