@@ -1063,7 +1063,6 @@ func TestEntryFormatter_Process_NoMutation(t *testing.T) {
 // which will currently cause a panic when a response is formatted due to the
 // underlying hashing that is done with reflectwalk.
 func TestEntryFormatter_Process_Panic(t *testing.T) {
-	// get a bad input...
 	t.Parallel()
 
 	// Create the formatter node.
