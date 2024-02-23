@@ -68,8 +68,7 @@ Use custom banners and modals in the Vault UI to share system-wide alerts for al
 
 When you are running Vault Enterprise or [HCP Vault](/hcp/docs/vault) clusters,
 the custom messages created on a [namespaces](/vault/docs/enterprise/namespaces)
-are inherited by its child namespaces. To create custom messages specific to a
-namespace, be sure to log into your target namespace.
+are inherited by its child namespaces. 
 
 For example, your cluster has the following namespace hierarchy. 
 
@@ -85,10 +84,11 @@ For example, your cluster has the following namespace hierarchy.
 
 </CodeBlockConfig>
 
-Each namespace is dedicated to an organization.
+Custom messages created on the `admin` namespace apply to all child namespaces:
+`fiance`, `marketing`, `marketing/digital-marketing` and `marketing/events`.
 
-To create a custom message intended to the marketing organization, you must log
-into the `marketing` namespace.
+To create a custom message intended to the marketing team but not for `finance`,
+you must log into the `marketing` namespace to create a message.
 
 1. On the Vault UI login page, enter `marketing` in the **Namespace** text
    field, and select an authentication method to log in. 
@@ -105,8 +105,8 @@ into the `marketing` namespace.
 1. Click **Create message** to save your new message.
 
 The message banner will only appear when a user logged into the `marketing`
-namespace and its child namespaces. To verify, log into the parent namespace
-(e.g. `admin`) to make sure that the banner does not show.
+namespace and its child namespaces. To verify, log into the `admin` or `finance`
+namespace to make sure that the banner does not show.
 
 
 ## Edit a custom message
