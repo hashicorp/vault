@@ -8,9 +8,11 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -98,7 +100,7 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 				return
 			}
 			core.ResetUnsealProcess()
-			handleSysSealStatusRaw(core, w)
+			handleSysSealStatusRaw(core, w, r)
 			return
 		}
 
@@ -148,7 +150,7 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 		}
 
 		// Return the seal status
-		handleSysSealStatusRaw(core, w)
+		handleSysSealStatusRaw(core, w, r)
 	})
 }
 
@@ -159,7 +161,7 @@ func handleSysSealStatus(core *vault.Core, opt ...ListenerConfigOption) http.Han
 			return
 		}
 
-		handleSysSealStatusRaw(core, w, opt...)
+		handleSysSealStatusRaw(core, w, r, opt...)
 	})
 }
 
@@ -174,7 +176,7 @@ func handleSysSealBackendStatus(core *vault.Core) http.Handler {
 	})
 }
 
-func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, opt ...ListenerConfigOption) {
+func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Request, opt ...ListenerConfigOption) {
 	ctx := context.Background()
 	status, err := core.GetSealStatus(ctx, true)
 	if err != nil {
@@ -182,15 +184,33 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, opt ...List
 		return
 	}
 
-	opts, err := getOpts(opt...)
+	var tokenPresent bool
+	token := r.Header.Get("X-Vault-Token")
+	fmt.Printf("[MARC] token: %s\n", token)
 
-	if opts.withRedactVersion {
-		status.Version = opts.withRedactionValue
-		status.BuildDate = opts.withRedactionValue
+	if token != "" {
+		// We don't really care about the error here, we just want to know if
+		// the token exists or not
+
+		tokenEntry, err := core.LookupToken(namespace.ContextWithNamespace(ctx, namespace.RootNamespace), token)
+
+		fmt.Printf("[MARC] tokenEntry: %#v, err: %s\n", tokenEntry, err)
+
+		tokenPresent = (tokenEntry != nil)
+		fmt.Printf("[MARC] tokenPresent set to %t\n", tokenPresent)
 	}
 
-	if opts.withRedactClusterName {
-		status.ClusterName = opts.withRedactionValue
+	opts, _ := getOpts(opt...)
+
+	if !tokenPresent {
+		if opts.withRedactVersion {
+			status.Version = opts.withRedactionValue
+			status.BuildDate = opts.withRedactionValue
+		}
+
+		if opts.withRedactClusterName {
+			status.ClusterName = opts.withRedactionValue
+		}
 	}
 
 	respondOk(w, status)
