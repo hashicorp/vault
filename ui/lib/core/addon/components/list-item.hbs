@@ -3,11 +3,11 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-{{#if this.componentName}}
-  {{component this.componentName item=this.item}}
-{{else if this.linkParams}}
+{{#if @componentName}}
+  {{component @componentName item=@item}}
+{{else if @linkParams}}
   <LinkedBlock
-    @params={{this.linkParams}}
+    @params={{@linkParams}}
     @queryParams={{@queryParams}}
     @linkPrefix={{@linkPrefix}}
     class="list-item-row"
@@ -25,9 +25,7 @@
       </div>
       <div class="level-right">
         <div class="level-item" data-test-list-item-popup>
-          {{yield
-            (hash callMethod=this.callMethod menu=(component "list-item/popup-menu" item=this.item hasMenu=this.hasMenu))
-          }}
+          {{yield (hash callMethod=this.callMethod menu=(component "list-item/popup-menu" item=@item))}}
         </div>
       </div>
     </div>
@@ -40,9 +38,7 @@
       </div>
       <div class="level-right">
         <div class="level-item" data-test-list-item-popup>
-          {{yield
-            (hash callMethod=this.callMethod menu=(component "list-item/popup-menu" item=this.item hasMenu=this.hasMenu))
-          }}
+          {{yield (hash callMethod=this.callMethod menu=(component "list-item/popup-menu" item=@item))}}
         </div>
       </div>
     </div>
