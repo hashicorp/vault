@@ -121,13 +121,9 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 
 		f.logger.Error("panic during logging",
 			"request_path", a.Data.Request.Path,
+			"audit_device_path", f.name,
 			"error", r,
 			"stacktrace", string(debug.Stack()))
-
-		// TODO: PW: We could potentially see a lot of these errors returned from
-		// an entry formatter in every pipeline that processed the event.
-		// So for a single request or response attempt via the broker, we might
-		// have a load of warnings (errors) returned.
 
 		// Ensure that we add this error onto any pre-existing error that was being returned.
 		retErr = multierror.Append(retErr, fmt.Errorf("%s: panic generating audit log: %q", op, f.name)).ErrorOrNil()

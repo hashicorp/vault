@@ -12,9 +12,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/internal/observability/event"

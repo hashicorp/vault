@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -1056,6 +1057,67 @@ func TestEntryFormatter_Process_NoMutation(t *testing.T) {
 	require.NotNil(t, a2)
 
 	require.NotEqual(t, a2, a)
+}
+
+// TestEntryFormatter_Process_Panic tries to send data into the EntryFormatter
+// which will currently cause a panic when a response is formatted due to the
+// underlying hashing that is done with reflectwalk.
+func TestEntryFormatter_Process_Panic(t *testing.T) {
+	// get a bad input...
+	t.Parallel()
+
+	// Create the formatter node.
+	cfg, err := NewFormatterConfig()
+	require.NoError(t, err)
+	ss := newStaticSalt(t)
+	formatter, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
+	require.NoError(t, err)
+	require.NotNil(t, formatter)
+
+	// The secret sauce, create a bad addr.
+	// see: https://github.com/hashicorp/vault/issues/16462
+	badAddr, err := sockaddr.NewSockAddr("10.10.10.2/32 10.10.10.3/32")
+	require.NoError(t, err)
+
+	in := &logical.LogInput{
+		Auth: &logical.Auth{
+			ClientToken:     "foo",
+			Accessor:        "bar",
+			EntityID:        "foobarentity",
+			DisplayName:     "testtoken",
+			NoDefaultPolicy: true,
+			Policies:        []string{"root"},
+			TokenType:       logical.TokenTypeService,
+		},
+		Request: &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "/foo",
+			Connection: &logical.Connection{
+				RemoteAddr: "127.0.0.1",
+			},
+			WrapInfo: &logical.RequestWrapInfo{
+				TTL: 60 * time.Second,
+			},
+			Headers: map[string][]string{
+				"foo": {"bar"},
+			},
+			Data: map[string]interface{}{},
+		},
+		Response: &logical.Response{
+			Data: map[string]any{
+				"token_bound_cidrs": []*sockaddr.SockAddrMarshaler{
+					{SockAddr: badAddr},
+				},
+			},
+		},
+	}
+
+	e := fakeEvent(t, ResponseType, in)
+
+	e2, err := formatter.Process(namespace.RootContext(nil), e)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "audit.(EntryFormatter).Process: panic generating audit log: \"juan\"")
+	require.Nil(t, e2)
 }
 
 // hashExpectedValueForComparison replicates enough of the audit HMAC process on a piece of expected data in a test,
