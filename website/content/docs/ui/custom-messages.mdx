@@ -40,8 +40,8 @@ Use custom banners and modals in the Vault UI to share system-wide alerts for al
 
 ## Add a custom message
 
-1. Navigate to the **Settings** section in the Vault UI sidebar and select "Custom
-   Messages".
+1. Navigate to the **Settings** section in the Vault UI sidebar and select **Custom
+   Messages**.
 
 1. On the **Custom messages** page, select whether you want the message
    to appear on the Vault UI login page or after a user logs in.
@@ -63,6 +63,52 @@ Use custom banners and modals in the Vault UI to share system-wide alerts for al
 1. Click **Preview** to see how your message will appear to users.
 
 1. Click **Create message** to save your new message.
+
+### Namespaces consideration
+
+When you are running Vault Enterprise or HCP Vault clusters, the custom messages
+created on a [namespaces](/vault/docs/enterprise/namespaces) are inherited by
+its child namespaces. To create custom messages specific to a namespace, be
+sure to log into your target namespace.
+
+For example, your cluster has the following namespace hierarchy. 
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+─ admin
+    ├── finance
+    └── marketing
+        ├── digital-marketing
+        └── events
+```
+
+</CodeBlockConfig>
+
+Each namespace is dedicated to an organization.
+
+To create a custom message intended to the marketing organization, you must be
+logged into the `marketing` namespace. 
+
+1. Enter `marketing` in the **Namespace** text field.
+
+1. Select an authentication method and log in. 
+
+1. Select **Custom Messages**.
+
+1. Select the **+ Create message** button in the toolbar to open  and fill out
+   the **Create message** form.
+
+   ![Custom message](/img/ui-custom-msg.png)
+
+1. Click **Preview** to see how your message will appear to users.
+
+1. Click **Create message** to save your new message.
+
+The message banner will only appear when a user logged into the `marketing`
+namespace and its child namespaces. To verify, log into the parent namespace
+(e.g. `admin`) to make sure that the banner does not show.
+
 
 ## Edit a custom message
 
