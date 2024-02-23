@@ -64,18 +64,7 @@ needing to retry. This decision was based on the observation that read-based
 requests are not as likely to cause untenable load than their
 resource-constrained counterparts.
 
-## `503 - Service Unavailable`
+## Vault server overloaded
 
-When Vault has reached capacity, the new requests will be immediately rejected
-with a new retryable `503` error:
-
-```
-* Vault server temporarily overloaded
-```
-
-This error indicates that the server is at capacity and the client should wait to retry.
-
-~> **NOTE**:  `429 - Too Many Requests` is typically used to indicate that a
-specific client is issuing too many requests. The choice of `503 - Service
-Unavailable` for this feature emphasizes that that the server is temporarily
-under excess load, which may not be related to a specific client.
+When Vault has reached capacity, new requests will be immediately rejected with a
+retryable `503 - Service Unavailable` [error](/docs/concepts/vault-server-temporarily-overloaded).
