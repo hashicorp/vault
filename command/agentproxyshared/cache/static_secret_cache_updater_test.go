@@ -73,9 +73,6 @@ func testNewStaticSecretCacheUpdater(t *testing.T, client *api.Client) *StaticSe
 // TestNewStaticSecretCacheUpdater tests the NewStaticSecretCacheUpdater method,
 // to ensure it errors out when appropriate.
 func TestNewStaticSecretCacheUpdater(t *testing.T) {
-	if !constants.IsEnterprise {
-		t.Skip()
-	}
 	t.Parallel()
 
 	lc := testNewLeaseCache(t, []*SendResponse{})
