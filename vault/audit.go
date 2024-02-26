@@ -516,6 +516,7 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		HMACType: "hmac-sha256",
 		Location: salt.DefaultLocation,
 	}
+	auditLogger := c.baseLogger.Named("audit")
 
 	be, err := f(
 		ctx, &audit.BackendConfig{
@@ -523,6 +524,7 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 			SaltConfig: saltConfig,
 			Config:     conf,
 			MountPath:  entry.Path,
+			Logger:     auditLogger,
 		},
 		c.auditedHeaders)
 	if err != nil {
@@ -531,8 +533,6 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 	if be == nil {
 		return nil, fmt.Errorf("nil backend returned from %q factory function", entry.Type)
 	}
-
-	auditLogger := c.baseLogger.Named("audit")
 
 	switch entry.Type {
 	case "file":

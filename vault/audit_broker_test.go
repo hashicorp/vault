@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/builtin/audit/syslog"
@@ -41,6 +42,7 @@ func testAuditBackend(t *testing.T, path string, config map[string]string) audit
 			HMAC:     sha256.New,
 			HMACType: "hmac-sha256",
 		},
+		Logger:    corehelpers.NewTestLogger(t),
 		Config:    config,
 		MountPath: path,
 	}
@@ -283,6 +285,7 @@ func BenchmarkAuditBroker_File_Request_DevNull(b *testing.B) {
 		MountPath:  "test",
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
+		Logger:     hclog.NewNullLogger(),
 	}
 
 	sink, err := file.Factory(context.Background(), backendConfig, nil)

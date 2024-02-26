@@ -6,6 +6,7 @@ package audit
 import (
 	"context"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -231,6 +232,9 @@ type BackendConfig struct {
 
 	// MountPath is the path where this Backend is mounted
 	MountPath string
+
+	// Logger is used to emit log messages usually captured in the server logs.
+	Logger hclog.Logger
 }
 
 // Factory is the factory function to create an audit backend.
