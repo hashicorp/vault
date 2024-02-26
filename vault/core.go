@@ -2683,6 +2683,11 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
 		c.systemBackend.mfaBackend.usedCodes = cache.New(0, 30*time.Second)
 	}
+	if c.systemBackend != nil {
+		// all mounts need to be initialized before activity log reporting
+		// starts, which happens in the post-unseal functions above.
+		sysActivityLogReporting(c.systemBackend)
+	}
 	c.logger.Info("post-unseal setup complete")
 	return nil
 }
