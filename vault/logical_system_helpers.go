@@ -39,6 +39,8 @@ var (
 		return nil
 	}
 
+	sysActivityLogReporting = func(b *SystemBackend) {}
+
 	getSystemSchemas = func() []func() *memdb.TableSchema { return nil }
 
 	getEGPListResponseKeyInfo = func(*SystemBackend, *namespace.Namespace) map[string]interface{} { return nil }
