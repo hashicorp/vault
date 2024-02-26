@@ -46,6 +46,10 @@ module('Integration | Component | auth-config-form options', function (hooks) {
           return {};
         },
       },
+      userLockoutConfig: {
+        modelAttrs: [],
+        apiParams: [],
+      },
     });
     sinon.spy(model.config, 'serialize');
     this.set('model', model);

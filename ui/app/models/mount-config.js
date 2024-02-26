@@ -74,7 +74,7 @@ export default class MountConfigModel extends Model {
   })
   pluginVersion;
 
-  // Auth mount user lockout config params, added to user_lockout_config object in saveModel method
+  // Auth mount userLockoutConfig params, added to user_lockout_config object in saveModel method
   @attr('string', {
     label: 'Lockout threshold',
     subText: 'Specifies the number of failed login attempts after which the user is locked out, e.g. 15.',
@@ -103,4 +103,5 @@ export default class MountConfigModel extends Model {
     subText: 'If checked, disables the user lockout feature for this mount.',
   })
   lockoutDisable;
+  // end of user_lockout_config params
 }
