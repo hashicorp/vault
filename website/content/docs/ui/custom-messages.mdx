@@ -31,7 +31,8 @@ Use custom banners and modals in the Vault UI to share system-wide alerts for al
 
 ## Before you start
 
-- **You must have Vault 1.16.0 or higher installed**.
+- **You must have a Vault Enterprise license for Custom Messages.**
+- **You must have Vault 1.16.0 enterprise or higher installed**.
 - **You must have the appropriate permissions**:
   - You must have `list` permission for the `sys/config/ui/custom-messages` endpoint.
   - To **create messages**, you must have `read` permission for the `sys/config/ui/custom-messages/:id` endpoint and `create` permission for the `sys/config/ui/custom-messages` endpoint.
@@ -68,9 +69,9 @@ Use custom banners and modals in the Vault UI to share system-wide alerts for al
 
 When you are running Vault Enterprise or [HCP Vault](/hcp/docs/vault) clusters,
 the custom messages created on a [namespace](/vault/docs/enterprise/namespaces)
-are inherited by its child namespaces. 
+are inherited by its child namespaces.
 
-For example, your cluster has the following namespace hierarchy. 
+For example, your cluster has the following namespace hierarchy.
 
 <CodeBlockConfig hideClipboard>
 
@@ -91,11 +92,11 @@ To create a custom message intended to the marketing team but not for `finance`,
 you must log into the `marketing` namespace to create a message.
 
 1. On the Vault UI login page, enter `marketing` in the **Namespace** text
-   field, and select an authentication method to log in. 
+   field, and select an authentication method to log in.
 
 1. Select **Custom Messages**.
 
-1. Select the **+ Create message** button in the toolbar to open  and fill out
+1. Select the **+ Create message** button in the toolbar to open and fill out
    the **Create message** form.
 
    ![Custom message](/img/ui-custom-msg.png)
@@ -107,7 +108,6 @@ you must log into the `marketing` namespace to create a message.
 The message banner will only appear when a user logged into the `marketing`
 namespace and its child namespaces. To verify, log into the `admin` or `finance`
 namespace to make sure that the banner does not show.
-
 
 ## Edit a custom message
 
