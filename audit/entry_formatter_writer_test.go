@@ -8,6 +8,7 @@ import (
 	"io"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -127,7 +128,7 @@ func TestNewEntryFormatterWriter(t *testing.T) {
 
 			var f Formatter
 			if !tc.UseNilFormatter {
-				tempFormatter, err := NewEntryFormatter(cfg, s)
+				tempFormatter, err := NewEntryFormatter("test", cfg, s, hclog.NewNullLogger())
 				require.NoError(t, err)
 				require.NotNil(t, tempFormatter)
 				f = tempFormatter
@@ -192,7 +193,7 @@ func TestEntryFormatter_FormatRequest(t *testing.T) {
 			ss := newStaticSalt(t)
 			cfg, err := NewFormatterConfig()
 			require.NoError(t, err)
-			f, err := NewEntryFormatter(cfg, ss)
+			f, err := NewEntryFormatter("test", cfg, ss, hclog.NewNullLogger())
 			require.NoError(t, err)
 
 			var ctx context.Context
@@ -259,7 +260,7 @@ func TestEntryFormatter_FormatResponse(t *testing.T) {
 			ss := newStaticSalt(t)
 			cfg, err := NewFormatterConfig()
 			require.NoError(t, err)
-			f, err := NewEntryFormatter(cfg, ss)
+			f, err := NewEntryFormatter("test", cfg, ss, hclog.NewNullLogger())
 			require.NoError(t, err)
 
 			var ctx context.Context
@@ -361,7 +362,7 @@ func TestElideListResponses(t *testing.T) {
 
 	formatResponse := func(t *testing.T, config FormatterConfig, operation logical.Operation, inputData map[string]interface{},
 	) {
-		f, err := NewEntryFormatter(config, &tfw)
+		f, err := NewEntryFormatter("test", config, &tfw, hclog.NewNullLogger())
 		require.NoError(t, err)
 		formatter, err := NewEntryFormatterWriter(config, f, &tfw)
 		require.NoError(t, err)

@@ -166,17 +166,25 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 	var retErr *multierror.Error
 
 	defer func() {
-		if r := recover(); r != nil {
-			a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r, "stacktrace", string(debug.Stack()))
-			retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log"))
-		}
+		if a.broker == nil {
+			if r := recover(); r != nil {
+				a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r, "stacktrace", string(debug.Stack()))
+				retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log"))
+			}
 
-		ret = retErr.ErrorOrNil()
-		failure := float32(0.0)
-		if ret != nil {
-			failure = 1.0
+			ret = retErr.ErrorOrNil()
+			failure := float32(0.0)
+			if ret != nil {
+				failure = 1.0
+			}
+			metrics.IncrCounter([]string{"audit", "log_request_failure"}, failure)
+		} else {
+			metricVal := float32(0.0)
+			if ret != nil {
+				metricVal = 1.0
+			}
+			metrics.IncrCounter([]string{"audit", "log_request_failure"}, metricVal)
 		}
-		metrics.IncrCounter([]string{"audit", "log_request_failure"}, failure)
 	}()
 
 	headers := in.Request.Headers
@@ -247,18 +255,25 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 	var retErr *multierror.Error
 
 	defer func() {
-		if r := recover(); r != nil {
-			a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r, "stacktrace", string(debug.Stack()))
-			retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log"))
-		}
+		if a.broker == nil {
+			if r := recover(); r != nil {
+				a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r, "stacktrace", string(debug.Stack()))
+				retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log"))
+			}
 
-		ret = retErr.ErrorOrNil()
-
-		failure := float32(0.0)
-		if ret != nil {
-			failure = 1.0
+			ret = retErr.ErrorOrNil()
+			failure := float32(0.0)
+			if ret != nil {
+				failure = 1.0
+			}
+			metrics.IncrCounter([]string{"audit", "log_response_failure"}, failure)
+		} else {
+			metricVal := float32(0.0)
+			if ret != nil {
+				metricVal = 1.0
+			}
+			metrics.IncrCounter([]string{"audit", "log_response_failure"}, metricVal)
 		}
-		metrics.IncrCounter([]string{"audit", "log_response_failure"}, failure)
 	}()
 
 	headers := in.Request.Headers

@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -35,6 +36,8 @@ func TestAuditFile_fileModeNew(t *testing.T) {
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
 		Config:     config,
+		Logger:     hclog.NewNullLogger(),
+		MountPath:  "test",
 	}, false, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -74,6 +77,8 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 		Config:     config,
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
+		Logger:     hclog.NewNullLogger(),
+		MountPath:  "test",
 	}, false, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -114,6 +119,8 @@ func TestAuditFile_fileMode0000(t *testing.T) {
 		Config:     config,
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
+		Logger:     hclog.NewNullLogger(),
+		MountPath:  "test",
 	}, false, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -148,6 +155,8 @@ func TestAuditFile_EventLogger_fileModeNew(t *testing.T) {
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
 		Config:     config,
+		Logger:     hclog.NewNullLogger(),
+		MountPath:  "test",
 	}, true, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -170,6 +179,8 @@ func BenchmarkAuditFile_request(b *testing.B) {
 		Config:     config,
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
+		Logger:     hclog.NewNullLogger(),
+		MountPath:  "test",
 	}, false, nil)
 	if err != nil {
 		b.Fatal(err)
