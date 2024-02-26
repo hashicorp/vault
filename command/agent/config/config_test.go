@@ -17,6 +17,10 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+func FloatPtr(t float64) *float64 {
+	return &t
+}
+
 func TestLoadConfigFile_AgentCache(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config-cache.hcl")
 	if err != nil {
@@ -1046,6 +1050,7 @@ func TestLoadConfigFile_TemplateConfig(t *testing.T) {
 				ExitOnRetryFailure:    true,
 				StaticSecretRenderInt: 1 * time.Minute,
 				MaxConnectionsPerHost: 100,
+				LeaseRenewalThreshold: FloatPtr(0.8),
 			},
 		},
 		"empty": {

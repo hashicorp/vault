@@ -169,6 +169,7 @@ type TemplateConfig struct {
 	StaticSecretRenderInt    time.Duration `hcl:"-"`
 	MaxConnectionsPerHostRaw interface{}   `hcl:"max_connections_per_host"`
 	MaxConnectionsPerHost    int           `hcl:"-"`
+	LeaseRenewalThreshold    *float64      `hcl:"lease_renewal_threshold"`
 }
 
 type ExecConfig struct {
