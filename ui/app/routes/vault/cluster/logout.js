@@ -35,7 +35,10 @@ export default Route.extend(ModelBoundaryRoute, {
     this.flashMessages.clearMessages();
     this.permissions.reset();
     this.version.version = null;
-    this.customMessages.clearCustomMessages();
+
+    if (this.version.isEnterprise) {
+      this.customMessages.clearCustomMessages();
+    }
 
     queryParams.with = authType;
     if (ns) {
