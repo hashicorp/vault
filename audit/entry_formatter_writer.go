@@ -10,6 +10,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -96,7 +97,7 @@ func NewTemporaryFormatter(requiredFormat, prefix string) (*EntryFormatterWriter
 		return nil, err
 	}
 
-	eventFormatter, err := NewEntryFormatter(cfg, &nonPersistentSalt{}, WithPrefix(prefix))
+	eventFormatter, err := NewEntryFormatter("sys/audit/test", cfg, &nonPersistentSalt{}, hclog.NewNullLogger(), WithPrefix(prefix))
 	if err != nil {
 		return nil, err
 	}
