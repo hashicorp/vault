@@ -17,7 +17,7 @@ module('Acceptance | oidc auth method', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.openStub = sinon.stub(window, 'open').callsFake(() => fakeWindow.create());
 
     this.setupMocks = (assert) => {
@@ -53,7 +53,7 @@ module('Acceptance | oidc auth method', function (hooks) {
 
     // ensure clean state
     localStorage.removeItem('selectedAuth');
-    authPage.logout();
+    await authPage.logout();
   });
 
   hooks.afterEach(function () {

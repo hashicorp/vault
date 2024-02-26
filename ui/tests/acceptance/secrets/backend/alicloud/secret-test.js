@@ -15,9 +15,9 @@ import authPage from 'vault/tests/pages/auth';
 module('Acceptance | alicloud/enable', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.uid = uuidv4();
-    return authPage.login();
+    return await authPage.login();
   });
 
   test('enable alicloud', async function (assert) {

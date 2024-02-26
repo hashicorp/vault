@@ -63,8 +63,8 @@ const newRole = async (backend, name) => {
 module('Acceptance | Enterprise | Transform secrets', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
-    return authPage.login();
+  hooks.beforeEach(async function () {
+    return await authPage.login();
   });
 
   test('it transitions to list route after mount success', async function (assert) {

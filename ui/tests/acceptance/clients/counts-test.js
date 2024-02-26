@@ -24,7 +24,7 @@ module('Acceptance | clients | counts', function (hooks) {
   hooks.beforeEach(async function () {
     clientsHandler(this.server);
     this.store = this.owner.lookup('service:store');
-    return authPage.login();
+    return await authPage.login();
   });
 
   hooks.after(function () {

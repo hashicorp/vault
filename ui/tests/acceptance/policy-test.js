@@ -11,8 +11,8 @@ import authPage from 'vault/tests/pages/auth';
 module('Acceptance | policies', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
-    return authPage.login();
+  hooks.beforeEach(async function () {
+    return await authPage.login();
   });
 
   test('it redirects to acls with unknown policy type', async function (assert) {

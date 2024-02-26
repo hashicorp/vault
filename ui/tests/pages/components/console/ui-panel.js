@@ -55,7 +55,7 @@ export default {
   }),
   hasInput: isPresent('[data-test-component="console/command-input"] input'),
   runCommands: async function (commands) {
-    const toExecute = Array.isArray(commands) ? commands : [commands];
+    const toExecute = (await Array.isArray(commands)) ? commands : [commands];
     for (const command of toExecute) {
       await this.consoleInput(command);
       await this.enter();

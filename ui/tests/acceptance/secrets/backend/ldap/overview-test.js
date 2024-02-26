@@ -19,7 +19,7 @@ module('Acceptance | ldap | overview', function (hooks) {
 
   hooks.beforeEach(async function () {
     ldapHandlers(this.server);
-    return authPage.login();
+    return await authPage.login();
   });
 
   test('it should transition to ldap overview on mount success', async function (assert) {

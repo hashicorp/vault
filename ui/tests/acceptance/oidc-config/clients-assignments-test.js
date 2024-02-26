@@ -29,10 +29,10 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     oidcConfigHandlers(this.server);
     this.store = this.owner.lookup('service:store');
-    return authPage.login();
+    return await authPage.login();
   });
 
   test('it renders only allow_all when no assignments are configured', async function (assert) {

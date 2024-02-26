@@ -52,7 +52,7 @@ export default {
     selectValue: value('select'),
   }),
   selectRadioInput: async function (value) {
-    return this.radioButtons.filterBy('id', value)[0].select();
+    return await this.radioButtons.filterBy('id', value)[0].select();
   },
   fillInTextarea: async function (name, value) {
     return this.fields

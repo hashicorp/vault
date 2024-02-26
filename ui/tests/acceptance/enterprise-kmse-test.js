@@ -17,7 +17,7 @@ module('Acceptance | Enterprise | keymgmt', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    return authPage.login();
+    return await authPage.login();
   });
 
   test('it transitions to list route after mount success', async function (assert) {

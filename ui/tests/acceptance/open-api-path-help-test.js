@@ -18,10 +18,10 @@ import { authEngineHelper, secretEngineHelper } from '../helpers/openapi/test-he
  */
 module('Acceptance | OpenAPI provides expected attributes enterprise', function (hooks) {
   setupApplicationTest(hooks);
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.pathHelp = this.owner.lookup('service:pathHelp');
     this.store = this.owner.lookup('service:store');
-    return authPage.login();
+    return await authPage.login();
   });
 
   // Secret engines that use OpenAPI

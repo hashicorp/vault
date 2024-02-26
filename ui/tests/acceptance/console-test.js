@@ -17,8 +17,8 @@ const consoleComponent = create(consoleClass);
 module('Acceptance | console', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
-    return authPage.login();
+  hooks.beforeEach(async function () {
+    return await authPage.login();
   });
 
   test("refresh reloads the current route's data", async function (assert) {

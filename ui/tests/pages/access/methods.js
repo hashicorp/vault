@@ -18,7 +18,7 @@ export default create({
     id: attribute('data-test-id', '[data-test-path]'),
   }),
 
-  findLinkById(id) {
-    return this.backendLinks.filterBy('id', id)[0];
+  async findLinkById(id) {
+    return await this.backendLinks.filterBy('id', id)[0];
   },
 });

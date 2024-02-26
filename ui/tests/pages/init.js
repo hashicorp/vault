@@ -14,6 +14,6 @@ export default create({
   buttonText: text('[data-test-advance-button]'),
   init: async function (shares, threshold) {
     await this.visit();
-    return this.shares(shares).threshold(threshold).submit();
+    return await this.shares(shares).threshold(threshold).submit();
   },
 });

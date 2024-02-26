@@ -14,14 +14,14 @@ import { setRunOptions } from 'ember-a11y-testing/test-support';
 module('Acceptance | /access/identity/entities/create', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     // Popup menu causes flakiness
     setRunOptions({
       rules: {
         'color-contrast': { enabled: false },
       },
     });
-    return authPage.login();
+    return await authPage.login();
   });
 
   test('it visits the correct page', async function (assert) {

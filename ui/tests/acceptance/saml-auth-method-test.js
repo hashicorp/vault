@@ -16,7 +16,7 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.openStub = sinon.stub(window, 'open').callsFake(() => fakeWindow.create());
     this.server.put('/auth/saml/sso_service_url', () => ({
       data: {
@@ -29,7 +29,7 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
     }));
     // ensure clean state
     localStorage.removeItem('selectedAuth');
-    authPage.logout();
+    await authPage.logout();
   });
 
   hooks.afterEach(function () {
@@ -146,7 +146,7 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
   });
 
   test('it should populate saml auth method on logout', async function (assert) {
-    authPage.logout();
+    await authPage.logout();
     // select from dropdown
     await waitUntil(() => find('[data-test-select="auth-method"]'));
     await fillIn('[data-test-select="auth-method"]', 'saml');

@@ -19,7 +19,7 @@ module('Integration | Component | kv-v2 | Page::Configuration', function (hooks)
     this.mountData = {
       id: 'my-kv',
       accessor: 'kv_80616825',
-      config: this.store.createRecord('mount-config', {
+      config: await this.store.createRecord('mount-config', {
         defaultLeaseTtl: '72h',
         forceNoCache: false,
         maxLeaseTtl: '123h',
@@ -47,8 +47,8 @@ module('Integration | Component | kv-v2 | Page::Configuration', function (hooks)
 
     // this is the route model, not an ember data model
     this.model = {
-      engineConfig: this.store.peekRecord('kv/config', 'my-config'),
-      mountConfig: this.store.createRecord('secret-engine', this.mountData),
+      engineConfig: await this.store.peekRecord('kv/config', 'my-config'),
+      mountConfig: await this.store.createRecord('secret-engine', this.mountData),
     };
 
     this.breadcrumbs = [

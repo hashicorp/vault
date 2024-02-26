@@ -22,9 +22,9 @@ const searchSelect = create(ss);
 module('Acceptance | secret-engine list view', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.uid = uuidv4();
-    return authPage.login();
+    return await authPage.login();
   });
 
   test('it allows you to disable an engine', async function (assert) {

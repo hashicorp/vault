@@ -19,10 +19,10 @@ module('Acceptance | unseal', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.unsealCount = 0;
     this.sealed = false;
-    return authPage.login();
+    return await authPage.login();
   });
 
   test('seal then unseal', async function (assert) {

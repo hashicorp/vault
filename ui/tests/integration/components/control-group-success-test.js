@@ -86,7 +86,7 @@ module('Integration | Component | control group success', function (hooks) {
     await render(hbs`<ControlGroupSuccess @model={{this.model}} />`);
     assert.ok(component.showsUnwrapForm, 'shows unwrap form');
     await component.token('token');
-    component.unwrap();
+    await component.unwrap();
     later(() => cancelTimers(), 50);
     return settled().then(() => {
       assert.ok(component.showsJsonViewer, 'shows unwrapped data');

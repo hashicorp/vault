@@ -15,7 +15,7 @@ module('Acceptance | kubernetes | credentials', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     kubernetesHandlers(this.server);
     kubernetesScenario(this.server);
     this.visitRoleCredentials = () => {
@@ -24,7 +24,7 @@ module('Acceptance | kubernetes | credentials', function (hooks) {
     this.validateRoute = (assert, route, message) => {
       assert.strictEqual(currentRouteName(), `vault.cluster.secrets.backend.kubernetes.${route}`, message);
     };
-    return authPage.login();
+    return await authPage.login();
   });
 
   test('it should have correct breadcrumb links in credentials view', async function (assert) {

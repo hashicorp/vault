@@ -21,7 +21,7 @@ module('Acceptance | sync | destination', function (hooks) {
   hooks.beforeEach(async function () {
     syncScenario(this.server);
     syncHandlers(this.server);
-    return authPage.login();
+    return await authPage.login();
   });
 
   test('it should transition to overview route via breadcrumb', async function (assert) {

@@ -32,8 +32,8 @@ module('Unit | Adapter | clients activity', function (hooks) {
   test('it does not format if both params are timestamp strings', async function (assert) {
     assert.expect(1);
     const queryParams = {
-      start_time: { timestamp: this.startDate.toISOString() },
-      end_time: { timestamp: this.endDate.toISOString() },
+      start_time: { timestamp: await this.startDate.toISOString() },
+      end_time: { timestamp: await this.endDate.toISOString() },
     };
     this.server.get('sys/internal/counters/activity', (schema, req) => {
       assert.propEqual(req.queryParams, {
@@ -56,7 +56,7 @@ module('Unit | Adapter | clients activity', function (hooks) {
         year,
       },
       end_time: {
-        timestamp: this.endDate.toISOString(),
+        timestamp: await this.endDate.toISOString(),
       },
     };
 
@@ -80,7 +80,7 @@ module('Unit | Adapter | clients activity', function (hooks) {
     const year = twoMothsAgo.getFullYear();
     const queryParams = {
       start_time: {
-        timestamp: this.startDate.toISOString(),
+        timestamp: await this.startDate.toISOString(),
       },
       end_time: {
         monthIdx: endMonth,

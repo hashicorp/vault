@@ -22,9 +22,9 @@ const SELECTORS = {
 module('Acceptance | settings/configure/secrets/ssh', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.uid = uuidv4();
-    return authPage.login();
+    return await authPage.login();
   });
 
   test('it configures ssh ca', async function (assert) {

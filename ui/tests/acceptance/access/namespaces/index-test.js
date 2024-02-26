@@ -14,8 +14,8 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
-    return authPage.login();
+  hooks.beforeEach(async function () {
+    return await authPage.login();
   });
 
   test('it navigates to namespaces page', async function (assert) {

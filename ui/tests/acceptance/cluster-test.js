@@ -24,7 +24,7 @@ module('Acceptance | cluster', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
-    return authPage.login();
+    return await authPage.login();
   });
 
   test('hides nav item if user does not have permission', async function (assert) {
