@@ -72,7 +72,7 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
     await fillIn('[data-test-input="commonName"]', 'foo');
     await click('[data-test-save]');
 
-    const savedRecord = this.store.peekAll('pki/action').firstObject;
+    const savedRecord = this.store.peekAll('pki/action')[0];
     assert.false(savedRecord.isNew, 'record is saved');
   });
 

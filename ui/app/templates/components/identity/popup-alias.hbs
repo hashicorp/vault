@@ -29,7 +29,12 @@
         />
       {{/if}}
       {{#if @item.canDelete}}
-        <dd.Interactive @text="Remove" @color="critical" {{on "click" (fn (mut this.showConfirmModal) true)}} />
+        <dd.Interactive
+          @text="Remove"
+          @color="critical"
+          {{on "click" (fn (mut this.showConfirmModal) true)}}
+          data-test-popup-menu="delete"
+        />
       {{/if}}
     {{/if}}
   </Hds::Dropdown>

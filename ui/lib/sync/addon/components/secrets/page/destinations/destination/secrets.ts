@@ -27,7 +27,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @service declare readonly store: StoreService;
   @service declare readonly flashMessages: FlashMessageService;
 
-  @tracked secretToUnsync = null;
+  @tracked secretToUnsync: SyncAssociationModel | null = null;
 
   get mountPoint(): string {
     const owner = getOwner(this) as EngineOwner;
