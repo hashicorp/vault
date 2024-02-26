@@ -1044,6 +1044,24 @@
     ]
   },
   {
+    "title": "Vault UI",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "ui"
+      },
+      {
+        "title": "Custom Messages",
+        "path": "ui/custom-messages",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      }
+    ]
+  },
+  {
     "title": "Vault Agent and Vault Proxy",
     "routes": [
       {
