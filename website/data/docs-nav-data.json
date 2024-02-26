@@ -281,7 +281,12 @@
       },
       {
         "title": "Events",
-        "path": "concepts/events"
+        "path": "concepts/events",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "highlight"
+        }
       },
       {
         "title": "Filtering",
