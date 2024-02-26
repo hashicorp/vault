@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -37,6 +38,7 @@ func TestAuditFile_fileModeNew(t *testing.T) {
 		MountPath:  "foo/bar",
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
+		Logger:     hclog.NewNullLogger(),
 	}
 	_, err = Factory(context.Background(), backendConfig, nil)
 	require.NoError(t, err)
@@ -68,6 +70,7 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 		MountPath:  "foo/bar",
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
+		Logger:     hclog.NewNullLogger(),
 	}
 
 	_, err = Factory(context.Background(), backendConfig, nil)
@@ -101,6 +104,7 @@ func TestAuditFile_fileMode0000(t *testing.T) {
 		MountPath:  "foo/bar",
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
+		Logger:     hclog.NewNullLogger(),
 	}
 
 	_, err = Factory(context.Background(), backendConfig, nil)
@@ -129,6 +133,7 @@ func TestAuditFile_EventLogger_fileModeNew(t *testing.T) {
 		MountPath:  "foo/bar",
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
+		Logger:     hclog.NewNullLogger(),
 	}
 
 	_, err = Factory(context.Background(), backendConfig, nil)
@@ -320,7 +325,7 @@ func TestBackend_configureFormatterNode(t *testing.T) {
 	formatConfig, err := audit.NewFormatterConfig()
 	require.NoError(t, err)
 
-	err = b.configureFormatterNode(formatConfig)
+	err = b.configureFormatterNode("juan", formatConfig, hclog.NewNullLogger())
 
 	require.NoError(t, err)
 	require.Len(t, b.nodeIDList, 1)
@@ -485,7 +490,7 @@ func TestBackend_configureFilterFormatterSink(t *testing.T) {
 	err = b.configureFilterNode("path == bar")
 	require.NoError(t, err)
 
-	err = b.configureFormatterNode(formatConfig)
+	err = b.configureFormatterNode("juan", formatConfig, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	err = b.configureSinkNode("foo", "/tmp/foo", "0777", "json")
@@ -533,11 +538,22 @@ func TestBackend_Factory_Conf(t *testing.T) {
 			isErrorExpected:      true,
 			expectedErrorMessage: "file.Factory: nil salt view",
 		},
+		"nil-logger": {
+			backendConfig: &audit.BackendConfig{
+				MountPath:  "discard",
+				SaltConfig: &salt.Config{},
+				SaltView:   &logical.InmemStorage{},
+				Logger:     nil,
+			},
+			isErrorExpected:      true,
+			expectedErrorMessage: "file.Factory: nil logger",
+		},
 		"fallback-device-with-filter": {
 			backendConfig: &audit.BackendConfig{
 				MountPath:  "discard",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config: map[string]string{
 					"fallback":  "true",
 					"file_path": discard,
@@ -552,6 +568,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				MountPath:  "discard",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config: map[string]string{
 					"fallback":  "false",
 					"file_path": discard,
@@ -598,6 +615,7 @@ func TestBackend_IsFallback(t *testing.T) {
 				MountPath:  "discard",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config: map[string]string{
 					"fallback":  "true",
 					"file_path": discard,
@@ -610,6 +628,7 @@ func TestBackend_IsFallback(t *testing.T) {
 				MountPath:  "discard",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config: map[string]string{
 					"fallback":  "false",
 					"file_path": discard,
