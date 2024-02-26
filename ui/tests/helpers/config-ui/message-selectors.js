@@ -10,6 +10,7 @@ export const PAGE = {
   ...GENERAL,
   inlineErrorMessage: `[data-test-inline-error-message]`,
   unauthCreateFormInfo: '[data-test-unauth-info]',
+  navLink: '[data-test-sidebar-nav-link="Custom Messages"]',
   radio: (radioName) => `[data-test-radio="${radioName}"]`,
   field: (fieldName) => `[data-test-field="${fieldName}"]`,
   input: (input) => `[data-test-input="${input}"]`,
