@@ -217,7 +217,11 @@ func (m *mockBuiltinRegistry) DeprecationStatus(name string, pluginType consts.P
 }
 
 func TestNoopAudit(t testing.T, path string, config map[string]string, opts ...audit.Option) *NoopAudit {
-	cfg := &audit.BackendConfig{Config: config, MountPath: path}
+	cfg := &audit.BackendConfig{
+		Config:    config,
+		MountPath: path,
+		Logger:    NewTestLogger(t),
+	}
 	n, err := NewNoopAudit(cfg, opts...)
 	if err != nil {
 		t.Fatal(err)
@@ -265,7 +269,7 @@ func NewNoopAudit(config *audit.BackendConfig, opts ...audit.Option) (*NoopAudit
 		return nil, fmt.Errorf("error generating random NodeID for formatter node: %w", err)
 	}
 
-	formatterNode, err := audit.NewEntryFormatter(cfg, noopBackend, opts...)
+	formatterNode, err := audit.NewEntryFormatter(config.MountPath, cfg, noopBackend, config.Logger, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
