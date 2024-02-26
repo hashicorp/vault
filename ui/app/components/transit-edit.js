@@ -80,7 +80,7 @@ export default Component.extend(FocusOnInsertMixin, {
         'save',
         () => {
           this.hasDataChanges();
-          this.transitionToRoute(SHOW_ROUTE, keyId);
+          this.transitionToRoute(SHOW_ROUTE, keyId, { queryParams: { tab: 'details' } });
         },
         type === 'create'
       );
