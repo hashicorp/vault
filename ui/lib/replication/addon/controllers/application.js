@@ -28,6 +28,7 @@ export default Controller.extend(copy(DEFAULTS, true), {
   isModalActive: false,
   isTokenCopied: false,
   expirationDate: null,
+  router: service(),
   store: service(),
   rm: service('replication-mode'),
   replicationMode: alias('rm.mode'),
@@ -125,7 +126,7 @@ export default Controller.extend(copy(DEFAULTS, true), {
     },
     closeTokenModal() {
       this.toggleProperty('isModalActive');
-      this.transitionToRoute('mode.secondaries');
+      this.router.transitionTo('vault.cluster.replication.mode.secondaries');
       this.set('isTokenCopied', false);
     },
     onCopy() {
