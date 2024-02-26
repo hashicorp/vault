@@ -24,9 +24,3 @@ request_limiter {
 ~> **Warning** This feature is still in Tech Preview. Turning the Request
 Limiter *on* may have negative effects on request success rates. Please test
 your workloads before turning this on in production.
-
-~> **Warning** Turning the Request Limiter *off* while Vault is experiencing
-high levels of traffic could result in immediate overload of the server. Great
-care should be taken when using this configuration to avoid adverse effects in
-optimal request servicing. It is strongly advised NOT to use this configuration
-unless there is a very good reason.

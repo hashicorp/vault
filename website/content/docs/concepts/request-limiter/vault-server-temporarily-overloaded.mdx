@@ -20,13 +20,14 @@ Code: 503. Errors:
 	* Vault server temporarily overloaded
 ```
 
-`503 - Service Unavailable` is a retryable HTTP error, which is handled
-internally by the Vault API.
+`503 - Service Unavailable` is a retryable HTTP error, which is handled by the
+Vault API `Client` implementation.
 
 ~> **NOTE**:  `429 - Too Many Requests` is typically used to indicate that a
 specific client is issuing too many requests. The choice of `503 - Service
 Unavailable` for request rejection emphasizes that that the server is
-temporarily under excess load, which may not be related to a specific client.
+temporarily under excess load, which may not be related to the behavior of a
+specific client.
 
 For more information on request rejection, refer to the [Request
 Limiter](/vault/docs/concepts/request-limiter) documentation.

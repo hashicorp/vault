@@ -315,7 +315,7 @@
           },
           {
             "title": "Vault server temporarily overloaded",
-            "path": "concepts/vault-server-temporarily-overloaded"
+            "path": "concepts/request-limiter/vault-server-temporarily-overloaded"
           }
         ]
       }

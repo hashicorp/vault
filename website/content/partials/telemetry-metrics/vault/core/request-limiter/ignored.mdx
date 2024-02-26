@@ -2,4 +2,8 @@
 
 Metric type | Value   | Description
 ----------- | ------- | -----------
-counter     | number  | Number of ignorable request errors observed by the request limiter
+counter     | number  | Number of ignored request errors observed by the request limiter
+
+Ignored request errors result from early request cancellation.  These errors are
+discarded from request limiter measurements to prevent skewing of latency
+measurements.
