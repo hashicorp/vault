@@ -367,9 +367,11 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 			nsPath = ""
 		}
 		if strings.HasPrefix(r.URL.Path, fmt.Sprintf("/v1/%ssys/events/subscribe/", nsPath)) {
-			handler := handleEventsSubscribe(core, req)
-			handler.ServeHTTP(w, r)
-			return
+			handler := entHandleEventsSubscribe(core, req)
+			if handler != nil {
+				handler.ServeHTTP(w, r)
+				return
+			}
 		}
 		handler := handleEntPaths(nsPath, core, r)
 		if handler != nil {
