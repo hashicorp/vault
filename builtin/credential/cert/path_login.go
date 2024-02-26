@@ -280,6 +280,14 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 			// Check for client cert being explicitly listed in the config (and matching other constraints)
 			if tCert.SerialNumber.Cmp(clientCert.SerialNumber) == 0 &&
 				bytes.Equal(tCert.AuthorityKeyId, clientCert.AuthorityKeyId) {
+				pkMatch, err := certutil.ComparePublicKeysAndType(tCert.PublicKey, clientCert.PublicKey)
+				if err != nil {
+					return nil, nil, err
+				}
+				if !pkMatch {
+					// Someone may be trying to pass off a forged certificate as the trusted non-CA cert.  Reject early.
+					return nil, logical.ErrorResponse("public key mismatch of a trusted leaf certificate"), nil
+				}
 				matches, err := b.matchesConstraints(ctx, clientCert, trustedNonCA.Certificates, trustedNonCA, verifyConf)
 
 				// matchesConstraints returns an error when OCSP verification fails,
