@@ -264,6 +264,37 @@ This overrides the project ID derived from the service account JSON credentials 
 default credentials. The service account must be [authorized](https://cloud.google.com/iam/docs/service-account-overview#locations)
 to perform Secret Manager actions in the target project.
 
+## Security
+
+Access to secrets can be allowed or restricted through the use of their
+[resource names by using conditions](https://cloud.google.com/iam/docs/conditions-resource-attributes#resource-name). For secrets,
+the fully qualified resource name is required in the format of `projects/<project_number>/secrets/<secret_name>` Take note that
+this requires the project _number_, not the project _ID_.
+
+For example, if the default secret name template is used, which prepends the word `vault` to the beginning of secret names,
+then following Role binding condition using `startsWith` will prevent Vault from being able to modify secrets that were not created
+by a sync operation:
+
+  <CodeBlockConfig hideClipboard>
+
+    resource.name.startsWith("projects/<project_number>/secrets/vault")
+
+  </CodeBlockConfig>
+
+Likewise, is it recommended to add a negative condition on other write-access role bindings not used by Vault to secrets to prevent
+out-of-band overwrites. This is done simply by applying the inverse to the same condition:
+
+  <CodeBlockConfig hideClipboard>
+
+    !(resource.name.startsWith("projects/<project_number>/secrets/vault"))
+
+  </CodeBlockConfig>
+
+  <Note>
+  Wildcards are used in the example above for brevity, but it is recommended to use the least privilege principle and restrict
+  the actions and resources to the minimum requirements for each use case.
+  </Note>
+
 ## API
 
 Please see the [secrets sync API](/vault/api-docs/system/secrets-sync) for more details.
