@@ -69,11 +69,9 @@ Use custom banners and modals in the Vault UI to share system-wide alerts for al
 
 ### Namespaces consideration
 
-When you are running Vault Enterprise or [HCP Vault](/hcp/docs/vault) clusters,
-the custom messages created on a [namespace](/vault/docs/enterprise/namespaces)
-are inherited by its child namespaces.
-
-For example, your cluster has the following namespace hierarchy.
+Child [namespaces](/vault/docs/enterprise/namespaces) inherit all messages
+created on the parent namespace. For example, your cluster has the following
+namespace hierarchy.
 
 <CodeBlockConfig hideClipboard>
 
