@@ -237,7 +237,11 @@ module('Acceptance | transit (flaky)', function (hooks) {
     await click('[data-test-toggle-label="Auto-rotation period"]');
     await click(SELECTORS.form('create'));
 
-    assert.strictEqual(currentURL(), `/vault/secrets/${this.path}/show/${name}`, 'it navigates to show page');
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${this.path}/show/${name}?tab=details`,
+      'it navigates to show page'
+    );
     assert.dom(SELECTORS.infoRow('Auto-rotation period')).hasText('30 days');
     assert.dom(SELECTORS.infoRow('Deletion allowed')).hasText('false');
     assert.dom(SELECTORS.infoRow('Derived')).hasText('Yes');
