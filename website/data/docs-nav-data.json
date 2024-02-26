@@ -1047,7 +1047,12 @@
       },
       {
         "title": "Custom Messages",
-        "path": "ui/custom-messages"
+        "path": "ui/custom-messages",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
       }
     ]
   },
