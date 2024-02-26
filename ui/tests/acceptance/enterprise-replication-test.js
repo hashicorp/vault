@@ -249,12 +249,11 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await pollCluster(this.owner);
     await settled();
-    const modalDefaultTtl = document.querySelector('[data-test-row-value="TTL"]').innerText;
 
     // checks on secondary token modal
     assert.dom('#replication-copy-token-modal').exists();
     assert.dom('[data-test-inline-error-message]').hasText('Copy token to dismiss modal');
-    assert.strictEqual(modalDefaultTtl, '1800s', 'shows the correct TTL of 1800s');
+    assert.dom('[data-test-row-value="TTL"]').hasText('1800s', 'shows the correct TTL of 1800s');
     // click off the modal to make sure you don't just have to click on the copy-close button to copy the token
     assert.dom('[data-test-modal-close]').isDisabled('cancel is disabled');
     await click('[data-test-modal-copy]');
@@ -272,8 +271,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await pollCluster(this.owner);
     await settled();
-    const modalTtl = document.querySelector('[data-test-row-value="TTL"]').innerText;
-    assert.strictEqual(modalTtl, '180s', 'shows the correct TTL of 180s');
+    assert.dom('[data-test-row-value="TTL"]').hasText('180s', 'shows the correct TTL of 180s');
     await click('[data-test-modal-copy]');
     await click('[data-test-modal-close]');
 
@@ -351,13 +349,14 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     // Click confirm button
     await click('[data-test-confirm-button="Demote to secondary?"]');
 
-    await click('[data-test-replication-link="details"]');
+    await pollCluster(this.owner);
+    await settled();
 
+    await click('[data-test-replication-link="details"]');
     assert.dom('[data-test-replication-dashboard]').exists();
     assert.dom('[data-test-selectable-card-container="secondary"]').exists();
-    assert.ok(
-      find('[data-test-replication-mode-display]').textContent.includes('secondary'),
-      'it displays the cluster mode correctly'
-    );
+    assert
+      .dom('[data-test-replication-mode-display]')
+      .hasText('secondary', 'it displays the cluster mode correctly in header');
   });
 });
