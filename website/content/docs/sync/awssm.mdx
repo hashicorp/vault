@@ -137,6 +137,63 @@ Moving forward, any modification on the Vault secret will be propagated to its A
 counterpart. Creating a new secret version in Vault will update the one in AWS to the new version. Deleting either
 the secret or the association in Vault will delete the secret in your AWS account as well.
 
+## Security
+
+Access to secrets can be allowed or restricted through the use of AWS Resource Tags attached to secrets. For example, the
+following AWS IAM policy prevents Vault from being able to modify secrets that were not created by a sync operation:
+
+  <CodeBlockConfig hideClipboard>
+
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "secretsmanager:*",
+          ],
+          "Resource": "*",
+          "Condition": {
+            "StringEquals": {
+              "secretsmanager:ResourceTag/hashicorp:vault": "" # This tag is automatically added by Vault on every synced secrets
+            }
+          }
+        }
+      ]
+    }
+
+  </CodeBlockConfig>
+
+Likewise, is it recommended to add a negative condition on other write-access policies not used by Vault to secrets to prevent
+out-of-band overwrites:
+
+  <CodeBlockConfig hideClipboard>
+
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Deny",
+          "Action": [
+            "secretsmanager:*"
+          ],
+          "Resource": "*",
+          "Condition": {
+            "StringNotEquals": {
+              "secretsmanager:ResourceTag/hashicorp:vault": "" # This tag is automatically added by Vault on every synced secrets
+            }
+          }
+        }
+      ]
+    }
+
+  </CodeBlockConfig>
+
+  <Note>
+  Wildcards are used in the example above for brevity, but it is recommended to use the least privilege principle and restrict
+  the actions and resources to the minimum requirements for each use case.
+  </Note>
+
 ## Tutorial
 
 Refer to the [Vault Enterprise Secrets Sync tutorial](/vault/tutorials/enterprise/secrets-sync)
