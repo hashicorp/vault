@@ -5,10 +5,5 @@
 
 package limits
 
-const (
-	WriteLimiter       = ""
-	SpecialPathLimiter = ""
-)
-
 // LimiterRegistry holds the map of RequestLimiters mapped to keys.
 type LimiterRegistry struct{}
