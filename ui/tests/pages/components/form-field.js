@@ -12,6 +12,7 @@ import {
   collection,
   fillable,
   triggerable,
+  text,
 } from 'ember-cli-page-object';
 
 export default {
@@ -35,7 +36,7 @@ export default {
   fields: collection('[data-test-field]', {
     clickLabel: clickable('label'),
     toggleTtl: clickable('[data-test-toggle-input="Foo"]'),
-    labelText: collection('label'),
+    labelValue: text('[data-test-form-field-label]'),
     input: fillable('input'),
     ttlTime: fillable('[data-test-ttl-value]'),
     select: fillable('select'),
