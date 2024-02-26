@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-/* This helper includes styles relating to: font-size, font-family, font-alignment, text-transform, text-weight, font-style, text-decoration. 
+/* This helper includes styles relating to: font-size, font-family, font-alignment, text-transform, text-weight, font-style, text-decoration.
 * Deprecated, please use the HDS text component to style fonts https://helios.hashicorp.design/components/text */
 
 // font size helpers
@@ -101,7 +101,7 @@
 }
 
 .sub-text {
-  color: $grey;
+  color: var(--token-color-foreground-faint);
   margin-bottom: $size-11;
   font-size: $size-8;
 
@@ -110,6 +110,9 @@
   }
 }
 
+.opacity-050 {
+  opacity: 0.5;
+}
 .opacity-060 {
   opacity: 0.6;
 }

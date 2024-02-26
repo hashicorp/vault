@@ -11,10 +11,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
-	"net/url"
 	"os"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -433,68 +431,6 @@ func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]by
 		}
 	}
 	return newKeys
-}
-
-// TestRaftServerAddressProvider is a ServerAddressProvider that uses the
-// ClusterAddr() of each node to provide raft addresses.
-//
-// Note that TestRaftServerAddressProvider should only be used in cases where
-// cores that are part of a raft configuration have already had
-// startClusterListener() called (via either unsealing or raft joining).
-type TestRaftServerAddressProvider struct {
-	Cluster *vault.TestCluster
-}
-
-func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib.ServerAddress, error) {
-	for _, core := range p.Cluster.Cores {
-		if core.NodeID == string(id) {
-			parsed, err := url.Parse(core.ClusterAddr())
-			if err != nil {
-				return "", err
-			}
-
-			return raftlib.ServerAddress(parsed.Host), nil
-		}
-	}
-
-	return "", errors.New("could not find cluster addr")
-}
-
-func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
-	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
-
-	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
-
-	leader := cluster.Cores[0]
-
-	// Seal the leader so we can install an address provider
-	{
-		EnsureCoreSealed(t, leader)
-		leader.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		cluster.UnsealCore(t, leader)
-		vault.TestWaitActive(t, leader.Core)
-	}
-
-	leaderInfos := []*raft.LeaderJoinInfo{
-		{
-			LeaderAPIAddr: leader.Client.Address(),
-			TLSConfig:     leader.TLSConfig(),
-		},
-	}
-
-	// Join followers
-	for i := 1; i < len(cluster.Cores); i++ {
-		core := cluster.Cores[i]
-		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		cluster.UnsealCore(t, core)
-	}
-
-	WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
 }
 
 // HardcodedServerAddressProvider is a ServerAddressProvider that uses

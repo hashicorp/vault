@@ -112,6 +112,10 @@
                 "path": "internals/telemetry/metrics/raft"
               },
               {
+                "title": "Secrets Sync metrics",
+                "path": "internals/telemetry/metrics/secrets-sync"
+              },
+              {
                 "title": "Secrets metrics",
                 "path": "internals/telemetry/metrics/secrets"
               },
@@ -168,6 +172,14 @@
       {
         "title": "Lease, Renew, and Revoke",
         "path": "concepts/lease"
+      },
+      {
+        "title": "Lease Explosions",
+        "path": "concepts/lease-explosions"
+      },
+      {
+        "title": "Lease count quota exceeded",
+        "path": "concepts/lease-count-quota-exceeded"
       },
       {
         "title": "Authentication",
@@ -269,12 +281,20 @@
       },
       {
         "title": "Events",
-        "path": "concepts/events",
-        "badge": {
-          "text": "BETA",
-          "type": "outlined",
-          "color": "highlight"
-        }
+        "path": "concepts/events"
+      },
+      {
+        "title": "Filtering",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "concepts/filtering"
+          },
+          {
+            "title": "Audit Filtering",
+            "path": "concepts/filtering/audit"
+          }
+        ]
       }
     ]
   },
@@ -313,9 +333,10 @@
             "title": "Overview",
             "path": "configuration/seal"
           },
-          { "title": "High Availability",
-           "badge": {
-              "text": "ENTERPRISE | BETA",
+          {
+            "title": "High Availability",
+            "badge": {
+              "text": "ENTERPRISE",
               "type": "outlined",
               "color": "highlight"
             },
@@ -522,6 +543,10 @@
         "path": "commands"
       },
       {
+        "title": "Web REPL",
+        "path": "commands/web"
+      },
+      {
         "title": "<code>agent</code>",
         "path": "commands/agent"
       },
@@ -590,6 +615,23 @@
       {
         "title": "<code>events</code>",
         "path": "commands/events"
+      },
+      {
+        "title": "<code>hcp</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/hcp"
+          },
+          {
+            "title": "<code>connect</code>",
+            "path": "commands/hcp/connect"
+          },
+          {
+            "title": "<code>disconnect</code>",
+            "path": "commands/hcp/disconnect"
+          }
+        ]
       },
       {
         "title": "<code>kv</code>",
@@ -752,6 +794,10 @@
           {
             "title": "<code>usage</code>",
             "path": "commands/operator/usage"
+          },
+          {
+            "title": "<code>utilization</code>",
+            "path": "commands/operator/utilization"
           }
         ]
       },
@@ -1354,18 +1400,18 @@
         ]
       },
       {
-        "title": "Key/Value",
+        "title": "Key Value",
         "routes": [
           {
             "title": "Overview",
             "path": "secrets/kv"
           },
           {
-            "title": "K/V Version 1",
+            "title": "KV version  1",
             "path": "secrets/kv/kv-v1"
           },
           {
-            "title": "K/V Version 2",
+            "title": "KV version  2",
             "path": "secrets/kv/kv-v2"
           }
         ]
@@ -1607,6 +1653,10 @@
                 "path": "auth/jwt/oidc-providers"
               },
               {
+                "title": "ADFS",
+                "path": "auth/jwt/oidc-providers/adfs"
+              },
+              {
                 "title": "Auth0",
                 "path": "auth/jwt/oidc-providers/auth0"
               },
@@ -1754,13 +1804,27 @@
         "path": "plugins/plugin-management"
       },
       {
-        "title": "Containerized Plugins",
-        "path": "plugins/containerized-plugins",
-        "badge": {
-          "text": "BETA",
-          "type": "outlined",
-          "color": "highlight"
-        }
+        "title": "Containerized plugins",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "plugins/containerized-plugins",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            }
+          },
+          {
+            "title": "Add a containerized plugin",
+            "path": "plugins/containerized-plugins/add-a-containerized-plugin",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            }
+          }
+        ]
       },
       {
         "title": "Integrations Library",
@@ -1993,8 +2057,12 @@
                         "title": "Auth Methods",
                         "routes": [
                           {
+                            "title": "AWS",
+                            "path": "platform/k8s/vso/sources/vault/auth/aws"
+                          },
+                          {
                             "title": "GCP",
-                            "path": "platform/k8s/vso/sources/vault/gcp-auth"
+                            "path": "platform/k8s/vso/sources/vault/auth/gcp"
                           }
                         ]
                       }
@@ -2007,12 +2075,16 @@
                 ]
               },
               {
-                "title": "Examples",
-                "path": "platform/k8s/vso/examples"
+                "title": "Secret Data Transformation",
+                "path": "platform/k8s/vso/secret-transformation"
               },
               {
                 "title": "Helm Chart",
                 "path": "platform/k8s/vso/helm"
+              },
+              {
+                "title": "Examples",
+                "path": "platform/k8s/vso/examples"
               },
               {
                 "title": "Telemetry",
@@ -2099,6 +2171,10 @@
       {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
+      },
+      {
+        "title": "Upgrade to 1.16.x",
+        "path": "upgrading/upgrade-to-1.16.x"
       },
       {
         "title": "Upgrade to 1.15.x",
@@ -2353,6 +2429,10 @@
         "path": "release-notes"
       },
       {
+        "title": "1.16.0",
+        "path": "release-notes/1.16.0"
+      },
+      {
         "title": "1.15.0",
         "path": "release-notes/1.15.0"
       },
@@ -2479,6 +2559,10 @@
             "path": "enterprise/license/utilization-reporting"
           },
           {
+            "title": "Manual license utilization reporting",
+            "path": "enterprise/license/manual-reporting"
+          },
+          {
             "title": "FAQ",
             "path": "enterprise/license/faq"
           }
@@ -2575,6 +2659,15 @@
           {
             "title": "Create an administrative namespace",
             "path": "enterprise/namespaces/create-admin-namespace"
+          },
+          {
+            "title": "Run Vault with many namespaces",
+            "path": "enterprise/namespaces/namespace-limits",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            }
           }
         ]
       },

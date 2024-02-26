@@ -11,7 +11,7 @@
       {{#if @attr}}
         <ReadonlyFormField @attr={{@attr}} @value="**********" />
       {{else}}
-        <Input disabled class="input" @type="text" @value="**********" />
+        <Input aria-label={{@label}} readonly class="input" @type="text" @value="**********" />
       {{/if}}
     </div>
     <div class="align-self-end">

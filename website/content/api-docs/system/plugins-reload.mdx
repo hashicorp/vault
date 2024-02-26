@@ -1,0 +1,122 @@
+---
+layout: api
+page_title: /sys/plugins/reload - HTTP API
+description: The `/sys/plugins/reload` endpoints are used to reload plugins.
+---
+
+# `/sys/plugins/reload`
+
+## Reload plugin
+
+The `/sys/plugins/reload/:type/:name` endpoint reloads a named plugin across all
+namespaces. It is only available in the root namespace. All instances of the plugin
+will be killed, and any newly pinned version of the plugin will be started in
+their place.
+
+| Method | Path                              |
+| :----- | :-------------------------------- |
+| `POST` | `/sys/plugins/reload/:type/:name` |
+
+### Parameters
+
+- `type` `(string: <required>)` – The type of the plugin, as registered in the
+  plugin catalog. One of "auth", "secret", "database", or "unknown". If "unknown",
+  all plugin types with the provided name will be reloaded.
+
+- `name` `(string: <required>)` – The name of the plugin to reload, as registered
+  in the plugin catalog.
+
+- `scope` `(string: "")` - The scope of the reload. If omitted, reloads the
+  plugin or mounts on this Vault instance. If 'global', will begin reloading the
+  plugin on all instances of a cluster.
+
+### Sample payload
+
+```json
+{
+  "scope": "global"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/plugins/reload/auth/mock-plugin
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "reload_id": "bdddb8df-ccb6-1b09-670d-efa9d3f2c11b"
+  },
+  ...
+}
+```
+
+-> Note: If no plugins are reloaded on the node that serviced the request, a
+warning will also be returned in the response.
+
+## Reload plugins within a namespace
+
+The `/sys/plugins/reload/backend` endpoint is used to reload mounted plugin
+backends. Either the plugin name (`plugin`) or the desired plugin backend mounts
+(`mounts`) must be provided, but not both. In the case that the plugin name is
+provided, all mounted paths that use that plugin backend will be reloaded.
+
+This API is available in all namespaces, and is limited to reloading plugins in
+use within the request's namespace.
+
+| Method | Path -                        |
+| :----- | :---------------------------- |
+| `POST` | `/sys/plugins/reload/backend` |
+
+### Parameters
+
+- `plugin` `(string: "")` – The name of the plugin to reload, as
+  registered in the plugin catalog.
+
+- `mounts` `(array: [])` – Array or comma-separated string mount paths
+  of the plugin backends to reload.
+
+- `scope` `(string: "")` - The scope of the reload. If omitted, reloads the
+  plugin or mounts on this Vault instance. If 'global', will begin reloading the
+  plugin on all instances of a cluster.
+
+### Sample payload
+
+```json
+{
+  "plugin": "mock-plugin",
+  "scope": "global"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/plugins/reload/backend
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "reload_id": "bdddb8df-ccb6-1b09-670d-efa9d3f2c11b"
+  },
+  ...
+}
+```
+
+-> Note: If no plugins are reloaded on the node that serviced the request, a
+warning will also be returned in the response.

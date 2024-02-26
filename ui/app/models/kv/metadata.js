@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
@@ -51,6 +51,7 @@ export default class KvSecretMetadataModel extends Model {
 
   @attr('object', {
     editType: 'kv',
+    isSectionHeader: true,
     subText: 'An optional set of informational key-value pairs that will be stored with all secret versions.',
   })
   customMetadata;

@@ -52,6 +52,7 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
+	"github.com/hashicorp/vault/plugins/event"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -96,6 +97,7 @@ type ServerCommand struct {
 	CredentialBackends map[string]logical.Factory
 	LogicalBackends    map[string]logical.Factory
 	PhysicalBackends   map[string]physical.Factory
+	EventBackends      map[string]event.Factory
 
 	ServiceRegistrations map[string]sr.Factory
 
@@ -901,6 +903,8 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 		}
 		props["max_request_duration"] = lnConfig.MaxRequestDuration.String()
 
+		props["disable_request_limiter"] = strconv.FormatBool(lnConfig.DisableRequestLimiter)
+
 		if lnConfig.ChrootNamespace != "" {
 			props["chroot_namespace"] = lnConfig.ChrootNamespace
 		}
@@ -1149,6 +1153,10 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 	if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" {
 		config.License = envLicense
+	}
+
+	if envPluginTmpdir := os.Getenv(EnvVaultPluginTmpdir); envPluginTmpdir != "" {
+		config.PluginTmpdir = envPluginTmpdir
 	}
 
 	if err := server.ExperimentsFromEnvAndCLI(config, EnvVaultExperiments, c.flagExperiments); err != nil {
@@ -1432,6 +1440,12 @@ func (c *ServerCommand) Run(args []string) int {
 	infoKeys = append(infoKeys, "administrative namespace")
 	info["administrative namespace"] = config.AdministrativeNamespacePath
 
+	infoKeys = append(infoKeys, "request limiter")
+	info["request limiter"] = "disabled"
+	if config.RequestLimiter != nil && !config.RequestLimiter.Disable {
+		info["request limiter"] = "enabled"
+	}
+
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
 
@@ -1660,6 +1674,8 @@ func (c *ServerCommand) Run(args []string) int {
 
 			// Setting log request with the new value in the config after reload
 			core.ReloadLogRequestsLevel()
+
+			core.ReloadRequestLimiter()
 
 			// reloading HCP link
 			hcpLink, err = c.reloadHCPLink(hcpLink, config, core, hcpLogger)
@@ -2066,10 +2082,10 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 	resp, err := core.HandleRequest(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("error creating default K/V store: %w", err)
+		return nil, fmt.Errorf("error creating default KV store: %w", err)
 	}
 	if resp.IsError() {
-		return nil, fmt.Errorf("failed to create default K/V store: %w", resp.Error())
+		return nil, fmt.Errorf("failed to create default KV store: %w", resp.Error())
 	}
 
 	return init, nil
@@ -2557,8 +2573,9 @@ type SetSealResponse struct {
 	unwrapSeal  vault.Seal
 
 	// sealConfigError is present if there was an error configuring wrappers, other than KeyNotFound.
-	sealConfigError   error
-	sealConfigWarning error
+	sealConfigError          error
+	sealConfigWarning        error
+	hasPartiallyWrappedPaths bool
 }
 
 func (r *SetSealResponse) getCreatedSeals() []*vault.Seal {
@@ -2761,6 +2778,9 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 				return nil, err
 			}
 			unwrapSeal = vault.NewAutoSeal(a)
+		} else if sealGenerationInfo.Generation == 1 {
+			// First generation, and shamir, with no disabled wrapperrs, so there can be no wrapped values
+			sealGenerationInfo.SetRewrapped(true)
 		}
 
 	case len(disabledSealWrappers) == 1 && containsShamir(disabledSealWrappers):
@@ -2809,10 +2829,11 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	}
 
 	return &SetSealResponse{
-		barrierSeal:       barrierSeal,
-		unwrapSeal:        unwrapSeal,
-		sealConfigError:   sealConfigError,
-		sealConfigWarning: sealConfigWarning,
+		barrierSeal:              barrierSeal,
+		unwrapSeal:               unwrapSeal,
+		sealConfigError:          sealConfigError,
+		sealConfigWarning:        sealConfigWarning,
+		hasPartiallyWrappedPaths: hasPartiallyWrappedPaths,
 	}, nil
 }
 
@@ -3060,6 +3081,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		AuditBackends:                  c.AuditBackends,
 		CredentialBackends:             c.CredentialBackends,
 		LogicalBackends:                c.LogicalBackends,
+		EventBackends:                  c.EventBackends,
 		LogLevel:                       config.LogLevel,
 		Logger:                         c.logger,
 		DetectDeadlocks:                config.DetectDeadlocks,
@@ -3072,6 +3094,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		ClusterName:                    config.ClusterName,
 		CacheSize:                      config.CacheSize,
 		PluginDirectory:                config.PluginDirectory,
+		PluginTmpdir:                   config.PluginTmpdir,
 		PluginFileUid:                  config.PluginFileUid,
 		PluginFilePermissions:          config.PluginFilePermissions,
 		EnableUI:                       config.EnableUI,
@@ -3093,6 +3116,12 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		DisableSSCTokens:               config.DisableSSCTokens,
 		Experiments:                    config.Experiments,
 		AdministrativeNamespacePath:    config.AdministrativeNamespacePath,
+	}
+
+	if config.RequestLimiter != nil {
+		coreConfig.DisableRequestLimiter = config.RequestLimiter.Disable
+	} else {
+		coreConfig.DisableRequestLimiter = true
 	}
 
 	if c.flagDev {
@@ -3337,12 +3366,12 @@ func (c *ServerCommand) reloadSeals(ctx context.Context, core *vault.Core, confi
 		return nil, err
 	}
 
-	err = core.SetSeals(setSealResponse.barrierSeal, secureRandomReader)
+	newGen := setSealResponse.barrierSeal.GetAccess().GetSealGenerationInfo()
+
+	err = core.SetSeals(setSealResponse.barrierSeal, secureRandomReader, !newGen.IsRewrapped() || setSealResponse.hasPartiallyWrappedPaths)
 	if err != nil {
 		return nil, fmt.Errorf("error setting seal: %s", err)
 	}
-
-	newGen := setSealResponse.barrierSeal.GetAccess().GetSealGenerationInfo()
 
 	if err := core.SetPhysicalSealGenInfo(ctx, newGen); err != nil {
 		c.logger.Warn("could not update seal information in storage", "err", err)

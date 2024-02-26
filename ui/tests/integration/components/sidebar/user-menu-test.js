@@ -8,12 +8,21 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | sidebar-user-menu', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
     this.auth = this.owner.lookup('service:auth');
+    setRunOptions({
+      // TODO: fix this component
+      rules: {
+        'nested-interactive': { enabled: false },
+        // TODO: fix ConfirmAction rendered in toolbar not a list item
+        list: { enabled: false },
+      },
+    });
   });
 
   test('it should render trigger and open menu', async function (assert) {

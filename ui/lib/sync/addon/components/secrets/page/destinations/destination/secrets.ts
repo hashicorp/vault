@@ -6,6 +6,7 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/application';
 import errorMessage from 'vault/utils/error-message';
 
@@ -26,6 +27,8 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @service declare readonly store: StoreService;
   @service declare readonly flashMessages: FlashMessageService;
 
+  @tracked secretToUnsync: SyncAssociationModel | null = null;
+
   get mountPoint(): string {
     const owner = getOwner(this) as EngineOwner;
     return owner.mountPoint;
@@ -36,15 +39,27 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   }
 
   @action
+  refreshRoute() {
+    // refresh route to update displayed secrets
+    this.store.clearDataset('sync/association');
+    this.router.transitionTo(
+      'vault.cluster.sync.secrets.destinations.destination.secrets',
+      this.args.destination.type,
+      this.args.destination.name
+    );
+  }
+
+  @action
   async update(association: SyncAssociationModel, operation: string) {
     try {
       await association.save({ adapterOptions: { action: operation } });
-      // this message can be expanded after testing -- deliberately generic for now
-      this.flashMessages.success(
-        'Sync operation successfully initiated. Status will be updated on secret when complete.'
-      );
+      const action: string = operation === 'set' ? 'Sync' : 'Unsync';
+      this.flashMessages.success(`${action} operation initiated.`);
     } catch (error) {
       this.flashMessages.danger(`Sync operation error: \n ${errorMessage(error)}`);
+    } finally {
+      this.secretToUnsync = null;
+      this.refreshRoute();
     }
   }
 }

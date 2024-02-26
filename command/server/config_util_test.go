@@ -1,11 +1,12 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 //go:build !enterprise
 
 package server
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -82,6 +83,58 @@ func TestCheckSealConfig(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+// TestRequestLimiterConfig verifies that the census config is correctly instantiated from HCL
+func TestRequestLimiterConfig(t *testing.T) {
+	testCases := []struct {
+		name              string
+		inConfig          string
+		outErr            bool
+		outRequestLimiter *configutil.RequestLimiter
+	}{
+		{
+			name:              "empty",
+			outRequestLimiter: nil,
+		},
+		{
+			name: "disabled",
+			inConfig: `
+request_limiter {
+	disable = true
+}`,
+			outRequestLimiter: &configutil.RequestLimiter{Disable: true},
+		},
+		{
+			name: "invalid disable",
+			inConfig: `
+request_limiter {
+	disable = "people make mistakes"
+}`,
+			outErr: true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			config := fmt.Sprintf(`
+ui = false
+storage "file" {
+	path = "/tmp/test"
+}
+
+listener "tcp" {
+	address = "0.0.0.0:8200"
+}
+%s`, tc.inConfig)
+			gotConfig, err := ParseConfig(config, "")
+			if tc.outErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.outRequestLimiter, gotConfig.RequestLimiter)
 			}
 		})
 	}

@@ -6,7 +6,7 @@ description: The `/sys/quotas/rate-limit` endpoint is used to create, edit and d
 
 # `/sys/quotas/rate-limit`
 
-@include 'alerts/restricted-root.mdx'
+@include 'alerts/restricted-admin.mdx'
 
 The `/sys/quotas/rate-limit` endpoint is used to create, edit and delete rate limit quotas.
 
@@ -28,7 +28,7 @@ the mount to restrict more specific API paths.
   A blank path configures a global rate limit quota. For example `namespace1/`
   adds a quota to a full namespace, `namespace1/auth/userpass` adds a quota to
   `userpass` in `namespace1`, and `namespace1/kv-v2/data/foo/bar` adds a quota to
-  a specific secret on a K/V v2 mount in `namespace1`. A trailing glob (`*`) can also
+  a specific secret on a KV v2 mount in `namespace1`. A trailing glob (`*`) can also
   be added as part of the path after the mount to match paths that share the same prefix
   prior to the glob. `namespace1/kv-v2/data/foo/*` would match both
   `namespace1/kv-v2/data/foo/bar` and `namespace1/kv-v2/data/foo/baz`. Updating this field on

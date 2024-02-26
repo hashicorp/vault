@@ -4,8 +4,8 @@
 ~}}
 
 {{#if @hasConfig}}
-  <Toolbar>
-    <ToolbarActions>
+  <Toolbar aria-label="PKI configuration">
+    <ToolbarActions aria-label="actions for PKI configuration">
       {{#if @canDeleteAllIssuers}}
         <Hds::Button
           @text="Delete all issuers"

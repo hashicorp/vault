@@ -15,7 +15,7 @@
             {{#if (and (eq attr.name "issuerRef") @issuers)}}
               <div class="has-top-margin-m {{unless this.showDefaultIssuer 'has-bottom-margin-xs' 'has-bottom-margin-m'}}">
                 <FormFieldLabel
-                  for={{attr.name}}
+                  for="select-{{attr.name}}"
                   @label="Issuer ref"
                   @helpText={{(if this.showHelpText attr.options.helpText)}}
                   @subText={{attr.options.subText}}
@@ -39,6 +39,7 @@
                       @isFullwidth={{true}}
                       @selectedValue={{@role.issuerRef}}
                       @onChange={{action (mut @role.issuerRef)}}
+                      aria-labelledby={{attr.name}}
                     />
                   </div>
                 </div>

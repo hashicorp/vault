@@ -10,6 +10,8 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupModels } from 'vault/tests/helpers/sync/setup-models';
 import hbs from 'htmlbars-inline-precompile';
 import { click, render } from '@ember/test-helpers';
+import sinon from 'sinon';
+
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
@@ -23,6 +25,7 @@ module(
 
     hooks.beforeEach(async function () {
       this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
+      sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
 
       await render(
         hbs`

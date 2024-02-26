@@ -309,14 +309,25 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 	c.metricsHelper = metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
 
+	var templateNamespace string
+	// This indicates whether the namespace for the client has been set by environment variable.
+	// If it has, we don't touch it
+	namespaceSetByEnvironmentVariable := client.Namespace() != ""
+
+	if !namespaceSetByEnvironmentVariable && config.Vault != nil && config.Vault.Namespace != "" {
+		client.SetNamespace(config.Vault.Namespace)
+	}
+
 	var method auth.AuthMethod
 	var sinks []*sink.SinkConfig
-	var templateNamespace string
 	if config.AutoAuth != nil {
-		if client.Headers().Get(consts.NamespaceHeaderName) == "" && config.AutoAuth.Method.Namespace != "" {
+		// Note: This will only set namespace header to the value in config.AutoAuth.Method.Namespace
+		// only if it hasn't been set by config.Vault.Namespace above. In that case, the config value
+		// present at config.AutoAuth.Method.Namespace will still be used for auto-auth.
+		if !namespaceSetByEnvironmentVariable && config.AutoAuth.Method.Namespace != "" {
 			client.SetNamespace(config.AutoAuth.Method.Namespace)
 		}
-		templateNamespace = client.Headers().Get(consts.NamespaceHeaderName)
+		templateNamespace = client.Namespace()
 
 		sinkClient, err := client.CloneWithHeaders()
 		if err != nil {
@@ -707,6 +718,11 @@ func (c *AgentCommand) Run(args []string) int {
 			return 1
 		}
 
+		// Override the set namespace with the auto-auth specific namespace
+		if !namespaceSetByEnvironmentVariable && config.AutoAuth.Method.Namespace != "" {
+			ahClient.SetNamespace(config.AutoAuth.Method.Namespace)
+		}
+
 		if config.DisableIdleConnsAutoAuth {
 			ahClient.SetMaxIdleConnections(-1)
 		}
@@ -1011,7 +1027,12 @@ func (c *AgentCommand) setBoolFlag(f *FlagSets, configVal bool, fVar *BoolVar) {
 		// Don't do anything as the flag is already set from the command line
 	case flagEnvSet:
 		// Use value from env var
-		*fVar.Target = flagEnvValue != ""
+		val, err := parseutil.ParseBool(flagEnvValue)
+		if err != nil {
+			c.logger.Error("error parsing bool from environment variable, using default instead", "environment variable", fVar.EnvVar, "provided value", flagEnvValue, "default", fVar.Default, "err", err)
+			val = fVar.Default
+		}
+		*fVar.Target = val
 	case configVal:
 		// Use value from config
 		*fVar.Target = configVal

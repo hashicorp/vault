@@ -14,16 +14,20 @@ import (
 // TestEntryFindMessages verifies that the (*Entry).FindMessages method behaves
 // correctly in the different edge cases that could occur.
 func TestEntryFindMessages(t *testing.T) {
+	now := time.Now()
+	later := now.Add(time.Hour)
+	earlier := now.Add(-1 * time.Hour)
+
 	testMessagesMap := map[string]Message{
-		"post-login": {
+		"post-login-message": {
 			Authenticated: true,
 		},
-		"modal": {
+		"modal-message": {
 			Type: ModalMessageType,
 		},
-		"active": {
-			StartTime: time.Now().Add(-1 * time.Hour),
-			EndTime:   time.Now().Add(time.Hour),
+		"active-message": {
+			StartTime: earlier,
+			EndTime:   &later,
 		},
 	}
 
@@ -76,17 +80,17 @@ func TestEntryCreateMessage(t *testing.T) {
 		time2            = time1.Add(time.Hour)
 		testValidMessage = Message{
 			StartTime: time1,
-			EndTime:   time2,
+			EndTime:   &time2,
 			Type:      BannerMessageType,
 		}
 		testInvalidTimesMessage = Message{
 			StartTime: time2,
-			EndTime:   time1,
+			EndTime:   &time1,
 			Type:      BannerMessageType,
 		}
 		testInvalidTypeMessage = Message{
 			StartTime: time1,
-			EndTime:   time2,
+			EndTime:   &time2,
 			Type:      "watermark",
 		}
 	)
@@ -173,19 +177,23 @@ func TestEntryUpdateMessage(t *testing.T) {
 	var (
 		testEntry = Entry{}
 
+		now     = time.Now()
+		later   = now.Add(time.Hour)
+		earlier = now.Add(-1 * time.Hour)
+
 		testValidMessage = Message{
-			StartTime: time.Now(),
-			EndTime:   time.Now().Add(time.Hour),
+			StartTime: now,
+			EndTime:   &later,
 			Type:      BannerMessageType,
 		}
 		testInvalidTimesMessage = Message{
-			StartTime: time.Now(),
-			EndTime:   time.Now().Add(-1 * time.Hour),
+			StartTime: now,
+			EndTime:   &earlier,
 			Type:      BannerMessageType,
 		}
 		testInvalidTypeMessage = Message{
-			StartTime: time.Now(),
-			EndTime:   time.Now().Add(time.Hour),
+			StartTime: now,
+			EndTime:   &later,
 			Type:      "watermark",
 		}
 	)

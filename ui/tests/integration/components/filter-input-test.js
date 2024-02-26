@@ -16,7 +16,9 @@ module('Integration | Component | filter-input', function (hooks) {
 
     this.onClick = () => assert.ok(true, 'on click modifier passed to input element');
 
-    await render(hbs`<FilterInput placeholder="Filter roles" value="foo" {{on "click" this.onClick}} />`);
+    await render(
+      hbs`<FilterInput aria-label="test-component" placeholder="Filter roles" value="foo" {{on "click" this.onClick}} />`
+    );
     await click('[data-test-filter-input]');
     assert
       .dom('[data-test-filter-input]')
@@ -25,7 +27,7 @@ module('Integration | Component | filter-input', function (hooks) {
   });
 
   test('it should focus input on insert', async function (assert) {
-    await render(hbs`<FilterInput @autofocus={{true}} />`);
+    await render(hbs`<FilterInput id="hello" aria-label="test-component" @autofocus={{true}} />`);
     assert.dom('[data-test-filter-input]').isFocused('Input is focussed');
   });
 
@@ -36,12 +38,12 @@ module('Integration | Component | filter-input', function (hooks) {
       assert.strictEqual(value, 'foo', 'onInput event sent with value');
     };
 
-    await render(hbs`<FilterInput @wait={{0}} @onInput={{this.onInput}} />`);
+    await render(hbs`<FilterInput aria-label="test-component" @wait={{0}} @onInput={{this.onInput}} />`);
     await fillIn('[data-test-filter-input]', 'foo');
   });
 
   test('it should render icon', async function (assert) {
-    await render(hbs`<FilterInput />`);
+    await render(hbs`<FilterInput aria-label="test-component" />`);
     assert
       .dom('[data-test-filter-input-container]')
       .hasClass('has-icons-left', 'Icon class exists on container');
@@ -49,7 +51,7 @@ module('Integration | Component | filter-input', function (hooks) {
   });
 
   test('it should hide icon', async function (assert) {
-    await render(hbs`<FilterInput @hideIcon={{true}} />`);
+    await render(hbs`<FilterInput aria-label="test-component" @hideIcon={{true}} />`);
     assert
       .dom('[data-test-filter-input-container]')
       .doesNotHaveClass('has-icons-left', 'Icon class does not exist on container');

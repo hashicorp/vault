@@ -37,6 +37,6 @@
   }
 
   .is-label {
-    color: $grey;
+    color: var(--token-color-foreground-faint);
   }
 }

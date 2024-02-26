@@ -8,7 +8,7 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 import { waitFor } from '@ember/test-waiters';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import trimRight from 'vault/utils/trim-right';
 import errorMessage from 'vault/utils/error-message';
 import type PkiKeyModel from 'vault/models/pki/key';

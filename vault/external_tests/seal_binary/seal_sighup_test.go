@@ -11,6 +11,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
 )
 
 func TestSealReloadSIGHUP(t *testing.T) {
@@ -124,10 +126,10 @@ COPY vault /bin/vault
 			vaultConfig := fmt.Sprintf(containerConfig, sealList)
 
 			svc, runner, err := createContainerWithConfig(vaultConfig, "hashicorp/vault", "test-image", func(s string) { t.Log(s) })
-			defer svc.Cleanup()
 			if err != nil {
 				t.Fatalf("error creating container: %s", err)
 			}
+			defer svc.Cleanup()
 
 			time.Sleep(5 * time.Second)
 
@@ -148,8 +150,13 @@ COPY vault /bin/vault
 				}
 
 				vaultConfig = fmt.Sprintf(containerConfig, sealList)
+				configCtx := dockhelper.NewBuildContext()
+				configCtx["local.json"] = &dockhelper.FileContents{
+					Data: []byte(vaultConfig),
+					Mode: 0o644,
+				}
 
-				err = copyConfigToContainer(vaultConfig, svc.Container.ID, runner)
+				err = copyConfigToContainer(svc.Container.ID, bCtx, runner)
 				if err != nil {
 					t.Fatalf("error copying over config file: %s", err)
 				}

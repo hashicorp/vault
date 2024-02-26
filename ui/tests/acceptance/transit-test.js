@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, find, currentURL, settled, visit, waitUntil, findAll } from '@ember/test-helpers';
+import { click, fillIn, find, currentURL, settled, visit, findAll } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -23,7 +23,7 @@ const SELECTORS = {
   form: (item) => `[data-test-transit-key="${item}"]`,
   versionRow: (version) => `[data-test-transit-version="${version}"]`,
   rotate: {
-    trigger: '[data-test-confirm-action-trigger]',
+    trigger: '[data-test-transit-key-rotate]',
     confirm: '[data-test-confirm-button]',
   },
 };
@@ -244,7 +244,7 @@ module('Acceptance | transit (flaky)', function (hooks) {
     assert.dom(SELECTORS.infoRow('Convergent encryption')).hasText('Yes');
     await click(SELECTORS.rootCrumb(this.path));
     await click(SELECTORS.popupMenu);
-    const actions = findAll('.ember-basic-dropdown-content li');
+    const actions = findAll('.hds-dropdown__list li');
     assert.strictEqual(actions.length, 2, 'shows 2 items in popup menu');
 
     await click(SELECTORS.secretLink);
@@ -344,17 +344,15 @@ module('Acceptance | transit (flaky)', function (hooks) {
 
     await click(SELECTORS.versionsTab);
     assert.dom(SELECTORS.versionRow(1)).hasTextContaining('Version 1', `${name}: only one key version`);
-    await waitUntil(() => find(SELECTORS.rotate.trigger));
+
     await click(SELECTORS.rotate.trigger);
     await click(SELECTORS.rotate.confirm);
-    // wait for rotate call
-    await waitUntil(() => find(SELECTORS.versionRow(2)));
+
     assert.dom(SELECTORS.versionRow(2)).exists('two key versions after rotate');
 
     // navigate back to actions tab
     await click(SELECTORS.actionsTab);
 
-    await waitUntil(() => find(SELECTORS.card('encrypt')));
     assert.dom(SELECTORS.card('encrypt')).exists(`renders encrypt action card for ${name}`);
     await click(SELECTORS.card('encrypt'));
     assert
@@ -366,11 +364,6 @@ module('Acceptance | transit (flaky)', function (hooks) {
     await testConvergentEncryption(assert, name);
   });
 
-  /* 
-  OLD FLAKY TESTS (skipped)
-  It's been a while since we've updated the transit engine
-  keeping these tests to run locally the next time we touch that secret engine
-  */
   const KEY_TYPE_COMBINATIONS = [
     {
       name: (uid) => `aes-${uid}`,
@@ -458,7 +451,7 @@ module('Acceptance | transit (flaky)', function (hooks) {
   ];
 
   for (const key of KEY_TYPE_COMBINATIONS) {
-    test.skip(`transit backend: ${key.type}`, async function (assert) {
+    test(`transit backend: ${key.type}`, async function (assert) {
       assert.expect(key.convergent ? 43 : 7);
       const name = await this.generateTransitKey(key);
       await visit(`vault/secrets/${this.path}/show/${name}`);
@@ -472,12 +465,9 @@ module('Acceptance | transit (flaky)', function (hooks) {
       // wait for capabilities
 
       assert.dom('[data-test-transit-version]').exists({ count: 1 }, `${name}: only one key version`);
-      await waitUntil(() => find(SELECTORS.rotate.trigger));
       await click(SELECTORS.rotate.trigger);
 
       await click(SELECTORS.rotate.confirm);
-      // wait for rotate call
-      await waitUntil(() => findAll('[data-test-transit-version]').length >= 2);
       assert
         .dom('[data-test-transit-version]')
         .exists({ count: 2 }, `${name}: two key versions after rotate`);
@@ -490,7 +480,6 @@ module('Acceptance | transit (flaky)', function (hooks) {
       );
 
       const keyAction = key.supportsEncryption ? 'encrypt' : 'sign';
-      await waitUntil(() => find(`[data-test-transit-action-title=${keyAction}]`));
 
       assert
         .dom(`[data-test-transit-action-title=${keyAction}]`)

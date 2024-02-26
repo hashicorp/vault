@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 // ARG NOTE: Once you remove outer-html after glimmerizing you can remove the outer-html component
 import Component from './outer-html';
 import { task, timeout, waitForEvent } from 'ember-concurrency';

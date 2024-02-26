@@ -33,13 +33,7 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
-	raftlib "github.com/hashicorp/raft"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
-	"github.com/mitchellh/copystructure"
-	"github.com/mitchellh/go-testing-interface"
-	"golang.org/x/crypto/ed25519"
-	"golang.org/x/net/http2"
-
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
@@ -50,6 +44,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -60,6 +55,10 @@ import (
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/vault/seal"
+	"github.com/mitchellh/copystructure"
+	"github.com/mitchellh/go-testing-interface"
+	"golang.org/x/crypto/ed25519"
+	"golang.org/x/net/http2"
 )
 
 // This file contains a number of methods that are useful for unit
@@ -233,7 +232,6 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.PluginDirectory = opts.PluginDirectory
 	conf.DetectDeadlocks = opts.DetectDeadlocks
 	conf.Experiments = opts.Experiments
-	conf.CensusAgent = opts.CensusAgent
 	conf.AdministrativeNamespacePath = opts.AdministrativeNamespacePath
 	conf.ImpreciseLeaseRoleTracking = opts.ImpreciseLeaseRoleTracking
 
@@ -521,7 +519,7 @@ func TestKeyCopy(key []byte) []byte {
 	return result
 }
 
-func TestDynamicSystemView(c *Core, ns *namespace.Namespace) *dynamicSystemView {
+func TestDynamicSystemView(c *Core, ns *namespace.Namespace) logical.SystemView {
 	me := &MountEntry{
 		Config: MountConfig{
 			DefaultLeaseTTL: 24 * time.Hour,
@@ -536,7 +534,9 @@ func TestDynamicSystemView(c *Core, ns *namespace.Namespace) *dynamicSystemView 
 		me.namespace = ns
 	}
 
-	return &dynamicSystemView{c, me, c.perfStandby}
+	return &extendedSystemViewImpl{
+		dynamicSystemView{c, me, c.perfStandby},
+	}
 }
 
 func TestAddTestPlugin(t testing.T, core *Core, name string, pluginType consts.PluginType, version string, testFunc string, env []string) {
@@ -716,6 +716,9 @@ type TestCluster struct {
 
 func (c *TestCluster) SetRootToken(token string) {
 	c.RootToken = token
+	for _, c := range c.Cores {
+		c.Client.SetToken(token)
+	}
 }
 
 func (c *TestCluster) Start() {
@@ -1041,6 +1044,12 @@ type PhysicalBackendBundle struct {
 	Backend   physical.Backend
 	HABackend physical.HABackend
 	Cleanup   func()
+	// MutateCoreConfig is invoked when applying the bundle to core config
+	// during core creation.  We do it this way rather than providing the input
+	// directly as part of the CoreConfig passed in to NewTestCluster so that
+	// the same input conf and opts can be used for multiple clusters, but at
+	// the same time can have per-cluster configuration specified by the backend.
+	MutateCoreConfig func(conf *CoreConfig)
 }
 
 type HandlerHandler interface {
@@ -1104,23 +1113,14 @@ type TestClusterOptions struct {
 	// built using the inmem implementation.
 	InmemClusterLayers bool
 
-	// RaftAddressProvider is used to set the raft ServerAddressProvider on
-	// each core.
-	//
-	// If SkipInit is true, then RaftAddressProvider has no effect.
-	// RaftAddressProvider should only be specified if the underlying physical
-	// storage is Raft.
-	RaftAddressProvider raftlib.ServerAddressProvider
-
 	CoreMetricSinkProvider func(clusterName string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper)
 
-	PhysicalFactoryConfig map[string]interface{}
-	LicensePublicKey      ed25519.PublicKey
-	LicensePrivateKey     ed25519.PrivateKey
+	PhysicalFactoryConfig        map[string]interface{}
+	PerNodePhysicalFactoryConfig map[int]map[string]interface{}
 
-	// this stores the vault version that should be used for each core config
-	VersionMap             map[int]string
-	RedundancyZoneMap      map[int]string
+	LicensePublicKey  ed25519.PublicKey
+	LicensePrivateKey ed25519.PrivateKey
+
 	KVVersion              string
 	EffectiveSDKVersionMap map[int]string
 
@@ -1133,6 +1133,8 @@ type TestClusterOptions struct {
 
 	// ABCDLoggerNames names the loggers according to our ABCD convention when generating 4 clusters
 	ABCDLoggerNames bool
+
+	LimiterRegistry *limits.LimiterRegistry
 }
 
 type TestPluginConfig struct {
@@ -1423,6 +1425,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		EnableUI:           true,
 		EnableRaw:          true,
 		BuiltinRegistry:    corehelpers.NewMockBuiltinRegistry(),
+		LimiterRegistry:    limits.NewLimiterRegistry(testCluster.Logger),
 	}
 
 	if base != nil {
@@ -1434,6 +1437,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.MaxLeaseTTL = base.MaxLeaseTTL
 		coreConfig.CacheSize = base.CacheSize
 		coreConfig.PluginDirectory = base.PluginDirectory
+		coreConfig.PluginTmpdir = base.PluginTmpdir
 		coreConfig.Seal = base.Seal
 		coreConfig.UnwrapSeal = base.UnwrapSeal
 		coreConfig.DevToken = base.DevToken
@@ -1509,6 +1513,12 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.PendingRemovalMountsAllowed = base.PendingRemovalMountsAllowed
 		coreConfig.ExpirationRevokeRetryBase = base.ExpirationRevokeRetryBase
 		coreConfig.PeriodicLeaderRefreshInterval = base.PeriodicLeaderRefreshInterval
+		coreConfig.ClusterAddrBridge = base.ClusterAddrBridge
+
+		if base.LimiterRegistry != nil {
+			coreConfig.LimiterRegistry = base.LimiterRegistry
+		}
+
 		testApplyEntBaseConfig(coreConfig, base)
 	}
 	if coreConfig.ClusterName == "" {
@@ -1831,11 +1841,10 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 		if pfc == nil {
 			pfc = make(map[string]interface{})
 		}
-		if len(opts.VersionMap) > 0 {
-			pfc["autopilot_upgrade_version"] = opts.VersionMap[idx]
-		}
-		if len(opts.RedundancyZoneMap) > 0 {
-			pfc["autopilot_redundancy_zone"] = opts.RedundancyZoneMap[idx]
+		if opts.PerNodePhysicalFactoryConfig != nil {
+			for k, v := range opts.PerNodePhysicalFactoryConfig[idx] {
+				pfc[k] = v
+			}
 		}
 		physBundle := opts.PhysicalFactory(t, idx, localConfig.Logger, pfc)
 		switch {
@@ -1864,12 +1873,19 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 			if physBundle.Cleanup != nil {
 				cleanupFunc = physBundle.Cleanup
 			}
+
+			if physBundle.MutateCoreConfig != nil {
+				physBundle.MutateCoreConfig(&localConfig)
+			}
 		}
 	}
 
 	if opts != nil && opts.ClusterLayers != nil {
 		localConfig.ClusterNetworkLayer = opts.ClusterLayers.Layers()[idx]
 		localConfig.ClusterAddr = "https://" + localConfig.ClusterNetworkLayer.Listeners()[0].Addr().String()
+	}
+	if opts != nil && opts.BaseClusterListenPort != 0 {
+		localConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", opts.BaseClusterListenPort+idx)
 	}
 
 	switch {
@@ -1895,6 +1911,10 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 	}
 
 	localConfig.NumExpirationWorkers = numExpirationWorkersTest
+
+	if opts != nil && opts.LimiterRegistry != nil {
+		localConfig.LimiterRegistry = opts.LimiterRegistry
+	}
 
 	c, err := NewCore(&localConfig)
 	if err != nil {

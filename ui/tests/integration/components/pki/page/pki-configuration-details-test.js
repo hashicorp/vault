@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const SELECTORS = {
   rowLabel: (attr) => `[data-test-row-label="${attr}"]`,
@@ -45,6 +46,12 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       crossClusterRevocation: true,
       unifiedCrl: true,
       unifiedCrlOnExistingPaths: true,
+    });
+    // Fails on #ember-testing-container
+    setRunOptions({
+      rules: {
+        'scrollable-region-focusable': { enabled: false },
+      },
     });
   });
 

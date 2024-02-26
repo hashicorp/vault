@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -11,6 +11,7 @@ import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | ldap | Page::Overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -55,6 +56,13 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
         }
       );
     };
+    setRunOptions({
+      rules: {
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+      },
+    });
   });
 
   test('it should render tab page header and config cta', async function (assert) {

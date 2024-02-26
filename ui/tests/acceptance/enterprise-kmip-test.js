@@ -6,17 +6,15 @@
 import { currentURL, currentRouteName, settled, fillIn, waitUntil, find } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { create } from 'ember-cli-page-object';
 
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import authPage from 'vault/tests/pages/auth';
 import scopesPage from 'vault/tests/pages/secrets/backend/kmip/scopes';
 import rolesPage from 'vault/tests/pages/secrets/backend/kmip/roles';
 import credentialsPage from 'vault/tests/pages/secrets/backend/kmip/credentials';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
-
-const uiConsole = create(consoleClass);
+import { runCmd } from 'vault/tests/helpers/commands';
+import { v4 as uuidv4 } from 'uuid';
 
 const getRandomPort = () => {
   let a = Math.floor(100000 + Math.random() * 900000);
@@ -25,16 +23,14 @@ const getRandomPort = () => {
 };
 
 const mount = async (shouldConfig = true) => {
-  const now = Date.now();
-  const path = `kmip-${now}`;
+  const path = `kmip-${uuidv4()}`;
   const addr = `127.0.0.1:${getRandomPort()}`; // use random port
   await settled();
   const commands = shouldConfig
     ? [`write sys/mounts/${path} type=kmip`, `write ${path}/config listen_addrs=${addr}`]
     : [`write sys/mounts/${path} type=kmip`];
-  await uiConsole.runCommands(commands);
+  const res = await runCmd(commands);
   await settled();
-  const res = uiConsole.lastLogOutput;
   if (res.includes('Error')) {
     throw new Error(`Error mounting secrets engine: ${res}`);
   }
@@ -44,11 +40,10 @@ const mount = async (shouldConfig = true) => {
 const createScope = async () => {
   const path = await mount();
   await settled();
-  const scope = `scope-${Date.now()}`;
+  const scope = `scope-${uuidv4()}`;
   await settled();
-  await uiConsole.runCommands([`write ${path}/scope/${scope} -force`]);
+  const res = await runCmd([`write ${path}/scope/${scope} -force`]);
   await settled();
-  const res = uiConsole.lastLogOutput;
   if (res.includes('Error')) {
     throw new Error(`Error creating scope: ${res}`);
   }
@@ -58,10 +53,9 @@ const createScope = async () => {
 const createRole = async () => {
   const { path, scope } = await createScope();
   await settled();
-  const role = `role-${Date.now()}`;
-  await uiConsole.runCommands([`write ${path}/scope/${scope}/role/${role} operation_all=true`]);
+  const role = `role-${uuidv4()}`;
+  const res = await runCmd([`write ${path}/scope/${scope}/role/${role} operation_all=true`]);
   await settled();
-  const res = uiConsole.lastLogOutput;
   if (res.includes('Error')) {
     throw new Error(`Error creating role: ${res}`);
   }
@@ -71,10 +65,10 @@ const createRole = async () => {
 const generateCreds = async () => {
   const { path, scope, role } = await createRole();
   await settled();
-  await uiConsole.runCommands([
+  const serial = await runCmd([
     `write ${path}/scope/${scope}/role/${role}/credential/generate format=pem -field=serial_number`,
   ]);
-  const serial = uiConsole.lastLogOutput;
+  await settled();
   if (serial.includes('Error')) {
     throw new Error(`Credential generation failed with error: ${serial}`);
   }
@@ -93,7 +87,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     const engine = allEngines().find((e) => e.type === 'kmip');
     assert.expect(1);
 
-    await uiConsole.runCommands([
+    await runCmd([
       // delete any previous mount with same name
       `delete sys/mounts/${engine.type}`,
     ]);
@@ -105,14 +99,14 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       `vault.cluster.secrets.backend.${engine.engineRoute}`,
       `Transitions to ${engine.displayName} route on mount success`
     );
-    await uiConsole.runCommands([
+    await runCmd([
       // cleanup after
       `delete sys/mounts/${engine.type}`,
     ]);
   });
 
   test('it enables KMIP secrets engine', async function (assert) {
-    const path = `kmip-${Date.now()}`;
+    const path = `kmip-${uuidv4()}`;
     await mountSecrets.enable('kmip', path);
     await settled();
     assert.strictEqual(
@@ -175,7 +169,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
   });
 
   test('it can create a scope', async function (assert) {
-    const path = await mount(this);
+    const path = await mount();
     await scopesPage.visit({ backend: path });
     await settled();
     await scopesPage.createLink();
@@ -220,9 +214,8 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     const scope = `scope-for-can-create-role`;
     await settled();
-    await uiConsole.runCommands([`write ${path}/scope/${scope} -force`]);
+    const res = await runCmd([`write ${path}/scope/${scope} -force`]);
     await settled();
-    const res = uiConsole.lastLogOutput;
     if (res.includes('Error')) {
       throw new Error(`Error creating scope: ${res}`);
     }

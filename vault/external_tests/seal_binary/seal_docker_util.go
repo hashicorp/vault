@@ -63,6 +63,11 @@ const (
 	}
 }
 `
+	// recoveryModeFileName serves as a signal for the softhsmSetupScript to add the `-recovery` flag
+	// when launching Vault.
+	recoveryModeFileName     = "start-in-recovery-mode"
+	recoveryModeFileDir      = "/root/"
+	recoveryModeFileContents = "Script setup-softhsm.sh looks for this file and starts vault in recovery mode if it sees it"
 )
 
 type transitContainerConfig struct {
@@ -102,7 +107,8 @@ func createDockerImage(imageRepo, imageTag, containerFile string, bCtx dockhelpe
 	}
 
 	_, err = runner.BuildImage(context.Background(), containerFile, bCtx,
-		dockhelper.BuildRemove(true), dockhelper.BuildForceRemove(true),
+		dockhelper.BuildRemove(true),
+		dockhelper.BuildForceRemove(true),
 		dockhelper.BuildPullParent(true),
 		dockhelper.BuildTags([]string{fmt.Sprintf("%s:%s", imageRepo, imageTag)}))
 	if err != nil {
@@ -112,6 +118,8 @@ func createDockerImage(imageRepo, imageTag, containerFile string, bCtx dockhelpe
 	return nil
 }
 
+// This passes the config in an environment variable, so any changes to local.json
+// on the container will be overwritten if the container restarts
 func createContainerWithConfig(config string, imageRepo, imageTag string, logConsumer func(s string)) (*dockhelper.Service, *dockhelper.Runner, error) {
 	runner, err := dockhelper.NewServiceRunner(dockhelper.RunOptions{
 		ContainerName: "vault",
@@ -120,9 +128,10 @@ func createContainerWithConfig(config string, imageRepo, imageTag string, logCon
 		Cmd: []string{
 			"server", "-log-level=trace",
 		},
-		Ports:       []string{"8200/tcp"},
-		Env:         []string{fmt.Sprintf("VAULT_LICENSE=%s", os.Getenv("VAULT_LICENSE")), fmt.Sprintf("VAULT_LOCAL_CONFIG=%s", config)},
-		LogConsumer: logConsumer,
+		Ports:           []string{"8200/tcp"},
+		Env:             []string{fmt.Sprintf("VAULT_LICENSE=%s", os.Getenv("VAULT_LICENSE")), fmt.Sprintf("VAULT_LOCAL_CONFIG=%s", config)},
+		LogConsumer:     logConsumer,
+		DoNotAutoRemove: true,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("error creating runner: %w", err)
@@ -136,6 +145,10 @@ func createContainerWithConfig(config string, imageRepo, imageTag string, logCon
 	}
 
 	return svc, runner, nil
+}
+
+func createContainerFromImage(imageRepo, imageTag string, logConsumer func(s string)) (*dockhelper.Service, *dockhelper.Runner, error) {
+	return createContainerWithConfig("", imageRepo, imageTag, logConsumer)
 }
 
 func createTransitTestContainer(imageRepo, imageTag string, numKeys int) (*dockhelper.Service, *transitContainerConfig, error) {
@@ -292,13 +305,7 @@ func initializeVault(client *api.Client, sealType string) ([]string, string, err
 	return keys, token, nil
 }
 
-func copyConfigToContainer(config, containerID string, runner *dockhelper.Runner) error {
-	bCtx := dockhelper.NewBuildContext()
-	bCtx["local.json"] = &dockhelper.FileContents{
-		Data: []byte(config),
-		Mode: 0o644,
-	}
-
+func copyConfigToContainer(containerID string, bCtx dockhelper.BuildContext, runner *dockhelper.Runner) error {
 	tar, err := bCtx.ToTarball()
 	if err != nil {
 		return fmt.Errorf("error creating config tarball: %w", err)
@@ -309,5 +316,23 @@ func copyConfigToContainer(config, containerID string, runner *dockhelper.Runner
 		return fmt.Errorf("error copying config to container: %w", err)
 	}
 
+	return nil
+}
+
+func copyRecoveryModeTriggerToContainer(containerID string, runner *dockhelper.Runner) error {
+	bCtx := dockhelper.NewBuildContext()
+	bCtx[recoveryModeFileName] = &dockhelper.FileContents{
+		Data: []byte(recoveryModeFileContents),
+		Mode: 0o644,
+	}
+	tar, err := bCtx.ToTarball()
+	if err != nil {
+		return fmt.Errorf("error creating config tarball: %w", err)
+	}
+
+	err = runner.DockerAPI.CopyToContainer(context.Background(), containerID, recoveryModeFileDir, tar, types.CopyToContainerOptions{})
+	if err != nil {
+		return fmt.Errorf("error copying revovery mode trigger file to container: %w", err)
+	}
 	return nil
 }

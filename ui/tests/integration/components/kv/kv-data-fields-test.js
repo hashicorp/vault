@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -11,6 +11,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { fillIn, render, click } from '@ember/test-helpers';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { PAGE, FORM } from 'vault/tests/helpers/kv/kv-selectors';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
   setupRenderingTest(hooks);
@@ -22,6 +23,12 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
     this.backend = 'my-kv-engine';
     this.path = 'my-secret';
     this.secret = this.store.createRecord('kv/data', { backend: this.backend });
+    // TODO: Fix JSONEditor/CodeMirror
+    setRunOptions({
+      rules: {
+        label: { enabled: false },
+      },
+    });
   });
 
   test('it updates the secret model', async function (assert) {
@@ -89,7 +96,7 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
   });
 
   test('it shows readonly json editor when viewing secret details of complex secret', async function (assert) {
-    assert.expect(3);
+    assert.expect(4);
     this.secret.secretData = {
       foo: {
         bar: 'baz',
@@ -102,6 +109,10 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
     });
     assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
     assert.dom('[data-test-component="code-mirror-modifier"]').hasClass('readonly-codemirror');
+    assert
+      .dom('[data-test-component="code-mirror-modifier"]')
+      .includesText(`{ "foo": { "bar": "********" }}`);
+    await click(FORM.toggleJsonValues);
     assert.dom('[data-test-component="code-mirror-modifier"]').includesText(`{ "foo": { "bar": "baz" }}`);
   });
 });

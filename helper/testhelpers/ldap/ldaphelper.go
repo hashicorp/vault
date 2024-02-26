@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/cap/ldap"
-
 	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 )

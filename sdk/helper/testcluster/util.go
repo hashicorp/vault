@@ -174,7 +174,7 @@ func LeaderNode(ctx context.Context, cluster VaultCluster) (int, error) {
 	leaderActiveTimes := make(map[int]time.Time)
 	for i, node := range cluster.Nodes() {
 		client := node.APIClient()
-		ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+		ctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
 		resp, err := client.Sys().LeaderWithContext(ctx)
 		cancel()
 		if err != nil || resp == nil || !resp.IsSelf {
@@ -281,7 +281,7 @@ func WaitForActiveNodeAndPerfStandbys(ctx context.Context, cluster VaultCluster)
 	// this call to WaitForActiveNode by reworking the logic in this method.
 	leaderIdx, err := WaitForActiveNode(ctx, cluster)
 	if err != nil {
-		return err
+		return fmt.Errorf("did not find leader: %w", err)
 	}
 
 	if len(cluster.Nodes()) == 1 {
@@ -307,7 +307,7 @@ func WaitForActiveNodeAndPerfStandbys(ctx context.Context, cluster VaultCluster)
 		time.Sleep(1 * time.Second)
 	}
 	if err != nil {
-		return fmt.Errorf("unable to mount KV engine: %v", err)
+		return fmt.Errorf("unable to mount KV engine: %w", err)
 	}
 	path := mountPoint + "/waitforactivenodeandperfstandbys"
 	var standbys, actives int64
@@ -381,9 +381,17 @@ func WaitForActiveNodeAndPerfStandbys(ctx context.Context, cluster VaultCluster)
 		time.Sleep(time.Second)
 	}
 	if err != nil {
-		return fmt.Errorf("unable to unmount KV engine on primary")
+		return fmt.Errorf("unable to unmount KV engine: %w", err)
 	}
 	return nil
+}
+
+func Clients(vc VaultCluster) []*api.Client {
+	var ret []*api.Client
+	for _, n := range vc.Nodes() {
+		ret = append(ret, n.APIClient())
+	}
+	return ret
 }
 
 type GenerateRootKind int

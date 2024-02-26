@@ -226,6 +226,13 @@ module "vault_verify_undo_logs" {
   vault_instance_count = var.vault_instance_count
 }
 
+module "vault_verify_default_lcq" {
+  source = "./modules/vault_verify_default_lcq"
+
+  vault_autopilot_default_max_leases = "300000"
+  vault_instance_count               = var.vault_instance_count
+}
+
 module "vault_verify_replication" {
   source = "./modules/vault_verify_replication"
 

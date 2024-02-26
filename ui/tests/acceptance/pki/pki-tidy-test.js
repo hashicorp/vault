@@ -13,7 +13,7 @@ import { v4 as uuidv4 } from 'uuid';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
-import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
+import { runCmd } from 'vault/tests/helpers/commands';
 import { SELECTORS } from 'vault/tests/helpers/pki/page/pki-tidy';
 
 module('Acceptance | pki tidy', function (hooks) {
@@ -26,7 +26,7 @@ module('Acceptance | pki tidy', function (hooks) {
     const mountPath = `pki-workflow-${uuidv4()}`;
     await enablePage.enable('pki', mountPath);
     this.mountPath = mountPath;
-    await runCommands([
+    await runCmd([
       `write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test" name="Hashicorp Test"`,
     ]);
     await logout.visit();
@@ -36,7 +36,7 @@ module('Acceptance | pki tidy', function (hooks) {
     await logout.visit();
     await authPage.login();
     // Cleanup engine
-    await runCommands([`delete sys/mounts/${this.mountPath}`]);
+    await runCmd([`delete sys/mounts/${this.mountPath}`]);
   });
 
   test('it configures a manual tidy operation and shows its details and tidy states', async function (assert) {

@@ -56,6 +56,8 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
     await click(kvSuggestion.input);
     assert.dom(searchSelect.option()).hasText('my-path/', 'Nested secret path renders');
     assert.dom(searchSelect.option(1)).hasText('my-secret', 'Secret renders');
+    await click(searchSelect.removeSelected);
+    assert.dom(kvSuggestion.input).hasValue('', 'secret path value is cleared when mount is unset');
   });
 
   test('it should render secret suggestions for nested paths', async function (assert) {
@@ -68,7 +70,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
   });
 
   test('it should sync secret', async function (assert) {
-    assert.expect(4);
+    assert.expect(9);
 
     const { type, name } = this.destination;
     this.server.post(`/sys/sync/destinations/${type}/${name}/associations/set`, (schema, req) => {
@@ -79,14 +81,20 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
     });
 
     assert.dom(submit).isDisabled('Submit button is disabled when mount is not selected');
+    assert.dom(cancel).hasText('Back', 'back button renders');
     await selectChoose(mountSelect, '.ember-power-select-option', 1);
     assert.dom(submit).isDisabled('Submit button is disabled when secret is not selected');
     await click(kvSuggestion.input);
     await click(searchSelect.option(1));
     await click(submit);
+    assert.dom(cancel).hasText('View synced secrets', 'view secrets tertiary renders');
+    assert.dom(kvSuggestion.input).hasNoValue('Secret path is unset after submit success');
+    assert.dom(submit).isDisabled('Submit button is disabled');
     assert
       .dom(successMessage)
-      .includesText('Sync operation successfully initiated for "my-secret".', 'Success banner renders');
+      .includesText('Sync operation successfully initiated for my-secret.', 'Success banner renders');
+    await click(searchSelect.removeSelected);
+    assert.dom(successMessage).doesNotExist('clearing kv v2 mount path clears success banner');
   });
 
   test('it should allow manual mount path input if kv mounts are not returned', async function (assert) {
@@ -112,16 +120,6 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
     await click(kvSuggestion.input);
     await click(searchSelect.option(1));
     await click(submit);
-  });
-
-  test('it should transition to destination secrets route on cancel', async function (assert) {
-    const transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
-    await click(cancel);
-    assert.propEqual(
-      transitionStub.lastCall.args,
-      ['vault.cluster.sync.secrets.destinations.destination.secrets'],
-      'Transitions to destination secrets route on cancel'
-    );
   });
 
   test('it should render alert banner on sync error', async function (assert) {

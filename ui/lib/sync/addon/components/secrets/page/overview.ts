@@ -9,9 +9,10 @@ import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import Ember from 'ember';
 
+import type FlashMessageService from 'vault/services/flash-messages';
 import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
-import type FlashMessageService from 'vault/services/flash-messages';
+import type VersionService from 'vault/services/version';
 import type { SyncDestinationAssociationMetrics } from 'vault/vault/adapters/sync/association';
 import type SyncDestinationModel from 'vault/vault/models/sync/destination';
 
@@ -21,9 +22,10 @@ interface Args {
 }
 
 export default class SyncSecretsDestinationsPageComponent extends Component<Args> {
+  @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly router: RouterService;
   @service declare readonly store: StoreService;
-  @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly version: VersionService;
 
   @tracked destinationMetrics: SyncDestinationAssociationMetrics[] = [];
   @tracked page = 1;

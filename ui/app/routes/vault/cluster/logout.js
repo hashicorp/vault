@@ -5,7 +5,7 @@
 
 import Ember from 'ember';
 import { computed } from '@ember/object';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
 
@@ -18,6 +18,7 @@ export default Route.extend(ModelBoundaryRoute, {
   namespaceService: service('namespace'),
   router: service(),
   version: service(),
+  customMessages: service(),
 
   modelTypes: computed(function () {
     return ['secret', 'secret-engine'];
@@ -34,12 +35,14 @@ export default Route.extend(ModelBoundaryRoute, {
     this.flashMessages.clearMessages();
     this.permissions.reset();
     this.version.version = null;
+    this.customMessages.clearCustomMessages();
 
     queryParams.with = authType;
     if (ns) {
       queryParams.namespace = ns;
     }
     if (Ember.testing) {
+      // TODO: cleanup this replaceWith instance. Using router.replaceWith causes test failures
       // Don't redirect on the test
       this.replaceWith('vault.cluster.auth', { queryParams });
     } else {

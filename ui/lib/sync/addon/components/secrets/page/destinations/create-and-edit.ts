@@ -8,7 +8,7 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
 
 import type SyncDestinationModel from 'vault/models/sync/destination';
@@ -45,6 +45,7 @@ export default class DestinationsCreateForm extends Component<Args> {
           title: `Edit ${name}`,
           breadcrumbs: [
             { label: 'Secrets Sync', route: 'secrets.overview' },
+            { label: 'Destinations', route: 'secrets.destinations' },
             {
               label: 'Destination',
               route: 'secrets.destinations.destination.secrets',
@@ -59,7 +60,7 @@ export default class DestinationsCreateForm extends Component<Args> {
   @waitFor
   *save(event: Event) {
     event.preventDefault();
-
+    this.error = '';
     // clear out validation warnings
     this.modelValidations = null;
     const { destination } = this.args;
@@ -70,10 +71,18 @@ export default class DestinationsCreateForm extends Component<Args> {
 
     if (isValid) {
       try {
-        const verb = destination.isNew ? 'created' : 'updated';
-        yield destination.save();
-        this.flashMessages.success(`Successfully ${verb} the destination ${destination.name}`);
-        this.store.clearDataset('sync/destination');
+        // we only want to save if there are changes
+        if (destination.dirtyType as unknown as string) {
+          const verb = destination.isNew ? 'created' : 'updated';
+          yield destination.save();
+          this.flashMessages.success(`Successfully ${verb} the destination ${destination.name}`);
+          // when saving a record the server returns all credentials as ******
+          // Ember Data observes this as a change, marks the model as dirty and the field will be returned from changedAttributes
+          // if the user then attempts to update the record the credential will get overwritten with the masked placeholder value
+          // since the record will be fetched from the details route we can safely unload it to avoid the aforementioned issue
+          destination.unloadRecord();
+          this.store.clearDataset('sync/destination');
+        }
         this.router.transitionTo(
           'vault.cluster.sync.secrets.destinations.destination.details',
           destination.type,

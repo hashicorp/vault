@@ -21,9 +21,20 @@ const validations = {
   // getter/setter for the deploymentEnvironments model attribute
   deploymentEnvironmentsArray: [{ type: 'presence', message: 'At least one environment is required.' }],
 };
-const displayFields = ['name', 'accessToken', 'projectId', 'teamId', 'deploymentEnvironments'];
+
+const displayFields = [
+  // connection details
+  'name',
+  'accessToken',
+  'projectId',
+  'teamId',
+  'deploymentEnvironments',
+  // vault sync config options
+  'granularity',
+  'secretNameTemplate',
+];
 const formFieldGroups = [
-  { default: ['name', 'projectId', 'teamId', 'deploymentEnvironments'] },
+  { default: ['name', 'projectId', 'teamId', 'deploymentEnvironments', 'granularity', 'secretNameTemplate'] },
   { Credentials: ['accessToken'] },
 ];
 @withModelValidations(validations)
@@ -47,8 +58,9 @@ export default class SyncDestinationsVercelProjectModel extends SyncDestinationM
   })
   teamId;
 
-  // comma separated string, updated as array using deploymentEnvironmentsArray
-  @attr({
+  // commaString transforms param from the server's array type
+  // to a comma string so changedAttributes() will track changes
+  @attr('commaString', {
     subText: 'Deployment environments where the environment variables are available.',
     editType: 'checkboxList',
     possibleValues: ['development', 'preview', 'production'],
@@ -56,9 +68,8 @@ export default class SyncDestinationsVercelProjectModel extends SyncDestinationM
   })
   deploymentEnvironments;
 
-  // Instead of using the 'array' attr transform, we keep deploymentEnvironments a string to leverage Ember's changedAttributes()
-  // which only tracks updates to string types. However, arrays are easier for managing multi-option selection so
-  // the fieldValue is used to get/set the deploymentEnvironments attribute to/from an array
+  // Arrays are easier for managing multi-option selection
+  // these get/set the deploymentEnvironments attribute via arrays
   get deploymentEnvironmentsArray() {
     // if undefined or an empty string, return empty array
     return !this.deploymentEnvironments ? [] : this.deploymentEnvironments.split(',');

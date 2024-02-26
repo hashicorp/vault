@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 export const PAGE = {
@@ -86,8 +86,8 @@ export const PAGE = {
   },
   paths: {
     copyButton: (label) => `${PAGE.infoRowValue(label)} button`,
-    codeSnippet: (section) => `[data-test-code-snippet][data-test-commands="${section}"] code`,
-    snippetCopy: (section) => `[data-test-code-snippet][data-test-commands="${section}"] button`,
+    codeSnippet: (section) => `[data-test-commands="${section}"] code`,
+    snippetCopy: (section) => `[data-test-commands="${section}"] button`,
   },
 };
 
@@ -96,6 +96,7 @@ export const FORM = {
   inputByAttr: (attr) => `[data-test-input="${attr}"]`,
   fieldByAttr: (attr) => `[data=test=field="${attr}"]`, // formfield
   toggleJson: '[data-test-toggle-input="json"]',
+  toggleJsonValues: '[data-test-toggle-input="revealValues"]',
   toggleMasked: '[data-test-button="toggle-masked"]',
   toggleMetadata: '[data-test-metadata-toggle]',
   jsonEditor: '[data-test-component="code-mirror-modifier"]',

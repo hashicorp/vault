@@ -88,7 +88,7 @@ secondaries to have a different configuration than their primary.  Tokens and le
 @include 'alerts/enterprise-and-hcp.mdx'
 
 In Performance Replication, secondaries keep track of their own tokens and leases
-but share the underlying configuration, policies, and supporting secrets (K/V values,
+but share the underlying configuration, policies, and supporting secrets (KV values,
 encryption keys for `transit`, etc).
 
 If a user action would modify underlying shared state, the secondary forwards the request
@@ -151,7 +151,7 @@ step-by-step instructions.
 ## Disaster recovery (DR) replication
 
 In disaster recovery (or DR) replication, secondaries share the same underlying configuration,
-policy, and supporting secrets (K/V values, encryption keys for `transit`, etc) infrastructure
+policy, and supporting secrets (KV values, encryption keys for `transit`, etc) infrastructure
 as the primary. They also share the same token and lease infrastructure as the primary, as
 they are designed to allow for continuous operations with applications connecting to the
 original primary on the election of the DR secondary.

@@ -23,58 +23,60 @@
       </LinkTo>
     </div>
     <div class="column has-text-right">
-      <PopupMenu @name="role-aws-nav" @contentClass="is-wide">
-        <nav class="menu">
-          <ul class="menu-list">
-            {{#if @item.generatePath.isPending}}
-              <li class="action">
-                <LoadingDropdownOption />
-              </li>
-            {{else if @item.canGenerate}}
-              <li class="action">
-                <LinkTo
-                  @route="vault.cluster.secrets.backend.credentials"
-                  @model={{@item.id}}
-                  data-test-role-aws-link="generate"
-                >
-                  Generate credentials
-                </LinkTo>
-              </li>
-            {{/if}}
-            {{#if @item.updatePath.isPending}}
-              <li class="action">
-                <LoadingDropdownOption />
-              </li>
-              <li class="action">
-                <LoadingDropdownOption />
-              </li>
-            {{else}}
-              {{#if @item.canRead}}
-                <li class="action">
-                  <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@item.id}} data-test-role-ssh-link="show">
-                    Details
-                  </LinkTo>
-                </li>
-              {{/if}}
-              {{#if @item.canEdit}}
-                <li class="action">
-                  <LinkTo @route="vault.cluster.secrets.backend.edit" @model={{@item.id}} data-test-role-ssh-link="edit">
-                    Edit
-                  </LinkTo>
-                </li>
-              {{/if}}
-              {{#if @item.canDelete}}
-                <ConfirmAction
-                  @buttonText="Delete"
-                  @isInDropdown={{true}}
-                  @onConfirmAction={{@delete}}
-                  data-test-aws-role-delete={{@item.id}}
-                />
-              {{/if}}
-            {{/if}}
-          </ul>
-        </nav>
-      </PopupMenu>
+      <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+        <dd.ToggleIcon
+          @icon="more-horizontal"
+          @text="manage A-W-S role {{@item.id}}"
+          @hasChevron={{false}}
+          data-test-popup-menu-trigger
+        />
+        {{#if @item.generatePath.isPending}}
+          <dd.Generic class="has-text-center">
+            <LoadingDropdownOption />
+          </dd.Generic>
+        {{else if @item.canGenerate}}
+          <dd.Interactive
+            @text="Generate credentials"
+            @route="vault.cluster.secrets.backend.credentials"
+            @model={{@item.id}}
+            data-test-role-aws-link="generate"
+          />
+        {{/if}}
+        {{#if @item.updatePath.isPending}}
+          <dd.Generic class="has-text-center">
+            <LoadingDropdownOption />
+          </dd.Generic>
+        {{else}}
+          {{#if @item.canRead}}
+            <dd.Interactive
+              @text="Details"
+              @route="vault.cluster.secrets.backend.show"
+              @model={{@item.id}}
+              data-test-role-ssh-link="show"
+            />
+          {{/if}}
+          {{#if @item.canEdit}}
+            <dd.Interactive
+              @text="Edit"
+              @route="vault.cluster.secrets.backend.edit"
+              @model={{@item.id}}
+              data-test-role-ssh-link="edit"
+            />
+          {{/if}}
+          {{#if @item.canDelete}}
+            <dd.Interactive
+              @text="Delete"
+              @color="critical"
+              {{on "click" (fn (mut this.showConfirmModal) true)}}
+              data-test-aws-role-delete={{@item.id}}
+            />
+          {{/if}}
+        {{/if}}
+      </Hds::Dropdown>
     </div>
   </div>
 </LinkedBlock>
+
+{{#if this.showConfirmModal}}
+  <ConfirmModal @color="critical" @onClose={{fn (mut this.showConfirmModal) false}} @onConfirm={{@delete}} />
+{{/if}}

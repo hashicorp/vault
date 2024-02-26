@@ -59,10 +59,11 @@ module('Unit | Adapter | sync | association', function (hooks) {
   });
 
   test('it should make request to correct endpoint for queryAll associations', async function (assert) {
-    assert.expect(2);
+    assert.expect(3);
 
-    this.server.get('/sys/sync/associations', () => {
+    this.server.get('/sys/sync/associations', (schema, req) => {
       assert.ok(true, 'request is made to correct endpoint for queryAll');
+      assert.propEqual(req.queryParams, { list: 'true' }, 'query params include list: true');
       return {
         data: {
           key_info: {},

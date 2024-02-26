@@ -5,8 +5,8 @@
 
 .empty-state {
   align-items: center;
-  color: $grey;
-  background: $ui-gray-010;
+  color: var(--token-color-foreground-faint);
+  background: var(--token-color-surface-faint);
   display: flex;
   justify-content: center;
   padding: $spacing-48 $spacing-12;
@@ -15,7 +15,7 @@
 
 .empty-state-transparent {
   align-items: center;
-  color: $grey;
+  color: var(--token-color-foreground-faint);
   background: transparent;
   display: flex;
   justify-content: center;
@@ -49,12 +49,6 @@
   margin-top: $spacing-8;
   display: flex;
   justify-content: space-between;
-
-  a,
-  .link,
-  a:not(.button):not(.file-delete-button):not(.tag) {
-    text-decoration: none;
-  }
 
   > * + * {
     margin-left: $spacing-12;

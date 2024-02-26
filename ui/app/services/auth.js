@@ -121,7 +121,7 @@ export default Service.extend({
       backend: {
         // add mount path for password reset
         mountPath: stored.backend.mountPath,
-        ...BACKENDS.findBy('type', backend),
+        ...BACKENDS.find((b) => b.type === backend),
       },
     });
   }),
@@ -252,8 +252,8 @@ export default Service.extend({
     const [firstArg, resp] = arguments;
     const tokens = this.tokens;
     const currentNamespace = this.namespaceService.path || '';
-    // Tab vs dropdown format
-    const mountPath = firstArg?.selectedAuth || firstArg?.data?.path;
+    // dropdown vs tab format
+    const mountPath = firstArg?.data?.path || firstArg?.selectedAuth;
     let tokenName;
     let options;
     let backend;
@@ -267,7 +267,7 @@ export default Service.extend({
 
     const currentBackend = {
       mountPath,
-      ...BACKENDS.findBy('type', backend),
+      ...BACKENDS.find((b) => b.type === backend),
     };
     let displayName;
     if (isArray(currentBackend.displayNamePath)) {

@@ -5,61 +5,12 @@ package audit
 
 import (
 	"context"
-	"io"
-	"time"
 
-	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
-
 	"github.com/hashicorp/vault/sdk/logical"
 )
-
-// Audit subtypes.
-const (
-	RequestType  subtype = "AuditRequest"
-	ResponseType subtype = "AuditResponse"
-)
-
-// Audit formats.
-const (
-	JSONFormat  format = "json"
-	JSONxFormat format = "jsonx"
-)
-
-// version defines the version of audit events.
-const version = "v0.1"
-
-// subtype defines the type of audit event.
-type subtype string
-
-// format defines types of format audit events support.
-type format string
-
-// auditEvent is the audit event.
-type auditEvent struct {
-	ID        string            `json:"id"`
-	Version   string            `json:"version"`
-	Subtype   subtype           `json:"subtype"` // the subtype of the audit event.
-	Timestamp time.Time         `json:"timestamp"`
-	Data      *logical.LogInput `json:"data"`
-}
-
-// Option is how options are passed as arguments.
-type Option func(*options) error
-
-// options are used to represent configuration for a audit related nodes.
-type options struct {
-	withID              string
-	withNow             time.Time
-	withSubtype         subtype
-	withFormat          format
-	withPrefix          string
-	withRaw             bool
-	withElision         bool
-	withOmitTime        bool
-	withHMACAccessor    bool
-	withHeaderFormatter HeaderFormatter
-}
 
 // Salter is an interface that provides a way to obtain a Salt for hashing.
 type Salter interface {
@@ -76,15 +27,6 @@ type Formatter interface {
 	FormatResponse(context.Context, *logical.LogInput) (*ResponseEntry, error)
 }
 
-// Writer is an interface that provides a way to write request and response audit entries.
-// Formatters write their output to an io.Writer.
-type Writer interface {
-	// WriteRequest writes the request entry to the writer or returns an error.
-	WriteRequest(io.Writer, *RequestEntry) error
-	// WriteResponse writes the response entry to the writer or returns an error.
-	WriteResponse(io.Writer, *ResponseEntry) error
-}
-
 // HeaderFormatter is an interface defining the methods of the
 // vault.AuditedHeadersConfig structure needed in this package.
 type HeaderFormatter interface {
@@ -92,21 +34,6 @@ type HeaderFormatter interface {
 	// intersection of the provided set of header values with a configured
 	// set of headers and will hash headers that have been configured as such.
 	ApplyConfig(context.Context, map[string][]string, Salter) (map[string][]string, error)
-}
-
-// EntryFormatter should be used to format audit requests and responses.
-type EntryFormatter struct {
-	salter          Salter
-	headerFormatter HeaderFormatter
-	config          FormatterConfig
-	prefix          string
-}
-
-// EntryFormatterWriter should be used to format and write out audit requests and responses.
-type EntryFormatterWriter struct {
-	Formatter
-	Writer
-	config FormatterConfig
 }
 
 // FormatterConfig is used to provide basic configuration to a formatter.
@@ -188,6 +115,7 @@ type Request struct {
 	WrapTTL                       int                    `json:"wrap_ttl,omitempty"`
 	Headers                       map[string][]string    `json:"headers,omitempty"`
 	ClientCertificateSerialNumber string                 `json:"client_certificate_serial_number,omitempty"`
+	RequestURI                    string                 `json:"request_uri,omitempty"`
 }
 
 type Response struct {
@@ -268,35 +196,26 @@ type Backend interface {
 	// Salter interface must be implemented by anything implementing Backend.
 	Salter
 
-	// LogRequest is used to synchronously log a request. This is done after the
-	// request is authorized but before the request is executed. The arguments
-	// MUST not be modified in any way. They should be deep copied if this is
-	// a possibility.
-	LogRequest(context.Context, *logical.LogInput) error
+	// The PipelineReader interface allows backends to surface information about their
+	// nodes for node and pipeline registration.
+	event.PipelineReader
 
-	// LogResponse is used to synchronously log a response. This is done after
-	// the request is processed but before the response is sent. The arguments
-	// MUST not be modified in any way. They should be deep copied if this is
-	// a possibility.
-	LogResponse(context.Context, *logical.LogInput) error
+	// IsFallback can be used to determine if this audit backend device is intended to
+	// be used as a fallback to catch all events that are not written when only using
+	// filtered pipelines.
+	IsFallback() bool
 
 	// LogTestMessage is used to check an audit backend before adding it
 	// permanently. It should attempt to synchronously log the given test
 	// message, WITHOUT using the normal Salt (which would require a storage
 	// operation on creation, which is currently disallowed.)
-	LogTestMessage(context.Context, *logical.LogInput, map[string]string) error
+	LogTestMessage(context.Context, *logical.LogInput) error
 
 	// Reload is called on SIGHUP for supporting backends.
 	Reload(context.Context) error
 
 	// Invalidate is called for path invalidation
 	Invalidate(context.Context)
-
-	// RegisterNodesAndPipeline provides an eventlogger.Broker pointer so that
-	// the Backend can call its RegisterNode and RegisterPipeline methods with
-	// the nodes and the pipeline that were created in the corresponding
-	// Factory function.
-	RegisterNodesAndPipeline(*eventlogger.Broker, string) error
 }
 
 // BackendConfig contains configuration parameters used in the factory func to
@@ -313,7 +232,10 @@ type BackendConfig struct {
 
 	// MountPath is the path where this Backend is mounted
 	MountPath string
+
+	// Logger is used to emit log messages usually captured in the server logs.
+	Logger hclog.Logger
 }
 
 // Factory is the factory function to create an audit backend.
-type Factory func(context.Context, *BackendConfig, bool, HeaderFormatter) (Backend, error)
+type Factory func(context.Context, *BackendConfig, HeaderFormatter) (Backend, error)

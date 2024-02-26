@@ -14,26 +14,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/command/server"
-
-	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
-	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
-
-	"github.com/hashicorp/vault/builtin/plugin"
-
-	"github.com/hashicorp/vault/builtin/audit/syslog"
-
-	"github.com/hashicorp/vault/builtin/audit/file"
-	"github.com/hashicorp/vault/builtin/audit/socket"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
+	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/builtin/audit/file"
+	"github.com/hashicorp/vault/builtin/audit/socket"
+	"github.com/hashicorp/vault/builtin/audit/syslog"
+	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
+	"github.com/hashicorp/vault/builtin/plugin"
+	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -46,6 +39,8 @@ import (
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
 	"github.com/sasha-s/go-deadlock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // invalidKey is used to test Unseal
@@ -1464,16 +1459,13 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 }
 
 func TestCore_HandleRequest_AuditTrail(t *testing.T) {
-	t.Setenv("VAULT_AUDIT_DISABLE_EVENTLOGGER", "true")
-
 	// Create a noop audit backend
-	noop := &corehelpers.NoopAudit{}
+	var noop *corehelpers.NoopAudit
 	c, _, root := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
-		noop = &corehelpers.NoopAudit{
-			Config: config,
-		}
-		return noop, nil
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
+		var err error
+		noop, err = corehelpers.NewNoopAudit(config, audit.WithHeaderFormatter(headerFormatter))
+		return noop, err
 	}
 
 	// Enable the audit backend
@@ -1530,16 +1522,13 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 }
 
 func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
-	t.Setenv("VAULT_AUDIT_DISABLE_EVENTLOGGER", "true")
-
 	// Create a noop audit backend
 	var noop *corehelpers.NoopAudit
 	c, _, root := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
-		noop = &corehelpers.NoopAudit{
-			Config: config,
-		}
-		return noop, nil
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
+		var err error
+		noop, err = corehelpers.NewNoopAudit(config, audit.WithHeaderFormatter(headerFormatter))
+		return noop, err
 	}
 
 	// Specify some keys to not HMAC
@@ -1636,10 +1625,8 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 }
 
 func TestCore_HandleLogin_AuditTrail(t *testing.T) {
-	t.Setenv("VAULT_AUDIT_DISABLE_EVENTLOGGER", "true")
-
 	// Create a badass credential backend that always logs in as armon
-	noop := &corehelpers.NoopAudit{}
+	var noop *corehelpers.NoopAudit
 	noopBack := &NoopBackend{
 		Login: []string{"login"},
 		Response: &logical.Response{
@@ -1659,11 +1646,10 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noopBack, nil
 	}
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
-		noop = &corehelpers.NoopAudit{
-			Config: config,
-		}
-		return noop, nil
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
+		var err error
+		noop, err = corehelpers.NewNoopAudit(config, audit.WithHeaderFormatter(headerFormatter))
+		return noop, err
 	}
 
 	// Enable the credential backend
@@ -3391,7 +3377,7 @@ func TestSetSeals(t *testing.T) {
 		Generation:   2,
 	})
 
-	err := testCore.SetSeals(newSeal, nil)
+	err := testCore.SetSeals(newSeal, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
