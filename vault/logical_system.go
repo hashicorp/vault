@@ -599,7 +599,9 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		Sha256:   sha256Bytes,
 	})
 	if err != nil {
-		if errors.Is(err, ErrPluginNotFound) || strings.HasPrefix(err.Error(), "plugin version mismatch") {
+		if errors.Is(err, ErrPluginNotFound) ||
+			errors.Is(err, ErrPluginVersionMismatch) ||
+			errors.Is(err, ErrPluginUnableToRun) {
 			return logical.ErrorResponse(err.Error()), nil
 		}
 		return nil, err

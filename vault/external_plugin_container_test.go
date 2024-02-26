@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os/exec"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -105,6 +106,10 @@ func mountAndUnmountContainerPlugin_WithRuntime(t *testing.T, c *Core, plugin pl
 }
 
 func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Containerized plugins only supported on Linux")
+	}
+
 	for name, tc := range map[string]struct {
 		pluginType        consts.PluginType
 		setRunningVersion string
