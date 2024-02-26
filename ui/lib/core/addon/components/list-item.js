@@ -4,14 +4,21 @@
  */
 
 import { service } from '@ember/service';
-import Component from '@glimmer/component';
+import Component from '@ember/component';
 import { task } from 'ember-concurrency';
+import { computed } from '@ember/object';
+import layout from '../templates/components/list-item';
 
-export default class ListItemComponent extends Component {
-  @service flashMessages;
+export default Component.extend({
+  layout,
+  flashMessages: service(),
+  tagName: '',
+  linkParams: null,
+  queryParams: null,
+  componentName: null,
+  hasMenu: true,
 
-  @task
-  *callMethod(method, model, successMessage, failureMessage, successCallback = () => {}) {
+  callMethod: task(function* (method, model, successMessage, failureMessage, successCallback = () => {}) {
     const flash = this.flashMessages;
     try {
       yield model[method]();
@@ -22,10 +29,10 @@ export default class ListItemComponent extends Component {
       flash.danger(failureMessage + ' ' + errString);
       model.rollbackAttributes();
     }
-  }
-  get link() {
-    if (!Array.isArray(this.args.linkParams) || !this.args.linkParams.length) return {};
-    const [route, ...models] = this.args.linkParams;
+  }),
+  link: computed('linkParams.[]', function () {
+    if (!Array.isArray(this.linkParams) || !this.linkParams.length) return {};
+    const [route, ...models] = this.linkParams;
     return { route, models };
-  }
-}
+  }),
+});
