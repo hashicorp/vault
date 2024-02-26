@@ -75,12 +75,12 @@ export default class AuthMethodModel extends Model {
     if (methodType === 'token') {
       tuneAttrs = [
         'description',
-        'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+        'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders,pluginVersion}',
       ];
     } else {
       tuneAttrs = [
         'description',
-        'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+        'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders,pluginVersion}',
       ];
     }
     return expandAttributeMeta(this, tuneAttrs);
@@ -94,7 +94,7 @@ export default class AuthMethodModel extends Model {
       'accessor',
       'local',
       'sealWrap',
-      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders,pluginVersion}',
     ];
   }
 
@@ -107,7 +107,7 @@ export default class AuthMethodModel extends Model {
           'config.listingVisibility',
           'local',
           'sealWrap',
-          'config.{defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+          'config.{defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders,pluginVersion}',
         ],
       },
     ];
