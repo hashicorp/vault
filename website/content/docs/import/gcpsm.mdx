@@ -4,5 +4,41 @@ page_title: Google Cloud Platform Secret Manager - Secrets Import Source
 description: The Google Cloud Platform Secret Manager source imports secrets from GCP to Vault.
 ---
 
-# Google Cloud Platform Secret Manager
+# GCP import source
 
+The GCP source enables users to import secret data from GCP Secret Manager into their Vault instance. To be able
+to import secret data from here into your Vault destination, the following permissions are required:
+
+```shell-session
+"secretmanager.secrets.list",
+"secretmanager.versions.access",
+```
+
+## Argument reference
+
+* `name` - (Required) The name of the source block used to internally reference this source inside of a mapping.
+
+* `credentials` - (Optional) The path to the service account key credentials file for the service account with the ncessary
+permissions. If `credentials` is set, then `vault_mount_path` and `vault_role_name` must be unset.
+
+* `vault_mount_path` - (Optional) The Vault mount path to a preconfigured GCP secrets engine that is used to generate a
+dynamic credential for the importer to use. If `vault_mount_path` or `vault_role_name` are set, then `credentials` must be unset.
+
+* `vault_role_name` - (Optional) The Vault role's name that exists in the preconfigured GCP secrets engine mount that is
+used to generate a dynamic credential for the importer to use. If `vault_role_name` or `vault_mount_path` are set, then
+`credentials` must be unset.
+
+Refer to a [specific import source's documentation](#sources) for details on how to define all remaining arguments of a source
+block for that external system type.
+
+## Example
+
+In this example, a GCP source is defined and configured to use 
+
+```hcl
+source_gcp {
+  name = "my-gcp-source-1"
+  secrets_engine_mount = "gcp"
+  secrets_engine_role = "my-gcp-role-1"
+}
+```

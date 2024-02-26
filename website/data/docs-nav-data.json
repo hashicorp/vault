@@ -1627,6 +1627,10 @@
       {
         "title": "GCP Secret Manager",
         "path": "import/gcpsm"
+      },
+      {
+        "title": "Mappings",
+        "path": "import/mappings"
       }
     ]
   },

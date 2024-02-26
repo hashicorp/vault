@@ -12,69 +12,25 @@ description: Secrets import allows you to safely onboard secrets from external s
 @include 'alerts/beta.mdx'
 
 Having collections of secrets across various external systems can present several challenges to an organization, such as
-the increased operational overhead required to safely maintain multiple secrets management tools. While Vault can offer
-a single source of truth (SSOT) solution to managing these secrets for increased security and reduced overhead, the effort
-required to migrate all your secrets from multiple external sources into Vault can be steep. To aid in this onboarding
-process, secrets import provides a mechanism to automate this process. 
+increased operational overhead, a greater risk of secrets sprawl, and more. Vault can offer a single source of truth (SSOT)
+solution to managing these secrets, providing increased security and reducing that overhead, yet the effort required
+to migrate all your secrets from multiple external sources into Vault can be steep. To aid in this onboarding process,
+secrets import provides a mechanism to automate it. 
 
 A secret that is imported from an external system is stored in Vault's KVv2 Secrets Engine. The import process is defined 
 an import plan, which is an HCL file. Using HCL enables users to declaratively configure which of their secrets will be read
 from an external source and where exactly they will be stored in Vault.
 
-## Sources
-
-Secrets can be imported from various external systems, called sources. The supported destinations are:
-* [GCP Secret Manager](/vault/docs/import/gcpsm)
-
-A source is defined by an HCL block in the format of `source_<external_system>`, for example `source_gcp`. The source is
-provided with the credentials it needs to access the external system's secrets to be able to import them into Vault. See
-the [HCL syntax section](#hcl-syntax) for more information about this block.
-
-## Vault destinations
-
-Secrets that get imported are stored into a Vault KVv2 Secrets Engine mount. The HCL block `destination_vault` is provided
-with a KVv2 mount path and/or namespace to specify exactly where the secret gets stored. See the
-[HCL syntax section](#hcl-syntax) for more information about this block.
-
-## Mappings
-
-Mappings blocks are what glue together a source block to a destination block. The supported mapping types are:
-* [mapping_passthrough](/vault/docs/import/mappings#passthrough)
-* [mapping_metadata](/vault/docs/import/mappings#metadata)
-* [mapping_regex](/vault/docs/import/mappings#regex)
-
-A mapping is where filtering logic is defined to control which secrets in the external system will be imported and which will
-be ignored. Mappings are defined by an HCL block in the format of `mapping_<filter_type>`, for example `mapping_passthrough`.
-See the [HCL syntax section](#hcl-syntax) for more information about this block.
-
-## HCL syntax
-
 There are three main types of HCL blocks used to configure a secrets import plan. They are source blocks, the Vault destination
 block, and mapping blocks.
 
-### Source blocks
+## Vault destinations
 
-#### Argument reference
+Secrets that get imported are stored into a Vault KVv2 Secrets Engine mount. The destination will accept the mount path of
+the desired KVv2 mount and optionally a namespace. This specifies the exact location to store the secrets in. A destination
+is defined by an HCL block in the format of `destination_vault`.
 
-All types of source blocks, no matter the external system, have one shared argument:
-
-* `name` - (Required) The name of the source block used to internally reference this source inside of a mapping.
-
-Refer to a specific import source's documentation for details on how to define all remaining arguments of a source block for
-that external system type.
-
-#### Example
-
-A `source_<external_system>` block may look like the following, using GCP as the example:
-
-```hcl
-source_gcp {
-  name = "my-gcp-source-1"
-  credentials = "@/path/to/service-account-key.json"
-}
-```
-
-### Vault destination blocks
+### HCL syntax
 
 #### Argument reference
 
@@ -82,13 +38,13 @@ The following arguments are supported:
 
 * `name` - (Required) The name of the Vault destination block used to internally reference this destination inside of a mapping.
 
-* `address` - (Optional) The
+* `address` - (Optional) The address of the Vault server with the KVv2 Secrets Engine for which the secrets will be imported into.
 
-* `token` - (Optional) The 
+* `token` - (Optional) A token for authentication to the Vault server located at the specified address.
 
-* `namespace` - (Optional) The
+* `namespace` - (Optional) The name of the Vault namespace containing the specified KVv2 mount.
 
-* `mount` - (Optional) The 
+* `mount` - (Optional) The name of the KVv2 mount in Vault for which the secrets will be imported into.
 
 #### Example
 
@@ -104,23 +60,56 @@ destination_vault {
 }
 ```
 
-### Mapping blocks
+## Sources
 
-#### Argument reference
+Secrets can be imported from various external systems, called sources. The supported destinations are:
+* [GCP Secret Manager](/vault/docs/import/gcpsm)
 
-All types of mapping blocks, no matter the type, have four shared arguments:
+A source requires the credentials necessary to read the external system's secrets and their values so that it may import
+them into Vault. Either credentials to the system can be directly provided, or you can leverage Vault's capabilities to
+geneerate a dynamic secret for the importer to use if you have the corresponding secrets engine configured. A source is
+defined by an HCL block in the format of `source_<external_system>`. For example, `source_gcp` defines a source block
+for GCP Secret Manager.
 
-* `name` - (Required) The
+### HCL syntax
 
-* `source` - (Required) The 
-
-* `destination` - (Required) The 
-
-* `priority` - (Required) The 
+Refer to a [specific source's documentation](#sources) for details on how to define all remaining arguments of a source
+block for that external system type.
 
 #### Example
 
-A `mapping_<filter_type>` block may look like the following, using regex as the example:
+A `source_<external_system>` block may look like the following, using GCP as an example:
+
+```hcl
+source_gcp {
+  name = "my-gcp-source-1"
+  credentials = "@/path/to/service-account-key.json"
+}
+```
+
+## Mappings
+
+Mappings blocks are what glue together a source block to a destination block. The supported mapping types are:
+* [mapping_passthrough](/vault/docs/import/mappings#passthrough)
+* [mapping_metadata](/vault/docs/import/mappings#metadata)
+* [mapping_regex](/vault/docs/import/mappings#regex)
+
+A mapping is where filtering logic is defined to control which secrets in the external system will be imported and which will
+be ignored. The definition of the rule depends on the type of mapping block that is being configured. Mapping blocks are
+applied in order of their given priority.
+
+Once a secret being imported matches a single mapping's rule, it cannot match to another mapping again. A mapping is defined
+by an HCL block in the format of `mapping_<filter_type>`. For example, `mapping_regex` defines a mapping block to pass
+all secrets through whose secret name passes the given regular expression.
+
+### HCL syntax
+
+See the [mapping documentation](/vault/docs/import/mappings) to see more info regarding specific mapping types and
+their arguments.
+
+#### Example
+
+A `mapping_<filter_type>` block may look like the following, using regex as an example:
 
 ```hcl
 mapping_regex {
@@ -131,7 +120,3 @@ mapping_regex {
   expression = "^database/.*$"
 }
 ```
-
-## API
-
-Please see the [secrets import API](/vault/api-docs/system/secrets-import) for more details.

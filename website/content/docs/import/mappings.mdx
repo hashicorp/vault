@@ -1,0 +1,119 @@
+---
+layout: docs
+page_title: Secrets import mappings
+description: Mappings lets users apply various filtering methods to secrets being imported in to Vault.
+---
+
+# Import mappings
+
+There are multiple types of mapping blocks that can be defined in the import plan. Each type enables a
+different mechanism for filtering out secrets from an external system during the execution of an import.
+
+## Argument reference
+
+All types of mapping blocks, no matter the type, have four shared arguments:
+
+* `name` - (Required) The name of the mapping block used internally to track secrets imported from a source to a destination.
+
+* `source` - (Required) The name of the source block for which this mapping's filter logic will be applied to.
+
+* `destination` - (Required) The name of the Vault destination block for which this mapping will place the matching secrets into.
+
+* `priority` - (Required) Controls the order in which multiple mapping blocks will be applied to the secrets being imported. The
+lower the value specified, the higher the priority will be during filtering.
+
+## Passthrough
+
+Passthrough mapping blocks `mapping_passthrough` allow all secrets through from the specified source to the
+specified destination. For example, one use case is using it as a base-case for imported secrets. By assigning
+it the lowest priority in the import plan, all other mapping blocks will be applied first. Secrets that fail
+to match any of the previous mappings will fall through to the passthrough block and be collected in a single
+KVv2 bucket.
+
+### Additional arguments
+
+There are no extra arguments to specify in a `mapping_passthrough` block.
+
+### Example
+
+In this example, every single secret that `my-gcp-source-1` is reads from GCP Secret Manager will be imported
+to the KVv2 Secrets Engine mount defined in `my-dest-1`.
+
+```hcl
+mapping_passthrough {
+  name = "my-map-1"
+  source = "my-gcp-source-1"
+  destination = "my-dest-1"
+  priority = 1
+}
+```
+
+## Metadata
+
+Metadata mapping blocks `mapping_metadata` allow secrets through from the specified source to the specified
+destination if they contain matching metadata key-value pairs. Metadata is not supported in all external secret
+manageement systems, and ones that do may use different terminology for metadata. For example, AWS allows tags
+on secrets while [GCP](/vault/docs/import/gcpsm) allows labels.
+
+### Additional arguments
+
+* `tags` - (Required) A set of key-value pairs to match on secrets from the external system. All of the specified
+keys must be found on a secret and all of the values must be exact matches. A key with an empty value, i.e. `""`,
+must also match an empty value from the external system.
+
+### Example
+
+In this example, there are two metadata mappings. The first, `my-map-1`, has a priority of 1. This will only import
+the secrets into the destination `my-dest-1` that contain both tag keys `database` and `importable`. Each of these
+keys' values must also match to `users` and `true` respectively to be imported. The second, `my-map-2`, has a
+priority of 2. Even though all the secrets in the first map would also qualify for the second map's filtering rule,
+those secrets will only be imported into `my-dest-1` because of the lower priority set in the second mapping. All
+remaining secrets that have the tag `importable` with a value of `true` will be imported into `my-dest-2`. 
+
+```hcl
+mapping_metadata {
+  name = "my-map-1"
+  source = "my-gcp-source-1"
+  destination = "my-dest-1"
+  priority = 1
+  tags = {
+    "database" = "users"
+    "importable" = "true"
+  }
+}
+
+mapping_metadata {
+  name = "my-map-2"
+  source = "my-gcp-source-1"
+  destination = "my-dest-2"
+  priority = 2
+  tags = {
+    "importable" = "true"
+  }
+}
+```
+
+## Regex
+
+Regex mapping blocks `mapping_regex` allow secrets through from the specified source to the specified
+destination if their secret name passes a regular expression check.
+
+### Additional arguments
+
+* `expression` - (Required) A regular expression to match secrets names from the external system. All of
+the specified keys must be found on a secret and all of the values must be exact matches. A key with an empty
+value, e.g. `""`, must also match an empty value from the external system.
+
+### Example
+
+In this example, any secret in the GCP source whose name begins with `database/` will be imported into Vault.
+
+```hcl
+mapping_regex {
+  name = "my-map-1"
+  source = "my-gcp-source-1"
+  destination = "my-dest-1"
+  priority = 1
+  expression = "^database/.*$"
+}
+```
