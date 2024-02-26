@@ -893,6 +893,7 @@ listener "tcp" {
   redact_addresses = true
   redact_cluster_name = true
   redact_version = true
+  disable_request_limiter = true
 }
 listener "unix" {
   address = "/var/run/vault.sock"
@@ -902,6 +903,7 @@ listener "unix" {
   redact_addresses = true
   redact_cluster_name = true
   redact_version = true
+  disable_request_limiter = true
 }`))
 
 	config := Config{
@@ -955,16 +957,18 @@ listener "unix" {
 					RedactAddresses:       true,
 					RedactClusterName:     true,
 					RedactVersion:         true,
+					DisableRequestLimiter: true,
 				},
 				{
-					Type:              "unix",
-					Address:           "/var/run/vault.sock",
-					SocketMode:        "644",
-					SocketUser:        "1000",
-					SocketGroup:       "1000",
-					RedactAddresses:   false,
-					RedactClusterName: false,
-					RedactVersion:     false,
+					Type:                  "unix",
+					Address:               "/var/run/vault.sock",
+					SocketMode:            "644",
+					SocketUser:            "1000",
+					SocketGroup:           "1000",
+					RedactAddresses:       false,
+					RedactClusterName:     false,
+					RedactVersion:         false,
+					DisableRequestLimiter: true,
 				},
 			},
 		},
