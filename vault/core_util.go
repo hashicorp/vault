@@ -215,8 +215,10 @@ func createCustomMessageManager(storage logical.Storage, _ *Core) CustomMessages
 	return uicustommessages.NewManager(storage)
 }
 
+// GetRequestLimiter is a stub for CE. The caller will handle the nil case as a no-op.
 func (c *Core) GetRequestLimiter(key string) *limits.RequestLimiter {
 	return nil
 }
 
+// ReloadRequestLimiter is a no-op on CE.
 func (c *Core) ReloadRequestLimiter() {}
