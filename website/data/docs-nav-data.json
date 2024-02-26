@@ -112,6 +112,10 @@
                 "path": "internals/telemetry/metrics/raft"
               },
               {
+                "title": "Secrets Sync metrics",
+                "path": "internals/telemetry/metrics/secrets-sync"
+              },
+              {
                 "title": "Secrets metrics",
                 "path": "internals/telemetry/metrics/secrets"
               },
@@ -172,6 +176,10 @@
       {
         "title": "Lease Explosions",
         "path": "concepts/lease-explosions"
+      },
+      {
+        "title": "Lease count quota exceeded",
+        "path": "concepts/lease-count-quota-exceeded"
       },
       {
         "title": "Authentication",
@@ -273,12 +281,7 @@
       },
       {
         "title": "Events",
-        "path": "concepts/events",
-        "badge": {
-          "text": "BETA",
-          "type": "outlined",
-          "color": "highlight"
-        }
+        "path": "concepts/events"
       },
       {
         "title": "Filtering",
@@ -2170,6 +2173,10 @@
         "path": "upgrading/plugins"
       },
       {
+        "title": "Upgrade to 1.16.x",
+        "path": "upgrading/upgrade-to-1.16.x"
+      },
+      {
         "title": "Upgrade to 1.15.x",
         "path": "upgrading/upgrade-to-1.15.x"
       },
@@ -2420,6 +2427,10 @@
       {
         "title": "Overview",
         "path": "release-notes"
+      },
+      {
+        "title": "1.16.0",
+        "path": "release-notes/1.16.0"
       },
       {
         "title": "1.15.0",

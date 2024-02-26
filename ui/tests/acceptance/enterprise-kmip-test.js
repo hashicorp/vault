@@ -13,8 +13,8 @@ import rolesPage from 'vault/tests/pages/secrets/backend/kmip/roles';
 import credentialsPage from 'vault/tests/pages/secrets/backend/kmip/credentials';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { runCmd } from 'vault/tests/helpers/commands';
+import { v4 as uuidv4 } from 'uuid';
 
 const getRandomPort = () => {
   let a = Math.floor(100000 + Math.random() * 900000);
@@ -23,8 +23,7 @@ const getRandomPort = () => {
 };
 
 const mount = async (shouldConfig = true) => {
-  const now = Date.now();
-  const path = `kmip-${now}`;
+  const path = `kmip-${uuidv4()}`;
   const addr = `127.0.0.1:${getRandomPort()}`; // use random port
   await settled();
   const commands = shouldConfig
@@ -41,7 +40,7 @@ const mount = async (shouldConfig = true) => {
 const createScope = async () => {
   const path = await mount();
   await settled();
-  const scope = `scope-${Date.now()}`;
+  const scope = `scope-${uuidv4()}`;
   await settled();
   const res = await runCmd([`write ${path}/scope/${scope} -force`]);
   await settled();
@@ -54,7 +53,7 @@ const createScope = async () => {
 const createRole = async () => {
   const { path, scope } = await createScope();
   await settled();
-  const role = `role-${Date.now()}`;
+  const role = `role-${uuidv4()}`;
   const res = await runCmd([`write ${path}/scope/${scope}/role/${role} operation_all=true`]);
   await settled();
   if (res.includes('Error')) {
@@ -107,7 +106,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
   });
 
   test('it enables KMIP secrets engine', async function (assert) {
-    const path = `kmip-${Date.now()}`;
+    const path = `kmip-${uuidv4()}`;
     await mountSecrets.enable('kmip', path);
     await settled();
     assert.strictEqual(
@@ -170,7 +169,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
   });
 
   test('it can create a scope', async function (assert) {
-    const path = await mount(this);
+    const path = await mount();
     await scopesPage.visit({ backend: path });
     await settled();
     await scopesPage.createLink();
@@ -316,12 +315,6 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
   });
 
   test('it can revoke a credential from the list', async function (assert) {
-    // Popup menu causes flakiness
-    setRunOptions({
-      rules: {
-        'color-contrast': { enabled: false },
-      },
-    });
     const { path, scope, role } = await generateCreds();
     await credentialsPage.visit({ backend: path, scope, role });
     // revoke the credentials

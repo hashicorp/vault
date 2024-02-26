@@ -7,6 +7,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
+
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/internal/observability/event"
@@ -196,7 +198,7 @@ func TestBackend_configureFormatterNode(t *testing.T) {
 	formatConfig, err := audit.NewFormatterConfig()
 	require.NoError(t, err)
 
-	err = b.configureFormatterNode(formatConfig)
+	err = b.configureFormatterNode("juan", formatConfig, hclog.NewNullLogger())
 
 	require.NoError(t, err)
 	require.Len(t, b.nodeIDList, 1)
@@ -299,7 +301,7 @@ func TestBackend_configureFilterFormatterSink(t *testing.T) {
 	err = b.configureFilterNode("mount_type == kv")
 	require.NoError(t, err)
 
-	err = b.configureFormatterNode(formatConfig)
+	err = b.configureFormatterNode("juan", formatConfig, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	err = b.configureSinkNode("foo", "json")
@@ -352,6 +354,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				MountPath:  "discard",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config: map[string]string{
 					"fallback": "false",
 					"filter":   "mount_type == kv",
@@ -364,6 +367,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				MountPath:  "discard",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config: map[string]string{
 					"fallback": "true",
 					"filter":   "mount_type == kv",
@@ -410,6 +414,7 @@ func TestBackend_IsFallback(t *testing.T) {
 				MountPath:  "qwerty",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config: map[string]string{
 					"fallback": "true",
 				},
@@ -421,6 +426,7 @@ func TestBackend_IsFallback(t *testing.T) {
 				MountPath:  "qwerty",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config: map[string]string{
 					"fallback": "false",
 				},

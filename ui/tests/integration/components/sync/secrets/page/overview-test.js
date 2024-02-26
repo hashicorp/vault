@@ -43,7 +43,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     this.destinations = await store.query('sync/destination', {});
 
     await render(
-      hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalAssociations={{7}} />`,
+      hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} />`,
       {
         owner: this.engine,
       }
@@ -96,10 +96,10 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     assert.dom(badge(2)).hasText('1 Unsynced', 'Unsynced badge renders');
     assert.dom(badge(2)).hasClass('hds-badge--color-neutral', 'Correct color renders for unsynced badge');
 
-    assert.dom(total(0)).hasText('1', '# of secrets renders');
+    assert.dom(total(0)).hasText('1', '# of external secrets renders');
     assert.dom(updated(0)).hasText(updatedDate, 'Last updated datetime renders');
 
-    assert.dom(total(1)).hasText('0', '# of secrets render for destination with no associations');
+    assert.dom(total(1)).hasText('0', '# of external secrets renders for destination with no associations');
     assert
       .dom(updated(1))
       .hasText('—', 'Last updated placeholder renders for destination with no associations');
@@ -143,9 +143,8 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
         count: '6',
       },
       {
-        cardTitle: 'Total sync associations',
-        subText:
-          'The number of secrets with a configured sync destination. One secret synced to two unique destinations will count as two associations.',
+        cardTitle: 'Total secrets',
+        subText: 'The total number of secrets synced from Vault.',
         // actionText: 'View billing',
         count: '7',
       },
@@ -155,7 +154,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       assert.dom(title(cardTitle)).hasText(cardTitle, 'Overview card title renders');
       assert.dom(description(cardTitle)).hasText(subText, 'Destinations overview card description renders');
       assert.dom(content(cardTitle)).hasText(count, 'Total count renders');
-      if (cardTitle === 'Total sync associations') return; // uncomment 'actionText' above and this return after SYNC BETA
+      if (cardTitle === 'Total secrets') return; // uncomment 'actionText' above and this return after SYNC BETA
       assert.dom(action(cardTitle)).hasText(actionText, 'Card action renders');
     });
   });

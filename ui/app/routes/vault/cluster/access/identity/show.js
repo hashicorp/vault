@@ -12,6 +12,7 @@ import { TABS } from 'vault/helpers/tabs-for-identity-show';
 import { service } from '@ember/service';
 
 export default Route.extend({
+  router: service(),
   store: service(),
 
   model(params) {
@@ -58,7 +59,7 @@ export default Route.extend({
   afterModel(resolvedModel) {
     const { section, model } = resolvedModel;
     if (model.get('identityType') === 'group' && model.get('type') === 'internal' && section === 'aliases') {
-      return this.transitionTo('vault.cluster.access.identity.show', model.id, 'details');
+      return this.router.transitionTo('vault.cluster.access.identity.show', model.id, 'details');
     }
   },
 
