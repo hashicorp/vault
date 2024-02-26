@@ -6,12 +6,11 @@
 
 #### Issue
 
-The new underlying event framework for auditing causes Vault to incorrectly
-attempt to handle panics if they occur during the formatting of audit entries.
+Due to an issue in the new event framework, Vault tries to resolve panics that
+occur when formatting audit entries. Vault cannot resolve the panic correctly,
+which results in the server terminating unexpectedly.
 
-This will cause the Vault server to stop running.
-
-The issue with audit devices not handling panics is fixed as a patch release in Vault `1.15.6`.
+The panic issue was resolved in `1.15.6`.
 
 #### Workaround
 
