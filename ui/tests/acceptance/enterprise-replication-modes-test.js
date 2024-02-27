@@ -82,7 +82,7 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
       assert.dom(s.navLink('Disaster Recovery')).exists('shows dr link');
 
       await click(s.navLink('Performance'));
-      assert.strictEqual(currentURL(), `/vault/replication/performance`, `URL CORRECT`);
+      assert.strictEqual(currentURL(), `/vault/replication/performance`, `goes to correct URL`);
       await settled();
       assert.dom(s.title).hasText(`Performance ${mode}`, `it shows the performance title`);
       assert.dom(s.dashboard).exists(`it shows the replication dashboard`);
@@ -108,6 +108,8 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
     assert.dom(s.navLink('Disaster Recovery')).exists('shows dr link');
 
     await click(s.navLink('Performance'));
+    assert.strictEqual(currentURL(), `/vault/replication/performance`, `goes to correct URL`);
+    await settled();
     assert.dom(s.title).hasText(`Enable Performance Replication`, `it shows the performance title`);
     assert.dom(s.enableForm).exists('it shows the enable view for performance');
 
