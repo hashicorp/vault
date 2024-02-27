@@ -3490,6 +3490,7 @@ func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v %#v", err, resp)
 	}
+
 	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
 		t.Fatalf("bad: %#v", resp)
 	}
@@ -3518,6 +3519,7 @@ func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
 				"command":   "",
 				"args":      []string{},
 				"builtin":   false,
+				"version":   "",
 			},
 		},
 		"fully specified": {
@@ -6379,10 +6381,6 @@ func TestSystemBackend_pluginRuntime_CannotDeleteRuntimeWithReferencingPlugins(t
 		"oci_runtime": conf.OCIRuntime,
 	}
 
-	const pluginVersion = "v1.16.0"
-	plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, pluginVersion, c.pluginCatalog.directory)
-	plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, c.pluginCatalog.directory)
-
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v %#v", err, resp)
@@ -6397,6 +6395,10 @@ func TestSystemBackend_pluginRuntime_CannotDeleteRuntimeWithReferencingPlugins(t
 		t.Fatalf("error: %v", err)
 	}
 	c.pluginCatalog.directory = sym
+
+	const pluginVersion = "v1.16.0"
+	plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, pluginVersion, c.pluginCatalog.directory)
+	plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, c.pluginCatalog.directory)
 
 	// Register the plugin referencing the runtime.
 	req = logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
@@ -6421,7 +6423,7 @@ func TestSystemBackend_pluginRuntime_CannotDeleteRuntimeWithReferencingPlugins(t
 
 	// Delete the plugin.
 	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/catalog/database/test-plugin")
-	req.Data["version"] = "v0.16.0"
+	req.Data["version"] = pluginVersion
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || resp.Error() != nil {
 		t.Fatalf("err: %v %v", err, resp.Error())
