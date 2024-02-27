@@ -115,7 +115,7 @@ func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Co
 	updater.client.SetToken(updater.tokenSink.(sink.SinkReader).Token())
 	conn, err := updater.openWebSocketConnection(ctx)
 	if err != nil {
-		return fmt.Errorf("error when opening event stream: %w", err)
+		return err
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "")
 
@@ -337,8 +337,8 @@ func (updater *StaticSecretCacheUpdater) openWebSocketConnection(ctx context.Con
 
 	// We do ten attempts, to ensure we follow forwarding to the leader.
 	var conn *websocket.Conn
+	var resp *http.Response
 	for attempt := 0; attempt < 10; attempt++ {
-		var resp *http.Response
 		conn, resp, err = websocket.Dial(ctx, wsURL, &websocket.DialOptions{
 			HTTPClient: httpClient,
 			HTTPHeader: headers,
@@ -359,8 +359,13 @@ func (updater *StaticSecretCacheUpdater) openWebSocketConnection(ctx context.Con
 	}
 
 	if err != nil {
+		if resp != nil {
+			if resp.StatusCode == http.StatusNotFound {
+				return nil, fmt.Errorf("received 404 when opening web socket to %s, ensure Vault is Enterprise version 1.16 or above", wsURL)
+			}
+		}
 		return nil, fmt.Errorf("error returned when opening event stream web socket to %s, ensure auto-auth token"+
-			" has correct permissions and Vault is version 1.16 or above: %w", wsURL, err)
+			" has correct permissions and Vault is Enterprise version 1.16 or above: %w", wsURL, err)
 	}
 
 	if conn == nil {
@@ -408,7 +413,7 @@ tokenLoop:
 			}
 			err := updater.streamStaticSecretEvents(ctx)
 			if err != nil {
-				updater.logger.Warn("error occurred during streaming static secret cache update events:", err)
+				updater.logger.Error("error occurred during streaming static secret cache update events", "err", err)
 				shouldBackoff = true
 				continue
 			}
