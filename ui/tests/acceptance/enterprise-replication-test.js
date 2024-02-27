@@ -4,7 +4,17 @@
  */
 
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
-import { click, fillIn, findAll, currentURL, find, visit, settled, waitUntil } from '@ember/test-helpers';
+import {
+  click,
+  fillIn,
+  findAll,
+  currentURL,
+  find,
+  visit,
+  settled,
+  waitUntil,
+  waitFor,
+} from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
@@ -353,6 +363,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await settled();
 
     await click('[data-test-replication-link="details"]');
+    await waitFor('[data-test-replication-dashboard]');
     assert.dom('[data-test-replication-dashboard]').exists();
     assert.dom('[data-test-selectable-card-container="secondary"]').exists();
     assert

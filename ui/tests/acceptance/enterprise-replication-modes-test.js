@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { click, visit } from '@ember/test-helpers';
+import { click, currentURL, settled, visit } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { STATUS_DISABLED_RESPONSE, mockReplicationBlock } from 'vault/tests/helpers/replication';
 
@@ -57,6 +57,8 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
     assert.dom(s.navLink('Disaster Recovery')).exists('shows dr link');
 
     await click(s.navLink('Performance'));
+    assert.strictEqual(currentURL(), '/vault/replication/performance', 'it navigates to the correct page');
+    await settled();
     assert.dom(s.title).hasText('Enable Performance Replication', 'it shows the enable view for performance');
 
     await click(s.navLink('Disaster Recovery'));
@@ -80,6 +82,8 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
       assert.dom(s.navLink('Disaster Recovery')).exists('shows dr link');
 
       await click(s.navLink('Performance'));
+      assert.strictEqual(currentURL(), `/vault/replication/performance`, `URL CORRECT`);
+      await settled();
       assert.dom(s.title).hasText(`Performance ${mode}`, `it shows the performance title`);
       assert.dom(s.dashboard).exists(`it shows the replication dashboard`);
 

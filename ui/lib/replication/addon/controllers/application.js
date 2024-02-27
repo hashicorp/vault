@@ -10,6 +10,7 @@ import Controller from '@ember/controller';
 import { copy } from 'ember-copy';
 import { resolve } from 'rsvp';
 import decodeConfigFromJWT from 'replication/utils/decode-config-from-jwt';
+import { buildWaiter } from '@ember/test-waiters';
 
 const DEFAULTS = {
   token: null,
@@ -23,6 +24,7 @@ const DEFAULTS = {
     paths: [],
   },
 };
+const waiter = buildWaiter('replication-actions');
 
 export default Controller.extend(copy(DEFAULTS, true), {
   isModalActive: false,
@@ -88,6 +90,7 @@ export default Controller.extend(copy(DEFAULTS, true), {
   },
 
   submitHandler(action, clusterMode, data, event) {
+    const waiterToken = waiter.beginAsync();
     const replicationMode = this.replicationMode;
     if (event && event.preventDefault) {
       event.preventDefault();
@@ -117,7 +120,10 @@ export default Controller.extend(copy(DEFAULTS, true), {
         },
         (...args) => this.submitError(...args)
       )
-      .finally(() => this.set('secondaryToRevoke', null));
+      .finally(() => {
+        this.set('secondaryToRevoke', null);
+        waiter.endAsync(waiterToken);
+      });
   },
 
   actions: {
