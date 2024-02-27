@@ -124,7 +124,7 @@ func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
 	if keyringTimeoutStr != "" {
 		t, err := time.ParseDuration(keyringTimeoutStr)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed parsing %s environment variable: %w", bestEffortKeyringTimeoutOverride, err)
 		}
 		keyringTimeout = t
 	}
