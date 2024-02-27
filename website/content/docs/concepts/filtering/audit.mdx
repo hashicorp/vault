@@ -1,165 +1,152 @@
 ---
 layout: docs
-page_title: Audit Filtering
-description: |-
-  How to filter audit entries in Vault.
+page_title: Filter syntax for audit results
+description: >-
+  Learn about the behavior and syntax for filtering audit data.
 ---
 
-[filter syntax]: /vault/docs/concepts/filtering
+# Filter syntax for audit results
 
-# Filtering audit entries
+As of Vault 1.16.0, you can enable audit devices with a `filter` option to limit
+the audit entries written to a particular audit log and fine-tune your auditing
+process. 
 
-This page describes how to use filters with Vault audit devices to fine tune which
-audit entries should be written to an audit log.
+<Warning title="Proceed with caution">
 
-Starting in Vault 1.16.0, audit devices can be enabled with a `filter` option, which
-is used to evaluate audit entries and determine if they should be written to a particular
-audit log. Please ensure you are familiar with the [filtering concept](/vault/docs/concepts/filtering) before
-attempting to configure an audit device with a filter.
+  Filtering audit logs is an advanced feature. Exclusively enabling filtered
+  devices without configuring an audit fallback may lead to gaps in your audit
+  logs.
+  
+  **Always** test your audit configuration in a non-production environment
+  before deploying filters to production. And make sure to read the
+  [Vault security model](/vault/docs/internals/security) and
+  [filtering overview](/vault/docs/concepts/filtering) to familiarize yourself
+  with Vault auditing and filtering basics before enabling filters on your audit
+  devices.
 
-Audit devices with and without filtering configured will all function simultaneously
-in Vault. Using a filtered audit device does not restrict Operators from *only* using
-the filter and fallback type devices described on this page.
+</Warning>
 
-<Note title="Advanced audit feature">
-  The use of filtering in Vault's audit system should be considered an advanced feature.
-  Whilst it has been designed to be simple and flexible, exclusively enabling filtered
-  devices without a fallback configured could result in some requests and responses that are not audited.
-</Note>
+Once you enable an audit device with a filter, every audit entry Vault sends to
+that audit device is compared to the predicate expression in the filter. Only
+audit entries that match the filter are written to the audit log for the device.
 
-Please see the [Vault security model](/vault/docs/internals/security) for further
-information about how all requests and responses to Vault are usually audited.
+When you enable filtered audit devices, the behavior of any existing audit
+device and the behavior of new audit devices that **do not** use filters remain
+unchanged. 
 
+## Fallback auditing devices
 
-## `filter` option
+Filtering adds flexibility to your auditing workflows, but filtering also adds
+complexity that can lead to entries missing from your logs by mistake. For
+example, writing audit entries to one device for `(N < 10)` and another device
+for `(N > 10)`would exclude audit entires where `(N == 10)`, which may not be
+the intended behavior.
 
-All audit device types ([file](/vault/docs/audit/file), [socket](/vault/docs/audit/socket)
-and [syslog](/vault/docs/audit/syslog)) support the `filter` option at the time they
-are enabled. After successfully enabling a device with a filter, every audit entry
-that Vault sends to that audit device will be compared to the expression in the filter.
-Only audit entries that match the filter will be written to the device's audit log.
+The fallback audit device saves all audit entires that would otherwise get
+filtered out and dropped from the audit record. Enabling an audit device with
+the `fallback` parameter ensures that Vault continues to adhere to the default
+[security model](/vault/docs/internals/security) which mandates that all
+requests and responses must be successfully logged before clients receive secret
+material.
 
-### Valid `filter` properties
+<Warning title="Always use a fallback to ensure proper security">
 
-Filters can **only** reference the following properties of an audit entry:
+  For Vault installations that use filtered audit devices **exclusively**,
+  configuring a fallback audit device is the only way to guarantee a comparable
+  security standard as Vault installations that only use standard, non-filtered
+  audit devices.
 
-* `mount_point` - Path to the mount (e.g. [auth method](/vault/docs/auth), [secret engine](/vault/docs/secrets)),
-including namespaces.
-* `mount_type` - Type of mount being interacted with.
-* `namespace` - [Namespace](/vault/docs/enterprise/namespaces) 'path' that the request is taking place within.
-* `operation` - [Operation](/vault/docs/glossary#operation) being performed.
-* `path` - Full path of the request.
+</Warning>
 
-### Example filters
+### Fallback telemetry metrics
 
-The following are examples that could be supplied as a `filter` value.
+When the fallback device successfully writes an audit entry to the audit log,
+Vault emits a
+[fallback 'success' metric](/vault/docs/internals/telemetry/metrics/audit#vault-audit-fallback-success).
 
-| Purpose                                                                                | Filter                                  |
-|----------------------------------------------------------------------------------------|-----------------------------------------|
-| Only persist audit entries for requests within `ns1`                                   | `namespace == ns1`                      |
-| Only persist audit entries for requests that are **not** in the root namespace         | `namespace != \"\"`                     |
-| Only persist audit entries that interact with `kv` engines                             | `mount_type == kv`                      |
-| Only persist audit entries that attempt to perform `read` operations                   | `operation == read`                     |
-| Only persist audit entries for requests that interact with `kv` within namespace `ns2` | `namespace == ns2 and mount_type == kv` |
+If you enable filtering **without** a fallback device, Vault emits a
+[fallback 'miss' metric](/vault/docs/internals/telemetry/metrics/audit#vault-audit-fallback-miss)
+metric anytime an audit entry would have been written to the fallback so you can
+track how many auditable events you have lost.
 
-### Scenario: `kv` only
+## Audit device limitations
 
-A Vault Operator wants only `kv` type audit entries to be written to an audit log for a particular device.
+1. You cannot add filtering to an existing audit device.
+1. You can configured filtering when enabling one of the following audit device
+types:
+  - [file](/vault/docs/audit/file)
+  - [socket](/vault/docs/audit/socket)
+  - [syslog](/vault/docs/audit/syslog)
+1. You can only designate one auditing fallback device.
 
-1. Enable an audit device with the following filter option:
+## Filtering and test messages
 
-    ```
-    vault audit enable -path kv-only file file_path=/var/audit.log filter="mount_type == kv"
-    ```
+By default, Vault sends a test message to the audit device when you enable it.
+Depending on how you configure your filters, the default test message may fail
+the predicate expression and not write to the new device. However, the test
+message **will** still be written to your fallback audit device.
 
-2. List the enabled audit devices:
+You can determine whether the test message should appear in the sink for the
+fallback or the newly enabled audit device based on the following property
+table, which are common to all default test messages.
 
-    ```
+Property      | Value
+------------- | ----------------
+`mount_point` | empty
+`mount_type`  | empty
+`namespace`   | empty
+`operation`   | `update`
+`path`        | `sys/audit/test`
+
+## `filter` properties for audit devices
+
+Filters can only reference the following properties of an audit entry:
+
+Property      | Example                             | Description
+-------------  ------------------------------------ | --------------------------
+`mount_point` | `mount_point == auth/oidc`          | Log all entries for the `auth/oidc` mount point
+`mount_type`  | `mount_type == kv`                  | Log all entries from `kv` plugins
+`namespace`   | `namespace != \"\"`                 | Log all entries **not** in the root namespace
+`operation`   | `operation == read`                 | Log all read operations
+`path`        | `path == auth/approle/login`        | Log all activity against the AppRole login path
+
+## A practical example
+
+Assume you already have an audit file called `vault-audit.log` but you want to
+filter your audit entries and save all the key/value ('kv ) plugin events to a
+specific audit log file called `kv-audit.log`.
+
+To filter the events:
+
+1. Enable a `file` audit device with a `mount_type` filter:
+  ```shell-session
+    vault audit enable                  \
+      -path kv-only                     \
+      file file_path=/logs/kv-audit.log \
+      filter="mount_type == kv"
+  ```
+1. Enable a fallback device:
+  ```shell-session
+  vault audit enable                \
+    fallback=true                   \
+    -path=my-fallback               \
+    -description="fallback device"  \
+    file file_path=/tmp/kv-audit.fallback.log 
+  ```
+1. Confirm the audit devices are enabled:
+  ```shell-session
     vault audit list --detailed
-    ```
-
-3. Enable a `kv` secrets engine:
-
-    ```
+  ```
+1. Enable a new `kv` secrets engine called `my-kv`:
+  ```shell-session
     vault secrets enable -path my-kv kv-v2
-    ```
+  ```
+1. Write secret data to the `kv` engine:
+  ```shell-session
+    vault kv put my-kv my_secret=always_angry
+  ```
 
-4. Write secret data to the `kv` engine:
-
-    ```
-    vault kv put my-kv foo=bar
-    ```
-
-5. Disable the audit device:
-
-    ```
-    vault audit disable -path kv-only
-    ```
-
-The steps above performed a number of actions against Vault that generate audit entries.
-However, only two of them had a `mount_type` of `kv` (steps 3 and 4).
-
-Viewing the contents of the file audit log at `/var/audit.log` will show that only audit
-entries related to steps 3 and 4, with a request and response audit entry for each.
-
-### Test message
-
-When enabling an audit device, Vault will (by default) attempt to send a test message
-to the device. In cases where filtering is configured on a device, it may be possible
-for the evaluation of the filter to result in the test message failing to meet the specified
-predicate expression, and therefore not being written to the audit device's sink. This test
-message will always be present in `fallback` devices (described below).
-
-The properties of the test message are as follows:
-
-* `mount_point` - not present
-* `mount_type` - not present.
-* `namespace` - not present.
-* `operation` - `update`.
-* `path` - `sys/audit/test`.
-
-Vault Operators should use this when trying to understand when they should or
-should not expect a test message to appear in the sink for a newly enabled audit device.
-
-## Fallback device
-
-The ability to filter audit entries can provide great flexibility to your workflows,
-however the additional complexity can make it possible for a Vault Operator to configure their
-audit devices in such a way that some audit entries are missed out from audit logs entirely.
-Therefore, we strongly encourage you to test out audit configurations in your non-production
-environments before deploying them to production.
-
-The `fallback` audit device is the (non-mandatory) mechanism by which Vault can
-continue to adhere to Vault's [security model](/vault/docs/internals/security),
-that all requests and responses are successfully logged before the client receives
-any secret material.
-
-When exclusively using filtered audit devices, enable the fallback audit device to
-catch any audit entries that would otherwise be missed.
-
-This means Vault is able to provide the same guarantee that 'at least one device must
-successfully write an audit entry' as when only standard/non-filtered audit devices
-are enabled.
-
-<Note title="Single fallback device">
-  Vault supports enabling only a single fallback audit device.
-</Note>
-
-#### Enabling the fallback audit device
-
-[Enabling the fallback audit device](/vault/docs/audit#fallback) requires supplying the `fallback` option:
-
-```shell-session
-vault audit enable -path=my-fallback -description="fallback device" file file_path=/tmp/audit.fallback.log fallback=true
-```
-
-### Metrics
-
-When the fallback device is enabled, and required to persist an audit entry to the audit log,
-Vault will emit a [fallback 'success' metric](/vault/docs/internals/telemetry/metrics/audit#vault-audit-fallback-success) on
-a successful write to the audit log.
-
-If audit devices are enabled that make use of filtering, but no fallback audit device
-has been enabled, Vault will produce a [fallback 'miss' metric](/vault/docs/internals/telemetry/metrics/audit#vault-audit-fallback-miss)
-as a way to allow Operators to understand how many auditable Vault entries are not
-being persisted to their audit logs.
+The `/var/kv-audit.log` now includes two entries: one for the command that
+enabled `my-kv` and one for the command that wrote a secret to `my-kv`. Entries
+for the other commands are captured by the fallback device. And the original
+audit file, `vault-audit.log` continues to capture all audit events.
