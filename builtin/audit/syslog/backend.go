@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"reflect"
 	"strconv"
 	"sync"
 
@@ -25,6 +26,10 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 
 	if conf.SaltView == nil {
 		return nil, fmt.Errorf("nil salt view")
+	}
+
+	if conf.Logger == nil || reflect.ValueOf(conf.Logger).IsNil() {
+		return nil, fmt.Errorf("nil logger")
 	}
 
 	// Get facility or default to AUTH
@@ -90,7 +95,11 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	}
 
 	// Configure the formatter for either case.
-	f, err := audit.NewEntryFormatter(b.formatConfig, b, audit.WithHeaderFormatter(headersConfig), audit.WithPrefix(conf.Config["prefix"]))
+	formatterOpts := []audit.Option{
+		audit.WithHeaderFormatter(headersConfig),
+		audit.WithPrefix(conf.Config["prefix"]),
+	}
+	f, err := audit.NewEntryFormatter(conf.MountPath, b.formatConfig, b, conf.Logger, formatterOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}

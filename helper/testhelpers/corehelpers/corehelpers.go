@@ -16,12 +16,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/internal/observability/event"
-
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/credential/approle"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/plugins/database/mysql"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -238,28 +237,32 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 		return nil, err
 	}
 
-	n := &NoopAudit{
-		Config: &audit.BackendConfig{
-			SaltView: view,
-			SaltConfig: &salt.Config{
-				HMAC:     sha256.New,
-				HMACType: "hmac-sha256",
-			},
-			Config: config,
+	cfg := &audit.BackendConfig{
+		SaltView: view,
+		SaltConfig: &salt.Config{
+			HMAC:     sha256.New,
+			HMACType: "hmac-sha256",
 		},
+		Config:    config,
+		MountPath: "noop/",
+		Logger:    hclog.NewNullLogger(),
 	}
 
-	cfg, err := audit.NewFormatterConfig()
+	n := &NoopAudit{
+		Config: cfg,
+	}
+
+	formatterCfg, err := audit.NewFormatterConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	f, err := audit.NewEntryFormatter(cfg, n)
+	f, err := audit.NewEntryFormatter(cfg.MountPath, formatterCfg, n, cfg.Logger)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
 
-	fw, err := audit.NewEntryFormatterWriter(cfg, f, &audit.JSONWriter{})
+	fw, err := audit.NewEntryFormatterWriter(formatterCfg, f, &audit.JSONWriter{})
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter writer: %w", err)
 	}

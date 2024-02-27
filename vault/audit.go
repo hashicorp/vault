@@ -522,12 +522,15 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		return nil, fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
 	}
 
+	auditLogger := c.baseLogger.Named("audit")
+
 	be, err := f(
 		ctx, &audit.BackendConfig{
 			SaltView:   view,
 			SaltConfig: saltConfig,
 			Config:     conf,
 			MountPath:  entry.Path,
+			Logger:     auditLogger,
 		},
 		!disableEventLogger,
 		c.auditedHeaders)
@@ -537,9 +540,6 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 	if be == nil {
 		return nil, fmt.Errorf("nil backend returned from %q factory function", entry.Type)
 	}
-
-	auditLogger := c.baseLogger.Named("audit")
-	c.AddLogger(auditLogger)
 
 	switch entry.Type {
 	case "file":
@@ -570,6 +570,7 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		}
 	}
 
+	c.AddLogger(auditLogger)
 	return be, err
 }
 

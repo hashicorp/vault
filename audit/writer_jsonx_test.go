@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFormatJSONx_formatRequest(t *testing.T) {
@@ -119,7 +119,7 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 			WithFormat(JSONxFormat.String()),
 		)
 		require.NoError(t, err)
-		f, err := NewEntryFormatter(cfg, tempStaticSalt)
+		f, err := NewEntryFormatter("test", cfg, tempStaticSalt, hclog.NewNullLogger())
 		require.NoError(t, err)
 		writer := &JSONxWriter{Prefix: tc.Prefix}
 		formatter, err := NewEntryFormatterWriter(cfg, f, writer)
