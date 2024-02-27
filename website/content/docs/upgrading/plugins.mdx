@@ -61,8 +61,8 @@ an auth plugin, just replace all usages of `secrets` or `secret` with `auth`.
    $ vault write sys/plugins/pins/secret/my-secret-plugin version=v1.0.1
    ```
 
-1. Finally, trigger a global [plugin reload](/vault/docs/commands/plugin/reload)
-   to reload all instances of the plugin.
+1. Finally, trigger a global [plugin reload](/vault/docs/commands/plugin/reload) to
+   reload all instances of the plugin.
 
     ```shell-session
     $ vault plugin reload -type=secret -plugin=my-secret-plugin -scope=global
@@ -76,7 +76,7 @@ an auth plugin, just replace all usages of `secrets` or `secret` with `auth`.
     $ vault secrets list -detailed
     ```
 
-Until the last step, the mount will still run the first version of `my-secret-plugin`. When
+Until the reload step, the mount will still run the first version of `my-secret-plugin`. When
 the reload is triggered, Vault will kill `my-secret-plugin`’s process and start the
 new plugin process for `my-secret-plugin` version 1.0.1.
 
@@ -124,8 +124,8 @@ new plugin process for `my-secret-plugin` version 1.0.1.
     $ vault write sys/plugins/pins/database/my-db-plugin version=v1.0.1
     ```
 
-1. Finally, trigger a global [plugin reload](/vault/docs/commands/plugin/reload)
-   to reload all instances of the plugin.
+1. Finally, trigger a global [plugin reload](/vault/docs/commands/plugin/reload) to
+   reload all instances of the plugin.
 
     ```shell-session
     $ vault plugin reload -type=database -plugin=my-db-plugin -scope=global
@@ -139,7 +139,7 @@ new plugin process for `my-secret-plugin` version 1.0.1.
     $ vault read database/config/my-db
     ```
 
-Until the last step, the mount will still run the first version of `my-db-plugin`. When
+Until the reload step, the mount will still run the first version of `my-db-plugin`. When
 the reload is triggered, Vault will kill `my-db-plugin`’s process and start the
 new plugin process for `my-db-plugin` version 1.0.1.
 
