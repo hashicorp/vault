@@ -20,6 +20,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -122,7 +124,7 @@ func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
 	keyringTimeout := defaultKeyringTimeout
 	keyringTimeoutStr := os.Getenv(bestEffortKeyringTimeoutOverride)
 	if keyringTimeoutStr != "" {
-		t, err := time.ParseDuration(keyringTimeoutStr)
+		t, err := parseutil.ParseDurationSecond(keyringTimeoutStr)
 		if err != nil {
 			return nil, err
 		}
