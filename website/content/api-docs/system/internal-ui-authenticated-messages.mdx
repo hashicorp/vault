@@ -10,6 +10,10 @@ description: >-
 The `/sys/internal/ui/authenticated-messages` endpoint is used by the UI to
 retrieve the active post-login custom messages so that it can display them.
 
+The ability to create and maintain custom messages is reserved for the Vault
+Enterprise edition. In the community edition, this path simply returns an
+empty result.
+
 When retrieving custom messages, the results will include active messages from
 the current namespace along with custom messages that exist all of the ancestral
 namespaces up to and including the root namespace.
