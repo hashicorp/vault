@@ -135,11 +135,9 @@ func TestNewStaticSecretCacheUpdater(t *testing.T) {
 }
 
 // TestOpenWebSocketConnection tests that the openWebSocketConnection function
-// works as expected. This uses a TLS enabled (wss) WebSocket connection.
+// works as expected (fails on CE, succeeds on ent).
+// This uses a TLS enabled (wss) WebSocket connection.
 func TestOpenWebSocketConnection(t *testing.T) {
-	if !constants.IsEnterprise {
-		t.Skip("test can only run on enterprise due to requiring the event notification system")
-	}
 	t.Parallel()
 	// We need a valid cluster for the connection to succeed.
 	cluster := minimal.NewTestSoloCluster(t, nil)
@@ -149,10 +147,13 @@ func TestOpenWebSocketConnection(t *testing.T) {
 	updater.tokenSink.WriteToken(client.Token())
 
 	conn, err := updater.openWebSocketConnection(context.Background())
-	if err != nil {
-		t.Fatal(err)
+	if constants.IsEnterprise {
+		require.NoError(t, err)
+		require.NotNil(t, conn)
+	} else {
+		require.Nil(t, conn)
+		require.Errorf(t, err, "ensure Vault is Enterprise version 1.16 or above")
 	}
-	require.NotNil(t, conn)
 }
 
 // TestOpenWebSocketConnectionReceivesEventsDefaultMount tests that the openWebSocketConnection function
