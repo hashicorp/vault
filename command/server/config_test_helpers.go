@@ -614,7 +614,6 @@ func testLoadConfigFile_json(t *testing.T) {
 					Type:                  "tcp",
 					Address:               "127.0.0.1:443",
 					CustomResponseHeaders: DefaultCustomHeaders,
-					DisableRequestLimiter: false,
 				},
 			},
 
@@ -905,6 +904,7 @@ listener "unix" {
   redact_addresses = true
   redact_cluster_name = true
   redact_version = true
+  disable_request_limiter = true
 }`))
 
 	config := Config{
@@ -961,14 +961,15 @@ listener "unix" {
 					DisableRequestLimiter: true,
 				},
 				{
-					Type:              "unix",
-					Address:           "/var/run/vault.sock",
-					SocketMode:        "644",
-					SocketUser:        "1000",
-					SocketGroup:       "1000",
-					RedactAddresses:   false,
-					RedactClusterName: false,
-					RedactVersion:     false,
+					Type:                  "unix",
+					Address:               "/var/run/vault.sock",
+					SocketMode:            "644",
+					SocketUser:            "1000",
+					SocketGroup:           "1000",
+					RedactAddresses:       false,
+					RedactClusterName:     false,
+					RedactVersion:         false,
+					DisableRequestLimiter: true,
 				},
 			},
 		},

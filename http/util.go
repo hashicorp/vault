@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/sdk/logical"
 
 	"github.com/hashicorp/vault/helper/namespace"
@@ -48,7 +49,7 @@ func wrapRequestLimiterHandler(handler http.Handler, props *vault.HandlerPropert
 		request := r.WithContext(
 			context.WithValue(
 				r.Context(),
-				logical.CtxKeyDisableRequestLimiter{},
+				limits.CtxKeyDisableRequestLimiter{},
 				props.ListenerConfig.DisableRequestLimiter,
 			),
 		)
