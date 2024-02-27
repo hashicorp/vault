@@ -3465,6 +3465,10 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 // TestSystemBackend_PluginCatalog_ContainerCRUD tests that plugins registered
 // with oci_image set get recorded properly in the catalog.
 func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Containerized plugins only supported on Linux")
+	}
+
 	c, b, _ := testCoreSystemBackend(t)
 	// Bootstrap the pluginCatalog
 	sym, err := filepath.EvalSymlinks(os.TempDir())
@@ -3552,15 +3556,6 @@ func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
 			}
 
 			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-
-			// We should get a nice error back from the API if we're not on linux, but
-			// that's all we can test on non-linux.
-			if runtime.GOOS != "linux" {
-				if err != nil || resp.Error() == nil {
-					t.Fatalf("err: %v %v", err, resp.Error())
-				}
-				return
-			}
 
 			if err != nil || resp.Error() != nil {
 				t.Fatalf("err: %v %v", err, resp.Error())
