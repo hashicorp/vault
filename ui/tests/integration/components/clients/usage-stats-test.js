@@ -60,7 +60,7 @@ module('Integration | Component | clients/usage-stats', function (hooks) {
 
     await render(hbs`<Clients::UsageStats @totalUsageCounts={{this.counts}} />`);
 
-    assert.dom('[data-test-stat-text]').exists({ count: 3 }, 'Renders 3 Stat texts'); // after SYNC BETA update to 4
+    assert.dom('[data-test-stat-text]').exists({ count: 4 }, 'Renders 3 Stat texts');
     assert
       .dom('[data-test-stat-text="total-clients"] .stat-value')
       .hasText('22', 'Total clients shows passed value');

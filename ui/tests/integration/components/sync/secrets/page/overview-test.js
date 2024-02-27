@@ -144,8 +144,9 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       },
       {
         cardTitle: 'Total secrets',
-        subText: 'The total number of secrets synced from Vault.',
-        // actionText: 'View billing',
+        subText:
+          'The total number of secrets that have been synced from Vault. One secret will be counted as one sync client.',
+        actionText: 'View billing',
         count: '7',
       },
     ];
@@ -154,7 +155,6 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       assert.dom(title(cardTitle)).hasText(cardTitle, 'Overview card title renders');
       assert.dom(description(cardTitle)).hasText(subText, 'Destinations overview card description renders');
       assert.dom(content(cardTitle)).hasText(count, 'Total count renders');
-      if (cardTitle === 'Total secrets') return; // uncomment 'actionText' above and this return after SYNC BETA
       assert.dom(action(cardTitle)).hasText(actionText, 'Card action renders');
     });
   });
