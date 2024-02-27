@@ -11,43 +11,89 @@ description: |-
 
 Vault features an extension to resource quotas that allows operators to enforce
 limits on how many leases are created. For a given lease count quota, if the
-number of leases in the cluster hits the configured limit, `max_leases`, additional
-lease creations will be forbidden for all clients until a lease has been revoked
-or has expired.
+number of leases in the cluster hits the configured limit, `max_leases`,
+additional lease creations will be forbidden for all clients until the
+an operator modifies the configured limit, or a lease has been revoked or
+expired.
+
+Lease count quotas guard against [lease
+explosions](/vault/docs/concepts/lease-explosions).
+
+## Root tokens
 
 It is important to note that lease count quotas do not apply to the root tokens.
 If the number of leases in the cluster hits the configured limit, `max_leases`,
-an operator could still create a root token and access the cluster to try to recover.
+an operator can still create a root token and access the cluster to try to
+recover.
 
-Additionally, batch token creation is blocked when the lease count quota is
-exceeded, but batch tokens do not count towards the quota.
+## Batch tokens
 
-All the nodes in the Vault cluster will share the lease quota rules, meaning that
-the lease counters will be shared, regardless of which node in the Vault cluster
-receives lease generation requests. Lease quotas can be imposed across Vault's API,
-or scoped down to API pertaining to specific namespaces or specific mounts.
+Batch token creation is blocked when the lease count quota is exceeded, but
+batch tokens do not count toward the quota.
 
-A quota that is defined in the `root` namespace with no specified path is inherited by all namespaces.
-Essentially, it applies to the entire Vault API unless a more specific quota has been defined
-for a specific API path.
+All the nodes in the Vault cluster share the lease quota rules, meaning that the
+lease counters are shared, regardless of which node in the Vault cluster
+receives lease generation requests. Lease quotas can be imposed across Vault's
+API, or scoped down to API pertaining to specific namespaces or specific mounts.
 
-Lease count quotas defined on a namespace take precedence over the global
-quotas. Lease count quotas defined for a mount will take precedence over global
-and namespace quotas. Lease count quotas defined for a specific path will take precedence
-over global, namespace, and mount quotas. Lease count quotas defined with a login role for
-a specific auth mount will take precedence over every other quota when applying to
-login requests using that auth method and the specified role.
+## Lease count quota inheritance
 
-The limits on quotas can either be increased or decreased. If a lower precedence quota
-is very restrictive and if it is desired to relax the limits in one namespace,
-or on a specific mount, it can be done using this precedence model. On the
-other hand, if a lower precedence quota is very liberal and if it is desired to
-further restrict usages in a specific namespace or mount, that can be done
-using the precedence model too.
+A quota that is defined in the `root` namespace with no specified path is
+inherited by all namespaces. This type of quota is referred to as a `global`
+quota. Global quotas applie to the entire Vault API unless a more specific quota
+(higher precedence) quota has been defined.
 
-Vault also allows the inspection into the state of lease count quotas in a Vault
-cluster through various [metrics](/vault/docs/internals/telemetry/metrics/core-system#quota-metrics)
-exposed and through enabling optional audit logging.
+## Lease count quota precedence
+
+Lease count quota precedence is dictated by highest to lowest level of
+specificity. The rules are as follows:
+
+1. Global lease count quotas are applied to all mounts and namespaces only if no
+other, more specific namespace is defined.
+1. Lease count quotas defined on a namespace take precedence over the global
+quotas.
+1. Lease count quotas defined for a mount will take precedence over global
+and namespace quotas.
+1. Lease count quotas defined for a specific path will take
+precedence over global, namespace, and mount quotas.
+1. Lease count quotas defined with a login role for a specific auth mount will
+take precedence over every other quota when applying to login requests using
+that auth method and the specified role.
+
+The limits on quotas can either be increased or decreased. If a lower precedence
+quota is very restrictive and if it is desired to relax the limits in one
+namespace, or on a specific mount, it can be done using this precedence model.
+On the other hand, if a lower precedence quota is very liberal and if it is
+desired to further restrict usages in a specific namespace or mount, that can be
+done using the precedence model too.
+
+## Default lease count quota
+
+As of Vault 1.16.0, new installations of Vault Enterprise will include a default
+global quota with a `max_leases` value of `300000`. This value is an
+intentionally low limit, intended to prevent runaway leases in the event that no
+other lease count quota is specified.
+
+This limit will affect all new clusters with no pre-existing configuration. As
+with any other quota, the default can be directly increased, decreased, or
+removed using the [lease-count-quotas endpoints](/vault/api-docs/system/lease-count-quotas).
+
+The default may also be overridden by higher precedence quotas (specified for a
+namespace, mount, path, or role) as described in the [Lease count quota
+precedence](#lease-count-quota-precedence) section above.
+
+## Quota inspection
+
+Vault also allows the inspection of the state of lease count quotas in a Vault
+cluster through various
+[metrics](/vault/docs/internals/telemetry/metrics/core-system#quota-metrics)
+and through enabling optional audit logging.
+
+## Lease count quota exceeded
+
+Vault returns a `429 - Too Many Requests` response if a new lease request
+violates the quota limit. For more information on this error, refer to [the
+error document](/vault/docs/concepts/lease-count-quota-exceeded).
 
 ## Tutorial
 

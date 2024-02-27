@@ -113,7 +113,7 @@ var (
 			return errors.New("nil token entry")
 		}
 
-		storage := ts.core.router.MatchingStorageByAPIPath(ctx, cubbyholeMountPath)
+		storage := ts.core.router.MatchingStorageByAPIPath(ctx, mountPathCubbyhole)
 		if storage == nil {
 			return fmt.Errorf("no cubby mount entry")
 		}
@@ -1451,6 +1451,7 @@ func (ts *TokenStore) UseTokenByID(ctx context.Context, id string) (*logical.Tok
 }
 
 // Lookup is used to find a token given its ID. It acquires a read lock, then calls lookupInternal.
+// Note that callers must handle possible nil, nil returns from this function.
 func (ts *TokenStore) Lookup(ctx context.Context, id string) (*logical.TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"token", "lookup"}, time.Now())
 	if id == "" {
@@ -1505,6 +1506,8 @@ func (ts *TokenStore) lookupBatchTokenInternal(ctx context.Context, id string) (
 
 	mEntry, err := ts.batchTokenEncryptor.Decrypt(ctx, "", eEntry)
 	if err != nil {
+		// We deliberately return nil, nil here to avoid leaking
+		// information about the decrypt failure.
 		return nil, nil
 	}
 
@@ -1522,12 +1525,16 @@ func (ts *TokenStore) lookupBatchTokenInternal(ctx context.Context, id string) (
 	return te, nil
 }
 
+// lookupBatchToken looks up a batch token and returns it if found.
+// Note that callers must handle possible nil, nil returns from this function.
 func (ts *TokenStore) lookupBatchToken(ctx context.Context, id string) (*logical.TokenEntry, error) {
 	te, err := ts.lookupBatchTokenInternal(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	if te == nil {
+		// We deliberately return nil, nil here to avoid leaking
+		// information in the case of a decrypt failure.
 		return nil, nil
 	}
 
@@ -2202,7 +2209,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			}
 
 			// List all the cubbyhole storage keys
-			view := ts.core.router.MatchingStorageByAPIPath(ctx, cubbyholeMountPath)
+			view := ts.core.router.MatchingStorageByAPIPath(ctx, mountPathCubbyhole)
 			if view == nil {
 				return fmt.Errorf("no cubby mount entry")
 			}

@@ -36,6 +36,7 @@ This announcement page is maintained and updated periodically to communicate imp
 | Consul secrets engine parameter changes  | v1.11     | N/A     | N/A     | The `policies` parameter on the Consul secrets engine has been changed in favor of `consul_policies`. The `token_type` and `policy` parameters have been deprecated as the latest versions of Consul no longer support the older ACL system they were used for. | [Consul secrets engine API documentation](/vault/api-docs/secret/consul) |
 | Vault Agent API proxy support | v1.14 | v1.16 | v1.17 | Migrate to [Vault Proxy](/vault/docs/proxy/index) by v1.17|
 | Centrify Auth Method | v1.15 | v1.17 | v1.17 | Use as an external plugin, but support will not be available. | |
+| AWS secrets engine field change  | v1.16     | N/A     | N/A     | The `security_token` field returned for AssumeRole and FederationToken credentials is deprecated in favor of the current term `session_token`. | [AWS secrets engine API documentation](/vault/api-docs/secret/aws) |
 
 *If you use **Standalone DB Engines** or **AppID (Community)**, you should actively plan to migrate away from their usage. If you use these features and upgrade to Release 1.12, Vault will log error messages and shut down, and any attempts to add new mounts will result in an error.
 This behavior may temporarily be overridden when starting the Vault server by using the `VAULT_ALLOW_PENDING_REMOVAL_MOUNTS` environment variable until they are officially removed in Vault version 1.13.

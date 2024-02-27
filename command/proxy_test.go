@@ -4,7 +4,6 @@
 package command
 
 import (
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -17,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-hclog"
 	vaultjwt "github.com/hashicorp/vault-plugin-auth-jwt"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
@@ -30,7 +30,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	"github.com/mitchellh/cli"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -686,266 +685,6 @@ vault {
 	wg.Wait()
 }
 
-// TestProxy_Cache_StaticSecret Tests that the cache successfully caches a static secret
-// going through the Proxy,
-func TestProxy_Cache_StaticSecret(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	serverClient := cluster.Cores[0].Client
-
-	// Unset the environment variable so that proxy picks up the right test
-	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
-
-	cacheConfig := `
-cache {
-	cache_static_secrets = true
-}
-`
-	listenAddr := generateListenerAddress(t)
-	listenConfig := fmt.Sprintf(`
-listener "tcp" {
-  address = "%s"
-  tls_disable = true
-}
-`, listenAddr)
-
-	config := fmt.Sprintf(`
-vault {
-  address = "%s"
-  tls_skip_verify = true
-}
-%s
-%s
-log_level = "trace"
-`, serverClient.Address(), cacheConfig, listenConfig)
-	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
-
-	// Start proxy
-	_, cmd := testProxyCommand(t, logger)
-	cmd.startedCh = make(chan struct{})
-
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		cmd.Run([]string{"-config", configPath})
-		wg.Done()
-	}()
-
-	select {
-	case <-cmd.startedCh:
-	case <-time.After(5 * time.Second):
-		t.Errorf("timeout")
-	}
-
-	proxyClient, err := api.NewClient(api.DefaultConfig())
-	if err != nil {
-		t.Fatal(err)
-	}
-	proxyClient.SetToken(serverClient.Token())
-	proxyClient.SetMaxRetries(0)
-	err = proxyClient.SetAddress("http://" + listenAddr)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	secretData := map[string]interface{}{
-		"foo": "bar",
-	}
-
-	// Create kvv1 secret
-	err = serverClient.KVv1("secret").Put(context.Background(), "my-secret", secretData)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// We use raw requests so we can check the headers for cache hit/miss.
-	// We expect the first to miss, and the second to hit.
-	req := proxyClient.NewRequest(http.MethodGet, "/v1/secret/my-secret")
-	resp1, err := proxyClient.RawRequest(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	cacheValue := resp1.Header.Get("X-Cache")
-	require.Equal(t, "MISS", cacheValue)
-
-	req = proxyClient.NewRequest(http.MethodGet, "/v1/secret/my-secret")
-	resp2, err := proxyClient.RawRequest(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	cacheValue = resp2.Header.Get("X-Cache")
-	require.Equal(t, "HIT", cacheValue)
-
-	// Lastly, we check to make sure the actual data we received is
-	// as we expect. We must use ParseSecret due to the raw requests.
-	secret1, err := api.ParseSecret(resp1.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	require.Equal(t, secretData, secret1.Data)
-
-	secret2, err := api.ParseSecret(resp2.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	require.Equal(t, secret1.Data, secret2.Data)
-
-	close(cmd.ShutdownCh)
-	wg.Wait()
-}
-
-// TestProxy_Cache_StaticSecretInvalidation Tests that the cache successfully caches a static secret
-// going through the Proxy, and that it gets invalidated by a POST.
-func TestProxy_Cache_StaticSecretInvalidation(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	serverClient := cluster.Cores[0].Client
-
-	// Unset the environment variable so that proxy picks up the right test
-	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
-
-	cacheConfig := `
-cache {
-	cache_static_secrets = true
-}
-`
-	listenAddr := generateListenerAddress(t)
-	listenConfig := fmt.Sprintf(`
-listener "tcp" {
-  address = "%s"
-  tls_disable = true
-}
-`, listenAddr)
-
-	config := fmt.Sprintf(`
-vault {
-  address = "%s"
-  tls_skip_verify = true
-}
-%s
-%s
-log_level = "trace"
-`, serverClient.Address(), cacheConfig, listenConfig)
-	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
-
-	// Start proxy
-	_, cmd := testProxyCommand(t, logger)
-	cmd.startedCh = make(chan struct{})
-
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		cmd.Run([]string{"-config", configPath})
-		wg.Done()
-	}()
-
-	select {
-	case <-cmd.startedCh:
-	case <-time.After(5 * time.Second):
-		t.Errorf("timeout")
-	}
-
-	proxyClient, err := api.NewClient(api.DefaultConfig())
-	if err != nil {
-		t.Fatal(err)
-	}
-	proxyClient.SetToken(serverClient.Token())
-	proxyClient.SetMaxRetries(0)
-	err = proxyClient.SetAddress("http://" + listenAddr)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	secretData := map[string]interface{}{
-		"foo": "bar",
-	}
-
-	secretData2 := map[string]interface{}{
-		"bar": "baz",
-	}
-
-	// Create kvv1 secret
-	err = serverClient.KVv1("secret").Put(context.Background(), "my-secret", secretData)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// We use raw requests so we can check the headers for cache hit/miss.
-	req := proxyClient.NewRequest(http.MethodGet, "/v1/secret/my-secret")
-	resp1, err := proxyClient.RawRequest(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	cacheValue := resp1.Header.Get("X-Cache")
-	require.Equal(t, "MISS", cacheValue)
-
-	// Update the secret using the proxy client
-	err = proxyClient.KVv1("secret").Put(context.Background(), "my-secret", secretData2)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	resp2, err := proxyClient.RawRequest(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	cacheValue = resp2.Header.Get("X-Cache")
-	// This should miss too, as we just updated it
-	require.Equal(t, "MISS", cacheValue)
-
-	resp3, err := proxyClient.RawRequest(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	cacheValue = resp3.Header.Get("X-Cache")
-	// This should hit, as the third request should get the cached value
-	require.Equal(t, "HIT", cacheValue)
-
-	// Lastly, we check to make sure the actual data we received is
-	// as we expect. We must use ParseSecret due to the raw requests.
-	secret1, err := api.ParseSecret(resp1.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	require.Equal(t, secretData, secret1.Data)
-
-	secret2, err := api.ParseSecret(resp2.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	require.Equal(t, secretData2, secret2.Data)
-
-	secret3, err := api.ParseSecret(resp3.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	require.Equal(t, secret2.Data, secret3.Data)
-
-	close(cmd.ShutdownCh)
-	wg.Wait()
-}
-
 // TestProxy_ApiProxy_Retry Tests the retry functionalities of Vault Proxy's API Proxy
 func TestProxy_ApiProxy_Retry(t *testing.T) {
 	//----------------------------------------------------
@@ -1327,6 +1066,36 @@ func TestProxy_LogFile_Config(t *testing.T) {
 	assert.Equal(t, "TMPDIR/juan.log", cfg.LogFile, "actual config check")
 	assert.Equal(t, 2, cfg.LogRotateMaxFiles)
 	assert.Equal(t, 1048576, cfg.LogRotateBytes)
+}
+
+// TestProxy_EnvVar_Overrides tests that environment variables are properly
+// parsed and override defaults.
+func TestProxy_EnvVar_Overrides(t *testing.T) {
+	configFile := populateTempFile(t, "proxy-config.hcl", BasicHclConfig)
+
+	cfg, err := proxyConfig.LoadConfigFile(configFile.Name())
+	if err != nil {
+		t.Fatal("Cannot load config to test update/merge", err)
+	}
+
+	assert.Equal(t, false, cfg.Vault.TLSSkipVerify)
+
+	t.Setenv("VAULT_SKIP_VERIFY", "true")
+	// Parse the cli flags (but we pass in an empty slice)
+	cmd := &ProxyCommand{BaseCommand: &BaseCommand{}}
+	f := cmd.Flags()
+	err = f.Parse([]string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cmd.applyConfigOverrides(f, cfg)
+	assert.Equal(t, true, cfg.Vault.TLSSkipVerify)
+
+	t.Setenv("VAULT_SKIP_VERIFY", "false")
+
+	cmd.applyConfigOverrides(f, cfg)
+	assert.Equal(t, false, cfg.Vault.TLSSkipVerify)
 }
 
 // TestProxy_Config_NewLogger_Default Tests defaults for log level and

@@ -8,9 +8,10 @@ import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { allEngines, isAddonEngine } from 'vault/helpers/mountable-secret-engines';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
 import { assert } from '@ember/debug';
+import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
 
@@ -68,7 +69,7 @@ export default Route.extend({
     const secretEngine = this.store.peekRecord('secret-engine', backend);
     const type = secretEngine?.engineType;
     assert('secretEngine.engineType is not defined', !!type);
-    const engineRoute = allEngines().findBy('type', type)?.engineRoute;
+    const engineRoute = allEngines().find((engine) => engine.type === type)?.engineRoute;
 
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
       return this.router.transitionTo('vault.cluster.secrets');
@@ -77,6 +78,9 @@ export default Route.extend({
       return this.router.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
     }
     if (isAddonEngine(type, secretEngine.version)) {
+      if (engineRoute === 'kv.list' && pathIsDirectory(secret)) {
+        return this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', backend, secret);
+      }
       return this.router.transitionTo(`vault.cluster.secrets.backend.${engineRoute}`, backend);
     }
     const modelType = this.getModelType(backend, tab);

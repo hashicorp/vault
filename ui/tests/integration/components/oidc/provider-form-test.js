@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import ENV from 'vault/config/environment';
+import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
 import {
   SELECTORS,
   OIDC_BASE_URL,
@@ -17,6 +17,7 @@ import {
   overrideCapabilities,
 } from 'vault/tests/helpers/oidc-config';
 import parseURL from 'core/utils/parse-url';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const ISSUER_URL = 'http://127.0.0.1:8200/v1/identity/oidc/provider/test-provider';
 
@@ -24,15 +25,8 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'oidcConfig';
-  });
-
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
-  });
-
   hooks.beforeEach(function () {
+    oidcConfigHandlers(this.server);
     this.store = this.owner.lookup('service:store');
     this.server.get('/identity/oidc/scope', () => {
       return {
@@ -49,6 +43,16 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       };
     });
     this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
+    setRunOptions({
+      rules: {
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+      },
+    });
   });
 
   test('it should save new provider', async function (assert) {

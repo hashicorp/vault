@@ -6,33 +6,55 @@ package http
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"strings"
 
-	"github.com/hashicorp/vault/sdk/logical"
-
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/limits"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/quotas"
 )
 
-var (
-	genericWrapping = func(core *vault.Core, in http.Handler, props *vault.HandlerProperties) http.Handler {
-		// Wrap the help wrapped handler with another layer with a generic
-		// handler
-		return wrapGenericHandler(core, in, props)
-	}
+var nonVotersAllowed = false
 
-	additionalRoutes = func(mux *http.ServeMux, core *vault.Core) {}
+func wrapMaxRequestSizeHandler(handler http.Handler, props *vault.HandlerProperties) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var maxRequestSize int64
+		if props.ListenerConfig != nil {
+			maxRequestSize = props.ListenerConfig.MaxRequestSize
+		}
+		if maxRequestSize == 0 {
+			maxRequestSize = DefaultMaxRequestSize
+		}
+		ctx := r.Context()
+		originalBody := r.Body
+		if maxRequestSize > 0 {
+			r.Body = http.MaxBytesReader(w, r.Body, maxRequestSize)
+		}
+		ctx = logical.CreateContextOriginalBody(ctx, originalBody)
+		r = r.WithContext(ctx)
 
-	nonVotersAllowed = false
+		handler.ServeHTTP(w, r)
+	})
+}
 
-	adjustResponse = func(core *vault.Core, w http.ResponseWriter, req *logical.Request) {}
-)
+func wrapRequestLimiterHandler(handler http.Handler, props *vault.HandlerProperties) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		request := r.WithContext(
+			context.WithValue(
+				r.Context(),
+				limits.CtxKeyDisableRequestLimiter{},
+				props.ListenerConfig.DisableRequestLimiter,
+			),
+		)
+		handler.ServeHTTP(w, request)
+	})
+}
 
 func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -51,14 +73,6 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 			return
 		}
 		mountPath := strings.TrimPrefix(core.MatchingMount(r.Context(), path), ns.Path)
-
-		// Clone body, so we do not close the request body reader
-		bodyBytes, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			respondError(w, http.StatusInternalServerError, errors.New("failed to read request body"))
-			return
-		}
-		r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 
 		quotaReq := &quotas.Request{
 			Type:          quotas.TypeRateLimit,
@@ -79,7 +93,18 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 		// If any role-based quotas are enabled for this namespace/mount, just
 		// do the role resolution once here.
 		if requiresResolveRole {
-			role := core.DetermineRoleFromLoginRequestFromBytes(r.Context(), mountPath, bodyBytes)
+			buf := bytes.Buffer{}
+			teeReader := io.TeeReader(r.Body, &buf)
+			role := core.DetermineRoleFromLoginRequestFromReader(r.Context(), mountPath, teeReader)
+
+			// Reset the body if it was read
+			if buf.Len() > 0 {
+				r.Body = io.NopCloser(&buf)
+				originalBody, ok := logical.ContextOriginalBodyValue(r.Context())
+				if ok {
+					r = r.WithContext(logical.CreateContextOriginalBody(r.Context(), newMultiReaderCloser(&buf, originalBody)))
+				}
+			}
 			// add an entry to the context to prevent recalculating request role unnecessarily
 			r = r.WithContext(context.WithValue(r.Context(), logical.CtxKeyRequestRole{}, role))
 			quotaReq.Role = role
@@ -107,7 +132,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 			}
 
 			if core.RateLimitAuditLoggingEnabled() {
-				req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
+				req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), core.RouterAccess(), w, r)
 				if err != nil || status != 0 {
 					respondError(w, status, err)
 					return
@@ -130,6 +155,14 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 	})
 }
 
+func disableReplicationStatusEndpointWrapping(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		request := r.WithContext(logical.CreateContextDisableReplicationStatusEndpoints(r.Context(), true))
+
+		h.ServeHTTP(w, request)
+	})
+}
+
 func parseRemoteIPAddress(r *http.Request) string {
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
@@ -137,4 +170,26 @@ func parseRemoteIPAddress(r *http.Request) string {
 	}
 
 	return ip
+}
+
+type multiReaderCloser struct {
+	readers []io.Reader
+	io.Reader
+}
+
+func newMultiReaderCloser(readers ...io.Reader) *multiReaderCloser {
+	return &multiReaderCloser{
+		readers: readers,
+		Reader:  io.MultiReader(readers...),
+	}
+}
+
+func (m *multiReaderCloser) Close() error {
+	var err error
+	for _, r := range m.readers {
+		if c, ok := r.(io.Closer); ok {
+			err = multierror.Append(err, c.Close())
+		}
+	}
+	return err
 }

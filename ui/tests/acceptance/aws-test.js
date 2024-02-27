@@ -75,8 +75,7 @@ module('Acceptance | aws secret backend', function (hooks) {
       `/vault/secrets/${path}/show/${roleName}`,
       `$aws: navigates to the show page on creation`
     );
-
-    await click('[data-test-secret-root-link]');
+    await click(`[data-test-secret-breadcrumb="${path}"] a`);
 
     assert.strictEqual(currentURL(), `/vault/secrets/${path}/list`);
     assert.ok(findAll(`[data-test-secret-link="${roleName}"]`).length, `aws: role shows in the list`);

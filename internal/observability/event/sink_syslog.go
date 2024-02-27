@@ -6,10 +6,10 @@ package event
 import (
 	"context"
 	"fmt"
-
-	gsyslog "github.com/hashicorp/go-syslog"
+	"strings"
 
 	"github.com/hashicorp/eventlogger"
+	gsyslog "github.com/hashicorp/go-syslog"
 )
 
 var _ eventlogger.Node = (*SyslogSink)(nil)
@@ -24,6 +24,11 @@ type SyslogSink struct {
 // Accepted options: WithFacility and WithTag.
 func NewSyslogSink(format string, opt ...Option) (*SyslogSink, error) {
 	const op = "event.NewSyslogSink"
+
+	format = strings.TrimSpace(format)
+	if format == "" {
+		return nil, fmt.Errorf("%s: format is required: %w", op, ErrInvalidParameter)
+	}
 
 	opts, err := getOpts(opt...)
 	if err != nil {

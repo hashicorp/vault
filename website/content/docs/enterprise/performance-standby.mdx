@@ -6,7 +6,7 @@ description: Performance Standby Nodes - Vault Enterprise
 
 # Performance standby nodes
 
-@include 'alerts/enterprise-and-hcp-plus.mdx'
+@include 'alerts/enterprise-and-hcp.mdx'
 
 Vault supports a multi-server mode for high availability. This mode protects
 against outages by running multiple Vault servers. High availability mode
@@ -21,6 +21,8 @@ that do not modify Vault's storage.
 
 Performance Standbys require the request forwarding method described in the [HA
 Server-to-Server](/vault/docs/concepts/ha#server-to-server-communication) docs.
+Unlike regular standby nodes, performance standbys will **not** respect the
+`X-Vault-No-Request-Forwarding` header.
 
 A performance standby will connect to the active node over the existing request
 forwarding connection. If selected by the active node to be promoted to a

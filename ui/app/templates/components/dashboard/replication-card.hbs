@@ -10,7 +10,7 @@
     </h3>
 
     {{#if (or @replication.dr.clusterId @replication.performance.clusterId)}}
-      <LinkTo class="is-no-underline" @route="vault.cluster.replication.index">
+      <LinkTo @route="vault.cluster.replication.index">
         Details
       </LinkTo>
     {{/if}}
@@ -89,9 +89,12 @@
       class="has-top-margin-m"
       data-test-empty-state="replication"
     >
-      <div>
-        <LinkTo @route="vault.cluster.replication">Enable replication</LinkTo>
-      </div>
+      <Hds::Link::Standalone
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        @text="Enable replication"
+        @route="vault.cluster.replication"
+      />
     </EmptyState>
   {{/if}}
 </Hds::Card::Container>

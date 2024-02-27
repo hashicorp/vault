@@ -15,6 +15,8 @@ Router.map(function () {
   this.route('vault', { path: '/' }, function () {
     this.route('cluster', { path: '/:cluster_name' }, function () {
       this.route('dashboard');
+      this.mount('config-ui');
+      this.mount('sync');
       this.route('oidc-provider-ns', { path: '/*namespace/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-provider', { path: '/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-callback', { path: '/auth/*auth_path/oidc/callback' });
@@ -25,7 +27,11 @@ Router.map(function () {
       this.route('license');
       this.route('mfa-setup');
       this.route('clients', function () {
-        this.route('dashboard');
+        this.route('counts', function () {
+          this.route('overview');
+          // this.route('sync'); * unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
+          this.route('token');
+        });
         this.route('config');
         this.route('edit');
       });
@@ -54,6 +60,7 @@ Router.map(function () {
         this.mount('open-api-explorer', { path: '/api-explorer' });
       });
       this.route('access', function () {
+        this.route('reset-password');
         this.route('methods', { path: '/' });
         this.route('method', { path: '/:path' }, function () {
           this.route('index', { path: '/' });

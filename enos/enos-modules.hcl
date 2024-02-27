@@ -49,6 +49,10 @@ module "generate_secondary_token" {
   vault_install_dir = var.vault_install_dir
 }
 
+module "install_packages" {
+  source = "./modules/install_packages"
+}
+
 module "read_license" {
   source = "./modules/read_license"
 }
@@ -57,12 +61,44 @@ module "replication_data" {
   source = "./modules/replication_data"
 }
 
+module "seal_awskms" {
+  source = "./modules/seal_awskms"
+
+  cluster_ssh_keypair = var.aws_ssh_keypair_name
+  common_tags         = var.tags
+}
+
+module "seal_shamir" {
+  source = "./modules/seal_shamir"
+
+  cluster_ssh_keypair = var.aws_ssh_keypair_name
+  common_tags         = var.tags
+}
+
+module "seal_pkcs11" {
+  source = "./modules/seal_pkcs11"
+
+  cluster_ssh_keypair = var.aws_ssh_keypair_name
+  common_tags         = var.tags
+}
+
 module "shutdown_node" {
   source = "./modules/shutdown_node"
 }
 
 module "shutdown_multiple_nodes" {
   source = "./modules/shutdown_multiple_nodes"
+}
+
+module "start_vault" {
+  source = "./modules/start_vault"
+
+  install_dir = var.vault_install_dir
+  log_level   = var.vault_log_level
+}
+
+module "stop_vault" {
+  source = "./modules/stop_vault"
 }
 
 # create target instances using ec2:CreateFleet
@@ -190,6 +226,13 @@ module "vault_verify_undo_logs" {
   vault_instance_count = var.vault_instance_count
 }
 
+module "vault_verify_default_lcq" {
+  source = "./modules/vault_verify_default_lcq"
+
+  vault_autopilot_default_max_leases = "300000"
+  vault_instance_count               = var.vault_instance_count
+}
+
 module "vault_verify_replication" {
   source = "./modules/vault_verify_replication"
 
@@ -246,6 +289,17 @@ module "vault_verify_write_data" {
 module "vault_wait_for_leader" {
   source = "./modules/vault_wait_for_leader"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_wait_for_seal_rewrap" {
+  source = "./modules/vault_wait_for_seal_rewrap"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "verify_seal_type" {
+  source = "./modules/verify_seal_type"
+
+  vault_install_dir = var.vault_install_dir
 }

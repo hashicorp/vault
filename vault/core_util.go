@@ -11,11 +11,13 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/quotas"
 	"github.com/hashicorp/vault/vault/replication"
+	uicustommessages "github.com/hashicorp/vault/vault/ui_custom_messages"
 )
 
 const (
@@ -40,9 +42,11 @@ func coreInit(c *Core, conf *CoreConfig) error {
 	phys := conf.Physical
 	_, txnOK := phys.(physical.Transactional)
 	sealUnwrapperLogger := conf.Logger.Named("storage.sealunwrapper")
+	c.allLoggers = append(c.allLoggers, sealUnwrapperLogger)
 	c.sealUnwrapper = NewSealUnwrapper(phys, sealUnwrapperLogger)
 	// Wrap the physical backend in a cache layer if enabled
 	cacheLogger := c.baseLogger.Named("storage.cache")
+	c.allLoggers = append(c.allLoggers, cacheLogger)
 	if txnOK {
 		c.physical = physical.NewTransactionalCache(c.sealUnwrapper, conf.CacheSize, cacheLogger, c.MetricSink().Sink)
 	} else {
@@ -74,6 +78,7 @@ func (c *Core) barrierViewForNamespace(namespaceId string) (*BarrierView, error)
 
 func (c *Core) UndoLogsEnabled() bool            { return false }
 func (c *Core) UndoLogsPersisted() (bool, error) { return false, nil }
+func (c *Core) EnableUndoLogs()                  {}
 func (c *Core) PersistUndoLogs() error           { return nil }
 
 func (c *Core) ReindexStage() *uint32  { return nil }
@@ -81,11 +86,13 @@ func (c *Core) BuildProgress() *uint32 { return nil }
 func (c *Core) BuildTotal() *uint32    { return nil }
 
 func (c *Core) teardownReplicationResolverHandler() {}
-func createSecondaries(*Core, *CoreConfig)          {}
+func (c *Core) createSecondaries(_ hclog.Logger)    {}
 
-func addExtraLogicalBackends(*Core, map[string]logical.Factory, string) {}
+func (c *Core) addExtraLogicalBackends(_ string) {}
 
-func addExtraCredentialBackends(*Core, map[string]logical.Factory) {}
+func (c *Core) addExtraEventBackends() {}
+
+func (c *Core) addExtraCredentialBackends() {}
 
 func preUnsealInternal(context.Context, *Core) error { return nil }
 
@@ -199,3 +206,19 @@ func (c *Core) MissingRequiredState(raw []string, perfStandby bool) bool {
 func DiagnoseCheckLicense(ctx context.Context, vaultCore *Core, coreConfig CoreConfig, generate bool) (bool, []string) {
 	return false, nil
 }
+
+// createCustomMessageManager is a function implemented differently for the
+// community edition and the enterprise edition. This is the community
+// edition implementation. It simply constructs a uicustommessages.Manager
+// instance and returns a pointer to it.
+func createCustomMessageManager(storage logical.Storage, _ *Core) CustomMessagesManager {
+	return uicustommessages.NewManager(storage)
+}
+
+// GetRequestLimiter is a stub for CE. The caller will handle the nil case as a no-op.
+func (c *Core) GetRequestLimiter(key string) *limits.RequestLimiter {
+	return nil
+}
+
+// ReloadRequestLimiter is a no-op on CE.
+func (c *Core) ReloadRequestLimiter() {}

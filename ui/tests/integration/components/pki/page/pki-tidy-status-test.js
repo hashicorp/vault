@@ -58,7 +58,7 @@ module('Integration | Component | Page::PkiTidyStatus', function (hooks) {
 
   test('shows the correct titles for the alert banner based on states', async function (assert) {
     await render(
-      hbs`<Page::PkiTidyStatus @autoTidyConfig={{this.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} /> <div id="modal-wormhole"></div>,`,
+      hbs`<Page::PkiTidyStatus @autoTidyConfig={{this.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} />`,
       { owner: this.engine }
     );
     // running state
@@ -68,35 +68,35 @@ module('Integration | Component | Page::PkiTidyStatus', function (hooks) {
     // inactive state
     this.tidyStatus.state = 'Inactive';
     await render(
-      hbs`<Page::PkiTidyStatus @autoTidyConfig={{this.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} /> <div id="modal-wormhole"></div>,`,
+      hbs`<Page::PkiTidyStatus @autoTidyConfig={{this.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} />`,
       { owner: this.engine }
     );
     assert.dom(SELECTORS.hdsAlertTitle).hasText('Tidy is inactive');
     // finished state
     this.tidyStatus.state = 'Finished';
     await render(
-      hbs`<Page::PkiTidyStatus @autoTidyConfig={{this.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} /> <div id="modal-wormhole"></div>,`,
+      hbs`<Page::PkiTidyStatus @autoTidyConfig={{this.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} />`,
       { owner: this.engine }
     );
     assert.dom(SELECTORS.hdsAlertTitle).hasText('Tidy operation finished');
     // error state
     this.tidyStatus.state = 'Error';
     await render(
-      hbs`<Page::PkiTidyStatus @autoTidyConfig={{this.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} /> <div id="modal-wormhole"></div>,`,
+      hbs`<Page::PkiTidyStatus @autoTidyConfig={{this.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} />`,
       { owner: this.engine }
     );
     assert.dom(SELECTORS.hdsAlertTitle).hasText('Tidy operation failed');
     // cancelling state
     this.tidyStatus.state = 'Cancelling';
     await render(
-      hbs`<Page::PkiTidyStatus @autoTidyConfig={{this.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} /> <div id="modal-wormhole"></div>,`,
+      hbs`<Page::PkiTidyStatus @autoTidyConfig={{this.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} />`,
       { owner: this.engine }
     );
     assert.dom(SELECTORS.hdsAlertTitle).hasText('Tidy operation cancelling');
     // cancelled state
     this.tidyStatus.state = 'Cancelled';
     await render(
-      hbs`<Page::PkiTidyStatus @autoTidyConfig={{this.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} /> <div id="modal-wormhole"></div>,`,
+      hbs`<Page::PkiTidyStatus @autoTidyConfig={{this.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} />`,
       { owner: this.engine }
     );
     assert.dom(SELECTORS.hdsAlertTitle).hasText('Tidy operation cancelled');
@@ -105,7 +105,7 @@ module('Integration | Component | Page::PkiTidyStatus', function (hooks) {
     this.tidyStatus.time_started = null;
     this.tidyStatus.time_finished = null;
     await render(
-      hbs`<Page::PkiTidyStatus @autoTidyConfig={{this.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} /> <div id="modal-wormhole"></div>,`,
+      hbs`<Page::PkiTidyStatus @autoTidyConfig={{this.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} />`,
       { owner: this.engine }
     );
     assert.dom(SELECTORS.timeStartedRow).exists();

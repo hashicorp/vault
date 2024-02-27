@@ -28,7 +28,7 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/agent-image` - name of the Vault docker image to use. This
   value overrides the default image configured in the injector and is usually
-  not needed. Defaults to `hashicorp/vault:1.12.3`.
+  not needed. Defaults to `hashicorp/vault:1.15.1`.
 
 - `vault.hashicorp.com/agent-init-first` - configures the pod to run the Vault Agent
   init container first if `true` (last if `false`). This is useful when other init
@@ -260,7 +260,9 @@ etc.
 - `vault.hashicorp.com/agent-auto-auth-exit-on-err` - set the [exit_on_err](/vault/docs/agent-and-proxy/autoauth#exit_on_err) option in the auto-auth config
 
 - `vault.hashicorp.com/ca-cert` - path of the CA certificate used to verify Vault's
-  TLS.
+  TLS. This can also be set as the default for all injected Agents via the
+  `AGENT_INJECT_VAULT_CACERT_BYTES` environment variable which takes a PEM-encoded
+  certificate or bundle.
 
 - `vault.hashicorp.com/ca-key` - path of the CA public key used to verify Vault's
   TLS.

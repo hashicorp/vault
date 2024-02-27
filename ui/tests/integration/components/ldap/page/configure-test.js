@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -50,12 +50,9 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
     this.breadcrumbs = generateBreadcrumbs('ldap', 'configure');
     this.model = this.newModel; // most of the tests use newModel but set this to editModel when needed
     this.renderComponent = () => {
-      return render(
-        hbs`<div id="modal-wormhole"></div><Page::Configure @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
-        {
-          owner: this.engine,
-        }
-      );
+      return render(hbs`<Page::Configure @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
+        owner: this.engine,
+      });
     };
     this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
   });
@@ -88,7 +85,7 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
       .dom('[data-test-field="bindpass"] [data-test-inline-error-message]')
       .hasText('Administrator password is required.', 'Validation message renders for bindpass');
     assert
-      .dom('[data-test-invalid-form-message] p')
+      .dom('[data-test-invalid-form-message]')
       .hasText('There are 2 errors with this form.', 'Invalid form message renders');
   });
 

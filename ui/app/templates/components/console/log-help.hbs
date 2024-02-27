@@ -5,7 +5,7 @@
 
 {{! template-lint-disable no-whitespace-for-layout }}
 {{! prettier-ignore }}
-<div class="console-ui-alert has-text-grey">
+<div class="console-ui-alert">
 <Icon @name="info" />
 <pre>Usage: vault &lt;command&gt; [args]
 
@@ -16,11 +16,15 @@ Commands:
   delete      Delete secrets and configuration
   list        List data or secrets
 
-Web CLI Commands:
+Web REPL Commands:
   api         Navigate to the Vault API explorer. Use 'api [filter]' to prefilter the list.
   clear       Clear output from the log
   clearall    Clear output and command history
   fullscreen  Toggle fullscreen display
   refresh     Refresh the data on the current screen under the CLI window
+
 </pre>
+  <p class="console-ui-panel-intro is-font-mono has-bottom-margin-s">
+    For more detailed documentation, see the <Hds::Link::Inline @href={{doc-link "/vault/docs/command/web"}}>HashiCorp Developer site</Hds::Link::Inline>.
+  </p>
 </div>

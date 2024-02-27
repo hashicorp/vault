@@ -174,7 +174,7 @@ func LeaderNode(ctx context.Context, cluster VaultCluster) (int, error) {
 	leaderActiveTimes := make(map[int]time.Time)
 	for i, node := range cluster.Nodes() {
 		client := node.APIClient()
-		ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+		ctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
 		resp, err := client.Sys().LeaderWithContext(ctx)
 		cancel()
 		if err != nil || resp == nil || !resp.IsSelf {
@@ -209,6 +209,68 @@ func WaitForActiveNode(ctx context.Context, cluster VaultCluster) (int, error) {
 	return -1, ctx.Err()
 }
 
+func WaitForStandbyNode(ctx context.Context, cluster VaultCluster, nodeIdx int) error {
+	if nodeIdx >= len(cluster.Nodes()) {
+		return fmt.Errorf("invalid nodeIdx %d for cluster", nodeIdx)
+	}
+	node := cluster.Nodes()[nodeIdx]
+	client := node.APIClient()
+
+	var err error
+	for ctx.Err() == nil {
+		var resp *api.LeaderResponse
+
+		resp, err = client.Sys().LeaderWithContext(ctx)
+		switch {
+		case err != nil:
+		case resp.IsSelf:
+			return fmt.Errorf("waiting for standby but node is leader")
+		case resp.LeaderAddress == "":
+			err = fmt.Errorf("node doesn't know leader address")
+		default:
+			return nil
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+	if err == nil {
+		err = ctx.Err()
+	}
+	return err
+}
+
+func WaitForActiveNodeAndStandbys(ctx context.Context, cluster VaultCluster) (int, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	leaderIdx, err := WaitForActiveNode(ctx, cluster)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(cluster.Nodes()) == 1 {
+		return 0, nil
+	}
+
+	errs := make(chan error)
+	for i := range cluster.Nodes() {
+		if i == leaderIdx {
+			continue
+		}
+		go func(i int) {
+			errs <- WaitForStandbyNode(ctx, cluster, i)
+		}(i)
+	}
+
+	var merr *multierror.Error
+	expectedStandbys := len(cluster.Nodes()) - 1
+	for i := 0; i < expectedStandbys; i++ {
+		merr = multierror.Append(merr, <-errs)
+	}
+
+	return leaderIdx, merr.ErrorOrNil()
+}
+
 func WaitForActiveNodeAndPerfStandbys(ctx context.Context, cluster VaultCluster) error {
 	logger := cluster.NamedLogger("WaitForActiveNodeAndPerfStandbys")
 	// This WaitForActiveNode was added because after a Raft cluster is sealed
@@ -219,7 +281,7 @@ func WaitForActiveNodeAndPerfStandbys(ctx context.Context, cluster VaultCluster)
 	// this call to WaitForActiveNode by reworking the logic in this method.
 	leaderIdx, err := WaitForActiveNode(ctx, cluster)
 	if err != nil {
-		return err
+		return fmt.Errorf("did not find leader: %w", err)
 	}
 
 	if len(cluster.Nodes()) == 1 {
@@ -245,7 +307,7 @@ func WaitForActiveNodeAndPerfStandbys(ctx context.Context, cluster VaultCluster)
 		time.Sleep(1 * time.Second)
 	}
 	if err != nil {
-		return fmt.Errorf("unable to mount KV engine: %v", err)
+		return fmt.Errorf("unable to mount KV engine: %w", err)
 	}
 	path := mountPoint + "/waitforactivenodeandperfstandbys"
 	var standbys, actives int64
@@ -319,9 +381,17 @@ func WaitForActiveNodeAndPerfStandbys(ctx context.Context, cluster VaultCluster)
 		time.Sleep(time.Second)
 	}
 	if err != nil {
-		return fmt.Errorf("unable to unmount KV engine on primary")
+		return fmt.Errorf("unable to unmount KV engine: %w", err)
 	}
 	return nil
+}
+
+func Clients(vc VaultCluster) []*api.Client {
+	var ret []*api.Client
+	for _, n := range vc.Nodes() {
+		ret = append(ret, n.APIClient())
+	}
+	return ret
 }
 
 type GenerateRootKind int

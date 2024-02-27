@@ -10,12 +10,11 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
 	policy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	az "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
 	"github.com/hashicorp/vault/helper/useragent"

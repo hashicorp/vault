@@ -39,7 +39,7 @@ If a server is in a sealed state, it cannot act as a standby. Servers in a seale
 
 Performance Standby Nodes service read-only requests from users or applications.
 Read-only requests are requests that do not modify Vault's storage. Vault quickly scales its ability to service these operations,
-providing a near-linear request-per-second scaling for most scenarios and secrets engines like K/V and Transit. Traffic is distributed across performance standby nodes, allowing clients to scale these IOPS horizontally, and control high traffic workloads.
+providing a near-linear request-per-second scaling for most scenarios and secrets engines like KV and Transit. Traffic is distributed across performance standby nodes, allowing clients to scale these IOPS horizontally, and control high traffic workloads.
 
 If a request comes into a Performance Standby Node that causes a storage to write
 the request, the request is forwarded to the active server. Read-only requests are serviced locally on the Performance Standby.

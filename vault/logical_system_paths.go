@@ -251,7 +251,6 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["config/ui/headers"][0]),
 			HelpSynopsis:    strings.TrimSpace(sysHelp["config/ui/headers"][1]),
 		},
-
 		{
 			Pattern: "generate-root(/attempt)?$",
 
@@ -740,12 +739,12 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 
 func (b *SystemBackend) rekeyPaths() []*framework.Path {
 	respFields := map[string]*framework.FieldSchema{
-		"nounce": {
+		"nonce": {
 			Type:     framework.TypeString,
 			Required: true,
 		},
 		"started": {
-			Type:     framework.TypeString,
+			Type:     framework.TypeBool,
 			Required: true,
 		},
 		"t": {
@@ -985,7 +984,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"nounce": {
+								"nonce": {
 									Type:     framework.TypeString,
 									Required: true,
 								},
@@ -993,7 +992,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 									Type: framework.TypeBool,
 								},
 								"started": {
-									Type: framework.TypeString,
+									Type: framework.TypeBool,
 								},
 								"t": {
 									Type: framework.TypeInt,
@@ -1062,12 +1061,12 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"nounce": {
+								"nonce": {
 									Type:     framework.TypeString,
 									Required: true,
 								},
 								"started": {
-									Type:     framework.TypeString,
+									Type:     framework.TypeBool,
 									Required: true,
 								},
 								"t": {
@@ -1095,12 +1094,12 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"nounce": {
+								"nonce": {
 									Type:     framework.TypeString,
 									Required: true,
 								},
 								"started": {
-									Type:     framework.TypeString,
+									Type:     framework.TypeBool,
 									Required: true,
 								},
 								"t": {
@@ -1129,7 +1128,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"nounce": {
+								"nonce": {
 									Type:     framework.TypeString,
 									Required: true,
 								},
@@ -2052,6 +2051,126 @@ func (b *SystemBackend) pluginsCatalogListPaths() []*framework.Path {
 	}
 }
 
+func (b *SystemBackend) pluginsCatalogPinsCRUDPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "plugins/pins/(?P<type>auth|database|secret)/" + framework.GenericNameRegex("name") + "$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: "plugins-catalog-pins",
+		},
+
+		Fields: map[string]*framework.FieldSchema{
+			"name": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_name"][0]),
+			},
+			"type": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_type"][0]),
+			},
+			"version": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+			},
+		},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.handlePluginCatalogPinUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "create",
+					OperationSuffix: "pinned-version",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+					}},
+				},
+				Summary: "Create or update the pinned version for a plugin with a given type and name.",
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.handlePluginCatalogPinDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "remove",
+					OperationSuffix: "pinned-version",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields:      map[string]*framework.FieldSchema{},
+					}},
+				},
+				Summary: "Remove any pinned version for the plugin with the given type and name.",
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.handlePluginCatalogPinRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "read",
+					OperationSuffix: "pinned-version",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"name": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-catalog_name"][0]),
+								Required:    true,
+							},
+							"type": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-catalog_type"][0]),
+								Required:    true,
+							},
+							"version": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+								Required:    true,
+							},
+						},
+					}},
+				},
+				Summary: "Return the pinned version for the plugin with the given type and name.",
+			},
+		},
+
+		HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog-pins"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog-pins"][1]),
+	}
+}
+
+func (b *SystemBackend) pluginsCatalogPinsListPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "plugins/pins/?$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: "plugins-catalog-pins",
+			OperationVerb:   "list",
+			OperationSuffix: "pinned-versions",
+		},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.handlePluginCatalogPinList,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"pinned_versions": {
+								Type:     framework.TypeMap,
+								Required: true,
+							},
+						},
+					}},
+				},
+			},
+		},
+
+		HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog-pins-list-all"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog-pins-list-all"][1]),
+	}
+}
+
 func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "plugins/reload/backend$",
@@ -2110,6 +2229,66 @@ func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 	}
 }
 
+func (b *SystemBackend) pluginsRootReloadPath() *framework.Path {
+	return &framework.Path{
+		// Unknown plugin type is allowed to make it easier for the CLI changes to be more backwards compatible.
+		Pattern: "plugins/reload/(?P<type>auth|database|secret|unknown)/" + framework.GenericNameRegex("name") + "$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationVerb:   "reload",
+			OperationSuffix: "plugins",
+		},
+
+		Fields: map[string]*framework.FieldSchema{
+			"name": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["root-plugin-reload-name"][0]),
+				Required:    true,
+			},
+			"type": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["root-plugin-reload-type"][0]),
+				Required:    true,
+			},
+			"scope": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["root-plugin-reload-scope"][0]),
+			},
+		},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.handleRootPluginReloadUpdate,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"reload_id": {
+								Type:     framework.TypeString,
+								Required: true,
+							},
+						},
+					}},
+					http.StatusAccepted: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"reload_id": {
+								Type:     framework.TypeString,
+								Required: true,
+							},
+						},
+					}},
+				},
+				Summary:     "Reload all instances of a specific plugin.",
+				Description: `Reload all plugins of a specific name and type across all namespaces. If "scope" is provided and is "global", the plugin is reloaded across all nodes and clusters. If a new plugin version has been pinned, this will ensure all instances start using the new version.`,
+			},
+		},
+
+		HelpSynopsis:    strings.TrimSpace(sysHelp["root-plugin-reload"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["root-plugin-reload"][1]),
+	}
+}
+
 func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "plugins/runtimes/catalog/(?P<type>container)/" + framework.GenericNameRegex("name"),
@@ -2142,6 +2321,10 @@ func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 			"memory_bytes": {
 				Type:        framework.TypeInt64,
 				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_memory-bytes"][0]),
+			},
+			"rootless": {
+				Type:        framework.TypeBool,
+				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_rootless"][0]),
 			},
 		},
 
@@ -2210,6 +2393,11 @@ func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 							"memory_bytes": {
 								Type:        framework.TypeInt64,
 								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_memory-bytes"][0]),
+								Required:    true,
+							},
+							"rootless": {
+								Type:        framework.TypeBool,
+								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_rootless"][0]),
 								Required:    true,
 							},
 						},
@@ -2428,6 +2616,37 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			HelpSynopsis: "Generate an OpenAPI 3 document of all mounted paths.",
 		},
 		{
+			Pattern: "internal/ui/authenticated-messages",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "read",
+				OperationSuffix: "authenticated-active-custom-messages",
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathInternalUIAuthenticatedMessages,
+					Summary:  "Retrieves Active post-login Custom Messages",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:     framework.TypeStringSlice,
+									Required: true,
+								},
+								"key_info": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
+			},
+		},
+		{
 			Pattern: "internal/ui/feature-flags",
 
 			DisplayAttrs: &framework.DisplayAttributes{
@@ -2633,6 +2852,10 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 									Type:     framework.TypeMap,
 									Required: false,
 								},
+								"chroot_namespace": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
 							},
 						}},
 					},
@@ -2640,6 +2863,62 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][1]),
+		},
+		{
+			Pattern: "internal/ui/unauthenticated-messages",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "read",
+				OperationSuffix: "unauthenticated-active-custom-messages",
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathInternalUIUnauthenticatedMessages,
+					Summary:  "Retrieves Active pre-login Custom Messages",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:     framework.TypeStringSlice,
+									Required: true,
+								},
+								"key_info": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
+			},
+		},
+		{
+			Pattern: "internal/ui/version",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "read",
+				OperationSuffix: "version",
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathInternalUIVersion,
+					Summary:  "Backwards compatibility is not guaranteed for this API",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"version": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
+			},
 		},
 		{
 			Pattern: "internal/counters/requests",
@@ -3562,6 +3841,11 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
 				},
+				"identity_token_key": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["identity_token_key"][0]),
+					Required:    false,
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -3645,6 +3929,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 									Required: false,
 								},
 								"plugin_version": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"identity_token_key": {
 									Type:     framework.TypeString,
 									Required: false,
 								},
@@ -4402,6 +4690,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeCommaStringSlice,
 					Description: strings.TrimSpace(sysHelp["tune_allowed_managed_keys"][0]),
 				},
+				"delegated_auth_accessors": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: strings.TrimSpace(sysHelp["allowed_delegated_auth_accessors"][0]),
+				},
 				"plugin_version": {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
@@ -4409,6 +4701,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 				"user_lockout_config": {
 					Type:        framework.TypeMap,
 					Description: strings.TrimSpace(sysHelp["tune_user_lockout_config"][0]),
+				},
+				"identity_token_key": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["identity_token_key"][0]),
 				},
 			},
 
@@ -4450,6 +4746,11 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 								"allowed_managed_keys": {
 									Type:        framework.TypeCommaStringSlice,
 									Description: strings.TrimSpace(sysHelp["tune_allowed_managed_keys"][0]),
+									Required:    false,
+								},
+								"delegated_auth_accessors": {
+									Type:        framework.TypeCommaStringSlice,
+									Description: strings.TrimSpace(sysHelp["delegated_auth_accessors"][0]),
 									Required:    false,
 								},
 								"allowed_response_headers": {
@@ -4501,6 +4802,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 								},
 								"user_lockout_disable": {
 									Type:     framework.TypeBool,
+									Required: false,
+								},
+								"identity_token_key": {
+									Type:     framework.TypeString,
 									Required: false,
 								},
 							},
@@ -4787,6 +5092,111 @@ func (b *SystemBackend) lockedUserPaths() []*framework.Path {
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["locked_users"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["locked_users"][1]),
+		},
+	}
+}
+
+func (b *SystemBackend) eventPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "events/subscriptions$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "subscriptions",
+				OperationVerb:   "create",
+			},
+
+			Fields: map[string]*framework.FieldSchema{
+				"config": {
+					Type:     framework.TypeMap,
+					Required: true,
+					// Description: strings.TrimSpace(sysHelp["mount_accessor"][0]),
+				},
+				"plugin": {
+					Type:     framework.TypeString,
+					Required: true,
+				},
+				//"alias_identifier": {
+				//	Type: framework.TypeString,
+				//	// Description: strings.TrimSpace(sysHelp["alias_identifier"][0]),
+				//},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleEventsSubscribe,
+					Summary:  "",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"id": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
+			},
+			// HelpSynopsis:    strings.TrimSpace(sysHelp["unlock_user"][0]),
+			// HelpDescription: strings.TrimSpace(sysHelp["unlock_user"][1]),
+		},
+		{
+			Pattern: "events/subscriptions/(?P<plugin>.+)/(?P<id>.+)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "subscriptions",
+				OperationVerb:   "create",
+			},
+
+			Fields: map[string]*framework.FieldSchema{
+				"plugin": {
+					Type: framework.TypeString,
+				},
+				"id": {
+					Type: framework.TypeString,
+					// Description: strings.TrimSpace(sysHelp["mount_accessor"][0]),
+				},
+				"list": {
+					Type: framework.TypeBool,
+				},
+				//"alias_identifier": {
+				//	Type: framework.TypeString,
+				//	// Description: strings.TrimSpace(sysHelp["alias_identifier"][0]),
+				//},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handleEventsListSubscriptions,
+					Summary:  "",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleEventsListSubscriptions,
+					Summary:  "",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.handleEventsUnsubscribe,
+					Summary:  "",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
+				},
+			},
+			// HelpSynopsis:    strings.TrimSpace(sysHelp["unlock_user"][0]),
+			// HelpDescription: strings.TrimSpace(sysHelp["unlock_user"][1]),
 		},
 	}
 }

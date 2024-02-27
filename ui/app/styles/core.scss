@@ -16,9 +16,11 @@
 @import './utils/mixins';
 @import './utils/animations';
 
+// Open-api styling
+@import './utils/swagger';
+
 // Core Styles: each file styles a class that is not associated with a component. Ex: box and not box-label.
 @import './core/box';
-@import './core/breadcrumb';
 @import './core/buttons';
 @import './core/charts';
 @import './core/checkbox-and-radio';
@@ -27,7 +29,6 @@
 @import './core/control';
 @import './core/field';
 @import './core/file';
-@import './core/footer';
 @import './core/inputs';
 @import './core/json-diff-patch';
 @import './core/label';
@@ -38,7 +39,6 @@
 @import './core/message';
 @import './core/progress';
 @import './core/select';
-@import './core/switch';
 @import './core/tag';
 @import './core/title';
 @import './core/toggle';
@@ -52,15 +52,13 @@
 @import './helper-classes/typography';
 
 // Component specific styling
-@import './components/auth-buttons';
 @import './components/auth-form';
 @import './components/autocomplete-input';
 @import './components/b64-toggle';
 @import './components/box-label';
-@import './components/box-radio';
 @import './components/calendar-widget';
+@import './components/cluster-banners';
 @import './components/codemirror';
-@import './components/confirm';
 @import './components/console-ui-panel';
 @import './components/control-group';
 @import './components/doc-link';
@@ -74,13 +72,11 @@
 @import './components/info-table-row';
 @import './components/kmip-role-edit';
 @import './components/known-secondaries-card.scss';
-@import './components/license-banners';
 @import './components/linked-block';
 @import './components/list-item-row';
 @import './components/loader';
 @import './components/login-form';
 @import './components/masked-input';
-@import './components/modal-component.scss';
 @import './components/namespace-picker';
 @import './components/namespace-reminder';
 @import './components/navigate-input';
@@ -95,16 +91,13 @@
 @import './components/replication-dashboard';
 @import './components/replication-mode-summary';
 @import './components/replication-page';
-@import './components/replication-primary-card';
 @import './components/replication-summary';
 @import './components/role-item';
 @import './components/search-select';
 @import './components/selectable-card';
 @import './components/selectable-card-container';
 @import './components/secrets-engines-card';
-// action-block extends selectable-card
 @import './components/action-block';
-@import './components/shamir-modal-flow';
 @import './components/shamir-progress';
 @import './components/sidebar';
 @import './components/splash-page';
@@ -119,4 +112,3 @@
 @import './components/unseal-warning';
 // @import './components/ui-wizard'; // remove, see PR https://github.com/hashicorp/vault/pull/19220
 @import './components/vault-loading';
-@import './components/vlt-table';

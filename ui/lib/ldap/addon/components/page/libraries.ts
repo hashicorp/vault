@@ -1,11 +1,11 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { getOwner } from '@ember/application';
 import errorMessage from 'vault/utils/error-message';
@@ -26,6 +26,7 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
 
   @tracked filterValue = '';
+  @tracked libraryToDelete: LdapLibraryModel | null = null;
 
   get mountPoint(): string {
     const owner = getOwner(this) as EngineOwner;

@@ -216,18 +216,18 @@
         ]
       },
       {
-        "title": "Key/Value",
+        "title": "Key Value",
         "routes": [
           {
             "title": "Overview",
             "path": "secret/kv"
           },
           {
-            "title": "K/V Version 1",
+            "title": "KV version 1",
             "path": "secret/kv/kv-v1"
           },
           {
-            "title": "K/V Version 2",
+            "title": "KV version 2",
             "path": "secret/kv/kv-v2"
           }
         ]
@@ -439,8 +439,12 @@
         "path": "system/config-state"
       },
       {
-        "title": "<code>/sys/config/ui</code>",
-        "path": "system/config-ui"
+        "title": "<code>/sys/config/ui/custom-messages</code>",
+        "path": "system/config-ui-custom-messages"
+      },
+      {
+        "title": "<code>/sys/config/ui/headers</code>",
+        "path": "system/config-ui-headers"
       },
       {
         "title": "<code>/sys/control-group</code>",
@@ -500,6 +504,10 @@
         "path": "system/internal-specs-openapi"
       },
       {
+        "title": "<code>/sys/internal/ui/authenticated-messages</code>",
+        "path": "system/internal-ui-authenticated-messages"
+      },
+      {
         "title": "<code>/sys/internal/ui/feature-flags</code>",
         "path": "system/internal-ui-feature"
       },
@@ -514,6 +522,14 @@
       {
         "title": "<code>/sys/internal/ui/resultant-acl</code>",
         "path": "system/internal-ui-resultant-acl"
+      },
+      {
+        "title": "<code>/sys/internal/ui/unauthenticated-messages</code>",
+        "path": "system/internal-ui-unauthenticated-messages"
+      },
+      {
+        "title": "<code>/sys/internal/ui/version</code>",
+        "path": "system/internal-ui-version"
       },
       {
         "title": "<code>/sys/key-status</code>",
@@ -598,8 +614,8 @@
         "path": "system/namespaces"
       },
       {
-        "title": "<code>/sys/plugins/reload/backend</code>",
-        "path": "system/plugins-reload-backend"
+        "title": "<code>/sys/plugins/reload</code>",
+        "path": "system/plugins-reload"
       },
       {
         "title": "<code>/sys/plugins/catalog</code>",

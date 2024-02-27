@@ -35,6 +35,7 @@ export default class MaskedInputComponent extends Component {
   textareaId = 'textarea-' + guidFor(this);
   @tracked showValue = false;
   @tracked modalOpen = false;
+  @tracked stringifyDownload = false;
 
   constructor() {
     super(...arguments);
@@ -62,7 +63,20 @@ export default class MaskedInputComponent extends Component {
       this.args.onKeyUp(name, value);
     }
   }
+
   @action toggleMask() {
     this.showValue = !this.showValue;
+  }
+
+  @action toggleStringifyDownload(event) {
+    this.stringifyDownload = event.target.checked;
+  }
+
+  get copyValue() {
+    // Value must be a string to be copied
+    const { value } = this.args;
+    if (!value || typeof value === 'string') return value;
+    if (typeof value === 'object') return JSON.stringify(value);
+    return value.toString();
   }
 }

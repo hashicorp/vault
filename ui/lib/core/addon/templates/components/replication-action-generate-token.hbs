@@ -14,27 +14,23 @@
   </div>
 
   <div class="action-block-action">
-    <button
-      type="button"
-      class="button is-tertiary"
-      onclick={{action (mut this.isModalActive) true}}
+    <Hds::Button
+      @text="Generate token"
+      @color="secondary"
+      {{on "click" (action (mut this.isModalActive) true)}}
       data-test-replication-action-trigger
-    >
-      Generate token
-    </button>
+    />
   </div>
 </div>
 
-<Modal
-  @title="Generate operation token"
-  @onClose={{action (mut this.isModalActive) false}}
-  @isActive={{this.isModalActive}}
-  @type="warning"
-  @showCloseButton={{true}}
->
-  {{#if this.isModalActive}}
-    {{! Wrapped in if statement so the Shamir constructor fires on modal open }}
-    <Shamir::DrTokenFlow @action="generate-dr-operation-token" @onCancel={{action (mut this.isModalActive) false}} />
+{{#if this.isModalActive}}
+  <Hds::Modal id="shamir-flow-modal" @color="warning" @onClose={{action (mut this.isModalActive) false}} as |M|>
+    <M.Header>
+      Generate operation token
+    </M.Header>
+    <M.Body>
+      <Shamir::DrTokenFlow @action="generate-dr-operation-token" @onCancel={{action (mut this.isModalActive) false}} />
+    </M.Body>
     {{! Section & Footer is in child component since the form must do side effects on cancel }}
-  {{/if}}
-</Modal>
+  </Hds::Modal>
+{{/if}}

@@ -10,6 +10,7 @@ import { capitalize } from 'vault/helpers/capitalize';
 import { humanize } from 'vault/helpers/humanize';
 import { dasherize } from 'vault/helpers/dasherize';
 import { assert } from '@ember/debug';
+
 /**
  * @module FormField
  * `FormField` components are field elements associated with a particular model.
@@ -73,6 +74,11 @@ export default class FormFieldComponent extends Component {
     );
     const modelValue = model[valuePath];
     this.showInput = !!modelValue;
+  }
+
+  get hasRadioSubText() {
+    // for 'radio' editType, check to see if every of the possibleValues has a subText and label
+    return this.args?.attr?.options?.possibleValues?.any((v) => v.subText);
   }
 
   get hideLabel() {
@@ -183,5 +189,13 @@ export default class FormFieldComponent extends Component {
   onChangeWithEvent(event) {
     const prop = event.target.type === 'checkbox' ? 'checked' : 'value';
     this.setAndBroadcast(event.target[prop]);
+  }
+
+  @action
+  handleChecklist(event) {
+    const valueArray = this.args.model[this.valuePath];
+    const method = event.target.checked ? 'addObject' : 'removeObject';
+    valueArray[method](event.target.value);
+    this.setAndBroadcast(valueArray);
   }
 }

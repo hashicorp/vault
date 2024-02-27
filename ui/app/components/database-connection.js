@@ -4,7 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
@@ -59,8 +59,6 @@ export default class DatabaseConnectionEdit extends Component {
   async handleCreateConnection(evt) {
     evt.preventDefault();
     const secret = this.args.model;
-    const secretId = secret.name;
-    secret.set('id', secretId);
     secret
       .save()
       .then(() => {
@@ -73,15 +71,15 @@ export default class DatabaseConnectionEdit extends Component {
   }
 
   @action
-  continueWithoutRotate(evt) {
-    evt.preventDefault();
+  continueWithoutRotate() {
+    this.showSaveModal = false;
     const { name } = this.args.model;
     this.transitionToRoute(SHOW_ROUTE, name);
   }
 
   @action
-  continueWithRotate(evt) {
-    evt.preventDefault();
+  continueWithRotate() {
+    this.showSaveModal = false;
     const { backend, name } = this.args.model;
     this.rotateCredentials(backend, name)
       .then(() => {

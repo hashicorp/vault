@@ -4,7 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
@@ -53,6 +53,7 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
  * @param {string} [wildcardLabel] - string (singular) for rendering label tag beside a wildcard selection (i.e. 'role*'), for the number of items it includes, e.g. @wildcardLabel="role" -> "includes 4 roles"
  * @param {string} [placeholder] - text you wish to replace the default "search" with
  * @param {boolean} [displayInherit=false] - if you need the search select component to display inherit instead of box.
+ * @param {boolean} [renderInPlace] - pass `true` when power select renders in a modal
  * @param {function} [renderInfoTooltip] - receives each inputValue string and list of dropdownOptions as args, so parent can determine when to render a tooltip beside a selectedOption and the tooltip text. see 'oidc/provider-form.js'
  * @param {boolean} [disabled] - if true sets the disabled property on the ember-power-select component and makes it unusable.
  *
@@ -92,6 +93,11 @@ export default class SearchSelect extends Component {
     return this.args.nameKey || 'name';
   }
 
+  get searchEnabled() {
+    if (typeof this.args.searchEnabled === 'boolean') return this.args.searchEnabled;
+    return true;
+  }
+
   addSearchText(optionsToFormat) {
     // maps over array of objects or response from query
     return optionsToFormat.toArray().map((option) => {
@@ -105,7 +111,7 @@ export default class SearchSelect extends Component {
     // inputValues are initially an array of strings from @inputValue
     // map over so selectedOptions are objects
     return inputValues.map((option) => {
-      const matchingOption = this.dropdownOptions.findBy(this.idKey, option);
+      const matchingOption = this.dropdownOptions.find((opt) => opt[this.idKey] === option);
       // tooltip text comes from return of parent function
       const addTooltip = this.args.renderInfoTooltip
         ? this.args.renderInfoTooltip(option, this.dropdownOptions)
@@ -164,7 +170,7 @@ export default class SearchSelect extends Component {
         const options = yield this.store.query(modelType, queryParams);
 
         // store both select + unselected options in tracked property used by wildcard filter
-        this.allOptions = [...this.allOptions, ...options.mapBy('id')];
+        this.allOptions = [...this.allOptions, ...options.map((option) => option.id)];
 
         // add to dropdown options
         this.dropdownOptions = [...this.dropdownOptions, ...this.addSearchText(options)];
@@ -190,7 +196,7 @@ export default class SearchSelect extends Component {
 
   @action
   handleChange() {
-    if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
+    if (this.selectedOptions.length && typeof this.selectedOptions[0] === 'object') {
       this.args.onChange(
         Array.from(this.selectedOptions, (option) =>
           this.args.passObject ? this.customizeObject(option) : option.id
@@ -202,12 +208,11 @@ export default class SearchSelect extends Component {
   }
 
   shouldShowCreate(id, searchResults) {
-    if (searchResults && searchResults.length && searchResults.firstObject.groupName) {
-      return !searchResults.some((group) => group.options.findBy('id', id));
+    if (searchResults && searchResults.length && searchResults[0].groupName) {
+      return !searchResults.some((group) => group.options.find((opt) => opt.id === id));
     }
     const existingOption =
-      this.dropdownOptions &&
-      (this.dropdownOptions.findBy('id', id) || this.dropdownOptions.findBy('name', id));
+      this.dropdownOptions && this.dropdownOptions.find((opt) => opt.id === id || opt.name === id);
     if (this.args.disallowNewItems && !existingOption) {
       return false;
     }

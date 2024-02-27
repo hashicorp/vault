@@ -26,6 +26,7 @@ const generateHealthResponse = (now, state) => {
       break;
   }
   return {
+    enterprise: true,
     initialized: true,
     sealed: false,
     standby: false,

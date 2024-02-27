@@ -181,14 +181,25 @@ only needs to validate the provided JWT.
 JWT signatures will be verified against public keys from the issuer. This process can be done in
 three different ways, though only one method may be configured for a single backend:
 
-- **Static Keys**. A set of public keys is stored directly in the backend configuration.
+- **Static Keys**. A set of public keys is stored directly in the backend configuration. See the
+  [jwt_validation_pubkeys](/vault/api-docs/auth/jwt#jwt_validation_pubkeys) 
+  configuration option.
 
-- **JWKS**. A JSON Web Key Set ([JWKS](https://tools.ietf.org/html/rfc7517)) URL (and optional
-  certificate chain) is configured. Keys will be fetched from this endpoint during authentication.
+- **JWKS**. A JSON Web Key Set ([JWKS](https://tools.ietf.org/html/rfc7517)) URL and optional
+  certificate chain is configured. Keys will be fetched from this endpoint for authentication.
+  See the [jwks_url](/vault/api-docs/auth/jwt#jwks_url) and [jwks_ca_pem](/vault/api-docs/auth/jwt#jwks_ca_pem) 
+  configuration options.
 
-- **OIDC Discovery**. An OIDC Discovery URL (and optional certificate chain) is configured. Keys
+- **JWKS Pairs**. A list of JSON Web Key Set ([JWKS](https://tools.ietf.org/html/rfc7517)) URLs and optional
+  certificate chain for each is configured. Keys will be fetched from each endpoint for authentication, 
+  stopping at the first set to successfully verify the JWT signature. See the 
+  [jwks_pairs](/vault/api-docs/auth/jwt#jwks_pairs) configuration option.
+
+- **OIDC Discovery**. An OIDC Discovery URL and optional certificate chain is configured. Keys
   will be fetched from this URL during authentication. When OIDC Discovery is used, OIDC validation
-  criteria (e.g. `iss`, `aud`, etc.) will be applied.
+  criteria (e.g. `iss`, `aud`, etc.) will be applied. See the [oidc_discovery_url](/vault/api-docs/auth/jwt#oidc_discovery_url)
+  and [oidc_discovery_ca_pem](/vault/api-docs/auth/jwt#oidc_discovery_ca_pem) configuration 
+  options.
 
 If multiple methods are needed, another instance of the backend can be mounted and configured
 at a different path.
@@ -251,7 +262,7 @@ management tool.
    $ vault auth enable oidc
    ```
 
-1. Use the `/config` endpoint to configure Vault. To support JWT roles, either local keys, a JWKS URL, or an OIDC
+1. Use the `/config` endpoint to configure Vault. To support JWT roles, either local keys, JWKS URL(s), or an OIDC
    Discovery URL must be present. For OIDC roles, OIDC Discovery URL, OIDC Client ID and OIDC Client Secret are required. For the
    list of available configuration options, please see the [API documentation](/vault/api-docs/auth/jwt).
 
@@ -339,7 +350,8 @@ This specifies that the value in the JWT claim "division" should be copied to th
 "department" claim value will also be copied into metadata but will retain the key name. If a claim is configured in `claim_mappings`,
 it must existing in the JWT or else the authentication will fail.
 
-Note: the metadata key name "role" is reserved and may not be used for claim mappings.
+Note: the metadata key name "role" is reserved and may not be used for claim mappings. Since Vault 1.16 the role name is available 
+by the key `role` in the alias metadata of the entity after a successful login.
 
 ### Claim specifications and JSON pointer
 

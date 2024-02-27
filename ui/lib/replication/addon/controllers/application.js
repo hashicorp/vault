@@ -5,7 +5,7 @@
 
 import { isPresent } from '@ember/utils';
 import { alias } from '@ember/object/computed';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Controller from '@ember/controller';
 import { copy } from 'ember-copy';
 import { resolve } from 'rsvp';
@@ -26,11 +26,12 @@ const DEFAULTS = {
 
 export default Controller.extend(copy(DEFAULTS, true), {
   isModalActive: false,
+  isTokenCopied: false,
   expirationDate: null,
   store: service(),
   rm: service('replication-mode'),
   replicationMode: alias('rm.mode'),
-  flashMessages: service(),
+  secondaryToRevoke: null,
 
   submitError(e) {
     if (e.errors) {
@@ -114,32 +115,21 @@ export default Controller.extend(copy(DEFAULTS, true), {
           });
         },
         (...args) => this.submitError(...args)
-      );
+      )
+      .finally(() => this.set('secondaryToRevoke', null));
   },
 
   actions: {
     onSubmit(/*action, mode, data, event*/) {
       return this.submitHandler(...arguments);
     },
-    copyClose(successMessage) {
-      // separate action for copy & close button so it does not try and use execCommand to copy token to clipboard
-      if (!!successMessage && typeof successMessage === 'string') {
-        this.flashMessages.success(successMessage);
-      }
+    closeTokenModal() {
       this.toggleProperty('isModalActive');
       this.transitionToRoute('mode.secondaries');
+      this.set('isTokenCopied', false);
     },
-    toggleModal(successMessage) {
-      if (!!successMessage && typeof successMessage === 'string') {
-        this.flashMessages.success(successMessage);
-      }
-      // use copy browser extension to copy token if you close the modal by clicking outside of it.
-      const htmlSelectedToken = document.querySelector('#token-textarea');
-      htmlSelectedToken.select();
-      document.execCommand('copy');
-
-      this.toggleProperty('isModalActive');
-      this.transitionToRoute('mode.secondaries');
+    onCopy() {
+      this.set('isTokenCopied', true);
     },
     clear() {
       this.reset();

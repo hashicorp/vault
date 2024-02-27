@@ -9,6 +9,7 @@ import { click, fillIn, render, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import Pretender from 'pretender';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const SELECTORS = {
   nameInput: '[data-test-policy-input="name"]',
@@ -53,6 +54,13 @@ module('Integration | Component | policy-form', function (hooks) {
       this.put('/v1/sys/policies/egp/**', () => {
         return [204, { 'Content-Type': 'application/json' }];
       });
+    });
+    setRunOptions({
+      rules: {
+        // TODO: fix JSONEditor/CodeMirror
+        label: { enabled: false },
+        'label-title-only': { enabled: false },
+      },
     });
   });
   hooks.afterEach(function () {
@@ -366,8 +374,7 @@ module('Integration | Component | policy-form', function (hooks) {
       @onSave={{this.onSave}}
       @renderPolicyExampleModal={{true}}
     />
-    <div id="modal-wormhole"></div>
-    `);
+        `);
     assert.dom(SELECTORS.exampleButton).exists({ count: 1 }, 'Modal for the policy example exists');
     assert.dom(SELECTORS.exampleButton).exists({ count: 1 }, 'Button for the policy example modal exists');
   });
@@ -380,8 +387,7 @@ module('Integration | Component | policy-form', function (hooks) {
       @onSave={{this.onSave}}
       @renderPolicyExampleModal={{true}}
     />
-    <div id="modal-wormhole"></div>
-    `);
+        `);
     await click(SELECTORS.exampleButton);
     assert.dom(SELECTORS.exampleModalTitle).hasText('Example ACL Policy');
   });
@@ -396,8 +402,7 @@ module('Integration | Component | policy-form', function (hooks) {
       @onSave={{this.onSave}}
       @renderPolicyExampleModal={{true}}
     />
-    <div id="modal-wormhole"></div>
-    `);
+        `);
     await click(SELECTORS.exampleButton);
     assert.dom(SELECTORS.exampleModalTitle).hasText('Example RGP Policy');
   });
@@ -412,8 +417,7 @@ module('Integration | Component | policy-form', function (hooks) {
       @onSave={{this.onSave}}
       @renderPolicyExampleModal={{true}}
     />
-    <div id="modal-wormhole"></div>
-    `);
+        `);
     await click(SELECTORS.exampleButton);
     assert.dom(SELECTORS.exampleModalTitle).hasText('Example EGP Policy');
   });

@@ -54,6 +54,17 @@ module('Unit | Adapter | aws credential', function (hooks) {
       'POST',
     ],
     [
+      'session_token type with ttl',
+      [storeStub, type, makeSnapshot({ credentialType: 'session_token', ttl: '3h' })],
+      'POST',
+      { ttl: '3h' },
+    ],
+    [
+      'session_token type no ttl',
+      [storeStub, type, makeSnapshot({ credentialType: 'session_token' })],
+      'POST',
+    ],
+    [
       'assumed_role type no arn, no ttl',
       [storeStub, type, makeSnapshot({ credentialType: 'assumed_role' })],
       'POST',

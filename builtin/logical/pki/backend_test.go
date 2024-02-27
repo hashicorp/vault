@@ -5,6 +5,7 @@ package pki
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -26,21 +27,13 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
-	"golang.org/x/exp/maps"
-
-	"github.com/hashicorp/vault/helper/testhelpers"
-
-	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
-
-	"github.com/stretchr/testify/require"
 
 	"github.com/armon/go-metrics"
 	"github.com/fatih/structs"
@@ -49,12 +42,19 @@ import (
 	"github.com/hashicorp/vault/api"
 	auth "github.com/hashicorp/vault/api/auth/userpass"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/maps"
 	"golang.org/x/net/idna"
 )
 
@@ -720,6 +720,10 @@ func generateCSR(t *testing.T, csrTemplate *x509.CertificateRequest, keyType str
 		t.Fatalf("Got error generating private key for CSR: %v", err)
 	}
 
+	return generateCSRWithKey(t, csrTemplate, priv)
+}
+
+func generateCSRWithKey(t *testing.T, csrTemplate *x509.CertificateRequest, priv interface{}) (interface{}, []byte, string) {
 	csr, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, priv)
 	if err != nil {
 		t.Fatalf("Got error generating CSR: %v", err)
@@ -856,7 +860,7 @@ func generateTestCsr(t *testing.T, keyType certutil.PrivateKeyType, keyBits int)
 
 // Generates steps to test out various role permutations
 func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
-	roleVals := roleEntry{
+	roleVals := issuing.RoleEntry{
 		MaxTTL:                    12 * time.Hour,
 		KeyType:                   "rsa",
 		KeyBits:                   2048,
@@ -938,7 +942,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		ret = append(ret, issueTestStep)
 	}
 
-	getCountryCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+	getCountryCheck := func(role issuing.RoleEntry) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
 			err := mapstructure.Decode(resp.Data, &certBundle)
@@ -959,7 +963,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
-	getOuCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+	getOuCheck := func(role issuing.RoleEntry) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
 			err := mapstructure.Decode(resp.Data, &certBundle)
@@ -980,7 +984,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
-	getOrganizationCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+	getOrganizationCheck := func(role issuing.RoleEntry) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
 			err := mapstructure.Decode(resp.Data, &certBundle)
@@ -1001,7 +1005,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
-	getLocalityCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+	getLocalityCheck := func(role issuing.RoleEntry) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
 			err := mapstructure.Decode(resp.Data, &certBundle)
@@ -1022,7 +1026,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
-	getProvinceCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+	getProvinceCheck := func(role issuing.RoleEntry) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
 			err := mapstructure.Decode(resp.Data, &certBundle)
@@ -1043,7 +1047,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
-	getStreetAddressCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+	getStreetAddressCheck := func(role issuing.RoleEntry) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
 			err := mapstructure.Decode(resp.Data, &certBundle)
@@ -1064,7 +1068,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
-	getPostalCodeCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+	getPostalCodeCheck := func(role issuing.RoleEntry) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
 			err := mapstructure.Decode(resp.Data, &certBundle)
@@ -1085,7 +1089,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
-	getNotBeforeCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+	getNotBeforeCheck := func(role issuing.RoleEntry) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
 			err := mapstructure.Decode(resp.Data, &certBundle)
@@ -1110,7 +1114,9 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 	// Returns a TestCheckFunc that performs various validity checks on the
 	// returned certificate information, mostly within checkCertsAndPrivateKey
-	getCnCheck := func(name string, role roleEntry, key crypto.Signer, usage x509.KeyUsage, extUsage x509.ExtKeyUsage, validity time.Duration) logicaltest.TestCheckFunc {
+	getCnCheck := func(name string, role issuing.RoleEntry, key crypto.Signer, usage x509.KeyUsage,
+		extUsage x509.ExtKeyUsage, validity time.Duration,
+	) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
 			err := mapstructure.Decode(resp.Data, &certBundle)
@@ -1220,7 +1226,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	}
 
 	getRandCsr := func(keyType string, errorOk bool, csrTemplate *x509.CertificateRequest) csrPlan {
-		rsaKeyBits := []int{2048, 3072, 4096}
+		rsaKeyBits := []int{2048, 3072, 4096, 8192}
 		ecKeyBits := []int{224, 256, 384, 521}
 		plan := csrPlan{errorOk: errorOk}
 
@@ -1333,7 +1339,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 
 			roleVals.KeyUsage = usage
-			parsedKeyUsage := parseKeyUsages(roleVals.KeyUsage)
+			parsedKeyUsage := parsing.ParseKeyUsages(roleVals.KeyUsage)
 			if parsedKeyUsage == 0 && len(usage) != 0 {
 				panic("parsed key usages was zero")
 			}
@@ -1592,7 +1598,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	}
 
 	{
-		getOtherCheck := func(expectedOthers ...otherNameUtf8) logicaltest.TestCheckFunc {
+		getOtherCheck := func(expectedOthers ...certutil.OtherNameUtf8) logicaltest.TestCheckFunc {
 			return func(resp *logical.Response) error {
 				var certBundle certutil.CertBundle
 				err := mapstructure.Decode(resp.Data, &certBundle)
@@ -1608,7 +1614,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 				if err != nil {
 					return err
 				}
-				var expected []otherNameUtf8
+				var expected []certutil.OtherNameUtf8
 				expected = append(expected, expectedOthers...)
 				if diff := deep.Equal(foundOthers, expected); len(diff) > 0 {
 					return fmt.Errorf("wrong SAN IPs, diff: %v", diff)
@@ -1617,11 +1623,11 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 		}
 
-		addOtherSANTests := func(useCSRs, useCSRSANs bool, allowedOtherSANs []string, errorOk bool, otherSANs []string, csrOtherSANs []otherNameUtf8, check logicaltest.TestCheckFunc) {
-			otherSansMap := func(os []otherNameUtf8) map[string][]string {
+		addOtherSANTests := func(useCSRs, useCSRSANs bool, allowedOtherSANs []string, errorOk bool, otherSANs []string, csrOtherSANs []certutil.OtherNameUtf8, check logicaltest.TestCheckFunc) {
+			otherSansMap := func(os []certutil.OtherNameUtf8) map[string][]string {
 				ret := make(map[string][]string)
 				for _, o := range os {
-					ret[o.oid] = append(ret[o.oid], o.value)
+					ret[o.Oid] = append(ret[o.Oid], o.Value)
 				}
 				return ret
 			}
@@ -1652,14 +1658,14 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		roleVals.UseCSRCommonName = true
 		commonNames.Localhost = true
 
-		newOtherNameUtf8 := func(s string) (ret otherNameUtf8) {
+		newOtherNameUtf8 := func(s string) (ret certutil.OtherNameUtf8) {
 			pieces := strings.Split(s, ";")
 			if len(pieces) == 2 {
 				piecesRest := strings.Split(pieces[1], ":")
 				if len(piecesRest) == 2 {
 					switch strings.ToUpper(piecesRest[0]) {
 					case "UTF-8", "UTF8":
-						return otherNameUtf8{oid: pieces[0], value: piecesRest[1]}
+						return certutil.OtherNameUtf8{Oid: pieces[0], Value: piecesRest[1]}
 					}
 				}
 			}
@@ -1669,7 +1675,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		oid1 := "1.3.6.1.4.1.311.20.2.3"
 		oth1str := oid1 + ";utf8:devops@nope.com"
 		oth1 := newOtherNameUtf8(oth1str)
-		oth2 := otherNameUtf8{oid1, "me@example.com"}
+		oth2 := certutil.OtherNameUtf8{oid1, "me@example.com"}
 		// allowNone, allowAll := []string{}, []string{oid1 + ";UTF-8:*"}
 		allowNone, allowAll := []string{}, []string{"*"}
 
@@ -1684,15 +1690,15 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 		// Given OtherSANs as API argument and useCSRSANs false, CSR arg ignored.
 		addOtherSANTests(useCSRs, false, allowAll, false, []string{oth1str},
-			[]otherNameUtf8{oth2}, getOtherCheck(oth1))
+			[]certutil.OtherNameUtf8{oth2}, getOtherCheck(oth1))
 
 		if useCSRs {
 			// OtherSANs not allowed, valid OtherSANs provided via CSR, should be an error.
-			addOtherSANTests(useCSRs, true, allowNone, true, nil, []otherNameUtf8{oth1}, nil)
+			addOtherSANTests(useCSRs, true, allowNone, true, nil, []certutil.OtherNameUtf8{oth1}, nil)
 
 			// Given OtherSANs as both API and CSR arguments and useCSRSANs=true, API arg ignored.
 			addOtherSANTests(useCSRs, false, allowAll, false, []string{oth2.String()},
-				[]otherNameUtf8{oth1}, getOtherCheck(oth2))
+				[]certutil.OtherNameUtf8{oth1}, getOtherCheck(oth2))
 		}
 	}
 
@@ -2170,7 +2176,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		// On older versions of Go this test will fail due to an explicit check for duplicate otherNames later in this test.
 		ExtraExtensions: []pkix.Extension{
 			{
-				Id:       oidExtensionSubjectAltName,
+				Id:       certutil.OidExtensionSubjectAltName,
 				Critical: false,
 				Value:    []byte{0x30, 0x26, 0xA0, 0x24, 0x06, 0x0A, 0x2B, 0x06, 0x01, 0x04, 0x01, 0x82, 0x37, 0x14, 0x02, 0x03, 0xA0, 0x16, 0x0C, 0x14, 0x75, 0x73, 0x65, 0x72, 0x6E, 0x61, 0x6D, 0x65, 0x40, 0x65, 0x78, 0x61, 0x6D, 0x70, 0x6C, 0x65, 0x2E, 0x63, 0x6F, 0x6D},
 			},
@@ -2332,7 +2338,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	// We assume that there is only one SAN in the original CSR and that it is an otherName.
 	san_count := 0
 	for _, ext := range cert.Extensions {
-		if ext.Id.Equal(oidExtensionSubjectAltName) {
+		if ext.Id.Equal(certutil.OidExtensionSubjectAltName) {
 			san_count += 1
 		}
 	}
@@ -2405,7 +2411,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	certSkid := certutil.GetHexFormatted(cert.SubjectKeyId, ":")
 
 	//  -> Validate the SKID matches between the root cert and the key
-	resp, err = CBRead(b, s, "key/"+keyId1.(keyID).String())
+	resp, err = CBRead(b, s, "key/"+keyId1.(issuing.KeyID).String())
 	require.NoError(t, err)
 	require.NotNil(t, resp, "expected a response")
 	require.Equal(t, resp.Data["subject_key_id"], certSkid)
@@ -2427,7 +2433,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	certSkid = certutil.GetHexFormatted(cert.SubjectKeyId, ":")
 
 	//  -> Validate the SKID matches between the root cert and the key
-	resp, err = CBRead(b, s, "key/"+keyId2.(keyID).String())
+	resp, err = CBRead(b, s, "key/"+keyId2.(issuing.KeyID).String())
 	require.NoError(t, err)
 	require.NotNil(t, resp, "expected a response")
 	require.Equal(t, resp.Data["subject_key_id"], certSkid)
@@ -2562,7 +2568,7 @@ func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
 	})
 	schema.ValidateResponse(t, schema.GetResponseSchema(t, b_root.Route("intermediate/generate/internal"), logical.UpdateOperation), resp, true)
 	require.Contains(t, resp.Data, "key_id")
-	intKeyId := resp.Data["key_id"].(keyID)
+	intKeyId := resp.Data["key_id"].(issuing.KeyID)
 	csr := resp.Data["csr"]
 
 	resp, err = CBRead(b_int, s_int, "key/"+intKeyId.String())
@@ -2764,7 +2770,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	}
 
 	sc := b.makeStorageContext(context.Background(), storage)
-	signingBundle, err := sc.fetchCAInfo(defaultRef, ReadOnlyUsage)
+	signingBundle, err := sc.fetchCAInfo(defaultRef, issuing.ReadOnlyUsage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3123,11 +3129,14 @@ func TestBackend_OID_SANs(t *testing.T) {
 		cert.DNSNames[2] != "foobar.com" {
 		t.Fatalf("unexpected DNS SANs %v", cert.DNSNames)
 	}
-	expectedOtherNames := []otherNameUtf8{{oid1, val1}, {oid2, val2}}
+	expectedOtherNames := []certutil.OtherNameUtf8{{oid1, val1}, {oid2, val2}}
 	foundOtherNames, err := getOtherSANsFromX509Extensions(cert.Extensions)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Sort our returned list as SANS are built internally with a map so ordering can be inconsistent
+	slices.SortFunc(foundOtherNames, func(a, b certutil.OtherNameUtf8) int { return cmp.Compare(a.Oid, b.Oid) })
+
 	if diff := deep.Equal(expectedOtherNames, foundOtherNames); len(diff) != 0 {
 		t.Errorf("unexpected otherNames: %v", diff)
 	}
@@ -3874,9 +3883,11 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 		"maintain_stored_certificate_counts":       true,
 		"publish_stored_certificate_count_metrics": true,
 	})
+	require.NoError(t, err, "failed calling auto-tidy")
 	_, err = client.Logical().Write("/sys/plugins/reload/backend", map[string]interface{}{
 		"mounts": "pki/",
 	})
+	require.NoError(t, err, "failed calling backend reload")
 
 	// Check the metrics initialized in order to calculate backendUUID for /pki
 	// BackendUUID not consistent during tests with UUID from /sys/mounts/pki
@@ -4934,9 +4945,9 @@ func TestRootWithExistingKey(t *testing.T) {
 	resp, err = CBList(b, s, "issuers")
 	require.NoError(t, err)
 	require.Equal(t, 3, len(resp.Data["keys"].([]string)))
-	require.Contains(t, resp.Data["keys"], string(myIssuerId1.(issuerID)))
-	require.Contains(t, resp.Data["keys"], string(myIssuerId2.(issuerID)))
-	require.Contains(t, resp.Data["keys"], string(myIssuerId3.(issuerID)))
+	require.Contains(t, resp.Data["keys"], string(myIssuerId1.(issuing.IssuerID)))
+	require.Contains(t, resp.Data["keys"], string(myIssuerId2.(issuing.IssuerID)))
+	require.Contains(t, resp.Data["keys"], string(myIssuerId3.(issuing.IssuerID)))
 }
 
 func TestIntermediateWithExistingKey(t *testing.T) {
@@ -5718,17 +5729,18 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 		}
 	}
 
-	if b.certCount.Load() != 6 {
-		t.Fatalf("Failed to count six certificates root,A,B,C,D,E, instead counted %d certs", b.certCount.Load())
+	certCounter := b.GetCertificateCounter()
+	if certCounter.CertificateCount() != 6 {
+		t.Fatalf("Failed to count six certificates root,A,B,C,D,E, instead counted %d certs", certCounter.CertificateCount())
 	}
-	if b.revokedCertCount.Load() != 2 {
-		t.Fatalf("Failed to count two revoked certificates A+B, instead counted %d certs", b.revokedCertCount.Load())
+	if certCounter.RevokedCount() != 2 {
+		t.Fatalf("Failed to count two revoked certificates A+B, instead counted %d certs", certCounter.RevokedCount())
 	}
 
 	// Simulates listing while initialize in progress, by "restarting it"
-	b.certCount.Store(0)
-	b.revokedCertCount.Store(0)
-	b.certsCounted.Store(false)
+	certCounter.certCount.Store(0)
+	certCounter.revokedCertCount.Store(0)
+	certCounter.certsCounted.Store(false)
 
 	// Revoke certificates C, D
 	dirtyRevocations := serials[2:4]
@@ -5753,15 +5765,16 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 	}
 
 	// Run initialize
-	b.initializeStoredCertificateCounts(ctx)
+	err = b.initializeStoredCertificateCounts(ctx)
+	require.NoError(t, err, "failed initializing certificate counts")
 
 	// Test certificate count
-	if b.certCount.Load() != 8 {
-		t.Fatalf("Failed to initialize count of certificates root, A,B,C,D,E,F,G counted %d certs", b.certCount.Load())
+	if certCounter.CertificateCount() != 8 {
+		t.Fatalf("Failed to initialize count of certificates root, A,B,C,D,E,F,G counted %d certs", certCounter.CertificateCount())
 	}
 
-	if b.revokedCertCount.Load() != 4 {
-		t.Fatalf("Failed to count revoked certificates A,B,C,D counted %d certs", b.revokedCertCount.Load())
+	if certCounter.RevokedCount() != 4 {
+		t.Fatalf("Failed to count revoked certificates A,B,C,D counted %d certs", certCounter.RevokedCount())
 	}
 
 	return
@@ -6147,7 +6160,7 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 	require.NoError(t, err)
 	resp, err = CBWrite(b, s, "root/generate/internal", rootData)
 	requireSuccessNonNilResponse(t, resp, err)
-	issuerId := string(resp.Data["issuer_id"].(issuerID))
+	issuerId := string(resp.Data["issuer_id"].(issuing.IssuerID))
 
 	// Now write the original AIA config and sign a leaf.
 	_, err = CBWrite(b, s, "config/urls", aiaData)
@@ -7063,7 +7076,7 @@ func TestPatchIssuer(t *testing.T) {
 			"issuer_name": "root",
 		})
 		requireSuccessNonNilResponse(t, resp, err, "failed generating root issuer")
-		id := string(resp.Data["issuer_id"].(issuerID))
+		id := string(resp.Data["issuer_id"].(issuing.IssuerID))
 
 		// 2. Enable Cluster paths
 		resp, err = CBWrite(b, s, "config/urls", map[string]interface{}{

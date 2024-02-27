@@ -1,0 +1,6 @@
+```release-note:change
+cli: `vault plugin info` and `vault plugin deregister` now require 2 positional arguments instead of accepting either 1 or 2.
+```
+```release-note:improvement
+cli: Improved error messages for `vault plugin` sub-commands.
+```

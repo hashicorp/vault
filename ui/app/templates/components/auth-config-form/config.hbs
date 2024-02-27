@@ -16,13 +16,12 @@
     {{/if}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    <button
+    <Hds::Button
+      @text="Save"
+      @icon={{if this.saveModel.isRunning "loading"}}
       type="submit"
       data-test-save-config="true"
-      class="button is-primary {{if this.saveModel.isRunning 'loading'}}"
       disabled={{this.saveModel.isRunning}}
-    >
-      Save
-    </button>
+    />
   </div>
 </form>
