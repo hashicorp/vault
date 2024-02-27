@@ -281,7 +281,12 @@
       },
       {
         "title": "Events",
-        "path": "concepts/events"
+        "path": "concepts/events",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "highlight"
+        }
       },
       {
         "title": "Filtering",
@@ -1035,6 +1040,24 @@
       {
         "title": "Token Helpers",
         "path": "commands/token-helper"
+      }
+    ]
+  },
+  {
+    "title": "Vault UI",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "ui"
+      },
+      {
+        "title": "Custom Messages",
+        "path": "ui/custom-messages",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
       }
     ]
   },
