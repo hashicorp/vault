@@ -1315,7 +1315,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Apply any enterprise configuration onto the coreConfig.
-	entAdjustCoreConfig(config, &coreConfig, &info, &infoKeys)
+	entAdjustCoreConfig(config, &coreConfig)
 
 	if !entCheckStorageType(&coreConfig) {
 		c.UI.Warn("")
@@ -1435,6 +1435,12 @@ func (c *ServerCommand) Run(args []string) int {
 
 		infoKeys = append(infoKeys, "HCP resource ID")
 		info["HCP resource ID"] = config.HCPLinkConf.Resource.ID
+	}
+
+	requestLimiterStatus := entGetRequestLimiterStatus(coreConfig)
+	if requestLimiterStatus != "" {
+		infoKeys = append(infoKeys, "request_limiter")
+		info["request_limiter"] = requestLimiterStatus
 	}
 
 	infoKeys = append(infoKeys, "administrative namespace")

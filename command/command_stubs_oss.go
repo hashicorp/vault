@@ -21,7 +21,7 @@ func entEnableFourClusterDev(c *ServerCommand, base *vault.CoreConfig, info map[
 	return 1
 }
 
-func entAdjustCoreConfig(config *server.Config, coreConfig *vault.CoreConfig, info *map[string]string, infoKeys *[]string) {
+func entAdjustCoreConfig(config *server.Config, coreConfig *vault.CoreConfig) {
 }
 
 func entCheckStorageType(coreConfig *vault.CoreConfig) bool {
@@ -29,5 +29,9 @@ func entCheckStorageType(coreConfig *vault.CoreConfig) bool {
 }
 
 func entGetFIPSInfoKey() string {
+	return ""
+}
+
+func entGetRequestLimiterStatus(coreConfig vault.CoreConfig) string {
 	return ""
 }
