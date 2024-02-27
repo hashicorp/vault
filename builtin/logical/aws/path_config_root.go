@@ -5,11 +5,13 @@ package aws
 
 import (
 	"context"
+	"errors"
 
 	"github.com/aws/aws-sdk-go/aws"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/pluginidentityutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -154,6 +156,18 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 
 	if rc.IdentityTokenAudience != "" && rc.RoleARN == "" {
 		return logical.ErrorResponse("missing required 'role_arn' when 'identity_token_audience' is set"), nil
+	}
+
+	if rc.IdentityTokenAudience != "" {
+		_, err := b.System().GenerateIdentityToken(ctx, &pluginutil.IdentityTokenRequest{
+			Audience: rc.IdentityTokenAudience,
+		})
+		if err != nil {
+			if errors.Is(err, pluginidentityutil.ErrPluginWorkloadIdentityUnsupported) {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			return nil, err
+		}
 	}
 
 	entry, err := logical.StorageEntryJSON("config/root", rc)
