@@ -1437,14 +1437,14 @@ func (c *ServerCommand) Run(args []string) int {
 		info["HCP resource ID"] = config.HCPLinkConf.Resource.ID
 	}
 
+	requestLimiterStatus := entGetRequestLimiterStatus(coreConfig)
+	if requestLimiterStatus != "" {
+		infoKeys = append(infoKeys, "request_limiter")
+		info["request_limiter"] = requestLimiterStatus
+	}
+
 	infoKeys = append(infoKeys, "administrative namespace")
 	info["administrative namespace"] = config.AdministrativeNamespacePath
-
-	infoKeys = append(infoKeys, "request limiter")
-	info["request limiter"] = "enabled"
-	if config.RequestLimiter != nil && config.RequestLimiter.Disable {
-		info["request limiter"] = "disabled"
-	}
 
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
@@ -3116,10 +3116,6 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		DisableSSCTokens:               config.DisableSSCTokens,
 		Experiments:                    config.Experiments,
 		AdministrativeNamespacePath:    config.AdministrativeNamespacePath,
-	}
-
-	if config.RequestLimiter != nil {
-		coreConfig.DisableRequestLimiter = config.RequestLimiter.Disable
 	}
 
 	if c.flagDev {

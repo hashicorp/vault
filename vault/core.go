@@ -49,7 +49,6 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/osutil"
-	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/plugins/event"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -715,9 +714,6 @@ type Core struct {
 	periodicLeaderRefreshInterval time.Duration
 
 	clusterAddrBridge *raft.ClusterAddrBridge
-
-	limiterRegistry     *limits.LimiterRegistry
-	limiterRegistryLock sync.Mutex
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -726,12 +722,6 @@ func (c *Core) ActiveNodeClockSkewMillis() int64 {
 
 func (c *Core) EchoDuration() time.Duration {
 	return c.echoDuration.Load()
-}
-
-func (c *Core) GetRequestLimiter(key string) *limits.RequestLimiter {
-	c.limiterRegistryLock.Lock()
-	defer c.limiterRegistryLock.Unlock()
-	return c.limiterRegistry.GetLimiter(key)
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -902,9 +892,6 @@ type CoreConfig struct {
 	PeriodicLeaderRefreshInterval time.Duration
 
 	ClusterAddrBridge *raft.ClusterAddrBridge
-
-	DisableRequestLimiter bool
-	LimiterRegistry       *limits.LimiterRegistry
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -1005,10 +992,6 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		for k, v := range detectDeadlocks {
 			detectDeadlocks[k] = strings.ToLower(strings.TrimSpace(v))
 		}
-	}
-
-	if conf.LimiterRegistry == nil {
-		conf.LimiterRegistry = limits.NewLimiterRegistry(conf.Logger.Named("limits"))
 	}
 
 	// Use imported logging deadlock if requested
@@ -1314,15 +1297,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	c.limiterRegistry = conf.LimiterRegistry
-	c.limiterRegistryLock.Lock()
-	if conf.DisableRequestLimiter {
-		c.limiterRegistry.Disable()
-	} else {
-		c.limiterRegistry.Enable()
-	}
-	c.limiterRegistryLock.Unlock()
 
 	err = c.adjustForSealMigration(conf.UnwrapSeal)
 	if err != nil {
@@ -2817,6 +2791,11 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
 		c.systemBackend.mfaBackend.usedCodes = cache.New(0, 30*time.Second)
 	}
+	if c.systemBackend != nil {
+		// all mounts need to be initialized before activity log reporting
+		// starts, which happens in the post-unseal functions above.
+		sysActivityLogReporting(c.systemBackend)
+	}
 	c.logger.Info("post-unseal setup complete")
 	return nil
 }
@@ -4102,27 +4081,6 @@ func (c *Core) ReloadLogRequestsLevel() {
 		c.logRequestsLevel.Store(int32(log.LevelFromString(infoLevel)))
 	case infoLevel != "":
 		c.logger.Warn("invalid log_requests_level", "level", infoLevel)
-	}
-}
-
-func (c *Core) ReloadRequestLimiter() {
-	c.limiterRegistry.Logger.Info("reloading request limiter config")
-	conf := c.rawConfig.Load()
-	if conf == nil {
-		return
-	}
-
-	disable := false
-	requestLimiterConfig := conf.(*server.Config).RequestLimiter
-	if requestLimiterConfig != nil {
-		disable = requestLimiterConfig.Disable
-	}
-
-	switch disable {
-	case true:
-		c.limiterRegistry.Disable()
-	default:
-		c.limiterRegistry.Enable()
 	}
 }
 

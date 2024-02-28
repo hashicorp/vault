@@ -47,7 +47,7 @@ export default AuthConfigComponent.extend({
         // because we're not calling model.save the model never updates with
         // the error.  Forcing the error message by manually setting the errorMessage
         try {
-          this.model.set('errorMessage', err.errors.firstObject);
+          this.model.set('errorMessage', err.errors?.join(','));
         } catch {
           // do nothing
         }
