@@ -44,8 +44,14 @@ export const SELECTORS = {
   infoRowLabel: (label) => `[data-test-row-label="${label}"]`,
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   inputByAttr: (attr) => `[data-test-input="${attr}"]`,
+  selectByAttr: (attr) => `[data-test-select="${attr}"]`,
   fieldByAttr: (attr) => `[data-test-field="${attr}"]`,
   enableField: (attr) => `[data-test-enable-field="${attr}"] button`,
+  ttl: {
+    toggle: (attr) => `[data-test-toggle-label="${attr}"]`,
+    input: (attr) => `[data-test-ttl-value="${attr}"]`,
+  },
+
   validation: (attr) => `[data-test-field-validation=${attr}]`,
   validationWarning: (attr) => `[data-test-validation-warning=${attr}]`,
   messageError: '[data-test-message-error]',
