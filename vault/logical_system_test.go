@@ -7073,4 +7073,3 @@ func TestWellKnownSysApi(t *testing.T) {
 	require.NoError(t, err, "failed get well-known request")
 	require.Nil(t, resp, "response from unknown should have been nil was %v", resp)
 }
-
