@@ -440,12 +440,7 @@
       },
       {
         "title": "<code>/sys/config/ui/custom-messages</code>",
-        "path": "system/config-ui-custom-messages",
-        "badge": {
-          "text": "ENT",
-          "type": "outlined",
-          "color": "neutral"
-        }
+        "path": "system/config-ui-custom-messages"
       },
       {
         "title": "<code>/sys/config/ui/headers</code>",
