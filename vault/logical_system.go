@@ -226,10 +226,6 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	b.Backend.Paths = append(b.Backend.Paths, b.experimentPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.introspectionPaths()...)
 
-	if requestLimiterRead := b.requestLimiterReadPath(); requestLimiterRead != nil {
-		b.Backend.Paths = append(b.Backend.Paths, b.requestLimiterReadPath())
-	}
-
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
 	}
@@ -5488,6 +5484,8 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 
 	hcpLinkStatus, resourceIDonHCP := core.GetHCPLinkStatus()
 
+	redactVersion, _, redactClusterName, _ := logical.CtxRedactionSettingsValue(ctx)
+
 	if sealConfig == nil {
 		s := &SealStatusResponse{
 			Type:         core.SealAccess().BarrierSealConfigType().String(),
@@ -5497,6 +5495,11 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 			StorageType:  core.StorageType(),
 			Version:      version.GetVersion().VersionNumber(),
 			BuildDate:    version.BuildDate,
+		}
+
+		if redactVersion {
+			s.Version = ""
+			s.BuildDate = ""
 		}
 
 		if resourceIDonHCP != "" {
@@ -5553,6 +5556,15 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 	if resourceIDonHCP != "" {
 		s.HCPLinkStatus = hcpLinkStatus
 		s.HCPLinkResourceID = resourceIDonHCP
+	}
+
+	if redactVersion {
+		s.Version = ""
+		s.BuildDate = ""
+	}
+
+	if redactClusterName {
+		s.ClusterName = ""
 	}
 
 	return s, nil
@@ -5616,14 +5628,14 @@ type LeaderResponse struct {
 	RaftAppliedIndex   uint64 `json:"raft_applied_index,omitempty"`
 }
 
-func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
+func (core *Core) GetLeaderStatus(ctx context.Context) (*LeaderResponse, error) {
 	core.stateLock.RLock()
 	defer core.stateLock.RUnlock()
 
-	return core.GetLeaderStatusLocked()
+	return core.GetLeaderStatusLocked(ctx)
 }
 
-func (core *Core) GetLeaderStatusLocked() (*LeaderResponse, error) {
+func (core *Core) GetLeaderStatusLocked(ctx context.Context) (*LeaderResponse, error) {
 	haEnabled := true
 	isLeader, address, clusterAddr, err := core.LeaderLocked()
 	if errwrap.Contains(err, ErrHANotEnabled.Error()) {
@@ -5650,7 +5662,14 @@ func (core *Core) GetLeaderStatusLocked() (*LeaderResponse, error) {
 		resp.LastWAL = core.EntLastWAL()
 	}
 
+	_, redactAddresses, _, _ := logical.CtxRedactionSettingsValue(ctx)
+	if redactAddresses {
+		resp.LeaderAddress = ""
+		resp.LeaderClusterAddress = ""
+	}
+
 	resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexesLocked()
+
 	return resp, nil
 }
 
@@ -5674,7 +5693,7 @@ func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Reque
 }
 
 func (b *SystemBackend) handleLeaderStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	status, err := b.Core.GetLeaderStatusLocked()
+	status, err := b.Core.GetLeaderStatusLocked(ctx)
 	if err != nil {
 		return nil, err
 	}

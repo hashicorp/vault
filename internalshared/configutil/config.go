@@ -55,8 +55,6 @@ type SharedConfig struct {
 	ClusterName string `hcl:"cluster_name"`
 
 	AdministrativeNamespacePath string `hcl:"administrative_namespace_path"`
-
-	RequestLimiter *RequestLimiter `hcl:"request_limiter"`
 }
 
 func ParseConfig(d string) (*SharedConfig, error) {
@@ -155,13 +153,6 @@ func ParseConfig(d string) (*SharedConfig, error) {
 		result.found("cloud", "Cloud")
 		if err := parseCloud(&result, o); err != nil {
 			return nil, fmt.Errorf("error parsing 'cloud': %w", err)
-		}
-	}
-
-	if o := list.Filter("request_limiter"); len(o.Items) > 0 {
-		result.found("request_limiter", "RequestLimiter")
-		if err := parseRequestLimiter(&result, o); err != nil {
-			return nil, fmt.Errorf("error parsing 'request_limiter': %w", err)
 		}
 	}
 
@@ -291,13 +282,6 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 			"add_mount_point_rollback_metrics":       c.Telemetry.RollbackMetricsIncludeMountPoint,
 		}
 		result["telemetry"] = sanitizedTelemetry
-	}
-
-	if c.RequestLimiter != nil {
-		sanitizedRequestLimiter := map[string]interface{}{
-			"disable": c.RequestLimiter.Disable,
-		}
-		result["request_limiter"] = sanitizedRequestLimiter
 	}
 
 	return result
