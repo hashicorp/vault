@@ -1,0 +1,75 @@
+---
+layout: api
+page_title: /sys/well-known - HTTP API
+description: The `/sys/well-known` endpoint is used to list and read registered .well-known labels in Vault.
+---
+
+# `/sys/well-known`
+
+The `/sys/well-known` endpoint is used to list and read the registered labels within the server's .well-known/ path prefix
+
+## List well-known
+
+This endpoint lists all registered labels.
+
+| Method | Path              |
+|:-------|:------------------|
+| `GET`  | `/sys/well-known` |
+| `LIST` | `/sys/well-known` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/well-known
+```
+
+### Sample response
+
+```json
+{
+  "key_info": {
+    "est/cacerts": {
+      "mountPath": "ns1/pki_int/",
+      "mountUuid": "fc9d3ee4-ae92-4e3e-c0e1-a1fdb3e3b8cf",
+      "prefix": "est/cacerts"
+    }
+  }
+  "keys": [
+    "est/cacerts",
+  ]
+}
+```
+
+## Read well-known
+
+This endpoint retrieves the information around a specific registered label
+
+| Method | Path                     |
+| :----- |:-------------------------|
+| `GET`  | `/sys/well-known/:label` |
+
+### Parameters
+
+- `label` `(string: <required>)` – Specifies the registered label to lookup
+  This is specified as part of the request URL.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/well-known/est/cacerts
+```
+
+### Sample response
+
+```json
+{
+  "label": "est/cacerts",
+  "mountPath": "ns1/pki_int/",
+  "mountUuid": "fc9d3ee4-ae92-4e3e-c0e1-a1fdb3e3b8cf",
+  "prefix": "est/cacerts"
+}
+```

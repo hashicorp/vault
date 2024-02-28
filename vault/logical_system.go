@@ -15,6 +15,7 @@ import (
 	"hash"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -225,6 +226,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	b.Backend.Paths = append(b.Backend.Paths, b.loginMFAPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.experimentPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.introspectionPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.wellKnownPaths()...)
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
@@ -6002,6 +6004,62 @@ func (b *SystemBackend) handleReadExperiments(ctx context.Context, _ *logical.Re
 	}, nil
 }
 
+// handleWellKnownList handles /sys/well-known/ endpoint to provide the list of registered labels
+// within the /.well-known path on this server
+func (b *SystemBackend) handleWellKnownList() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		labels := b.Core.WellKnownRedirects.List()
+
+		respKeys := []string{}
+		respKeyInfo := map[string]interface{}{}
+
+		for label, wk := range labels {
+			respKeys = append(respKeys, label)
+
+			mountPath := ""
+			m := b.Core.router.MatchingMountByUUID(wk.mountUUID)
+			if m != nil {
+				mountPath, _ = url.JoinPath(m.namespace.Path, m.Path)
+			}
+
+			respKeyInfo[label] = map[string]interface{}{
+				"mountPath": mountPath,
+				"mountUuid": wk.mountUUID,
+				"prefix":    wk.prefix,
+			}
+		}
+
+		return logical.ListResponseWithInfo(respKeys, respKeyInfo), nil
+	}
+}
+
+// handleWellKnownRead handles the "/sys/well-known/<name>" endpoint to read a registered well-known label
+func (b *SystemBackend) handleWellKnownRead() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		label := data.Get("label").(string)
+
+		wk, ok := b.Core.WellKnownRedirects.Get(label)
+		if !ok {
+			return nil, nil
+		}
+
+		mountPath := ""
+		m := b.Core.router.MatchingMountByUUID(wk.mountUUID)
+		if m != nil {
+			mountPath, _ = url.JoinPath(m.namespace.Path, m.Path)
+		}
+
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"label":     label,
+				"mountPath": mountPath,
+				"mountUuid": wk.mountUUID,
+				"prefix":    wk.prefix,
+			},
+		}, nil
+	}
+}
+
 func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -7005,5 +7063,32 @@ This path responds to the following HTTP methods.
 	POST /
 		returns the manual license reporting data.
 		`,
+	},
+
+	"well-known-list": {
+		`List the registered well-known labels to associated mounts.`,
+		`
+This path responds to the following HTTP methods.
+    LIST /
+        List the names of the registered labels within the .well-known folder on this server.
+
+    GET /
+        List the names of the registered labels within the .well-known folder on this server.
+
+    GET /<label>
+        Retrieve the information regarding a specific registered label on this server.
+	    `,
+	},
+
+	"well-known": {
+		`Read the associated mount info for a registered label within the well-known path prefix`,
+		`
+        Retrieve the information regarding a specific registered label on this server.
+		`,
+	},
+
+	"well-known-label": {
+		`The label representing a path-prefix within the /.well-known/ path`,
+		"",
 	},
 }
