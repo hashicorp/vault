@@ -60,13 +60,13 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
   test('it should render landing cta component for enterprise', async function (assert) {
     this.set('destinations', []);
     await settled();
-    assert.dom(title).hasText('Secrets Sync Beta', 'Page title renders');
+    assert.dom(title).hasText('Secrets Sync', 'Page title renders');
     assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
     assert.dom(cta.summary).exists('CTA renders');
   });
 
   test('it should render header, tabs and toolbar for overview state', async function (assert) {
-    assert.dom(title).hasText('Secrets Sync Beta', 'Page title renders');
+    assert.dom(title).hasText('Secrets Sync', 'Page title renders');
     assert.dom(breadcrumb).exists({ count: 1 }, 'Correct number of breadcrumbs render');
     assert.dom(breadcrumb).includesText('Secrets Sync', 'Top level breadcrumb renders');
     assert.dom(cta.button).doesNotExist('CTA does not render');
@@ -141,8 +141,9 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       },
       {
         cardTitle: 'Total secrets',
-        subText: 'The total number of secrets synced from Vault.',
-        // actionText: 'View billing',
+        subText:
+          'The total number of secrets that have been synced from Vault. One secret will be counted as one sync client.',
+        actionText: 'View billing',
         count: '7',
       },
     ];
@@ -151,7 +152,6 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       assert.dom(title(cardTitle)).hasText(cardTitle, 'Overview card title renders');
       assert.dom(description(cardTitle)).hasText(subText, 'Destinations overview card description renders');
       assert.dom(content(cardTitle)).hasText(count, 'Total count renders');
-      if (cardTitle === 'Total secrets') return; // uncomment 'actionText' above and this return after SYNC BETA
       assert.dom(action(cardTitle)).hasText(actionText, 'Card action renders');
     });
   });
