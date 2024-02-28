@@ -20,6 +20,7 @@ const pathForAction = (action, replicationMode, clusterMode) => {
 };
 
 export default Route.extend({
+  router: service(),
   store: service(),
   model() {
     const store = this.store;
@@ -46,7 +47,7 @@ export default Route.extend({
       model.get(replicationMode).get('replicationDisabled') ||
       model.get(replicationMode).get('replicationUnsupported')
     ) {
-      return this.transitionTo('mode', replicationMode);
+      this.router.transitionTo('vault.cluster.replication.mode', replicationMode);
     }
   },
 });
