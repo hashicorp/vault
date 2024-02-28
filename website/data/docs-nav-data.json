@@ -1198,7 +1198,12 @@
               },
               {
                 "title": "Static Secret Caching",
-                "path": "agent-and-proxy/proxy/caching/static-secret-caching"
+                "path": "agent-and-proxy/proxy/caching/static-secret-caching",
+                "badge": {
+                  "text": "ENTERPRISE",
+                  "type": "outlined",
+                  "color": "neutral"
+                }
               },
               {
                 "title": "Persistent Caching",
