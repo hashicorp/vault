@@ -85,8 +85,8 @@ $ base64 vault.keytab > vault.keytab.base64
 ```
 
 - Configure the Kerberos auth method with the `keytab` and
-  entry name that will be used to verify inbound login
-  requests:
+entry name that will be used to verify inbound login
+requests:
 
 ```shell-session
 $ vault write auth/kerberos/config \
@@ -95,10 +95,10 @@ $ vault write auth/kerberos/config \
 ```
 
 - Configure the Kerberos auth method to communicate with
-  LDAP using the service account configured above. This is
-  a sample LDAP configuration. Yours will vary. Ensure you've
-  first tested your configuration from the Vault server using
-  a tool like `ldapsearch`.
+LDAP using the service account configured above. This is
+a sample LDAP configuration. Yours will vary. Ensure you've
+first tested your configuration from the Vault server using
+a tool like `ldapsearch`.
 
 ```shell-session
 $ vault write auth/kerberos/config/ldap \
@@ -118,11 +118,11 @@ See [its documentation](/vault/docs/auth/ldap)
 for further discussion of available parameters.
 
 - Configure the Vault policies that should be granted to those
-  who successfully authenticate based on their LDAP group membership.
-  Since this is identical to the LDAP auth method, see
-  [Group Membership Resolution](/vault/docs/auth/ldap#group-membership-resolution)
-  and [LDAP Group -> Policy Mapping](/vault/docs/auth/ldap#ldap-group-policy-mapping)
-  for further discussion.
+who successfully authenticate based on their LDAP group membership.
+Since this is identical to the LDAP auth method, see
+[Group Membership Resolution](/vault/docs/auth/ldap#group-membership-resolution)
+and [LDAP Group -> Policy Mapping](/vault/docs/auth/ldap#ldap-group-policy-mapping)
+for further discussion.
 
 ```shell-session
 $ vault write auth/kerberos/groups/engineering-team \
@@ -149,25 +149,25 @@ $ vault login -method=kerberos \
 ```
 
 - `krb5conf_path` is the path to a valid `krb5.conf` file describing how to
-  communicate with the Kerberos environment.
+communicate with the Kerberos environment.
 - `keytab_path` is the path to the `keytab` in which the entry lives for the
-  entity authenticating to Vault. Keytab files should be protected from other
-  users on a shared server using appropriate file permissions.
+entity authenticating to Vault. Keytab files should be protected from other
+users on a shared server using appropriate file permissions.
 - `username` is the username for the entry _within_ the `keytab` to use for
-  logging into Kerberos. This username must match a service account in LDAP.
+logging into Kerberos. This username must match a service account in LDAP.
 - `service` is the service principal name to use in obtaining a service ticket for
-  gaining a SPNEGO token. This service must exist in LDAP.
+gaining a SPNEGO token. This service must exist in LDAP.
 - `realm` is the name of the Kerberos realm. This realm must match the UPNDomain
-  configured on the LDAP connection. This check is case-sensitive.
+configured on the LDAP connection. This check is case-sensitive.
 - `disable_fast_negotiation` is for disabling the Kerberos auth method's default
-  of using FAST negotiation. FAST is a pre-authentication framework for Kerberos.
-  It includes a mechanism for tunneling pre-authentication exchanges using armoured
-  KDC messages. FAST provides increased resistance to passive password guessing attacks.
-  Some common Kerberos implementations do not support FAST negotiation.
+of using FAST negotiation. FAST is a pre-authentication framework for Kerberos.
+It includes a mechanism for tunneling pre-authentication exchanges using armoured
+KDC messages. FAST provides increased resistance to passive password guessing attacks.
+Some common Kerberos implementations do not support FAST negotiation.
 - `remove_instance_name` removes any instance names from a Kerberos service
-  principal name when parsing the keytab file. For example when this is set to true,
-  if a keytab has the service principal name `foo/localhost@example.com`, the CLI
-  will strip the service principal name to just be `foo@example.com`.
+principal name when parsing the keytab file. For example when this is set to true,
+if a keytab has the service principal name `foo/localhost@example.com`, the CLI
+will strip the service principal name to just be `foo@example.com`.
 
 ## Troubleshooting
 
@@ -177,12 +177,12 @@ Once the malfunctioning piece of the journey is identified, you can focus
 your debugging efforts in the most useful direction.
 
 1. Use `ldapsearch` while logged into your machine hosting Vault to ensure
-   your LDAP configuration is functional.
+your LDAP configuration is functional.
 2. Authenticate to your domain server using `kinit`, your `keytab`, and your
-   `krb5.conf`. Do this with both Vault's `keytab`, and any client `keytab` being
-   used for logging in. This ensures your Kerberos network is working.
+`krb5.conf`. Do this with both Vault's `keytab`, and any client `keytab` being
+used for logging in. This ensures your Kerberos network is working.
 3. While logged into your client machine, verify you can reach Vault
-   through the following command: `$ curl $VAULT_ADDR/v1/sys/health`.
+through the following command: `$ curl $VAULT_ADDR/v1/sys/health`.
 
 ### Build clear steps to reproduce the problem
 
@@ -233,64 +233,3 @@ client.
 The Kerberos auth method has a full HTTP API. Please see the
 [Kerberos auth method API](/vault/api-docs/auth/kerberos) for more
 details.
-
-## Workflows
-
-Refer to the following workflow examples for Kubernetes auth method usage:
-
-### Working with templated policies
-
-When configuring Kubernetes auth, you can set `use_annotations_as_alias_metadata=true`
-to use Kubernetes Service Account annotations for
-[Vault alias](vault/docs/concepts/identity#entities-and-aliases) metadata. This will
-allow you to utilize the `identity.entity.aliases.<mount accessor>.metadata.<metadata key>`
-templating parameter in creating
-[templated policies](vault/docs/concepts/policies#templated-policies). Note that
-Vault will need permission to read service accounts from the Kubernetes API.
-
-#### Scenario Introduction
-Assume that the following policy requirement was given:
-
-Each application can perform read operations on its allocated key/value secret path
-`(env-kv/data/<env>)`
-
-#### Annotate Kubernetes Service Accounts with their dedicated secret paths
-
-```
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: app
-  namespace: demo
-  annotations:
-    vault.hashicorp.com/alias-metadata-env: demo/app
-```
-
-The annotation will be rendered to the alias metadata as `env : demo/app`
-upon Vault login using `app` ServiceAccount's JWT.
-
-#### Create a templated ACL policy
-
-The `env-tmpl` policy allows applications to read their secret that
-are defined in KV v2 secret engine. The mount accessor value (auth_kubernetes_bcecb1e1
-in this example) can be read from the sys/auth endpoint.
-
-```bash
-tee env-tmpl.hcl <<EOF
-path "env-kv/data/{{identity.entity.aliases.auth_kubernetes_bcecb1e1.metadata.env}}" {
-  capabilities = [ "read" ]
-}
-EOF
-
-vault policy write env-tmpl env-tmpl.hcl
-```
-
-#### Create a Kubernetes role with the templated ACL policy
-
-This allows users that login as the `env-reader` role to read at the secret path
-described in the `env-tmpl` policy.
-
-```bash
-vault write auth/kubernetes/role/env-reader bound_service_account_names=app
-bound_service_account_namespaces=demo policies=default,env-tmpl ttl=1h
-```
