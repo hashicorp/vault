@@ -4,6 +4,7 @@
  */
 
 import { createServer } from 'miragejs';
+import { discoverEmberDataModels } from 'ember-cli-mirage';
 import ENV from 'vault/config/environment';
 import handlers from './handlers';
 // remember to export handler name from mirage/handlers/index.js file
@@ -13,6 +14,7 @@ export default function (config) {
     ...config,
     logging: false,
     models: {
+      ...discoverEmberDataModels(config.store),
       ...config.models,
     },
     routes,
