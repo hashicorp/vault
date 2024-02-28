@@ -5666,7 +5666,14 @@ func (core *Core) GetLeaderStatusLocked(ctx context.Context) (*LeaderResponse, e
 		resp.LastWAL = core.EntLastWAL()
 	}
 
+	_, redactAddresses, _, _ := logical.CtxRedactionSettingsValue(ctx)
+	if redactAddresses {
+		resp.LeaderAddress = ""
+		resp.LeaderClusterAddress = ""
+	}
+
 	resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexesLocked()
+
 	return resp, nil
 }
 
