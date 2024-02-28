@@ -4,8 +4,10 @@
 package http
 
 import (
+	"context"
 	"net/http"
 
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -23,16 +25,17 @@ func handleSysLeader(core *vault.Core, opt ...ListenerConfigOption) http.Handler
 }
 
 func handleSysLeaderGet(core *vault.Core, w http.ResponseWriter, opt ...ListenerConfigOption) {
-	resp, err := core.GetLeaderStatus()
+	ctx := context.Background()
+
+	opts, _ := getOpts(opt...)
+	if opts.withRedactAddresses {
+		ctx = logical.CreateContextRedactionSettings(ctx, false, true, false)
+	}
+
+	resp, err := core.GetLeaderStatus(ctx)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
-	}
-
-	opts, err := getOpts(opt...)
-	if opts.withRedactAddresses {
-		resp.LeaderAddress = opts.withRedactionValue
-		resp.LeaderClusterAddress = opts.withRedactionValue
 	}
 
 	respondOk(w, resp)

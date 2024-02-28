@@ -263,6 +263,13 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		wrappedHandler = disableReplicationStatusEndpointWrapping(wrappedHandler)
 	}
 
+	// Add an extra wrapping handler if any of the Redaction settings are
+	// true that will create a new request with a context containing the
+	// redaction settings.
+	if props.ListenerConfig != nil && (props.ListenerConfig.RedactAddresses || props.ListenerConfig.RedactClusterName || props.ListenerConfig.RedactVersion) {
+		wrappedHandler = redactionSettingsWrapping(wrappedHandler, props.ListenerConfig.RedactVersion, props.ListenerConfig.RedactAddresses, props.ListenerConfig.RedactClusterName)
+	}
+
 	if props.ListenerConfig != nil && props.ListenerConfig.DisableRequestLimiter {
 		wrappedHandler = wrapRequestLimiterHandler(wrappedHandler, props)
 	}

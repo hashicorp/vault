@@ -483,7 +483,7 @@ func (c CtxKeyRequestRole) String() string {
 	return "request-role"
 }
 
-// CtxKeyDisableReplicationStatusEndpoints is a custom type used as a key in
+// ctxKeyDisableReplicationStatusEndpoints is a custom type used as a key in
 // context.Context to store the value `true` when the
 // disable_replication_status_endpoints configuration parameter is set to true
 // for the listener through which a request was received.
@@ -545,4 +545,40 @@ func ContextOriginalBodyValue(ctx context.Context) (io.ReadCloser, bool) {
 
 func CreateContextOriginalBody(parent context.Context, body io.ReadCloser) context.Context {
 	return context.WithValue(parent, ctxKeyOriginalBody{}, body)
+}
+
+type CtxKeyDisableRequestLimiter struct{}
+
+func (c CtxKeyDisableRequestLimiter) String() string {
+	return "disable_request_limiter"
+}
+
+// ctxKeyRedactionSettings is a custom type used as a key in context.Context to
+// store the value the redaction settings for the listener that received the
+// request.
+type ctxKeyRedactionSettings struct{}
+
+// String returns a string representation of the receiver type.
+func (c ctxKeyRedactionSettings) String() string {
+	return "redaction-settings"
+}
+
+// CtxRedactionSettingsValue examines the provided context.Context for the
+// redaction settings value and returns them as a tuple of bool values if they
+// are found along with the ok return value set to true; otherwise the ok return
+// value is false.
+func CtxRedactionSettingsValue(ctx context.Context) (redactVersion, redactAddresses, redactClusterName, ok bool) {
+	value, ok := ctx.Value(ctxKeyRedactionSettings{}).([]bool)
+	if !ok {
+		return false, false, false, false
+	}
+
+	return value[0], value[1], value[2], true
+}
+
+// CreatecontextRedactionSettings creates a new context.Context based on the
+// provided parent that also includes the provided redaction settings values for
+// the ctxKeyRedactionSettings key.
+func CreateContextRedactionSettings(parent context.Context, redactVersion, redactAddresses, redactClusterName bool) context.Context {
+	return context.WithValue(parent, ctxKeyRedactionSettings{}, []bool{redactVersion, redactAddresses, redactClusterName})
 }
