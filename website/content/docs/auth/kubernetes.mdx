@@ -322,6 +322,67 @@ The Kubernetes Auth Plugin has a full HTTP API. Please see the
 
 [k8s-tokenreview]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#tokenreview-v1-authentication-k8s-io
 
+## Workflows
+
+Refer to the following workflow examples for Kubernetes auth method usage:
+
+### Working with templated policies
+
+When configuring Kubernetes auth, you can set `use_annotations_as_alias_metadata=true`
+to use Kubernetes Service Account annotations for
+[Vault alias](vault/docs/concepts/identity#entities-and-aliases) metadata. This will
+allow you to utilize the `identity.entity.aliases.<mount accessor>.metadata.<metadata key>`
+templating parameter in creating
+[templated policies](vault/docs/concepts/policies#templated-policies). Note that
+Vault will need permission to read service accounts from the Kubernetes API.
+
+#### Scenario Introduction
+Assume that the following policy requirement was given:
+
+Each application can perform read operations on its allocated key/value secret path
+`(env-kv/data/<env>)`
+
+#### Annotate Kubernetes Service Accounts with their dedicated secret paths
+
+```
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app
+  namespace: demo
+  annotations:
+    vault.hashicorp.com/alias-metadata-env: demo/app
+```
+
+The annotation will be rendered to the alias metadata as `env : demo/app`
+upon Vault login using `app` ServiceAccount's JWT.
+
+#### Create a templated ACL policy
+
+The `env-tmpl` policy allows applications to read their secret that
+are defined in KV v2 secret engine. The mount accessor value (auth_kubernetes_bcecb1e1
+in this example) can be read from the sys/auth endpoint.
+
+```bash
+tee env-tmpl.hcl <<EOF
+path "env-kv/data/{{identity.entity.aliases.auth_kubernetes_bcecb1e1.metadata.env}}" {
+  capabilities = [ "read" ]
+}
+EOF
+
+vault policy write env-tmpl env-tmpl.hcl
+```
+
+#### Create a Kubernetes role with the templated ACL policy
+
+This allows users that login as the `env-reader` role to read at the secret path
+described in the `env-tmpl` policy.
+
+```bash
+vault write auth/kubernetes/role/env-reader bound_service_account_names=app
+bound_service_account_namespaces=demo policies=default,env-tmpl ttl=1h
+```
+
 ## Code example
 
 The following example demonstrates the Kubernetes auth method to authenticate
@@ -447,5 +508,5 @@ namespace Examples
 }
 ```
 </CodeBlockConfig>
-
 </CodeTabs>
+

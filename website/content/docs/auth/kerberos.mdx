@@ -164,9 +164,9 @@ $ vault login -method=kerberos \
   It includes a mechanism for tunneling pre-authentication exchanges using armoured
   KDC messages. FAST provides increased resistance to passive password guessing attacks.
   Some common Kerberos implementations do not support FAST negotiation.
-- `remove_instance_name` removes any instance names from a Kerberos service 
-  principal name when parsing the keytab file. For example when this is set to true, 
-  if a keytab has the service principal name `foo/localhost@example.com`, the CLI 
+- `remove_instance_name` removes any instance names from a Kerberos service
+  principal name when parsing the keytab file. For example when this is set to true,
+  if a keytab has the service principal name `foo/localhost@example.com`, the CLI
   will strip the service principal name to just be `foo@example.com`.
 
 ## Troubleshooting
@@ -233,3 +233,64 @@ client.
 The Kerberos auth method has a full HTTP API. Please see the
 [Kerberos auth method API](/vault/api-docs/auth/kerberos) for more
 details.
+
+## Workflows
+
+Refer to the following workflow examples for Kubernetes auth method usage:
+
+### Working with templated policies
+
+When configuring Kubernetes auth, you can set `use_annotations_as_alias_metadata=true`
+to use Kubernetes Service Account annotations for
+[Vault alias](vault/docs/concepts/identity#entities-and-aliases) metadata. This will
+allow you to utilize the `identity.entity.aliases.<mount accessor>.metadata.<metadata key>`
+templating parameter in creating
+[templated policies](vault/docs/concepts/policies#templated-policies). Note that
+Vault will need permission to read service accounts from the Kubernetes API.
+
+#### Scenario Introduction
+Assume that the following policy requirement was given:
+
+Each application can perform read operations on its allocated key/value secret path
+`(env-kv/data/<env>)`
+
+#### Annotate Kubernetes Service Accounts with their dedicated secret paths
+
+```
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app
+  namespace: demo
+  annotations:
+    vault.hashicorp.com/alias-metadata-env: demo/app
+```
+
+The annotation will be rendered to the alias metadata as `env : demo/app`
+upon Vault login using `app` ServiceAccount's JWT.
+
+#### Create a templated ACL policy
+
+The `env-tmpl` policy allows applications to read their secret that
+are defined in KV v2 secret engine. The mount accessor value (auth_kubernetes_bcecb1e1
+in this example) can be read from the sys/auth endpoint.
+
+```bash
+tee env-tmpl.hcl <<EOF
+path "env-kv/data/{{identity.entity.aliases.auth_kubernetes_bcecb1e1.metadata.env}}" {
+  capabilities = [ "read" ]
+}
+EOF
+
+vault policy write env-tmpl env-tmpl.hcl
+```
+
+#### Create a Kubernetes role with the templated ACL policy
+
+This allows users that login as the `env-reader` role to read at the secret path
+described in the `env-tmpl` policy.
+
+```bash
+vault write auth/kubernetes/role/env-reader bound_service_account_names=app
+bound_service_account_namespaces=demo policies=default,env-tmpl ttl=1h
+```
