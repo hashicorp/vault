@@ -7,7 +7,7 @@
     <div class="lineal-chart" data-test-chart={{@chartTitle}}>
       <Lineal::Fluid as |width|>
         {{#let
-          (scale-time domain=this.timeDomain range=(array 0 width) nice=true)
+          (scale-point domain=this.xDomain range=(array 0 width) padding=0.2)
           (scale-linear domain=this.yDomain range=(array this.chartHeight 0) nice=true)
           (scale-linear range=(array 0 this.chartHeight))
           as |xScale yScale tooltipScale|

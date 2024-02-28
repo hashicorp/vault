@@ -113,7 +113,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     assert
       .dom(usageStats)
       .hasText(
-        `Secrets sync usage This data can be used to understand how many secrets sync clients have been used for this date range. A secret with a configured sync destination would qualify as a unique and active client. Total sync clients ${total}`,
+        `Secrets sync usage This data can be used to understand how many secrets sync clients have been used for this date range. Each Vault secret that is synced to at least one destination counts as one Vault client. Total sync clients ${total}`,
         'renders sync stats instead of chart'
       );
     assert.dom(syncTab.total).doesNotExist('total sync counts does not exist');
