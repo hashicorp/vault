@@ -5250,7 +5250,7 @@ func (b *SystemBackend) wellKnownPaths() []*framework.Path {
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "well-known",
-				OperationSuffix: "label", // this endpoint duplicates /sys/policies/acl
+				OperationSuffix: "label",
 			},
 
 			Fields: map[string]*framework.FieldSchema{

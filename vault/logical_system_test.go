@@ -7025,6 +7025,7 @@ func TestGetSealStatus_RedactionSettings(t *testing.T) {
 	assert.Empty(t, resp.ClusterName)
 }
 
+// TestWellKnownSysApi verifies the GET/LIST endpoints of /sys/well-known and /sys/well-known/<label>
 func TestWellKnownSysApi(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	b := c.systemBackend
