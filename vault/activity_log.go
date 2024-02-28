@@ -1454,7 +1454,6 @@ func (c *Core) ResetActivityLog() []*activity.LogFragment {
 
 	allFragments = append(allFragments, a.standbyFragmentsReceived...)
 	a.standbyFragmentsReceived = make([]*activity.LogFragment, 0)
-	a.partialMonthClientTracker = make(map[string]*activity.EntityRecord)
 	a.fragmentLock.Unlock()
 	return allFragments
 }
