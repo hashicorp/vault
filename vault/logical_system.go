@@ -6023,9 +6023,9 @@ func (b *SystemBackend) handleWellKnownList() framework.OperationFunc {
 			}
 
 			respKeyInfo[label] = map[string]interface{}{
-				"mountPath": mountPath,
-				"mountUuid": wk.mountUUID,
-				"prefix":    wk.prefix,
+				"mount_path": mountPath,
+				"mount_uuid": wk.mountUUID,
+				"prefix":     wk.prefix,
 			}
 		}
 
@@ -6051,10 +6051,10 @@ func (b *SystemBackend) handleWellKnownRead() framework.OperationFunc {
 
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"label":     label,
-				"mountPath": mountPath,
-				"mountUuid": wk.mountUUID,
-				"prefix":    wk.prefix,
+				"label":      label,
+				"mount_path": mountPath,
+				"mount_uuid": wk.mountUUID,
+				"prefix":     wk.prefix,
 			},
 		}, nil
 	}

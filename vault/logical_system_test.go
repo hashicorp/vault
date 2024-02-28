@@ -7051,11 +7051,11 @@ func TestWellKnownSysApi(t *testing.T) {
 
 	keyInfo := resp.Data["key_info"].(map[string]interface{})
 	keyInfoLabel1 := keyInfo["mylabel1"].(map[string]interface{})
-	require.Equal(t, myUuid, keyInfoLabel1["mountUuid"])
+	require.Equal(t, myUuid, keyInfoLabel1["mount_uuid"])
 	require.Equal(t, "test-path/foo1", keyInfoLabel1["prefix"])
 
 	keyInfoLabel2 := keyInfo["mylabel2"].(map[string]interface{})
-	require.Equal(t, myUuid, keyInfoLabel2["mountUuid"])
+	require.Equal(t, myUuid, keyInfoLabel2["mount_uuid"])
 	require.Equal(t, "test-path/foo2", keyInfoLabel2["prefix"])
 
 	// Test GET operation
@@ -7064,7 +7064,7 @@ func TestWellKnownSysApi(t *testing.T) {
 	require.NoError(t, err, "failed get well-known request")
 	require.NotNil(t, resp, "response from get well-known request was nil")
 
-	require.Equal(t, myUuid, resp.Data["mountUuid"])
+	require.Equal(t, myUuid, resp.Data["mount_uuid"])
 	require.Equal(t, "test-path/foo1", resp.Data["prefix"])
 
 	// Test GET operation on unknown label

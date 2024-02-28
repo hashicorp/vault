@@ -5271,11 +5271,11 @@ func (b *SystemBackend) wellKnownPaths() []*framework.Path {
 									Type:     framework.TypeString,
 									Required: true,
 								},
-								"mountUuid": {
+								"mount_uuid": {
 									Type:     framework.TypeString,
 									Required: true,
 								},
-								"mountPath": {
+								"mount_path": {
 									Type:     framework.TypeString,
 									Required: true,
 								},
