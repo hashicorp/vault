@@ -43,9 +43,10 @@ access the Kubernetes API.
   keys.
 - `disable_local_ca_jwt` `(bool: false)` - Disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod.
 - `use_annotations_as_alias_metadata` `(bool: false)` - Use annotations from the client token's associated service account
-  as alias metadata for the Vault entity. Only annotations with the prefix `vault.hashicorp.com/alias-metadata-` will be used.
-  For example, if an annotation "vault.hashicorp.com/alias-metadata-foo" is configured, "foo" with its value will be added
-  to the alias metadata. NOTE: Vault will need permission to read service accounts from the Kubernetes API.
+  as alias metadata for the Vault entity. Only annotations with `vault.hashicorp.com/alias-metadata-` key prefix will be used.
+  For example, if an annotation "vault.hashicorp.com/alias-metadata-foo" is configured, "foo" with the annotation value will be added
+  to the alias metadata. **IMPORTANT NOTE** Vault will need permission to read service accounts from the Kubernetes API,
+  and the annotation value must be 512 characters or less due to the Vault alias metadata value limit.
 
 ### Deprecated parameters
 
@@ -136,10 +137,10 @@ entities attempting to login.
 - `bound_service_account_namespaces` `(array: [])` - List of namespaces
   allowed to access this role. If set to "\*" all namespaces are allowed.
 - `bound_service_account_namespace_selector` `(string: "")` - A label selector for Kubernetes
-  namespaces allowed to acces this role. Accepts either a JSON or YAML object. The value
+  namespaces allowed to access this role. Accepts either a JSON or YAML object. The value
   should be of type
   [LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#labelselector-v1-meta). Currently, label selectors with `matchExpressions` are not supported.
-  If this parameter is used, the Vault requires permissions to read namespaces on the Kubernetes
+  **IMPORTANT NOTE** If this parameter is used, the Vault requires permissions to read namespaces on the Kubernetes
   cluster. If set with `bound_service_account_namespaces`, the conditions are `OR`ed.
 - `audience` `(string: "")` - Optional Audience claim to verify in the JWT.
 - `alias_name_source` `(string: "serviceaccount_uid")` - Configures how identity aliases are generated.
