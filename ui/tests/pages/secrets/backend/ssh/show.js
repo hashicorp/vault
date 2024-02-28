@@ -15,7 +15,7 @@ export default create({
   generateIsPresent: isPresent('[data-test-backend-credentials]'),
   deleteBtn: clickable('[data-test-confirm-action-trigger]'),
   confirmBtn: clickable('[data-test-confirm-button]'),
-  deleteRole() {
-    return this.deleteBtn().confirmBtn();
+  async deleteRole() {
+    return await this.deleteBtn().confirmBtn();
   },
 });

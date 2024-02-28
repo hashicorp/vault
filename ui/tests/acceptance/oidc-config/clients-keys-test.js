@@ -32,10 +32,10 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     oidcConfigHandlers(this.server);
     this.store = this.owner.lookup('service:store');
-    return authPage.login();
+    return await authPage.login();
   });
 
   test('it creates a key, signs a client and edits key access to only that client', async function (assert) {

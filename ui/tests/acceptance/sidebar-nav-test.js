@@ -18,7 +18,7 @@ module('Acceptance | sidebar navigation', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     // set storage_type to raft to test link
     this.server.get('/sys/seal-status', (schema, req) => {
       return modifyPassthroughResponse(req, { storage_type: 'raft' });
@@ -30,7 +30,7 @@ module('Acceptance | sidebar navigation', function (hooks) {
         'nested-interactive': { enabled: false },
       },
     });
-    return authPage.login();
+    return await authPage.login();
   });
 
   test('it should navigate back to the dashboard when logo is clicked', async function (assert) {

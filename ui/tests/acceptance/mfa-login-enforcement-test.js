@@ -14,9 +14,9 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     mfaConfigHandlers(this.server);
-    return authPage.login();
+    return await authPage.login();
   });
 
   test('it should send the correct data when creating an enforcement', async function (assert) {

@@ -14,10 +14,10 @@ let adapterException;
 module('Acceptance | not-found', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     adapterException = Ember.Test.adapter.exception;
     Ember.Test.adapter.exception = () => {};
-    return authPage.login();
+    return await authPage.login();
   });
 
   hooks.afterEach(function () {

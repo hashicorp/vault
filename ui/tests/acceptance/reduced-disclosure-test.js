@@ -24,12 +24,12 @@ module('Acceptance | reduced disclosure test', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     reducedDisclosureHandlers(this.server);
     this.unsealCount = 0;
     this.sealed = false;
     this.versionSvc = this.owner.lookup('service:version');
-    return authPage.logout();
+    return await authPage.logout();
   });
 
   test('login works when reduced disclosure enabled', async function (assert) {

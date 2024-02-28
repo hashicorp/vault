@@ -25,7 +25,7 @@ module('Acceptance | leases', function (hooks) {
     await authPage.login();
     this.enginePath = `kv-for-lease-${uuidv4()}`;
     // need a version 1 mount for leased secrets here
-    return mountSecrets.visit().path(this.enginePath).type('kv').version(1).submit();
+    return await mountSecrets.visit().path(this.enginePath).type('kv').version(1).submit();
   });
 
   const createSecret = async (context, isRenewable) => {

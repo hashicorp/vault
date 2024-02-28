@@ -34,12 +34,12 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     oidcConfigHandlers(this.server);
     this.store = this.owner.lookup('service:store');
     // mock client list so OIDC BASE URL does not redirect to landing call-to-action image
     this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
-    return authPage.login();
+    return await authPage.login();
   });
 
   // LIST SCOPES EMPTY

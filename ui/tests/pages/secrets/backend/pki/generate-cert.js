@@ -25,7 +25,7 @@ export default create({
   },
 
   sign: async function (commonName, csr) {
-    return this.csr(csr)
+    return await this.csr(csr)
       .commonName(commonName)
       .toggleOptions()
       .enableTtl()

@@ -11,12 +11,12 @@ import { v4 as uuidv4 } from 'uuid';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
-module('Acceptance | aws secret backend', function (hooks) {
+module('Acceptance | aws secret backend ', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.uid = uuidv4();
-    return authPage.login();
+    return await authPage.login();
   });
 
   test('aws backend', async function (assert) {

@@ -20,7 +20,7 @@ module('Acceptance | sync | destination', function (hooks) {
   hooks.beforeEach(async function () {
     syncScenario(this.server);
     syncHandlers(this.server);
-    return authPage.login();
+    return await authPage.login();
   });
 
   test('it should transition to correct routes when performing actions', async function (assert) {

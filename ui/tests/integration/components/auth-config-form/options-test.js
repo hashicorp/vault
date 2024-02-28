@@ -50,7 +50,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
     sinon.spy(model.config, 'serialize');
     this.set('model', model);
     await render(hbs`<AuthConfigForm::Options @model={{this.model}} />`);
-    component.save();
+    await component.save();
     return settled().then(() => {
       assert.strictEqual(model.config.serialize.callCount, 1, 'config serialize was called once');
     });

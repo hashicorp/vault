@@ -23,7 +23,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.store = this.owner.lookup('service:store');
     this.store.push({
       data: {
@@ -37,7 +37,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
         },
       },
     });
-    this.model = this.store.peekRecord('keymgmt/provider', 'foo-bar');
+    this.model = await this.store.peekRecord('keymgmt/provider', 'foo-bar');
     this.root = root;
     this.owner.lookup('service:router').reopen({
       currentURL: '/ui/vault/secrets/keymgmt/show/foo-bar',

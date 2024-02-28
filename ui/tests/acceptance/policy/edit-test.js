@@ -12,8 +12,8 @@ import authPage from 'vault/tests/pages/auth';
 module('Acceptance | policy/acl/:name/edit', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
-    return authPage.login();
+  hooks.beforeEach(async function () {
+    return await authPage.login();
   });
 
   test('it redirects to list if navigating to root', async function (assert) {

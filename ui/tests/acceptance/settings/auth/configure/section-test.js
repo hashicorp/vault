@@ -21,10 +21,10 @@ const cli = create(consolePanel);
 module('Acceptance | settings/auth/configure/section', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.uid = uuidv4();
     this.server = apiStub({ usePassthrough: true });
-    return authPage.login();
+    return await authPage.login();
   });
 
   hooks.afterEach(function () {

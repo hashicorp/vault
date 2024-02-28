@@ -16,8 +16,8 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
-    return authPage.login();
+  hooks.beforeEach(async function () {
+    return await authPage.login();
   });
 
   // common links are tested in the sidebar-nav test and will not be covered here

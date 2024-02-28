@@ -14,7 +14,7 @@ export default create({
   edit: clickable('[data-test-secret-edit]'),
   editIsPresent: isPresent('[data-test-secret-edit]'),
 
-  deleteSecretV1() {
-    return this.deleteBtnV1().confirmBtn();
+  async deleteSecretV1() {
+    return await this.deleteBtnV1().confirmBtn();
   },
 });

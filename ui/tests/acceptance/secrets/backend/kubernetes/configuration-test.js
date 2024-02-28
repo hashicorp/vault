@@ -16,7 +16,7 @@ module('Acceptance | kubernetes | configuration', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     kubernetesHandlers(this.server);
     kubernetesScenario(this.server);
     this.visitConfiguration = () => {
@@ -25,7 +25,7 @@ module('Acceptance | kubernetes | configuration', function (hooks) {
     this.validateRoute = (assert, route, message) => {
       assert.strictEqual(currentRouteName(), `vault.cluster.secrets.backend.kubernetes.${route}`, message);
     };
-    return authPage.login();
+    return await authPage.login();
   });
 
   test('it should transition to configure page on Edit Configuration click from toolbar', async function (assert) {

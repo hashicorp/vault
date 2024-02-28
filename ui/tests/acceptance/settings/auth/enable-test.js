@@ -15,9 +15,9 @@ import authPage from 'vault/tests/pages/auth';
 module('Acceptance | settings/auth/enable', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.uid = uuidv4();
-    return authPage.login();
+    return await authPage.login();
   });
 
   test('it mounts and redirects', async function (assert) {

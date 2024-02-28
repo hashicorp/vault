@@ -47,6 +47,6 @@ export default {
     inputChecked: attribute('checked', 'input[type=checkbox]'),
   }),
   selectRadioInput: async function (value) {
-    return this.radioButtons.filterBy('id', value)[0].select();
+    return await this.radioButtons.filterBy('id', value)[0].select();
   },
 };

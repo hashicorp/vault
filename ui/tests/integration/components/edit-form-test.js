@@ -66,7 +66,7 @@ module('Integration | Component | edit form', function (hooks) {
 
     await render(hbs`{{edit-form model=this.model onSave=this.onSave}}`);
 
-    component.submit();
+    await component.submit();
     later(() => cancelTimers(), 50);
     return settled().then(() => {
       assert.ok(saveSpy.calledOnce, 'calls passed onSave');

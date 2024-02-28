@@ -23,7 +23,7 @@ module('Acceptance | sync | destinations', function (hooks) {
   hooks.beforeEach(async function () {
     syncScenario(this.server);
     syncHandlers(this.server);
-    return authPage.login();
+    return await authPage.login();
   });
 
   test('it should create new destination', async function (assert) {

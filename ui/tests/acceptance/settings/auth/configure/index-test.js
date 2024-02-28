@@ -15,9 +15,9 @@ import authPage from 'vault/tests/pages/auth';
 module('Acceptance | settings/auth/configure', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.uid = uuidv4();
-    return authPage.login();
+    return await authPage.login();
   });
 
   test('it redirects to section options when there are no other sections', async function (assert) {
