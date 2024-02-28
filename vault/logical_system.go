@@ -1953,8 +1953,8 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 		err := b.moveMount(ns, logger, migrationID, entry, fromPathDetails, toPathDetails)
 		if err != nil {
 			logger.Error("remount failed", "error", err)
-			if err := b.Core.setMigrationStatus(migrationID, MigrationFailureStatus); err != nil {
-				logger.Error("Setting migration status failed", "error", err, "target_status", MigrationFailureStatus)
+			if err := b.Core.setMigrationStatus(migrationID, MigrationStatusFailure); err != nil {
+				logger.Error("Setting migration status failed", "error", err, "target_status", MigrationStatusFailure)
 			}
 		}
 	}(migrationID)
@@ -2010,7 +2010,7 @@ func (b *SystemBackend) moveMount(ns *namespace.Namespace, logger log.Logger, mi
 		return err
 	}
 
-	if err := b.Core.setMigrationStatus(migrationID, MigrationSuccessStatus); err != nil {
+	if err := b.Core.setMigrationStatus(migrationID, MigrationStatusSuccess); err != nil {
 		return err
 	}
 	logger.Info("Completed mount move operations")

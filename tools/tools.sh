@@ -47,6 +47,7 @@ install_external() {
     gotest.tools/gotestsum@latest
     honnef.co/go/tools/cmd/staticcheck@latest
     mvdan.cc/gofumpt@latest
+    github.com/loggerhead/enumer@latest
   )
 
   echo "==> Installing external tools..."
