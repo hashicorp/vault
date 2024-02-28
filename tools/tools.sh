@@ -65,6 +65,7 @@ check_external() {
   local tools
   tools=(
     buf
+    enumer
     gofumpt
     goimports
     gosimports
