@@ -14702,9 +14702,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-cli-mirage@npm:3.0.0":
-  version: 3.0.0
-  resolution: "ember-cli-mirage@npm:3.0.0"
+"ember-cli-mirage@npm:^3.0.3":
+  version: 3.0.3
+  resolution: "ember-cli-mirage@npm:3.0.3"
   dependencies:
     "@babel/core": ^7.22.20
     "@embroider/macros": ^1.13.2
@@ -14731,7 +14731,7 @@ __metadata:
       optional: true
     ember-qunit:
       optional: true
-  checksum: 1f194dfa8200ac308b81be7ee7567dd0fe542cf7d9fa08dc76f061ef2cc3ea3e0479f53b0acd629790fbd2f91a1028806071ef55b38c1a0ae533506fb3265d56
+  checksum: 2d198315def0dd3634a9a11f0ba2bbe4a17a702384e8dd3fca2783670d9bfa524c5cb4e779b00c36102b0f2b5b28ff4be3ce7f3ee4956d6dd5c3bf021c009eac
   languageName: node
   linkType: hard
 
@@ -27889,7 +27889,7 @@ __metadata:
     ember-cli-flash: 4.0.0
     ember-cli-htmlbars: ^6.2.0
     ember-cli-inject-live-reload: ^2.1.0
-    ember-cli-mirage: 3.0.0
+    ember-cli-mirage: ^3.0.3
     ember-cli-page-object: 1.17.10
     ember-cli-sass: 11.0.1
     ember-cli-sri: "meirish/ember-cli-sri#rooturl"
