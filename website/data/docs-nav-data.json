@@ -281,7 +281,12 @@
       },
       {
         "title": "Events",
-        "path": "concepts/events"
+        "path": "concepts/events",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "highlight"
+        }
       },
       {
         "title": "Filtering",
@@ -293,6 +298,29 @@
           {
             "title": "Audit Filtering",
             "path": "concepts/filtering/audit"
+          }
+        ]
+      },
+      {
+        "title": "Request Limiter",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "concepts/request-limiter",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            }
+          },
+          {
+            "title": "Vault server temporarily overloaded",
+            "path": "concepts/request-limiter/vault-server-temporarily-overloaded"
           }
         ]
       }
@@ -502,6 +530,10 @@
       {
         "title": "<code>telemetry</code>",
         "path": "configuration/telemetry"
+      },
+      {
+        "title": "<code>Request Limiter</code>",
+        "path": "configuration/request-limiter"
       },
       {
         "title": "<code>ui</code>",
@@ -1035,6 +1067,24 @@
       {
         "title": "Token Helpers",
         "path": "commands/token-helper"
+      }
+    ]
+  },
+  {
+    "title": "Vault UI",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "ui"
+      },
+      {
+        "title": "Custom Messages",
+        "path": "ui/custom-messages",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
       }
     ]
   },
