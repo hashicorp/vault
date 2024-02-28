@@ -21,7 +21,7 @@ Before using Seal HA, one must have upgraded to Vault 1.16 or higher.
 
 ## Adding and Removing Seals
 
-In order to use Seal HA, there must be more than one defined `seal` stanza
+In order to use Seal HA, there must be more than one defined [`seal` stanza](..) 
 in Vault's configuration.
 
 Seal HA adds two fields to these stanzas, `name`, and `priority`:
@@ -45,6 +45,21 @@ in the case more than one seal can unwrap a seal wrapped value, the order
 in which to attempt decryption, and which order to attempt to source entropy
 for entropy augmentation.  This can be useful if your seals have different
 performance or cost characteristics.
+
+Here is a hypothetical configuration for an [AWS seal](awskms) compatible with Seal
+HA:
+
+```hcl
+seal "awskms" {
+  name       = "aws-east"
+  priority   = "1"
+
+  region     = "us-east-1"
+  access_key = "AKIAIOSFODNN7EXAMPLE"
+  secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+  kms_key_id = "19ec80b0-dfdd-4d97-8164-c6examplekey"
+}
+```
 
 All configured, healthy seals are used to seal wrap values.  This means that
 for every write of a seal wrapped value or CSP, an encryption is requested
