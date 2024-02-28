@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -48,9 +49,10 @@ type sqsConnection struct {
 
 type sqsConfig struct {
 	event.SubscribeConfigDefaults
-	CreateQueue     bool   `mapstructure:"create_queue"`
+	CreateQueue     string `mapstructure:"create_queue"`
 	AccessKeyID     string `mapstructure:"access_key_id"`
 	SecretAccessKey string `mapstructure:"secret_access_key"`
+	SessionToken    string `mapstructure:"session_token"`
 	Region          string `mapstructure:"region"`
 	QueueName       string `mapstructure:"queue_name"`
 	QueueURL        string `mapstructure:"queue_url"`
@@ -68,6 +70,9 @@ func newClient(sconfig *sqsConfig) (*sqs.SQS, error) {
 	options = append(options, awsutil.WithEnvironmentCredentials(true))
 	options = append(options, awsutil.WithSharedCredentials(true))
 	credConfig, err := awsutil.NewCredentialsConfig(options...)
+	if sconfig.SessionToken != "" {
+		credConfig.SessionToken = sconfig.SessionToken // no awsutil option for this
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +97,14 @@ func (s *sqsBackend) Subscribe(_ context.Context, request *event.SubscribeReques
 		return err
 	}
 	var queueURL string
-	if sconfig.CreateQueue && sconfig.QueueName != "" {
+	createQueue := false
+	if sconfig.CreateQueue != "" {
+		createQueue, err = strconv.ParseBool(sconfig.CreateQueue)
+		if err != nil {
+			return fmt.Errorf("boolean required for 'create_queue' but got: '%v'", sconfig.CreateQueue)
+		}
+	}
+	if createQueue && sconfig.QueueName != "" {
 		resp, err := client.CreateQueue(&sqs.CreateQueueInput{
 			QueueName: &sconfig.QueueName,
 		})
