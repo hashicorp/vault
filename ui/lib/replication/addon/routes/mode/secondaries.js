@@ -9,6 +9,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 
 export default Route.extend({
+  router: service(),
   store: service(),
   model() {
     const replicationMode = this.paramsFor('mode').replication_mode;
@@ -36,7 +37,7 @@ export default Route.extend({
       model.get(`${replicationMode}.replicationDisabled`) ||
       model.get(`${replicationMode}.replicationUnsupported`)
     ) {
-      return this.transitionTo('mode', replicationMode);
+      this.router.transitionTo('vault.cluster.replication.mode', replicationMode);
     }
   },
 });

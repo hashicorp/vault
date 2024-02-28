@@ -300,6 +300,29 @@
             "path": "concepts/filtering/audit"
           }
         ]
+      },
+      {
+        "title": "Request Limiter",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "concepts/request-limiter",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            }
+          },
+          {
+            "title": "Vault server temporarily overloaded",
+            "path": "concepts/request-limiter/vault-server-temporarily-overloaded"
+          }
+        ]
       }
     ]
   },
@@ -507,6 +530,10 @@
       {
         "title": "<code>telemetry</code>",
         "path": "configuration/telemetry"
+      },
+      {
+        "title": "<code>Request Limiter</code>",
+        "path": "configuration/request-limiter"
       },
       {
         "title": "<code>ui</code>",
@@ -1171,7 +1198,12 @@
               },
               {
                 "title": "Static Secret Caching",
-                "path": "agent-and-proxy/proxy/caching/static-secret-caching"
+                "path": "agent-and-proxy/proxy/caching/static-secret-caching",
+                "badge": {
+                  "text": "ENTERPRISE",
+                  "type": "outlined",
+                  "color": "neutral"
+                }
               },
               {
                 "title": "Persistent Caching",
