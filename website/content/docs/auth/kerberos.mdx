@@ -85,8 +85,8 @@ $ base64 vault.keytab > vault.keytab.base64
 ```
 
 - Configure the Kerberos auth method with the `keytab` and
-entry name that will be used to verify inbound login
-requests:
+  entry name that will be used to verify inbound login
+  requests:
 
 ```shell-session
 $ vault write auth/kerberos/config \
@@ -95,10 +95,10 @@ $ vault write auth/kerberos/config \
 ```
 
 - Configure the Kerberos auth method to communicate with
-LDAP using the service account configured above. This is
-a sample LDAP configuration. Yours will vary. Ensure you've
-first tested your configuration from the Vault server using
-a tool like `ldapsearch`.
+  LDAP using the service account configured above. This is
+  a sample LDAP configuration. Yours will vary. Ensure you've
+  first tested your configuration from the Vault server using
+  a tool like `ldapsearch`.
 
 ```shell-session
 $ vault write auth/kerberos/config/ldap \
@@ -118,11 +118,11 @@ See [its documentation](/vault/docs/auth/ldap)
 for further discussion of available parameters.
 
 - Configure the Vault policies that should be granted to those
-who successfully authenticate based on their LDAP group membership.
-Since this is identical to the LDAP auth method, see
-[Group Membership Resolution](/vault/docs/auth/ldap#group-membership-resolution)
-and [LDAP Group -> Policy Mapping](/vault/docs/auth/ldap#ldap-group-policy-mapping)
-for further discussion.
+  who successfully authenticate based on their LDAP group membership.
+  Since this is identical to the LDAP auth method, see
+  [Group Membership Resolution](/vault/docs/auth/ldap#group-membership-resolution)
+  and [LDAP Group -> Policy Mapping](/vault/docs/auth/ldap#ldap-group-policy-mapping)
+  for further discussion.
 
 ```shell-session
 $ vault write auth/kerberos/groups/engineering-team \
@@ -149,25 +149,25 @@ $ vault login -method=kerberos \
 ```
 
 - `krb5conf_path` is the path to a valid `krb5.conf` file describing how to
-communicate with the Kerberos environment.
+  communicate with the Kerberos environment.
 - `keytab_path` is the path to the `keytab` in which the entry lives for the
-entity authenticating to Vault. Keytab files should be protected from other
-users on a shared server using appropriate file permissions.
+  entity authenticating to Vault. Keytab files should be protected from other
+  users on a shared server using appropriate file permissions.
 - `username` is the username for the entry _within_ the `keytab` to use for
-logging into Kerberos. This username must match a service account in LDAP.
+  logging into Kerberos. This username must match a service account in LDAP.
 - `service` is the service principal name to use in obtaining a service ticket for
-gaining a SPNEGO token. This service must exist in LDAP.
+  gaining a SPNEGO token. This service must exist in LDAP.
 - `realm` is the name of the Kerberos realm. This realm must match the UPNDomain
-configured on the LDAP connection. This check is case-sensitive.
+  configured on the LDAP connection. This check is case-sensitive.
 - `disable_fast_negotiation` is for disabling the Kerberos auth method's default
-of using FAST negotiation. FAST is a pre-authentication framework for Kerberos.
-It includes a mechanism for tunneling pre-authentication exchanges using armoured
-KDC messages. FAST provides increased resistance to passive password guessing attacks.
-Some common Kerberos implementations do not support FAST negotiation.
+  of using FAST negotiation. FAST is a pre-authentication framework for Kerberos.
+  It includes a mechanism for tunneling pre-authentication exchanges using armoured
+  KDC messages. FAST provides increased resistance to passive password guessing attacks.
+  Some common Kerberos implementations do not support FAST negotiation.
 - `remove_instance_name` removes any instance names from a Kerberos service
-principal name when parsing the keytab file. For example when this is set to true,
-if a keytab has the service principal name `foo/localhost@example.com`, the CLI
-will strip the service principal name to just be `foo@example.com`.
+  principal name when parsing the keytab file. For example when this is set to true,
+  if a keytab has the service principal name `foo/localhost@example.com`, the CLI
+  will strip the service principal name to just be `foo@example.com`.
 
 ## Troubleshooting
 
@@ -177,12 +177,12 @@ Once the malfunctioning piece of the journey is identified, you can focus
 your debugging efforts in the most useful direction.
 
 1. Use `ldapsearch` while logged into your machine hosting Vault to ensure
-your LDAP configuration is functional.
+   your LDAP configuration is functional.
 2. Authenticate to your domain server using `kinit`, your `keytab`, and your
-`krb5.conf`. Do this with both Vault's `keytab`, and any client `keytab` being
-used for logging in. This ensures your Kerberos network is working.
+   `krb5.conf`. Do this with both Vault's `keytab`, and any client `keytab` being
+   used for logging in. This ensures your Kerberos network is working.
 3. While logged into your client machine, verify you can reach Vault
-through the following command: `$ curl $VAULT_ADDR/v1/sys/health`.
+   through the following command: `$ curl $VAULT_ADDR/v1/sys/health`.
 
 ### Build clear steps to reproduce the problem
 
