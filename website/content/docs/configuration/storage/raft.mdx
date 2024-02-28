@@ -162,14 +162,12 @@ delay) mode. The maximum allowed value is 10.
   and is used to enhance scaling and resiliency. Use of this feature requires Vault Enterprise.
 
 - `raft_wal` `(boolean: false)` - Setting this to `true` enables the
-  [raft-wal](https://github.com/hashicorp/raft-wal) log store instead of the default of BoltDB.
-  raft-wal is explained in more detail on the
-  [internals](/vault/docs/internals/integrated-storage#configurable-raft-log-store) page.
+  [raft-wal](/vault/docs/internals/integrated-storage#configurable-raft-log-store) log store instead of the default of BoltDB.
 
 - `raft_log_verifier_enabled` `(boolean: false)` - Setting this to `true` turns on the raft log
-  verifier. The verifier adds an extra layer of confidence and protection by periodically writing
-  small raft logs and then verifying checksums to ensure that data has been written correctly.
-  This works with both BoltDB and raft-wal log stores.
+  verifier. The verifier periodically writes small raft logs and verifies checksums to 
+  ensure that data has been written correctly. This works with both BoltDB and raft-wal log
+  stores.
 
 - `raft_log_verification_interval` `(string: "60s")` - This is the interval at which the raft log
   verifier will write its verification logs. The default is `60s`. This cannot be set to a value
