@@ -363,9 +363,9 @@ renders  the alias metadata as `env : demo/app`
 
 #### Create a templated ACL policy
 
-The `env-tmpl` policy allows applications to read their secret that
-are defined in KV v2 secret engine. The mount accessor value (auth_kubernetes_bcecb1e1
-in this example) can be read from the sys/auth endpoint.
+The `env-tmpl` policy lets applications read their secrets defined in KV v2
+secret engine. So you can read the example mount accessor value
+(`auth_kubernetes_bcecb1e1`) from the `sys/auth` endpoint.
 
 ```bash
 tee env-tmpl.hcl <<EOF
