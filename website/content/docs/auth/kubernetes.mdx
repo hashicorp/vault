@@ -337,9 +337,10 @@ templating parameter in creating
 Vault will need permission to read service accounts from the Kubernetes API.
 
 #### Scenario Introduction
-Assume that the following policy requirement was given:
 
-Each application can perform read operations on its allocated key/value secret path
+Assume you have the following policy requirement:
+
+Applications can perform read operations on its allocated key/value secret path:
 `(env-kv/data/<env>)`
 
 #### Annotate Kubernetes Service Accounts with their dedicated secret paths
