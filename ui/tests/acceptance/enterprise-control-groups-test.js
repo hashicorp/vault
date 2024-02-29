@@ -130,6 +130,11 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
       await waitUntil(() => currentRouteName() === 'vault.cluster.access.control-group-accessor'),
       'redirects to access control group route'
     );
+    // without waiting for a settled state before test teardown there was an occasional async request leak causing failures
+    // the queryRecord method in the capabilities adapter was seemingly resolving after the store was destroyed
+    // "Error: Async Request leaks detected. Add a breakpoint here and set store.generateStackTracesForTrackedRequests = true; to inspect traces for leak origins"
+    // this should allow the pending request to resolve before tear down
+    await settled();
   });
 
   const workflow = async (assert, context, shouldStoreToken) => {
