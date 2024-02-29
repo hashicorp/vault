@@ -12,6 +12,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
 import { format, addDays, startOfDay } from 'date-fns';
 import { PAGE } from 'vault/tests/helpers/config-ui/message-selectors';
+import timestamp from 'core/utils/timestamp';
 
 module('Integration | Component | messages/page/create-and-edit', function (hooks) {
   setupRenderingTest(hooks);
@@ -47,7 +48,7 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
     assert.dom(PAGE.input('startTime')).exists();
     assert
       .dom(PAGE.input('startTime'))
-      .hasValue(format(addDays(startOfDay(new Date()), 1), datetimeLocalStringFormat));
+      .hasValue(format(addDays(startOfDay(timestamp.now()), 1), datetimeLocalStringFormat));
     assert.dom(PAGE.input('endTime')).exists();
     assert.dom(PAGE.input('endTime')).hasValue('');
   });
