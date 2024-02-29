@@ -281,9 +281,10 @@ against the fully qualified resource name.
 
 </Tip>
 
-For example, if the default secret name template is used, which prepends the word `vault` to the beginning of secret names,
-then following Role binding condition using `startsWith` will prevent Vault from being able to modify secrets that were not created
-by a sync operation:
+For example, the default secret name template prepends the word `vault` to the
+beginning of secret names. To prevent Vault from modifying secrets that were not
+created by a sync operation, you can use a role binding against the resource
+name with the `startsWith` condition:
 
   <CodeBlockConfig hideClipboard>
 
