@@ -358,8 +358,8 @@ metadata:
     vault.hashicorp.com/alias-metadata-env: demo/app
 ```
 
-The annotation will be rendered to the alias metadata as `env : demo/app`
-upon Vault login using `app` ServiceAccount's JWT.
+When the application, `app`, logs in with JWT for the service account, Vault
+renders  the alias metadata as `env : demo/app`
 
 #### Create a templated ACL policy
 
