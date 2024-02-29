@@ -35,8 +35,8 @@ Create a pinned version for a plugin with the given type and name.
 - `type` `(string: <required>)` – Path parameter specifying the target plugin
   type for the pinned version. May be "auth", "database", or "secret".
 
-- `name` `(string: <required>)` – Specifies the name of the plugin to create a
-  pinned version for. This is part of the request URL.
+- `name` `(string: <required>)` – Path parameter specifying the plugin name for
+  the pinned version.
 
 - `version` `(string: <required>)` - Specifies the semantic version of the plugin
   to pin. Cannot be a builtin version, and must already exist in the catalog.
