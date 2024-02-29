@@ -1,0 +1,3 @@
+```release-note:improvement
+COMPONENT: Add `use_csr_serial_number` to PKI roles
+```
