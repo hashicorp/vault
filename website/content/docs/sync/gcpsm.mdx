@@ -266,18 +266,19 @@ to perform Secret Manager actions in the target project.
 
 ## Security
 
-You can allow or restrict access to secrets based on IAM
-[conditions](https://cloud.google.com/iam/docs/conditions-resource-attributes#resource-name)
-against the fully qualified resource name.
+You can allow or restrict access to secrets based on
+[IAM conditions](https://cloud.google.com/iam/docs/conditions-resource-attributes#resource-name)
+against the fully-qualified resource name.
 
-<Tip title="Use the project number not the project ID">
+<Tip title="Use the project number, not the project ID">
 
-  For Vault secrets, a fully qualified resource name must have the format:
+  For Secret Manager secrets in GCP, a fully-qualified resource name must have the following format:
 
   `projects/<project_number>/secrets/<secret_name>`
 
   The project **number** is not the same as the project **ID**. Project numbers
-  are **numeric** while project IDs are **alphanumeric**.
+  are **numeric** while project IDs are **alphanumeric**. They can be found on
+  the Project info panel on the web dashboard.
 
 </Tip>
 
@@ -292,8 +293,8 @@ name with the `startsWith` condition:
 
   </CodeBlockConfig>
 
-Likewise, is it recommended to add a negative condition on other write-access role bindings not used by Vault to secrets to prevent
-out-of-band overwrites. This is done simply by applying the inverse to the same condition:
+To prevent out-of-band overwrites, we recommend adding a negative condition on
+all write-access role bindings not used by Vault:
 
   <CodeBlockConfig hideClipboard>
 
