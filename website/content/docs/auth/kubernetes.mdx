@@ -379,8 +379,8 @@ vault policy write env-tmpl env-tmpl.hcl
 
 #### Create a Kubernetes role with the templated ACL policy
 
-This allows users that login as the `env-reader` role to read at the secret path
-described in the `env-tmpl` policy.
+The Kubernetes role lets users login as the `env-reader` role to read from the
+secret path described in the `env-tmpl` policy.
 
 ```bash
 vault write auth/kubernetes/role/env-reader bound_service_account_names=app
