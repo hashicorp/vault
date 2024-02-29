@@ -1182,7 +1182,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 				},
 				"migrate": {
 					Type:        framework.TypeBool,
-					Description: "Available in 1.0 - Used to migrate the seal from shamir to autoseal or autoseal to shamir. Must be provided on all unseal key calls.",
+					Description: "Used to migrate the seal from shamir to autoseal or autoseal to shamir. Must be provided on all unseal key calls.",
 				},
 			},
 
