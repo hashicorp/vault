@@ -6,7 +6,6 @@
 package audit
 
 import (
-	"os"
 	"testing"
 
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
@@ -21,19 +20,17 @@ func TestAuditFilteringInCE(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Attempt to create an audit device with filtering enabled.
-	tempDir := t.TempDir()
-	mountPointFilterLogFile, err := os.CreateTemp(tempDir, "")
 	mountPointFilterDevicePath := "mountpoint"
 	mountPointFilterDeviceData := map[string]any{
 		"type":        "file",
 		"description": "",
 		"local":       false,
 		"options": map[string]any{
-			"file_path": mountPointFilterLogFile.Name(),
+			"file_path": "/tmp/audit.log",
 			"filter":    "mount_point == secret/",
 		},
 	}
-	_, err = client.Logical().Write("sys/audit/"+mountPointFilterDevicePath, mountPointFilterDeviceData)
+	_, err := client.Logical().Write("sys/audit/"+mountPointFilterDevicePath, mountPointFilterDeviceData)
 	require.Error(t, err)
 	require.ErrorContains(t, err, "enterprise-only options supplied")
 
@@ -50,19 +47,17 @@ func TestAuditFilteringFallbackDeviceInCE(t *testing.T) {
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
-	tempDir := t.TempDir()
-	fallbackLogFile, err := os.CreateTemp(tempDir, "")
 	fallbackDevicePath := "fallback"
 	fallbackDeviceData := map[string]any{
 		"type":        "file",
 		"description": "",
 		"local":       false,
 		"options": map[string]any{
-			"file_path": fallbackLogFile.Name(),
+			"file_path": "/tmp/audit.log",
 			"fallback":  "true",
 		},
 	}
-	_, err = client.Logical().Write("sys/audit/"+fallbackDevicePath, fallbackDeviceData)
+	_, err := client.Logical().Write("sys/audit/"+fallbackDevicePath, fallbackDeviceData)
 	require.Error(t, err)
 	require.ErrorContains(t, err, "enterprise-only options supplied")
 
