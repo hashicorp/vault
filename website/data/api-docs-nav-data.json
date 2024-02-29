@@ -762,6 +762,10 @@
         "path": "system/version-history"
       },
       {
+        "title": "<code>/sys/well-known</code>",
+        "path": "system/well-known"
+      },
+      {
         "title": "<code>/sys/wrapping/lookup</code>",
         "path": "system/wrapping-lookup"
       },
