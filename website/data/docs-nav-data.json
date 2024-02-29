@@ -304,6 +304,11 @@
       },
       {
         "title": "<code>replication</code>",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "configuration/replication"
       },
       {
