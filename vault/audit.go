@@ -420,6 +420,7 @@ func (c *Core) setupAudits(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	c.auditBroker = broker
 
 	var successCount int
 
@@ -463,7 +464,6 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		return errLoadAuditFailed
 	}
 
-	c.auditBroker = broker
 	c.AddLogger(brokerLogger)
 	return nil
 }
