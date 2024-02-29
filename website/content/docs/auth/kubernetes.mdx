@@ -328,13 +328,16 @@ Refer to the following workflow examples for Kubernetes auth method usage:
 
 ### Working with templated policies
 
-When configuring Kubernetes auth, you can set `use_annotations_as_alias_metadata=true`
-to use Kubernetes Service Account annotations for
-[Vault alias](/vault/docs/concepts/identity#entities-and-aliases) metadata. This will
-allow you to utilize the `identity.entity.aliases.<mount accessor>.metadata.<metadata key>`
-templating parameter in creating
-[templated policies](/vault/docs/concepts/policies#templated-policies). Note that
-Vault will need permission to read service accounts from the Kubernetes API.
+Set `use_annotations_as_alias_metadata=true` in your Kubernetes auth
+configuration to use Kubernetes Service Account annotations for
+[Vault alias](/vault/docs/concepts/identity#entities-and-aliases) metadata.
+
+When `use_annotations_as_alias_metadata` is true, you can also use the
+`identity.entity.aliases.<mount accessor>.metadata.<metadata key>` template
+parameter when you create [templated policies](/vault/docs/concepts/policies#templated-policies).
+
+To use annotations as alias metadata, you must give Vault permission to read
+service accounts from the Kubernetes API.
 
 #### Scenario Introduction
 
