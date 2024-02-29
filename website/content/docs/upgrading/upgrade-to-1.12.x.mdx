@@ -183,7 +183,7 @@ Affects version 1.12.3. A fix will be released in 1.12.4.
 
 @include 'tokenization-rotation-persistence.mdx'
 
-@include 'ocsp-redirect.mdx'
+@include 'known-issuers/ocsp-redirect.mdx'
 
 ### LDAP pagination issue
 
@@ -202,8 +202,8 @@ Affects Vault 1.12.6.
 
 ### Slow startup time when storing PKI certificates
 
-There was a regression introduced in 1.12.0 where Vault is slow to start because the 
-PKI secret engine performs a list operation on the stored certificates. If a large number 
+There was a regression introduced in 1.12.0 where Vault is slow to start because the
+PKI secret engine performs a list operation on the stored certificates. If a large number
 of certificates are stored this can cause long start times on active and standby nodes.
 
 There is currently no workaround for this other than limiting the number of certificates stored
