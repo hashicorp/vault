@@ -66,10 +66,10 @@ ignore the locally configured version. See the
 If no version is specified when creating a new mount, the following precedence is used
 for any available plugins whose type and name match:
 
-* The pinned version of the plugin, if any exists.
-* The plugin registered with no version.
-* The plugin with the most recent semantic version among any registered versions.
-* The plugin built into Vault.
+1. The pinned version of the plugin, if any exists.
+1. The plugin registered with no version.
+1. The plugin with the most recent semantic version among any registered versions.
+1. The plugin built into Vault.
 
 ### Built-In versions
 
