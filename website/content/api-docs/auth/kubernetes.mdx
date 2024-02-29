@@ -143,7 +143,7 @@ entities attempting to login.
   namespaces allowed to access this role. Accepts either a JSON or YAML object. The value
   should be of type
   [LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#labelselector-v1-meta). Currently, label selectors with `matchExpressions` are not supported.
-  **IMPORTANT NOTE** If this parameter is used, the Vault requires permissions to read namespaces on the Kubernetes
+  To use label selectors, **Vault must have permission to read namespaces** on the Kubernetes
   cluster. If set with `bound_service_account_namespaces`, the conditions are `OR`ed.
 - `audience` `(string: "")` - Optional Audience claim to verify in the JWT.
 - `alias_name_source` `(string: "serviceaccount_uid")` - Configures how identity aliases are generated.
