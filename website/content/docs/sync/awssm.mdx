@@ -165,8 +165,8 @@ modifying secrets that were not created by a sync operation:
 
   </CodeBlockConfig>
 
-Likewise, is it recommended to add a negative condition on other write-access policies not used by Vault to secrets to prevent
-out-of-band overwrites:
+To prevent out-of-band overwrites, we recommend adding a negative condition on
+all write-access policies not used by Vault:
 
   <CodeBlockConfig hideClipboard>
 
