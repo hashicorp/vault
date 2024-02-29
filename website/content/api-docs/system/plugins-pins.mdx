@@ -7,9 +7,11 @@ description: The `/sys/plugins/pins` endpoint is used to manage pinned plugin ve
 # `/sys/plugins/pins`
 
 Use the `/sys/plugins/pins` endpoint to read, create, update, and delete pinned
-plugin versions in Vault's catalog. When a pinned version is in effect, all
-plugins that Vault starts of a specific name and type will use the specified
-version, even if the mount is configured with a different specific version.
+plugin versions in your Vault catalog.
+
+When you pin a plugin version, Vault starts all instances of that name and type
+with the configured version, even if the mount was originally configured with a
+different version.
 
 Plugin versions must be registered before being pinned, and a version pin must be
 deleted before that plugin version can be deleted. Note that pinning a version
