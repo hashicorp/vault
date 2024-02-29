@@ -7,9 +7,10 @@
 // contains getters that filter and extract data from activity model for use in charts
 
 import Component from '@glimmer/component';
-import { isAfter, isBefore, isSameMonth, fromUnixTime } from 'date-fns';
+import { isSameMonth, fromUnixTime } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { calculateAverage } from 'vault/utils/chart-helpers';
+import { filterVersionHistory } from 'core/utils/client-count-utils';
 
 import type ClientsActivityModel from 'vault/models/clients/activity';
 import type {
@@ -18,7 +19,6 @@ import type {
   ClientActivityResourceByKey,
 } from 'vault/models/clients/activity';
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
-import type VersionHistoryModel from 'vault/models/clients/version-history';
 
 interface Args {
   activity: ClientsActivityModel;
@@ -115,33 +115,7 @@ export default class ClientsActivityComponent extends Component<Args> {
 
   get upgradesDuringActivity() {
     const { versionHistory, activity } = this.args;
-    if (versionHistory) {
-      // array of noteworthy upgrades from version history (1.9 and/or 1.10)
-      const upgrades = versionHistory.reduce(
-        (array: Array<VersionHistoryModel>, data: VersionHistoryModel) => {
-          const matchVersion = (v: string) =>
-            // only add first match, disregard subsequent patch releases of the same version
-            data.version.match(v) && !array.some((d) => d.version.match(v));
-
-          if (matchVersion('1.9')) array.push(data);
-          if (matchVersion('1.10')) array.push(data);
-          // TODO add 1.16, but only include if user has opted in to secret sync feature
-          return array;
-        },
-        []
-      );
-
-      // if there are noteworthy upgrades, only return those during queried date range
-      if (upgrades.length) {
-        const activityStart = parseAPITimestamp(activity.startTime) as Date;
-        const activityEnd = parseAPITimestamp(activity.endTime) as Date;
-        return upgrades.filter(({ timestampInstalled }) => {
-          const upgradeDate = parseAPITimestamp(timestampInstalled) as Date;
-          return isAfter(upgradeDate, activityStart) && isBefore(upgradeDate, activityEnd);
-        });
-      }
-    }
-    return [];
+    return filterVersionHistory(versionHistory, activity);
   }
 
   // (object) single month new client data with total counts + array of namespace breakdown
