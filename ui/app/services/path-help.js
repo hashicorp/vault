@@ -28,16 +28,17 @@ import {
   reducePathsByPathName,
 } from 'vault/utils/openapi-helpers';
 
-export default Service.extend({
-  attrs: null,
-  dynamicApiPath: '',
+export default class PathHelpService extends Service {
+  attrs = null;
+  dynamicApiPath = '';
+
   ajax(url, options = {}) {
     const appAdapter = getOwner(this).lookup(`adapter:application`);
     const { data } = options;
     return appAdapter.ajax(url, 'GET', {
       data,
     });
-  },
+  }
 
   /**
    * getNewModel instantiates models which use OpenAPI fully or partially
@@ -106,7 +107,7 @@ export default Service.extend({
         // TODO: we should handle the error better here
         console.error(err); // eslint-disable-line
       });
-  },
+  }
 
   /**
    * getPaths is used to fetch all the openAPI paths available for an auth method,
@@ -135,7 +136,7 @@ export default Service.extend({
         itemID,
       });
     });
-  },
+  }
 
   // Makes a call to grab the OpenAPI document.
   // Returns relevant information from OpenAPI
@@ -185,7 +186,7 @@ export default Service.extend({
       const newProps = { ...paramProp, ...props };
       return expandOpenApiProps(newProps);
     });
-  },
+  }
 
   getNewAdapter(pathInfo, itemType) {
     // we need list and create paths to set the correct urls for actions
@@ -244,7 +245,7 @@ export default Service.extend({
       },
 
       createRecord(store, type, snapshot) {
-        return this._super(...arguments).then((response) => {
+        return super.createRecord(...arguments).then((response) => {
           // if the server does not return an id and one has not been set on the model we need to set it manually from the mutableId value
           if (!response?.id && !snapshot.record.id) {
             snapshot.record.id = snapshot.record.mutableId;
@@ -254,7 +255,7 @@ export default Service.extend({
         });
       },
     });
-  },
+  }
 
   registerNewModelWithProps(helpUrl, backend, newModel, modelName) {
     return this.getProps(helpUrl, backend).then((props) => {
@@ -282,9 +283,8 @@ export default Service.extend({
               }
               return obj;
             }, {});
-            @withModelValidations(validations)
-            class GeneratedItemModel extends newModel {}
-            newModel = GeneratedItemModel;
+
+            newModel = withModelValidations(validations)(class GeneratedItemModel extends newModel {});
           }
         }
       } catch (err) {
@@ -306,7 +306,7 @@ export default Service.extend({
       owner.unregister(modelName);
       owner.register(modelName, newModel);
     });
-  },
+  }
   getFieldGroups(newModel) {
     const groups = {
       default: [],
@@ -330,5 +330,5 @@ export default Service.extend({
       fieldGroups.push({ [group]: groups[group] });
     }
     return fieldToAttrs(newModel, fieldGroups);
-  },
-});
+  }
+}
