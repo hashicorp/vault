@@ -20,7 +20,7 @@ import { capitalize } from '@ember/string';
 import { computed } from '@ember/object'; // eslint-disable-line
 import { withModelValidations } from 'vault/decorators/model-validations';
 
-import generatedItemAdapter from 'vault/adapters/generated-item-list';
+import GeneratedItemAdapter from 'vault/adapters/generated-item-list';
 import { sanitizePath } from 'core/utils/sanitize-path';
 import {
   filterPathsByItemType,
@@ -198,7 +198,7 @@ export default class PathHelpService extends Service {
     const createPath = paths.find((path) => path.action === 'Create' || path.operations.includes('post'));
     const deletePath = paths.find((path) => path.operations.includes('delete'));
 
-    return generatedItemAdapter.extend({
+    return class NewAdapter extends GeneratedItemAdapter {
       urlForItem(id, isList, dynamicApiPath) {
         const itemType = sanitizePath(getPath.path);
         let url;
@@ -220,27 +220,27 @@ export default class PathHelpService extends Service {
         }
 
         return url;
-      },
+      }
 
       urlForQueryRecord(id, modelName) {
         return this.urlForItem(id, modelName);
-      },
+      }
 
       urlForUpdateRecord(id) {
         const itemType = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${itemType}/${id}`;
-      },
+      }
 
       urlForCreateRecord(modelType, snapshot) {
         const id = snapshot.record.mutableId; // computed property that returns either id or private settable _id value
         const path = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
-      },
+      }
 
       urlForDeleteRecord(id) {
         const path = deletePath.path.slice(1, deletePath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
-      },
+      }
 
       createRecord(store, type, snapshot) {
         return super.createRecord(...arguments).then((response) => {
@@ -251,8 +251,8 @@ export default class PathHelpService extends Service {
           }
           return response;
         });
-      },
-    });
+      }
+    };
   }
 
   registerNewModelWithProps(helpUrl, backend, newModel, modelName) {
