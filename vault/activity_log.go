@@ -2247,7 +2247,6 @@ func (a *ActivityLog) writePrecomputedQuery(ctx context.Context, segmentTime tim
 
 	// the byNamespace map also needs to be transformed into a protobuf
 	pq.Namespaces = a.transformALNamespaceBreakdowns(opts.byNamespace)
-
 	err := a.queryStore.Put(ctx, pq)
 	if err != nil {
 		a.logger.Warn("failed to store precomputed query", "error", err)
@@ -2316,11 +2315,27 @@ func (a *ActivityLog) segmentToPrecomputedQuery(ctx context.Context, segmentTime
 		a.breakdownTokenSegment(token, opts.byNamespace)
 	}
 
-	// write metrics
+	// handle metrics reporting
+	a.reportPrecomputedQueryMetrics(ctx, segmentTime, opts)
+
+	// convert the maps to the proper format and write them as precomputed queries
+	return a.writePrecomputedQuery(ctx, segmentTime, opts)
+}
+
+func (a *ActivityLog) reportPrecomputedQueryMetrics(ctx context.Context, segmentTime time.Time, opts pqOptions) {
+	if segmentTime != opts.activePeriodEnd && segmentTime != opts.activePeriodStart {
+		return
+	}
+	// we don't want to introduce any new namespaced metrics. For secret sync
+	// (and all newer client types) we'll instead keep maps of the total
+	summedMetricsMonthly := make(map[string]int)
+	summedMetricsReporting := make(map[string]int)
+
 	for nsID, entry := range opts.byNamespace {
 		// If this is the most recent month, or the start of the reporting period, output
 		// a metric for each namespace.
-		if segmentTime == opts.activePeriodEnd {
+		switch segmentTime {
+		case opts.activePeriodEnd:
 			a.metrics.SetGaugeWithLabels(
 				[]string{"identity", "entity", "active", "monthly"},
 				float32(entry.Counts.countByType(entityActivityType)),
@@ -2335,7 +2350,8 @@ func (a *ActivityLog) segmentToPrecomputedQuery(ctx context.Context, segmentTime
 					{Name: "namespace", Value: a.namespaceToLabel(ctx, nsID)},
 				},
 			)
-		} else if segmentTime == opts.activePeriodStart {
+			summedMetricsMonthly[secretSyncActivityType] += entry.Counts.countByType(secretSyncActivityType)
+		case opts.activePeriodStart:
 			a.metrics.SetGaugeWithLabels(
 				[]string{"identity", "entity", "active", "reporting_period"},
 				float32(entry.Counts.countByType(entityActivityType)),
@@ -2350,11 +2366,16 @@ func (a *ActivityLog) segmentToPrecomputedQuery(ctx context.Context, segmentTime
 					{Name: "namespace", Value: a.namespaceToLabel(ctx, nsID)},
 				},
 			)
+			summedMetricsReporting[secretSyncActivityType] += entry.Counts.countByType(secretSyncActivityType)
 		}
 	}
 
-	// convert the maps to the proper format and write them as precomputed queries
-	return a.writePrecomputedQuery(ctx, segmentTime, opts)
+	for clientType, count := range summedMetricsMonthly {
+		a.metrics.SetGauge([]string{"identity", strings.ReplaceAll(clientType, "-", ""), "active", "monthly"}, float32(count))
+	}
+	for clientType, count := range summedMetricsReporting {
+		a.metrics.SetGauge([]string{"identity", strings.ReplaceAll(clientType, "-", ""), "active", "reporting_period"}, float32(count))
+	}
 }
 
 // goroutine to process the request in the intent log, creating precomputed queries.
