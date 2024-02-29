@@ -266,10 +266,20 @@ to perform Secret Manager actions in the target project.
 
 ## Security
 
-Access to secrets can be allowed or restricted through the use of their
-[resource names by using conditions](https://cloud.google.com/iam/docs/conditions-resource-attributes#resource-name). For secrets,
-the fully qualified resource name is required in the format of `projects/<project_number>/secrets/<secret_name>` Take note that
-this requires the project _number_, not the project _ID_.
+You can allow or restrict access to secrets based on IAM
+[conditions](https://cloud.google.com/iam/docs/conditions-resource-attributes#resource-name)
+against the fully qualified resource name.
+
+<Tip title="Use the project number not the project ID">
+
+  For Vault secrets, a fully qualified resource name must have the format:
+
+  `projects/<project_number>/secrets/<secret_name>`
+
+  The project **number** is not the same as the project **ID**. Project numbers
+  are **numeric** while project IDs are **alphanumeric**.
+
+</Tip>
 
 For example, if the default secret name template is used, which prepends the word `vault` to the beginning of secret names,
 then following Role binding condition using `startsWith` will prevent Vault from being able to modify secrets that were not created
