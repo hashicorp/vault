@@ -1,0 +1,3 @@
+```release-note:improvement
+core/metrics (enterprise): add metrics for secret sync client count 
+```
