@@ -139,8 +139,9 @@ the secret or the association in Vault will delete the secret in your AWS accoun
 
 ## Security
 
-Access to secrets can be allowed or restricted through the use of AWS Resource Tags attached to secrets. For example, the
-following AWS IAM policy prevents Vault from being able to modify secrets that were not created by a sync operation:
+You can allow or restrict access to secrets by attaching the AWS Resource Tags
+to secrets. For example, the following AWS IAM policy prevents Vault from
+modifying secrets that were not created by a sync operation:
 
   <CodeBlockConfig hideClipboard>
 
