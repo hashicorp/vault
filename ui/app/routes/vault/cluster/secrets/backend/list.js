@@ -69,7 +69,7 @@ export default Route.extend({
     const secretEngine = this.store.peekRecord('secret-engine', backend);
     const type = secretEngine?.engineType;
     assert('secretEngine.engineType is not defined', !!type);
-    const engineRoute = allEngines().findBy('type', type)?.engineRoute;
+    const engineRoute = allEngines().find((engine) => engine.type === type)?.engineRoute;
 
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
       return this.router.transitionTo('vault.cluster.secrets');

@@ -112,6 +112,10 @@
                 "path": "internals/telemetry/metrics/raft"
               },
               {
+                "title": "Secrets Sync metrics",
+                "path": "internals/telemetry/metrics/secrets-sync"
+              },
+              {
                 "title": "Secrets metrics",
                 "path": "internals/telemetry/metrics/secrets"
               },
@@ -172,6 +176,10 @@
       {
         "title": "Lease Explosions",
         "path": "concepts/lease-explosions"
+      },
+      {
+        "title": "Lease count quota exceeded",
+        "path": "concepts/lease-count-quota-exceeded"
       },
       {
         "title": "Authentication",
@@ -275,7 +283,7 @@
         "title": "Events",
         "path": "concepts/events",
         "badge": {
-          "text": "BETA",
+          "text": "ENTERPRISE",
           "type": "outlined",
           "color": "highlight"
         }
@@ -290,6 +298,29 @@
           {
             "title": "Audit Filtering",
             "path": "concepts/filtering/audit"
+          }
+        ]
+      },
+      {
+        "title": "Request Limiter",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "concepts/request-limiter",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            }
+          },
+          {
+            "title": "Vault server temporarily overloaded",
+            "path": "concepts/request-limiter/vault-server-temporarily-overloaded"
           }
         ]
       }
@@ -321,6 +352,11 @@
       },
       {
         "title": "<code>replication</code>",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "configuration/replication"
       },
       {
@@ -499,6 +535,10 @@
       {
         "title": "<code>telemetry</code>",
         "path": "configuration/telemetry"
+      },
+      {
+        "title": "<code>Request Limiter</code>",
+        "path": "configuration/request-limiter"
       },
       {
         "title": "<code>ui</code>",
@@ -1036,6 +1076,24 @@
     ]
   },
   {
+    "title": "Vault UI",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "ui"
+      },
+      {
+        "title": "Custom Messages",
+        "path": "ui/custom-messages",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      }
+    ]
+  },
+  {
     "title": "Vault Agent and Vault Proxy",
     "routes": [
       {
@@ -1145,7 +1203,12 @@
               },
               {
                 "title": "Static Secret Caching",
-                "path": "agent-and-proxy/proxy/caching/static-secret-caching"
+                "path": "agent-and-proxy/proxy/caching/static-secret-caching",
+                "badge": {
+                  "text": "ENTERPRISE",
+                  "type": "outlined",
+                  "color": "neutral"
+                }
               },
               {
                 "title": "Persistent Caching",
@@ -2170,6 +2233,10 @@
         "path": "upgrading/plugins"
       },
       {
+        "title": "Upgrade to 1.16.x",
+        "path": "upgrading/upgrade-to-1.16.x"
+      },
+      {
         "title": "Upgrade to 1.15.x",
         "path": "upgrading/upgrade-to-1.15.x"
       },
@@ -2420,6 +2487,10 @@
       {
         "title": "Overview",
         "path": "release-notes"
+      },
+      {
+        "title": "1.16.0",
+        "path": "release-notes/1.16.0"
       },
       {
         "title": "1.15.0",

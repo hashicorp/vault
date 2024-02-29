@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { assign } from '@ember/polyfills';
 import { allSettled } from 'rsvp';
 import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
@@ -85,7 +84,7 @@ export default ApplicationAdapter.extend({
             };
             delete d.templates;
           }
-          resp.data = assign({}, resp.data, d);
+          resp.data = { ...resp.data, ...d };
         }
       });
       return resp;
