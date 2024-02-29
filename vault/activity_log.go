@@ -2371,10 +2371,10 @@ func (a *ActivityLog) reportPrecomputedQueryMetrics(ctx context.Context, segment
 	}
 
 	for clientType, count := range summedMetricsMonthly {
-		a.metrics.SetGauge([]string{"identity", strings.ReplaceAll(clientType, "-", ""), "active", "monthly"}, float32(count))
+		a.metrics.SetGauge([]string{"identity", strings.ReplaceAll(clientType, "-", "_"), "active", "monthly"}, float32(count))
 	}
 	for clientType, count := range summedMetricsReporting {
-		a.metrics.SetGauge([]string{"identity", strings.ReplaceAll(clientType, "-", ""), "active", "reporting_period"}, float32(count))
+		a.metrics.SetGauge([]string{"identity", strings.ReplaceAll(clientType, "-", "_"), "active", "reporting_period"}, float32(count))
 	}
 }
 

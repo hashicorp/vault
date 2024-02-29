@@ -4907,10 +4907,10 @@ func TestActivityLog_reportPrecomputedQueryMetrics(t *testing.T) {
 		data := metricsSink.Data()
 		hasNoMetric(t, data, "identity.entity.active.monthly")
 		hasNoMetric(t, data, "identity.nonentity.active.monthly")
-		hasNoMetric(t, data, "identity.secretsync.active.monthly")
+		hasNoMetric(t, data, "identity.secret_sync.active.monthly")
 		hasNoMetric(t, data, "identity.entity.active.reporting_period")
 		hasNoMetric(t, data, "identity.entity.active.reporting_period")
-		hasNoMetric(t, data, "identity.secretsync.active.reporting_period")
+		hasNoMetric(t, data, "identity.secret_sync.active.reporting_period")
 	})
 	t.Run("monthly metric", func(t *testing.T) {
 		// activePeriodEnd is equal to the segment time, indicating that monthly
@@ -4930,7 +4930,7 @@ func TestActivityLog_reportPrecomputedQueryMetrics(t *testing.T) {
 		}
 		// secret sync metrics should be the sum of clients across all
 		// namespaces
-		hasMetric(t, data, "identity.secretsync.active.monthly", 3, nil)
+		hasMetric(t, data, "identity.secret_sync.active.monthly", 3, nil)
 	})
 	t.Run("reporting period metric", func(t *testing.T) {
 		// activePeriodEnd is not equal to the segment time but activePeriodStart
@@ -4951,6 +4951,6 @@ func TestActivityLog_reportPrecomputedQueryMetrics(t *testing.T) {
 		}
 		// secret sync metrics should be the sum of clients across all
 		// namespaces
-		hasMetric(t, data, "identity.secretsync.active.reporting_period", 3, nil)
+		hasMetric(t, data, "identity.secret_sync.active.reporting_period", 3, nil)
 	})
 }
