@@ -111,11 +111,22 @@
         <Hds::Button @text="Export" {{on "click" (fn this.exportChartData this.formattedCsvFileName)}} />
         <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
       </Hds::ButtonSet>
-      {{#if @upgradeExplanation}}
+      {{#if @upgradesDuringActivity}}
         <Hds::Alert class="has-top-padding-m" @type="compact" @color="warning" as |A|>
           <A.Description>
-            <strong>Your data contains an upgrade.</strong>
-            {{@upgradeExplanation}}
+            <strong>Your data contains {{pluralize @upgradesDuringActivity.length "upgrade"}}:</strong>
+          </A.Description>
+          <A.Description>
+            <ul class="bullet">
+              {{#each @upgradesDuringActivity as |upgrade|}}
+                <li>
+                  {{upgrade.version}}
+                  {{date-format upgrade.timestampInstalled "(MMM d, yyyy)"}}
+                </li>
+              {{/each}}
+            </ul>
+          </A.Description>
+          <A.Description>
             Visit our
             <Hds::Link::Inline
               @icon="docs-link"

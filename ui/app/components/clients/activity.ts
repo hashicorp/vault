@@ -18,6 +18,7 @@ import type {
   ClientActivityResourceByKey,
 } from 'vault/models/clients/activity';
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
+import type VersionHistoryModel from 'vault/models/clients/version-history';
 
 interface Args {
   activity: ClientsActivityModel;
@@ -112,25 +113,35 @@ export default class ClientsActivityComponent extends Component<Args> {
     return namespace ? this.filteredActivity : activity.total;
   }
 
-  get upgradeDuringActivity() {
+  get upgradesDuringActivity() {
     const { versionHistory, activity } = this.args;
     if (versionHistory) {
-      // filter for upgrade data of noteworthy upgrades (1.9 and/or 1.10)
-      const upgradeVersionHistory = versionHistory.filter(
-        ({ version }) => version.match('1.9') || version.match('1.10')
+      // array of noteworthy upgrades from version history (1.9 and/or 1.10)
+      const upgrades = versionHistory.reduce(
+        (array: Array<VersionHistoryModel>, data: VersionHistoryModel) => {
+          const matchVersion = (v: string) =>
+            // only add first match, disregard subsequent patch releases of the same version
+            data.version.match(v) && !array.some((d) => d.version.match(v));
+
+          if (matchVersion('1.9')) array.push(data);
+          if (matchVersion('1.10')) array.push(data);
+          // TODO add 1.16, but only include if user has opted in to secret sync feature
+          return array;
+        },
+        []
       );
-      if (upgradeVersionHistory.length) {
+
+      // if there are noteworthy upgrades, only return those during queried date range
+      if (upgrades.length) {
         const activityStart = parseAPITimestamp(activity.startTime) as Date;
         const activityEnd = parseAPITimestamp(activity.endTime) as Date;
-        // filter and return all upgrades that happened within date range of queried activity
-        const upgradesWithinData = upgradeVersionHistory.filter(({ timestampInstalled }) => {
+        return upgrades.filter(({ timestampInstalled }) => {
           const upgradeDate = parseAPITimestamp(timestampInstalled) as Date;
           return isAfter(upgradeDate, activityStart) && isBefore(upgradeDate, activityEnd);
         });
-        return upgradesWithinData.length === 0 ? null : upgradesWithinData;
       }
     }
-    return null;
+    return [];
   }
 
   // (object) single month new client data with total counts + array of namespace breakdown
@@ -177,22 +188,5 @@ export default class ClientsActivityComponent extends Component<Args> {
     }
 
     return false;
-  }
-
-  get upgradeExplanation() {
-    if (this.upgradeDuringActivity) {
-      if (this.upgradeDuringActivity.length === 1) {
-        const version = this.upgradeDuringActivity[0]?.version || '';
-        if (version.match('1.9')) {
-          return ' How we count clients changed in 1.9, so keep that in mind when looking at the data.';
-        }
-        if (version.match('1.10')) {
-          return ' We added monthly breakdowns and mount level attribution starting in 1.10, so keep that in mind when looking at the data.';
-        }
-      }
-      // return combined explanation if spans multiple upgrades
-      return ' How we count clients changed in 1.9 and we added monthly breakdowns and mount level attribution starting in 1.10. Keep this in mind when looking at the data.';
-    }
-    return null;
   }
 }
