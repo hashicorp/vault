@@ -9,13 +9,13 @@
   has less (or no) information about.
 */
 import Model from '@ember-data/model';
-import Service from '@ember/service';
+import Service, { service } from '@ember/service';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { getOwner } from '@ember/application';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve, reject } from 'rsvp';
-import { debug } from '@ember/debug';
+import { assert, debug } from '@ember/debug';
 import { capitalize } from '@ember/string';
 import { computed } from '@ember/object'; // eslint-disable-line
 import { withModelValidations } from 'vault/decorators/model-validations';
@@ -29,8 +29,7 @@ import {
 } from 'vault/utils/openapi-helpers';
 
 export default class PathHelpService extends Service {
-  attrs = null;
-  dynamicApiPath = '';
+  @service store;
 
   ajax(url, options = {}) {
     const appAdapter = getOwner(this).lookup(`adapter:application`);
@@ -50,9 +49,7 @@ export default class PathHelpService extends Service {
    */
   getNewModel(modelType, backend, apiPath, itemType) {
     const owner = getOwner(this);
-    const modelName = `model:${modelType}`;
-
-    const modelFactory = owner.factoryFor(modelName);
+    const modelFactory = owner.factoryFor(`model:${modelType}`);
     let newModel, helpUrl;
     // if we have a factory, we need to take the existing model into account
     if (modelFactory) {
@@ -64,9 +61,10 @@ export default class PathHelpService extends Service {
       }
 
       helpUrl = modelProto.getHelpUrl(backend);
-      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
+      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelType);
     } else {
       debug(`Creating new Model for ${modelType}`);
+      // this.store.registerSchema();
       newModel = Model.extend({});
     }
 
@@ -74,7 +72,7 @@ export default class PathHelpService extends Service {
     // and we don't need paths for them yet
     if (!apiPath) {
       helpUrl = newModel.proto().getHelpUrl(backend);
-      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
+      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelType);
     }
 
     // use paths to dynamically create our openapi help url
@@ -101,7 +99,7 @@ export default class PathHelpService extends Service {
         helpUrl = `/v1/${apiPath}${path.slice(1)}?help=true` || newModel.proto().getHelpUrl(backend);
         pathInfo.paths = paths;
         newModel = newModel.extend({ paths: pathInfo });
-        return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
+        return this.registerNewModelWithProps(helpUrl, backend, newModel, modelType);
       })
       .catch((err) => {
         // TODO: we should handle the error better here
@@ -258,6 +256,7 @@ export default class PathHelpService extends Service {
   }
 
   registerNewModelWithProps(helpUrl, backend, newModel, modelName) {
+    assert('modelName should not include the type prefix', modelName.includes(':') === false);
     return this.getProps(helpUrl, backend).then((props) => {
       const { attrs, newFields } = combineAttributes(newModel.attributes, props);
       const owner = getOwner(this);
@@ -303,8 +302,8 @@ export default class PathHelpService extends Service {
         }),
       });
       newModel.reopenClass({ merged: true });
-      owner.unregister(modelName);
-      owner.register(modelName, newModel);
+      owner.unregister(`model:${modelName}`);
+      owner.register(`model:${modelName}`, newModel);
     });
   }
   getFieldGroups(newModel) {
