@@ -6,11 +6,11 @@ description: The `/sys/well-known` endpoint is used to list and read registered 
 
 # `/sys/well-known`
 
-The `/sys/well-known` endpoint is used to list and read the registered labels within the server's .well-known/ path prefix
+Use the `/sys/well-known` endpoint to list and read registered labels on the `.well-known/` path prefix for your Vault instance.
 
 ## List well-known
 
-This endpoint lists all registered labels.
+List all registered labels.
 
 | Method | Path              |
 |:-------|:------------------|
@@ -44,7 +44,7 @@ $ curl \
 
 ## Read well-known
 
-This endpoint retrieves the information around a specific registered label
+Retrieve information for the specified label.
 
 | Method | Path                     |
 | :----- |:-------------------------|
@@ -52,8 +52,7 @@ This endpoint retrieves the information around a specific registered label
 
 ### Parameters
 
-- `label` `(string: <required>)` – Specifies the registered label to lookup
-  This is specified as part of the request URL.
+- `label` `(string: <required>)` – URL path parameter specifying the registered label to fetch.
 
 ### Sample request
 
