@@ -4,7 +4,7 @@
  */
 
 // This cannot be called kv-metadata because mirage checks for plural factory names, and metadata and data are considered plural. It will throw an error.
-import { Factory, trait } from 'ember-cli-mirage';
+import { Factory, trait } from 'miragejs';
 
 // define data outside of factory for linting error: https://github.com/ember-cli/eslint-plugin-ember/issues/202#issuecomment-356255988
 const data = {
