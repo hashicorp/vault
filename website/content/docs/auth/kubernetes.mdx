@@ -332,7 +332,7 @@ Set `use_annotations_as_alias_metadata=true` in your Kubernetes auth
 configuration to use Kubernetes Service Account annotations for
 [Vault alias](/vault/docs/concepts/identity#entities-and-aliases) metadata.
 
-When `use_annotations_as_alias_metadata` is true, you can also use the
+When `use_annotations_as_alias_metadata` is true, you can use the
 `identity.entity.aliases.<mount accessor>.metadata.<metadata key>` template
 parameter when you create [templated policies](/vault/docs/concepts/policies#templated-policies).
 
@@ -348,7 +348,7 @@ Applications can perform read operations on its allocated key/value secret path:
 
 #### Annotate Kubernetes Service Accounts with their dedicated secret paths
 
-```
+```yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -359,7 +359,7 @@ metadata:
 ```
 
 When the application, `app`, logs in with JWT for the service account, Vault
-renders  the alias metadata as `env : demo/app`
+renders the alias metadata as `env : demo/app`.
 
 #### Create a templated ACL policy
 

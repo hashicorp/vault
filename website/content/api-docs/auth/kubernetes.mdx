@@ -44,7 +44,7 @@ access the Kubernetes API.
 - `disable_local_ca_jwt` `(bool: false)` - Disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod.
 - `use_annotations_as_alias_metadata` `(bool: false)` - Use annotations from the client token's associated service account
   as alias metadata for the Vault entity. Only annotations with the
-  `vault.hashicorp.com/alias-metadata-` key prefix are targeted as metadata and
+  `vault.hashicorp.com/alias-metadata-` key prefix are targeted as alias metadata and
   your annotations must be 512 characters or less due to the Vault alias
   metadata value limit. For example, if you configure the annotation
   `vault.hashicorp.com/alias-metadata-foo`, Vault saves the string "foo" along
