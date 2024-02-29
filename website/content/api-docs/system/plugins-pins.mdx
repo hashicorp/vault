@@ -13,11 +13,14 @@ When you pin a plugin version, Vault starts all instances of that name and type
 with the configured version, even if the mount was originally configured with a
 different version.
 
-Plugin versions must be registered before being pinned, and a version pin must be
-deleted before that plugin version can be deleted. Note that pinning a version
-only updates Vault's configuration. Plugins already in use must be
-[reloaded](/vault/api-docs/system/plugins-reload) before a newly pinned version
-takes effect.
+<Note tile="Behavioral notes">
+
+- You must register a plugin version before pinning it.
+- You must delete a pin before deleting the associated plugin version.
+- You must [reload](/vault/api-docs/system/plugins-reload) any plugins currently
+  in use for the pinned version to take effect.
+
+</Note>
 
 ## Create/update pinned version
 
