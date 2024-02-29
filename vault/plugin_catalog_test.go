@@ -12,11 +12,13 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"sort"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
@@ -661,6 +663,18 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 	}
 
 	catalog := core.pluginCatalog
+
+	const pluginRuntime = "custom-runtime"
+	const ociRuntime = "runc"
+	err = catalog.runtimeCatalog.Set(context.Background(), &pluginruntimeutil.PluginRuntimeConfig{
+		Name:       pluginRuntime,
+		Type:       consts.PluginRuntimeTypeContainer,
+		OCIRuntime: ociRuntime,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tests := map[string]func(t *testing.T){
 		"set binary plugin": func(t *testing.T) {
 			file, err := os.CreateTemp(tempDir, "temp")
@@ -700,12 +714,19 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 			}
 		},
 		"set container plugin": func(t *testing.T) {
+			if runtime.GOOS != "linux" {
+				t.Skip("Containerized plugins only supported on Linux")
+			}
+
 			// Should never error.
-			const image = "does-not-exist"
+			plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, "", tempDir)
+			plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, tempDir)
+
 			err = catalog.Set(context.Background(), pluginutil.SetPluginInput{
 				Name:     "container",
 				Type:     consts.PluginTypeDatabase,
-				OCIImage: image,
+				OCIImage: plugin.Image,
+				Runtime:  pluginRuntime,
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -715,8 +736,8 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if p.OCIImage != image {
-				t.Fatalf("Expected %s, got %s", image, p.OCIImage)
+			if p.OCIImage != plugin.Image {
+				t.Fatalf("Expected %s, got %s", plugin.Image, p.OCIImage)
 			}
 			// Make sure we can still get builtins too
 			_, err = core.pluginCatalog.Get(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, "")
@@ -745,22 +766,33 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 // are returned with their container runtime config populated if it was
 // specified.
 func TestRuntimeConfigPopulatedIfSpecified(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Containerized plugins only supported on Linux")
+	}
 	core, _, _ := TestCoreUnsealed(t)
-	const image = "does-not-exist"
-	const runtime = "custom-runtime"
-	err := core.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+	tempDir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	core.pluginCatalog.directory = tempDir
+
+	plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, "", core.pluginCatalog.directory)
+	plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, core.pluginCatalog.directory)
+
+	const pluginRuntime = "custom-runtime"
+	err = core.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
 		Name:     "container",
 		Type:     consts.PluginTypeDatabase,
-		OCIImage: image,
-		Runtime:  runtime,
+		OCIImage: plugin.Image,
+		Runtime:  pluginRuntime,
 	})
 	if err == nil {
 		t.Fatal("specified runtime doesn't exist yet, should have failed")
 	}
 
-	const ociRuntime = "some-other-oci-runtime"
+	const ociRuntime = "runc"
 	err = core.pluginRuntimeCatalog.Set(context.Background(), &pluginruntimeutil.PluginRuntimeConfig{
-		Name:       runtime,
+		Name:       pluginRuntime,
 		Type:       consts.PluginRuntimeTypeContainer,
 		OCIRuntime: ociRuntime,
 	})
@@ -772,8 +804,8 @@ func TestRuntimeConfigPopulatedIfSpecified(t *testing.T) {
 	err = core.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
 		Name:     "container",
 		Type:     consts.PluginTypeDatabase,
-		OCIImage: image,
-		Runtime:  runtime,
+		OCIImage: plugin.Image,
+		Runtime:  pluginRuntime,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -783,8 +815,8 @@ func TestRuntimeConfigPopulatedIfSpecified(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.Runtime != runtime {
-		t.Errorf("expected %s, got %s", runtime, p.Runtime)
+	if p.Runtime != pluginRuntime {
+		t.Errorf("expected %s, got %s", pluginRuntime, p.Runtime)
 	}
 	if p.RuntimeConfig == nil {
 		t.Fatal()
