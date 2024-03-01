@@ -584,6 +584,10 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	if ok {
 		ctx = logical.CreateContextOriginalBody(ctx, body)
 	}
+	redactVersion, redactAddresses, redactClusterName, ok := logical.CtxRedactionSettingsValue(httpCtx)
+	if ok {
+		ctx = logical.CreateContextRedactionSettings(ctx, redactVersion, redactAddresses, redactClusterName)
+	}
 	resp, err = c.handleCancelableRequest(ctx, req)
 	req.SetTokenEntry(nil)
 	cancel()

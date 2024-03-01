@@ -7000,3 +7000,76 @@ func TestWellKnownSysApi(t *testing.T) {
 	require.NoError(t, err, "failed get well-known request")
 	require.Nil(t, resp, "response from unknown should have been nil was %v", resp)
 }
+
+// TestGetLeaderStatus_RedactionSettings verifies that the GetLeaderStatus response
+// is properly redacted based on the provided context.Context.
+func TestGetLeaderStatus_RedactionSettings(t *testing.T) {
+	testCluster := NewTestCluster(t, nil, nil)
+
+	testCluster.Start()
+	defer testCluster.Cleanup()
+
+	testCore := testCluster.Cores[0]
+
+	// Check with no redaction settings
+	resp, err := testCore.GetLeaderStatus(context.Background())
+	assert.NoError(t, err)
+	assert.NotEmpty(t, resp.LeaderAddress)
+	assert.NotEmpty(t, resp.LeaderClusterAddress)
+
+	// Check with redaction setting explicitly disabled
+	ctx := logical.CreateContextRedactionSettings(context.Background(), false, false, false)
+	resp, err = testCore.GetLeaderStatus(ctx)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, resp.LeaderAddress)
+	assert.NotEmpty(t, resp.LeaderClusterAddress)
+
+	// Check with redaction setting enabled
+	ctx = logical.CreateContextRedactionSettings(context.Background(), false, true, false)
+	resp, err = testCore.GetLeaderStatus(ctx)
+	assert.NoError(t, err)
+	assert.Empty(t, resp.LeaderAddress)
+	assert.Empty(t, resp.LeaderClusterAddress)
+}
+
+// TestGetSealStatus_RedactionSettings verifies that the GetSealStatus response
+// is properly redacted based on the provided context.Context.
+func TestGetSealStatus_RedactionSettings(t *testing.T) {
+	// This test function cannot be parallelized, because it messes with the
+	// global version.BuildDate variable.
+	oldBuildDate := version.BuildDate
+	version.BuildDate = time.Now().Format(time.RFC3339)
+	defer func() { version.BuildDate = oldBuildDate }()
+
+	testCluster := NewTestCluster(t, &CoreConfig{
+		ClusterName: "secret-cluster-name",
+	}, nil)
+
+	testCluster.Start()
+	defer testCluster.Cleanup()
+
+	testCore := testCluster.Cores[0]
+
+	// Check with no redaction settings
+	resp, err := testCore.GetSealStatus(context.Background(), false)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, resp.Version)
+	assert.NotEmpty(t, resp.BuildDate)
+	assert.NotEmpty(t, resp.ClusterName)
+
+	// Check with redaction setting explicitly disabled
+	ctx := logical.CreateContextRedactionSettings(context.Background(), false, false, false)
+	resp, err = testCore.GetSealStatus(ctx, false)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, resp.Version)
+	assert.NotEmpty(t, resp.BuildDate)
+	assert.NotEmpty(t, resp.ClusterName)
+
+	// Check with redaction setting enabled
+	ctx = logical.CreateContextRedactionSettings(context.Background(), true, false, true)
+	resp, err = testCore.GetSealStatus(ctx, false)
+	assert.NoError(t, err)
+	assert.Empty(t, resp.Version)
+	assert.Empty(t, resp.BuildDate)
+	assert.Empty(t, resp.ClusterName)
+}
