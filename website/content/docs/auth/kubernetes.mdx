@@ -76,8 +76,8 @@ management tool.
 
 1. Enable the Kubernetes auth method:
 
-  ```bash
-  vault auth enable kubernetes
+  ```shell-session
+  $ vault auth enable kubernetes
   ```
 
 1. Use the `/config` endpoint to configure Vault to talk to Kubernetes. Use
@@ -85,8 +85,8 @@ management tool.
   For the list of available configuration options, please see the
   [API documentation](/vault/api-docs/auth/kubernetes).
 
-  ```bash
-  vault write auth/kubernetes/config \
+  ```shell-session
+  $ vault write auth/kubernetes/config \
       token_reviewer_jwt="<your reviewer service account JWT>" \
       kubernetes_host=https://192.168.99.100:<your TCP port or blank for 443> \
       kubernetes_ca_cert=@ca.crt
@@ -102,8 +102,8 @@ management tool.
 
 1. Create a named role:
 
-  ```text
-  vault write auth/kubernetes/role/demo \
+  ```shell-session
+  $ vault write auth/kubernetes/role/demo \
       bound_service_account_names=myapp \
       bound_service_account_namespaces=default \
       policies=default \
@@ -179,8 +179,8 @@ short-lived tokens. To use the local token and CA certificate, omit
 Vault will attempt to load them from `token` and `ca.crt` respectively inside
 the default mount folder `/var/run/secrets/kubernetes.io/serviceaccount/`.
 
-```bash
-vault write auth/kubernetes/config \
+```shell-session
+$ vault write auth/kubernetes/config \
     kubernetes_host=https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT
 ```
 
@@ -201,12 +201,12 @@ everywhere but adds some operational overhead to maintain the cluster role
 bindings on the set of service accounts you want to be able to authenticate with
 Vault. Each client of Vault would need the `system:auth-delegator` ClusterRole:
 
-```bash
-kubectl create clusterrolebinding vault-client-auth-delegator \
-  --clusterrole=system:auth-delegator \
-  --group=group1 \
-  --serviceaccount=default:svcaccount1 \
-  ...
+```shell-session
+$ kubectl create clusterrolebinding vault-client-auth-delegator \
+    --clusterrole=system:auth-delegator \
+    --group=group1 \
+    --serviceaccount=default:svcaccount1 \
+    ...
 ```
 
 #### Continue using long-lived tokens
@@ -215,8 +215,8 @@ You can create a long-lived secret using the instructions [here][k8s-create-secr
 and use that as the `token_reviewer_jwt`. In this example, the `vault` service
 account would need the `system:auth-delegator` ClusterRole:
 
-```bash
-kubectl apply -f - <<EOF
+```shell-session
+$ kubectl apply -f - <<EOF
 apiVersion: v1
 kind: Secret
 metadata:
@@ -263,8 +263,8 @@ itself, instead of the old default of `kubernetes/serviceaccount`. If you are
 unable to check this value directly, you can run the following and look for the
 `"iss"` field to find the required value:
 
-```bash
-echo '{"apiVersion": "authentication.k8s.io/v1", "kind": "TokenRequest"}' \
+```shell-session
+$ echo '{"apiVersion": "authentication.k8s.io/v1", "kind": "TokenRequest"}' \
   | kubectl create -f- --raw /api/v1/namespaces/default/serviceaccounts/default/token \
   | jq -r '.status.token' \
   | cut -d . -f2 \
@@ -274,16 +274,16 @@ echo '{"apiVersion": "authentication.k8s.io/v1", "kind": "TokenRequest"}' \
 Most clusters will also have that information available at the
 `.well-known/openid-configuration` endpoint:
 
-```bash
-kubectl get --raw /.well-known/openid-configuration | jq -r .issuer
+```shell-session
+$ kubectl get --raw /.well-known/openid-configuration | jq -r .issuer
 ```
 
 This value is then used when configuring Kubernetes auth, e.g.:
 
-```bash
-vault write auth/kubernetes/config \
-  kubernetes_host="https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT" \
-  issuer="\"test-aks-cluster-dns-d6cbb78e.hcp.uksouth.azmk8s.io\""
+```shell-session
+$ vault write auth/kubernetes/config \
+    kubernetes_host="https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT" \
+    issuer="\"test-aks-cluster-dns-d6cbb78e.hcp.uksouth.azmk8s.io\""
 ```
 
 ## Configuring kubernetes
@@ -321,6 +321,73 @@ The Kubernetes Auth Plugin has a full HTTP API. Please see the
 [API docs](/vault/api-docs/auth/kubernetes) for more details.
 
 [k8s-tokenreview]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#tokenreview-v1-authentication-k8s-io
+
+## Workflows
+
+Refer to the following workflow examples for Kubernetes auth method usage:
+
+### Working with templated policies
+
+Set `use_annotations_as_alias_metadata=true` in your Kubernetes auth
+configuration to use Kubernetes Service Account annotations for
+[Vault alias](/vault/docs/concepts/identity#entities-and-aliases) metadata.
+
+When `use_annotations_as_alias_metadata` is true, you can use the
+`identity.entity.aliases.<mount accessor>.metadata.<metadata key>` template
+parameter when you create [templated policies](/vault/docs/concepts/policies#templated-policies).
+
+To use annotations as alias metadata, you must give Vault permission to read
+service accounts from the Kubernetes API.
+
+#### Scenario Introduction
+
+Assume you have the following policy requirement:
+
+Applications can perform read operations on their allocated key/value secret path:
+`(env-kv/data/<env>)`
+
+#### Annotate Kubernetes Service Accounts with their dedicated secret paths
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app
+  namespace: demo
+  annotations:
+    vault.hashicorp.com/alias-metadata-env: demo/app
+```
+
+When the application, `app`, logs in with JWT for the service account, Vault
+renders the alias metadata as `env : demo/app`.
+
+#### Create a templated ACL policy
+
+The `env-tmpl` policy lets applications read their secrets defined in KV v2
+secret engine. Use the mount accessor value
+(`auth_kubernetes_bcecb1e1`) from the [`sys/auth`](/vault/api-docs/system/auth) endpoint or the [`vault auth list`](/vault/docs/commands/auth/list) command.
+
+```shell-session
+$ tee env-tmpl.hcl <<EOF
+path "env-kv/data/{{identity.entity.aliases.auth_kubernetes_bcecb1e1.metadata.env}}" {
+  capabilities = [ "read" ]
+}
+EOF
+$ vault policy write env-tmpl env-tmpl.hcl
+```
+
+#### Create a Kubernetes role with the templated ACL policy
+
+The Kubernetes role lets users login as the `env-reader` role to read from the
+secret path described in the `env-tmpl` policy.
+
+```shell-session
+$ vault write auth/kubernetes/role/env-reader \
+    bound_service_account_names=app \
+    bound_service_account_namespaces=demo \
+    policies=default,env-tmpl \
+    ttl=1h
+```
 
 ## Code example
 
