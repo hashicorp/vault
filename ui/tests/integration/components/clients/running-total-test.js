@@ -63,7 +63,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
       <Clients::RunningTotal
         @byMonthActivityData={{this.activity.byMonth}}
         @runningTotals={{this.totalUsageCounts}}
-        @upgradeData={{this.upgradeDuringActivity}}
+        @upgradeData={{this.upgradesDuringActivity}}
         @responseTimestamp={{this.timestamp}}
         @isHistoricalMonth={{false}}
       />
