@@ -70,16 +70,16 @@ export default class ClientsCountsPageComponent extends Component<Args> {
         switch (true) {
           case version.includes('1.9'):
             explanation =
-              'We introduced changes to non-entity token and local auth mount logic for client counting in 1.9.';
+              '- We introduced changes to non-entity token and local auth mount logic for client counting in 1.9.';
             break;
           case version.includes('1.10'):
-            explanation = 'We added monthly breakdowns and mount level attribution starting in 1.10.';
+            explanation = '- We added monthly breakdowns and mount level attribution starting in 1.10.';
             break;
-          // TODO add switch case for 1.16 secret syncs
           default:
+            explanation = '';
             break;
         }
-        return `${version} (upgraded on ${date}) - ${explanation}`;
+        return `${version} (upgraded on ${date}) ${explanation}`;
       });
     }
     return null;

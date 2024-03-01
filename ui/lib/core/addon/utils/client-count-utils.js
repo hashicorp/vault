@@ -10,14 +10,15 @@ import { compareAsc, getUnixTime, isAfter, isBefore } from 'date-fns';
 // that occurred during the queried activity data
 export const filterVersionHistory = (versionHistory, activity) => {
   if (versionHistory) {
-    const upgrades = versionHistory.reduce((array, data) => {
-      const matchVersion = (v) =>
+    const upgrades = versionHistory.reduce((array, upgradeData) => {
+      const includesVersion = (v) =>
         // only add first match, disregard subsequent patch releases of the same version
-        data.version.match(v) && !array.some((d) => d.version.match(v));
+        upgradeData.version.match(v) && !array.some((d) => d.version.match(v));
 
-      if (matchVersion('1.9')) array.push(data);
-      if (matchVersion('1.10')) array.push(data);
-      // TODO add 1.16, but only include if user has opted in to secret sync feature
+      ['1.9', '1.10', '1.16'].forEach((v) => {
+        if (includesVersion(v)) array.push(upgradeData);
+      });
+
       return array;
     }, []);
 
