@@ -922,8 +922,8 @@ func convertType(t FieldType) schemaType {
 		ret.baseType = "integer"
 		ret.format = "int64"
 	case TypeDurationSecond, TypeSignedDurationSecond:
-		ret.baseType = "integer"
-		ret.format = "seconds"
+		ret.baseType = "string"
+		ret.format = "duration"
 	case TypeBool:
 		ret.baseType = "boolean"
 	case TypeMap:
