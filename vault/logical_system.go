@@ -5675,6 +5675,17 @@ func (core *Core) GetLeaderStatusLocked(ctx context.Context) (*LeaderResponse, e
 }
 
 func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var tokenPresent bool
+	token := req.ClientToken
+	if token != "" {
+		// We don't care about the error, we just want to know if the token exists
+		_, tokenEntry, _, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
+		tokenPresent = err == nil && tokenEntry != nil
+	}
+	// If there is a valid token then we will not redact any values
+	if tokenPresent {
+		ctx = logical.CreateContextRedactionSettings(ctx, false, false, false)
+	}
 	status, err := b.Core.GetSealStatus(ctx, false)
 	if err != nil {
 		return nil, err
@@ -5694,6 +5705,18 @@ func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Reque
 }
 
 func (b *SystemBackend) handleLeaderStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var tokenPresent bool
+	token := req.ClientToken
+
+	if token != "" {
+		// We don't care about the error, we just want to know if token exists
+		_, tokenEntry, _, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
+		tokenPresent = err == nil && tokenEntry != nil
+	}
+
+	if tokenPresent {
+		ctx = logical.CreateContextRedactionSettings(ctx, false, false, false)
+	}
 	status, err := b.Core.GetLeaderStatusLocked(ctx)
 	if err != nil {
 		return nil, err
