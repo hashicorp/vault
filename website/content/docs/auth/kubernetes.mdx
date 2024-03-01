@@ -383,8 +383,11 @@ The Kubernetes role lets users login as the `env-reader` role to read from the
 secret path described in the `env-tmpl` policy.
 
 ```bash
-vault write auth/kubernetes/role/env-reader bound_service_account_names=app
-bound_service_account_namespaces=demo policies=default,env-tmpl ttl=1h
+vault write auth/kubernetes/role/env-reader \
+    bound_service_account_names=app \
+    bound_service_account_namespaces=demo \
+    policies=default,env-tmpl \
+    ttl=1h
 ```
 
 ## Code example
