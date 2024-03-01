@@ -13,12 +13,14 @@ export default class SyncSecretsOverviewRoute extends Route {
   @service declare readonly store: StoreService;
 
   async model() {
+    const { featureEnabled } = this.modelFor('secrets') as { featureEnabled: boolean };
     return hash({
       destinations: this.store.query('sync/destination', {}).catch(() => []),
       associations: this.store
         .adapterFor('sync/association')
         .queryAll()
         .catch(() => []),
+      featureEnabled,
     });
   }
 }

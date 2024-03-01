@@ -12,6 +12,8 @@ export const PAGE = {
     summary: '[data-test-cta-container] p',
     link: '[data-test-cta-doc-link]',
     button: '[data-test-cta-button]',
+    featureCheck: '[data-test-cta-feature-check]',
+    featureConfirm: '[data-test-cta-feature-confirm]',
   },
   associations: {
     list: {
