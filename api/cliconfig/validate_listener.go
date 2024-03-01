@@ -3,10 +3,8 @@
 
 //go:build !fips_140_3
 
-package config
+package cliconfig
 
-import "github.com/hashicorp/vault/internalshared/configutil"
-
-func IsValidListener(listener *configutil.Listener) error {
+func IsValidListener(tlsDisable bool) error {
 	return nil
 }
