@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/axiomhq/hyperloglog"
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
@@ -4840,4 +4841,116 @@ func TestAddActivityToFragment(t *testing.T) {
 			}, a.partialMonthClientTracker[tc.expectedID]))
 		})
 	}
+}
+
+// TestActivityLog_reportPrecomputedQueryMetrics creates 3 clients per type and
+// calls reportPrecomputedQueryMetrics. The test verifies that the metric sink
+// gets metrics reported correctly, based on the segment time matching the
+// active period start or end
+func TestActivityLog_reportPrecomputedQueryMetrics(t *testing.T) {
+	core, _, _, metricsSink := TestCoreUnsealedWithMetrics(t)
+	a := core.activityLog
+	byMonth := make(summaryByMonth)
+	byNS := make(summaryByNamespace)
+	segmentTime := time.Now()
+
+	// for each client type, make 3 clients in their own namespaces
+	for i := 0; i < 3; i++ {
+		for _, clientType := range []string{secretSyncActivityType, nonEntityTokenActivityType, entityActivityType} {
+			client := &activity.EntityRecord{
+				ClientID:      fmt.Sprintf("%s-%d", clientType, i),
+				NamespaceID:   fmt.Sprintf("ns-%d", i),
+				MountAccessor: fmt.Sprintf("mnt-%d", i),
+				ClientType:    clientType,
+				NonEntity:     clientType == nonEntityTokenActivityType,
+			}
+			processClientRecord(client, byNS, byMonth, segmentTime)
+		}
+	}
+	endTime := timeutil.EndOfMonth(segmentTime)
+	opts := pqOptions{
+		byNamespace: byNS,
+		byMonth:     byMonth,
+		endTime:     endTime,
+	}
+
+	otherTime := segmentTime.Add(time.Hour)
+
+	hasNoMetric := func(t *testing.T, intervals []*metrics.IntervalMetrics, name string) {
+		t.Helper()
+		gauges := intervals[len(intervals)-1].Gauges
+		for _, metric := range gauges {
+			if metric.Name == name {
+				require.Fail(t, "metric found", name)
+			}
+		}
+	}
+	hasMetric := func(t *testing.T, intervals []*metrics.IntervalMetrics, name string, value float32, namespaceLabel *string) {
+		t.Helper()
+		fullMetric := fmt.Sprintf("%s;cluster=test-cluster", name)
+		if namespaceLabel != nil {
+			fullMetric = fmt.Sprintf("%s;namespace=%s;cluster=test-cluster", name, *namespaceLabel)
+		}
+		gauges := intervals[len(intervals)-1].Gauges
+		require.Contains(t, gauges, fullMetric)
+		metric := gauges[fullMetric]
+		require.Equal(t, value, metric.Value)
+	}
+
+	t.Run("no metrics", func(t *testing.T) {
+		// neither option is equal to the segment time, so no metrics should be
+		// reported
+		opts.activePeriodStart = otherTime
+		opts.activePeriodEnd = otherTime
+		a.reportPrecomputedQueryMetrics(context.Background(), segmentTime, opts)
+
+		data := metricsSink.Data()
+		hasNoMetric(t, data, "identity.entity.active.monthly")
+		hasNoMetric(t, data, "identity.nonentity.active.monthly")
+		hasNoMetric(t, data, "identity.secret_sync.active.monthly")
+		hasNoMetric(t, data, "identity.entity.active.reporting_period")
+		hasNoMetric(t, data, "identity.entity.active.reporting_period")
+		hasNoMetric(t, data, "identity.secret_sync.active.reporting_period")
+	})
+	t.Run("monthly metric", func(t *testing.T) {
+		// activePeriodEnd is equal to the segment time, indicating that monthly
+		// metrics should be reported
+		opts.activePeriodEnd = segmentTime
+		opts.activePeriodStart = otherTime
+		a.reportPrecomputedQueryMetrics(context.Background(), segmentTime, opts)
+
+		data := metricsSink.Data()
+		// expect the metrics ending with "monthly"
+		// the namespace was never registered in core, so it'll be
+		// reported with a "deleted-" prefix
+		for i := 0; i < 3; i++ {
+			ns := fmt.Sprintf("deleted-ns-%d", i)
+			hasMetric(t, data, "identity.entity.active.monthly", 1, &ns)
+			hasMetric(t, data, "identity.nonentity.active.monthly", 1, &ns)
+		}
+		// secret sync metrics should be the sum of clients across all
+		// namespaces
+		hasMetric(t, data, "identity.secret_sync.active.monthly", 3, nil)
+	})
+	t.Run("reporting period metric", func(t *testing.T) {
+		// activePeriodEnd is not equal to the segment time but activePeriodStart
+		// is, which indicates that metrics for the reporting period should be
+		// reported
+		opts.activePeriodEnd = otherTime
+		opts.activePeriodStart = segmentTime
+		a.reportPrecomputedQueryMetrics(context.Background(), segmentTime, opts)
+
+		data := metricsSink.Data()
+		// expect the metrics ending with "reporting_period"
+		// the namespace was never registered in core, so it'll be
+		// reported with a "deleted-" prefix
+		for i := 0; i < 3; i++ {
+			ns := fmt.Sprintf("deleted-ns-%d", i)
+			hasMetric(t, data, "identity.entity.active.reporting_period", 1, &ns)
+			hasMetric(t, data, "identity.nonentity.active.reporting_period", 1, &ns)
+		}
+		// secret sync metrics should be the sum of clients across all
+		// namespaces
+		hasMetric(t, data, "identity.secret_sync.active.reporting_period", 3, nil)
+	})
 }
