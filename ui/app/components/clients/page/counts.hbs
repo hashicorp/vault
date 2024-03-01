@@ -105,10 +105,11 @@
       {{#if this.upgradeExplanations}}
         <Hds::Alert data-test-clients-upgrade-warning @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
           <A.Title>
-            Vault was upgraded during this time period.
+            Client count data contains
+            {{pluralize this.upgradeExplanations.length "upgrade"}}
           </A.Title>
           <A.Description>
-            Keep this in mind while looking at the data. Visit our
+            Vault was upgraded during this time period. Keep this in mind while looking at the data. Visit our
             <Hds::Link::Inline
               @isHrefExternal={{true}}
               @href={{doc-link
