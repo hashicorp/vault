@@ -1439,8 +1439,8 @@ func (c *ServerCommand) Run(args []string) int {
 
 	requestLimiterStatus := entGetRequestLimiterStatus(coreConfig)
 	if requestLimiterStatus != "" {
-		infoKeys = append(infoKeys, "request_limiter")
-		info["request_limiter"] = requestLimiterStatus
+		infoKeys = append(infoKeys, "request limiter")
+		info["request limiter"] = requestLimiterStatus
 	}
 
 	infoKeys = append(infoKeys, "administrative namespace")
