@@ -55,10 +55,11 @@ configuration will be overridden and the token in the request will be used to
 forward the request to the Vault server. If set to `"force"` Proxy will use the
 auto-auth token, overwriting the attached Vault token if set.
 
-~> **Note**: When using the proxy's auto-auth token, one proxy per application is very
-   strongly recommended, as Vault will otherwise be unable to disinguish requests coming from
-   multiple applications through a single proxy. In situations where a single proxy is
-   shared by multiple applications, setting `use_auto_auth_token` to `false` is recommended.
+~> **Note**: When using the proxy's auto-auth token with the `use_auto_auth_token` 
+   configuration, one proxy per application is very strongly recommended, as Vault will
+   unable to distinguish requests coming from multiple applications through a single proxy. 
+   In situations where a single proxy is shared by multiple applications, setting `use_auto_auth_token` 
+   to `false` (the default) is recommended.
 
 - `prepend_configured_namespace` `(bool: false)` - If set, when Proxy has a
   namespace configured, such as through the
