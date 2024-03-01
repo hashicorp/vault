@@ -10,10 +10,8 @@ import (
 	"testing"
 )
 
-const FixturePath = "../test-fixtures"
-
 func TestLoadConfig(t *testing.T) {
-	config, err := LoadConfig(filepath.Join(FixturePath, "config.hcl"))
+	config, err := LoadConfig(filepath.Join("testdata", "config.hcl"))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

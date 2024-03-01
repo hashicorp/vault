@@ -53,10 +53,10 @@ func TestExternalTokenHelperPath(t *testing.T) {
 }
 
 func TestExternalTokenHelper(t *testing.T) {
-	test(t, testExternalTokenHelper(t))
+	test(t, testExternalTokenHelper())
 }
 
-func testExternalTokenHelper(t *testing.T) *ExternalTokenHelper {
+func testExternalTokenHelper() *ExternalTokenHelper {
 	return &ExternalTokenHelper{BinaryPath: helperPath("helper"), Env: helperEnv()}
 }
 
