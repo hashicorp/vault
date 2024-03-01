@@ -15,7 +15,7 @@ export const filterVersionHistory = (versionHistory, activity) => {
         // only add first match, disregard subsequent patch releases of the same version
         upgradeData.version.match(v) && !array.some((d) => d.version.match(v));
 
-      ['1.9', '1.10', '1.16'].forEach((v) => {
+      ['1.9', '1.10'].forEach((v) => {
         if (includesVersion(v)) array.push(upgradeData);
       });
 
