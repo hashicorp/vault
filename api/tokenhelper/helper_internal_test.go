@@ -16,7 +16,7 @@ func TestCommand(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	Test(t, helper)
+	test(t, helper)
 }
 
 func TestInternalHelperFilePerms(t *testing.T) {

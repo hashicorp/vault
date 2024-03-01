@@ -53,7 +53,7 @@ func TestExternalTokenHelperPath(t *testing.T) {
 }
 
 func TestExternalTokenHelper(t *testing.T) {
-	Test(t, testExternalTokenHelper(t))
+	test(t, testExternalTokenHelper(t))
 }
 
 func testExternalTokenHelper(t *testing.T) *ExternalTokenHelper {
