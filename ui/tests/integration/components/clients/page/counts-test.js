@@ -44,6 +44,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
         @activity={{this.activity}}
         @activityError={{this.activityError}}
         @config={{this.config}}
+        @versionHistory={{this.versionHistory}}
         @startTimestamp={{this.startTimestamp}}
         @endTimestamp={{this.endTimestamp}}
         @namespace={{this.namespace}}
@@ -191,7 +192,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     assert
       .dom(ts.counts.startDiscrepancy)
       .hasText(
-        'Warning You requested data from June 2022. We only have data from October 2023, and that is what is being shown here.',
+        'You requested data from June 2022. We only have data from October 2023, and that is what is being shown here.',
         'Start discrepancy alert renders'
       );
   });
