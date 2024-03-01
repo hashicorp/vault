@@ -197,7 +197,7 @@ type UsageResponse struct {
 	// As per 1.9, the tokenCount field will contain the distinct non-entity
 	// token clients instead of each individual token.
 	tokenCount  int64
-	SecretSyncs int64
+	secretSyncs int64
 	clientCount int64
 }
 
@@ -243,7 +243,7 @@ func (c *OperatorUsageCommand) parseNamespaceCount(rawVal interface{}) (UsageRes
 	}
 
 	// don't error if secret syncs are 0
-	ret.SecretSyncs, _ = jsonNumberOK(counts, "secret_syncs")
+	ret.secretSyncs, _ = jsonNumberOK(counts, "secret_syncs")
 
 	ret.clientCount, ok = jsonNumberOK(counts, "clients")
 	if !ok {
@@ -278,7 +278,7 @@ func (c *OperatorUsageCommand) namespacesOutput(data map[string]interface{}) []s
 		}
 
 		formattedLine := fmt.Sprintf("%s | %d | %d | %d | %d",
-			val.namespacePath, val.entityCount, val.tokenCount, val.SecretSyncs, val.clientCount)
+			val.namespacePath, val.entityCount, val.tokenCount, val.secretSyncs, val.clientCount)
 		nsOut = append(nsOut, UsageCommandNamespace{
 			formattedLine: formattedLine,
 			sortOrder:     sortOrder,
