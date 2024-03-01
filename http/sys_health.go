@@ -57,14 +57,27 @@ func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	opts, err := getOpts(opt...)
+	var tokenPresent bool
+	token := r.Header.Get(consts.AuthHeaderName)
 
-	if opts.withRedactVersion {
-		body.Version = opts.withRedactionValue
+	if token != "" {
+		// We don't care about the error, we just want to know if the token exists
+		lock := core.HALock()
+		lock.Lock()
+		tokenEntry, err := core.LookupToken(r.Context(), token)
+		lock.Unlock()
+		tokenPresent = err == nil && tokenEntry != nil
 	}
+	opts, _ := getOpts(opt...)
 
-	if opts.withRedactClusterName {
-		body.ClusterName = opts.withRedactionValue
+	if !tokenPresent {
+		if opts.withRedactVersion {
+			body.Version = opts.withRedactionValue
+		}
+
+		if opts.withRedactClusterName {
+			body.ClusterName = opts.withRedactionValue
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

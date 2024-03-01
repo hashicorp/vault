@@ -743,6 +743,10 @@ func (c *Core) HAStateWithLock() consts.HAState {
 	return c.HAState()
 }
 
+func (c *Core) HALock() sync.Locker {
+	return c.stateLock.RLocker()
+}
+
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
 	entCoreConfig

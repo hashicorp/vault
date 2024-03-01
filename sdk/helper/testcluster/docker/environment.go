@@ -640,6 +640,9 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 			listener := cfg["tcp"].(map[string]interface{})
 			listener["address"] = fmt.Sprintf("%s:%d", "0.0.0.0", config.Port)
 			listener["chroot_namespace"] = config.ChrootNamespace
+			listener["redact_addresses"] = config.RedactAddresses
+			listener["redact_cluster_name"] = config.RedactClusterName
+			listener["redact_version"] = config.RedactVersion
 			listenerConfig = append(listenerConfig, cfg)
 			portStr := fmt.Sprintf("%d/tcp", config.Port)
 			if strutil.StrListContains(ports, portStr) {
