@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/cli"
 	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/token"
+	"github.com/hashicorp/vault/api/tokenhelper"
 	"github.com/mattn/go-colorable"
 )
 
@@ -135,7 +135,7 @@ func getGlobalFlagValue(arg string) string {
 }
 
 type RunOptions struct {
-	TokenHelper    token.TokenHelper
+	TokenHelper    tokenhelper.TokenHelper
 	HCPTokenHelper hcpvlib.HCPTokenHelper
 	Stdout         io.Writer
 	Stderr         io.Writer

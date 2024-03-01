@@ -4,7 +4,7 @@
 package command
 
 import (
-	"github.com/hashicorp/vault/command/config"
+	"github.com/hashicorp/vault/api/cliconfig"
 )
 
 const (
@@ -31,9 +31,9 @@ type DefaultConfig struct {
 //
 // Config just calls into config.Config for backwards compatibility purposes.
 // Use config.Config instead.
-func Config() (*DefaultConfig, error) {
-	conf, err := config.Config()
-	return (*DefaultConfig)(conf), err
+func Config() (*cliconfig.DefaultConfig, error) {
+	conf, err := cliconfig.Config()
+	return (*cliconfig.DefaultConfig)(conf), err
 }
 
 // LoadConfig reads the configuration from the given path. If path is
@@ -42,16 +42,16 @@ func Config() (*DefaultConfig, error) {
 //
 // LoadConfig just calls into config.LoadConfig for backwards compatibility
 // purposes. Use config.LoadConfig instead.
-func LoadConfig(path string) (*DefaultConfig, error) {
-	conf, err := config.LoadConfig(path)
-	return (*DefaultConfig)(conf), err
+func LoadConfig(path string) (*cliconfig.DefaultConfig, error) {
+	conf, err := cliconfig.LoadConfig(path)
+	return (*cliconfig.DefaultConfig)(conf), err
 }
 
 // ParseConfig parses the given configuration as a string.
 //
 // ParseConfig just calls into config.ParseConfig for backwards compatibility
 // purposes. Use config.ParseConfig instead.
-func ParseConfig(contents string) (*DefaultConfig, error) {
-	conf, err := config.ParseConfig(contents)
-	return (*DefaultConfig)(conf), err
+func ParseConfig(contents string) (*cliconfig.DefaultConfig, error) {
+	conf, err := cliconfig.ParseConfig(contents)
+	return (*cliconfig.DefaultConfig)(conf), err
 }

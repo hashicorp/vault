@@ -12,9 +12,9 @@ import (
 
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/api/tokenhelper"
 	credToken "github.com/hashicorp/vault/builtin/credential/token"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
-	"github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/vault"
 )
@@ -33,7 +33,7 @@ func testLoginCommand(tb testing.TB) (*cli.MockUi, *LoginCommand) {
 			UI: ui,
 
 			// Override to our own token helper
-			tokenHelper: token.NewTestingTokenHelper(),
+			tokenHelper: tokenhelper.NewTestingTokenHelper(),
 		},
 		Handlers: map[string]LoginHandler{
 			"token":    &credToken.CLIHandler{},
