@@ -21,7 +21,7 @@ export default class SyncAssociationSerializer extends ApplicationSerializer {
       const secrets = [];
       for (const key in associated_secrets) {
         const data = associated_secrets[key];
-        data.id = `${data.mount}/${data.secret_name}`;
+        data.id = `${data.mount}/${data.secret_name}/${data.sub_key}`;
         const association = {
           destinationName: store_name,
           destinationType: store_type,

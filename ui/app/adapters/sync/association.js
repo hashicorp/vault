@@ -82,7 +82,7 @@ export default class SyncAssociationAdapter extends ApplicationAdapter {
       });
       return {
         ...association,
-        id: `${data.mount}/${data.secret_name}`,
+        id: `${data.mount}/${data.secret_name}/${data.sub_key}`,
         destinationName: resp.data.store_name,
         destinationType: resp.data.store_type,
       };
