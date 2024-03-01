@@ -68,7 +68,7 @@ func LoadConfig(path string) (*DefaultConfig, error) {
 
 	conf, err := ParseConfig(string(contents))
 	if err != nil {
-		return nil, fmt.Errorf("error parsing config file at %q: %w; ensure that the file is valid; Ansible Vault is known to conflict with it.", path, err)
+		return nil, fmt.Errorf("error parsing config file at %q: %w; ensure that the file is valid; Ansible Vault is known to conflict with it", path, err)
 	}
 
 	return conf, nil
@@ -87,11 +87,20 @@ func ParseConfig(contents string) (*DefaultConfig, error) {
 		return nil, fmt.Errorf("failed to parse config; does not contain a root object")
 	}
 
-	valid := []string{
-		"token_helper",
+	valid := map[string]struct{}{
+		"token_helper": {},
 	}
-	if err := checkHCLKeys(list, valid); err != nil {
-		return nil, err
+
+	var validationErrors error
+	for _, item := range list.Items {
+		key := item.Keys[0].Token.Value().(string)
+		if _, ok := valid[key]; !ok {
+			validationErrors = multierror.Append(validationErrors, fmt.Errorf("invalid key %q on line %d", key, item.Assign.Line))
+		}
+	}
+
+	if validationErrors != nil {
+		return nil, validationErrors
 	}
 
 	var c DefaultConfig
@@ -99,31 +108,4 @@ func ParseConfig(contents string) (*DefaultConfig, error) {
 		return nil, err
 	}
 	return &c, nil
-}
-
-func checkHCLKeys(node ast.Node, valid []string) error {
-	var list *ast.ObjectList
-	switch n := node.(type) {
-	case *ast.ObjectList:
-		list = n
-	case *ast.ObjectType:
-		list = n.List
-	default:
-		return fmt.Errorf("cannot check HCL keys of type %T", n)
-	}
-
-	validMap := make(map[string]struct{}, len(valid))
-	for _, v := range valid {
-		validMap[v] = struct{}{}
-	}
-
-	var result error
-	for _, item := range list.Items {
-		key := item.Keys[0].Token.Value().(string)
-		if _, ok := validMap[key]; !ok {
-			result = multierror.Append(result, fmt.Errorf("invalid key %q on line %d", key, item.Assign.Line))
-		}
-	}
-
-	return result
 }
