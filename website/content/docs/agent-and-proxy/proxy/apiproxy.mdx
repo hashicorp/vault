@@ -55,6 +55,12 @@ configuration will be overridden and the token in the request will be used to
 forward the request to the Vault server. If set to `"force"` Proxy will use the
 auto-auth token, overwriting the attached Vault token if set.
 
+~> **Note**: When using the proxy's auto-auth token with the `use_auto_auth_token` 
+   configuration, one proxy per application is very strongly recommended, as Vault will
+   unable to distinguish requests coming from multiple applications through a single proxy. 
+   In situations where a single proxy is shared by multiple applications, setting `use_auto_auth_token` 
+   to `false` (the default) is recommended.
+
 - `prepend_configured_namespace` `(bool: false)` - If set, when Proxy has a
   namespace configured, such as through the
   [Vault stanza](/vault/docs/agent-and-proxy/proxy#vault-stanza), all requests
@@ -79,7 +85,7 @@ or `"forward"`.
 ### Example configuration
 
 Here is an example of a `listener` configuration alongside `api_proxy` configuration to force the use of the auto_auth token
-and enforce consistency.
+and enforce consistency for a proxy dedicated to a single application.
 
 ```hcl
 # Other Vault Proxy configuration blocks
@@ -90,8 +96,7 @@ api_proxy {
   enforce_consistency = "always"
 }
 
-listener "tcp" {
-    address = "127.0.0.1:8100"
-    tls_disable = true
+listener "unix" {
+    address = "/var/run/vault-proxy.sock
 }
 ```
