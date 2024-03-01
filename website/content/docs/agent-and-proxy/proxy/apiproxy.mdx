@@ -58,7 +58,7 @@ auto-auth token, overwriting the attached Vault token if set.
 ~> **Note**: When using the proxy's auto-auth token, one proxy per application is very
    strongly recommended, as Vault will otherwise be unable to disinguish requests coming from
    multiple applications through a single proxy. In situations where a single proxy is
-   shared by multiple applications, disabling `use_auto_auth_token` is recommended.
+   shared by multiple applications, setting `use_auto_auth_token` to `false` is recommended.
 
 - `prepend_configured_namespace` `(bool: false)` - If set, when Proxy has a
   namespace configured, such as through the
