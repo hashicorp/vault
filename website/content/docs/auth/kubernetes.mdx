@@ -179,10 +179,10 @@ short-lived tokens. To use the local token and CA certificate, omit
 Vault will attempt to load them from `token` and `ca.crt` respectively inside
 the default mount folder `/var/run/secrets/kubernetes.io/serviceaccount/`.
 
-  ```shell-session
-  $ vault write auth/kubernetes/config \
+```shell-session
+$ vault write auth/kubernetes/config \
     kubernetes_host=https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT
-  ```
+```
 
 !> **Note:** Requires Vault 1.9.3+. In earlier versions the service account
 token and CA certificate is read once and stored in Vault storage.
@@ -282,8 +282,8 @@ This value is then used when configuring Kubernetes auth, e.g.:
 
 ```shell-session
 $ vault write auth/kubernetes/config \
-  kubernetes_host="https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT" \
-  issuer="\"test-aks-cluster-dns-d6cbb78e.hcp.uksouth.azmk8s.io\""
+    kubernetes_host="https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT" \
+    issuer="\"test-aks-cluster-dns-d6cbb78e.hcp.uksouth.azmk8s.io\""
 ```
 
 ## Configuring kubernetes
