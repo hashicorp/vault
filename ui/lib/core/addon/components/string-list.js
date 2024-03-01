@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import ArrayProxy from '@ember/array/proxy';
@@ -70,7 +70,7 @@ export default class StringList extends Component {
   }
 
   toVal() {
-    const inputs = this.inputList.filter((x) => x.value).mapBy('value');
+    const inputs = this.inputList.filter((x) => x.value).map((x) => x.value);
     if (this.args.type === 'string') {
       return inputs.join(',');
     }

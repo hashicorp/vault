@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import ApplicationAdapter from '../application';
@@ -56,6 +56,7 @@ export default ApplicationAdapter.extend({
       return {
         data: {
           id,
+          name: id,
           ...data,
         },
       };

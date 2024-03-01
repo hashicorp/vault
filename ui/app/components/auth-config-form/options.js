@@ -1,11 +1,11 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import AdapterError from '@ember-data/adapter/error';
 import AuthConfigComponent from './config';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 
@@ -30,11 +30,19 @@ export default AuthConfigComponent.extend({
     waitFor(function* () {
       const data = this.model.config.serialize();
       data.description = this.model.description;
+      data.user_lockout_config = {};
 
       // token_type should not be tuneable for the token auth method.
-      if (this.model.type === 'token') {
+      if (this.model.methodType === 'token') {
         delete data.token_type;
       }
+
+      this.model.userLockoutConfig.apiParams.forEach((attr) => {
+        if (Object.keys(data).includes(attr)) {
+          data.user_lockout_config[attr] = data[attr];
+          delete data[attr];
+        }
+      });
 
       try {
         yield this.model.tune(data);
@@ -47,7 +55,7 @@ export default AuthConfigComponent.extend({
         // because we're not calling model.save the model never updates with
         // the error.  Forcing the error message by manually setting the errorMessage
         try {
-          this.model.set('errorMessage', err.errors.firstObject);
+          this.model.set('errorMessage', err.errors?.join(','));
         } catch {
           // do nothing
         }

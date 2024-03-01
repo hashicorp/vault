@@ -1,17 +1,16 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { alias, gt } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
-import keyUtils from 'vault/lib/key-utils';
-import pathToTree from 'vault/lib/path-to-tree';
 import { task, timeout } from 'ember-concurrency';
+import pathToTree from 'vault/lib/path-to-tree';
+import { ancestorKeysForKey } from 'core/utils/key-utils';
 
-const { ancestorKeysForKey } = keyUtils;
 const DOT_REPLACEMENT = '☃';
 const ANIMATION_DURATION = 250;
 
@@ -48,7 +47,7 @@ export default Component.extend({
       this.set('canList', true);
     } catch (e) {
       // If error out on findRecord call it's because you don't have permissions
-      // and therefor don't have permission to manage namespaces
+      // and therefore don't have permission to manage namespaces
       this.set('canList', false);
     }
   }),

@@ -1,26 +1,17 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 // Low level service that allows users to input paths to make requests to vault
 // this service provides the UI synecdote to the cli commands read, write, delete, and list
-import { filterBy } from '@ember/object/computed';
-
 import Service from '@ember/service';
 
 import { getOwner } from '@ember/application';
 import { computed } from '@ember/object';
 import { shiftCommandIndex } from 'vault/lib/console-helpers';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
-
-export function sanitizePath(path) {
-  //remove whitespace + remove trailing and leading slashes
-  return path.trim().replace(/^\/+|\/+$/g, '');
-}
-export function ensureTrailingSlash(path) {
-  return path.replace(/(\w+[^/]$)/g, '$1/');
-}
+import { sanitizePath, ensureTrailingSlash } from 'core/utils/sanitize-path';
 
 const VERBS = {
   read: 'GET',
@@ -35,7 +26,9 @@ export default Service.extend({
   adapter() {
     return getOwner(this).lookup('adapter:console');
   },
-  commandHistory: filterBy('log', 'type', 'command'),
+  get commandHistory() {
+    return this.log.filter((log) => log.type === 'command');
+  },
   log: computed(function () {
     return [];
   }),

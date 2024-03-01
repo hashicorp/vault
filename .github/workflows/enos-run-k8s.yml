@@ -31,9 +31,9 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
     steps:
       - name: Checkout
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3
         with:
           # the Terraform wrapper will break Terraform execution in Enos because
           # it changes the output to text when we expect it to be JSON.
@@ -44,13 +44,14 @@ jobs:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Download Docker Image
         id: download
+        # Use actions/download-artifact @3.x until https://hashicorp.atlassian.net/browse/HREL-99 is resolved
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: ${{ inputs.artifact-name }}
           path: ./enos/support/downloads
       - name: Prepare for scenario execution
         env:
-          IS_ENT: ${{ startsWith(env.ARTIFACT_NAME, 'vault-enterprise' ) }}
+          IS_ENT: ${{ contains(env.ARTIFACT_NAME, 'vault-enterprise' ) }}
         run: |
           mkdir -p ./enos/support/terraform-plugin-cache
           if [ "$IS_ENT" == true ]; then
@@ -60,8 +61,8 @@ jobs:
             echo "image_repo=hashicorp/vault-enterprise" >> "$GITHUB_ENV"
             echo "image repo set to 'hashicorp/vault-enterprise'"
           else
-            echo "edition=oss" >> "$GITHUB_ENV"
-            echo "edition set to 'oss'"
+            echo "edition=ce" >> "$GITHUB_ENV"
+            echo "edition set to 'ce'"
             echo "image_repo=hashicorp/vault" >> "$GITHUB_ENV"
             echo "image repo set to 'hashicorp/vault'"
           fi

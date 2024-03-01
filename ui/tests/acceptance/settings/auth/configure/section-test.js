@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -37,7 +37,7 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
     const section = 'options';
     await enablePage.enable(type, path);
     await page.visit({ path, section });
-    await page.fillInTextarea('description', 'This is AppRole!');
+    await fillIn('[data-test-input="description"]', 'This is Approle!');
     assert
       .dom('[data-test-input="config.tokenType"]')
       .hasValue('default-service', 'as default the token type selected is default-service.');

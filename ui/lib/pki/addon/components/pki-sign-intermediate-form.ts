@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -40,6 +40,7 @@ export default class PkiSignIntermediateFormComponent extends Component<Args> {
     try {
       yield this.args.model.save();
       this.flashMessages.success('Successfully signed CSR.');
+      window?.scrollTo(0, 0);
     } catch (e) {
       this.errorBanner = errorMessage(e);
       this.inlineFormAlert = 'There was a problem signing the CSR.';

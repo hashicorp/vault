@@ -6,7 +6,7 @@ description: |-
   method plugin.
 ---
 
-# Azure Auth Method (API)
+# Azure auth method (API)
 
 This is the API documentation for the Vault Azure auth method
 plugin. To learn more about the usage and operation, see the
@@ -41,8 +41,12 @@ virtual machine.
   This value can also be provided with the `AZURE_CLIENT_ID` environment variable.
 - `client_secret` `(string: '')` - The client secret for credentials to query the Azure APIs.
   This value can also be provided with the `AZURE_CLIENT_SECRET` environment variable.
+- `max_retries` `(int: 3)` - The maximum number of attempts a failed operation will be 
+  retried before producing an error.
+- `max_retry_delay` `(string: '60s')` - The maximum delay, in seconds, allowed before retrying an operation.
+- `retry_delay` `(string: '4s')` - The initial amount of delay, in seconds, to use before retrying an operation. Increases exponentially.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -53,7 +57,7 @@ virtual machine.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -63,7 +67,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/azure/config
 ```
 
-# Read Config
+# Read config
 
 Returns the previously configured config, including credentials.
 
@@ -71,7 +75,7 @@ Returns the previously configured config, including credentials.
 | :----- | :------------------- |
 | `GET`  | `/auth/azure/config` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -79,7 +83,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/azure/config
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -94,7 +98,7 @@ $ curl \
 
 ```
 
-## Delete Config
+## Delete config
 
 Deletes the previously configured Azure config and credentials.
 
@@ -102,7 +106,7 @@ Deletes the previously configured Azure config and credentials.
 | :------- | :------------------- |
 | `DELETE` | `/auth/azure/config` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -111,7 +115,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/azure/config
 ```
 
-## Rotate Root
+## Rotate root
 
 This endpoint generates a new client secret for the root account defined in the config. The
 value generated will only be known by Vault.
@@ -124,7 +128,7 @@ value generated will only be known by Vault.
 
 There are no parameters to this operation.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -133,7 +137,7 @@ $ curl \
   https://127.0.0.1:8200/v1/auth/azure/rotate-root
 ```
 
-## Create/Update Role
+## Create/Update role
 
 Registers a role in the method. Role types have specific entities
 that can perform login operations against this endpoint. Constraints specific
@@ -161,7 +165,7 @@ entities attempting to login.
 
 @include 'tokenfields.mdx'
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -172,7 +176,7 @@ entities attempting to login.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -182,7 +186,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/azure/role/dev-role
 ```
 
-## Read Role
+## Read role
 
 Returns the previously registered role configuration.
 
@@ -194,7 +198,7 @@ Returns the previously registered role configuration.
 
 - `name` `(string: <required>)` - Name of the role.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -202,7 +206,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/azure/role/dev-role
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -225,7 +229,7 @@ $ curl \
 
 ```
 
-## List Roles
+## List roles
 
 Lists all the roles that are registered with the plugin.
 
@@ -233,7 +237,7 @@ Lists all the roles that are registered with the plugin.
 | :----- | :----------------- |
 | `LIST` | `/auth/azure/role` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -242,7 +246,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/azure/role
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -256,7 +260,7 @@ $ curl \
 }
 ```
 
-## Delete Role
+## Delete role
 
 Deletes the previously registered role.
 
@@ -268,7 +272,7 @@ Deletes the previously registered role.
 
 - `name` `(string: <required>)` - Name of the role.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -287,7 +291,7 @@ entity and then authorizes the entity for the given role.
 | :----- | :------------------ |
 | `POST` | `/auth/azure/login` |
 
-### Sample Payload
+### Sample payload
 
 - `role` `(string: <required>)` - Name of the role against which the login is being
   attempted.
@@ -311,7 +315,7 @@ entity and then authorizes the entity for the given role.
   the format /subscriptions/{guid}/resourceGroups/{resource-group-name}/{resource-provider-namespace}/{resource-type}/{resource-name}.
   If `vm_name` or `vmss_name` is provided, this value is ignored.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -320,7 +324,7 @@ entity and then authorizes the entity for the given role.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -329,7 +333,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/azure/login
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

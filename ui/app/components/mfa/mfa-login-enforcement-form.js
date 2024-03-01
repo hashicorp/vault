@@ -1,12 +1,13 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { inject as service } from '@ember/service';
+import { A } from '@ember/array';
+import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import handleHasManySelection from 'core/utils/search-select-has-many';
 
@@ -40,14 +41,14 @@ export default class MfaLoginEnforcementForm extends Component {
   searchSelectOptions = null;
 
   @tracked name;
-  @tracked targets = [];
+  @tracked targets = A([]);
   @tracked selectedTargetType = 'accessor';
   @tracked selectedTargetValue = null;
   @tracked searchSelect = {
     options: [],
     selected: [],
   };
-  @tracked authMethods = [];
+  @tracked authMethods = A([]);
   @tracked modelErrors;
 
   constructor() {
@@ -90,14 +91,20 @@ export default class MfaLoginEnforcementForm extends Component {
   }
   async fetchAuthMethods() {
     const mounts = (await this.store.findAll('auth-method')).toArray();
-    this.authMethods = mounts.mapBy('type');
+    this.authMethods = mounts.map((auth) => auth.type);
   }
 
   get selectedTarget() {
-    return this.targetTypes.findBy('type', this.selectedTargetType);
+    return this.targetTypes.find((tt) => tt.type === this.selectedTargetType);
   }
   get errors() {
     return this.args.modelErrors || this.modelErrors;
+  }
+
+  updateModelForKey(key) {
+    const newValue = this.targets.filter((t) => t.key === key).map((t) => t.value);
+    // Set the model value directly instead of using Array methods (like .addObject)
+    this.args.model[key] = newValue;
   }
 
   @task
@@ -139,21 +146,22 @@ export default class MfaLoginEnforcementForm extends Component {
       this.selectedTargetValue = selected;
     }
   }
+
   @action
   addTarget() {
     const { label, key } = this.selectedTarget;
     const value = this.selectedTargetValue;
     this.targets.addObject({ label, value, key });
-    // add target to appropriate model property
-    this.args.model[key].addObject(value);
+    // recalculate value for appropriate model property
+    this.updateModelForKey(key);
     this.selectedTargetValue = null;
     this.resetTargetState();
   }
   @action
   removeTarget(target) {
     this.targets.removeObject(target);
-    // remove target from appropriate model property
-    this.args.model[target.key].removeObject(target.value);
+    // recalculate value for appropriate model property
+    this.updateModelForKey(target.key);
   }
   @action
   cancel() {

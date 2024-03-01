@@ -1,13 +1,14 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
 import UnloadModel from 'vault/mixins/unload-model-route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default Route.extend(UnloadModel, {
+  router: service(),
   store: service(),
   templateName: 'vault/cluster/secrets/backend/sign',
 
@@ -31,11 +32,11 @@ export default Route.extend(UnloadModel, {
     const backend = backendModel.get('id');
 
     if (backendModel.get('type') !== 'ssh') {
-      return this.transitionTo('vault.cluster.secrets.backend.list-root', backend);
+      return this.router.transitionTo('vault.cluster.secrets.backend.list-root', backend);
     }
     return this.store.queryRecord('capabilities', this.pathQuery(role, backend)).then((capabilities) => {
       if (!capabilities.get('canUpdate')) {
-        return this.transitionTo('vault.cluster.secrets.backend.list-root', backend);
+        return this.router.transitionTo('vault.cluster.secrets.backend.list-root', backend);
       }
       return this.store.createRecord('ssh-sign', {
         role: {

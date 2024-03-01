@@ -28,7 +28,7 @@ on port scanners and other security utilities that assumed insecure ciphers were
 being used. The previous behavior can be achieved by setting the value of the
 (undocumented) cluster_cipher_suites config flag to tls12.
 
-## API/Agent Renewal Behavior
+## API/Agent renewal behavior
 
 The API now allows multiple options for how it deals with renewals. The legacy
 behavior in the Agent/API is for the renewer (now called the lifetime watcher)
@@ -39,7 +39,7 @@ custom code, to disable renewals entirely, which allows the lifetime watcher to
 simply return when it believes it is time for your code to renew or
 reauthenticate.
 
-## Filtered Mount Replication Deprecation
+## Filtered mount replication deprecation
 
 As of 1.3.0, paths that were once filtered with
 [Filtered Mount Replication](/vault/api-docs/system/replication/replication-performance#create-mounts-filter-deprecated)

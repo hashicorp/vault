@@ -1,14 +1,15 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { setProperties } from '@ember/object';
 import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default Route.extend({
+  router: service(),
   store: service(),
   model() {
     const replicationMode = this.paramsFor('mode').replication_mode;
@@ -36,7 +37,7 @@ export default Route.extend({
       model.get(`${replicationMode}.replicationDisabled`) ||
       model.get(`${replicationMode}.replicationUnsupported`)
     ) {
-      return this.transitionTo('mode', replicationMode);
+      this.router.transitionTo('vault.cluster.replication.mode', replicationMode);
     }
   },
 });

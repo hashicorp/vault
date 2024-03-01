@@ -1,15 +1,14 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
 import { visit, currentURL, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import ENV from 'vault/config/environment';
+import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
@@ -30,21 +29,10 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'oidcConfig';
-  });
-
-  hooks.beforeEach(async function () {
-    this.store = await this.owner.lookup('service:store');
+  hooks.beforeEach(function () {
+    oidcConfigHandlers(this.server);
+    this.store = this.owner.lookup('service:store');
     return authPage.login();
-  });
-
-  hooks.afterEach(function () {
-    return logout.visit();
-  });
-
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
   });
 
   test('it renders only allow_all when no assignments are configured', async function (assert) {
@@ -80,7 +68,7 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
   });
 
   test('it creates an assignment inline, creates a client, updates client to limit access, deletes client', async function (assert) {
-    assert.expect(22);
+    assert.expect(21);
 
     //* clear out test state
     await clearRecord(this.store, 'oidc/client', 'test-app');
@@ -202,11 +190,16 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
     assert.strictEqual(currentRouteName(), 'vault.cluster.access.oidc.clients.client.details');
     await click(SELECTORS.clientDeleteButton);
     await click(SELECTORS.confirmActionButton);
-    assert.strictEqual(
-      currentRouteName(),
-      'vault.cluster.access.oidc.index',
-      'redirects to call to action if only existing client is deleted'
-    );
+
+    //TODO this part of the test has a race condition
+    //because other tests could have created clients - there is no guarantee that this will be the last
+    //client in the list to redirect to the call to action
+    //assert.strictEqual(
+    //currentRouteName(),
+    //'vault.cluster.access.oidc.index',
+    //'redirects to call to action if only existing client is deleted'
+    //);
+
     //* clean up test state
     await clearRecord(this.store, 'oidc/assignment', 'assignment-inline');
   });
@@ -225,7 +218,7 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
       'vault.cluster.access.oidc.assignments.create',
       'navigates to create form'
     );
-    assert.dom('[data-test-oidc-assignment-title]').hasText('Create assignment', 'Form title renders');
+    assert.dom('[data-test-oidc-assignment-title]').hasText('Create Assignment', 'Form title renders');
     await fillIn('[data-test-input="name"]', 'test-assignment');
     await click('[data-test-component="search-select"]#entities .ember-basic-dropdown-trigger');
     await click('.ember-power-select-option');
@@ -252,7 +245,7 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
       'vault.cluster.access.oidc.assignments.assignment.edit',
       'navigates to the assignment edit page from details'
     );
-    assert.dom('[data-test-oidc-assignment-title]').hasText('Edit assignment', 'Form title renders');
+    assert.dom('[data-test-oidc-assignment-title]').hasText('Edit Assignment', 'Form title renders');
     await click('[data-test-component="search-select"]#groups .ember-basic-dropdown-trigger');
     await click('.ember-power-select-option');
     assert.dom('[data-test-oidc-assignment-save]').hasText('Update');

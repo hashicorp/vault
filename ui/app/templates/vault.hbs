@@ -1,36 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{outlet}}
-<footer class="footer has-text-grey has-text-centered">
-  <span class="is-inline-block">
-    <Icon @name="hashicorp" aria-hidden="true" class="has-text-grey-light" />
-    &copy;
-    {{date-format (now) "yyyy"}}
-    HashiCorp
-  </span>
-  <span>
-    <ExternalLink @href={{changelog-url-for this.auth.activeCluster.leaderNode.version}} class="link has-text-grey">
-      Vault
-      {{this.auth.activeCluster.leaderNode.version}}
-    </ExternalLink>
-  </span>
-  {{#if (is-version "OSS")}}
-    <span>
-      <ExternalLink @href="https://hashicorp.com/products/vault/trial?source=vaultui" class="link has-text-grey">
-        Upgrade to Vault Enterprise
-      </ExternalLink>
-    </span>
-  {{/if}}
-  <span>
-    <DocLink @path="/vault" class="has-text-grey">
-      Documentation
-    </DocLink>
-  </span>
-</footer>
-{{#if (eq this.env "development")}}
-  <div class="env-banner level development">
-    <div class="level-item notification">
-      <Icon @name="git-branch" /><Icon @name="pencil-tool" />
-      Local development
-      <Icon @name="pencil-tool" /><Icon @name="git-branch" />
-    </div>
-  </div>
-{{/if}}
+
+<AppFooter />

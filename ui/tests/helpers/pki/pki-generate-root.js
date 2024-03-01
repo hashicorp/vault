@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 export const SELECTORS = {
@@ -23,13 +23,13 @@ export const SELECTORS = {
   urlField: '[data-test-urls-section] [data-test-input]',
   // Shown values after save
   saved: {
-    certificate: '[data-test-value-div="Certificate"] [data-test-masked-input]',
+    certificate: '[data-test-value-div="Certificate"] [data-test-certificate-card]',
     commonName: '[data-test-row-value="Common name"]',
     issuerName: '[data-test-row-value="Issuer name"]',
     issuerLink: '[data-test-value-div="Issuer ID"] a',
     keyName: '[data-test-row-value="Key name"]',
     keyLink: '[data-test-value-div="Key ID"] a',
-    privateKey: '[data-test-value-div="Private key"] [data-test-masked-input]',
+    privateKey: '[data-test-value-div="Private key"] [data-test-certificate-card]',
     serialNumber: '[data-test-row-value="Serial number"]',
   },
 };

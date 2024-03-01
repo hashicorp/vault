@@ -1,0 +1,3 @@
+```release-note:bug 
+core: Fix readonly errors that could occur while loading mounts/auths during unseal
+```

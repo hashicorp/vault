@@ -1,9 +1,9 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { computed } from '@ember/object';
 import Controller from '@ember/controller';
 
@@ -21,13 +21,22 @@ export default Controller.extend({
 
   filterFocused: false,
 
-  // set via the route `loading` action
-  isLoading: false,
+  isLoading: false, // set via the route `loading` action
+  policyToDelete: null, // set when clicking 'Delete' from popup menu
+
+  // callback from HDS pagination to set the queryParams page
+  get paginationQueryParams() {
+    return (page) => {
+      return {
+        page,
+      };
+    };
+  },
 
   filterMatchesKey: computed('filter', 'model', 'model.[]', function () {
     var filter = this.filter;
     var content = this.model;
-    return !!(content && content.length && content.findBy('id', filter));
+    return !!(content && content.length && content.find((c) => c.id === filter));
   }),
 
   firstPartialMatch: computed('filter', 'model', 'model.[]', 'filterMatchesKey', function () {
@@ -68,7 +77,8 @@ export default Controller.extend({
           flash.danger(
             `There was an error deleting the ${policyType.toUpperCase()} policy "${name}": ${errors}.`
           );
-        });
+        })
+        .finally(() => this.set('policyToDelete', null));
     },
   },
 });

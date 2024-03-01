@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /**
@@ -30,13 +30,13 @@ import Component from '@glimmer/component';
 import { typeOf } from '@ember/utils';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import Duration from '@icholy/duration';
 import { guidFor } from '@ember/object/internals';
 import Ember from 'ember';
 import { restartableTask, timeout } from 'ember-concurrency';
 import {
   convertFromSeconds,
   convertToSeconds,
+  durationToSeconds,
   goSafeConvertFromSeconds,
   largestUnitFromSeconds,
 } from 'core/utils/duration-utils';
@@ -45,7 +45,6 @@ export default class TtlPickerComponent extends Component {
   @tracked recalculateSeconds = false;
   @tracked time = ''; // if defaultValue is NOT set, then do not display a defaultValue.
   @tracked unit = 's';
-  @tracked recalculateSeconds = false;
   @tracked errorMessage = '';
 
   /* Used internally */
@@ -80,18 +79,19 @@ export default class TtlPickerComponent extends Component {
 
   initializeTtl() {
     const initialValue = this.args.initialValue;
+
     let seconds = 0;
+
     if (typeof initialValue === 'number') {
       // if the passed value is a number, assume unit is seconds
       seconds = initialValue;
     } else {
-      try {
-        seconds = Duration.parse(initialValue).seconds();
-      } catch (e) {
-        // if parsing fails leave it empty
-        return;
-      }
+      const parseDuration = durationToSeconds(initialValue);
+      // if parsing fails leave it empty
+      if (parseDuration === null) return;
+      seconds = parseDuration;
     }
+
     const unit = largestUnitFromSeconds(seconds);
     this.time = convertFromSeconds(seconds, unit);
     this.unit = unit;

@@ -1,10 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
@@ -62,7 +62,7 @@ export default class KeymgmtProviderEdit extends Component {
   }
   @task
   @waitFor
-  *fetchKeys(page = 1) {
+  *fetchKeys(page) {
     try {
       yield this.args.model.fetchKeys(page);
     } catch (error) {

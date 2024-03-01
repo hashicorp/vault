@@ -1,15 +1,16 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { isPresent } from '@ember/utils';
 import { alias } from '@ember/object/computed';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Controller from '@ember/controller';
 import { copy } from 'ember-copy';
 import { resolve } from 'rsvp';
 import decodeConfigFromJWT from 'replication/utils/decode-config-from-jwt';
+import { buildWaiter } from '@ember/test-waiters';
 
 const DEFAULTS = {
   token: null,
@@ -23,14 +24,17 @@ const DEFAULTS = {
     paths: [],
   },
 };
+const waiter = buildWaiter('replication-actions');
 
 export default Controller.extend(copy(DEFAULTS, true), {
   isModalActive: false,
+  isTokenCopied: false,
   expirationDate: null,
+  router: service(),
   store: service(),
   rm: service('replication-mode'),
   replicationMode: alias('rm.mode'),
-  flashMessages: service(),
+  secondaryToRevoke: null,
 
   submitError(e) {
     if (e.errors) {
@@ -86,6 +90,7 @@ export default Controller.extend(copy(DEFAULTS, true), {
   },
 
   submitHandler(action, clusterMode, data, event) {
+    const waiterToken = waiter.beginAsync();
     const replicationMode = this.replicationMode;
     if (event && event.preventDefault) {
       event.preventDefault();
@@ -114,32 +119,24 @@ export default Controller.extend(copy(DEFAULTS, true), {
           });
         },
         (...args) => this.submitError(...args)
-      );
+      )
+      .finally(() => {
+        this.set('secondaryToRevoke', null);
+        waiter.endAsync(waiterToken);
+      });
   },
 
   actions: {
     onSubmit(/*action, mode, data, event*/) {
       return this.submitHandler(...arguments);
     },
-    copyClose(successMessage) {
-      // separate action for copy & close button so it does not try and use execCommand to copy token to clipboard
-      if (!!successMessage && typeof successMessage === 'string') {
-        this.flashMessages.success(successMessage);
-      }
+    closeTokenModal() {
       this.toggleProperty('isModalActive');
-      this.transitionToRoute('mode.secondaries');
+      this.router.transitionTo('vault.cluster.replication.mode.secondaries');
+      this.set('isTokenCopied', false);
     },
-    toggleModal(successMessage) {
-      if (!!successMessage && typeof successMessage === 'string') {
-        this.flashMessages.success(successMessage);
-      }
-      // use copy browser extension to copy token if you close the modal by clicking outside of it.
-      const htmlSelectedToken = document.querySelector('#token-textarea');
-      htmlSelectedToken.select();
-      document.execCommand('copy');
-
-      this.toggleProperty('isModalActive');
-      this.transitionToRoute('mode.secondaries');
+    onCopy() {
+      this.set('isTokenCopied', true);
     },
     clear() {
       this.reset();

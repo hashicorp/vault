@@ -65,6 +65,7 @@ func TestConversionsHaveAllFields(t *testing.T) {
 			CredentialType: CredentialTypeRSAPrivateKey,
 			PublicKey:      []byte("-----BEGIN PUBLIC KEY-----"),
 			Password:       "password",
+			Subject:        "subject",
 			Expiration:     time.Now(),
 		}
 

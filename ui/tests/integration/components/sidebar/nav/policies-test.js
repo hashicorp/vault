@@ -1,8 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { stubFeaturesAndPermissions } from 'vault/tests/helpers/components/sidebar-nav';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const renderComponent = () => {
   return render(hbs`
@@ -14,6 +20,17 @@ const renderComponent = () => {
 
 module('Integration | Component | sidebar-nav-policies', function (hooks) {
   setupRenderingTest(hooks);
+
+  hooks.beforeEach(function () {
+    setRunOptions({
+      rules: {
+        // This is an issue with Hds::SideNav::Header::HomeLink
+        'aria-prohibited-attr': { enabled: false },
+        // TODO: fix use Dropdown on user-menu
+        'nested-interactive': { enabled: false },
+      },
+    });
+  });
 
   test('it should hide links user does not have access too', async function (assert) {
     await renderComponent();

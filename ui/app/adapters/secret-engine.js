@@ -1,9 +1,8 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { assign } from '@ember/polyfills';
 import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { splitObject } from 'vault/helpers/split-object';
@@ -34,8 +33,6 @@ export default ApplicationAdapter.extend({
     let mountModel, configModel;
     try {
       mountModel = await this.ajax(this.internalURL(query.path), 'GET');
-      // if kv2 then add the config data to the mountModel
-      // version comes in as a string
       if (mountModel?.data?.type === 'kv' && mountModel?.data?.options?.version === '2') {
         configModel = await this.ajax(this.urlForConfig(query.path), 'GET');
         mountModel.data = { ...mountModel.data, ...configModel.data };
@@ -78,13 +75,13 @@ export default ApplicationAdapter.extend({
         // we do not handle the error here because we want the secret-engine to mount successfully and to continue the flow.
       }
       return {
-        data: assign({}, data, { path: path + '/', id: path }),
+        data: { ...data, path: path + '/', id: path },
       };
     } else {
       return this.ajax(this.url(path), 'POST', { data }).then(() => {
         // ember data doesn't like 204s if it's not a DELETE
         return {
-          data: assign({}, data, { path: path + '/', id: path }),
+          data: { ...data, path: path + '/', id: path },
         };
       });
     }
@@ -134,7 +131,11 @@ export default ApplicationAdapter.extend({
 
   saveZeroAddressConfig(store, type, snapshot) {
     const path = encodePath(snapshot.id);
-    const roles = store.peekAll('role-ssh').filterBy('zeroAddress').mapBy('id').join(',');
+    const roles = store
+      .peekAll('role-ssh')
+      .filter((role) => role.zeroAddress)
+      .map((role) => role.id)
+      .join(',');
     const url = `/v1/${path}/config/zeroaddress`;
     const data = { roles };
     if (roles === '') {

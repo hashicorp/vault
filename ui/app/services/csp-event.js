@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /*eslint-disable no-constant-condition*/
@@ -14,7 +14,7 @@ export default Service.extend({
     return [];
   }),
   connectionViolations: computed('events.@each.violatedDirective', function () {
-    return this.events.filter((e) => e.violatedDirective.startsWith('connect-src'));
+    return this.events.some((e) => e.violatedDirective.startsWith('connect-src'));
   }),
 
   attach() {

@@ -1,11 +1,17 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Service, { inject as service } from '@ember/service';
+import Service, { service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
+import { sanitizePath, sanitizeStart } from 'core/utils/sanitize-path';
 import { task } from 'ember-concurrency';
 
+export const PERMISSIONS_BANNER_STATES = {
+  readFailed: 'read-failed',
+  noAccess: 'no-ns-access',
+};
 const API_PATHS = {
   access: {
     methods: 'sys/auth',
@@ -40,6 +46,9 @@ const API_PATHS = {
     activity: 'sys/internal/counters/activity',
     config: 'sys/internal/counters/config',
   },
+  settings: {
+    customMessages: 'sys/config/ui/custom-messages',
+  },
 };
 
 const API_PATHS_TO_ROUTE_PARAMS = {
@@ -58,17 +67,41 @@ const API_PATHS_TO_ROUTE_PARAMS = {
   It fetches a users' policy from the resultant-acl endpoint and stores their
   allowed exact and glob paths as state. It also has methods for checking whether
   a user has permission for a given path.
+  The data from the resultant-acl endpoint has the following shape:
+  {
+    exact_paths: {
+      [key: string]: {
+        capabilities: string[];
+      };
+    };
+    glob_paths: {
+      [key: string]: {
+        capabilities: string[];
+      };
+    };
+    root: boolean;
+    chroot_namespace?: string;
+  };
 */
 
-export default Service.extend({
-  exactPaths: null,
-  globPaths: null,
-  canViewAll: null,
-  store: service(),
-  auth: service(),
-  namespace: service(),
+export default class PermissionsService extends Service {
+  @tracked exactPaths = null;
+  @tracked globPaths = null;
+  @tracked canViewAll = null;
+  @tracked permissionsBanner = null;
+  @tracked chrootNamespace = null;
+  @service store;
+  @service auth;
+  @service namespace;
 
-  getPaths: task(function* () {
+  get baseNs() {
+    const currentNs = this.namespace.path;
+    return this.chrootNamespace
+      ? `${sanitizePath(this.chrootNamespace)}/${sanitizePath(currentNs)}`
+      : sanitizePath(currentNs);
+  }
+
+  @task *getPaths() {
     if (this.paths) {
       return;
     }
@@ -79,34 +112,53 @@ export default Service.extend({
       return;
     } catch (err) {
       // If no policy can be found, default to showing all nav items.
-      this.set('canViewAll', true);
+      this.canViewAll = true;
+      this.permissionsBanner = PERMISSIONS_BANNER_STATES.readFailed;
     }
-  }),
+  }
+
+  calcNsAccess() {
+    if (this.canViewAll) {
+      this.permissionsBanner = null;
+      return;
+    }
+    const namespace = this.baseNs;
+    const allowed =
+      Object.keys(this.globPaths).any((k) => k.startsWith(namespace)) ||
+      Object.keys(this.exactPaths).any((k) => k.startsWith(namespace));
+    this.permissionsBanner = allowed ? null : PERMISSIONS_BANNER_STATES.noAccess;
+  }
 
   setPaths(resp) {
-    this.set('exactPaths', resp.data.exact_paths);
-    this.set('globPaths', resp.data.glob_paths);
-    this.set('canViewAll', resp.data.root);
-  },
+    this.exactPaths = resp.data.exact_paths;
+    this.globPaths = resp.data.glob_paths;
+    this.canViewAll = resp.data.root;
+    this.chrootNamespace = resp.data.chroot_namespace;
+    this.calcNsAccess();
+  }
 
   reset() {
-    this.set('exactPaths', null);
-    this.set('globPaths', null);
-    this.set('canViewAll', null);
-  },
+    this.exactPaths = null;
+    this.globPaths = null;
+    this.canViewAll = null;
+    this.chrootNamespace = null;
+    this.permissionsBanner = null;
+  }
 
   hasNavPermission(navItem, routeParams, requireAll) {
     if (routeParams) {
-      // viewing the entity and groups pages require the list capability, while the others require the default, which is anything other than deny
-      const capability = routeParams === 'entities' || routeParams === 'groups' ? ['list'] : [null];
       // check that the user has permission to access all (requireAll = true) or any of the routes when array is passed
       // useful for hiding nav headings when user does not have access to any of the links
       const params = Array.isArray(routeParams) ? routeParams : [routeParams];
       const evalMethod = !Array.isArray(routeParams) || requireAll ? 'every' : 'some';
-      return params[evalMethod]((param) => this.hasPermission(API_PATHS[navItem][param], capability));
+      return params[evalMethod]((param) => {
+        // viewing the entity and groups pages require the list capability, while the others require the default, which is anything other than deny
+        const capability = param === 'entities' || param === 'groups' ? ['list'] : [null];
+        return this.hasPermission(API_PATHS[navItem][param], capability);
+      });
     }
     return Object.values(API_PATHS[navItem]).some((path) => this.hasPermission(path));
-  },
+  }
 
   navPathParams(navItem) {
     const path = Object.values(API_PATHS[navItem]).find((path) => this.hasPermission(path));
@@ -115,29 +167,28 @@ export default Service.extend({
     }
 
     return API_PATHS_TO_ROUTE_PARAMS[path];
-  },
+  }
 
   pathNameWithNamespace(pathName) {
-    const namespace = this.namespace.path;
+    const namespace = this.baseNs;
     if (namespace) {
-      return `${namespace}/${pathName}`;
+      return `${sanitizePath(namespace)}/${sanitizeStart(pathName)}`;
     } else {
       return pathName;
     }
-  },
+  }
 
   hasPermission(pathName, capabilities = [null]) {
-    const path = this.pathNameWithNamespace(pathName);
-
     if (this.canViewAll) {
       return true;
     }
+    const path = this.pathNameWithNamespace(pathName);
 
     return capabilities.every(
       (capability) =>
         this.hasMatchingExactPath(path, capability) || this.hasMatchingGlobPath(path, capability)
     );
-  },
+  }
 
   hasMatchingExactPath(pathName, capability) {
     const exactPaths = this.exactPaths;
@@ -152,7 +203,7 @@ export default Service.extend({
       return hasMatchingPath;
     }
     return false;
-  },
+  }
 
   hasMatchingGlobPath(pathName, capability) {
     const globPaths = this.globPaths;
@@ -171,13 +222,13 @@ export default Service.extend({
       return hasMatchingPath;
     }
     return false;
-  },
+  }
 
   hasCapability(path, capability) {
     return path.capabilities.includes(capability);
-  },
+  }
 
   isDenied(path) {
     return path.capabilities.includes('deny');
-  },
-});
+  }
+}

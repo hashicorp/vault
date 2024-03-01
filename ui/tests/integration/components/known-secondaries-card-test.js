@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -58,8 +58,8 @@ module('Integration | Component | replication known-secondaries-card', function 
       .dom('[data-test-known-secondaries-table]')
       .doesNotExist('does not show the known secondaries table');
     assert
-      .dom('.empty-state')
-      .includesText('No known dr secondary clusters', 'has a message with the replication mode');
+      .dom('.hds-application-state')
+      .includesText('No known dr secondary clusters', 'empty state has a message with the replication mode');
   });
 
   test('it renders an Add secondary link if user has capabilites', async function (assert) {

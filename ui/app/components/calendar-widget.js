@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -28,8 +28,6 @@ export default class CalendarWidget extends Component {
   currentDate = timestamp.now();
   @tracked calendarDisplayDate = this.currentDate; // init to current date, updates when user clicks on calendar chevrons
   @tracked showCalendar = false;
-  @tracked tooltipTarget = null;
-  @tracked tooltipText = null;
 
   // both date getters return a date object
   get startDate() {
@@ -70,20 +68,6 @@ export default class CalendarWidget extends Component {
         readonly,
       };
     });
-  }
-
-  @action
-  addTooltip() {
-    if (this.disablePastYear) {
-      const previousYear = this.displayYear - 1;
-      this.tooltipText = `${previousYear} is unavailable because it is before your start date. Change your start month to a date in ${previousYear} to see data for this year.`;
-      this.tooltipTarget = '#previous-year';
-    }
-  }
-
-  @action
-  removeTooltip() {
-    this.tooltipTarget = null;
   }
 
   @action

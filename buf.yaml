@@ -1,0 +1,123 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+version: v1
+breaking:
+  use:
+    - FILE
+deps:
+  - buf.build/hashicorp/go-kms-wrapping
+lint:
+  ignore_only:
+    ENUM_VALUE_PREFIX:
+      - sdk/helper/clientcountutil/generation/generate_data.proto
+      - vault/hcp_link/proto/node_status/status.proto
+      - vault/replication_services_ent.proto
+    ENUM_ZERO_VALUE_SUFFIX:
+      - sdk/helper/clientcountutil/generation/generate_data.proto
+      - vault/hcp_link/proto/node_status/status.proto
+      - vault/replication_services_ent.proto
+    FIELD_LOWER_SNAKE_CASE:
+      - enthelpers/wal/types_ent.proto
+      - sdk/database/dbplugin/database.proto
+      - sdk/database/dbplugin/v5/proto/database.proto
+      - sdk/logical/identity.proto
+      - sdk/plugin/pb/backend.proto
+      - vault/hcp_link/proto/meta/meta.proto
+      - vault/hcp_link/proto/node_status/status.proto
+      - vault/replication/replication_resolver_ent.proto
+      - vault/replication_services_ent.proto
+    IMPORT_USED:
+      - vault/hcp_link/proto/node_status/status.proto
+      - vault/replication_services_ent.proto
+    PACKAGE_DIRECTORY_MATCH:
+      - enthelpers/merkle/types_ent.proto
+      - enthelpers/wal/types_ent.proto
+      - helper/forwarding/types.proto
+      - helper/identity/mfa/types.proto
+      - helper/identity/types.proto
+      - helper/storagepacker/types.proto
+      - physical/raft/types.proto
+      - sdk/database/dbplugin/database.proto
+      - sdk/database/dbplugin/v5/proto/database.proto
+      - sdk/helper/pluginutil/multiplexing.proto
+      - sdk/logical/event.proto
+      - sdk/logical/identity.proto
+      - sdk/logical/plugin.proto
+      - sdk/logical/version.proto
+      - sdk/plugin/pb/backend.proto
+      - vault/activity/activity_log.proto
+      - sdk/helper/clientcountutil/generation/generate_data.proto
+      - vault/hcp_link/proto/link_control/link_control.proto
+      - vault/hcp_link/proto/meta/meta.proto
+      - vault/hcp_link/proto/node_status/status.proto
+      - vault/replication/replication_resolver_ent.proto
+      - vault/seal/multi_wrap_value.proto
+      - vault/tokens/token.proto
+    PACKAGE_SAME_DIRECTORY:
+      - vault/replication/replication_resolver_ent.proto
+      - vault/replication_services_ent.proto
+      - vault/request_forwarding_service.proto
+    PACKAGE_SAME_GO_PACKAGE:
+      - vault/replication/replication_resolver_ent.proto
+      - vault/replication_services_ent.proto
+      - vault/request_forwarding_service.proto
+    PACKAGE_VERSION_SUFFIX:
+      - enthelpers/merkle/types_ent.proto
+      - enthelpers/wal/types_ent.proto
+      - helper/forwarding/types.proto
+      - helper/identity/mfa/types.proto
+      - helper/identity/types.proto
+      - helper/storagepacker/types.proto
+      - physical/raft/types.proto
+      - sdk/database/dbplugin/database.proto
+      - sdk/helper/pluginutil/multiplexing.proto
+      - sdk/logical/event.proto
+      - sdk/logical/identity.proto
+      - sdk/logical/plugin.proto
+      - sdk/logical/version.proto
+      - sdk/plugin/pb/backend.proto
+      - vault/activity/activity_log.proto
+      - sdk/helper/clientcountutil/generation/generate_data.proto
+      - vault/hcp_link/proto/link_control/link_control.proto
+      - vault/hcp_link/proto/meta/meta.proto
+      - vault/hcp_link/proto/node_status/status.proto
+      - vault/replication/replication_resolver_ent.proto
+      - vault/replication_services_ent.proto
+      - vault/request_forwarding_service.proto
+      - vault/seal/multi_wrap_value.proto
+      - vault/tokens/token.proto
+    RPC_REQUEST_RESPONSE_UNIQUE:
+      - sdk/database/dbplugin/database.proto
+      - sdk/database/dbplugin/v5/proto/database.proto
+      - sdk/plugin/pb/backend.proto
+      - vault/replication_services_ent.proto
+      - vault/request_forwarding_service.proto
+    RPC_REQUEST_STANDARD_NAME:
+      - sdk/database/dbplugin/database.proto
+      - sdk/database/dbplugin/v5/proto/database.proto
+      - sdk/logical/version.proto
+      - sdk/plugin/pb/backend.proto
+      - vault/replication/replication_resolver_ent.proto
+      - vault/replication_services_ent.proto
+      - vault/request_forwarding_service.proto
+    RPC_RESPONSE_STANDARD_NAME:
+      - sdk/database/dbplugin/database.proto
+      - sdk/database/dbplugin/v5/proto/database.proto
+      - sdk/logical/version.proto
+      - sdk/plugin/pb/backend.proto
+      - vault/hcp_link/proto/meta/meta.proto
+      - vault/replication/replication_resolver_ent.proto
+      - vault/replication_services_ent.proto
+      - vault/request_forwarding_service.proto
+    SERVICE_SUFFIX:
+      - sdk/database/dbplugin/database.proto
+      - sdk/database/dbplugin/v5/proto/database.proto
+      - sdk/helper/pluginutil/multiplexing.proto
+      - sdk/logical/version.proto
+      - sdk/plugin/pb/backend.proto
+      - vault/hcp_link/proto/link_control/link_control.proto
+      - vault/hcp_link/proto/meta/meta.proto
+      - vault/replication/replication_resolver_ent.proto
+      - vault/replication_services_ent.proto
+      - vault/request_forwarding_service.proto

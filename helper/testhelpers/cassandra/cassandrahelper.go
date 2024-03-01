@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package cassandra
 
@@ -9,6 +9,8 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -80,6 +82,12 @@ func (h Host) ConnectionURL() string {
 
 func PrepareTestContainer(t *testing.T, opts ...ContainerOpt) (Host, func()) {
 	t.Helper()
+
+	// Skipping on ARM, as this image can't run on ARM architecture
+	if strings.Contains(runtime.GOARCH, "arm") {
+		t.Skip("Skipping, as this image is not supported on ARM architectures")
+	}
+
 	if os.Getenv("CASSANDRA_HOSTS") != "" {
 		host, port, err := net.SplitHostPort(os.Getenv("CASSANDRA_HOSTS"))
 		if err != nil {

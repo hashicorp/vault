@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { run } from '@ember/runloop';
@@ -134,8 +134,8 @@ module('Integration | Service | auth', function (hooks) {
     this.server = new Pretender(function () {
       this.get('/v1/auth/token/lookup-self', function (request) {
         const resp = copy(ROOT_TOKEN_RESPONSE, true);
-        resp.id = request.requestHeaders['X-Vault-Token'];
-        resp.data.id = request.requestHeaders['X-Vault-Token'];
+        resp.id = request.requestHeaders['x-vault-token'];
+        resp.data.id = request.requestHeaders['x-vault-token'];
         return [200, {}, resp];
       });
       this.post('/v1/auth/userpass/login/:username', function (request) {
@@ -321,8 +321,8 @@ module('Integration | Service | auth', function (hooks) {
     this.server.map(function () {
       this.get('/v1/auth/token/lookup-self', function (request) {
         const resp = copy(tokenResp, true);
-        resp.id = request.requestHeaders['X-Vault-Token'];
-        resp.data.id = request.requestHeaders['X-Vault-Token'];
+        resp.id = request.requestHeaders['x-vault-token'];
+        resp.data.id = request.requestHeaders['x-vault-token'];
         return [200, {}, resp];
       });
     });

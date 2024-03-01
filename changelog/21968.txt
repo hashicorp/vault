@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix styling for viewing certificate in kubernetes configuration
+```

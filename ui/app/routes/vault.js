@@ -1,25 +1,28 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { later } from '@ember/runloop';
 import { Promise } from 'rsvp';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import Ember from 'ember';
-/* eslint-disable ember/no-ember-testing-in-module-scope */
-const SPLASH_DELAY = Ember.testing ? 0 : 300;
 
-export default Route.extend({
-  store: service(),
-  version: service(),
+const SPLASH_DELAY = 300;
+
+export default class VaultRoute extends Route {
+  @service router;
+  @service store;
+  @service version;
 
   beforeModel() {
-    return this.version.fetchVersion();
-  },
+    // So we can know what type (Enterprise/Community) we're running
+    return this.version.fetchType();
+  }
 
   model() {
+    const delay = Ember.testing ? 0 : SPLASH_DELAY;
     // hardcode single cluster
     const fixture = {
       data: {
@@ -34,13 +37,13 @@ export default Route.extend({
     return new Promise((resolve) => {
       later(() => {
         resolve(this.store.peekAll('cluster'));
-      }, SPLASH_DELAY);
+      }, delay);
     });
-  },
+  }
 
   redirect(model, transition) {
     if (model.get('length') === 1 && transition.targetName === 'vault.index') {
-      return this.transitionTo('vault.cluster', model.get('firstObject.name'));
+      return this.router.transitionTo('vault.cluster', model[0].name);
     }
-  },
-});
+  }
+}

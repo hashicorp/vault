@@ -1,0 +1,3 @@
+```release-note:change
+secrets/alicloud: Update plugin to v0.15.1
+```

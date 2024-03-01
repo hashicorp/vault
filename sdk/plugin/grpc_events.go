@@ -23,7 +23,7 @@ type GRPCEventsClient struct {
 
 var _ logical.EventSender = (*GRPCEventsClient)(nil)
 
-func (s *GRPCEventsClient) Send(ctx context.Context, eventType logical.EventType, event *logical.EventData) error {
+func (s *GRPCEventsClient) SendEvent(ctx context.Context, eventType logical.EventType, event *logical.EventData) error {
 	_, err := s.client.SendEvent(ctx, &pb.SendEventRequest{
 		EventType: string(eventType),
 		Event:     event,
@@ -41,7 +41,7 @@ func (s *GRPCEventsServer) SendEvent(ctx context.Context, req *pb.SendEventReque
 		return &pb.Empty{}, nil
 	}
 
-	err := s.impl.Send(ctx, logical.EventType(req.EventType), req.Event)
+	err := s.impl.SendEvent(ctx, logical.EventType(req.EventType), req.Event)
 	if err != nil {
 		return nil, err
 	}

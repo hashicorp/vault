@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -14,10 +14,13 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -37,6 +40,9 @@ const (
 
 	autoRotateCheckInterval = 5 * time.Minute
 	legacyRotateReason      = "legacy rotation"
+	// The keyring is persisted before the root key.
+	defaultKeyringTimeout            = 1 * time.Second
+	bestEffortKeyringTimeoutOverride = "VAULT_ENCRYPTION_COUNT_PERSIST_TIMEOUT"
 )
 
 // Versions of the AESGCM storage methodology
@@ -89,6 +95,8 @@ type AESGCMBarrier struct {
 	// Used only for testing
 	RemoteEncryptions     *atomic.Int64
 	totalLocalEncryptions *atomic.Int64
+
+	bestEffortKeyringTimeout time.Duration
 }
 
 func (b *AESGCMBarrier) RotationConfig() (kc KeyRotationConfig, err error) {
@@ -113,6 +121,15 @@ func (b *AESGCMBarrier) SetRotationConfig(ctx context.Context, rotConfig KeyRota
 // NewAESGCMBarrier is used to construct a new barrier that uses
 // the provided physical backend for storage.
 func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
+	keyringTimeout := defaultKeyringTimeout
+	keyringTimeoutStr := os.Getenv(bestEffortKeyringTimeoutOverride)
+	if keyringTimeoutStr != "" {
+		t, err := parseutil.ParseDurationSecond(keyringTimeoutStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed parsing %s environment variable: %w", bestEffortKeyringTimeoutOverride, err)
+		}
+		keyringTimeout = t
+	}
 	b := &AESGCMBarrier{
 		backend:                  physical,
 		sealed:                   true,
@@ -121,6 +138,7 @@ func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
 		UnaccountedEncryptions:   atomic.NewInt64(0),
 		RemoteEncryptions:        atomic.NewInt64(0),
 		totalLocalEncryptions:    atomic.NewInt64(0),
+		bestEffortKeyringTimeout: keyringTimeout,
 	}
 	return b, nil
 }
@@ -153,7 +171,7 @@ func (b *AESGCMBarrier) Initialized(ctx context.Context) (bool, error) {
 
 // Initialize works only if the barrier has not been initialized
 // and makes use of the given root key.
-func (b *AESGCMBarrier) Initialize(ctx context.Context, key, sealKey []byte, reader io.Reader) error {
+func (b *AESGCMBarrier) Initialize(ctx context.Context, key []byte, sealKey []byte, reader io.Reader) error {
 	// Verify the key size
 	min, max := b.KeyLength()
 	if len(key) < min || len(key) > max {
@@ -168,7 +186,7 @@ func (b *AESGCMBarrier) Initialize(ctx context.Context, key, sealKey []byte, rea
 	}
 
 	// Generate encryption key
-	encrypt, err := b.GenerateKey(reader)
+	encryptionKey, err := b.GenerateKey(reader)
 	if err != nil {
 		return fmt.Errorf("failed to generate encryption key: %w", err)
 	}
@@ -179,7 +197,7 @@ func (b *AESGCMBarrier) Initialize(ctx context.Context, key, sealKey []byte, rea
 	keyring, err = keyring.AddKey(&Key{
 		Term:    1,
 		Version: 1,
-		Value:   encrypt,
+		Value:   encryptionKey,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create keyring: %w", err)
@@ -191,7 +209,7 @@ func (b *AESGCMBarrier) Initialize(ctx context.Context, key, sealKey []byte, rea
 	}
 
 	if len(sealKey) > 0 {
-		primary, err := b.aeadFromKey(encrypt)
+		primary, err := b.aeadFromKey(encryptionKey)
 		if err != nil {
 			return err
 		}
@@ -211,6 +229,18 @@ func (b *AESGCMBarrier) Initialize(ctx context.Context, key, sealKey []byte, rea
 // persistKeyring is used to write out the keyring using the
 // root key to encrypt it.
 func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) error {
+	return b.persistKeyringInternal(ctx, keyring, false)
+}
+
+// persistKeyringBestEffort is like persistKeyring but 'best effort', ie times out early
+// for non critical keyring writes (encryption/rotation tracking)
+func (b *AESGCMBarrier) persistKeyringBestEffort(ctx context.Context, keyring *Keyring) error {
+	return b.persistKeyringInternal(ctx, keyring, true)
+}
+
+// persistKeyring is used to write out the keyring using the
+// root key to encrypt it.
+func (b *AESGCMBarrier) persistKeyringInternal(ctx context.Context, keyring *Keyring, bestEffort bool) error {
 	// Create the keyring entry
 	keyringBuf, err := keyring.Serialize()
 	defer memzero(keyringBuf)
@@ -221,13 +251,13 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 	// Create the AES-GCM
 	gcm, err := b.aeadFromKey(keyring.RootKey())
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to retrieve AES-GCM AEAD from root key: %w", err)
 	}
 
 	// Encrypt the barrier init value
 	value, err := b.encrypt(keyringPath, initialKeyTerm, gcm, keyringBuf)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to encrypt barrier initial value: %w", err)
 	}
 
 	// Create the keyring physical entry
@@ -235,7 +265,18 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 		Key:   keyringPath,
 		Value: value,
 	}
-	if err := b.backend.Put(ctx, pe); err != nil {
+
+	ctxKeyring := ctx
+
+	if bestEffort {
+		// We reduce the timeout on the initial 'put' but if this succeeds we will
+		// allow longer later on when we try to persist the root key .
+		var cancelKeyring func()
+		ctxKeyring, cancelKeyring = context.WithTimeout(ctx, b.bestEffortKeyringTimeout)
+		defer cancelKeyring()
+	}
+
+	if err := b.backend.Put(ctxKeyring, pe); err != nil {
 		return fmt.Errorf("failed to persist keyring: %w", err)
 	}
 
@@ -255,11 +296,11 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 	activeKey := keyring.ActiveKey()
 	aead, err := b.aeadFromKey(activeKey.Value)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to retrieve AES-GCM AEAD from active key: %w", err)
 	}
 	value, err = b.encryptTracked(rootKeyPath, activeKey.Term, aead, keyBuf)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to encrypt and track active key value: %w", err)
 	}
 
 	// Update the rootKeyPath for standby instances
@@ -267,6 +308,9 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 		Key:   rootKeyPath,
 		Value: value,
 	}
+
+	// Use the longer timeout from the original context, for the follow-up write
+	// to persist the root key, as the initial storage of the keyring was successful.
 	if err := b.backend.Put(ctx, pe); err != nil {
 		return fmt.Errorf("failed to persist root key: %w", err)
 	}
@@ -961,7 +1005,7 @@ func (b *AESGCMBarrier) aeadFromKey(key []byte) (cipher.AEAD, error) {
 
 // encrypt is used to encrypt a value
 func (b *AESGCMBarrier) encrypt(path string, term uint32, gcm cipher.AEAD, plain []byte) ([]byte, error) {
-	// Allocate the output buffer with room for tern, version byte,
+	// Allocate the output buffer with room for term, version byte,
 	// nonce, GCM tag and the plaintext
 
 	extra := termSize + 1 + gcm.NonceSize() + gcm.Overhead()
@@ -1218,7 +1262,7 @@ func (b *AESGCMBarrier) persistEncryptions(ctx context.Context) error {
 			newEncs := upe + 1
 			activeKey.Encryptions += uint64(newEncs)
 			newKeyring := b.keyring.Clone()
-			err := b.persistKeyring(ctx, newKeyring)
+			err := b.persistKeyringBestEffort(ctx, newKeyring)
 			if err != nil {
 				return err
 			}

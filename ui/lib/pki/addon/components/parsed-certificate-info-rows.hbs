@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#each this.possibleFields as |field|}}
   {{#let (get @model field.key) as |value|}}
     <InfoTableRow
@@ -7,16 +12,3 @@
     />
   {{/let}}
 {{/each}}
-{{#if (or (eq @model.can_parse false) this.parsingErrors)}}
-  <AlertBanner
-    data-test-parsing-error-alert-banner
-    class="has-top-margin-m"
-    @type="info"
-    @title="There was an error parsing certificate metadata"
-  >
-    Vault cannot display unparsed values, but this will not interfere with the certificate's functionality.
-    {{#if this.parsingErrors}}
-      <p class="sub-text is-font-mono">Parsing error(s): {{this.parsingErrors}} </p>
-    {{/if}}
-  </AlertBanner>
-{{/if}}

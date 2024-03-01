@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { parsedParameterKeys } from 'vault/utils/parse-pki-cert-oids';
 import { ParsedCertificateData } from 'vault/vault/utils/parse-pki-cert';
@@ -50,12 +55,5 @@ export default class ParsedCertificateInfoRowsComponent extends Component<Args> 
         ...attrsByKey[key],
       };
     });
-  }
-
-  get parsingErrors() {
-    if (this.args.model?.parsing_errors?.length) {
-      return this.args.model.parsing_errors.map((e) => e.message).join(', ');
-    }
-    return '';
   }
 }

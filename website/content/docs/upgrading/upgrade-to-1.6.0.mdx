@@ -11,7 +11,7 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 1.6.0 compared to 1.5. Please read it carefully.
 
-## Go Version
+## Go version
 
 Vault 1.6.0 is built with Go 1.15. Please review the [Go Release
 Notes](https://golang.org/doc/go1.15) for full details. A few items of
@@ -23,14 +23,14 @@ particular note:
   host name. X.509 certificates should be validated and potentially regenerated
   before upgrading if they do not have Subject Alternative Names.
 
-## Transform Secrets Engine Storage Upgrade
+## Transform secrets engine storage upgrade
 
 The Transform Secrets Engine (Enterprise only) will automatically upgrade the
 storage of its configuration in order to accommodate the new transformation
 type oriented configuration API. Secondaries will receive the
 modifications via replication.
 
-## Database Engine Interface Upgrade
+## Database engine interface upgrade
 
 The Database Engine has changed the underlying interface between Vault and each database
 implementation. This change allows use of [password policies](/vault/docs/concepts/password-policies)
@@ -44,7 +44,7 @@ more information on upgrading custom database plugins.
 
 @include 'alpine-314.mdx'
 
-## Known Issues
+## Known issues
 
 Due to the known issue, Transform Secrets Engine users are recommended to upgrade to version 1.6.4.
 Due to the known issue, Lease Count Quota users with DR Secondaries are recommended to upgrade to version 1.6.6.

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .replication-dashboard {
   box-shadow: none;
 
-  .selectable-card {
+  .replication-summary-card {
     line-height: normal;
 
     &:hover {
@@ -23,16 +23,16 @@
   }
 
   .title.is-6 {
-    margin-bottom: $spacing-xs;
+    margin-bottom: $spacing-8;
   }
 
   .reindexing-alert,
   .syncing-alert {
-    margin-top: $spacing-xl;
+    margin-top: $spacing-36;
   }
 
   .selectable-card-container {
-    margin-top: $spacing-xl;
+    margin-top: $spacing-36;
     display: grid;
 
     &.primary,
@@ -47,15 +47,15 @@
 
     &.secondary {
       grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-      grid-gap: $spacing-xl;
+      grid-gap: $spacing-36;
     }
 
     .card-container {
       display: grid;
-      grid-gap: $spacing-s;
+      grid-gap: $spacing-12;
       grid-template-columns: 1fr 1fr;
       grid-template-rows: 0.2fr 0.2fr 0.2fr;
-      padding: $spacing-l;
+      padding: $spacing-24;
       line-height: 1.5;
 
       &.summary {
@@ -120,11 +120,11 @@
     }
 
     &.summary {
-      margin-bottom: $spacing-xl;
+      margin-bottom: $spacing-36;
     }
   }
   .summary-state {
-    padding-bottom: $spacing-xl;
+    padding-bottom: $spacing-36;
     border-bottom: 1px solid rgba($grey-dark, 0.3);
   }
 

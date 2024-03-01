@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixes issue unsealing cluster for seal types other than shamir
+```

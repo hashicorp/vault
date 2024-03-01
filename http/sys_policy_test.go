@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package http
 
@@ -27,6 +27,7 @@ func TestSysPolicies(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"policies": []interface{}{"default", "root"},
 			"keys":     []interface{}{"default", "root"},
@@ -58,6 +59,7 @@ func TestSysReadPolicy(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"name":  "root",
 			"rules": "",
@@ -94,6 +96,7 @@ func TestSysWritePolicy(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"policies": []interface{}{"default", "foo", "root"},
 			"keys":     []interface{}{"default", "foo", "root"},
@@ -143,6 +146,7 @@ func TestSysDeletePolicy(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"policies": []interface{}{"default", "root"},
 			"keys":     []interface{}{"default", "root"},

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { currentURL, find, visit, settled } from '@ember/test-helpers';
@@ -11,7 +11,6 @@ import { v4 as uuidv4 } from 'uuid';
 import backendListPage from 'vault/tests/pages/secrets/backends';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 
 module('Acceptance | settings', function (hooks) {
   setupApplicationTest(hooks);
@@ -19,10 +18,6 @@ module('Acceptance | settings', function (hooks) {
   hooks.beforeEach(function () {
     this.uid = uuidv4();
     return authPage.login();
-  });
-
-  hooks.afterEach(function () {
-    return logout.visit();
   });
 
   test('settings', async function (assert) {
@@ -36,7 +31,6 @@ module('Acceptance | settings', function (hooks) {
 
     await mountSecrets.selectType(type);
     await mountSecrets
-      .next()
       .path(path)
       .toggleOptions()
       .enableDefaultTtl()

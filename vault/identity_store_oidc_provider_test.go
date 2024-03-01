@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -1175,7 +1176,8 @@ func setupOIDCCommon(t *testing.T, c *Core, s logical.Storage) (string, string, 
 	ctx := namespace.RootContext(nil)
 
 	// Create a key
-	resp, err := c.identityStore.HandleRequest(ctx, testKeyReq(s, []string{"*"}, "RS256"))
+	resp, err := c.identityStore.HandleRequest(ctx, testKeyReq(s, "test-key",
+		[]string{"*"}, "RS256"))
 	expectSuccess(t, resp, err)
 
 	// Create an entity
@@ -1358,10 +1360,10 @@ func testEntityReq(s logical.Storage) *logical.Request {
 	}
 }
 
-func testKeyReq(s logical.Storage, allowedClientIDs []string, alg string) *logical.Request {
+func testKeyReq(s logical.Storage, name string, allowedClientIDs []string, alg string) *logical.Request {
 	return &logical.Request{
 		Storage:   s,
-		Path:      "oidc/key/test-key",
+		Path:      fmt.Sprintf("oidc/key/%s", name),
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
 			"allowed_client_ids": allowedClientIDs,
@@ -2253,8 +2255,8 @@ func TestOIDC_Path_OIDC_Client_List_KeyInfo(t *testing.T) {
 		expected := clients[name].(map[string]interface{})
 		require.Contains(t, keys, name)
 
-		idTokenTTL, _ := time.ParseDuration(expected["id_token_ttl"].(string))
-		accessTokenTTL, _ := time.ParseDuration(expected["access_token_ttl"].(string))
+		idTokenTTL, _ := parseutil.ParseDurationSecond(expected["id_token_ttl"].(string))
+		accessTokenTTL, _ := parseutil.ParseDurationSecond(expected["access_token_ttl"].(string))
 		require.EqualValues(t, idTokenTTL.Seconds(), actual["id_token_ttl"])
 		require.EqualValues(t, accessTokenTTL.Seconds(), actual["access_token_ttl"])
 		require.Equal(t, expected["redirect_uris"], actual["redirect_uris"])
@@ -3636,6 +3638,7 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		AuthMethods:           []string{"none", "client_secret_basic", "client_secret_post"},
 		RequestParameter:      false,
 		RequestURIParameter:   false,
+		CodeChallengeMethods:  []string{codeChallengeMethodPlain, codeChallengeMethodS256},
 	}
 	discoveryResp := &providerDiscovery{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
@@ -3692,6 +3695,7 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		AuthMethods:           []string{"none", "client_secret_basic", "client_secret_post"},
 		RequestParameter:      false,
 		RequestURIParameter:   false,
+		CodeChallengeMethods:  []string{codeChallengeMethodPlain, codeChallengeMethodS256},
 	}
 	discoveryResp = &providerDiscovery{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)

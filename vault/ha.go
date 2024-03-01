@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -118,13 +118,15 @@ func (c *Core) getHAMembers() ([]HAStatusNode, error) {
 	for _, peerNode := range c.GetHAPeerNodesCached() {
 		lastEcho := peerNode.LastEcho
 		nodes = append(nodes, HAStatusNode{
-			Hostname:       peerNode.Hostname,
-			APIAddress:     peerNode.APIAddress,
-			ClusterAddress: peerNode.ClusterAddress,
-			LastEcho:       &lastEcho,
-			Version:        peerNode.Version,
-			UpgradeVersion: peerNode.UpgradeVersion,
-			RedundancyZone: peerNode.RedundancyZone,
+			Hostname:           peerNode.Hostname,
+			APIAddress:         peerNode.APIAddress,
+			ClusterAddress:     peerNode.ClusterAddress,
+			LastEcho:           &lastEcho,
+			Version:            peerNode.Version,
+			UpgradeVersion:     peerNode.UpgradeVersion,
+			RedundancyZone:     peerNode.RedundancyZone,
+			EchoDurationMillis: peerNode.EchoDuration.Milliseconds(),
+			ClockSkewMillis:    peerNode.ClockSkewMillis,
 		})
 	}
 
@@ -150,30 +152,41 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	if c.Sealed() {
 		return false, "", "", consts.ErrSealed
 	}
-
 	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+
+	return c.LeaderLocked()
+}
+
+func (c *Core) LeaderLocked() (isLeader bool, leaderAddr, clusterAddr string, err error) {
+	// Check if HA enabled. We don't need the lock for this check as it's set
+	// on startup and never modified
+	if c.ha == nil {
+		return false, "", "", ErrHANotEnabled
+	}
+
+	// Check if sealed
+	if c.Sealed() {
+		return false, "", "", consts.ErrSealed
+	}
 
 	// Check if we are the leader
 	if !c.standby {
-		c.stateLock.RUnlock()
 		return true, c.redirectAddr, c.ClusterAddr(), nil
 	}
 
 	// Initialize a lock
 	lock, err := c.ha.LockWith(CoreLockPath, "read")
 	if err != nil {
-		c.stateLock.RUnlock()
 		return false, "", "", err
 	}
 
 	// Read the value
 	held, leaderUUID, err := lock.Value()
 	if err != nil {
-		c.stateLock.RUnlock()
 		return false, "", "", err
 	}
 	if !held {
-		c.stateLock.RUnlock()
 		return false, "", "", nil
 	}
 
@@ -188,13 +201,11 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	// If the leader hasn't changed, return the cached value; nothing changes
 	// mid-leadership, and the barrier caches anyways
 	if leaderUUID == localLeaderUUID && localRedirectAddr != "" {
-		c.stateLock.RUnlock()
 		return false, localRedirectAddr, localClusterAddr, nil
 	}
 
 	c.logger.Trace("found new active node information, refreshing")
 
-	defer c.stateLock.RUnlock()
 	c.leaderParamsLock.Lock()
 	defer c.leaderParamsLock.Unlock()
 
@@ -336,7 +347,7 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 		Auth:    auth,
 		Request: req,
 	}
-	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+	if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 		c.logger.Error("failed to audit request", "request_path", req.Path, "error", err)
 		return errors.New("failed to audit request, cannot continue")
 	}
@@ -520,6 +531,20 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			continue
 		}
 
+		// If the backend is a FencingHABackend, register the lock with it so it can
+		// correctly fence all writes from now on  (i.e. assert that we still hold
+		// the lock atomically with each write).
+		if fba, ok := c.ha.(physical.FencingHABackend); ok {
+			err := fba.RegisterActiveNodeLock(lock)
+			if err != nil {
+				// Can't register lock, bail out
+				c.heldHALock = nil
+				lock.Unlock()
+				c.logger.Error("failed registering lock with fencing backend, giving up active state")
+				continue
+			}
+		}
+
 		c.logger.Info("acquired lock, enabling active operation")
 
 		// This is used later to log a metrics event; this can be helpful to
@@ -571,9 +596,9 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		// everything is sane. If we have no sanity in the barrier, we actually
 		// seal, as there's little we can do.
 		{
-			c.seal.SetBarrierConfig(activeCtx, nil)
+			c.seal.ClearBarrierConfig(activeCtx)
 			if c.seal.RecoveryKeySupported() {
-				c.seal.SetRecoveryConfig(activeCtx, nil)
+				c.seal.ClearRecoveryConfig(activeCtx)
 			}
 
 			if err := c.performKeyUpgrades(activeCtx); err != nil {
@@ -638,6 +663,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		err = c.postUnseal(activeCtx, activeCtxCancel, standardUnsealStrategy{})
 		if err == nil {
 			c.standby = false
+			c.activeTime = time.Now()
 			c.leaderUUID = uuid
 			c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 1, nil)
 		}
@@ -690,6 +716,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 
 			// Mark as standby
 			c.standby = true
+			c.activeTime = time.Time{}
 			c.leaderUUID = ""
 			c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 0, nil)
 
@@ -708,6 +735,13 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 					c.logger.Error("unlocking HA lock failed", "error", err)
 				}
 				c.heldHALock = nil
+			}
+
+			// Advertise ourselves as a standby.
+			if c.serviceRegistration != nil {
+				if err := c.serviceRegistration.NotifyActiveStateChange(false); err != nil {
+					c.logger.Warn("failed to notify standby status", "error", err)
+				}
 			}
 
 			// If we are stopped return, otherwise unlock the statelock
@@ -803,7 +837,7 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 
 	clusterAddr := ""
 	for {
-		timer := time.NewTimer(leaderCheckInterval)
+		timer := time.NewTimer(c.periodicLeaderRefreshInterval)
 		select {
 		case <-timer.C:
 			count := atomic.AddInt32(opCount, 1)
@@ -818,7 +852,18 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 			go func() {
 				// Bind locally, as the race detector is tripping here
 				lopCount := opCount
-				isLeader, _, newClusterAddr, _ := c.Leader()
+				isLeader, _, newClusterAddr, err := c.Leader()
+				if err != nil {
+					// This is debug level because it's not really something the user
+					// needs to see typically. This will only really fail if we are sealed
+					// or the HALock fails (e.g. can't connect to Consul or elect raft
+					// leader) and other things in logs should make those kinds of
+					// conditions obvious. However when debugging, it is useful to know
+					// for sure why a standby is not seeing the leadership update which
+					// could be due to errors being returned or could be due to some other
+					// bug.
+					c.logger.Debug("periodicLeaderRefresh fail to fetch leader info", "err", err)
+				}
 
 				// If we are the leader reset the clusterAddr since the next
 				// failover might go to the node that was previously active.
@@ -944,10 +989,13 @@ func (c *Core) reloadRootKey(ctx context.Context) error {
 }
 
 func (c *Core) reloadShamirKey(ctx context.Context) error {
-	_ = c.seal.SetBarrierConfig(ctx, nil)
-	if cfg, _ := c.seal.BarrierConfig(ctx); cfg == nil {
+	_ = c.seal.ClearBarrierConfig(ctx)
+
+	cfg, _ := c.seal.BarrierConfig(ctx)
+	if cfg == nil {
 		return nil
 	}
+
 	var shamirKey []byte
 	switch c.seal.StoredKeysSupported() {
 	case seal.StoredKeysSupportedGeneric:
@@ -968,11 +1016,7 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 		}
 		shamirKey = keyring.rootKey
 	}
-	shamirWrapper, err := c.seal.GetShamirWrapper()
-	if err != nil {
-		return err
-	}
-	return shamirWrapper.SetAesGcmKeyBytes(shamirKey)
+	return c.seal.GetAccess().SetShamirSealKey(shamirKey)
 }
 
 func (c *Core) performKeyUpgrades(ctx context.Context) error {
@@ -1133,18 +1177,7 @@ func (c *Core) cleanLeaderPrefix(ctx context.Context, uuid string, leaderLostCh 
 // clearLeader is used to clear our leadership entry
 func (c *Core) clearLeader(uuid string) error {
 	key := coreLeaderPrefix + uuid
-	err := c.barrier.Delete(context.Background(), key)
-
-	// Advertise ourselves as a standby
-	if c.serviceRegistration != nil {
-		if err := c.serviceRegistration.NotifyActiveStateChange(false); err != nil {
-			if c.logger.IsWarn() {
-				c.logger.Warn("failed to notify standby status", "error", err)
-			}
-		}
-	}
-
-	return err
+	return c.barrier.Delete(context.Background(), key)
 }
 
 func (c *Core) SetNeverBecomeActive(on bool) {

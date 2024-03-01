@@ -1,34 +1,91 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
 <Sidebar::Nav::Cluster />
+{{#if this.vaultVersion.isEnterprise}}
+  {{#each this.customMessages.bannerMessages as |bannerMessage|}}
+    {{#if (get this.customMessages.bannerState bannerMessage.id)}}
+      <Hds::Alert
+        @type="inline"
+        @color="highlight"
+        data-test-custom-alert={{bannerMessage.id}}
+        @onDismiss={{fn this.customMessages.onBannerDismiss bannerMessage.id}}
+        as |A|
+      >
+        <A.Title data-test-custom-alert-title={{bannerMessage.id}}>{{bannerMessage.title}}</A.Title>
+        {{#each (new-line-split bannerMessage.message) as |msg|}}
+          <A.Description data-test-custom-alert-description={{bannerMessage.id}}>
+            {{msg}}
+          </A.Description>
+        {{/each}}
+        {{#unless (is-empty-value bannerMessage.link)}}
+          {{#each-in bannerMessage.link as |title href|}}
+            <A.Link::Standalone
+              @color="secondary"
+              @icon="external-link"
+              @isHrefExternal={{true}}
+              @iconPosition="trailing"
+              @text={{title}}
+              @href={{href}}
+              data-test-custom-alert-action="link"
+            />
+          {{/each-in}}
+        {{/unless}}
+      </Hds::Alert>
+    {{/if}}
+  {{/each}}
+  {{#each this.customMessages.modalMessages as |modalMessage|}}
+    <Hds::Modal id={{modalMessage.id}} @size="large" @color="warning" data-test-modal={{modalMessage.id}} as |M|>
+      <M.Header data-test-modal-title={{modalMessage.id}}>
+        {{modalMessage.title}}
+      </M.Header>
+      <M.Body data-test-modal-body={{modalMessage.id}}>
+        {{#each (new-line-split modalMessage.message) as |msg|}}
+          {{#if (eq msg "")}}
+            <br />
+          {{else}}
+            <div>
+              {{msg}}
+            </div>
+          {{/if}}
+        {{/each}}
+        {{#unless (is-empty-value modalMessage.link)}}
+          {{#each-in modalMessage.link as |title href|}}
+            <Hds::Link::Inline @icon="external-link" @isHrefExternal={{true}} @href={{href}}>{{title}}</Hds::Link::Inline>
+          {{/each-in}}
+        {{/unless}}
+      </M.Body>
 
-<LicenseBanners
-  @expiry={{this.activeCluster.licenseExpiry}}
-  @autoloaded={{eq this.activeCluster.licenseState "autoloaded"}}
-/>
+      <M.Footer as |F|>
+        <Hds::Button @text="Confirm" {{on "click" F.close}} data-test-modal-button={{modalMessage.id}} />
+      </M.Footer>
+    </Hds::Modal>
+  {{/each}}
+{{/if}}
+<div class="cluster-banners-wrapper">
+  {{#if this.activeCluster.version.isEnterprise}}
+    <LicenseBanners
+      @expiry={{this.activeCluster.licenseExpiry}}
+      @autoloaded={{eq this.activeCluster.licenseState "autoloaded"}}
+    />
+  {{/if}}
+  {{#if this.permissionBanner}}
+    <ResultantAclBanner @isEnterprise={{this.activeCluster.version.isEnterprise}} @failType={{this.permissionBanner}} />
+  {{/if}}
+</div>
 <div class="global-flash">
   {{#each this.flashMessages.queue as |flash|}}
     <FlashMessage data-test-flash-message={{true}} @flash={{flash}} as |customComponent flash close|>
-      {{#if flash.componentName}}
-        {{component flash.componentName content=flash.content}}
-      {{else}}
-        <AlertPopup
-          @type={{message-types flash.type}}
-          @message={{flash.message}}
-          @close={{close}}
-          @isPreformatted={{flash.preformatted}}
-        />
-      {{/if}}
+      <FlashToast @flash={{flash}} @close={{close}} />
     </FlashMessage>
   {{/each}}
 </div>
 
 {{#if this.auth.isActiveSession}}
-  <section class="section">
-    <div class="container is-widescreen">
-      <TokenExpireWarning @expirationDate={{this.auth.tokenExpirationDate}}>
-        {{outlet}}
-      </TokenExpireWarning>
-    </div>
-  </section>
+  <TokenExpireWarning @expirationDate={{this.auth.tokenExpirationDate}} @allowingExpiration={{this.auth.allowExpiration}}>
+    {{outlet}}
+  </TokenExpireWarning>
 {{else}}
   {{outlet}}
 {{/if}}

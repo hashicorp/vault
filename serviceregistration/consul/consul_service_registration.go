@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package consul
 
@@ -88,6 +88,10 @@ type serviceRegistration struct {
 
 // NewConsulServiceRegistration constructs a Consul-based ServiceRegistration.
 func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.State) (sr.ServiceRegistration, error) {
+	if logger == nil {
+		return nil, errors.New("logger is required")
+	}
+
 	// Allow admins to disable consul integration
 	disableReg, ok := conf["disable_registration"]
 	var disableRegistration bool
@@ -168,7 +172,7 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 
 		logger:              logger,
 		serviceName:         service,
-		serviceTags:         strutil.ParseDedupLowercaseAndSortStrings(tags, ","),
+		serviceTags:         strutil.ParseDedupAndSortStrings(tags, ","),
 		serviceAddress:      serviceAddr,
 		checkTimeout:        checkTimeout,
 		disableRegistration: disableRegistration,
@@ -312,7 +316,7 @@ func (c *serviceRegistration) NotifyInitializedStateChange(isInitialized bool) e
 	default:
 		// NOTE: If this occurs Vault's initialized status could be out of
 		// sync with Consul until checkTimer expires.
-		c.logger.Warn("concurrent initalize state change notify dropped")
+		c.logger.Warn("concurrent initialize state change notify dropped")
 	}
 
 	return nil

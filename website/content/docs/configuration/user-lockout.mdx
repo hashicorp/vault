@@ -5,11 +5,11 @@ description: |-
   The user_lockout stanza specifies various configurations for user lockout behaviour for
   failed logins in vault. 
 ---
-# User Lockout
+# User lockout
 
 @include 'user-lockout.mdx'
 
-## `user_lockout` Stanza
+## `user_lockout` stanza
 
 The `user_lockout` stanza specifies various configurations for user lockout 
 behaviour for failed logins in vault. They can be configured for all supported auth methods
@@ -57,7 +57,7 @@ lockout duration of 5 minutes, lockout counter reset of 10 minutes. Approle auth
 The user lockout configuration for the auth method at a given path can be tuned using auth tune. Please see [auth tune command](/vault/docs/commands/auth/tune)
 or [auth tune api](/vault/api-docs/system/auth#tune-auth-method) for more details. 
 
-## `user_lockout` Parameters
+## `user_lockout` parameters
 
 The following options are available on all user_lockout configurations.
 

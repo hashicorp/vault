@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package etcd
 
@@ -26,7 +26,7 @@ func TestEtcd3Backend(t *testing.T) {
 		"username": "root",
 		"password": "insecure",
 
-		// Syncing adverticed client urls should be disabled since docker port mapping confuses the client.
+		// Syncing advertised client urls should be disabled since docker port mapping confuses the client.
 		"sync": "false",
 	}
 

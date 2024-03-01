@@ -1,0 +1,51 @@
+### Audit devices could log raw data despite configuration
+
+#### Affected versions
+
+- 1.15.0 - 1.15.4
+
+#### Issue
+
+Enabling an audit device which specifies the [`log_raw`](/vault/docs/audit#log_raw) option
+could lead to raw data being logged to other audit devices, regardless of whether they
+are configured to use `log_raw`.
+
+The issue with raw data potentially appearing in logs where HMAC data as expected,
+is fixed as a patch release in Vault `1.15.5`.
+
+#### Workaround
+
+Do not enable any audit devices in Vault that use `log_raw`. If any audit devices
+are currently enabled with `log_raw` set to `true` they should be [disabled](/vault/docs/commands/audit/disable).
+
+To view the options for audit devices via the CLI, use the `--detailed` flag for the
+`vault audit list` command:
+
+```shell-session
+$ vault audit list --detailed
+```
+
+The output will resemble the following, with `log_raw` shown under `Options` on
+any device which has it enabled:
+
+**Example output:** 
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+Path      Type    Description    Replication    Options
+----      ----    -----------    -----------    -------
+file1/    file    n/a            replicated     file_path=/var/log/vault/log1.json
+file2/    file    n/a            replicated     file_path=/var/log/vault/log2.json log_raw=true
+```
+
+</CodeBlockConfig>
+
+Disable any device with the `log_raw` option set to `true` using the command
+`vault audit disable {path}` (`file2` in the above output):
+
+```shell-session
+$ vault audit disable file2
+```
+
+See also: [Disable audit via API](/vault/api-docs/system/audit#disable-audit-device).

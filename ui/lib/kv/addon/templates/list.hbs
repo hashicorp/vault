@@ -1,0 +1,13 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Page::List
+  @secrets={{this.model.secrets}}
+  @backend={{this.model.backend}}
+  @pathToSecret={{this.model.pathToSecret}}
+  @filterValue={{this.model.filterValue}}
+  @failedDirectoryQuery={{this.model.failedDirectoryQuery}}
+  @breadcrumbs={{this.breadcrumbs}}
+/>

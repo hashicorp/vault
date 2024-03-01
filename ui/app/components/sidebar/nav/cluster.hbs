@@ -1,11 +1,23 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Hds::SideNav::Portal @ariaLabel="Cluster Navigation Links" data-test-sidebar-nav-panel="Cluster" as |Nav|>
   <Nav.Title data-test-sidebar-nav-heading="Vault">Vault</Nav.Title>
 
+  <Nav.Link @route="vault.cluster.dashboard" @text="Dashboard" data-test-sidebar-nav-link="Dashboard" />
   <Nav.Link
     @route="vault.cluster.secrets"
     @current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
-    @text="Secrets engines"
-    data-test-sidebar-nav-link="Secrets engines"
+    @text="Secrets Engines"
+    data-test-sidebar-nav-link="Secrets Engines"
+  />
+  <Nav.Link
+    @route="vault.cluster.sync"
+    @text="Secrets Sync"
+    @badge={{unless this.version.isEnterprise "Enterprise"}}
+    data-test-sidebar-nav-link="Secrets Sync"
   />
   {{#if (has-permission "access")}}
     <Nav.Link
@@ -37,38 +49,29 @@
   {{/if}}
 
   {{#if
-    (and this.version.isEnterprise this.cluster.anyReplicationEnabled (has-permission "status" routeParams="replication"))
-  }}
-    <Nav.Title data-test-sidebar-nav-heading="Replication">Replication</Nav.Title>
-    <Nav.Link
-      @route="vault.cluster.replication.mode.index"
-      @model="dr"
-      @text="DR Primary"
-      data-test-sidebar-nav-link="DR Primary"
-    />
-
-    {{#if (has-feature "Performance Replication")}}
-      <Nav.Link
-        @route="vault.cluster.replication.mode.index"
-        @model="performance"
-        @text="Performance Secondary"
-        data-test-sidebar-nav-link="Performance Secondary"
-      />
-    {{/if}}
-  {{/if}}
-
-  {{#if
     (or
-      (has-permission "status" routeParams=(array "replication" "raft" "license" "seal"))
+      (and this.isRootNamespace (has-permission "status" routeParams=(array "replication" "raft" "license" "seal")))
       (has-permission "clients" routeParams="activity")
     )
   }}
     <Nav.Title data-test-sidebar-nav-heading="Monitoring">Monitoring</Nav.Title>
   {{/if}}
-  {{#if (and this.version.isEnterprise (has-permission "status" routeParams="replication"))}}
-    <Nav.Link @route="vault.cluster.replication.index" @text="Replication" data-test-sidebar-nav-link="Replication" />
+  {{#if
+    (and
+      this.version.isEnterprise
+      this.isRootNamespace
+      (not this.cluster.replicationRedacted)
+      (has-permission "status" routeParams="replication")
+    )
+  }}
+    <Nav.Link
+      @route="vault.cluster.replication.index"
+      @text="Replication"
+      data-test-sidebar-nav-link="Replication"
+      @hasSubItems={{true}}
+    />
   {{/if}}
-  {{#if (and this.cluster.usingRaft (has-permission "status" routeParams="raft"))}}
+  {{#if (and this.cluster.usingRaft this.isRootNamespace (has-permission "status" routeParams="raft"))}}
     <Nav.Link
       @route="vault.cluster.storage"
       @model={{this.cluster.name}}
@@ -77,9 +80,16 @@
     />
   {{/if}}
   {{#if (and (has-permission "clients" routeParams="activity") (not this.cluster.dr.isSecondary))}}
-    <Nav.Link @route="vault.cluster.clients" @text="Client count" data-test-sidebar-nav-link="Client count" />
+    <Nav.Link @route="vault.cluster.clients" @text="Client Count" data-test-sidebar-nav-link="Client Count" />
   {{/if}}
-  {{#if (and this.version.features (has-permission "status" routeParams="license") (not this.cluster.dr.isSecondary))}}
+  {{#if
+    (and
+      this.version.features
+      this.isRootNamespace
+      (has-permission "status" routeParams="license")
+      (not this.cluster.dr.isSecondary)
+    )
+  }}
     <Nav.Link
       @route="vault.cluster.license"
       @model={{this.cluster.name}}
@@ -87,12 +97,21 @@
       data-test-sidebar-nav-link="License"
     />
   {{/if}}
-  {{#if (and (has-permission "status" routeParams="seal") (not this.cluster.dr.isSecondary))}}
+  {{#if (and this.isRootNamespace (has-permission "status" routeParams="seal") (not this.cluster.dr.isSecondary))}}
     <Nav.Link
       @route="vault.cluster.settings.seal"
       @model={{this.cluster.name}}
       @text="Seal Vault"
       data-test-sidebar-nav-link="Seal Vault"
+    />
+  {{/if}}
+
+  {{#if (and this.version.isEnterprise (has-permission "settings"))}}
+    <Nav.Title data-test-sidebar-nav-heading="Settings">Settings</Nav.Title>
+    <Nav.Link
+      @route="vault.cluster.config-ui.messages"
+      @text="Custom Messages"
+      data-test-sidebar-nav-link="Custom Messages"
     />
   {{/if}}
 </Hds::SideNav::Portal>

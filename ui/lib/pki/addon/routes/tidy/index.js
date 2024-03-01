@@ -1,7 +1,12 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Route from '@ember/routing/route';
 import { PKI_DEFAULT_EMPTY_STATE_MSG } from '../overview';
 import { hash } from 'rsvp';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import timestamp from 'core/utils/timestamp';
 
 export default class PkiTidyIndexRoute extends Route {

@@ -7,21 +7,17 @@ description: |-
   newly created tokens.
 ---
 
-# Vault Proxy Caching
+# Vault Proxy caching
 
-Vault Proxy Caching allows client-side caching of responses containing newly
+Vault Proxy caching allows client-side caching of responses containing newly
 created tokens and responses containing leased secrets generated off of these
 newly created tokens. The renewals of the cached tokens and leases are also
-managed by the proxy.
+managed by the proxy. Additionally, with `cache_static_secrets` set to `true`,
+Vault Proxy [can be configured to cache KVv1 and KVv2 secrets][static-secret-caching].
 
--> **Note:** Vault Proxy Caching works best with servers/clusters that are
-running on Vault 1.1 and above due to changes that were introduced
-alongside this feature, such as the exposure of the `orphan` field in token
-creation responses.
+## Caching and renewals
 
-## Caching and Renewals
-
-Response caching and renewals are managed by the proxy only under these
+Response caching and renewals for dynamic secrets are managed by Proxy only under these
 specific scenarios.
 
 1. Token creation requests are made through the proxy. This means that any
@@ -36,18 +32,37 @@ specific scenarios.
    that are issued using the tokens managed by the proxy, will be cached and
    its renewals are taken care of.
 
-## Persistent Cache
+## Static secret caching
 
-Vault Proxy can restore tokens and leases from a persistent cache file created
-by a previous Vault Proxy process.
+You can configure Vault Proxy to cache dynamic secrets and static (KVv1 and KVv2)
+secrets. When you enable caching for static secrets. Proxy keeps a cached entry
+of the secret but only provides the cached response to requests made with tokens
+that can access the secret. As a result, multiple requests to Vault Proxy for
+the same KV secret only require a single, initial request to be forwarded to Vault.
+
+Static secret caching is disabled by default. To enable caching for static secrets you must
+configure [auto-auth](/vault/docs/agent-and-proxy/autoauth) and ensure the
+auto-auth token has permission to subscribe to KV
+[event](/vault/docs/concepts/events) updates.
+
+Once configured, Proxy uses the auto-auth token to subscribe to KV events, and
+monitors the subscription feed to know when to update the secrets in its cache.
+
+For more information on static secret caching, refer to the
+[Vault Proxy static secret caching][static-secret-caching] overview.
+
+## Persistent cache
+
+Vault Proxy can restore secrets, such as, tokens, leases, and static secrets, from a persistent
+cache file created by a previous Vault Proxy process.
 
 Refer to the [Vault Proxy Persistent
 Caching](/vault/docs/agent-and-proxy/proxy/caching/persistent-caches) page for more information on
 this functionality.
 
-## Cache Evictions
+## Cache evictions
 
-The eviction of cache entries pertaining to secrets will occur when the proxy
+The eviction of cache entries pertaining to dynamic secrets will occur when the proxy
 can no longer renew them. This can happen when the secrets hit their maximum
 TTL or if the renewals result in errors.
 
@@ -66,9 +81,9 @@ entries. For managing the stale entries in the cache, an endpoint
 `/proxy/v1/cache-clear`(see below) is made available to manually evict cache
 entries based on some of the query criteria used for indexing the cache entries.
 
-## Request Uniqueness
+## Request uniqueness
 
-In order to detect repeat requests and return cached responses, proxy will need
+In order to detect repeat requests and return cached responses, Proxy needs
 to have a way to uniquely identify the requests. This computation as it stands
 today takes a simplistic approach (may change in future) of serializing and
 hashing the HTTP request along with all the headers and the request body. This
@@ -83,7 +98,7 @@ assumption that the clients will use consistent mechanisms to make requests,
 thereby resulting in consistent hash values per request is the idea upon which
 the caching functionality is built upon.
 
-## Renewal Management
+## Renewal management
 
 The tokens and leases are renewed by the proxy using the secret renewer that is
 made available via the Vault server's [Go
@@ -97,7 +112,7 @@ secrets are no longer performed by the Vault proxy.
 
 ## API
 
-### Cache Clear
+### Cache clear
 
 This endpoint clears the cache based on given criteria. To use this
 API, some information on how the proxy caches values should be known
@@ -129,7 +144,7 @@ but will do nothing (there is no cache to clear) and will return a `200` respons
   `request_path`. The namespace of which the cache entries to be evicted for
   the given request path.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -138,7 +153,7 @@ but will do nothing (there is no cache to clear) and will return a `200` respons
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -150,9 +165,16 @@ $ curl \
 ## Configuration (`cache`)
 
 The presence of the top level `cache` block in any way (including an empty `cache` block)  will enable the cache.
-The top level `cache` block has the following configuration entry:
+Note that either `cache_static_secrets` must be `true` and/or `disable_caching_dynamic_secrets` must
+be `false`, otherwise the cache does nothing. The top level `cache` block has the following configuration entries:
 
 - `persist` `(object: optional)` - Configuration for the persistent cache.
+
+- `cache_static_secrets` `(bool: false)` - Enables static secret caching when
+`true`.
+
+- `disable_caching_dynamic_secrets` `(bool: false)` - Disables dynamic secret caching when
+`true`.
 
 -> **Note:** When the `cache` block is defined, a [listener][proxy-listener] must also be defined
 in the config, otherwise there is no way to utilize the cache.
@@ -165,7 +187,8 @@ These are common configuration values that live within the `persist` block:
 
 - `type` `(string: required)` - The type of the persistent cache to use,
   e.g. `kubernetes`. _Note_: when using HCL this can be used as the key for
-  the block, e.g. `persist "kubernetes" {...}`.
+  the block, e.g. `persist "kubernetes" {...}`. Currently, only `kubernetes`
+  is supported.
 
 - `path` `(string: required)` - The path on disk where the persistent cache file
   should be created or restored from.
@@ -210,7 +233,7 @@ or the default role, `default`, which serves everything (including metrics).
 - `tls_cert_file` `(string: optional)` - Specifies the path to the certificate
   for TLS.
 
-### Example Configuration
+### Example configuration
 
 Here is an example of a cache configuration with the optional `persist` block,
 alongside a regular listener, and a listener that only serves metrics.
@@ -240,3 +263,5 @@ listener "tcp" {
     role = "metrics_only"
 }
 ```
+
+[static-secret-caching]: /vault/docs/agent-and-proxy/proxy/caching/static-secret-caching

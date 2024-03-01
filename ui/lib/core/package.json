@@ -24,10 +24,10 @@
     "ember-router-helpers": "*",
     "ember-svg-jar": "*",
     "ember-truth-helpers": "*",
-    "ember-wormhole": "*",
     "escape-string-regexp": "*",
     "@hashicorp/ember-flight-icons": "*",
     "@hashicorp/flight-icons": "*",
+    "@hashicorp/design-system-components": "*",
     "codemirror": "*",
     "ember-modifier": "*"
   }

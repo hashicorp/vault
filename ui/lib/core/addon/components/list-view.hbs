@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (or (and @items.meta @items.meta.total) @items.length)}}
   <div class="box is-fullwidth is-bottomless is-sideless is-paddingless" data-test-list-view-list>
     {{#each @items as |item|}}
@@ -5,12 +10,14 @@
     {{else}}
       {{yield}}
     {{/each}}
-    {{#if this.showPagination}}
-      <ListPagination
-        @page={{@items.meta.currentPage}}
-        @lastPage={{@items.meta.lastPage}}
-        @link={{@paginationRouteName}}
-        data-test-list-view-pagination
+    {{#if @paginationRouteName}}
+      <Hds::Pagination::Numbered
+        @currentPage={{@items.meta.currentPage}}
+        @currentPageSize={{@items.meta.pageSize}}
+        @route={{@paginationRouteName}}
+        @showSizeSelector={{false}}
+        @totalItems={{@items.meta.total}}
+        @queryFunction={{this.paginationQueryParams}}
       />
     {{/if}}
   </div>

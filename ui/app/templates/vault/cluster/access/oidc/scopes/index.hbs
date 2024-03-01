@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Toolbar>
   <ToolbarActions>
     <ToolbarLink @route="vault.cluster.access.oidc.scopes.create" @type="add" data-test-oidc-scope-create>
@@ -24,50 +29,44 @@
         </div>
         <div class="level-right is-flex is-paddingless is-marginless">
           <div class="level-item">
-            <PopupMenu>
-              <nav class="menu">
-                <ul class="menu-list">
-                  <li>
-                    <LinkTo
-                      @route="vault.cluster.access.oidc.scopes.scope.details"
-                      @model={{model.name}}
-                      @disabled={{eq model.canRead false}}
-                      data-test-oidc-scope-menu-link="details"
-                    >
-                      Details
-                    </LinkTo>
-                  </li>
-                  <li>
-                    <LinkTo
-                      @route="vault.cluster.access.oidc.scopes.scope.edit"
-                      @model={{model.name}}
-                      @disabled={{eq model.canEdit false}}
-                      data-test-oidc-scope-menu-link="edit"
-                    >
-                      Edit
-                    </LinkTo>
-                  </li>
-                </ul>
-              </nav>
-            </PopupMenu>
+            <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+              <dd.ToggleIcon
+                @icon="more-horizontal"
+                @text="Assignment nav options"
+                @hasChevron={{false}}
+                data-test-popup-menu-trigger
+              />
+              <dd.Interactive
+                @text="Details"
+                @route="vault.cluster.access.oidc.scopes.scope.details"
+                @model={{model.name}}
+                @disabled={{eq model.canRead false}}
+                data-test-oidc-scope-menu-link="details"
+              />
+              <dd.Interactive
+                @text="Edit"
+                @route="vault.cluster.access.oidc.scopes.scope.edit"
+                @model={{model.name}}
+                @disabled={{eq model.canEdit false}}
+                data-test-oidc-scope-menu-link="edit"
+              />
+            </Hds::Dropdown>
           </div>
         </div>
       </div>
     </LinkedBlock>
   {{/each}}
 {{else}}
-  <EmptyState @title="No scopes yet" data-test-oidc-scope-empty-state>
-    <div>
-      <p>Use scope to define identity information about the authenticated user.
-        <DocLink @path="/vault/docs/concepts/oidc-provider#scopes">
-          Learn more.
-        </DocLink>
-      </p>
-      <div class="has-top-margin-m">
-        <LinkTo @route="vault.cluster.access.oidc.scopes.create" data-test-oidc-scope-create-empty-state>
-          Create scope
-        </LinkTo>
-      </div>
-    </div>
+  <EmptyState
+    @title="No scopes yet"
+    @message="Use scope to define identity information about the authenticated user."
+    data-test-oidc-scope-empty-state
+  >
+    <Hds::Link::Standalone
+      @iconPosition="trailing"
+      @icon="docs-link"
+      @text="OIDC provider scopes"
+      @href={{doc-link "/vault/docs/concepts/oidc-provider#scopes"}}
+    />
   </EmptyState>
 {{/if}}

@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/ldap: improved login speed by adding concurrency to LDAP token group searches
+```

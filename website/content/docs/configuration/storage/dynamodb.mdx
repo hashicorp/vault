@@ -6,7 +6,7 @@ description: |-
   table.
 ---
 
-# DynamoDB Storage Backend
+# DynamoDB storage backend
 
 The DynamoDB storage backend is used to persist Vault's data in
 [DynamoDB][dynamodb] table.
@@ -32,7 +32,7 @@ storage "dynamodb" {
 For more information about the read/write capacity of DynamoDB tables, please
 see the [official AWS DynamoDB documentation][dynamodb-rw-capacity].
 
-## DynamoDB Parameters
+## DynamoDB parameters
 
 - `endpoint` `(string: "")` – Specifies an alternative, AWS compatible, DynamoDB
   endpoint. This can also be provided via the environment variable
@@ -79,7 +79,7 @@ cause Vault to attempt to retrieve credentials from the AWS metadata service.
 - `session_token` `(string: "")` – Specifies the AWS session token. This can
   also be provided via the environment variable `AWS_SESSION_TOKEN`.
 
-## Required AWS Permissions
+## Required AWS permissions
 
 The governing policy for the IAM user or EC2 instance profile that Vault uses
 to access DynamoDB must contain the following permissions for Vault to perform
@@ -112,7 +112,7 @@ the required operations on the DynamoDB table:
     },
 ```
 
-## Table Schema
+## Table schema
 
 If you are going to create the DynamoDB table prior to the execution and
 initialization of Vault, you will need to create a table with these attributes:
@@ -155,13 +155,13 @@ If the table does not already exist, Vault will try to create it, with read and
 write capacities set to the values of `read_capacity` and `write_capacity`
 respectively.
 
-## AWS Instance Metadata Timeout
+## AWS instance metadata timeout
 
 @include 'aws-imds-timeout.mdx'
 
-## DynamoDB Examples of Vault Configuration
+## DynamoDB examples of Vault configuration
 
-### Custom Table and Read-Write Capacity
+### Custom table and Read-Write capacity
 
 This example shows using a custom table name and read/write capacity.
 
@@ -174,7 +174,7 @@ storage "dynamodb" {
 }
 ```
 
-### Enabling High Availability
+### Enabling high availability
 
 This example shows enabling high availability for the DynamoDB storage backend.
 

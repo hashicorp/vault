@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -267,6 +267,11 @@ func verifyEabPayload(acmeState *acmeState, ac *acmeContext, outer *jwsCtx, expe
 	// Make sure how eab payload matches the outer JWK key value
 	if !bytes.Equal(outer.Jwk, verifiedPayload) {
 		return nil, fmt.Errorf("eab payload does not match outer JWK key: %w", ErrMalformed)
+	}
+
+	if eabEntry.AcmeDirectory != ac.acmeDirectory {
+		// This EAB was not created for this specific ACME directory, reject it
+		return nil, fmt.Errorf("%w: failed to verify eab", ErrUnauthorized)
 	}
 
 	return eabEntry, nil

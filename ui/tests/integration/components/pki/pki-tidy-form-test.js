@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -19,7 +19,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
     this.version = this.owner.lookup('service:version');
-    this.version.version = '1.14.1+ent';
+    this.version.type = 'enterprise';
     this.server.post('/sys/capabilities-self', () => {});
     this.onSave = () => {};
     this.onCancel = () => {};
@@ -33,7 +33,6 @@ module('Integration | Component | pki tidy form', function (hooks) {
 
   test('it hides or shows fields depending on auto-tidy toggle', async function (assert) {
     assert.expect(37);
-    this.version.version = '1.14.1+ent';
     const sectionHeaders = [
       'Universal operations',
       'ACME operations',
@@ -82,7 +81,6 @@ module('Integration | Component | pki tidy form', function (hooks) {
 
   test('it renders all attribute fields, including enterprise', async function (assert) {
     assert.expect(25);
-    this.version.version = '1.14.1+ent';
     this.autoTidy.enabled = true;
     const skipFields = ['enabled', 'tidyAcme', 'intervalDuration']; // combined with duration ttl or asserted separately
     await render(
@@ -123,7 +121,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
 
   test('it hides enterprise fields for OSS', async function (assert) {
     assert.expect(7);
-    this.version.version = '1.14.1';
+    this.version.type = 'community';
     this.autoTidy.enabled = true;
 
     const enterpriseFields = [
@@ -293,6 +291,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
         { tidy_acme: false },
         'response contains manual tidy params'
       );
+      return { id: 'pki-manual-tidy' };
     });
     this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
     this.onCancel = () => assert.ok(true, 'onCancel callback fires on save success');

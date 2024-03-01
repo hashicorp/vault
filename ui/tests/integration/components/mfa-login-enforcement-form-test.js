@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | mfa-login-enforcement-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -27,6 +28,16 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
         keys: ['123456'],
       },
     }));
+    setRunOptions({
+      rules: {
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+        // TODO: add labels to enforcement targets key/value style inputs
+        'select-name': { enabled: false },
+        'aria-prohibited-attr': { enabled: false },
+      },
+    });
   });
 
   test('it should render correct fields', async function (assert) {
@@ -130,10 +141,11 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
     await click('[data-test-mlef-save]');
     assert.true(this.didSave, 'onSave callback triggered');
     assert.strictEqual(this.model.name, 'bar', 'Name property set on model');
-    assert.strictEqual(this.model.mfa_methods.firstObject.id, '123456', 'Mfa method added to model');
-    assert.strictEqual(
-      this.model.auth_method_accessors.firstObject,
-      'auth_userpass_1234',
+    const methods = await this.model.mfa_methods; //hasManyPromise
+    assert.strictEqual(methods[0].id, '123456', 'Mfa method added to model');
+    assert.deepEqual(
+      this.model.auth_method_accessors,
+      ['auth_userpass_1234'],
       'Target saved to correct model property'
     );
   });

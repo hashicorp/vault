@@ -1,12 +1,12 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package raft
 
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
@@ -14,36 +14,49 @@ import (
 )
 
 func GetRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, string) {
-	raftDir, err := ioutil.TempDir("", "vault-raft-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Logf("raft dir: %s", raftDir)
-
-	return getRaftWithDir(t, bootstrap, noStoreState, raftDir)
+	return getRaftInternal(t, bootstrap, defaultRaftConfig(t, bootstrap, noStoreState), nil)
 }
 
-func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir string) (*RaftBackend, string) {
+func GetRaftWithConfig(t testing.TB, bootstrap bool, noStoreState bool, conf map[string]string) (*RaftBackend, string) {
+	defaultConf := defaultRaftConfig(t, bootstrap, noStoreState)
+	conf["path"] = defaultConf["path"]
+	conf["doNotStoreLatestState"] = defaultConf["doNotStoreLatestState"]
+	return getRaftInternal(t, bootstrap, conf, nil)
+}
+
+func GetRaftWithLogOutput(t testing.TB, bootstrap bool, noStoreState bool, logOutput io.Writer) (*RaftBackend, string) {
+	return getRaftInternal(t, bootstrap, defaultRaftConfig(t, bootstrap, noStoreState), logOutput)
+}
+
+func defaultRaftConfig(t testing.TB, bootstrap bool, noStoreState bool) map[string]string {
+	raftDir := t.TempDir()
+	t.Logf("raft dir: %s", raftDir)
+
+	conf := map[string]string{
+		"path":          raftDir,
+		"trailing_logs": "100",
+	}
+
+	if noStoreState {
+		conf["doNotStoreLatestState"] = ""
+	}
+
+	return conf
+}
+
+func getRaftInternal(t testing.TB, bootstrap bool, conf map[string]string, logOutput io.Writer) (*RaftBackend, string) {
 	id, err := uuid.GenerateUUID()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	logger := hclog.New(&hclog.LoggerOptions{
-		Name:  fmt.Sprintf("raft-%s", id),
-		Level: hclog.Trace,
+		Name:   fmt.Sprintf("raft-%s", id),
+		Level:  hclog.Trace,
+		Output: logOutput,
 	})
-	logger.Info("raft dir", "dir", raftDir)
 
-	conf := map[string]string{
-		"path":          raftDir,
-		"trailing_logs": "100",
-		"node_id":       id,
-	}
-
-	if noStoreState {
-		conf["doNotStoreLatestState"] = ""
-	}
+	conf["node_id"] = id
 
 	backendRaw, err := NewRaftBackend(conf, logger)
 	if err != nil {
@@ -76,6 +89,5 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 	}
 
 	backend.DisableAutopilot()
-
-	return backend, raftDir
+	return backend, conf["path"]
 }

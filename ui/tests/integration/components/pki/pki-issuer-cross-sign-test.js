@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -133,14 +133,20 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
         },
         'payload contains correct key ref'
       );
-      return { data: { csr: newCSR.csr, key_id: this.intIssuerData.key_id } };
+      return {
+        data: { csr: newCSR.csr, key_id: this.intIssuerData.key_id },
+        request_id: '1234',
+      };
     });
     this.server.post(
       `/${this.backend}/issuer/${this.parentIssuerData.issuer_name}/sign-intermediate`,
       (schema, req) => {
         assert.ok(true, 'Step 3. POST request is made to sign CSR with new parent issuer');
         assert.propEqual(JSON.parse(req.requestBody), newCSR, 'payload has common name and csr');
-        return { data: { ca_chain: [newlySignedCert, parentIssuerCert] } };
+        return {
+          data: { ca_chain: [newlySignedCert, parentIssuerCert] },
+          request_id: '1234',
+        };
       }
     );
     this.server.post(`/${this.intMountPath}/issuers/import/bundle`, (schema, req) => {
@@ -151,6 +157,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
         'payload contains pem bundle'
       );
       return {
+        request_id: '1234',
         data: {
           imported_issuers: null,
           imported_keys: null,
@@ -297,9 +304,9 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
       .dom(`${SELECTORS.signedIssuerRow()} [data-test-icon="alert-circle-fill"]`)
       .exists('row has failure icon');
 
-    assert.dom('[data-test-alert-banner="alert"] .message-title').hasText('Cross-sign failed');
+    assert.dom('[data-test-cross-sign-alert-title]').hasText('Cross-sign failed');
     assert
-      .dom('[data-test-alert-banner="alert"] .alert-banner-message-body')
+      .dom('[data-test-cross-sign-alert-message]')
       .hasText('1 error occurred: * unable to find PKI issuer for reference: nonexistent-mount');
 
     for (const field of FIELDS) {
@@ -329,13 +336,48 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
       .dom(`${SELECTORS.signedIssuerRow()} [data-test-icon="alert-circle-fill"]`)
       .exists('row has failure icon');
     assert
-      .dom('[data-test-alert-banner="alert"] .message-title')
+      .dom('[data-test-cross-sign-alert-title]')
       .hasText('Certificate must be manually cross-signed using the CLI.');
     assert
-      .dom('[data-test-alert-banner="alert"] .alert-banner-message-body')
+      .dom('[data-test-cross-sign-alert-message]')
       .hasText(
         'certificate contains unsupported subject OIDs: 1.2.840.113549.1.9.1, certificate contains unsupported extension OIDs: 2.5.29.37'
       );
+
+    for (const field of FIELDS) {
+      assert
+        .dom(`${SELECTORS.signedIssuerCol(field.key)}`)
+        .hasText(this.testInputs[field.key], `${field.key} displays correct value`);
+    }
+  });
+
+  test('it returns an error when attempting to self-cross-sign', async function (assert) {
+    assert.expect(7);
+    this.testInputs = {
+      intermediateMount: this.backend,
+      intermediateIssuer: this.parentIssuerData.issuer_name,
+      newCrossSignedIssuer: this.newIssuerData.issuer_name,
+    };
+    this.server.get(`/${this.backend}/issuer/${this.parentIssuerData.issuer_name}`, () => {
+      return { data: this.parentIssuerData };
+    });
+
+    await render(hbs`<PkiIssuerCrossSign @parentIssuer={{this.parentIssuerModel}} /> `, {
+      owner: this.engine,
+    });
+    // fill out form and submit
+    for (const field of FIELDS) {
+      await fillIn(SELECTORS.objectListInput(field.key), this.testInputs[field.key]);
+    }
+    await click(SELECTORS.submitButton);
+    assert.dom(SELECTORS.statusCount).hasText('Cross-signing complete (0 successful, 1 error)');
+    assert
+      .dom(`${SELECTORS.signedIssuerRow()} [data-test-icon="alert-circle-fill"]`)
+      .exists('row has failure icon');
+    assert.dom('[data-test-cross-sign-alert-title]').hasText('Cross-sign failed');
+    assert
+      .dom('[data-test-cross-sign-alert-message]')
+      .hasText('Cross-signing a root issuer with itself must be performed manually using the CLI.');
 
     for (const field of FIELDS) {
       assert

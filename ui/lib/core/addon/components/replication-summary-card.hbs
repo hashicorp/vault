@@ -1,0 +1,40 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::Card::Container
+  @hasBorder={{true}}
+  class="replication-summary-card card-container summary"
+  data-test-replication-summary-card
+>
+  <h3 class="title is-5 grid-item-top-left card-title">{{@title}}</h3>
+  <div class="grid-item-top-right">
+    <Hds::Button
+      @route="mode.index"
+      @model={{this.key}}
+      @text="Details"
+      @color="tertiary"
+      @icon="chevron-right"
+      @iconPosition="trailing"
+      data-test-manage-link={{@title}}
+    />
+  </div>
+  <div class="grid-item-left">
+    <p class="title is-6">last_dr_wal</p>
+    <p class="helper-text is-label has-text-grey">
+      Index of last WAL entry written on local storage. Updates every ten seconds.
+    </p>
+  </div>
+  <div class="grid-item-right">
+    <p class="title is-6">known_secondaries</p>
+    <p class="helper-text is-label has-text-grey">Number of secondaries connected to this primary.</p>
+  </div>
+  <p class="title is-3 grid-item-bottom-left" data-test-lastWAL>{{format-number this.lastWAL}}</p>
+  <p class="title is-3 grid-item-bottom-right" data-test-known-secondaries>{{format-number this.knownSecondariesCount}}</p>
+  <div class="grid-item-bottom-row">
+    <p class="title is-6">merkle_root</p>
+    <p class="helper-text is-label has-text-grey">A snapshot of the merkle tree's root hash.</p>
+    <div><code class="is-word-break has-text-black" data-test-merkle-root>{{this.merkleRoot}}</code></div>
+  </div>
+</Hds::Card::Container>

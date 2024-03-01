@@ -12,12 +12,11 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/go-ldap/ldap/v3"
+	capldap "github.com/hashicorp/cap/ldap"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/sdk/framework"
-
-	"github.com/hashicorp/errwrap"
-
-	"github.com/go-ldap/ldap/v3"
 )
 
 var ldapDerefAliasMap = map[string]int{
@@ -461,7 +460,7 @@ type ConfigEntry struct {
 	UseTokenGroups           bool   `json:"use_token_groups"`
 	UsePre111GroupCNBehavior *bool  `json:"use_pre111_group_cn_behavior"`
 	RequestTimeout           int    `json:"request_timeout"`
-	ConnectionTimeout        int    `json:"connection_timeout"`
+	ConnectionTimeout        int    `json:"connection_timeout"` // deprecated: use RequestTimeout
 	DerefAliases             string `json:"dereference_aliases"`
 	MaximumPageSize          int    `json:"max_page_size"`
 
@@ -558,4 +557,54 @@ func (c *ConfigEntry) Validate() error {
 		}
 	}
 	return nil
+}
+
+func ConvertConfig(cfg *ConfigEntry) *capldap.ClientConfig {
+	// cap/ldap doesn't have a notion of connection_timeout, and uses a single timeout value for
+	// both the net.Dialer and ldap connection timeout.
+	// So take the smaller of the two values and use that as the timeout value.
+	minTimeout := min(cfg.ConnectionTimeout, cfg.RequestTimeout)
+	urls := strings.Split(cfg.Url, ",")
+	config := &capldap.ClientConfig{
+		URLs:                                 urls,
+		UserDN:                               cfg.UserDN,
+		AnonymousGroupSearch:                 cfg.AnonymousGroupSearch,
+		GroupDN:                              cfg.GroupDN,
+		GroupFilter:                          cfg.GroupFilter,
+		GroupAttr:                            cfg.GroupAttr,
+		UPNDomain:                            cfg.UPNDomain,
+		UserFilter:                           cfg.UserFilter,
+		UserAttr:                             cfg.UserAttr,
+		ClientTLSCert:                        cfg.ClientTLSCert,
+		ClientTLSKey:                         cfg.ClientTLSKey,
+		InsecureTLS:                          cfg.InsecureTLS,
+		StartTLS:                             cfg.StartTLS,
+		BindDN:                               cfg.BindDN,
+		BindPassword:                         cfg.BindPassword,
+		AllowEmptyPasswordBinds:              !cfg.DenyNullBind,
+		DiscoverDN:                           cfg.DiscoverDN,
+		TLSMinVersion:                        cfg.TLSMinVersion,
+		TLSMaxVersion:                        cfg.TLSMaxVersion,
+		UseTokenGroups:                       cfg.UseTokenGroups,
+		RequestTimeout:                       minTimeout,
+		IncludeUserAttributes:                true,
+		ExcludedUserAttributes:               nil,
+		IncludeUserGroups:                    true,
+		MaximumPageSize:                      cfg.MaximumPageSize,
+		DerefAliases:                         cfg.DerefAliases,
+		DeprecatedVaultPre111GroupCNBehavior: cfg.UsePre111GroupCNBehavior,
+	}
+
+	if cfg.Certificate != "" {
+		config.Certificates = []string{cfg.Certificate}
+	}
+
+	return config
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -17,6 +17,7 @@ module('Integration | Component | mfa-method-form', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.model = this.store.createRecord('mfa-method');
     this.model.type = 'totp';
+    this.model.id = 'some-id';
   });
 
   test('it should render correct fields', async function (assert) {
@@ -27,8 +28,7 @@ module('Integration | Component | mfa-method-form', function (hooks) {
         @model={{this.model}}
         @hasActions="true"
       />
-      <div id="modal-wormhole"></div>
-    `);
+          `);
     assert.dom('[data-test-input="issuer"]').exists(`Issuer field input renders`);
     assert.dom('[data-test-input="period"]').exists('Period field ttl renders');
     assert.dom('[data-test-input="key_size"]').exists('Key size field input renders');
@@ -38,12 +38,12 @@ module('Integration | Component | mfa-method-form', function (hooks) {
       .dom('[data-test-input="max_validation_attempts"]')
       .exists(`Max validation attempts field input renders`);
   });
-
-  test('it should create new mfa method', async function (assert) {
+  // You can only edit a mfa method from this form. To create you need to go to the parent create route.
+  test('it should edit a mfa method', async function (assert) {
     assert.expect(3);
 
-    this.server.post('/identity/mfa/method/totp', () => {
-      assert.ok(true, 'create request sent to server');
+    this.server.post('/identity/mfa/method/totp/some-id', () => {
+      assert.ok(true, 'edit request sent to server');
       return {};
     });
 
@@ -53,8 +53,7 @@ module('Integration | Component | mfa-method-form', function (hooks) {
         @model={{this.model}}
         @onSave={{fn (mut this.didSave) true}}
       />
-      <div id="modal-wormhole"></div>
-    `);
+          `);
 
     await fillIn('[data-test-input="issuer"]', 'Vault');
     await click('[data-test-mfa-save]');
@@ -76,8 +75,7 @@ module('Integration | Component | mfa-method-form', function (hooks) {
         @hasActions="true"
         @model={{this.model}}
       />
-      <div id="modal-wormhole"></div>
-    `);
+          `);
     assert.dom('[data-test-input="issuer"]').hasValue('Vault', 'Issuer input is populated');
     assert.dom('[data-test-ttl-value="Period"]').hasValue('30', 'Period input ttl is populated');
     const checkedAlgorithm = this.element.querySelector('input[name=algorithm]:checked');

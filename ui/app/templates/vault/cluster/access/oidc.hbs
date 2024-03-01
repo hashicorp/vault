@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if this.header}}
   <PageHeader as |p|>
     <p.levelLeft>
@@ -15,25 +20,20 @@
         <br />
       {{/if}}
       methods and source of identity to any client applications.
-      <DocLink @path="/vault/tutorials/auth-methods/oidc-identity-provider">
-        Learn more
-      </DocLink>
+      <Hds::Link::Inline @href={{doc-link "/vault/tutorials/auth-methods/oidc-identity-provider"}}>Learn more</Hds::Link::Inline>
     </p>
     {{#if this.isCta}}
-      <button
-        type="submit"
-        class="button is-primary"
-        {{on "click" (transition-to "vault.cluster.access.oidc.clients.create")}}
+      <Hds::Button
+        @text="Create your first app"
+        @route="vault.cluster.access.oidc.clients.create"
         data-test-oidc-configure
-      >
-        Create your first app
-      </button>
+      />
     {{/if}}
   </div>
   {{#unless this.isCta}}
     {{! show tab links in list routes }}
     <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless" data-test-oidc-tabs>
-      <nav class="tabs">
+      <nav class="tabs" aria-label="navigation for managing Open ID Connect">
         <ul>
           <LinkTo @route="vault.cluster.access.oidc.clients" data-test-tab="clients">
             Applications

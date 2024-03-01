@@ -5,7 +5,7 @@ description: >-
   The Vault CSI Provider allows pods to consume Vault secrets using CSI volumes.
 ---
 
-# Vault CSI Provider
+# Vault CSI provider
 
 The Vault CSI Provider allows pods to consume Vault secrets using
 [CSI Secrets Store](https://github.com/kubernetes-sigs/secrets-store-csi-driver) volumes.
@@ -48,7 +48,7 @@ must be bound to a Vault role and a policy granting access to the secrets desire
 It is highly recommended to run pods with dedicated Kubernetes service accounts to
 ensure applications cannot access more secrets than they require.
 
-## Secret Provider Class Example
+## Secret provider class example
 
 The following is an example of a Secret Provider Class using the `vault` provider:
 
@@ -85,7 +85,7 @@ spec:
 
 ~> Secret Provider Class is a namespaced object in Kubernetes.
 
-## Using Secret Provider Classes
+## Using secret provider classes
 
 An application pod uses the example Secret Provider Class above by mounting it as a CSI volume:
 

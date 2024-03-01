@@ -1,0 +1,9 @@
+### vault.runtime.num_goroutines ((#vault-runtime-num_goroutines))
+
+Metric type | Value   | Description
+----------- | ------- | -----------
+gauge       | number  | Total number of Go routines running in memory
+
+The `vault.runtime.num_goroutines` metric is a good system load indicator. We
+recommend monitoring `vault.runtime.num_goroutines` to establish an accurate
+baseline and thresholds for alerting on the health of your Vault installation.

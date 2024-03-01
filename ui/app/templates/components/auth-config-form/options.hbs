@@ -1,19 +1,37 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form {{action (perform this.saveModel) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @model={{this.model}} @errorMessage={{this.model.errorMessage}} />
     <NamespaceReminder @mode="save" @noun="Auth Method" />
+
     {{#each this.model.tuneAttrs as |attr|}}
-      <FormField data-test-field @attr={{attr}} @model={{this.model}} />
+      {{#if (not (includes attr.name this.model.userLockoutConfig.modelAttrs))}}
+        <FormField data-test-field @attr={{attr}} @model={{this.model}} />
+      {{/if}}
+    {{/each}}
+
+    <hr class="has-top-margin-xl has-bottom-margin-l has-background-gray-200" />
+    <Hds::Text::Display @tag="h2" @size="400" @weight="bold">User lockout configuration</Hds::Text::Display>
+    <Hds::Text::Body @tag="p" @size="100" @color="faint" class="has-bottom-margin-m">
+      Specifies the user lockout settings for this auth mount.
+    </Hds::Text::Body>
+    {{#each this.model.tuneAttrs as |attr|}}
+      {{#if (includes attr.name this.model.userLockoutConfig.modelAttrs)}}
+        <FormField @attr={{attr}} @model={{this.model}} />
+      {{/if}}
     {{/each}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    <button
+    <Hds::Button
+      @text="Update options"
+      @icon={{if this.saveModel.isRunning "loading"}}
       type="submit"
       data-test-save-config="true"
-      class="button is-primary {{if this.saveModel.isRunning 'loading'}}"
       disabled={{this.saveModel.isRunning}}
-    >
-      Update Options
-    </button>
+    />
   </div>
 </form>

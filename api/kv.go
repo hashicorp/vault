@@ -38,7 +38,7 @@ type KVSecret struct {
 // by default when a server is started in -dev mode. See the kvv2 struct.
 //
 // Learn more about the KV secrets engine here:
-// https://www.vaultproject.io/docs/secrets/kv
+// https://developer.hashicorp.com/vault/docs/secrets/kv
 func (c *Client) KVv1(mountPath string) *KVv1 {
 	return &KVv1{c: c, mountPath: mountPath}
 }
@@ -53,7 +53,7 @@ func (c *Client) KVv1(mountPath string) *KVv1 {
 // as these are the default settings when a server is started in -dev mode.
 //
 // Learn more about the KV secrets engine here:
-// https://www.vaultproject.io/docs/secrets/kv
+// https://developer.hashicorp.com/vault/docs/secrets/kv
 func (c *Client) KVv2(mountPath string) *KVv2 {
 	return &KVv2{c: c, mountPath: mountPath}
 }

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -9,6 +9,7 @@ import { render, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki/pki-role-form';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | pki key parameters', function (hooks) {
   setupRenderingTest(hooks);
@@ -18,6 +19,12 @@ module('Integration | Component | pki key parameters', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.model = this.store.createRecord('pki/role', { backend: 'pki' });
     [this.fields] = Object.values(this.model.formFieldGroups.find((g) => g['Key parameters']));
+    // TODO: remove Tooltip/ember-basic-dropdown
+    setRunOptions({
+      rules: {
+        'nested-interactive': { enabled: false },
+      },
+    });
   });
 
   test('it should render the component and display the correct defaults', async function (assert) {

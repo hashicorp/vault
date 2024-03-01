@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -9,17 +9,20 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/hashicorp/cli"
+	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/mattn/go-isatty"
-	"github.com/mitchellh/cli"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
 )
@@ -63,12 +66,14 @@ type BaseCommand struct {
 	flagOutputCurlString bool
 	flagOutputPolicy     bool
 	flagNonInteractive   bool
+	addrWarning          string
 
 	flagMFA []string
 
 	flagHeader map[string]string
 
-	tokenHelper token.TokenHelper
+	tokenHelper    token.TokenHelper
+	hcpTokenHelper hcpvlib.HCPTokenHelper
 
 	client *api.Client
 }
@@ -78,6 +83,10 @@ type BaseCommand struct {
 func (c *BaseCommand) Client() (*api.Client, error) {
 	// Read the test client if present
 	if c.client != nil {
+		if err := c.applyHCPConfig(); err != nil {
+			return nil, err
+		}
+
 		return c.client, nil
 	}
 
@@ -186,7 +195,51 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 
 	c.client = client
 
+	if err := c.applyHCPConfig(); err != nil {
+		return nil, err
+	}
+
+	if c.addrWarning != "" && c.UI != nil {
+		if os.Getenv("VAULT_ADDR") == "" {
+			if !c.flagNonInteractive && isatty.IsTerminal(os.Stdin.Fd()) {
+				c.UI.Warn(wrapAtLength(c.addrWarning))
+			}
+		}
+	}
+
 	return client, nil
+}
+
+func (c *BaseCommand) applyHCPConfig() error {
+	if c.hcpTokenHelper == nil {
+		c.hcpTokenHelper = c.HCPTokenHelper()
+	}
+
+	hcpToken, err := c.hcpTokenHelper.GetHCPToken()
+	if err != nil {
+		return err
+	}
+
+	if hcpToken != nil {
+		cookie := &http.Cookie{
+			Name:    "hcp_access_token",
+			Value:   hcpToken.AccessToken,
+			Expires: hcpToken.AccessTokenExpiry,
+		}
+
+		if err := c.client.SetHCPCookie(cookie); err != nil {
+			return fmt.Errorf("unable to correctly connect to the HCP Vault cluster; please reconnect to HCP: %w", err)
+		}
+
+		if err := c.client.SetAddress(hcpToken.ProxyAddr); err != nil {
+			return fmt.Errorf("unable to correctly set the HCP address: %w", err)
+		}
+
+		// remove address warning since address was set to HCP's address
+		c.addrWarning = ""
+	}
+
+	return nil
 }
 
 // SetAddress sets the token helper on the command; useful for the demo server and other outside cases.
@@ -212,6 +265,14 @@ func (c *BaseCommand) TokenHelper() (token.TokenHelper, error) {
 	return helper, nil
 }
 
+// HCPTokenHelper returns the HCPToken helper attached to the command.
+func (c *BaseCommand) HCPTokenHelper() hcpvlib.HCPTokenHelper {
+	if c.hcpTokenHelper != nil {
+		return c.hcpTokenHelper
+	}
+	return config.DefaultHCPTokenHelper()
+}
+
 // DefaultWrappingLookupFunc is the default wrapping function based on the
 // CLI flag.
 func (c *BaseCommand) DefaultWrappingLookupFunc(operation, path string) string {
@@ -222,7 +283,7 @@ func (c *BaseCommand) DefaultWrappingLookupFunc(operation, path string) string {
 	return api.DefaultWrappingLookupFunc(operation, path)
 }
 
-// getValidationRequired checks to see if the secret exists and has an MFA
+// getMFAValidationRequired checks to see if the secret exists and has an MFA
 // requirement. If MFA is required and the number of constraints is greater than
 // 1, we can assert that interactive validation is not required.
 func (c *BaseCommand) getMFAValidationRequired(secret *api.Secret) bool {
@@ -321,10 +382,12 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Completion: complete.PredictAnything,
 				Usage:      "Address of the Vault server.",
 			}
+
 			if c.flagAddress != "" {
 				addrStringVar.Default = c.flagAddress
 			} else {
 				addrStringVar.Default = "https://127.0.0.1:8200"
+				c.addrWarning = fmt.Sprintf("WARNING! VAULT_ADDR and -address unset. Defaulting to %s.", addrStringVar.Default)
 			}
 			f.StringVar(addrStringVar)
 

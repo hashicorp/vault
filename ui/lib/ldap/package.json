@@ -1,0 +1,29 @@
+{
+  "name": "ldap",
+  "keywords": [
+    "ember-addon",
+    "ember-engine"
+  ],
+  "dependencies": {
+    "@hashicorp/design-system-components": "*",
+    "ember-cli-htmlbars": "*",
+    "ember-cli-babel": "*",
+    "ember-concurrency": "*",
+    "@ember/test-waiters": "*",
+    "ember-cli-typescript": "*",
+    "@types/ember": "latest",
+    "@types/ember-data": "latest",
+    "@types/ember-data__store": "latest",
+    "@types/ember__array": "latest",
+    "@types/ember__component": "latest",
+    "@types/ember__controller": "latest",
+    "@types/ember__engine": "latest",
+    "@types/ember__routing": "latest",
+    "@types/rsvp": "latest"
+  },
+  "ember-addon": {
+    "paths": [
+      "../core"
+    ]
+  }
+}

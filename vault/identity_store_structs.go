@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -102,6 +102,7 @@ type IdentityStore struct {
 	groupUpdater  GroupUpdater
 	tokenStorer   TokenStorer
 	entityCreator EntityCreator
+	mountLister   MountLister
 	mfaBackend    *LoginMFABackend
 }
 
@@ -153,3 +154,10 @@ type EntityCreator interface {
 }
 
 var _ EntityCreator = &Core{}
+
+type MountLister interface {
+	ListMounts() ([]*MountEntry, error)
+	ListAuths() ([]*MountEntry, error)
+}
+
+var _ MountLister = &Core{}

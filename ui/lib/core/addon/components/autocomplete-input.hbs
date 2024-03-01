@@ -1,6 +1,11 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div {{did-insert this.setElement}} ...attributes>
   {{#if @label}}
-    <FormFieldLabel @label={{@label}} @subText={{@subText}} />
+    <FormFieldLabel @label={{@label}} @subText={{@subText}} for={{dasherize @label}} />
   {{/if}}
   <div class="control">
     <Input
@@ -10,6 +15,7 @@
       placeholder={{@placeholder}}
       class="input"
       {{on "input" this.onInput}}
+      id={{dasherize @label}}
     />
     <BasicDropdown @registerAPI={{this.setDropdownAPI}} @renderInPlace={{true}} as |D|>
       <D.Content @defaultClass="autocomplete-input">

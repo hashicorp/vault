@@ -6,10 +6,12 @@ description: The '/sys/host-info' endpoint is used to retrieve host information
 
 # `/sys/host-info`
 
+@include 'alerts/restricted-root.mdx'
+
 The `/sys/host-info` endpoint is used retrieve information about the
 host instance that the Vault server is running on.
 
-## Collect Host Information
+## Collect host information
 
 This endpoint returns information about the host instance that the Vault
 server is running on. The data returned includes CPU information, CPU
@@ -19,7 +21,7 @@ times, disk usage, host info, and memory statistics.
 | :----- | :--------------- |
 | `GET`  | `/sys/host-info` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -27,7 +29,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/host-info
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

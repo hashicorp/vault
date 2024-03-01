@@ -36,7 +36,6 @@ func errorPaths(b *backend) []*framework.Path {
 				"err_type": {Type: framework.TypeInt},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.CreateOperation: b.pathErrorRPCRead,
 				logical.UpdateOperation: b.pathErrorRPCRead,
 			},
 		},

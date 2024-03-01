@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -9,6 +9,7 @@ import { click, fillIn, render, triggerEvent } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
 import { componentPemBundle } from 'vault/tests/helpers/pki/values';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const SELECTORS = {
   label: '[data-test-text-file-label]',
@@ -34,6 +35,14 @@ module('Integration | Component | text-file', function (hooks) {
   });
 
   test('it renders without toggle and option for text input when uploadOnly=true', async function (assert) {
+    setRunOptions({
+      rules: {
+        // TODO: fix textFile / replace with HDS
+        label: { enabled: false },
+        'label-title-only': { enabled: false },
+      },
+    });
+
     await render(hbs`<TextFile @onChange={{this.onChange}} @uploadOnly={{true}} />`);
 
     assert.dom(SELECTORS.label).doesNotExist('Label no longer rendered');
@@ -52,9 +61,10 @@ module('Integration | Component | text-file', function (hooks) {
   });
 
   test('it correctly parses uploaded files', async function (assert) {
-    this.file = new File(['some content for a file'], 'filename.txt');
+    const file = new Blob([['some content for a file']], { type: 'text/plain' });
+    file.name = 'filename.txt';
     await render(hbs`<TextFile @onChange={{this.onChange}} />`);
-    await triggerEvent(SELECTORS.fileUpload, 'change', { files: [this.file] });
+    await triggerEvent(SELECTORS.fileUpload, 'change', { files: [file] });
     assert.propEqual(
       this.onChange.lastCall.args[0],
       {

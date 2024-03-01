@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package cert
 
@@ -20,13 +20,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-
-	"golang.org/x/crypto/ocsp"
-
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
-
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/crypto/ocsp"
 )
 
 var ocspPort int
@@ -94,6 +91,10 @@ func TestCert_RoleResolve(t *testing.T) {
 			testAccStepCert(t, "web", ca, "foo", allowed{dns: "example.com"}, false),
 			testAccStepLoginWithName(t, connState, "web"),
 			testAccStepResolveRoleWithName(t, connState, "web"),
+			// Test with caching disabled
+			testAccStepSetRoleCacheSize(t, -1),
+			testAccStepLoginWithName(t, connState, "web"),
+			testAccStepResolveRoleWithName(t, connState, "web"),
 		},
 	})
 }
@@ -151,8 +152,21 @@ func TestCert_RoleResolveWithoutProvidingCertName(t *testing.T) {
 			testAccStepCert(t, "web", ca, "foo", allowed{dns: "example.com"}, false),
 			testAccStepLoginWithName(t, connState, "web"),
 			testAccStepResolveRoleWithEmptyDataMap(t, connState, "web"),
+			testAccStepSetRoleCacheSize(t, -1),
+			testAccStepLoginWithName(t, connState, "web"),
+			testAccStepResolveRoleWithEmptyDataMap(t, connState, "web"),
 		},
 	})
+}
+
+func testAccStepSetRoleCacheSize(t *testing.T, size int) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Data: map[string]interface{}{
+			"role_cache_size": size,
+		},
+	}
 }
 
 func testAccStepResolveRoleWithEmptyDataMap(t *testing.T, connState tls.ConnectionState, certName string) logicaltest.TestStep {

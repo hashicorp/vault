@@ -1,10 +1,15 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Input
   id={{this.safeId}}
   name={{this.name}}
   @type="checkbox"
   @checked={{this.checked}}
   {{on "change" this.handleChange}}
-  class={{this.inputClasses}}
+  class="toggle is-success is-small"
   disabled={{this.disabled}}
   data-test-toggle-input={{this.name}}
   ...attributes

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -47,7 +47,7 @@ module('Integration | Component | kubernetes | TabPageHeader', function (hooks) 
     });
     assert
       .dom('[data-test-header-title] svg')
-      .hasClass('flight-icon-kubernetes', 'Correct icon renders in title');
+      .hasClass('flight-icon-kubernetes-color', 'Correct icon renders in title');
     assert.dom('[data-test-header-title]').hasText(this.mount, 'Mount path renders in title');
   });
 

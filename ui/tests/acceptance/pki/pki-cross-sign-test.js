@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -9,9 +9,8 @@ import { setupApplicationTest } from 'vault/tests/helpers';
 import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
-import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
+import { runCmd } from 'vault/tests/helpers/commands';
 import { SELECTORS } from 'vault/tests/helpers/pki/pki-issuer-cross-sign';
 import { verifyCertificates } from 'vault/utils/parse-pki-cert';
 module('Acceptance | pki/pki cross sign', function (hooks) {
@@ -28,7 +27,7 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     await enablePage.enable('pki', this.parentMountPath);
     await enablePage.enable('pki', this.intMountPath);
 
-    await runCommands([
+    await runCmd([
       `write "${this.parentMountPath}/root/generate/internal" common_name="Long-Lived Root X1" ttl=8960h issuer_name="${this.oldParentIssuerName}"`,
       `write "${this.parentMountPath}/root/generate/internal" common_name="Long-Lived Root X2" ttl=8960h issuer_name="${this.parentIssuerName}"`,
       `write "${this.parentMountPath}/config/issuers" default="${this.parentIssuerName}"`,
@@ -37,9 +36,8 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
 
   hooks.afterEach(async function () {
     // Cleanup engine
-    await runCommands([`delete sys/mounts/${this.intMountPath}`]);
-    await runCommands([`delete sys/mounts/${this.parentMountPath}`]);
-    await logout.visit();
+    await runCmd([`delete sys/mounts/${this.intMountPath}`]);
+    await runCmd([`delete sys/mounts/${this.parentMountPath}`]);
   });
 
   test('it cross-signs an issuer', async function (assert) {
@@ -49,13 +47,13 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     await fillIn(SELECTORS.inputByName('type'), 'internal');
     await fillIn(SELECTORS.inputByName('commonName'), 'Short-Lived Int R1');
     await click('[data-test-save]');
-    const csr = find(SELECTORS.copyButton('CSR')).getAttribute('data-clipboard-text');
+    const csr = find(SELECTORS.copyButton('CSR')).getAttribute('data-test-copy-button');
     await visit(`vault/secrets/${this.parentMountPath}/pki/issuers/${this.oldParentIssuerName}/sign`);
     await fillIn(SELECTORS.inputByName('csr'), csr);
     await fillIn(SELECTORS.inputByName('format'), 'pem_bundle');
     await click('[data-test-pki-sign-intermediate-save]');
     const pemBundle = find(SELECTORS.copyButton('CA Chain'))
-      .getAttribute('data-clipboard-text')
+      .getAttribute('data-test-copy-button')
       .replace(/,/, '\n');
     await visit(`vault/secrets/${this.intMountPath}/pki/configuration/create`);
     await click(SELECTORS.configure.optionByKey('import'));
@@ -66,7 +64,7 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     await click('[data-test-is-default]');
     // name default issuer of intermediate
     const oldIntIssuerId = find(SELECTORS.rowValue('Issuer ID')).innerText;
-    const oldIntCert = find(SELECTORS.copyButton('Certificate')).getAttribute('data-clipboard-text');
+    const oldIntCert = find(SELECTORS.copyButton('Certificate')).getAttribute('data-test-copy-button');
     await click(SELECTORS.details.configure);
     await fillIn(SELECTORS.inputByName('issuerName'), this.intIssuerName);
     await click('[data-test-save]');
@@ -86,11 +84,11 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
 
     // get certificate data of newly signed issuer
     await click(`${SELECTORS.signedIssuerCol('newCrossSignedIssuer')} a`);
-    const newIntCert = find(SELECTORS.copyButton('Certificate')).getAttribute('data-clipboard-text');
+    const newIntCert = find(SELECTORS.copyButton('Certificate')).getAttribute('data-test-copy-button');
 
     // verify cross-sign was accurate by creating a role to issue a leaf certificate
     const myRole = 'some-role';
-    await runCommands([
+    await runCmd([
       `write ${this.intMountPath}/roles/${myRole} \
     issuer_ref=${this.newlySignedIssuer}\
     allow_any_name=true \
@@ -100,7 +98,7 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     await fillIn(SELECTORS.inputByName('commonName'), 'my-leaf');
     await fillIn('[data-test-ttl-value="TTL"]', '3600');
     await click('[data-test-pki-generate-button]');
-    const myLeafCert = find(SELECTORS.copyButton('Certificate')).getAttribute('data-clipboard-text');
+    const myLeafCert = find(SELECTORS.copyButton('Certificate')).getAttribute('data-test-copy-button');
 
     // see comments in utils/parse-pki-cert.js for step-by-step explanation of of verifyCertificates method
     assert.true(

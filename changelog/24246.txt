@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft: Fix a race whereby a new leader may present inconsistent node data to Autopilot.
+```

@@ -1,0 +1,3 @@
+```release-note:bug 
+ui: Fixed secrets, leases, and policies filter dropping focus after a single character
+```

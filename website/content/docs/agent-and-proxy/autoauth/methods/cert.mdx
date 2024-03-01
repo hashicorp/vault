@@ -4,7 +4,7 @@ page_title: Vault Auto-Auth Cert Method
 description: Cert Method for Vault Auto-Auth
 ---
 
-# Vault Auto-Auth Cert Method
+# Vault Auto-Auth cert method
 
 The `cert` method uses the configured TLS certificates from the `vault` stanza of
 the agent configuration and takes an optional `name` parameter. There is no option
@@ -14,7 +14,7 @@ It is strongly advised to provide TLS settings in the configuration stanza
 within the auth method to avoid agent cache, if also enabled, from using the
 same TLS settings when proxying requests. If TLS settings are not present in the
 config stanza, Agent and Proxy will fall back to using TLS settings from their respective
-[`vault` Stanzas](/vault/docs/agent#vault-stanza).
+[`vault` Stanzas](/vault/docs/agent-and-proxy/agent#vault-stanza).
 
 ## Configuration
 

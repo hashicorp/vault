@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -14,8 +14,10 @@ import (
 )
 
 // Error prefix; see RFC 8555 Section 6.7. Errors.
-const ErrorPrefix = "urn:ietf:params:acme:error:"
-const ErrorContentType = "application/problem+json"
+const (
+	ErrorPrefix      = "urn:ietf:params:acme:error:"
+	ErrorContentType = "application/problem+json"
+)
 
 // See RFC 8555 Section 6.7. Errors.
 var ErrAccountDoesNotExist = errors.New("The request specified an account that does not exist")
@@ -111,6 +113,19 @@ type ErrorResponse struct {
 	Subproblems []*ErrorResponse `json:"subproblems"`
 }
 
+func (e *ErrorResponse) MarshalForStorage() map[string]interface{} {
+	subProblems := []map[string]interface{}{}
+	for _, subProblem := range e.Subproblems {
+		subProblems = append(subProblems, subProblem.MarshalForStorage())
+	}
+	return map[string]interface{}{
+		"status":      e.StatusCode,
+		"type":        e.Type,
+		"detail":      e.Detail,
+		"subproblems": subProblems,
+	}
+}
+
 func (e *ErrorResponse) Marshal() (*logical.Response, error) {
 	body, err := json.Marshal(e)
 	if err != nil {
@@ -128,13 +143,17 @@ func (e *ErrorResponse) Marshal() (*logical.Response, error) {
 }
 
 func FindType(given error) (err error, id string, code int, found bool) {
+	matchedError := false
 	for err, id = range errIdMappings {
 		if errors.Is(given, err) {
+			matchedError = true
 			break
 		}
 	}
 
-	if err == nil {
+	// If the given error was not matched from one of the standard ACME errors
+	// make this error, force ErrServerInternal
+	if !matchedError {
 		err = ErrServerInternal
 		id = errIdMappings[err]
 	}
@@ -153,6 +172,12 @@ func TranslateError(given error) (*logical.Response, error) {
 		return logical.RespondWithStatusCode(nil, nil, http.StatusNotFound)
 	}
 
+	body := TranslateErrorToErrorResponse(given)
+
+	return body.Marshal()
+}
+
+func TranslateErrorToErrorResponse(given error) ErrorResponse {
 	// We're multierror aware here: if we're given a list of errors, assume
 	// they're structured so the first error is the outer error and the inner
 	// subproblems are subsequent in the multierror.
@@ -183,6 +208,5 @@ func TranslateError(given error) (*logical.Response, error) {
 
 		body.Subproblems = append(body.Subproblems, &sub)
 	}
-
-	return body.Marshal()
+	return body
 }

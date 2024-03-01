@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package node_status
 
@@ -33,7 +33,7 @@ func (c *NodeStatusReporter) GetNodeStatus(ctx context.Context) (retStatus nodes
 
 	var status nodestatus.NodeStatus
 
-	sealStatus, err := c.NodeStatusGetter.GetSealStatus(ctx)
+	sealStatus, err := c.NodeStatusGetter.GetSealStatus(ctx, true)
 	if err != nil {
 		return status, err
 	}

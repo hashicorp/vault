@@ -1,5 +1,10 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if @label}}
-  <label class="is-label" ...attributes>
+  <label data-test-form-field-label class="is-label" ...attributes>
     {{@label}}
     {{#if @helpText}}
       <InfoTooltip>

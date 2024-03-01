@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package cluster
 
@@ -18,11 +18,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
-
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"golang.org/x/net/http2"
 )
 
@@ -75,10 +74,9 @@ type Listener struct {
 	logger                    log.Logger
 	l                         sync.RWMutex
 	tlsConnectionLoggingLevel log.Level
-	grpcMinConnectTimeout     time.Duration
 }
 
-func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Logger, idleTimeout, grpcMinConnectTimeout time.Duration) *Listener {
+func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Logger, idleTimeout time.Duration) *Listener {
 	var maxStreams uint32 = math.MaxUint32
 	if override := os.Getenv("VAULT_GRPC_MAX_STREAMS"); override != "" {
 		i, err := strconv.ParseUint(override, 10, 32)
@@ -115,7 +113,6 @@ func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Lo
 		cipherSuites:              cipherSuites,
 		logger:                    logger,
 		tlsConnectionLoggingLevel: log.LevelFromString(os.Getenv("VAULT_CLUSTER_TLS_SESSION_LOG_LEVEL")),
-		grpcMinConnectTimeout:     grpcMinConnectTimeout,
 	}
 }
 
@@ -272,7 +269,8 @@ func (cl *Listener) TLSConfig(ctx context.Context) (*tls.Config, error) {
 }
 
 // Run starts the tcp listeners and will accept connections until stop is
-// called. This function blocks so should be called in a goroutine.
+// called. This function does not block and will start the listeners in
+// separate goroutines.
 func (cl *Listener) Run(ctx context.Context) error {
 	// Get our TLS config
 	tlsConfig, err := cl.TLSConfig(ctx)
@@ -466,21 +464,10 @@ func (cl *Listener) GetDialerFunc(ctx context.Context, alpn string) func(string,
 		}
 
 		tlsConfig.NextProtos = []string{alpn}
-		args := []interface{}{
-			"address", addr,
-			"alpn", alpn,
-			"host", tlsConfig.ServerName,
-			"timeout", fmt.Sprintf("%s", timeout),
-		}
-		if cl.grpcMinConnectTimeout != 0 {
-			args = append(args, "timeout_env_override", fmt.Sprintf("%s", cl.grpcMinConnectTimeout))
-		}
-		cl.logger.Debug("creating rpc dialer", args...)
+		cl.logger.Debug("creating rpc dialer", "address", addr, "alpn", alpn, "host", tlsConfig.ServerName)
 
-		start := time.Now()
 		conn, err := cl.networkLayer.Dial(addr, timeout, tlsConfig)
 		if err != nil {
-			cl.logger.Debug("dial failure", "address", addr, "alpn", alpn, "host", tlsConfig.ServerName, "duration", fmt.Sprintf("%s", time.Since(start)), "error", err)
 			return nil, err
 		}
 		cl.logTLSSessionStart(conn.RemoteAddr().String(), conn.ConnectionState())

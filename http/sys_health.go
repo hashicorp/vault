@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package http
 
@@ -12,16 +12,17 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/version"
 )
 
-func handleSysHealth(core *vault.Core) http.Handler {
+func handleSysHealth(core *vault.Core, opt ...ListenerConfigOption) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":
-			handleSysHealthGet(core, w, r)
+			handleSysHealthGet(core, w, r, opt...)
 		case "HEAD":
 			handleSysHealthHead(core, w, r)
 		default:
@@ -43,7 +44,7 @@ func fetchStatusCode(r *http.Request, field string) (int, bool, bool) {
 	return statusCode, false, true
 }
 
-func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request, opt ...ListenerConfigOption) {
 	code, body, err := getSysHealth(core, r)
 	if err != nil {
 		core.Logger().Error("error checking health", "error", err)
@@ -54,6 +55,29 @@ func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 	if body == nil {
 		respondError(w, code, nil)
 		return
+	}
+
+	var tokenPresent bool
+	token := r.Header.Get(consts.AuthHeaderName)
+
+	if token != "" {
+		// We don't care about the error, we just want to know if the token exists
+		lock := core.HALock()
+		lock.Lock()
+		tokenEntry, err := core.LookupToken(r.Context(), token)
+		lock.Unlock()
+		tokenPresent = err == nil && tokenEntry != nil
+	}
+	opts, _ := getOpts(opt...)
+
+	if !tokenPresent {
+		if opts.withRedactVersion {
+			body.Version = opts.withRedactionValue
+		}
+
+		if opts.withRedactClusterName {
+			body.ClusterName = opts.withRedactionValue
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -194,11 +218,14 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		ReplicationDRMode:          replicationState.GetDRString(),
 		ServerTimeUTC:              time.Now().UTC().Unix(),
 		Version:                    version.GetVersion().VersionNumber(),
+		Enterprise:                 constants.IsEnterprise,
 		ClusterName:                clusterName,
 		ClusterID:                  clusterID,
+		ClockSkewMillis:            core.ActiveNodeClockSkewMillis(),
+		EchoDurationMillis:         core.EchoDuration().Milliseconds(),
 	}
 
-	licenseState, err := vault.LicenseSummary(core)
+	licenseState, err := core.EntGetLicenseState()
 	if err != nil {
 		return http.StatusInternalServerError, nil, err
 	}
@@ -214,7 +241,7 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 	}
 
 	if init && !sealed && !standby {
-		body.LastWAL = vault.LastWAL(core)
+		body.LastWAL = core.EntLastWAL()
 	}
 
 	return code, body, nil
@@ -235,8 +262,11 @@ type HealthResponse struct {
 	ReplicationDRMode          string                 `json:"replication_dr_mode"`
 	ServerTimeUTC              int64                  `json:"server_time_utc"`
 	Version                    string                 `json:"version"`
+	Enterprise                 bool                   `json:"enterprise"`
 	ClusterName                string                 `json:"cluster_name,omitempty"`
 	ClusterID                  string                 `json:"cluster_id,omitempty"`
 	LastWAL                    uint64                 `json:"last_wal,omitempty"`
 	License                    *HealthResponseLicense `json:"license,omitempty"`
+	EchoDurationMillis         int64                  `json:"echo_duration_ms"`
+	ClockSkewMillis            int64                  `json:"clock_skew_ms"`
 }

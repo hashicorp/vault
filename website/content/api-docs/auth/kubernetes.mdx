@@ -4,7 +4,7 @@ page_title: Kubernetes - Auth Methods - HTTP API
 description: This is the API documentation for the Vault Kubernetes auth method plugin.
 ---
 
-# Kubernetes Auth Method (API)
+# Kubernetes auth method (API)
 
 @include 'x509-sha1-deprecation.mdx'
 
@@ -16,7 +16,7 @@ This documentation assumes the Kubernetes method is mounted at the
 `/auth/kubernetes` path in Vault. Since it is possible to enable auth methods at
 any location, please update your API calls accordingly.
 
-## Configure Method
+## Configure method
 
 The Kubernetes auth method validates service account JWTs and verifies their
 existence with the Kubernetes TokenReview API. This endpoint configures the
@@ -32,8 +32,8 @@ access the Kubernetes API.
 - `kubernetes_host` `(string: <required>)` - Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server.
 - `kubernetes_ca_cert` `(string: "")` - PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API. NOTE: Every line must end with a newline: `\n`
   If not set, the local CA cert will be used if running in a Kubernetes pod.
-- `token_reviewer_jwt` `(string: "")` - A service account JWT used to access the TokenReview
-  API to validate other JWTs during login. If not set,
+- `token_reviewer_jwt` `(string: "")` - A service account JWT (or other token) used as a bearer
+  token to access the TokenReview API to validate other JWTs during login. If not set,
   the local service account token is used if running in a Kubernetes pod, otherwise
   the JWT submitted in the login payload will be used to access the Kubernetes TokenReview API.
 - `pem_keys` `(array: [])` - Optional list of PEM-formatted public keys or certificates
@@ -42,8 +42,12 @@ access the Kubernetes API.
   extracted. Not every installation of Kubernetes exposes these
   keys.
 - `disable_local_ca_jwt` `(bool: false)` - Disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod.
+- `use_annotations_as_alias_metadata` `(bool: false)` - Use annotations from the client token's associated service account
+  as alias metadata for the Vault entity. Only annotations with the prefix `vault.hashicorp.com/alias-metadata-` will be used.
+  For example, if an annotation "vault.hashicorp.com/alias-metadata-foo" is configured, "foo" with its value will be added
+  to the alias metadata. NOTE: Vault will need permission to read service accounts from the Kubernetes API.
 
-### Deprecated Parameters
+### Deprecated parameters
 
 -> The following fields have been deprecated and will be removed in a future release:
 
@@ -63,7 +67,7 @@ behavior may be disabled by setting `disable_local_ca_jwt` to `true`.
 When Vault is running in a non-Kubernetes environment, either
 `kubernetes_ca_cert` or `pem_keys` must be set by the user.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -73,7 +77,7 @@ When Vault is running in a non-Kubernetes environment, either
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -83,7 +87,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/kubernetes/config
 ```
 
-## Read Config
+## Read config
 
 Returns the previously configured config, excluding credentials.
 
@@ -91,7 +95,7 @@ Returns the previously configured config, excluding credentials.
 | :----- | :------------------------ |
 | `GET`  | `/auth/kubernetes/config` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -99,7 +103,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/kubernetes/config
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -107,12 +111,13 @@ $ curl \
     "kubernetes_host": "https://192.168.99.100:8443",
     "kubernetes_ca_cert": "-----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----",
     "pem_keys": ["-----BEGIN CERTIFICATE-----.....", .....],
-    "disable_local_ca_jwt": false
+    "disable_local_ca_jwt": false,
+    "token_reviewer_jwt_set": false
   }
 }
 ```
 
-## Create/Update Role
+## Create/Update role
 
 Registers a role in the auth method. Role types have specific entities
 that can perform login operations against this endpoint. Constraints specific
@@ -128,8 +133,14 @@ entities attempting to login.
 - `name` `(string: <required>)` - Name of the role.
 - `bound_service_account_names` `(array: <required>)` - List of service account
   names able to access this role. If set to "\*" all names are allowed.
-- `bound_service_account_namespaces` `(array: <required>)` - List of namespaces
+- `bound_service_account_namespaces` `(array: [])` - List of namespaces
   allowed to access this role. If set to "\*" all namespaces are allowed.
+- `bound_service_account_namespace_selector` `(string: "")` - A label selector for Kubernetes
+  namespaces allowed to acces this role. Accepts either a JSON or YAML object. The value
+  should be of type
+  [LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#labelselector-v1-meta). Currently, label selectors with `matchExpressions` are not supported.
+  If this parameter is used, the Vault requires permissions to read namespaces on the Kubernetes
+  cluster. If set with `bound_service_account_namespaces`, the conditions are `OR`ed.
 - `audience` `(string: "")` - Optional Audience claim to verify in the JWT.
 - `alias_name_source` `(string: "serviceaccount_uid")` - Configures how identity aliases are generated.
   Valid choices are: `serviceaccount_uid`, `serviceaccount_name`
@@ -143,12 +154,23 @@ entities attempting to login.
 
 @include 'tokenfields.mdx'
 
-### Sample Payload
+### Sample Payload 1
 
 ```json
 {
   "bound_service_account_names": "vault-auth",
   "bound_service_account_namespaces": "default",
+  "policies": ["dev", "prod"],
+  "max_ttl": 1800000
+}
+```
+
+### Sample Payload 2
+
+```json
+{
+  "bound_service_account_names": "vault-auth",
+  "bound_service_account_namespace_selector": "\"{\"matchLabels\":{\"stage\":\"dev\",\"vault-role\":\"dev-role\"}}",
   "policies": ["dev", "prod"],
   "max_ttl": 1800000
 }
@@ -164,7 +186,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/kubernetes/role/dev-role
 ```
 
-## Read Role
+## Read role
 
 Returns the previously registered role configuration.
 
@@ -176,7 +198,7 @@ Returns the previously registered role configuration.
 
 - `name` `(string: <required>)` - Name of the role.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -184,7 +206,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/kubernetes/role/dev-role
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -199,7 +221,7 @@ $ curl \
 }
 ```
 
-## List Roles
+## List roles
 
 Lists all the roles that are registered with the auth method.
 
@@ -208,7 +230,7 @@ Lists all the roles that are registered with the auth method.
 | `LIST` | `/auth/kubernetes/role`           |
 | `GET`  | `/auth/kubernetes/role?list=true` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -217,7 +239,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/kubernetes/role
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -227,7 +249,7 @@ $ curl \
 }
 ```
 
-## Delete Role
+## Delete role
 
 Deletes the previously registered role.
 
@@ -239,7 +261,7 @@ Deletes the previously registered role.
 
 - `role` `(string: <required>)` - Name of the role.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -266,7 +288,7 @@ entity and then authorizes the entity for the given role.
   Token](https://tools.ietf.org/html/rfc7519) (JWT) for authenticating a service
   account.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -275,7 +297,7 @@ entity and then authorizes the entity for the given role.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -284,7 +306,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/kubernetes/login
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

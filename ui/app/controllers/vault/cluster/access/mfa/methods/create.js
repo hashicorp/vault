@@ -1,10 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Controller from '@ember/controller';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { capitalize } from '@ember/string';
@@ -16,7 +16,12 @@ export default class MfaMethodCreateController extends Controller {
   @service router;
 
   queryParams = ['type'];
-  methodNames = ['TOTP', 'Duo', 'Okta', 'PingID'];
+  methods = [
+    { name: 'TOTP', icon: 'history' },
+    { name: 'Duo', icon: 'duo' },
+    { name: 'Okta', icon: 'okta-color' },
+    { name: 'PingID', icon: 'pingid' },
+  ];
 
   @tracked type = null;
   @tracked method = null;

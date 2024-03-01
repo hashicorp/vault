@@ -1,0 +1,51 @@
+---
+layout: api
+page_title: /sys/internal/ui/version - HTTP API
+description: >-
+  The `/sys/internal/ui/version` endpoint exposes the software version of Vault.
+---
+
+# `/sys/internal/ui/version`
+
+The `/sys/internal/ui/version` endpoint exposes the Vault software version
+so the Vault UI can display the information to logged in users.
+
+Vault uses internal endpoints to provide information to the Vault UI
+and/or Vault CLI. Internal endpoints are explicitly intended to support
+Vault functionality, so we do not recommend them for general use
+and do not guarantee backwards compatibility across versions.
+
+## Get version
+
+Return the current software version of Vault.
+
+| Method | Path                       |
+| :----- | :------------------------- |
+| `GET`  | `/sys/internal/ui/version` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/internal/ui/version
+```
+
+### Sample response
+
+```json
+{
+  "request_id": "d585b9be-9c6f-a05f-939b-490cf062ebbe",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "version": "1.16.0"
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null,
+  "mount_type": "system"
+}
+```

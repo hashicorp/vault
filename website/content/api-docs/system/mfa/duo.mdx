@@ -6,7 +6,9 @@ description: >-
   Vault Enterprise.
 ---
 
-## Configure Duo MFA Method
+## Configure Duo MFA method
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint defines a MFA method of type Duo.
 
@@ -35,7 +37,7 @@ This endpoint defines a MFA method of type Duo.
 
 - `push_info` `(string)` - Push information for Duo.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -46,7 +48,7 @@ This endpoint defines a MFA method of type Duo.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -56,7 +58,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/mfa/method/duo/my_duo
 ```
 
-## Read Duo MFA Method
+## Read Duo MFA method
 
 This endpoint queries the MFA configuration of Duo type for a given method
 name.
@@ -69,7 +71,7 @@ name.
 
 - `name` `(string: <required>)` – Name of the MFA method.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -79,7 +81,7 @@ $ curl \
 
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -97,7 +99,7 @@ $ curl \
 }
 ```
 
-## Delete Duo MFA Method
+## Delete Duo MFA method
 
 This endpoint deletes a Duo MFA method.
 
@@ -109,7 +111,7 @@ This endpoint deletes a Duo MFA method.
 
 - `name` `(string: <required>)` - Name of the MFA method.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

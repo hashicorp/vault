@@ -1,5 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model from '@ember-data/model';
-import { FModelValidations } from 'vault/app-types';
+import { ModelValidations } from 'vault/app-types';
 
 export default class PkiRoleModel extends Model {
   get useOpenAPI(): boolean;

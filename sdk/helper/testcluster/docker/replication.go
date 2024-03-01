@@ -52,6 +52,9 @@ func NewReplicationSetDocker(t *testing.T, opts *DockerClusterOptions) (*testclu
 	r.Builder = func(ctx context.Context, name string, baseLogger hclog.Logger) (testcluster.VaultCluster, error) {
 		myOpts := *opts
 		myOpts.Logger = baseLogger.Named(name)
+		if myOpts.ClusterName == "" {
+			myOpts.ClusterName = strings.ReplaceAll(t.Name(), "/", "-")
+		}
 		myOpts.ClusterName += "-" + strings.ReplaceAll(name, "/", "-")
 		myOpts.CA = r.CA
 		return NewTestDockerCluster(t, &myOpts), nil

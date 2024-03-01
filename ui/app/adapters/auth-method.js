@@ -1,10 +1,9 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import AdapterError from '@ember-data/adapter/error';
-import { assign } from '@ember/polyfills';
 import { set } from '@ember/object';
 import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
@@ -55,7 +54,7 @@ export default ApplicationAdapter.extend({
       // ember data doesn't like 204s if it's not a DELETE
       data.config.id = path; // config relationship needs an id so use path for now
       return {
-        data: assign({}, data, { path: path + '/', id: path }),
+        data: { ...data, path: path + '/', id: path },
       };
     });
   },
@@ -68,8 +67,20 @@ export default ApplicationAdapter.extend({
     return this.ajax(`/v1/auth/${encodePath(path)}/oidc/callback`, 'GET', { data: { state, code } });
   },
 
+  pollSAMLToken(path, token_poll_id, client_verifier) {
+    return this.ajax(`/v1/auth/${encodePath(path)}/token`, 'PUT', {
+      data: { token_poll_id, client_verifier },
+    });
+  },
+
   tune(path, data) {
     const url = `${this.buildURL()}/${this.pathForType()}/${encodePath(path)}tune`;
     return this.ajax(url, 'POST', { data });
+  },
+
+  resetPassword(backend, username, password) {
+    // For userpass auth types only
+    const url = `/v1/auth/${encodePath(backend)}/users/${encodePath(username)}/password`;
+    return this.ajax(url, 'POST', { data: { password } });
   },
 });

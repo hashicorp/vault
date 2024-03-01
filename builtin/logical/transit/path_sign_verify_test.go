@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
@@ -12,12 +12,10 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/constants"
-
-	"golang.org/x/crypto/ed25519"
-
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
+	"golang.org/x/crypto/ed25519"
 )
 
 // The outcome of processing a request includes

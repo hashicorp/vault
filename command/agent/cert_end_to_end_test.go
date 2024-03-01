@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package agent
 
@@ -66,7 +66,6 @@ func TestCertEndToEnd(t *testing.T) {
 func testCertEndToEnd(t *testing.T, withCertRoleName, ahWrapping bool) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
-		Logger: logger,
 		CredentialBackends: map[string]logical.Factory{
 			"cert": vaultcert.Factory,
 		},
@@ -306,7 +305,6 @@ func testCertEndToEnd(t *testing.T, withCertRoleName, ahWrapping bool) {
 func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
-		Logger: logger,
 		CredentialBackends: map[string]logical.Factory{
 			"cert": vaultcert.Factory,
 		},
@@ -426,7 +424,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(leafCertFile.Name())
-	if _, err := leafCertFile.Write([]byte(leafCertPEM)); err != nil {
+	if _, err := leafCertFile.WriteString(leafCertPEM); err != nil {
 		t.Fatal(err)
 	}
 	if err := leafCertFile.Close(); err != nil {
@@ -438,7 +436,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(leafCertKeyFile.Name())
-	if _, err := leafCertKeyFile.Write([]byte(leafCertKeyPEM)); err != nil {
+	if _, err := leafCertKeyFile.WriteString(leafCertKeyPEM); err != nil {
 		t.Fatal(err)
 	}
 	if err := leafCertKeyFile.Close(); err != nil {

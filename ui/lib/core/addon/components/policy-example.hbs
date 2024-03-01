@@ -1,0 +1,62 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="has-bottom-margin-s">
+  {{#if (eq @policyType "acl")}}
+    <p data-test-example-modal-text="acl">
+      ACL Policies are written in Hashicorp Configuration Language (
+      <ExternalLink @href="https://github.com/hashicorp/hcl">HCL</ExternalLink>
+      ) or JSON and describe which paths in Vault a user or machine is allowed to access. Here is an example policy:
+    </p>
+  {{else if (eq @policyType "rgp")}}
+    <p class="has-bottom-margin-s" data-test-example-modal-text="rgp">
+      Role Governing Policies (RGPs) are tied to client tokens or identities which is similar to
+      <DocLink @path="/vault/tutorials/policies/policies">ACL policies</DocLink>. They use
+      <DocLink @path="/vault/docs/enterprise/sentinel">Sentinel</DocLink>
+      as a language framework to enable fine-grained policy decisions.
+    </p>
+    <p>
+      Here is an example policy that uses RGP to restrict access to the
+      <code class="tag is-marginless is-paddingless">admin</code>
+      policy such that a user named "James Thomas" or has the
+      <code class="tag is-marginless is-paddingless">Team Lead</code>
+      role can manage the
+      <code class="tag is-marginless is-paddingless">admin</code>
+      policy:
+    </p>
+  {{else}}
+    <p class="has-bottom-margin-s" data-test-example-modal-text="egp">
+      Endpoint Governing Policies (EGPs) are tied to particular paths (e.g.
+      <code class="tag is-marginless is-paddingless">aws/creds/</code>
+      ) instead of tokens. They use
+      <ExternalLink @href="https://docs.hashicorp.com/sentinel/language">Sentinel</ExternalLink>
+      as a language to access
+      <DocLink @path="/vault/docs/enterprise/sentinel/properties">properties</DocLink>
+      of the incoming requests.
+    </p>
+    <p>
+      Here is an example policy that fulfills the requirement of an incoming request to be performed during the business
+      hours 7:00am to 6:00pm on work days:
+    </p>
+  {{/if}}
+</div>
+<JsonEditor
+  @value={{get this.policyTemplates @policyType}}
+  @mode="ruby"
+  @readOnly={{true}}
+  @showToolbar={{true}}
+  {{! Passed to copy button }}
+  @container={{@container}}
+/>
+<div class="has-bottom-margin-m has-top-padding-s">
+  <p>
+    More information about
+    {{uppercase @policyType}}
+    policies can be found
+    <DocLink @path={{get this.moreInformationLinks @policyType}} data-test-example-modal-information-link>
+      here.
+    </DocLink>
+  </p>
+</div>

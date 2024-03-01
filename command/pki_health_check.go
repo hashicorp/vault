@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -9,10 +9,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hashicorp/vault/command/healthcheck"
-
 	"github.com/ghodss/yaml"
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
+	"github.com/hashicorp/vault/command/healthcheck"
 	"github.com/posener/complete"
 	"github.com/ryanuber/columnize"
 )

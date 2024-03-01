@@ -1,10 +1,9 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import RESTSerializer from '@ember-data/serializer/rest';
-import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
 
 export default RESTSerializer.extend({
@@ -19,7 +18,7 @@ export default RESTSerializer.extend({
       const secrets = payload.data.keys.map((secret) => ({ name: secret, backend: payload.backend }));
       return secrets;
     }
-    assign(payload, payload.data);
+    Object.assign(payload, payload.data);
     delete payload.data;
     // timestamps for these two are in seconds...
     if (

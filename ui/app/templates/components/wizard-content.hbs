@@ -1,16 +1,14 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="wizard-header">
   {{#unless this.hidePopup}}
-    <PopupMenu @class="wizard-dismiss-menu">
-      <nav class="menu">
-        <ul class="menu-list">
-          <li class="action">
-            <button type="button" class="button link" onclick={{action "dismissWizard"}}>
-              Dismiss
-            </button>
-          </li>
-        </ul>
-      </nav>
-    </PopupMenu>
+    <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+      <dd.ToggleIcon @icon="more-horizontal" @text="Wizard dismiss menu" @hasChevron={{false}} class="wizard-dismiss-menu" />
+      <dd.Interactive @text="Dismiss" {{on "click" (action "dismissWizard")}} />
+    </Hds::Dropdown>
   {{/unless}}
   <h1 class="title is-5">
     <Icon @name={{this.glyph}} />

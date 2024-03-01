@@ -1,9 +1,9 @@
-<form
-  onsubmit={{action
-    @doSubmit
-    (hash input=@input algorithm=@algorithm key_version=@key_version encodedBase64=@encodedBase64)
-  }}
->
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<form {{on "submit" (fn @doSubmit (hash input=@trackedInput algorithm=@algorithm key_version=@key_version))}} ...attributes>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="HMAC creation" />
     <div class="content has-bottom-margin-l">
@@ -13,14 +13,20 @@
         as the named key.
       </p>
     </div>
-    <KeyVersionSelect @key={{@key}} @onVersionChange={{action (mut @key_version)}} @key_version={{@key_version}} />
+    <KeyVersionSelect @key={{@key}} @onVersionChange={{fn (mut @key_version)}} @key_version={{@key_version}} />
     <div class="field">
       <div id="input-control" class="control is-relative">
-        <JsonEditor @title="Input" @valueUpdated={{action (mut @input)}} @mode="ruby" @data-test-transit-input="input" />
+        <JsonEditor @title="Input" @valueUpdated={{fn (mut @trackedInput)}} @mode="ruby" @data-test-transit-input="input" />
       </div>
     </div>
     <div class="field">
-      <Input @type="checkbox" id="encodedBase64" @checked={{@encodedBase64}} data-test-transit-input="encodedBase64" />
+      <Input
+        @type="checkbox"
+        id="encodedBase64"
+        @checked={{@encodedBase64}}
+        {{on "change" @toggleEncodeBase64}}
+        data-test-transit-input="encodedBase64"
+      />
       <label for="encodedBase64">This data is already encoded in base64</label>
     </div>
     <div class="field">
@@ -40,39 +46,31 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button type="submit" class="button is-primary">
-        HMAC
-      </button>
+      <Hds::Button @text="HMAC" type="submit" />
     </div>
   </div>
 </form>
-<Modal @title="Copy your unwrapped data" @onClose={{action (mut @isModalActive) false}} @isActive={{@isModalActive}}>
-  <section class="modal-card-body">
-    <div class="box is-shadowless is-fullwidth is-sideless">
+{{#if @isModalActive}}
+  <Hds::Modal id="transit-hmac-modal" @onClose={{fn (mut @isModalActive) false}} as |M|>
+    <M.Header>
+      Copy your unwrapped data
+    </M.Header>
+    <M.Body>
       <h2 class="title is-6">HMAC</h2>
-      <div class="copy-text level">
-        <code class="level-left" data-test-encrypted-value="hmac">{{@hmac}}</code>
-        <CopyButton
-          class="button is-compact is-transparent level-right"
-          data-test-button="modal-copy"
-          @clipboardText={{@hmac}}
-          @buttonType="button"
-          @success={{action (set-flash-message "HMAC copied!")}}
-        >
-          <Icon @name="clipboard-copy" aria-label="Copy" />
-        </CopyButton>
-      </div>
-    </div>
-  </section>
-  <footer class="modal-card-foot">
-    <CopyButton
-      class="button is-primary copy-close"
-      data-test-button="modal-copy-close"
-      @clipboardText={{@hmac}}
-      @buttonType="button"
-      @success={{action @toggleModal "HMAC copied!"}}
-    >
-      Copy &amp; Close
-    </CopyButton>
-  </footer>
-</Modal>
+      <Hds::Copy::Snippet
+        @textToCopy={{@hmac}}
+        @color="secondary"
+        @container="#transit-hmac-modal"
+        @isFullWidth={{true}}
+        @isTruncated={{true}}
+        @onError={{(fn
+          (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+        )}}
+        data-test-encrypted-value="hmac"
+      />
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button @text="Close" {{on "click" F.close}} />
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

@@ -1,18 +1,28 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { computed } from '@ember/object';
 import Controller, { inject as controller } from '@ember/controller';
-import utils from 'vault/lib/key-utils';
 import ListController from 'core/mixins/list-controller';
+import { keyIsFolder } from 'core/utils/key-utils';
 
 export default Controller.extend(ListController, {
   flashMessages: service(),
+  router: service(),
   store: service(),
   clusterController: controller('vault.cluster'),
+
+  // callback from HDS pagination to set the queryParams page
+  get paginationQueryParams() {
+    return (page) => {
+      return {
+        page,
+      };
+    };
+  },
 
   backendCrumb: computed('clusterController.model.name', function () {
     return {
@@ -26,7 +36,7 @@ export default Controller.extend(ListController, {
   isLoading: false,
 
   filterIsFolder: computed('filter', function () {
-    return !!utils.keyIsFolder(this.filter);
+    return !!keyIsFolder(this.filter);
   }),
 
   emptyTitle: computed('baseKey.id', 'filter', 'filterIsFolder', function () {
@@ -52,7 +62,7 @@ export default Controller.extend(ListController, {
       const fn = adapter[method];
       fn.call(adapter, prefix)
         .then(() => {
-          return this.transitionToRoute('vault.cluster.access.leases.list-root').then(() => {
+          return this.router.transitionTo('vault.cluster.access.leases.list-root').then(() => {
             this.flashMessages.success(`All of the leases under ${prefix} will be revoked.`);
           });
         })

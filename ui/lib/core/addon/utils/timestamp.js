@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/**
  * Use this instead of new Date() throughout the app so that time-related logic is easier to test.
  */
 const timestamp = {

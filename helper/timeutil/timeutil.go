@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package timeutil
 
@@ -15,6 +15,20 @@ import (
 func StartOfPreviousMonth(t time.Time) time.Time {
 	year, month, _ := t.Date()
 	return time.Date(year, month, 1, 0, 0, 0, 0, t.Location()).AddDate(0, -1, 0)
+}
+
+func StartOfDay(t time.Time) time.Time {
+	year, month, day := t.Date()
+	return time.Date(year, month, day, 0, 0, 0, 0, t.Location())
+}
+
+// IsCurrentDay checks if :t: is in the current day, as defined by :compare:
+// generally, pass in time.Now().UTC() as :compare:
+func IsCurrentDay(t, compare time.Time) bool {
+	thisDayStart := StartOfDay(compare)
+	queryDayStart := StartOfDay(t)
+
+	return queryDayStart.Equal(thisDayStart)
 }
 
 func StartOfMonth(t time.Time) time.Time {

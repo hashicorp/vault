@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -12,30 +12,38 @@ import (
 )
 
 // Capabilities is used to fetch the capabilities of the given token on the
-// given path
+// given path.
 func (c *Core) Capabilities(ctx context.Context, token, path string) ([]string, error) {
+	capabilities, _, err := c.CapabilitiesAndSubscribeEventTypes(ctx, token, path)
+	return capabilities, err
+}
+
+// CapabilitiesAndSubscribeEventTypes is used to fetch the capabilities and event types that are allowed to
+// be subscribed to by given token on the given path.
+func (c *Core) CapabilitiesAndSubscribeEventTypes(ctx context.Context, token, path string) ([]string, []string, error) {
 	if path == "" {
-		return nil, &logical.StatusBadRequest{Err: "missing path"}
+		return nil, nil, &logical.StatusBadRequest{Err: "missing path"}
 	}
 
 	if token == "" {
-		return nil, &logical.StatusBadRequest{Err: "missing token"}
+		return nil, nil, &logical.StatusBadRequest{Err: "missing token"}
 	}
 
 	te, err := c.tokenStore.Lookup(ctx, token)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if te == nil {
-		return nil, &logical.StatusBadRequest{Err: "invalid token"}
+		return nil, nil, &logical.StatusBadRequest{Err: "invalid token"}
 	}
 
-	tokenNS, err := NamespaceByID(ctx, te.NamespaceID, c)
+	var tokenNS *namespace.Namespace
+	tokenNS, err = NamespaceByID(ctx, te.NamespaceID, c)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if tokenNS == nil {
-		return nil, namespace.ErrNoNamespace
+		return nil, nil, namespace.ErrNoNamespace
 	}
 
 	var policyCount int
@@ -45,15 +53,15 @@ func (c *Core) Capabilities(ctx context.Context, token, path string) ([]string, 
 
 	entity, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID, te.NoIdentityPolicies)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if entity != nil && entity.Disabled {
 		c.logger.Warn("permission denied as the entity on the token is disabled")
-		return nil, logical.ErrPermissionDenied
+		return nil, nil, logical.ErrPermissionDenied
 	}
 	if te.EntityID != "" && entity == nil {
 		c.logger.Warn("permission denied as the entity on the token is invalid")
-		return nil, logical.ErrPermissionDenied
+		return nil, nil, logical.ErrPermissionDenied
 	}
 
 	for nsID, nsPolicies := range identityPolicies {
@@ -66,14 +74,14 @@ func (c *Core) Capabilities(ctx context.Context, token, path string) ([]string, 
 	if te.InlinePolicy != "" {
 		inlinePolicy, err := ParseACLPolicy(tokenNS, te.InlinePolicy)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		policies = append(policies, inlinePolicy)
 		policyCount++
 	}
 
 	if policyCount == 0 {
-		return []string{DenyCapability}, nil
+		return []string{DenyCapability}, nil, nil
 	}
 
 	// Construct the corresponding ACL object. ACL construction should be
@@ -81,10 +89,10 @@ func (c *Core) Capabilities(ctx context.Context, token, path string) ([]string, 
 	tokenCtx := namespace.ContextWithNamespace(ctx, tokenNS)
 	acl, err := c.policyStore.ACL(tokenCtx, entity, policyNames, policies...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	capabilities := acl.Capabilities(ctx, path)
+	capabilities, eventTypes := acl.CapabilitiesAndSubscribeEventTypes(ctx, path)
 	sort.Strings(capabilities)
-	return capabilities, nil
+	return capabilities, eventTypes, nil
 }

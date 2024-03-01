@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -21,9 +21,9 @@ module('Integration | Component | form-error', function (hooks) {
 
     // Template block usage:
     await render(hbs`
-      {{#form-error}}
+      <FormError>
         template block text
-      {{/form-error}}
+      </FormError>
     `);
 
     assert.dom(this.element).hasText('template block text');

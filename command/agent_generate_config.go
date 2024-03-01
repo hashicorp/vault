@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -13,10 +13,10 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-homedir"
 	"github.com/posener/complete"
 )
@@ -40,7 +40,46 @@ func (c *AgentGenerateConfigCommand) Synopsis() string {
 
 func (c *AgentGenerateConfigCommand) Help() string {
 	helpText := `
-Usage: vault agent generate-config [options] [args]
+Usage: vault agent generate-config [options] [path/to/config.hcl]
+
+  Generates a simple Vault Agent configuration file from the given parameters.
+
+  Currently, the only supported configuration type is 'env-template', which
+  helps you generate a configuration file with environment variable templates
+  for running Vault Agent in process supervisor mode.
+
+  For every specified secret -path, the command will attempt to generate one or
+  multiple 'env_template' entries based on the JSON key(s) stored in the
+  specified secret. If the secret -path ends with '/*', the command will
+  attempt to recurse through the secrets tree rooted at the given path,
+  generating 'env_template' entries for each encountered secret. Currently,
+  only kv-v1 and kv-v2 paths are supported.
+
+  The command specified in the '-exec' option will be used to generate an
+  'exec' entry, which will tell Vault Agent which child process to run.
+
+  In addition to env_template entries, the command generates an 'auto_auth'
+  section with 'token_file' authentication method. While this method is very
+  convenient for local testing, it should NOT be used in production. Please
+  see https://developer.hashicorp.com/vault/docs/agent-and-proxy/autoauth/methods
+  for a list of production-ready auto_auth methods that you can use instead.
+
+  By default, the file will be generated in the local directory as 'agent.hcl'
+  unless a path is specified as an argument.
+
+  Generate a simple environment variable template configuration:
+
+      $ vault agent generate-config -type="env-template" \
+                    -exec="./my-app arg1 arg2" \
+                    -path="secret/foo"
+
+  Generate an environment variable template configuration for multiple secrets:
+
+      $ vault agent generate-config -type="env-template" \
+                    -exec="./my-app arg1 arg2" \
+                    -path="secret/foo" \
+                    -path="secret/bar" \
+                    -path="secret/my-app/*"
 
 ` + c.Flags().Help()
 
@@ -48,7 +87,8 @@ Usage: vault agent generate-config [options] [args]
 }
 
 func (c *AgentGenerateConfigCommand) Flags() *FlagSets {
-	set := NewFlagSets(c.UI)
+	// Include client-modifying flags (-address, -namespace, etc.)
+	set := c.flagSet(FlagSetHTTP)
 
 	// Common Options
 	f := set.NewFlagSet("Command Options")
@@ -73,7 +113,7 @@ func (c *AgentGenerateConfigCommand) Flags() *FlagSets {
 		Name:    "exec",
 		Target:  &c.flagExec,
 		Default: "env",
-		Usage:   "The command to execute in env-template mode.",
+		Usage:   "The command to execute in agent process supervisor mode.",
 	})
 
 	return set
@@ -184,6 +224,7 @@ func generateConfiguration(ctx context.Context, client *api.Client, flagExec str
 		TemplateConfig: generatedConfigTemplateConfig{
 			StaticSecretRenderInterval: "5m",
 			ExitOnRetryFailure:         true,
+			MaxConnectionsPerHost:      10,
 		},
 		Vault: generatedConfigVault{
 			Address: client.Address(),
@@ -370,6 +411,7 @@ type generatedConfig struct {
 type generatedConfigTemplateConfig struct {
 	StaticSecretRenderInterval string `hcl:"static_secret_render_interval"`
 	ExitOnRetryFailure         bool   `hcl:"exit_on_retry_failure"`
+	MaxConnectionsPerHost      int    `hcl:"max_connections_per_host"`
 }
 
 type generatedConfigExec struct {

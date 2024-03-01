@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package ssh
 
@@ -948,10 +948,61 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 					return nil
 				},
 			},
+			testIssueCert("testcarole", "ec", testUserName, sshAddress, expectError),
+			testIssueCert("testcarole", "ed25519", testUserName, sshAddress, expectError),
+			testIssueCert("testcarole", "rsa", testUserName, sshAddress, expectError),
 		},
 	}
 
 	logicaltest.Test(t, testCase)
+}
+
+func testIssueCert(role string, keyType string, testUserName string, sshAddress string, expectError bool) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/" + role,
+		ErrorOk:   expectError,
+		Data: map[string]interface{}{
+			"key_type":         keyType,
+			"valid_principals": testUserName,
+		},
+
+		Check: func(resp *logical.Response) error {
+			// Tolerate nil response if an error was expected
+			if expectError && resp == nil {
+				return nil
+			}
+
+			signedKey := strings.TrimSpace(resp.Data["signed_key"].(string))
+			if signedKey == "" {
+				return errors.New("no signed key in response")
+			}
+
+			privKey, err := ssh.ParsePrivateKey([]byte(resp.Data["private_key"].(string)))
+			if err != nil {
+				return fmt.Errorf("error parsing private key: %v", err)
+			}
+
+			parsedKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(signedKey))
+			if err != nil {
+				return fmt.Errorf("error parsing signed key: %v", err)
+			}
+			certSigner, err := ssh.NewCertSigner(parsedKey.(*ssh.Certificate), privKey)
+			if err != nil {
+				return err
+			}
+
+			err = testSSH(testUserName, sshAddress, ssh.PublicKeys(certSigner), "date")
+			if expectError && err == nil {
+				return fmt.Errorf("expected error but got none")
+			}
+			if !expectError && err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
 }
 
 func TestSSHBackend_CAUpgradeAlgorithmSigner(t *testing.T) {
@@ -2714,7 +2765,7 @@ func TestProperAuthing(t *testing.T) {
 		"public_key":         shouldBeUnauthedReadList,
 		"roles/test-ca":      shouldBeAuthed,
 		"roles/test-otp":     shouldBeAuthed,
-		"roles":              shouldBeAuthed,
+		"roles/":             shouldBeAuthed,
 		"sign/test-ca":       shouldBeAuthed,
 		"tidy/dynamic-keys":  shouldBeAuthed,
 		"verify":             shouldBeUnauthedWriteOnly,
@@ -2758,7 +2809,8 @@ func TestProperAuthing(t *testing.T) {
 
 		handler, present := paths[raw_path]
 		if !present {
-			t.Fatalf("OpenAPI reports SSH mount contains %v->%v  but was not tested to be authed or authed.", openapi_path, raw_path)
+			t.Fatalf("OpenAPI reports SSH mount contains %v -> %v but was not tested to be authed or not authed.",
+				openapi_path, raw_path)
 		}
 
 		openapi_data := raw_data.(map[string]interface{})

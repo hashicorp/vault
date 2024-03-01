@@ -1,13 +1,14 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { getOwner } from '@ember/application';
 import errorMessage from 'vault/utils/error-message';
+import { tracked } from '@glimmer/tracking';
 
 /**
  * @module Roles
@@ -20,6 +21,7 @@ import errorMessage from 'vault/utils/error-message';
  */
 export default class RolesPageComponent extends Component {
   @service flashMessages;
+  @tracked roleToDelete = null;
 
   get mountPoint() {
     return getOwner(this).mountPoint;
@@ -35,6 +37,8 @@ export default class RolesPageComponent extends Component {
     } catch (error) {
       const message = errorMessage(error, 'Error deleting role. Please try again or contact support');
       this.flashMessages.danger(message);
+    } finally {
+      this.roleToDelete = null;
     }
   }
 }

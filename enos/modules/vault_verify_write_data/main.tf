@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 terraform {
   required_providers {
@@ -63,7 +63,7 @@ resource "enos_remote_exec" "smoke-enable-secrets-kv" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = ["${path.module}/scripts/smoke-enable-secrets-kv.sh"]
+  scripts = [abspath("${path.module}/scripts/smoke-enable-secrets-kv.sh")]
 
   transport = {
     ssh = {
@@ -85,7 +85,7 @@ resource "enos_remote_exec" "smoke-write-test-data" {
     TEST_VALUE        = "fire"
   }
 
-  scripts = ["${path.module}/scripts/smoke-write-test-data.sh"]
+  scripts = [abspath("${path.module}/scripts/smoke-write-test-data.sh")]
 
   transport = {
     ssh = {

@@ -1,0 +1,3 @@
+```release-note:improvement
+api: adding a new api sys method for replication status
+```

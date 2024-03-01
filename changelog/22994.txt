@@ -1,0 +1,5 @@
+```release-note:improvement
+auth/azure: Add support for azure workload identity authentication (see issue
+#18257). Update go-kms-wrapping dependency to include [PR
+#155](https://github.com/hashicorp/go-kms-wrapping/pull/155) 
+```

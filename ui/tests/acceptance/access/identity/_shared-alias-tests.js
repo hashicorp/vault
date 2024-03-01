@@ -1,14 +1,13 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentRouteName, settled } from '@ember/test-helpers';
+import { currentRouteName, find, settled, waitUntil } from '@ember/test-helpers';
 import page from 'vault/tests/pages/access/identity/aliases/add';
 import aliasIndexPage from 'vault/tests/pages/access/identity/aliases/index';
 import aliasShowPage from 'vault/tests/pages/access/identity/aliases/show';
 import createItemPage from 'vault/tests/pages/access/identity/create';
-import showItemPage from 'vault/tests/pages/access/identity/show';
 
 export const testAliasCRUD = async function (name, itemType, assert) {
   if (itemType === 'groups') {
@@ -18,8 +17,13 @@ export const testAliasCRUD = async function (name, itemType, assert) {
     await createItemPage.createItem(itemType);
     await settled();
   }
-  let idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
-  const itemID = idRow.rowValue;
+
+  const itemID = await waitUntil(
+    function () {
+      return find('[data-test-row-value="ID"]').textContent.trim();
+    },
+    { timeout: 2000 }
+  );
   await page.visit({ item_type: itemType, id: itemID });
   await settled();
   await page.editForm.name(name).submit();
@@ -29,8 +33,12 @@ export const testAliasCRUD = async function (name, itemType, assert) {
     `${itemType}: shows a flash message`
   );
 
-  idRow = aliasShowPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
-  const aliasID = idRow.rowValue;
+  const aliasID = await waitUntil(
+    function () {
+      return find('[data-test-row-value="ID"]').textContent.trim();
+    },
+    { timeout: 2000 }
+  );
   assert.strictEqual(
     currentRouteName(),
     'vault.cluster.access.identity.aliases.show',
@@ -73,14 +81,23 @@ export const testAliasDeleteFromForm = async function (name, itemType, assert) {
     await createItemPage.createItem(itemType);
     await settled();
   }
-  let idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
-  const itemID = idRow.rowValue;
+
+  const itemID = await waitUntil(
+    function () {
+      return find('[data-test-row-value="ID"]').textContent.trim();
+    },
+    { timeout: 2000 }
+  );
   await page.visit({ item_type: itemType, id: itemID });
   await settled();
   await page.editForm.name(name).submit();
   await settled();
-  idRow = aliasShowPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
-  const aliasID = idRow.rowValue;
+  const aliasID = await waitUntil(
+    function () {
+      return find('[data-test-row-value="ID"]').textContent.trim();
+    },
+    { timeout: 2000 }
+  );
   await aliasShowPage.edit();
   await settled();
   assert.strictEqual(

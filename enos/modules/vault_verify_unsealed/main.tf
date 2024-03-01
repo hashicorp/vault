@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 terraform {
   required_providers {
@@ -45,11 +45,12 @@ locals {
 resource "enos_remote_exec" "verify_node_unsealed" {
   for_each = local.instances
 
-  content = templatefile("${path.module}/templates/verify-vault-node-unsealed.sh", {
-    vault_cluster_addr      = "${each.value.private_ip}:${var.vault_cluster_addr_port}"
-    vault_install_dir       = var.vault_install_dir
-    vault_local_binary_path = "${var.vault_install_dir}/vault"
-  })
+  scripts = [abspath("${path.module}/scripts/verify-vault-node-unsealed.sh")]
+
+  environment = {
+    VAULT_CLUSTER_ADDR = "${each.value.private_ip}:${var.vault_cluster_addr_port}"
+    VAULT_INSTALL_DIR  = var.vault_install_dir
+  }
 
   transport = {
     ssh = {

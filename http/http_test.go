@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package http
 
@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
@@ -25,41 +25,61 @@ func testHttpGet(t *testing.T, token string, addr string) *http.Response {
 		loggedToken = "<empty>"
 	}
 	t.Logf("Token is %s", loggedToken)
-	return testHttpData(t, "GET", token, addr, nil, false, 0)
+	return testHttpData(t, "GET", token, addr, "", nil, false, 0, false)
 }
 
 func testHttpDelete(t *testing.T, token string, addr string) *http.Response {
-	return testHttpData(t, "DELETE", token, addr, nil, false, 0)
+	return testHttpData(t, "DELETE", token, addr, "", nil, false, 0, false)
 }
 
 // Go 1.8+ clients redirect automatically which breaks our 307 standby testing
 func testHttpDeleteDisableRedirect(t *testing.T, token string, addr string) *http.Response {
-	return testHttpData(t, "DELETE", token, addr, nil, true, 0)
+	return testHttpData(t, "DELETE", token, addr, "", nil, true, 0, false)
 }
 
 func testHttpPostWrapped(t *testing.T, token string, addr string, body interface{}, wrapTTL time.Duration) *http.Response {
-	return testHttpData(t, "POST", token, addr, body, false, wrapTTL)
+	return testHttpData(t, "POST", token, addr, "", body, false, wrapTTL, false)
 }
 
 func testHttpPost(t *testing.T, token string, addr string, body interface{}) *http.Response {
-	return testHttpData(t, "POST", token, addr, body, false, 0)
+	return testHttpData(t, "POST", token, addr, "", body, false, 0, false)
+}
+
+func testHttpPostBinaryData(t *testing.T, token string, addr string, body interface{}) *http.Response {
+	return testHttpData(t, "POST", token, addr, "", body, false, 0, true)
+}
+
+func testHttpPostNamespace(t *testing.T, token string, addr string, namespace string, body interface{}) *http.Response {
+	return testHttpData(t, "POST", token, addr, namespace, body, false, 0, false)
 }
 
 func testHttpPut(t *testing.T, token string, addr string, body interface{}) *http.Response {
-	return testHttpData(t, "PUT", token, addr, body, false, 0)
+	return testHttpData(t, "PUT", token, addr, "", body, false, 0, false)
+}
+
+func testHttpPutBinaryData(t *testing.T, token string, addr string, body interface{}) *http.Response {
+	return testHttpData(t, "PUT", token, addr, "", body, false, 0, true)
 }
 
 // Go 1.8+ clients redirect automatically which breaks our 307 standby testing
 func testHttpPutDisableRedirect(t *testing.T, token string, addr string, body interface{}) *http.Response {
-	return testHttpData(t, "PUT", token, addr, body, true, 0)
+	return testHttpData(t, "PUT", token, addr, "", body, true, 0, false)
 }
 
-func testHttpData(t *testing.T, method string, token string, addr string, body interface{}, disableRedirect bool, wrapTTL time.Duration) *http.Response {
+func testHttpData(t *testing.T, method string, token string, addr string, namespace string, body interface{}, disableRedirect bool, wrapTTL time.Duration, binaryBody bool) *http.Response {
 	bodyReader := new(bytes.Buffer)
 	if body != nil {
-		enc := json.NewEncoder(bodyReader)
-		if err := enc.Encode(body); err != nil {
-			t.Fatalf("err:%s", err)
+		if binaryBody {
+			bodyAsBytes, ok := body.([]byte)
+			if !ok {
+				t.Fatalf("binary body was true, but body was not a []byte was %T", body)
+			}
+			bodyReader = bytes.NewBuffer(bodyAsBytes)
+		} else {
+			enc := json.NewEncoder(bodyReader)
+			if err := enc.Encode(body); err != nil {
+				t.Fatalf("err:%s", err)
+			}
 		}
 	}
 
@@ -77,6 +97,9 @@ func testHttpData(t *testing.T, method string, token string, addr string, body i
 
 	if wrapTTL > 0 {
 		req.Header.Set("X-Vault-Wrap-TTL", wrapTTL.String())
+	}
+	if namespace != "" {
+		req.Header.Set("X-Vault-Namespace", namespace)
 	}
 
 	if len(token) != 0 {

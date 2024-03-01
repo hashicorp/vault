@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package http
 
@@ -15,11 +15,18 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/audit"
+	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSysSealStatus(t *testing.T) {
@@ -62,80 +69,6 @@ func TestSysSealStatus(t *testing.T) {
 	} else {
 		expected["cluster_id"] = actual["cluster_id"]
 	}
-	if diff := deep.Equal(actual, expected); diff != nil {
-		t.Fatal(diff)
-	}
-}
-
-func TestSysSealStatus_Warnings(t *testing.T) {
-	core := vault.TestCore(t)
-	vault.TestCoreInit(t, core)
-	ln, addr := TestServer(t, core)
-	defer ln.Close()
-
-	// Manually configure DisableSSCTokens to be true
-	core.GetCoreConfigInternal().DisableSSCTokens = true
-
-	resp, err := http.Get(addr + "/v1/sys/seal-status")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	var actual map[string]interface{}
-	expected := map[string]interface{}{
-		"sealed":        true,
-		"t":             json.Number("3"),
-		"n":             json.Number("3"),
-		"progress":      json.Number("0"),
-		"nonce":         "",
-		"type":          "shamir",
-		"recovery_seal": false,
-		"initialized":   true,
-		"migration":     false,
-		"build_date":    version.BuildDate,
-	}
-	testResponseStatus(t, resp, 200)
-	testResponseBody(t, resp, &actual)
-	if actual["version"] == nil {
-		t.Fatalf("expected version information")
-	}
-	expected["version"] = actual["version"]
-	if actual["cluster_name"] == nil {
-		delete(expected, "cluster_name")
-	} else {
-		expected["cluster_name"] = actual["cluster_name"]
-	}
-	if actual["cluster_id"] == nil {
-		delete(expected, "cluster_id")
-	} else {
-		expected["cluster_id"] = actual["cluster_id"]
-	}
-	actualWarnings := actual["warnings"]
-	if actualWarnings == nil {
-		t.Fatalf("expected warnings about SSCToken disabling")
-	}
-
-	actualWarningsArray, ok := actualWarnings.([]interface{})
-	if !ok {
-		t.Fatalf("expected warnings about SSCToken disabling were not in the right format")
-	}
-	if len(actualWarningsArray) != 1 {
-		t.Fatalf("too many warnings were given")
-	}
-	actualWarning, ok := actualWarningsArray[0].(string)
-	if !ok {
-		t.Fatalf("expected warning about SSCToken disabling was not in the right format")
-	}
-
-	expectedWarning := "Server Side Consistent Tokens are disabled, due to the " +
-		"VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS environment variable being set. " +
-		"It is not recommended to run Vault for an extended period of time with this configuration."
-	if actualWarning != expectedWarning {
-		t.Fatalf("actual warning was not as expected. Expected %s, but got %s", expectedWarning, actualWarning)
-	}
-
-	expected["warnings"] = actual["warnings"]
-
 	if diff := deep.Equal(actual, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -629,4 +562,65 @@ func TestSysStepDown(t *testing.T) {
 
 	resp := testHttpPut(t, token, addr+"/v1/sys/step-down", nil)
 	testResponseStatus(t, resp, 204)
+}
+
+// TestSysSealStatusRedaction tests that the response from a
+// a request to sys/seal-status are redacted only if no valid token
+// is provided with the request
+func TestSysSealStatusRedaction(t *testing.T) {
+	conf := &vault.CoreConfig{
+		EnableUI:        false,
+		EnableRaw:       true,
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
+	}
+	core, _, token := vault.TestCoreUnsealedWithConfig(t, conf)
+
+	// Setup new custom listener
+	ln, addr := TestListener(t)
+	props := &vault.HandlerProperties{
+		Core: core,
+		ListenerConfig: &configutil.Listener{
+			RedactVersion: true,
+		},
+	}
+	TestServerWithListenerAndProperties(t, ln, addr, core, props)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	client := cleanhttp.DefaultClient()
+
+	// Check seal-status
+	req, err := http.NewRequest("GET", addr+"/v1/sys/seal-status", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	req.Header.Set(consts.AuthHeaderName, token)
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	testResponseStatus(t, resp, 200)
+
+	// Verify that version exists when provided a valid token
+	var actual map[string]interface{}
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
+	assert.NotEmpty(t, actual["version"])
+
+	// Verify that version is redacted when no token is provided
+	req, err = http.NewRequest("GET", addr+"/v1/sys/seal-status", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	req.Header.Set(consts.AuthHeaderName, "")
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
+	assert.Empty(t, actual["version"])
 }

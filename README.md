@@ -1,4 +1,4 @@
-# Vault [![CircleCI](https://circleci.com/gh/hashicorp/vault.svg?style=svg)](https://circleci.com/gh/hashicorp/vault) [![vault enterprise](https://img.shields.io/badge/vault-enterprise-yellow.svg?colorB=7c8797&colorA=000000)](https://www.hashicorp.com/products/vault/?utm_source=github&utm_medium=banner&utm_campaign=github-vault-enterprise)
+# Vault [![build](https://github.com/hashicorp/vault/actions/workflows/build.yml/badge.svg)](https://github.com/hashicorp/vault/actions/workflows/build.yml) [![ci](https://github.com/hashicorp/vault/actions/workflows/ci.yml/badge.svg)](https://github.com/hashicorp/vault/actions/workflows/ci.yml)  [![vault enterprise](https://img.shields.io/badge/vault-enterprise-yellow.svg?colorB=7c8797&colorA=000000)](https://www.hashicorp.com/products/vault/?utm_source=github&utm_medium=banner&utm_campaign=github-vault-enterprise)
 
 ----
 
@@ -9,9 +9,9 @@
 -	Website: https://www.vaultproject.io
 -	Announcement list: [Google Groups](https://groups.google.com/group/hashicorp-announce)
 -	Discussion forum: [Discuss](https://discuss.hashicorp.com/c/vault)
-- Documentation: [https://www.vaultproject.io/docs/](https://www.vaultproject.io/docs/)
-- Tutorials: [HashiCorp's Learn Platform](https://learn.hashicorp.com/vault)
-- Certification Exam: [Vault Associate](https://www.hashicorp.com/certification/#hashicorp-certified-vault-associate)
+- Documentation: [https://developer.hashicorp.com/vault/docs](https://developer.hashicorp.com/vault/docs)
+- Tutorials: [https://developer.hashicorp.com/vault/tutorials](https://developer.hashicorp.com/vault/tutorials)
+- Certification Exam: [https://developer.hashicorp.com/certifications/security-automation](https://developer.hashicorp.com/certifications/security-automation)
 
 <img width="300" alt="Vault Logo" src="https://github.com/hashicorp/vault/blob/f22d202cde2018f9455dec755118a9b84586e082/Vault_PrimaryLogo_Black.png">
 
@@ -52,7 +52,7 @@ The key features of Vault are:
 Documentation, Getting Started, and Certification Exams
 -------------------------------
 
-Documentation is available on the [Vault website](https://www.vaultproject.io/docs/).
+Documentation is available on the [Vault website](https://developer.hashicorp.com/vault/docs).
 
 If you're new to Vault and want to get started with security automation, please
 check out our [Getting Started guides](https://learn.hashicorp.com/collections/vault/getting-started)
@@ -136,6 +136,8 @@ is not, and has never been, a supported way to use the Vault project. We aren't
 likely to fix bugs relating to failure to import `github.com/hashicorp/vault` 
 into your project.
 
+See also the section "Docker-based tests" below.
+
 ### Acceptance Tests
 
 Vault has comprehensive [acceptance tests](https://en.wikipedia.org/wiki/Acceptance_testing)
@@ -169,3 +171,118 @@ things such as access keys. The test itself should error early and tell
 you what to set, so it is not documented here.
 
 For more information on Vault Enterprise features, visit the [Vault Enterprise site](https://www.hashicorp.com/products/vault/?utm_source=github&utm_medium=referral&utm_campaign=github-vault-enterprise).
+
+### Docker-based Tests
+
+We have created an experimental new testing mechanism inspired by NewTestCluster.
+An example of how to use it:
+
+```go
+import (
+  "testing"
+  "github.com/hashicorp/vault/sdk/helper/testcluster/docker"
+)
+
+func Test_Something_With_Docker(t *testing.T) {
+  opts := &docker.DockerClusterOptions{
+    ImageRepo: "hashicorp/vault", // or "hashicorp/vault-enterprise"
+    ImageTag:    "latest",
+  }
+  cluster := docker.NewTestDockerCluster(t, opts)
+  defer cluster.Cleanup()
+  
+  client := cluster.Nodes()[0].APIClient()
+  _, err := client.Logical().Read("sys/storage/raft/configuration")
+  if err != nil {
+    t.Fatal(err)
+  }
+}
+```
+
+Or for Enterprise:
+
+```go
+import (
+  "testing"
+  "github.com/hashicorp/vault/sdk/helper/testcluster/docker"
+)
+
+func Test_Something_With_Docker(t *testing.T) {
+  opts := &docker.DockerClusterOptions{
+    ImageRepo: "hashicorp/vault-enterprise",
+    ImageTag:  "latest",
+	VaultLicense: licenseString, // not a path, the actual license bytes
+  }
+  cluster := docker.NewTestDockerCluster(t, opts)
+  defer cluster.Cleanup()
+}
+```
+
+Here is a more realistic example of how we use it in practice.  DefaultOptions uses 
+`hashicorp/vault`:`latest` as the repo and tag, but it also looks at the environment
+variable VAULT_BINARY. If populated, it will copy the local file referenced by
+VAULT_BINARY into the container. This is useful when testing local changes.
+
+Instead of setting the VaultLicense option, you can set the VAULT_LICENSE_CI environment
+variable, which is better than committing a license to version control.
+
+Optionally you can set COMMIT_SHA, which will be appended to the image name we
+build as a debugging convenience.
+
+```go
+func Test_Custom_Build_With_Docker(t *testing.T) {
+  opts := docker.DefaultOptions(t)
+  cluster := docker.NewTestDockerCluster(t, opts)
+  defer cluster.Cleanup()
+}
+```
+
+There are a variety of helpers in the `github.com/hashicorp/vault/sdk/helper/testcluster`
+package, e.g. these tests below will create a pair of 3-node clusters and link them using
+PR or DR replication respectively, and fail if the replication state doesn't become healthy
+before the passed context expires.
+
+Again, as written, these depend on having a Vault Enterprise binary locally and the env
+var VAULT_BINARY set to point to it, as well as having VAULT_LICENSE_CI set.
+
+```go
+func TestStandardPerfReplication_Docker(t *testing.T) {
+  opts := docker.DefaultOptions(t)
+  r, err := docker.NewReplicationSetDocker(t, opts)
+  if err != nil {
+      t.Fatal(err)
+  }
+  defer r.Cleanup()
+
+  ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+  defer cancel()
+  err = r.StandardPerfReplication(ctx)
+  if err != nil {
+    t.Fatal(err)
+  }
+}
+
+func TestStandardDRReplication_Docker(t *testing.T) {
+  opts := docker.DefaultOptions(t)
+  r, err := docker.NewReplicationSetDocker(t, opts)
+  if err != nil {
+    t.Fatal(err)
+  }
+  defer r.Cleanup()
+
+  ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+  defer cancel()
+  err = r.StandardDRReplication(ctx)
+  if err != nil {
+    t.Fatal(err)
+  }
+}
+```
+
+Finally, here's an example of running an existing OSS docker test with a custom binary:
+
+```bash
+$ GOOS=linux make dev
+$ VAULT_BINARY=$(pwd)/bin/vault go test -run 'TestRaft_Configuration_Docker' ./vault/external_tests/raft/raft_binary
+ok      github.com/hashicorp/vault/vault/external_tests/raft/raft_binary        20.960s
+```

@@ -1,9 +1,14 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="action-block is-rounded" data-test-disable-replication>
   <div class="action-block-info">
-    <h4 class="title is-5 is-marginless">
+    <h3 class="title is-5 is-marginless">
       Disable Replication
-    </h4>
-    <p>
+    </h3>
+    <p class="has-top-padding-s">
       Disable
       {{this.model.replicationModeForDisplay}}
       Replication entirely on the cluster.
@@ -11,14 +16,12 @@
   </div>
 
   <div class="action-block-action">
-    <button
-      type="button"
-      class="button is-danger"
-      onclick={{action (mut this.isModalActive) true}}
-      data-test-replication-action-trigger
-    >
-      Disable Replication
-    </button>
+    <Hds::Button
+      @text="Disable Replication"
+      @color="critical"
+      {{on "click" (action (mut this.isModalActive) true)}}
+      data-test-replication-action-trigger="disable"
+    />
   </div>
 </div>
 
@@ -28,8 +31,8 @@
   @isActive={{this.isModalActive}}
   @confirmText={{this.model.replicationModeForDisplay}}
   @toConfirmMsg="disabling {{this.model.replicationModeForDisplay}} Replication on this cluster"
-  @onConfirm={{action
-    "onSubmit"
+  @onConfirm={{fn
+    (action "onSubmit")
     "disable"
     (if (eq this.model.replicationAttrs.modeForUrl "bootstrapping") this.mode this.model.replicationAttrs.modeForUrl)
   }}

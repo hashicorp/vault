@@ -1,17 +1,19 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { computed } from '@ember/object';
 import { reject } from 'rsvp';
 import Route from '@ember/routing/route';
 import { task, timeout } from 'ember-concurrency';
 import Ember from 'ember';
 import getStorage from '../../lib/token-storage';
+import localStorage from 'vault/lib/local-storage';
 import ClusterRoute from 'vault/mixins/cluster-route';
 import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
+import { assert } from '@ember/debug';
 
 const POLL_INTERVAL_MS = 10000;
 
@@ -26,13 +28,15 @@ export const getManagedNamespace = (nsParam, root) => {
 };
 
 export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
-  namespaceService: service('namespace'),
-  version: service(),
-  permissions: service(),
-  store: service(),
   auth: service(),
-  featureFlagService: service('featureFlag'),
   currentCluster: service(),
+  customMessages: service(),
+  featureFlagService: service('featureFlag'),
+  namespaceService: service('namespace'),
+  permissions: service(),
+  router: service(),
+  store: service(),
+  version: service(),
   modelTypes: computed(function () {
     return ['node', 'secret', 'secret-engine'];
   }),
@@ -45,7 +49,8 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
 
   getClusterId(params) {
     const { cluster_name } = params;
-    const cluster = this.modelFor('vault').findBy('name', cluster_name);
+    const records = this.store.peekAll('cluster');
+    const cluster = records.find((record) => record.name === cluster_name);
     return cluster ? cluster.get('id') : null;
   },
 
@@ -54,10 +59,10 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     let namespace = params.namespaceQueryParam;
     const currentTokenName = this.auth.get('currentTokenName');
     const managedRoot = this.featureFlagService.managedNamespaceRoot;
-    if (managedRoot && this.version.isOSS) {
-      // eslint-disable-next-line no-console
-      console.error('Cannot use Cloud Admin Namespace flag with OSS Vault');
-    }
+    assert(
+      'Cannot use VAULT_CLOUD_ADMIN_NAMESPACE flag with non-enterprise Vault version',
+      !(managedRoot && this.version.isCommunity)
+    );
     if (!namespace && currentTokenName && !Ember.testing) {
       // if no namespace queryParam and user authenticated,
       // use user's root namespace to redirect to properly param'd url
@@ -65,12 +70,12 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       namespace = storage?.userRootNamespace;
       // only redirect if something other than nothing
       if (namespace) {
-        this.transitionTo({ queryParams: { namespace } });
+        this.router.transitionTo({ queryParams: { namespace } });
       }
     } else if (managedRoot !== null) {
       const managed = getManagedNamespace(namespace, managedRoot);
       if (managed !== namespace) {
-        this.transitionTo({ queryParams: { namespace: managed } });
+        this.router.transitionTo({ queryParams: { namespace: managed } });
       }
     }
     this.namespaceService.setNamespace(namespace);
@@ -78,6 +83,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     if (id) {
       this.auth.setCluster(id);
       if (this.auth.currentToken) {
+        this.version.fetchVersion();
         await this.permissions.getPaths.perform();
       }
       return this.version.fetchFeatures();
@@ -87,6 +93,9 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   },
 
   model(params) {
+    // if a user's browser settings block localStorage they will be unable to use Vault. The method will throw the error and the rest of the application will not load.
+    localStorage.isLocalStorageSupported();
+
     const id = this.getClusterId(params);
     return this.store.findRecord('cluster', id);
   },
@@ -118,7 +127,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     // Check that namespaces is enabled and if not,
     // clear the namespace by transition to this route w/o it
     if (this.namespaceService.path && !this.version.hasNamespaces) {
-      return this.transitionTo(this.routeName, { queryParams: { namespace: '' } });
+      return this.router.transitionTo(this.routeName, { queryParams: { namespace: '' } });
     }
     return this.transitionToTargetRoute(transition);
   },

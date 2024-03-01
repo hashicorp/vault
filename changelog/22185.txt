@@ -1,0 +1,5 @@
+```release-note:improvement
+auth/ldap: introduce cap/ldap.Client for LDAP authentication
+auth/ldap: deprecates `connection_timeout` in favor of `request_timeout` for timeouts
+sdk/ldaputil: deprecates Client in favor of cap/ldap.Client
+```

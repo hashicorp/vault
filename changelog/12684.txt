@@ -1,0 +1,3 @@
+```release-note:bug
+Doc: Expanded the description of "What is Vault?" to align with CSA team's content.
+```

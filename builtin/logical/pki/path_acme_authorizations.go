@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -10,8 +10,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathAcmeAuthorization(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeAuthorization, "/authorization/"+framework.MatchAllRegex("auth_id"))
+func pathAcmeAuthorization(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeAuthorization(b, baseUrl+"/authorization/"+framework.MatchAllRegex("auth_id"), opts)
 }
 
 func addFieldsForACMEAuthorization(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
@@ -24,7 +24,7 @@ func addFieldsForACMEAuthorization(fields map[string]*framework.FieldSchema) map
 	return fields
 }
 
-func patternAcmeAuthorization(b *backend, pattern string) *framework.Path {
+func patternAcmeAuthorization(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 	addFieldsForACMERequest(fields)
@@ -35,7 +35,7 @@ func patternAcmeAuthorization(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeAccountRequiredWrapper(b.acmeAuthorizationHandler),
+				Callback:                    b.acmeAccountRequiredWrapper(opts, b.acmeAuthorizationHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
@@ -48,7 +48,7 @@ func patternAcmeAuthorization(b *backend, pattern string) *framework.Path {
 
 func (b *backend) acmeAuthorizationHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, _ *acmeAccount) (*logical.Response, error) {
 	authId := fields.Get("auth_id").(string)
-	authz, err := b.acmeState.LoadAuthorization(acmeCtx, userCtx, authId)
+	authz, err := b.GetAcmeState().LoadAuthorization(acmeCtx, userCtx, authId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load authorization: %w", err)
 	}
@@ -90,7 +90,7 @@ func (b *backend) acmeAuthorizationDeactivateHandler(acmeCtx *acmeContext, r *lo
 		challenge.Status = ACMEChallengeInvalid
 	}
 
-	if err := b.acmeState.SaveAuthorization(acmeCtx, authz); err != nil {
+	if err := b.GetAcmeState().SaveAuthorization(acmeCtx, authz); err != nil {
 		return nil, fmt.Errorf("error saving deactivated authorization: %w", err)
 	}
 

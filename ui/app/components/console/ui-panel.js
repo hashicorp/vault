@@ -1,15 +1,16 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { alias, or } from '@ember/object/computed';
 import Component from '@ember/component';
 import { getOwner } from '@ember/application';
 import { schedule } from '@ember/runloop';
 import { camelize } from '@ember/string';
 import { task } from 'ember-concurrency';
+import { buildWaiter } from '@ember/test-waiters';
 import ControlGroupError from 'vault/lib/control-group-error';
 import {
   parseCommand,
@@ -20,6 +21,8 @@ import {
   extractFlagsFromStrings,
   extractDataFromStrings,
 } from 'vault/lib/console-helpers';
+
+const waiter = buildWaiter('web-repl');
 
 export default Component.extend({
   console: service(),
@@ -49,6 +52,7 @@ export default Component.extend({
 
   executeCommand: task(function* (command, shouldThrow = false) {
     this.set('inputValue', '');
+    const waiterToken = waiter.beginAsync();
     const service = this.console;
     let serviceArgs;
 
@@ -61,6 +65,7 @@ export default Component.extend({
         refresh: () => this.refreshRoute.perform(),
       })
     ) {
+      waiter.endAsync(waiterToken);
       return;
     }
 
@@ -71,6 +76,7 @@ export default Component.extend({
       if (shouldThrow) {
         this.logAndOutput(command, { type: 'help' });
       }
+      waiter.endAsync(waiterToken);
       return;
     }
 
@@ -81,6 +87,7 @@ export default Component.extend({
     const inputError = formattedErrorFromInput(path, method, flags, dataArray);
     if (inputError) {
       this.logAndOutput(command, inputError);
+      waiter.endAsync(waiterToken);
       return;
     }
     try {
@@ -88,10 +95,12 @@ export default Component.extend({
       this.logAndOutput(command, logFromResponse(resp, path, method, flags));
     } catch (error) {
       if (error instanceof ControlGroupError) {
+        waiter.endAsync(waiterToken);
         return this.logAndOutput(command, this.controlGroup.logFromError(error));
       }
       this.logAndOutput(command, logFromError(error, path, method));
     }
+    waiter.endAsync(waiterToken);
   }),
 
   refreshRoute: task(function* () {
@@ -115,7 +124,7 @@ export default Component.extend({
       content = `Welcome to the Vault API explorer! \nWe've filtered the list of endpoints for '${filter}'.`;
     }
     try {
-      yield this.router.transitionTo('vault.cluster.open-api-explorer.index', {
+      yield this.router.transitionTo('vault.cluster.tools.open-api-explorer', {
         queryParams: { filter },
       });
       this.logAndOutput(null, {

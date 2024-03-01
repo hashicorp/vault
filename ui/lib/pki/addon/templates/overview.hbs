@@ -1,13 +1,10 @@
-<SecretListHeader
-  @model={{this.model.engine}}
-  @backendCrumb={{hash
-    label=this.model.engine.id
-    text=this.model.engine.id
-    path="vault.cluster.secrets.backend.list-root"
-    model=this.model.engine.id
-  }}
-  @isEngine={{true}}
-/>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PkiPageHeader @backend={{this.model.engine}} />
+
 <Toolbar>
   <ToolbarActions>
     {{#unless this.model.hasConfig}}
@@ -22,8 +19,11 @@
   <Page::PkiOverview @issuers={{this.model.issuers}} @roles={{this.model.roles}} @engine={{this.model.engine}} />
 {{else}}
   <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
-    <LinkTo @route="configuration.create">
-      Configure PKI
-    </LinkTo>
+    <Hds::Link::Standalone
+      @icon="chevron-right"
+      @iconPosition="trailing"
+      @text="Configure PKI"
+      @route="configuration.create"
+    />
   </EmptyState>
 {{/if}}

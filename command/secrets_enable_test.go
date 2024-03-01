@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -7,19 +7,17 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
+	"sort"
 	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/cli"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/mitchellh/cli"
 )
-
-// logicalBackendAdjustmentFactor is set to plus 1 for the database backend
-// which is a plugin but not found in go.mod files, and minus 1 for the ldap
-// and openldap secret backends which have the same underlying plugin.
-var logicalBackendAdjustmentFactor = 1 - 1
 
 func testSecretsEnableCommand(tb testing.TB) (*cli.MockUi, *SecretsEnableCommand) {
 	tb.Helper()
@@ -120,6 +118,7 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 			"-passthrough-request-headers", "www-authentication",
 			"-allowed-response-headers", "authorization",
 			"-allowed-managed-keys", "key1,key2",
+			"-identity-token-key", "default",
 			"-force-no-cache",
 			"pki",
 		})
@@ -172,6 +171,9 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 		if diff := deep.Equal([]string{"key1,key2"}, mountInfo.Config.AllowedManagedKeys); len(diff) > 0 {
 			t.Errorf("Failed to find expected values in AllowedManagedKeys. Difference is: %v", diff)
 		}
+		if diff := deep.Equal("default", mountInfo.Config.IdentityTokenKey); len(diff) > 0 {
+			t.Errorf("Failed to find expected values in IdentityTokenKey. Difference is: %v", diff)
+		}
 	})
 
 	t.Run("communication_failure", func(t *testing.T) {
@@ -218,7 +220,7 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 		var backends []string
 		for _, f := range files {
 			if f.IsDir() {
-				if f.Name() == "plugin" {
+				if f.Name() == "plugin" || f.Name() == "database" {
 					continue
 				}
 				if _, err := os.Stat("../builtin/logical/" + f.Name() + "/backend.go"); errors.Is(err, os.ErrNotExist) {
@@ -245,10 +247,12 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 			}
 		}
 
-		// backends are found by walking the directory, which includes the database backend,
-		// however, the plugins registry omits that one
-		if len(backends) != len(builtinplugins.Registry.Keys(consts.PluginTypeSecrets))+logicalBackendAdjustmentFactor {
-			t.Fatalf("expected %d logical backends, got %d", len(builtinplugins.Registry.Keys(consts.PluginTypeSecrets))+logicalBackendAdjustmentFactor, len(backends))
+		regkeys := strutil.StrListDelete(builtinplugins.Registry.Keys(consts.PluginTypeSecrets), "ldap")
+		sort.Strings(regkeys)
+		sort.Strings(backends)
+
+		if d := cmp.Diff(regkeys, backends); len(d) > 0 {
+			t.Fatalf("found logical registry mismatch: %v", d)
 		}
 
 		for _, b := range backends {

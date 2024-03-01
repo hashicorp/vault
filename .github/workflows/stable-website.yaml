@@ -3,6 +3,11 @@ on:
     types:
       - closed
 
+# cancel existing runs of the same workflow on the same ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   stable_website_cherry_pick:
     if: github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'docs-cherrypick')
@@ -10,7 +15,7 @@ jobs:
     name: Cherry pick to stable-website branch
     steps:
     - name: Checkout
-      uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       with:
         ref: stable-website
     - run: |

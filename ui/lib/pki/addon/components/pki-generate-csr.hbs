@@ -1,15 +1,23 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if @model.id}}
   {{! Model only has ID once form has been submitted and saved }}
   <main data-test-generate-csr-result>
     <div class="box is-sideless is-fullwidth is-shadowless">
-      <AlertBanner @title="Next steps" @type="warning">
-        Copy the CSR below for a parent issuer to sign and then import the signed certificate back into this mount.
-        {{#if @model.privateKey}}
-          The
-          <code>private_key</code>
-          is only available once. Make sure you copy and save it now.
-        {{/if}}
-      </AlertBanner>
+      <Hds::Alert data-test-next-steps-csr @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
+        <A.Title>Next steps</A.Title>
+        <A.Description>
+          Copy the CSR below for a parent issuer to sign and then import the signed certificate back into this mount.
+          {{#if @model.privateKey}}
+            The
+            <code>private_key</code>
+            is only available once. Make sure you copy and save it now.
+          {{/if}}
+        </A.Description>
+      </Hds::Alert>
       {{#each this.showFields as |fieldName|}}
         {{#let (find-by "name" fieldName @model.allFields) as |attr|}}
           {{#let (get @model attr.name) as |value|}}
@@ -18,8 +26,8 @@
               @value={{value}}
               @addCopyButton={{eq attr.name "keyId"}}
             >
-              {{#if (and attr.options.masked value)}}
-                <MaskedInput @value={{value}} @displayOnly={{true}} @allowCopy={{true}} />
+              {{#if (and attr.options.isCertificate value)}}
+                <CertificateCard @data={{value}} />
               {{else if (eq attr.name "keyId")}}
                 <LinkTo @route="keys.key.details" @model={{@model.keyId}}>
                   {{@model.keyId}}
@@ -36,11 +44,7 @@
   </main>
   <footer>
     <div class="field is-grouped is-fullwidth has-top-margin-l">
-      <div class="control">
-        <button type="button" class="button is-primary" {{on "click" @onComplete}} data-test-done>
-          Done
-        </button>
-      </div>
+      <Hds::Button @text="Done" {{on "click" @onComplete}} data-test-done />
     </div>
   </footer>
 {{else}}
@@ -56,20 +60,15 @@
 
     <PkiGenerateToggleGroups @model={{@model}} @modelValidations={{this.modelValidations}} />
 
-    <div class="field is-grouped box is-fullwidth is-bottomless has-top-margin-l">
+    <hr class="has-background-gray-100" />
+    <Hds::ButtonSet>
+      <Hds::Button @text="Generate" type="submit" data-test-save />
+      <Hds::Button @text="Cancel" @color="secondary" {{on "click" this.cancel}} data-test-cancel />
+    </Hds::ButtonSet>
+    {{#if this.alert}}
       <div class="control">
-        <button type="submit" class="button is-primary" data-test-save>
-          Generate
-        </button>
-        <button {{on "click" this.cancel}} type="button" class="button has-left-margin-s" data-test-cancel>
-          Cancel
-        </button>
+        <AlertInline @type="danger" class="has-top-padding-s" @message={{this.alert}} data-test-alert />
       </div>
-      {{#if this.alert}}
-        <div class="control">
-          <AlertInline @type="danger" @paddingTop={{true}} @message={{this.alert}} @mimicRefresh={{true}} data-test-alert />
-        </div>
-      {{/if}}
-    </div>
+    {{/if}}
   </form>
 {{/if}}

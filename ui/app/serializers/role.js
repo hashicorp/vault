@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import ApplicationSerializer from './application';
@@ -8,7 +8,7 @@ import ApplicationSerializer from './application';
 export default ApplicationSerializer.extend({
   primaryKey: 'name',
 
-  // Used for both pki-role (soon to be deprecated) and role-ssh
+  // Used for role-ssh
   extractLazyPaginatedData(payload) {
     if (payload.zero_address_roles) {
       payload.zero_address_roles.forEach((role) => {

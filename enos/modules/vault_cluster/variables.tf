@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 variable "artifactory_release" {
   type = object({
     username = string
@@ -9,9 +12,15 @@ variable "artifactory_release" {
   default     = null
 }
 
-variable "awskms_unseal_key_arn" {
+variable "backend_cluster_name" {
   type        = string
-  description = "The AWSKMS key ARN if using the awskms unseal method"
+  description = "The name of the backend cluster"
+  default     = null
+}
+
+variable "backend_cluster_tag_key" {
+  type        = string
+  description = "The tag key for searching for backend nodes"
   default     = null
 }
 
@@ -33,12 +42,6 @@ variable "config_env_vars" {
   default     = null
 }
 
-variable "consul_cluster_tag" {
-  type        = string
-  description = "The retry_join tag to use for Consul"
-  default     = null
-}
-
 variable "consul_data_dir" {
   type        = string
   description = "The directory where the consul will store data"
@@ -51,10 +54,28 @@ variable "consul_install_dir" {
   default     = "/opt/consul/bin"
 }
 
+variable "consul_license" {
+  type        = string
+  sensitive   = true
+  description = "The consul enterprise license"
+  default     = null
+}
+
 variable "consul_log_file" {
   type        = string
   description = "The file where the consul will write log output"
   default     = "/var/log/consul.log"
+}
+
+variable "consul_log_level" {
+  type        = string
+  description = "The consul service log level"
+  default     = "info"
+
+  validation {
+    condition     = contains(["trace", "debug", "info", "warn", "error"], var.consul_log_level)
+    error_message = "The consul_log_level must be one of 'trace', 'debug', 'info', 'warn', or 'error'."
+  }
 }
 
 variable "consul_release" {
@@ -65,8 +86,14 @@ variable "consul_release" {
   description = "Consul release version and edition to install from releases.hashicorp.com"
   default = {
     version = "1.15.1"
-    edition = "oss"
+    edition = "ce"
   }
+}
+
+variable "enable_audit_devices" {
+  description = "If true every audit device will be enabled"
+  type        = bool
+  default     = true
 }
 
 variable "force_unseal" {
@@ -100,6 +127,17 @@ variable "local_artifact_path" {
   default     = null
 }
 
+variable "log_level" {
+  type        = string
+  description = "The vault service log level"
+  default     = "info"
+
+  validation {
+    condition     = contains(["trace", "debug", "info", "warn", "error"], var.log_level)
+    error_message = "The log_level must be one of 'trace', 'debug', 'info', 'warn', or 'error'."
+  }
+}
+
 variable "manage_service" {
   type        = bool
   description = "Manage the Vault service users and systemd unit. Disable this to use configuration in RPM and Debian packages"
@@ -125,6 +163,43 @@ variable "root_token" {
   type        = string
   description = "The Vault root token that we can use to intialize and configure the cluster"
   default     = null
+}
+
+variable "seal_ha_beta" {
+  description = "Enable using Seal HA on clusters that meet minimum version requirements and are enterprise editions"
+  default     = true
+}
+
+variable "seal_attributes" {
+  description = "The auto-unseal device attributes"
+  default     = null
+}
+
+variable "seal_attributes_secondary" {
+  description = "The secondary auto-unseal device attributes"
+  default     = null
+}
+
+variable "seal_type" {
+  type        = string
+  description = "The primary seal device type"
+  default     = "awskms"
+
+  validation {
+    condition     = contains(["awskms", "pkcs11", "shamir"], var.seal_type)
+    error_message = "The seal_type must be either 'awskms', 'pkcs11', or 'shamir'. No other seal types are supported."
+  }
+}
+
+variable "seal_type_secondary" {
+  type        = string
+  description = "A secondary HA seal device type. Only supported in Vault Enterprise >= 1.15"
+  default     = "none"
+
+  validation {
+    condition     = contains(["awskms", "none", "pkcs11"], var.seal_type_secondary)
+    error_message = "The secondary_seal_type must be 'awskms', 'none', or 'pkcs11'. No other secondary seal types are supported."
+  }
 }
 
 variable "shamir_unseal_keys" {
@@ -162,15 +237,4 @@ variable "target_hosts" {
     private_ip = string
     public_ip  = string
   }))
-}
-
-variable "unseal_method" {
-  type        = string
-  description = "The method by which to unseal the Vault cluster"
-  default     = "awskms"
-
-  validation {
-    condition     = contains(["awskms", "shamir"], var.unseal_method)
-    error_message = "The unseal_method must be either awskms or shamir. No other unseal methods are supported."
-  }
 }

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -166,6 +166,7 @@ type providerDiscovery struct {
 	Subjects              []string `json:"subject_types_supported"`
 	GrantTypes            []string `json:"grant_types_supported"`
 	AuthMethods           []string `json:"token_endpoint_auth_methods_supported"`
+	CodeChallengeMethods  []string `json:"code_challenge_methods_supported"`
 }
 
 type authCodeCacheEntry struct {
@@ -477,42 +478,51 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "The ID of the requesting client.",
 					Required:    true,
+					Query:       true,
 				},
 				"scope": {
 					Type:        framework.TypeString,
 					Description: "A space-delimited, case-sensitive list of scopes to be requested. The 'openid' scope is required.",
 					Required:    true,
+					Query:       true,
 				},
 				"redirect_uri": {
 					Type:        framework.TypeString,
 					Description: "The redirection URI to which the response will be sent.",
 					Required:    true,
+					Query:       true,
 				},
 				"response_type": {
 					Type:        framework.TypeString,
 					Description: "The OIDC authentication flow to be used. The following response types are supported: 'code'",
 					Required:    true,
+					Query:       true,
 				},
 				"state": {
 					Type:        framework.TypeString,
 					Description: "The value used to maintain state between the authentication request and client.",
+					Query:       true,
 				},
 				"nonce": {
 					Type:        framework.TypeString,
 					Description: "The value that will be returned in the ID token nonce claim after a token exchange.",
+					Query:       true,
 				},
 				"max_age": {
 					Type:        framework.TypeInt,
 					Description: "The allowable elapsed time in seconds since the last time the end-user was actively authenticated.",
+					Query:       true,
 				},
 				"code_challenge": {
 					Type:        framework.TypeString,
 					Description: "The code challenge derived from the code verifier.",
+					Query:       true,
 				},
 				"code_challenge_method": {
 					Type:        framework.TypeString,
 					Description: "The method that was used to derive the code challenge. The following methods are supported: 'S256', 'plain'. Defaults to 'plain'.",
 					Default:     codeChallengeMethodPlain,
+					Query:       true,
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -1120,6 +1130,12 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 		return logical.ErrorResponse("key %q does not exist", client.Key), nil
 	}
 
+	if client.Key == defaultKeyName {
+		if err := i.lazyGenerateDefaultKey(ctx, req.Storage); err != nil {
+			return nil, fmt.Errorf("failed to generate default key: %w", err)
+		}
+	}
+
 	if idTokenTTLRaw, ok := d.GetOk("id_token_ttl"); ok {
 		client.IDTokenTTL = time.Duration(idTokenTTLRaw.(int)) * time.Second
 	} else if req.Operation == logical.CreateOperation {
@@ -1556,6 +1572,10 @@ func (i *IdentityStore) pathOIDCProviderDiscovery(ctx context.Context, req *logi
 			"none",
 			"client_secret_basic",
 			"client_secret_post",
+		},
+		CodeChallengeMethods: []string{
+			codeChallengeMethodPlain,
+			codeChallengeMethodS256,
 		},
 	}
 
@@ -2536,34 +2556,8 @@ func (i *IdentityStore) storeOIDCDefaultResources(ctx context.Context, view logi
 		i.Logger().Debug("wrote OIDC default provider")
 	}
 
-	// Store the default key
-	storageKey = namedKeyConfigPath + defaultKeyName
-	entry, err = view.Get(ctx, storageKey)
-	if err != nil {
-		return err
-	}
-	if entry == nil {
-		defaultKey := defaultOIDCKey()
-
-		// Generate initial key material for current and next keys
-		err = defaultKey.generateAndSetKey(ctx, i.Logger(), view)
-		if err != nil {
-			return err
-		}
-		err = defaultKey.generateAndSetNextKey(ctx, i.Logger(), view)
-		if err != nil {
-			return err
-		}
-
-		// Store the entry
-		entry, err := logical.StorageEntryJSON(storageKey, defaultKey)
-		if err != nil {
-			return err
-		}
-		if err := view.Put(ctx, entry); err != nil {
-			return err
-		}
-		i.Logger().Debug("wrote OIDC default key")
+	if _, err := i.ensureDefaultKey(ctx, view); err != nil {
+		return fmt.Errorf("error writing default key to storage: %w", err)
 	}
 
 	// Store the allow all assignment
@@ -2581,6 +2575,71 @@ func (i *IdentityStore) storeOIDCDefaultResources(ctx context.Context, view logi
 			return err
 		}
 		i.Logger().Debug("wrote OIDC allow_all assignment")
+	}
+
+	return nil
+}
+
+// ensureDefaultKey ensures that the OIDC default key is written to storage. If no
+// error is returned, callers can be sure that it exists in storage. Note that it
+// only writes the key's configuration to storage and does not generate key material
+// for its current and next keys.
+func (i *IdentityStore) ensureDefaultKey(ctx context.Context, storage logical.Storage) (*namedKey, error) {
+	key, err := i.getNamedKey(ctx, storage, defaultKeyName)
+	if err != nil {
+		return nil, err
+	}
+	if key != nil {
+		return key, nil
+	}
+
+	// The default key doesn't exist. Write it to storage.
+	defaultKey := defaultOIDCKey()
+	entry, err := logical.StorageEntryJSON(namedKeyConfigPath+defaultKeyName, defaultKey)
+	if err != nil {
+		return nil, err
+	}
+	if err := storage.Put(ctx, entry); err != nil {
+		return nil, err
+	}
+
+	i.Logger().Debug("wrote OIDC default key")
+	return &defaultKey, nil
+}
+
+// lazyGenerateDefaultKey generates key material for the OIDC default key's current and
+// next key if it hasn't already been generated. Must be called with the oidcLock write
+// lock held.
+func (i *IdentityStore) lazyGenerateDefaultKey(ctx context.Context, storage logical.Storage) error {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	defaultKey, err := i.ensureDefaultKey(ctx, storage)
+	if err != nil {
+		return err
+	}
+
+	if defaultKey.SigningKey == nil {
+		if err := defaultKey.generateAndSetKey(ctx, i.Logger(), storage); err != nil {
+			return err
+		}
+		if err := defaultKey.generateAndSetNextKey(ctx, i.Logger(), storage); err != nil {
+			return err
+		}
+
+		entry, err := logical.StorageEntryJSON(namedKeyConfigPath+defaultKeyName, defaultKey)
+		if err != nil {
+			return err
+		}
+		if err := storage.Put(ctx, entry); err != nil {
+			return err
+		}
+
+		if err := i.oidcCache.Flush(ns); err != nil {
+			return err
+		}
 	}
 
 	return nil

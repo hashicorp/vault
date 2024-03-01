@@ -1,12 +1,12 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
 import { waitFor } from '@ember/test-waiters';
@@ -128,6 +128,11 @@ export default class PkiIssuerCrossSign extends Component {
       backend: intMount,
       id: intName,
     });
+
+    // Return if user is attempting to self-sign issuer
+    if (existingIssuer.issuerId === this.args.parentIssuer.issuerId) {
+      throw new Error('Cross-signing a root issuer with itself must be performed manually using the CLI.');
+    }
 
     // Translate certificate values to API parameters to pass along: CSR -> Signed CSR -> Cross-Signed issuer
     // some of these values do not apply to a CSR, but pass anyway. If there is any issue parsing the certificate,

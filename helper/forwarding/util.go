@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package forwarding
 
@@ -7,9 +7,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -63,19 +61,7 @@ func GenerateForwardedHTTPRequest(req *http.Request, addr string) (*http.Request
 
 func GenerateForwardedRequest(req *http.Request) (*Request, error) {
 	var reader io.Reader = req.Body
-	ctx := req.Context()
-	maxRequestSize := ctx.Value("max_request_size")
-	if maxRequestSize != nil {
-		max, ok := maxRequestSize.(int64)
-		if !ok {
-			return nil, errors.New("could not parse max_request_size from request context")
-		}
-		if max > 0 {
-			reader = io.LimitReader(req.Body, max)
-		}
-	}
-
-	body, err := ioutil.ReadAll(reader)
+	body, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}

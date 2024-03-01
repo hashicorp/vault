@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import AdapterError from '@ember-data/adapter/error';
@@ -9,9 +9,10 @@ import { hash } from 'rsvp';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { TABS } from 'vault/helpers/tabs-for-identity-show';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default Route.extend({
+  router: service(),
   store: service(),
 
   model(params) {
@@ -58,7 +59,7 @@ export default Route.extend({
   afterModel(resolvedModel) {
     const { section, model } = resolvedModel;
     if (model.get('identityType') === 'group' && model.get('type') === 'internal' && section === 'aliases') {
-      return this.transitionTo('vault.cluster.access.identity.show', model.id, 'details');
+      return this.router.transitionTo('vault.cluster.access.identity.show', model.id, 'details');
     }
   },
 

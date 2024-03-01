@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -35,7 +35,7 @@ module('Integration | Component | secret-list-header', function (hooks) {
         assert
           .dom(selector)
           .hasText(
-            `Version ${this.model.version || 1}`,
+            `version ${this.model.version || 1}`,
             `Badge renders with correct version for ${type} engine type`
           );
       } else {
