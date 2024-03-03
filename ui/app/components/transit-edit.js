@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { or } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
 import Component from '@ember/component';
@@ -80,7 +80,7 @@ export default Component.extend(FocusOnInsertMixin, {
         'save',
         () => {
           this.hasDataChanges();
-          this.transitionToRoute(SHOW_ROUTE, keyId);
+          this.transitionToRoute(SHOW_ROUTE, keyId, { queryParams: { tab: 'details' } });
         },
         type === 'create'
       );

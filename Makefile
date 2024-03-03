@@ -2,18 +2,15 @@
 # Be sure to place this BEFORE `include` directives, if any.
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
 
-TEST?=$$($(GO_CMD) list ./... | grep -v /vendor/ | grep -v /integ)
+MAIN_PACKAGES=$$($(GO_CMD) list ./... | grep -v vendor/ )
+SDK_PACKAGES=$$(cd $(CURDIR)/sdk && $(GO_CMD) list ./... | grep -v vendor/ )
+API_PACKAGES=$$(cd $(CURDIR)/api && $(GO_CMD) list ./... | grep -v vendor/ )
+ALL_PACKAGES=$(MAIN_PACKAGES) $(SDK_PACKAGES) $(API_PACKAGES)
+TEST=$$(echo $(ALL_PACKAGES) | grep -v integ/ )
 TEST_TIMEOUT?=45m
 EXTENDED_TEST_TIMEOUT=60m
 INTEG_TEST_TIMEOUT=120m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
-EXTERNAL_TOOLS_CI=\
-	golang.org/x/tools/cmd/goimports \
-	github.com/golangci/revgrep/cmd/revgrep \
-	mvdan.cc/gofumpt \
-	honnef.co/go/tools/cmd/staticcheck
-EXTERNAL_TOOLS=\
-	github.com/client9/misspell/cmd/misspell
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 SED?=$(shell command -v gsed || command -v sed)
 
@@ -119,39 +116,40 @@ deprecations: bootstrap prep
 
 # ci-deprecations runs staticcheck tool to look for deprecations. All output gets piped to revgrep
 # which will only return an error if changes that is not on main has deprecated function, variable, constant or field
-ci-deprecations: ci-bootstrap prep
+ci-deprecations: prep check-tools-external
 	@BUILD_TAGS='$(BUILD_TAGS)' ./scripts/deprecations-checker.sh main
-
-tools/codechecker/.bin/codechecker:
-	@cd tools/codechecker && $(GO_CMD) build -o .bin/codechecker .
 
 # vet-codechecker runs our custom linters on the test functions. All output gets
 # piped to revgrep which will only return an error if new piece of code violates
 # the check
-vet-codechecker: bootstrap tools/codechecker/.bin/codechecker prep
-	@$(GO_CMD) vet -vettool=./tools/codechecker/.bin/codechecker -tags=$(BUILD_TAGS) ./... 2>&1 | revgrep
+vet-codechecker: check-tools-internal
+	@echo "==> Running go vet with ./tools/codechecker..."
+	@$(GO_CMD) vet -vettool=$$(which codechecker) -tags=$(BUILD_TAGS) ./... 2>&1 | revgrep
 
 # vet-codechecker runs our custom linters on the test functions. All output gets
 # piped to revgrep which will only return an error if new piece of code that is
 # not on main violates the check
-ci-vet-codechecker: ci-bootstrap tools/codechecker/.bin/codechecker prep
-	@$(GO_CMD) vet -vettool=./tools/codechecker/.bin/codechecker -tags=$(BUILD_TAGS) ./... 2>&1 | revgrep origin/main
+ci-vet-codechecker: tools-internal check-tools-external
+	@echo "==> Running go vet with ./tools/codechecker..."
+	@$(GO_CMD) vet -vettool=$$(which codechecker) -tags=$(BUILD_TAGS) ./... 2>&1 | revgrep origin/main
 
 # lint runs vet plus a number of other checkers, it is more comprehensive, but louder
-lint:
+lint: check-tools-external
 	@$(GO_CMD) list -f '{{.Dir}}' ./... | grep -v /vendor/ \
 		| xargs golangci-lint run; if [ $$? -eq 1 ]; then \
 			echo ""; \
 			echo "Lint found suspicious constructs. Please check the reported constructs"; \
 			echo "and fix them if necessary before submitting the code for reviewal."; \
 		fi
+
 # for ci jobs, runs lint against the changed packages in the commit
-ci-lint:
+ci-lint: check-tools-external
 	@golangci-lint run --deadline 10m --new-from-rev=HEAD~
 
 # Lint protobuf files
-protolint: ci-bootstrap
-	buf lint
+protolint: prep check-tools-external
+	@echo "==> Linting protobufs..."
+	@buf lint
 
 # prep runs `go generate` to build the dynamically generated
 # source files.
@@ -160,26 +158,23 @@ protolint: ci-bootstrap
 # now run as a pre-commit hook (and there's little value in
 # making every build run the formatter), we've removed that
 # dependency.
-prep:
-	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
-	@GOARCH= GOOS= $(GO_CMD) generate $$($(GO_CMD) list ./... | grep -v /vendor/)
+prep: check-go-version
+	@echo "==> Running go generate..."
+	@GOARCH= GOOS= $(GO_CMD) generate $(MAIN_PACKAGES)
+	@GOARCH= GOOS= cd api && $(GO_CMD) generate $(API_PACKAGES)
+	@GOARCH= GOOS= cd sdk && $(GO_CMD) generate $(SDK_PACKAGES)
+
+# Git doesn't allow us to store shared hooks in .git. Instead, we make sure they're up-to-date
+# whenever a make target is invoked.
+.PHONY: hooks
+hooks:
 	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
 
-# bootstrap the build by downloading additional tools needed to build
-ci-bootstrap: .ci-bootstrap
-.ci-bootstrap:
-	@for tool in  $(EXTERNAL_TOOLS_CI) ; do \
-		echo "Installing/Updating $$tool" ; \
-		GO111MODULE=off $(GO_CMD) get -u $$tool; \
-	done
-	go install github.com/bufbuild/buf/cmd/buf@v1.25.0
-	@touch .ci-bootstrap
+-include hooks # Make sure they're always up-to-date
 
-# bootstrap the build by downloading additional tools that may be used by devs
-bootstrap: ci-bootstrap
-	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
-	go generate -tags tools tools/tools.go
-	go install github.com/bufbuild/buf/cmd/buf@v1.25.0
+# bootstrap the build by generating any necessary code and downloading additional tools that may
+# be used by devs.
+bootstrap: prep tools
 
 # Note: if you have plugins in GOPATH you can update all of them via something like:
 # for i in $(ls | grep vault-plugin-); do cd $i; git remote update; git reset --hard origin/master; dep ensure -update; git add .; git commit; git push; cd ..; done
@@ -190,37 +185,33 @@ static-assets-dir:
 	@mkdir -p ./http/web_ui
 
 install-ui-dependencies:
-	@echo "--> Installing JavaScript assets"
+	@echo "==> Installing JavaScript assets"
 	@cd ui && yarn
 
 test-ember: install-ui-dependencies
-	@echo "--> Running ember tests"
+	@echo "==> Running ember tests"
 	@cd ui && yarn run test:oss
 
 test-ember-enos: install-ui-dependencies
-	@echo "--> Running ember tests with a real backend"
+	@echo "==> Running ember tests with a real backend"
 	@cd ui && yarn run test:enos
-
-check-vault-in-path:
-	@VAULT_BIN=$$(command -v vault) || { echo "vault command not found"; exit 1; }; \
-		[ -x "$$VAULT_BIN" ] || { echo "$$VAULT_BIN not executable"; exit 1; }; \
-		printf "Using Vault at %s:\n\$$ vault version\n%s\n" "$$VAULT_BIN" "$$(vault version)"
 
 ember-dist: install-ui-dependencies
 	@cd ui && npm rebuild node-sass
-	@echo "--> Building Ember application"
+	@echo "==> Building Ember application"
 	@cd ui && yarn run build
 	@rm -rf ui/if-you-need-to-delete-this-open-an-issue-async-disk-cache
 
 ember-dist-dev: install-ui-dependencies
 	@cd ui && npm rebuild node-sass
-	@echo "--> Building Ember application"
+	@echo "==> Building Ember application"
 	@cd ui && yarn run build:dev
 
 static-dist: ember-dist
 static-dist-dev: ember-dist-dev
 
-proto: bootstrap
+proto: check-tools-external
+	@echo "==> Generating Go code from protobufs..."
 	buf generate
 
 	# No additional sed expressions should be added to this list. Going forward
@@ -233,20 +224,27 @@ proto: bootstrap
 	protoc-go-inject-tag -input=./helper/identity/types.pb.go
 	protoc-go-inject-tag -input=./helper/identity/mfa/types.pb.go
 
-fmtcheck:
-	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
+importfmt: check-tools-external
+	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gosimports -w
 
-fmt: ci-bootstrap
-	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs go run mvdan.cc/gofumpt -w
+fmt: importfmt
+	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
 
-protofmt: ci-bootstrap
+fmtcheck: check-go-fmt
+
+.PHONY: go-mod-download
+go-mod-download:
+	@$(CURDIR)/scripts/go-helper.sh mod-download
+
+.PHONY: go-mod-tidy
+go-mod-tidy:
+	@$(CURDIR)/scripts/go-helper.sh mod-tidy
+
+protofmt:
 	buf format -w
 
 semgrep:
 	semgrep --include '*.go' --exclude 'vendor' -a -f tools/semgrep .
-
-semgrep-ci:
-	semgrep --error --include '*.go' --exclude 'vendor' -f tools/semgrep/ci .
 
 assetcheck:
 	@echo "==> Checking compiled UI assets..."
@@ -255,6 +253,60 @@ assetcheck:
 spellcheck:
 	@echo "==> Spell checking website..."
 	@misspell -error -source=text website/source
+
+.PHONY check-go-fmt:
+check-go-fmt:
+	@$(CURDIR)/scripts/go-helper.sh check-fmt
+
+.PHONY check-go-version:
+check-go-version:
+	@$(CURDIR)/scripts/go-helper.sh check-version $(GO_VERSION_MIN)
+
+.PHONY: check-proto-fmt
+check-proto-fmt:
+	buf format -d --error-format github-actions --exit-code
+
+.PHONY: check-proto-delta
+check-proto-delta: prep
+	@echo "==> Checking for a delta in proto generated Go files..."
+	@echo "==> Deleting all *.pg.go files..."
+	find . -type f -name '*.pb.go' -delete -print0
+	@$(MAKE) -f $(THIS_FILE) proto
+	@if ! git diff --exit-code; then echo "Go protobuf bindings need to be regenerated. Run 'make proto' to fix them." && exit 1; fi
+
+.PHONY:check-sempgrep
+check-sempgrep: check-tools-external
+	@echo "==> Checking semgrep..."
+	@semgrep --error --include '*.go' --exclude 'vendor' -f tools/semgrep/ci .
+
+.PHONY: check-tools
+check-tools:
+	@$(CURDIR)/tools/tools.sh check
+
+.PHONY: check-tools-external
+check-tools-external:
+	@$(CURDIR)/tools/tools.sh check-external
+
+.PHONY: check-tools-internal
+check-tools-internal:
+	@$(CURDIR)/tools/tools.sh check-internal
+
+check-vault-in-path:
+	@VAULT_BIN=$$(command -v vault) || { echo "vault command not found"; exit 1; }; \
+		[ -x "$$VAULT_BIN" ] || { echo "$$VAULT_BIN not executable"; exit 1; }; \
+		printf "Using Vault at %s:\n\$$ vault version\n%s\n" "$$VAULT_BIN" "$$(vault version)"
+
+.PHONY: tools
+tools:
+	@$(CURDIR)/tools/tools.sh install
+
+.PHONY: tools-external
+tools-external:
+	@$(CURDIR)/tools/tools.sh install-external
+
+.PHONY: tools-internal
+tools-internal:
+	@$(CURDIR)/tools/tools.sh install-internal
 
 mysql-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mysql-database-plugin ./plugins/database/mysql/mysql-database-plugin
@@ -279,10 +331,6 @@ hana-database-plugin:
 
 mongodb-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
-
-.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-codechecker ci-vet-codechecker
-
-.NOTPARALLEL: ember-dist ember-dist-dev
 
 # These ci targets are used for used for building and testing in Github Actions
 # workflows and for Enos scenarios.
@@ -314,9 +362,17 @@ ci-get-revision:
 ci-get-version-package:
 	@$(CURDIR)/scripts/ci-helper.sh version-package
 
+.PHONY: ci-install-external-tools
+ci-install-external-tools:
+	@$(CURDIR)/scripts/ci-helper.sh install-external-tools
+
 .PHONY: ci-prepare-legal
 ci-prepare-legal:
 	@$(CURDIR)/scripts/ci-helper.sh prepare-legal
+
+.PHONY: ci-update-external-tool-modules
+ci-update-external-tool-modules:
+	@$(CURDIR)/scripts/ci-helper.sh update-external-tool-modules
 
 .PHONY: ci-copywriteheaders
 ci-copywriteheaders:
@@ -326,3 +382,10 @@ ci-copywriteheaders:
 	cd sdk && $(CURDIR)/scripts/copywrite-exceptions.sh
 	cd shamir && $(CURDIR)/scripts/copywrite-exceptions.sh
 
+.PHONY: all bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-codechecker ci-vet-codechecker clean dev
+
+.NOTPARALLEL: ember-dist ember-dist-dev
+
+.PHONY: all-packages
+all-packages:
+	@echo $(ALL_PACKAGES) | tr ' ' '\n'

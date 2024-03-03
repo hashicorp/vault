@@ -61,7 +61,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 			"totp": totp.Factory,
 		},
 		AuditBackends: map[string]audit.Factory{
-			"noop": func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
+			"noop": func(ctx context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 				return noop, nil
 			},
 		},

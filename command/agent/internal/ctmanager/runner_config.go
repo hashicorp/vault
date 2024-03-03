@@ -38,8 +38,12 @@ func NewConfig(mc ManagerConfig, templates ctconfig.TemplateConfigs) (*ctconfig.
 		conf.Vault.Namespace = &mc.Namespace
 	}
 
-	if mc.AgentConfig.TemplateConfig != nil && mc.AgentConfig.TemplateConfig.StaticSecretRenderInt != 0 {
-		conf.Vault.DefaultLeaseDuration = &mc.AgentConfig.TemplateConfig.StaticSecretRenderInt
+	if mc.AgentConfig.TemplateConfig != nil {
+		conf.Vault.LeaseRenewalThreshold = mc.AgentConfig.TemplateConfig.LeaseRenewalThreshold
+
+		if mc.AgentConfig.TemplateConfig.StaticSecretRenderInt != 0 {
+			conf.Vault.DefaultLeaseDuration = &mc.AgentConfig.TemplateConfig.StaticSecretRenderInt
+		}
 	}
 
 	if mc.AgentConfig.DisableIdleConnsTemplating {
@@ -49,6 +53,10 @@ func NewConfig(mc ManagerConfig, templates ctconfig.TemplateConfigs) (*ctconfig.
 
 	if mc.AgentConfig.DisableKeepAlivesTemplating {
 		conf.Vault.Transport.DisableKeepAlives = pointerutil.BoolPtr(true)
+	}
+
+	if mc.AgentConfig.TemplateConfig != nil && mc.AgentConfig.TemplateConfig.MaxConnectionsPerHost != 0 {
+		conf.Vault.Transport.MaxConnsPerHost = &mc.AgentConfig.TemplateConfig.MaxConnectionsPerHost
 	}
 
 	conf.Vault.SSL = &ctconfig.SSLConfig{

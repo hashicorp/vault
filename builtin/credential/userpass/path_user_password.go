@@ -6,12 +6,11 @@ package userpass
 import (
 	"context"
 	"fmt"
-
-	"golang.org/x/crypto/bcrypt"
+	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	"strings"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func pathUserPassword(b *backend) *framework.Path {

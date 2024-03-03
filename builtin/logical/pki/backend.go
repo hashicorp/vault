@@ -13,16 +13,15 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
-
-	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
-	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
-	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 )
 
 const (
@@ -145,6 +144,11 @@ func Backend(conf *logical.BackendConfig) *backend {
 				crossRevocationPath,
 				unifiedRevocationWritePathPrefix,
 				unifiedDeltaWALPath,
+			},
+
+			Limited: []string{
+				"issue",
+				"issue/*",
 			},
 
 			Binary: []string{

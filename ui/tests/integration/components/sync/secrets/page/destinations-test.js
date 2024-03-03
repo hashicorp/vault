@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render, click } from '@ember/test-helpers';
+import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import sinon from 'sinon';
@@ -97,8 +97,7 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
     );
 
     // NAME FILTER
-    await click(`${filter('name')} .ember-basic-dropdown-trigger`);
-    await click(searchSelect.option(searchSelect.optionIndex('destination-aws')));
+    await fillIn(filter('name'), 'destination-aws');
     assert.deepEqual(
       this.transitionStub.lastCall.args,
       ['vault.cluster.sync.secrets.destinations', { queryParams: { name: 'destination-aws' } }],
@@ -155,7 +154,7 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
 
     assert.propEqual(
       this.transitionStub.lastCall.args,
-      ['vault.cluster.sync.secrets.destinations'],
+      ['vault.cluster.sync.secrets.overview'],
       'Transition is triggered on delete success'
     );
     assert.propEqual(

@@ -188,6 +188,12 @@ be overridden by setting the `VAULT_SKIP_VERIFY` environment variable.
 connecting via TLS. This value can be overridden by setting the
 `VAULT_TLS_SERVER_NAME` environment variable.
 
+- `namespace` `(string: <optional>)` - Namespace to use for all of Vault Proxy's
+requests to Vault. This can also be specified by command line or environment variable.
+The order of precedence is: this setting lowest, followed by the environment variable
+`VAULT_NAMESPACE`, and then the highest precedence command-line option `-namespace`.
+If none of these are specified, defaults to the root namespace.
+
 #### retry stanza
 
 The `vault` stanza may contain a `retry` stanza that controls how failing Vault

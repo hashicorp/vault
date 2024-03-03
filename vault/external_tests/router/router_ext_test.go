@@ -6,13 +6,15 @@ package router
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/testhelpers"
-	vaulthttp "github.com/hashicorp/vault/http"
-
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -90,7 +92,11 @@ func TestRouter_UnmountRollbackIsntFatal(t *testing.T) {
 }
 
 func TestWellKnownRedirect_HA(t *testing.T) {
+	var records *[][]byte
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		AuditBackends: map[string]audit.Factory{
+			"noop": corehelpers.NoopAuditFactory(&records),
+		},
 		DisablePerformanceStandby: true,
 		LogicalBackends: map[string]logical.Factory{
 			"noop": func(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
@@ -113,6 +119,12 @@ func TestWellKnownRedirect_HA(t *testing.T) {
 	active := testhelpers.DeriveActiveCore(t, cluster)
 	standbys := testhelpers.DeriveStandbyCores(t, cluster)
 	standby := standbys[0].Client
+
+	if err := active.Client.Sys().EnableAuditWithOptions("noop", &api.EnableAuditOptions{
+		Type: "noop",
+	}); err != nil {
+		t.Fatalf("failed to enable audit: %v", err)
+	}
 
 	if err := active.Client.Sys().Mount("noop", &api.MountInput{
 		Type: "noop",
@@ -142,5 +154,16 @@ func TestWellKnownRedirect_HA(t *testing.T) {
 		t.Fatal(err)
 	} else if resp2.StatusCode != http.StatusOK {
 		t.Fatal("did not get expected response from noop backend after redirect")
+	}
+
+	if len(*records) < 2 {
+		t.Fatal("audit entries not populated")
+	} else {
+		rs := *records
+		// Make sure RequestURI is present in the redirect audit entries
+		if !strings.Contains(string(rs[len(rs)-1]), "request_uri\":\"/.well-known/foo/baz") ||
+			!strings.Contains(string(rs[len(rs)-2]), "request_uri\":\"/.well-known/foo/baz") {
+			t.Fatal("did not find request_uri in audit entries")
+		}
 	}
 }

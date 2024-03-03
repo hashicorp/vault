@@ -4,14 +4,26 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { hash } from 'rsvp';
 
 import type StoreService from 'vault/services/store';
-import SyncDestinationModel from 'vault/vault/models/sync/destination';
+import type SyncDestinationModel from 'vault/vault/models/sync/destination';
+import type SyncAssociationModel from 'vault/vault/models/sync/association';
+import type Controller from '@ember/controller';
 
 interface SyncDestinationSecretsRouteParams {
   page: string;
+}
+
+interface SyncDestinationSecretsRouteModel {
+  destination: SyncDestinationModel;
+  associations: SyncAssociationModel[];
+}
+
+interface SyncDestinationSecretsController extends Controller {
+  model: SyncDestinationSecretsRouteModel;
+  page: number | undefined;
 }
 
 export default class SyncDestinationSecretsRoute extends Route {
@@ -34,5 +46,11 @@ export default class SyncDestinationSecretsRoute extends Route {
         destinationName: destination.name,
       }),
     });
+  }
+
+  resetController(controller: SyncDestinationSecretsController, isExiting: boolean) {
+    if (isExiting) {
+      controller.set('page', undefined);
+    }
   }
 }

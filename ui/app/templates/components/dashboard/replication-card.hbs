@@ -89,9 +89,12 @@
       class="has-top-margin-m"
       data-test-empty-state="replication"
     >
-      <div>
-        <LinkTo @route="vault.cluster.replication">Enable replication</LinkTo>
-      </div>
+      <Hds::Link::Standalone
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        @text="Enable replication"
+        @route="vault.cluster.replication"
+      />
     </EmptyState>
   {{/if}}
 </Hds::Card::Container>

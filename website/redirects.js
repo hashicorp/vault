@@ -104,5 +104,10 @@ module.exports = [
     source: '/vault/docs/v1.13.x/agent-and-proxy/agent/apiproxy',
     destination: '/vault/docs/v1.13.x/agent/apiproxy',
     permanent: true,
+  },
+  {
+    source: '/vault/api-docs/system/plugins-reload-backend',
+    destination: '/vault/api-docs/system/plugins-reload',
+    permanent: true,
   }
 ]

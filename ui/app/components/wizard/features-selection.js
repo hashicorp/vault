@@ -4,7 +4,7 @@
  */
 
 import { or, not } from '@ember/object/computed';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { FEATURE_MACHINE_TIME } from 'vault/helpers/wizard-constants';
@@ -26,7 +26,7 @@ export default Component.extend({
     });
 
     if (this.showReplication === false) {
-      const feature = this.allFeatures.findBy('key', 'replication');
+      const feature = this.allFeatures.find((f) => f.key === 'replication');
       feature.show = false;
     }
   },
@@ -134,7 +134,7 @@ export default Component.extend({
   showReplication: or('version.hasPerfReplication', 'version.hasDRReplication'),
 
   selectedFeatures: computed('allFeatures.@each.selected', function () {
-    return this.allFeatures.filterBy('selected').mapBy('key');
+    return this.allFeatures.filter((feature) => feature.selected).map((feature) => feature.key);
   }),
 
   cannotStartWizard: not('selectedFeatures.length'),

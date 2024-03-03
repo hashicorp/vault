@@ -15,6 +15,7 @@ import (
 	"hash"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -50,6 +51,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/plugincatalog"
+	uicustommessages "github.com/hashicorp/vault/vault/ui_custom_messages"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/crypto/sha3"
@@ -142,8 +144,8 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 				"wrapping/pubkey",
 				"replication/status",
 				"internal/specs/openapi",
-				"internal/ui/custom-messages",
-				"internal/ui/custom-messages/*",
+				"internal/ui/authenticated-messages",
+				"internal/ui/unauthenticated-messages",
 				"internal/ui/mounts",
 				"internal/ui/mounts/*",
 				"internal/ui/namespaces",
@@ -191,13 +193,15 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 
 	b.Backend.Paths = append(b.Backend.Paths, entPaths(b)...)
 	b.Backend.Paths = append(b.Backend.Paths, b.configPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.uiCustomMessagePaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.rekeyPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.sealPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.statusPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogListPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogCRUDPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogPinsListPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogPinsCRUDPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsReloadPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRootReloadPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogCRUDPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogListPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.auditPaths()...)
@@ -221,6 +225,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	b.Backend.Paths = append(b.Backend.Paths, b.loginMFAPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.experimentPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.introspectionPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.wellKnownPaths()...)
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
@@ -588,9 +593,12 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		Sha256:   sha256Bytes,
 	})
 	if err != nil {
-		if errors.Is(err, plugincatalog.ErrPluginNotFound) || strings.HasPrefix(err.Error(), "plugin version mismatch") {
+		if errors.Is(err, plugincatalog.ErrPluginNotFound) ||
+			errors.Is(err, plugincatalog.ErrPluginVersionMismatch) ||
+			errors.Is(err, plugincatalog.ErrPluginUnableToRun) {
 			return logical.ErrorResponse(err.Error()), nil
 		}
+
 		return nil, err
 	}
 
@@ -737,32 +745,226 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 		return logical.ErrorResponse("plugin or mounts must be provided"), nil
 	}
 
-	if pluginName != "" {
-		err := b.Core.reloadMatchingPlugin(ctx, pluginName)
-		if err != nil {
-			return nil, err
-		}
-	} else if len(pluginMounts) > 0 {
-		err := b.Core.reloadMatchingPluginMounts(ctx, pluginMounts)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	r := logical.Response{
+	resp := logical.Response{
 		Data: map[string]interface{}{
 			"reload_id": req.ID,
 		},
 	}
 
-	if scope == globalScope {
-		err := handleGlobalPluginReload(ctx, b.Core, req.ID, pluginName, pluginMounts)
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if pluginName != "" {
+		reloaded, err := b.Core.reloadMatchingPlugin(ctx, ns, consts.PluginTypeUnknown, pluginName)
 		if err != nil {
 			return nil, err
 		}
-		return logical.RespondWithStatusCode(&r, req, http.StatusAccepted)
+		if reloaded == 0 {
+			if scope == globalScope {
+				resp.AddWarning("no plugins were reloaded locally (but they may be reloaded on other nodes)")
+			} else {
+				resp.AddWarning("no plugins were reloaded")
+			}
+		}
+	} else if len(pluginMounts) > 0 {
+		err := b.Core.reloadMatchingPluginMounts(ctx, ns, pluginMounts)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return &r, nil
+
+	if scope == globalScope {
+		reloadRequest := pluginReloadRequest{
+			Namespace:  ns,
+			Timestamp:  time.Now(),
+			ReloadID:   req.ID,
+			PluginType: consts.PluginTypeUnknown,
+		}
+
+		if pluginName != "" {
+			reloadRequest.Type = pluginReloadPluginsType
+			reloadRequest.Subjects = []string{pluginName}
+		} else {
+			reloadRequest.Type = pluginReloadMountsType
+			reloadRequest.Subjects = pluginMounts
+		}
+		err = handleGlobalPluginReload(ctx, b.Core, reloadRequest)
+		if err != nil {
+			return nil, err
+		}
+		return logical.RespondWithStatusCode(&resp, req, http.StatusAccepted)
+	}
+	return &resp, nil
+}
+
+func (b *SystemBackend) handleRootPluginReloadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginName := d.Get("name").(string)
+	pluginTypeStr := d.Get("type").(string)
+	scope := d.Get("scope").(string)
+
+	if pluginName == "" {
+		return logical.ErrorResponse("'plugin' must be provided"), nil
+	}
+	if pluginTypeStr == "" {
+		return logical.ErrorResponse("'type' must be provided"), nil
+	}
+	pluginType, err := consts.ParsePluginType(pluginTypeStr)
+	if err != nil {
+		return logical.ErrorResponse(`error parsing %q as a plugin type, must be one of "auth", "secret", "database", or "unknown"`, pluginTypeStr), nil
+	}
+	if scope != "" && scope != globalScope {
+		return logical.ErrorResponse("reload scope must be omitted or 'global'"), nil
+	}
+
+	resp := logical.Response{
+		Data: map[string]interface{}{
+			"reload_id": req.ID,
+		},
+	}
+
+	reloaded, err := b.Core.reloadMatchingPlugin(ctx, nil, pluginType, pluginName)
+	if err != nil {
+		return nil, err
+	}
+	if reloaded == 0 {
+		if scope == globalScope {
+			resp.AddWarning("no plugins were reloaded locally (but they may be reloaded on other nodes)")
+		} else {
+			resp.AddWarning("no plugins were reloaded")
+		}
+	}
+
+	if scope == globalScope {
+		reloadRequest := pluginReloadRequest{
+			Type:       pluginReloadPluginsType,
+			Subjects:   []string{pluginName},
+			PluginType: pluginType,
+			Namespace:  nil,
+			Timestamp:  time.Now(),
+			ReloadID:   req.ID,
+		}
+
+		err = handleGlobalPluginReload(ctx, b.Core, reloadRequest)
+		if err != nil {
+			return nil, err
+		}
+		return logical.RespondWithStatusCode(&resp, req, http.StatusAccepted)
+	}
+	return &resp, nil
+}
+
+func (b *SystemBackend) handlePluginCatalogPinUpdate(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginType, pluginName, resp := requirePluginTypeAndName(d)
+	if resp != nil {
+		return resp, nil
+	}
+
+	pluginVersion, builtin, err := getVersion(d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+	if pluginVersion == "" {
+		return logical.ErrorResponse("missing plugin version"), nil
+	}
+	if builtin {
+		return logical.ErrorResponse("cannot pin a builtin plugin: %q", pluginVersion), nil
+	}
+
+	err = b.Core.pluginCatalog.SetPinnedVersion(ctx, &pluginutil.PinnedVersion{
+		Name:    pluginName,
+		Type:    pluginType,
+		Version: pluginVersion,
+	})
+	if err != nil {
+		if errors.Is(err, plugincatalog.ErrPluginNotFound) {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		return nil, err
+	}
+
+	return &logical.Response{}, nil
+}
+
+func (b *SystemBackend) handlePluginCatalogPinRead(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginType, pluginName, resp := requirePluginTypeAndName(d)
+	if resp != nil {
+		return resp, nil
+	}
+
+	pin, err := b.Core.pluginCatalog.GetPinnedVersion(ctx, pluginType, pluginName)
+	if errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
+		return nil, logical.CodedError(http.StatusNotFound, "no pinned version for this plugin")
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"name":    pin.Name,
+			"type":    pin.Type.String(),
+			"version": pin.Version,
+		},
+	}, nil
+}
+
+func (b *SystemBackend) handlePluginCatalogPinDelete(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginType, pluginName, resp := requirePluginTypeAndName(d)
+	if resp != nil {
+		return resp, nil
+	}
+
+	if err := b.Core.pluginCatalog.DeletePinnedVersion(ctx, pluginType, pluginName); err != nil {
+		if errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
+			return &logical.Response{}, nil
+		}
+
+		return nil, err
+	}
+
+	return &logical.Response{}, nil
+}
+
+func requirePluginTypeAndName(d *framework.FieldData) (consts.PluginType, string, *logical.Response) {
+	pluginName := d.Get("name").(string)
+	if pluginName == "" {
+		return consts.PluginTypeUnknown, "", logical.ErrorResponse("missing plugin name")
+	}
+
+	pluginTypeStr := d.Get("type").(string)
+	if pluginTypeStr == "" {
+		return consts.PluginTypeUnknown, "", logical.ErrorResponse("missing plugin type")
+	}
+	pluginType, err := consts.ParsePluginType(pluginTypeStr)
+	if err != nil {
+		return consts.PluginTypeUnknown, "", logical.ErrorResponse("invalid plugin type: %s", err)
+	}
+
+	return pluginType, pluginName, nil
+}
+
+func (b *SystemBackend) handlePluginCatalogPinList(ctx context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	pins, err := b.Core.pluginCatalog.ListPinnedVersions(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	pinnedVersions := []map[string]any{}
+	for _, pin := range pins {
+		pinnedVersions = append(pinnedVersions, map[string]any{
+			"name":    pin.Name,
+			"type":    pin.Type.String(),
+			"version": pin.Version,
+		})
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"pinned_versions": pinnedVersions,
+		},
+	}, nil
 }
 
 func (b *SystemBackend) handlePluginRuntimeCatalogUpdate(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -880,7 +1082,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 }
 
 func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	var data []map[string]any
+	runtimes := []map[string]any{}
 
 	var pluginRuntimeTypes []consts.PluginRuntimeType
 	runtimeTypeStr := d.Get("type").(string)
@@ -908,7 +1110,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *l
 				return strings.Compare(configs[i].Name, configs[j].Name) == -1
 			})
 			for _, conf := range configs {
-				data = append(data, map[string]any{
+				runtimes = append(runtimes, map[string]any{
 					"name":          conf.Name,
 					"type":          conf.Type.String(),
 					"oci_runtime":   conf.OCIRuntime,
@@ -921,15 +1123,11 @@ func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *l
 		}
 	}
 
-	resp := &logical.Response{
-		Data: map[string]interface{}{},
-	}
-
-	if len(data) > 0 {
-		resp.Data["runtimes"] = data
-	}
-
-	return resp, nil
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"runtimes": runtimes,
+		},
+	}, nil
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
@@ -1197,6 +1395,9 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 	if rawVal, ok := entry.synthesizedConfigCache.Load("allowed_managed_keys"); ok {
 		entryConfig["allowed_managed_keys"] = rawVal.([]string)
 	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("identity_token_key"); ok {
+		entryConfig["identity_token_key"] = rawVal.(string)
+	}
 	if entry.Table == credentialTableType {
 		entryConfig["token_type"] = entry.Config.TokenType.String()
 	}
@@ -1418,6 +1619,42 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		config.DelegatedAuthAccessors = apiConfig.DelegatedAuthAccessors
 	}
 
+	storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+	if storage == nil {
+		return nil, errors.New("failed to find identity storage")
+	}
+
+	// Ensure that the mount's identity token key exists
+	identityStore := b.Core.IdentityStore()
+	identityStore.oidcLock.Lock()
+	defer identityStore.oidcLock.Unlock()
+	if apiConfig.IdentityTokenKey != "" {
+		k, err := identityStore.getNamedKey(ctx, storage, apiConfig.IdentityTokenKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed getting key %q: %w", apiConfig.IdentityTokenKey, err)
+		}
+		if k == nil {
+			return logical.ErrorResponse("key %q does not exist", apiConfig.IdentityTokenKey), nil
+		}
+
+		config.IdentityTokenKey = apiConfig.IdentityTokenKey
+	}
+
+	// Don't lazily generate the default OIDC key for KV mounts. A default KV mount
+	// is enabled in dev and test servers. We don't want to pay the cost of key
+	// generation for that KV mount in all tests.
+	if config.usingOIDCDefaultKey() && logicalType != mountTypeKV {
+		err := identityStore.lazyGenerateDefaultKey(ctx, storage)
+		if err != nil {
+			if local && errors.Is(err, logical.ErrReadOnly) {
+				b.Logger().Warn("skipping default OIDC key generation for local mount",
+					"name", logicalType, "path", path)
+			} else {
+				return nil, fmt.Errorf("failed to generate default key: %w", err)
+			}
+		}
+	}
+
 	// Create the mount entry
 	me := &MountEntry{
 		Table:                 mountTableType,
@@ -1432,7 +1669,11 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		Version:               pluginVersion,
 	}
 
-	if b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeSecrets) {
+	builtin, err := b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeSecrets)
+	if err != nil {
+		return nil, err
+	}
+	if builtin {
 		resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
 		if err != nil {
 			b.Core.logger.Error("could not mount builtin", "name", me.Type, "path", me.Path, "error", err)
@@ -1492,9 +1733,20 @@ func (b *SystemBackend) handleReadMount(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse("No secret engine mount at %s", path), nil
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: b.mountInfo(ctx, entry),
-	}, nil
+	}
+	if entry.Version != "" && entry.Version != entry.RunningVersion {
+		warning := fmt.Sprintf("Plugin version is configured as %q, but running %q", entry.Version, entry.RunningVersion)
+		if pin, _ := b.Core.pluginCatalog.GetPinnedVersion(ctx, consts.PluginTypeSecrets, entry.Type); pin != nil && pin.Version == entry.RunningVersion {
+			warning += " because that version is pinned"
+		} else {
+			warning += " either due to a pinned version or because the plugin was upgraded and not yet reloaded"
+		}
+		resp.AddWarning(warning)
+	}
+
+	return resp, nil
 }
 
 // used to intercept an HTTPCodedError so it goes back to callee
@@ -1846,7 +2098,8 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 		resp.Data["external_entropy_access"] = true
 	}
 
-	if mountEntry.Table == credentialTableType {
+	isAuth := mountEntry.Table == credentialTableType
+	if isAuth {
 		resp.Data["token_type"] = mountEntry.Config.TokenType.String()
 	}
 
@@ -1874,6 +2127,10 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 		resp.Data["allowed_managed_keys"] = rawVal.([]string)
 	}
 
+	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("identity_token_key"); ok {
+		resp.Data["identity_token_key"] = rawVal.(string)
+	}
+
 	if mountEntry.Config.UserLockoutConfig != nil {
 		resp.Data["user_lockout_counter_reset_duration"] = int64(mountEntry.Config.UserLockoutConfig.LockoutCounterReset.Seconds())
 		resp.Data["user_lockout_threshold"] = mountEntry.Config.UserLockoutConfig.LockoutThreshold
@@ -1887,6 +2144,19 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 
 	if mountEntry.Version != "" {
 		resp.Data["plugin_version"] = mountEntry.Version
+	}
+	var pinnedVersion *pluginutil.PinnedVersion
+	var err error
+	if isAuth {
+		pinnedVersion, err = b.Core.pluginCatalog.GetPinnedVersion(ctx, consts.PluginTypeCredential, mountEntry.Type)
+	} else {
+		pinnedVersion, err = b.Core.pluginCatalog.GetPinnedVersion(ctx, consts.PluginTypeSecrets, mountEntry.Type)
+	}
+	if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
+		return nil, err
+	}
+	if pinnedVersion != nil && mountEntry.Version != pinnedVersion.Version {
+		resp.AddWarning(fmt.Sprintf("plugin_version is configured as %s but a version pin for %s is in effect", mountEntry.Version, pinnedVersion.Version))
 	}
 
 	return resp, nil
@@ -2129,6 +2399,19 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("plugin_version"); ok {
+		pluginType := consts.PluginTypeSecrets
+		if strings.HasPrefix(path, "auth/") {
+			pluginType = consts.PluginTypeCredential
+		}
+
+		pinnedVersion, err := b.Core.pluginCatalog.GetPinnedVersion(ctx, pluginType, mountEntry.Type)
+		if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
+			return nil, err
+		}
+		if pinnedVersion != nil {
+			return logical.ErrorResponse(fmt.Sprintf("plugin_version cannot be set for %s plugin %q as a pinned version %s is in effect", pluginType, mountEntry.Type, pinnedVersion.Version)), nil
+		}
+
 		version := rawVal.(string)
 		semanticVersion, err := semver.NewVersion(version)
 		if err != nil {
@@ -2137,10 +2420,6 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		version = "v" + semanticVersion.String()
 
 		// Lookup the version to ensure it exists in the catalog before committing.
-		pluginType := consts.PluginTypeSecrets
-		if strings.HasPrefix(path, "auth/") {
-			pluginType = consts.PluginTypeCredential
-		}
 		_, err = b.System().LookupPluginVersion(ctx, mountEntry.Type, pluginType, version)
 		if err != nil {
 			return handleError(err)
@@ -2162,6 +2441,64 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 		if b.Core.logger.IsInfo() {
 			b.Core.logger.Info("mount tuning of version successful", "path", path, "version", version)
+		}
+	}
+
+	if rawVal, ok := data.GetOk("identity_token_key"); ok {
+		identityTokenKey := rawVal.(string)
+
+		storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+		if storage == nil {
+			return nil, errors.New("failed to find identity storage")
+		}
+
+		// Ensure that the mount's identity token key exists
+		identityStore := b.Core.IdentityStore()
+		identityStore.oidcLock.Lock()
+		defer identityStore.oidcLock.Unlock()
+		if identityTokenKey != "" {
+			k, err := identityStore.getNamedKey(ctx, storage, identityTokenKey)
+			if err != nil {
+				return nil, fmt.Errorf("failed getting key %q: %w", identityTokenKey, err)
+			}
+			if k == nil {
+				return logical.ErrorResponse("key %q does not exist", identityTokenKey), nil
+			}
+		}
+
+		oldVal := mountEntry.Config.IdentityTokenKey
+		mountEntry.Config.IdentityTokenKey = identityTokenKey
+
+		if mountEntry.Config.usingOIDCDefaultKey() {
+			err := identityStore.lazyGenerateDefaultKey(ctx, storage)
+			if err != nil {
+				if mountEntry.Local && errors.Is(err, logical.ErrReadOnly) {
+					b.Logger().Warn("skipping default OIDC key generation for local mount",
+						"name", mountEntry.Type, "path", path)
+				} else {
+					mountEntry.Config.IdentityTokenKey = oldVal
+					return nil, fmt.Errorf("failed to generate default key: %w", err)
+				}
+			}
+		}
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.IdentityTokenKey = oldVal
+			return handleError(err)
+		}
+
+		mountEntry.SyncCache()
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("mount tuning of identity_token_key successful", "path", path)
 		}
 	}
 
@@ -2920,6 +3257,38 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		config.AllowedManagedKeys = apiConfig.AllowedManagedKeys
 	}
 
+	storage := b.Core.router.MatchingStorageByAPIPath(ctx, mountPathIdentity)
+	if storage == nil {
+		return nil, errors.New("failed to find identity storage")
+	}
+
+	// Ensure that the mount's identity token key exists
+	identityStore := b.Core.IdentityStore()
+	identityStore.oidcLock.Lock()
+	defer identityStore.oidcLock.Unlock()
+	if apiConfig.IdentityTokenKey != "" {
+		k, err := identityStore.getNamedKey(ctx, storage, apiConfig.IdentityTokenKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed getting key %q: %w", apiConfig.IdentityTokenKey, err)
+		}
+		if k == nil {
+			return logical.ErrorResponse("key %q does not exist", apiConfig.IdentityTokenKey), nil
+		}
+
+		config.IdentityTokenKey = apiConfig.IdentityTokenKey
+	}
+	if config.usingOIDCDefaultKey() {
+		err := identityStore.lazyGenerateDefaultKey(ctx, storage)
+		if err != nil {
+			if local && errors.Is(err, logical.ErrReadOnly) {
+				b.Logger().Warn("skipping default OIDC key generation for local mount",
+					"name", logicalType, "path", path)
+			} else {
+				return nil, fmt.Errorf("failed to generate default key: %w", err)
+			}
+		}
+	}
+
 	// Create the mount entry
 	me := &MountEntry{
 		Table:                 credentialTableType,
@@ -2935,7 +3304,11 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 
 	var resp *logical.Response
-	if b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeCredential) {
+	builtin, err := b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeCredential)
+	if err != nil {
+		return nil, err
+	}
+	if builtin {
 		resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
 		if err != nil {
 			b.Core.logger.Error("could not mount builtin", "name", me.Type, "path", me.Path, "error", err)
@@ -2952,6 +3325,18 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 }
 
 func (b *SystemBackend) validateVersion(ctx context.Context, version string, pluginName string, pluginType consts.PluginType) (string, *logical.Response, error) {
+	pinnedVersion, err := b.Core.pluginCatalog.GetPinnedVersion(ctx, pluginType, pluginName)
+	if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
+		return "", nil, err
+	}
+	if pinnedVersion != nil {
+		if version != "" {
+			return "", logical.ErrorResponse("cannot specify plugin_version for %s plugin %q, as it is pinned to version %s", pluginType.String(), pluginName, pinnedVersion.Version), nil
+		}
+
+		return pinnedVersion.Version, nil, nil
+	}
+
 	switch version {
 	case "":
 		var err error
@@ -4428,6 +4813,87 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 	return aclCapabilitiesGiven
 }
 
+// pathInternalUIAuthenticatedMessages finds all of the active messages whose
+// Authenticated property is set to true in the current namespace (based on the
+// provided context.Context) or in any ancestor namespace all the way up to the
+// root namespace.
+func (b *SystemBackend) pathInternalUIAuthenticatedMessages(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	// Make sure that the request includes a Vault token.
+	var tokenEntry *logical.TokenEntry
+	if token := req.ClientToken; token != "" {
+		tokenEntry, _ = b.Core.LookupToken(ctx, token)
+	}
+
+	if tokenEntry == nil {
+		return logical.ListResponseWithInfo([]string{}, map[string]any{}), nil
+	}
+
+	filter := uicustommessages.FindFilter{
+		IncludeAncestors: true,
+	}
+	filter.Active(true)
+	filter.Authenticated(true)
+
+	return b.pathInternalUICustomMessagesCommon(ctx, filter)
+}
+
+// pathInternalUIUnauthenticatedMessages finds all of the active messages whose
+// Authenticated property is set to false in the current namespace (based on the
+// provided context.Context) or in any ancestor namespace all the way up to the
+// root namespace.
+func (b *SystemBackend) pathInternalUIUnauthenticatedMessages(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	filter := uicustommessages.FindFilter{
+		IncludeAncestors: true,
+	}
+	filter.Active(true)
+	filter.Authenticated(false)
+
+	return b.pathInternalUICustomMessagesCommon(ctx, filter)
+}
+
+// pathInternalUICustomMessagesCommon takes care of finding the custom messages
+// that meet the criteria set in the provided uicustommessages.FindFilter.
+func (b *SystemBackend) pathInternalUICustomMessagesCommon(ctx context.Context, filter uicustommessages.FindFilter) (*logical.Response, error) {
+	messages, err := b.Core.customMessageManager.FindMessages(ctx, filter)
+	if err != nil {
+		return logical.ErrorResponse("failed to retrieve custom messages: %w", err), nil
+	}
+
+	keys := []string{}
+	keyInfo := map[string]any{}
+
+	for _, message := range messages {
+		keys = append(keys, message.ID)
+
+		var endTimeFormatted any
+
+		if message.EndTime != nil {
+			endTimeFormatted = message.EndTime.Format(time.RFC3339Nano)
+		}
+
+		var linkFormatted map[string]string = nil
+
+		if message.Link != nil {
+			linkFormatted = make(map[string]string)
+
+			linkFormatted[message.Link.Title] = message.Link.Href
+		}
+
+		keyInfo[message.ID] = map[string]any{
+			"title":         message.Title,
+			"message":       message.Message,
+			"authenticated": message.Authenticated,
+			"type":          message.Type,
+			"start_time":    message.StartTime.Format(time.RFC3339Nano),
+			"end_time":      endTimeFormatted,
+			"link":          linkFormatted,
+			"options":       message.Options,
+		}
+	}
+
+	return logical.ListResponseWithInfo(keys, keyInfo), nil
+}
+
 func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -4996,6 +5462,7 @@ type SealBackendStatusResponse struct {
 	Healthy        bool                `json:"healthy"`
 	UnhealthySince string              `json:"unhealthy_since,omitempty"`
 	Backends       []SealBackendStatus `json:"backends"`
+	FullyWrapped   bool                `json:"fully_wrapped"`
 }
 
 func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResponse, error) {
@@ -5018,6 +5485,8 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 
 	hcpLinkStatus, resourceIDonHCP := core.GetHCPLinkStatus()
 
+	redactVersion, _, redactClusterName, _ := logical.CtxRedactionSettingsValue(ctx)
+
 	if sealConfig == nil {
 		s := &SealStatusResponse{
 			Type:         core.SealAccess().BarrierSealConfigType().String(),
@@ -5027,6 +5496,11 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 			StorageType:  core.StorageType(),
 			Version:      version.GetVersion().VersionNumber(),
 			BuildDate:    version.BuildDate,
+		}
+
+		if redactVersion {
+			s.Version = ""
+			s.BuildDate = ""
 		}
 
 		if resourceIDonHCP != "" {
@@ -5085,6 +5559,15 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 		s.HCPLinkResourceID = resourceIDonHCP
 	}
 
+	if redactVersion {
+		s.Version = ""
+		s.BuildDate = ""
+	}
+
+	if redactClusterName {
+		s.ClusterName = ""
+	}
+
 	return s, nil
 }
 
@@ -5121,6 +5604,13 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 		}
 		r.Healthy = true
 	}
+
+	pps, err := GetPartiallySealWrappedPaths(ctx, c.physical)
+	if err != nil {
+		return nil, fmt.Errorf("could not list partially seal wrapped values: %w", err)
+	}
+	genInfo := c.seal.GetAccess().GetSealGenerationInfo()
+	r.FullyWrapped = genInfo.IsRewrapped() && len(pps) == 0
 	return &r, nil
 }
 
@@ -5139,14 +5629,14 @@ type LeaderResponse struct {
 	RaftAppliedIndex   uint64 `json:"raft_applied_index,omitempty"`
 }
 
-func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
+func (core *Core) GetLeaderStatus(ctx context.Context) (*LeaderResponse, error) {
 	core.stateLock.RLock()
 	defer core.stateLock.RUnlock()
 
-	return core.GetLeaderStatusLocked()
+	return core.GetLeaderStatusLocked(ctx)
 }
 
-func (core *Core) GetLeaderStatusLocked() (*LeaderResponse, error) {
+func (core *Core) GetLeaderStatusLocked(ctx context.Context) (*LeaderResponse, error) {
 	haEnabled := true
 	isLeader, address, clusterAddr, err := core.LeaderLocked()
 	if errwrap.Contains(err, ErrHANotEnabled.Error()) {
@@ -5173,11 +5663,29 @@ func (core *Core) GetLeaderStatusLocked() (*LeaderResponse, error) {
 		resp.LastWAL = core.EntLastWAL()
 	}
 
+	_, redactAddresses, _, _ := logical.CtxRedactionSettingsValue(ctx)
+	if redactAddresses {
+		resp.LeaderAddress = ""
+		resp.LeaderClusterAddress = ""
+	}
+
 	resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexesLocked()
+
 	return resp, nil
 }
 
 func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var tokenPresent bool
+	token := req.ClientToken
+	if token != "" {
+		// We don't care about the error, we just want to know if the token exists
+		_, tokenEntry, _, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
+		tokenPresent = err == nil && tokenEntry != nil
+	}
+	// If there is a valid token then we will not redact any values
+	if tokenPresent {
+		ctx = logical.CreateContextRedactionSettings(ctx, false, false, false)
+	}
 	status, err := b.Core.GetSealStatus(ctx, false)
 	if err != nil {
 		return nil, err
@@ -5197,7 +5705,19 @@ func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Reque
 }
 
 func (b *SystemBackend) handleLeaderStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	status, err := b.Core.GetLeaderStatusLocked()
+	var tokenPresent bool
+	token := req.ClientToken
+
+	if token != "" {
+		// We don't care about the error, we just want to know if token exists
+		_, tokenEntry, _, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
+		tokenPresent = err == nil && tokenEntry != nil
+	}
+
+	if tokenPresent {
+		ctx = logical.CreateContextRedactionSettings(ctx, false, false, false)
+	}
+	status, err := b.Core.GetLeaderStatusLocked(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -5504,6 +6024,62 @@ func (b *SystemBackend) handleReadExperiments(ctx context.Context, _ *logical.Re
 			"enabled":   enabled,
 		},
 	}, nil
+}
+
+// handleWellKnownList handles /sys/well-known/ endpoint to provide the list of registered labels
+// within the /.well-known path on this server
+func (b *SystemBackend) handleWellKnownList() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		labels := b.Core.WellKnownRedirects.List()
+
+		respKeys := []string{}
+		respKeyInfo := map[string]interface{}{}
+
+		for label, wk := range labels {
+			respKeys = append(respKeys, label)
+
+			mountPath := ""
+			m := b.Core.router.MatchingMountByUUID(wk.mountUUID)
+			if m != nil {
+				mountPath, _ = url.JoinPath(m.namespace.Path, m.Path)
+			}
+
+			respKeyInfo[label] = map[string]interface{}{
+				"mount_path": mountPath,
+				"mount_uuid": wk.mountUUID,
+				"prefix":     wk.prefix,
+			}
+		}
+
+		return logical.ListResponseWithInfo(respKeys, respKeyInfo), nil
+	}
+}
+
+// handleWellKnownRead handles the "/sys/well-known/<name>" endpoint to read a registered well-known label
+func (b *SystemBackend) handleWellKnownRead() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		label := data.Get("label").(string)
+
+		wk, ok := b.Core.WellKnownRedirects.Get(label)
+		if !ok {
+			return nil, nil
+		}
+
+		mountPath := ""
+		m := b.Core.router.MatchingMountByUUID(wk.mountUUID)
+		if m != nil {
+			mountPath, _ = url.JoinPath(m.namespace.Path, m.Path)
+		}
+
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"label":      label,
+				"mount_path": mountPath,
+				"mount_uuid": wk.mountUUID,
+				"prefix":     wk.prefix,
+			},
+		}, nil
+	}
 }
 
 func sanitizePath(path string) string {
@@ -6235,6 +6811,28 @@ Must already be present on the machine.`,
 		`The Vault plugin runtime to use when running the plugin.`,
 		"",
 	},
+	"plugin-catalog-pins": {
+		"Configures pinned plugin versions from the plugin catalog",
+		`
+This path responds to the following HTTP methods.
+		GET /<type>/<name>
+			Retrieve the pinned version for the named plugin.
+
+		PUT /<type>/<name>
+			Add or update a pinned version for the named plugin. Does not trigger changes until the plugin is reloaded.
+
+		DELETE /<type>/<name>
+			Delete the pinned version for the named plugin. Does not trigger changes until the plugin is reloaded.
+		`,
+	},
+	"plugin-catalog-pins-list-all": {
+		"Lists all the pinned plugin versions known to Vault",
+		`
+This path responds to the following HTTP methods.
+		LIST /
+			Returns a list of configured pinned versions.
+		`,
+	},
 	"plugin-runtime-catalog": {
 		"Configures plugin runtimes",
 		`
@@ -6284,6 +6882,10 @@ This path responds to the following HTTP methods.
 		"Whether the container runtime is run as a non-privileged (non-root) user.",
 		"",
 	},
+	"identity_token_key": {
+		"The name of the key used to sign plugin identity tokens. Defaults to the default key.",
+		"",
+	},
 	"leases": {
 		`View or list lease metadata.`,
 		`
@@ -6315,6 +6917,36 @@ This path responds to the following HTTP methods.
 	"plugin-backend-reload-mounts": {
 		`The mount paths of the plugin backends to reload.`,
 		"",
+	},
+	"plugin-backend-reload-scope": {
+		`The scope for the reload operation. May be empty or "global".`,
+		`The scope for the reload operation. May be empty or "global". If empty,
+		the plugin(s) will be reloaded only on the local node. If "global", the
+		plugin(s) will be reloaded on all nodes in the cluster and in all replicated
+		clusters.`,
+	},
+	"root-plugin-reload": {
+		"Reload all instances of a specific plugin.",
+		`Reload all plugins of a specific name and type across all namespaces. If
+		"scope" is provided and is "global", the plugin is reloaded across all
+		nodes and clusters. If a new plugin version has been pinned, this will
+		ensure all instances start using the new version.`,
+	},
+	"root-plugin-reload-name": {
+		`The name of the plugin to reload, as registered in the plugin catalog.`,
+		"",
+	},
+	"root-plugin-reload-type": {
+		`The type of the plugin to reload, as registered in the plugin catalog.`,
+		"",
+	},
+	"root-plugin-reload-scope": {
+		`The scope for the reload operation. May be empty or "global".`,
+		`The scope for the reload operation. May be empty or "global". If empty,
+		the plugin will be reloaded only on the local node. If "global", the
+		plugin will be reloaded on all nodes in the cluster and in all replicated
+		clusters. A "global" reload will ensure that any pinned version specified
+		is in full effect.`,
 	},
 	"hash": {
 		"Generate a hash sum for input data",
@@ -6443,6 +7075,42 @@ This path responds to the following HTTP methods.
 	},
 	"delegated_auth_accessors": {
 		"A list of auth accessors that the mount is allowed to delegate authentication too",
+		"",
+	},
+	"utilization": {
+		"This internal api will return manual license reporting report data.",
+		`
+This path responds to the following HTTP methods.
+
+	POST /
+		returns the manual license reporting data.
+		`,
+	},
+
+	"well-known-list": {
+		`List the registered well-known labels to associated mounts.`,
+		`
+This path responds to the following HTTP methods.
+    LIST /
+        List the names of the registered labels within the .well-known folder on this server.
+
+    GET /
+        List the names of the registered labels within the .well-known folder on this server.
+
+    GET /<label>
+        Retrieve the information regarding a specific registered label on this server.
+	    `,
+	},
+
+	"well-known": {
+		`Read the associated mount info for a registered label within the well-known path prefix`,
+		`
+        Retrieve the information regarding a specific registered label on this server.
+		`,
+	},
+
+	"well-known-label": {
+		`The label representing a path-prefix within the /.well-known/ path`,
 		"",
 	},
 }

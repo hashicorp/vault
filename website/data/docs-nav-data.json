@@ -112,6 +112,10 @@
                 "path": "internals/telemetry/metrics/raft"
               },
               {
+                "title": "Secrets Sync metrics",
+                "path": "internals/telemetry/metrics/secrets-sync"
+              },
+              {
                 "title": "Secrets metrics",
                 "path": "internals/telemetry/metrics/secrets"
               },
@@ -168,6 +172,14 @@
       {
         "title": "Lease, Renew, and Revoke",
         "path": "concepts/lease"
+      },
+      {
+        "title": "Lease Explosions",
+        "path": "concepts/lease-explosions"
+      },
+      {
+        "title": "Lease count quota exceeded",
+        "path": "concepts/lease-count-quota-exceeded"
       },
       {
         "title": "Authentication",
@@ -271,10 +283,46 @@
         "title": "Events",
         "path": "concepts/events",
         "badge": {
-          "text": "BETA",
+          "text": "ENTERPRISE",
           "type": "outlined",
           "color": "highlight"
         }
+      },
+      {
+        "title": "Filtering",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "concepts/filtering"
+          },
+          {
+            "title": "Audit Filtering",
+            "path": "concepts/filtering/audit"
+          }
+        ]
+      },
+      {
+        "title": "Request Limiter",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "concepts/request-limiter",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            }
+          },
+          {
+            "title": "Vault server temporarily overloaded",
+            "path": "concepts/request-limiter/vault-server-temporarily-overloaded"
+          }
+        ]
       }
     ]
   },
@@ -304,6 +352,11 @@
       },
       {
         "title": "<code>replication</code>",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "configuration/replication"
       },
       {
@@ -313,9 +366,10 @@
             "title": "Overview",
             "path": "configuration/seal"
           },
-          { "title": "High Availability",
-           "badge": {
-              "text": "ENTERPRISE | BETA",
+          {
+            "title": "High Availability",
+            "badge": {
+              "text": "ENTERPRISE",
               "type": "outlined",
               "color": "highlight"
             },
@@ -483,6 +537,10 @@
         "path": "configuration/telemetry"
       },
       {
+        "title": "<code>Request Limiter</code>",
+        "path": "configuration/request-limiter"
+      },
+      {
         "title": "<code>ui</code>",
         "path": "configuration/ui"
       },
@@ -520,6 +578,10 @@
       {
         "title": "Overview",
         "path": "commands"
+      },
+      {
+        "title": "Web REPL",
+        "path": "commands/web"
       },
       {
         "title": "<code>agent</code>",
@@ -590,6 +652,23 @@
       {
         "title": "<code>events</code>",
         "path": "commands/events"
+      },
+      {
+        "title": "<code>hcp</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/hcp"
+          },
+          {
+            "title": "<code>connect</code>",
+            "path": "commands/hcp/connect"
+          },
+          {
+            "title": "<code>disconnect</code>",
+            "path": "commands/hcp/disconnect"
+          }
+        ]
       },
       {
         "title": "<code>kv</code>",
@@ -752,6 +831,10 @@
           {
             "title": "<code>usage</code>",
             "path": "commands/operator/usage"
+          },
+          {
+            "title": "<code>utilization</code>",
+            "path": "commands/operator/utilization"
           }
         ]
       },
@@ -993,6 +1076,24 @@
     ]
   },
   {
+    "title": "Vault UI",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "ui"
+      },
+      {
+        "title": "Custom Messages",
+        "path": "ui/custom-messages",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      }
+    ]
+  },
+  {
     "title": "Vault Agent and Vault Proxy",
     "routes": [
       {
@@ -1102,7 +1203,12 @@
               },
               {
                 "title": "Static Secret Caching",
-                "path": "agent-and-proxy/proxy/caching/static-secret-caching"
+                "path": "agent-and-proxy/proxy/caching/static-secret-caching",
+                "badge": {
+                  "text": "ENTERPRISE",
+                  "type": "outlined",
+                  "color": "neutral"
+                }
               },
               {
                 "title": "Persistent Caching",
@@ -1607,6 +1713,10 @@
                 "path": "auth/jwt/oidc-providers"
               },
               {
+                "title": "ADFS",
+                "path": "auth/jwt/oidc-providers/adfs"
+              },
+              {
                 "title": "Auth0",
                 "path": "auth/jwt/oidc-providers/auth0"
               },
@@ -2025,12 +2135,16 @@
                 ]
               },
               {
-                "title": "Examples",
-                "path": "platform/k8s/vso/examples"
+                "title": "Secret Data Transformation",
+                "path": "platform/k8s/vso/secret-transformation"
               },
               {
                 "title": "Helm Chart",
                 "path": "platform/k8s/vso/helm"
+              },
+              {
+                "title": "Examples",
+                "path": "platform/k8s/vso/examples"
               },
               {
                 "title": "Telemetry",
@@ -2117,6 +2231,10 @@
       {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
+      },
+      {
+        "title": "Upgrade to 1.16.x",
+        "path": "upgrading/upgrade-to-1.16.x"
       },
       {
         "title": "Upgrade to 1.15.x",
@@ -2371,6 +2489,10 @@
         "path": "release-notes"
       },
       {
+        "title": "1.16.0",
+        "path": "release-notes/1.16.0"
+      },
+      {
         "title": "1.15.0",
         "path": "release-notes/1.15.0"
       },
@@ -2497,6 +2619,10 @@
             "path": "enterprise/license/utilization-reporting"
           },
           {
+            "title": "Manual license utilization reporting",
+            "path": "enterprise/license/manual-reporting"
+          },
+          {
             "title": "FAQ",
             "path": "enterprise/license/faq"
           }
@@ -2593,6 +2719,15 @@
           {
             "title": "Create an administrative namespace",
             "path": "enterprise/namespaces/create-admin-namespace"
+          },
+          {
+            "title": "Run Vault with many namespaces",
+            "path": "enterprise/namespaces/namespace-limits",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            }
           }
         ]
       },

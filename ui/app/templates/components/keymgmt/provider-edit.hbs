@@ -183,9 +183,12 @@
               @title="No keys for this provider"
               @message="Keys for this provider will be listed here. Add a key to get started."
             >
-              <SecretLink @mode="create" @secret="" @queryParams={{hash itemType="key"}} class="link">
-                Create key
-              </SecretLink>
+              <Hds::Link::Standalone
+                @icon="plus"
+                @text="Create key"
+                @route="vault.cluster.secrets.backend.create-root"
+                @query={{hash itemType="key"}}
+              />
             </EmptyState>
           {{/if}}
         {{/let}}

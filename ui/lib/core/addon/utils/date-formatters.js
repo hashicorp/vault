@@ -5,6 +5,8 @@
 
 import { format, parseISO } from 'date-fns';
 
+export const datetimeLocalStringFormat = "yyyy-MM-dd'T'HH:mm";
+
 export const ARRAY_OF_MONTHS = [
   'January',
   'February',

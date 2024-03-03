@@ -52,6 +52,7 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
+	"github.com/hashicorp/vault/plugins/event"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -96,6 +97,7 @@ type ServerCommand struct {
 	CredentialBackends map[string]logical.Factory
 	LogicalBackends    map[string]logical.Factory
 	PhysicalBackends   map[string]physical.Factory
+	EventBackends      map[string]event.Factory
 
 	ServiceRegistrations map[string]sr.Factory
 
@@ -901,6 +903,8 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 		}
 		props["max_request_duration"] = lnConfig.MaxRequestDuration.String()
 
+		props["disable_request_limiter"] = strconv.FormatBool(lnConfig.DisableRequestLimiter)
+
 		if lnConfig.ChrootNamespace != "" {
 			props["chroot_namespace"] = lnConfig.ChrootNamespace
 		}
@@ -1149,6 +1153,10 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 	if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" {
 		config.License = envLicense
+	}
+
+	if envPluginTmpdir := os.Getenv(EnvVaultPluginTmpdir); envPluginTmpdir != "" {
+		config.PluginTmpdir = envPluginTmpdir
 	}
 
 	if err := server.ExperimentsFromEnvAndCLI(config, EnvVaultExperiments, c.flagExperiments); err != nil {
@@ -1429,6 +1437,12 @@ func (c *ServerCommand) Run(args []string) int {
 		info["HCP resource ID"] = config.HCPLinkConf.Resource.ID
 	}
 
+	requestLimiterStatus := entGetRequestLimiterStatus(coreConfig)
+	if requestLimiterStatus != "" {
+		infoKeys = append(infoKeys, "request limiter")
+		info["request limiter"] = requestLimiterStatus
+	}
+
 	infoKeys = append(infoKeys, "administrative namespace")
 	info["administrative namespace"] = config.AdministrativeNamespacePath
 
@@ -1661,6 +1675,8 @@ func (c *ServerCommand) Run(args []string) int {
 			// Setting log request with the new value in the config after reload
 			core.ReloadLogRequestsLevel()
 
+			core.ReloadRequestLimiter()
+
 			// reloading HCP link
 			hcpLink, err = c.reloadHCPLink(hcpLink, config, core, hcpLogger)
 			if err != nil {
@@ -1744,42 +1760,43 @@ func (c *ServerCommand) Run(args []string) int {
 			// We can only get pprof outputs via the API but sometimes Vault can get
 			// into a state where it cannot process requests so we can get pprof outputs
 			// via SIGUSR2.
-			if os.Getenv("VAULT_PPROF_WRITE_TO_FILE") != "" {
-				dir := ""
-				path := os.Getenv("VAULT_PPROF_FILE_PATH")
-				if path != "" {
-					if _, err := os.Stat(path); err != nil {
-						c.logger.Error("Checking pprof path failed", "error", err)
-						continue
-					}
-					dir = path
-				} else {
-					dir, err = os.MkdirTemp("", "vault-pprof")
-					if err != nil {
-						c.logger.Error("Could not create temporary directory for pprof", "error", err)
-						continue
-					}
+			pprofPath := filepath.Join(os.TempDir(), "vault-pprof")
+			err := os.MkdirAll(pprofPath, os.ModePerm)
+			if err != nil {
+				c.logger.Error("Could not create temporary directory for pprof", "error", err)
+				continue
+			}
+
+			dumps := []string{"goroutine", "heap", "allocs", "threadcreate", "profile"}
+			for _, dump := range dumps {
+				pFile, err := os.Create(filepath.Join(pprofPath, dump))
+				if err != nil {
+					c.logger.Error("error creating pprof file", "name", dump, "error", err)
+					break
 				}
 
-				dumps := []string{"goroutine", "heap", "allocs", "threadcreate"}
-				for _, dump := range dumps {
-					pFile, err := os.Create(filepath.Join(dir, dump))
-					if err != nil {
-						c.logger.Error("error creating pprof file", "name", dump, "error", err)
-						break
-					}
-
+				if dump != "profile" {
 					err = pprof.Lookup(dump).WriteTo(pFile, 0)
 					if err != nil {
 						c.logger.Error("error generating pprof data", "name", dump, "error", err)
 						pFile.Close()
 						break
 					}
-					pFile.Close()
+				} else {
+					// CPU profiles need to run for a duration so we're going to run it
+					// just for one second to avoid blocking here.
+					if err := pprof.StartCPUProfile(pFile); err != nil {
+						c.logger.Error("could not start CPU profile: ", err)
+						pFile.Close()
+						break
+					}
+					time.Sleep(time.Second * 1)
+					pprof.StopCPUProfile()
 				}
-
-				c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", dir))
+				pFile.Close()
 			}
+
+			c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", pprofPath))
 		}
 	}
 	// Notify systemd that the server is shutting down
@@ -2557,8 +2574,9 @@ type SetSealResponse struct {
 	unwrapSeal  vault.Seal
 
 	// sealConfigError is present if there was an error configuring wrappers, other than KeyNotFound.
-	sealConfigError   error
-	sealConfigWarning error
+	sealConfigError          error
+	sealConfigWarning        error
+	hasPartiallyWrappedPaths bool
 }
 
 func (r *SetSealResponse) getCreatedSeals() []*vault.Seal {
@@ -2761,6 +2779,9 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 				return nil, err
 			}
 			unwrapSeal = vault.NewAutoSeal(a)
+		} else if sealGenerationInfo.Generation == 1 {
+			// First generation, and shamir, with no disabled wrapperrs, so there can be no wrapped values
+			sealGenerationInfo.SetRewrapped(true)
 		}
 
 	case len(disabledSealWrappers) == 1 && containsShamir(disabledSealWrappers):
@@ -2809,10 +2830,11 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	}
 
 	return &SetSealResponse{
-		barrierSeal:       barrierSeal,
-		unwrapSeal:        unwrapSeal,
-		sealConfigError:   sealConfigError,
-		sealConfigWarning: sealConfigWarning,
+		barrierSeal:              barrierSeal,
+		unwrapSeal:               unwrapSeal,
+		sealConfigError:          sealConfigError,
+		sealConfigWarning:        sealConfigWarning,
+		hasPartiallyWrappedPaths: hasPartiallyWrappedPaths,
 	}, nil
 }
 
@@ -3060,6 +3082,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		AuditBackends:                  c.AuditBackends,
 		CredentialBackends:             c.CredentialBackends,
 		LogicalBackends:                c.LogicalBackends,
+		EventBackends:                  c.EventBackends,
 		LogLevel:                       config.LogLevel,
 		Logger:                         c.logger,
 		DetectDeadlocks:                config.DetectDeadlocks,
@@ -3072,6 +3095,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		ClusterName:                    config.ClusterName,
 		CacheSize:                      config.CacheSize,
 		PluginDirectory:                config.PluginDirectory,
+		PluginTmpdir:                   config.PluginTmpdir,
 		PluginFileUid:                  config.PluginFileUid,
 		PluginFilePermissions:          config.PluginFilePermissions,
 		EnableUI:                       config.EnableUI,
@@ -3337,12 +3361,12 @@ func (c *ServerCommand) reloadSeals(ctx context.Context, core *vault.Core, confi
 		return nil, err
 	}
 
-	err = core.SetSeals(setSealResponse.barrierSeal, secureRandomReader)
+	newGen := setSealResponse.barrierSeal.GetAccess().GetSealGenerationInfo()
+
+	err = core.SetSeals(setSealResponse.barrierSeal, secureRandomReader, !newGen.IsRewrapped() || setSealResponse.hasPartiallyWrappedPaths)
 	if err != nil {
 		return nil, fmt.Errorf("error setting seal: %s", err)
 	}
-
-	newGen := setSealResponse.barrierSeal.GetAccess().GetSealGenerationInfo()
 
 	if err := core.SetPhysicalSealGenInfo(ctx, newGen); err != nil {
 		c.logger.Warn("could not update seal information in storage", "err", err)

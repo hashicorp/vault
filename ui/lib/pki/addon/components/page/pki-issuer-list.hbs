@@ -84,22 +84,21 @@
           </div>
           <div class="level-right is-flex is-paddingless is-marginless">
             <div class="level-item">
-              <PopupMenu>
-                <nav class="menu" aria-label="issuer config options">
-                  <ul class="menu-list">
-                    <li data-test-popup-menu-details>
-                      <LinkTo @route="issuers.issuer.details" @model={{pkiIssuer.id}}>
-                        Details
-                      </LinkTo>
-                    </li>
-                    <li>
-                      <LinkTo @route="issuers.issuer.edit" @model={{pkiIssuer.id}}>
-                        Edit
-                      </LinkTo>
-                    </li>
-                  </ul>
-                </nav>
-              </PopupMenu>
+              <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+                <dd.ToggleIcon
+                  @icon="more-horizontal"
+                  @text="Manage issuer"
+                  @hasChevron={{false}}
+                  data-test-popup-menu-trigger
+                />
+                <dd.Interactive
+                  @text="Details"
+                  @route="issuers.issuer.details"
+                  @model={{pkiIssuer.id}}
+                  data-test-popup-menu-details
+                />
+                <dd.Interactive @text="Edit" @route="issuers.issuer.edit" @model={{pkiIssuer.id}} />
+              </Hds::Dropdown>
             </div>
           </div>
         </div>
@@ -108,9 +107,12 @@
   </:list>
   <:empty>
     <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
-      <LinkTo @route="configuration.create">
-        Configure PKI
-      </LinkTo>
+      <Hds::Link::Standalone
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        @text="Configure PKI"
+        @route="configuration.create"
+      />
     </EmptyState>
   </:empty>
 </PkiPaginatedList>

@@ -19,6 +19,7 @@ export default create({
   namespaceInput: fillable('[data-test-auth-form-ns-input]'),
   optionsToggle: clickable('[data-test-auth-form-options-toggle]'),
   mountPath: fillable('[data-test-auth-form-mount-path]'),
+  authType: fillable('[data-test-select="auth-method"]'),
 
   login: async function (token = rootToken) {
     // make sure we're always logged out and logged back in
@@ -28,7 +29,9 @@ export default create({
     window.localStorage.clear();
     await this.visit({ with: 'token' });
     await settled();
-    return this.tokenInput(token).submit();
+    await this.tokenInput(token).submit();
+    await settled();
+    return;
   },
   loginUsername: async function (username, password, path) {
     // make sure we're always logged out and logged back in
@@ -43,7 +46,8 @@ export default create({
       await this.mountPath(path);
     }
     await this.usernameInput(username);
-    return this.passwordInput(password).submit();
+    await this.passwordInput(password).submit();
+    return;
   },
   loginNs: async function (ns, token = rootToken) {
     // make sure we're always logged out and logged back in
@@ -64,6 +68,7 @@ export default create({
     if (clearNamespace) {
       await this.namespaceInput('');
     }
+    await settled();
     return;
   },
 });
