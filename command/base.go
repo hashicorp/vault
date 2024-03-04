@@ -19,8 +19,9 @@ import (
 	"github.com/hashicorp/cli"
 	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/api/cliconfig"
+	"github.com/hashicorp/vault/api/tokenhelper"
 	"github.com/hashicorp/vault/command/config"
-	"github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/mattn/go-isatty"
 	"github.com/pkg/errors"
@@ -72,7 +73,7 @@ type BaseCommand struct {
 
 	flagHeader map[string]string
 
-	tokenHelper    token.TokenHelper
+	tokenHelper    tokenhelper.TokenHelper
 	hcpTokenHelper hcpvlib.HCPTokenHelper
 
 	client *api.Client
@@ -248,17 +249,17 @@ func (c *BaseCommand) SetAddress(addr string) {
 }
 
 // SetTokenHelper sets the token helper on the command.
-func (c *BaseCommand) SetTokenHelper(th token.TokenHelper) {
+func (c *BaseCommand) SetTokenHelper(th tokenhelper.TokenHelper) {
 	c.tokenHelper = th
 }
 
 // TokenHelper returns the token helper attached to the command.
-func (c *BaseCommand) TokenHelper() (token.TokenHelper, error) {
+func (c *BaseCommand) TokenHelper() (tokenhelper.TokenHelper, error) {
 	if c.tokenHelper != nil {
 		return c.tokenHelper, nil
 	}
 
-	helper, err := DefaultTokenHelper()
+	helper, err := cliconfig.DefaultTokenHelper()
 	if err != nil {
 		return nil, err
 	}

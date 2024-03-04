@@ -1,12 +1,11 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: MPL-2.0
 
-package token
+package tokenhelper
 
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"strings"
@@ -54,10 +53,10 @@ func TestExternalTokenHelperPath(t *testing.T) {
 }
 
 func TestExternalTokenHelper(t *testing.T) {
-	Test(t, testExternalTokenHelper(t))
+	test(t, testExternalTokenHelper())
 }
 
-func testExternalTokenHelper(t *testing.T) *ExternalTokenHelper {
+func testExternalTokenHelper() *ExternalTokenHelper {
 	return &ExternalTokenHelper{BinaryPath: helperPath("helper"), Env: helperEnv()}
 }
 
@@ -73,7 +72,7 @@ func helperPath(s ...string) string {
 func helperEnv() []string {
 	var env []string
 
-	tf, err := ioutil.TempFile("", "vault")
+	tf, err := os.CreateTemp("", "vault")
 	if err != nil {
 		panic(err)
 	}
