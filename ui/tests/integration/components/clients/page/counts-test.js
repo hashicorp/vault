@@ -227,7 +227,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     assert
       .dom(first)
       .hasText(
-        `1.9.0 (upgraded on Oct 31, 2023) - We introduced changes to non-entity token and local auth mount logic for client counting in 1.9.`,
+        `1.9.0 (upgraded on Nov 1, 2023) - We introduced changes to non-entity token and local auth mount logic for client counting in 1.9.`,
         'alert includes 1.9.0 upgrade'
       );
 

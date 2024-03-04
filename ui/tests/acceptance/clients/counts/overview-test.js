@@ -100,7 +100,7 @@ module('Acceptance | clients | overview', function (hooks) {
       .exists('Shows running totals with monthly breakdown charts');
     assert
       .dom(SELECTORS.charts.line.xAxisLabel)
-      .hasText(`8/22`, 'x-axis labels start with updated billing start month');
+      .hasText('8/23', 'x-axis labels start with updated billing start month');
     assert.strictEqual(
       findAll('[data-test-line-chart="plot-point"]').length,
       6,
