@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/cli"
-	"github.com/hashicorp/vault/api/tokenhelper"
+	"github.com/hashicorp/vault/command/token"
 )
 
 func testAuthCommand(tb testing.TB) (*cli.MockUi, *AuthCommand) {
@@ -19,7 +19,7 @@ func testAuthCommand(tb testing.TB) (*cli.MockUi, *AuthCommand) {
 			UI: ui,
 
 			// Override to our own token helper
-			tokenHelper: tokenhelper.NewTestingTokenHelper(),
+			tokenHelper: token.NewTestingTokenHelper(),
 		},
 	}
 }
