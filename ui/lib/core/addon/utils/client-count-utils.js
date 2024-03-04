@@ -7,8 +7,8 @@ import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { compareAsc, getUnixTime, isAfter, isBefore } from 'date-fns';
 
 // returns array of VersionHistoryModels for noteworthy upgrades (1.9, 1.10, 1.16)
-// that occurred during the queried activity data
-export const filterVersionHistory = (versionHistory, activity) => {
+// that occurred between timestamps (i.e. queried activity data)
+export const filterVersionHistory = (versionHistory, start, end) => {
   if (versionHistory) {
     const upgrades = versionHistory.reduce((array, upgradeData) => {
       const includesVersion = (v) =>
@@ -24,11 +24,11 @@ export const filterVersionHistory = (versionHistory, activity) => {
 
     // if there are noteworthy upgrades, only return those during queried date range
     if (upgrades.length) {
-      const activityStart = parseAPITimestamp(activity.startTime); //  as Date;
-      const activityEnd = parseAPITimestamp(activity.endTime); // as Date;
+      const startDate = parseAPITimestamp(start);
+      const endDate = parseAPITimestamp(end);
       return upgrades.filter(({ timestampInstalled }) => {
-        const upgradeDate = parseAPITimestamp(timestampInstalled); // as Date;
-        return isAfter(upgradeDate, activityStart) && isBefore(upgradeDate, activityEnd);
+        const upgradeDate = parseAPITimestamp(timestampInstalled);
+        return isAfter(upgradeDate, startDate) && isBefore(upgradeDate, endDate);
       });
     }
   }

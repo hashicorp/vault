@@ -115,7 +115,7 @@ export default class ClientsActivityComponent extends Component<Args> {
 
   get upgradesDuringActivity() {
     const { versionHistory, activity } = this.args;
-    return filterVersionHistory(versionHistory, activity);
+    return filterVersionHistory(versionHistory, activity.startTime, activity.endTime);
   }
 
   // (object) single month new client data with total counts + array of namespace breakdown

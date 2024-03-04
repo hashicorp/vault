@@ -61,7 +61,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
 
   get upgradeExplanations() {
     const { versionHistory, activity } = this.args;
-    const upgradesDuringActivity = filterVersionHistory(versionHistory, activity);
+    const upgradesDuringActivity = filterVersionHistory(versionHistory, activity.startTime, activity.endTime);
     if (upgradesDuringActivity.length) {
       return upgradesDuringActivity.map((upgrade: ClientsVersionHistoryModel) => {
         let explanation;
