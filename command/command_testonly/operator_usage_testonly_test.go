@@ -3,7 +3,7 @@
 
 //go:build testonly
 
-package command
+package command_testonly
 
 import (
 	"context"
@@ -13,18 +13,21 @@ import (
 	"time"
 
 	"github.com/hashicorp/cli"
+	"github.com/hashicorp/vault/command"
 	"github.com/hashicorp/vault/helper/timeutil"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/clientcountutil"
 	"github.com/hashicorp/vault/sdk/helper/clientcountutil/generation"
+	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
 )
 
-func testOperatorUsageCommand(tb testing.TB) (*cli.MockUi, *OperatorUsageCommand) {
+func testOperatorUsageCommand(tb testing.TB) (*cli.MockUi, *command.OperatorUsageCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &OperatorUsageCommand{
-		BaseCommand: &BaseCommand{
+	return ui, &command.OperatorUsageCommand{
+		BaseCommand: &command.BaseCommand{
 			UI: ui,
 		},
 	}
@@ -32,13 +35,19 @@ func testOperatorUsageCommand(tb testing.TB) (*cli.MockUi, *OperatorUsageCommand
 
 // TestOperatorUsageCommandRun writes mock activity log data and runs the
 // operator usage command. The test verifies that the output contains the
-// expected values per client type
+// expected values per client type.
+// This test cannot be run in parallel because it sets the VAULT_TOKEN env
+// var
 func TestOperatorUsageCommandRun(t *testing.T) {
-	t.Parallel()
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
+	})
+	defer cluster.Cleanup()
+	core := cluster.Cores[0].Core
+	vault.TestWaitActive(t, core)
 
-	client, _, closer := testVaultServerUnseal(t)
-	defer closer()
-
+	client := cluster.Cores[0].Client
 	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{"enabled": "enable"})
 	require.NoError(t, err)
 
@@ -57,16 +66,18 @@ func TestOperatorUsageCommandRun(t *testing.T) {
 	require.NoError(t, err)
 
 	ui, cmd := testOperatorUsageCommand(t)
-	cmd.client = client
 
+	t.Setenv("VAULT_TOKEN", client.Token())
 	start := timeutil.MonthsPreviousTo(1, now).Format(time.RFC3339)
 	end := timeutil.EndOfMonth(now).UTC().Format(time.RFC3339)
 	// Reset and check output
 	code := cmd.Run([]string{
+		"-address", client.Address(),
+		"-tls-skip-verify",
 		"-start-time", start,
 		"-end-time", end,
 	})
-	require.Equal(t, 0, code)
+	require.Equal(t, 0, code, ui.ErrorWriter.String())
 	output := ui.OutputWriter.String()
 	outputLines := strings.Split(output, "\n")
 	require.Equal(t, fmt.Sprintf("Period start: %s", start), outputLines[0])
