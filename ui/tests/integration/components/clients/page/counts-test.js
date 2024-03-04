@@ -8,15 +8,14 @@ import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, settled, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import clientsHandler from 'vault/mirage/handlers/clients';
-import { addMonths, getUnixTime, fromUnixTime } from 'date-fns';
+import clientsHandler, { STATIC_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
+import { getUnixTime } from 'date-fns';
 import { SELECTORS as ts, dateDropdownSelect } from 'vault/tests/helpers/clients';
 import { selectChoose } from 'ember-power-select/test-support/helpers';
 import timestamp from 'core/utils/timestamp';
 import sinon from 'sinon';
 
-const STATIC_NOW = new Date('2024-01-25T23:59:59Z');
-const START_TIME = getUnixTime(new Date('2023-10-01T00:00:00Z'));
+const START_TIME = getUnixTime(STATIC_START);
 const END_TIME = getUnixTime(STATIC_NOW);
 
 module('Integration | Component | clients | Page::Counts', function (hooks) {
@@ -29,13 +28,13 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
   hooks.beforeEach(async function () {
     clientsHandler(this.server);
-    const store = this.owner.lookup('service:store');
+    this.store = this.owner.lookup('service:store');
     const activityQuery = {
       start_time: { timestamp: START_TIME },
       end_time: { timestamp: END_TIME },
     };
-    this.activity = await store.queryRecord('clients/activity', activityQuery);
-    this.config = await store.queryRecord('clients/config', {});
+    this.activity = await this.store.queryRecord('clients/activity', activityQuery);
+    this.config = await this.store.queryRecord('clients/config', {});
     this.startTimestamp = START_TIME;
     this.endTimestamp = END_TIME;
     this.versionHistory = [];
@@ -200,37 +199,18 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
   test('it renders alert if upgrade happened within queried activity', async function (assert) {
     assert.expect(4);
-    // noteworthy releases: 1.9, 1.10
-    const startDate = fromUnixTime(START_TIME);
-    this.versionHistory = [
-      {
-        version: '1.9.0',
-        previousVersion: null,
-        timestampInstalled: addMonths(startDate, 1).toISOString(),
-      },
-      {
-        version: '1.9.1',
-        previousVersion: '1.9.0',
-        timestampInstalled: addMonths(startDate, 2).toISOString(),
-      },
-      {
-        version: '1.10.1',
-        previousVersion: '1.9.1',
-        timestampInstalled: addMonths(startDate, 3).toISOString(),
-      },
-      {
-        version: '1.14.4',
-        previousVersion: '1.10.1',
-        timestampInstalled: addMonths(startDate, 4).toISOString(),
-      },
-      {
-        version: '1.16.0',
-        previousVersion: '1.14.4',
-        timestampInstalled: addMonths(startDate, 5).toISOString(),
-      },
-    ];
+    this.versionHistory = await this.store.findAll('clients/version-history').then((resp) => {
+      return resp.map(({ version, previousVersion, timestampInstalled }) => {
+        return {
+          version,
+          previousVersion,
+          timestampInstalled,
+        };
+      });
+    });
 
     await this.renderComponent();
+
     assert
       .dom(ts.upgradeWarning)
       .hasTextContaining(

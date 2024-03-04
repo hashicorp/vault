@@ -16,6 +16,8 @@ import {
 } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
+export const STATIC_START = new Date('2023-10-01T00:00:00Z');
+export const STATIC_NOW = new Date('2024-01-25T23:59:59Z');
 // Matches mocked date in client-dashboard-test file
 const CURRENT_DATE = new Date('2023-01-13T14:15:00');
 const COUNTS_START = subMonths(CURRENT_DATE, 12); // pretend vault user started cluster 6 months ago
@@ -193,6 +195,49 @@ export default function (server) {
       wrap_info: null,
       warnings: null,
       auth: null,
+    };
+  });
+
+  // client counting has changed in different ways since 1.9 see link below for details
+  // https://developer.hashicorp.com/vault/docs/concepts/client-count/faq#client-count-faq
+  server.get('sys/version-history', function () {
+    return {
+      request_id: 'version-history-request-id',
+      data: {
+        keys: ['1.9.0', '1.9.1', '1.10.1', '1.14.4', '1.16.0'],
+        key_info: {
+          // entity/non-entity breakdown added
+          '1.9.0': {
+            // we don't currently use build_date, including for accuracy. it's only tracked in versions >= 1.110
+            build_date: null,
+            previous_version: null,
+            timestamp_installed: addMonths(STATIC_START, 1).toISOString(),
+          },
+          '1.9.1': {
+            build_date: null,
+            previous_version: '1.9.0',
+            timestamp_installed: addMonths(STATIC_START, 2).toISOString(),
+          },
+          // auth mount attribution added in 1.10.0
+          '1.10.1': {
+            build_date: null,
+            previous_version: '1.9.1',
+            timestamp_installed: addMonths(STATIC_START, 3).toISOString(),
+          },
+          // no notable UI changes
+          '1.14.4': {
+            build_date: addMonths(STATIC_START, 3).toISOString(),
+            previous_version: '1.10.1',
+            timestamp_installed: addMonths(STATIC_START, 4).toISOString(),
+          },
+          // sync clients added
+          '1.16.0': {
+            build_date: addMonths(STATIC_START, 4).toISOString(),
+            previous_version: '1.14.4',
+            timestamp_installed: addMonths(STATIC_START, 5).toISOString(),
+          },
+        },
+      },
     };
   });
 }
