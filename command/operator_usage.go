@@ -242,7 +242,7 @@ func (c *OperatorUsageCommand) parseNamespaceCount(rawVal interface{}) (UsageRes
 		return ret, errors.New("missing non_entity_tokens")
 	}
 
-	// don't error if secret syncs are 0
+	// don't error if the secret syncs key is missing
 	ret.secretSyncs, _ = jsonNumberOK(counts, "secret_syncs")
 
 	ret.clientCount, ok = jsonNumberOK(counts, "clients")
@@ -318,7 +318,7 @@ func (c *OperatorUsageCommand) totalOutput(data map[string]interface{}) []string
 		c.UI.Error("missing non_entity_tokens in total")
 		return out
 	}
-	// don't error if secret syncs are 0
+	// don't error if secret syncs key is missing
 	secretSyncs, _ := jsonNumberOK(total, "secret_syncs")
 
 	clientCount, ok := jsonNumberOK(total, "clients")
