@@ -6,12 +6,12 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import clientsHandler from 'vault/mirage/handlers/clients';
+import clientsHandler, { STATIC_NOW, LICENSE_START, UPGRADE_DATE } from 'vault/mirage/handlers/clients';
 import sinon from 'sinon';
 import { visit, click, findAll, find, settled } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
-import { SELECTORS, STATIC_NOW, LICENSE_START, UPGRADE_DATE } from 'vault/tests/helpers/clients';
+import { SELECTORS } from 'vault/tests/helpers/clients';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { formatNumber } from 'core/helpers/format-number';
@@ -42,17 +42,17 @@ module('Acceptance | clients | overview', function (hooks) {
   test('it should render charts', async function (assert) {
     assert
       .dom(SELECTORS.counts.startMonth)
-      .hasText('July 2022', 'billing start month is correctly parsed from license');
+      .hasText('July 2023', 'billing start month is correctly parsed from license');
     assert
       .dom(SELECTORS.rangeDropdown)
-      .hasText(`Jul 2022 - Jan 2023`, 'Date range shows dates correctly parsed activity response');
+      .hasText(`Jul 2023 - Jan 2024`, 'Date range shows dates correctly parsed activity response');
     assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
     assert
       .dom(SELECTORS.charts.chart('running total'))
       .exists('Shows running totals with monthly breakdown charts');
     assert
       .dom(SELECTORS.charts.line.xAxisLabel)
-      .hasText(`7/22`, 'x-axis labels start with billing start date');
+      .hasText('7/23', 'x-axis labels start with billing start date');
     assert.strictEqual(
       findAll('[data-test-line-chart="plot-point"]').length,
       6,

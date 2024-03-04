@@ -18,13 +18,11 @@ import { parseAPITimestamp } from 'core/utils/date-formatters';
 
 export const STATIC_START = new Date('2023-10-01T00:00:00Z');
 export const STATIC_NOW = new Date('2024-01-25T23:59:59Z');
-// Matches mocked date in client-dashboard-test file
-const CURRENT_DATE = new Date('2023-01-13T14:15:00');
-const COUNTS_START = subMonths(CURRENT_DATE, 12); // pretend vault user started cluster 6 months ago
+const COUNTS_START = subMonths(STATIC_NOW, 12); // pretend vault user started cluster 12 months ago
 // for testing, we're in the middle of a license/billing period
-const LICENSE_START = startOfMonth(subMonths(CURRENT_DATE, 6));
+export const LICENSE_START = startOfMonth(subMonths(STATIC_NOW, 6));
 // upgrade happened 1 month after license start
-const UPGRADE_DATE = addMonths(LICENSE_START, 1);
+export const UPGRADE_DATE = addMonths(LICENSE_START, 1);
 
 function getSum(array, key) {
   return array.reduce((sum, { counts }) => sum + counts[key], 0);
@@ -161,7 +159,7 @@ export default function (server) {
         autoloaded: {
           license_id: 'my-license-id',
           start_time: formatRFC3339(LICENSE_START),
-          expiration_time: formatRFC3339(endOfMonth(addMonths(CURRENT_DATE, 6))),
+          expiration_time: formatRFC3339(endOfMonth(addMonths(STATIC_NOW, 6))),
         },
       },
     };
