@@ -10,7 +10,7 @@ import (
 // DefaultTokenHelper returns the token helper that is configured for Vault.
 // This helper should only be used for non-server CLI commands.
 func DefaultTokenHelper() (tokenhelper.TokenHelper, error) {
-	config, err := LoadConfig("")
+	config, err := loadConfig("")
 	if err != nil {
 		return nil, err
 	}

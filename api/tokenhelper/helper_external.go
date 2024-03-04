@@ -110,7 +110,7 @@ func (h *ExternalTokenHelper) Path() string {
 
 func (h *ExternalTokenHelper) cmd(op string) (*exec.Cmd, error) {
 	script := strings.ReplaceAll(h.BinaryPath, "\\", "\\\\") + " " + op
-	cmd, err := ExecScript(script)
+	cmd, err := execScript(script)
 	if err != nil {
 		return nil, err
 	}
@@ -118,8 +118,8 @@ func (h *ExternalTokenHelper) cmd(op string) (*exec.Cmd, error) {
 	return cmd, nil
 }
 
-// ExecScript returns a command to execute a script
-func ExecScript(script string) (*exec.Cmd, error) {
+// execScript returns a command to execute a script
+func execScript(script string) (*exec.Cmd, error) {
 	var shell, flag string
 	if runtime.GOOS == "windows" {
 		shell = "cmd"

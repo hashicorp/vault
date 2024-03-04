@@ -14,17 +14,17 @@ import (
 )
 
 const (
-	// DefaultConfigPath is the default path to the configuration file
-	DefaultConfigPath = "~/.vault"
+	// defaultConfigPath is the default path to the configuration file
+	defaultConfigPath = "~/.vault"
 
-	// ConfigPathEnv is the environment variable that can be used to
+	// configPathEnv is the environment variable that can be used to
 	// override where the Vault configuration is.
-	ConfigPathEnv = "VAULT_CONFIG_PATH"
+	configPathEnv = "VAULT_CONFIG_PATH"
 )
 
 // Config is the CLI configuration for Vault that can be specified via
 // a `$HOME/.vault` file which is HCL-formatted (therefore HCL or JSON).
-type DefaultConfig struct {
+type defaultConfig struct {
 	// TokenHelper is the executable/command that is executed for storing
 	// and retrieving the authentication token for the Vault CLI. If this
 	// is not specified, then vault's internal token store will be used, which
@@ -32,26 +32,14 @@ type DefaultConfig struct {
 	TokenHelper string `hcl:"token_helper"`
 }
 
-// Config loads the configuration and returns it. If the configuration
-// is already loaded, it is returned.
-func Config() (*DefaultConfig, error) {
-	var err error
-	config, err := LoadConfig("")
-	if err != nil {
-		return nil, err
-	}
-
-	return config, nil
-}
-
-// LoadConfig reads the configuration from the given path. If path is
+// loadConfig reads the configuration from the given path. If path is
 // empty, then the default path will be used, or the environment variable
 // if set.
-func LoadConfig(path string) (*DefaultConfig, error) {
+func loadConfig(path string) (*defaultConfig, error) {
 	if path == "" {
-		path = DefaultConfigPath
+		path = defaultConfigPath
 	}
-	if v := os.Getenv(ConfigPathEnv); v != "" {
+	if v := os.Getenv(configPathEnv); v != "" {
 		path = v
 	}
 
@@ -66,7 +54,7 @@ func LoadConfig(path string) (*DefaultConfig, error) {
 		return nil, err
 	}
 
-	conf, err := ParseConfig(string(contents))
+	conf, err := parseConfig(string(contents))
 	if err != nil {
 		return nil, fmt.Errorf("error parsing config file at %q: %w; ensure that the file is valid; Ansible Vault is known to conflict with it", path, err)
 	}
@@ -74,8 +62,8 @@ func LoadConfig(path string) (*DefaultConfig, error) {
 	return conf, nil
 }
 
-// ParseConfig parses the given configuration as a string.
-func ParseConfig(contents string) (*DefaultConfig, error) {
+// parseConfig parses the given configuration as a string.
+func parseConfig(contents string) (*defaultConfig, error) {
 	root, err := hcl.Parse(contents)
 	if err != nil {
 		return nil, err
@@ -103,7 +91,7 @@ func ParseConfig(contents string) (*DefaultConfig, error) {
 		return nil, validationErrors
 	}
 
-	var c DefaultConfig
+	var c defaultConfig
 	if err := hcl.DecodeObject(&c, list); err != nil {
 		return nil, err
 	}

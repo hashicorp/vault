@@ -11,12 +11,12 @@ import (
 )
 
 func TestLoadConfig(t *testing.T) {
-	config, err := LoadConfig(filepath.Join("testdata", "config.hcl"))
+	config, err := loadConfig(filepath.Join("testdata", "config.hcl"))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	expected := &DefaultConfig{
+	expected := &defaultConfig{
 		TokenHelper: "foo",
 	}
 	if !reflect.DeepEqual(expected, config) {
@@ -25,7 +25,7 @@ func TestLoadConfig(t *testing.T) {
 }
 
 func TestLoadConfig_noExist(t *testing.T) {
-	config, err := LoadConfig("nope/not-once/.never")
+	config, err := loadConfig("nope/not-once/.never")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +36,7 @@ func TestLoadConfig_noExist(t *testing.T) {
 }
 
 func TestParseConfig_badKeys(t *testing.T) {
-	_, err := ParseConfig(`
+	_, err := parseConfig(`
 token_helper = "/token"
 nope = "true"
 `)
