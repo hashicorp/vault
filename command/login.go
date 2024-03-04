@@ -212,7 +212,7 @@ func (c *LoginCommand) Run(args []string) int {
 	}
 
 	// Create the client
-	client, err := c.Client()
+	client, err := c.ClientWithoutToken()
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
@@ -296,7 +296,7 @@ func (c *LoginCommand) Run(args []string) int {
 
 	if !c.flagNoStore {
 		// Grab the token helper so we can store
-		tokenHelper, err := c.TokenHelper()
+		tokenHelper, err := c.TokenHelper(client.Address())
 		if err != nil {
 			c.UI.Error(wrapAtLength(fmt.Sprintf(
 				"Error initializing token helper. Please verify that the token "+

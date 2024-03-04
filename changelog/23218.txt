@@ -1,0 +1,4 @@
+```release-note:bug
+cli: Always pass `VAULT_ADDR` to the token helper, so the token helper can know
+the address even if it was provided through the `-address` flag.
+```

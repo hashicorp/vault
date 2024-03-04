@@ -2055,7 +2055,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 
 	// Set the token
 	if !c.flagDevNoStoreToken {
-		tokenHelper, err := c.TokenHelper()
+		tokenHelper, err := c.TokenHelper("dev-server")
 		if err != nil {
 			return nil, err
 		}
@@ -2219,7 +2219,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	}
 
 	// Set the token
-	tokenHelper, err := c.TokenHelper()
+	tokenHelper, err := c.TokenHelper("dev-server")
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error getting token helper: %s", err))
 		return 1

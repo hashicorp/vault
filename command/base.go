@@ -78,9 +78,10 @@ type BaseCommand struct {
 	client *api.Client
 }
 
-// Client returns the HTTP API client. The client is cached on the command to
-// save performance on future calls.
-func (c *BaseCommand) Client() (*api.Client, error) {
+// Construct the HTTP API client, but do not set the token on it yet. This is to
+// avoid invoking the token helper for calls that do not need a token, such as
+// `vault login`.
+func (c *BaseCommand) ClientWithoutToken() (*api.Client, error) {
 	// Read the test client if present
 	if c.client != nil {
 		if err := c.applyHCPConfig(); err != nil {
@@ -142,26 +143,6 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	// Set the wrapping function
 	client.SetWrappingLookupFunc(c.DefaultWrappingLookupFunc)
 
-	// Get the token if it came in from the environment
-	token := client.Token()
-
-	// If we don't have a token, check the token helper
-	if token == "" {
-		helper, err := c.TokenHelper()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get token helper")
-		}
-		token, err = helper.Get()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get token from token helper")
-		}
-	}
-
-	// Set the token
-	if token != "" {
-		client.SetToken(token)
-	}
-
 	client.SetMFACreds(c.flagMFA)
 
 	// flagNS takes precedence over flagNamespace. After resolution, point both
@@ -191,6 +172,42 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 		if len(forbiddenHeaders) > 0 {
 			return nil, fmt.Errorf("failed to setup Headers[%s]: Header starting by 'X-Vault-' are for internal usage only", strings.Join(forbiddenHeaders, ", "))
 		}
+	}
+
+	return client, nil
+}
+
+// Client returns the HTTP API client. The client is cached on the command to
+// save performance on future calls.
+func (c *BaseCommand) Client() (*api.Client, error) {
+	// Read the test client if present
+	if c.client != nil {
+		return c.client, nil
+	}
+
+	client, err := c.ClientWithoutToken()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the token if it came in from the environment
+	token := client.Token()
+
+	// If we don't have a token, check the token helper
+	if token == "" {
+		helper, err := c.TokenHelper(client.Address())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get token helper")
+		}
+		token, err = helper.Get()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get token from token helper")
+		}
+	}
+
+	// Set the token
+	if token != "" {
+		client.SetToken(token)
 	}
 
 	c.client = client
@@ -253,12 +270,12 @@ func (c *BaseCommand) SetTokenHelper(th token.TokenHelper) {
 }
 
 // TokenHelper returns the token helper attached to the command.
-func (c *BaseCommand) TokenHelper() (token.TokenHelper, error) {
+func (c *BaseCommand) TokenHelper(vaultAddr string) (token.TokenHelper, error) {
 	if c.tokenHelper != nil {
 		return c.tokenHelper, nil
 	}
 
-	helper, err := DefaultTokenHelper()
+	helper, err := DefaultTokenHelper(vaultAddr)
 	if err != nil {
 		return nil, err
 	}
