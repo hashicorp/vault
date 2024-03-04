@@ -42,18 +42,18 @@ import { format, isSameMonth } from 'date-fns';
  */
 
 export default class Attribution extends Component {
-  @tracked showCSVDownloadModal = false;
   @service download;
+
+  @tracked showCSVDownloadModal = false;
+
+  parseAPITimestamp = (time, format) => parseAPITimestamp(time, format);
+
   attributionLegend = [
     { key: 'entity_clients', label: 'entity clients' },
     { key: 'non_entity_clients', label: 'non-entity clients' },
     { key: 'secret_syncs', label: 'secrets sync clients' },
   ];
 
-  get formattedStartDate() {
-    if (!this.args.startTimestamp) return null;
-    return parseAPITimestamp(this.args.startTimestamp, 'MMMM yyyy');
-  }
   get formattedEndDate() {
     if (!this.args.startTimestamp && !this.args.endTimestamp) return null;
     // displays on CSV export modal, no need to display duplicate months and years

@@ -102,7 +102,7 @@
       </p>
       <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if this.formattedEndDate " RANGE"}}</p>
       <p class="has-bottom-margin-s" data-test-export-date-range>
-        {{this.formattedStartDate}}
+        {{this.parseAPITimestamp @startTimestamp "MMMM yyyy"}}
         {{if this.formattedEndDate "-"}}
         {{this.formattedEndDate}}</p>
     </M.Body>
@@ -121,7 +121,7 @@
               {{#each @upgradesDuringActivity as |upgrade|}}
                 <li>
                   {{upgrade.version}}
-                  {{date-format upgrade.timestampInstalled "(MMM d, yyyy)"}}
+                  {{this.parseAPITimestamp upgrade.timestampInstalled "(MMM d, yyyy)"}}
                 </li>
               {{/each}}
             </ul>
