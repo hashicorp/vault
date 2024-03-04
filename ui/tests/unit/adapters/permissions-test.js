@@ -47,11 +47,11 @@ module('Unit | Adapter | permissions', function (hooks) {
     auth.setTokenData('vault-_root_☃1', { userRootNamespace: '', backend: { mountPath: 'token' } });
 
     this.server.get('/sys/internal/ui/resultant-acl', (schema, request) => {
-      assert.strictEqual(
-        request.requestHeaders['X-Vault-Namespace'],
-        '',
-        'Namespace is users root not current path'
+      assert.false(
+        Object.keys(request.requestHeaders).includes('X-Vault-Namespace'),
+        'request is called without namespace'
       );
+
       return {
         data: {
           exact_paths: {},
