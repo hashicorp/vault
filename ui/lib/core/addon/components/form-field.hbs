@@ -37,10 +37,15 @@
             <div class="has-left-margin-xs">
               <label
                 for="{{or val.value val}}"
-                class="has-left-margin-xs has-text-black is-size-7"
+                class="has-left-margin-xs is-size-7"
                 data-test-radio-label={{or val.label val.value val}}
               >
-                <span>{{or val.label val.value val}}</span>
+                {{or val.label val.value val}}
+                {{#if val.helpText}}
+                  <Hds::TooltipButton @text={{val.helpText}} aria-label="More information">
+                    <FlightIcon @name="info" />
+                  </Hds::TooltipButton>
+                {{/if}}
                 {{#if this.hasRadioSubText}}
                   <p class="has-left-margin-xs has-text-grey is-size-8" data-test-radio-subText={{val.subText}}>
                     {{val.subText}}
@@ -94,11 +99,12 @@
     <Input
       @type="datetime-local"
       @value={{date-format (get @model this.valuePath) "yyyy-MM-dd'T'HH:mm"}}
-      class="input has-top-margin-xs is-auto-width is-block"
       name={{@attr.name}}
       id={{@attr.name}}
       data-test-input={{@attr.name}}
-      {{on "change" this.onChangeWithEvent}}
+      class="input has-top-margin-xs has-bottom-margin-xs is-auto-width is-block
+        {{if this.validationError 'has-error-border'}}"
+      {{on "focusout" this.onChangeWithEvent}}
     />
   {{else if (eq @attr.options.editType "searchSelect")}}
     <div class="form-section">
@@ -133,12 +139,15 @@
       @value={{get @model this.valuePath}}
       @onChange={{this.setAndBroadcast}}
       @label={{this.labelString}}
-      @labelClass="title {{if (eq @mode 'create') 'is-5' 'is-4'}}"
+      @labelClass={{if @attr.options.isSectionHeader "title is-4" "is-label"}}
       @helpText={{@attr.options.helpText}}
       @subText={{@attr.options.subText}}
       @onKeyUp={{this.handleKeyUp}}
-      @validationError={{this.validationError}}
-      class="form-section"
+      @keyPlaceholder={{@attr.options.keyPlaceholder}}
+      @valuePlaceholder={{@attr.options.valuePlaceholder}}
+      @isSingleRow={{@attr.options.isSingleRow}}
+      @allowWhiteSpace={{@attr.options.allowWhiteSpace}}
+      class="{{if this.validationError 'error-border-child-inputs'}} {{if @attr.options.isSectionHeader 'form-section'}}"
     />
   {{else if (eq @attr.options.editType "file")}}
     {{! File Input }}
@@ -333,7 +342,7 @@
         onchange={{this.onChangeWithEvent}}
         data-test-input={{@attr.name}}
       />
-      <label for={{@attr.name}} class="is-label">
+      <label for={{@attr.name}} class="is-label" data-test-form-field-label>
         {{this.labelString}}
         {{#if (and this.showHelpText @attr.options.helpText)}}
           <InfoTooltip>{{@attr.options.helpText}}</InfoTooltip>

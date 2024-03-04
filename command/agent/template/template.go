@@ -13,17 +13,19 @@ import (
 	"errors"
 	"fmt"
 	"io"
-
-	"go.uber.org/atomic"
+	"math"
+	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/internal/ctmanager"
 	"github.com/hashicorp/vault/helper/useragent"
+	"github.com/hashicorp/vault/sdk/helper/backoff"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
+	"go.uber.org/atomic"
 )
 
 // ServerConfig is a config struct for setting up the basic parts of the
@@ -145,6 +147,10 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	}
 	ts.lookupMap = lookupMap
 
+	// Create  backoff object to calculate backoff time before restarting a failed
+	// consul template server
+	restartBackoff := backoff.NewBackoff(math.MaxInt, consts.DefaultMinBackoff, consts.DefaultMaxBackoff)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -192,6 +198,17 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			if ts.config.AgentConfig.TemplateConfig != nil && ts.config.AgentConfig.TemplateConfig.ExitOnRetryFailure {
 				return fmt.Errorf("template server: %w", err)
 			}
+
+			// Calculate the amount of time to backoff using exponential backoff
+			sleep, err := restartBackoff.Next()
+			if err != nil {
+				ts.logger.Error("template server: reached maximum number of restart attempts")
+				restartBackoff.Reset()
+			}
+
+			// Sleep for the calculated backoff time then attempt to create a new runner
+			ts.logger.Warn(fmt.Sprintf("template server restart: retry attempt after %s", sleep))
+			time.Sleep(sleep)
 
 			ts.runner, err = manager.NewRunner(runnerConfig, false)
 			if err != nil {

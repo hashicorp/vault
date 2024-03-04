@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+/* eslint-disable ember/no-settled-after-test-helper */
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
@@ -42,7 +43,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     this.destinations = await store.query('sync/destination', {});
 
     await render(
-      hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalAssociations={{7}} />`,
+      hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} />`,
       {
         owner: this.engine,
       }
@@ -95,10 +96,10 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     assert.dom(badge(2)).hasText('1 Unsynced', 'Unsynced badge renders');
     assert.dom(badge(2)).hasClass('hds-badge--color-neutral', 'Correct color renders for unsynced badge');
 
-    assert.dom(total(0)).hasText('1', '# of secrets renders');
+    assert.dom(total(0)).hasText('1', '# of external secrets renders');
     assert.dom(updated(0)).hasText(updatedDate, 'Last updated datetime renders');
 
-    assert.dom(total(1)).hasText('0', '# of secrets render for destination with no associations');
+    assert.dom(total(1)).hasText('0', '# of external secrets renders for destination with no associations');
     assert
       .dom(updated(1))
       .hasText('—', 'Last updated placeholder renders for destination with no associations');
@@ -114,6 +115,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     assert.dom(name(0)).hasText('destination-aws', 'First destination renders on page 1');
 
     await click(pagination.next);
+    await settled();
     assert.dom(overview.table.row).exists({ count: 3 }, 'New items are fetched and rendered on page change');
     assert.dom(name(0)).hasText('destination-gcp', 'First destination renders on page 2');
   });
@@ -124,6 +126,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
     // since the request resolved trigger a page change and return an error from the associations endpoint
     await click(pagination.next);
+    await settled();
     assert.dom(emptyStateTitle).hasText('Error fetching information', 'Empty state title renders');
     assert
       .dom(emptyStateMessage)
@@ -140,8 +143,9 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
         count: '6',
       },
       {
-        cardTitle: 'Total sync associations',
-        subText: 'Total sync associations that count towards client count',
+        cardTitle: 'Total secrets',
+        subText:
+          'The total number of secrets that have been synced from Vault. One secret will be counted as one sync client.',
         actionText: 'View billing',
         count: '7',
       },
@@ -150,8 +154,8 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     cardData.forEach(({ cardTitle, subText, actionText, count }) => {
       assert.dom(title(cardTitle)).hasText(cardTitle, 'Overview card title renders');
       assert.dom(description(cardTitle)).hasText(subText, 'Destinations overview card description renders');
-      assert.dom(action(cardTitle)).hasText(actionText, 'Card action renders');
       assert.dom(content(cardTitle)).hasText(count, 'Total count renders');
+      assert.dom(action(cardTitle)).hasText(actionText, 'Card action renders');
     });
   });
 });

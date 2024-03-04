@@ -86,7 +86,7 @@ func TestClientDefaultHttpClient_unixSocket(t *testing.T) {
 	if client.addr.Scheme != "http" {
 		t.Fatalf("bad: %s", client.addr.Scheme)
 	}
-	if client.addr.Host != "/var/run/vault.sock" {
+	if client.addr.Host != "localhost" {
 		t.Fatalf("bad: %s", client.addr.Host)
 	}
 }
@@ -111,8 +111,8 @@ func TestClientSetAddress(t *testing.T) {
 	if client.addr.Scheme != "http" {
 		t.Fatalf("bad: expected: 'http' actual: %q", client.addr.Scheme)
 	}
-	if client.addr.Host != "/var/run/vault.sock" {
-		t.Fatalf("bad: expected: '/var/run/vault.sock' actual: %q", client.addr.Host)
+	if client.addr.Host != "localhost" {
+		t.Fatalf("bad: expected: 'localhost' actual: %q", client.addr.Host)
 	}
 	if client.addr.Path != "" {
 		t.Fatalf("bad: expected '' actual: %q", client.addr.Path)
@@ -757,7 +757,6 @@ func TestCloneWithHeadersNoDeadlock(t *testing.T) {
 	wg := &sync.WaitGroup{}
 
 	problematicFunc := func() {
-		wg.Add(1)
 		client.SetCloneToken(true)
 		_, err := client.CloneWithHeaders()
 		if err != nil {
@@ -767,6 +766,7 @@ func TestCloneWithHeadersNoDeadlock(t *testing.T) {
 	}
 
 	for i := 0; i < 1000; i++ {
+		wg.Add(1)
 		go problematicFunc()
 	}
 	wg.Wait()
@@ -783,7 +783,6 @@ func TestCloneNoDeadlock(t *testing.T) {
 	wg := &sync.WaitGroup{}
 
 	problematicFunc := func() {
-		wg.Add(1)
 		client.SetCloneToken(true)
 		_, err := client.Clone()
 		if err != nil {
@@ -793,6 +792,7 @@ func TestCloneNoDeadlock(t *testing.T) {
 	}
 
 	for i := 0; i < 1000; i++ {
+		wg.Add(1)
 		go problematicFunc()
 	}
 	wg.Wait()
@@ -1521,7 +1521,7 @@ func TestParseAddressWithUnixSocket(t *testing.T) {
 	if u.Scheme != "http" {
 		t.Fatal("Scheme not changed to http")
 	}
-	if u.Host != "/var/run/vault.sock" {
+	if u.Host != "localhost" {
 		t.Fatal("Host not changed to socket name")
 	}
 	if u.Path != "" {

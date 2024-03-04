@@ -21,9 +21,20 @@ const validations = {
   // getter/setter for the deploymentEnvironments model attribute
   deploymentEnvironmentsArray: [{ type: 'presence', message: 'At least one environment is required.' }],
 };
-const displayFields = ['name', 'accessToken', 'projectId', 'teamId', 'deploymentEnvironments'];
+
+const displayFields = [
+  // connection details
+  'name',
+  'accessToken',
+  'projectId',
+  'teamId',
+  'deploymentEnvironments',
+  // vault sync config options
+  'granularity',
+  'secretNameTemplate',
+];
 const formFieldGroups = [
-  { default: ['name', 'projectId', 'teamId', 'deploymentEnvironments'] },
+  { default: ['name', 'projectId', 'teamId', 'deploymentEnvironments', 'granularity', 'secretNameTemplate'] },
   { Credentials: ['accessToken'] },
 ];
 @withModelValidations(validations)

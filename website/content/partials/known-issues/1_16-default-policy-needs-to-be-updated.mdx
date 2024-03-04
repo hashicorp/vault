@@ -1,0 +1,45 @@
+### Existing clusters do not show the current Vault version in UI by default
+
+#### Affected versions
+
+- 1.16+
+
+#### Issue
+
+Previous versions of the Vault UI fetched version information from
+un-authenticated endpoints like `sys/health` and `sys/seal-status`. Since
+introducing the `redact_version` TCP listener parameter, version information may
+no longer be available under some configurations. As a result, the Vault UI now
+uses a new, **authenticated** endpoint (`sys/internal/ui/version`) to fetch
+version information.
+
+By default, all **new** Vault servers created with v1.16+ include the following rule, in the 
+automatically-generated policy:
+
+```
+# Allow a token to look up the Vault version. This path is not subject to
+# redaction like the unauthenticated endpoints that provide the Vault version.
+path "sys/internal/ui/version" {
+    capabilities = ["read"]
+}
+```
+
+However, the default policy for **existing** Vault servers does not update
+automatically during the upgrade. You must updated the policy manually in order
+for the Vault version to be displayed in the Vault UI.
+
+No other functionality in the Vault UI is affected be this issue.
+
+You can use the Vault CLI to update the **default** policy and allow the Vault IU to query the Vault server for version information:
+
+```shell-session
+$ vault policy read default | cat - <<< '
+# Allow a token to look up the Vault version. This path is not subject to
+# redaction like the unauthenticated endpoints that provide the Vault version.
+path "sys/internal/ui/version" {
+    capabilities = ["read"]
+}
+' > default-policy.hcl
+$ vault policy write default ./default-policy.hcl
+```
+

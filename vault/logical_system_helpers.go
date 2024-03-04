@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -37,6 +38,8 @@ var (
 	sysClean = func(b *SystemBackend) func(context.Context) {
 		return nil
 	}
+
+	sysActivityLogReporting = func(b *SystemBackend) {}
 
 	getSystemSchemas = func() []func() *memdb.TableSchema { return nil }
 
@@ -263,7 +266,7 @@ var (
 
 		return paths
 	}
-	handleGlobalPluginReload = func(context.Context, *Core, string, string, []string) error {
+	handleGlobalPluginReload = func(context.Context, *Core, pluginReloadRequest) error {
 		return nil
 	}
 	handleSetupPluginReload = func(*Core) error {
@@ -276,6 +279,16 @@ var (
 	}
 	checkRaw = func(b *SystemBackend, path string) error { return nil }
 )
+
+// Contains the config for a global plugin reload
+type pluginReloadRequest struct {
+	Type       string            `json:"type"` // Either 'plugins' or 'mounts'
+	PluginType consts.PluginType `json:"plugin_type"`
+	Subjects   []string          `json:"subjects"`  // The plugin names or mount points for the reload
+	ReloadID   string            `json:"reload_id"` // a UUID for the request
+	Timestamp  time.Time         `json:"timestamp"`
+	Namespace  *namespace.Namespace
+}
 
 // tuneMount is used to set config on a mount point
 func (b *SystemBackend) tuneMountTTLs(ctx context.Context, path string, me *MountEntry, newDefault, newMax time.Duration) error {

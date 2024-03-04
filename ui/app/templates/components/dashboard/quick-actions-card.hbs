@@ -40,25 +40,34 @@
       />
 
       {{#if this.searchSelectParams.model}}
-        <h4 class="title is-6" data-test-card-subtitle="param">{{this.searchSelectParams.title}}</h4>
+        {{! use special input to allow searching for KVv2 secrets inside a directory }}
+        {{#if (eq this.selectedEngine.type "kv")}}
+          <KvSuggestionInput
+            @label="Secret Path"
+            @value={{this.paramValue}}
+            @mountPath={{this.selectedEngine.id}}
+            @onChange={{fn (mut this.paramValue)}}
+          />
+        {{else}}
+          <h4 class="title is-6" data-test-card-subtitle="param">{{this.searchSelectParams.title}}</h4>
 
-        <SearchSelect
-          class="is-flex-grow-1"
-          @selectLimit="1"
-          @models={{array this.searchSelectParams.model}}
-          @placeholder={{this.searchSelectParams.placeholder}}
-          @disallowNewItems={{true}}
-          @onChange={{this.handleActionSelect}}
-          @fallbackComponent="input-search"
-          @disabled={{not this.searchSelectParams.model}}
-          @nameKey={{this.searchSelectParams.nameKey}}
-          @queryObject={{this.searchSelectParams.queryObject}}
-          @objectKeys={{this.searchSelectParams.objectKeys}}
-          @passObject={{true}}
-          @shouldRenderName={{this.searchSelectParams.nameKey}}
-          data-test-search-select="params"
-        />
-
+          <SearchSelect
+            class="is-flex-grow-1"
+            @selectLimit="1"
+            @models={{array this.searchSelectParams.model}}
+            @placeholder={{this.searchSelectParams.placeholder}}
+            @disallowNewItems={{true}}
+            @onChange={{this.handleActionSelect}}
+            @fallbackComponent="input-search"
+            @disabled={{not this.searchSelectParams.model}}
+            @nameKey={{this.searchSelectParams.nameKey}}
+            @queryObject={{this.searchSelectParams.queryObject}}
+            @objectKeys={{this.searchSelectParams.objectKeys}}
+            @passObject={{true}}
+            @shouldRenderName={{this.searchSelectParams.nameKey}}
+            data-test-search-select="params"
+          />
+        {{/if}}
         <div>
           <Hds::Button
             @text={{this.searchSelectParams.buttonText}}
@@ -83,9 +92,12 @@
       @message="Access secret engine actions easily. Enable a compatible secret engine (such as database, KV version 2, or PKI) to get started."
       data-test-empty-state="quick-actions"
     >
-      <div>
-        <LinkTo @route="vault.cluster.settings.mount-secret-backend">Enable a secret engine</LinkTo>
-      </div>
+      <Hds::Link::Standalone
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        @text="Enable a secrets engine"
+        @route="vault.cluster.settings.mount-secret-backend"
+      />
     </EmptyState>
   {{/if}}
 </Hds::Card::Container>

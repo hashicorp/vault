@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -110,10 +112,8 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 		// add the HTTP request to the logical request object for later consumption.
 		contentType := r.Header.Get("Content-Type")
 
-		if ra != nil && ra.IsBinaryPath(r.Context(), path) {
-			passHTTPReq = true
-			origBody = r.Body
-		} else if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" {
+		if (ra != nil && ra.IsBinaryPath(r.Context(), path)) ||
+			path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" {
 			passHTTPReq = true
 			origBody = r.Body
 		} else {
@@ -194,6 +194,11 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 		return nil, nil, http.StatusMethodNotAllowed, nil
 	}
 
+	// RFC 5785 Redirect, keep the request for auditing purposes
+	if r.URL.Path != r.RequestURI {
+		passHTTPReq = true
+	}
+
 	requestId, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, nil, http.StatusInternalServerError, fmt.Errorf("failed to generate identifier for the request: %w", err)
@@ -206,6 +211,10 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 		Data:       data,
 		Connection: getConnection(r),
 		Headers:    r.Header,
+	}
+
+	if ra != nil && ra.IsLimitedPath(r.Context(), path) {
+		req.PathLimited = true
 	}
 
 	if passHTTPReq {
@@ -358,9 +367,11 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 			nsPath = ""
 		}
 		if strings.HasPrefix(r.URL.Path, fmt.Sprintf("/v1/%ssys/events/subscribe/", nsPath)) {
-			handler := handleEventsSubscribe(core, req)
-			handler.ServeHTTP(w, r)
-			return
+			handler := entHandleEventsSubscribe(core, req)
+			if handler != nil {
+				handler.ServeHTTP(w, r)
+				return
+			}
 		}
 		handler := handleEntPaths(nsPath, core, r)
 		if handler != nil {
@@ -375,6 +386,9 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 		// success.
 		resp, ok, needsForward := request(core, w, r, req)
 		switch {
+		case errors.Is(resp.Error(), limits.ErrCapacity):
+			respondError(w, http.StatusServiceUnavailable, limits.ErrCapacity)
+			return
 		case needsForward && noForward:
 			respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
 			return

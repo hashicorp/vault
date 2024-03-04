@@ -7,8 +7,9 @@
 // individual lookup done in mirage config
 import base from './base';
 import chrootNamespace from './chroot-namespace';
+import customMessages from './custom-messages';
 import clients from './clients';
-import db from './db';
+import database from './database';
 import hcpLink from './hcp-link';
 import kms from './kms';
 import kubernetes from './kubernetes';
@@ -23,7 +24,7 @@ export {
   base,
   chrootNamespace,
   clients,
-  db,
+  database,
   hcpLink,
   kms,
   kubernetes,
@@ -32,5 +33,6 @@ export {
   mfaLogin,
   oidcConfig,
   reducedDisclosure,
+  customMessages,
   sync,
 };

@@ -143,7 +143,7 @@ module('Integration | Component | dashboard/quick-actions-card', function (hooks
     await selectChoose(SELECTORS.searchSelect('secrets-engines'), 'kv-v2-test');
     assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
     await fillIn(SELECTORS.selectEl, 'Find KV secrets');
-    assert.dom(SELECTORS.subtitle('param')).hasText('Secret path');
+    assert.dom(SELECTORS.kvSearchSelect).exists('Shows option to search fo KVv2 secret');
     assert.dom(SELECTORS.actionButton('Read secrets')).exists({ count: 1 });
   });
 });

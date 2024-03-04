@@ -12,6 +12,7 @@ export default class SyncAssociationSerializer extends ApplicationSerializer {
     destinationType: { serialize: false },
     syncStatus: { serialize: false },
     updatedAt: { serialize: false },
+    subKey: { serialize: false },
   };
 
   extractLazyPaginatedData(payload) {
@@ -20,7 +21,7 @@ export default class SyncAssociationSerializer extends ApplicationSerializer {
       const secrets = [];
       for (const key in associated_secrets) {
         const data = associated_secrets[key];
-        data.id = key;
+        data.id = `${data.mount}/${data.secret_name}`;
         const association = {
           destinationName: store_name,
           destinationType: store_type,

@@ -1,0 +1,119 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if (gt @byMonthActivityData.length 1)}}
+  <Clients::ChartContainer
+    @title="Vault client counts"
+    @description="The total clients in the specified date range. This includes entity, non-entity, and secrets sync clients. The total client count number is an important consideration for Vault billing."
+    @timestamp={{@responseTimestamp}}
+    @hasChartData={{true}}
+    data-test-chart="running total"
+  >
+    <:subTitle>
+      <StatText
+        @label="Running client total"
+        @subText="The number of clients which interacted with Vault during this date range."
+        @value={{@runningTotals.clients}}
+        @size="l"
+      />
+    </:subTitle>
+
+    <:stats>
+      <div class="data-details-top has-top-padding-l">
+        <div class="is-flex-row">
+          <StatText
+            @label="Entity clients"
+            @value={{@runningTotals.entity_clients}}
+            @size="m"
+            data-test-chart-stat="running total entity"
+          />
+          <StatText
+            @label="Secrets sync clients"
+            @value={{@runningTotals.secret_syncs}}
+            @size="m"
+            class="has-left-margin-l"
+            data-test-chart-stat="running total sync"
+          />
+        </div>
+      </div>
+      <StatText
+        @label="Non-entity clients"
+        @value={{@runningTotals.non_entity_clients}}
+        @size="m"
+        class="data-details-bottom"
+        data-test-chart-stat="running total sync"
+      />
+    </:stats>
+
+    <:chart>
+      <Clients::Charts::Line @dataset={{@byMonthActivityData}} @upgradeData={{@upgradeData}} @chartHeight="250" />
+    </:chart>
+  </Clients::ChartContainer>
+{{else}}
+  {{#let (get @byMonthActivityData "0") as |singleMonthData|}}
+    {{#if (and @isHistoricalMonth singleMonthData.new_clients.clients)}}
+      <div class="chart-wrapper single-month-grid" data-test-running-total="single-month-stats">
+        <div class="chart-header has-bottom-margin-sm">
+          <h2 class="chart-title">Vault client counts</h2>
+          <p class="chart-description">
+            The total billable clients in the specified date range. This includes entity, non-entity, and secrets sync
+            clients. The total client count number is an important consideration for Vault billing.
+          </p>
+        </div>
+        <div class="single-month-stats" data-test-new>
+          <div class="single-month-section-title">
+            <StatText
+              @label="New clients"
+              @subText="This is the number of clients which were created in Vault for the first time in the selected month."
+              @value={{singleMonthData.new_clients.clients}}
+              @size="l"
+            />
+          </div>
+          <div class="single-month-breakdown-entity">
+            <StatText @label="Entity clients" @value={{singleMonthData.new_clients.entity_clients}} @size="m" />
+          </div>
+          <div class="single-month-breakdown-nonentity">
+            <StatText @label="Non-entity clients" @value={{singleMonthData.new_clients.non_entity_clients}} @size="m" />
+          </div>
+          <div class="single-month-breakdown-sync">
+            <StatText @label="Secrets sync clients" @value={{singleMonthData.new_clients.secret_syncs}} @size="m" />
+          </div>
+        </div>
+        <div class="single-month-stats" data-test-total>
+          <div class="single-month-section-title">
+            <StatText
+              @label="Total monthly clients"
+              @subText="This is the number of total clients which used Vault for the given month, both new and previous."
+              @value={{singleMonthData.clients}}
+              @size="l"
+            />
+          </div>
+          <div class="single-month-breakdown-entity">
+            <StatText @label="Entity clients" @value={{singleMonthData.entity_clients}} @size="m" />
+          </div>
+          <div class="single-month-breakdown-nonentity">
+            <StatText @label="Non-entity clients" @value={{singleMonthData.non_entity_clients}} @size="m" />
+          </div>
+          <div class="single-month-breakdown-sync">
+            <StatText @label="Secrets sync clients" @value={{singleMonthData.secret_syncs}} @size="m" />
+          </div>
+        </div>
+      </div>
+    {{else}}
+      {{! This renders when either:
+    -> viewing the current month and all namespaces (no filters)
+    -> filtering by a namespace with no month over month data
+    if filtering by a mount with no month over month data <UsageStats> in dashboard.hbs renders }}
+      <Clients::UsageStats
+        @title="Total usage"
+        @description="These totals are within this namespace and all its children. {{if
+          @isCurrentMonth
+          "Only totals are available when viewing the current month. To see a breakdown of new and total clients for this month, select the 'Current billing period' filter."
+        }}"
+        @totalUsageCounts={{@runningTotals}}
+      />
+    {{/if}}
+  {{/let}}
+{{/if}}

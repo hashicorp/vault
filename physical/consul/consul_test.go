@@ -159,6 +159,10 @@ func TestConsul_newConsulBackend(t *testing.T) {
 		// if test.max_parallel != cap(c.permitPool) {
 		// 	t.Errorf("bad: %v != %v", test.max_parallel, cap(c.permitPool))
 		// }
+
+		maxEntries, maxBytes := be.(physical.TransactionalLimits).TransactionLimits()
+		require.Equal(t, 63, maxEntries)
+		require.Equal(t, 128*1024, maxBytes)
 	}
 }
 

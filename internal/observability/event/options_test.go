@@ -324,12 +324,12 @@ func TestOptions_WithMaxDuration(t *testing.T) {
 		"bad-value": {
 			Value:                "juan",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "time: invalid duration \"juan\"",
+			ExpectedErrorMessage: "unable to parse max duration: time: invalid duration \"juan\"",
 		},
 		"bad-spacey-value": {
 			Value:                "   juan   ",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "time: invalid duration \"juan\"",
+			ExpectedErrorMessage: "unable to parse max duration: time: invalid duration \"juan\"",
 		},
 		"duration-2s": {
 			Value:         "2s",

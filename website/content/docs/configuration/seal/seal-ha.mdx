@@ -9,25 +9,22 @@ description: |-
 
 <EnterpriseAlert product="vault" />
 
-@include 'alerts/beta.mdx'
-
-[Seal High Availability](/vault/docs/concepts/seal#seal-high-availability-enterprise-beta) 
+[Seal High Availability](/vault/docs/concepts/seal#seal-high-availability-enterprise) 
 provides the means to configure at least two auto-seals (and no more than three)
 in order to have resilience against outage of a seal service or mechanism.   
 
 Using Seal HA involves configuring extra seals in Vault's server configuration file
-and restarting Vault, after having enabled the Seal HA beta feature by setting
-the environment variable:
+and restarting Vault or triggering a reload of it's configuration via sending
+it the SIGHUP signal.
 
-`VAULT_ENABLE_SEAL_HA_BETA=true`
-
-Before using Seal HA, one must have upgraded to Vault 1.15 or higher and
-started with the environment variable and a single seal.
+Before using Seal HA, one must have upgraded to Vault 1.16 or higher.
 
 ## Adding and Removing Seals
 
-Seal HA adds two new fields to the seal configuration stanza, `name`, and
-`priority`:
+In order to use Seal HA, there must be more than one defined [`seal` stanza](/vault/docs/configuration/seal) 
+in Vault's configuration.
+
+Seal HA adds two fields to these stanzas, `name`, and `priority`:
 
 ```hcl
 seal [TYPE] {
@@ -48,6 +45,21 @@ in the case more than one seal can unwrap a seal wrapped value, the order
 in which to attempt decryption, and which order to attempt to source entropy
 for entropy augmentation.  This can be useful if your seals have different
 performance or cost characteristics.
+
+Here is a hypothetical configuration for an [AWS seal](/vault/docs/configuration/seal/awskms) 
+compatible with Seal HA:
+
+```hcl
+seal "awskms" {
+  name       = "aws-east"
+  priority   = "1"
+
+  region     = "us-east-1"
+  access_key = "AKIAIOSFODNN7EXAMPLE"
+  secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+  kms_key_id = "19ec80b0-dfdd-4d97-8164-c6examplekey"
+}
+```
 
 All configured, healthy seals are used to seal wrap values.  This means that
 for every write of a seal wrapped value or CSP, an encryption is requested
@@ -71,6 +83,23 @@ any seal configuration change.
 
 Once Vault unseals with the new seal configuration, it will be available to process
 traffic even as re-wrapping proceeds.
+
+Here is a partial snippet of a two seal HA setup, using an AWS KMS seal as
+the primary (highest priority) seal, and a Azure KMS seal as well:
+
+```
+seal "awskms" {
+  name = "AWS"
+  priority = "1"
+  # ...
+}
+
+seal "azurekeyvault" {
+  name = "Azure"
+  priority = "2"
+  # ...
+}
+```
 
 ### Safety checks
 
