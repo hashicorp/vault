@@ -132,7 +132,7 @@ func (c *OperatorUsageCommand) Run(args []string) int {
 	c.outputTimestamps(resp.Data)
 
 	out := []string{
-		"Namespace path | Distinct entities | Non-Entity tokens | Active clients",
+		"Namespace path | Distinct entities | Non-Entity tokens | Secret syncs | Active clients",
 	}
 
 	out = append(out, c.namespacesOutput(resp.Data)...)
@@ -196,8 +196,8 @@ type UsageResponse struct {
 	entityCount   int64
 	// As per 1.9, the tokenCount field will contain the distinct non-entity
 	// token clients instead of each individual token.
-	tokenCount int64
-
+	tokenCount  int64
+	secretSyncs int64
 	clientCount int64
 }
 
@@ -242,6 +242,9 @@ func (c *OperatorUsageCommand) parseNamespaceCount(rawVal interface{}) (UsageRes
 		return ret, errors.New("missing non_entity_tokens")
 	}
 
+	// don't error if the secret syncs key is missing
+	ret.secretSyncs, _ = jsonNumberOK(counts, "secret_syncs")
+
 	ret.clientCount, ok = jsonNumberOK(counts, "clients")
 	if !ok {
 		return ret, errors.New("missing clients")
@@ -274,8 +277,8 @@ func (c *OperatorUsageCommand) namespacesOutput(data map[string]interface{}) []s
 			sortOrder = "2" + val.namespacePath
 		}
 
-		formattedLine := fmt.Sprintf("%s | %d | %d | %d",
-			val.namespacePath, val.entityCount, val.tokenCount, val.clientCount)
+		formattedLine := fmt.Sprintf("%s | %d | %d | %d | %d",
+			val.namespacePath, val.entityCount, val.tokenCount, val.secretSyncs, val.clientCount)
 		nsOut = append(nsOut, UsageCommandNamespace{
 			formattedLine: formattedLine,
 			sortOrder:     sortOrder,
@@ -296,7 +299,7 @@ func (c *OperatorUsageCommand) namespacesOutput(data map[string]interface{}) []s
 
 func (c *OperatorUsageCommand) totalOutput(data map[string]interface{}) []string {
 	// blank line separating it from namespaces
-	out := []string{"  |  |  |  "}
+	out := []string{"  |  |  |  |  "}
 
 	total, ok := data["total"].(map[string]interface{})
 	if !ok {
@@ -315,13 +318,16 @@ func (c *OperatorUsageCommand) totalOutput(data map[string]interface{}) []string
 		c.UI.Error("missing non_entity_tokens in total")
 		return out
 	}
+	// don't error if secret syncs key is missing
+	secretSyncs, _ := jsonNumberOK(total, "secret_syncs")
+
 	clientCount, ok := jsonNumberOK(total, "clients")
 	if !ok {
 		c.UI.Error("missing clients in total")
 		return out
 	}
 
-	out = append(out, fmt.Sprintf("Total | %d | %d | %d",
-		entityCount, tokenCount, clientCount))
+	out = append(out, fmt.Sprintf("Total | %d | %d | %d | %d",
+		entityCount, tokenCount, secretSyncs, clientCount))
 	return out
 }
