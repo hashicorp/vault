@@ -58,6 +58,7 @@ Vagrantfile
 !command/agent/config/test-fixtures/*.hcl
 !command/server/test-fixtures/**/*.hcl
 !enos/**/*.hcl
+!**/testdata/*.hcl
 
 # Enos
 .enos
