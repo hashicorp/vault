@@ -6,10 +6,10 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render, click, settled } from '@ember/test-helpers';
+import { render, click, settled, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import clientsHandler from 'vault/mirage/handlers/clients';
-import { getUnixTime } from 'date-fns';
+import { addMonths, getUnixTime, fromUnixTime } from 'date-fns';
 import { SELECTORS as ts, dateDropdownSelect } from 'vault/tests/helpers/clients';
 import { selectChoose } from 'ember-power-select/test-support/helpers';
 import timestamp from 'core/utils/timestamp';
@@ -38,6 +38,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     this.config = await store.queryRecord('clients/config', {});
     this.startTimestamp = START_TIME;
     this.endTimestamp = END_TIME;
+    this.versionHistory = [];
     this.renderComponent = () =>
       render(hbs`
       <Clients::Page::Counts
@@ -194,6 +195,67 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       .hasText(
         'You requested data from June 2022. We only have data from October 2023, and that is what is being shown here.',
         'Start discrepancy alert renders'
+      );
+  });
+
+  test('it renders alert if upgrade happened within queried activity', async function (assert) {
+    assert.expect(4);
+    // noteworthy releases: 1.9, 1.10
+    const startDate = fromUnixTime(START_TIME);
+    this.versionHistory = [
+      {
+        version: '1.9.0',
+        previousVersion: null,
+        timestampInstalled: addMonths(startDate, 1).toISOString(),
+      },
+      {
+        version: '1.9.1',
+        previousVersion: '1.9.0',
+        timestampInstalled: addMonths(startDate, 2).toISOString(),
+      },
+      {
+        version: '1.10.1',
+        previousVersion: '1.9.1',
+        timestampInstalled: addMonths(startDate, 3).toISOString(),
+      },
+      {
+        version: '1.14.4',
+        previousVersion: '1.10.1',
+        timestampInstalled: addMonths(startDate, 4).toISOString(),
+      },
+      {
+        version: '1.16.0',
+        previousVersion: '1.14.4',
+        timestampInstalled: addMonths(startDate, 5).toISOString(),
+      },
+    ];
+
+    await this.renderComponent();
+    assert
+      .dom(ts.upgradeWarning)
+      .hasTextContaining(
+        `Client count data contains 2 upgrades Vault was upgraded during this time period. Keep this in mind while looking at the data. Visit our Client count FAQ for more information.`,
+        'it renders title and subtext'
+      );
+    assert
+      .dom(`${ts.upgradeWarning} ul`)
+      .doesNotHaveTextContaining(
+        '1.9.1',
+        'Warning does not include subsequent patch releases (e.g. 1.9.1) of the same notable upgrade.'
+      );
+    const [first, second] = findAll(`${ts.upgradeWarning} li`);
+    assert
+      .dom(first)
+      .hasText(
+        `1.9.0 (upgraded on Oct 31, 2023) - We introduced changes to non-entity token and local auth mount logic for client counting in 1.9.`,
+        'alert includes 1.9.0 upgrade'
+      );
+
+    assert
+      .dom(second)
+      .hasTextContaining(
+        `1.10.1 (upgraded on Dec 31, 2023) - We added monthly breakdowns and mount level attribution starting in 1.10.`,
+        'alert includes 1.10.1 upgrade'
       );
   });
 
