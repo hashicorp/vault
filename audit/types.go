@@ -5,61 +5,12 @@ package audit
 
 import (
 	"context"
-	"io"
-	"time"
 
-	"github.com/hashicorp/go-bexpr"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
-
-// Audit subtypes.
-const (
-	RequestType  subtype = "AuditRequest"
-	ResponseType subtype = "AuditResponse"
-)
-
-// Audit formats.
-const (
-	JSONFormat  format = "json"
-	JSONxFormat format = "jsonx"
-)
-
-// version defines the version of audit events.
-const version = "v0.1"
-
-// subtype defines the type of audit event.
-type subtype string
-
-// format defines types of format audit events support.
-type format string
-
-// AuditEvent is the audit event.
-type AuditEvent struct {
-	ID        string            `json:"id"`
-	Version   string            `json:"version"`
-	Subtype   subtype           `json:"subtype"` // the subtype of the audit event.
-	Timestamp time.Time         `json:"timestamp"`
-	Data      *logical.LogInput `json:"data"`
-}
-
-// Option is how options are passed as arguments.
-type Option func(*options) error
-
-// options are used to represent configuration for a audit related nodes.
-type options struct {
-	withID              string
-	withNow             time.Time
-	withSubtype         subtype
-	withFormat          format
-	withPrefix          string
-	withRaw             bool
-	withElision         bool
-	withOmitTime        bool
-	withHMACAccessor    bool
-	withHeaderFormatter HeaderFormatter
-}
 
 // Salter is an interface that provides a way to obtain a Salt for hashing.
 type Salter interface {
@@ -76,15 +27,6 @@ type Formatter interface {
 	FormatResponse(context.Context, *logical.LogInput) (*ResponseEntry, error)
 }
 
-// Writer is an interface that provides a way to write request and response audit entries.
-// Formatters write their output to an io.Writer.
-type Writer interface {
-	// WriteRequest writes the request entry to the writer or returns an error.
-	WriteRequest(io.Writer, *RequestEntry) error
-	// WriteResponse writes the response entry to the writer or returns an error.
-	WriteResponse(io.Writer, *ResponseEntry) error
-}
-
 // HeaderFormatter is an interface defining the methods of the
 // vault.AuditedHeadersConfig structure needed in this package.
 type HeaderFormatter interface {
@@ -92,21 +34,6 @@ type HeaderFormatter interface {
 	// intersection of the provided set of header values with a configured
 	// set of headers and will hash headers that have been configured as such.
 	ApplyConfig(context.Context, map[string][]string, Salter) (map[string][]string, error)
-}
-
-// EntryFormatter should be used to format audit requests and responses.
-type EntryFormatter struct {
-	salter          Salter
-	headerFormatter HeaderFormatter
-	config          FormatterConfig
-	prefix          string
-}
-
-// EntryFormatterWriter should be used to format and write out audit requests and responses.
-type EntryFormatterWriter struct {
-	Formatter
-	Writer
-	config FormatterConfig
 }
 
 // FormatterConfig is used to provide basic configuration to a formatter.
@@ -142,13 +69,6 @@ type FormatterConfig struct {
 
 	// The required/target format for the event (supported: JSONFormat and JSONxFormat).
 	RequiredFormat format
-}
-
-// EntryFilter should be used to filter audit requests and responses which should
-// make it to a sink.
-type EntryFilter struct {
-	// the evaluator for the bexpr expression that should be applied by the node.
-	evaluator *bexpr.Evaluator
 }
 
 // RequestEntry is the structure of a request audit log entry.
@@ -312,6 +232,9 @@ type BackendConfig struct {
 
 	// MountPath is the path where this Backend is mounted
 	MountPath string
+
+	// Logger is used to emit log messages usually captured in the server logs.
+	Logger hclog.Logger
 }
 
 // Factory is the factory function to create an audit backend.

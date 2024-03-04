@@ -177,6 +177,10 @@ This endpoint enables a new secrets engine at the given path.
   - `delegated_auth_accessors` `(array: [])` - List of allowed authentication mount
     accessors the backend can request delegated authentication for.
 
+  - `identity_token_key` `(string: "")` - The key to use for signing plugin workload
+    identity tokens. If not provided, this will default to Vault's OIDC
+    [default key](/vault/docs/concepts/oidc-provider#keys).
+
 - `options` `(map<string|string>: nil)` - Specifies mount type specific options
   that are passed to the backend.
 

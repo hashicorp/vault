@@ -8,6 +8,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { click, visit, fillIn, currentRouteName } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/config-ui/message-selectors';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+
 import authPage from 'vault/tests/pages/auth';
 import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
 import { format, addDays, startOfDay } from 'date-fns';
@@ -50,6 +51,7 @@ const unauthenticatedMessageResponse = {
   mount_type: '',
 };
 
+// custom messages is an enterprise feature, but since we're using mirage enterprise is omitted from the module name.
 module('Acceptance | auth custom messages auth tests', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);

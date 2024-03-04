@@ -35,13 +35,17 @@ export default Route.extend(ModelBoundaryRoute, {
     this.flashMessages.clearMessages();
     this.permissions.reset();
     this.version.version = null;
-    this.customMessages.clearCustomMessages();
+
+    if (this.version.isEnterprise) {
+      this.customMessages.clearCustomMessages();
+    }
 
     queryParams.with = authType;
     if (ns) {
       queryParams.namespace = ns;
     }
     if (Ember.testing) {
+      // TODO: cleanup this replaceWith instance. Using router.replaceWith causes test failures
       // Don't redirect on the test
       this.replaceWith('vault.cluster.auth', { queryParams });
     } else {

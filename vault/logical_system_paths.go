@@ -739,12 +739,12 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 
 func (b *SystemBackend) rekeyPaths() []*framework.Path {
 	respFields := map[string]*framework.FieldSchema{
-		"nounce": {
+		"nonce": {
 			Type:     framework.TypeString,
 			Required: true,
 		},
 		"started": {
-			Type:     framework.TypeString,
+			Type:     framework.TypeBool,
 			Required: true,
 		},
 		"t": {
@@ -984,7 +984,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"nounce": {
+								"nonce": {
 									Type:     framework.TypeString,
 									Required: true,
 								},
@@ -992,7 +992,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 									Type: framework.TypeBool,
 								},
 								"started": {
-									Type: framework.TypeString,
+									Type: framework.TypeBool,
 								},
 								"t": {
 									Type: framework.TypeInt,
@@ -1061,12 +1061,12 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"nounce": {
+								"nonce": {
 									Type:     framework.TypeString,
 									Required: true,
 								},
 								"started": {
-									Type:     framework.TypeString,
+									Type:     framework.TypeBool,
 									Required: true,
 								},
 								"t": {
@@ -1094,12 +1094,12 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"nounce": {
+								"nonce": {
 									Type:     framework.TypeString,
 									Required: true,
 								},
 								"started": {
-									Type:     framework.TypeString,
+									Type:     framework.TypeBool,
 									Required: true,
 								},
 								"t": {
@@ -1128,7 +1128,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"nounce": {
+								"nonce": {
 									Type:     framework.TypeString,
 									Required: true,
 								},
@@ -5197,6 +5197,101 @@ func (b *SystemBackend) eventPaths() []*framework.Path {
 			},
 			// HelpSynopsis:    strings.TrimSpace(sysHelp["unlock_user"][0]),
 			// HelpDescription: strings.TrimSpace(sysHelp["unlock_user"][1]),
+		},
+	}
+}
+
+func (b *SystemBackend) wellKnownPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "well-known/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "well-known",
+				OperationVerb:   "list",
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleWellKnownList(),
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:     framework.TypeStringSlice,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handleWellKnownList(),
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:     framework.TypeStringSlice,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["well-known-list"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["well-known-list"][1]),
+		},
+		{
+			Pattern: "well-known/(?P<label>.+)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "well-known",
+				OperationSuffix: "label",
+			},
+
+			Fields: map[string]*framework.FieldSchema{
+				"label": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["well-known-label"][0]),
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleWellKnownRead(),
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"label": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"mount_uuid": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"mount_path": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"prefix": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
+					Summary: "Retrieve the associated mount information for a registered well-known label.",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["well-known"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["well-known"][1]),
 		},
 	}
 }
