@@ -38,8 +38,8 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/mlock"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
-	"github.com/hashicorp/vault/api/cliconfig"
 	"github.com/hashicorp/vault/audit"
+	config2 "github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/constants"
@@ -3293,7 +3293,7 @@ func startHttpServers(c *ServerCommand, core *vault.Core, config *server.Config,
 			return fmt.Errorf("Found nil listener config after parsing")
 		}
 
-		if err := cliconfig.IsValidListener(ln.Config.TLSDisable); err != nil {
+		if err := config2.IsValidListener(ln.Config); err != nil {
 			return err
 		}
 
