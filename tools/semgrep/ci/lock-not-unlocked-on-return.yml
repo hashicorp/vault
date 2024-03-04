@@ -89,6 +89,10 @@ rules:
            ...
            return ...
          }
+      # Another lock object that returns an error
+      - pattern-not: |
+         $ERR = $LOCK.Lock()
+         ...
       # deferred unlock with release function
       - pattern-not: |
          $LOCK.Lock()
