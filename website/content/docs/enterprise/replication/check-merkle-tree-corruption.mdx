@@ -7,7 +7,7 @@ description: >-
 
 # Check for Merkle tree corruption
 
-@include 'alerts/enterprise-and-hcp.mdx'
+@include 'alerts/enterprise-only.mdx'
 
 Vault Enterprise replication uses Merkle trees to keep the cluster state, and rolls cluster state into a Merkle root hash. When data is updated or removed in a cluster, the Merkle tree is also updated. In certain circumstances detailed later in this document, the Merkle tree can become corrupted.
 
