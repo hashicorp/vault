@@ -78,7 +78,9 @@ vault [TRACE] .perf-pri.core0.core: serving conflicting pages
 In the example log output, the performance secondary cluster's finite state machine (FSM) is entering merkle-diff mode, in which it tries to fetch conflicting pages from the primary cluster. The diff result is empty, indicated by an immediate switch to the stream-wals mode and **skipping the merkle-sync operation**. 
 
 Further into the log, the performance secondary cluster immediately goes into the merkle-diff mode again trying to reconcile the discrepancies of its Merkle tree with the primary cluster. This loop goes on without resolution due to the Merkle tree corruption.
-Non resolving merkle-sync
+
+### Non resolving merkle-sync
+
 When a diff operation reveals conflicting data and the sync operation fetches them, but Vault still cannot enter lasting streaming WALs mode afterwards, this indicates a non-matching Merkle roots condition.
 
 In the following server log snippet, merkle-diff returns a non-empty list of page conflicts and merkle-sync fetches those keys. The FSM then transitions to the stream-wals state. Immediately after this transition, the FSM transitions to the merkle-diff again, and returns a **non-matching guard** error.
