@@ -4,7 +4,7 @@
  */
 
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { compareAsc, getUnixTime, isAfter, isBefore, isSameDay } from 'date-fns';
+import { compareAsc, getUnixTime, isWithinInterval } from 'date-fns';
 
 // returns array of VersionHistoryModels for noteworthy upgrades (1.9, 1.10, 1.16)
 // that occurred between timestamps (i.e. queried activity data)
@@ -28,9 +28,7 @@ export const filterVersionHistory = (versionHistory, start, end) => {
       const endDate = parseAPITimestamp(end);
       return upgrades.filter(({ timestampInstalled }) => {
         const upgradeDate = parseAPITimestamp(timestampInstalled);
-        const isBetween = isAfter(upgradeDate, startDate) && isBefore(upgradeDate, endDate);
-        const isSameDate = isSameDay(upgradeDate, startDate) || isSameDay(upgradeDate, endDate);
-        return isBetween || isSameDate;
+        return isWithinInterval(upgradeDate, { start: startDate, end: endDate });
       });
     }
   }
