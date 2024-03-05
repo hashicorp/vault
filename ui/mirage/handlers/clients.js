@@ -4,25 +4,25 @@
  */
 
 import {
-  isBefore,
-  startOfMonth,
-  endOfMonth,
   addMonths,
-  subMonths,
   differenceInCalendarMonths,
+  endOfMonth,
+  formatRFC3339,
   fromUnixTime,
   isAfter,
-  formatRFC3339,
+  isBefore,
+  isSameMonth,
+  isWithinInterval,
+  startOfMonth,
+  subMonths,
 } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
-export const STATIC_START = new Date('2023-10-01T00:00:00Z');
+export const LICENSE_START = new Date('2023-07-02T00:00:00Z');
 export const STATIC_NOW = new Date('2024-01-25T23:59:59Z');
-const COUNTS_START = subMonths(STATIC_NOW, 12); // pretend vault user started cluster 12 months ago
-// for testing, we're in the middle of a license/billing period
-export const LICENSE_START = startOfMonth(subMonths(STATIC_NOW, 6));
-// upgrade happened 1 month after license start
-export const UPGRADE_DATE = addMonths(LICENSE_START, 1);
+const COUNTS_START = subMonths(STATIC_NOW, 12); // user started Vault cluster on 2023-01-25
+// upgrade happened 2 month after license start
+export const UPGRADE_DATE = addMonths(LICENSE_START, 2); // monthly attribution added
 
 function getSum(array, key) {
   return array.reduce((sum, { counts }) => sum + counts[key], 0);
@@ -105,39 +105,40 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
 }
 
 function generateMonths(startDate, endDate, namespaces) {
-  const startDateObject = startOfMonth(parseAPITimestamp(startDate));
-  const endDateObject = startOfMonth(parseAPITimestamp(endDate));
+  const startDateObject = parseAPITimestamp(startDate);
+  const endDateObject = parseAPITimestamp(endDate);
   const numberOfMonths = differenceInCalendarMonths(endDateObject, startDateObject) + 1;
   const months = [];
-  if (isBefore(startDateObject, UPGRADE_DATE) && isBefore(endDateObject, UPGRADE_DATE)) {
-    // months block is empty if dates do not span an upgrade
-    return [];
-  }
-  for (let i = 0; i < numberOfMonths; i++) {
-    const month = addMonths(startDateObject, i);
-    const hasNoData = isBefore(month, UPGRADE_DATE);
-    if (hasNoData) {
+
+  // only generate monthly block if queried dates span an upgrade
+  if (isWithinInterval(UPGRADE_DATE, { start: startDateObject, end: endDateObject })) {
+    for (let i = 0; i < numberOfMonths; i++) {
+      const month = addMonths(startOfMonth(startDateObject), i);
+      const hasNoData = isBefore(month, UPGRADE_DATE) && !isSameMonth(month, UPGRADE_DATE);
+      if (hasNoData) {
+        months.push({
+          timestamp: formatRFC3339(month),
+          counts: null,
+          namespaces: null,
+          new_clients: null,
+        });
+        continue;
+      }
+
+      const monthNs = namespaces.map((ns, idx) => generateNamespaceBlock(idx, false, ns));
+      const newClients = namespaces.map((ns, idx) => generateNamespaceBlock(idx, true, ns));
       months.push({
         timestamp: formatRFC3339(month),
-        counts: null,
-        namespaces: null,
-        new_clients: null,
+        counts: getTotalCounts(monthNs),
+        namespaces: monthNs.sort((a, b) => b.counts.clients - a.counts.clients),
+        new_clients: {
+          counts: getTotalCounts(newClients),
+          namespaces: newClients.sort((a, b) => b.counts.clients - a.counts.clients),
+        },
       });
-      continue;
     }
-
-    const monthNs = namespaces.map((ns, idx) => generateNamespaceBlock(idx, false, ns));
-    const newClients = namespaces.map((ns, idx) => generateNamespaceBlock(idx, true, ns));
-    months.push({
-      timestamp: formatRFC3339(month),
-      counts: getTotalCounts(monthNs),
-      namespaces: monthNs.sort((a, b) => b.counts.clients - a.counts.clients),
-      new_clients: {
-        counts: getTotalCounts(newClients),
-        namespaces: newClients.sort((a, b) => b.counts.clients - a.counts.clients),
-      },
-    });
   }
+
   return months;
 }
 
@@ -209,30 +210,30 @@ export default function (server) {
             // we don't currently use build_date, including for accuracy. it's only tracked in versions >= 1.110
             build_date: null,
             previous_version: null,
-            timestamp_installed: addMonths(STATIC_START, 1).toISOString(),
+            timestamp_installed: LICENSE_START.toISOString(),
           },
           '1.9.1': {
             build_date: null,
             previous_version: '1.9.0',
-            timestamp_installed: addMonths(STATIC_START, 2).toISOString(),
+            timestamp_installed: addMonths(LICENSE_START, 1).toISOString(),
           },
           // auth mount attribution added in 1.10.0
           '1.10.1': {
             build_date: null,
             previous_version: '1.9.1',
-            timestamp_installed: addMonths(STATIC_START, 3).toISOString(),
+            timestamp_installed: UPGRADE_DATE.toISOString(),
           },
           // no notable UI changes
           '1.14.4': {
-            build_date: addMonths(STATIC_START, 3).toISOString(),
+            build_date: addMonths(LICENSE_START, 3).toISOString(),
             previous_version: '1.10.1',
-            timestamp_installed: addMonths(STATIC_START, 4).toISOString(),
+            timestamp_installed: addMonths(LICENSE_START, 3).toISOString(),
           },
           // sync clients added
           '1.16.0': {
-            build_date: addMonths(STATIC_START, 4).toISOString(),
+            build_date: addMonths(LICENSE_START, 4).toISOString(),
             previous_version: '1.14.4',
-            timestamp_installed: addMonths(STATIC_START, 5).toISOString(),
+            timestamp_installed: addMonths(LICENSE_START, 4).toISOString(),
           },
         },
       },

@@ -8,14 +8,14 @@ import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, settled, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import clientsHandler, { STATIC_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
+import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { getUnixTime } from 'date-fns';
 import { SELECTORS as ts, dateDropdownSelect } from 'vault/tests/helpers/clients';
 import { selectChoose } from 'ember-power-select/test-support/helpers';
 import timestamp from 'core/utils/timestamp';
 import sinon from 'sinon';
 
-const START_TIME = getUnixTime(STATIC_START);
+const START_TIME = getUnixTime(LICENSE_START);
 const END_TIME = getUnixTime(STATIC_NOW);
 
 module('Integration | Component | clients | Page::Counts', function (hooks) {
@@ -87,10 +87,10 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
   test('it should populate start and end month displays', async function (assert) {
     await this.renderComponent();
 
-    assert.dom(ts.counts.startMonth).hasText('October 2023', 'Start month renders');
+    assert.dom(ts.counts.startMonth).hasText('July 2023', 'Start month renders');
     assert
       .dom(ts.calendarWidget.trigger)
-      .hasText('Oct 2023 - Jan 2024', 'Start and end months render in filter bar');
+      .hasText('Jul 2023 - Jan 2024', 'Start and end months render in filter bar');
   });
 
   test('it should render no data empty state', async function (assert) {
@@ -100,7 +100,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
     assert
       .dom(ts.emptyStateTitle)
-      .hasText('No data received from October 2023 to January 2024', 'No data empty state renders');
+      .hasText('No data received from July 2023 to January 2024', 'No data empty state renders');
   });
 
   test('it should render activity error', async function (assert) {
@@ -192,7 +192,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     assert
       .dom(ts.counts.startDiscrepancy)
       .hasText(
-        'You requested data from June 2022. We only have data from October 2023, and that is what is being shown here.',
+        'You requested data from June 2022. We only have data from July 2023, and that is what is being shown here.',
         'Start discrepancy alert renders'
       );
   });
@@ -227,14 +227,14 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     assert
       .dom(first)
       .hasText(
-        `1.9.0 (upgraded on Nov 1, 2023) - We introduced changes to non-entity token and local auth mount logic for client counting in 1.9.`,
+        `1.9.0 (upgraded on Jul 2, 2023) - We introduced changes to non-entity token and local auth mount logic for client counting in 1.9.`,
         'alert includes 1.9.0 upgrade'
       );
 
     assert
       .dom(second)
       .hasTextContaining(
-        `1.10.1 (upgraded on Dec 31, 2023) - We added monthly breakdowns and mount level attribution starting in 1.10.`,
+        `1.10.1 (upgraded on Sep 2, 2023) - We added monthly breakdowns and mount level attribution starting in 1.10.`,
         'alert includes 1.10.1 upgrade'
       );
   });
@@ -257,6 +257,6 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
     assert
       .dom(ts.emptyStateTitle)
-      .hasText('No data received from October 2023 to January 2024', 'Empty state renders');
+      .hasText('No data received from July 2023 to January 2024', 'Empty state renders');
   });
 });
