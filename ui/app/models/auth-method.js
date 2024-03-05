@@ -68,6 +68,16 @@ export default class AuthMethodModel extends Model {
     return this.local ? 'local' : 'replicated';
   }
 
+  userLockoutConfig = {
+    modelAttrs: [
+      'config.lockoutThreshold',
+      'config.lockoutDuration',
+      'config.lockoutCounterReset',
+      'config.lockoutDisable',
+    ],
+    apiParams: ['lockout_threshold', 'lockout_duration', 'lockout_counter_reset', 'lockout_disable'],
+  };
+
   get tuneAttrs() {
     const { methodType } = this;
     let tuneAttrs;
@@ -75,12 +85,12 @@ export default class AuthMethodModel extends Model {
     if (methodType === 'token') {
       tuneAttrs = [
         'description',
-        'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+        'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders,pluginVersion,lockoutThreshold,lockoutDuration,lockoutCounterReset,lockoutDisable}',
       ];
     } else {
       tuneAttrs = [
         'description',
-        'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+        'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders,pluginVersion,lockoutThreshold,lockoutDuration,lockoutCounterReset,lockoutDisable}',
       ];
     }
     return expandAttributeMeta(this, tuneAttrs);
@@ -94,7 +104,7 @@ export default class AuthMethodModel extends Model {
       'accessor',
       'local',
       'sealWrap',
-      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders,pluginVersion}',
     ];
   }
 
@@ -107,7 +117,7 @@ export default class AuthMethodModel extends Model {
           'config.listingVisibility',
           'local',
           'sealWrap',
-          'config.{defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+          'config.{defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders,pluginVersion}',
         ],
       },
     ];
