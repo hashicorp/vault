@@ -208,6 +208,45 @@ func TestUnitCheckOCSPResponseCache(t *testing.T) {
 	}
 }
 
+func TestUnitZeroValueExpiryOCSPResponse(t *testing.T) {
+	rootCaKey, rootCa, leafCert := createCaLeafCerts(t)
+
+	expiredOcspResponse := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		now := time.Now()
+		ocspRes := ocsp.Response{
+			SerialNumber: big.NewInt(2),
+			ThisUpdate:   now.Add(-1 * time.Hour),
+			Status:       ocsp.Good,
+		}
+		response, err := ocsp.CreateResponse(rootCa, rootCa, ocspRes, rootCaKey)
+		if err != nil {
+			_, _ = w.Write(ocsp.InternalErrorErrorResponse)
+			t.Fatalf("failed generating OCSP response: %v", err)
+		}
+		_, _ = w.Write(response)
+	})
+	ts := httptest.NewServer(expiredOcspResponse)
+	defer ts.Close()
+
+	logFactory := func() hclog.Logger {
+		return hclog.NewNullLogger()
+	}
+	client := New(logFactory, 100)
+
+	ctx := context.Background()
+
+	config := &VerifyConfig{
+		OcspEnabled:         true,
+		OcspServersOverride: []string{ts.URL},
+		OcspFailureMode:     FailOpenFalse,
+		QueryAllServers:     false,
+	}
+
+	status, err := client.GetRevocationStatus(ctx, leafCert, rootCa, config)
+	require.NoError(t, err, "ocsp response should have been considered valid")
+	require.Equal(t, &ocspStatus{code: ocspStatusGood}, status)
+}
+
 func TestUnitExpiredOCSPResponse(t *testing.T) {
 	rootCaKey, rootCa, leafCert := createCaLeafCerts(t)
 

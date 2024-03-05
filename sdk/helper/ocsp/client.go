@@ -162,9 +162,27 @@ func (c *Client) getHashAlgorithmFromOID(target pkix.AlgorithmIdentifier) crypto
 	return crypto.SHA1
 }
 
-// isInValidityRange checks the validity
-func isInValidityRange(currTime, nextUpdate time.Time) bool {
-	return !nextUpdate.IsZero() && !currTime.After(nextUpdate)
+// isInValidityRange checks the validity times of the OCSP response making sure
+// that thisUpdate and nextUpdate values are bounded within currTime
+func isInValidityRange(currTime time.Time, ocspRes *ocsp.Response) bool {
+	thisUpdate := ocspRes.ThisUpdate
+
+	// If the thisUpdate value in the OCSP response wasn't set fail this check
+	if thisUpdate.IsZero() || thisUpdate.After(currTime) {
+		return false
+	}
+
+	nextUpdate := ocspRes.NextUpdate
+	if nextUpdate.IsZero() {
+		// We don't have a nextUpdate field set, assume we are okay.
+		return true
+	}
+
+	if currTime.After(nextUpdate) || thisUpdate.After(nextUpdate) {
+		return false
+	}
+
+	return true
 }
 
 func extractCertIDKeyFromRequest(ocspReq []byte) (*certIDKey, *ocspStatus) {
@@ -241,7 +259,7 @@ func validateOCSP(ocspRes *ocsp.Response) (*ocspStatus, error) {
 	if ocspRes == nil {
 		return nil, errors.New("OCSP Response is nil")
 	}
-	if !isInValidityRange(curTime, ocspRes.NextUpdate) {
+	if !isInValidityRange(curTime, ocspRes) {
 		return &ocspStatus{
 			code: ocspInvalidValidity,
 			err:  fmt.Errorf("invalid validity: producedAt: %v, thisUpdate: %v, nextUpdate: %v", ocspRes.ProducedAt, ocspRes.ThisUpdate, ocspRes.NextUpdate),
@@ -582,6 +600,12 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 	if !isValidOCSPStatus(ret.code) {
 		return ret, nil
 	}
+
+	if ocspRes.NextUpdate.IsZero() {
+		// We should not cache values with no NextUpdate values
+		return ret, nil
+	}
+
 	v := ocspCachedResponse{
 		status:     ret.code,
 		time:       float64(time.Now().UTC().Unix()),
