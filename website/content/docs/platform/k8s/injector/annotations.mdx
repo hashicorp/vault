@@ -28,7 +28,7 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/agent-image` - name of the Vault docker image to use. This
   value overrides the default image configured in the injector and is usually
-  not needed. Defaults to `hashicorp/vault:1.15.1`.
+  not needed. Defaults to `hashicorp/vault:1.15.6`.
 
 - `vault.hashicorp.com/agent-init-first` - configures the pod to run the Vault Agent
   init container first if `true` (last if `false`). This is useful when other init
@@ -54,6 +54,14 @@ them, optional commands to run, etc.
   `vault.hashicorp.com/agent-inject-template-foobar`. This should map to the same
   unique value provided in `vault.hashicorp.com/agent-inject-secret-`. If not provided,
   a default generic template is used.
+
+- `vault.hashicorp.com/error-on-missing-key` - configures whether Vault Agent
+  should exit with an error when accessing a struct or map field/key that does
+  not exist. The name of the secret is the string after
+  `vault.hashicorp.com/error-on-missing-key-`, and should map to the same unique
+  value provided in `vault.hashicorp.com/agent-inject-secret-`. Defaults to
+  `false`. See [Vault Agent Template Config](/vault/docs/agent-and-proxy/agent/template#template-configurations)
+  for more details.
 
 - `vault.hashicorp.com/agent-inject-containers` - comma-separated list that specifies in
   which containers the secrets volume should be mounted. If not provided, the secrets
@@ -95,11 +103,17 @@ them, optional commands to run, etc.
 - `vault.hashicorp.com/template-config-exit-on-retry-failure` - controls whether
   Vault Agent exits after it has exhausted its number of template retry attempts
   due to failures. Defaults to `true`. See [Vault Agent Template
-  Config](/vault/docs/agent-and-proxy/agent/template#template-configurations) for more details.
+  Config](/vault/docs/agent-and-proxy/agent/template#global-configurations) for more details.
 
 - `vault.hashicorp.com/template-static-secret-render-interval` - If specified,
   configures how often Vault Agent Template should render non-leased secrets such as KV v2.
-  See [Vault Agent Template Config](/vault/docs/agent-and-proxy/agent/template#template-configurations) for more details.
+  See [Vault Agent Template Config](/vault/docs/agent-and-proxy/agent/template#global-configurations) for more details.
+
+- `vault.hashicorp.com/template-max-connections-per-host` - If specified, limits
+  the total number of connections that the Vault Agent templating engine can use
+  for a particular Vault host. This limit includes connections in the dialing,
+  active, and idle states. See [Vault Agent Template Config](/vault/docs/agent-and-proxy/agent/template#global-configurations)
+  for more details.
 
 - `vault.hashicorp.com/agent-extra-secret` - mounts Kubernetes secret as a volume at
   `/vault/custom` in the sidecar/init containers. Useful for custom Agent configs with
