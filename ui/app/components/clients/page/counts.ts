@@ -8,17 +8,19 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { fromUnixTime, getUnixTime, isSameMonth, isAfter } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { formatDateObject } from 'core/utils/client-count-utils';
+import { filterVersionHistory, formatDateObject } from 'core/utils/client-count-utils';
+import timestamp from 'core/utils/timestamp';
 
 import type VersionService from 'vault/services/version';
 import type ClientsActivityModel from 'vault/models/clients/activity';
 import type ClientsConfigModel from 'vault/models/clients/config';
+import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
 import type StoreService from 'vault/services/store';
-import timestamp from 'core/utils/timestamp';
 
 interface Args {
   activity: ClientsActivityModel;
   config: ClientsConfigModel;
+  versionHistory: ClientsVersionHistoryModel[];
   startTimestamp: number;
   endTimestamp: number;
   namespace: string;
@@ -53,6 +55,32 @@ export default class ClientsCountsPageComponent extends Component<Args> {
         : `to ${parseAPITimestamp(this.endTimestampISO, 'MMMM yyyy')}`;
       // completes the message 'No data received from { dateRangeMessage }'
       return `from ${parseAPITimestamp(this.startTimestampISO, 'MMMM yyyy')} ${endMonth}`;
+    }
+    return null;
+  }
+
+  get upgradeExplanations() {
+    const { versionHistory, activity } = this.args;
+    const upgradesDuringActivity = filterVersionHistory(versionHistory, activity.startTime, activity.endTime);
+    if (upgradesDuringActivity.length) {
+      return upgradesDuringActivity.map((upgrade: ClientsVersionHistoryModel) => {
+        let explanation;
+        const date = parseAPITimestamp(upgrade.timestampInstalled, 'MMM d, yyyy');
+        const version = upgrade.version || '';
+        switch (true) {
+          case version.includes('1.9'):
+            explanation =
+              '- We introduced changes to non-entity token and local auth mount logic for client counting in 1.9.';
+            break;
+          case version.includes('1.10'):
+            explanation = '- We added monthly breakdowns and mount level attribution starting in 1.10.';
+            break;
+          default:
+            explanation = '';
+            break;
+        }
+        return `${version} (upgraded on ${date}) ${explanation}`;
+      });
     }
     return null;
   }

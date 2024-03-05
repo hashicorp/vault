@@ -102,9 +102,36 @@
     {{/if}}
 
     {{#if this.filteredActivity}}
+      {{#if this.upgradeExplanations}}
+        <Hds::Alert data-test-clients-upgrade-warning @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+          <A.Title>
+            Client count data contains
+            {{pluralize this.upgradeExplanations.length "upgrade"}}
+          </A.Title>
+          <A.Description>
+            Vault was upgraded during this time period. Keep this in mind while looking at the data. Visit our
+            <Hds::Link::Inline
+              @isHrefExternal={{true}}
+              @href={{doc-link
+                "/vault/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
+              }}
+            >
+              Client count FAQ
+            </Hds::Link::Inline>
+            for more information.
+          </A.Description>
+          <A.Description>
+            <ul class="bullet">
+              {{#each this.upgradeExplanations as |info|}}
+                <li>{{info}}</li>
+              {{/each}}
+            </ul>
+          </A.Description>
+        </Hds::Alert>
+      {{/if}}
+
       {{#if this.startTimeDiscrepancy}}
-        <Hds::Alert data-test-counts-start-discrepancy @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
-          <A.Title>Warning</A.Title>
+        <Hds::Alert data-test-counts-start-discrepancy @type="inline" @color="neutral" class="has-bottom-margin-s" as |A|>
           <A.Description data-test-counts-start-discrepancy>
             {{this.startTimeDiscrepancy}}
           </A.Description>
