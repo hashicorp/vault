@@ -79,7 +79,8 @@ export default class LineChart extends Component<Args> {
     }
   }
   get upgradedMonths() {
-    return this.data.filter((datum) => datum.tooltipUpgrade);
+    // only render upgrade month circle if datum has client count data (the y value)
+    return this.data.filter((datum) => datum.tooltipUpgrade && datum.y);
   }
   // Domains
   get yDomain() {
