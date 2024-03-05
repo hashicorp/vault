@@ -79,16 +79,16 @@ For example:
   as the same entity e.g. if client 1 requests `a.test.com` and client 2 requests
   `a.test.com` a single entity is created for both requests.
 
-## Entity assignment with secret syncs
+## Secret sync clients
 Vault can automatically update secrets in external destinations with [secret sync](/vault/docs/sync).
 A secret that gets synced to one or more destinations is considered a **secret
-sync entity** for client count calculations.
+sync client** for client count calculations.
 
 Note that:
 
 - Each synced secret is counted distinctly based on the path and namespace of
   the secret. If you have secrets at path `kv1/secret` and `kv2/secret`
-  which are both synced, then two distinct entities will be created.
+  which are both synced, then two distinct secret syncs will be counted.
 - A secret can be synced to multiple different destinations, and it will still
   only be counted as one secret sync. If `kv/secret` is synced to both Azure Key
   Vault and AWS Secret Manager, this will be counted as only one secret sync
@@ -96,11 +96,11 @@ Note that:
 - Secret sync clients are only created after you create an association between a
   secret and a store. If you create `kv/secret` and do not associate this secret
   with any destinations, it will not be counted as a secret sync client.
-- Secret syncs clients are only registered in Vault's client counting system
-  when a sync happens. If you create `kv/secret` and associate it with a
+- Secret syncs clients are registered in Vault's client counting system so long
+  as the sync is active. If you create `kv/secret` and associate it with a
   destination in January, update the secret in May, and then delete the secret
-  in September, Vault will consider this client as only having been seen in
-  January, May, and September.
+  in September, Vault will consider this client as having been seen throughout
+  the entire period of January through September.
 
 ## Entity assignment with namespaces
 
