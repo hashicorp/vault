@@ -6,7 +6,7 @@
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { compareAsc, getUnixTime, isWithinInterval } from 'date-fns';
 
-// returns array of VersionHistoryModels for noteworthy upgrades (1.9, 1.10, 1.16)
+// returns array of VersionHistoryModels for noteworthy upgrades: 1.9, 1.10
 // that occurred between timestamps (i.e. queried activity data)
 export const filterVersionHistory = (versionHistory, start, end) => {
   if (versionHistory) {

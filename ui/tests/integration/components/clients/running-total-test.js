@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import clientsHandler from 'vault/mirage/handlers/clients';
+import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import sinon from 'sinon';
 import { formatRFC3339, getUnixTime } from 'date-fns';
 import { findAll } from '@ember/test-helpers';
@@ -17,14 +17,14 @@ import timestamp from 'core/utils/timestamp';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { SELECTORS as ts } from 'vault/tests/helpers/clients';
 
-const START_TIME = getUnixTime(new Date('2023-10-01T00:00:00Z'));
+const START_TIME = getUnixTime(LICENSE_START);
 
 module('Integration | Component | clients/running-total', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
   hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2024-01-31T23:59:59Z'));
+    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
   });
 
   hooks.beforeEach(async function () {
