@@ -1,31 +1,30 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: MPL-2.0
 
-package config
+package cliconfig
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/vault/sdk/helper/hclutil"
-	homedir "github.com/mitchellh/go-homedir"
+	"github.com/mitchellh/go-homedir"
 )
 
 const (
-	// DefaultConfigPath is the default path to the configuration file
-	DefaultConfigPath = "~/.vault"
+	// defaultConfigPath is the default path to the configuration file
+	defaultConfigPath = "~/.vault"
 
-	// ConfigPathEnv is the environment variable that can be used to
+	// configPathEnv is the environment variable that can be used to
 	// override where the Vault configuration is.
-	ConfigPathEnv = "VAULT_CONFIG_PATH"
+	configPathEnv = "VAULT_CONFIG_PATH"
 )
 
 // Config is the CLI configuration for Vault that can be specified via
 // a `$HOME/.vault` file which is HCL-formatted (therefore HCL or JSON).
-type DefaultConfig struct {
+type defaultConfig struct {
 	// TokenHelper is the executable/command that is executed for storing
 	// and retrieving the authentication token for the Vault CLI. If this
 	// is not specified, then vault's internal token store will be used, which
@@ -33,26 +32,14 @@ type DefaultConfig struct {
 	TokenHelper string `hcl:"token_helper"`
 }
 
-// Config loads the configuration and returns it. If the configuration
-// is already loaded, it is returned.
-func Config() (*DefaultConfig, error) {
-	var err error
-	config, err := LoadConfig("")
-	if err != nil {
-		return nil, err
-	}
-
-	return config, nil
-}
-
-// LoadConfig reads the configuration from the given path. If path is
+// loadConfig reads the configuration from the given path. If path is
 // empty, then the default path will be used, or the environment variable
 // if set.
-func LoadConfig(path string) (*DefaultConfig, error) {
+func loadConfig(path string) (*defaultConfig, error) {
 	if path == "" {
-		path = DefaultConfigPath
+		path = defaultConfigPath
 	}
-	if v := os.Getenv(ConfigPathEnv); v != "" {
+	if v := os.Getenv(configPathEnv); v != "" {
 		path = v
 	}
 
@@ -62,21 +49,21 @@ func LoadConfig(path string) (*DefaultConfig, error) {
 		return nil, fmt.Errorf("error expanding config path %q: %w", path, err)
 	}
 
-	contents, err := ioutil.ReadFile(path)
+	contents, err := os.ReadFile(path)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
 
-	conf, err := ParseConfig(string(contents))
+	conf, err := parseConfig(string(contents))
 	if err != nil {
-		return nil, fmt.Errorf("error parsing config file at %q: %w; ensure that the file is valid; Ansible Vault is known to conflict with it.", path, err)
+		return nil, fmt.Errorf("error parsing config file at %q: %w; ensure that the file is valid; Ansible Vault is known to conflict with it", path, err)
 	}
 
 	return conf, nil
 }
 
-// ParseConfig parses the given configuration as a string.
-func ParseConfig(contents string) (*DefaultConfig, error) {
+// parseConfig parses the given configuration as a string.
+func parseConfig(contents string) (*defaultConfig, error) {
 	root, err := hcl.Parse(contents)
 	if err != nil {
 		return nil, err
@@ -88,14 +75,23 @@ func ParseConfig(contents string) (*DefaultConfig, error) {
 		return nil, fmt.Errorf("failed to parse config; does not contain a root object")
 	}
 
-	valid := []string{
-		"token_helper",
-	}
-	if err := hclutil.CheckHCLKeys(list, valid); err != nil {
-		return nil, err
+	valid := map[string]struct{}{
+		"token_helper": {},
 	}
 
-	var c DefaultConfig
+	var validationErrors error
+	for _, item := range list.Items {
+		key := item.Keys[0].Token.Value().(string)
+		if _, ok := valid[key]; !ok {
+			validationErrors = multierror.Append(validationErrors, fmt.Errorf("invalid key %q on line %d", key, item.Assign.Line))
+		}
+	}
+
+	if validationErrors != nil {
+		return nil, validationErrors
+	}
+
+	var c defaultConfig
 	if err := hcl.DecodeObject(&c, list); err != nil {
 		return nil, err
 	}

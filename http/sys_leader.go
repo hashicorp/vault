@@ -4,9 +4,9 @@
 package http
 
 import (
-	"context"
 	"net/http"
 
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -17,19 +17,29 @@ func handleSysLeader(core *vault.Core, opt ...ListenerConfigOption) http.Handler
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":
-			handleSysLeaderGet(core, w, opt...)
+			handleSysLeaderGet(core, w, r, opt...)
 		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)
 		}
 	})
 }
 
-func handleSysLeaderGet(core *vault.Core, w http.ResponseWriter, opt ...ListenerConfigOption) {
-	ctx := context.Background()
+func handleSysLeaderGet(core *vault.Core, w http.ResponseWriter, r *http.Request, opt ...ListenerConfigOption) {
+	var tokenPresent bool
+	token := r.Header.Get(consts.AuthHeaderName)
+	ctx := r.Context()
 
-	opts, _ := getOpts(opt...)
-	if opts.withRedactAddresses {
-		ctx = logical.CreateContextRedactionSettings(ctx, false, true, false)
+	if token != "" {
+		// We don't care about the error, we just want to know if token exists
+		lock := core.HALock()
+		lock.Lock()
+		tokenEntry, err := core.LookupToken(ctx, token)
+		lock.Unlock()
+		tokenPresent = err == nil && tokenEntry != nil
+	}
+
+	if tokenPresent {
+		ctx = logical.CreateContextRedactionSettings(r.Context(), false, false, false)
 	}
 
 	resp, err := core.GetLeaderStatus(ctx)
