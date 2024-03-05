@@ -8,13 +8,12 @@ import { service } from '@ember/service';
 import Component from '@ember/component';
 import { setProperties, computed, set } from '@ember/object';
 import { addSeconds, parseISO } from 'date-fns';
-import { A } from '@ember/array';
 import { capitalize } from '@ember/string';
 
 const DEFAULTS = {
   token: null,
   rewrap_token: null,
-  errors: A(),
+  errors: null,
   wrap_info: null,
   creation_time: null,
   creation_ttl: null,
