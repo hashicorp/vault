@@ -245,7 +245,7 @@ $ curl $VAULT_ADDR/v1/sys/replication/dr/secondary/merkle-check
 
 ## CLI commands for diagnosing corruption
 
-You need to check four layers for potential Merkle tree corruption: composite root, subtree roots, page hash, and subpage hash. You can use the following example Vault CLI commands in combination with the jq tool to diagnose corruption.
+You need to check four layers for potential Merkle tree corruption: composite root, subtree roots, page hash, and subpage hash. You can use the following example Vault CLI commands in combination with the [jq](https://jqlang.github.io/jq/) tool to diagnose corruption.
 
 ### Composite root corruption
 
