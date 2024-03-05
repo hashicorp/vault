@@ -8,6 +8,9 @@
 SECURITY:
 
 * secrets/transit: fix a regression that was honoring nonces provided in non-convergent modes during encryption. [[GH-22852](https://github.com/hashicorp/vault/pull/22852)]
+* auth/cert: compare public keys of trusted non-CA certificates with incoming
+client certificates to prevent trusting certs with the same serial number
+but not the same public/private key (CVE-2024-2048). [[GH-25649](https://github.com/hashicorp/vault/pull/25649), [HSEC-2024-05](https://discuss.hashicorp.com/t/hcsec-2024-05-vault-cert-auth-method-did-not-correctly-validate-non-ca-certificates/63382)]
 
 CHANGES:
 
@@ -328,7 +331,7 @@ SECURITY:
 
 * auth/cert: compare public keys of trusted non-CA certificates with incoming
 client certificates to prevent trusting certs with the same serial number
-but not the same public/private key. [[GH-25649](https://github.com/hashicorp/vault/pull/25649)]
+but not the same public/private key (CVE-2024-2048). [[GH-25649](https://github.com/hashicorp/vault/pull/25649), [HSEC-2024-05](https://discuss.hashicorp.com/t/hcsec-2024-05-vault-cert-auth-method-did-not-correctly-validate-non-ca-certificates/63382)]
 
 CHANGES:
 
@@ -807,7 +810,7 @@ SECURITY:
 
 * auth/cert: compare public keys of trusted non-CA certificates with incoming
 client certificates to prevent trusting certs with the same serial number
-but not the same public/private key. [[GH-25649](https://github.com/hashicorp/vault/pull/25649)]
+but not the same public/private key (CVE-2024-2048). [[GH-25649](https://github.com/hashicorp/vault/pull/25649), [HSEC-2024-05](https://discuss.hashicorp.com/t/hcsec-2024-05-vault-cert-auth-method-did-not-correctly-validate-non-ca-certificates/63382)]
 
 CHANGES:
 
