@@ -42,7 +42,7 @@ example, writing audit entries to one device for `(N < 10)` and another device
 for `(N > 10)`would exclude audit entries where `(N == 10)`, which may not be
 the intended behavior.
 
-The fallback audit device saves all audit entires that would otherwise get
+The fallback audit device saves all audit entries that would otherwise get
 filtered out and dropped from the audit record. Enabling an audit device with
 the `fallback` parameter ensures that Vault continues to adhere to the default
 [security model](/vault/docs/internals/security) which mandates that all
