@@ -153,7 +153,12 @@ To filter the events:
     vault kv put -mount=my-kv my_secret the_value=always_angry
   ```
 
-The `/var/kv-audit.log` now includes two entries: one for the command that
-enabled `my-kv` and one for the command that wrote a secret to `my-kv`. Entries
-for the other commands are captured by the fallback device. And the original
-audit file, `vault-audit.log` continues to capture all audit events.
+The `/var/kv-audit.log` now includes four entries in total:
+
+- the command request that enabled `my-kv`
+- the response entry from enabling `my-kv`
+- the command request that wrote a secret to `my-kv`
+- the response entry from writing the secret to `my-kv`.
+
+The fallback device captured entries for the other commands. And the
+ original audit file, `vault-audit.log`, continues to capture all audit events.
