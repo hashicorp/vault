@@ -76,13 +76,15 @@ export default class SyncAssociationAdapter extends ApplicationAdapter {
     );
     const url = this.buildURL(modelName, null, snapshot);
     const data = snapshot.serialize();
+    const serializer = store.serializerFor('sync/association');
+
     return this.ajax(url, 'POST', { data }).then((resp) => {
       const association = Object.values(resp.data.associated_secrets).find((association) => {
         return association.mount === data.mount && association.secret_name === data.secret_name;
       });
       return {
         ...association,
-        id: `${data.mount}/${data.secret_name}`,
+        id: serializer.generateId(association),
         destinationName: resp.data.store_name,
         destinationType: resp.data.store_type,
       };
