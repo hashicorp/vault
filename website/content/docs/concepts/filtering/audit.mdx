@@ -110,8 +110,8 @@ Property      | Example                             | Description
 
 <Tip title="Root namespaces are unnamed">
 
-  Most namespace strings **must** end with a trailing slash to match correctly.
-  But the root namespace is technically unnamed and only matches to an empty
+  Non-root namespace paths **must** end with a trailing slash (`/`) to match correctly.
+  But the root namespace does not have a path and only matches to an empty
   string. To match to the root namespace in your filter use `\"\"`. For example,
   `namespace != \"\"` matches any audit entry **not** in the root namespace.
 
