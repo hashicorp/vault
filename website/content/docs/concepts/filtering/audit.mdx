@@ -150,7 +150,7 @@ To filter the events:
   ```
 1. Write secret data to the `kv` engine:
   ```shell-session
-    vault kv put my-kv my_secret=always_angry
+    vault kv put -mount=my-kv my_secret the_value=always_angry
   ```
 
 The `/var/kv-audit.log` now includes two entries: one for the command that
