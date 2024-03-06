@@ -5206,14 +5206,14 @@ func (b *SystemBackend) wellKnownPaths() []*framework.Path {
 		{
 			Pattern: "well-known/?$",
 
-			DisplayAttrs: &framework.DisplayAttributes{
-				OperationPrefix: "well-known",
-				OperationVerb:   "list",
-			},
-
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleWellKnownList(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "well-known",
+						OperationVerb:   "list",
+						OperationSuffix: "labels-2",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -5228,6 +5228,11 @@ func (b *SystemBackend) wellKnownPaths() []*framework.Path {
 				},
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handleWellKnownList(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "well-known",
+						OperationVerb:   "list",
+						OperationSuffix: "labels",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
