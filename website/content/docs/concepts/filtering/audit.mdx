@@ -104,9 +104,18 @@ Property      | Example                             | Description
 ------------- | ----------------------------------- | --------------------------
 `mount_point` | `mount_point == auth/oidc`          | Log all entries for the `auth/oidc` mount point
 `mount_type`  | `mount_type == kv`                  | Log all entries from `kv` plugins
-`namespace`   | `namespace != \"\"`                 | Log all entries **not** in the root namespace
+`namespace`   | `namespace != admin/`               | Log all entries **not** in the admin namespace
 `operation`   | `operation == read`                 | Log all read operations
 `path`        | `path == auth/approle/login`        | Log all activity against the AppRole login path
+
+<Tip title="Root namespaces are unnamed">
+
+  Most namespace strings **must** end with a trailing slash to match correctly.
+  But the root namespace is technically unnamed and only matches to an empty
+  string. To match to the root namespace in your filter use `\"\"`. For example,
+  `namespace != \"\"` matches any audit entry **not** in the root namespace.
+
+</Tip>
 
 ## A practical example
 
