@@ -136,11 +136,11 @@ To filter the events:
 1. Enable a fallback device:
   ```shell-session
   vault audit enable                \
-    fallback=true                   \
     -path=my-fallback               \
     -description="fallback device"  \
-    file file_path=/tmp/kv-audit.fallback.log 
-  ```
+    file                            \
+    fallback=true                   \
+    file_path=/tmp/kv-audit.fallback.log
 1. Confirm the audit devices are enabled:
   ```shell-session
     vault audit list --detailed
