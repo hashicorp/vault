@@ -49,7 +49,7 @@ the `fallback` parameter ensures that Vault continues to adhere to the default
 requests and responses must be successfully logged before clients receive secret
 material.
 
-<Warning title="Use a fallback to ensure no missed audit entries">
+<Warning title="Use a fallback to avoid missing audit entries">
 
   For Vault installations that use filtered audit devices **exclusively**,
   configuring a fallback audit device is the only way to guarantee a comparable
