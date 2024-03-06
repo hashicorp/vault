@@ -164,6 +164,14 @@ func disableReplicationStatusEndpointWrapping(h http.Handler) http.Handler {
 	})
 }
 
+func redactionSettingsWrapping(h http.Handler, redactVersion, redactAddresses, redactClusterName bool) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		request := r.WithContext(logical.CreateContextRedactionSettings(r.Context(), redactVersion, redactAddresses, redactClusterName))
+
+		h.ServeHTTP(w, request)
+	})
+}
+
 func parseRemoteIPAddress(r *http.Request) string {
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {

@@ -196,31 +196,6 @@ func formatterConfig(config map[string]string) (audit.FormatterConfig, error) {
 	return audit.NewFormatterConfig(opts...)
 }
 
-// configureFilterNode is used to configure a filter node and associated ID on the Backend.
-func (b *Backend) configureFilterNode(filter string) error {
-	const op = "syslog.(Backend).configureFilterNode"
-
-	filter = strings.TrimSpace(filter)
-	if filter == "" {
-		return nil
-	}
-
-	filterNodeID, err := event.GenerateNodeID()
-	if err != nil {
-		return fmt.Errorf("%s: error generating random NodeID for filter node: %w", op, err)
-	}
-
-	filterNode, err := audit.NewEntryFilter(filter)
-	if err != nil {
-		return fmt.Errorf("%s: error creating filter node: %w", op, err)
-	}
-
-	b.nodeIDList = append(b.nodeIDList, filterNodeID)
-	b.nodeMap[filterNodeID] = filterNode
-
-	return nil
-}
-
 // configureFormatterNode is used to configure a formatter node and associated ID on the Backend.
 func (b *Backend) configureFormatterNode(name string, formatConfig audit.FormatterConfig, logger hclog.Logger, opts ...audit.Option) error {
 	const op = "syslog.(Backend).configureFormatterNode"
