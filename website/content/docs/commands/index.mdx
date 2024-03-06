@@ -214,8 +214,8 @@ Or specify the contents of a file as a value:
 $ vault kv put secret/password value=@data.txt
 ```
 
-If you intend the value supplied to begin with an `@` character, then escaping
-using a `\` will instruct Vault not to attempt to parse the value as a file location:
+To use values that begin with an `@` character, escape the character with a
+backslash (`\`) to keep Vault from parsing the value as a file location:
 
 ```shell-session
 $ vault login -method userpass username="mitchellh" password="\@foo"
