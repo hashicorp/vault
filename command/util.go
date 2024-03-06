@@ -15,14 +15,14 @@ import (
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/config"
-	"github.com/hashicorp/vault/command/token"
+	"github.com/hashicorp/vault/api/cliconfig"
+	"github.com/hashicorp/vault/api/tokenhelper"
 )
 
 // DefaultTokenHelper returns the token helper that is configured for Vault.
 // This helper should only be used for non-server CLI commands.
-func DefaultTokenHelper() (token.TokenHelper, error) {
-	return config.DefaultTokenHelper()
+func DefaultTokenHelper() (tokenhelper.TokenHelper, error) {
+	return cliconfig.DefaultTokenHelper()
 }
 
 // RawField extracts the raw field from the given data and returns it as a

@@ -77,7 +77,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
       const data = JSON.parse(req.requestBody);
       const expected = { mount: 'my-kv', secret_name: 'my-secret' };
       assert.deepEqual(data, expected, 'Sync request made with mount and secret name');
-      return { data: { associated_secrets: {} } };
+      return { data: { associated_secrets: { 'my-kv_12345': data } } };
     });
 
     assert.dom(submit).isDisabled('Submit button is disabled when mount is not selected');
