@@ -49,13 +49,15 @@ the `fallback` parameter ensures that Vault continues to adhere to the default
 requests and responses must be successfully logged before clients receive secret
 material.
 
-<Warning title="Use a fallback to avoid missing audit entries">
+Vault installations that use filtered audit devices **exclusively**, should
+always configure a fallback audit device to guarantee a comparable security
+standard as Vault installations that only use standard, non-filtered audit
+devices.
 
-  For Vault installations that use filtered audit devices **exclusively**,
-  configuring a fallback audit device is the only way to guarantee a comparable
-  security standard as Vault installations that only use standard, non-filtered
-  audit devices.
+<Warning title="You can only have 1 fallback device">
 
+  Choose your fallback audit device carefully. Regadless of type, you can only designate one
+  fallback **out of all your active audit devices regardless of type** to act as backup for your entire Vault installation.
 </Warning>
 
 ### Fallback telemetry metrics
