@@ -118,10 +118,11 @@ To filter the events:
 
 1. Enable a `file` audit device with a `mount_type` filter:
   ```shell-session
-    vault audit enable                  \
-      -path kv-only                     \
-      file file_path=/logs/kv-audit.log \
-      filter="mount_type == kv"
+  vault audit enable                \
+    -path kv-only                   \
+    file                            \
+    file_path=/logs/kv-audit.log    \
+    filter="mount_type == kv"
   ```
 1. Enable a fallback device:
   ```shell-session
