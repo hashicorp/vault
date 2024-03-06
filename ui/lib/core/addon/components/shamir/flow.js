@@ -43,7 +43,7 @@ import { tracked } from '@glimmer/tracking';
  */
 export default class ShamirFlowComponent extends Component {
   @service store;
-  @tracked errors = [];
+  @tracked errors = null;
   @tracked attemptResponse = null;
 
   get action() {
