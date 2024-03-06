@@ -130,9 +130,8 @@ To filter the events:
   vault audit enable                \
     -path kv-only                   \
     file                            \
-    file_path=/logs/kv-audit.log    \
-    filter="mount_type == kv"
-  ```
+    filter="mount_type == \"kv\""   \
+    file_path=/logs/kv-audit.log
 1. Enable a fallback device:
   ```shell-session
   vault audit enable                \
