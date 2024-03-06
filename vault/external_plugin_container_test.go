@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -105,6 +106,7 @@ func mountAndUnmountContainerPlugin_WithRuntime(t *testing.T, c *Core, plugin pl
 }
 
 func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
+	expectedErrs := []error{nil, ErrPluginUnableToRun}
 	for name, tc := range map[string]struct {
 		pluginType        consts.PluginType
 		setRunningVersion string
@@ -124,36 +126,53 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			c, plugin := testClusterWithContainerPlugin(t, tc.pluginType, tc.setRunningVersion)
-			for _, ociRuntime := range []string{"runc", "runsc"} {
-				t.Run(ociRuntime, func(t *testing.T) {
-					if _, err := exec.LookPath(ociRuntime); err != nil {
-						t.Skipf("Skipping test as %s not found on path", ociRuntime)
-					}
-					shaBytes, _ := hex.DecodeString(plugin.ImageSha256)
-					entry := &pluginutil.PluginRunner{
-						Name:     plugin.Name,
-						OCIImage: plugin.Image,
-						Args:     nil,
-						Sha256:   shaBytes,
-						Builtin:  false,
-						Runtime:  ociRuntime,
-						RuntimeConfig: &pluginruntimeutil.PluginRuntimeConfig{
-							OCIRuntime: ociRuntime,
-						},
-					}
+			for _, expectedErr := range expectedErrs {
+				expectedErrTestName := "nil err"
+				if expectedErr != nil {
+					expectedErrTestName = expectedErr.Error()
+				}
+				t.Run(expectedErrTestName, func(t *testing.T) {
+					for _, ociRuntime := range []string{"runc", "runsc"} {
+						t.Run(ociRuntime, func(t *testing.T) {
+							if _, err := exec.LookPath(ociRuntime); err != nil {
+								t.Skipf("Skipping test as %s not found on path", ociRuntime)
+							}
+							shaBytes, _ := hex.DecodeString(plugin.ImageSha256)
+							ociImage := plugin.Image
+							if expectedErr != nil {
+								ociImage += "-will-not-be-found"
+							}
+							entry := &pluginutil.PluginRunner{
+								Name:     plugin.Name,
+								OCIImage: ociImage,
+								Args:     nil,
+								Sha256:   shaBytes,
+								Builtin:  false,
+								Runtime:  ociRuntime,
+								RuntimeConfig: &pluginruntimeutil.PluginRuntimeConfig{
+									OCIRuntime: ociRuntime,
+								},
+							}
 
-					var version logical.PluginVersion
-					var err error
-					if tc.pluginType == consts.PluginTypeDatabase {
-						version, err = c.pluginCatalog.getDatabaseRunningVersion(context.Background(), entry)
-					} else {
-						version, err = c.pluginCatalog.getBackendRunningVersion(context.Background(), entry)
-					}
-					if err != nil {
-						t.Fatal(err)
-					}
-					if version.Version != tc.setRunningVersion {
-						t.Errorf("Expected to get version %v but got %v", tc.setRunningVersion, version.Version)
+							var version logical.PluginVersion
+							var err error
+							if tc.pluginType == consts.PluginTypeDatabase {
+								version, err = c.pluginCatalog.getDatabaseRunningVersion(context.Background(), entry)
+							} else {
+								version, err = c.pluginCatalog.getBackendRunningVersion(context.Background(), entry)
+							}
+							if expectedErr == nil {
+								if err != nil {
+									t.Fatalf("Expected successful get backend type version but got: %v", err)
+								}
+								if version.Version != plugin.Version {
+									t.Errorf("Expected to get version %v but got %v", plugin.Version, version.Version)
+								}
+
+							} else if !errors.Is(err, expectedErr) {
+								t.Errorf("Expected to get err %s but got %s", expectedErr, err)
+							}
+						})
 					}
 				})
 			}
