@@ -24,7 +24,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/ocsp"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	glob "github.com/ryanuber/go-glob"
+	"github.com/ryanuber/go-glob"
 )
 
 // ParsedCert is a certificate that has been configured as trusted
@@ -662,6 +662,7 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 				conf.OcspFailureMode = ocsp.FailOpenFalse
 			}
 			conf.QueryAllServers = conf.QueryAllServers || entry.OcspQueryAllServers
+			conf.OcspThisUpdateMaxTTL = entry.OcspThisUpdateMaxTTL
 		}
 	}
 

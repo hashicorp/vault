@@ -77,6 +77,9 @@ Sets a CA cert and associated parameters in a role name.
 - `ocsp_fail_open` `(bool: false)` - If true and an OCSP response cannot be fetched
   or is of an unknown status, the login will proceed as if the certificate has not
   been revoked.
+- `ocsp_this_update_max_ttl` (integer:0 or string: "")` - If greater than 0, specifies
+  the maximum TTL of an OCSP thisUpdate field. This avoids accepting old responses
+  without a nextUpdate field.
 - `ocsp_query_all_servers` `(bool: false)` - If set to true, rather than accepting
   the first successful OCSP response, query all servers and consider the certificate
   valid only if all servers agree.
@@ -360,7 +363,7 @@ Configuration options for the method.
   `allowed_metadata_extensions` will be stored in the alias
 - `ocsp_cache_size` `(int: 100)` - The size of the OCSP response LRU cache.  Note
   that this cache is used for all configured certificates.
-- `role_cache_size` `(int: 200)` - The size of the role cache.  Use `-1` to disable 
+- `role_cache_size` `(int: 200)` - The size of the role cache.  Use `-1` to disable
   role caching.
 
 ### Sample payload
