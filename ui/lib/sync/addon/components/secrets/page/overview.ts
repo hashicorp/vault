@@ -8,6 +8,7 @@ import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import Ember from 'ember';
+import AdapterError from '@ember-data/adapter/error';
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type StoreService from 'vault/services/store';
@@ -19,6 +20,7 @@ interface Args {
   destinations: Array<SyncDestinationModel>;
   totalVaultSecrets: number;
   featureEnabled: boolean;
+  adapterError: AdapterError | boolean;
 }
 
 export default class SyncSecretsDestinationsPageComponent extends Component<Args> {

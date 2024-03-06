@@ -52,9 +52,9 @@ export default class SyncLandingCtaComponent extends Component<Args> {
   @waitFor
   *onFeatureConfirm() {
     try {
-      // endpoint may change but should still involve updating disabled or similar property to false
-      const payload = { data: { disabled: false } };
-      yield this.store.adapterFor('application').ajax('/v1/sys/sync/config', 'PATCH', payload);
+      // payload is empty
+      const payload = { data: {} };
+      yield this.store.adapterFor('application').ajax('/v1/sys/activation-flags/secrets-sync/activate', 'PATCH', payload);
       this.createDestination();
     } catch (error) {
       this.flashMessages.danger(`Error enabling feature \n ${errorMessage(error)}`);

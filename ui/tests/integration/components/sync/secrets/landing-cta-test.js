@@ -71,9 +71,9 @@ module('Integration | Component | sync | Secrets::LandingCta', function (hooks) 
     this.version.type = 'enterprise';
     this.featureEnabled = false;
 
-    this.server.patch('/sys/sync/config', (schema, req) => {
-      const payload = JSON.parse(req.requestBody);
-      assert.false(payload.disabled, 'Correct value sent to enable feature in config request');
+    this.server.patch('/sys/activation-flags/secrets-sync/activate', () => {
+      assert.ok(true, 'request made to the activate endpoint');
+      return {};
     });
 
     await this.renderComponent();
