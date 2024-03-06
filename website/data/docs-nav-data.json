@@ -2356,12 +2356,19 @@
           }
         ]
       },
-
       {
         "title": "Replication",
-        "path": "enterprise/replication"
+        "routes": [
+            {
+                "title": "Overview",
+                "path": "enterprise/replication"
+            },
+            {
+                "title": "Check for Merkle tree corruption",
+                "path": "enterprise/replication/check-merkle-tree-corruption"
+            }
+        ]
       },
-
       {
         "title": "HSM Support",
         "routes": [
