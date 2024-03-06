@@ -1309,6 +1309,24 @@ func (c *Core) loadMounts(ctx context.Context) error {
 		}
 		entry.namespace = ns
 
+		// Subtle/hacky: re-register ns with namespaceManager to ensure that in the
+		// case where duplicate namespaces existed due to historical race bugs, we
+		// still ensure the correct namespaces are the ones that "win" the path
+		// registrations. This became an issue when we added Core.warmNamespaceCache
+		// and subsequently discovered customers had latent corruption where there
+		// were multiple namespace IDs with the same path in the namespaces config
+		// entry and loading them into cache made it non-deterministic which one won
+		// the slot in the path index due to map iteration randomness. By explicitly
+		// re-registering them here we enforce the same consistent order of
+		// registration into the path index that we had before warming and so
+		// prevent any apparent regressions. Note that mount entries are a slice not
+		// a map so consistent even if we ever did allow duplicates to be stored. We
+		// want to fix all the root causes of those duplicates but also want to
+		// restore the previous behavior that masked them as a problem. They will
+		// likely be there for a long time to come as they are persistent now even
+		// if we find all the bugs that allowed it to get in that state.
+		NamespaceRegister(ctx, ns, c)
+
 		// Sync values to the cache
 		entry.SyncCache()
 	}
