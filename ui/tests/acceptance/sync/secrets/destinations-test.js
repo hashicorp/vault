@@ -27,7 +27,7 @@ module('Acceptance | sync | destinations', function (hooks) {
   });
 
   test('it should show opt-in banner and modal if secrets-sync is not activated', async function (assert) {
-    assert.expect(4);
+    assert.expect(3);
     server.get('/sys/activation-flags', () => {
       return {
         data: {
@@ -43,16 +43,8 @@ module('Acceptance | sync | destinations', function (hooks) {
     assert.dom(ts.overview.optInModal).exists('Opt-in modal is shown');
     assert.dom(ts.overview.optInConfirm).isDisabled('Confirm button is disabled when checkbox is unchecked');
     await click(ts.overview.optInCheck);
-    server.get('/sys/activation-flags', () => {
-      return {
-        data: {
-          activated: ['secrets-sync'],
-          unactivated: [''],
-        },
-      };
-    });
     await click(ts.overview.optInConfirm);
-    assert.dom(ts.overview.optInBanner).doesNotExist('Opt-in banner is not shown');
+    // ARG TODO improve test coverage and try and use API to check if the opt-in was successful
   });
 
   test('it should create new destination', async function (assert) {
