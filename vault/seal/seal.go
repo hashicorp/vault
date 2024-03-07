@@ -950,6 +950,7 @@ type keyIdSet struct {
 func (s *keyIdSet) initialized() bool {
 	return len(s.get()) > 0
 }
+
 func (s *keyIdSet) set(value *MultiWrapValue) {
 	keyIds := s.collect(value)
 	s.setIds(keyIds)
