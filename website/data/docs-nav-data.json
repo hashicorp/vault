@@ -1542,6 +1542,15 @@
               "color": "neutral"
             },
             "path": "secrets/pki/cieps"
+          },
+          {
+            "title": "Enrollment over Secure Transport (EST)",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            },
+            "path": "secrets/pki/est"
           }
         ]
       },
