@@ -45,7 +45,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     this.renderComponent = () =>
       render(
-        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @activatedFeatures={{this.activatedFeatures}} @adapterError={{false}} />`,
+        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @activatedFeatures={{this.activatedFeatures}} @isAdapterError={{false}} />`,
         {
           owner: this.engine,
         }

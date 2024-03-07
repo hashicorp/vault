@@ -24,7 +24,7 @@ interface Args {
   destinations: Array<SyncDestinationModel>;
   totalVaultSecrets: number;
   activatedFeatures: Array<string>;
-  adapterError: boolean;
+  isAdapterError: boolean;
 }
 
 export default class SyncSecretsDestinationsPageComponent extends Component<Args> {
@@ -48,7 +48,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   }
 
   get isActivated() {
-    if (this.args.adapterError) {
+    if (this.args.isAdapterError) {
       return false;
     }
     return this.args.activatedFeatures.includes('secrets-sync');

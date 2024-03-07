@@ -5,6 +5,7 @@
 
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
+
 import type VersionService from 'vault/services/version';
 
 export default class SyncLandingCtaComponent extends Component {
