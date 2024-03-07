@@ -3,7 +3,12 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div class="replication-page" data-test-replication-page>
+<div
+  class="replication-page"
+  {{did-insert this.onModeUpdate @model.replicationMode}}
+  {{did-update this.onModeUpdate @model.replicationMode}}
+  data-test-replication-page
+>
   {{#if this.isLoadingData}}
     <LayoutLoading />
   {{else}}
@@ -11,7 +16,7 @@
       (hash
         header=(component
           "replication-header"
-          data=this.model
+          data=@model
           title=this.formattedReplicationMode
           isSecondary=this.isSecondary
           secondaryId=this.replicationDetails.secondaryId
@@ -20,7 +25,7 @@
         )
         dashboard=(component
           "replication-dashboard"
-          data=this.model
+          data=@model
           isSecondary=this.isSecondary
           isSummaryDashboard=this.isSummaryDashboard
           replicationDetailsSummary=this.replicationDetailsSummary
