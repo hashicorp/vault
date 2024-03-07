@@ -109,6 +109,16 @@ const createOrUpdateDestination = (schema, req) => {
 };
 
 export default function (server) {
+  // default to activated
+  server.get('/sys/activation-flags', () => {
+    return {
+      data: {
+        activated: ['secrets-sync'],
+        unactivated: [''],
+      },
+    };
+  });
+
   const base = '/sys/sync/destinations';
   const uri = `${base}/:type/:name`;
 
