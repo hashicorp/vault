@@ -752,7 +752,6 @@ func TestCloneWithHeadersNoDeadlock(t *testing.T) {
 	wg := &sync.WaitGroup{}
 
 	problematicFunc := func() {
-		wg.Add(1)
 		client.SetCloneToken(true)
 		_, err := client.CloneWithHeaders()
 		if err != nil {
@@ -762,6 +761,7 @@ func TestCloneWithHeadersNoDeadlock(t *testing.T) {
 	}
 
 	for i := 0; i < 1000; i++ {
+		wg.Add(1)
 		go problematicFunc()
 	}
 	wg.Wait()
@@ -778,7 +778,6 @@ func TestCloneNoDeadlock(t *testing.T) {
 	wg := &sync.WaitGroup{}
 
 	problematicFunc := func() {
-		wg.Add(1)
 		client.SetCloneToken(true)
 		_, err := client.Clone()
 		if err != nil {
@@ -788,6 +787,7 @@ func TestCloneNoDeadlock(t *testing.T) {
 	}
 
 	for i := 0; i < 1000; i++ {
+		wg.Add(1)
 		go problematicFunc()
 	}
 	wg.Wait()
