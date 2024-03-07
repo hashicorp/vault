@@ -66,7 +66,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
       this.destinationMetrics = [];
     }
   });
-  
+
   @action
   onDocsConfirmChange(event: HTMLElementEvent<HTMLInputElement>) {
     this.confirmDisabled = !event.target.checked;
@@ -78,7 +78,9 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
     try {
       // payload is empty
       const payload = { data: {} };
-      yield this.store.adapterFor('application').ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST', payload);
+      yield this.store
+        .adapterFor('application')
+        .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST', payload);
       this.showActivateSecretsSyncModal = false;
       this.router.transitionTo('vault.cluster.sync.secrets.overview');
     } catch (error) {
