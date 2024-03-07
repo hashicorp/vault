@@ -6,7 +6,7 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { hash } from 'rsvp';
-import AdapterError from 'ember-data/adapter';
+import type AdapterError from '@ember-data/adapter';
 
 import type StoreService from 'vault/services/store';
 
