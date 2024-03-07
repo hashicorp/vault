@@ -290,16 +290,12 @@
       },
       {
         "title": "Filtering",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "concepts/filtering"
-          },
-          {
-            "title": "Audit Filtering",
-            "path": "concepts/filtering/audit"
-          }
-        ]
+        "path": "concepts/filtering",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
       },
       {
         "title": "Request Limiter",
@@ -2628,12 +2624,19 @@
           }
         ]
       },
-
       {
         "title": "Replication",
-        "path": "enterprise/replication"
+        "routes": [
+            {
+                "title": "Overview",
+                "path": "enterprise/replication"
+            },
+            {
+                "title": "Check for Merkle tree corruption",
+                "path": "enterprise/replication/check-merkle-tree-corruption"
+            }
+        ]
       },
-
       {
         "title": "HSM Support",
         "routes": [
@@ -2738,6 +2741,15 @@
       {
         "title": "Eventual Consistency",
         "path": "enterprise/consistency"
+      },
+      {
+        "title": "Audit",
+        "routes": [
+          {
+            "title": "Audit Filtering",
+            "path": "enterprise/audit/filtering"
+          }
+        ]
       },
       {
         "title": "Control Groups",
