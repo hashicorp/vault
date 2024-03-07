@@ -76,11 +76,9 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @waitFor
   *onFeatureConfirm() {
     try {
-      // payload is empty
-      const payload = { data: {} };
       yield this.store
         .adapterFor('application')
-        .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST', payload);
+        .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST');
       this.showActivateSecretsSyncModal = false;
       this.router.transitionTo('vault.cluster.sync.secrets.overview');
     } catch (error) {
