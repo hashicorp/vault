@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 	"go.uber.org/atomic"
@@ -85,6 +86,9 @@ const (
 	nonEntityTokenActivityType = "non-entity-token"
 	entityActivityType         = "entity"
 	secretSyncActivityType     = "secret-sync"
+
+	// FeatureSecretSyncBilling will always be false
+	FeatureSecretSyncBilling = license.FeatureNone
 )
 
 type segmentInfo struct {
@@ -1105,7 +1109,7 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) e
 	c.AddLogger(logger)
 
 	if os.Getenv("VAULT_DISABLE_ACTIVITY_LOG") != "" {
-		if c.CensusLicensingEnabled() {
+		if c.ManualLicenseReportingEnabled() {
 			logger.Warn("activity log disabled via environment variable while reporting is enabled. " +
 				"Reporting will override, and the activity log will be enabled")
 		} else {
@@ -1155,7 +1159,7 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) e
 			close(manager.retentionDone)
 		}(manager.retentionMonths)
 
-		manager.CensusReportDone = make(chan bool)
+		manager.CensusReportDone = make(chan bool, 1)
 		go c.activityLog.CensusReport(ctx, c.CensusAgent(), c.BillingStart())
 	}
 
@@ -1387,7 +1391,6 @@ func (a *ActivityLog) HandleEndOfMonth(ctx context.Context, currentTime time.Tim
 	// empty when it returns, but dropping some measurements is acceptable.
 	// We use force=true here in case an entry didn't appear this month
 	err = a.saveCurrentSegmentToStorageLocked(ctx, true)
-
 	// Don't return this error, just log it, we are done with that segment anyway.
 	if err != nil {
 		a.logger.Warn("last save of segment failed", "error", err)
@@ -1479,15 +1482,14 @@ func (a *ActivityLog) AddClientToFragment(clientID string, namespaceID string, t
 // fragment. The timestamp is a Unix timestamp *without* nanoseconds,
 // as that is what token.CreationTime uses.
 func (a *ActivityLog) AddActivityToFragment(clientID string, namespaceID string, timestamp int64, activityType string, mountAccessor string) {
+	if activityType == secretSyncActivityType && !a.core.HasFeature(FeatureSecretSyncBilling) {
+		return
+	}
 	// Check whether entity ID already recorded
 	var present bool
 
-	// TODO: This hack enables separate tracking of events without handling
-	// separate storage buckets for counting these event types. Consider
-	// removing if the event type is otherwise clear; notably though, this
-	// does help ensure clientID uniqueness across different types of tokens,
-	// assuming it does not break any other downstream systems.
-	if activityType != nonEntityTokenActivityType && activityType != entityActivityType {
+	// ACME clients are prefixed with "pki-acme."
+	if activityType == ACMEActivityType {
 		clientID = activityType + "." + clientID
 	}
 
@@ -1525,10 +1527,8 @@ func (a *ActivityLog) AddActivityToFragment(clientID string, namespaceID string,
 	// Track whether the clientID corresponds to a token without an entity or not.
 	// This field is backward compatible, as the default is 0, so records created
 	// from pre-1.9 activityLog code will automatically be marked as having an entity.
-	if activityType != entityActivityType {
-		// TODO: This part needs to be modified potentially for separate
-		// storage buckets of custom event types. Consider setting the above
-		// condition to activityType == nonEntityTokenEventType in the future.
+	switch activityType {
+	case nonEntityTokenActivityType, ACMEActivityType, secretSyncActivityType:
 		clientRecord.NonEntity = true
 	}
 
@@ -1578,6 +1578,20 @@ type ResponseCounts struct {
 	NonEntityTokens  int `json:"non_entity_tokens" mapstructure:"non_entity_tokens"`
 	NonEntityClients int `json:"non_entity_clients" mapstructure:"non_entity_clients"`
 	Clients          int `json:"clients"`
+	SecretSyncs      int `json:"secret_syncs" mapstructure:"secret_syncs"`
+}
+
+// Add adds the new record's counts to the existing record
+func (r *ResponseCounts) Add(newRecord *ResponseCounts) {
+	if newRecord == nil {
+		return
+	}
+	r.EntityClients += newRecord.EntityClients
+	r.Clients += newRecord.Clients
+	r.DistinctEntities += newRecord.DistinctEntities
+	r.NonEntityClients += newRecord.NonEntityClients
+	r.NonEntityTokens += newRecord.NonEntityTokens
+	r.SecretSyncs += newRecord.SecretSyncs
 }
 
 type ResponseNamespace struct {
@@ -1585,6 +1599,30 @@ type ResponseNamespace struct {
 	NamespacePath string           `json:"namespace_path" mapstructure:"namespace_path"`
 	Counts        ResponseCounts   `json:"counts"`
 	Mounts        []*ResponseMount `json:"mounts"`
+}
+
+// Add adds the namespace counts to the existing record, then either adds the
+// mount counts to the existing mount (if it exists) or appends the mount to the
+// list of mounts
+func (r *ResponseNamespace) Add(newRecord *ResponseNamespace) {
+	// Create a map of the existing mounts, so we don't duplicate them
+	mountMap := make(map[string]*ResponseCounts)
+	for _, erm := range r.Mounts {
+		mountMap[erm.MountPath] = erm.Counts
+	}
+
+	r.Counts.Add(&newRecord.Counts)
+
+	// Check the current month mounts against the existing mounts and if there are matches, update counts
+	// accordingly. If there is no match, append the new mount to the existing mounts, so it will be counted
+	// later.
+	for _, newRecordMount := range newRecord.Mounts {
+		if existingRecordMountCounts, ok := mountMap[newRecordMount.MountPath]; ok {
+			existingRecordMountCounts.Add(newRecordMount.Counts)
+		} else {
+			r.Mounts = append(r.Mounts, newRecordMount)
+		}
+	}
 }
 
 type ResponseMonth struct {
@@ -1681,7 +1719,7 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 
 	// Calculate the namespace response breakdowns and totals for entities and tokens from the initial
 	// namespace data.
-	totalEntities, totalTokens, byNamespaceResponse, err := a.calculateByNamespaceResponseForQuery(ctx, pq.Namespaces)
+	totalCounts, byNamespaceResponse, err := a.calculateByNamespaceResponseForQuery(ctx, pq.Namespaces)
 	if err != nil {
 		return nil, err
 	}
@@ -1690,9 +1728,8 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 	// breakdown for the current month as well.
 	var partialByMonth map[int64]*processMonth
 	var partialByNamespace map[string]*processByNamespace
-	var totalEntitiesCurrent int
-	var totalTokensCurrent int
 	var byNamespaceResponseCurrent []*ResponseNamespace
+	var totalCurrentCounts *ResponseCounts
 	if computePartial {
 		// Traverse through current month's activitylog data and group clients
 		// into months and namespaces
@@ -1705,9 +1742,9 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 		// endpoints.
 		byNamespaceComputation := a.transformALNamespaceBreakdowns(partialByNamespace)
 
-		// Calculate the namespace response breakdowns and totals for entities and tokens from the initial
-		// namespace data.
-		totalEntitiesCurrent, totalTokensCurrent, byNamespaceResponseCurrent, err = a.calculateByNamespaceResponseForQuery(ctx, byNamespaceComputation)
+		// Calculate the namespace response breakdowns and totals for entities
+		// and tokens from current month namespace data.
+		totalCurrentCounts, byNamespaceResponseCurrent, err = a.calculateByNamespaceResponseForQuery(ctx, byNamespaceComputation)
 		if err != nil {
 			return nil, err
 		}
@@ -1723,34 +1760,7 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 		// month counts, and append or update as necessary. We also want to account for mounts and their counts.
 		for _, nrc := range byNamespaceResponseCurrent {
 			if ndx, ok := nsrMap[nrc.NamespaceID]; ok {
-				existingRecord := byNamespaceResponse[ndx]
-
-				// Create a map of the existing mounts, so we don't duplicate them
-				mountMap := make(map[string]*ResponseCounts)
-				for _, erm := range existingRecord.Mounts {
-					mountMap[erm.MountPath] = erm.Counts
-				}
-
-				existingRecord.Counts.EntityClients += nrc.Counts.EntityClients
-				existingRecord.Counts.Clients += nrc.Counts.Clients
-				existingRecord.Counts.DistinctEntities += nrc.Counts.DistinctEntities
-				existingRecord.Counts.NonEntityClients += nrc.Counts.NonEntityClients
-				existingRecord.Counts.NonEntityTokens += nrc.Counts.NonEntityTokens
-
-				// Check the current month mounts against the existing mounts and if there are matches, update counts
-				// accordingly. If there is no match, append the new mount to the existing mounts, so it will be counted
-				// later.
-				for _, nrcMount := range nrc.Mounts {
-					if existingRecordMountCounts, ook := mountMap[nrcMount.MountPath]; ook {
-						existingRecordMountCounts.EntityClients += nrcMount.Counts.EntityClients
-						existingRecordMountCounts.Clients += nrcMount.Counts.Clients
-						existingRecordMountCounts.DistinctEntities += nrcMount.Counts.DistinctEntities
-						existingRecordMountCounts.NonEntityClients += nrcMount.Counts.NonEntityClients
-						existingRecordMountCounts.NonEntityTokens += nrcMount.Counts.NonEntityTokens
-					} else {
-						existingRecord.Mounts = append(existingRecord.Mounts, nrcMount)
-					}
-				}
+				byNamespaceResponse[ndx].Add(nrc)
 			} else {
 				byNamespaceResponse = append(byNamespaceResponse, nrc)
 			}
@@ -1761,10 +1771,10 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 	a.sortALResponseNamespaces(byNamespaceResponse)
 
 	if limitNamespaces > 0 {
-		totalEntities, totalTokens, byNamespaceResponse = a.limitNamespacesInALResponse(byNamespaceResponse, limitNamespaces)
+		totalCounts, byNamespaceResponse = a.limitNamespacesInALResponse(byNamespaceResponse, limitNamespaces)
 	}
 
-	distinctEntitiesResponse := totalEntities
+	distinctEntitiesResponse := totalCounts.EntityClients
 	if computePartial {
 		currentMonth, err := a.computeCurrentMonthForBillingPeriod(ctx, partialByMonth, startTime, endTime)
 		if err != nil {
@@ -1808,13 +1818,9 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 	}
 
 	responseData["by_namespace"] = byNamespaceResponse
-	responseData["total"] = &ResponseCounts{
-		DistinctEntities: distinctEntitiesResponse,
-		EntityClients:    totalEntities + totalEntitiesCurrent,
-		NonEntityTokens:  totalTokens + totalTokensCurrent,
-		NonEntityClients: totalTokens + totalTokensCurrent,
-		Clients:          totalEntities + totalEntitiesCurrent + totalTokens + totalTokensCurrent,
-	}
+	totalCounts.Add(totalCurrentCounts)
+	totalCounts.DistinctEntities = distinctEntitiesResponse
+	responseData["total"] = totalCounts
 
 	// Create and populate the month response structs based on the monthly breakdown.
 	months, err := a.prepareMonthsResponseForQuery(ctx, pq.Months)
@@ -2610,32 +2616,25 @@ func (a *ActivityLog) transformMonthBreakdowns(byMonth map[int64]*processMonth) 
 	return monthly
 }
 
-func (a *ActivityLog) calculateByNamespaceResponseForQuery(ctx context.Context, byNamespace []*activity.NamespaceRecord) (int, int, []*ResponseNamespace, error) {
+func (a *ActivityLog) calculateByNamespaceResponseForQuery(ctx context.Context, byNamespace []*activity.NamespaceRecord) (*ResponseCounts, []*ResponseNamespace, error) {
 	queryNS, err := namespace.FromContext(ctx)
 	if err != nil {
-		return 0, 0, nil, err
+		return nil, nil, err
 	}
 	byNamespaceResponse := make([]*ResponseNamespace, 0)
-	totalEntities := 0
-	totalTokens := 0
+	totalCounts := &ResponseCounts{}
 
 	for _, nsRecord := range byNamespace {
 		ns, err := NamespaceByID(ctx, nsRecord.NamespaceID, a.core)
 		if err != nil {
-			return 0, 0, nil, err
+			return nil, nil, err
 		}
 		if a.includeInResponse(queryNS, ns) {
 			mountResponse := make([]*ResponseMount, 0, len(nsRecord.Mounts))
 			for _, mountRecord := range nsRecord.Mounts {
 				mountResponse = append(mountResponse, &ResponseMount{
 					MountPath: mountRecord.MountPath,
-					Counts: &ResponseCounts{
-						DistinctEntities: int(mountRecord.Counts.EntityClients),
-						EntityClients:    int(mountRecord.Counts.EntityClients),
-						NonEntityClients: int(mountRecord.Counts.NonEntityClients),
-						NonEntityTokens:  int(mountRecord.Counts.NonEntityClients),
-						Clients:          int(mountRecord.Counts.EntityClients + mountRecord.Counts.NonEntityClients),
-					},
+					Counts:    a.countsRecordToCountsResponse(mountRecord.Counts, true),
 				})
 			}
 			// Sort the mounts in descending order of usage
@@ -2649,55 +2648,41 @@ func (a *ActivityLog) calculateByNamespaceResponseForQuery(ctx context.Context, 
 			} else {
 				displayPath = ns.Path
 			}
+			nsCounts := a.namespaceRecordToCountsResponse(nsRecord)
 			byNamespaceResponse = append(byNamespaceResponse, &ResponseNamespace{
 				NamespaceID:   nsRecord.NamespaceID,
 				NamespacePath: displayPath,
-				Counts: ResponseCounts{
-					DistinctEntities: int(nsRecord.Entities),
-					EntityClients:    int(nsRecord.Entities),
-					NonEntityTokens:  int(nsRecord.NonEntityTokens),
-					NonEntityClients: int(nsRecord.NonEntityTokens),
-					Clients:          int(nsRecord.Entities + nsRecord.NonEntityTokens),
-				},
-				Mounts: mountResponse,
+				Counts:        *nsCounts,
+				Mounts:        mountResponse,
 			})
-			totalEntities += int(nsRecord.Entities)
-			totalTokens += int(nsRecord.NonEntityTokens)
+			totalCounts.Add(nsCounts)
 		}
 	}
-	return totalEntities, totalTokens, byNamespaceResponse, nil
+	return totalCounts, byNamespaceResponse, nil
 }
 
 func (a *ActivityLog) prepareMonthsResponseForQuery(ctx context.Context, byMonth []*activity.MonthRecord) ([]*ResponseMonth, error) {
 	months := make([]*ResponseMonth, 0, len(byMonth))
 	for _, monthsRecord := range byMonth {
 		newClientsResponse := &ResponseNewClients{}
-		if int(monthsRecord.NewClients.Counts.EntityClients+monthsRecord.NewClients.Counts.NonEntityClients) != 0 {
+		if monthsRecord.NewClients.Counts.HasCounts() {
 			newClientsNSResponse, err := a.prepareNamespaceResponse(ctx, monthsRecord.NewClients.Namespaces)
 			if err != nil {
 				return nil, err
 			}
-			newClientsResponse.Counts = &ResponseCounts{
-				EntityClients:    int(monthsRecord.NewClients.Counts.EntityClients),
-				NonEntityClients: int(monthsRecord.NewClients.Counts.NonEntityClients),
-				Clients:          int(monthsRecord.NewClients.Counts.EntityClients + monthsRecord.NewClients.Counts.NonEntityClients),
-			}
+			newClientsResponse.Counts = a.countsRecordToCountsResponse(monthsRecord.NewClients.Counts, false)
 			newClientsResponse.Namespaces = newClientsNSResponse
 		}
 
 		monthResponse := &ResponseMonth{
 			Timestamp: time.Unix(monthsRecord.Timestamp, 0).UTC().Format(time.RFC3339),
 		}
-		if int(monthsRecord.Counts.EntityClients+monthsRecord.Counts.NonEntityClients) != 0 {
+		if monthsRecord.Counts.HasCounts() {
 			nsResponse, err := a.prepareNamespaceResponse(ctx, monthsRecord.Namespaces)
 			if err != nil {
 				return nil, err
 			}
-			monthResponse.Counts = &ResponseCounts{
-				EntityClients:    int(monthsRecord.Counts.EntityClients),
-				NonEntityClients: int(monthsRecord.Counts.NonEntityClients),
-				Clients:          int(monthsRecord.Counts.EntityClients + monthsRecord.Counts.NonEntityClients),
-			}
+			monthResponse.Counts = a.countsRecordToCountsResponse(monthsRecord.Counts, false)
 			monthResponse.Namespaces = nsResponse
 			monthResponse.NewClients = newClientsResponse
 			months = append(months, monthResponse)
@@ -2715,7 +2700,7 @@ func (a *ActivityLog) prepareNamespaceResponse(ctx context.Context, nsRecords []
 	}
 	nsResponse := make([]*ResponseNamespace, 0, len(nsRecords))
 	for _, nsRecord := range nsRecords {
-		if int(nsRecord.Counts.EntityClients) == 0 && int(nsRecord.Counts.NonEntityClients) == 0 {
+		if !nsRecord.Counts.HasCounts() {
 			continue
 		}
 
@@ -2726,17 +2711,13 @@ func (a *ActivityLog) prepareNamespaceResponse(ctx context.Context, nsRecords []
 		if a.includeInResponse(queryNS, ns) {
 			mountResponse := make([]*ResponseMount, 0, len(nsRecord.Mounts))
 			for _, mountRecord := range nsRecord.Mounts {
-				if int(mountRecord.Counts.EntityClients) == 0 && int(mountRecord.Counts.NonEntityClients) == 0 {
+				if !mountRecord.Counts.HasCounts() {
 					continue
 				}
 
 				mountResponse = append(mountResponse, &ResponseMount{
 					MountPath: mountRecord.MountPath,
-					Counts: &ResponseCounts{
-						EntityClients:    int(mountRecord.Counts.EntityClients),
-						NonEntityClients: int(mountRecord.Counts.NonEntityClients),
-						Clients:          int(mountRecord.Counts.EntityClients + mountRecord.Counts.NonEntityClients),
-					},
+					Counts:    a.countsRecordToCountsResponse(mountRecord.Counts, false),
 				})
 			}
 
@@ -2749,12 +2730,8 @@ func (a *ActivityLog) prepareNamespaceResponse(ctx context.Context, nsRecords []
 			nsResponse = append(nsResponse, &ResponseNamespace{
 				NamespaceID:   nsRecord.NamespaceID,
 				NamespacePath: displayPath,
-				Counts: ResponseCounts{
-					EntityClients:    int(nsRecord.Counts.EntityClients),
-					NonEntityClients: int(nsRecord.Counts.NonEntityClients),
-					Clients:          int(nsRecord.Counts.EntityClients + nsRecord.Counts.NonEntityClients),
-				},
-				Mounts: mountResponse,
+				Counts:        *a.countsRecordToCountsResponse(nsRecord.Counts, false),
+				Mounts:        mountResponse,
 			})
 		}
 	}
@@ -2783,7 +2760,7 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]i
 
 	// Calculate the namespace response breakdowns and totals for entities and tokens from the initial
 	// namespace data.
-	totalEntities, totalTokens, byNamespaceResponse, err := a.calculateByNamespaceResponseForQuery(ctx, byNamespaceComputation)
+	totalCounts, byNamespaceResponse, err := a.calculateByNamespaceResponseForQuery(ctx, byNamespaceComputation)
 	if err != nil {
 		return nil, err
 	}
@@ -2794,11 +2771,12 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]i
 	// Now populate the response based on breakdowns.
 	responseData := make(map[string]interface{})
 	responseData["by_namespace"] = byNamespaceResponse
-	responseData["distinct_entities"] = totalEntities
-	responseData["entity_clients"] = totalEntities
-	responseData["non_entity_tokens"] = totalTokens
-	responseData["non_entity_clients"] = totalTokens
-	responseData["clients"] = totalEntities + totalTokens
+	responseData["distinct_entities"] = totalCounts.EntityClients
+	responseData["entity_clients"] = totalCounts.EntityClients
+	responseData["non_entity_tokens"] = totalCounts.NonEntityClients
+	responseData["non_entity_clients"] = totalCounts.NonEntityClients
+	responseData["clients"] = totalCounts.Clients
+	responseData["secret_syncs"] = totalCounts.SecretSyncs
 
 	// The partialMonthClientCount should not have more than one month worth of data.
 	// If it does, something has gone wrong and we should warn that the activity log data

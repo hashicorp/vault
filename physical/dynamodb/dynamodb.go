@@ -529,7 +529,6 @@ func (d *DynamoDBBackend) batchWriteRequests(requests []*dynamodb.WriteRequest) 
 			output, err = d.client.BatchWriteItem(&dynamodb.BatchWriteItemInput{
 				RequestItems: batch,
 			})
-
 			if err != nil {
 				break
 			}

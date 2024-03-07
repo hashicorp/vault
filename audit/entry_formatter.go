@@ -8,19 +8,20 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"reflect"
+	"runtime/debug"
 	"strings"
 	"time"
 
-	"github.com/jefferai/jsonx"
-
-	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-
-	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/jefferai/jsonx"
 )
 
 var (
@@ -30,11 +31,20 @@ var (
 
 // NewEntryFormatter should be used to create an EntryFormatter.
 // Accepted options: WithPrefix.
-func NewEntryFormatter(config FormatterConfig, salter Salter, opt ...Option) (*EntryFormatter, error) {
+func NewEntryFormatter(name string, config FormatterConfig, salter Salter, logger hclog.Logger, opt ...Option) (*EntryFormatter, error) {
 	const op = "audit.NewEntryFormatter"
+
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, fmt.Errorf("%s: name is required: %w", op, event.ErrInvalidParameter)
+	}
 
 	if salter == nil {
 		return nil, fmt.Errorf("%s: cannot create a new audit formatter with nil salter: %w", op, event.ErrInvalidParameter)
+	}
+
+	if logger == nil || reflect.ValueOf(logger).IsNil() {
+		return nil, fmt.Errorf("%s: cannot create a new audit formatter with nil logger: %w", op, event.ErrInvalidParameter)
 	}
 
 	// We need to ensure that the format isn't just some default empty string.
@@ -48,9 +58,11 @@ func NewEntryFormatter(config FormatterConfig, salter Salter, opt ...Option) (*E
 	}
 
 	return &EntryFormatter{
-		salter:          salter,
 		config:          config,
+		salter:          salter,
+		logger:          logger,
 		headerFormatter: opts.withHeaderFormatter,
+		name:            name,
 		prefix:          opts.withPrefix,
 	}, nil
 }
@@ -67,7 +79,7 @@ func (*EntryFormatter) Type() eventlogger.NodeType {
 
 // Process will attempt to parse the incoming event data into a corresponding
 // audit Request/Response which is serialized to JSON/JSONx and stored within the event.
-func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
+func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *eventlogger.Event, retErr error) {
 	const op = "audit.(EntryFormatter).Process"
 
 	select {
@@ -80,20 +92,41 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		return nil, fmt.Errorf("%s: event is nil: %w", op, event.ErrInvalidParameter)
 	}
 
-	a, ok := e.Payload.(*auditEvent)
+	a, ok := e.Payload.(*AuditEvent)
 	if !ok {
 		return nil, fmt.Errorf("%s: cannot parse event payload: %w", op, event.ErrInvalidParameter)
 	}
 
-	var result []byte
-	data := new(logical.LogInput)
-	headers := make(map[string][]string)
+	if a.Data == nil {
+		return nil, fmt.Errorf("%s: cannot audit event (%s) with no data: %w", op, a.Subtype, event.ErrInvalidParameter)
+	}
 
-	if a.Data != nil {
-		*data = *a.Data
-		if a.Data.Request != nil && a.Data.Request.Headers != nil {
-			headers = a.Data.Request.Headers
+	// Handle panics
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
 		}
+
+		f.logger.Error("panic during logging",
+			"request_path", a.Data.Request.Path,
+			"audit_device_path", f.name,
+			"error", r,
+			"stacktrace", string(debug.Stack()))
+
+		// Ensure that we add this error onto any pre-existing error that was being returned.
+		retErr = multierror.Append(retErr, fmt.Errorf("%s: panic generating audit log: %q", op, f.name)).ErrorOrNil()
+	}()
+
+	// Take a copy of the event data before we modify anything.
+	data, err := a.Data.Clone()
+	if err != nil {
+		return nil, fmt.Errorf("%s: unable to copy audit event data: %w", op, err)
+	}
+
+	var headers map[string][]string
+	if data.Request != nil && data.Request.Headers != nil {
+		headers = data.Request.Headers
 	}
 
 	if f.headerFormatter != nil {
@@ -104,6 +137,8 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 
 		data.Request.Headers = adjustedHeaders
 	}
+
+	var result []byte
 
 	switch a.Subtype {
 	case RequestType:
@@ -149,10 +184,26 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		result = append([]byte(f.prefix), result...)
 	}
 
-	// Store the final format.
-	e.FormattedAs(f.config.RequiredFormat.String(), result)
+	// Copy some properties from the event (and audit event) and store the
+	// format for the next (sink) node to Process.
+	a2 := &AuditEvent{
+		ID:        a.ID,
+		Version:   a.Version,
+		Subtype:   a.Subtype,
+		Timestamp: a.Timestamp,
+		Data:      data, // Use the cloned data here rather than a pointer to the original.
+	}
 
-	return e, nil
+	e2 := &eventlogger.Event{
+		Type:      e.Type,
+		CreatedAt: e.CreatedAt,
+		Formatted: make(map[string][]byte), // we are about to set this ourselves.
+		Payload:   a2,
+	}
+
+	e2.FormattedAs(f.config.RequiredFormat.String(), result)
+
+	return e2, nil
 }
 
 // FormatRequest attempts to format the specified logical.LogInput into a RequestEntry.

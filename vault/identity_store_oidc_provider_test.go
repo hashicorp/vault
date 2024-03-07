@@ -3637,6 +3637,7 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		AuthMethods:           []string{"none", "client_secret_basic", "client_secret_post"},
 		RequestParameter:      false,
 		RequestURIParameter:   false,
+		CodeChallengeMethods:  []string{codeChallengeMethodPlain, codeChallengeMethodS256},
 	}
 	discoveryResp := &providerDiscovery{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
@@ -3693,6 +3694,7 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		AuthMethods:           []string{"none", "client_secret_basic", "client_secret_post"},
 		RequestParameter:      false,
 		RequestURIParameter:   false,
+		CodeChallengeMethods:  []string{codeChallengeMethodPlain, codeChallengeMethodS256},
 	}
 	discoveryResp = &providerDiscovery{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)

@@ -9,8 +9,8 @@ check_fmt() {
   echo "==> Checking code formatting..."
 
   declare -a malformed=()
-  readarray -t files <<< "$1"
-  if [ -n "$1" ] && [ "${#files[@]}" -ne 0 ]; then
+  IFS=" " read -r -a files <<< "$(tr '\n' ' ' <<< "$@")"
+  if [ -n "${files+set}" ] && [[ "${files[0]}" != "" ]]; then
     echo "--> Checking changed files..."
     for file in "${files[@]}"; do
       if [ ! -f "$file" ]; then
@@ -19,7 +19,9 @@ check_fmt() {
       fi
 
       if echo "$file" | grep -v pb.go | grep -v vendor > /dev/null; then
-        if ! gofumpt -l "$file" > /dev/null; then
+        local output
+        if ! output=$(gofumpt -l "$file") || [ "$output" != "" ]; then
+          echo "--> ${file} ✖"
           malformed+=("$file")
           continue
         fi
@@ -29,7 +31,7 @@ check_fmt() {
     done
   else
     echo "--> Checking all files..."
-    readarray -t malformed <<< "$(find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -l)"
+    IFS=" " read -r -a malformed <<< "$(find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -l)"
   fi
 
   if [ "${#malformed[@]}" -ne 0 ] && [ -n "${malformed[0]}" ] ; then
@@ -97,7 +99,7 @@ main() {
     mod_tidy
   ;;
   check-fmt)
-    check_fmt "${2-}"
+    check_fmt "${@:2}"
   ;;
   check-version)
     check_version "$2"

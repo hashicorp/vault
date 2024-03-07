@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFormatJSON_formatRequest(t *testing.T) {
@@ -100,7 +100,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 		var buf bytes.Buffer
 		cfg, err := NewFormatterConfig(WithHMACAccessor(false))
 		require.NoError(t, err)
-		f, err := NewEntryFormatter(cfg, ss)
+		f, err := NewEntryFormatter("test", cfg, ss, hclog.NewNullLogger())
 		require.NoError(t, err)
 		formatter := EntryFormatterWriter{
 			Formatter: f,

@@ -8,14 +8,14 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"reflect"
 	"strconv"
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -26,8 +26,13 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	if conf.SaltConfig == nil {
 		return nil, fmt.Errorf("nil salt config")
 	}
+
 	if conf.SaltView == nil {
 		return nil, fmt.Errorf("nil salt view")
+	}
+
+	if conf.Logger == nil || reflect.ValueOf(conf.Logger).IsNil() {
+		return nil, fmt.Errorf("nil logger")
 	}
 
 	address, ok := conf.Config["address"]
@@ -96,7 +101,11 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	}
 
 	// Configure the formatter for either case.
-	f, err := audit.NewEntryFormatter(b.formatConfig, b, audit.WithHeaderFormatter(headersConfig))
+	formatterOpts := []audit.Option{
+		audit.WithHeaderFormatter(headersConfig),
+		audit.WithPrefix(conf.Config["prefix"]),
+	}
+	f, err := audit.NewEntryFormatter(conf.MountPath, b.formatConfig, b, conf.Logger, formatterOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}

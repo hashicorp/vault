@@ -328,7 +328,7 @@ func (b *SystemBackend) handleActivityConfigRead(ctx context.Context, req *logic
 			"retention_months":         config.RetentionMonths,
 			"enabled":                  config.Enabled,
 			"queries_available":        qa,
-			"reporting_enabled":        b.Core.CensusLicensingEnabled(),
+			"reporting_enabled":        b.Core.AutomatedLicenseReportingEnabled(),
 			"billing_start_timestamp":  b.Core.BillingStart(),
 			"minimum_retention_months": a.configOverrides.MinimumRetentionMonths,
 		},
@@ -388,8 +388,8 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 				!activityLogEnabledDefault && config.Enabled == "enable" && enabledStr == "default" ||
 				activityLogEnabledDefault && config.Enabled == "default" && enabledStr == "disable" {
 
-				// if census is enabled, the activity log cannot be disabled
-				if a.core.CensusLicensingEnabled() {
+				// if reporting is enabled, the activity log cannot be disabled. Manual Reporting is always enabled on ent.
+				if a.core.ManualLicenseReportingEnabled() {
 					return logical.ErrorResponse("cannot disable the activity log while Reporting is enabled"), logical.ErrInvalidRequest
 				}
 				warnings = append(warnings, "the current monthly segment will be deleted because the activity log was disabled")
@@ -416,7 +416,8 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 		return logical.ErrorResponse("retention_months cannot be 0 while enabled"), logical.ErrInvalidRequest
 	}
 
-	if a.core.CensusLicensingEnabled() && config.RetentionMonths < minimumRetentionMonths {
+	// if manual license reporting is enabled, retention months must at least be 24 months
+	if a.core.ManualLicenseReportingEnabled() && config.RetentionMonths < minimumRetentionMonths {
 		return logical.ErrorResponse("retention_months must be at least %d while Reporting is enabled", minimumRetentionMonths), logical.ErrInvalidRequest
 	}
 

@@ -7,9 +7,8 @@ import (
 	"context"
 	"fmt"
 
-	gsyslog "github.com/hashicorp/go-syslog"
-
 	"github.com/hashicorp/eventlogger"
+	gsyslog "github.com/hashicorp/go-syslog"
 )
 
 var _ eventlogger.Node = (*SyslogSink)(nil)

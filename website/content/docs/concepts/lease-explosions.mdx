@@ -1,0 +1,379 @@
+---
+layout: docs
+page_title: 'Guard against lease explosions'
+description: >-
+  Learn about lease explosions and how you can prevent them.
+---
+
+# Introduction
+
+As your Vault environment scales to meet deployment needs, it is important to avoid over-subscription. A lease explosion can occur when operators reach over-subscription and clients create leases much faster than Vault is set to revoke them. If this continues unchecked, the active node can run out of memory. Once a lease explosion occurs, mitigation is time consuming and resource intensive.
+
+This document shows you how to prevent lease explosions, mitigate when a lease explosion occurs, and clean up your environment after a lease explosion.
+
+Applications and users can overwhelm system resources through consistent and high-volume API requests, resulting in denial-of-service issues in some Vault nodes or even the entire Vault cluster. Review [Vault resource quotas](/vault/docs/concepts/resource-quotas) to learn more about enabling rate-limit quotas and lease-count quotas to protect against requests which could trigger lease explosions.
+
+These are common observations and behaviors operators experience as their Vault deployment matures:
+
+- TTL values for dynamic secret leases or authentication tokens could be too high, resulting in unused leases consuming storage space while waiting to expire.
+
+- Rapid lease count growth disproportionate to the number of clients is a sign of misconfiguration or potential anti-patterns in client usage.
+
+- Lease revocation is failing. This can be caused by failures in an external service in the case of dynamic secrets.
+
+- Valid credentials which have already been leased are not being reused when possible. e.g. a badly behaving app requests new credentials from Vault every time it starts instead of caching ones it previously requested and using them again. This encourages a build up of leases associated with otherwise unused credentials.
+
+- The Vault server is not processing lease revocations as quickly as they're expiring. Usually, this is due to insufficient IOPS for the storage backend.
+
+You can approach lease explosions in three phases:
+
+- Preventing lease explosions
+
+- Mitigating lease explosions
+
+- Cleaning up after lease explosions
+
+## Preventing lease explosions
+
+Prevention is the best tool against lease explosion. The following are three important areas you can focus on to prevent lease explosion in your Vault environment.
+
+Although no technical maximum exists, high lease counts can cause degradation in system performance. We recommend short default time-to-live (TTL) values on tokens and leases to avoid a large backlog of unexpired leases or many simultaneous expirations. Review [Vault lease limits](/vault/docs/internals/limits#lease-limits) to learn more.
+
+### Client best practices
+
+Ensure clients using Vault adhere to best practices for their authentication and secret retrieval, and do not make excessive dynamic secrets requests or service token authentications. Review [Lease Concepts](/vault/docs/concepts/lease) and [Auth Concepts](/vault/docs/concepts/auth) to learn more.
+
+You should avoid these client behavior anti-patterns:
+Long TTLs configured, leading to a slow build over-subscription.
+Acute aberrant client behavior leading to rapid over-subscription.
+A combination of both.
+
+#### AppRole
+
+As Vault matures in your environment, it's important to review and ensure client behavior best practices around machine-based authentication as it can have more impact on lease explosion than human-based authentication typically does. 
+
+- [Recommended pattern for Vault AppRole use](/vault/tutorials/recommended-patterns/pattern-approle)
+
+- [How and why to use AppRole correctly in HashiCorp Vault](https://www.hashicorp.com/blog/how-and-why-to-use-approle-correctly-in-hashicorp-vault)
+
+### Monitoring key metrics
+
+Proactive monitoring is key to identifying behavior and usage patterns before they become problematic. Review the following resources for more details:
+
+- [Vault key metrics](/well-architected-framework/reliability/reliability-vault-monitoring-key-metrics)
+
+- [Vault anti-patterns poor metrics](/well-architected-framework/operational-excellence/security-vault-anti-patterns#poor-metrics-or-no-telemetry-data)
+
+### Implementation guardrails
+
+You can choose the appropriate token type for your use case, and use resource quotas as guardrails against lease explosion in your implementation.
+
+#### TTLs
+
+| TTL type | Notes |
+| -------- |------ |
+| [System-wide maximum TTL](/vault/docs/configuration#default_lease_ttl) and [system-wide default TTL](/vault/docs/configuration#max_lease_ttl) | TTL values which you specify in the Vault server configuration file; they are the last used values by Vault in terms of precedence after mount TTLs and high granularity TTLs |
+| [Mount maximum TTL](/vault/api-docs/system/mounts#default_lease_ttl-1) and [mount default TTL](/vault/api-docs/system/mounts#max_lease_ttl-1) | TTL values specified on a per mount instance of auth method or secrets engine. In terms of precedence, these TTL values override system-wide TTLs, but are overridden by highly granular TTLs. |
+| Highly granular TTLs, for example: [Database secrets engine role default TTL](/vault/api-docs/secret/databases#default_ttl) and [Database secrets engine role maximum TTL](/vault/api-docs/secret/databases#max_ttl) | These TTLs are specified on a role, group, or user level, and their values override both mount and system-wide TTL values. |
+
+More details are available in the [Token Time-To-Live, periodic tokens, and explicit max TTLs](/vault/docs/concepts/tokens#token-time-to-live-periodic-tokens-and-explicit-max-ttls) and [Lease limits](/vault/docs/internals/limits#lease-limits) documentation.
+
+You should also review the details in the Vault anti-patterns guide: [not adjusting the default lease time](/well-architected-framework/operational-excellence/security-vault-anti-patterns#not-adjusting-the-default-lease-time) for a clear explanation of the issue and solution.
+
+The following are examples for setting default and maximum TTL values using the Vault API and CLI, which you can reference when setting values for your implementation.
+
+<Note>
+
+Adjusting TTL values is not a retroactive operation, and affects just those leases or tokens issued after you make the changes.
+
+</Note>
+
+Update the default TTL to 8 hours and maximum TTL to 12 hours on a username and password auth method user named "alice". The value of `$VAULT_TOKEN` should be that of a token with capabilities to perform the operations.
+
+<Tabs>
+
+<Tab heading="API" group="api">
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    --request POST \
+    --data '{"token_ttl":"8h","token_max_ttl":"12h"}' \
+    $VAULT_ADDR/v1/auth/userpass/users/alice
+```
+
+This command is not expected to produce output, but you can read the user to confirm the settings.
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    --request GET \
+    --silent \
+    $VAULT_ADDR/v1/auth/userpass/users/alice \
+    | jq
+```
+
+Example output:
+
+<CodeBlockConfig hideClipboard>
+
+```json
+{
+  "request_id": "4cfc0293-a3f3-9b3b-b668-82aea63ced91",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "token_bound_cidrs": [],
+    "token_explicit_max_ttl": 0,
+    "token_max_ttl": 43200,
+    "token_no_default_policy": false,
+    "token_num_uses": 0,
+    "token_period": 0,
+    "token_policies": [],
+    "token_ttl": 28800,
+    "token_type": "default"
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+</CodeBlockConfig>
+
+When Alice authenticates with Vault and gets a token, its default TTL value is set to 28800 seconds (8 hours) and the maximum TTL value is 43200 seconds (12 hours).
+
+</Tab>
+
+<Tab heading="CLI" group="cli">
+
+```shell-session
+$ VAULT_TOKEN=$VAULT_TOKEN vault write /auth/userpass/users/alice \
+    token_ttl="8h" token_max_ttl="12h"
+```
+
+Example output:
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+Success! Data written to: auth/userpass/users/alice
+```
+
+</CodeBlockConfig>
+
+You can read the user to confirm the settings.
+
+```shell-session
+$ VAULT_TOKEN=$VAULT_TOKEN vault read /auth/userpass/users/alice
+```
+
+Example output:
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+Key                        Value
+---                        -----
+token_bound_cidrs          []
+token_explicit_max_ttl     0s
+token_max_ttl              12h
+token_no_default_policy    false
+token_num_uses             0
+token_period               0s
+token_policies             []
+token_ttl                  8h
+token_type                 default
+```
+
+</CodeBlockConfig>
+
+When Alice next authenticates with Vault and gets a token, its default TTL value is set to 8 hours and the maximum TTL value is 12 hours.
+
+</Tab>
+
+</Tabs>
+
+#### Resource Quotas
+You can use quotas to control Vault resource usage in the form of API rate limiting quotas and [lease count quotas](/vault/tutorials/operations/resource-quotas#lease-count-quotas). For the purposes of this overview, lease count quotas are most relevant as you can cap the maximum number of leases generated on a per-mount basis.
+
+Use this feature for use cases where a hard limit to the number of leases makes sense. Also, be sure to [monitor Vault audit device logs](/vault/tutorials/monitoring/monitor-telemetry-audit-splunk) where Vault emits messages about failures related to exceeding the quota.
+
+The following examples demonstrate creating a lease count quota on an instance of the Approle auth method, for the role named "webapp" to restrict leases to no more than 100. The value of `$VAULT_TOKEN` should be that of a token capable of performing the operations.
+
+<Tabs>
+
+<Tab heading="API" group="api">
+
+1. Create a payload file containing the lease quota parameters.
+
+   ```shell-session
+   $ cat > payload.json << EOF
+   {
+     "path": "auth/approle",
+     "role": "webapp",
+     "max_leases": 100
+   }
+   EOF
+   ```
+
+1. Write the webapp-tokens lease count quota.
+
+   ```shell-session
+   $ curl \
+    --request POST \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    --data @payload.json \
+    $VAULT_ADDR/v1/sys/quotas/lease-count/webapp-tokens
+   ```
+
+   This command is not expected to produce output, but you can read the user to confirm the settings.
+
+1. Confirm settings.
+
+   ```shell-session
+   $ curl \
+       --header "X-Vault-Token: $VAULT_TOKEN" \
+       --request GET \
+       --silent \
+       $VAULT_ADDR/v1/sys/quotas/lease-count/webapp-tokens \
+       | jq
+   ```
+
+   Example output:
+   
+   <CodeBlockConfig hideClipboard>
+   
+   ```json
+   {
+     "request_id": "188e22f1-dc1a-251a-a0a1-005e256fe70f",
+     "lease_id": "",
+     "renewable": false,
+     "lease_duration": 0,
+     "data": {
+       "counter": 0,
+       "inheritable": true,
+       "max_leases": 100,
+       "name": "webapp-tokens",
+       "path": "auth/approle/",
+       "role": "webapp",
+       "type": "lease-count"
+     },
+     "wrap_info": null,
+     "warnings": null,
+     "auth": null
+   }
+   ```
+
+   </CodeBlockConfig>
+
+</Tab>
+
+<Tab heading="CLI" group="cli">
+
+Write the webapp-tokens lease count quota.
+
+```shell-session
+$ vault write sys/quotas/lease-count/webapp-tokens \
+   max_leases=100 \
+   path="auth/approle" \
+   role="webapp"
+```
+
+Example output:
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+Success! Data written to: sys/quotas/lease-count/webapp-tokens
+```
+
+</CodeBlockConfig>
+
+Confirm the setting.
+
+```shell-session
+$ vault read sys/quotas/lease-count/webapp-tokens
+```
+
+Example output:
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+Key            Value
+---            -----
+counter        0
+inheritable    true
+max_leases     100
+name           webapp-tokens
+path           auth/approle/
+role           webapp
+type           lease-count
+```
+
+</CodeBlockConfig>
+
+</Tab>
+
+</Tabs>
+
+The limit is set to 100 leases for the AppRole auth method role named webapp.
+
+<Note>
+
+Enabling the rate limit audit logging may have an impact on the Vault performance if the volume of rejected requests is large.
+
+</Note>
+
+Review these resources for a deeper dive into controlling Vault resources:
+
+- [Vault resource quotas](/vault/docs/concepts/resource-quotas)
+
+- [Vault Enterprise lease count quotas](/vault/docs/enterprise/lease-count-quotas)
+
+- [Query audit device logs](/vault/tutorials/monitoring/query-audit-device-logs)
+
+#### Token type
+
+In some use cases, batch tokens can be a better fit than service tokens with respect to lease explosion. Review the following resources for help deciding when to use batch tokens and when to use service tokens:
+
+- [Vault service tokens vs batch tokens](/vault/tutorials/tokens/batch-tokens#service-tokens-vs-batch-tokens)
+
+- [Service vs batch token lease handling](/vault/docs/concepts/tokens#service-vs-batch-token-lease-handling)
+
+## Mitigating lease explosions
+
+Ultimately, the number of leases a system can handle is unique to the Vault deployment and environment. 
+
+### Increase resources
+
+Increasing available resources in your Vault cluster can help mitigate lease explosion and allow for cluster recovery. Review [hardware sizing](/well-architected-framework/zero-trust-security/raft-reference-architecture#hardware-sizing-for-vault-servers), and focus on increasing available RAM.
+
+#### Within Vault
+
+Use the information from the Implementation guardrails section to adjust TTL values from the default values according to your use case needs.
+
+#### External to Vault
+
+You can use firewalls or load balancers to limit API calls to Vault from aberrant clients.)
+
+[Knowledge base article around load balancing](https://support.hashicorp.com/hc/en-us/articles/14496042865427-Vault-Global-Load-Balancing-Patterns)
+[Vault & load balancing](/vault/tutorials/day-one-raft/raft-reference-architecture#load-balancer-recommendations)
+
+## Cleaning up environment after lease explosions
+
+Once the acute event subsides, the Vault active node will continue to purge leases. Sometimes, the explosion is so great, you will need to manually intervene to revoke [leases](/vault/api-docs/system/leases). If you are running a version of Vault prior to 1.13.0, this lease revocation can cause further performance degradation.
+
+Revoking or forcefully revoking leases is potentially a dangerous operation. You should ensure that you have recent valid snapshots of the cluster. Users of Vault versions prior to 1.13.0 on integrated storage must also perform freelist compaction. Vault Enterprise customers should consider proactively contacting the [Customer Success team](https://support.hashicorp.com) for help with this process.
+
+## Additional resources
+
+Proactive monitoring and periodic usage analysis are some of the best practices for Vault operators. Review the following resources for more details.
+
+- [Vault key metrics for common health checks](/well-architected-framework/reliability/reliability-vault-monitoring-key-metrics)
+
+- [Troubleshoot irrevocable leases](/vault/tutorials/monitoring/troubleshoot-irrevocable-leases)
+
+- [Troubleshooting Vault](/vault/tutorials/monitoring/troubleshooting-vault)

@@ -397,7 +397,6 @@ func (b *backend) secretAccessKeysCreate(
 			Tags:     tags,
 			UserName: &username,
 		})
-
 		if err != nil {
 			return logical.ErrorResponse("Error adding tags to user: %s", err), awsutil.CheckAWSError(err)
 		}

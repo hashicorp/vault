@@ -170,6 +170,10 @@
         "path": "concepts/lease"
       },
       {
+        "title": "Lease Explosions",
+        "path": "concepts/lease-explosions"
+      },
+      {
         "title": "Authentication",
         "path": "concepts/auth"
       },
@@ -304,6 +308,11 @@
       },
       {
         "title": "<code>replication</code>",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "configuration/replication"
       },
       {
@@ -1603,6 +1612,10 @@
                 "path": "auth/jwt/oidc-providers"
               },
               {
+                "title": "ADFS",
+                "path": "auth/jwt/oidc-providers/adfs"
+              },
+              {
                 "title": "Auth0",
                 "path": "auth/jwt/oidc-providers/auth0"
               },
@@ -2017,12 +2030,16 @@
                 ]
               },
               {
-                "title": "Examples",
-                "path": "platform/k8s/vso/examples"
+                "title": "Secret Data Transformation",
+                "path": "platform/k8s/vso/secret-transformation"
               },
               {
                 "title": "Helm Chart",
                 "path": "platform/k8s/vso/helm"
+              },
+              {
+                "title": "Examples",
+                "path": "platform/k8s/vso/examples"
               },
               {
                 "title": "Telemetry",

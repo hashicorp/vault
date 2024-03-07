@@ -311,10 +311,11 @@ module('Acceptance | landing page dashboard', function (hooks) {
     };
 
     test('shows the correct actions and links associated with database', async function (assert) {
-      await mountSecrets.enable('database', 'database');
-      await newConnection('database');
+      const backend = 'database-dashboard-1234';
+      await mountSecrets.enable('database', backend);
+      await newConnection(backend);
       await runCommands([
-        `write database/roles/my-role \
+        `write ${backend}/roles/my-role \
         db_name=mongodb-database-plugin \
         creation_statements='{ "db": "admin", "roles": [{ "role": "readWrite" }, {"role": "read", "db": "foo"}] }' \
         default_ttl="1h" \
@@ -322,7 +323,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       ]);
       await settled();
       await visit('/vault/dashboard');
-      await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, 'database');
+      await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, backend);
       await fillIn(QUICK_ACTION_SELECTORS.actionSelect, 'Generate credentials for database');
       assert.dom(QUICK_ACTION_SELECTORS.emptyState).doesNotExist();
       assert.dom(QUICK_ACTION_SELECTORS.paramsTitle).hasText('Role to use');

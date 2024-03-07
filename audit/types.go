@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/salt"
-
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -35,8 +35,8 @@ type subtype string
 // format defines types of format audit events support.
 type format string
 
-// auditEvent is the audit event.
-type auditEvent struct {
+// AuditEvent is the audit event.
+type AuditEvent struct {
 	ID        string            `json:"id"`
 	Version   string            `json:"version"`
 	Subtype   subtype           `json:"subtype"` // the subtype of the audit event.
@@ -96,9 +96,11 @@ type HeaderFormatter interface {
 
 // EntryFormatter should be used to format audit requests and responses.
 type EntryFormatter struct {
-	salter          Salter
-	headerFormatter HeaderFormatter
 	config          FormatterConfig
+	salter          Salter
+	logger          hclog.Logger
+	headerFormatter HeaderFormatter
+	name            string
 	prefix          string
 }
 
@@ -313,6 +315,9 @@ type BackendConfig struct {
 
 	// MountPath is the path where this Backend is mounted
 	MountPath string
+
+	// Logger is used to emit log messages usually captured in the server logs.
+	Logger hclog.Logger
 }
 
 // Factory is the factory function to create an audit backend.

@@ -36,6 +36,11 @@ export default class TokenExpireWarning extends Component {
     yield this.handleRenew();
   }
 
+  get queryParams() {
+    // Bring user back to current page after login
+    return { redirect_to: this.router.currentURL };
+  }
+
   get showWarning() {
     const currentRoute = this.router.currentRouteName;
     if ('vault.cluster.oidc-provider' === currentRoute) {

@@ -8,7 +8,7 @@
 import base from './base';
 import chrootNamespace from './chroot-namespace';
 import clients from './clients';
-import db from './db';
+import database from './database';
 import kms from './kms';
 import mfaConfig from './mfa-config';
 import mfaLogin from './mfa-login';
@@ -21,7 +21,7 @@ export {
   base,
   chrootNamespace,
   clients,
-  db,
+  database,
   hcpLink,
   kms,
   kubernetes,

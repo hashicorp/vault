@@ -15,6 +15,10 @@ for Vault 1.13.x compared to 1.12. Please read it carefully.
 
 @include 'consul-dataplane-upgrade-note.mdx'
 
+### Undo logs
+
+Vault 1.13 introduced changes to add extra resiliency to log shipping with undo logs. These logs can help prevent several Merkle syncs from occurring due to rapid key changes in the primary Merkle tree as the secondary tries to synchronize. For integrated storage users, Vault needs to be upgraded to 1.13 will enable this feature by default. For Consul storage users, Consul also needs to be upgraded to 1.14 to use this feature.
+
 ### User lockout
 
 As of version 1.13, Vault will stop trying to validate user credentials if the
@@ -97,7 +101,7 @@ are unaffected.
 
 @include 'tokenization-rotation-persistence.mdx'
 
-@include 'ocsp-redirect.mdx'
+@include 'known-issues/ocsp-redirect.mdx'
 
 ### PKI revocation request forwarding
 
@@ -186,3 +190,9 @@ Affects Vault 1.13.0+
 @include 'known-issues/internal-error-namespace-missing-policy.mdx'
 
 @include 'known-issues/ephemeral-loggers-memory-leak.mdx'
+
+@include 'known-issues/sublogger-levels-unchanged-on-reload.mdx'
+
+@include 'known-issues/expiration-metrics-fatal-error.mdx'
+
+@include 'known-issues/perf-secondary-many-mounts-deadlock.mdx'
