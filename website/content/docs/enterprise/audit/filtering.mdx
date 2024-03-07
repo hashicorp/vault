@@ -2,26 +2,28 @@
 layout: docs
 page_title: Filter syntax for audit results
 description: >-
-  Learn about the behavior and syntax for filtering audit data.
+  Learn about the behavior and syntax for filtering audit data in Vault Enterprise.
 ---
 
 # Filter syntax for audit results
 
+<EnterpriseAlert product="vault" />
+
 As of Vault 1.16.0, you can enable audit devices with a `filter` option to limit
 the audit entries written to a particular audit log and fine-tune your auditing
-process. 
+process.
 
 <Warning title="Proceed with caution">
 
   Filtering audit logs is an advanced feature. Exclusively enabling filtered
   devices without configuring an audit fallback may lead to gaps in your audit
   logs.
-  
+
   **Always** test your audit configuration in a non-production environment
   before deploying filters to production. And make sure to read the
   [Vault security model](/vault/docs/internals/security) and
   [filtering overview](/vault/docs/concepts/filtering) to familiarize yourself
-  with Vault auditing and filtering basics before enabling filtered audit 
+  with Vault auditing and filtering basics before enabling filtered audit
   devices.
 
 </Warning>
@@ -32,7 +34,7 @@ audit entries that match the filter are written to the audit log for the device.
 
 When you enable filtered audit devices, the behavior of any existing audit
 device and the behavior of new audit devices that **do not** use filters remain
-unchanged. 
+unchanged.
 
 ## Fallback auditing devices
 
@@ -70,7 +72,7 @@ Vault emits a
 
 If you enable filtering **without** a fallback device, Vault emits a
 [fallback 'miss' metric](/vault/docs/internals/telemetry/metrics/audit#vault-audit-fallback-miss)
-metric anytime an audit entry would have been written to the fallback so you can
+metric anytime an audit entry would have been written to the fallback device, so you can
 track how many auditable events you have lost.
 
 ## Audit device limitations
@@ -88,7 +90,7 @@ By default, Vault sends a test message to the audit device when you enable it.
 Depending on how you configure your filters, the default test message may fail
 the predicate expression and not write to the new device.
 
-You can determine whether the test message should appear in the sink for the 
+You can determine whether the test message should appear in the sink for the
 newly enabled audit device based on the following property
 table, which are common to all default test messages.
 
