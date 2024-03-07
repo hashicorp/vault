@@ -22,7 +22,7 @@
       </Hds::Alert>
     </div>
   {{/if}}
-  {{#if this.isSummaryDashboard}}
+  {{#if @isSummaryDashboard}}
     <div class="summary-state">
       <h6 class="title is-5 {{if (not (get (cluster-states this.summaryState) 'isOk')) 'has-text-danger'}}" data-test-error>
         state
@@ -47,15 +47,15 @@
       </h2>
     </div>
     <div class="selectable-card-container summary" data-test-selectable-card-container-summary>
-      {{yield (hash card=(component this.componentToRender replicationDetails=this.replicationDetailsSummary))}}
+      {{yield (hash card=(component @componentToRender replicationDetails=@replicationDetailsSummary))}}
     </div>
   {{else}}
     <div
-      class="selectable-card-container {{if this.isSecondary 'secondary' 'primary'}}"
-      data-test-selectable-card-container={{if this.isSecondary "secondary" "primary"}}
+      class="selectable-card-container {{if @isSecondary 'secondary' 'primary'}}"
+      data-test-selectable-card-container={{if @isSecondary "secondary" "primary"}}
     >
-      {{yield (hash card=(component this.componentToRender replicationDetails=this.replicationDetails))}}
-      {{#unless this.isSecondary}}
+      {{yield (hash card=(component @componentToRender replicationDetails=@replicationDetails))}}
+      {{#unless @isSecondary}}
         {{yield (hash secondaryCard=(component "known-secondaries-card"))}}
       {{/unless}}
     </div>
@@ -71,8 +71,8 @@
       </Hds::Alert>
     </div>
   {{/if}}
-  {{#unless this.isSummaryDashboard}}
-    <ReplicationTableRows @replicationDetails={{this.replicationDetails}} @clusterMode={{this.clusterMode}} />
+  {{#unless @isSummaryDashboard}}
+    <ReplicationTableRows @replicationDetails={{@replicationDetails}} @clusterMode={{this.clusterMode}} />
     <div class="replication helper-text float-right" data-test-replication-doc-link>
       <p class="has-text-grey">
         We have additional time series telemetry that can be found
