@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import clientsHandler from 'vault/mirage/handlers/clients';
+import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import sinon from 'sinon';
 import { formatRFC3339, getUnixTime } from 'date-fns';
 import { findAll } from '@ember/test-helpers';
@@ -17,14 +17,14 @@ import timestamp from 'core/utils/timestamp';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { SELECTORS as ts } from 'vault/tests/helpers/clients';
 
-const START_TIME = getUnixTime(new Date('2023-10-01T00:00:00Z'));
+const START_TIME = getUnixTime(LICENSE_START);
 
 module('Integration | Component | clients/running-total', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
   hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2024-01-31T23:59:59Z'));
+    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
   });
 
   hooks.beforeEach(async function () {
@@ -57,13 +57,13 @@ module('Integration | Component | clients/running-total', function (hooks) {
   test('it renders with full monthly activity data', async function (assert) {
     const expectedTotalEntity = formatNumber([this.totalUsageCounts.entity_clients]);
     const expectedTotalNonEntity = formatNumber([this.totalUsageCounts.non_entity_clients]);
-    // const expectedTotalSync = formatNumber([this.totalUsageCounts.secret_syncs]);
+    const expectedTotalSync = formatNumber([this.totalUsageCounts.secret_syncs]);
 
     await render(hbs`
       <Clients::RunningTotal
         @byMonthActivityData={{this.activity.byMonth}}
         @runningTotals={{this.totalUsageCounts}}
-        @upgradeData={{this.upgradeDuringActivity}}
+        @upgradeData={{this.upgradesDuringActivity}}
         @responseTimestamp={{this.timestamp}}
         @isHistoricalMonth={{false}}
       />
@@ -80,10 +80,9 @@ module('Integration | Component | clients/running-total', function (hooks) {
         `${expectedTotalNonEntity}`,
         `renders correct total nonentity average ${expectedTotalNonEntity}`
       );
-    // * unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
-    // assert
-    //   .dom(ts.charts.statTextValue('Secrets sync clients'))
-    //   .hasText(`${expectedTotalSync}`, `renders correct total sync ${expectedTotalSync}`);
+    assert
+      .dom(ts.charts.statTextValue('Secrets sync clients'))
+      .hasText(`${expectedTotalSync}`, `renders correct total sync ${expectedTotalSync}`);
 
     // assert line chart is correct
     findAll(ts.charts.line.xAxisLabel).forEach((e, i) => {
@@ -112,7 +111,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     );
     const expectedTotalEntity = formatNumber([this.totalUsageCounts.entity_clients]);
     const expectedTotalNonEntity = formatNumber([this.totalUsageCounts.non_entity_clients]);
-    // const expectedTotalSync = formatNumber([this.totalUsageCounts.secret_syncs]);
+    const expectedTotalSync = formatNumber([this.totalUsageCounts.secret_syncs]);
 
     await render(hbs`
       <Clients::RunningTotal
@@ -134,10 +133,9 @@ module('Integration | Component | clients/running-total', function (hooks) {
         `${expectedTotalNonEntity}`,
         `renders correct total nonentity average ${expectedTotalNonEntity}`
       );
-    // * unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
-    // assert
-    //   .dom(ts.charts.statTextValue('Secrets sync clients'))
-    //   .hasText(`${expectedTotalSync}`, `renders correct total sync ${expectedTotalSync}`);
+    assert
+      .dom(ts.charts.statTextValue('Secrets sync clients'))
+      .hasText(`${expectedTotalSync}`, `renders correct total sync ${expectedTotalSync}`);
   });
 
   test('it renders with single historical month data', async function (assert) {
@@ -147,11 +145,11 @@ module('Integration | Component | clients/running-total', function (hooks) {
     const expectedTotalClients = formatNumber([singleMonth.clients]);
     const expectedTotalEntity = formatNumber([singleMonth.entity_clients]);
     const expectedTotalNonEntity = formatNumber([singleMonth.non_entity_clients]);
-    // const expectedTotalSync = formatNumber([singleMonth.secret_syncs]);
+    const expectedTotalSync = formatNumber([singleMonth.secret_syncs]);
     const expectedNewClients = formatNumber([singleMonthNew.clients]);
     const expectedNewEntity = formatNumber([singleMonthNew.entity_clients]);
     const expectedNewNonEntity = formatNumber([singleMonthNew.non_entity_clients]);
-    // const expectedNewSyncs = formatNumber([singleMonthNew.secret_syncs]);
+    const expectedNewSyncs = formatNumber([singleMonthNew.secret_syncs]);
     const { statTextValue } = ts.charts;
 
     await render(hbs`
@@ -163,7 +161,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
       />
     `);
     assert.dom(ts.charts.lineChart).doesNotExist('line chart does not render');
-    assert.dom(statTextValue()).exists({ count: 6 }, 'renders 6 stat text containers'); // after SYNC BETA update to 8
+    assert.dom(statTextValue()).exists({ count: 8 }, 'renders 6 stat text containers');
     assert
       .dom(`[data-test-new] ${statTextValue('New clients')}`)
       .hasText(`${expectedNewClients}`, `renders correct total new clients: ${expectedNewClients}`);
@@ -173,10 +171,9 @@ module('Integration | Component | clients/running-total', function (hooks) {
     assert
       .dom(`[data-test-new] ${statTextValue('Non-entity clients')}`)
       .hasText(`${expectedNewNonEntity}`, `renders correct total new non-entity: ${expectedNewNonEntity}`);
-    // * unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
-    // assert
-    //   .dom(`[data-test-new] ${statTextValue('Secrets sync clients')}`)
-    //   .hasText(`${expectedNewSyncs}`, `renders correct total new non-entity: ${expectedNewSyncs}`);
+    assert
+      .dom(`[data-test-new] ${statTextValue('Secrets sync clients')}`)
+      .hasText(`${expectedNewSyncs}`, `renders correct total new non-entity: ${expectedNewSyncs}`);
     assert
       .dom(`[data-test-total] ${statTextValue('Total monthly clients')}`)
       .hasText(`${expectedTotalClients}`, `renders correct total clients: ${expectedTotalClients}`);
@@ -186,9 +183,8 @@ module('Integration | Component | clients/running-total', function (hooks) {
     assert
       .dom(`[data-test-total] ${statTextValue('Non-entity clients')}`)
       .hasText(`${expectedTotalNonEntity}`, `renders correct total non-entity: ${expectedTotalNonEntity}`);
-    // * unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
-    // assert
-    //   .dom(`[data-test-total] ${statTextValue('Secrets sync clients')}`)
-    //   .hasText(`${expectedTotalSync}`, `renders correct total sync: ${expectedTotalSync}`);
+    assert
+      .dom(`[data-test-total] ${statTextValue('Secrets sync clients')}`)
+      .hasText(`${expectedTotalSync}`, `renders correct total sync: ${expectedTotalSync}`);
   });
 });

@@ -565,6 +565,7 @@ func (c *AgentCommand) Run(args []string) int {
 			lnBundle, err := cache.StartListener(lnConfig)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
+				c.tlsReloadFuncsLock.Unlock()
 				return 1
 			}
 
@@ -587,6 +588,7 @@ func (c *AgentCommand) Run(args []string) int {
 				}, leaseCache)
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("Error creating inmem sink for cache: %v", err))
+					c.tlsReloadFuncsLock.Unlock()
 					return 1
 				}
 				sinks = append(sinks, &sink.SinkConfig{

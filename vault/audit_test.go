@@ -16,6 +16,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -233,69 +234,6 @@ func TestCore_EnableAudit_Local(t *testing.T) {
 	if len(c.audit.Entries) != 2 {
 		t.Fatalf("expected two audit entries, got %#v", localAuditTable)
 	}
-}
-
-// TestAudit_enableAudit_fallback_invalid ensures that supplying a bad value for
-// 'fallback' in options gives us the correct error.
-func TestAudit_enableAudit_fallback_invalid(t *testing.T) {
-	entry := &MountEntry{
-		Path: "noop/",
-		Options: map[string]string{
-			"fallback": "juan",
-		},
-	}
-
-	cluster := NewTestCluster(t, nil, nil)
-	cluster.Start()
-	defer cluster.Cleanup()
-	core := cluster.Cores[0]
-	core.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
-	err := core.enableAudit(context.Background(), entry, false)
-	require.Error(t, err)
-	require.EqualError(t, err, "unable to enable audit device 'noop/', cannot parse supplied 'fallback' setting: cannot parse '' as bool: strconv.ParseBool: parsing \"juan\": invalid syntax")
-}
-
-// TestAudit_enableAudit_fallback_two ensures trying to enable a second fallback
-// device returns the correct error.
-func TestAudit_enableAudit_fallback_two(t *testing.T) {
-	entry1 := &MountEntry{
-		Table:       auditTableType,
-		Path:        "noop1/",
-		Type:        "noop",
-		UUID:        "abcd",
-		Accessor:    "noop1-abcd",
-		NamespaceID: namespace.RootNamespaceID,
-		Options: map[string]string{
-			"fallback": "TRUE",
-		},
-		namespace: namespace.RootNamespace,
-	}
-
-	entry2 := &MountEntry{
-		Table:       auditTableType,
-		Path:        "noop2/",
-		Type:        "noop",
-		UUID:        "abcd",
-		Accessor:    "noop2-abcd",
-		NamespaceID: namespace.RootNamespaceID,
-		Options: map[string]string{
-			"fallback": "1",
-		},
-		namespace: namespace.RootNamespace,
-	}
-
-	cluster := NewTestCluster(t, nil, nil)
-	cluster.Start()
-	defer cluster.Cleanup()
-	core := cluster.Cores[0]
-	core.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
-	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
-	err := core.enableAudit(ctx, entry1, false)
-	require.NoError(t, err)
-
-	err = core.enableAudit(ctx, entry2, false)
-	require.Error(t, err)
-	require.EqualError(t, err, "unable to enable audit device 'noop2/', a fallback device already exists 'noop1/'")
 }
 
 func TestCore_DisableAudit(t *testing.T) {
@@ -683,5 +621,144 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	err = b.LogRequest(ctx, logInput)
 	if !errwrap.Contains(err, "event not processed by enough 'sink' nodes") {
 		t.Fatalf("err: %v", err)
+	}
+}
+
+// TestAudit_hasEnterpriseAuditOptions checks that the existence of any Enterprise
+// only options in the options which can be supplied to enable an audit device can
+// be flagged.
+func TestAudit_hasEnterpriseAuditOptions(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		input    map[string]string
+		expected bool
+	}{
+		"nil": {
+			expected: false,
+		},
+		"empty": {
+			input:    make(map[string]string),
+			expected: false,
+		},
+		"non-ent-opts": {
+			input: map[string]string{
+				"log_raw": "true",
+			},
+			expected: false,
+		},
+		"ent-opt-filter": {
+			input: map[string]string{
+				"filter": "mount_type == kv",
+			},
+			expected: true,
+		},
+		"ent-opt-fallback": {
+			input: map[string]string{
+				"fallback": "true",
+			},
+			expected: true,
+		},
+		"ent-opt-filter-and-fallback": {
+			input: map[string]string{
+				"filter":   "mount_type == kv",
+				"fallback": "true",
+			},
+			expected: true,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tc.expected, hasEnterpriseAuditOptions(tc.input))
+		})
+	}
+}
+
+// TestAudit_hasInvalidAuditOptions tests that depending on whether we are running
+// an Enterprise or non-Enterprise version of Vault, the options supplied to enable
+// an audit device may or may not be valid.
+// NOTE: In the non-Enterprise version of Vault supplying audit options such as
+// 'filter' or 'fallback' is not allowed.
+func TestAudit_hasInvalidAuditOptions(t *testing.T) {
+	tests := map[string]struct {
+		input    map[string]string
+		expected bool
+	}{
+		"non-ent-opts": {
+			input: map[string]string{
+				"log_raw": "true",
+			},
+			expected: false,
+		},
+		"ent-opt": {
+			input: map[string]string{
+				"filter": "mount_type == kv",
+			},
+			expected: !constants.IsEnterprise,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tc.expected, hasInvalidAuditOptions(tc.input))
+		})
+	}
+}
+
+// TestAudit_enableAudit ensures that we do not enable an audit device with Enterprise
+// only options on a non-Enterprise version of Vault.
+func TestAudit_enableAudit(t *testing.T) {
+	cluster := NewTestCluster(t, nil, &TestClusterOptions{NumCores: 1})
+	defer cluster.Cleanup()
+
+	c := cluster.Cores[0]
+	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
+
+	me := &MountEntry{
+		Table:   auditTableType,
+		Path:    "foo",
+		Type:    "noop",
+		Options: map[string]string{"fallback": "true"},
+	}
+	err := c.enableAudit(namespace.RootContext(context.Background()), me, true)
+
+	if constants.IsEnterprise {
+		require.NoError(t, err)
+	} else {
+		require.Error(t, err)
+	}
+}
+
+// TestAudit_newAuditBackend ensures that we do not create a new audit device
+// with Enterprise only options on a non-Enterprise version of Vault.
+func TestAudit_newAuditBackend(t *testing.T) {
+	cluster := NewTestCluster(t, nil, &TestClusterOptions{NumCores: 1})
+	defer cluster.Cleanup()
+
+	c := cluster.Cores[0]
+	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
+
+	me := &MountEntry{
+		Table:   auditTableType,
+		Path:    "foo",
+		Type:    "noop",
+		Options: map[string]string{"fallback": "true"},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := c.newAuditBackend(ctx, me, &logical.InmemStorage{}, me.Options)
+
+	if constants.IsEnterprise {
+		require.NoError(t, err)
+	} else {
+		require.Error(t, err)
 	}
 }
