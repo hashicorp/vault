@@ -557,7 +557,7 @@ func (n *DockerClusterNode) apiConfig() (*api.Config, error) {
 	}
 
 	protocol := "https"
-	if transport.TLSClientConfig == nil || transport.TLSClientConfig.Certificates == nil {
+	if n.tlsConfig == nil {
 		protocol = "http"
 	}
 	config.Address = fmt.Sprintf("%s://%s", protocol, n.HostPort)
