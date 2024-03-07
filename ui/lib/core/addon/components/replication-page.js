@@ -8,6 +8,9 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
+import { buildWaiter } from '@ember/test-waiters';
+
+const waiter = buildWaiter('replication-page');
 
 /**
  * @module ReplicationPage
@@ -41,19 +44,21 @@ export default class ReplicationPage extends Component {
   @task
   *getReplicationModeStatus(replicationMode) {
     let resp;
-
     if (this.isSummaryDashboard) {
       // the summary dashboard is not mode specific and will error
       // while running replication/null/status in the replication-mode adapter
       return;
     }
 
+    const waiterToken = waiter.beginAsync();
     try {
       resp = yield this.store.adapterFor('replication-mode').fetchStatus(replicationMode);
     } catch (e) {
       // do not handle error
+    } finally {
+      this.reindexingDetails = resp;
+      waiter.endAsync(waiterToken);
     }
-    this.reindexingDetails = resp;
   }
   get isSummaryDashboard() {
     const currentRoute = this.router.currentRouteName;
