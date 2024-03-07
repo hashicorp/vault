@@ -41,11 +41,11 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     const store = this.owner.lookup('service:store');
     this.destinations = await store.query('sync/destination', {});
-    this.featureEnabled = true;
+    this.activatedFeatures = ['secrets-sync'];
 
     this.renderComponent = () =>
       render(
-        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @featureEnabled={{this.featureEnabled}} />`,
+        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @activatedFeatures={{this.activatedFeatures}} @adapterError={{false}} />`,
         {
           owner: this.engine,
         }
@@ -172,13 +172,5 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       assert.dom(content(cardTitle)).hasText(count, 'Total count renders');
       assert.dom(action(cardTitle)).hasText(actionText, 'Card action renders');
     });
-  });
-
-  test('it should render cta when feature is disabled', async function (assert) {
-    this.featureEnabled = false;
-
-    await this.renderComponent();
-
-    assert.dom(cta.button).exists('CTA renders when feature is disabled');
   });
 });

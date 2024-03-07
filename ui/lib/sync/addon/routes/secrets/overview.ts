@@ -6,24 +6,22 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { hash } from 'rsvp';
-import type AdapterError from '@ember-data/adapter';
 
 import type StoreService from 'vault/services/store';
+import type AdapterError from '@ember-data/adapter';
 
 export default class SyncSecretsOverviewRoute extends Route {
   @service declare readonly store: StoreService;
 
   async model() {
-    const { featureEnabled } = this.modelFor('secrets') as { featureEnabled: boolean };
-    const { adapterError } = this.modelFor('secrets') as { adapterError: AdapterError | boolean };
+    const { activatedFeatures } = this.modelFor('secrets') as { activatedFeatures: Array<string> | AdapterError };
     return hash({
       destinations: this.store.query('sync/destination', {}).catch(() => []),
       associations: this.store
         .adapterFor('sync/association')
         .queryAll()
         .catch(() => []),
-      featureEnabled,
-      adapterError,
+      activatedFeatures,
     });
   }
 }

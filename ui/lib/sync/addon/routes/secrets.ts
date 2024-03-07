@@ -24,20 +24,20 @@ export default class SyncSecretsRoute extends Route {
 
   model() {
     return hash({
-      featureEnabled: this.store
+      activatedFeatures: this.store
       .adapterFor('application')
       .ajax('/v1/sys/activation-flags', 'GET')
-      .then(({ data: { activated } }: ActivationFlagsResponse) => {
-        activated.includes('secrets-sync');
+      .then((resp: ActivationFlagsResponse) => {
+          return resp.data.activated;
       }).catch((error: AdapterError) => {
-        // break out the error in the args to the component
+        // we break out this error while passing args to the component and handle the error in the overview template
         return error;
       })
     });
   }
 
-  afterModel(model: { featureEnabled: boolean }) {
-    if (!model.featureEnabled) {
+  afterModel(model: { activatedFeatures: Array<string> | AdapterError }) {
+    if (!model.activatedFeatures) {
       this.router.transitionTo('vault.cluster.sync.secrets.overview');
     }
   }
