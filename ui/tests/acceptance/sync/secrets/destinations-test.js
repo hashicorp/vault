@@ -43,13 +43,16 @@ module('Acceptance | sync | destinations', function (hooks) {
     assert.dom(ts.overview.optInModal).exists('Opt-in modal is shown');
     assert.dom(ts.overview.optInConfirm).isDisabled('Confirm button is disabled when checkbox is unchecked');
     await click(ts.overview.optInCheck);
+    server.get('/sys/activation-flags', () => {
+      return {
+        data: {
+          activated: ['secrets-sync'],
+          unactivated: [''],
+        },
+      };
+    });
     await click(ts.overview.optInConfirm);
-
-    assert.strictEqual(
-      currentURL(),
-      '/vault/sync/secrets/overview',
-      'Navigates to overview page after opt-in confirmation'
-    );
+    assert.dom(ts.overview.optInBanner).doesNotExist('Opt-in banner is not shown');
   });
 
   test('it should create new destination', async function (assert) {
