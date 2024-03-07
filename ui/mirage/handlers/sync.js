@@ -251,14 +251,6 @@ export default function (server) {
     return syncStatusResponse(schema, req);
   });
 
-  server.get('/sys/sync/config', () => {
-    return {
-      data: {
-        disabled: false,
-      },
-    };
-  });
-
   // SYNC CLIENTS ACTIVITY RESPONSE
 
   // DYNAMIC RESPONSE (with date querying)
