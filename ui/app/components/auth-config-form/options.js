@@ -16,9 +16,7 @@ import errorMessage from 'vault/utils/error-message';
  * The `AuthConfigForm/Options` is options portion of the auth config form.
  *
  * @example
- * ```js
- * <AuthConfigForm::Options @modle={{this.args.model.model}} />
- * ```
+ * <AuthConfigForm::Options @model={{this.model}} />
  *
  * @property model=null {DS.Model} - The corresponding auth model that is being configured.
  *

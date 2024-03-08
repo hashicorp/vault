@@ -14,9 +14,7 @@ import { waitFor } from '@ember/test-waiters';
  * The `AuthConfigForm/Config` is the base form to configure auth methods.
  *
  * @example
- * ```js
- * <AuthConfigForm::Config @model={{this.model.model}} />
- * ```
+ * <AuthConfigForm::Config @model={{this.model}} />
  *
  * @property model=null {DS.Model} - The corresponding auth model that is being configured.
  *
@@ -31,7 +29,7 @@ export default class AuthConfigBase extends Component {
   *saveModel(evt) {
     evt.preventDefault();
     try {
-      yield this.model.save();
+      yield this.args.model.save();
     } catch (err) {
       // AdapterErrors are handled by the error-message component
       // in the form
