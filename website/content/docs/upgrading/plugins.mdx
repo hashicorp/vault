@@ -61,7 +61,7 @@ an auth plugin, just replace all usages of `secrets` or `secret` with `auth`.
    $ vault write sys/plugins/pins/secret/my-secret-plugin version=v1.0.1
    ```
 
-1. Finally, trigger a global [plugin reload](/vault/docs/commands/plugin/reload) to
+1. Trigger a global [plugin reload](/vault/docs/commands/plugin/reload) to
    reload all instances of the plugin.
 
     ```shell-session
