@@ -54,15 +54,13 @@ export default class AuthConfigOptions extends AuthConfigComponent {
     try {
       yield this.args.model.tune(data);
     } catch (err) {
-      // AdapterErrors are handled by the error-message component
-      // in the form
-      if (err instanceof AdapterError === false) {
-        throw err;
+      if (err instanceof AdapterError) {
+        // because we're not calling model.save the model never updates with
+        // the error, so we set it manually in the component instead.
+        this.errorMessage = errorMessage(err);
+        return;
       }
-      // because we're not calling model.save the model never updates with
-      // the error. Set it on the component instead.
-      this.errorMessage = errorMessage(err);
-      return;
+      throw err;
     }
     this.router.transitionTo('vault.cluster.access.methods').followRedirects();
     this.flashMessages.success('The configuration was saved successfully.');
