@@ -79,7 +79,8 @@ export default class LineChart extends Component<Args> {
     }
   }
   get upgradedMonths() {
-    return this.data.filter((datum) => datum.tooltipUpgrade);
+    // only render upgrade month circle if datum has client count data (the y value)
+    return this.data.filter((datum) => datum.tooltipUpgrade && datum.y);
   }
   // Domains
   get yDomain() {
@@ -90,11 +91,11 @@ export default class LineChart extends Component<Args> {
     // if max is <=4, hardcode 4 which is the y-axis tickCount so y-axes are not decimals
     return [0, max <= 4 ? 4 : max];
   }
-  get timeDomain() {
-    // assume data is sorted by time
-    const firstTime = this.data[0]?.x;
-    const lastTime = this.data[this.data.length - 1]?.x;
-    return [firstTime, lastTime];
+
+  get xDomain() {
+    // these values are date objects but are already in chronological order so we use scale-point (instead of scale-time)
+    // which calculates the x-scale based on the number of data points
+    return this.data.map((d) => d.x);
   }
 
   get upgradeByMonthYear(): UpgradeByMonth {

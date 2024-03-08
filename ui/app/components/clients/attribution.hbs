@@ -89,13 +89,6 @@
     </M.Header>
     <M.Body>
       <p class="has-bottom-margin-s">
-        This export will include the namespace path, authentication method path, and the associated total, entity, and
-        non-entity clients for the
-        {{if this.formattedEndDate "date range" "month"}}
-        below.
-      </p>
-      {{!--  * SYNC BETA (1.16.0) - beta removal planned for 1.16.1 release, replace copy above with the following
-      <p class="has-bottom-margin-s">
         This export will include the namespace path, mount path and associated total, entity, non-entity and secrets sync
         clients for the
         {{if this.formattedEndDate "date range" "month"}}
@@ -107,10 +100,9 @@
         for secrets sync clients is the KV v2 engine path and for entity/non-entity clients is the corresponding
         authentication method path.
       </p>
-       --}}
       <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if this.formattedEndDate " RANGE"}}</p>
       <p class="has-bottom-margin-s" data-test-export-date-range>
-        {{this.formattedStartDate}}
+        {{this.parseAPITimestamp @startTimestamp "MMMM yyyy"}}
         {{if this.formattedEndDate "-"}}
         {{this.formattedEndDate}}</p>
     </M.Body>
@@ -119,15 +111,24 @@
         <Hds::Button @text="Export" {{on "click" (fn this.exportChartData this.formattedCsvFileName)}} />
         <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
       </Hds::ButtonSet>
-      {{#if @upgradeExplanation}}
+      {{#if @upgradesDuringActivity}}
         <Hds::Alert class="has-top-padding-m" @type="compact" @color="warning" as |A|>
           <A.Description>
-            <strong>Your data contains an upgrade.</strong>
-            {{@upgradeExplanation}}
+            <strong>Data contains {{pluralize @upgradesDuringActivity.length "upgrade"}}:</strong>
+          </A.Description>
+          <A.Description>
+            <ul class="bullet">
+              {{#each @upgradesDuringActivity as |upgrade|}}
+                <li>
+                  {{upgrade.version}}
+                  {{this.parseAPITimestamp upgrade.timestampInstalled "(MMM d, yyyy)"}}
+                </li>
+              {{/each}}
+            </ul>
+          </A.Description>
+          <A.Description>
             Visit our
             <Hds::Link::Inline
-              @icon="docs-link"
-              @iconPosition="trailing"
               @isHrefExternal={{true}}
               @href={{doc-link
                 "/vault/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"

@@ -440,7 +440,12 @@
       },
       {
         "title": "<code>/sys/config/ui/custom-messages</code>",
-        "path": "system/config-ui-custom-messages"
+        "path": "system/config-ui-custom-messages",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
       },
       {
         "title": "<code>/sys/config/ui/headers</code>",
@@ -759,6 +764,10 @@
       {
         "title": "<code>/sys/version-history</code>",
         "path": "system/version-history"
+      },
+      {
+        "title": "<code>/sys/well-known</code>",
+        "path": "system/well-known"
       },
       {
         "title": "<code>/sys/wrapping/lookup</code>",

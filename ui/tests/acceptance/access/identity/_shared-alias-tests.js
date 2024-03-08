@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentRouteName, find, settled } from '@ember/test-helpers';
+import { currentRouteName, find, settled, waitUntil } from '@ember/test-helpers';
 import page from 'vault/tests/pages/access/identity/aliases/add';
 import aliasIndexPage from 'vault/tests/pages/access/identity/aliases/index';
 import aliasShowPage from 'vault/tests/pages/access/identity/aliases/show';
@@ -18,7 +18,12 @@ export const testAliasCRUD = async function (name, itemType, assert) {
     await settled();
   }
 
-  const itemID = find('[data-test-row-value="ID"]').textContent.trim();
+  const itemID = await waitUntil(
+    function () {
+      return find('[data-test-row-value="ID"]').textContent.trim();
+    },
+    { timeout: 2000 }
+  );
   await page.visit({ item_type: itemType, id: itemID });
   await settled();
   await page.editForm.name(name).submit();
@@ -28,7 +33,12 @@ export const testAliasCRUD = async function (name, itemType, assert) {
     `${itemType}: shows a flash message`
   );
 
-  const aliasID = find('[data-test-row-value="ID"]').textContent.trim();
+  const aliasID = await waitUntil(
+    function () {
+      return find('[data-test-row-value="ID"]').textContent.trim();
+    },
+    { timeout: 2000 }
+  );
   assert.strictEqual(
     currentRouteName(),
     'vault.cluster.access.identity.aliases.show',
@@ -72,12 +82,22 @@ export const testAliasDeleteFromForm = async function (name, itemType, assert) {
     await settled();
   }
 
-  const itemID = find('[data-test-row-value="ID"]').textContent.trim();
+  const itemID = await waitUntil(
+    function () {
+      return find('[data-test-row-value="ID"]').textContent.trim();
+    },
+    { timeout: 2000 }
+  );
   await page.visit({ item_type: itemType, id: itemID });
   await settled();
   await page.editForm.name(name).submit();
   await settled();
-  const aliasID = find('[data-test-row-value="ID"]').textContent.trim();
+  const aliasID = await waitUntil(
+    function () {
+      return find('[data-test-row-value="ID"]').textContent.trim();
+    },
+    { timeout: 2000 }
+  );
   await aliasShowPage.edit();
   await settled();
   assert.strictEqual(
