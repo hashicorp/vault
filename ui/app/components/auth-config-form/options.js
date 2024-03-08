@@ -34,7 +34,7 @@ export default class AuthConfigOptions extends AuthConfigComponent {
   @waitFor
   *saveModel(evt) {
     evt.preventDefault();
-    this.error = null;
+    this.errorMessage = null;
     const data = this.args.model.config.serialize();
     data.description = this.args.model.description;
 
