@@ -99,4 +99,4 @@ func (c *Core) EntWaitUntilWALShipped(ctx context.Context, index uint64) bool {
 	return true
 }
 
-func (c *Core) SecretsSyncActivated() { return false }
+func (c *Core) SecretsSyncLicensedActivated() bool { return false }
