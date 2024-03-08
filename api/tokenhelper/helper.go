@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: MPL-2.0
 
-package token
+package tokenhelper
 
 // TokenHelper is an interface that contains basic operations that must be
 // implemented by a token helper

@@ -7,9 +7,10 @@
 // contains getters that filter and extract data from activity model for use in charts
 
 import Component from '@glimmer/component';
-import { isAfter, isBefore, isSameMonth, fromUnixTime } from 'date-fns';
+import { isSameMonth, fromUnixTime } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { calculateAverage } from 'vault/utils/chart-helpers';
+import { filterVersionHistory } from 'core/utils/client-count-utils';
 
 import type ClientsActivityModel from 'vault/models/clients/activity';
 import type {
@@ -112,25 +113,9 @@ export default class ClientsActivityComponent extends Component<Args> {
     return namespace ? this.filteredActivity : activity.total;
   }
 
-  get upgradeDuringActivity() {
+  get upgradesDuringActivity() {
     const { versionHistory, activity } = this.args;
-    if (versionHistory) {
-      // filter for upgrade data of noteworthy upgrades (1.9 and/or 1.10)
-      const upgradeVersionHistory = versionHistory.filter(
-        ({ version }) => version.match('1.9') || version.match('1.10')
-      );
-      if (upgradeVersionHistory.length) {
-        const activityStart = parseAPITimestamp(activity.startTime) as Date;
-        const activityEnd = parseAPITimestamp(activity.endTime) as Date;
-        // filter and return all upgrades that happened within date range of queried activity
-        const upgradesWithinData = upgradeVersionHistory.filter(({ timestampInstalled }) => {
-          const upgradeDate = parseAPITimestamp(timestampInstalled) as Date;
-          return isAfter(upgradeDate, activityStart) && isBefore(upgradeDate, activityEnd);
-        });
-        return upgradesWithinData.length === 0 ? null : upgradesWithinData;
-      }
-    }
-    return null;
+    return filterVersionHistory(versionHistory, activity.startTime, activity.endTime);
   }
 
   // (object) single month new client data with total counts + array of namespace breakdown
@@ -177,22 +162,5 @@ export default class ClientsActivityComponent extends Component<Args> {
     }
 
     return false;
-  }
-
-  get upgradeExplanation() {
-    if (this.upgradeDuringActivity) {
-      if (this.upgradeDuringActivity.length === 1) {
-        const version = this.upgradeDuringActivity[0]?.version || '';
-        if (version.match('1.9')) {
-          return ' How we count clients changed in 1.9, so keep that in mind when looking at the data.';
-        }
-        if (version.match('1.10')) {
-          return ' We added monthly breakdowns and mount level attribution starting in 1.10, so keep that in mind when looking at the data.';
-        }
-      }
-      // return combined explanation if spans multiple upgrades
-      return ' How we count clients changed in 1.9 and we added monthly breakdowns and mount level attribution starting in 1.10. Keep this in mind when looking at the data.';
-    }
-    return null;
   }
 }
