@@ -64,7 +64,6 @@ export default class PathHelpService extends Service {
       return this.registerNewModelWithProps(helpUrl, backend, newModel, modelType);
     } else {
       debug(`Creating new Model for ${modelType}`);
-      // this.store.registerSchema();
       newModel = Model.extend({});
     }
 

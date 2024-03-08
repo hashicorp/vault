@@ -6,16 +6,15 @@
 import ApplicationAdapter from './application';
 import { task } from 'ember-concurrency';
 import { service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
 
 export default class GeneratedItemAdapter extends ApplicationAdapter {
   @service store;
   namespace = 'v1';
-  urlForItem() {}
-  dynamicApiPath = '';
+  @tracked dynamicApiPath = '';
 
   @task
   *getDynamicApiPath(id) {
-    // TODO: remove yield at some point.
     const result = yield this.store.peekRecord('auth-method', id);
     this.dynamicApiPath = result.apiPath;
     return;
