@@ -9,18 +9,18 @@
   has less (or no) information about.
 */
 import Model from '@ember-data/model';
-import Service from '@ember/service';
+import Service, { service } from '@ember/service';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { getOwner } from '@ember/application';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve, reject } from 'rsvp';
-import { debug } from '@ember/debug';
+import { assert, debug } from '@ember/debug';
 import { capitalize } from '@ember/string';
 import { computed } from '@ember/object'; // eslint-disable-line
 import { withModelValidations } from 'vault/decorators/model-validations';
 
-import generatedItemAdapter from 'vault/adapters/generated-item-list';
+import GeneratedItemAdapter from 'vault/adapters/generated-item-list';
 import { sanitizePath } from 'core/utils/sanitize-path';
 import {
   filterPathsByItemType,
@@ -28,16 +28,16 @@ import {
   reducePathsByPathName,
 } from 'vault/utils/openapi-helpers';
 
-export default Service.extend({
-  attrs: null,
-  dynamicApiPath: '',
+export default class PathHelpService extends Service {
+  @service store;
+
   ajax(url, options = {}) {
     const appAdapter = getOwner(this).lookup(`adapter:application`);
     const { data } = options;
     return appAdapter.ajax(url, 'GET', {
       data,
     });
-  },
+  }
 
   /**
    * getNewModel instantiates models which use OpenAPI fully or partially
@@ -49,9 +49,7 @@ export default Service.extend({
    */
   getNewModel(modelType, backend, apiPath, itemType) {
     const owner = getOwner(this);
-    const modelName = `model:${modelType}`;
-
-    const modelFactory = owner.factoryFor(modelName);
+    const modelFactory = owner.factoryFor(`model:${modelType}`);
     let newModel, helpUrl;
     // if we have a factory, we need to take the existing model into account
     if (modelFactory) {
@@ -63,7 +61,7 @@ export default Service.extend({
       }
 
       helpUrl = modelProto.getHelpUrl(backend);
-      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
+      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelType);
     } else {
       debug(`Creating new Model for ${modelType}`);
       newModel = Model.extend({});
@@ -73,7 +71,7 @@ export default Service.extend({
     // and we don't need paths for them yet
     if (!apiPath) {
       helpUrl = newModel.proto().getHelpUrl(backend);
-      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
+      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelType);
     }
 
     // use paths to dynamically create our openapi help url
@@ -100,13 +98,13 @@ export default Service.extend({
         helpUrl = `/v1/${apiPath}${path.slice(1)}?help=true` || newModel.proto().getHelpUrl(backend);
         pathInfo.paths = paths;
         newModel = newModel.extend({ paths: pathInfo });
-        return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
+        return this.registerNewModelWithProps(helpUrl, backend, newModel, modelType);
       })
       .catch((err) => {
         // TODO: we should handle the error better here
         console.error(err); // eslint-disable-line
       });
-  },
+  }
 
   /**
    * getPaths is used to fetch all the openAPI paths available for an auth method,
@@ -135,7 +133,7 @@ export default Service.extend({
         itemID,
       });
     });
-  },
+  }
 
   // Makes a call to grab the OpenAPI document.
   // Returns relevant information from OpenAPI
@@ -185,7 +183,7 @@ export default Service.extend({
       const newProps = { ...paramProp, ...props };
       return expandOpenApiProps(newProps);
     });
-  },
+  }
 
   getNewAdapter(pathInfo, itemType) {
     // we need list and create paths to set the correct urls for actions
@@ -199,7 +197,7 @@ export default Service.extend({
     const createPath = paths.find((path) => path.action === 'Create' || path.operations.includes('post'));
     const deletePath = paths.find((path) => path.operations.includes('delete'));
 
-    return generatedItemAdapter.extend({
+    return class NewAdapter extends GeneratedItemAdapter {
       urlForItem(id, isList, dynamicApiPath) {
         const itemType = sanitizePath(getPath.path);
         let url;
@@ -221,30 +219,30 @@ export default Service.extend({
         }
 
         return url;
-      },
+      }
 
       urlForQueryRecord(id, modelName) {
         return this.urlForItem(id, modelName);
-      },
+      }
 
       urlForUpdateRecord(id) {
         const itemType = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${itemType}/${id}`;
-      },
+      }
 
       urlForCreateRecord(modelType, snapshot) {
         const id = snapshot.record.mutableId; // computed property that returns either id or private settable _id value
         const path = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
-      },
+      }
 
       urlForDeleteRecord(id) {
         const path = deletePath.path.slice(1, deletePath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
-      },
+      }
 
       createRecord(store, type, snapshot) {
-        return this._super(...arguments).then((response) => {
+        return super.createRecord(...arguments).then((response) => {
           // if the server does not return an id and one has not been set on the model we need to set it manually from the mutableId value
           if (!response?.id && !snapshot.record.id) {
             snapshot.record.id = snapshot.record.mutableId;
@@ -252,11 +250,12 @@ export default Service.extend({
           }
           return response;
         });
-      },
-    });
-  },
+      }
+    };
+  }
 
   registerNewModelWithProps(helpUrl, backend, newModel, modelName) {
+    assert('modelName should not include the type prefix', modelName.includes(':') === false);
     return this.getProps(helpUrl, backend).then((props) => {
       const { attrs, newFields } = combineAttributes(newModel.attributes, props);
       const owner = getOwner(this);
@@ -282,9 +281,8 @@ export default Service.extend({
               }
               return obj;
             }, {});
-            @withModelValidations(validations)
-            class GeneratedItemModel extends newModel {}
-            newModel = GeneratedItemModel;
+
+            newModel = withModelValidations(validations)(class GeneratedItemModel extends newModel {});
           }
         }
       } catch (err) {
@@ -303,10 +301,10 @@ export default Service.extend({
         }),
       });
       newModel.reopenClass({ merged: true });
-      owner.unregister(modelName);
-      owner.register(modelName, newModel);
+      owner.unregister(`model:${modelName}`);
+      owner.register(`model:${modelName}`, newModel);
     });
-  },
+  }
   getFieldGroups(newModel) {
     const groups = {
       default: [],
@@ -330,5 +328,5 @@ export default Service.extend({
       fieldGroups.push({ [group]: groups[group] });
     }
     return fieldToAttrs(newModel, fieldGroups);
-  },
-});
+  }
+}
