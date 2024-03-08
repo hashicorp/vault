@@ -28,7 +28,8 @@ export default class AuthConfigBase extends Component {
 
   @task
   @waitFor
-  *saveModel() {
+  *saveModel(evt) {
+    evt.preventDefault();
     try {
       yield this.model.save();
     } catch (err) {
