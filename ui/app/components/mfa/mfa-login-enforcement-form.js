@@ -6,7 +6,6 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { A } from '@ember/array';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import handleHasManySelection from 'core/utils/search-select-has-many';
@@ -41,14 +40,14 @@ export default class MfaLoginEnforcementForm extends Component {
   searchSelectOptions = null;
 
   @tracked name;
-  @tracked targets = A([]);
+  @tracked targets = [];
   @tracked selectedTargetType = 'accessor';
   @tracked selectedTargetValue = null;
   @tracked searchSelect = {
     options: [],
     selected: [],
   };
-  @tracked authMethods = A([]);
+  @tracked authMethods = [];
   @tracked modelErrors;
 
   constructor() {
