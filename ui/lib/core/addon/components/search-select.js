@@ -278,9 +278,6 @@ export default class SearchSelect extends Component {
     }
     if (this.args.search) {
       return resolve(this.args.search(term, select)).then((results) => {
-        if (results.toArray) {
-          results = results.slice();
-        }
         this.addCreateOption(term, results);
         return results;
       });
