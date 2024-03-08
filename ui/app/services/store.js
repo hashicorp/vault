@@ -187,7 +187,7 @@ export default class StoreService extends Store {
         );
         // Hack to make sure all records get in model correctly. remove with update to ember-data@4.12
         this.peekAll(modelName).length;
-        const model = this.peekAll(modelName).toArray();
+        const model = this.peekAll(modelName).slice();
         model.set('meta', response.meta);
         resolve(model);
       });

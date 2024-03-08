@@ -324,7 +324,7 @@ export default Service.extend(DEFAULTS, {
 
   getCompletedFeatures() {
     if (this.storageHasKey(COMPLETED_FEATURES)) {
-      return this.getExtState(COMPLETED_FEATURES).toArray();
+      return this.getExtState(COMPLETED_FEATURES).slice();
     }
     return [];
   },
@@ -337,7 +337,7 @@ export default Service.extend(DEFAULTS, {
       completed.push(done);
       this.saveExtState(COMPLETED_FEATURES, completed);
     } else {
-      this.saveExtState(COMPLETED_FEATURES, this.getExtState(COMPLETED_FEATURES).toArray().addObject(done));
+      this.saveExtState(COMPLETED_FEATURES, this.getExtState(COMPLETED_FEATURES).slice().addObject(done));
     }
 
     this.saveExtState(FEATURE_LIST, features.length ? features : null);

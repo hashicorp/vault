@@ -41,7 +41,7 @@ export default class MfaLoginEnforcementHeaderComponent extends Component {
   async fetchEnforcements() {
     try {
       // cache initial values for lookup in select handler
-      this._enforcements = (await this.store.query('mfa-login-enforcement', {})).toArray();
+      this._enforcements = (await this.store.query('mfa-login-enforcement', {})).slice();
       this.enforcements = [...this._enforcements];
     } catch (error) {
       this.enforcements = [];
