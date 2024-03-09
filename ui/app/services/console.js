@@ -46,7 +46,7 @@ export default Service.extend({
     const log = this.log;
     let history;
     if (!clearAll) {
-      history = this.commandHistory.slice();
+      history = this.commandHistory;
       history.setEach('hidden', true);
     }
     log.clear();

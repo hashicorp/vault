@@ -15,7 +15,7 @@ export const COMPUTEDS = {
   }),
 
   operationFieldsWithoutSpecial: computed('operationFields', function () {
-    return this.operationFields.slice().removeObjects(['operationAll', 'operationNone']);
+    return this.operationFields.removeObjects(['operationAll', 'operationNone']);
   }),
 
   tlsFields: computed(function () {
@@ -25,12 +25,12 @@ export const COMPUTEDS = {
   // For rendering on the create/edit pages
   defaultFields: computed('newFields', 'operationFields', 'tlsFields', function () {
     const excludeFields = ['role'].concat(this.operationFields, this.tlsFields);
-    return this.newFields.slice().removeObjects(excludeFields);
+    return this.newFields.removeObjects(excludeFields);
   }),
 
   // For adapter/serializer
   nonOperationFields: computed('newFields', 'operationFields', function () {
-    return this.newFields.slice().removeObjects(this.operationFields);
+    return this.newFields.removeObjects(this.operationFields);
   }),
 };
 
@@ -64,9 +64,7 @@ export default Model.extend(COMPUTEDS, {
 
     const attributes = ['operationAddAttribute', 'operationGetAttributes'];
     const server = ['operationDiscoverVersions'];
-    const others = this.operationFieldsWithoutSpecial
-      .slice()
-      .removeObjects(objects.concat(attributes, server));
+    const others = this.operationFieldsWithoutSpecial.removeObjects(objects.concat(attributes, server));
     const groups = [
       { 'Managed Cryptographic Objects': objects },
       { 'Object Attributes': attributes },
