@@ -100,7 +100,7 @@ export default class SearchSelect extends Component {
 
   addSearchText(optionsToFormat) {
     // maps over array of objects or response from query
-    return optionsToFormat.slice().map((option) => {
+    return optionsToFormat.map((option) => {
       const id = option[this.idKey] ? option[this.idKey] : option.id;
       option.searchText = `${option[this.nameKey]} ${id}`;
       return option;

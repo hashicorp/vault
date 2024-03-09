@@ -46,7 +46,7 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
     });
 
     // mimic what happens in lazyPaginatedQuery
-    this.destinations = store.peekAll(modelName).slice();
+    this.destinations = store.peekAll(modelName);
     this.destinations.meta = {
       filteredTotal: this.destinations.length,
       currentPage: 1,

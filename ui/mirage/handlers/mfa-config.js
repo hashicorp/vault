@@ -50,7 +50,7 @@ export default function (server) {
           records.push(server.create(`mfa-${type}-method`));
         });
       } else {
-        records = server.createList('mfa-login-enforcement', 4).slice();
+        records = server.createList('mfa-login-enforcement', 4);
       }
     }
     const dataKey = isMethod ? 'id' : 'name';

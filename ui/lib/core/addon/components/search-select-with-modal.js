@@ -69,7 +69,7 @@ export default class SearchSelectWithModal extends Component {
 
   addSearchText(optionsToFormat) {
     // maps over array models from query
-    return optionsToFormat.slice().map((option) => {
+    return optionsToFormat.map((option) => {
       option.searchText = `${option.name} ${option.id}`;
       return option;
     });

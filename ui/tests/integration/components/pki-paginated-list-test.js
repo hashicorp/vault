@@ -35,7 +35,7 @@ module('Integration | Component | pki-paginated-list', function (hooks) {
       },
     });
     // mimic what happens in lazyPaginatedQuery
-    const keyModels = this.store.peekAll('pki/key').slice();
+    const keyModels = this.store.peekAll('pki/key');
     keyModels.meta = STANDARD_META;
     this.list = keyModels;
     const emptyList = this.store.peekAll('pki/foo');
