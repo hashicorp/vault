@@ -713,7 +713,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		protocol = "http"
 	}
 	vaultCfg["api_addr"] = fmt.Sprintf(`%s://{{- GetAllInterfaces | exclude "flags" "loopback" | attr "address" -}}:8200`, protocol)
-	vaultCfg["cluster_addr"] = fmt.Sprintf(`%s://{{- GetAllInterfaces | exclude "flags" "loopback" | attr "address" -}}:8201`, protocol)
+	vaultCfg["cluster_addr"] = `https://{{- GetAllInterfaces | exclude "flags" "loopback" | attr "address" -}}:8201`
 
 	vaultCfg["administrative_namespace_path"] = opts.AdministrativeNamespacePath
 
