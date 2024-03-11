@@ -264,7 +264,8 @@ func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *fr
 	switch {
 	case password != "" && passwordHash != "":
 		return logical.ErrorResponse(fmt.Sprintf("%q and %q cannot be supplied together", paramPassword, paramPasswordHash)), logical.ErrInvalidRequest
-	case password == "" && passwordHash == "":
+	case password == "" && passwordHash == "" && req.Operation == logical.CreateOperation:
+		// Password or pre-hashed password are only required on 'create'.
 		return logical.ErrorResponse(fmt.Sprintf("%q or %q must be supplied", paramPassword, paramPasswordHash)), logical.ErrInvalidRequest
 	default:
 		return b.userCreateUpdate(ctx, req, d)
