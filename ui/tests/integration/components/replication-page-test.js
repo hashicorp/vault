@@ -62,9 +62,10 @@ module('Integration | Component | replication-page', function (hooks) {
     await render(
       hbs`<ReplicationPage @model={{this.model}} as |Page|><Page.header @showTabs={{true}} /></ReplicationPage>`
     );
-    assert.dom('[data-test-replication-title]').hasText('Disaster Recovery');
+    // Title has spaces and newlines, so we can't use hasText because it won't match exactly
+    assert.dom('[data-test-replication-title]').includesText('Disaster Recovery');
     this.set('model', { ...MODEL, replicationMode: 'performance' });
     await settled();
-    assert.dom('[data-test-replication-title]').hasText('Performance');
+    assert.dom('[data-test-replication-title]').includesText('Performance');
   });
 });
