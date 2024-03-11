@@ -150,89 +150,130 @@ module('Integration | Component | edit form kmip role', function (hooks) {
     await click('[data-test-edit-form-submit]');
   });
 
-  const savingTests = [
-    [
-      'setting operationAll',
-      { operationNone: true, operationGet: true },
-      'operationNone',
-      {
-        operationAll: true,
-        operationNone: false,
-        operationGet: true,
-      },
-      {
-        operationGet: null,
-        operationNone: false,
-      },
-      5,
-    ],
-    [
-      'setting operationNone',
-      { operationAll: true, operationCreate: true },
-      'operationNone',
-      {
-        operationAll: false,
-        operationNone: true,
-        operationCreate: true,
-      },
-      {
-        operationNone: true,
-        operationCreate: null,
-        operationAll: false,
-      },
-      6,
-    ],
+  test('setting operationAll', async function (assert) {
+    const initialState = { operationNone: true, operationGet: true };
+    const displayClicks = 'operationNone';
+    const stateBeforeSave = {
+      operationAll: true,
+      operationNone: false,
+      operationGet: true,
+    };
+    const stateAfterSave = {
+      operationGet: null,
+      operationNone: false,
+    };
+    assert.expect(5);
+    const model = createModel(initialState);
+    this.set('model', model);
+    const clickTargets = displayClicks.split(',');
+    await render(hbs`<EditFormKmipRole @model={{this.model}} />`, this.context);
+    for (const clickTarget of clickTargets) {
+      await click(`label[for=${clickTarget}]`);
+    }
+    for (const beforeStateKey of Object.keys(stateBeforeSave)) {
+      assert.strictEqual(
+        model.get(beforeStateKey),
+        stateBeforeSave[beforeStateKey],
+        `sets ${beforeStateKey}`
+      );
+    }
 
-    [
-      'setting choose, and selecting an additional item',
-      { operationAll: true, operationGet: true, operationCreate: true },
-      'operationAll,operationDestroy',
-      {
-        operationAll: false,
-        operationCreate: true,
-        operationGet: true,
-      },
-      {
-        operationGet: true,
-        operationCreate: true,
-        operationDestroy: true,
-        operationAll: false,
-      },
-      7,
-    ],
-  ];
-  for (const testCase of savingTests) {
-    const [name, initialState, displayClicks, stateBeforeSave, stateAfterSave, assertionCount] = testCase;
-    test(name, async function (assert) {
-      assert.expect(assertionCount);
-      const model = createModel(initialState);
-      this.set('model', model);
-      const clickTargets = displayClicks.split(',');
-      await render(hbs`<EditFormKmipRole @model={{this.model}} />`, this.context);
+    click('[data-test-edit-form-submit]');
 
-      for (const clickTarget of clickTargets) {
-        await click(`label[for=${clickTarget}]`);
-      }
-      for (const beforeStateKey of Object.keys(stateBeforeSave)) {
+    later(() => cancelTimers(), 50);
+    return settled().then(() => {
+      for (const afterStateKey of Object.keys(stateAfterSave)) {
         assert.strictEqual(
-          model.get(beforeStateKey),
-          stateBeforeSave[beforeStateKey],
-          `sets ${beforeStateKey}`
+          model.get(afterStateKey),
+          stateAfterSave[afterStateKey],
+          `sets ${afterStateKey} on save`
         );
       }
-
-      click('[data-test-edit-form-submit]');
-
-      later(() => cancelTimers(), 50);
-      return settled().then(() => {
-        for (const afterStateKey of Object.keys(stateAfterSave)) {
-          assert.strictEqual(
-            model.get(afterStateKey),
-            stateAfterSave[afterStateKey],
-            `sets ${afterStateKey} on save`
-          );
-        }
-      });
     });
-  }
+  });
+  test('setting operationNone', async function (assert) {
+    const initialState = { operationAll: true, operationCreate: true };
+    const displayClicks = 'operationNone';
+    const stateBeforeSave = {
+      operationAll: false,
+      operationNone: true,
+      operationCreate: true,
+    };
+    const stateAfterSave = {
+      operationNone: true,
+      operationCreate: null,
+      operationAll: false,
+    };
+    assert.expect(6);
+    const model = createModel(initialState);
+    this.set('model', model);
+    const clickTargets = displayClicks.split(',');
+    await render(hbs`<EditFormKmipRole @model={{this.model}} />`, this.context);
+    for (const clickTarget of clickTargets) {
+      await click(`label[for=${clickTarget}]`);
+    }
+    for (const beforeStateKey of Object.keys(stateBeforeSave)) {
+      assert.strictEqual(
+        model.get(beforeStateKey),
+        stateBeforeSave[beforeStateKey],
+        `sets ${beforeStateKey}`
+      );
+    }
+
+    click('[data-test-edit-form-submit]');
+
+    later(() => cancelTimers(), 50);
+    return settled().then(() => {
+      for (const afterStateKey of Object.keys(stateAfterSave)) {
+        assert.strictEqual(
+          model.get(afterStateKey),
+          stateAfterSave[afterStateKey],
+          `sets ${afterStateKey} on save`
+        );
+      }
+    });
+  });
+  test('setting choose, and selecting an additional item', async function (assert) {
+    const initialState = { operationAll: true, operationGet: true, operationCreate: true };
+    const displayClicks = 'operationAll,operationDestroy';
+    const stateBeforeSave = {
+      operationAll: false,
+      operationCreate: true,
+      operationGet: true,
+    };
+    const stateAfterSave = {
+      operationGet: true,
+      operationCreate: true,
+      operationDestroy: true,
+      operationAll: false,
+    };
+    assert.expect(7);
+    const model = createModel(initialState);
+    this.set('model', model);
+    const clickTargets = displayClicks.split(',');
+    await render(hbs`<EditFormKmipRole @model={{this.model}} />`, this.context);
+    for (const clickTarget of clickTargets) {
+      await click(`label[for=${clickTarget}]`);
+    }
+    for (const beforeStateKey of Object.keys(stateBeforeSave)) {
+      assert.strictEqual(
+        model.get(beforeStateKey),
+        stateBeforeSave[beforeStateKey],
+        `sets ${beforeStateKey}`
+      );
+    }
+
+    click('[data-test-edit-form-submit]');
+
+    later(() => cancelTimers(), 50);
+    return settled().then(() => {
+      for (const afterStateKey of Object.keys(stateAfterSave)) {
+        assert.strictEqual(
+          model.get(afterStateKey),
+          stateAfterSave[afterStateKey],
+          `sets ${afterStateKey} on save`
+        );
+      }
+    });
+  });
 });
