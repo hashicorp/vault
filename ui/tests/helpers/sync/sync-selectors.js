@@ -51,6 +51,11 @@ export const PAGE = {
     },
   },
   overview: {
+    optInBanner: '[data-test-secrets-sync-opt-in-banner]',
+    optInBannerEnable: '[data-test-secrets-sync-opt-in-banner-enable]',
+    optInModal: '[data-test-secrets-sync-opt-in-modal]',
+    optInCheck: '[data-test-opt-in-check]',
+    optInConfirm: '[data-test-opt-in-confirm]',
     createDestination: '[data-test-create-destination]',
     table: {
       row: '[data-test-overview-table-row]',

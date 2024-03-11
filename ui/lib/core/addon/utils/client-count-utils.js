@@ -4,7 +4,36 @@
  */
 
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { compareAsc, getUnixTime } from 'date-fns';
+import { compareAsc, getUnixTime, isWithinInterval } from 'date-fns';
+
+// returns array of VersionHistoryModels for noteworthy upgrades: 1.9, 1.10
+// that occurred between timestamps (i.e. queried activity data)
+export const filterVersionHistory = (versionHistory, start, end) => {
+  if (versionHistory) {
+    const upgrades = versionHistory.reduce((array, upgradeData) => {
+      const includesVersion = (v) =>
+        // only add first match, disregard subsequent patch releases of the same version
+        upgradeData.version.match(v) && !array.some((d) => d.version.match(v));
+
+      ['1.9', '1.10'].forEach((v) => {
+        if (includesVersion(v)) array.push(upgradeData);
+      });
+
+      return array;
+    }, []);
+
+    // if there are noteworthy upgrades, only return those during queried date range
+    if (upgrades.length) {
+      const startDate = parseAPITimestamp(start);
+      const endDate = parseAPITimestamp(end);
+      return upgrades.filter(({ timestampInstalled }) => {
+        const upgradeDate = parseAPITimestamp(timestampInstalled);
+        return isWithinInterval(upgradeDate, { start: startDate, end: endDate });
+      });
+    }
+  }
+  return [];
+};
 
 export const formatDateObject = (dateObj, isEnd) => {
   if (dateObj) {
