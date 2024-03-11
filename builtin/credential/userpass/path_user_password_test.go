@@ -53,7 +53,7 @@ func TestUserPass_ParseHash(t *testing.T) {
 			got, err := parsePasswordHash(tc.input)
 			switch {
 			case tc.isErrorExpected:
-				require.EqualError(t, err, "password_hash doesn't appear to be a valid bcrypt hash")
+				require.EqualError(t, err, "\"password_hash\" doesn't appear to be a valid bcrypt hash")
 			default:
 				require.NoError(t, err)
 				require.Equal(t, tc.input, string(got))
