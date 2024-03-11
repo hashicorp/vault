@@ -97,17 +97,16 @@ func (b *backend) updateUserPassword(_ *logical.Request, d *framework.FieldData,
 		return fmt.Errorf("%q or %q must be supplied", paramPassword, paramPasswordHash), nil
 	case password != "":
 		hash, err = bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-		if err != nil {
-			return nil, err
-		}
 	case passwordHash != "":
 		hash, err = parsePasswordHash(passwordHash)
-		if err != nil {
-			return nil, err
-		}
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	userEntry.PasswordHash = hash
+
 	return nil, nil
 }
 
