@@ -10,6 +10,7 @@ import Component from '@ember/component';
 import decodeConfigFromJWT from 'replication/utils/decode-config-from-jwt';
 import ReplicationActions from 'core/mixins/replication-actions';
 import { task } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
 
 const DEFAULTS = {
   token: null,
@@ -66,13 +67,15 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
     this.setProperties(DEFAULTS);
   },
 
-  submit: task(function* () {
-    try {
-      yield this.submitHandler.perform(...arguments);
-    } catch (e) {
-      // do not handle error
-    }
-  }),
+  submit: task(
+    waitFor(function* () {
+      try {
+        yield this.submitHandler.perform(...arguments);
+      } catch (e) {
+        // do not handle error
+      }
+    })
+  ),
   actions: {
     onSubmit(/*action, mode, data, event*/) {
       this.submit.perform(...arguments);

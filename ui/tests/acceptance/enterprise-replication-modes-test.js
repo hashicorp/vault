@@ -59,7 +59,9 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
     await click(s.navLink('Performance'));
     assert.strictEqual(currentURL(), '/vault/replication/performance', 'it navigates to the correct page');
     await settled();
-    assert.dom(s.title).hasText('Enable Performance Replication', 'it shows the enable view for performance');
+    assert
+      .dom(s.title)
+      .hasText('Enable Performance Replication', 'it shows the enable view for performance (flaky)');
 
     await click(s.navLink('Disaster Recovery'));
     assert.dom(s.title).hasText('Enable Disaster Recovery Replication', 'it shows the enable view for dr');
