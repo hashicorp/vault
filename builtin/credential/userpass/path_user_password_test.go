@@ -6,6 +6,8 @@ package userpass
 import (
 	"testing"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,32 +17,41 @@ func TestUserPass_ParseHash(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		input           string
-		isErrorExpected bool
+		input                string
+		isErrorExpected      bool
+		expectedErrorMessage string
 	}{
-		"spaces": {
-			input:           "         ",
-			isErrorExpected: true,
+		"too-short": {
+			input:                "too short",
+			isErrorExpected:      true,
+			expectedErrorMessage: "password hash has incorrect length",
+		},
+		"60-spaces": {
+			input:                "                                                            ",
+			isErrorExpected:      true,
+			expectedErrorMessage: "password hash has incorrect prefix",
 		},
 		"jibberish": {
-			input:           "jibberfish",
-			isErrorExpected: true,
+			input:                "jibberfishjibberfishjibberfishjibberfishjibberfishjibberfish",
+			isErrorExpected:      true,
+			expectedErrorMessage: "password hash has incorrect prefix",
 		},
-		"non-ascii": {
-			input:           "$2a$qwerty",
+		"non-ascii-prefix": {
+			input:           "$2a$qwertyjibberfishjibberfishjibberfishjibberfishjibberfish",
 			isErrorExpected: false,
 		},
-		"truncation": {
-			input:           "$2b$qwerty",
+		"truncation-prefix": {
+			input:           "$2b$qwertyjibberfishjibberfishjibberfishjibberfishjibberfish",
 			isErrorExpected: false,
 		},
-		"php-only-fixed": {
-			input:           "$2y$qwerty",
+		"php-only-fixed-prefix": {
+			input:           "$2y$qwertyjibberfishjibberfishjibberfishjibberfishjibberfish",
 			isErrorExpected: false,
 		},
 		"php-only-existing": {
-			input:           "$2x$qwerty",
-			isErrorExpected: true,
+			input:                "$2x$qwertyjibberfishjibberfishjibberfishjibberfishjibberfish",
+			isErrorExpected:      true,
+			expectedErrorMessage: "password hash has incorrect prefix",
 		},
 	}
 
@@ -53,11 +64,30 @@ func TestUserPass_ParseHash(t *testing.T) {
 			got, err := parsePasswordHash(tc.input)
 			switch {
 			case tc.isErrorExpected:
-				require.EqualError(t, err, "\"password_hash\" doesn't appear to be a valid bcrypt hash")
+				require.EqualError(t, err, tc.expectedErrorMessage)
 			default:
 				require.NoError(t, err)
 				require.Equal(t, tc.input, string(got))
 			}
 		})
+	}
+}
+
+// TestUserPass_BcryptHashLength ensures that using the bcrypt library to generate
+// a hash from a password always produces the same length.
+func TestUserPass_BcryptHashLength(t *testing.T) {
+	t.Parallel()
+
+	tests := []string{
+		"",
+		"    ",
+		"foo",
+		"this is a long password woo",
+	}
+
+	for _, input := range tests {
+		hash, err := bcrypt.GenerateFromPassword([]byte(input), bcrypt.DefaultCost)
+		require.NoError(t, err)
+		require.Len(t, hash, bcryptHashLength)
 	}
 }
