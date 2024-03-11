@@ -30,5 +30,5 @@
     {{/if}}
   </p.levelRight>
 </PageHeader>
-{{section-tabs this.model "authShow"}}
+<SectionTabs @model={{this.model}} @tabType="authShow" />
 {{component (concat "auth-method/" this.section) model=this.model}}
