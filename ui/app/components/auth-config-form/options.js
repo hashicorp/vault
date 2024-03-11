@@ -30,19 +30,21 @@ export default AuthConfigComponent.extend({
     waitFor(function* () {
       const data = this.model.config.serialize();
       data.description = this.model.description;
-      data.user_lockout_config = {};
+
+      if (this.model.supportsUserLockoutConfig) {
+        data.user_lockout_config = {};
+        this.model.userLockoutConfig.apiParams.forEach((attr) => {
+          if (Object.keys(data).includes(attr)) {
+            data.user_lockout_config[attr] = data[attr];
+            delete data[attr];
+          }
+        });
+      }
 
       // token_type should not be tuneable for the token auth method.
       if (this.model.methodType === 'token') {
         delete data.token_type;
       }
-
-      this.model.userLockoutConfig.apiParams.forEach((attr) => {
-        if (Object.keys(data).includes(attr)) {
-          data.user_lockout_config[attr] = data[attr];
-          delete data[attr];
-        }
-      });
 
       try {
         yield this.model.tune(data);
