@@ -2,8 +2,8 @@
 layout: docs
 page_title: Userpass - Auth Methods
 description: >-
-  The "userpass" auth method allows users to authenticate with Vault using a
-  username and password.
+The "userpass" auth method allows users to authenticate with Vault using a
+username and password.
 ---
 
 # Userpass auth method
@@ -13,7 +13,8 @@ a username and password combination.
 
 The username/password combinations are configured directly to the auth
 method using the `users/` path. This method cannot read usernames and
-passwords from an external source.
+passwords from an external source but it can accept pre-hashed passwords
+as inputs.
 
 The method lowercases all submitted usernames, e.g. `Mary` and `mary` are the
 same entry.
@@ -65,27 +66,27 @@ management tool.
 
 1. Enable the userpass auth method:
 
-   ```shell-session
-   $ vault auth enable userpass
+```shell-session
+$ vault auth enable userpass
    ```
 
-   This enables the userpass auth method at `auth/userpass`. To enable it at a different path, use the `-path` flag:
+This enables the userpass auth method at `auth/userpass`. To enable it at a different path, use the `-path` flag:
 
-   ```shell-session
-   $ vault auth enable -path=<path> userpass
+```shell-session
+$ vault auth enable -path=<path> userpass
    ```
 
 1. Configure it with users that are allowed to authenticate:
 
-   ```shell-session
-   $ vault write auth/<userpass:path>/users/mitchellh \
-       password=foo \
-       policies=admins
+```shell-session
+$ vault write auth/<userpass:path>/users/mitchellh \
+    password=foo \
+    policies=admins
    ```
 
-   This creates a new user "mitchellh" with the password "foo" that will be
-   associated with the "admins" policy. This is the only configuration
-   necessary.
+This creates a new user "mitchellh" with the password "foo" that will be
+associated with the "admins" policy. This is the only configuration
+necessary.
 
 ## User lockout
 

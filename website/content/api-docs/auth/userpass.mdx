@@ -2,8 +2,8 @@
 layout: api
 page_title: Userpass - Auth Methods - HTTP API
 description: |-
-  This is the API documentation for the Vault username and password
-  auth method.
+This is the API documentation for the Vault username and password
+auth method.
 ---
 
 # Userpass auth method (HTTP API)
@@ -27,8 +27,8 @@ Create a new user or update an existing user. This path honors the distinction b
 ### Parameters
 
 - `username` `(string: <required>)` – The username for the user. Accepted characters: alphanumeric plus "_", "-", "." (underscore, hyphen and period); username cannot begin with a hyphen, nor can it begin or end with a period.
-- `password` `(string: <required>)` - The password for the user. Only required
-  when creating the user.
+- `password` `(string: <required if password_hash is not given>)` - Password for the current user. Only required when creating the user.  Mutually exclusive with `password_hash`.
+- `password_hash` `(string: <required if password is not given>)` - Pre-hashed password for the current user in bcrypt format. Mutually exclusive with `password`.
 
 @include 'tokenfields.mdx'
 
@@ -163,8 +163,8 @@ Update policies for an existing user.
 
 - `username` `(string: <required>)` – The username for the user.
 - `token_policies` `(array: [] or comma-delimited string: "")` - List of
-  policies to encode onto generated tokens. Depending on the auth method, this
-  list may be supplemented by user/group/other values.
+policies to encode onto generated tokens. Depending on the auth method, this
+list may be supplemented by user/group/other values.
 
 ### Sample payload
 
