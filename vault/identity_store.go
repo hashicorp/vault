@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/patrickmn/go-cache"
 )
@@ -65,6 +66,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		tokenStorer:   core,
 		entityCreator: core,
 		mfaBackend:    core.loginMFABackend,
+		aliasLocks:    locksutil.CreateLocks(),
 	}
 
 	// Create a memdb instance, which by default, operates on lower cased
