@@ -4812,9 +4812,6 @@ func TestAddActivityToFragment(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.activityType == secretSyncActivityType && !core.HasFeature(FeatureSecretSyncBilling) {
-				t.Skip()
-			}
 			a.fragmentLock.RLock()
 			numClientsBefore := len(a.fragment.Clients)
 			a.fragmentLock.RUnlock()
