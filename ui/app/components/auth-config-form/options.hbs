@@ -21,8 +21,8 @@
         Specifies the user lockout settings for this auth mount.
       </Hds::Text::Body>
       {{#each @model.tuneAttrs as |attr|}}
-        {{#if (includes attr.name this.model.userLockoutConfig.modelAttrs)}}
-          <FormField @attr={{attr}} @model={{this.model}} />
+        {{#if (includes attr.name @model.userLockoutConfig.modelAttrs)}}
+          <FormField @attr={{attr}} @model={{@model}} />
         {{/if}}
       {{/each}}
     {{/if}}
