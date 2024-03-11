@@ -72,7 +72,7 @@
     </div>
   {{/if}}
   {{#unless @isSummaryDashboard}}
-    <ReplicationTableRows @replicationDetails={{@replicationDetails}} @clusterMode={{this.clusterMode}} />
+    <ReplicationTableRows @replicationDetails={{@replicationDetails}} @clusterMode={{@clusterMode}} />
     <div class="replication helper-text float-right" data-test-replication-doc-link>
       <p class="has-text-grey">
         We have additional time series telemetry that can be found

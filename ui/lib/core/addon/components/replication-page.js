@@ -8,9 +8,7 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
-import { buildWaiter } from '@ember/test-waiters';
-
-const waiter = buildWaiter('replication-page');
+import { waitFor } from '@ember/test-waiters';
 
 /**
  * @module ReplicationPage
@@ -42,6 +40,7 @@ export default class ReplicationPage extends Component {
   }
 
   @task
+  @waitFor
   *getReplicationModeStatus(replicationMode) {
     let resp;
     if (this.isSummaryDashboard) {
@@ -50,14 +49,12 @@ export default class ReplicationPage extends Component {
       return;
     }
 
-    const waiterToken = waiter.beginAsync();
     try {
       resp = yield this.store.adapterFor('replication-mode').fetchStatus(replicationMode);
     } catch (e) {
       // do not handle error
     } finally {
       this.reindexingDetails = resp;
-      waiter.endAsync(waiterToken);
     }
   }
   get isSummaryDashboard() {
@@ -73,8 +70,7 @@ export default class ReplicationPage extends Component {
   }
   get formattedReplicationMode() {
     // dr or performance 🤯
-    const { isSummaryDashboard } = this;
-    if (isSummaryDashboard) {
+    if (this.isSummaryDashboard) {
       return 'Disaster Recovery & Performance';
     }
     const mode = this.args.model.replicationMode;
@@ -89,13 +85,11 @@ export default class ReplicationPage extends Component {
     return this.args.model.replicationAttrs.mode;
   }
   get isLoadingData() {
-    const { isSummaryDashboard, clusterMode } = this;
-    if (isSummaryDashboard) {
+    if (this.isSummaryDashboard) {
       return false;
     }
-    const clusterId = this.args.model.replicationAttrs.clusterId;
-    const replicationDisabled = this.args.model.replicationAttrs.replicationDisabled;
-    if (clusterMode === 'bootstrapping' || (!clusterId && !replicationDisabled)) {
+    const { clusterId, replicationDisabled } = this.args.model.replicationAttrs;
+    if (this.clusterMode === 'bootstrapping' || (!clusterId && !replicationDisabled)) {
       // if clusterMode is bootstrapping
       // if no clusterId, the data hasn't loaded yet, wait for another status endpoint to be called
       return true;
@@ -103,15 +97,10 @@ export default class ReplicationPage extends Component {
     return false;
   }
   get isSecondary() {
-    const { clusterMode } = this;
-    return clusterMode === 'secondary';
+    return this.clusterMode === 'secondary';
   }
   get replicationDetailsSummary() {
-    const { isSummaryDashboard } = this;
-    if (!isSummaryDashboard) {
-      return {};
-    }
-    if (isSummaryDashboard) {
+    if (this.isSummaryDashboard) {
       const combinedObject = {};
       combinedObject.dr = this.args.model['dr'];
       combinedObject.performance = this.args.model['performance'];
@@ -124,7 +113,7 @@ export default class ReplicationPage extends Component {
       // Cannot return null
       return {};
     }
-    const replicationMode = this.args.model.replicationMode;
+    const { replicationMode } = this.args.model;
     return this.args.model[replicationMode];
   }
   get isDisabled() {
