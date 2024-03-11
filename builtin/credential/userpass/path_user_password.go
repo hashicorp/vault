@@ -96,7 +96,6 @@ func (b *backend) updateUserPassword(_ *logical.Request, d *framework.FieldData,
 	case password == "" && passwordHash == "":
 		return fmt.Errorf("%q or %q must be supplied", paramPassword, paramPasswordHash), nil
 	case password != "":
-		var err error
 		hash, err = bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		if err != nil {
 			return nil, err
