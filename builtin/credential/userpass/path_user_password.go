@@ -123,7 +123,7 @@ func parsePasswordHash(passwordHash string) ([]byte, error) {
 		strings.HasPrefix(passwordHash, "$2b$"): // $2b$ (truncation fix)
 		res = []byte(passwordHash)
 	default:
-		return nil, fmt.Errorf("password_hash doesn't appear to be a valid bcrypt hash")
+		return nil, fmt.Errorf("%q doesn't appear to be a valid bcrypt hash", paramPasswordHash)
 	}
 
 	return res, nil
