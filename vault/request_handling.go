@@ -1659,6 +1659,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			var err error
 			// Fetch the entity for the alias, or create an entity if one
 			// doesn't exist.
+
 			entity, entityCreated, err := c.identityStore.CreateOrFetchEntity(ctx, auth.Alias)
 			if err != nil {
 				switch auth.Alias.Local {
@@ -1666,7 +1667,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 					// Only create a new entity if the error was a readonly error and the creation flag is true
 					// i.e the entity was in the middle of being created
 					if entityCreated && errors.Is(err, logical.ErrReadOnly) {
-						entity, err = possiblyForwardEntityCreation(ctx, c, err, auth, nil)
+						entity, err = registerLocalAlias(ctx, c, auth.Alias)
 						if err != nil {
 							if strings.Contains(err.Error(), errCreateEntityUnimplemented) {
 								resp.AddWarning("primary cluster doesn't yet issue entities for local auth mounts; falling back to not issuing entities for local auth mounts")
@@ -1676,14 +1677,14 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 							}
 						}
 					}
-					err = updateLocalAlias(ctx, c, auth, entity)
 				default:
 					entity, entityCreated, err = possiblyForwardAliasCreation(ctx, c, err, auth, entity)
+					if err != nil {
+						return nil, nil, err
+					}
 				}
 			}
-			if err != nil {
-				return nil, nil, err
-			}
+
 			if entity == nil {
 				return nil, nil, fmt.Errorf("failed to create an entity for the authenticated alias")
 			}
