@@ -321,7 +321,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await settled();
 
     // navigate using breadcrumbs back to replication.index
-    assert.dom('[data-test-replication-breadcrumb]').exists();
+    assert.dom('[data-test-replication-breadcrumb]').exists('shows the replication breadcrumb (flaky)');
     await click('[data-test-replication-breadcrumb] a');
 
     assert
