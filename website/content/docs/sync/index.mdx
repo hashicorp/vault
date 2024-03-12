@@ -283,6 +283,13 @@ Note that reconciliation process do not protect from out-of-band updates
 that occur directly in the external service. The secrets sync system is designed to be
 one-way and does not support bidirectional sync at this time.
 
+## Client Counts
+
+Each secret that is synced with one or more destinations is counted as a
+distinct client in Vault's client counting. See [entity assignments with secret
+sync](/vault/docs/concepts/client-count#entity-assignment-with-secret-sync)
+for more information.
+
 ## API
 
 Please see the [secrets sync API](/vault/api-docs/system/secrets-sync) for more details.

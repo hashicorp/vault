@@ -273,6 +273,7 @@ That is to say, the response will appear as follows.
             "entity_clients":"exact int value",
             "non_entity_tokens":"exact int value",
             "non_entity_clients":"exact int value",
+            "secret_syncs":"exact int value",
             "clients":"exact int value"
          },
          "namespaces": [
@@ -284,6 +285,7 @@ That is to say, the response will appear as follows.
                      "entity_clients":"exact int value",
                      "non_entity_tokens":"exact int value",
                      "non_entity_clients":"exact int value",
+                     "secret_syncs":"exact int value",
                      "clients":"exact int value"
                   },
                   "mounts":[
@@ -294,6 +296,7 @@ That is to say, the response will appear as follows.
                            "entity_clients":"exact int value",
                            "non_entity_tokens":"exact int value",
                            "non_entity_clients":"exact int value",
+                           "secret_syncs":"exact int value",
                            "clients":"exact int value"
                         },
                      },
@@ -306,6 +309,7 @@ That is to say, the response will appear as follows.
                "entity_clients":"approx int value",
                "non_entity_tokens":"approx int value",
                "non_entity_clients":"approx int value",
+               "secret_syncs":"exact int value",
                "clients":"approx int value"
             },
             "namespaces":[]
@@ -379,7 +383,8 @@ $ curl \
                "entity_clients":20,
                "non_entity_tokens":10,
                "non_entity_clients":10,
-               "clients":30
+               "secret_syncs": 5,
+               "clients":35
             },
             "mounts":[
                {
@@ -389,6 +394,7 @@ $ curl \
                      "entity_clients":10,
                      "non_entity_tokens":10,
                      "non_entity_clients":10,
+                     "secret_syncs": 0,
                      "clients":20
                   }
                },
@@ -399,7 +405,30 @@ $ curl \
                      "entity_clients":5,
                      "non_entity_tokens":5,
                      "non_entity_clients":5,
+                     "secret_syncs": 0,
                      "clients":10
+                  }
+               },
+               {
+                  "path":"secrets/kv1/",
+                  "counts":{
+                     "distinct_entities":0,
+                     "entity_clients":0,
+                     "non_entity_tokens":0,
+                     "non_entity_clients":0,
+                     "secret_syncs":3,
+                     "clients":3
+                  }
+               },
+               {
+                  "path":"secrets/kv2/",
+                  "counts":{
+                     "distinct_entities":0,
+                     "entity_clients":0,
+                     "non_entity_tokens":0,
+                     "non_entity_clients":0,
+                     "secret_syncs":0,
+                     "clients":2
                   }
                }
             ]
@@ -412,6 +441,7 @@ $ curl \
                "entity_clients":5,
                "non_entity_tokens":5,
                "non_entity_clients":5,
+               "secret_syncs":0,
                "clients":10
             },
             "mounts":[
@@ -422,6 +452,7 @@ $ curl \
                      "entity_clients":0,
                      "non_entity_tokens":5,
                      "non_entity_clients":5,
+                     "secret_syncs":0,
                      "clients":5
                   }
                },
@@ -432,6 +463,7 @@ $ curl \
                      "entity_clients":5,
                      "non_entity_tokens":0,
                      "non_entity_clients":0,
+                     "secret_syncs":0,
                      "clients":5
                   }
                }
@@ -447,7 +479,8 @@ $ curl \
                "entity_clients":20,
                "non_entity_tokens":10,
                "non_entity_clients":10,
-               "clients":30
+               "secret_syncs":5,
+               "clients":35
             },
             "namespaces":[
                {
@@ -458,6 +491,7 @@ $ curl \
                      "entity_clients":15,
                      "non_entity_tokens":5,
                      "non_entity_clients":5,
+                     "secret_syncs":5,
                      "clients":20
                   },
                   "mounts":[
@@ -468,6 +502,7 @@ $ curl \
                            "entity_clients":10,
                            "non_entity_tokens":5,
                            "non_entity_clients":5,
+                           "secret_syncs":0,
                            "clients":15
                         }
                      },
@@ -478,7 +513,30 @@ $ curl \
                            "entity_clients":3,
                            "non_entity_tokens":2,
                            "non_entity_clients":2,
+                           "secret_syncs":0,
                            "clients":5
+                        }
+                     },
+                     {
+                        "path":"secrets/kv1/",
+                        "counts":{
+                           "distinct_entities":0,
+                           "entity_clients":0,
+                           "non_entity_tokens":0,
+                           "non_entity_clients":0,
+                           "secret_syncs":3,
+                           "clients":3
+                        }
+                     },
+                     {
+                        "path":"secrets/kv2/",
+                        "counts":{
+                           "distinct_entities":0,
+                           "entity_clients":0,
+                           "non_entity_tokens":0,
+                           "non_entity_clients":0,
+                           "secret_syncs":2,
+                           "clients":2
                         }
                      }
                   ]
@@ -491,6 +549,7 @@ $ curl \
                      "entity_clients":5,
                      "non_entity_tokens":5,
                      "non_entity_clients":5,
+                     "secret_syncs":0,
                      "clients":10
                   },
                   "mounts":[
@@ -501,6 +560,7 @@ $ curl \
                            "entity_clients":0,
                            "non_entity_tokens":5,
                            "non_entity_clients":5,
+                           "secret_syncs":0,
                            "clients":5
                         }
                      },
@@ -511,6 +571,7 @@ $ curl \
                            "entity_clients":5,
                            "non_entity_tokens":0,
                            "non_entity_clients":0,
+                           "secret_syncs":0,
                            "clients":5
                         }
                      }
@@ -523,7 +584,8 @@ $ curl \
                   "entity_clients":10,
                   "non_entity_tokens":10,
                   "non_entity_clients":10,
-                  "clients":20
+                  "secret_syncs":2,
+                  "clients":22
                },
                "namespaces":[
                   {
@@ -534,7 +596,8 @@ $ curl \
                         "entity_clients":5,
                         "non_entity_tokens":5,
                         "non_entity_clients":5,
-                        "clients":10
+                        "secret_syncs":2,
+                        "clients":12
                      },
                      "mounts":[
                         {
@@ -555,6 +618,28 @@ $ curl \
                               "non_entity_tokens":0,
                               "non_entity_clients":0,
                               "clients":5
+                           }
+                        },
+                        {
+                           "path":"secrets/kv1/",
+                           "counts":{
+                              "distinct_entities":0,
+                              "entity_clients":0,
+                              "non_entity_tokens":0,
+                              "non_entity_clients":0,
+                              "secret_syncs":1,
+                              "clients":1
+                           }
+                        },
+                        {
+                           "path":"secrets/kv2/",
+                           "counts":{
+                              "distinct_entities":0,
+                              "entity_clients":0,
+                              "non_entity_tokens":0,
+                              "non_entity_clients":0,
+                              "secret_syncs":1,
+                              "clients":1
                            }
                         }
                      ]
@@ -567,6 +652,7 @@ $ curl \
                         "entity_clients":5,
                         "non_entity_tokens":5,
                         "non_entity_clients":5,
+                        "secret_syncs":0,
                         "clients":10
                      },
                      "mounts":[
@@ -577,6 +663,7 @@ $ curl \
                               "entity_clients":0,
                               "non_entity_tokens":5,
                               "non_entity_clients":5,
+                              "secret_syncs":0,
                               "clients":5
                            }
                         },
@@ -587,6 +674,7 @@ $ curl \
                               "entity_clients":5,
                               "non_entity_tokens":0,
                               "non_entity_clients":0,
+                              "secret_syncs":0,
                               "clients":5
                            }
                         }
@@ -602,6 +690,7 @@ $ curl \
                "entity_clients":5,
                "non_entity_tokens":5,
                "non_entity_clients":5,
+               "secret_syncs":0,
                "clients":10
             },
             "namespaces":[
@@ -613,6 +702,7 @@ $ curl \
                      "entity_clients":5,
                      "non_entity_tokens":5,
                      "non_entity_clients":5,
+                     "secret_syncs":0,
                      "clients":10
                   },
                   "mounts":[
@@ -623,6 +713,7 @@ $ curl \
                            "entity_clients":0,
                            "non_entity_tokens":5,
                            "non_entity_clients":5,
+                           "secret_syncs":0,
                            "clients":5
                         }
                      },
@@ -633,6 +724,7 @@ $ curl \
                            "entity_clients":5,
                            "non_entity_tokens":0,
                            "non_entity_clients":0,
+                           "secret_syncs":0,
                            "clients":5
                         }
                      }
@@ -645,6 +737,7 @@ $ curl \
                   "entity_clients":5,
                   "non_entity_tokens":5,
                   "non_entity_clients":5,
+                  "secret_syncs":3,
                   "clients":10
                },
                "namespaces":[
@@ -656,6 +749,7 @@ $ curl \
                         "entity_clients":5,
                         "non_entity_tokens":5,
                         "non_entity_clients":5,
+                        "secret_syncs":3,
                         "clients":10
                      },
                      "mounts":[
@@ -666,6 +760,7 @@ $ curl \
                               "entity_clients":0,
                               "non_entity_tokens":5,
                               "non_entity_clients":5,
+                              "secret_syncs":0,
                               "clients":5
                            }
                         },
@@ -676,7 +771,30 @@ $ curl \
                               "entity_clients":5,
                               "non_entity_tokens":0,
                               "non_entity_clients":0,
+                              "secret_syncs":0,
                               "clients":5
+                           }
+                        },
+                        {
+                           "path":"secrets/kv1/",
+                           "counts":{
+                              "distinct_entities":0,
+                              "entity_clients":0,
+                              "non_entity_tokens":0,
+                              "non_entity_clients":0,
+                              "secret_syncs":2,
+                              "clients":2
+                           }
+                        },
+                        {
+                           "path":"secrets/kv2/",
+                           "counts":{
+                              "distinct_entities":0,
+                              "entity_clients":0,
+                              "non_entity_tokens":0,
+                              "non_entity_clients":0,
+                              "secret_syncs":1,
+                              "clients":1
                            }
                         }
                      ]
@@ -691,7 +809,8 @@ $ curl \
          "entity_clients":20,
          "non_entity_tokens":20,
          "non_entity_clients":20,
-         "clients":40
+         "secret_syncs":5,
+         "clients":45
       }
    },
    "wrap_info":null,
@@ -764,7 +883,8 @@ $ curl \
           "distinct_entities": 0,
           "entity_clients": 0,
           "non_entity_clients": 1,
-          "non_entity_tokens": 1
+          "non_entity_tokens": 1,
+          "secret_syncs": 0
         },
         "mounts": [
           {
@@ -773,7 +893,8 @@ $ curl \
               "distinct_entities": 0,
               "entity_clients": 0,
               "non_entity_clients": 1,
-              "non_entity_tokens": 0
+              "non_entity_tokens": 0,
+              "secret_syncs": 0
             },
             "mount_path": "auth_token_0747d59c"
           }
@@ -792,7 +913,8 @@ $ curl \
           "distinct_entities": 0,
           "entity_clients": 0,
           "non_entity_clients": 1,
-          "non_entity_tokens": 0
+          "non_entity_tokens": 0,
+          "secret_syncs": 0
         },
         "namespaces": [
           {
@@ -802,6 +924,7 @@ $ curl \
               "entity_clients": 0,
               "non_entity_clients": 1,
               "non_entity_tokens": 0
+              "secret_syncs": 0
             },
             "mounts": [
               {
@@ -811,6 +934,7 @@ $ curl \
                   "entity_clients": 0,
                   "non_entity_clients": 1,
                   "non_entity_tokens": 0
+                  "secret_syncs": 0
                 },
                 "mount_path": "auth_token_0747d59c"
               }
@@ -826,6 +950,7 @@ $ curl \
             "entity_clients": 0,
             "non_entity_clients": 1,
             "non_entity_tokens": 0
+            "secret_syncs": 0
           },
           "namespaces": [
             {
@@ -835,6 +960,7 @@ $ curl \
                 "entity_clients": 0,
                 "non_entity_clients": 1,
                 "non_entity_tokens": 0
+                "secret_syncs": 0
               },
               "mounts": [
                 {
@@ -844,6 +970,7 @@ $ curl \
                     "entity_clients": 0,
                     "non_entity_clients": 1,
                     "non_entity_tokens": 0
+                    "secret_syncs": 0
                   },
                   "mount_path": "auth_token_0747d59c"
                 }
@@ -857,7 +984,8 @@ $ curl \
       }
     ],
     "non_entity_clients": 1,
-    "non_entity_tokens": 1
+    "non_entity_tokens": 1,
+    "secret_syncs": 0
   },
   "warnings": null
 }
