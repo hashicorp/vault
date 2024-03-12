@@ -69,7 +69,8 @@ management tool.
    $ vault auth enable userpass
    ```
 
-   This enables the userpass auth method at `auth/userpass`. To enable it at a different path, use the `-path` flag:
+  Enable the `userpass` auth method at the default `auth/userpass` path.
+  You can choose to enable the auth method at a different path with the `-path` flag:
 
    ```shell-session
    $ vault auth enable -path=<path> userpass
