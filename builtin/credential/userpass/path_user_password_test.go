@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"golang.org/x/crypto/bcrypt"
-
 	"github.com/stretchr/testify/require"
 )
 
