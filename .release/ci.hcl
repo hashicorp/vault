@@ -12,8 +12,7 @@ project "vault" {
     organization = "hashicorp"
     repository = "vault"
     release_branches = [
-      "main",
-      "release/**",
+      "VAULT-24506/tvoran/test-couchbase-32bit",
     ]
   }
 }
