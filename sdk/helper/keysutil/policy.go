@@ -68,6 +68,8 @@ const (
 	KeyType_RSA3072
 	KeyType_MANAGED_KEY
 	KeyType_HMAC
+	KeyType_AES128_CMAC
+	KeyType_AES256_CMAC
 )
 
 const (
@@ -202,6 +204,10 @@ func (kt KeyType) String() string {
 		return "hmac"
 	case KeyType_MANAGED_KEY:
 		return "managed_key"
+	case KeyType_AES128_CMAC:
+		return "aes-128-cmac"
+	case KeyType_AES256_CMAC:
+		return "aes-256-cmac"
 	}
 
 	return "[unknown]"
@@ -1611,14 +1617,17 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		DeprecatedCreationTime: now.Unix(),
 	}
 
-	hmacKey, err := uuid.GenerateRandomBytesWithReader(32, randReader)
-	if err != nil {
-		return err
+	if p.Type != KeyType_AES128_CMAC && p.Type != KeyType_AES256_CMAC {
+		hmacKey, err := uuid.GenerateRandomBytesWithReader(32, randReader)
+		if err != nil {
+			return err
+		}
+		entry.HMACKey = hmacKey
 	}
-	entry.HMACKey = hmacKey
 
+	var err error
 	switch p.Type {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_HMAC:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC:
 		// Default to 256 bit key
 		numBytes := 32
 		if p.Type == KeyType_AES128_GCM96 {
