@@ -332,3 +332,39 @@ func TestAuditEvent_Subtype_MetricTag(t *testing.T) {
 		})
 	}
 }
+
+// TestAuditEvent_Subtype_String is used to ensure that we get the string value
+// we expect for a subtype when it is used with the Stringer interface.
+// e.g. an AuditRequest subtype is 'request'
+func TestAuditEvent_Subtype_String(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		input          string
+		expectedOutput string
+	}{
+		"request": {
+			input:          "AuditRequest",
+			expectedOutput: "request",
+		},
+		"response": {
+			input:          "AuditResponse",
+			expectedOutput: "response",
+		},
+		"non-validated": {
+			input:          "juan",
+			expectedOutput: "juan",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			st := subtype(tc.input)
+			require.Equal(t, tc.expectedOutput, st.String())
+		})
+	}
+}

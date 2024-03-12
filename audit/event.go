@@ -140,5 +140,17 @@ func (t subtype) MetricTag() string {
 		return "log_response"
 	}
 
+	return t.String()
+}
+
+// String returns the subtype as a human-readable string.
+func (t subtype) String() string {
+	switch t {
+	case RequestType:
+		return "request"
+	case ResponseType:
+		return "response"
+	}
+
 	return string(t)
 }
