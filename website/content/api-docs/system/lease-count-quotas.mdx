@@ -138,9 +138,9 @@ $ curl \
 ## List lease count quotas
 
 This endpoint returns a list of all the lease count quotas across all namespaces.
-The global visibility differs from the restricted access enforced when modifying
-and deleting rate limit quotas within parent or sibling namespaces. A 404
-response will be returned if no lease count quota has been created.
+Note that this level of access differs from creating, updating, and deleting
+quotas which restricts access to parent and sibling namespaces. A 404 response
+will be returned if no lease count quota has been created.
 
 | Method | Path                      |
 | :----- | :------------------------ |
