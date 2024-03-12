@@ -34,17 +34,17 @@ if ! files="$(git diff "${base_commit}...${head_commit}" --name-only)"; then
   exit 1
 fi
 
-for file in $(awk -F "/" '{ print $2}' <<< "$files" | uniq); do
-  if [[ "$file" =~ "changelog" ]]; then
+for file in $(awk -F "/" '{ print $1}' <<< "$files" | uniq); do
+  if [[ "$file" == "changelog" ]]; then
     continue
   fi
 
-  if [[ "$file" =~ "website" ]]; then
+  if [[ "$file" == "website" ]]; then
     docs_changed=true
     continue
   fi
 
-  if [[ "$file" =~ "ui" ]]; then
+  if [[ "$file" == "ui" ]]; then
     ui_changed=true
     continue
   fi

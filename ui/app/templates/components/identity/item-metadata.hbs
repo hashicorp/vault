@@ -16,7 +16,7 @@
       </div>
       <div class="column has-text-right">
         {{#if @model.canEdit}}
-          <Identity::PopupMetadata @params={{array @model key}} />
+          <Identity::PopupMetadata @key={{key}} @model={{@model}} />
         {{/if}}
       </div>
     </div>

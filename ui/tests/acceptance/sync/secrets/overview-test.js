@@ -9,10 +9,11 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
 import authPage from 'vault/tests/pages/auth';
-import { click } from '@ember/test-helpers';
+import { click, waitFor } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 
-module('Acceptance | enterprise | sync | destination', function (hooks) {
+// sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
+module('Acceptance | sync | destination', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
@@ -28,10 +29,12 @@ module('Acceptance | enterprise | sync | destination', function (hooks) {
     await click(ts.createCancel);
     await click(ts.overviewCard.actionLink('Create new'));
     await click(ts.createCancel);
+    await waitFor(ts.overview.table.actionToggle(0));
     await click(ts.overview.table.actionToggle(0));
     await click(ts.overview.table.action('sync'));
     await click(ts.destinations.sync.cancel);
     await click(ts.breadcrumbLink('Secrets Sync'));
+    await waitFor(ts.overview.table.actionToggle(0));
     await click(ts.overview.table.actionToggle(0));
     await click(ts.overview.table.action('details'));
     assert.dom(ts.tab('Secrets')).hasClass('active', 'Navigates to secrets view for destination');

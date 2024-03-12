@@ -93,7 +93,7 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
     await this.renderComponent();
 
     assert.dom('[data-test-list-item-content] svg').hasClass('flight-icon-folder', 'List item icon renders');
-    assert.dom('[data-test-library]').hasText(this.libraries.firstObject.name, 'List item name renders');
+    assert.dom('[data-test-library]').hasText(this.libraries[0].name, 'List item name renders');
 
     await click('[data-test-popup-menu-trigger]');
     assert.dom('[data-test-edit]').hasText('Edit', 'Edit link renders in menu');

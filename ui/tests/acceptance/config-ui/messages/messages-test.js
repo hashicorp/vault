@@ -12,13 +12,70 @@ import logout from 'vault/tests/pages/logout';
 import { format, addDays, startOfDay } from 'date-fns';
 import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
 import { PAGE } from 'vault/tests/helpers/config-ui/message-selectors';
+import { clickTrigger } from 'ember-power-select/test-support/helpers';
 
-module('Acceptance | config-ui', function (hooks) {
+module('Acceptance | Community | config-ui/messages', function (hooks) {
+  setupApplicationTest(hooks);
+  setupMirage(hooks);
+
+  hooks.beforeEach(async function () {
+    this.server.get('sys/internal/ui/version', function () {
+      return {
+        data: {
+          version: '1.16.0',
+        },
+      };
+    });
+
+    this.server.get('/sys/health', function () {
+      return {
+        enterprise: false,
+        initialized: true,
+        sealed: false,
+        standby: false,
+        license: {
+          expiry: '2024-01-12T23:20:50.52Z',
+          state: 'stored',
+        },
+        performance_standby: false,
+        replication_performance_mode: 'disabled',
+        replication_dr_mode: 'disabled',
+        server_time_utc: 1622562585,
+        version: '1.16.0',
+        cluster_name: 'vault-cluster-e779cd7c',
+        cluster_id: '5f20f5ab-acea-0481-787e-71ec2ff5a60b',
+        last_wal: 121,
+      };
+    });
+    await authPage.login();
+  });
+
+  hooks.afterEach(async function () {
+    await logout.visit();
+  });
+
+  test('it should hide the sidebar settings section on community', async function (assert) {
+    assert.expect(1);
+    assert.dom(PAGE.navLink).doesNotExist();
+  });
+});
+
+module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
     this.createMessage = async (messageType = 'banner', endTime = '2023-12-12', authenticated = true) => {
+      await click(PAGE.navLink);
+
+      if (authenticated) {
+        await click(PAGE.tab('After user logs in'));
+        await click(PAGE.button('create message'));
+      } else {
+        await click(PAGE.tab('On login page'));
+        await click(PAGE.button('create message'));
+      }
+
       await visit(`vault/config-ui/messages?authenticated=${authenticated}`);
       await click(PAGE.button('create message'));
       await fillIn(PAGE.input('title'), 'Awesome custom message title');
@@ -43,15 +100,42 @@ module('Acceptance | config-ui', function (hooks) {
 
       await click(PAGE.button('create-message'));
     };
+    this.server.get('sys/internal/ui/version', function () {
+      return {
+        data: {
+          version: '1.16.0+ent',
+        },
+      };
+    });
+    this.server.get('/sys/health', function () {
+      return {
+        enterprise: true,
+        initialized: true,
+        sealed: false,
+        standby: false,
+        license: {
+          expiry: '2024-01-12T23:20:50.52Z',
+          state: 'stored',
+        },
+        performance_standby: false,
+        replication_performance_mode: 'disabled',
+        replication_dr_mode: 'disabled',
+        server_time_utc: 1622562585,
+        version: '1.16.0+ent',
+        cluster_name: 'vault-cluster-e779cd7c',
+        cluster_id: '5f20f5ab-acea-0481-787e-71ec2ff5a60b',
+        last_wal: 121,
+      };
+    });
     await authPage.login();
   });
+
   hooks.afterEach(async function () {
     await logout.visit();
   });
-
   test('it should show an empty state when no messages are created', async function (assert) {
     assert.expect(4);
-    await visit('vault/config-ui/messages');
+    await click(PAGE.navLink);
     assert.dom('[data-test-component="empty-state"]').exists();
     assert.dom(PAGE.emptyStateTitle).hasText('No messages yet');
     await click(PAGE.tab('On login page'));
@@ -76,6 +160,7 @@ module('Acceptance | config-ui', function (hooks) {
         'redirects to messages page after delete'
       );
     });
+
     test('it should show multiple messages modal', async function (assert) {
       assert.expect(4);
       await this.createMessage('modal', null);
@@ -92,9 +177,48 @@ module('Acceptance | config-ui', function (hooks) {
       await click(PAGE.confirmButton);
       assert.dom('[data-test-component="empty-state"]').exists('Message was deleted');
     });
+    test('it should filter by type and status', async function (assert) {
+      assert.expect(6);
+      await this.createMessage('banner', null);
+      await this.createMessage('banner');
+      await visit('vault/config-ui/messages');
+
+      // check number of messages with status filters
+      await clickTrigger('#filter-by-message-status');
+      await click('.ember-power-select-options [data-option-index="0"]');
+      assert.dom('.linked-block').exists({ count: 1 }, 'filtered by active');
+      await click('[data-test-selected-list-button="delete"]');
+      await clickTrigger('#filter-by-message-status');
+      await click('.ember-power-select-options [data-option-index="1"]');
+      assert.dom('.linked-block').exists({ count: 1 }, 'filtered by inactive');
+      await click('[data-test-selected-list-button="delete"]');
+
+      // check number of messages with type filters
+      await clickTrigger('#filter-by-message-type');
+      await click('.ember-power-select-options [data-option-index="0"]');
+      assert.dom('.linked-block').exists({ count: 0 }, 'filtered by modal');
+      await click('[data-test-selected-list-button="delete"]');
+      await clickTrigger('#filter-by-message-type');
+      await click('.ember-power-select-options [data-option-index="1"]');
+      assert.dom('.linked-block').exists({ count: 2 }, 'filtered by banner');
+      await click('[data-test-selected-list-button="delete"]');
+
+      // check number of messages with no filters
+      assert.dom('.linked-block').exists({ count: 2 }, 'no filters selected');
+
+      // clean up custom messages
+      await click(PAGE.listItem('Awesome custom message title'));
+      await click(PAGE.confirmActionButton('Delete message'));
+      await click(PAGE.confirmButton);
+      await click(PAGE.listItem('Awesome custom message title'));
+      await click(PAGE.confirmActionButton('Delete message'));
+      await click(PAGE.confirmButton);
+      assert.dom('[data-test-component="empty-state"]').exists('Message was deleted');
+    });
     test('it should display preview a message when all required fields are filled out', async function (assert) {
       assert.expect(2);
-      await visit(`vault/config-ui/messages`);
+      await click(PAGE.navLink);
+      await click(PAGE.tab('After user logs in'));
       await click(PAGE.button('create message'));
       await fillIn(PAGE.input('title'), 'Awesome custom message title');
       await click(PAGE.radio('banner'));
@@ -113,7 +237,8 @@ module('Acceptance | config-ui', function (hooks) {
     });
     test('it should not display preview a message when all required fields are not filled out', async function (assert) {
       assert.expect(2);
-      await visit(`vault/config-ui/messages`);
+      await click(PAGE.navLink);
+      await click(PAGE.tab('After user logs in'));
       await click(PAGE.button('create message'));
       await click(PAGE.radio('banner'));
       await fillIn(
@@ -163,17 +288,19 @@ module('Acceptance | config-ui', function (hooks) {
     });
     test('it should show info message on create and edit form', async function (assert) {
       assert.expect(1);
-      await visit('vault/config-ui/messages?authenticated=false');
+      await click(PAGE.navLink);
+      await click(PAGE.tab('On login page'));
       await click(PAGE.button('create message'));
       assert
         .dom(PAGE.unauthCreateFormInfo)
         .hasText(
-          'Note: Do not include sensitive info in this message since users are unauthenticated at this stage.'
+          'Note: Do not include sensitive information in this message since users are unauthenticated at this stage.'
         );
     });
     test('it should display preview a message when all required fields are filled out', async function (assert) {
       assert.expect(2);
-      await visit('vault/config-ui/messages?authenticated=false');
+      await click(PAGE.navLink);
+      await click(PAGE.tab('On login page'));
       await click(PAGE.button('create message'));
       await fillIn(PAGE.input('title'), 'Awesome custom message title');
       await click(PAGE.radio('banner'));
@@ -192,7 +319,8 @@ module('Acceptance | config-ui', function (hooks) {
     });
     test('it should not display preview a message when all required fields are not filled out', async function (assert) {
       assert.expect(2);
-      await visit('vault/config-ui/messages?authenticated=false');
+      await click(PAGE.navLink);
+      await click(PAGE.tab('On login page'));
       await click(PAGE.button('create message'));
       await click(PAGE.radio('banner'));
       await fillIn(

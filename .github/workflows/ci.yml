@@ -223,26 +223,31 @@ jobs:
       - test-ui
     if: always()
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
+    permissions: write-all # Ensure we have id-token:write access for vault-auth.
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       # Determine the overall status of our required test jobs.
       - name: Determine status
         id: status
         run: |
-          # Decode our test results and filter out unrequired jobs. Reformat the JSON
-          # body that we get from Github into a more useful shape.
-          if results=$(jq -er 'del(.["test-go-fips"], .["test-go-race"]) as $required
-            | $required | keys as $jobs
-            | reduce $jobs[] as $job ([]; . + [{job: $job}+$required[$job]])'
-          ) <<< '${{ toJSON(needs.*.result) }}'; then
+          # Determine the overall status of the job. We allow fips and race tests to fail so we
+          # don't consider their result here.
+          #
+          # Encode the needs context into JSON, filter out unrequired workflows, shape the result
+          # into a more useful schema. Determine the overall status by comparing the total number of
+          # successful results with the number of required jobs.
+          if results=$(jq -rec 'del(.["test-go-fips"], .["test-go-race"]) as $required
+              | $required | keys as $jobs
+              | reduce $jobs[] as $job ([]; . + [{job: $job}+$required[$job]])' <<< '${{ toJSON(needs) }}'
+          ); then
             # Determine if all of our required jobs have succeeded.
-            if jq -er 'length as $expected_length
-              | [.[] | select(.result == "success")]
-              | length == $expected_length' <<< "$results"; then
-              msg=$(echo -e "All required test jobs succeeded!\n$results")
+            if jq -rec 'length as $expected
+              | [.[] | select((.result == "success") or (.result == "skipped"))] | length as $got
+              | $expected == $got' <<< "$results"; then
+              msg="All required test jobs succeeded!"
               result="success"
             else
-              msg=$(echo -e "One or more required test jobs failed!\n$results")
+              msg="One or more required test jobs failed!"
               result="failed"
             fi
           else
@@ -253,7 +258,7 @@ jobs:
           {
             echo "msg=${msg}"
             echo "result=${result}"
-            echo "results=${results}"
+            echo "results<<EOFRESULTS"$'\n'"${results}"$'\n'EOFRESULTS
           } | tee -a "$GITHUB_OUTPUT"
       - if: needs.setup.outputs.is-enterprise == 'true'
         id: vault-auth
@@ -350,12 +355,14 @@ jobs:
               cat "$temp_file_name"
             } >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "### All Go tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
+            if [ "${{ steps.status.outputs.result }}" == 'success' ]; then
+              echo "### All required Go tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
+            fi
           fi
           {
-            echo 'table-test-results<<EOF'
+            echo 'table-test-results<<EOFTABLE'
             cat "$temp_file_name"
-            echo EOF
+            echo EOFTABLE
           } | tee -a "$GITHUB_OUTPUT"
       - name: Create comment
         if: github.head_ref != '' && needs.setup.outputs.is-fork == 'false'
@@ -364,6 +371,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           RUN_ID: ${{ github.run_id }}
           REPO: ${{ github.event.repository.name }}
+          RESULT: ${{ steps.status.outputs.result }}
           TABLE_DATA: ${{ steps.prepare-failure-summary.outputs.table-test-results }}
         run: ./.github/scripts/report-ci-status.sh
       - if: always() && steps.status.outputs.result != 'success'

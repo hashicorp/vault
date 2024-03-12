@@ -42,8 +42,7 @@ on:
         description: |
           A unique identifier to use for labeling artifacts and workflows. It is commonly used to
           specify context, e.g: fips, race, testonly, standard.
-        required: false
-        default: ''
+        required: true
         type: string
       go-test-parallelism:
         description: The parallelism parameter for Go tests
@@ -78,10 +77,10 @@ on:
     outputs:
       data-race-output:
         description: A textual output of any data race detector failures
-        value: ${{ jobs.test-go.outputs.data-race-output }}
+        value: ${{ jobs.status.outputs.data-race-output }}
       data-race-result:
         description: Whether or not there were any data races detected
-        value: ${{ jobs.test-go.outputs.data-race-result }}
+        value: ${{ jobs.status.outputs.data-race-result }}
 
 env: ${{ fromJSON(inputs.env-vars) }}
 
@@ -228,9 +227,8 @@ jobs:
       GOPRIVATE: github.com/hashicorp/*
       TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }}
     outputs:
-      data-race-result : ${{ steps.data-race-check.outputs.data-race-result }}
-      data-race-output : ${{ steps.data-race-check.outputs.data-race-output }}
       go-test-results-download-pattern: ${{ steps.metadata.outputs.go-test-results-download-pattern }}
+      data-race-log-download-pattern: ${{ steps.metadata.outputs.data-race-log-download-pattern }}
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
@@ -246,23 +244,29 @@ jobs:
           #   - needs.test-matrix.outputs.go-test-dir == test-results/go-test
           #   - inputs.name == testonly
           #   - matrix.id == 1
-          name='${{ matrix.id }}-${{ inputs.name }}'                                    # 1-testonly
+          name='${{ inputs.name }}-${{ matrix.id }}'                                    # testonly-1
           go_test_dir='${{ needs.test-matrix.outputs.go-test-dir }}'                    # test-results/go-test
           test_results_dir="$(dirname "$go_test_dir")"                                  # test-results
           go_test_dir_absolute="$(pwd)/${go_test_dir}"                                  # /home/runner/work/vault/vault/test-results/go-test
           go_test_log_dir="${go_test_dir}/logs"                                         # test-results/go-test/logs
           go_test_log_dir_absolute="${go_test_dir_absolute}/logs"                       # /home/runner/work/vault/vault/test-results/go-test/logs
-          go_test_log_archive_name="test-logs-${name}.tar"                              # test-logs-1-testonly.tar
-          go_test_results_upload_key="${test_results_dir}-${name}"                      # test-results/go-test-1-testonly
-          go_test_results_download_pattern="${test_results_dir}-*"                      # test-results/go-test-*
+          go_test_log_archive_name="test-logs-${name}.tar"                              # test-logs-testonly-1.tar
+          go_test_results_upload_key="${test_results_dir}-${name}"                      # test-results/go-test-testonly-1
+          go_test_results_download_pattern="${test_results_dir}-${{ inputs.name }}-*"   # test-results/go-test-testonly-*
           gotestsum_results_prefix="results"                                            # results
-          gotestsum_junitfile=${go_test_dir}/${gotestsum_results_prefix}-${name}.xml    # test-results/go-test/results-1-testonly.xml
-          gotestsum_jsonfile=${go_test_dir}/${gotestsum_results_prefix}-${name}.json    # test-results/go-test/results-1-testonly.json
-          gotestsum_timing_events=failure-summary-${name}.json                          # failure-summary-1-testonly.json
-          failure_summary_file_name="failure-summary-${name}.md"                        # failure-summary-1-testonly.md
+          gotestsum_junitfile=${go_test_dir}/${gotestsum_results_prefix}-${name}.xml    # test-results/go-test/results-testonly-1.xml
+          gotestsum_jsonfile=${go_test_dir}/${gotestsum_results_prefix}-${name}.json    # test-results/go-test/results-testonly-1.json
+          gotestsum_timing_events=failure-summary-${name}.json                          # failure-summary-testonly-1.json
+          failure_summary_file_name="failure-summary-${name}.md"                        # failure-summary-testonly-1.md
+          data_race_log_file="data-race.log"                                            # data-race.log
+          data_race_log_download_pattern="data-race-${{ inputs.name }}*.log"            # data-race-testonly-*.log
+          data_race_log_upload_key="data-race-${name}.log"                              # data-race-testonly-1.log
           {
             echo "name=${name}"
             echo "failure-summary-file-name=${failure_summary_file_name}"
+            echo "data-race-log-file=${data_race_log_file}"
+            echo "data-race-log-download-pattern=${data_race_log_download_pattern}"
+            echo "data-race-log-upload-key=${data_race_log_upload_key}"
             echo "go-test-dir=${go_test_dir}"
             echo "go-test-log-archive-name=${go_test_log_archive_name}"
             echo "go-test-log-dir=${go_test_log_dir}"
@@ -403,17 +407,6 @@ jobs:
             package_parallelism="-p 2"
           fi
 
-          # On a release branch, add a flag to rerun failed tests
-          # shellcheck disable=SC2193 # can get false positive for this comparision
-          if [[  "${{ github.base_ref }}" == release/* ]] || [[  -z "${{ github.base_ref }}" && "${{ github.ref_name }}" == release/* ]]
-          then
-            # TODO remove this extra condition once 1.15 is about to released GA
-            if [[  "${{ github.base_ref }}" != release/1.15* ]] || [[  -z "${{ github.base_ref }}" && "${{ github.ref_name }}" != release/1.15* ]]
-            then
-              RERUN_FAILS="--rerun-fails"
-            fi
-          fi
-
           VAULT_TEST_LOG_DIR='${{ steps.metadata.outputs.go-test-log-dir-absolute }}'
           export VAULT_TEST_LOG_DIR
           mkdir -p "$VAULT_TEST_LOG_DIR"
@@ -423,7 +416,6 @@ jobs:
               --junitfile '${{ steps.metadata.outputs.gotestsum-junitfile }}' \
               --jsonfile '${{ steps.metadata.outputs.gotestsum-jsonfile }}' \
               --jsonfile-timing-events '${{ steps.metadata.outputs.gotestsum-timing-events }}' \
-              $RERUN_FAILS \
               --packages "$packages" \
               -- \
               $package_parallelism \
@@ -435,7 +427,17 @@ jobs:
         if: (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise') && (success() || failure())
         continue-on-error: true
         run: |
-          curl -L --fail "https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64" --output "/usr/local/bin/datadog-ci"
+          if type datadog-ci > /dev/null 2>&1; then
+            exit 0
+          fi
+          # Curl does not always exit 1 if things go wrong. To determine if this is successful we'll
+          # we'll silence all non-error output and check the results to determine success.
+          if ! out="$(curl -sSL --fail https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64 --output /usr/local/bin/datadog-ci 2>&1)"; then
+            printf "failed to download datadog-ci: %s" "$out"
+          fi
+          if [[ -n "$out" ]]; then
+            printf "failed to download datadog-ci: %s" "$out"
+          fi
           chmod +x /usr/local/bin/datadog-ci
       - name: Upload test results to DataDog
         continue-on-error: true
@@ -478,14 +480,18 @@ jobs:
         run: |
           # Scan gotestsum output files for data race errors.
           data_race_tests=()
+          data_race_log='${{ steps.metadata.outputs.data-race-log-file }}'
           for file in *.json; do
             # Check if test results contains offending phrase
             if grep -q "WARNING: DATA RACE" "$file"; then
               data_race_tests+=("test-go (${{ matrix.id }})")
+              touch "$data_race_log"
 
-              # Print failing matrix tests
-              echo "=============== test-go (${{ matrix.id }}) ==========================="
-              sed -n '/WARNING: DATA RACE/,/==================/p' "$file" | jq -r -j '.Output'
+              # Write output to our log file so we can aggregate it in the final workflow
+              {
+                echo "=============== test-go (${{ matrix.id }}) ==========================="
+                sed -n '/WARNING: DATA RACE/,/==================/p' "$file" | jq -r -j '.Output'
+              } | tee -a "$data_race_log"
             fi
           done
 
@@ -494,11 +500,19 @@ jobs:
           if (("${#data_race_tests[@]}" > 0)); then
             result="failure"
           fi
-
-          {
-            echo "data-race-result=${result}"
-            echo -n "data-race-output=${data_race_tests[*]}"
-          } | tee -a "$GITHUB_OUTPUT"
+          echo "data-race-result=${result}" | tee -a "$GITHUB_OUTPUT"
+      - name: Upload data race detector failure log
+        if: |
+          (success() || failure()) &&
+          steps.data-race-check.outputs.data-race-result == 'failure'
+        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+        with:
+          name: ${{ steps.metadata.outputs.data-race-log-upload-key }}
+          path: ${{ steps.metadata.outputs.go-test-dir }}/${{ steps.metadata.outputs.data-race-log-file }}
+          # Set the minimum retention possible. We only upload this because it's the only way to
+          # aggregate results from matrix workflows.
+          retention-days: 1
+          if-no-files-found: error # Make sure we always upload the data race logs if it failed
       # GitHub Actions doesn't expose the job ID or the URL to the job execution,
       # so we have to fetch it from the API
       - name: Fetch job logs URL
@@ -555,7 +569,7 @@ jobs:
         continue-on-error: true
         run: |
           # This jq query filters out successful tests, leaving only the failures.
-          # Then, it formats the results into rows of a Markdown table.
+          # Then, it formats the results into rows of a Markdown table.k
           # An example row will resemble this:
           # | github.com/hashicorp/vault/package | TestName | fips | 0 | 2 | [view results](github.com/link-to-logs) |
           jq -r -n 'inputs
@@ -578,27 +592,48 @@ jobs:
       - test-matrix
       - test-go
     runs-on: ${{ fromJSON(inputs.runs-on-small) }}
+    outputs:
+      data-race-output: ${{ steps.status.outputs.data-race-output }}
+      data-race-result: ${{ steps.status.outputs.data-race-result }}
     steps:
+      - uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+        with:
+          pattern: ${{ needs.test-go.outputs.data-race-log-download-pattern }}
+          path: data-race-logs
+          merge-multiple: true
       # Determine our success/failure status by checking the result status and data race status.
       - id: status
         name: Determine status result
         run: |
           # Determine status result
           result="success"
+
+          # Aggregate all of our test workflows and determine our Go test result from them.
           test_go_results=$(tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | jq -Mrc)
           if ! grep -q -v -E '(failure|cancelled)' <<< "$test_go_results"; then
+            test_go_result="failed"
+            result="failed"
+          else
+            test_go_result="success"
+          fi
+
+          # If we have downloaded data race detector logs then at least one Go test job detected
+          # a data race during execution. We'll fail on that.
+          if [ -z "$(ls -A data-race-logs)" ]; then
+            data_race_output=""
+            data_race_result="success"
+          else
+            data_race_output="$(cat data-race-logs/*)"
+            data_race_result="failed"
             result="failed"
           fi
-          data_race_output=""
-          data_race_results=$(tr -d '\n' <<< '${{ toJSON(needs.test-go.outputs.data-race-result) }}' | jq -Mrc)
-          if ! grep -q -v -E '(failure|cancelled)' <<< "$data_race_results"; then
-            data_race_output="${{ toJSON(needs.test-go.outputs.data-race-output) }}"
-            result="failed"
-          fi
+
+          # Write Go and data race results to outputs.
           {
-            echo "data-race-output=${data_race_output}"
-            echo "data-race-results=${data_race_results}"
+            echo "data-race-output<<EOFDATARACEOUTPUT"$'\n'"${data_race_output}"$'\n'EOFDATARACEOUTPUT
+            echo "data-race-result=${data_race_result}"
             echo "result=${result}"
+            echo "test-go-result=${test_go_result}"
             echo "test-go-results=${test_go_results}"
           } | tee -a "$GITHUB_OUTPUT"
       # Aggregate, prune, and cache our timing data
@@ -616,7 +651,7 @@ jobs:
           pattern: ${{ needs.test-go.outputs.go-test-results-download-pattern }}
           merge-multiple: true
       - if: ${{ ! cancelled() && needs.test-go.result == 'success' && inputs.test-timing-cache-enabled }}
-        name: Prune old timing
+        name: Prune any invalid timing files
         run: |
           ls -lhR '${{ needs.test-matrix.outputs.go-test-dir }}'
           find '${{ needs.test-matrix.outputs.go-test-dir }}' -mindepth 1 -type f -mtime +3 -delete
@@ -628,7 +663,7 @@ jobs:
           ' shell {} \; > /dev/null 2>&1
 
           ls -lhR '${{ needs.test-matrix.outputs.go-test-dir }}'
-      # Determine our overall pass/fail with our Go test results and our
+      # Determine our overall pass/fail with our Go test results
       - if: always() && steps.status.outputs.result != 'success'
         name: Check for failed status
         run: |

@@ -13,10 +13,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
-	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
-
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
 )

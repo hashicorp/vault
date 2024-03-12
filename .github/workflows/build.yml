@@ -2,7 +2,7 @@ name: build
 
 # Some words of caution before modifying this workflow:
 
-# This file and workflow has been carefully architected to meet the following requirements:
+# This file and workflow have been carefully architected to meet the following requirements:
 #   * Builds and tests the correct artifacts in both CE and Ent while maintaining a merge-conflict-free
 #     build.yml between the two repos
 #   * Supports multiple Github event triggers
@@ -10,39 +10,45 @@ name: build
 #   * Supports a variety of complex use cases
 
 # If you wish to modify this file/workflow, please consider:
-#   * All of the workflow event triggers: you must ensure that the workflow still works under normal
-#     pull_request, push, scheduled, and workflow_dispatch events.
-#   * Merge-conflict-free compatibility between CE and Ent: any changes that you make here must work
-#     in both repository contexts
-#   * All of the flow control modifiers: see details below
-#   * The total number of workers and the runner size: see details below
+#   * That the workflow must work under when triggered by pull_request, push, schedule, and
+#     workflow_dispatch events.
+#   * Merge-conflict-free compatibility between CE and Ent. Any changes that you make here must work
+#     in both repository contexts.
+#   * There are many workflow flow control modifiers. Further details below.
+#   * The total number of workers and the runner size. Further details below.
 
 # Further details:
 #   * The workflow is used by the CRT system for building, notarizing, signing, and releasing
 #     artifacts. Whatever we do in this workflow must support building all artifacts and uploading
-#     them to Github in order to fulfill the CRT requirement.
+#     them to Github in order to fulfill the CRT requirement, while also maintaining a smaller
+#     default build matrix for the pull requests.
 #   * CRT is designed to trigger a workflow called build in a workflow file called build.yml. This
 #     file must build the correct artifacts in CE and Ent, depending on the repository context.
 #     We've gone to great lengths to architect this file and workflow so that we can build and test
 #     the correct artifacts in each context while maintaining a merge-conflict-free file between CE
-#     and Ent. As such, any changes that you make here must work in both repository contexts.
+#     and Ent. Any changes that you make here must work in both repository contexts.
 #   * The workflow must support multiple event triggers, all of which have varying event payloads
 #     which must be considered. If you make changes you must ensure that the workflow still works
-#     under normal pull_request, push, scheduled, and workflow_dispatch events.
+#     under normal pull_request, push, schedule, and workflow_dispatch trigger events.
 #   * The workflow has been highly optimized for cost and speed. If possible, it's better to add a
-#     step to an existing job than create another job (each job uses a separate runner, of which we
-#     have a limited number and size).
-#   * The workflow flow control is complex in order to support many various use cases, including:
+#     step to an existing job than create another job. Over a long time horizon a new job is often
+#     much more expensive than a single step in an existing job, they also take up a limited number
+#     of our available runners.
+#   * Flow control in the workflow is complex in order to support many various use cases, including:
 #     * Only building on tier 1 supported "core" artifacts by default.
-#     * Only building the UI if the application or UI has been modified.
+#     * Only building the UI if the Go application or UI has been modified.
 #     * Skipping builds entirely if the commit or PR only modifies changelog or website documentation.
 #     * The ability to check out the HEAD reference instead of a Github merge branch reference.
 #     * The ability to control building all of our tier 2 supported "extended" artifacts via a
-#       build/all label, even if the event trigger is `pull_request` or a push.
+#       build/all label, even if the event trigger is pull_request or, more importantly, a push.
+#       It's important to note that we must maintain support for building all artifacts on push
+#       via a pull request, even though push events aren't directly tied to pull requests. Our
+#       label metadata helpers are designed to handle this complexity.
 #     * The ability to build all of our artifacts on a scheduled cadence to ensure we don't
 #       accidentally regress.
 #     * All of these considerations, and many others, have led to the modular design we have here.
-#       If you're considering a change, try and use small composite actions whenever possible.
+#     * If you're doing something in more than one place, try and use small composite actions
+#       whenever possible.
 
 on:
   workflow_dispatch:
@@ -94,8 +100,8 @@ jobs:
       vault-binary-name: ${{ steps.metadata.outputs.vault-binary-name }}
       vault-revision: ${{ steps.metadata.outputs.vault-revision }}
       vault-version: ${{ steps.metadata.outputs.vault-version }}
+      vault-version-metadata: ${{ steps.metadata.outputs.vault-version-metadata }}
       vault-version-package: ${{ steps.metadata.outputs.vault-version-package }}
-      vault-version-test: ${{ steps.metadata.outputs.vault-version-test }}
       workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
     steps:
       # Run the changed-files action to determine what Git reference we should check out
@@ -187,8 +193,15 @@ jobs:
     # workflow is triggered by a push to main CRT will take these artifacts from Github and perform
     # all of the necessary notarizing and signing before uploading them to Artifactory.
     #
-    # Build the Vault artifacts if our UI job was triggered and our Go app has changed.
-    if: needs.setup.outputs.app-changed == 'true'
+    #   # Trigger the setup workflow if any of the following conditions are true:
+    #
+    #   * The workflow was triggered by on schedule to test building all artifacts.
+    #   * The Go app was changed.
+    #   * The build/all label is present on a pull request or push.
+    if: |
+      needs.setup.outputs.workflow-trigger == 'schedule' ||
+      needs.setup.outputs.app-changed == 'true' ||
+      contains(fromJSON(needs.setup.outputs.labels), 'build/all')
     needs:
       - setup
       - ui # Don't build and test artifacts unless the UI build was triggered.
@@ -197,7 +210,7 @@ jobs:
     with:
       # The inputs defined here must be supported in both the build-artifacts-ce and
       # build-artifacts-ent workflows. The implementations should seek to keep a compatible interface.
-      build-all: ${{ contains(fromJSON(needs.setup.outputs.labels), 'build/all') || needs.setup.outputs.workflow-trigger == 'scheduled' }}
+      build-all: ${{ contains(fromJSON(needs.setup.outputs.labels), 'build/all') || needs.setup.outputs.workflow-trigger == 'schedule' }}
       build-date: ${{ needs.setup.outputs.build-date }}
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       compute-build: ${{ needs.setup.outputs.compute-build }}
@@ -230,7 +243,7 @@ jobs:
       ssh-key-name: ${{ github.event.repository.name }}-ci-ssh-key
       vault-edition: ${{ matrix.edition }}
       vault-revision: ${{ needs.setup.outputs.vault-revision }}
-      vault-version: ${{ needs.setup.outputs.vault-version-test }}
+      vault-version: ${{ needs.setup.outputs.vault-version-metadata }}
     secrets: inherit
 
   test-containers:
@@ -251,7 +264,7 @@ jobs:
       artifact-build-date: ${{ needs.setup.outputs.build-date }}
       artifact-name: ${{ matrix.artifact }}
       artifact-revision: ${{ needs.setup.outputs.vault-revision }}
-      artifact-version: ${{ needs.setup.outputs.vault-version-test }}
+      artifact-version: ${{ needs.setup.outputs.vault-version-metadata }}
     secrets: inherit
 
   completed-successfully:
@@ -259,7 +272,16 @@ jobs:
     # a pull request. This workflow is used to determine the overall status of all the prior
     # workflows and to notify various different channels of success or failure. As part of this
     # workflow we create the necessary build metadata that is required for the CRT build system.
-    if: always() && github.head_ref != ''
+    #
+    # Our logic here mirrors that of setup as it and this are the only two workflows that must
+    # be triggered together.
+    if: |
+      always() &&
+      (
+        github.event_name == 'push' ||
+        github.event_name == 'schedule' ||
+        (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
+      )
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
     permissions: write-all # Ensure we have id-token:write access for vault-auth.
     needs:
@@ -323,7 +345,8 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ steps.slackbot-token.outputs.slackbot-token }}
         with:
-          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official, use "C05Q4D5V89W"/test-vault-ci-slack-integration for testing
+          channel-id: "C05AABYEA9Y" # Notify #feed-vault-ci-official
+          # channel-id: "C05Q4D5V89W" # Notify #test-vault-ci-slack-integration
           payload: |
             {
               "text": "${{ github.repository }} build failures on ${{ github.ref_name }}",
@@ -345,8 +368,6 @@ jobs:
                     "type": "mrkdwn",
                     "text": "${{ needs.setup.result != 'failure' && ':white_check_mark:' || ':x:' }} Setup\n${{ needs.ui.result != 'failure' && ':white_check_mark:' || ':x:' }} Build UI\n${{ needs.artifacts.result != 'failure' && ':white_check_mark:' || ':x:' }} Build Vault Artifacts\n${{ needs.test.result != 'failure' && ':white_check_mark:' || ':x:' }} Enos package test scenarios\n${{ needs.test-containers.result != 'failure' && ':white_check_mark:' || ':x:' }} Enos container test scenarios"
                   },
-                    "text": "':x:'"
-                  },
                   "accessory": {
                     "type": "button",
                     "text": {
@@ -360,12 +381,14 @@ jobs:
               ]
             }
       - uses: hashicorp/actions-generate-metadata@v1
+        if: needs.artifacts.result == 'success' # create build metadata if we successfully created artifacts
         id: generate-metadata-file
         with:
-          version: ${{ needs.setup.outputs.vault-version }}
+          version: ${{ needs.setup.outputs.vault-version-metadata }}
           product: ${{ needs.setup.outputs.vault-binary-name }}
       # Use actions/upload-artifact @3.x until https://hashicorp.atlassian.net/browse/HREL-99 is resolved
       - uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+        if: steps.generate-metadata-file.outcome == 'success' # upload our metadata if we created it
         with:
           name: metadata.json
           path: ${{ steps.generate-metadata-file.outputs.filepath }}

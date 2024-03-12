@@ -10,11 +10,10 @@ import (
 	"strings"
 
 	"github.com/hashicorp/cli"
+	consulapi "github.com/hashicorp/consul/api"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/posener/complete"
-
-	consulapi "github.com/hashicorp/consul/api"
 )
 
 var (

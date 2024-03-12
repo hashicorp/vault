@@ -6,7 +6,7 @@
 import { set } from '@ember/object';
 import Ember from 'ember';
 import { resolve } from 'rsvp';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import { encodePath, normalizePath } from 'vault/utils/path-encoding-helpers';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
@@ -83,20 +83,24 @@ export default Route.extend({
       if (secretEngine.type === 'kv' && secretEngine.version === 2) {
         // if no secret param redirect to the create route
         // if secret param they are either viewing or editing secret so navigate to the details route
-        return !secret
-          ? this.router.transitionTo('vault.cluster.secrets.backend.kv.create', secretEngine.id)
-          : this.router.transitionTo(
-              'vault.cluster.secrets.backend.kv.secret.details',
-              secretEngine.id,
-              secret
-            );
+        if (!secret) {
+          this.router.transitionTo('vault.cluster.secrets.backend.kv.create', secretEngine.id);
+        } else {
+          this.router.transitionTo(
+            'vault.cluster.secrets.backend.kv.secret.details',
+            secretEngine.id,
+            secret
+          );
+        }
+        return;
       }
       if (mode === 'edit' && keyIsFolder(secret)) {
         if (parentKey) {
-          return this.router.transitionTo('vault.cluster.secrets.backend.list', encodePath(parentKey));
+          this.router.transitionTo('vault.cluster.secrets.backend.list', encodePath(parentKey));
         } else {
-          return this.router.transitionTo('vault.cluster.secrets.backend.list-root');
+          this.router.transitionTo('vault.cluster.secrets.backend.list-root');
         }
+        return;
       }
     });
   },
