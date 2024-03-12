@@ -37,10 +37,15 @@
             <div class="has-left-margin-xs">
               <label
                 for="{{or val.value val}}"
-                class="has-left-margin-xs has-text-black is-size-7"
+                class="has-left-margin-xs is-size-7"
                 data-test-radio-label={{or val.label val.value val}}
               >
-                <span>{{or val.label val.value val}}</span>
+                {{or val.label val.value val}}
+                {{#if val.helpText}}
+                  <Hds::TooltipButton @text={{val.helpText}} aria-label="More information">
+                    <FlightIcon @name="info" />
+                  </Hds::TooltipButton>
+                {{/if}}
                 {{#if this.hasRadioSubText}}
                   <p class="has-left-margin-xs has-text-grey is-size-8" data-test-radio-subText={{val.subText}}>
                     {{val.subText}}
@@ -94,11 +99,12 @@
     <Input
       @type="datetime-local"
       @value={{date-format (get @model this.valuePath) "yyyy-MM-dd'T'HH:mm"}}
-      class="input has-top-margin-xs is-auto-width is-block"
       name={{@attr.name}}
       id={{@attr.name}}
       data-test-input={{@attr.name}}
-      {{on "change" this.onChangeWithEvent}}
+      class="input has-top-margin-xs has-bottom-margin-xs is-auto-width is-block
+        {{if this.validationError 'has-error-border'}}"
+      {{on "focusout" this.onChangeWithEvent}}
     />
   {{else if (eq @attr.options.editType "searchSelect")}}
     <div class="form-section">
@@ -336,7 +342,7 @@
         onchange={{this.onChangeWithEvent}}
         data-test-input={{@attr.name}}
       />
-      <label for={{@attr.name}} class="is-label">
+      <label for={{@attr.name}} class="is-label" data-test-form-field-label>
         {{this.labelString}}
         {{#if (and this.showHelpText @attr.options.helpText)}}
           <InfoTooltip>{{@attr.options.helpText}}</InfoTooltip>

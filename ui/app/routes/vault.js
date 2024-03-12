@@ -5,7 +5,7 @@
 
 import { later } from '@ember/runloop';
 import { Promise } from 'rsvp';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import Ember from 'ember';
 

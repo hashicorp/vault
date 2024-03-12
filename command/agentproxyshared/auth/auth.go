@@ -14,15 +14,10 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/backoff"
-
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/backoff"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-)
-
-const (
-	defaultMinBackoff = 1 * time.Second
-	defaultMaxBackoff = 5 * time.Minute
 )
 
 // AuthMethod is the interface that auto-auth methods implement for the agent/proxy
@@ -133,10 +128,10 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	}
 
 	if ah.minBackoff <= 0 {
-		ah.minBackoff = defaultMinBackoff
+		ah.minBackoff = consts.DefaultMinBackoff
 	}
 	if ah.maxBackoff <= 0 {
-		ah.maxBackoff = defaultMaxBackoff
+		ah.maxBackoff = consts.DefaultMaxBackoff
 	}
 	if ah.minBackoff > ah.maxBackoff {
 		return errors.New("auth handler: min_backoff cannot be greater than max_backoff")
@@ -511,11 +506,11 @@ type autoAuthBackoff struct {
 
 func newAutoAuthBackoff(min, max time.Duration, exitErr bool) *autoAuthBackoff {
 	if max <= 0 {
-		max = defaultMaxBackoff
+		max = consts.DefaultMaxBackoff
 	}
 
 	if min <= 0 {
-		min = defaultMinBackoff
+		min = consts.DefaultMinBackoff
 	}
 
 	retries := math.MaxInt

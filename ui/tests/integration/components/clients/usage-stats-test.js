@@ -60,7 +60,7 @@ module('Integration | Component | clients/usage-stats', function (hooks) {
 
     await render(hbs`<Clients::UsageStats @totalUsageCounts={{this.counts}} />`);
 
-    assert.dom('[data-test-stat-text]').exists({ count: 3 }, 'Renders 3 Stat texts'); // after SYNC BETA update to 4
+    assert.dom('[data-test-stat-text]').exists({ count: 4 }, 'Renders 3 Stat texts');
     assert
       .dom('[data-test-stat-text="total-clients"] .stat-value')
       .hasText('22', 'Total clients shows passed value');
@@ -70,9 +70,8 @@ module('Integration | Component | clients/usage-stats', function (hooks) {
     assert
       .dom('[data-test-stat-text="non-entity-clients"] .stat-value')
       .hasText('10', 'non entity clients shows passed value');
-    // * unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
-    // assert
-    //   .dom('[data-test-stat-text="secret-syncs"] .stat-value')
-    //   .hasText('5', 'secrets sync clients shows passed value');
+    assert
+      .dom('[data-test-stat-text="secret-syncs"] .stat-value')
+      .hasText('5', 'secrets sync clients shows passed value');
   });
 });

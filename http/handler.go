@@ -263,6 +263,13 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		wrappedHandler = disableReplicationStatusEndpointWrapping(wrappedHandler)
 	}
 
+	// Add an extra wrapping handler if any of the Redaction settings are
+	// true that will create a new request with a context containing the
+	// redaction settings.
+	if props.ListenerConfig != nil && (props.ListenerConfig.RedactAddresses || props.ListenerConfig.RedactClusterName || props.ListenerConfig.RedactVersion) {
+		wrappedHandler = redactionSettingsWrapping(wrappedHandler, props.ListenerConfig.RedactVersion, props.ListenerConfig.RedactAddresses, props.ListenerConfig.RedactClusterName)
+	}
+
 	if props.ListenerConfig != nil && props.ListenerConfig.DisableRequestLimiter {
 		wrappedHandler = wrapRequestLimiterHandler(wrappedHandler, props)
 	}
@@ -415,10 +422,13 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/robots.txt", r.URL.Path == "/":
 			// RFC 5785
 		case strings.HasPrefix(r.URL.Path, "/.well-known/"):
+			perfStandby := core.PerfStandby()
 			standby, err := core.Standby()
 			if err != nil {
 				core.Logger().Warn("error resolving standby status handling .well-known path", "error", err)
-			} else if standby {
+			} else if standby && !perfStandby {
+				// Standby nodes, not performance standbys, don't start plugins
+				// so registration can not happen, instead redirect to active
 				respondStandby(core, w, r.URL)
 				cancelFunc()
 				return
@@ -429,6 +439,8 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 				} else {
 					if redir != "" {
 						newReq := r.Clone(ctx)
+						// Save the original path for audit logging.
+						newReq.RequestURI = newReq.URL.Path
 						newReq.URL.Path = redir
 						hf(w, newReq)
 						cancelFunc()
@@ -913,35 +925,15 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	w.Write(retBytes)
 }
 
-func acquireLimiterListener(core *vault.Core, rawReq *http.Request, r *logical.Request) (*limits.RequestListener, bool) {
-	var disable bool
-	disableRequestLimiter := rawReq.Context().Value(logical.CtxKeyDisableRequestLimiter{})
-	if disableRequestLimiter != nil {
-		disable = disableRequestLimiter.(bool)
-	}
-	r.RequestLimiterDisabled = disable
-	if disable {
-		return &limits.RequestListener{}, true
-	}
-
-	lim := &limits.RequestLimiter{}
-	if r.PathLimited {
-		lim = core.GetRequestLimiter(limits.SpecialPathLimiter)
-	} else {
-		switch rawReq.Method {
-		case http.MethodGet, http.MethodHead, http.MethodTrace, http.MethodOptions:
-			// We're only interested in the inverse, so do nothing here.
-		default:
-			lim = core.GetRequestLimiter(limits.WriteLimiter)
-		}
-	}
-	return lim.Acquire(rawReq.Context())
-}
-
 // request is a helper to perform a request and properly exit in the
 // case of an error.
 func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool, bool) {
-	lsnr, ok := acquireLimiterListener(core, rawReq, r)
+	lim := &limits.HTTPLimiter{
+		Method:      rawReq.Method,
+		PathLimited: r.PathLimited,
+		LookupFunc:  core.GetRequestLimiter,
+	}
+	lsnr, ok := lim.Acquire(rawReq.Context())
 	if !ok {
 		resp := &logical.Response{}
 		logical.RespondWithStatusCode(resp, r, http.StatusServiceUnavailable)

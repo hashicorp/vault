@@ -41,6 +41,11 @@ export default AuthConfig.extend({
     label: 'JWKS URL',
   }),
 
+  jwksPairs: attr({
+    label: 'JWKS pairs',
+    // This attribute is not shown in the UI
+  }),
+
   oidcResponseMode: attr('string', {
     label: 'OIDC response mode',
   }),

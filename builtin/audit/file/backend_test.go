@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -37,6 +38,7 @@ func TestAuditFile_fileModeNew(t *testing.T) {
 		MountPath:  "foo/bar",
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
+		Logger:     hclog.NewNullLogger(),
 	}
 	_, err = Factory(context.Background(), backendConfig, nil)
 	require.NoError(t, err)
@@ -68,6 +70,7 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 		MountPath:  "foo/bar",
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
+		Logger:     hclog.NewNullLogger(),
 	}
 
 	_, err = Factory(context.Background(), backendConfig, nil)
@@ -101,6 +104,7 @@ func TestAuditFile_fileMode0000(t *testing.T) {
 		MountPath:  "foo/bar",
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
+		Logger:     hclog.NewNullLogger(),
 	}
 
 	_, err = Factory(context.Background(), backendConfig, nil)
@@ -129,6 +133,7 @@ func TestAuditFile_EventLogger_fileModeNew(t *testing.T) {
 		MountPath:  "foo/bar",
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
+		Logger:     hclog.NewNullLogger(),
 	}
 
 	_, err = Factory(context.Background(), backendConfig, nil)
@@ -238,75 +243,6 @@ func TestBackend_formatterConfig(t *testing.T) {
 	}
 }
 
-// TestBackend_configureFilterNode ensures that configureFilterNode handles various
-// filter values as expected. Empty (including whitespace) strings should return
-// no error but skip configuration of the node.
-func TestBackend_configureFilterNode(t *testing.T) {
-	t.Parallel()
-
-	tests := map[string]struct {
-		filter           string
-		shouldSkipNode   bool
-		wantErr          bool
-		expectedErrorMsg string
-	}{
-		"happy": {
-			filter: "operation == update",
-		},
-		"empty": {
-			filter:         "",
-			shouldSkipNode: true,
-		},
-		"spacey": {
-			filter:         "    ",
-			shouldSkipNode: true,
-		},
-		"bad": {
-			filter:           "___qwerty",
-			wantErr:          true,
-			expectedErrorMsg: "file.(Backend).configureFilterNode: error creating filter node: audit.NewEntryFilter: cannot create new audit filter",
-		},
-		"unsupported-field": {
-			filter:           "foo == bar",
-			wantErr:          true,
-			expectedErrorMsg: "filter references an unsupported field: foo == bar",
-		},
-	}
-	for name, tc := range tests {
-		name := name
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			b := &Backend{
-				nodeIDList: []eventlogger.NodeID{},
-				nodeMap:    map[eventlogger.NodeID]eventlogger.Node{},
-			}
-
-			err := b.configureFilterNode(tc.filter)
-
-			switch {
-			case tc.wantErr:
-				require.Error(t, err)
-				require.ErrorContains(t, err, tc.expectedErrorMsg)
-				require.Len(t, b.nodeIDList, 0)
-				require.Len(t, b.nodeMap, 0)
-			case tc.shouldSkipNode:
-				require.NoError(t, err)
-				require.Len(t, b.nodeIDList, 0)
-				require.Len(t, b.nodeMap, 0)
-			default:
-				require.NoError(t, err)
-				require.Len(t, b.nodeIDList, 1)
-				require.Len(t, b.nodeMap, 1)
-				id := b.nodeIDList[0]
-				node := b.nodeMap[id]
-				require.Equal(t, eventlogger.NodeTypeFilter, node.Type())
-			}
-		})
-	}
-}
-
 // TestBackend_configureFormatterNode ensures that configureFormatterNode
 // populates the nodeIDList and nodeMap on Backend when given valid formatConfig.
 func TestBackend_configureFormatterNode(t *testing.T) {
@@ -320,7 +256,7 @@ func TestBackend_configureFormatterNode(t *testing.T) {
 	formatConfig, err := audit.NewFormatterConfig()
 	require.NoError(t, err)
 
-	err = b.configureFormatterNode(formatConfig)
+	err = b.configureFormatterNode("juan", formatConfig, hclog.NewNullLogger())
 
 	require.NoError(t, err)
 	require.Len(t, b.nodeIDList, 1)
@@ -467,46 +403,6 @@ func TestBackend_configureSinkNode(t *testing.T) {
 	}
 }
 
-// TestBackend_configureFilterFormatterSink ensures that configuring all three
-// types of nodes on a Backend works as expected, i.e. we have all three nodes
-// at the end and nothing gets overwritten. The order of calls influences the
-// slice of IDs on the Backend.
-func TestBackend_configureFilterFormatterSink(t *testing.T) {
-	t.Parallel()
-
-	b := &Backend{
-		nodeIDList: []eventlogger.NodeID{},
-		nodeMap:    map[eventlogger.NodeID]eventlogger.Node{},
-	}
-
-	formatConfig, err := audit.NewFormatterConfig()
-	require.NoError(t, err)
-
-	err = b.configureFilterNode("path == bar")
-	require.NoError(t, err)
-
-	err = b.configureFormatterNode(formatConfig)
-	require.NoError(t, err)
-
-	err = b.configureSinkNode("foo", "/tmp/foo", "0777", "json")
-	require.NoError(t, err)
-
-	require.Len(t, b.nodeIDList, 3)
-	require.Len(t, b.nodeMap, 3)
-
-	id := b.nodeIDList[0]
-	node := b.nodeMap[id]
-	require.Equal(t, eventlogger.NodeTypeFilter, node.Type())
-
-	id = b.nodeIDList[1]
-	node = b.nodeMap[id]
-	require.Equal(t, eventlogger.NodeTypeFormatter, node.Type())
-
-	id = b.nodeIDList[2]
-	node = b.nodeMap[id]
-	require.Equal(t, eventlogger.NodeTypeSink, node.Type())
-}
-
 // TestBackend_Factory_Conf is used to ensure that any configuration which is
 // supplied, is validated and tested.
 func TestBackend_Factory_Conf(t *testing.T) {
@@ -533,11 +429,22 @@ func TestBackend_Factory_Conf(t *testing.T) {
 			isErrorExpected:      true,
 			expectedErrorMessage: "file.Factory: nil salt view",
 		},
+		"nil-logger": {
+			backendConfig: &audit.BackendConfig{
+				MountPath:  "discard",
+				SaltConfig: &salt.Config{},
+				SaltView:   &logical.InmemStorage{},
+				Logger:     nil,
+			},
+			isErrorExpected:      true,
+			expectedErrorMessage: "file.Factory: nil logger",
+		},
 		"fallback-device-with-filter": {
 			backendConfig: &audit.BackendConfig{
 				MountPath:  "discard",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config: map[string]string{
 					"fallback":  "true",
 					"file_path": discard,
@@ -552,6 +459,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				MountPath:  "discard",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config: map[string]string{
 					"fallback":  "false",
 					"file_path": discard,
@@ -598,6 +506,7 @@ func TestBackend_IsFallback(t *testing.T) {
 				MountPath:  "discard",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config: map[string]string{
 					"fallback":  "true",
 					"file_path": discard,
@@ -610,6 +519,7 @@ func TestBackend_IsFallback(t *testing.T) {
 				MountPath:  "discard",
 				SaltConfig: &salt.Config{},
 				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
 				Config: map[string]string{
 					"fallback":  "false",
 					"file_path": discard,
