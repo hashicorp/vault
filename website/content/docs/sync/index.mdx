@@ -55,6 +55,13 @@ association object returned by the endpoint and, upon failure, includes an error
 	external service provider's side.
 * `UNKNOWN` - Vault is unable to determine the current state of the secret in regards to the external service.
 
+## Client Counts
+
+Each secret that is synced with one or more destinations is counted as a
+distinct client in Vault's client counting. See [entity assignments with secret
+sync](/vault/docs/concepts/client-count#entity-assignment-with-secret-sync)
+for more information.
+
 ## API
 
 Please see the [secrets sync API](/vault/api-docs/system/secrets-sync) for more details.
