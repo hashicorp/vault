@@ -135,7 +135,7 @@ const MOUNTABLE_SECRET_ENGINES = [
 ];
 
 export function mountableEngines() {
-  return MOUNTABLE_SECRET_ENGINES;
+  return MOUNTABLE_SECRET_ENGINES.slice();
 }
 
 export function allEngines() {

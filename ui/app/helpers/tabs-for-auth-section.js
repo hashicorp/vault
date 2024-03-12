@@ -83,7 +83,7 @@ const TABS_FOR_SHOW = {};
 export function tabsForAuthSection([model, sectionType = 'authSettings', paths]) {
   let tabs;
   if (sectionType === 'authSettings') {
-    tabs = TABS_FOR_SETTINGS[model.type] || [];
+    tabs = (TABS_FOR_SETTINGS[model.type] || []).slice();
     tabs.push({
       label: 'Method Options',
       routeParams: ['vault.cluster.settings.auth.configure.section', 'options'],
@@ -104,7 +104,7 @@ export function tabsForAuthSection([model, sectionType = 'authSettings', paths])
       };
     });
   } else {
-    tabs = TABS_FOR_SHOW[model.type] || [];
+    tabs = (TABS_FOR_SHOW[model.type] || []).slice();
   }
   tabs.push({
     label: 'Configuration',
