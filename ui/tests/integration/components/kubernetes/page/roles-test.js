@@ -9,6 +9,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
   setupRenderingTest(hooks);
@@ -17,6 +18,7 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
+    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub(['read', 'update', 'delete']));
     this.store.pushPayload('secret-engine', {
       modelName: 'secret-engine',
       data: {
@@ -88,16 +90,9 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
   });
 
   test('it should render roles list', async function (assert) {
-    this.server.post('/sys/capabilities-self', () => ({
-      data: {
-        'kubernetes/role': ['root'],
-      },
-    }));
     await this.renderComponent();
     assert.dom('[data-test-list-item-content] svg').hasClass('flight-icon-user', 'List item icon renders');
-    assert
-      .dom('[data-test-list-item-content]')
-      .hasText(this.roles.firstObject.name, 'List item name renders');
+    assert.dom('[data-test-list-item-content]').hasText(this.roles[0].name, 'List item name renders');
     await click('[data-test-popup-menu-trigger]');
     assert.dom('[data-test-details]').hasText('Details', 'Details link renders in menu');
     assert.dom('[data-test-edit]').hasText('Edit', 'Edit link renders in menu');

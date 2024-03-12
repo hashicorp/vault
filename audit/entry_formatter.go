@@ -8,11 +8,15 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"reflect"
+	"runtime/debug"
 	"strings"
 	"time"
 
 	"github.com/go-jose/go-jose/v3/jwt"
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -30,20 +34,31 @@ var (
 
 // EntryFormatter should be used to format audit requests and responses.
 type EntryFormatter struct {
-	salter          Salter
-	headerFormatter HeaderFormatter
 	config          FormatterConfig
+	salter          Salter
+	logger          hclog.Logger
+	headerFormatter HeaderFormatter
+	name            string
 	prefix          string
 	exclusions      []*exclusion
 }
 
 // NewEntryFormatter should be used to create an EntryFormatter.
 // Accepted options: WithExclusions, WithHeaderFormatter, WithPrefix.
-func NewEntryFormatter(config FormatterConfig, salter Salter, opt ...Option) (*EntryFormatter, error) {
+func NewEntryFormatter(name string, config FormatterConfig, salter Salter, logger hclog.Logger, opt ...Option) (*EntryFormatter, error) {
 	const op = "audit.NewEntryFormatter"
+
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, fmt.Errorf("%s: name is required: %w", op, event.ErrInvalidParameter)
+	}
 
 	if salter == nil {
 		return nil, fmt.Errorf("%s: cannot create a new audit formatter with nil salter: %w", op, event.ErrInvalidParameter)
+	}
+
+	if logger == nil || reflect.ValueOf(logger).IsNil() {
+		return nil, fmt.Errorf("%s: cannot create a new audit formatter with nil logger: %w", op, event.ErrInvalidParameter)
 	}
 
 	// We need to ensure that the format isn't just some default empty string.
@@ -57,9 +72,11 @@ func NewEntryFormatter(config FormatterConfig, salter Salter, opt ...Option) (*E
 	}
 
 	return &EntryFormatter{
-		salter:          salter,
 		config:          config,
+		salter:          salter,
+		logger:          logger,
 		headerFormatter: opts.withHeaderFormatter,
+		name:            name,
 		prefix:          opts.withPrefix,
 		exclusions:      opts.withExclusions,
 	}, nil
@@ -77,7 +94,7 @@ func (*EntryFormatter) Type() eventlogger.NodeType {
 
 // Process will attempt to parse the incoming event data into a corresponding
 // audit Request/Response which is serialized to JSON/JSONx and stored within the event.
-func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
+func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *eventlogger.Event, retErr error) {
 	const op = "audit.(EntryFormatter).Process"
 
 	// Return early if the context was cancelled, eventlogger will not carry on
@@ -102,6 +119,23 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 	if a.Data == nil {
 		return nil, fmt.Errorf("%s: cannot audit event (%s) with no data: %w", op, a.Subtype, event.ErrInvalidParameter)
 	}
+
+	// Handle panics
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
+		}
+
+		f.logger.Error("panic during logging",
+			"request_path", a.Data.Request.Path,
+			"audit_device_path", f.name,
+			"error", r,
+			"stacktrace", string(debug.Stack()))
+
+		// Ensure that we add this error onto any pre-existing error that was being returned.
+		retErr = multierror.Append(retErr, fmt.Errorf("%s: panic generating audit log: %q", op, f.name)).ErrorOrNil()
+	}()
 
 	// Take a copy of the event data before we modify anything.
 	data, err := a.Data.Clone()

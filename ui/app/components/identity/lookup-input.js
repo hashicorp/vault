@@ -27,7 +27,7 @@ export default Component.extend({
     this._super(...arguments);
     this.store.findAll('auth-method').then((methods) => {
       this.set('authMethods', methods);
-      this.set('aliasMountAccessor', methods.get('firstObject.accessor'));
+      this.set('aliasMountAccessor', methods[0].accessor);
     });
   },
 
