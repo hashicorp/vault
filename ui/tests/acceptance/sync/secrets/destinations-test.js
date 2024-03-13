@@ -44,7 +44,6 @@ module('Acceptance | sync | destinations', function (hooks) {
     assert.dom(ts.overview.optInConfirm).isDisabled('Confirm button is disabled when checkbox is unchecked');
     await click(ts.overview.optInCheck);
     await click(ts.overview.optInConfirm);
-    // ARG TODO improve test coverage and try and use API to check if the opt-in was successful
   });
 
   test('it should create new destination', async function (assert) {

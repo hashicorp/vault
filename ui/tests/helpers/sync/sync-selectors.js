@@ -56,6 +56,7 @@ export const PAGE = {
     optInModal: '[data-test-secrets-sync-opt-in-modal]',
     optInCheck: '[data-test-opt-in-check]',
     optInConfirm: '[data-test-opt-in-confirm]',
+    optInCancel: '[data-test-opt-in-cancel]',
     createDestination: '[data-test-create-destination]',
     table: {
       row: '[data-test-overview-table-row]',

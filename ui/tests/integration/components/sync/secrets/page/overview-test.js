@@ -15,6 +15,7 @@ import syncHandlers from 'vault/mirage/handlers/sync';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { Response } from 'miragejs';
 import { dateFormat } from 'core/helpers/date-format';
+import sinon from 'sinon';
 
 const {
   title,
@@ -35,6 +36,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.version = this.owner.lookup('service:version');
+    this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
     this.version.type = 'enterprise';
     syncScenario(this.server);
     syncHandlers(this.server);
@@ -70,6 +72,42 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     assert.dom(title).hasText('Secrets Sync', 'Page title renders');
     assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
     assert.dom(cta.summary).exists('CTA renders');
+  });
+
+  test('it should render opt-in modal for enterprise', async function (assert) {
+    assert.expect(4);
+    this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
+      assert.ok(true, 'Request made to activate secrets-sync');
+      return {};
+    });
+
+    this.destinations = [];
+    this.activatedFeatures = [''];
+
+    await render(
+      hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @activatedFeatures={{this.activatedFeatures}} @isAdapterError={{false}} />`,
+      {
+        owner: this.engine,
+      }
+    );
+    await click(overview.optInBannerEnable);
+    await click(overview.optInCheck);
+    assert.dom(overview.optInConfirm).isNotDisabled('Confirm button is enabled when checkbox is checked');
+
+    await click(overview.optInCancel);
+    await click(overview.optInBannerEnable);
+    assert
+      .dom(overview.optInConfirm)
+      .isDisabled('Confirm button is disabled after canceling modal and restarting process');
+
+    await click(overview.optInCheck);
+    await click(overview.optInConfirm);
+
+    assert.deepEqual(
+      this.transitionStub.lastCall.args,
+      ['vault.cluster.sync.secrets.overview'],
+      'after confirming opt-in, user is redirected to overview page'
+    );
   });
 
   test('it should render header, tabs and toolbar for overview state', async function (assert) {
