@@ -171,6 +171,12 @@ const cert = {
       fieldGroup: 'default',
       type: 'number',
     },
+    roleCacheSize: {
+      editType: 'number',
+      fieldGroup: 'default',
+      helpText: 'The size of the in memory role cache',
+      type: 'number',
+    },
   },
   cert: {
     name: {
@@ -488,6 +494,12 @@ const jwt = {
         'The CA certificate or chain of certificates, in PEM format, to use to validate connections to the JWKS URL. If not set, system certificates are used.',
       fieldGroup: 'default',
       type: 'string',
+    },
+    jwksPairs: {
+      editType: 'objectArray',
+      fieldGroup: 'default',
+      helpText:
+        'Set of JWKS Url and CA certificate (or chain of certificates) pairs. CA certificates must be in PEM format. Cannot be used with "jwks_url" or "jwks_ca_pem".',
     },
     jwksUrl: {
       editType: 'string',

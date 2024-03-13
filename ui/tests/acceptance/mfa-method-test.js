@@ -90,7 +90,7 @@ module('Acceptance | mfa-method', function (hooks) {
     // ensure methods are tied to an enforcement
     this.server.get('/identity/mfa/login-enforcement', () => {
       const record = this.server.create('mfa-login-enforcement', {
-        mfa_method_ids: this.getMethods().mapBy('id'),
+        mfa_method_ids: this.getMethods().map((m) => m.id),
       });
       return {
         data: {
@@ -255,7 +255,7 @@ module('Acceptance | mfa-method', function (hooks) {
     await visit('/vault/access/mfa/methods');
     const id = this.element.querySelector('[data-test-mfa-method-list-item] .tag').textContent.trim();
     const model = this.store.peekRecord('mfa-method', id);
-    await click('[data-test-mfa-method-list-item] .ember-basic-dropdown-trigger');
+    await click('[data-test-mfa-method-list-item] [data-test-popup-menu-trigger]');
     await click('[data-test-mfa-method-menu-link="edit"]');
 
     const keys = ['issuer', 'period', 'key_size', 'qr_size', 'algorithm', 'digits', 'skew'];

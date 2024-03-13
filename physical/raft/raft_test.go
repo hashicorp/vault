@@ -31,7 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testBothRaftBackends(t *testing.T, f func(raftWALValue string)) {
+func testBothRaftBackends(t *testing.T, f func(t *testing.T, raftWALValue string)) {
 	t.Helper()
 
 	testCases := []struct {
@@ -51,7 +51,7 @@ func testBothRaftBackends(t *testing.T, f func(raftWALValue string)) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// we can't use t.Parallel() here because some raft tests manipulate package level variables
-			f(tc.useWAL)
+			f(t, tc.useWAL)
 		})
 	}
 }
@@ -205,7 +205,7 @@ func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB, dataOnly bool) error {
 func TestRaft_Backend(t *testing.T) {
 	t.Parallel()
 
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -267,7 +267,7 @@ func TestRaft_SwitchFromBoltDBToRaftWal(t *testing.T) {
 // i.e. we can stand up a raft cluster with the verifier enabled, do a bunch of raft things, let the verifier
 // do its thing, and nothing blows up.
 func TestRaft_VerifierEnabled(t *testing.T) {
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs":             "100",
 			"raft_wal":                  useRaftWal,
@@ -491,7 +491,7 @@ func TestRaft_ParseNonVoter(t *testing.T) {
 func TestRaft_Backend_LargeKey(t *testing.T) {
 	t.Parallel()
 
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -526,7 +526,7 @@ func TestRaft_Backend_LargeKey(t *testing.T) {
 func TestRaft_Backend_LargeValue(t *testing.T) {
 	t.Parallel()
 
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -560,7 +560,7 @@ func TestRaft_Backend_LargeValue(t *testing.T) {
 // raft backend will populate values for any transactions that are Get operations.
 func TestRaft_TransactionalBackend_GetTransactions(t *testing.T) {
 	t.Parallel()
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -623,7 +623,7 @@ func TestRaft_TransactionalBackend_GetTransactions(t *testing.T) {
 
 func TestRaft_TransactionalBackend_LargeKey(t *testing.T) {
 	t.Parallel()
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -668,7 +668,7 @@ func TestRaft_TransactionalBackend_LargeKey(t *testing.T) {
 
 func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
 	t.Parallel()
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -709,7 +709,7 @@ func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
 
 func TestRaft_Backend_ListPrefix(t *testing.T) {
 	t.Parallel()
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -722,7 +722,7 @@ func TestRaft_Backend_ListPrefix(t *testing.T) {
 
 func TestRaft_TransactionalBackend(t *testing.T) {
 	t.Parallel()
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -745,7 +745,7 @@ func TestRaft_HABackend(t *testing.T) {
 
 func TestRaft_Backend_ThreeNode(t *testing.T) {
 	t.Parallel()
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -772,7 +772,7 @@ func TestRaft_Backend_ThreeNode(t *testing.T) {
 
 func TestRaft_GetOfflineConfig(t *testing.T) {
 	t.Parallel()
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		config := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -824,7 +824,7 @@ func TestRaft_GetOfflineConfig(t *testing.T) {
 
 func TestRaft_Recovery(t *testing.T) {
 	t.Parallel()
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -937,7 +937,7 @@ func TestRaft_Recovery(t *testing.T) {
 
 func TestRaft_TransactionalBackend_ThreeNode(t *testing.T) {
 	t.Parallel()
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -1046,7 +1046,7 @@ func TestRaft_TransactionalLimitsEnvOverride(t *testing.T) {
 
 func TestRaft_Backend_Performance(t *testing.T) {
 	t.Parallel()
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,

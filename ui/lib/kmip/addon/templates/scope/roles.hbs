@@ -69,44 +69,44 @@
         <Icon @name="user" class="has-text-grey-light" />{{list.item.id}}
       </Item.content>
       <Item.menu>
-        <li class="action">
-          <LinkTo @route="credentials" @models={{array this.scope list.item.id}} class="is-block">
-            View credentials
-          </LinkTo>
-        </li>
-        <li class="action">
-          <LinkTo @route="role" @models={{array this.scope list.item.id}} class="is-block">
-            View role
-          </LinkTo>
-        </li>
-        {{#if list.item.updatePath.isPending}}
-          <li class="action">
-            <LoadingDropdownOption />
-          </li>
-        {{else}}
-          {{#if list.item.updatePath.canUpdate}}
-            <LinkTo @route="role.edit" @models={{array this.scope list.item.id}} class="is-block">
-              Edit role
-            </LinkTo>
+        <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+          <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
+          <dd.Interactive @text="View credentials" @route="credentials" @models={{array this.scope list.item.id}} />
+          <dd.Interactive @text="View role" @route="role" @models={{array this.scope list.item.id}} />
+          {{#if list.item.updatePath.isPending}}
+            <dd.Generic>
+              <LoadingDropdownOption />
+            </dd.Generic>
+          {{else}}
+            {{#if list.item.updatePath.canUpdate}}
+              <dd.Interactive @text="Edit role" @route="role.edit" @models={{array this.scope list.item.id}} />
+            {{/if}}
+            {{#if list.item.updatePath.canDelete}}
+              <dd.Interactive
+                @text="Delete role"
+                @color="critical"
+                {{on "click" (fn (mut this.roleToDelete) list.item)}}
+                data-test-confirm-action-trigger
+              />
+            {{/if}}
           {{/if}}
-          {{#if list.item.updatePath.canDelete}}
-            <ConfirmAction
-              @isInDropdown={{true}}
-              @buttonText="Delete role"
-              @confirmMessage="Are you sure you want to delete {{list.item.id}}?"
-              @onConfirmAction={{action
-                (perform
-                  Item.callMethod
-                  "destroyRecord"
-                  list.item
-                  (concat "Successfully deleted role " list.item.id)
-                  (concat "There was an error deleting the role " list.item.id)
-                  (action "refresh")
-                )
-              }}
-              data-test-scope-delete
-            />
-          {{/if}}
+        </Hds::Dropdown>
+        {{#if (eq this.roleToDelete list.item)}}
+          <ConfirmModal
+            @color="critical"
+            @confirmMessage="Are you sure you want to delete {{this.roleToDelete.id}}?"
+            @onConfirm={{action
+              (perform
+                Item.callMethod
+                "destroyRecord"
+                this.roleToDelete
+                (concat "Successfully deleted role " this.roleToDelete.id)
+                (concat "There was an error deleting the role " this.roleToDelete.id)
+                (action "refresh")
+              )
+            }}
+            @onClose={{fn (mut this.roleToDelete) null}}
+          />
         {{/if}}
       </Item.menu>
     </ListItem>

@@ -279,34 +279,57 @@ func (f *Filters) watch(ctx context.Context, cluster clusterID) (<-chan []Filter
 		}
 	}()
 
-	// actual watcher goroutine that waits for notifications and calculates changes
+	sendToNotify := make(chan *ClusterFilter)
+
+	// goroutine for polling the condition variable.
+	// it's necessary to hold the lock the entire time to ensure there are no race conditions.
 	go func() {
+		// use a WG to ensure we don't try to send to a closed channel
+		senders := sync.WaitGroup{}
+		defer func() {
+			senders.Wait()
+			close(sendToNotify)
+		}()
+		f.lock.Lock()
+		defer f.lock.Unlock()
+		for {
+			select {
+			case <-doneCh:
+				return
+			default:
+			}
+			next := f.copyPatternWithLock(cluster)
+			senders.Add(1)
+			// don't block to send since we hold the lock
+			go func() {
+				sendToNotify <- next
+				senders.Done()
+			}()
+			notify.Wait()
+		}
+	}()
+
+	// calculate changes and forward to notification channel
+	go func() {
+		defer close(ch)
 		var current *ClusterFilter
 		for {
-			done := func() bool {
-				f.lock.Lock()
-				defer f.lock.Unlock()
-				next := f.copyPatternWithLock(cluster)
-				changes := calculateChanges(current, next)
-				current = next
-				// check if the context is finished before sending
-				select {
-				case <-doneCh:
-					close(ch)
-					return true
-				default:
-					go func() {
-						ch <- changes
-					}()
-				}
-				notify.Wait()
-				return false
-			}()
-			if done {
+			next, ok := <-sendToNotify
+			if !ok {
 				return
+			}
+			changes := calculateChanges(current, next)
+			current = next
+			// check if the context is finished before sending
+			select {
+			case <-doneCh:
+				return
+			default:
+				ch <- changes
 			}
 		}
 	}()
+
 	return ch, cancelFunc, nil
 }
 

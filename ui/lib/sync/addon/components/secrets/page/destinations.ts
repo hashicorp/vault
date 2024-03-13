@@ -6,6 +6,7 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/application';
 import errorMessage from 'vault/utils/error-message';
 import { findDestination, syncDestinations } from 'core/helpers/sync-destinations';
@@ -30,6 +31,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @service declare readonly store: StoreService;
   @service declare readonly flashMessages: FlashMessageService;
 
+  @tracked destinationToDelete: SyncDestinationModel | null = null;
   // for some reason there isn't a full page refresh happening when transitioning on filter change
   // when the transition happens it causes the FilterInput component to lose focus since it can only focus on didInsert
   // to work around this, verify that a transition from this route was completed and then focus the input
@@ -93,14 +95,16 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @action
   async onDelete(destination: SyncDestinationModel) {
     try {
-      const { name, type } = destination;
+      const { name } = destination;
       const message = `Destination ${name} has been queued for deletion.`;
       await destination.destroyRecord();
       this.store.clearDataset('sync/destination');
-      this.router.transitionTo('vault.cluster.sync.secrets.destinations.destination.secrets', type, name);
+      this.router.transitionTo('vault.cluster.sync.secrets.overview');
       this.flashMessages.success(message);
     } catch (error) {
       this.flashMessages.danger(`Error deleting destination \n ${errorMessage(error)}`);
+    } finally {
+      this.destinationToDelete = null;
     }
   }
 }

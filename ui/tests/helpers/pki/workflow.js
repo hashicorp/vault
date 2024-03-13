@@ -57,7 +57,7 @@ export const SELECTORS = {
   generateIssuerRoot: '[data-test-generate-issuer="root"]',
   generateIssuerIntermediate: '[data-test-generate-issuer="intermediate"]',
   issuerPopupMenu: '[data-test-popup-menu-trigger]',
-  issuerPopupDetails: '[data-test-popup-menu-details] a',
+  issuerPopupDetails: '[data-test-popup-menu-details]',
   issuerDetails: {
     title: '[data-test-pki-issuer-page-title]',
     ...ISSUERDETAILS,

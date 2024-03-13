@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -72,6 +73,11 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	// Ensure there is a name
 	if entry.Path == "/" {
 		return fmt.Errorf("backend path must be specified")
+	}
+
+	// We can check early to ensure that non-Enterprise versions aren't trying to supply Enterprise only options.
+	if hasInvalidAuditOptions(entry.Options) {
+		return fmt.Errorf("enterprise-only options supplied")
 	}
 
 	if fallbackRaw, ok := entry.Options["fallback"]; ok {
@@ -414,6 +420,7 @@ func (c *Core) setupAudits(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	c.auditBroker = broker
 
 	var successCount int
 
@@ -457,7 +464,6 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		return errLoadAuditFailed
 	}
 
-	c.auditBroker = broker
 	c.AddLogger(brokerLogger)
 	return nil
 }
@@ -507,6 +513,11 @@ func (c *Core) removeAuditReloadFunc(entry *MountEntry) {
 
 // newAuditBackend is used to create and configure a new audit backend by name
 func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logical.Storage, conf map[string]string) (audit.Backend, error) {
+	// Ensure that non-Enterprise versions aren't trying to supply Enterprise only options.
+	if hasInvalidAuditOptions(entry.Options) {
+		return nil, fmt.Errorf("enterprise-only options supplied")
+	}
+
 	f, ok := c.auditBackends[entry.Type]
 	if !ok {
 		return nil, fmt.Errorf("unknown backend type: %q", entry.Type)
@@ -516,6 +527,7 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		HMACType: "hmac-sha256",
 		Location: salt.DefaultLocation,
 	}
+	auditLogger := c.baseLogger.Named("audit")
 
 	be, err := f(
 		ctx, &audit.BackendConfig{
@@ -523,6 +535,7 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 			SaltConfig: saltConfig,
 			Config:     conf,
 			MountPath:  entry.Path,
+			Logger:     auditLogger,
 		},
 		c.auditedHeaders)
 	if err != nil {
@@ -531,8 +544,6 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 	if be == nil {
 		return nil, fmt.Errorf("nil backend returned from %q factory function", entry.Type)
 	}
-
-	auditLogger := c.baseLogger.Named("audit")
 
 	switch entry.Type {
 	case "file":
@@ -616,4 +627,30 @@ func (g genericAuditor) AuditResponse(ctx context.Context, input *logical.LogInp
 	logInput := *input
 	logInput.Type = g.mountType + "-response"
 	return g.c.auditBroker.LogResponse(ctx, &logInput)
+}
+
+// hasInvalidAuditOptions is used to determine if a non-Enterprise version of Vault
+// is being used when supplying options that contain options exclusive to Enterprise.
+func hasInvalidAuditOptions(options map[string]string) bool {
+	return !constants.IsEnterprise && hasEnterpriseAuditOptions(options)
+}
+
+// hasValidEnterpriseAuditOptions is used to check if any of the options supplied
+// are only for use in the Enterprise version of Vault.
+func hasEnterpriseAuditOptions(options map[string]string) bool {
+	const enterpriseAuditOptionFilter = "filter"
+	const enterpriseAuditOptionFallback = "fallback"
+
+	enterpriseAuditOptions := []string{
+		enterpriseAuditOptionFallback,
+		enterpriseAuditOptionFilter,
+	}
+
+	for _, o := range enterpriseAuditOptions {
+		if _, ok := options[o]; ok {
+			return true
+		}
+	}
+
+	return false
 }

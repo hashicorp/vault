@@ -19,8 +19,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
-
-	// CockroachDB uses the Postgres SQL driver
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 

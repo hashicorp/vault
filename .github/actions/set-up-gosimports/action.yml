@@ -1,0 +1,63 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+---
+name: Set up gosimports from Github releases
+description: Set up gosimports from Github releases
+
+inputs:
+  destination:
+    description: "Where to install the gosimports binary (default: $HOME/bin/gosimports)"
+    type: boolean
+    default: "$HOME/bin/gosimports"
+  version:
+    description: "The version to install (default: latest)"
+    type: string
+    default: Latest
+
+outputs:
+  destination:
+    description: Where the installed gosimports binary is
+    value: ${{ steps.install.outputs.destination }}
+  destination-dir:
+    description: The directory where the installed gosimports binary is
+    value: ${{ steps.install.outputs.destination-dir }}
+  version:
+    description: The installed version of gosimports
+    value: ${{ steps.install.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - id: install
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        VERSION=$(gh release list -R rinchsan/gosimports --exclude-drafts --exclude-pre-releases | grep ${{ inputs.version }} | cut -f1)
+
+        mkdir -p $(dirname ${{ inputs.destination }})
+        DESTINATION="$(readlink -f "${{ inputs.destination }}")"
+        DESTINATION_DIR="$(dirname "$DESTINATION")"
+        echo "$DESTINATION_DIR" >> "$GITHUB_PATH"
+
+        {
+          echo "destination=$DESTINATION"
+          echo "version=$VERSION"
+          echo "destination-dir=$DESTINATION_DIR"
+        } | tee -a "$GITHUB_OUTPUT"
+
+        ARCH="$(echo "$RUNNER_ARCH" | tr '[:upper:]' '[:lower:]')"
+        OS="$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')"
+        if [ "$ARCH" = "x64" ]; then
+          export ARCH="amd64"
+        fi
+        if [ "$OS" = "macos" ]; then
+          export OS="darwin"
+        fi
+
+        mkdir -p tmp
+        gh release download "$VERSION" -p "gosimports_*_${OS}_${ARCH}.tar.gz" -O tmp/gosimports.tgz -R rinchsan/gosimports
+        pushd tmp && tar -xvf gosimports.tgz && popd
+        mv tmp/gosimports "$DESTINATION"
+        rm -rf tmp

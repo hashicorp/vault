@@ -77,7 +77,7 @@
 }
 
 .is-medium-width {
-  width: calc($desktop / 3);
+  width: calc($desktop / 2.5);
 }
 
 .is-medium-height {
@@ -123,4 +123,8 @@
   .is-widescreen:not(.is-max-desktop) {
     max-width: 1152px;
   }
+}
+
+.has-margin-top-auto {
+  margin-top: auto;
 }
