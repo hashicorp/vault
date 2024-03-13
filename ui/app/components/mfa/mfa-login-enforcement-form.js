@@ -8,7 +8,8 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
-import handleHasManySelection from 'core/utils/search-select-has-many';
+import { addManyToArray, addToArray } from 'vault/helpers/add-to-array';
+import { removeFromArray } from 'vault/helpers/remove-from-array';
 
 /**
  * @module MfaLoginEnforcementForm
@@ -64,7 +65,7 @@ export default class MfaLoginEnforcementForm extends Component {
     for (const { label, key } of this.targetTypes) {
       const targetArray = await this.args.model[key];
       const targets = targetArray.map((value) => ({ label, key, value }));
-      this.targets.addObjects(targets);
+      this.targets = addManyToArray(this.targets, targets); //  [...this.targets, ...targets];
     }
   }
   async resetTargetState() {
@@ -102,7 +103,6 @@ export default class MfaLoginEnforcementForm extends Component {
 
   updateModelForKey(key) {
     const newValue = this.targets.filter((t) => t.key === key).map((t) => t.value);
-    // Set the model value directly instead of using Array methods (like .addObject)
     this.args.model[key] = newValue;
   }
 
@@ -126,8 +126,18 @@ export default class MfaLoginEnforcementForm extends Component {
 
   @action
   async onMethodChange(selectedIds) {
+    // first make sure the async relationship is loaded
     const methods = await this.args.model.mfa_methods;
-    handleHasManySelection(selectedIds, methods, this.store, 'mfa-method');
+    // then remove items that are no longer selected
+    const updatedList = methods.filter((model) => {
+      return selectedIds.includes(model.id);
+    });
+    // then add selected items that don't exist in the list already
+    const modelIds = updatedList.map((model) => model.id);
+    const toAdd = selectedIds
+      .filter((id) => !modelIds.includes(id))
+      .map((id) => this.store.peekRecord('mfa-method', id));
+    this.args.model.mfa_methods = addManyToArray(updatedList, toAdd);
   }
 
   @action
@@ -150,7 +160,7 @@ export default class MfaLoginEnforcementForm extends Component {
   addTarget() {
     const { label, key } = this.selectedTarget;
     const value = this.selectedTargetValue;
-    this.targets.addObject({ label, value, key });
+    this.targets = addToArray(this.targets, { label, value, key });
     // recalculate value for appropriate model property
     this.updateModelForKey(key);
     this.selectedTargetValue = null;
@@ -158,7 +168,9 @@ export default class MfaLoginEnforcementForm extends Component {
   }
   @action
   removeTarget(target) {
-    this.targets.removeObject(target);
+    // const targets = [...this.targets];
+    // targets.splice(targets.indexOf(target), 1);
+    this.targets = removeFromArray(this.targets, target);
     // recalculate value for appropriate model property
     this.updateModelForKey(target.key);
   }
