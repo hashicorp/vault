@@ -1085,7 +1085,6 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		echoDuration:                   uberAtomic.NewDuration(0),
 		activeNodeClockSkewMillis:      uberAtomic.NewInt64(0),
 		periodicLeaderRefreshInterval:  conf.PeriodicLeaderRefreshInterval,
-		enableMultiseal:                conf.EnableMultiseal,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -2640,7 +2639,7 @@ func (c *Core) runUnsealSetupForPrimary(ctx context.Context, logger log.Logger) 
 		return err
 	}
 
-	if c.enableMultiseal {
+	if c.IsMultisealEnabled() {
 		// Retrieve the seal generation information from storage
 		existingGenerationInfo, err := PhysicalSealGenInfo(ctx, c.physical)
 		if err != nil {
@@ -3058,7 +3057,7 @@ func (c *Core) checkForSealMigration(ctx context.Context, unwrapSeal Seal) (seal
 			// This is a migration away from Shamir.
 
 			return sealMigrationCheckAdjust, nil
-		case configuredType == SealConfigTypeMultiseal && c.enableMultiseal:
+		case configuredType == SealConfigTypeMultiseal && c.IsMultisealEnabled():
 			// We are going from a single non-shamir seal to multiseal, and multi seal is supported.
 			// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
 			// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).

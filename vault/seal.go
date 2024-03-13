@@ -339,7 +339,7 @@ func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor sea
 }
 
 func (c *Core) SetPhysicalSealGenInfo(ctx context.Context, sealGenInfo *seal.SealGenerationInfo) error {
-	if !c.enableMultiseal {
+	if !c.IsMultisealEnabled() {
 		return nil
 	}
 
