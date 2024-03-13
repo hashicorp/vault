@@ -3,10 +3,28 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { kvDataPath, kvDestroyPath, kvMetadataPath, kvUndeletePath } from 'vault/utils/kv-path';
+import { buildKvPath, kvDataPath, kvDestroyPath, kvMetadataPath, kvUndeletePath } from 'vault/utils/kv-path';
 import { module, test } from 'qunit';
 
 module('Unit | Utility | kv-path utils', function () {
+  test('buildKvPath encodes and sanitizes path', function (assert) {
+    assert.expect(4);
+
+    assert.strictEqual(
+      buildKvPath('my-backend', '//my-secret/hello ', 'metadata'),
+      'my-backend/metadata/my-secret/hello'
+    );
+    assert.strictEqual(
+      buildKvPath('my-backend', 'my-secret/hello ', 'data'),
+      'my-backend/data/my-secret/hello'
+    );
+    assert.strictEqual(
+      buildKvPath('kv?engine', 'my-secret hello ', 'data'),
+      'kv%3Fengine/data/my-secret%20hello'
+    );
+    assert.strictEqual(buildKvPath('kv-engine', 'foo', 'data', 2), 'kv-engine/data/foo?version=2');
+  });
+
   module('kvDataPath', function () {
     [
       {
