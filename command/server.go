@@ -2671,7 +2671,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 				wrapper = aeadwrapper.NewShamirWrapper()
 			}
 			configuredSeals++
-		} else if server.IsMultisealSupported() {
+		} else if config.EnableMultiseal {
 			recordSealConfigWarning(fmt.Errorf("error configuring seal: %v", wrapperConfigError))
 		} else {
 			// It seems that we are checking for this particular error here is to distinguish between a
@@ -2739,7 +2739,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Compute seal generation
-	sealGenerationInfo, err := c.computeSealGenerationInfo(existingSealGenerationInfo, allSealKmsConfigs, hasPartiallyWrappedPaths)
+	sealGenerationInfo, err := c.computeSealGenerationInfo(existingSealGenerationInfo, allSealKmsConfigs, hasPartiallyWrappedPaths, config.EnableMultiseal)
 	if err != nil {
 		return nil, err
 	}
@@ -2797,7 +2797,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		}
 		unwrapSeal = vault.NewDefaultSeal(a)
 
-	case server.IsMultisealSupported():
+	case config.EnableMultiseal:
 		// We know we are not using Shamir seal, that we are not migrating away from one, and multi seal is supported,
 		// so just put enabled and disabled wrappers on the same seal Access
 		allSealWrappers := append(enabledSealWrappers, disabledSealWrappers...)
@@ -2838,7 +2838,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	}, nil
 }
 
-func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal.SealGenerationInfo, sealConfigs []*configutil.KMS, hasPartiallyWrappedPaths bool) (*vaultseal.SealGenerationInfo, error) {
+func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal.SealGenerationInfo, sealConfigs []*configutil.KMS, hasPartiallyWrappedPaths, shouldValidate bool) (*vaultseal.SealGenerationInfo, error) {
 	generation := uint64(1)
 
 	if existingSealGenInfo != nil {
@@ -2860,7 +2860,7 @@ func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal
 		Seals:      sealConfigs,
 	}
 
-	if server.IsMultisealSupported() {
+	if shouldValidate {
 		err := newSealGenInfo.Validate(existingSealGenInfo, hasPartiallyWrappedPaths)
 		if err != nil {
 			return nil, err
