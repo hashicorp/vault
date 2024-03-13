@@ -322,7 +322,10 @@ jobs:
       - id: slackbot-token
         run:
           echo "slackbot-token=${{ needs.setup.outputs.is-enterprise != 'true' && secrets.SLACK_BOT_TOKEN || steps.secrets.outputs.SLACK_BOT_TOKEN }}" >> "$GITHUB_OUTPUT"
-      - if: needs.setup.outputs.workflow-trigger == 'pull_request'
+      - if: | 
+          needs.setup.outputs.workflow-trigger == 'pull_request' && 
+          github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name && 
+          (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise')
         name: Create or update a build status comment on the pull request
         env:
           ARTIFACTS: ${{ needs.artifacts.result }}
