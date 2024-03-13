@@ -9,11 +9,11 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
 import authPage from 'vault/tests/pages/auth';
-import { settled, click, waitFor } from '@ember/test-helpers';
+import { click, waitFor } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 
 // sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
-module('Acceptance | sync | overview', function (hooks) {
+module('Acceptance | sync | meep overview', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
@@ -41,7 +41,7 @@ module('Acceptance | sync | overview', function (hooks) {
   });
 
   test('it should show opt-in banner and modal if secrets-sync is not activated and clear it when opt-in confirmed', async function (assert) {
-    assert.expect(6);
+    assert.expect(7);
     server.get('/sys/activation-flags', () => {
       assert.ok(true, 'Request on initial load to check if secrets-sync is activated');
       return {
@@ -67,8 +67,8 @@ module('Acceptance | sync | overview', function (hooks) {
     });
     await click(ts.overview.optInCheck);
     await click(ts.overview.optInConfirm);
-    /* eslint-disable ember/no-settled-after-test-helper */
-    await settled();
+    // Locally, the banner disappears, but on CI we need a route transition, which is why we have 7 asserts and not 6. The request to activation-flags is made twice.
+    await click(ts.navLink('Secrets Sync'));
     assert.dom(ts.overview.optInBanner).doesNotExist('Opt-in banner does not show after confirmation');
   });
 });
