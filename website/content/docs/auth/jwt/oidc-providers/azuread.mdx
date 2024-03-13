@@ -68,14 +68,14 @@ You should set up a [Vault policy](/vault/tutorials/policies/policies) for the A
   from Azure.
    - `allowed_redirect_uris` should be the two redirect URIs for Vault CLI and UI access.
    - `groups_claim` should be set to `"groups"`.
-   - `oidc_scopes` should be set to `"https://graph.microsoft.com/.default"`.
+   - `oidc_scopes` should be set to `"https://graph.microsoft.com/.default profile"`.
    
    ```shell
    vault write auth/oidc/role/your_default_role \
       user_claim="sub" \
       allowed_redirect_uris="http://localhost:8250/oidc/callback,https://online_version_hostname:port_number/ui/vault/auth/oidc/oidc/callback"  \
       groups_claim="groups" \
-      oidc_scopes="https://graph.microsoft.com/.default" \
+      oidc_scopes="https://graph.microsoft.com/.default profile" \
       policies=default
    ```
 
