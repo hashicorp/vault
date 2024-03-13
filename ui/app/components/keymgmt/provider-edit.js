@@ -9,6 +9,7 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import { removeFromArray } from 'vault/helpers/remove-from-array';
 
 /**
  * @module KeymgmtProviderEdit
@@ -95,7 +96,7 @@ export default class KeymgmtProviderEdit extends Component {
   async onDeleteKey(model) {
     try {
       await model.destroyRecord();
-      this.args.model.keys.removeObject(model);
+      this.args.model.keys = removeFromArray(this.args.model.keys, model);
     } catch (error) {
       this.flashMessages.danger(error.errors.join('. '));
     }

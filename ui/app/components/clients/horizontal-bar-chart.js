@@ -14,6 +14,7 @@ import { max, maxIndex } from 'd3-array';
 import { GREY, BLUE_PALETTE } from 'vault/utils/chart-helpers';
 import { tracked } from '@glimmer/tracking';
 import { formatNumber } from 'core/helpers/format-number';
+import { addManyToArray } from 'vault/helpers/add-to-array';
 
 /**
  * @module HorizontalBarChart
@@ -174,9 +175,10 @@ export default class HorizontalBarChart extends Component {
         this.tooltipTarget = hoveredElement;
         this.isLabel = false;
         this.tooltipText = []; // clear stats
-        this.args.chartLegend.forEach(({ key, label }) => {
-          this.tooltipText.pushObject(`${formatNumber([data[key]])} ${label}`);
-        });
+        this.tooltipText = addManyToArray(
+          this.tooltipText,
+          this.args.chartLegend.map(({ key, label }) => `${formatNumber([data[key]])} ${label}`)
+        );
 
         select(hoveredElement).style('opacity', 1);
       })

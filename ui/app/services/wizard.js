@@ -11,6 +11,7 @@ import { capitalize } from '@ember/string';
 
 import getStorage from 'vault/lib/token-storage';
 import { STORAGE_KEYS, DEFAULTS, MACHINES } from 'vault/helpers/wizard-constants';
+import { addToArray } from 'vault/helpers/add-to-array';
 const {
   TUTORIAL_STATE,
   COMPONENT_STATE,
@@ -101,7 +102,7 @@ export default Service.extend(DEFAULTS, {
     } else {
       if (this.featureMachineHistory) {
         if (!this.featureMachineHistory.includes(state)) {
-          const newHistory = this.featureMachineHistory.addObject(state);
+          const newHistory = addToArray(this.featureMachineHistory, state);
           this.set('featureMachineHistory', newHistory);
         } else {
           //we're repeating steps
@@ -337,7 +338,7 @@ export default Service.extend(DEFAULTS, {
       completed.push(done);
       this.saveExtState(COMPLETED_FEATURES, completed);
     } else {
-      this.saveExtState(COMPLETED_FEATURES, this.getExtState(COMPLETED_FEATURES).addObject(done));
+      this.saveExtState(COMPLETED_FEATURES, addToArray(this.getExtState(COMPLETED_FEATURES), done));
     }
 
     this.saveExtState(FEATURE_LIST, features.length ? features : null);
