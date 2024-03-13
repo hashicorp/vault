@@ -5200,3 +5200,103 @@ func (b *SystemBackend) eventPaths() []*framework.Path {
 		},
 	}
 }
+
+func (b *SystemBackend) wellKnownPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "well-known/?$",
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleWellKnownList(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "well-known",
+						OperationVerb:   "list",
+						OperationSuffix: "labels-2",
+					},
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:     framework.TypeStringSlice,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handleWellKnownList(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "well-known",
+						OperationVerb:   "list",
+						OperationSuffix: "labels",
+					},
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:     framework.TypeStringSlice,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["well-known-list"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["well-known-list"][1]),
+		},
+		{
+			Pattern: "well-known/(?P<label>.+)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "well-known",
+				OperationSuffix: "label",
+			},
+
+			Fields: map[string]*framework.FieldSchema{
+				"label": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["well-known-label"][0]),
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleWellKnownRead(),
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"label": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"mount_uuid": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"mount_path": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"prefix": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
+					Summary: "Retrieve the associated mount information for a registered well-known label.",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["well-known"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["well-known"][1]),
+		},
+	}
+}

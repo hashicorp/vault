@@ -1,0 +1,8 @@
+### vault.identity.secret_sync.active.reporting_period ((#vault-identity-secretsync-active-reporting_period))
+
+Metric type | Value   | Description
+----------- | ------- | -----------
+gauge       | secrets | The number of distinct synced secrets that had at least one active association during the configured reporting period
+
+Vault reports `vault.identity.secret_sync.active.reporting_period` at the start of
+each month when client counting is enabled.
