@@ -29,7 +29,14 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <Hds::Copy::Button @text="Copy" @textToCopy={{@rewrap_token}} class="primary" />
+      <Hds::Copy::Button
+        @text="Copy"
+        @textToCopy={{@rewrap_token}}
+        @onError={{(fn
+          (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+        )}}
+        class="primary"
+      />
     </div>
     <div class="control">
       <Hds::Button @text="Back" @color="secondary" {{on "click" this.onClear}} />

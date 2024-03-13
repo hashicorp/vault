@@ -1,0 +1,3 @@
+```release-note:change
+events: Remove event noficiations websocket endpoint in non-Enterprise
+```

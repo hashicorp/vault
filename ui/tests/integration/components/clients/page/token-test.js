@@ -8,15 +8,15 @@ import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import clientsHandler from 'vault/mirage/handlers/clients';
+import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { getUnixTime } from 'date-fns';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import { dateFormat } from 'core/helpers/date-format';
 import { SELECTORS as ts } from 'vault/tests/helpers/clients';
 
-const START_TIME = getUnixTime(new Date('2023-10-01T00:00:00Z'));
-const END_TIME = getUnixTime(new Date('2024-01-31T23:59:59Z'));
+const START_TIME = getUnixTime(LICENSE_START);
+const END_TIME = getUnixTime(STATIC_NOW);
 
 module('Integration | Component | clients | Page::Token', function (hooks) {
   setupRenderingTest(hooks);

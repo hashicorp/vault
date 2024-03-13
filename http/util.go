@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/quotas"
@@ -47,7 +48,7 @@ func wrapRequestLimiterHandler(handler http.Handler, props *vault.HandlerPropert
 		request := r.WithContext(
 			context.WithValue(
 				r.Context(),
-				logical.CtxKeyDisableRequestLimiter{},
+				limits.CtxKeyDisableRequestLimiter{},
 				props.ListenerConfig.DisableRequestLimiter,
 			),
 		)
@@ -157,6 +158,14 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 func disableReplicationStatusEndpointWrapping(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		request := r.WithContext(logical.CreateContextDisableReplicationStatusEndpoints(r.Context(), true))
+
+		h.ServeHTTP(w, request)
+	})
+}
+
+func redactionSettingsWrapping(h http.Handler, redactVersion, redactAddresses, redactClusterName bool) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		request := r.WithContext(logical.CreateContextRedactionSettings(r.Context(), redactVersion, redactAddresses, redactClusterName))
 
 		h.ServeHTTP(w, request)
 	})

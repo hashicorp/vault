@@ -8,15 +8,15 @@ import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import clientsHandler from 'vault/mirage/handlers/clients';
+import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { getUnixTime } from 'date-fns';
 import { SELECTORS } from 'vault/tests/helpers/clients';
 import { formatNumber } from 'core/helpers/format-number';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 import { dateFormat } from 'core/helpers/date-format';
 
-const START_TIME = getUnixTime(new Date('2023-10-01T00:00:00Z'));
-const END_TIME = getUnixTime(new Date('2024-01-31T23:59:59Z'));
+const START_TIME = getUnixTime(LICENSE_START);
+const END_TIME = getUnixTime(STATIC_NOW);
 const { syncTab, charts, usageStats } = SELECTORS;
 
 module('Integration | Component | clients | Clients::Page::Sync', function (hooks) {
@@ -78,12 +78,9 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
           `renders x-axis labels for bar chart: ${this.activity.byMonth[i].month}`
         );
     });
-    assert
-      .dom(charts.dataBar)
-      .exists(
-        { count: this.activity.byMonth.filter((m) => m.counts !== null).length },
-        'renders correct number of data bars'
-      );
+
+    const dataBars = findAll(charts.dataBar).filter((b) => b.hasAttribute('height'));
+    assert.strictEqual(dataBars.length, this.activity.byMonth.filter((m) => m.counts !== null).length);
   });
 
   test('it should render empty state for no monthly data', async function (assert) {
@@ -113,7 +110,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     assert
       .dom(usageStats)
       .hasText(
-        `Secrets sync usage This data can be used to understand how many secrets sync clients have been used for this date range. A secret with a configured sync destination would qualify as a unique and active client. Total sync clients ${total}`,
+        `Secrets sync usage This data can be used to understand how many secrets sync clients have been used for this date range. Each Vault secret that is synced to at least one destination counts as one Vault client. Total sync clients ${total}`,
         'renders sync stats instead of chart'
       );
     assert.dom(syncTab.total).doesNotExist('total sync counts does not exist');
