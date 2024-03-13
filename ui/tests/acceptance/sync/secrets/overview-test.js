@@ -9,7 +9,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
 import authPage from 'vault/tests/pages/auth';
-import { click, waitFor } from '@ember/test-helpers';
+import { settled, click, waitFor } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 
 // sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
@@ -67,6 +67,8 @@ module('Acceptance | sync | overview', function (hooks) {
     });
     await click(ts.overview.optInCheck);
     await click(ts.overview.optInConfirm);
+    /* eslint-disable ember/no-settled-after-test-helper */
+    await settled();
     assert.dom(ts.overview.optInBanner).doesNotExist('Opt-in banner does not show after confirmation');
   });
 });
