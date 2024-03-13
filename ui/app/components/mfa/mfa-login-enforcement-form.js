@@ -74,7 +74,7 @@ export default class MfaLoginEnforcementForm extends Component {
       const types = ['identity/group', 'identity/entity'];
       for (const type of types) {
         try {
-          options[type] = (await this.store.query(type, {})).toArray();
+          options[type] = await this.store.query(type, {});
         } catch (error) {
           options[type] = [];
         }
@@ -89,7 +89,7 @@ export default class MfaLoginEnforcementForm extends Component {
     }
   }
   async fetchAuthMethods() {
-    const mounts = (await this.store.findAll('auth-method')).toArray();
+    const mounts = await this.store.findAll('auth-method');
     this.authMethods = mounts.map((auth) => auth.type);
   }
 
