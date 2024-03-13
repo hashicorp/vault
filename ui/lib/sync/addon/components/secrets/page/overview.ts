@@ -18,7 +18,6 @@ import type RouterService from '@ember/routing/router-service';
 import type VersionService from 'vault/services/version';
 import type { SyncDestinationAssociationMetrics } from 'vault/vault/adapters/sync/association';
 import type SyncDestinationModel from 'vault/vault/models/sync/destination';
-import type { HTMLElementEvent } from 'vault/forms';
 
 interface Args {
   destinations: Array<SyncDestinationModel>;
@@ -36,7 +35,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @tracked destinationMetrics: SyncDestinationAssociationMetrics[] = [];
   @tracked page = 1;
   @tracked showActivateSecretsSyncModal = false;
-  @tracked confirmDisabled = true;
+  @tracked docsConfirmChange = false;
 
   pageSize = Ember.testing ? 3 : 5; // lower in tests to test pagination without seeding more data
 
@@ -68,8 +67,10 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   });
 
   @action
-  onDocsConfirmChange(event: HTMLElementEvent<HTMLInputElement>) {
-    this.confirmDisabled = !event.target.checked;
+  closeActivateSecretsSyncModal() {
+    // need to both close the modal and reset the docsConfirmChange boolean
+    this.showActivateSecretsSyncModal = false;
+    this.docsConfirmChange = false;
   }
 
   @task
