@@ -6,8 +6,8 @@ package userpass
 import (
 	"testing"
 
-	"golang.org/x/crypto/bcrypt"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // TestUserPass_ParseHash ensures that we correctly validate password hashes that
