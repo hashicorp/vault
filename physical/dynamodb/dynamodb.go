@@ -927,7 +927,7 @@ func shouldUpdateTable(tableDescription *dynamodb.TableDescription, billingMode 
 
 // recordPathForVaultKey transforms a vault key into
 // a value suitable for the `DynamoDBRecord`'s `Path`
-// property. This path equals the the vault key without
+// property. This path equals the vault key without
 // its last component.
 func recordPathForVaultKey(key string) string {
 	if strings.Contains(key, "/") {
@@ -938,7 +938,7 @@ func recordPathForVaultKey(key string) string {
 
 // recordKeyForVaultKey transforms a vault key into
 // a value suitable for the `DynamoDBRecord`'s `Key`
-// property. This path equals the the vault key's
+// property. This path equals the vault key's
 // last component.
 func recordKeyForVaultKey(key string) string {
 	return pkgPath.Base(key)

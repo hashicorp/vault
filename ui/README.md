@@ -54,7 +54,7 @@ in the `.yarn/releases` folder. To update to a different version of `yarn`, use 
 ## Running a Vault Server
 
 Before running Vault UI locally, a Vault server must be running. First, ensure
-Vault dev is built according the the instructions in `../README.md`.
+Vault dev is built according the instructions in `../README.md`.
 
 - To start a single local Vault server: `yarn vault`
 - To start a local Vault cluster: `yarn vault:cluster`

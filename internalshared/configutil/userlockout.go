@@ -117,7 +117,7 @@ func ParseUserLockouts(result *SharedConfig, list *ast.ObjectList) error {
 	// we set values for these fields with defaults
 	// The issue with not being able to use non-raw entries is because of fields lockout threshold
 	// and disable lockout. We cannot differentiate using non-raw entries if the user configured these fields
-	// with values (0 and false) or if the the user did not configure these values in config file at all.
+	// with values (0 and false) or if the user did not configure these values in config file at all.
 	// The raw fields are set to nil after setting missing values in setNilValuesForRawUserLockoutFields function
 	userLockoutsMap = setMissingUserLockoutValuesInMap(userLockoutsMap)
 	for _, userLockoutValues := range userLockoutsMap {

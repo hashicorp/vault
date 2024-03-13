@@ -273,7 +273,7 @@ type LeaderJoinInfo struct {
 	// client authentication during TLS.
 	LeaderClientKey string `json:"leader_client_key"`
 
-	// LeaderCACertFile is the path on disk to the the CA cert file of the
+	// LeaderCACertFile is the path on disk to the CA cert file of the
 	// leader node. This should only be provided via Vault's configuration file.
 	LeaderCACertFile string `json:"leader_ca_cert_file"`
 
