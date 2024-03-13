@@ -743,6 +743,10 @@ func (c *Core) HAStateWithLock() consts.HAState {
 	return c.HAState()
 }
 
+func (c *Core) HALock() sync.Locker {
+	return c.stateLock.RLocker()
+}
+
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
 	entCoreConfig
@@ -4474,9 +4478,7 @@ func (c *Core) SetSeals(barrierSeal Seal, secureRandomReader io.Reader, shouldRe
 
 	c.seal = barrierSeal
 
-	c.reloadSealsEnt(secureRandomReader, barrierSeal, c.logger, shouldRewrap)
-
-	return nil
+	return c.reloadSealsEnt(secureRandomReader, barrierSeal, c.logger, shouldRewrap)
 }
 
 func (c *Core) GetWellKnownRedirect(ctx context.Context, path string) (string, error) {

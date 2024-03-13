@@ -407,17 +407,6 @@ jobs:
             package_parallelism="-p 2"
           fi
 
-          # On a release branch, add a flag to rerun failed tests
-          # shellcheck disable=SC2193 # can get false positive for this comparision
-          if [[  "${{ github.base_ref }}" == release/* ]] || [[  -z "${{ github.base_ref }}" && "${{ github.ref_name }}" == release/* ]]
-          then
-            # TODO remove this extra condition once 1.15 is about to released GA
-            if [[  "${{ github.base_ref }}" != release/1.15* ]] || [[  -z "${{ github.base_ref }}" && "${{ github.ref_name }}" != release/1.15* ]]
-            then
-              RERUN_FAILS="--rerun-fails"
-            fi
-          fi
-
           VAULT_TEST_LOG_DIR='${{ steps.metadata.outputs.go-test-log-dir-absolute }}'
           export VAULT_TEST_LOG_DIR
           mkdir -p "$VAULT_TEST_LOG_DIR"
@@ -427,7 +416,6 @@ jobs:
               --junitfile '${{ steps.metadata.outputs.gotestsum-junitfile }}' \
               --jsonfile '${{ steps.metadata.outputs.gotestsum-jsonfile }}' \
               --jsonfile-timing-events '${{ steps.metadata.outputs.gotestsum-timing-events }}' \
-              $RERUN_FAILS \
               --packages "$packages" \
               -- \
               $package_parallelism \

@@ -90,8 +90,8 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await click('#deny');
     await clickTrigger();
-    const mountPath = searchSelect.options.objectAt(0).text;
     await searchSelect.options.objectAt(0).click();
+    const mountPath = find('[data-test-selected-option="0"]').textContent.trim();
     await click('[data-test-secondary-add]');
 
     await pollCluster(this.owner);
@@ -109,7 +109,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     assert.dom('[data-test-mount-config-mode]').includesText(mode, 'show page renders the correct mode');
     assert
       .dom('[data-test-mount-config-paths]')
-      .includesText(mountPath, 'show page renders the correct mount path');
+      .includesText(`${mountPath}/`, 'show page renders the correct mount path');
 
     // delete config by choosing "no filter" in the edit screen
     await click('[data-test-replication-link="edit-mount-config"]');
@@ -321,6 +321,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await settled();
 
     // navigate using breadcrumbs back to replication.index
+    assert.dom('[data-test-replication-breadcrumb]').exists('shows the replication breadcrumb (flaky)');
     await click('[data-test-replication-breadcrumb] a');
 
     assert

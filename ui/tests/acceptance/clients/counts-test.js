@@ -6,11 +6,11 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import clientsHandler from 'vault/mirage/handlers/clients';
+import clientsHandler, { STATIC_NOW } from 'vault/mirage/handlers/clients';
 import sinon from 'sinon';
 import { visit, click, currentURL } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
-import { SELECTORS as ts, STATIC_NOW } from 'vault/tests/helpers/clients';
+import { SELECTORS as ts } from 'vault/tests/helpers/clients';
 import timestamp from 'core/utils/timestamp';
 
 module('Acceptance | clients | counts', function (hooks) {
