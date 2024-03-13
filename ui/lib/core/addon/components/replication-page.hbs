@@ -1,0 +1,40 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div
+  class="replication-page"
+  {{did-insert this.onModeUpdate @model.replicationMode}}
+  {{did-update this.onModeUpdate @model.replicationMode}}
+  data-test-replication-page
+>
+  {{#if this.isLoadingData}}
+    <LayoutLoading />
+  {{else}}
+    {{yield
+      (hash
+        header=(component
+          "replication-header"
+          data=@model
+          title=this.formattedReplicationMode
+          isSecondary=this.isSecondary
+          secondaryId=this.replicationDetails.secondaryId
+          isSummaryDashboard=this.isSummaryDashboard
+          isDisabled=this.isDisabled
+        )
+        dashboard=(component
+          "replication-dashboard"
+          isSecondary=this.isSecondary
+          isSummaryDashboard=this.isSummaryDashboard
+          replicationDetailsSummary=this.replicationDetailsSummary
+          replicationDetails=this.replicationDetails
+          clusterMode=this.clusterMode
+          reindexingDetails=this.reindexingDetails
+        )
+        isDisabled=this.isDisabled
+        message=this.message
+      )
+    }}
+  {{/if}}
+</div>
