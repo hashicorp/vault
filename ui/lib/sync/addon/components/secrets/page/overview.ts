@@ -68,7 +68,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
 
   @action
   closeActivateSecretsSyncModal() {
-    // need to both close the modal and reset the docsConfirmChange boolean
+    // need to close the modal and reset the docsConfirmChange boolean
     this.showActivateSecretsSyncModal = false;
     this.docsConfirmChange = false;
   }
