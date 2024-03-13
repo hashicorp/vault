@@ -13,9 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/constants"
-
 	"github.com/hashicorp/cli"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/vault/diagnose"
 )
 
