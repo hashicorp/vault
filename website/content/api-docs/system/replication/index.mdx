@@ -221,6 +221,8 @@ You must provide an authentication token when calling `replication/merkle-check`
 
 ```shell-session
 $ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
     http://127.0.0.1:8200/v1/sys/replication/merkle-check
 ```
 
