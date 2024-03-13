@@ -26,26 +26,6 @@ module('Acceptance | sync | destinations', function (hooks) {
     return authPage.login();
   });
 
-  test('it should show opt-in banner and modal if secrets-sync is not activated', async function (assert) {
-    assert.expect(3);
-    server.get('/sys/activation-flags', () => {
-      return {
-        data: {
-          activated: [''],
-          unactivated: ['secrets-sync'],
-        },
-      };
-    });
-
-    await visit('vault/sync/secrets/overview');
-    assert.dom(ts.overview.optInBanner).exists('Opt-in banner is shown');
-    await click(ts.overview.optInBannerEnable);
-    assert.dom(ts.overview.optInModal).exists('Opt-in modal is shown');
-    assert.dom(ts.overview.optInConfirm).isDisabled('Confirm button is disabled when checkbox is unchecked');
-    await click(ts.overview.optInCheck);
-    await click(ts.overview.optInConfirm);
-  });
-
   test('it should create new destination', async function (assert) {
     // remove destinations from mirage so cta shows when 404 is returned
     this.server.db.syncDestinations.remove();

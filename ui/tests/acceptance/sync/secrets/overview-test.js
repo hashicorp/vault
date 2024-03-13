@@ -13,7 +13,7 @@ import { click, waitFor } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 
 // sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
-module('Acceptance | sync | destination', function (hooks) {
+module('Acceptance | sync | overview', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
@@ -38,5 +38,35 @@ module('Acceptance | sync | destination', function (hooks) {
     await click(ts.overview.table.actionToggle(0));
     await click(ts.overview.table.action('details'));
     assert.dom(ts.tab('Secrets')).hasClass('active', 'Navigates to secrets view for destination');
+  });
+
+  test('it should show opt-in banner and modal if secrets-sync is not activated and clear it when opt-in confirmed', async function (assert) {
+    assert.expect(6);
+    server.get('/sys/activation-flags', () => {
+      assert.ok(true, 'Request on initial load to check if secrets-sync is activated');
+      return {
+        data: {
+          activated: [''],
+          unactivated: ['secrets-sync'],
+        },
+      };
+    });
+    await click(ts.navLink('Secrets Sync'));
+    assert.dom(ts.overview.optInBanner).exists('Opt-in banner is shown');
+    await click(ts.overview.optInBannerEnable);
+    assert.dom(ts.overview.optInModal).exists('Opt-in modal is shown');
+    assert.dom(ts.overview.optInConfirm).isDisabled('Confirm button is disabled when checkbox is unchecked');
+    server.get('/sys/activation-flags', () => {
+      assert.ok(true, 'Request made after confirmation to check if secrets-sync is activated');
+      return {
+        data: {
+          activated: ['secrets-sync'],
+          unactivated: [],
+        },
+      };
+    });
+    await click(ts.overview.optInCheck);
+    await click(ts.overview.optInConfirm);
+    assert.dom(ts.overview.optInBanner).doesNotExist('Opt-in banner does not show after confirmation');
   });
 });
