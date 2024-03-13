@@ -15,7 +15,7 @@ export default Route.extend({
   model() {
     const { backend } = this.paramsFor(this.routeName);
     return this.store.query('secret-engine', { path: backend }).then((modelList) => {
-      const model = modelList && modelList.get('firstObject');
+      const model = modelList && modelList[0];
       if (!model || !CONFIGURABLE_BACKEND_TYPES.includes(model.get('type'))) {
         const error = new AdapterError();
         set(error, 'httpStatus', 404);

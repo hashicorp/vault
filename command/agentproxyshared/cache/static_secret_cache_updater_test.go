@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cacheboltdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -134,7 +135,8 @@ func TestNewStaticSecretCacheUpdater(t *testing.T) {
 }
 
 // TestOpenWebSocketConnection tests that the openWebSocketConnection function
-// works as expected. This uses a TLS enabled (wss) WebSocket connection.
+// works as expected (fails on CE, succeeds on ent).
+// This uses a TLS enabled (wss) WebSocket connection.
 func TestOpenWebSocketConnection(t *testing.T) {
 	t.Parallel()
 	// We need a valid cluster for the connection to succeed.
@@ -145,21 +147,24 @@ func TestOpenWebSocketConnection(t *testing.T) {
 	updater.tokenSink.WriteToken(client.Token())
 
 	conn, err := updater.openWebSocketConnection(context.Background())
-	if err != nil {
-		t.Fatal(err)
+	if constants.IsEnterprise {
+		require.NoError(t, err)
+		require.NotNil(t, conn)
+	} else {
+		require.Nil(t, conn)
+		require.Errorf(t, err, "ensure Vault is Enterprise version 1.16 or above")
 	}
-	require.NotNil(t, conn)
 }
 
 // TestOpenWebSocketConnectionReceivesEventsDefaultMount tests that the openWebSocketConnection function
 // works as expected with the default KVV1 mount, and then the connection can be used to receive an event.
 // This acts as more of an event system sanity check than a test of the updater
 // logic. It's still important coverage, though.
-// As of right now, it does not pass since the default kv mount is LeasedPassthroughBackend.
-// If that is changed, this test will be unskipped.
 func TestOpenWebSocketConnectionReceivesEventsDefaultMount(t *testing.T) {
+	if !constants.IsEnterprise {
+		t.Skip("test can only run on enterprise due to requiring the event notification system")
+	}
 	t.Parallel()
-	t.Skip("This test won't finish, as the default KV mount is LeasedPassthroughBackend in tests, and therefore does not send events")
 	// We need a valid cluster for the connection to succeed.
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
@@ -211,6 +216,9 @@ func TestOpenWebSocketConnectionReceivesEventsDefaultMount(t *testing.T) {
 // This acts as more of an event system sanity check than a test of the updater
 // logic. It's still important coverage, though.
 func TestOpenWebSocketConnectionReceivesEventsKVV1(t *testing.T) {
+	if !constants.IsEnterprise {
+		t.Skip("test can only run on enterprise due to requiring the event notification system")
+	}
 	t.Parallel()
 	// We need a valid cluster for the connection to succeed.
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
@@ -273,6 +281,9 @@ func TestOpenWebSocketConnectionReceivesEventsKVV1(t *testing.T) {
 // This acts as more of an event system sanity check than a test of the updater
 // logic. It's still important coverage, though.
 func TestOpenWebSocketConnectionReceivesEventsKVV2(t *testing.T) {
+	if !constants.IsEnterprise {
+		t.Skip("test can only run on enterprise due to requiring the event notification system")
+	}
 	t.Parallel()
 	// We need a valid cluster for the connection to succeed.
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
@@ -335,6 +346,9 @@ func TestOpenWebSocketConnectionReceivesEventsKVV2(t *testing.T) {
 // works as expected using vaulthttp.TestServer. This server isn't TLS enabled, so tests
 // the ws path (as opposed to the wss) path.
 func TestOpenWebSocketConnectionTestServer(t *testing.T) {
+	if !constants.IsEnterprise {
+		t.Skip("test can only run on enterprise due to requiring the event notification system")
+	}
 	t.Parallel()
 	// We need a valid cluster for the connection to succeed.
 	core := vault.TestCoreWithConfig(t, &vault.CoreConfig{})
@@ -371,6 +385,9 @@ func TestOpenWebSocketConnectionTestServer(t *testing.T) {
 // ensuring that updateStaticSecret gets called by the event arriving
 // (as part of streamStaticSecretEvents) instead of testing calling it explicitly.
 func Test_StreamStaticSecretEvents_UpdatesCacheWithNewSecrets(t *testing.T) {
+	if !constants.IsEnterprise {
+		t.Skip("test can only run on enterprise due to requiring the event notification system")
+	}
 	t.Parallel()
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{

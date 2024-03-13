@@ -21,7 +21,7 @@ export default Route.extend(ClusterRoute, {
   model(params) {
     const policyType = params.type;
     if (!ALLOWED_TYPES.includes(policyType)) {
-      return this.transitionTo(this.routeName, ALLOWED_TYPES[0]);
+      return this.router.transitionTo(this.routeName, ALLOWED_TYPES[0]);
     }
     return {};
   },

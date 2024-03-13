@@ -1,0 +1,3 @@
+```release-note:bug
+storage/file: Fixing spuriously deleting storage keys ending with .temp
+```
