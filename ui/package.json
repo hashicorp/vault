@@ -32,7 +32,7 @@
     "test:enos": "concurrently --kill-others-on-fail -P -c \"auto\" -n lint:js,lint:hbs,enos \"yarn:lint:js:quiet\" \"yarn:lint:hbs:quiet\" \"node scripts/enos-test-ember.js {@}\" --",
     "test:oss": "yarn run test -f='!enterprise' --split=8 --preserve-test-name --parallel",
     "test:quick": "node scripts/start-vault.js --split=8 --preserve-test-name --parallel",
-    "test:quick-oss": "yarn test:quick -f='!enterprise' --split=8 --preserve-test-name --parallel",
+    "test:quick-oss": "node scripts/start-vault.js -f='!enterprise' --split=8 --preserve-test-name --parallel",
     "test:filter": "node scripts/start-vault.js --server -f='!enterprise'",
     "types:declare": "declare () { yarn tsc $1 --declaration --allowJs --emitDeclarationOnly --experimentalDecorators --outDir $2; }; declare",
     "vault": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8200 vault server -log-level=error -dev -dev-root-token-id=root -dev-ha -dev-transactional",
