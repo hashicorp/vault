@@ -33,6 +33,7 @@ export default class StringList extends Component {
   constructor() {
     super(...arguments);
 
+    // inputList is type ArrayProxy, so addObject etc are fine here
     this.inputList = ArrayProxy.create({
       // trim the `value` when accessing objects
       content: [],
