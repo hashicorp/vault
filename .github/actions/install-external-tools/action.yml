@@ -15,6 +15,7 @@ runs:
       with:
         version: v1.25.0 # This should match the version in tools/tool.sh
     - uses: ./.github/actions/set-up-gofumpt
+    - uses: ./.github/actions/set-up-gosimports
     - uses: ./.github/actions/set-up-gotestsum
     - uses: ./.github/actions/set-up-misspell
     - uses: ./.github/actions/set-up-staticcheck

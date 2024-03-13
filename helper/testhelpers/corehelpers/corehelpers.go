@@ -217,7 +217,11 @@ func (m *mockBuiltinRegistry) DeprecationStatus(name string, pluginType consts.P
 }
 
 func TestNoopAudit(t testing.T, path string, config map[string]string, opts ...audit.Option) *NoopAudit {
-	cfg := &audit.BackendConfig{Config: config, MountPath: path}
+	cfg := &audit.BackendConfig{
+		Config:    config,
+		MountPath: path,
+		Logger:    NewTestLogger(t),
+	}
 	n, err := NewNoopAudit(cfg, opts...)
 	if err != nil {
 		t.Fatal(err)
@@ -265,7 +269,7 @@ func NewNoopAudit(config *audit.BackendConfig, opts ...audit.Option) (*NoopAudit
 		return nil, fmt.Errorf("error generating random NodeID for formatter node: %w", err)
 	}
 
-	formatterNode, err := audit.NewEntryFormatter(cfg, noopBackend, opts...)
+	formatterNode, err := audit.NewEntryFormatter(config.MountPath, cfg, noopBackend, config.Logger, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
@@ -315,6 +319,10 @@ type noopWrapper struct {
 	backend *NoopAudit
 }
 
+// NoopAuditEventListener is a callback used by noopWrapper.Process() to notify
+// of each received audit event.
+type NoopAuditEventListener func(*audit.AuditEvent)
+
 type NoopAudit struct {
 	Config *audit.BackendConfig
 
@@ -339,6 +347,8 @@ type NoopAudit struct {
 
 	nodeIDList []eventlogger.NodeID
 	nodeMap    map[eventlogger.NodeID]eventlogger.Node
+
+	listener NoopAuditEventListener
 }
 
 // Process handles the contortions required by older test code to ensure behavior.
@@ -356,6 +366,10 @@ func (n *noopWrapper) Process(ctx context.Context, e *eventlogger.Event) (*event
 	a, ok := e.Payload.(*audit.AuditEvent)
 	if !ok {
 		return nil, errors.New("cannot parse payload as an audit event")
+	}
+
+	if n.backend.listener != nil {
+		n.backend.listener(a)
 	}
 
 	in := a.Data
@@ -493,6 +507,10 @@ func (n *NoopAudit) RegisterNodesAndPipeline(broker *eventlogger.Broker, name st
 	}
 
 	return broker.RegisterPipeline(pipeline)
+}
+
+func (n *NoopAudit) SetListener(listener NoopAuditEventListener) {
+	n.listener = listener
 }
 
 type TestLogger struct {

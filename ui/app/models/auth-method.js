@@ -4,14 +4,14 @@
  */
 
 import Model, { belongsTo, hasMany, attr } from '@ember-data/model';
-import { alias } from '@ember/object/computed'; // eslint-disable-line
-import { computed } from '@ember/object'; // eslint-disable-line
 import { service } from '@ember/service';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import apiPath from 'vault/utils/api-path';
-import attachCapabilities from 'vault/lib/attach-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { allMethods } from 'vault/helpers/mountable-auth-methods';
+import lazyCapabilities from 'vault/macros/lazy-capabilities';
+import { action } from '@ember/object';
+import { camelize } from '@ember/string';
 
 const validations = {
   path: [
@@ -25,69 +25,83 @@ const validations = {
   ],
 };
 
-// unsure if ember-api-actions will work on native JS class model
-// for now create class to use validations and then use classic extend pattern
 @withModelValidations(validations)
-class AuthMethodModel extends Model {}
-const ModelExport = AuthMethodModel.extend({
-  store: service(),
+export default class AuthMethodModel extends Model {
+  @service store;
 
-  config: belongsTo('mount-config', { async: false, inverse: null }), // one-to-none that replaces former fragment
-  authConfigs: hasMany('auth-config', { polymorphic: true, inverse: 'backend', async: false }),
-  path: attr('string'),
-  accessor: attr('string'),
-  name: attr('string'),
-  type: attr('string'),
+  @belongsTo('mount-config', { async: false, inverse: null }) config; // one-to-none that replaces former fragment
+  @hasMany('auth-config', { polymorphic: true, inverse: 'backend', async: false }) authConfigs;
+  @attr('string') path;
+  @attr('string') accessor;
+  @attr('string') name;
+  @attr('string') type;
   // namespaces introduced types with a `ns_` prefix for built-in engines
   // so we need to strip that to normalize the type
-  methodType: computed('type', function () {
+  get methodType() {
     return this.type.replace(/^ns_/, '');
-  }),
-  icon: computed('methodType', function () {
+  }
+  get icon() {
     const authMethods = allMethods().find((backend) => backend.type === this.methodType);
 
     return authMethods?.glyph || 'users';
-  }),
-  description: attr('string', {
+  }
+  @attr('string', {
     editType: 'textarea',
-  }),
-  local: attr('boolean', {
+  })
+  description;
+  @attr('boolean', {
     helpText:
       'When Replication is enabled, a local mount will not be replicated across clusters. This can only be specified at mount time.',
-  }),
-  sealWrap: attr('boolean', {
+  })
+  local;
+  @attr('boolean', {
     helpText:
       'When enabled - if a seal supporting seal wrapping is specified in the configuration, all critical security parameters (CSPs) in this backend will be seal wrapped. (For KV mounts, all values will be seal wrapped.) This can only be specified at mount time.',
-  }),
+  })
+  sealWrap;
 
   // used when the `auth` prefix is important,
   // currently only when setting perf mount filtering
-  apiPath: computed('path', function () {
+  get apiPath() {
     return `auth/${this.path}`;
-  }),
-  localDisplay: computed('local', function () {
+  }
+  get localDisplay() {
     return this.local ? 'local' : 'replicated';
-  }),
+  }
 
-  tuneAttrs: computed('path', function () {
-    const { methodType } = this;
-    let tuneAttrs;
-    // token_type should not be tuneable for the token auth method
-    if (methodType === 'token') {
-      tuneAttrs = [
-        'description',
-        'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
-      ];
-    } else {
-      tuneAttrs = [
-        'description',
-        'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
-      ];
-    }
-    return expandAttributeMeta(this, tuneAttrs);
-  }),
+  get supportsUserLockoutConfig() {
+    return ['approle', 'ldap', 'userpass'].includes(this.methodType);
+  }
 
-  formFields: computed(function () {
+  userLockoutConfig = {
+    modelAttrs: [
+      'config.lockoutThreshold',
+      'config.lockoutDuration',
+      'config.lockoutCounterReset',
+      'config.lockoutDisable',
+    ],
+    apiParams: ['lockout_threshold', 'lockout_duration', 'lockout_counter_reset', 'lockout_disable'],
+  };
+
+  get tuneAttrs() {
+    // order here determines order tune fields render
+    const tuneAttrs = [
+      'listingVisibility',
+      'defaultLeaseTtl',
+      'maxLeaseTtl',
+      ...(this.methodType === 'token' ? [] : ['tokenType']),
+      'auditNonHmacRequestKeys',
+      'auditNonHmacResponseKeys',
+      'passthroughRequestHeaders',
+      'allowedResponseHeaders',
+      'pluginVersion',
+      ...(this.supportsUserLockoutConfig ? this.userLockoutConfig.apiParams.map((a) => camelize(a)) : []),
+    ];
+
+    return expandAttributeMeta(this, ['description', `config.{${tuneAttrs.join(',')}}`]);
+  }
+
+  get formFields() {
     return [
       'type',
       'path',
@@ -95,11 +109,11 @@ const ModelExport = AuthMethodModel.extend({
       'accessor',
       'local',
       'sealWrap',
-      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders,pluginVersion}',
     ];
-  }),
+  }
 
-  formFieldGroups: computed(function () {
+  get formFieldGroups() {
     return [
       { default: ['path'] },
       {
@@ -108,34 +122,34 @@ const ModelExport = AuthMethodModel.extend({
           'config.listingVisibility',
           'local',
           'sealWrap',
-          'config.{defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+          'config.{defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders,pluginVersion}',
         ],
       },
     ];
-  }),
+  }
 
-  attrs: computed('formFields', function () {
+  get attrs() {
     return expandAttributeMeta(this, this.formFields);
-  }),
+  }
 
-  fieldGroups: computed('formFieldGroups', function () {
+  get fieldGroups() {
     return fieldToAttrs(this, this.formFieldGroups);
-  }),
-  canDisable: alias('deletePath.canDelete'),
-  canEdit: alias('configPath.canUpdate'),
+  }
+  @lazyCapabilities(apiPath`sys/auth/${'id'}`, 'id') deletePath;
+  @lazyCapabilities(apiPath`auth/${'id'}/config`, 'id') configPath;
+  @lazyCapabilities(apiPath`auth/${'id'}/config/client`, 'id') awsConfigPath;
+  get canDisable() {
+    return this.deletePath.get('canDelete') !== false;
+  }
+  get canEdit() {
+    return this.configPath.get('canUpdate') !== false;
+  }
+  get canEditAws() {
+    return this.awsConfigPath.get('canUpdate') !== false;
+  }
 
+  @action
   tune(data) {
     return this.store.adapterFor('auth-method').tune(this.path, data);
-  },
-});
-
-export default attachCapabilities(ModelExport, {
-  deletePath: apiPath`sys/auth/${'id'}`,
-  configPath: function (context) {
-    if (context.type === 'aws') {
-      return apiPath`auth/${'id'}/config/client`.call(this, context);
-    } else {
-      return apiPath`auth/${'id'}/config`.call(this, context);
-    }
-  },
-});
+  }
+}

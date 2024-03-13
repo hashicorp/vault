@@ -37,7 +37,7 @@ export default class MfaForm extends Component {
     super(...arguments);
     // trigger validation immediately when passcode is not required
     const passcodeOrSelect = this.constraints.filter((constraint) => {
-      return constraint.methods.length > 1 || constraint.methods.findBy('uses_passcode');
+      return constraint.methods.length > 1 || constraint.methods.find((m) => m.uses_passcode);
     });
     if (!passcodeOrSelect.length) {
       this.validate.perform();
@@ -112,7 +112,11 @@ export default class MfaForm extends Component {
 
   @action onSelect(constraint, id) {
     set(constraint, 'selectedId', id);
-    set(constraint, 'selectedMethod', constraint.methods.findBy('id', id));
+    set(
+      constraint,
+      'selectedMethod',
+      constraint.methods.find((m) => m.id === id)
+    );
   }
   @action submit(e) {
     e.preventDefault();

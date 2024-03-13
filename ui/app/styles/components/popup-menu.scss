@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+// Popup menu no longer exists, but these styles are still used in some places
 .popup-menu-content,
 .ember-power-select-options {
   border-radius: $radius;
@@ -174,5 +175,20 @@
     &.ember-basic-dropdown--transitioning-out {
       animation: drop-fade-below 0.15s reverse;
     }
+  }
+}
+
+// Match HDS styling for namespace ink
+a.ns-dropdown-item {
+  color: var(--token-color-foreground-primary);
+  display: flex;
+  align-items: flex-start;
+  padding: 7px 9px 7px 0px;
+  border: 1px solid transparent;
+  outline-style: solid;
+  outline-color: transparent;
+  text-decoration: none;
+  &:hover {
+    color: var(--token-color-foreground-action-hover);
   }
 }

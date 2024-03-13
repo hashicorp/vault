@@ -1437,14 +1437,14 @@ func (c *ServerCommand) Run(args []string) int {
 		info["HCP resource ID"] = config.HCPLinkConf.Resource.ID
 	}
 
+	requestLimiterStatus := entGetRequestLimiterStatus(coreConfig)
+	if requestLimiterStatus != "" {
+		infoKeys = append(infoKeys, "request limiter")
+		info["request limiter"] = requestLimiterStatus
+	}
+
 	infoKeys = append(infoKeys, "administrative namespace")
 	info["administrative namespace"] = config.AdministrativeNamespacePath
-
-	infoKeys = append(infoKeys, "request limiter")
-	info["request limiter"] = "enabled"
-	if config.RequestLimiter != nil && config.RequestLimiter.Disable {
-		info["request limiter"] = "disabled"
-	}
 
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
@@ -1760,42 +1760,43 @@ func (c *ServerCommand) Run(args []string) int {
 			// We can only get pprof outputs via the API but sometimes Vault can get
 			// into a state where it cannot process requests so we can get pprof outputs
 			// via SIGUSR2.
-			if os.Getenv("VAULT_PPROF_WRITE_TO_FILE") != "" {
-				dir := ""
-				path := os.Getenv("VAULT_PPROF_FILE_PATH")
-				if path != "" {
-					if _, err := os.Stat(path); err != nil {
-						c.logger.Error("Checking pprof path failed", "error", err)
-						continue
-					}
-					dir = path
-				} else {
-					dir, err = os.MkdirTemp("", "vault-pprof")
-					if err != nil {
-						c.logger.Error("Could not create temporary directory for pprof", "error", err)
-						continue
-					}
+			pprofPath := filepath.Join(os.TempDir(), "vault-pprof")
+			err := os.MkdirAll(pprofPath, os.ModePerm)
+			if err != nil {
+				c.logger.Error("Could not create temporary directory for pprof", "error", err)
+				continue
+			}
+
+			dumps := []string{"goroutine", "heap", "allocs", "threadcreate", "profile"}
+			for _, dump := range dumps {
+				pFile, err := os.Create(filepath.Join(pprofPath, dump))
+				if err != nil {
+					c.logger.Error("error creating pprof file", "name", dump, "error", err)
+					break
 				}
 
-				dumps := []string{"goroutine", "heap", "allocs", "threadcreate"}
-				for _, dump := range dumps {
-					pFile, err := os.Create(filepath.Join(dir, dump))
-					if err != nil {
-						c.logger.Error("error creating pprof file", "name", dump, "error", err)
-						break
-					}
-
+				if dump != "profile" {
 					err = pprof.Lookup(dump).WriteTo(pFile, 0)
 					if err != nil {
 						c.logger.Error("error generating pprof data", "name", dump, "error", err)
 						pFile.Close()
 						break
 					}
-					pFile.Close()
+				} else {
+					// CPU profiles need to run for a duration so we're going to run it
+					// just for one second to avoid blocking here.
+					if err := pprof.StartCPUProfile(pFile); err != nil {
+						c.logger.Error("could not start CPU profile: ", err)
+						pFile.Close()
+						break
+					}
+					time.Sleep(time.Second * 1)
+					pprof.StopCPUProfile()
 				}
-
-				c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", dir))
+				pFile.Close()
 			}
+
+			c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", pprofPath))
 		}
 	}
 	// Notify systemd that the server is shutting down
@@ -3116,10 +3117,6 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		DisableSSCTokens:               config.DisableSSCTokens,
 		Experiments:                    config.Experiments,
 		AdministrativeNamespacePath:    config.AdministrativeNamespacePath,
-	}
-
-	if config.RequestLimiter != nil {
-		coreConfig.DisableRequestLimiter = config.RequestLimiter.Disable
 	}
 
 	if c.flagDev {
