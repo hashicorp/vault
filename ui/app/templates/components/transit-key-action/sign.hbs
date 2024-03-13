@@ -4,18 +4,22 @@
 ~}}
 
 <form
-  onsubmit={{action
-    @doSubmit
-    (hash
-      input=@input
-      hash_algorithm=@hash_algorithm
-      signature_algorithm=@signature_algorithm
-      key_version=@key_version
-      context=@context
-      prehashed=@prehashed
-      encodedBase64=@encodedBase64
+  {{on
+    "submit"
+    (fn
+      @doSubmit
+      (hash
+        input=@trackedInput
+        hash_algorithm=@hash_algorithm
+        signature_algorithm=@signature_algorithm
+        key_version=@key_version
+        context=@context
+        prehashed=@prehashed
+        encodedBase64=@encodedBase64
+      )
     )
   }}
+  ...attributes
 >
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="signing" />
@@ -26,20 +30,26 @@
         as the encryption key and the specified hash algorithm.
       </p>
     </div>
-    <KeyVersionSelect @key={{@key}} @onVersionChange={{action (mut @key_version)}} @key_version={{@key_version}} />
+    <KeyVersionSelect @key={{@key}} @onVersionChange={{fn (mut @key_version)}} @key_version={{@key_version}} />
     <div class="field">
       <div class="control is-relative">
         <JsonEditor
           @title="Input"
-          @value={{@input}}
-          @valueUpdated={{action (mut @input)}}
+          @value={{@trackedInput}}
+          @valueUpdated={{fn (mut @trackedInput)}}
           @mode="ruby"
           @data-test-transit-input="input"
         />
       </div>
     </div>
     <div class="field">
-      <Input @type="checkbox" id="encodedBase64" @checked={{@encodedBase64}} data-test-transit-input="encodedBase64" />
+      <Input
+        @type="checkbox"
+        id="encodedBase64"
+        @checked={{@encodedBase64}}
+        {{on "change" @toggleEncodeBase64}}
+        data-test-transit-input="encodedBase64"
+      />
       <label for="encodedBase64">This data is already encoded in base64</label>
     </div>
     {{#if @key.derived}}
@@ -68,10 +78,10 @@
               id="prehashed"
               @type="checkbox"
               name="prehashed"
-              class="switch is-rounded is-success is-small"
+              class="toggle is-success is-small"
               @checked={{@prehashed}}
             />
-            <label for="prehashed">Prehashed</label>
+            <label for="prehashed" class="has-text-weight-bold is-size-8">Prehashed</label>
           </div>
         </div>
       </div>
@@ -114,9 +124,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button type="submit" disabled={{@loading}} class="button is-primary {{if @loading 'is-loading'}}">
-        Sign
-      </button>
+      <Hds::Button @text="Sign" @icon={{if @submitIsRunning "loading"}} type="submit" disabled={{@submitIsRunning}} />
     </div>
   </div>
 </form>
@@ -131,6 +139,11 @@
         @textToCopy={{@signature}}
         @color="secondary"
         @container="#transit-sign-modal"
+        @isFullWidth={{true}}
+        @isTruncated={{true}}
+        @onError={{(fn
+          (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+        )}}
         data-test-encrypted-value="signature"
       />
     </M.Body>

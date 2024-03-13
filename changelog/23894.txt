@@ -1,0 +1,3 @@
+```release-note:bug
+core: Skip unnecessary deriving of policies during Login MFA Check.
+```

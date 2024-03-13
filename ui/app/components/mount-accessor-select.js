@@ -4,7 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { action } from '@ember/object';
 
@@ -45,7 +45,7 @@ export default class MountAccessorSelect extends Component {
   @task *authMethods() {
     const methods = yield this.store.findAll('auth-method');
     if (!this.args.value && !this.args.noDefault) {
-      const getValue = methods.get('firstObject.accessor');
+      const getValue = methods[0].accessor;
       this.args.onChange(getValue);
     }
     return methods;

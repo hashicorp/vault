@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentURL, fillIn } from '@ember/test-helpers';
+import { click, currentURL } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import authPage from 'vault/tests/pages/auth';
 
@@ -24,9 +24,15 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
   test('it should render enterprise only navigation links', async function (assert) {
     assert.dom(panel('Cluster')).exists('Cluster nav panel renders');
 
+    await click(link('Secrets Sync'));
+    assert.strictEqual(currentURL(), '/vault/sync/secrets/overview', 'Sync route renders');
+
     await click(link('Replication'));
     assert.strictEqual(currentURL(), '/vault/replication', 'Replication route renders');
-    await click('[data-test-replication-enable]');
+    assert.dom(panel('Replication')).exists(`Replication nav panel renders`);
+    assert.dom(link('Overview')).hasClass('active', 'Overview link is active');
+    assert.dom(link('Performance')).exists('Performance link exists');
+    assert.dom(link('Disaster Recovery')).exists('DR link exists');
 
     await click(link('Performance'));
     assert.strictEqual(
@@ -37,14 +43,9 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
 
     await click(link('Disaster Recovery'));
     assert.strictEqual(currentURL(), '/vault/replication/dr', 'Replication dr route renders');
-    // disable replication now that we have checked the links
-    await click('[data-test-replication-link="manage"]');
-    await click('[data-test-replication-action-trigger]');
-    await fillIn('[data-test-confirmation-modal-input="Disable Replication?"]', 'Disaster Recovery');
-    await click('[data-test-confirm-button="Disable Replication?"]');
 
     await click(link('Client Count'));
-    assert.strictEqual(currentURL(), '/vault/clients/dashboard', 'Client counts route renders');
+    assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'Client counts route renders');
 
     await click(link('License'));
     assert.strictEqual(currentURL(), '/vault/license', 'License route renders');

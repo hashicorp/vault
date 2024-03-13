@@ -87,6 +87,11 @@ func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 					"read",
 				},
 			},
+			"sys/internal/ui/version": map[string]interface{}{
+				"capabilities": []interface{}{
+					"read",
+				},
+			},
 			"sys/leases/lookup": map[string]interface{}{
 				"capabilities": []interface{}{
 					"update",
@@ -139,7 +144,8 @@ func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 				},
 			},
 		},
-		"root": false,
+		"root":             false,
+		"chroot_namespace": "",
 	}
 
 	if diff := deep.Equal(resp.Data, exp); diff != nil {

@@ -14,7 +14,7 @@ organization operate within isolated environments known as **tenants**.
 
 Multi-tenant environments have the following implementation challenges:
 
-- **Tenant isolation**. Teams within a Visualization as a Service (VaaS)
+- **Tenant isolation**. Teams within a Vault as a Service (VaaS)
   environment require strong isolation for their policies, secrets, and
   identities. Tenant isolation may also be required due to organizational
   security and privacy requirements or to address compliance regulations like
@@ -103,8 +103,10 @@ admins to allow teams to self-manage their namespace. In addition to basic
 management, delegate admins can create child namespaces and assign admin rights
 to subordinate delegate admins.
 
-Additionally, administrative namespaces let Vault administrators grant access to
-a [predefined subset of privileged endpoints](#privileged-endpoints) by setting
+Additionally,
+[administrative namespaces](/vault/docs/enterprise/namespaces/create-admin-namespace)
+let Vault administrators grant access to a
+[predefined subset of privileged endpoints](#privileged-endpoints) by setting
 the relevant namespace parameters in their Vault configuration file.
 
 ## Vault API and namespaces
@@ -160,3 +162,4 @@ Refer to the following tutorials to learn more about Vault namespaces:
   Guide](/vault/tutorials/enterprise/namespace-structure)
 - [HCP Vault namespace
   considerations](/vault/tutorials/cloud-ops/hcp-vault-namespace-considerations)
+- [Using many Namespaces](/vault/docs/enterprise/namespaces/namespace-limits)

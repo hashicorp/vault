@@ -1,0 +1,26 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{or @breadcrumbs (array (hash label="Secrets Sync"))}} />
+  </p.top>
+
+  <p.levelLeft>
+    <h1 class="title is-3 has-bottom-margin-m" data-test-page-title>
+      {{#if @icon}}
+        <Icon @name={{@icon}} @size="24" />
+      {{/if}}
+      {{@title}}
+      {{#if this.version.isCommunity}}
+        <Hds::Badge @text="Enterprise feature" @color="highlight" @size="large" />
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+
+  <p.levelRight>
+    {{yield to="actions"}}
+  </p.levelRight>
+</PageHeader>

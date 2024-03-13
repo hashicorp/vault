@@ -13,7 +13,7 @@
   />
   {{#if @validationError}}
     <div>
-      <AlertInline @type="danger" @message={{@validationError}} @paddingTop={{true}} />
+      <AlertInline @type="danger" @message={{@validationError}} class="has-top-padding-s" />
     </div>
   {{/if}}
   {{#if this.kvData}}
@@ -52,24 +52,42 @@
             />
           {{/if}}
         </div>
-        <div class="column is-narrow">
-          {{#if (eq this.kvData.length (inc index))}}
-            <button type="button" {{action "addRow"}} class="button is-outlined is-primary" data-test-kv-add-row={{index}}>
-              Add
-            </button>
-          {{else}}
-            <button
-              class="button has-text-grey is-expanded is-icon"
-              type="button"
-              {{action "deleteRow" row index}}
-              aria-label="Delete row"
-              data-test-kv-delete-row={{index}}
-            >
-              <Icon @name="trash" />
-            </button>
-          {{/if}}
-        </div>
+        {{#unless @isSingleRow}}
+          <div class="column is-1">
+            {{#if (eq this.kvData.length (inc index))}}
+              <Hds::Button @text="Add" {{on "click" this.addRow}} data-test-kv-add-row={{index}} @isFullWidth={{true}} />
+            {{else}}
+              <Hds::Button
+                @text="Delete row"
+                @color="secondary"
+                {{on "click" (fn this.deleteRow row index)}}
+                @icon="trash"
+                @isIconOnly={{true}}
+                @isFullWidth={{true}}
+                data-test-kv-delete-row={{index}}
+              />
+            {{/if}}
+          </div>
+        {{/unless}}
       </div>
+      {{#if (this.showWhitespaceWarning row.name)}}
+        <div class="has-bottom-margin-s">
+          <AlertInline
+            @type="warning"
+            @message="Key contains whitespace. If this is desired, you'll need to encode it with %20 in API requests."
+            data-test-kv-whitespace-warning={{index}}
+          />
+        </div>
+      {{/if}}
+      {{#if (this.showNonStringWarning row.value)}}
+        <div class="has-bottom-margin-s">
+          <AlertInline
+            @type="warning"
+            @message="This value will be saved as a string. If you need to save a non-string value, please use the JSON editor."
+            data-test-kv-object-warning={{index}}
+          />
+        </div>
+      {{/if}}
     {{/each}}
     {{#if this.hasDuplicateKeys}}
       <Hds::Alert data-test-duplicate-keys-warning @type="inline" @color="warning" as |A|>

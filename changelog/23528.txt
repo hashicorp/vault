@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/aws: update credential rotation deadline when static role rotation period is updated
+```

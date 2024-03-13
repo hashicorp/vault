@@ -64,9 +64,6 @@ import (
 // Thus, rather than creating multiple instances of it, we only need one.
 var Registry = newRegistry()
 
-// TODO remove once entAddExtPlugins is implemented in ENT
-var addExternalPlugins = addExtPluginsImpl
-
 // BuiltinFactory is the func signature that should be returned by
 // the plugin's New() func.
 type BuiltinFactory func() (interface{}, error)
@@ -200,7 +197,7 @@ func newRegistry() *registry {
 		},
 	}
 
-	addExternalPlugins(reg)
+	entAddExtPlugins(reg)
 
 	return reg
 }

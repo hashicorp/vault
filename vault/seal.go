@@ -11,10 +11,8 @@ import (
 	"sync/atomic"
 
 	"github.com/hashicorp/vault/command/server"
-
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
-
 	"github.com/hashicorp/vault/vault/seal"
 )
 
@@ -342,9 +340,7 @@ func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor sea
 }
 
 func (c *Core) SetPhysicalSealGenInfo(ctx context.Context, sealGenInfo *seal.SealGenerationInfo) error {
-	if enabled, err := server.IsSealHABetaEnabled(); err != nil {
-		return err
-	} else if !enabled {
+	if !server.IsMultisealSupported() {
 		return nil
 	}
 
@@ -372,9 +368,7 @@ func (c *Core) SetPhysicalSealGenInfo(ctx context.Context, sealGenInfo *seal.Sea
 }
 
 func PhysicalSealGenInfo(ctx context.Context, storage physical.Backend) (*seal.SealGenerationInfo, error) {
-	if enabled, err := server.IsSealHABetaEnabled(); err != nil {
-		return nil, err
-	} else if !enabled {
+	if !server.IsMultisealSupported() {
 		return nil, nil
 	}
 

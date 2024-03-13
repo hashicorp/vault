@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -55,7 +56,7 @@ func pathListIssuers(b *backend) *framework.Path {
 }
 
 func (b *backend) pathListIssuersHandler(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not list issuers until migration has completed"), nil
 	}
 
@@ -398,11 +399,11 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 		return b.pathGetRawIssuer(ctx, req, data)
 	}
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not get issuer until migration has completed"), nil
 	}
 
-	issuerName := getIssuerRef(data)
+	issuerName := GetIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
@@ -424,7 +425,7 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 	return respondReadIssuer(issuer)
 }
 
-func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
+func respondReadIssuer(issuer *issuing.IssuerEntry) (*logical.Response, error) {
 	var respManualChain []string
 	for _, entity := range issuer.ManualChain {
 		respManualChain = append(respManualChain, string(entity))
@@ -483,11 +484,11 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not update issuer until migration has completed"), nil
 	}
 
-	issuerName := getIssuerRef(data)
+	issuerName := GetIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
@@ -537,9 +538,9 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	rawUsage := data.Get("usage").([]string)
-	newUsage, err := NewIssuerUsageFromNames(rawUsage)
+	newUsage, err := issuing.NewIssuerUsageFromNames(rawUsage)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("Unable to parse specified usages: %v - valid values are %v", rawUsage, AllIssuerUsages.Names())), nil
+		return logical.ErrorResponse(fmt.Sprintf("Unable to parse specified usages: %v - valid values are %v", rawUsage, issuing.AllIssuerUsages.Names())), nil
 	}
 
 	// Revocation signature algorithm changes
@@ -562,15 +563,15 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	// AIA access changes
 	enableTemplating := data.Get("enable_aia_url_templating").(bool)
 	issuerCertificates := data.Get("issuing_certificates").([]string)
-	if badURL := validateURLs(issuerCertificates); !enableTemplating && badURL != "" {
+	if badURL := issuing.ValidateURLs(issuerCertificates); !enableTemplating && badURL != "" {
 		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter issuing_certificates: %s", badURL)), nil
 	}
 	crlDistributionPoints := data.Get("crl_distribution_points").([]string)
-	if badURL := validateURLs(crlDistributionPoints); !enableTemplating && badURL != "" {
+	if badURL := issuing.ValidateURLs(crlDistributionPoints); !enableTemplating && badURL != "" {
 		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter crl_distribution_points: %s", badURL)), nil
 	}
 	ocspServers := data.Get("ocsp_servers").([]string)
-	if badURL := validateURLs(ocspServers); !enableTemplating && badURL != "" {
+	if badURL := issuing.ValidateURLs(ocspServers); !enableTemplating && badURL != "" {
 		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter ocsp_servers: %s", badURL)), nil
 	}
 
@@ -582,8 +583,8 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		issuer.Name = newName
 		issuer.LastModified = time.Now().UTC()
 		// See note in updateDefaultIssuerId about why this is necessary.
-		b.crlBuilder.invalidateCRLBuildTime()
-		b.crlBuilder.flushCRLBuildTimeInvalidation(sc)
+		b.CrlBuilder().invalidateCRLBuildTime()
+		b.CrlBuilder().flushCRLBuildTimeInvalidation(sc)
 		modified = true
 	}
 
@@ -593,7 +594,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	if newUsage != issuer.Usage {
-		if issuer.Revoked && newUsage.HasUsage(IssuanceUsage) {
+		if issuer.Revoked && newUsage.HasUsage(issuing.IssuanceUsage) {
 			// Forbid allowing cert signing on its usage.
 			return logical.ErrorResponse("This issuer was revoked; unable to modify its usage to include certificate signing again. Reissue this certificate (preferably with a new key) and modify that entry instead."), nil
 		}
@@ -604,7 +605,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse issuer's certificate: %w", err)
 		}
-		if (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 && newUsage.HasUsage(CRLSigningUsage) {
+		if (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 && newUsage.HasUsage(issuing.CRLSigningUsage) {
 			return logical.ErrorResponse("This issuer's underlying certificate lacks the CRLSign KeyUsage value; unable to set CRLSigningUsage on this issuer as a result."), nil
 		}
 
@@ -618,7 +619,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	if issuer.AIAURIs == nil && (len(issuerCertificates) > 0 || len(crlDistributionPoints) > 0 || len(ocspServers) > 0) {
-		issuer.AIAURIs = &aiaConfigEntry{}
+		issuer.AIAURIs = &issuing.AiaConfigEntry{}
 	}
 	if issuer.AIAURIs != nil {
 		// Associative mapping from data source to destination on the
@@ -665,7 +666,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	// it'll write it out to disk for us. We'd hate to then modify the issuer
 	// again and write it a second time.
 	var updateChain bool
-	var constructedChain []issuerID
+	var constructedChain []issuing.IssuerID
 	for index, newPathRef := range newPath {
 		// Allow self for the first entry.
 		if index == 0 && newPathRef == "self" {
@@ -715,7 +716,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		addWarningOnDereferencing(sc, oldName, response)
 	}
 	if issuer.AIAURIs != nil && issuer.AIAURIs.EnableTemplating {
-		_, aiaErr := issuer.AIAURIs.toURLEntries(sc, issuer.ID)
+		_, aiaErr := ToURLEntries(sc, issuer.ID, issuer.AIAURIs)
 		if aiaErr != nil {
 			response.AddWarning(fmt.Sprintf("issuance may fail: %v\n\nConsider setting the cluster-local address if it is not already set.", aiaErr))
 		}
@@ -730,12 +731,12 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not patch issuer until migration has completed"), nil
 	}
 
 	// First we fetch the issuer
-	issuerName := getIssuerRef(data)
+	issuerName := GetIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
@@ -782,8 +783,8 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 			issuer.Name = newName
 			issuer.LastModified = time.Now().UTC()
 			// See note in updateDefaultIssuerId about why this is necessary.
-			b.crlBuilder.invalidateCRLBuildTime()
-			b.crlBuilder.flushCRLBuildTimeInvalidation(sc)
+			b.CrlBuilder().invalidateCRLBuildTime()
+			b.CrlBuilder().flushCRLBuildTimeInvalidation(sc)
 			modified = true
 		}
 	}
@@ -813,12 +814,12 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	rawUsageData, ok := data.GetOk("usage")
 	if ok {
 		rawUsage := rawUsageData.([]string)
-		newUsage, err := NewIssuerUsageFromNames(rawUsage)
+		newUsage, err := issuing.NewIssuerUsageFromNames(rawUsage)
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("Unable to parse specified usages: %v - valid values are %v", rawUsage, AllIssuerUsages.Names())), nil
+			return logical.ErrorResponse(fmt.Sprintf("Unable to parse specified usages: %v - valid values are %v", rawUsage, issuing.AllIssuerUsages.Names())), nil
 		}
 		if newUsage != issuer.Usage {
-			if issuer.Revoked && newUsage.HasUsage(IssuanceUsage) {
+			if issuer.Revoked && newUsage.HasUsage(issuing.IssuanceUsage) {
 				// Forbid allowing cert signing on its usage.
 				return logical.ErrorResponse("This issuer was revoked; unable to modify its usage to include certificate signing again. Reissue this certificate (preferably with a new key) and modify that entry instead."), nil
 			}
@@ -827,7 +828,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 			if err != nil {
 				return nil, fmt.Errorf("unable to parse issuer's certificate: %w", err)
 			}
-			if (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 && newUsage.HasUsage(CRLSigningUsage) {
+			if (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 && newUsage.HasUsage(issuing.CRLSigningUsage) {
 				return logical.ErrorResponse("This issuer's underlying certificate lacks the CRLSign KeyUsage value; unable to set CRLSigningUsage on this issuer as a result."), nil
 			}
 
@@ -864,7 +865,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 
 	// AIA access changes.
 	if issuer.AIAURIs == nil {
-		issuer.AIAURIs = &aiaConfigEntry{}
+		issuer.AIAURIs = &issuing.AiaConfigEntry{}
 	}
 
 	// Associative mapping from data source to destination on the
@@ -903,7 +904,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		rawURLsValue, ok := data.GetOk(pair.Source)
 		if ok {
 			urlsValue := rawURLsValue.([]string)
-			if badURL := validateURLs(urlsValue); !issuer.AIAURIs.EnableTemplating && badURL != "" {
+			if badURL := issuing.ValidateURLs(urlsValue); !issuer.AIAURIs.EnableTemplating && badURL != "" {
 				return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter %v: %s", pair.Source, badURL)), nil
 			}
 
@@ -925,7 +926,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	if ok {
 		newPath := newPathData.([]string)
 		var updateChain bool
-		var constructedChain []issuerID
+		var constructedChain []issuing.IssuerID
 		for index, newPathRef := range newPath {
 			// Allow self for the first entry.
 			if index == 0 && newPathRef == "self" {
@@ -976,7 +977,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		addWarningOnDereferencing(sc, oldName, response)
 	}
 	if issuer.AIAURIs != nil && issuer.AIAURIs.EnableTemplating {
-		_, aiaErr := issuer.AIAURIs.toURLEntries(sc, issuer.ID)
+		_, aiaErr := ToURLEntries(sc, issuer.ID, issuer.AIAURIs)
 		if aiaErr != nil {
 			response.AddWarning(fmt.Sprintf("issuance may fail: %v\n\nConsider setting the cluster-local address if it is not already set.", aiaErr))
 		}
@@ -986,11 +987,11 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 }
 
 func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not get issuer until migration has completed"), nil
 	}
 
-	issuerName := getIssuerRef(data)
+	issuerName := GetIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
@@ -1069,11 +1070,11 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not delete issuer until migration has completed"), nil
 	}
 
-	issuerName := getIssuerRef(data)
+	issuerName := GetIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
@@ -1082,7 +1083,7 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 	ref, err := sc.resolveIssuerReference(issuerName)
 	if err != nil {
 		// Return as if we deleted it if we fail to lookup the issuer.
-		if ref == IssuerRefNotFound {
+		if ref == issuing.IssuerRefNotFound {
 			return &logical.Response{}, nil
 		}
 		return nil, err
@@ -1120,7 +1121,7 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 	// Finally, we need to rebuild both the local and the unified CRLs. This
 	// will free up any now unnecessary space used in both the CRL config
 	// and for the underlying CRL.
-	warnings, err := b.crlBuilder.rebuild(sc, true)
+	warnings, err := b.CrlBuilder().rebuild(sc, true)
 	if err != nil {
 		return nil, err
 	}
@@ -1220,17 +1221,17 @@ func buildPathGetIssuerCRL(b *backend, pattern string, displayAttrs *framework.D
 }
 
 func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not get issuer's CRL until migration has completed"), nil
 	}
 
-	issuerName := getIssuerRef(data)
+	issuerName := GetIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	warnings, err := b.crlBuilder.rebuildIfForced(sc)
+	warnings, err := b.CrlBuilder().rebuildIfForced(sc)
 	if err != nil {
 		return nil, err
 	}

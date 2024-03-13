@@ -11,13 +11,12 @@ import (
 	"testing"
 	"time"
 
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
-
 	"github.com/armon/go-metrics"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/helper/metricsutil"
-
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
+	"github.com/stretchr/testify/require"
 )
 
 // phy implements physical.Backend. It maps keys to a slice of entries.
@@ -181,7 +180,7 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 	metrics.NewGlobal(metricsConf, inmemSink)
 
 	pBackend := newTestBackend(t)
-	testSealAccess, setErrs := seal.NewToggleableTestSeal(&seal.TestSealOpts{Name: "health-test"})
+	testSealAccess, wrappers := seal.NewTestSeal(&seal.TestSealOpts{Name: "health-test"})
 	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
 		MetricSink: metricsutil.NewClusterMetricSink("", inmemSink),
 		Physical:   pBackend,
@@ -193,7 +192,7 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 	core.seal = autoSeal
 	autoSeal.StartHealthCheck()
 	defer autoSeal.StopHealthCheck()
-	setErrs[0](errors.New("disconnected"))
+	wrappers[0].SetError(errors.New("disconnected"))
 
 	tries := 10
 	for tries = 10; tries > 0; tries-- {
@@ -206,9 +205,20 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 		t.Fatalf("Expected to detect unhealthy seals")
 	}
 
-	setErrs[0](nil)
+	wrappers[0].SetError(nil)
 	time.Sleep(50 * time.Millisecond)
 	if !autoSeal.Healthy() {
 		t.Fatal("Expected seals to be healthy")
 	}
+}
+
+func TestAutoSeal_BarrierSealConfigType(t *testing.T) {
+	singleWrapperAccess, _ := seal.NewTestSeal(&seal.TestSealOpts{WrapperCount: 1})
+	multipleWrapperAccess, _ := seal.NewTestSeal(&seal.TestSealOpts{WrapperCount: 2})
+
+	require.Equalf(t, singleWrapperAccess.GetAllSealWrappersByPriority()[0].SealConfigType, NewAutoSeal(singleWrapperAccess).BarrierSealConfigType().String(),
+		"autoseals that have a single seal wrapper report that wrapper's as the barrier seal type")
+
+	require.Equalf(t, SealConfigTypeMultiseal, NewAutoSeal(multipleWrapperAccess).BarrierSealConfigType(),
+		"autoseals that have a multiple seal wrappers report the barrier seal type as Multiseal")
 }

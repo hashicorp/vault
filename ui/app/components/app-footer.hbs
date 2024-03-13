@@ -1,0 +1,31 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::AppFooter class="has-margin-top-auto" as |AF|>
+  <AF.ExtraBefore>
+    {{#if this.isDevelopment}}
+      <div class="env-banner">
+        <div class="level-item notification">
+          <Icon @name="git-branch" /><Icon @name="pencil-tool" />
+          Local development
+          <Icon @name="pencil-tool" /><Icon @name="git-branch" />
+        </div>
+      </div>
+    {{/if}}
+  </AF.ExtraBefore>
+  <AF.Link @href={{changelog-url-for this.version.version}} data-test-footer-version>
+    Vault
+    {{this.version.version}}
+  </AF.Link>
+  {{#if this.version.isCommunity}}
+    <AF.Link @href="https://hashicorp.com/products/vault/trial?source=vaultui" data-test-footer-upgrade-link>
+      Upgrade to Vault Enterprise
+    </AF.Link>
+  {{/if}}
+  <AF.Link @href={{doc-link "/vault"}} data-test-footer-documentation-link>
+    Documentation
+  </AF.Link>
+  <AF.LegalLinks />
+</Hds::AppFooter>

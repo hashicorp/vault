@@ -49,7 +49,10 @@ set [`disable_mlock`](/vault/docs/configuration#disable_mlock) to `true`, and to
   This value can be overridden by setting the `VAULT_RAFT_PATH` environment variable.
 
 - `node_id` `(string: "")` - The identifier for the node in the Raft cluster.
-  This value can be overridden by setting the `VAULT_RAFT_NODE_ID` environment variable.
+  You can override `node_id` with the `VAULT_RAFT_NODE_ID` environment
+  variable.  When `VAULT_RAFT_NODE_ID` is unset, Vault assigns a random
+  GUID during initialization and writes the value to `data/node-id` in the
+  directory specified by the `path` parameter.
 
 - `performance_multiplier` `(integer: 0)` - An integer multiplier used by 
   servers to scale key Raft timing parameters, where each increment translates to approximately 1 – 2 seconds of delay. For example, setting the multiplier to "3" translates to 3 – 6 seconds of total delay.  Tuning  the multiplier affects the time it
@@ -94,16 +97,18 @@ delay) mode. The maximum allowed value is 10.
    from performing a snapshot at once. The default snapshot interval is
    120 seconds.
 
-- `retry_join` `(list: [])` - There can be one or more
-  [`retry_join`](#retry_join-stanza) stanzas. When the Raft cluster is getting
-  bootstrapped, if the connection details of all the nodes are known beforehand,
-  then specifying this config stanzas enables the nodes to automatically join a
-  Raft cluster. All the nodes would mention all other nodes that they could join
-  using this config. When one of the nodes is initialized, it becomes the leader
-  and all the other nodes will join the leader node to form the cluster. When
-  using Shamir seal, the joined nodes will still need to be unsealed manually.
-  See [the section below](#retry_join-stanza) that describes the parameters
-  accepted by the [`retry_join`](#retry_join-stanza) stanza.
+- `retry_join` `(list: [])` - A set of connection details for another node in the
+  cluster, which is used to help nodes locate a leader in order to join a cluster.
+  There can be one or more [`retry_join`](#retry_join-stanza) stanzas.
+
+  If the connection details for all nodes in the cluster are known in advance, you
+  can include these stanzas to enable nodes to automatically join the Raft cluster.
+  Once one of the nodes is initialized as the leader, the remaining nodes will use
+  their [`retry_join`](#retry_join-stanza) configuration to locate the leader and
+  join the cluster. Note that when using Shamir seal, the joined nodes will still
+  need to be unsealed manually.
+  See [the section below](#retry_join-stanza) for the parameters accepted by the
+  [`retry_join`](#retry_join-stanza) stanza.
 
 - `retry_join_as_non_voter` `(boolean: false)` - If set, causes any `retry_join`
   config to join the Raft cluster as a non-voter. The node will not participate
@@ -124,7 +129,7 @@ delay) mode. The maximum allowed value is 10.
   breaking a large value into chunks. By default, the chunk size is the same as
   Raft's max size log entry. The default value for this configuration is 1048576
   -- two times the chunking size.
-  - **Note:** This option corresponds to [Consul's `kv_max_value_size` parameter](https://developer.hashicorp.com/consul/docs/agent/config/config-files#kv_max_value_size) for
+  - **Note:** This option corresponds to [Consul's `kv_max_value_size` parameter](/consul/docs/agent/config/config-files#kv_max_value_size) for
     Vault clusters using a Consul storage backend.  If you are migrating from Consul
     storage to Raft Integrated Storage,  and have changed this value in Consul from its
     default to a value larger than the Integrated Storage default of 1MB, then you will 

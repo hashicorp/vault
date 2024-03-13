@@ -75,7 +75,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     await runCmd([`delete sys/mounts/${engine.type}`]);
     await mountSecrets.visit();
     await mountSecrets.selectType(engine.type);
-    await mountSecrets.next().path(engine.type);
+    await mountSecrets.path(engine.type);
     await mountSecrets.submit();
 
     assert.strictEqual(
@@ -147,7 +147,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
       `/vault/secrets/${backend}/show/${transformationName}`,
       'redirects to show transformation page after submit'
     );
-    await click(`[data-test-secret-breadcrumb="${backend}"]`);
+    await click(`[data-test-secret-breadcrumb="${backend}"] a`);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/list`,
@@ -160,7 +160,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     const backend = await mount();
     // create transformation without role
     await newTransformation(backend, 'a-transformation', true);
-    await click(`[data-test-secret-breadcrumb="${backend}"]`);
+    await click(`[data-test-secret-breadcrumb="${backend}"] a`);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/list`,
@@ -186,7 +186,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
       `/vault/secrets/${backend}/show/role/${roleName}`,
       'redirects to show role page after submit'
     );
-    await click(`[data-test-secret-breadcrumb="${backend}"]`);
+    await click(`[data-test-secret-breadcrumb="${backend}"] a`);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/list?tab=role`,
@@ -216,7 +216,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     assert.dom('[data-test-row-value="Allowed roles"]').hasText(roleName);
     // Edit transformation
     await click('[data-test-edit-link]');
-    assert.dom('.modal.is-active').exists('Confirmation modal appears');
+    assert.dom('#transformation-edit-modal').exists('Confirmation modal appears');
     await rolesPage.modalConfirm();
     await settled();
     assert.strictEqual(

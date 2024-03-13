@@ -118,13 +118,15 @@ func (c *Core) getHAMembers() ([]HAStatusNode, error) {
 	for _, peerNode := range c.GetHAPeerNodesCached() {
 		lastEcho := peerNode.LastEcho
 		nodes = append(nodes, HAStatusNode{
-			Hostname:       peerNode.Hostname,
-			APIAddress:     peerNode.APIAddress,
-			ClusterAddress: peerNode.ClusterAddress,
-			LastEcho:       &lastEcho,
-			Version:        peerNode.Version,
-			UpgradeVersion: peerNode.UpgradeVersion,
-			RedundancyZone: peerNode.RedundancyZone,
+			Hostname:           peerNode.Hostname,
+			APIAddress:         peerNode.APIAddress,
+			ClusterAddress:     peerNode.ClusterAddress,
+			LastEcho:           &lastEcho,
+			Version:            peerNode.Version,
+			UpgradeVersion:     peerNode.UpgradeVersion,
+			RedundancyZone:     peerNode.RedundancyZone,
+			EchoDurationMillis: peerNode.EchoDuration.Milliseconds(),
+			ClockSkewMillis:    peerNode.ClockSkewMillis,
 		})
 	}
 
@@ -150,30 +152,41 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	if c.Sealed() {
 		return false, "", "", consts.ErrSealed
 	}
-
 	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+
+	return c.LeaderLocked()
+}
+
+func (c *Core) LeaderLocked() (isLeader bool, leaderAddr, clusterAddr string, err error) {
+	// Check if HA enabled. We don't need the lock for this check as it's set
+	// on startup and never modified
+	if c.ha == nil {
+		return false, "", "", ErrHANotEnabled
+	}
+
+	// Check if sealed
+	if c.Sealed() {
+		return false, "", "", consts.ErrSealed
+	}
 
 	// Check if we are the leader
 	if !c.standby {
-		c.stateLock.RUnlock()
 		return true, c.redirectAddr, c.ClusterAddr(), nil
 	}
 
 	// Initialize a lock
 	lock, err := c.ha.LockWith(CoreLockPath, "read")
 	if err != nil {
-		c.stateLock.RUnlock()
 		return false, "", "", err
 	}
 
 	// Read the value
 	held, leaderUUID, err := lock.Value()
 	if err != nil {
-		c.stateLock.RUnlock()
 		return false, "", "", err
 	}
 	if !held {
-		c.stateLock.RUnlock()
 		return false, "", "", nil
 	}
 
@@ -188,13 +201,11 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	// If the leader hasn't changed, return the cached value; nothing changes
 	// mid-leadership, and the barrier caches anyways
 	if leaderUUID == localLeaderUUID && localRedirectAddr != "" {
-		c.stateLock.RUnlock()
 		return false, localRedirectAddr, localClusterAddr, nil
 	}
 
 	c.logger.Trace("found new active node information, refreshing")
 
-	defer c.stateLock.RUnlock()
 	c.leaderParamsLock.Lock()
 	defer c.leaderParamsLock.Unlock()
 
@@ -336,7 +347,7 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 		Auth:    auth,
 		Request: req,
 	}
-	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+	if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 		c.logger.Error("failed to audit request", "request_path", req.Path, "error", err)
 		return errors.New("failed to audit request, cannot continue")
 	}
@@ -652,6 +663,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		err = c.postUnseal(activeCtx, activeCtxCancel, standardUnsealStrategy{})
 		if err == nil {
 			c.standby = false
+			c.activeTime = time.Now()
 			c.leaderUUID = uuid
 			c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 1, nil)
 		}
@@ -704,6 +716,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 
 			// Mark as standby
 			c.standby = true
+			c.activeTime = time.Time{}
 			c.leaderUUID = ""
 			c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 0, nil)
 
@@ -824,7 +837,7 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 
 	clusterAddr := ""
 	for {
-		timer := time.NewTimer(leaderCheckInterval)
+		timer := time.NewTimer(c.periodicLeaderRefreshInterval)
 		select {
 		case <-timer.C:
 			count := atomic.AddInt32(opCount, 1)

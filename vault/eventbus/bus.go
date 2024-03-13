@@ -35,9 +35,8 @@ const (
 )
 
 var (
-	ErrNotStarted              = errors.New("event broker has not been started")
-	cloudEventsFormatterFilter *cloudevents.FormatterFilter
-	subscriptions              atomic.Int64 // keeps track of event subscription count in all event buses
+	ErrNotStarted = errors.New("event broker has not been started")
+	subscriptions atomic.Int64 // keeps track of event subscription count in all event buses
 
 	// these metadata fields will have the plugin mount path prepended to them
 	metadataPrependPathFields = []string{
@@ -49,11 +48,13 @@ var (
 // EventBus contains the main logic of running an event broker for Vault.
 // Start() must be called before the EventBus will accept events for sending.
 type EventBus struct {
-	logger          hclog.Logger
-	broker          *eventlogger.Broker
-	started         atomic.Bool
-	formatterNodeID eventlogger.NodeID
-	timeout         time.Duration
+	logger                     hclog.Logger
+	broker                     *eventlogger.Broker
+	started                    atomic.Bool
+	formatterNodeID            eventlogger.NodeID
+	timeout                    time.Duration
+	filters                    *Filters
+	cloudEventsFormatterFilter *cloudevents.FormatterFilter
 }
 
 type pluginEventBus struct {
@@ -72,6 +73,7 @@ type asyncChanNode struct {
 	closeOnce      sync.Once
 	cancelFunc     context.CancelFunc
 	pipelineID     eventlogger.PipelineID
+	removeFilter   func()
 	removePipeline func(ctx context.Context, t eventlogger.EventType, id eventlogger.PipelineID) (bool, error)
 }
 
@@ -162,21 +164,7 @@ func (bus *pluginEventBus) SendEvent(ctx context.Context, eventType logical.Even
 	return bus.bus.SendEventInternal(ctx, bus.namespace, bus.pluginInfo, eventType, data)
 }
 
-func init() {
-	// TODO: maybe this should relate to the Vault core somehow?
-	sourceUrl, err := url.Parse("https://vaultproject.io/")
-	if err != nil {
-		panic(err)
-	}
-	cloudEventsFormatterFilter = &cloudevents.FormatterFilter{
-		Source: sourceUrl,
-		Predicate: func(_ context.Context, e interface{}) (bool, error) {
-			return true, nil
-		},
-	}
-}
-
-func NewEventBus(logger hclog.Logger) (*EventBus, error) {
+func NewEventBus(localClusterID string, logger hclog.Logger) (*EventBus, error) {
 	broker, err := eventlogger.NewBroker()
 	if err != nil {
 		return nil, err
@@ -192,11 +180,25 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 		logger = hclog.Default().Named("events")
 	}
 
+	sourceUrl, err := url.Parse("vault://" + localClusterID)
+	if err != nil {
+		return nil, err
+	}
+
+	cloudEventsFormatterFilter := &cloudevents.FormatterFilter{
+		Source: sourceUrl,
+		Predicate: func(_ context.Context, e interface{}) (bool, error) {
+			return true, nil
+		},
+	}
+
 	return &EventBus{
-		logger:          logger,
-		broker:          broker,
-		formatterNodeID: formatterNodeID,
-		timeout:         defaultTimeout,
+		logger:                     logger,
+		broker:                     broker,
+		formatterNodeID:            formatterNodeID,
+		timeout:                    defaultTimeout,
+		cloudEventsFormatterFilter: cloudEventsFormatterFilter,
+		filters:                    NewFilters(localClusterID),
 	}, nil
 }
 
@@ -209,13 +211,20 @@ func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pat
 // SubscribeMultipleNamespaces subscribes to events in the given namespace matching the event type
 // pattern and after applying the optional go-bexpr filter.
 func (bus *EventBus) SubscribeMultipleNamespaces(ctx context.Context, namespacePathPatterns []string, pattern string, bexprFilter string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
+	return bus.subscribeInternal(ctx, namespacePathPatterns, pattern, bexprFilter, nil)
+}
+
+// subscribeInternal creates the pipeline and connects it to the event bus to receive events.
+// if the cluster is specified, then the namespacePathPatterns, pattern, and bexprFilter are ignored, and instead this
+// subscription will be tied to the given cluster's filter.
+func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPatterns []string, pattern string, bexprFilter string, cluster *string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
 	// subscriptions are still stored even if the bus has not been started
 	pipelineID, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	err = bus.broker.RegisterNode(bus.formatterNodeID, cloudEventsFormatterFilter)
+	err = bus.broker.RegisterNode(bus.formatterNodeID, bus.cloudEventsFormatterFilter)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -225,9 +234,15 @@ func (bus *EventBus) SubscribeMultipleNamespaces(ctx context.Context, namespaceP
 		return nil, nil, err
 	}
 
-	filterNode, err := newFilterNode(namespacePathPatterns, pattern, bexprFilter)
-	if err != nil {
-		return nil, nil, err
+	var filterNode *eventlogger.Filter
+	if cluster != nil {
+		filterNode, err = newClusterFilterNode(bus.filters, clusterID(*cluster))
+	} else {
+		filterNode, err = newFilterNode(namespacePathPatterns, pattern, bexprFilter)
+		if err != nil {
+			return nil, nil, err
+		}
+		bus.filters.addPattern(bus.filters.self, namespacePathPatterns, pattern)
 	}
 	err = bus.broker.RegisterNode(eventlogger.NodeID(filterNodeID), filterNode)
 	if err != nil {
@@ -240,7 +255,11 @@ func (bus *EventBus) SubscribeMultipleNamespaces(ctx context.Context, namespaceP
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
-	asyncNode := newAsyncNode(ctx, bus.logger, bus.broker)
+	asyncNode := newAsyncNode(ctx, bus.logger, bus.broker, func() {
+		if cluster == nil {
+			bus.filters.removePattern(bus.filters.self, namespacePathPatterns, pattern)
+		}
+	})
 	err = bus.broker.RegisterNode(eventlogger.NodeID(sinkNodeID), asyncNode)
 	if err != nil {
 		defer cancel()
@@ -274,6 +293,73 @@ func (bus *EventBus) SetSendTimeout(timeout time.Duration) {
 	bus.timeout = timeout
 }
 
+// GlobalMatch returns true if the given namespace and event type match the current global filter.
+func (bus *EventBus) GlobalMatch(ns *namespace.Namespace, eventType logical.EventType) bool {
+	return bus.filters.globalMatch(ns, eventType)
+}
+
+// ApplyClusterFilterChanges applies the given filter changes to the cluster's filters.
+func (bus *EventBus) ApplyClusterFilterChanges(c string, changes []FilterChange) {
+	bus.filters.applyChanges(clusterID(c), changes)
+}
+
+// ApplyGlobalFilterChanges applies the given filter changes to the global filters.
+func (bus *EventBus) ApplyGlobalFilterChanges(changes []FilterChange) {
+	bus.filters.applyChanges(globalCluster, changes)
+}
+
+// ClearGlobalFilter removes all entries from the current global filter.
+func (bus *EventBus) ClearGlobalFilter() {
+	bus.filters.clearGlobalPatterns()
+}
+
+// ClearClusterFilter removes all entries from the given cluster's filter.
+func (bus *EventBus) ClearClusterFilter(id string) {
+	bus.filters.clearClusterPatterns(clusterID(id))
+}
+
+// NotifyOnGlobalFilterChanges returns a channel that receives changes to the global filter.
+func (bus *EventBus) NotifyOnGlobalFilterChanges(ctx context.Context) (<-chan []FilterChange, context.CancelFunc, error) {
+	return bus.filters.watch(ctx, globalCluster)
+}
+
+// NotifyOnLocalFilterChanges returns a channel that receives changes to the filter for the current cluster.
+func (bus *EventBus) NotifyOnLocalFilterChanges(ctx context.Context) (<-chan []FilterChange, context.CancelFunc, error) {
+	return bus.NotifyOnClusterFilterChanges(ctx, string(bus.filters.self))
+}
+
+// NotifyOnClusterFilterChanges returns a channel that receives changes to the filter for the given cluster.
+func (bus *EventBus) NotifyOnClusterFilterChanges(ctx context.Context, cluster string) (<-chan []FilterChange, context.CancelFunc, error) {
+	return bus.filters.watch(ctx, clusterID(cluster))
+}
+
+// NewGlobalSubscription creates a new subscription to all events that match the global filter.
+func (bus *EventBus) NewGlobalSubscription(ctx context.Context) (<-chan *eventlogger.Event, context.CancelFunc, error) {
+	g := globalCluster
+	return bus.subscribeInternal(ctx, nil, "", "", &g)
+}
+
+// NewClusterSubscription creates a new subscription to all events that match the given cluster's filter.
+func (bus *EventBus) NewClusterSubscription(ctx context.Context, cluster string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
+	return bus.subscribeInternal(ctx, nil, "", "", &cluster)
+}
+
+// creates a new filter node that is tied to the filter for a given cluster
+func newClusterFilterNode(filters *Filters, c clusterID) (*eventlogger.Filter, error) {
+	return &eventlogger.Filter{
+		Predicate: func(e *eventlogger.Event) (bool, error) {
+			eventRecv := e.Payload.(*logical.EventReceived)
+			eventNs := strings.Trim(eventRecv.Namespace, "/")
+			if filters.clusterMatch(c, &namespace.Namespace{
+				Path: eventNs,
+			}, logical.EventType(eventRecv.EventType)) {
+				return true, nil
+			}
+			return false, nil
+		},
+	}, nil
+}
+
 func newFilterNode(namespacePatterns []string, pattern string, bexprFilter string) (*eventlogger.Filter, error) {
 	var evaluator *bexpr.Evaluator
 	if bexprFilter != "" {
@@ -301,7 +387,7 @@ func newFilterNode(namespacePatterns []string, pattern string, bexprFilter strin
 				}
 			}
 
-			// Filter for correct event type, including wildcards.
+			// ClusterFilter for correct event type, including wildcards.
 			if !glob.Glob(pattern, eventRecv.EventType) {
 				return false, nil
 			}
@@ -315,11 +401,12 @@ func newFilterNode(namespacePatterns []string, pattern string, bexprFilter strin
 	}, nil
 }
 
-func newAsyncNode(ctx context.Context, logger hclog.Logger, broker *eventlogger.Broker) *asyncChanNode {
+func newAsyncNode(ctx context.Context, logger hclog.Logger, broker *eventlogger.Broker, removeFilter func()) *asyncChanNode {
 	return &asyncChanNode{
 		ctx:            ctx,
 		ch:             make(chan *eventlogger.Event),
 		logger:         logger,
+		removeFilter:   removeFilter,
 		removePipeline: broker.RemovePipelineAndNodes,
 	}
 }
@@ -328,6 +415,7 @@ func newAsyncNode(ctx context.Context, logger hclog.Logger, broker *eventlogger.
 func (node *asyncChanNode) Close(ctx context.Context) {
 	node.closeOnce.Do(func() {
 		defer node.cancelFunc()
+		node.removeFilter()
 		removed, err := node.removePipeline(ctx, eventTypeAll, node.pipelineID)
 
 		switch {

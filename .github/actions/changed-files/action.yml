@@ -1,0 +1,73 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+---
+name: Determine what files changed between two git referecnes.
+description: |
+  Determine what files have changed between two git references. If the github.event_type is
+  pull_request we'll compare the github.base_ref (merge target) and pull request head SHA.
+  For other event types we'll gather the changed files from the most recent commit. This allows
+  us to support PR and merge workflows.
+
+outputs:
+  app-changed:
+    description: Whether or not the vault Go app was modified.
+    value: ${{ steps.changed-files.outputs.app-changed }}
+  docs-changed:
+    description: Whether or not the documentation was modified.
+    value: ${{ steps.changed-files.outputs.docs-changed }}
+  ui-changed:
+    description: Whether or not the web UI was modified.
+    value: ${{ steps.changed-files.outputs.ui-changed }}
+  files:
+    description: All of the file names that changed.
+    value: ${{ steps.changed-files.outputs.files }}
+
+runs:
+  using: composite
+  steps:
+    - id: ref
+      shell: bash
+      name: ref
+      run: |
+        # Determine our desired checkout ref.
+        #
+        # * If the trigger event is pull_request we will default to a magical merge SHA that Github
+        #   creates. This SHA is the product of what merging our PR into the merge target branch at
+        #   at the point in time when we created the PR. When you push a change to a PR branch
+        #   Github updates this branch if it can. When you rebase a PR it updates this branch.
+        #
+        # * If the trigger event is pull_request and a `checkout-head` tag is present or the
+        #   checkout-head input is set, we'll use HEAD of the PR branch instead of the magical
+        #   merge SHA.
+        #
+        # * If the trigger event is a push (merge) then we'll get the latest commit that was pushed.
+        #
+        # * For anything any other event type we'll default to whatever is default in Github.
+        if [ '${{ github.event_name }}' = 'pull_request' ]; then
+          checkout_ref='${{ github.event.pull_request.head.sha }}'
+        elif [ '${{ github.event_name }}' = 'push' ]; then
+          # Our checkout ref for any other event type should default to the github ref.
+          checkout_ref='${{ github.event.after && github.event.after || github.event.push.after }}'
+        else
+          checkout_ref='${{ github.ref }}'
+        fi
+        echo "ref=${checkout_ref}" | tee -a "$GITHUB_OUTPUT"
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      with:
+        repository: ${{ github.repository }}
+        path: "changed-files"
+        # The fetch-depth could probably be optimized at some point. It's currently set to zero to
+        # ensure that we have a successfull diff, regardless of how many commits might be present
+        # present between the two references we're comparing. It would be nice to change this
+        # depending on the number of commits by using the push.commits and/or pull_request.commits
+        # payload fields, however, they have different behavior and limitations. For now we'll do
+        # the slow but sure thing of getting the whole repository.
+        fetch-depth: 0
+        ref: ${{ steps.ref.outputs.ref }}
+    - id: changed-files
+      name: changed-files
+      # This script writes output values to $GITHUB_OUTPUT and STDOUT
+      shell: bash
+      run: ./.github/scripts/changed-files.sh ${{ github.event_name }} ${{ github.ref_name }} ${{ github.base_ref }}
+      working-directory: changed-files

@@ -32,18 +32,16 @@ import (
 	"sync/atomic"
 	"time"
 
-	"golang.org/x/crypto/chacha20poly1305"
-	"golang.org/x/crypto/ed25519"
-	"golang.org/x/crypto/hkdf"
-
+	"github.com/google/tink/go/kwp/subtle"
 	"github.com/hashicorp/errwrap"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/kdf"
 	"github.com/hashicorp/vault/sdk/logical"
-
-	"github.com/google/tink/go/kwp/subtle"
+	"golang.org/x/crypto/chacha20poly1305"
+	"golang.org/x/crypto/ed25519"
+	"golang.org/x/crypto/hkdf"
 )
 
 // Careful with iota; don't put anything before it in this const block because
@@ -148,7 +146,7 @@ func (kt KeyType) SigningSupported() bool {
 
 func (kt KeyType) HashSignatureInput() bool {
 	switch kt {
-	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
 		return true
 	}
 	return false
@@ -251,7 +249,7 @@ type KeyEntry struct {
 }
 
 func (ke *KeyEntry) IsPrivateKeyMissing() bool {
-	if ke.RSAKey != nil || ke.EC_D != nil || len(ke.Key) != 0 {
+	if ke.RSAKey != nil || ke.EC_D != nil || len(ke.Key) != 0 || len(ke.ManagedKeyUUID) != 0 {
 		return false
 	}
 

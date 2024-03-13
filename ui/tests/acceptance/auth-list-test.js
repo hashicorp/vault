@@ -13,7 +13,7 @@ import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { supportedManagedAuthBackends } from 'vault/helpers/supported-managed-auth-backends';
-import { deleteAuthCmd, mountAuthCmd, runCmd } from 'vault/tests/helpers/commands';
+import { deleteAuthCmd, mountAuthCmd, runCmd, createNS } from 'vault/tests/helpers/commands';
 
 const SELECTORS = {
   backendLink: (path) => `[data-test-auth-backend-link="${path}"]`,
@@ -21,7 +21,7 @@ const SELECTORS = {
   input: (attr) => `[data-test-input="${attr}"]`,
   password: '[data-test-textarea]',
   saveBtn: '[data-test-save-config]',
-  methods: '[data-test-access-methods]',
+  methods: '[data-test-access-methods] a',
   listItem: '[data-test-list-item-content]',
 };
 module('Acceptance | auth backend list', function (hooks) {
@@ -34,14 +34,12 @@ module('Acceptance | auth backend list', function (hooks) {
     this.user1 = 'user1';
     this.user2 = 'user2';
 
-    await runCmd(mountAuthCmd('userpass', this.path1));
-    await runCmd(mountAuthCmd('userpass', this.path2));
+    await runCmd([mountAuthCmd('userpass', this.path1), mountAuthCmd('userpass', this.path2)], false);
   });
 
   hooks.afterEach(async function () {
     await authPage.login();
-    await runCmd(deleteAuthCmd(this.path1));
-    await runCmd(deleteAuthCmd(this.path2));
+    await runCmd([deleteAuthCmd(this.path1), deleteAuthCmd(this.path2)], false);
     return;
   });
 
@@ -77,7 +75,7 @@ module('Acceptance | auth backend list', function (hooks) {
   });
 
   test('auth methods are linkable and link to correct view', async function (assert) {
-    assert.expect(16);
+    assert.expect(24);
     const uid = uuidv4();
     await visit('/vault/access');
 
@@ -85,15 +83,22 @@ module('Acceptance | auth backend list', function (hooks) {
     const backends = supportedAuthBackends();
     for (const backend of backends) {
       const { type } = backend;
-      const path = `auth-list-${type}-${uid}`;
+      const path = type === 'token' ? 'token' : `auth-list-${type}-${uid}`;
       if (type !== 'token') {
         await enablePage.enable(type, path);
       }
       await settled();
       await visit('/vault/access');
 
+      // check popup menu
+      const itemCount = type === 'token' ? 2 : 3;
+      await click(`[data-test-auth-backend-link="${path}"] [data-test-popup-menu-trigger]`);
+      assert
+        .dom('.hds-dropdown-list-item')
+        .exists({ count: itemCount }, `shows ${itemCount} dropdown items for ${type}`);
+
       // all auth methods should be linkable
-      await click(`[data-test-auth-backend-link="${type === 'token' ? type : path}"]`);
+      await click(`[data-test-auth-backend-link="${path}"]`);
       if (!supportManaged.includes(type)) {
         assert.dom('[data-test-auth-section-tab]').exists({ count: 1 });
         assert
@@ -108,6 +113,8 @@ module('Acceptance | auth backend list', function (hooks) {
         assert
           .dom('[data-test-auth-section-tab]')
           .exists({ count: expectedTabs }, `has management tabs for ${type} auth method`);
+      }
+      if (type !== 'token') {
         // cleanup method
         await runCmd(deleteAuthCmd(path));
       }
@@ -150,5 +157,22 @@ module('Acceptance | auth backend list', function (hooks) {
         await runCmd(deleteAuthCmd(path));
       }
     }
+  });
+
+  test('enterprise: token config within namespace', async function (assert) {
+    const ns = 'ns-wxyz';
+    await runCmd(createNS(ns), false);
+    await settled();
+    await authPage.loginNs(ns);
+    // go directly to token configure route
+    await visit('/vault/settings/auth/configure/token/options');
+    await fillIn('[data-test-input="description"]', 'My custom description');
+    await click('[data-test-save-config="true"]');
+    assert.strictEqual(currentURL(), '/vault/access', 'successfully saves and navigates away');
+    await click('[data-test-auth-backend-link="token"]');
+    assert
+      .dom('[data-test-row-value="Description"]')
+      .hasText('My custom description', 'description was saved');
+    await runCmd(`delete sys/namespaces/${ns}`);
   });
 });

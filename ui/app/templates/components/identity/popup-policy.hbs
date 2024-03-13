@@ -3,30 +3,30 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<PopupMenu @name="policy-menu">
-  <nav class="menu">
-    <ul class="menu-list">
-      <li class="action">
-        <LinkTo @route="vault.cluster.policy.show" @models={{array "acl" this.policyName}}>
-          View Policy
-        </LinkTo>
-      </li>
-      <li class="action">
-        <LinkTo @route="vault.cluster.policy.edit" @models={{array "acl" this.policyName}}>
-          Edit Policy
-        </LinkTo>
-      </li>
-      <li class="action">
-        <ConfirmAction
-          @buttonClasses="link is-destroy"
-          @confirmButtonText="Remove"
-          @confirmMessage="This policy may affect permissions to access Vault data."
-          @onConfirmAction={{action "performTransaction" this.model this.policyName}}
-        >
-          Remove from
-          {{this.model.identityType}}
-        </ConfirmAction>
-      </li>
-    </ul>
-  </nav>
-</PopupMenu>
+<div class="has-text-right">
+  <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+    <dd.ToggleIcon
+      @icon="more-horizontal"
+      @text="Identity policy management options"
+      @hasChevron={{false}}
+      data-test-popup-menu-trigger
+    />
+    <dd.Interactive @text="View policy" @route="vault.cluster.policy.show" @models={{array "acl" @policyName}} />
+    <dd.Interactive @text="Edit policy" @route="vault.cluster.policy.edit" @models={{array "acl" @policyName}} />
+    <dd.Interactive
+      @text="Remove from {{@model.identityType}}"
+      @color="critical"
+      {{on "click" (fn (mut this.showConfirmModal) true)}}
+    />
+  </Hds::Dropdown>
+</div>
+
+{{#if this.showConfirmModal}}
+  <ConfirmModal
+    @color="critical"
+    @onClose={{fn (mut this.showConfirmModal) false}}
+    @onConfirm={{this.removePolicy}}
+    @confirmTitle="Remove this policy?"
+    @confirmMessage="This policy may affect permissions to access Vault data."
+  />
+{{/if}}

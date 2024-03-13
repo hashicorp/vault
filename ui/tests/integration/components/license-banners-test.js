@@ -28,6 +28,7 @@ module('Integration | Component | license-banners', function (hooks) {
     this.tomorrow = addDays(mockNow, 1);
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1+ent';
+    this.version.type = 'enterprise';
   });
   hooks.after(function () {
     timestamp.now.restore();

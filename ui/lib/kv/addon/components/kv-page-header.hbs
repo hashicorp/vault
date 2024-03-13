@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
@@ -5,15 +10,19 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-header-title>
       {{#if @mountName}}
-        <Icon @name="kv" @size="24" class="has-text-grey-light" />
+        <Icon @name="key-values" @size="24" class="has-text-grey-light" />
         {{@mountName}}
-        <span class="tag">Version 2</span>
+        <span class="tag">version 2</span>
       {{else}}
         {{@pageTitle}}
       {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
+
+{{#if (has-block "syncDetails")}}
+  {{yield to="syncDetails"}}
+{{/if}}
 
 {{#if (has-block "tabLinks")}}
   <div class="tabs-container box is-bottomless is-marginless is-paddingless">
@@ -26,11 +35,11 @@
 {{/if}}
 
 {{#if (or (has-block "toolbarFilters") (has-block "toolbarActions"))}}
-  <Toolbar>
-    <ToolbarFilters>
+  <Toolbar aria-label="menu items for managing {{or @mountName @pageTitle}}">
+    <ToolbarFilters aria-label="filters for secrets list">
       {{yield to="toolbarFilters"}}
     </ToolbarFilters>
-    <ToolbarActions>
+    <ToolbarActions aria-label="actions for secrets">
       {{yield to="toolbarActions"}}
     </ToolbarActions>
   </Toolbar>

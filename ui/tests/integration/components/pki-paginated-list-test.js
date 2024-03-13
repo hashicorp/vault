@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
@@ -29,8 +34,8 @@ module('Integration | Component | pki-paginated-list', function (hooks) {
         key_name: 'another-key',
       },
     });
-    // toArray to mimic what happens in lazyPaginatedQuery
-    const keyModels = this.store.peekAll('pki/key').toArray();
+    // mimic what happens in lazyPaginatedQuery
+    const keyModels = this.store.peekAll('pki/key');
     keyModels.meta = STANDARD_META;
     this.list = keyModels;
     const emptyList = this.store.peekAll('pki/foo');

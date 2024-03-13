@@ -1,8 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 //go:build !enterprise
 
 package vault
 
-import "context"
+import (
+	"context"
+)
 
 //go:generate go run github.com/hashicorp/vault/tools/stubmaker
 
@@ -22,11 +27,11 @@ func (c *Core) entCheckLicenseInit() error {
 	return nil
 }
 
-func (c *Core) entGetLicenseState() (*LicenseState, error) {
+func (c *Core) EntGetLicenseState() (*LicenseState, error) {
 	return nil, nil
 }
 
-func (c *Core) entReloadLicense() error {
+func (c *Core) EntReloadLicense() error {
 	return nil
 }
 
@@ -93,3 +98,5 @@ func (c *Core) entLastRemoteUpstreamWAL() uint64 {
 func (c *Core) EntWaitUntilWALShipped(ctx context.Context, index uint64) bool {
 	return true
 }
+
+func (c *Core) SecretsSyncLicensedActivated() bool { return false }

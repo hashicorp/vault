@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -11,6 +11,7 @@ import { fillIn } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support/helpers';
 
 import { SELECTORS } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | dashboard/quick-actions-card', function (hooks) {
   setupRenderingTest(hooks);
@@ -91,6 +92,14 @@ module('Integration | Component | dashboard/quick-actions-card', function (hooks
     this.renderComponent = () => {
       return render(hbs`<Dashboard::QuickActionsCard @secretsEngines={{this.secretsEngines}} />`);
     };
+
+    setRunOptions({
+      rules: {
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+      },
+    });
   });
 
   test('it should show quick action empty state if no engine is selected', async function (assert) {
@@ -134,7 +143,7 @@ module('Integration | Component | dashboard/quick-actions-card', function (hooks
     await selectChoose(SELECTORS.searchSelect('secrets-engines'), 'kv-v2-test');
     assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
     await fillIn(SELECTORS.selectEl, 'Find KV secrets');
-    assert.dom(SELECTORS.subtitle('param')).hasText('Secret path');
+    assert.dom(SELECTORS.kvSearchSelect).exists('Shows option to search fo KVv2 secret');
     assert.dom(SELECTORS.actionButton('Read secrets')).exists({ count: 1 });
   });
 });

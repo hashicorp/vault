@@ -56,11 +56,6 @@ func (c *SharedConfig) Merge(c2 *SharedConfig) *SharedConfig {
 		result.DefaultMaxRequestDuration = c2.DefaultMaxRequestDuration
 	}
 
-	result.UserLockoutLogInterval = c.UserLockoutLogInterval
-	if c2.UserLockoutLogInterval > result.UserLockoutLogInterval {
-		result.UserLockoutLogInterval = c2.UserLockoutLogInterval
-	}
-
 	result.LogLevel = c.LogLevel
 	if c2.LogLevel != "" {
 		result.LogLevel = c2.LogLevel

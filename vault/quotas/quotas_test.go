@@ -12,12 +12,16 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
 )
 
 func TestQuotas_MountPathOverwrite(t *testing.T) {
-	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink())
+	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink(), true)
 	require.NoError(t, err)
+
+	view := &logical.InmemStorage{}
+	require.NoError(t, qm.Setup(context.Background(), view, nil))
 
 	quota := NewRateLimitQuota("tq", "", "kv1/", "", "", false, time.Second, 0, 10)
 	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, false))
@@ -43,7 +47,7 @@ func TestQuotas_MountPathOverwrite(t *testing.T) {
 }
 
 func TestQuotas_Precedence(t *testing.T) {
-	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink())
+	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink(), true)
 	require.NoError(t, err)
 
 	setQuotaFunc := func(t *testing.T, name, nsPath, mountPath, pathSuffix, role string, inheritable bool) Quota {
@@ -68,6 +72,9 @@ func TestQuotas_Precedence(t *testing.T) {
 			t.Fatal(diff)
 		}
 	}
+
+	view := &logical.InmemStorage{}
+	require.NoError(t, qm.Setup(context.Background(), view, nil))
 
 	// No quota present. Expect nil.
 	checkQuotaFunc(t, "", "", "", "", nil)
@@ -142,9 +149,11 @@ func TestQuotas_QueryResolveRole_RateLimitQuotas(t *testing.T) {
 	leaseWalkFunc := func(context.Context, func(request *Request) bool) error {
 		return nil
 	}
-	qm, err := NewManager(logging.NewVaultLogger(log.Trace), leaseWalkFunc, metricsutil.BlackholeSink())
+	qm, err := NewManager(logging.NewVaultLogger(log.Trace), leaseWalkFunc, metricsutil.BlackholeSink(), true)
 	require.NoError(t, err)
 
+	view := &logical.InmemStorage{}
+	require.NoError(t, qm.Setup(context.Background(), view, nil))
 	rlqReq := &Request{
 		Type:          TypeRateLimit,
 		Path:          "",

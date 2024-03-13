@@ -17,7 +17,7 @@ jobs:
       runs-on: ${{ steps.metadata.outputs.runs-on }}
       version: ${{ steps.metadata.outputs.version }}
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - id: set-product-version
         uses: hashicorp/actions-set-product-version@v1
       - id: metadata
@@ -37,11 +37,10 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-      - uses: hashicorp/setup-terraform@v2
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
-          terraform_version: 1.5.7 # QT-623: pin to terraform 1.5.x until a tfjson bug is resolved
       - uses: hashicorp/action-setup-enos@v1
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}

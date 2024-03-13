@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { create } from 'ember-cli-page-object';
 import { v4 as uuidv4 } from 'uuid';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, fillIn } from '@ember/test-helpers';
+import { click, fillIn, waitFor } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
@@ -77,9 +77,11 @@ module('Acceptance | mfa-setup', function (hooks) {
     });
     await fillIn('[data-test-input="uuid"]', 123);
     await click('[data-test-verify]');
+    await waitFor('[data-test-qrcode]', { timeout: 5000 });
     assert.dom('[data-test-qrcode]').exists('the qrCode is shown.');
     assert.dom('[data-test-mfa-enabled-warning]').doesNotExist('warning does not show.');
     await click('[data-test-restart]');
+    await waitFor('[data-test-step-one]', { timeout: 5000 });
     assert.dom('[data-test-step-one]').exists('back to step one.');
   });
 
@@ -95,6 +97,7 @@ module('Acceptance | mfa-setup', function (hooks) {
 
     await fillIn('[data-test-input="uuid"]', 123);
     await click('[data-test-verify]');
+    await waitFor('[data-test-mfa-enabled-warning]', { timeout: 5000 });
     assert.dom('[data-test-qrcode]').doesNotExist('the qrCode is not shown.');
     assert.dom('[data-test-mfa-enabled-warning]').exists('the mfa-enabled warning shows.');
   });

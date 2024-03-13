@@ -34,9 +34,13 @@
         {{#if (gt this.model.allowed_roles.length 0)}}
           <ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
             <T.Trigger @tabindex="-1">
-              <button class="toolbar-link" aria-disabled="true" type="button" disabled>
-                Delete transformation
-              </button>
+              <Hds::Button
+                @text="Delete transformation"
+                @color="secondary"
+                class="toolbar-button"
+                aria-disabled="true"
+                disabled
+              />
             </T.Trigger>
             <T.Content @defaultClass="tool-tip">
               <div class="box">
@@ -45,9 +49,12 @@
             </T.Content>
           </ToolTip>
         {{else}}
-          <button class="toolbar-link" onclick={{action (mut this.isDeleteModalActive) true}} type="button">
-            Delete transformation
-          </button>
+          <Hds::Button
+            @text="Delete transformation"
+            @color="secondary"
+            class="toolbar-button"
+            {{on "click" (action (mut this.isDeleteModalActive) true)}}
+          />
         {{/if}}
         <div class="toolbar-separator"></div>
       {{/if}}

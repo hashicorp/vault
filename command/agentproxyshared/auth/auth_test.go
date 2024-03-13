@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -110,38 +111,39 @@ consumption:
 
 func TestAgentBackoff(t *testing.T) {
 	max := 1024 * time.Second
-	backoff := newAutoAuthBackoff(defaultMinBackoff, max, false)
+	backoff := newAutoAuthBackoff(consts.DefaultMinBackoff, max, false)
 
 	// Test initial value
-	if backoff.current != defaultMinBackoff {
-		t.Fatalf("expected 1s initial backoff, got: %v", backoff.current)
+	if backoff.backoff.Current() > consts.DefaultMinBackoff || backoff.backoff.Current() < consts.DefaultMinBackoff*3/4 {
+		t.Fatalf("expected 1s initial backoff, got: %v", backoff.backoff.Current())
 	}
 
-	// Test that backoff values are in expected range (75-100% of 2*previous)
+	// Test that backoffSleep values are in expected range (75-100% of 2*previous)
+	next, _ := backoff.backoff.Next()
 	for i := 0; i < 9; i++ {
-		old := backoff.current
-		backoff.next()
+		old := next
+		next, _ = backoff.backoff.Next()
 
 		expMax := 2 * old
 		expMin := 3 * expMax / 4
 
-		if backoff.current < expMin || backoff.current > expMax {
-			t.Fatalf("expected backoff in range %v to %v, got: %v", expMin, expMax, backoff)
+		if next < expMin || next > expMax {
+			t.Fatalf("expected backoffSleep in range %v to %v, got: %v", expMin, expMax, backoff)
 		}
 	}
 
-	// Test that backoff is capped
+	// Test that backoffSleep is capped
 	for i := 0; i < 100; i++ {
-		backoff.next()
-		if backoff.current > max {
+		_, _ = backoff.backoff.Next()
+		if backoff.backoff.Current() > max {
 			t.Fatalf("backoff exceeded max of 100s: %v", backoff)
 		}
 	}
 
 	// Test reset
-	backoff.reset()
-	if backoff.current != defaultMinBackoff {
-		t.Fatalf("expected 1s backoff after reset, got: %v", backoff.current)
+	backoff.backoff.Reset()
+	if backoff.backoff.Current() > consts.DefaultMinBackoff || backoff.backoff.Current() < consts.DefaultMinBackoff*3/4 {
+		t.Fatalf("expected 1s backoff after reset, got: %v", backoff.backoff.Current())
 	}
 }
 
@@ -163,35 +165,36 @@ func TestAgentMinBackoffCustom(t *testing.T) {
 		backoff := newAutoAuthBackoff(test.minBackoff, max, false)
 
 		// Test initial value
-		if backoff.current != test.want {
-			t.Fatalf("expected %d initial backoff, got: %v", test.want, backoff.current)
+		if backoff.backoff.Current() > test.want || backoff.backoff.Current() < test.want*3/4 {
+			t.Fatalf("expected %d initial backoffSleep, got: %v", test.want, backoff.backoff.Current())
 		}
 
-		// Test that backoff values are in expected range (75-100% of 2*previous)
+		// Test that backoffSleep values are in expected range (75-100% of 2*previous)
+		next, _ := backoff.backoff.Next()
 		for i := 0; i < 5; i++ {
-			old := backoff.current
-			backoff.next()
+			old := next
+			next, _ = backoff.backoff.Next()
 
 			expMax := 2 * old
 			expMin := 3 * expMax / 4
 
-			if backoff.current < expMin || backoff.current > expMax {
-				t.Fatalf("expected backoff in range %v to %v, got: %v", expMin, expMax, backoff)
+			if next < expMin || next > expMax {
+				t.Fatalf("expected backoffSleep in range %v to %v, got: %v", expMin, expMax, backoff)
 			}
 		}
 
-		// Test that backoff is capped
+		// Test that backoffSleep is capped
 		for i := 0; i < 100; i++ {
-			backoff.next()
-			if backoff.current > max {
-				t.Fatalf("backoff exceeded max of 100s: %v", backoff)
+			next, _ = backoff.backoff.Next()
+			if next > max {
+				t.Fatalf("backoffSleep exceeded max of 100s: %v", backoff)
 			}
 		}
 
 		// Test reset
-		backoff.reset()
-		if backoff.current != test.want {
-			t.Fatalf("expected %d backoff after reset, got: %v", test.want, backoff.current)
+		backoff.backoff.Reset()
+		if backoff.backoff.Current() > test.want || backoff.backoff.Current() < test.want*3/4 {
+			t.Fatalf("expected %d backoffSleep after reset, got: %v", test.want, backoff.backoff.Current())
 		}
 	}
 }

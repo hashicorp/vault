@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/patrickmn/go-cache"
 )
@@ -64,7 +65,9 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		groupUpdater:  core,
 		tokenStorer:   core,
 		entityCreator: core,
+		mountLister:   core,
 		mfaBackend:    core.loginMFABackend,
+		aliasLocks:    locksutil.CreateLocks(),
 	}
 
 	// Create a memdb instance, which by default, operates on lower cased
@@ -75,8 +78,11 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	}
 
 	entitiesPackerLogger := iStore.logger.Named("storagepacker").Named("entities")
+	core.AddLogger(entitiesPackerLogger)
 	localAliasesPackerLogger := iStore.logger.Named("storagepacker").Named("local-aliases")
+	core.AddLogger(localAliasesPackerLogger)
 	groupsPackerLogger := iStore.logger.Named("storagepacker").Named("groups")
+	core.AddLogger(groupsPackerLogger)
 
 	iStore.entityPacker, err = storagepacker.NewStoragePacker(iStore.view, entitiesPackerLogger, "")
 	if err != nil {
@@ -101,6 +107,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"oidc/.well-known/*",
+				"oidc/+/.well-known/*",
 				"oidc/provider/+/.well-known/*",
 				"oidc/provider/+/token",
 			},
@@ -570,6 +577,7 @@ func (i *IdentityStore) initialize(ctx context.Context, req *logical.Initializat
 	}
 
 	if err := i.storeOIDCDefaultResources(ctx, req.Storage); err != nil {
+		i.logger.Error("failed to write OIDC default resources to storage", "error", err)
 		return err
 	}
 

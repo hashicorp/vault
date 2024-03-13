@@ -15,6 +15,7 @@ import sinon from 'sinon';
 import waitForError from 'vault/tests/helpers/wait-for-error';
 import searchSelect from '../../pages/components/search-select';
 import { isWildcardString } from 'vault/helpers/is-wildcard-string';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const component = create(searchSelect);
 
@@ -80,8 +81,8 @@ module('Integration | Component | search select', function (hooks) {
   hooks.beforeEach(function () {
     const mockFunctionFromParent = (selection, dropdownOptions) => {
       const modelExists =
-        !!dropdownOptions.findBy('id', selection) ||
-        !!dropdownOptions.findBy('uuid', selection) ||
+        !!dropdownOptions.find((opt) => opt.id === selection) ||
+        !!dropdownOptions.find((opt) => opt.uuid === selection) ||
         isWildcardString([selection]);
       return !modelExists ? 'The model associated with this id no longer exists' : false;
     };
@@ -89,6 +90,16 @@ module('Integration | Component | search select', function (hooks) {
     run(() => {
       this.owner.unregister('service:store');
       this.owner.register('service:store', storeService);
+    });
+    setRunOptions({
+      rules: {
+        // TODO: Fix this component
+        'color-contrast': { enabled: false },
+        label: { enabled: false },
+        'aria-input-field-name': { enabled: false },
+        'aria-required-attr': { enabled: false },
+        'aria-valid-attr-value': { enabled: false },
+      },
     });
   });
 

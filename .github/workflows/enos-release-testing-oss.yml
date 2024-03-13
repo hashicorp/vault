@@ -15,7 +15,7 @@ jobs:
       vault-version: ${{ github.event.client_payload.payload.version }}
       vault-version-package: ${{ steps.get-metadata.outputs.vault-version-package }}
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           # Check out the repository at the same Git SHA that was used to create
           # the artifacts to get the correct metadata.

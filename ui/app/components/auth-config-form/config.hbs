@@ -1,0 +1,27 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<form {{on "submit" (perform this.saveModel)}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <NamespaceReminder @mode="save" @noun="Auth Method" />
+    <MessageError @model={{@model}} />
+    {{#if @model.attrs}}
+      {{#each @model.attrs as |attr|}}
+        <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
+      {{/each}}
+    {{else if @model.fieldGroups}}
+      <FormFieldGroups @model={{@model}} @mode={{this.mode}} />
+    {{/if}}
+  </div>
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <Hds::Button
+      @text="Save"
+      @icon={{if this.saveModel.isRunning "loading"}}
+      type="submit"
+      data-test-save-config="true"
+      disabled={{this.saveModel.isRunning}}
+    />
+  </div>
+</form>

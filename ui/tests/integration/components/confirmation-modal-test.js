@@ -29,7 +29,7 @@ module('Integration | Component | confirmation-modal', function (hooks) {
     `);
 
     assert.dom('[data-test-confirm-button]').isDisabled();
-    assert.dom('.hds-modal#confirmation-modal').exists('modal is active');
+    assert.dom('#confirmation-modal').exists('modal is active');
     assert.dom('[data-test-confirm-button]').hasText('Plz Continue', 'Confirm button has specified value');
     assert
       .dom('[data-test-confirmation-modal-title] [data-test-icon="alert-triangle"]')

@@ -276,7 +276,7 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
   test('it renders enterprise only params', async function (assert) {
     assert.expect(6);
     this.version = this.owner.lookup('service:version');
-    this.version.version = '1.13.1+ent';
+    this.version.type = 'enterprise';
     this.server.post(`/${this.backend}/config/acme`, () => {});
     this.server.post(`/${this.backend}/config/cluster`, () => {});
     this.server.post(`/${this.backend}/config/crl`, (schema, req) => {
@@ -327,7 +327,7 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
   test('it does not render enterprise only params for OSS', async function (assert) {
     assert.expect(9);
     this.version = this.owner.lookup('service:version');
-    this.version.version = '1.13.1';
+    this.version.type = 'community';
     this.server.post(`/${this.backend}/config/acme`, () => {});
     this.server.post(`/${this.backend}/config/cluster`, () => {});
     this.server.post(`/${this.backend}/config/crl`, (schema, req) => {

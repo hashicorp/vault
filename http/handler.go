@@ -23,7 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NYTimes/gziphandler"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -31,11 +30,13 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pathmanager"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	gziphandler "github.com/klauspost/compress/gzhttp"
 )
 
 const (
@@ -151,6 +152,10 @@ func handler(props *vault.HandlerProperties) http.Handler {
 
 	// Create the muxer to handle the actual endpoints
 	mux := http.NewServeMux()
+	var chrootNamespace string
+	if props.ListenerConfig != nil {
+		chrootNamespace = props.ListenerConfig.ChrootNamespace
+	}
 
 	switch {
 	case props.RecoveryMode:
@@ -161,8 +166,8 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/generate-recovery-token/update", handleSysGenerateRootUpdate(core, strategy))
 	default:
 		// Handle non-forwarded paths
-		mux.Handle("/v1/sys/config/state/", handleLogicalNoForward(core))
-		mux.Handle("/v1/sys/host-info", handleLogicalNoForward(core))
+		mux.Handle("/v1/sys/config/state/", handleLogicalNoForward(core, chrootNamespace))
+		mux.Handle("/v1/sys/host-info", handleLogicalNoForward(core, chrootNamespace))
 
 		mux.Handle("/v1/sys/init", handleSysInit(core))
 		mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core,
@@ -177,7 +182,7 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/health", handleSysHealth(core,
 			WithRedactClusterName(props.ListenerConfig.RedactClusterName),
 			WithRedactVersion(props.ListenerConfig.RedactVersion)))
-		mux.Handle("/v1/sys/monitor", handleLogicalNoForward(core))
+		mux.Handle("/v1/sys/monitor", handleLogicalNoForward(core, chrootNamespace))
 		mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core,
 			handleAuditNonLogical(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy))))
 		mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core,
@@ -193,10 +198,10 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/internal/ui/feature-flags", handleSysInternalFeatureFlags(core))
 
 		for _, path := range injectDataIntoTopRoutes {
-			mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core)))
+			mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core, chrootNamespace)))
 		}
-		mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core)))
-		mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core)))
+		mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core, chrootNamespace)))
+		mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, chrootNamespace)))
 		if core.UIEnabled() {
 			if uiBuiltIn {
 				mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
@@ -213,7 +218,7 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		if props.ListenerConfig != nil && props.ListenerConfig.Telemetry.UnauthenticatedMetricsAccess {
 			mux.Handle("/v1/sys/metrics", handleMetricsUnauthenticated(core))
 		} else {
-			mux.Handle("/v1/sys/metrics", handleLogicalNoForward(core))
+			mux.Handle("/v1/sys/metrics", handleLogicalNoForward(core, chrootNamespace))
 		}
 
 		if props.ListenerConfig != nil && props.ListenerConfig.Profiling.UnauthenticatedPProfAccess {
@@ -226,31 +231,50 @@ func handler(props *vault.HandlerProperties) http.Handler {
 			mux.Handle("/v1/sys/pprof/symbol", http.HandlerFunc(pprof.Symbol))
 			mux.Handle("/v1/sys/pprof/trace", http.HandlerFunc(pprof.Trace))
 		} else {
-			mux.Handle("/v1/sys/pprof/", handleLogicalNoForward(core))
+			mux.Handle("/v1/sys/pprof/", handleLogicalNoForward(core, chrootNamespace))
 		}
 
 		if props.ListenerConfig != nil && props.ListenerConfig.InFlightRequestLogging.UnauthenticatedInFlightAccess {
 			mux.Handle("/v1/sys/in-flight-req", handleUnAuthenticatedInFlightRequest(core))
 		} else {
-			mux.Handle("/v1/sys/in-flight-req", handleLogicalNoForward(core))
+			mux.Handle("/v1/sys/in-flight-req", handleLogicalNoForward(core, chrootNamespace))
 		}
-		additionalRoutes(mux, core)
+		entAdditionalRoutes(mux, core)
 	}
 
-	// Wrap the handler in another handler to trigger all help paths.
-	helpWrappedHandler := wrapHelpHandler(mux, core)
-	corsWrappedHandler := wrapCORSHandler(helpWrappedHandler, core)
-	quotaWrappedHandler := rateLimitQuotaWrapping(corsWrappedHandler, core)
-	genericWrappedHandler := genericWrapping(core, quotaWrappedHandler, props)
+	// Build up a chain of wrapping handlers.
+	wrappedHandler := wrapHelpHandler(mux, core)
+	wrappedHandler = wrapCORSHandler(wrappedHandler, core)
+	wrappedHandler = rateLimitQuotaWrapping(wrappedHandler, core)
+	wrappedHandler = entWrapGenericHandler(core, wrappedHandler, props)
+	wrappedHandler = wrapMaxRequestSizeHandler(wrappedHandler, props)
 
-	// Wrap the handler with PrintablePathCheckHandler to check for non-printable
-	// characters in the request path.
-	printablePathCheckHandler := genericWrappedHandler
+	// Add an extra wrapping handler if the DisablePrintableCheck listener
+	// setting isn't true that checks for non-printable characters in the
+	// request path.
 	if !props.DisablePrintableCheck {
-		printablePathCheckHandler = cleanhttp.PrintablePathCheckHandler(genericWrappedHandler, nil)
+		wrappedHandler = cleanhttp.PrintablePathCheckHandler(wrappedHandler, nil)
 	}
 
-	return printablePathCheckHandler
+	// Add an extra wrapping handler if the DisableReplicationStatusEndpoints
+	// setting is true that will create a new request with a context that has
+	// a value indicating that the replication status endpoints are disabled.
+	if props.ListenerConfig != nil && props.ListenerConfig.DisableReplicationStatusEndpoints {
+		wrappedHandler = disableReplicationStatusEndpointWrapping(wrappedHandler)
+	}
+
+	// Add an extra wrapping handler if any of the Redaction settings are
+	// true that will create a new request with a context containing the
+	// redaction settings.
+	if props.ListenerConfig != nil && (props.ListenerConfig.RedactAddresses || props.ListenerConfig.RedactClusterName || props.ListenerConfig.RedactVersion) {
+		wrappedHandler = redactionSettingsWrapping(wrappedHandler, props.ListenerConfig.RedactVersion, props.ListenerConfig.RedactAddresses, props.ListenerConfig.RedactClusterName)
+	}
+
+	if props.ListenerConfig != nil && props.ListenerConfig.DisableRequestLimiter {
+		wrappedHandler = wrapRequestLimiterHandler(wrappedHandler, props)
+	}
+
+	return wrappedHandler
 }
 
 type copyResponseWriter struct {
@@ -288,14 +312,14 @@ func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 		origBody := new(bytes.Buffer)
 		reader := ioutil.NopCloser(io.TeeReader(r.Body, origBody))
 		r.Body = reader
-		req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
+		req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), core.RouterAccess(), w, r)
 		if err != nil || status != 0 {
 			respondError(w, status, err)
 			return
 		}
-		if origBody != nil {
-			r.Body = ioutil.NopCloser(origBody)
-		}
+
+		r.Body = io.NopCloser(origBody)
+
 		input := &logical.LogInput{
 			Request: req,
 		}
@@ -307,17 +331,16 @@ func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 		cw := newCopyResponseWriter(w)
 		h.ServeHTTP(cw, r)
 		data := make(map[string]interface{})
-		err = jsonutil.DecodeJSON(cw.body.Bytes(), &data)
-		if err != nil {
-			// best effort, ignore
-		}
+
+		// Refactoring this code, since the returned error was being ignored.
+		jsonutil.DecodeJSON(cw.body.Bytes(), &data)
+
 		httpResp := &logical.HTTPResponse{Data: data, Headers: cw.Header()}
 		input.Response = logical.HTTPResponseToLogicalResponse(httpResp)
 		err = core.AuditLogger().AuditResponse(r.Context(), input)
 		if err != nil {
 			respondError(w, status, err)
 		}
-		return
 	})
 }
 
@@ -326,23 +349,18 @@ func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 // are performed.
 func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerProperties) http.Handler {
 	var maxRequestDuration time.Duration
-	var maxRequestSize int64
 	if props.ListenerConfig != nil {
 		maxRequestDuration = props.ListenerConfig.MaxRequestDuration
-		maxRequestSize = props.ListenerConfig.MaxRequestSize
 	}
 	if maxRequestDuration == 0 {
 		maxRequestDuration = vault.DefaultMaxRequestDuration
 	}
-	if maxRequestSize == 0 {
-		maxRequestSize = DefaultMaxRequestSize
-	}
-
 	// Swallow this error since we don't want to pollute the logs and we also don't want to
 	// return an HTTP error here. This information is best effort.
 	hostname, _ := os.Hostname()
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var hf func(w http.ResponseWriter, r *http.Request)
+	hf = func(w http.ResponseWriter, r *http.Request) {
 		// This block needs to be here so that upon sending SIGHUP, custom response
 		// headers are also reloaded into the handlers.
 		var customHeaders map[string][]*logical.CustomHeader
@@ -372,12 +390,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			ctx, cancelFunc = context.WithTimeout(ctx, maxRequestDuration)
 		}
 
-		// if maxRequestSize < 0, no need to set context value
-		// Add a size limiter if desired
-		if maxRequestSize > 0 {
-			ctx = context.WithValue(ctx, "max_request_size", maxRequestSize)
-		}
-		ctx = context.WithValue(ctx, "original_request_path", r.URL.Path)
+		ctx = logical.CreateContextOriginalRequestPath(ctx, r.URL.Path)
 		r = r.WithContext(ctx)
 		r = r.WithContext(namespace.ContextWithNamespace(r.Context(), namespace.RootNamespace))
 
@@ -407,7 +420,34 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			r = newR
 
 		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/robots.txt", r.URL.Path == "/":
-		default:
+			// RFC 5785
+		case strings.HasPrefix(r.URL.Path, "/.well-known/"):
+			perfStandby := core.PerfStandby()
+			standby, err := core.Standby()
+			if err != nil {
+				core.Logger().Warn("error resolving standby status handling .well-known path", "error", err)
+			} else if standby && !perfStandby {
+				// Standby nodes, not performance standbys, don't start plugins
+				// so registration can not happen, instead redirect to active
+				respondStandby(core, w, r.URL)
+				cancelFunc()
+				return
+			} else {
+				redir, err := core.GetWellKnownRedirect(r.Context(), r.URL.Path)
+				if err != nil {
+					core.Logger().Warn("error resolving potential API redirect", "error", err)
+				} else {
+					if redir != "" {
+						newReq := r.Clone(ctx)
+						// Save the original path for audit logging.
+						newReq.RequestURI = newReq.URL.Path
+						newReq.URL.Path = redir
+						hf(w, newReq)
+						cancelFunc()
+						return
+					}
+				}
+			}
 			respondError(nw, http.StatusNotFound, nil)
 			cancelFunc()
 			return
@@ -458,8 +498,8 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		h.ServeHTTP(nw, r)
 
 		cancelFunc()
-		return
-	})
+	}
+	return http.HandlerFunc(hf)
 }
 
 func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handler {
@@ -550,23 +590,7 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 
 		r.RemoteAddr = net.JoinHostPort(acc[indexToUse], port)
 		h.ServeHTTP(w, r)
-		return
 	})
-}
-
-// stripPrefix is a helper to strip a prefix from the path. It will
-// return false from the second return value if it the prefix doesn't exist.
-func stripPrefix(prefix, path string) (string, bool) {
-	if !strings.HasPrefix(path, prefix) {
-		return "", false
-	}
-
-	path = path[len(prefix):]
-	if path == "" {
-		return "", false
-	}
-
-	return path, true
 }
 
 func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
@@ -578,12 +602,12 @@ func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
 			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
-		if userHeaders != nil {
-			for k := range userHeaders {
-				v := userHeaders.Get(k)
-				header.Set(k, v)
-			}
+
+		for k := range userHeaders {
+			v := userHeaders.Get(k)
+			header.Set(k, v)
 		}
+
 		h.ServeHTTP(w, req)
 	})
 }
@@ -595,7 +619,6 @@ func handleUI(h http.Handler) http.Handler {
 		// here.
 		req.URL.Path = strings.TrimSuffix(req.URL.Path, "/")
 		h.ServeHTTP(w, req)
-		return
 	})
 }
 
@@ -673,8 +696,7 @@ func handleUIStub() http.Handler {
 
 func handleUIRedirect() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		http.Redirect(w, req, "/ui/", 307)
-		return
+		http.Redirect(w, req, "/ui/", http.StatusTemporaryRedirect)
 	})
 }
 
@@ -722,26 +744,9 @@ func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, 
 	// Limit the maximum number of bytes to MaxRequestSize to protect
 	// against an indefinite amount of data being read.
 	reader := r.Body
-	ctx := r.Context()
-	maxRequestSize := ctx.Value("max_request_size")
-	if maxRequestSize != nil {
-		max, ok := maxRequestSize.(int64)
-		if !ok {
-			return nil, errors.New("could not parse max_request_size from request context")
-		}
-		if max > 0 {
-			// MaxBytesReader won't do all the internal stuff it must unless it's
-			// given a ResponseWriter that implements the internal http interface
-			// requestTooLarger.  So we let it have access to the underlying
-			// ResponseWriter.
-			inw := w
-			if myw, ok := inw.(logical.WrappingResponseWriter); ok {
-				inw = myw.Wrapped()
-			}
-			reader = http.MaxBytesReader(inw, r.Body, max)
-		}
-	}
+
 	var origBody io.ReadWriter
+
 	if perfStandby {
 		// Since we're checking PerfStandby here we key on origBody being nil
 		// or not later, so we need to always allocate so it's non-nil
@@ -762,16 +767,6 @@ func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, 
 //
 // A nil map will be returned if the format is empty or invalid.
 func parseFormRequest(r *http.Request) (map[string]interface{}, error) {
-	maxRequestSize := r.Context().Value("max_request_size")
-	if maxRequestSize != nil {
-		max, ok := maxRequestSize.(int64)
-		if !ok {
-			return nil, errors.New("could not parse max_request_size from request context")
-		}
-		if max > 0 {
-			r.Body = ioutil.NopCloser(io.LimitReader(r.Body, max))
-		}
-	}
 	if err := r.ParseForm(); err != nil {
 		return nil, err
 	}
@@ -879,7 +874,6 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 		}
 
 		forwardRequest(core, w, r)
-		return
 	})
 }
 
@@ -923,10 +917,8 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if header != nil {
-		for k, v := range header {
-			w.Header()[k] = v
-		}
+	for k, v := range header {
+		w.Header()[k] = v
 	}
 
 	w.WriteHeader(statusCode)
@@ -936,8 +928,35 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 // request is a helper to perform a request and properly exit in the
 // case of an error.
 func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool, bool) {
+	lim := &limits.HTTPLimiter{
+		Method:      rawReq.Method,
+		PathLimited: r.PathLimited,
+		LookupFunc:  core.GetRequestLimiter,
+	}
+	lsnr, ok := lim.Acquire(rawReq.Context())
+	if !ok {
+		resp := &logical.Response{}
+		logical.RespondWithStatusCode(resp, r, http.StatusServiceUnavailable)
+		respondError(w, http.StatusServiceUnavailable, limits.ErrCapacity)
+		return resp, false, false
+	}
+
+	// To guard against leaking RequestListener slots, we should ignore Limiter
+	// measurements on panic. OnIgnore will check to see if a RequestListener
+	// slot has been acquired and not released, which could happen on
+	// recoverable panics.
+	defer lsnr.OnIgnore()
+
 	resp, err := core.HandleRequest(rawReq.Context(), r)
-	if r.LastRemoteWAL() > 0 && !vault.WaitUntilWALShipped(rawReq.Context(), core, r.LastRemoteWAL()) {
+
+	// Do the limiter measurement
+	if err != nil {
+		lsnr.OnDropped()
+	} else {
+		lsnr.OnSuccess()
+	}
+
+	if r.LastRemoteWAL() > 0 && !core.EntWaitUntilWALShipped(rawReq.Context(), r.LastRemoteWAL()) {
 		if resp == nil {
 			resp = &logical.Response{}
 		}

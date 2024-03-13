@@ -353,10 +353,6 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	if hashAlgorithm == keysutil.HashTypeNone && (!prehashed || sigAlgorithm != "pkcs1v15") {
-		return logical.ErrorResponse("hash_algorithm=none requires both prehashed=true and signature_algorithm=pkcs1v15"), logical.ErrInvalidRequest
-	}
-
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
@@ -371,10 +367,17 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
 	}
+	defer p.Unlock()
 
 	if !p.Type.SigningSupported() {
-		p.Unlock()
 		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support signing", p.Type)), logical.ErrInvalidRequest
+	}
+
+	// Allow managed keys to specify no hash algo without additional conditions.
+	if hashAlgorithm == keysutil.HashTypeNone && p.Type != keysutil.KeyType_MANAGED_KEY {
+		if !prehashed || sigAlgorithm != "pkcs1v15" {
+			return logical.ErrorResponse("hash_algorithm=none requires both prehashed=true and signature_algorithm=pkcs1v15"), logical.ErrInvalidRequest
+		}
 	}
 
 	batchInputRaw := d.Raw["batch_input"]
@@ -382,12 +385,10 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	if batchInputRaw != nil {
 		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
-			p.Unlock()
 			return nil, fmt.Errorf("failed to parse batch input: %w", err)
 		}
 
 		if len(batchInputItems) == 0 {
-			p.Unlock()
 			return logical.ErrorResponse("missing batch input to process"), logical.ErrInvalidRequest
 		}
 	} else {
@@ -400,7 +401,6 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	response := make([]batchResponseSignItem, len(batchInputItems))
-
 	for i, item := range batchInputItems {
 
 		rawInput, ok := item["input"]
@@ -419,8 +419,10 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 
 		if p.Type.HashSignatureInput() && !prehashed {
 			hf := keysutil.HashFuncMap[hashAlgorithm]()
-			hf.Write(input)
-			input = hf.Sum(nil)
+			if hf != nil {
+				hf.Write(input)
+				input = hf.Sum(nil)
+			}
 		}
 
 		contextRaw := item["context"]
@@ -486,7 +488,6 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	} else {
 		if response[0].Error != "" || response[0].err != nil {
-			p.Unlock()
 			if response[0].Error != "" {
 				return logical.ErrorResponse(response[0].Error), response[0].err
 			}
@@ -504,7 +505,6 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
-	p.Unlock()
 	return resp, nil
 }
 
@@ -606,10 +606,6 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	if hashAlgorithm == keysutil.HashTypeNone && (!prehashed || sigAlgorithm != "pkcs1v15") {
-		return logical.ErrorResponse("hash_algorithm=none requires both prehashed=true and signature_algorithm=pkcs1v15"), logical.ErrInvalidRequest
-	}
-
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
@@ -624,10 +620,17 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
 	}
+	defer p.Unlock()
 
 	if !p.Type.SigningSupported() {
-		p.Unlock()
 		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support verification", p.Type)), logical.ErrInvalidRequest
+	}
+
+	// Allow managed keys to specify no hash algo without additional conditions.
+	if hashAlgorithm == keysutil.HashTypeNone && p.Type != keysutil.KeyType_MANAGED_KEY {
+		if !prehashed || sigAlgorithm != "pkcs1v15" {
+			return logical.ErrorResponse("hash_algorithm=none requires both prehashed=true and signature_algorithm=pkcs1v15"), logical.ErrInvalidRequest
+		}
 	}
 
 	response := make([]batchResponseVerifyItem, len(batchInputItems))
@@ -657,8 +660,10 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 
 		if p.Type.HashSignatureInput() && !prehashed {
 			hf := keysutil.HashFuncMap[hashAlgorithm]()
-			hf.Write(input)
-			input = hf.Sum(nil)
+			if hf != nil {
+				hf.Write(input)
+				input = hf.Sum(nil)
+			}
 		}
 
 		contextRaw := item["context"]
@@ -722,7 +727,6 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		}
 	} else {
 		if response[0].Error != "" || response[0].err != nil {
-			p.Unlock()
 			if response[0].Error != "" {
 				return logical.ErrorResponse(response[0].Error), response[0].err
 			}
@@ -733,7 +737,6 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		}
 	}
 
-	p.Unlock()
 	return resp, nil
 }
 

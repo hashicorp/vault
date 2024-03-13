@@ -1,11 +1,11 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model from '@ember-data/model';
 
-export default class KvSecretDataModel extends Model {
+export default class KvSecretMetadataModel extends Model {
   backend: string;
   path: string;
   fullSecretPath: string;
@@ -21,6 +21,11 @@ export default class KvSecretDataModel extends Model {
   // apiPaths for capabilities
   dataPath: Promise<CapabilitiesModel>;
   metadataPath: Promise<CapabilitiesModel>;
+
+  get pathIsDirectory(): boolean;
+  get isSecretDeleted(): boolean;
+  get sortedVersions(): number[];
+  get currentSecret(): { state: string; isDeactivated: boolean };
 
   // Capabilities
   get canDeleteMetadata(): boolean;

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 export const SELECTORS = {
   cardName: (name) => `[data-test-card="${name}"]`,
   emptyState: (name) => `[data-test-empty-state="${name}"]`,
@@ -7,6 +12,7 @@ export const SELECTORS = {
   cardHeader: (name) => `[data-test-dashboard-card-header="${name}"]`,
   tableRow: (name) => `[data-test-dashboard-table="${name}"] tr`,
   searchSelect: (name) => `[data-test-search-select="${name}"]`,
+  kvSearchSelect: `[data-test-kv-suggestion-input]`,
   actionButton: (action) => `[data-test-button="${action}"]`,
   title: (name) => `[data-test-title="${name}"]`,
   subtitle: (name) => `[data-test-card-subtitle="${name}"]`,

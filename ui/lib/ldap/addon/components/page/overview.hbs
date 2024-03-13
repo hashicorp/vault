@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
   <:toolbarActions>
     {{#if @promptConfig}}
@@ -53,15 +58,14 @@
             @fallbackComponent="input-search"
             @onChange={{this.selectRole}}
           />
-          <button
-            class="button has-left-margin-s"
-            type="button"
+          <Hds::Button
+            @text="Get credentials"
+            @color="secondary"
+            class="has-left-margin-s"
             disabled={{not this.selectedRole}}
             {{on "click" this.generateCredentials}}
             data-test-generate-credential-button
-          >
-            Get credentials
-          </button>
+          />
         </div>
       </OverviewCard>
     </div>
