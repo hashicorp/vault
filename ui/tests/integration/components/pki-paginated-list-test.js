@@ -34,8 +34,8 @@ module('Integration | Component | pki-paginated-list', function (hooks) {
         key_name: 'another-key',
       },
     });
-    // toArray to mimic what happens in lazyPaginatedQuery
-    const keyModels = this.store.peekAll('pki/key').toArray();
+    // mimic what happens in lazyPaginatedQuery
+    const keyModels = this.store.peekAll('pki/key');
     keyModels.meta = STANDARD_META;
     this.list = keyModels;
     const emptyList = this.store.peekAll('pki/foo');
