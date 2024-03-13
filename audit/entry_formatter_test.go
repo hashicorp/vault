@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -62,20 +64,42 @@ func TestNewEntryFormatter(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
+		Name                 string
 		UseStaticSalt        bool
+		Logger               hclog.Logger
 		Options              []Option // Only supports WithPrefix
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
 		ExpectedFormat       format
 		ExpectedPrefix       string
 	}{
+		"empty-name": {
+			Name:                 "",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "audit.NewEntryFormatter: name is required: invalid parameter",
+		},
+		"spacey-name": {
+			Name:                 "   ",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "audit.NewEntryFormatter: name is required: invalid parameter",
+		},
 		"nil-salter": {
+			Name:                 "juan",
 			UseStaticSalt:        false,
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.NewEntryFormatter: cannot create a new audit formatter with nil salter: invalid parameter",
 		},
+		"nil-logger": {
+			Name:                 "juan",
+			UseStaticSalt:        true,
+			Logger:               nil,
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "audit.NewEntryFormatter: cannot create a new audit formatter with nil logger: invalid parameter",
+		},
 		"static-salter": {
+			Name:            "juan",
 			UseStaticSalt:   true,
+			Logger:          hclog.NewNullLogger(),
 			IsErrorExpected: false,
 			Options: []Option{
 				WithFormat(JSONFormat.String()),
@@ -83,12 +107,16 @@ func TestNewEntryFormatter(t *testing.T) {
 			ExpectedFormat: JSONFormat,
 		},
 		"default": {
+			Name:            "juan",
 			UseStaticSalt:   true,
+			Logger:          hclog.NewNullLogger(),
 			IsErrorExpected: false,
 			ExpectedFormat:  JSONFormat,
 		},
 		"config-json": {
+			Name:          "juan",
 			UseStaticSalt: true,
+			Logger:        hclog.NewNullLogger(),
 			Options: []Option{
 				WithFormat(JSONFormat.String()),
 			},
@@ -96,7 +124,9 @@ func TestNewEntryFormatter(t *testing.T) {
 			ExpectedFormat:  JSONFormat,
 		},
 		"config-jsonx": {
+			Name:          "juan",
 			UseStaticSalt: true,
+			Logger:        hclog.NewNullLogger(),
 			Options: []Option{
 				WithFormat(JSONxFormat.String()),
 			},
@@ -104,7 +134,9 @@ func TestNewEntryFormatter(t *testing.T) {
 			ExpectedFormat:  JSONxFormat,
 		},
 		"config-json-prefix": {
+			Name:          "juan",
 			UseStaticSalt: true,
+			Logger:        hclog.NewNullLogger(),
 			Options: []Option{
 				WithPrefix("foo"),
 				WithFormat(JSONFormat.String()),
@@ -114,7 +146,9 @@ func TestNewEntryFormatter(t *testing.T) {
 			ExpectedPrefix:  "foo",
 		},
 		"config-jsonx-prefix": {
+			Name:          "juan",
 			UseStaticSalt: true,
+			Logger:        hclog.NewNullLogger(),
 			Options: []Option{
 				WithPrefix("foo"),
 				WithFormat(JSONxFormat.String()),
@@ -137,7 +171,7 @@ func TestNewEntryFormatter(t *testing.T) {
 
 			cfg, err := NewFormatterConfig(tc.Options...)
 			require.NoError(t, err)
-			f, err := NewEntryFormatter(cfg, ss, tc.Options...)
+			f, err := NewEntryFormatter(tc.Name, cfg, ss, tc.Logger, tc.Options...)
 
 			switch {
 			case tc.IsErrorExpected:
@@ -162,7 +196,7 @@ func TestEntryFormatter_Reopen(t *testing.T) {
 	cfg, err := NewFormatterConfig()
 	require.NoError(t, err)
 
-	f, err := NewEntryFormatter(cfg, ss)
+	f, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 	require.NoError(t, err)
 	require.NotNil(t, f)
 	require.NoError(t, f.Reopen())
@@ -176,7 +210,7 @@ func TestEntryFormatter_Type(t *testing.T) {
 	cfg, err := NewFormatterConfig()
 	require.NoError(t, err)
 
-	f, err := NewEntryFormatter(cfg, ss)
+	f, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 	require.NoError(t, err)
 	require.NotNil(t, f)
 	require.Equal(t, eventlogger.NodeTypeFormatter, f.Type())
@@ -197,14 +231,14 @@ func TestEntryFormatter_Process(t *testing.T) {
 	}{
 		"json-request-no-data": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(EntryFormatter).Process: cannot audit event (AuditRequest) with no data: invalid parameter",
+			ExpectedErrorMessage: "audit.(EntryFormatter).Process: cannot audit event (request) with no data: invalid parameter",
 			Subtype:              RequestType,
 			RequiredFormat:       JSONFormat,
 			Data:                 nil,
 		},
 		"json-response-no-data": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(EntryFormatter).Process: cannot audit event (AuditResponse) with no data: invalid parameter",
+			ExpectedErrorMessage: "audit.(EntryFormatter).Process: cannot audit event (response) with no data: invalid parameter",
 			Subtype:              ResponseType,
 			RequiredFormat:       JSONFormat,
 			Data:                 nil,
@@ -253,14 +287,14 @@ func TestEntryFormatter_Process(t *testing.T) {
 		},
 		"jsonx-request-no-data": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(EntryFormatter).Process: cannot audit event (AuditRequest) with no data: invalid parameter",
+			ExpectedErrorMessage: "audit.(EntryFormatter).Process: cannot audit event (request) with no data: invalid parameter",
 			Subtype:              RequestType,
 			RequiredFormat:       JSONxFormat,
 			Data:                 nil,
 		},
 		"jsonx-response-no-data": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(EntryFormatter).Process: cannot audit event (AuditResponse) with no data: invalid parameter",
+			ExpectedErrorMessage: "audit.(EntryFormatter).Process: cannot audit event (response) with no data: invalid parameter",
 			Subtype:              ResponseType,
 			RequiredFormat:       JSONxFormat,
 			Data:                 nil,
@@ -321,7 +355,7 @@ func TestEntryFormatter_Process(t *testing.T) {
 			cfg, err := NewFormatterConfig(WithFormat(tc.RequiredFormat.String()))
 			require.NoError(t, err)
 
-			f, err := NewEntryFormatter(cfg, ss)
+			f, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 			require.NoError(t, err)
 			require.NotNil(t, f)
 
@@ -386,7 +420,7 @@ func BenchmarkAuditFileSink_Process(b *testing.B) {
 	cfg, err := NewFormatterConfig()
 	require.NoError(b, err)
 	ss := newStaticSalt(b)
-	formatter, err := NewEntryFormatter(cfg, ss)
+	formatter, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 	require.NoError(b, err)
 	require.NotNil(b, formatter)
 
@@ -457,7 +491,7 @@ func TestEntryFormatter_FormatRequest(t *testing.T) {
 			ss := newStaticSalt(t)
 			cfg, err := NewFormatterConfig()
 			require.NoError(t, err)
-			f, err := NewEntryFormatter(cfg, ss)
+			f, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 			require.NoError(t, err)
 
 			var ctx context.Context
@@ -526,7 +560,7 @@ func TestEntryFormatter_FormatResponse(t *testing.T) {
 			ss := newStaticSalt(t)
 			cfg, err := NewFormatterConfig()
 			require.NoError(t, err)
-			f, err := NewEntryFormatter(cfg, ss)
+			f, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 			require.NoError(t, err)
 
 			var ctx context.Context
@@ -636,7 +670,7 @@ func TestEntryFormatter_Process_JSON(t *testing.T) {
 	for name, tc := range cases {
 		cfg, err := NewFormatterConfig(WithHMACAccessor(false))
 		require.NoError(t, err)
-		formatter, err := NewEntryFormatter(cfg, ss, WithPrefix(tc.Prefix))
+		formatter, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger(), WithPrefix(tc.Prefix))
 		require.NoError(t, err)
 
 		in := &logical.LogInput{
@@ -797,7 +831,7 @@ func TestEntryFormatter_Process_JSONx(t *testing.T) {
 			WithFormat(JSONxFormat.String()),
 		)
 		require.NoError(t, err)
-		formatter, err := NewEntryFormatter(cfg, tempStaticSalt, WithPrefix(tc.Prefix))
+		formatter, err := NewEntryFormatter("juan", cfg, tempStaticSalt, hclog.NewNullLogger(), WithPrefix(tc.Prefix))
 		require.NoError(t, err)
 		require.NotNil(t, formatter)
 
@@ -913,7 +947,7 @@ func TestEntryFormatter_FormatResponse_ElideListResponses(t *testing.T) {
 	var err error
 
 	format := func(t *testing.T, config FormatterConfig, operation logical.Operation, inputData map[string]any) *ResponseEntry {
-		formatter, err = NewEntryFormatter(config, ss)
+		formatter, err = NewEntryFormatter("juan", config, ss, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, formatter)
 
@@ -975,7 +1009,7 @@ func TestEntryFormatter_Process_NoMutation(t *testing.T) {
 	cfg, err := NewFormatterConfig()
 	require.NoError(t, err)
 	ss := newStaticSalt(t)
-	formatter, err := NewEntryFormatter(cfg, ss)
+	formatter, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 	require.NoError(t, err)
 	require.NotNil(t, formatter)
 
@@ -1023,6 +1057,66 @@ func TestEntryFormatter_Process_NoMutation(t *testing.T) {
 	require.NotNil(t, a2)
 
 	require.NotEqual(t, a2, a)
+}
+
+// TestEntryFormatter_Process_Panic tries to send data into the EntryFormatter
+// which will currently cause a panic when a response is formatted due to the
+// underlying hashing that is done with reflectwalk.
+func TestEntryFormatter_Process_Panic(t *testing.T) {
+	t.Parallel()
+
+	// Create the formatter node.
+	cfg, err := NewFormatterConfig()
+	require.NoError(t, err)
+	ss := newStaticSalt(t)
+	formatter, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
+	require.NoError(t, err)
+	require.NotNil(t, formatter)
+
+	// The secret sauce, create a bad addr.
+	// see: https://github.com/hashicorp/vault/issues/16462
+	badAddr, err := sockaddr.NewSockAddr("10.10.10.2/32 10.10.10.3/32")
+	require.NoError(t, err)
+
+	in := &logical.LogInput{
+		Auth: &logical.Auth{
+			ClientToken:     "foo",
+			Accessor:        "bar",
+			EntityID:        "foobarentity",
+			DisplayName:     "testtoken",
+			NoDefaultPolicy: true,
+			Policies:        []string{"root"},
+			TokenType:       logical.TokenTypeService,
+		},
+		Request: &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "/foo",
+			Connection: &logical.Connection{
+				RemoteAddr: "127.0.0.1",
+			},
+			WrapInfo: &logical.RequestWrapInfo{
+				TTL: 60 * time.Second,
+			},
+			Headers: map[string][]string{
+				"foo": {"bar"},
+			},
+			Data: map[string]interface{}{},
+		},
+		Response: &logical.Response{
+			Data: map[string]any{
+				"token_bound_cidrs": []*sockaddr.SockAddrMarshaler{
+					{SockAddr: badAddr},
+				},
+			},
+		},
+	}
+
+	e := fakeEvent(t, ResponseType, in)
+
+	e2, err := formatter.Process(namespace.RootContext(nil), e)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "audit.(EntryFormatter).Process: panic generating audit log: \"juan\"")
+	require.Nil(t, e2)
 }
 
 // hashExpectedValueForComparison replicates enough of the audit HMAC process on a piece of expected data in a test,

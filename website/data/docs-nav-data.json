@@ -178,6 +178,10 @@
         "path": "concepts/lease-explosions"
       },
       {
+        "title": "Lease count quota exceeded",
+        "path": "concepts/lease-count-quota-exceeded"
+      },
+      {
         "title": "Authentication",
         "path": "concepts/auth"
       },
@@ -277,18 +281,42 @@
       },
       {
         "title": "Events",
-        "path": "concepts/events"
+        "path": "concepts/events",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "highlight"
+        }
       },
       {
         "title": "Filtering",
+        "path": "concepts/filtering",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
+        "title": "Request Limiter",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "routes": [
           {
             "title": "Overview",
-            "path": "concepts/filtering"
+            "path": "concepts/request-limiter",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            }
           },
           {
-            "title": "Audit Filtering",
-            "path": "concepts/filtering/audit"
+            "title": "Vault server temporarily overloaded",
+            "path": "concepts/request-limiter/vault-server-temporarily-overloaded"
           }
         ]
       }
@@ -320,6 +348,11 @@
       },
       {
         "title": "<code>replication</code>",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "configuration/replication"
       },
       {
@@ -498,6 +531,10 @@
       {
         "title": "<code>telemetry</code>",
         "path": "configuration/telemetry"
+      },
+      {
+        "title": "<code>Request Limiter</code>",
+        "path": "configuration/request-limiter"
       },
       {
         "title": "<code>ui</code>",
@@ -1035,6 +1072,24 @@
     ]
   },
   {
+    "title": "Vault UI",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "ui"
+      },
+      {
+        "title": "Custom Messages",
+        "path": "ui/custom-messages",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      }
+    ]
+  },
+  {
     "title": "Vault Agent and Vault Proxy",
     "routes": [
       {
@@ -1144,7 +1199,12 @@
               },
               {
                 "title": "Static Secret Caching",
-                "path": "agent-and-proxy/proxy/caching/static-secret-caching"
+                "path": "agent-and-proxy/proxy/caching/static-secret-caching",
+                "badge": {
+                  "text": "ENTERPRISE",
+                  "type": "outlined",
+                  "color": "neutral"
+                }
               },
               {
                 "title": "Persistent Caching",
@@ -1482,6 +1542,15 @@
               "color": "neutral"
             },
             "path": "secrets/pki/cieps"
+          },
+          {
+            "title": "Enrollment over Secure Transport (EST)",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            },
+            "path": "secrets/pki/est"
           }
         ]
       },
@@ -2169,6 +2238,10 @@
         "path": "upgrading/plugins"
       },
       {
+        "title": "Upgrade to 1.16.x",
+        "path": "upgrading/upgrade-to-1.16.x"
+      },
+      {
         "title": "Upgrade to 1.15.x",
         "path": "upgrading/upgrade-to-1.15.x"
       },
@@ -2421,6 +2494,10 @@
         "path": "release-notes"
       },
       {
+        "title": "1.16.0",
+        "path": "release-notes/1.16.0"
+      },
+      {
         "title": "1.15.0",
         "path": "release-notes/1.15.0"
       },
@@ -2556,12 +2633,19 @@
           }
         ]
       },
-
       {
         "title": "Replication",
-        "path": "enterprise/replication"
+        "routes": [
+            {
+                "title": "Overview",
+                "path": "enterprise/replication"
+            },
+            {
+                "title": "Check for Merkle tree corruption",
+                "path": "enterprise/replication/check-merkle-tree-corruption"
+            }
+        ]
       },
-
       {
         "title": "HSM Support",
         "routes": [
@@ -2666,6 +2750,15 @@
       {
         "title": "Eventual Consistency",
         "path": "enterprise/consistency"
+      },
+      {
+        "title": "Audit",
+        "routes": [
+          {
+            "title": "Audit Filtering",
+            "path": "enterprise/audit/filtering"
+          }
+        ]
       },
       {
         "title": "Control Groups",

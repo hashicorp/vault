@@ -8,7 +8,7 @@
   @isHistoricalMonth={{and (not this.isCurrentMonth) (not this.isDateRange)}}
   @isCurrentMonth={{this.isCurrentMonth}}
   @runningTotals={{this.totalUsageCounts}}
-  @upgradeData={{this.upgradeDuringActivity}}
+  @upgradeData={{this.upgradesDuringActivity}}
   @responseTimestamp={{@activity.responseTimestamp}}
 />
 {{#if this.hasAttributionData}}
@@ -22,6 +22,6 @@
     @endTimestamp={{this.endTimeISO}}
     @responseTimestamp={{@activity.responseTimestamp}}
     @isHistoricalMonth={{and (not this.isCurrentMonth) (not this.isDateRange)}}
-    @upgradeExplanation={{this.upgradeExplanation}}
+    @upgradesDuringActivity={{this.upgradesDuringActivity}}
   />
 {{/if}}
