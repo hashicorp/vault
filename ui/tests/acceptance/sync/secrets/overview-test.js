@@ -13,7 +13,7 @@ import { click, waitFor } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 
 // sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
-module('Acceptance | sync | meep overview', function (hooks) {
+module('Acceptance | sync | overview', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
