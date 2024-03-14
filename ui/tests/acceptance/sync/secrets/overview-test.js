@@ -11,6 +11,7 @@ import syncHandlers from 'vault/mirage/handlers/sync';
 import authPage from 'vault/tests/pages/auth';
 import { click, waitFor } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
+import AdapterError from '@ember-data/adapter/error';
 
 // sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
 module('Acceptance | sync | overview', function (hooks) {
@@ -40,8 +41,8 @@ module('Acceptance | sync | overview', function (hooks) {
     assert.dom(ts.tab('Secrets')).hasClass('active', 'Navigates to secrets view for destination');
   });
 
-  test('it should show opt-in banner and modal if secrets-sync is not activated and clear it when opt-in confirmed', async function (assert) {
-    assert.expect(5);
+  test('it should show opt-in banner and modal if secrets-sync is not activated', async function (assert) {
+    assert.expect(6);
     server.get('/sys/activation-flags', () => {
       assert.ok(true, 'Request on initial load to check if secrets-sync is activated');
       return {
@@ -56,18 +57,21 @@ module('Acceptance | sync | overview', function (hooks) {
     await click(ts.overview.optInBannerEnable);
     assert.dom(ts.overview.optInModal).exists('Opt-in modal is shown');
     assert.dom(ts.overview.optInConfirm).isDisabled('Confirm button is disabled when checkbox is unchecked');
-    server.get('/sys/activation-flags', () => {
-      return {
-        data: {
-          activated: ['secrets-sync'],
-          unactivated: [],
-        },
-      };
+    this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
+      assert.ok(true, 'Request made to activate secrets-sync');
+      return {};
     });
     await click(ts.overview.optInCheck);
     await click(ts.overview.optInConfirm);
-    // Locally, the banner disappears, but on CI we need a route transition, which is why I do not have an assertion inside the activation-flags get handler because the assert count is not the same locally vs. in CI.
+  });
+
+  test('it should show adapter error if call to activated-features fails', async function (assert) {
+    assert.expect(2);
+    server.get('/sys/activation-flags', () => {
+      assert.ok(true, 'Request on initial load to check if secrets-sync is activated');
+      return AdapterError.create();
+    });
     await click(ts.navLink('Secrets Sync'));
-    assert.dom(ts.overview.optInBanner).doesNotExist('Opt-in banner does not show after confirmation');
+    assert.dom(ts.overview.optInBannerEnableError).exists('Adapter error message is shown');
   });
 });

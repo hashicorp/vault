@@ -21,22 +21,27 @@ export default class SyncSecretsRoute extends Route {
   @service declare readonly router: RouterService;
   @service declare readonly store: StoreService;
 
-  model() {
+  fetchActivatedFeatures() {
+    return this.store
+      .adapterFor('application')
+      .ajax('/v1/sys/activation-flags', 'GET')
+      .then((resp: ActivationFlagsResponse) => {
+        return resp.data?.activated;
+      })
+      .catch((error: AdapterError) => {
+        return error;
+      });
+  }
+
+  async model() {
+    const activatedFeatures = await this.fetchActivatedFeatures();
     return {
-      activatedFeatures: this.store
-        .adapterFor('application')
-        .ajax('/v1/sys/activation-flags', 'GET')
-        .then((resp: ActivationFlagsResponse) => {
-          return resp.data.activated;
-        })
-        .catch((error: AdapterError) => {
-          // we break out this error while passing args to the component and handle the error in the overview template
-          return error;
-        }),
+      activatedFeatures: activatedFeatures.isAdapterError ? [] : activatedFeatures,
+      adapterError: activatedFeatures.isAdapterError ? activatedFeatures : null,
     };
   }
 
-  afterModel(model: { activatedFeatures: Array<string> | AdapterError }) {
+  afterModel(model: { activatedFeatures: Array<string> }) {
     if (!model.activatedFeatures) {
       this.router.transitionTo('vault.cluster.sync.secrets.overview');
     }

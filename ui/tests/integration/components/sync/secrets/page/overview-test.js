@@ -15,7 +15,6 @@ import syncHandlers from 'vault/mirage/handlers/sync';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { Response } from 'miragejs';
 import { dateFormat } from 'core/helpers/date-format';
-import sinon from 'sinon';
 
 const {
   title,
@@ -36,7 +35,6 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.version = this.owner.lookup('service:version');
-    this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
     this.version.type = 'enterprise';
     syncScenario(this.server);
     syncHandlers(this.server);
@@ -47,7 +45,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     this.renderComponent = () =>
       render(
-        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @activatedFeatures={{this.activatedFeatures}} @isAdapterError={{false}} />`,
+        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @activatedFeatures={{this.activatedFeatures}} @adapterError={{""}} />`,
         {
           owner: this.engine,
         }
@@ -74,40 +72,28 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     assert.dom(cta.summary).exists('CTA renders');
   });
 
-  test('it should render opt-in modal for enterprise', async function (assert) {
-    assert.expect(4);
+  test('it should render adapter error if post to activate secret sync fails', async function (assert) {
+    assert.expect(3);
+    this.activatedFeatures = [''];
+    this.destinations = [''];
+    const error = { errors: ['Permission denied'] };
     this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
       assert.ok(true, 'Request made to activate secrets-sync');
-      return {};
+      return new Response(403, {}, error);
     });
 
-    this.destinations = [];
-    this.activatedFeatures = [''];
-
     await render(
-      hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @activatedFeatures={{this.activatedFeatures}} @isAdapterError={{false}} />`,
+      hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @activatedFeatures={{this.activatedFeatures}} @adapterError={{""}} />`,
       {
         owner: this.engine,
       }
     );
-    await click(overview.optInBannerEnable);
-    await click(overview.optInCheck);
-    assert.dom(overview.optInConfirm).isNotDisabled('Confirm button is enabled when checkbox is checked');
 
-    await click(overview.optInCancel);
     await click(overview.optInBannerEnable);
-    assert
-      .dom(overview.optInConfirm)
-      .isDisabled('Confirm button is disabled after canceling modal and restarting process');
-
     await click(overview.optInCheck);
     await click(overview.optInConfirm);
-
-    assert.deepEqual(
-      this.transitionStub.lastCall.args,
-      ['vault.cluster.sync.secrets.overview'],
-      'after confirming opt-in, user is redirected to overview page'
-    );
+    assert.dom(overview.optInModal).doesNotExist('Opt-in modal closed');
+    assert.dom(overview.optInError).exists('Opt-in modal error displays');
   });
 
   test('it should render header, tabs and toolbar for overview state', async function (assert) {

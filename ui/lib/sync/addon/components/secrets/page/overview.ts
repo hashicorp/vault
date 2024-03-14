@@ -18,12 +18,13 @@ import type RouterService from '@ember/routing/router-service';
 import type VersionService from 'vault/services/version';
 import type { SyncDestinationAssociationMetrics } from 'vault/vault/adapters/sync/association';
 import type SyncDestinationModel from 'vault/vault/models/sync/destination';
+import type AdapterError from '@ember/test/adapter';
 
 interface Args {
   destinations: Array<SyncDestinationModel>;
   totalVaultSecrets: number;
   activatedFeatures: Array<string>;
-  isAdapterError: boolean;
+  adapterError: AdapterError | null;
 }
 
 export default class SyncSecretsDestinationsPageComponent extends Component<Args> {
@@ -35,7 +36,8 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @tracked destinationMetrics: SyncDestinationAssociationMetrics[] = [];
   @tracked page = 1;
   @tracked showActivateSecretsSyncModal = false;
-  @tracked docsConfirmChange = false;
+  @tracked hasConfirmedDocs = false;
+  @tracked error = null;
 
   pageSize = Ember.testing ? 3 : 5; // lower in tests to test pagination without seeding more data
 
@@ -47,9 +49,6 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   }
 
   get isActivated() {
-    if (this.args.isAdapterError) {
-      return false;
-    }
     return this.args.activatedFeatures.includes('secrets-sync');
   }
 
@@ -67,10 +66,9 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   });
 
   @action
-  closeActivateSecretsSyncModal() {
-    // need to close the modal and reset the docsConfirmChange boolean
+  resetOptInModal() {
     this.showActivateSecretsSyncModal = false;
-    this.docsConfirmChange = false;
+    this.hasConfirmedDocs = false;
   }
 
   @task
@@ -82,9 +80,10 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
         .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST');
       this.router.transitionTo('vault.cluster.sync.secrets.overview');
     } catch (error) {
+      this.error = errorMessage(error);
       this.flashMessages.danger(`Error enabling feature \n ${errorMessage(error)}`);
     } finally {
-      this.showActivateSecretsSyncModal = false;
+      this.resetOptInModal();
     }
   }
 }
