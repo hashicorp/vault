@@ -248,7 +248,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 
 	// Ensure the token is valid
 	if te == nil {
-		return nil, nil, nil, nil, logical.ErrPermissionDenied
+		return nil, nil, nil, nil, multierror.Append(logical.ErrPermissionDenied, logical.ErrInvalidToken)
 	}
 
 	// CIDR checks bind all tokens except non-expiring root tokens
@@ -627,6 +627,9 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 
 	err = c.PopulateTokenEntry(ctx, req)
 	if err != nil {
+		if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
+			return nil, multierror.Append(err, logical.ErrInvalidToken)
+		}
 		return nil, err
 	}
 
@@ -1025,7 +1028,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 		if te == nil {
 			// Token has been revoked by this point
-			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+			retErr = multierror.Append(retErr, logical.ErrPermissionDenied, logical.ErrInvalidToken)
 			return nil, nil, retErr
 		}
 		if te.NumUses == tokenRevocationPending {
