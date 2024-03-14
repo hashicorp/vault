@@ -23,6 +23,9 @@ var (
 	// ErrPermissionDenied is returned if the client is not authorized
 	ErrPermissionDenied = errors.New("permission denied")
 
+	// ErrInvalidToken is returned if the token is revoked, expired, or non-existent
+	ErrInvalidToken = errors.New("invalid token")
+
 	// ErrInvalidCredentials is returned when the provided credentials are incorrect
 	// This is used internally for user lockout purposes. This is not seen externally.
 	// The status code returned does not change because of this error
