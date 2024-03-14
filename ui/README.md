@@ -116,7 +116,7 @@ setting `VAULT_UI` environment variable.
 | `make static-dist && make dev-ui`                 | build a Vault binary with UI assets (run from root directory not `/ui`) |
 | `ember g component foo -ir core`                  | generate a component in the /addon engine                               |
 | `yarn test:filter`                                | run non-enterprise in the browser                                       |
-| `yarn test:filter -f='<test name>'` -s            | run tests in the browser, filtering by test name                        |
+| `yarn test:filter -f='<test name>'`               | run tests in the browser, filtering by test name                        |
 | `yarn lint:js`                                    | lint javascript files                                                   |
 
 ### Code Generators
@@ -133,7 +133,7 @@ The above command creates a template-only component by default. If you'd like to
 
 ### Running Tests
 
-Running tests will spin up a Vault dev server on port :9200 via a pretest script that testem (the test runner) executes. All of the acceptance tests then run, which proxy requests back to that server. The normal test scripts use `ember-exam` which split into parallel runs, which is excellent for speed but makes it harder to debug. So we have a custom
+Running tests will spin up a Vault dev server on port :9200 via a pretest script that testem (the test runner) executes. All of the acceptance tests then run, which proxy requests back to that server. The normal test scripts use `ember-exam` which split into parallel runs, which is excellent for speed but makes it harder to debug. So we have a custom yarn script that automatically opens all the tests in a browser, and we can pass the `-f` flag to target the test(s) we're debugging.
 
 - `yarn run test` lint & run all the tests (CI uses this)
 - `yarn run test:oss` lint & run all the non-enterprise tests (CI uses this)
