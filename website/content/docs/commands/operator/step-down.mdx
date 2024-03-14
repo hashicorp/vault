@@ -34,7 +34,9 @@ included on all commands.
 
 ## Policy Requirements
 
-In order to access this feature you will need a policy with (at minimum) the following:
+You must belong to a policy with `update` and `sudo` permissions to use the
+`vault operator step-down` command:
+ 
 ```hcl
 path "sys/step-down" {
   capabilities = ["update", "sudo"]
