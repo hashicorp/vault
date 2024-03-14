@@ -1421,7 +1421,7 @@ func TestBackend_organizationalUnit_singleCert(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
-	ca, err := ioutil.ReadFile("test-fixtures/root/rootcawoucert.pem")
+	ca, err := os.ReadFile("test-fixtures/root/rootcawoucert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
