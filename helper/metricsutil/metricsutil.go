@@ -12,10 +12,9 @@ import (
 	"sync"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/expfmt"
-
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
