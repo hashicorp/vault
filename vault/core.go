@@ -714,7 +714,6 @@ type Core struct {
 	periodicLeaderRefreshInterval time.Duration
 
 	clusterAddrBridge *raft.ClusterAddrBridge
-	enableMultiseal   bool
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
