@@ -114,8 +114,7 @@ export default class StringList extends Component {
 
   @action
   removeInput(idx) {
-    const inputs = this.inputList;
-    inputs.removeObject(inputs.objectAt(idx));
+    this.inputList.removeObject(this.inputs.objectAt(idx));
     this.args.onChange(this.toVal());
   }
 }
