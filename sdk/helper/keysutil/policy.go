@@ -205,9 +205,9 @@ func (kt KeyType) String() string {
 	case KeyType_MANAGED_KEY:
 		return "managed_key"
 	case KeyType_AES128_CMAC:
-		return "aes-128-cmac"
+		return "aes128-cmac"
 	case KeyType_AES256_CMAC:
-		return "aes-256-cmac"
+		return "aes256-cmac"
 	}
 
 	return "[unknown]"
