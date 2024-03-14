@@ -665,6 +665,12 @@ func (c *Core) loadCredentials(ctx context.Context) error {
 		}
 		entry.namespace = ns
 
+		// Subtle: in `loadMounts` there is a call to namespaceManager.Register in
+		// the equivalent place to here. It's non-obvious why that is needed (see
+		// the large comment there) but it's equally subtle why it better NOT to do
+		// the same here. For more rationale see
+		// https://github.com/hashicorp/vault-enterprise/pull/5437#issuecomment-1954434213.
+
 		// Sync values to the cache
 		entry.SyncCache()
 	}
