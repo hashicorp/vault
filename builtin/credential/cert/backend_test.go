@@ -1421,7 +1421,7 @@ func TestBackend_organizationalUnit_singleCert(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
-	ca, err := ioutil.ReadFile("test-fixtures/root/rootcawoucert.pem")
+	ca, err := os.ReadFile("test-fixtures/root/rootcawoucert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1434,6 +1434,10 @@ func TestBackend_organizationalUnit_singleCert(t *testing.T) {
 			testAccStepLogin(t, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{organizational_units: "engineering,finance"}, false),
 			testAccStepLogin(t, connState),
+			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{}, false),
+			testAccStepSetConfig(t, config{EnableIdentityAliasMetadata: true}, connState),
+			testAccStepReadConfig(t, config{EnableIdentityAliasMetadata: true}, connState),
+			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{}, true),
 			testAccStepCert(t, "web", ca, "foo", allowed{organizational_units: "foo"}, false),
 			testAccStepLoginInvalid(t, connState),
 		},
@@ -1808,6 +1812,8 @@ func testAccStepLoginWithMetadata(t *testing.T, connState tls.ConnectionState, c
 			// Check for fixed metadata too
 			metadata["cert_name"] = certName
 			metadata["common_name"] = connState.PeerCertificates[0].Subject.CommonName
+			metadata["org"] = fmt.Sprint(connState.PeerCertificates[0].Subject.Organization)
+			metadata["org_unit"] = fmt.Sprint(connState.PeerCertificates[0].Subject.OrganizationalUnit)
 			metadata["serial_number"] = connState.PeerCertificates[0].SerialNumber.String()
 			metadata["subject_key_id"] = certutil.GetHexFormatted(connState.PeerCertificates[0].SubjectKeyId, ":")
 			metadata["authority_key_id"] = certutil.GetHexFormatted(connState.PeerCertificates[0].AuthorityKeyId, ":")

@@ -143,6 +143,8 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 	metadata := map[string]string{
 		"cert_name":        matched.Entry.Name,
 		"common_name":      clientCerts[0].Subject.CommonName,
+		"org":              fmt.Sprint(clientCerts[0].Subject.Organization),
+		"org_unit":         fmt.Sprint(clientCerts[0].Subject.OrganizationalUnit),
 		"serial_number":    clientCerts[0].SerialNumber.String(),
 		"subject_key_id":   certutil.GetHexFormatted(clientCerts[0].SubjectKeyId, ":"),
 		"authority_key_id": certutil.GetHexFormatted(clientCerts[0].AuthorityKeyId, ":"),
