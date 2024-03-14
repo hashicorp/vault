@@ -196,3 +196,68 @@ func TestTransit_CreateKeyWithAutorotation(t *testing.T) {
 		})
 	}
 }
+
+func TestTransit_CreateKey(t *testing.T) {
+	testCases := map[string]struct {
+		keyType     string
+		shouldError bool
+	}{
+		"AES-128 CMAC": {
+			keyType:     "aes-128-cmac",
+			shouldError: false,
+		},
+		"AES-256 CMAC": {
+			keyType:     "aes-256-cmac",
+			shouldError: false,
+		},
+		"bad key type": {
+			keyType:     "fake-key-type",
+			shouldError: true,
+		},
+	}
+
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"transit": transit.Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	cores := cluster.Cores
+	vault.TestWaitActive(t, cores[0].Core)
+	client := cores[0].Client
+	err := client.Sys().Mount("transit", &api.MountInput{
+		Type: "transit",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for name, tt := range testCases {
+		t.Run(name, func(t *testing.T) {
+			keyName, err := uuid.GenerateUUID()
+			if err != nil {
+				t.Fatalf("error generating key name: %s", err)
+			}
+
+			resp, err := client.Logical().Write(fmt.Sprintf("transit/keys/%s", keyName), map[string]interface{}{
+				"type": tt.keyType,
+			})
+			if err != nil && tt.shouldError {
+				t.Fatalf("unexpected error creating key: %s", err)
+			}
+
+			keyType, ok := resp.Data["type"]
+			if !ok {
+				t.Fatal("missing key type in response")
+			}
+
+			if keyType != tt.keyType {
+				t.Fatalf("incorrect key type: expected %s, got %s", tt.keyType, keyType)
+			}
+		})
+	}
+}
