@@ -266,7 +266,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/core@npm:^7.22.20":
+"@babel/core@npm:^7.22.20, @babel/core@npm:^7.24.0":
   version: 7.24.0
   resolution: "@babel/core@npm:7.24.0"
   dependencies:
@@ -5080,29 +5080,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@embroider/addon-shim@npm:^1.0.0, @embroider/addon-shim@npm:^1.2.0, @embroider/addon-shim@npm:^1.8.3":
-  version: 1.8.6
-  resolution: "@embroider/addon-shim@npm:1.8.6"
-  dependencies:
-    "@embroider/shared-internals": ^2.2.3
-    broccoli-funnel: ^3.0.8
-    semver: ^7.3.8
-  checksum: 63214fbc1b3f333b052791cdfc0c278c348dd6ca4ec2b53c96183150e3d5fe9882cdd3065853e3d6a2c964c962d718b87f2fd8a17414b53fc3a3997d5eedb30e
-  languageName: node
-  linkType: hard
-
-"@embroider/addon-shim@npm:^1.8.4":
-  version: 1.8.4
-  resolution: "@embroider/addon-shim@npm:1.8.4"
-  dependencies:
-    "@embroider/shared-internals": ^2.0.0
-    broccoli-funnel: ^3.0.8
-    semver: ^7.3.8
-  checksum: 107220e97bbd46ead81dfbbfc6cf7daa61731096a6e81b989659a9a0b29b48b3c97ebdd446b6dc0636c4be369f3744e514b7f5e5c0fdc54c1c0e026f54404cc2
-  languageName: node
-  linkType: hard
-
-"@embroider/addon-shim@npm:^1.8.6, @embroider/addon-shim@npm:^1.8.7":
+"@embroider/addon-shim@npm:^1.0.0, @embroider/addon-shim@npm:^1.2.0, @embroider/addon-shim@npm:^1.8.3, @embroider/addon-shim@npm:^1.8.4, @embroider/addon-shim@npm:^1.8.6, @embroider/addon-shim@npm:^1.8.7":
   version: 1.8.7
   resolution: "@embroider/addon-shim@npm:1.8.7"
   dependencies:
@@ -5113,23 +5091,46 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@embroider/macros@npm:^1.0.0":
-  version: 1.5.0
-  resolution: "@embroider/macros@npm:1.5.0"
+"@embroider/macros@npm:^1.15.0":
+  version: 1.15.0
+  resolution: "@embroider/macros@npm:1.15.0"
   dependencies:
-    "@embroider/shared-internals": 1.5.0
+    "@babel/core": ^7.24.0
+    "@embroider/shared-internals": 2.5.2
     assert-never: ^1.2.1
-    babel-import-util: ^1.1.0
-    ember-cli-babel: ^7.26.6
+    babel-import-util: ^2.0.0
+    ember-cli-babel: ^8.2.0
     find-up: ^5.0.0
     lodash: ^4.17.21
     resolve: ^1.20.0
     semver: ^7.3.2
-  checksum: 5e0d5f8c89b0b31199b938848bb7afc5bcd8d3501cc8bfd3ad4a531d74c4e50e8648303e8adaf690c0f0f69a61025925ce55640d93aa3d1723c820efd9cecabc
+  peerDependencies:
+    "@glint/template": ^1.0.0
+  peerDependenciesMeta:
+    "@glint/template":
+      optional: true
+  checksum: ac78c4e0d8a553a6d45476acf9248b6ccfb6499e0eb1ddc7e953e1e52cc7a491ce72d4a28defcbe29aff69ed4c32fac5a7311445400836f6427281ef378f1f83
   languageName: node
   linkType: hard
 
-"@embroider/shared-internals@npm:1.5.0, @embroider/shared-internals@npm:^1.0.0":
+"@embroider/shared-internals@npm:2.5.2, @embroider/shared-internals@npm:^2.5.1":
+  version: 2.5.2
+  resolution: "@embroider/shared-internals@npm:2.5.2"
+  dependencies:
+    babel-import-util: ^2.0.0
+    debug: ^4.3.2
+    ember-rfc176-data: ^0.3.17
+    fs-extra: ^9.1.0
+    js-string-escape: ^1.0.1
+    lodash: ^4.17.21
+    resolve-package-path: ^4.0.1
+    semver: ^7.3.5
+    typescript-memoize: ^1.0.1
+  checksum: ffa48bc708498f57482d7c1ebca44fccf46543d705a2dab698581ef5dee5f0981a9a67d7df3164940f8de1b7412f20cfd4d6204b13c2945f461660089908fe53
+  languageName: node
+  linkType: hard
+
+"@embroider/shared-internals@npm:^1.0.0":
   version: 1.5.0
   resolution: "@embroider/shared-internals@npm:1.5.0"
   dependencies:
@@ -5173,39 +5174,6 @@ __metadata:
     semver: ^7.3.5
     typescript-memoize: ^1.0.1
   checksum: 19d2754182b9e1373177843a354852c82b35d71af66edcdf0662597442062e5f5f51adbdf7a63a263ee0052064c222ff33ddb983ec3f17b68b7275de8de3680e
-  languageName: node
-  linkType: hard
-
-"@embroider/shared-internals@npm:^2.2.3":
-  version: 2.2.3
-  resolution: "@embroider/shared-internals@npm:2.2.3"
-  dependencies:
-    babel-import-util: ^1.1.0
-    ember-rfc176-data: ^0.3.17
-    fs-extra: ^9.1.0
-    js-string-escape: ^1.0.1
-    lodash: ^4.17.21
-    resolve-package-path: ^4.0.1
-    semver: ^7.3.5
-    typescript-memoize: ^1.0.1
-  checksum: bf9f3769af5a66b6e8935257c77fe49678ef0a24ec74b397134598c16f13cd791ac2107008b0ae5dc41d94810f5e15ad318100c03bf1fcb2209a62db966cc483
-  languageName: node
-  linkType: hard
-
-"@embroider/shared-internals@npm:^2.5.1":
-  version: 2.5.2
-  resolution: "@embroider/shared-internals@npm:2.5.2"
-  dependencies:
-    babel-import-util: ^2.0.0
-    debug: ^4.3.2
-    ember-rfc176-data: ^0.3.17
-    fs-extra: ^9.1.0
-    js-string-escape: ^1.0.1
-    lodash: ^4.17.21
-    resolve-package-path: ^4.0.1
-    semver: ^7.3.5
-    typescript-memoize: ^1.0.1
-  checksum: ffa48bc708498f57482d7c1ebca44fccf46543d705a2dab698581ef5dee5f0981a9a67d7df3164940f8de1b7412f20cfd4d6204b13c2945f461660089908fe53
   languageName: node
   linkType: hard
 
@@ -5493,7 +5461,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-components@npm:^4.0.0":
+"@hashicorp/design-system-components@npm:^4.1.0":
   version: 4.1.0
   resolution: "@hashicorp/design-system-components@npm:4.1.0"
   dependencies:
@@ -5529,7 +5497,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/ember-flight-icons@npm:^5.0.0, @hashicorp/ember-flight-icons@npm:^5.0.1":
+"@hashicorp/ember-flight-icons@npm:^5.0.1":
   version: 5.0.1
   resolution: "@hashicorp/ember-flight-icons@npm:5.0.1"
   dependencies:
@@ -24822,6 +24790,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "vault@workspace:."
   dependencies:
+    "@babel/core": ^7.24.0
     "@babel/eslint-parser": ^7.21.3
     "@babel/plugin-proposal-decorators": ^7.21.0
     "@babel/plugin-proposal-object-rest-spread": ^7.12.1
@@ -24835,8 +24804,8 @@ __metadata:
     "@ember/test-waiters": ^3.1.0
     "@glimmer/component": ^1.1.2
     "@glimmer/tracking": ^1.1.2
-    "@hashicorp/design-system-components": ^4.0.0
-    "@hashicorp/ember-flight-icons": ^5.0.0
+    "@hashicorp/design-system-components": ^4.1.0
+    "@hashicorp/ember-flight-icons": ^5.0.1
     "@icholy/duration": ^5.1.0
     "@lineal-viz/lineal": ^0.5.1
     "@tsconfig/ember": ^2.0.0
