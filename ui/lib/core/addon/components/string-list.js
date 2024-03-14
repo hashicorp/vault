@@ -10,6 +10,8 @@ import { action } from '@ember/object';
 import { set } from '@ember/object';
 import { next } from '@ember/runloop';
 import { tracked } from '@glimmer/tracking';
+import { addToArray } from 'vault/helpers/add-to-array';
+import { removeFromArray } from 'vault/helpers/remove-from-array';
 
 /**
  * @module StringList
@@ -91,9 +93,11 @@ export default class StringList extends Component {
   @action
   inputChanged(idx, event) {
     if (event.target.value.includes(',') && !this.indicesWithComma.includes(idx)) {
-      this.indicesWithComma.pushObject(idx);
+      this.indicesWithComma = addToArray(this.indicesWithComma, idx);
     }
-    if (!event.target.value.includes(',')) this.indicesWithComma.removeObject(idx);
+    if (!event.target.value.includes(',')) {
+      this.indicesWithComma = removeFromArray(this.indicesWithComma, idx);
+    }
 
     const inputObj = this.inputList.objectAt(idx);
     set(inputObj, 'value', event.target.value);
