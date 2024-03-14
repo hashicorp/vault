@@ -544,7 +544,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	ctx := context.Background()
-	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(ctx, backend)
+	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(ctx, backend, config.IsMultisealEnabled())
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error getting seal generation info: %v", err))
 		return 1
@@ -1824,7 +1824,7 @@ func (c *ServerCommand) Run(args []string) int {
 }
 
 func (c *ServerCommand) configureSeals(ctx context.Context, config *server.Config, backend physical.Backend, infoKeys []string, info map[string]string) (*SetSealResponse, io.Reader, error) {
-	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(ctx, backend)
+	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(ctx, backend, config.IsMultisealEnabled())
 	if err != nil {
 		return nil, nil, fmt.Errorf("Error getting seal generation info: %v", err)
 	}

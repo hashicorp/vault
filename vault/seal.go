@@ -366,7 +366,10 @@ func (c *Core) SetPhysicalSealGenInfo(ctx context.Context, sealGenInfo *seal.Sea
 	return nil
 }
 
-func PhysicalSealGenInfo(ctx context.Context, storage physical.Backend) (*seal.SealGenerationInfo, error) {
+func PhysicalSealGenInfo(ctx context.Context, storage physical.Backend, multiSealEnabled bool) (*seal.SealGenerationInfo, error) {
+	if !multiSealEnabled { // Not ideal, but this function has access neither to config or Core
+		return nil, nil
+	}
 	pe, err := storage.Get(ctx, SealGenInfoPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch seal generation info: %w", err)
