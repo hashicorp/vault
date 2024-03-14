@@ -66,7 +66,7 @@ export default class ObjectListInput extends Component {
 
   @action
   handleInput(idx, { target }) {
-    const inputObj = this.inputList.objectAt(idx);
+    const inputObj = this.inputList[idx];
     inputObj[target.name] = target.value;
     this.handleChange();
   }
@@ -80,7 +80,7 @@ export default class ObjectListInput extends Component {
 
   @action
   removeRow(idx) {
-    const row = this.inputList.objectAt(idx);
+    const row = this.inputList[idx];
     this.inputList = removeFromArray(this.inputList, row);
     this.handleChange();
   }
