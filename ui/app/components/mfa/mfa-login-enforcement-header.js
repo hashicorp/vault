@@ -5,7 +5,7 @@
 
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 
 /**
@@ -41,7 +41,7 @@ export default class MfaLoginEnforcementHeaderComponent extends Component {
   async fetchEnforcements() {
     try {
       // cache initial values for lookup in select handler
-      this._enforcements = (await this.store.query('mfa-login-enforcement', {})).toArray();
+      this._enforcements = await this.store.query('mfa-login-enforcement', {});
       this.enforcements = [...this._enforcements];
     } catch (error) {
       this.enforcements = [];
@@ -52,6 +52,6 @@ export default class MfaLoginEnforcementHeaderComponent extends Component {
   onEnforcementSelect([name]) {
     // search select returns array of strings, in this case enforcement name
     // lookup model and pass to callback
-    this.args.onEnforcementSelect(this._enforcements.findBy('name', name));
+    this.args.onEnforcementSelect(this._enforcements.find((enf) => enf.name === name));
   }
 }

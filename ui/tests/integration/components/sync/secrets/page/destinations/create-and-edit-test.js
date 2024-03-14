@@ -31,6 +31,17 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         owner: this.engine,
       });
     };
+
+    this.generateModel = (type = 'aws-sm') => {
+      const data = this.server.create('sync-destination', type);
+      const id = `${type}/${data.name}`;
+      data.id = id;
+      this.store.pushPayload(`sync/destinations/${type}`, {
+        modelName: `sync/destinations/${type}`,
+        ...data,
+      });
+      return this.store.peekRecord(`sync/destinations/${type}`, id);
+    };
   });
 
   test('create: it renders and navigates back to create on cancel', async function (assert) {
@@ -47,15 +58,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
   test('edit: it renders and navigates back to details on cancel', async function (assert) {
     assert.expect(4);
-    const type = SYNC_DESTINATIONS[0].type;
-    const data = this.server.create('sync-destination', type);
-    const id = `${type}/${data.name}`;
-    data.id = id;
-    this.store.pushPayload(`sync/destinations/${type}`, {
-      modelName: `sync/destinations/${type}`,
-      ...data,
-    });
-    this.model = this.store.peekRecord(`sync/destinations/${type}`, id);
+    this.model = this.generateModel();
 
     await this.renderFormComponent();
     assert.dom(PAGE.breadcrumbs).hasText('Secrets Sync Destinations Destination Edit Destination');
@@ -68,6 +71,64 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     await click(PAGE.cancelButton);
     const transition = this.transitionStub.calledWith('vault.cluster.sync.secrets.destinations.destination');
     assert.true(transition, 'transitions to vault.cluster.sync.secrets.destinations.destination on cancel');
+  });
+
+  test('edit: it PATCH updates custom_tags', async function (assert) {
+    assert.expect(1);
+    this.model = this.generateModel();
+
+    this.server.patch(`sys/sync/destinations/${this.model.type}/${this.model.name}`, (schema, req) => {
+      const payload = JSON.parse(req.requestBody);
+      const expected = {
+        tags_to_remove: ['foo'],
+        custom_tags: { updated: 'bar', added: 'key' },
+      };
+      assert.propEqual(payload, expected, 'payload removes old tags and includes updated object');
+      return { payload };
+    });
+
+    // bypass form and manually set model attributes
+    this.model.set('customTags', {
+      updated: 'bar',
+      added: 'key',
+    });
+    await this.renderFormComponent();
+    await click(PAGE.saveButton);
+  });
+
+  test('edit: it adds custom_tags when previously there are none', async function (assert) {
+    assert.expect(1);
+    this.model = this.generateModel();
+
+    this.server.patch(`sys/sync/destinations/${this.model.type}/${this.model.name}`, (schema, req) => {
+      const payload = JSON.parse(req.requestBody);
+      const expected = { custom_tags: { foo: 'blah' } };
+      assert.propEqual(payload, expected, 'payload contains new custom tags');
+      return { payload };
+    });
+
+    // bypass form and manually set model attributes
+    this.model.set('customTags', {});
+
+    await this.renderFormComponent();
+    await PAGE.form.fillInByAttr('customTags', 'blah');
+    await click(PAGE.saveButton);
+  });
+
+  test('edit: payload does not contain any custom_tags when removed in form', async function (assert) {
+    assert.expect(1);
+    this.model = this.generateModel();
+
+    this.server.patch(`sys/sync/destinations/${this.model.type}/${this.model.name}`, (schema, req) => {
+      const payload = JSON.parse(req.requestBody);
+      const expected = { tags_to_remove: ['foo'], custom_tags: {} };
+      assert.propEqual(payload, expected, 'payload removes old keys');
+      return { payload };
+    });
+
+    await this.renderFormComponent();
+    await click(PAGE.kvObjectEditor.deleteRow());
+    await click(PAGE.saveButton);
   });
 
   test('it renders API errors', async function (assert) {
@@ -144,7 +205,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
         assert.dom(PAGE.title).hasTextContaining(`Create Destination for ${name}`);
         for (const attr of this.model.formFields) {
-          assert.dom(PAGE.inputByAttr(attr.name)).exists();
+          assert.dom(PAGE.fieldByAttr(attr.name)).exists();
         }
       });
 
@@ -205,17 +266,38 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
   }
 
   // EDIT FORM ASSERTIONS FOR EACH DESTINATION TYPE
+  // * test updates: if editable, add param here
+  //  if it is not a string type, add case to EXPECTED_VALUE and update
+  //  fillInByAttr() (in sync-selectors) to interact with the form
   const EDITABLE_FIELDS = {
-    'aws-sm': ['accessKeyId', 'secretAccessKey'],
-    'azure-kv': ['clientId', 'clientSecret'],
-    'gcp-sm': ['credentials'],
-    gh: ['accessToken'],
-    'vercel-project': ['accessToken', 'teamId', 'deploymentEnvironments'],
+    'aws-sm': [
+      'accessKeyId',
+      'secretAccessKey',
+      'roleArn',
+      'externalId',
+      'granularity',
+      'secretNameTemplate',
+      'customTags',
+    ],
+    'azure-kv': ['clientId', 'clientSecret', 'granularity', 'secretNameTemplate', 'customTags'],
+    'gcp-sm': ['projectId', 'credentials', 'granularity', 'secretNameTemplate', 'customTags'],
+    gh: ['accessToken', 'granularity', 'secretNameTemplate'],
+    'vercel-project': [
+      'accessToken',
+      'teamId',
+      'deploymentEnvironments',
+      'granularity',
+      'secretNameTemplate',
+    ],
   };
   const EXPECTED_VALUE = (key) => {
     switch (key) {
+      case 'custom_tags':
+        return { foo: `new-${key}-value` };
       case 'deployment_environments':
         return ['production'];
+      case 'granularity':
+        return 'secret-key';
       default:
         // for all string type parameters
         return `new-${key}-value`;
@@ -226,22 +308,15 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     const { type, maskedParams } = destination;
     module(`edit destination: ${type}`, function (hooks) {
       hooks.beforeEach(function () {
-        this.data = this.server.create('sync-destination', type);
-        const id = `${type}/${this.data.name}`;
-        this.data.id = id;
-        this.store.pushPayload(`sync/destinations/${type}`, {
-          modelName: `sync/destinations/${type}`,
-          ...this.data,
-        });
-        this.model = this.store.peekRecord(`sync/destinations/${type}`, id);
+        this.model = this.generateModel(type);
       });
 
       test('it renders destination form and PATCH updates a destination', async function (assert) {
         const disabledAssertions = this.model.formFields.filter((f) => f.options.editDisabled).length;
         const editable = EDITABLE_FIELDS[this.model.type];
         assert.expect(5 + disabledAssertions + editable.length);
-        this.server.patch(`sys/sync/destinations/${type}/${this.data.name}`, (schema, req) => {
-          assert.ok(true, `makes request: PATCH sys/sync/destinations/${type}/${this.data.name}`);
+        this.server.patch(`sys/sync/destinations/${type}/${this.model.name}`, (schema, req) => {
+          assert.ok(true, `makes request: PATCH sys/sync/destinations/${type}/${this.model.name}`);
           const payload = JSON.parse(req.requestBody);
           const payloadKeys = Object.keys(payload);
           const expectedKeys = editable.map((k) => decamelize(k));
@@ -272,7 +347,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         const expectedArgs = [
           'vault.cluster.sync.secrets.destinations.destination.details',
           type,
-          this.data.name,
+          this.model.name,
         ];
         assert.propEqual(actualArgs, expectedArgs, 'transitionTo called with expected args');
         assert.propEqual(

@@ -86,6 +86,7 @@ var (
 	_ ToggleablePurgemonster = (*TransactionalCache)(nil)
 	_ Backend                = (*Cache)(nil)
 	_ Transactional          = (*TransactionalCache)(nil)
+	_ TransactionalLimits    = (*TransactionalCache)(nil)
 )
 
 // NewCache returns a physical cache of the given size.
@@ -270,4 +271,15 @@ func (c *TransactionalCache) Transaction(ctx context.Context, txns []*TxnEntry) 
 	}
 
 	return nil
+}
+
+// TransactionLimits implements physical.TransactionalLimits
+func (c *TransactionalCache) TransactionLimits() (int, int) {
+	if tl, ok := c.Transactional.(TransactionalLimits); ok {
+		return tl.TransactionLimits()
+	}
+	// We don't have any specific limits of our own so return zeros to signal that
+	// the caller should use whatever reasonable defaults it would if it used a
+	// non-TransactionalLimits backend.
+	return 0, 0
 }

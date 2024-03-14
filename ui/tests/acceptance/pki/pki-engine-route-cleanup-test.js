@@ -11,7 +11,7 @@ import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, fillIn, visit } from '@ember/test-helpers';
-import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
+import { runCmd } from 'vault/tests/helpers/commands';
 import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 
 /**
@@ -34,7 +34,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
     await logout.visit();
     await authPage.login();
     // Cleanup engine
-    await runCommands([`delete sys/mounts/${this.mountPath}`]);
+    await runCmd([`delete sys/mounts/${this.mountPath}`]);
   });
 
   module('configuration', function () {

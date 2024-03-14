@@ -655,13 +655,14 @@ func TestOpenAPI_CleanResponse(t *testing.T) {
 	// logical.Response. This will fail if logical.Response changes without a corresponding
 	// change to cleanResponse()
 	orig = &logical.Response{
-		Secret:   new(logical.Secret),
-		Auth:     new(logical.Auth),
-		Data:     map[string]interface{}{"foo": 42},
-		Redirect: "foo",
-		Warnings: []string{"foo"},
-		WrapInfo: &wrapping.ResponseWrapInfo{Token: "foo"},
-		Headers:  map[string][]string{"foo": {"bar"}},
+		Secret:    new(logical.Secret),
+		Auth:      new(logical.Auth),
+		Data:      map[string]interface{}{"foo": 42},
+		Redirect:  "foo",
+		Warnings:  []string{"foo"},
+		WrapInfo:  &wrapping.ResponseWrapInfo{Token: "foo"},
+		Headers:   map[string][]string{"foo": {"bar"}},
+		MountType: "mount",
 	}
 	origJSON := mustJSONMarshal(t, orig)
 
@@ -900,7 +901,6 @@ func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) 
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	// Compare json by first decoding, then comparing with a deep equality check.
 	var expected, actual interface{}
 	if err := jsonutil.DecodeJSON(docJSON, &actual); err != nil {

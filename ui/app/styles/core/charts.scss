@@ -34,9 +34,8 @@
 .single-month-breakdown-nonentity {
   grid-column-start: 2;
 }
-.stacked-charts {
-  display: grid;
-  width: 100%;
+.single-month-breakdown-sync {
+  grid-column-start: 3;
 }
 
 .single-chart-grid {
@@ -44,6 +43,9 @@
   grid-template-columns: 1fr 0.3fr 3.7fr;
   grid-template-rows: 0.5fr 1fr 1fr 1fr 0.25fr;
   width: 100%;
+  &.no-legend {
+    grid-template-rows: 0.5fr 1fr 1fr 0.25fr;
+  }
 }
 
 .dual-chart-grid {
@@ -85,6 +87,7 @@
   justify-self: center;
   height: 300px;
   max-width: 700px;
+  width: 100%;
 
   svg.chart {
     width: 100%;
@@ -128,7 +131,8 @@
 
 .chart-empty-state {
   place-self: center stretch;
-  grid-row-end: span 3;
+  grid-row-end: span 2;
+  grid-column-start: 1;
   grid-column-end: span 3;
   max-width: none;
   padding-right: 20px;
@@ -165,28 +169,18 @@
 }
 
 .timestamp {
-  grid-column-start: 1;
-  grid-column-end: 2;
-  grid-row-start: 5;
+  grid-column: 1 / span 2;
+  grid-row-start: -2;
   color: $ui-gray-500;
   font-size: $size-9;
   align-self: end;
 }
 
-.legend-center {
+.legend {
   grid-row-start: 5;
-  grid-column-start: 3;
-  grid-column-end: 5;
+  grid-column-start: 2;
+  grid-column-end: 6;
   align-self: center;
-  justify-self: center;
-  font-size: $size-9;
-}
-
-.legend-right {
-  grid-row-start: 4;
-  grid-column-start: 3;
-  grid-column-end: 3;
-  align-self: end;
   justify-self: center;
   font-size: $size-9;
 }
@@ -228,20 +222,21 @@ p.data-details {
 
 // MISC STYLES
 
-.light-dot {
-  background-color: $blue-100;
+.legend-colors {
   height: 10px;
   width: 10px;
   border-radius: 50%;
   display: inline-block;
-}
-
-.dark-dot {
-  background-color: $blue-500;
-  height: 10px;
-  width: 10px;
-  border-radius: 50%;
-  display: inline-block;
+  // numbers are indices because chart legend is iterated over
+  &.dot-0 {
+    background-color: var(--token-color-palette-blue-100);
+  }
+  &.dot-1 {
+    background-color: var(--token-color-palette-blue-300);
+  }
+  &.dot-2 {
+    background-color: var(--token-color-palette-blue-500);
+  }
 }
 
 .legend-label {
@@ -255,21 +250,11 @@ p.data-details {
   font-size: $size-9;
   padding: 6px;
   border-radius: $radius-large;
-  width: 140px;
+  flex-wrap: nowrap;
+  width: fit-content;
 
   .bold {
     font-weight: $font-weight-bold;
-  }
-  .line-chart {
-    width: 117px;
-  }
-  .vertical-chart {
-    text-align: center;
-    flex-wrap: nowrap;
-    width: fit-content;
-  }
-  .horizontal-chart {
-    padding: $spacing-12;
   }
 }
 
@@ -336,13 +321,41 @@ p.data-details {
     margin-right: $spacing-48;
   }
 
-  .legend-center {
-    grid-column-start: 1;
-    grid-row-start: 4;
-  }
-
   .timestamp {
     grid-column-start: 1;
     grid-row-start: 4;
   }
+}
+
+// LINEAL STYLING //
+.lineal-chart {
+  position: relative;
+  padding: 10px 10px 20px 50px;
+  width: 100%;
+  svg {
+    overflow: visible;
+  }
+}
+.lineal-chart-bar {
+  fill: var(--token-color-palette-blue-300);
+}
+.lineal-axis {
+  color: $ui-gray-500;
+  text {
+    font-size: 0.75rem;
+  }
+  line {
+    color: $ui-gray-300;
+  }
+}
+.lineal-tooltip-position {
+  position: absolute;
+  transform-style: preserve-3d;
+  bottom: 30px;
+  left: -20px;
+  pointer-events: none;
+  width: 140px;
+  transform: translate(calc(1px * var(--x, 0)), calc(-1px * var(--y, 0)));
+  transform-origin: bottom left;
+  z-index: 100;
 }

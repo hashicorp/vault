@@ -11,8 +11,11 @@
     @title="No available providers"
     @message="Edit an existing provider or create a new one to allow this application access for authentication requests."
   >
-    <LinkTo @route="vault.cluster.access.oidc.providers">
-      View providers
-    </LinkTo>
+    <Hds::Link::Standalone
+      @icon="chevron-right"
+      @iconPosition="trailing"
+      @text="View providers"
+      @route="vault.cluster.access.oidc.providers"
+    />
   </EmptyState>
 {{/if}}

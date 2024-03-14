@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { visit, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import ENV from 'vault/config/environment';
+import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
 import authPage from 'vault/tests/pages/auth';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger, selectChoose } from 'ember-power-select/test-support/helpers';
@@ -32,17 +32,10 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'oidcConfig';
-  });
-
   hooks.beforeEach(function () {
+    oidcConfigHandlers(this.server);
     this.store = this.owner.lookup('service:store');
     return authPage.login();
-  });
-
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
   });
 
   test('it creates a key, signs a client and edits key access to only that client', async function (assert) {

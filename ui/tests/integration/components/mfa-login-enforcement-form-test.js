@@ -35,6 +35,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
         label: { enabled: false },
         // TODO: add labels to enforcement targets key/value style inputs
         'select-name': { enabled: false },
+        'aria-prohibited-attr': { enabled: false },
       },
     });
   });
@@ -140,7 +141,8 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
     await click('[data-test-mlef-save]');
     assert.true(this.didSave, 'onSave callback triggered');
     assert.strictEqual(this.model.name, 'bar', 'Name property set on model');
-    assert.strictEqual(this.model.mfa_methods.firstObject.id, '123456', 'Mfa method added to model');
+    const methods = await this.model.mfa_methods; //hasManyPromise
+    assert.strictEqual(methods[0].id, '123456', 'Mfa method added to model');
     assert.deepEqual(
       this.model.auth_method_accessors,
       ['auth_userpass_1234'],
@@ -150,7 +152,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
 
   test('it should populate fields with model data', async function (assert) {
     this.model.name = 'foo';
-    const [method] = (await this.store.query('mfa-method', {})).toArray();
+    const [method] = await this.store.query('mfa-method', {});
     this.model.mfa_methods.addObject(method);
     this.model.auth_method_accessors.addObject('auth_userpass_1234');
 
@@ -207,9 +209,9 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
     }));
     this.model.auth_method_accessors.addObject('auth_userpass_1234');
     this.model.auth_method_types.addObject('userpass');
-    const [entity] = (await this.store.query('identity/entity', {})).toArray();
+    const [entity] = await this.store.query('identity/entity', {});
     this.model.identity_entities.addObject(entity);
-    const [group] = (await this.store.query('identity/group', {})).toArray();
+    const [group] = await this.store.query('identity/group', {});
     this.model.identity_groups.addObject(group);
 
     await render(hbs`

@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/asn1"
 	"encoding/hex"
 	"fmt"
 	"net"
@@ -17,17 +16,14 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/ryanuber/go-glob"
-	"golang.org/x/crypto/cryptobyte"
-	asn12 "golang.org/x/crypto/cryptobyte/asn1"
 	"golang.org/x/net/idna"
-
-	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
-	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 )
 
 var (
@@ -55,9 +51,6 @@ var (
 	endWildRegex       = labelRegex + `\*`
 	middleWildRegex    = labelRegex + `\*` + labelRegex
 	leftWildLabelRegex = regexp.MustCompile(`^(` + allWildRegex + `|` + startWildRegex + `|` + endWildRegex + `|` + middleWildRegex + `)$`)
-
-	// OIDs for X.509 certificate extensions used below.
-	OidExtensionSubjectAltName = []int{2, 5, 29, 17}
 )
 
 type EntityInfo struct {
@@ -216,7 +209,7 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 		otherSANsInput = sans
 	}
 	if role.UseCSRSANs && csr != nil && len(csr.Extensions) > 0 {
-		others, err := GetOtherSANsFromX509Extensions(csr.Extensions)
+		others, err := certutil.GetOtherSANsFromX509Extensions(csr.Extensions)
 		if err != nil {
 			return nil, nil, errutil.UserError{Err: fmt.Errorf("could not parse requested other SAN: %w", err).Error()}
 		}
@@ -928,115 +921,6 @@ func ValidateSerialNumber(role *RoleEntry, serialNumber string) string {
 	} else {
 		return ""
 	}
-}
-
-func GetOtherSANsFromX509Extensions(exts []pkix.Extension) ([]OtherNameUtf8, error) {
-	var ret []OtherNameUtf8
-	for _, ext := range exts {
-		if !ext.Id.Equal(OidExtensionSubjectAltName) {
-			continue
-		}
-		err := forEachSAN(ext.Value, func(tag int, data []byte) error {
-			if tag != 0 {
-				return nil
-			}
-
-			var other OtherNameRaw
-			_, err := asn1.UnmarshalWithParams(data, &other, "tag:0")
-			if err != nil {
-				return fmt.Errorf("could not parse requested other SAN: %w", err)
-			}
-			val, err := other.ExtractUTF8String()
-			if err != nil {
-				return err
-			}
-			ret = append(ret, *val)
-			return nil
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return ret, nil
-}
-
-func forEachSAN(extension []byte, callback func(tag int, data []byte) error) error {
-	// RFC 5280, 4.2.1.6
-
-	// SubjectAltName ::= GeneralNames
-	//
-	// GeneralNames ::= SEQUENCE SIZE (1..MAX) OF GeneralName
-	//
-	// GeneralName ::= CHOICE {
-	//      otherName                       [0]     OtherName,
-	//      rfc822Name                      [1]     IA5String,
-	//      dNSName                         [2]     IA5String,
-	//      x400Address                     [3]     ORAddress,
-	//      directoryName                   [4]     Name,
-	//      ediPartyName                    [5]     EDIPartyName,
-	//      uniformResourceIdentifier       [6]     IA5String,
-	//      iPAddress                       [7]     OCTET STRING,
-	//      registeredID                    [8]     OBJECT IDENTIFIER }
-	var seq asn1.RawValue
-	rest, err := asn1.Unmarshal(extension, &seq)
-	if err != nil {
-		return err
-	} else if len(rest) != 0 {
-		return fmt.Errorf("x509: trailing data after X.509 extension")
-	}
-	if !seq.IsCompound || seq.Tag != 16 || seq.Class != 0 {
-		return asn1.StructuralError{Msg: "bad SAN sequence"}
-	}
-
-	rest = seq.Bytes
-	for len(rest) > 0 {
-		var v asn1.RawValue
-		rest, err = asn1.Unmarshal(rest, &v)
-		if err != nil {
-			return err
-		}
-
-		if err := callback(v.Tag, v.FullBytes); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// otherNameRaw describes a name related to a certificate which is not in one
-// of the standard name formats. RFC 5280, 4.2.1.6:
-//
-//	OtherName ::= SEQUENCE {
-//	     type-id    OBJECT IDENTIFIER,
-//	     Value      [0] EXPLICIT ANY DEFINED BY type-id }
-type OtherNameRaw struct {
-	TypeID asn1.ObjectIdentifier
-	Value  asn1.RawValue
-}
-
-type OtherNameUtf8 struct {
-	Oid   string
-	Value string
-}
-
-// ExtractUTF8String returns the UTF8 string contained in the Value, or an error
-// if none is present.
-func (oraw *OtherNameRaw) ExtractUTF8String() (*OtherNameUtf8, error) {
-	svalue := cryptobyte.String(oraw.Value.Bytes)
-	var outTag asn12.Tag
-	var val cryptobyte.String
-	read := svalue.ReadAnyASN1(&val, &outTag)
-
-	if read && outTag == asn1.TagUTF8String {
-		return &OtherNameUtf8{Oid: oraw.TypeID.String(), Value: string(val)}, nil
-	}
-	return nil, fmt.Errorf("no UTF-8 string found in OtherName")
-}
-
-func (o OtherNameUtf8) String() string {
-	return fmt.Sprintf("%s;%s:%s", o.Oid, "UTF-8", o.Value)
 }
 
 type CertNotAfterInput interface {

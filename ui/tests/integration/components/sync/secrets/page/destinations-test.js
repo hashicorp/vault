@@ -45,7 +45,8 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
       id: destination.name,
     });
 
-    this.destinations = store.peekAll(modelName).toArray();
+    // mimic what happens in lazyPaginatedQuery
+    this.destinations = store.peekAll(modelName);
     this.destinations.meta = {
       filteredTotal: this.destinations.length,
       currentPage: 1,
@@ -154,7 +155,7 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
 
     assert.propEqual(
       this.transitionStub.lastCall.args,
-      ['vault.cluster.sync.secrets.destinations.destination.secrets', 'aws-sm', 'destination-aws'],
+      ['vault.cluster.sync.secrets.overview'],
       'Transition is triggered on delete success'
     );
     assert.propEqual(

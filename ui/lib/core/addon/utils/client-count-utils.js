@@ -4,7 +4,46 @@
  */
 
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { compareAsc } from 'date-fns';
+import { compareAsc, getUnixTime, isWithinInterval } from 'date-fns';
+
+// returns array of VersionHistoryModels for noteworthy upgrades: 1.9, 1.10
+// that occurred between timestamps (i.e. queried activity data)
+export const filterVersionHistory = (versionHistory, start, end) => {
+  if (versionHistory) {
+    const upgrades = versionHistory.reduce((array, upgradeData) => {
+      const includesVersion = (v) =>
+        // only add first match, disregard subsequent patch releases of the same version
+        upgradeData.version.match(v) && !array.some((d) => d.version.match(v));
+
+      ['1.9', '1.10'].forEach((v) => {
+        if (includesVersion(v)) array.push(upgradeData);
+      });
+
+      return array;
+    }, []);
+
+    // if there are noteworthy upgrades, only return those during queried date range
+    if (upgrades.length) {
+      const startDate = parseAPITimestamp(start);
+      const endDate = parseAPITimestamp(end);
+      return upgrades.filter(({ timestampInstalled }) => {
+        const upgradeDate = parseAPITimestamp(timestampInstalled);
+        return isWithinInterval(upgradeDate, { start: startDate, end: endDate });
+      });
+    }
+  }
+  return [];
+};
+
+export const formatDateObject = (dateObj, isEnd) => {
+  if (dateObj) {
+    const { year, monthIdx } = dateObj;
+    // day=0 for Date.UTC() returns the last day of the month before
+    // increase monthIdx by one to get last day of queried month
+    const utc = isEnd ? Date.UTC(year, monthIdx + 1, 0) : Date.UTC(year, monthIdx, 1);
+    return getUnixTime(utc);
+  }
+};
 
 export const formatByMonths = (monthsArray) => {
   // the monthsArray will always include a timestamp of the month and either new/total client data or counts = null
@@ -23,7 +62,12 @@ export const formatByMonths = (monthsArray) => {
         timestamp: m.timestamp,
         ...totalCounts,
         namespaces: formatByNamespace(m.namespaces) || [],
-        namespaces_by_key: namespaceArrayToObject(totalClientsByNamespace, newClientsByNamespace, month),
+        namespaces_by_key: namespaceArrayToObject(
+          totalClientsByNamespace,
+          newClientsByNamespace,
+          month,
+          m.timestamp
+        ),
         new_clients: {
           month,
           timestamp: m.timestamp,
@@ -64,11 +108,12 @@ export const formatByNamespace = (namespaceArray) => {
 export const homogenizeClientNaming = (object) => {
   // if new key names exist, only return those key/value pairs
   if (Object.keys(object).includes('entity_clients')) {
-    const { clients, entity_clients, non_entity_clients } = object;
+    const { clients, entity_clients, non_entity_clients, secret_syncs } = object;
     return {
       clients,
       entity_clients,
       non_entity_clients,
+      secret_syncs,
     };
   }
   // if object only has outdated key names, update naming
@@ -99,7 +144,7 @@ export const sortMonthsByTimestamp = (monthsArray) => {
   );
 };
 
-export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByNamespace, month) => {
+export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByNamespace, month, timestamp) => {
   if (!totalClientsByNamespace) return {}; // return if no data for that month
   // all 'new_client' data resides within a separate key of each month (see data structure below)
   // FIRST: iterate and nest respective 'new_clients' data within each namespace and mount object
@@ -107,7 +152,7 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
   const nestNewClientsWithinNamespace = totalClientsByNamespace?.map((ns) => {
     const newNamespaceCounts = newClientsByNamespace?.find((n) => n.label === ns.label);
     if (newNamespaceCounts) {
-      const { label, clients, entity_clients, non_entity_clients } = newNamespaceCounts;
+      const { label, clients, entity_clients, non_entity_clients, secret_syncs } = newNamespaceCounts;
       const newClientsByMount = [...newNamespaceCounts.mounts];
       const nestNewClientsWithinMounts = ns.mounts?.map((mount) => {
         const new_clients = newClientsByMount?.find((m) => m.label === mount.label) || {};
@@ -123,6 +168,7 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
           clients,
           entity_clients,
           non_entity_clients,
+          secret_syncs,
           mounts: newClientsByMount,
         },
         mounts: [...nestNewClientsWithinMounts],
@@ -141,17 +187,20 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
     namespaceObject.mounts.forEach((mountObject) => {
       mounts_by_key[mountObject.label] = {
         month,
+        timestamp,
         ...mountObject,
         new_clients: { month, ...mountObject.new_clients },
       };
     });
 
-    const { label, clients, entity_clients, non_entity_clients, new_clients } = namespaceObject;
+    const { label, clients, entity_clients, non_entity_clients, secret_syncs, new_clients } = namespaceObject;
     namespaces_by_key[label] = {
       month,
+      timestamp,
       clients,
       entity_clients,
       non_entity_clients,
+      secret_syncs,
       new_clients: { month, ...new_clients },
       mounts_by_key,
     };

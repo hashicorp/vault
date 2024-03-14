@@ -14,12 +14,14 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -38,7 +40,8 @@ const (
 	autoRotateCheckInterval = 5 * time.Minute
 	legacyRotateReason      = "legacy rotation"
 	// The keyring is persisted before the root key.
-	keyringTimeout = 1 * time.Second
+	defaultKeyringTimeout            = 1 * time.Second
+	bestEffortKeyringTimeoutOverride = "VAULT_ENCRYPTION_COUNT_PERSIST_TIMEOUT"
 )
 
 // Versions of the AESGCM storage methodology
@@ -91,6 +94,8 @@ type AESGCMBarrier struct {
 	// Used only for testing
 	RemoteEncryptions     *atomic.Int64
 	totalLocalEncryptions *atomic.Int64
+
+	bestEffortKeyringTimeout time.Duration
 }
 
 func (b *AESGCMBarrier) RotationConfig() (kc KeyRotationConfig, err error) {
@@ -115,6 +120,15 @@ func (b *AESGCMBarrier) SetRotationConfig(ctx context.Context, rotConfig KeyRota
 // NewAESGCMBarrier is used to construct a new barrier that uses
 // the provided physical backend for storage.
 func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
+	keyringTimeout := defaultKeyringTimeout
+	keyringTimeoutStr := os.Getenv(bestEffortKeyringTimeoutOverride)
+	if keyringTimeoutStr != "" {
+		t, err := parseutil.ParseDurationSecond(keyringTimeoutStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed parsing %s environment variable: %w", bestEffortKeyringTimeoutOverride, err)
+		}
+		keyringTimeout = t
+	}
 	b := &AESGCMBarrier{
 		backend:                  physical,
 		sealed:                   true,
@@ -123,6 +137,7 @@ func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
 		UnaccountedEncryptions:   atomic.NewInt64(0),
 		RemoteEncryptions:        atomic.NewInt64(0),
 		totalLocalEncryptions:    atomic.NewInt64(0),
+		bestEffortKeyringTimeout: keyringTimeout,
 	}
 	return b, nil
 }
@@ -256,7 +271,7 @@ func (b *AESGCMBarrier) persistKeyringInternal(ctx context.Context, keyring *Key
 		// We reduce the timeout on the initial 'put' but if this succeeds we will
 		// allow longer later on when we try to persist the root key .
 		var cancelKeyring func()
-		ctxKeyring, cancelKeyring = context.WithTimeout(ctx, keyringTimeout)
+		ctxKeyring, cancelKeyring = context.WithTimeout(ctx, b.bestEffortKeyringTimeout)
 		defer cancelKeyring()
 	}
 

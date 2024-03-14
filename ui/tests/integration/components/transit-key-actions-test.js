@@ -5,7 +5,6 @@
 
 import { run } from '@ember/runloop';
 import { resolve } from 'rsvp';
-import { assign } from '@ember/polyfills';
 import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
@@ -25,12 +24,12 @@ const storeStub = Service.extend({
       keyAction(action, { backend, id, payload }, options) {
         self.set('callArgs', { action, backend, id, payload });
         self.set('callArgsOptions', options);
-        const rootResp = assign({}, self.get('rootKeyActionReturnVal'));
+        const rootResp = { ...self.get('rootKeyActionReturnVal') };
         const resp =
           Object.keys(rootResp).length > 0
             ? rootResp
             : {
-                data: assign({}, self.get('keyActionReturnVal')),
+                data: { ...self.get('keyActionReturnVal') },
               };
         return resolve(resp);
       },
@@ -60,7 +59,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     render(hbs`
       <TransitKeyActions />`);
     const err = await promise;
-    assert.ok(err.message.includes('`key` is required for'), 'asserts without key');
+    assert.ok(err.message.includes('@key is required for'), 'asserts without key');
   });
 
   test('it renders', async function (assert) {
@@ -102,23 +101,10 @@ module('Integration | Component | transit key actions', function (hooks) {
       .exists({ count: 1 }, 'renders signature_algorithm field on verify with rsa key');
   });
 
-  test('it renders: rotate', async function (assert) {
-    this.set('key', { backend: 'transit', id: 'akey', supportedActions: ['rotate'] });
-    await render(hbs`
-    <TransitKeyActions @selectedAction="rotate" @key={{this.key}} />`);
-
-    assert.dom('*').hasText('', 'renders an empty div');
-
-    this.set('key.canRotate', true);
-    assert
-      .dom('button')
-      .hasText('Rotate encryption key', 'renders confirm-button when key.canRotate is true');
-  });
-
   async function doEncrypt(assert, actions = [], keyattrs = {}) {
     const keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat(actions) };
 
-    const key = assign({}, keyDefaults, keyattrs);
+    const key = { ...keyDefaults, ...keyattrs };
     this.set('key', key);
     this.set('selectedAction', 'encrypt');
     this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
@@ -169,7 +155,7 @@ module('Integration | Component | transit key actions', function (hooks) {
   test('it shows key version selection', async function (assert) {
     const keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat([]) };
     const keyattrs = { keysForEncryption: [3, 2, 1], latestVersion: 3 };
-    const key = assign({}, keyDefaults, keyattrs);
+    const key = { ...keyDefaults, ...keyattrs };
     this.set('key', key);
     this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
     await render(hbs`
@@ -198,7 +184,7 @@ module('Integration | Component | transit key actions', function (hooks) {
   test('it hides key version selection', async function (assert) {
     const keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat([]) };
     const keyattrs = { keysForEncryption: [1] };
-    const key = assign({}, keyDefaults, keyattrs);
+    const key = { ...keyDefaults, ...keyattrs };
     this.set('key', key);
     this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
     await render(hbs`
@@ -312,7 +298,7 @@ module('Integration | Component | transit key actions', function (hooks) {
       validKeyVersions: [1],
     });
     await render(hbs`
-    <TransitKeyActions @key={{this.key}} />`);
+    <TransitKeyActions @key={{this.key}} @selectedAction="hmac" />`);
     await fillIn('#algorithm', 'sha2-384');
     await blur('#algorithm');
     await fillIn('[data-test-component="code-mirror-modifier"] textarea', 'plaintext');

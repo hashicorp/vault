@@ -197,19 +197,17 @@ func (a *ActivityLog) transformALNamespaceBreakdowns(nsData map[string]*processB
 
 // limitNamespacesInALResponse will truncate the number of namespaces shown in the activity
 // endpoints to the number specified in limitNamespaces (the API filtering parameter)
-func (a *ActivityLog) limitNamespacesInALResponse(byNamespaceResponse []*ResponseNamespace, limitNamespaces int) (int, int, []*ResponseNamespace) {
+func (a *ActivityLog) limitNamespacesInALResponse(byNamespaceResponse []*ResponseNamespace, limitNamespaces int) (*ResponseCounts, []*ResponseNamespace) {
 	if limitNamespaces > len(byNamespaceResponse) {
 		limitNamespaces = len(byNamespaceResponse)
 	}
 	byNamespaceResponse = byNamespaceResponse[:limitNamespaces]
 	// recalculate total entities and tokens
-	totalEntities := 0
-	totalTokens := 0
+	totalCounts := &ResponseCounts{}
 	for _, namespaceData := range byNamespaceResponse {
-		totalEntities += namespaceData.Counts.DistinctEntities
-		totalTokens += namespaceData.Counts.NonEntityTokens
+		totalCounts.Add(&namespaceData.Counts)
 	}
-	return totalEntities, totalTokens, byNamespaceResponse
+	return totalCounts, byNamespaceResponse
 }
 
 // transformActivityLogMounts is a helper used to reformat data for transformMonthlyNamespaceBreakdowns.
@@ -382,4 +380,36 @@ func (e *segmentReader) ReadEntity(ctx context.Context) (*activity.EntityActivit
 		return nil, err
 	}
 	return out, nil
+}
+
+// namespaceRecordToCountsResponse converts the record to the ResponseCounts
+// type. The function sums entity, non-entity, and secret sync counts to get the
+// total client count. If includeDeprecated is true, the deprecated fields
+// NonEntityTokens and DistinctEntities are populated
+func (a *ActivityLog) countsRecordToCountsResponse(record *activity.CountsRecord, includeDeprecated bool) *ResponseCounts {
+	response := &ResponseCounts{
+		EntityClients:    record.EntityClients,
+		NonEntityClients: record.NonEntityClients,
+		Clients:          record.EntityClients + record.NonEntityClients + record.SecretSyncs,
+		SecretSyncs:      record.SecretSyncs,
+	}
+	if includeDeprecated {
+		response.NonEntityTokens = response.NonEntityClients
+		response.DistinctEntities = response.EntityClients
+	}
+	return response
+}
+
+// namespaceRecordToCountsResponse converts the namespace counts to the
+// ResponseCounts type. The function sums entity, non-entity, and secret sync
+// counts to get the total client count.
+func (a *ActivityLog) namespaceRecordToCountsResponse(record *activity.NamespaceRecord) *ResponseCounts {
+	return &ResponseCounts{
+		DistinctEntities: int(record.Entities),
+		EntityClients:    int(record.Entities),
+		NonEntityTokens:  int(record.NonEntityTokens),
+		NonEntityClients: int(record.NonEntityTokens),
+		Clients:          int(record.Entities + record.NonEntityTokens + record.SecretSyncs),
+		SecretSyncs:      int(record.SecretSyncs),
+	}
 }

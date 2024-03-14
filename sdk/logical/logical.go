@@ -163,6 +163,17 @@ type Paths struct {
 	// Binary paths are those whose request bodies should not be assumed to
 	// be JSON encoded, and for which the backend will decode values for auditing
 	Binary []string
+
+	// Limited paths are storage paths that require special-cased request
+	// limiting.
+	//
+	// This was initially added to separate limiting of "write" requests
+	// (limits.WriteLimiter) from limiting for CPU-bound pki/issue requests
+	// (limits.SpecialPathLimiter). Other plugins might also choose to mark
+	// paths if they don't follow a typical resource usage pattern.
+	//
+	// For more details, consult limits/registry.go.
+	Limited []string
 }
 
 type Auditor interface {

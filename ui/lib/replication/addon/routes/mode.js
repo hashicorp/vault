@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { hash } from 'rsvp';
 import { setProperties } from '@ember/object';
 import Route from '@ember/routing/route';
@@ -12,11 +12,12 @@ const SUPPORTED_REPLICATION_MODES = ['dr', 'performance'];
 
 export default Route.extend({
   replicationMode: service(),
+  router: service(),
   store: service(),
   beforeModel() {
     const replicationMode = this.paramsFor(this.routeName).replication_mode;
     if (!SUPPORTED_REPLICATION_MODES.includes(replicationMode)) {
-      return this.transitionTo('index');
+      this.router.transitionTo('vault.cluster.replication.index');
     }
   },
   model() {

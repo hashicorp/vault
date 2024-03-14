@@ -6,13 +6,13 @@ package socket
 import (
 	"context"
 	"fmt"
-	"net"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/internal/observability/event"
@@ -24,19 +24,14 @@ var _ audit.Backend = (*Backend)(nil)
 
 // Backend is the audit backend for the socket audit transport.
 type Backend struct {
-	sync.Mutex
-	address       string
-	connection    net.Conn
-	fallback      bool
-	name          string
-	nodeIDList    []eventlogger.NodeID
-	nodeMap       map[eventlogger.NodeID]eventlogger.Node
-	salt          *salt.Salt
-	saltConfig    *salt.Config
-	saltMutex     sync.RWMutex
-	saltView      logical.Storage
-	socketType    string
-	writeDuration time.Duration
+	fallback   bool
+	name       string
+	nodeIDList []eventlogger.NodeID
+	nodeMap    map[eventlogger.NodeID]eventlogger.Node
+	salt       *salt.Salt
+	saltConfig *salt.Config
+	saltMutex  sync.RWMutex
+	saltView   logical.Storage
 }
 
 func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.HeaderFormatter) (audit.Backend, error) {
@@ -48,6 +43,10 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 
 	if conf.SaltView == nil {
 		return nil, fmt.Errorf("%s: nil salt view", op)
+	}
+
+	if conf.Logger == nil || reflect.ValueOf(conf.Logger).IsNil() {
+		return nil, fmt.Errorf("%s: nil logger", op)
 	}
 
 	address, ok := conf.Config["address"]
@@ -65,14 +64,10 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 		writeDeadline = "2s"
 	}
 
-	writeDuration, err := parseutil.ParseDurationSecond(writeDeadline)
-	if err != nil {
-		return nil, fmt.Errorf("%s: failed to parse 'write_timeout': %w", op, err)
-	}
-
 	// The config options 'fallback' and 'filter' are mutually exclusive, a fallback
 	// device catches everything, so it cannot be allowed to filter.
 	var fallback bool
+	var err error
 	if fallbackRaw, ok := conf.Config["fallback"]; ok {
 		fallback, err = parseutil.ParseBool(fallbackRaw)
 		if err != nil {
@@ -85,15 +80,12 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 	}
 
 	b := &Backend{
-		fallback:      fallback,
-		address:       address,
-		name:          conf.MountPath,
-		saltConfig:    conf.SaltConfig,
-		saltView:      conf.SaltView,
-		socketType:    socketType,
-		writeDuration: writeDuration,
-		nodeIDList:    []eventlogger.NodeID{},
-		nodeMap:       make(map[eventlogger.NodeID]eventlogger.Node),
+		fallback:   fallback,
+		name:       conf.MountPath,
+		saltConfig: conf.SaltConfig,
+		saltView:   conf.SaltView,
+		nodeIDList: []eventlogger.NodeID{},
+		nodeMap:    make(map[eventlogger.NodeID]eventlogger.Node),
 	}
 
 	err = b.configureFilterNode(conf.Config["filter"])
@@ -108,9 +100,10 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 
 	opts := []audit.Option{
 		audit.WithHeaderFormatter(headersConfig),
+		audit.WithPrefix(conf.Config["prefix"]),
 	}
 
-	err = b.configureFormatterNode(cfg, opts...)
+	err = b.configureFormatterNode(conf.MountPath, cfg, conf.Logger, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("%s: error configuring formatter node: %w", op, err)
 	}
@@ -212,33 +205,8 @@ func formatterConfig(config map[string]string) (audit.FormatterConfig, error) {
 	return audit.NewFormatterConfig(cfgOpts...)
 }
 
-// configureFilterNode is used to configure a filter node and associated ID on the Backend.
-func (b *Backend) configureFilterNode(filter string) error {
-	const op = "socket.(Backend).configureFilterNode"
-
-	filter = strings.TrimSpace(filter)
-	if filter == "" {
-		return nil
-	}
-
-	filterNodeID, err := event.GenerateNodeID()
-	if err != nil {
-		return fmt.Errorf("%s: error generating random NodeID for filter node: %w", op, err)
-	}
-
-	filterNode, err := audit.NewEntryFilter(filter)
-	if err != nil {
-		return fmt.Errorf("%s: error creating filter node: %w", op, err)
-	}
-
-	b.nodeIDList = append(b.nodeIDList, filterNodeID)
-	b.nodeMap[filterNodeID] = filterNode
-
-	return nil
-}
-
 // configureFormatterNode is used to configure a formatter node and associated ID on the Backend.
-func (b *Backend) configureFormatterNode(formatConfig audit.FormatterConfig, opts ...audit.Option) error {
+func (b *Backend) configureFormatterNode(name string, formatConfig audit.FormatterConfig, logger hclog.Logger, opts ...audit.Option) error {
 	const op = "socket.(Backend).configureFormatterNode"
 
 	formatterNodeID, err := event.GenerateNodeID()
@@ -246,7 +214,7 @@ func (b *Backend) configureFormatterNode(formatConfig audit.FormatterConfig, opt
 		return fmt.Errorf("%s: error generating random NodeID for formatter node: %w", op, err)
 	}
 
-	formatterNode, err := audit.NewEntryFormatter(formatConfig, b, opts...)
+	formatterNode, err := audit.NewEntryFormatter(name, formatConfig, b, logger, opts...)
 	if err != nil {
 		return fmt.Errorf("%s: error creating formatter: %w", op, err)
 	}

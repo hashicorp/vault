@@ -23,11 +23,6 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-const (
-	expectedEnvKey   = "FOO"
-	expectedEnvValue = "BAR"
-)
-
 // logicalVersionMap is a map of version to test plugin
 var logicalVersionMap = map[string]string{
 	"v4":             "TestBackend_PluginMain_V4_Logical",
@@ -202,7 +197,7 @@ func TestSystemBackend_Plugin_MissingBinary(t *testing.T) {
 			// since that's how we create the file for catalog registration in the test
 			// helper.
 			pluginFileName := filepath.Base(os.Args[0])
-			err = os.Remove(filepath.Join(cluster.TempDir, pluginFileName))
+			err = os.Remove(filepath.Join(cluster.Cores[0].CoreConfig.PluginDirectory, pluginFileName))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -466,14 +461,21 @@ func TestSystemBackend_Plugin_SealUnseal(t *testing.T) {
 }
 
 func TestSystemBackend_Plugin_reload(t *testing.T) {
+	// Paths being tested.
+	const (
+		reloadBackendPath = "sys/plugins/reload/backend"
+		rootReloadPath    = "sys/plugins/reload/%s/%s"
+	)
 	testCases := []struct {
 		name        string
 		backendType logical.BackendType
+		path        string
 		data        map[string]interface{}
 	}{
 		{
 			name:        "test plugin reload for type credential",
 			backendType: logical.TypeCredential,
+			path:        reloadBackendPath,
 			data: map[string]interface{}{
 				"plugin": "mock-plugin",
 			},
@@ -481,6 +483,7 @@ func TestSystemBackend_Plugin_reload(t *testing.T) {
 		{
 			name:        "test mount reload for type credential",
 			backendType: logical.TypeCredential,
+			path:        reloadBackendPath,
 			data: map[string]interface{}{
 				"mounts": "sys/auth/mock-0/,auth/mock-1/",
 			},
@@ -488,6 +491,7 @@ func TestSystemBackend_Plugin_reload(t *testing.T) {
 		{
 			name:        "test plugin reload for type secret",
 			backendType: logical.TypeLogical,
+			path:        reloadBackendPath,
 			data: map[string]interface{}{
 				"plugin": "mock-plugin",
 			},
@@ -495,21 +499,38 @@ func TestSystemBackend_Plugin_reload(t *testing.T) {
 		{
 			name:        "test mount reload for type secret",
 			backendType: logical.TypeLogical,
+			path:        reloadBackendPath,
 			data: map[string]interface{}{
 				"mounts": "mock-0/,mock-1",
 			},
 		},
+		{
+			name:        "root plugin reload for type auth",
+			backendType: logical.TypeCredential,
+			path:        fmt.Sprintf(rootReloadPath, "auth", "mock-plugin"),
+		},
+		{
+			name:        "root plugin reload for type secret",
+			backendType: logical.TypeLogical,
+			path:        fmt.Sprintf(rootReloadPath, "secret", "mock-plugin"),
+		},
+		{
+			name:        "root plugin reload for unknown type",
+			backendType: logical.TypeUnknown,
+			path:        fmt.Sprintf(rootReloadPath, "unknown", "mock-plugin"),
+		},
 	}
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			testSystemBackend_PluginReload(t, tc.data, tc.backendType)
+			testSystemBackend_PluginReload(t, tc.path, tc.data, tc.backendType)
 		})
 	}
 }
 
 // Helper func to test different reload methods on plugin reload endpoint
-func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}, backendType logical.BackendType) {
+func testSystemBackend_PluginReload(t *testing.T, path string, reqData map[string]interface{}, backendType logical.BackendType) {
 	testCases := []struct {
 		pluginVersion string
 	}{
@@ -532,25 +553,25 @@ func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}
 			core := cluster.Cores[0]
 			client := core.Client
 
-			pathPrefix := "mock-"
+			var mountPaths []string
 			if backendType == logical.TypeCredential {
-				pathPrefix = "auth/" + pathPrefix
-			}
-			for i := 0; i < 2; i++ {
-				// Update internal value in the backend
-				resp, err := client.Logical().Write(fmt.Sprintf("%s%d/internal", pathPrefix, i), map[string]interface{}{
-					"value": "baz",
-				})
-				if err != nil {
-					t.Fatalf("err: %v", err)
-				}
-				if resp != nil {
-					t.Fatalf("bad: %v", resp)
-				}
+				mountPaths = []string{"auth/mock-0", "auth/mock-1"}
+			} else {
+				mountPaths = []string{"mock-0", "mock-1"}
 			}
 
-			// Perform plugin reload
-			resp, err := client.Logical().Write("sys/plugins/reload/backend", reqData)
+			for _, mountPath := range mountPaths {
+				// Update internal value in the backend
+				mock.WriteInternalValue(t, client, mountPath, "baz")
+			}
+
+			// Verify our precondition that the write succeeded.
+			for _, mountPath := range mountPaths {
+				mock.ExpectInternalValue(t, client, mountPath, "baz")
+			}
+
+			// Perform plugin reload which should reset the value.
+			resp, err := client.Logical().Write(path, reqData)
 			if err != nil {
 				t.Fatalf("err: %v", err)
 			}
@@ -564,18 +585,9 @@ func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}
 				t.Fatal(resp.Warnings)
 			}
 
-			for i := 0; i < 2; i++ {
-				// Ensure internal backed value is reset
-				resp, err := client.Logical().Read(fmt.Sprintf("%s%d/internal", pathPrefix, i))
-				if err != nil {
-					t.Fatalf("err: %v", err)
-				}
-				if resp == nil {
-					t.Fatalf("bad: response should not be nil")
-				}
-				if resp.Data["value"].(string) == "baz" {
-					t.Fatal("did not expect backend internal value to be 'baz'")
-				}
+			// Ensure internal backed value is reset
+			for _, mountPath := range mountPaths {
+				mock.ExpectInternalValue(t, client, mountPath, mock.MockPluginDefaultInternalValue)
 			}
 		})
 	}
@@ -643,7 +655,7 @@ func testSystemBackendMock(t *testing.T, numCores, numMounts int, backendType lo
 	env := []string{pluginutil.PluginCACertPEMEnv + "=" + cluster.CACertPEMFile}
 
 	switch backendType {
-	case logical.TypeLogical:
+	case logical.TypeLogical, logical.TypeUnknown:
 		plugin := logicalVersionMap[pluginVersion]
 		vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "", plugin, env)
 		for i := 0; i < numMounts; i++ {
@@ -682,50 +694,69 @@ func testSystemBackendMock(t *testing.T, numCores, numMounts int, backendType lo
 	return cluster
 }
 
+// TestSystemBackend_Plugin_Env ensures we use env vars specified during plugin
+// registration, and get the priority between OS and plugin env vars correct.
 func TestSystemBackend_Plugin_Env(t *testing.T) {
-	kvPair := fmt.Sprintf("%s=%s", expectedEnvKey, expectedEnvValue)
-	cluster := testSystemBackend_SingleCluster_Env(t, []string{kvPair})
-	defer cluster.Cleanup()
-}
-
-// testSystemBackend_SingleCluster_Env is a helper func that returns a single
-// cluster and a single mounted plugin logical backend.
-func testSystemBackend_SingleCluster_Env(t *testing.T, env []string) *vault.TestCluster {
 	pluginDir := corehelpers.MakeTestPluginDir(t)
 	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"test": plugin.Factory,
-		},
 		PluginDirectory: pluginDir,
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc:        vaulthttp.Handler,
-		KeepStandbysSealed: true,
-		NumCores:           1,
-		TempDir:            pluginDir,
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
+		TempDir:     pluginDir,
 	})
 	cluster.Start()
+	t.Cleanup(cluster.Cleanup)
 
 	core := cluster.Cores[0]
 	vault.TestWaitActive(t, core.Core)
 	client := core.Client
 
-	env = append([]string{pluginutil.PluginCACertPEMEnv + "=" + cluster.CACertPEMFile}, env...)
-	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "", "TestBackend_PluginMainEnv", env)
-	options := map[string]interface{}{
-		"type": "mock-plugin",
+	key := t.Name() + "_FOO"
+	osValue := "bar"
+	pluginValue := "baz"
+	t.Setenv(key, osValue)
+	env := []string{
+		fmt.Sprintf("%s=%s", key, pluginValue),
+		pluginutil.PluginCACertPEMEnv + "=" + cluster.CACertPEMFile,
 	}
+	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "", "TestBackend_PluginMainLogical", env)
 
-	resp, err := client.Logical().Write("sys/mounts/mock", options)
+	err := client.Sys().Mount("mock", &api.MountInput{
+		Type: "mock-plugin",
+	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
-		t.Fatalf("bad: %v", resp)
+
+	// Plugin env should take precedence by default.
+	resp, err := client.Logical().Read("mock/env/" + key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Data["key"] != pluginValue {
+		t.Fatal(resp)
 	}
 
-	return cluster
+	// Now set the flag that reverts to legacy behavior and reload the plugin.
+	t.Setenv(pluginutil.PluginUseLegacyEnvLayering, "true")
+	_, err = client.Sys().RootReloadPlugin(context.Background(), &api.RootReloadPluginInput{
+		Plugin: "mock-plugin",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Now the OS value should take precedence.
+	resp, err = client.Logical().Read("mock/env/" + key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Data["key"] != osValue {
+		t.Fatal(resp)
+	}
 }
 
 func TestBackend_PluginMain_V4_Logical(t *testing.T) {
@@ -897,39 +928,6 @@ func TestBackend_PluginMainCredentials(t *testing.T) {
 	flags.Parse(args)
 
 	factoryFunc := mock.FactoryType(logical.TypeCredential)
-
-	err := lplugin.Serve(&lplugin.ServeOpts{
-		BackendFactoryFunc: factoryFunc,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-// TestBackend_PluginMainEnv is a mock plugin that simply checks for the existence of FOO env var.
-func TestBackend_PluginMainEnv(t *testing.T) {
-	args := []string{}
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" && os.Getenv(pluginutil.PluginMetadataModeEnv) != "true" {
-		return
-	}
-
-	// Check on actual vs expected env var
-	actual := os.Getenv(expectedEnvKey)
-	if actual != expectedEnvValue {
-		t.Fatalf("expected: %q, got: %q", expectedEnvValue, actual)
-	}
-
-	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)
-	if caPEM == "" {
-		t.Fatal("CA cert not passed in")
-	}
-	args = append(args, fmt.Sprintf("--ca-cert=%s", caPEM))
-
-	apiClientMeta := &api.PluginAPIClientMeta{}
-	flags := apiClientMeta.FlagSet()
-	flags.Parse(args)
-
-	factoryFunc := mock.FactoryType(logical.TypeLogical)
 
 	err := lplugin.Serve(&lplugin.ServeOpts{
 		BackendFactoryFunc: factoryFunc,

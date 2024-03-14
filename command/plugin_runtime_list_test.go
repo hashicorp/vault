@@ -46,14 +46,14 @@ func TestPluginRuntimeListCommand_Run(t *testing.T) {
 		{
 			"list container on empty plugin runtime catalog",
 			[]string{"-type=container"},
-			"Error listing available plugin runtimes:",
-			2,
+			"OCI Runtime",
+			0,
 		},
 		{
 			"list on empty plugin runtime catalog",
 			nil,
-			"Error listing available plugin runtimes:",
-			2,
+			"OCI Runtime",
+			0,
 		},
 	}
 

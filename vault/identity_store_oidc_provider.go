@@ -166,6 +166,7 @@ type providerDiscovery struct {
 	Subjects              []string `json:"subject_types_supported"`
 	GrantTypes            []string `json:"grant_types_supported"`
 	AuthMethods           []string `json:"token_endpoint_auth_methods_supported"`
+	CodeChallengeMethods  []string `json:"code_challenge_methods_supported"`
 }
 
 type authCodeCacheEntry struct {
@@ -1572,6 +1573,10 @@ func (i *IdentityStore) pathOIDCProviderDiscovery(ctx context.Context, req *logi
 			"client_secret_basic",
 			"client_secret_post",
 		},
+		CodeChallengeMethods: []string{
+			codeChallengeMethodPlain,
+			codeChallengeMethodS256,
+		},
 	}
 
 	data, err := json.Marshal(disc)
@@ -2624,15 +2629,15 @@ func (i *IdentityStore) lazyGenerateDefaultKey(ctx context.Context, storage logi
 			return err
 		}
 
-		if err := i.oidcCache.Delete(ns, namedKeyCachePrefix+defaultKeyName); err != nil {
-			return err
-		}
-
 		entry, err := logical.StorageEntryJSON(namedKeyConfigPath+defaultKeyName, defaultKey)
 		if err != nil {
 			return err
 		}
 		if err := storage.Put(ctx, entry); err != nil {
+			return err
+		}
+
+		if err := i.oidcCache.Flush(ns); err != nil {
 			return err
 		}
 	}

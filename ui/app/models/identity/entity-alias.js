@@ -24,6 +24,7 @@ export default IdentityModel.extend({
   }),
   metadata: attr({
     editType: 'kv',
+    isSectionHeader: true,
   }),
   mountPath: attr('string', {
     readOnly: true,

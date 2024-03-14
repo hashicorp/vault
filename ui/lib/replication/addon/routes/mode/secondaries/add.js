@@ -13,7 +13,7 @@ export default Base.extend({
   redirect(model) {
     const replicationMode = this.paramsFor('mode').replication_mode;
     if (!model.get(`${replicationMode}.isPrimary`) || !model.get('canAddSecondary')) {
-      return this.transitionTo('mode', replicationMode);
+      return this.router.transitionTo('vault.cluster.replication.mode', replicationMode);
     }
   },
 
