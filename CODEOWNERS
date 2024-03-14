@@ -85,3 +85,4 @@
 /website/content/docs/secrets/kmip.mdx               @hashicorp/vault-crypto
 /website/content/api-docs/secret/kmip.mdx            @hashicorp/vault-crypto
 /website/content/docs/enterprise/fips/               @hashicorp/vault-crypto
+/website/content/docs/platform/k8s                   @hashicorp/vault-ecosystem
