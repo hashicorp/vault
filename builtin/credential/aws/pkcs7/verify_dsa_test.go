@@ -72,21 +72,21 @@ but that's not what ships are built for.
 	if err != nil {
 		t.Fatal(err)
 	}
-	ioutil.WriteFile(tmpContentFile.Name(), content, 0o755)
+	ioutil.WriteFile(tmpContentFile.Name(), content, 0755)
 
 	// write the signer cert to a temp file
 	tmpSignerCertFile, err := ioutil.TempFile("", "TestDSASignWithOpenSSLAndVerify_signer")
 	if err != nil {
 		t.Fatal(err)
 	}
-	ioutil.WriteFile(tmpSignerCertFile.Name(), dsaPublicCert, 0o755)
+	ioutil.WriteFile(tmpSignerCertFile.Name(), dsaPublicCert, 0755)
 
 	// write the signer key to a temp file
 	tmpSignerKeyFile, err := ioutil.TempFile("", "TestDSASignWithOpenSSLAndVerify_key")
 	if err != nil {
 		t.Fatal(err)
 	}
-	ioutil.WriteFile(tmpSignerKeyFile.Name(), dsaPrivateKey, 0o755)
+	ioutil.WriteFile(tmpSignerKeyFile.Name(), dsaPrivateKey, 0755)
 
 	tmpSignedFile, err := ioutil.TempFile("", "TestDSASignWithOpenSSLAndVerify_signature")
 	if err != nil {
