@@ -187,6 +187,11 @@ $ curl \
 ## Read auth method configuration
 
 This endpoints returns the configuration of the auth method at the given path.
+_This endpoint requires `sudo` capability on the final path, but the same
+functionality can be achieved without `sudo` via `sys/mounts/auth/[auth-path]`._
+
+- **`sudo` required** – This endpoint requires `sudo` capability in addition to
+  any path-specific capabilities.
 
 | Method | Path              |
 | :----- | :---------------- |
@@ -260,7 +265,7 @@ $ curl \
 
 ## Read auth method tuning
 
-- This endpoint reads the given auth path's configuration. This endpoint requires
+This endpoint reads the given auth path's configuration. _This endpoint requires
 `sudo` capability on the final path, but the same functionality can be achieved
 without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 
