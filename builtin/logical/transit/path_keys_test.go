@@ -197,6 +197,7 @@ func TestTransit_CreateKeyWithAutorotation(t *testing.T) {
 	}
 }
 
+// TestTransit_CreateKey validates transit key creation functionality
 func TestTransit_CreateKey(t *testing.T) {
 	testCases := map[string]struct {
 		creationParams map[string]interface{}
