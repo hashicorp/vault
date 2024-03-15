@@ -5,7 +5,6 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { hash } from 'rsvp';
 
 import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
@@ -22,22 +21,28 @@ export default class SyncSecretsRoute extends Route {
   @service declare readonly router: RouterService;
   @service declare readonly store: StoreService;
 
-  model() {
-    return hash({
-      activatedFeatures: this.store
-        .adapterFor('application')
-        .ajax('/v1/sys/activation-flags', 'GET')
-        .then((resp: ActivationFlagsResponse) => {
-          return resp.data.activated;
-        })
-        .catch((error: AdapterError) => {
-          // we break out this error while passing args to the component and handle the error in the overview template
-          return error;
-        }),
-    });
+  async fetchActivatedFeatures() {
+    return await this.store
+      .adapterFor('application')
+      .ajax('/v1/sys/activation-flags', 'GET')
+      .then((resp: ActivationFlagsResponse) => {
+        return resp.data?.activated;
+      })
+      .catch((error: AdapterError) => {
+        return error;
+      });
   }
 
-  afterModel(model: { activatedFeatures: Array<string> | AdapterError }) {
+  async model() {
+    const activatedFeatures = await this.fetchActivatedFeatures();
+    const { isAdapterError } = activatedFeatures;
+    return {
+      activatedFeatures: isAdapterError ? [] : activatedFeatures,
+      adapterError: isAdapterError ? activatedFeatures : null,
+    };
+  }
+
+  afterModel(model: { activatedFeatures: Array<string> }) {
     if (!model.activatedFeatures) {
       this.router.transitionTo('vault.cluster.sync.secrets.overview');
     }

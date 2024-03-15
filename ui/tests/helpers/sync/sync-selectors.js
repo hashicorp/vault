@@ -53,9 +53,12 @@ export const PAGE = {
   overview: {
     optInBanner: '[data-test-secrets-sync-opt-in-banner]',
     optInBannerEnable: '[data-test-secrets-sync-opt-in-banner-enable]',
+    optInBannerEnableError: '[data-test-opt-in-banner-error]',
     optInModal: '[data-test-secrets-sync-opt-in-modal]',
     optInCheck: '[data-test-opt-in-check]',
     optInConfirm: '[data-test-opt-in-confirm]',
+    optInCancel: '[data-test-opt-in-cancel]',
+    optInError: '[data-test-opt-in-error]',
     createDestination: '[data-test-create-destination]',
     table: {
       row: '[data-test-overview-table-row]',

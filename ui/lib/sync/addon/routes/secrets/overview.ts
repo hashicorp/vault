@@ -14,8 +14,9 @@ export default class SyncSecretsOverviewRoute extends Route {
   @service declare readonly store: StoreService;
 
   async model() {
-    const { activatedFeatures } = this.modelFor('secrets') as {
-      activatedFeatures: Array<string> | AdapterError;
+    const { activatedFeatures, adapterError } = this.modelFor('secrets') as {
+      activatedFeatures: Array<string>;
+      adapterError: AdapterError;
     };
     return hash({
       destinations: this.store.query('sync/destination', {}).catch(() => []),
@@ -24,6 +25,7 @@ export default class SyncSecretsOverviewRoute extends Route {
         .queryAll()
         .catch(() => []),
       activatedFeatures,
+      adapterError,
     });
   }
 }
