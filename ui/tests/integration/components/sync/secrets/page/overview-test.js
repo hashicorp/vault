@@ -44,7 +44,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     this.renderComponent = () =>
       render(
-        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @activatedFeatures={{this.activatedFeatures}} @isAdapterError={{false}} />`,
+        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @activatedFeatures={{this.activatedFeatures}} @adapterError={{null}} />`,
         {
           owner: this.engine,
         }
@@ -69,6 +69,30 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     assert.dom(title).hasText('Secrets Sync', 'Page title renders');
     assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
     assert.dom(cta.summary).exists('CTA renders');
+  });
+
+  test('it should render adapter error if post to activate secret sync fails', async function (assert) {
+    assert.expect(3);
+    this.activatedFeatures = [''];
+    this.destinations = [''];
+    const error = { errors: ['Permission denied'] };
+    this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
+      assert.ok(true, 'Request made to activate secrets-sync');
+      return new Response(403, {}, error);
+    });
+
+    await render(
+      hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @activatedFeatures={{this.activatedFeatures}} @adapterError={{null}} />`,
+      {
+        owner: this.engine,
+      }
+    );
+
+    await click(overview.optInBannerEnable);
+    await click(overview.optInCheck);
+    await click(overview.optInConfirm);
+    assert.dom(overview.optInModal).doesNotExist('Opt-in modal closed');
+    assert.dom(overview.optInError).exists('Opt-in modal error displays');
   });
 
   test('it should render header, tabs and toolbar for overview state', async function (assert) {
