@@ -43,7 +43,7 @@ module('Acceptance | sync | overview', function (hooks) {
 
   test('it should show opt-in banner and modal if secrets-sync is not activated', async function (assert) {
     assert.expect(6);
-    server.get('/sys/activation-flags', () => {
+    this.server.get('/sys/activation-flags', () => {
       assert.ok(true, 'Request on initial load to check if secrets-sync is activated');
       return {
         data: {
@@ -52,22 +52,22 @@ module('Acceptance | sync | overview', function (hooks) {
         },
       };
     });
+    this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
+      assert.ok(true, 'Request made to activate secrets-sync');
+      return {};
+    });
     await click(ts.navLink('Secrets Sync'));
     assert.dom(ts.overview.optInBanner).exists('Opt-in banner is shown');
     await click(ts.overview.optInBannerEnable);
     assert.dom(ts.overview.optInModal).exists('Opt-in modal is shown');
     assert.dom(ts.overview.optInConfirm).isDisabled('Confirm button is disabled when checkbox is unchecked');
-    this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
-      assert.ok(true, 'Request made to activate secrets-sync');
-      return {};
-    });
     await click(ts.overview.optInCheck);
     await click(ts.overview.optInConfirm);
   });
 
   test('it should show adapter error if call to activated-features fails', async function (assert) {
     assert.expect(2);
-    server.get('/sys/activation-flags', () => {
+    this.server.get('/sys/activation-flags', () => {
       assert.ok(true, 'Request on initial load to check if secrets-sync is activated');
       return AdapterError.create();
     });

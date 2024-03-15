@@ -21,8 +21,8 @@ export default class SyncSecretsRoute extends Route {
   @service declare readonly router: RouterService;
   @service declare readonly store: StoreService;
 
-  fetchActivatedFeatures() {
-    return this.store
+  async fetchActivatedFeatures() {
+    return await this.store
       .adapterFor('application')
       .ajax('/v1/sys/activation-flags', 'GET')
       .then((resp: ActivationFlagsResponse) => {
@@ -35,9 +35,10 @@ export default class SyncSecretsRoute extends Route {
 
   async model() {
     const activatedFeatures = await this.fetchActivatedFeatures();
+    const { isAdapterError } = activatedFeatures;
     return {
-      activatedFeatures: activatedFeatures.isAdapterError ? [] : activatedFeatures,
-      adapterError: activatedFeatures.isAdapterError ? activatedFeatures : null,
+      activatedFeatures: isAdapterError ? [] : activatedFeatures,
+      adapterError: isAdapterError ? activatedFeatures : null,
     };
   }
 
