@@ -126,7 +126,7 @@
     "ember-a11y-testing": "^5.2.1",
     "ember-auto-import": "2.6.3",
     "ember-basic-dropdown": "6.0.1",
-    "ember-cli": "~4.12.1",
+    "ember-cli": "~4.12.2",
     "ember-cli-autoprefixer": "^0.8.1",
     "ember-cli-babel": "^7.26.11",
     "ember-cli-content-security-policy": "2.0.3",
@@ -213,6 +213,7 @@
   },
   "resolutions": {
     "cryptiles": "^4.1.2",
+    "socket-io": "^4.6.2",
     "eslint-utils": "^1.4.1",
     "ember-basic-dropdown": "6.0.1",
     "growl": "^1.10.0",
