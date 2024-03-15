@@ -199,64 +199,60 @@ func TestTransit_CreateKeyWithAutorotation(t *testing.T) {
 
 func TestTransit_CreateKey(t *testing.T) {
 	testCases := map[string]struct {
-		keyType     string
-		shouldError bool
+		creationParams map[string]interface{}
+		shouldError    bool
 	}{
 		"AES-128": {
-			keyType:     "aes128-gcm96",
-			shouldError: false,
+			creationParams: map[string]interface{}{"type": "aes128-gcm96"},
+			shouldError:    false,
 		},
 		"AES-256": {
-			keyType:     "aes256-gcm96",
-			shouldError: false,
+			creationParams: map[string]interface{}{"type": "aes256-gcm96"},
+			shouldError:    false,
 		},
 		"CHACHA20": {
-			keyType:     "chacha20-poly1305",
-			shouldError: false,
+			creationParams: map[string]interface{}{"type": "chacha20-poly1305"},
+			shouldError:    false,
 		},
 		"ECDSA-P256": {
-			keyType:     "ecdsa-p256",
-			shouldError: false,
+			creationParams: map[string]interface{}{"type": "ecdsa-p256"},
+			shouldError:    false,
 		},
 		"ECDSA-P384": {
-			keyType:     "ecdsa-p384",
-			shouldError: false,
+			creationParams: map[string]interface{}{"type": "ecdsa-p384"},
+			shouldError:    false,
 		},
 		"ECDSA-P521": {
-			keyType:     "ecdsa-p521",
-			shouldError: false,
+			creationParams: map[string]interface{}{"type": "ecdsa-p521"},
+			shouldError:    false,
 		},
 		"RSA_2048": {
-			keyType:     "rsa-2048",
-			shouldError: false,
+			creationParams: map[string]interface{}{"type": "rsa-2048"},
+			shouldError:    false,
 		},
 		"RSA_3072": {
-			keyType:     "rsa-3072",
-			shouldError: false,
+			creationParams: map[string]interface{}{"type": "rsa-3072"},
+			shouldError:    false,
 		},
 		"RSA_4096": {
-			keyType:     "rsa-4096",
-			shouldError: false,
+			creationParams: map[string]interface{}{"type": "rsa-4096"},
+			shouldError:    false,
 		},
 		"HMAC": {
-			keyType:     "hmac",
-			shouldError: false,
-		},
-		"Managed key": {
-			keyType:     "managed_key",
-			shouldError: false,
+			creationParams: map[string]interface{}{"type": "hmac", "key_size": 128},
+			shouldError:    false,
 		},
 		"AES-128 CMAC": {
-			keyType:     "aes128-cmac",
-			shouldError: false,
+			creationParams: map[string]interface{}{"type": "aes128-cmac"},
+			shouldError:    false,
 		},
 		"AES-256 CMAC": {
-			keyType:     "aes256-cmac",
-			shouldError: false,
+			creationParams: map[string]interface{}{"type": "aes256-cmac"},
+			shouldError:    false,
 		},
 		"bad key type": {
-			keyType:     "fake-key-type",
-			shouldError: true,
+			creationParams: map[string]interface{}{"type": "fake-key-type"},
+			shouldError:    true,
 		},
 	}
 
@@ -287,9 +283,7 @@ func TestTransit_CreateKey(t *testing.T) {
 				t.Fatalf("error generating key name: %s", err)
 			}
 
-			resp, err := client.Logical().Write(fmt.Sprintf("transit/keys/%s", keyName), map[string]interface{}{
-				"type": tt.keyType,
-			})
+			resp, err := client.Logical().Write(fmt.Sprintf("transit/keys/%s", keyName), tt.creationParams)
 			if err != nil && !tt.shouldError {
 				t.Fatalf("unexpected error creating key: %s", err)
 			}
@@ -304,8 +298,8 @@ func TestTransit_CreateKey(t *testing.T) {
 					t.Fatal("missing key type in response")
 				}
 
-				if keyType != tt.keyType {
-					t.Fatalf("incorrect key type: expected %s, got %s", tt.keyType, keyType)
+				if keyType != tt.creationParams["type"] {
+					t.Fatalf("incorrect key type: expected %s, got %s", tt.creationParams["type"], keyType)
 				}
 			}
 		})
