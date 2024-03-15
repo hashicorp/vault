@@ -3,34 +3,34 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<PageHeader as |p|>
+<PageHeader data-test-replication-header as |p|>
   <p.top>
-    {{#if (not (or this.isSummaryDashboard this.isSecondary))}}
+    {{#if (not (or @isSummaryDashboard @isSecondary))}}
       <Hds::Breadcrumb>
         <Hds::Breadcrumb::Item @text="Replication" @route="vault.cluster.replication.index" />
-        <Hds::Breadcrumb::Item @text={{this.title}} @current={{true}} />
+        <Hds::Breadcrumb::Item @text={{@title}} @current={{true}} />
       </Hds::Breadcrumb>
     {{/if}}
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-replication-title>
-      {{this.title}}
-      {{#if this.data.anyReplicationEnabled}}
+      {{@title}}
+      {{#if @data.anyReplicationEnabled}}
         <span class="tag is-light has-text-grey-dark" data-test-mode>
-          {{if this.isSecondary "secondary" "primary"}}
+          {{if @isSecondary "secondary" "primary"}}
         </span>
         <span class="tag is-light has-text-grey-dark" data-test-secondaryId>
-          {{this.secondaryId}}
+          {{@secondaryId}}
         </span>
       {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-{{#if this.showTabs}}
+{{#if @showTabs}}
   <div class="tabs-container box is-bottomless is-fullwidth is-paddingless has-bottom-margin-l" data-test-tabs>
     <nav class="tabs">
-      {{#if this.isSummaryDashboard}}
+      {{#if @isSummaryDashboard}}
         <ul>
           <li class="is-active">
             <LinkToExternal @route="replication">Summary</LinkToExternal>
@@ -38,12 +38,16 @@
         </ul>
       {{else}}
         <ul>
-          <LinkTo @route="vault.cluster.replication-dr-promote.details">
-            Details
-          </LinkTo>
-          <LinkTo @route="vault.cluster.replication-dr-promote" @current-when="vault.cluster.replication-dr-promote.index">
-            Manage
-          </LinkTo>
+          <li>
+            <LinkTo @route="vault.cluster.replication-dr-promote.details">
+              Details
+            </LinkTo>
+          </li>
+          <li>
+            <LinkTo @route="vault.cluster.replication-dr-promote" @current-when="vault.cluster.replication-dr-promote.index">
+              Manage
+            </LinkTo>
+          </li>
         </ul>
       {{/if}}
     </nav>

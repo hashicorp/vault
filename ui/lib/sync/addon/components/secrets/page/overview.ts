@@ -79,10 +79,11 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
       yield this.store
         .adapterFor('application')
         .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST');
-      this.showActivateSecretsSyncModal = false;
       this.router.transitionTo('vault.cluster.sync.secrets.overview');
     } catch (error) {
       this.flashMessages.danger(`Error enabling feature \n ${errorMessage(error)}`);
+    } finally {
+      this.showActivateSecretsSyncModal = false;
     }
   }
 }
