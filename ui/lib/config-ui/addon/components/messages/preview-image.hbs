@@ -27,7 +27,7 @@
       {{/each}}
       {{#unless (is-empty-value @message.link)}}
         {{#each-in @message.link as |title href|}}
-          <A.Link::Standalone
+          <A.LinkStandalone
             @color="secondary"
             @icon="external-link"
             @isHrefExternal={{true}}
