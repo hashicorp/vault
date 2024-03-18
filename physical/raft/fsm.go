@@ -179,7 +179,6 @@ type FSM struct {
 
 	localID         string
 	desiredSuffrage string
-	unknownOpTypes  sync.Map
 }
 
 // NewFSM constructs a FSM using the given directory
@@ -678,24 +677,24 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 	// Do the unmarshalling first so we don't hold locks
 	var latestConfiguration *ConfigurationValue
 	commands := make([]interface{}, 0, numLogs)
-	for _, l := range logs {
-		switch l.Type {
+	for _, log := range logs {
+		switch log.Type {
 		case raft.LogCommand:
 			command := &LogData{}
 
 			// explicitly check for zero length Data, which will be the case for verifier no-ops
-			if len(l.Data) > 0 {
-				err := proto.Unmarshal(l.Data, command)
+			if len(log.Data) > 0 {
+				err := proto.Unmarshal(log.Data, command)
 				if err != nil {
-					f.logger.Error("error proto unmarshaling log data", "error", err, "data", l.Data)
+					f.logger.Error("error proto unmarshaling log data", "error", err, "data", log.Data)
 					panic("error proto unmarshaling log data")
 				}
 			}
 
 			commands = append(commands, command)
 		case raft.LogConfiguration:
-			configuration := raft.DecodeConfiguration(l.Data)
-			config := raftConfigurationToProtoConfiguration(l.Index, configuration)
+			configuration := raft.DecodeConfiguration(log.Data)
+			config := raftConfigurationToProtoConfiguration(log.Index, configuration)
 
 			commands = append(commands, config)
 
@@ -704,7 +703,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 			latestConfiguration = config
 
 		default:
-			panic(fmt.Sprintf("got unexpected log type: %d", l.Type))
+			panic(fmt.Sprintf("got unexpected log type: %d", log.Type))
 		}
 	}
 
@@ -763,10 +762,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 							go f.restoreCb(context.Background())
 						}
 					default:
-						if _, ok := f.unknownOpTypes.Load(op.OpType); !ok {
-							f.logger.Error("unsupported transaction operation", "op", op.OpType)
-							f.unknownOpTypes.Store(op.OpType, struct{}{})
-						}
+						return fmt.Errorf("%q is not a supported transaction operation", op.OpType)
 					}
 					if err != nil {
 						return err
