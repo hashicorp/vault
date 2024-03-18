@@ -1617,7 +1617,7 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		DeprecatedCreationTime: now.Unix(),
 	}
 
-	if p.Type != KeyType_AES128_CMAC && p.Type != KeyType_AES256_CMAC {
+	if p.Type != KeyType_AES128_CMAC && p.Type != KeyType_AES256_CMAC && p.Type != KeyType_HMAC {
 		hmacKey, err := uuid.GenerateRandomBytesWithReader(32, randReader)
 		if err != nil {
 			return err
@@ -1630,7 +1630,7 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC:
 		// Default to 256 bit key
 		numBytes := 32
-		if p.Type == KeyType_AES128_GCM96 {
+		if p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES128_CMAC {
 			numBytes = 16
 		} else if p.Type == KeyType_HMAC {
 			numBytes = p.KeySize
