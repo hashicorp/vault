@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
@@ -89,6 +90,11 @@ from the AuthorityInformationAccess extension on the certificate being inspected
 				Type:        framework.TypeBool,
 				Default:     false,
 				Description: "If set to true, rather than accepting the first successful OCSP response, query all servers and consider the certificate valid only if all servers agree.",
+			},
+			"ocsp_this_update_max_age": {
+				Type:        framework.TypeDurationSecond,
+				Default:     0,
+				Description: "If greater than 0, specifies the maximum age of an OCSP thisUpdate field to avoid accepting old responses without a nextUpdate field.",
 			},
 			"allowed_names": {
 				Type: framework.TypeCommaStringSlice,
@@ -308,6 +314,7 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 		"ocsp_servers_override":        cert.OcspServersOverride,
 		"ocsp_fail_open":               cert.OcspFailOpen,
 		"ocsp_query_all_servers":       cert.OcspQueryAllServers,
+		"ocsp_this_update_max_age":     int64(cert.OcspThisUpdateMaxAge.Seconds()),
 	}
 	cert.PopulateTokenData(data)
 
@@ -365,6 +372,13 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 	if ocspQueryAll, ok := d.GetOk("ocsp_query_all_servers"); ok {
 		cert.OcspQueryAllServers = ocspQueryAll.(bool)
+	}
+	if ocspThisUpdateMaxAge, ok := d.GetOk("ocsp_this_update_max_age"); ok {
+		maxAgeDuration, err := parseutil.ParseDurationSecond(ocspThisUpdateMaxAge)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse ocsp_this_update_max_age: %w", err)
+		}
+		cert.OcspThisUpdateMaxAge = maxAgeDuration
 	}
 	if displayNameRaw, ok := d.GetOk("display_name"); ok {
 		cert.DisplayName = displayNameRaw.(string)
@@ -511,11 +525,12 @@ type CertEntry struct {
 	AllowedMetadataExtensions  []string
 	BoundCIDRs                 []*sockaddr.SockAddrMarshaler
 
-	OcspCaCertificates  string
-	OcspEnabled         bool
-	OcspServersOverride []string
-	OcspFailOpen        bool
-	OcspQueryAllServers bool
+	OcspCaCertificates   string
+	OcspEnabled          bool
+	OcspServersOverride  []string
+	OcspFailOpen         bool
+	OcspQueryAllServers  bool
+	OcspThisUpdateMaxAge time.Duration
 }
 
 const pathCertHelpSyn = `
