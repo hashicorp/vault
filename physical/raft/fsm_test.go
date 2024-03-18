@@ -157,6 +157,8 @@ func TestFSM_List(t *testing.T) {
 	}
 }
 
+// TestFSM_UnknownOperation calls ApplyBatch with a batch that has an unknown
+// command operation type. The test verifies that the call panics
 func TestFSM_UnknownOperation(t *testing.T) {
 	fsm := getFSM(t)
 	command := &LogData{
