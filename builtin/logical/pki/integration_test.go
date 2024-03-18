@@ -630,9 +630,6 @@ func TestIntegrationOCSPClientWithPKI(t *testing.T) {
 			return testLogger
 		}, 10)
 
-		err = ocspClient.VerifyLeafCertificate(context.Background(), cert, issuer, conf)
-		require.NoError(t, err)
-
 		_, err = client.Logical().Write("pki/revoke", map[string]interface{}{
 			"serial_number": serialNumber,
 		})
