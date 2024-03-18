@@ -94,7 +94,7 @@ from the AuthorityInformationAccess extension on the certificate being inspected
 			"ocsp_this_update_max_age": {
 				Type:        framework.TypeDurationSecond,
 				Default:     0,
-				Description: "If greater than 0, specifies the maximum TTL of an OCSP thisUpdate field to avoid accepting old responses without a nextUpdate field.",
+				Description: "If greater than 0, specifies the maximum age of an OCSP thisUpdate field to avoid accepting old responses without a nextUpdate field.",
 			},
 			"allowed_names": {
 				Type: framework.TypeCommaStringSlice,

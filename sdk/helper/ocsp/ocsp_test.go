@@ -302,7 +302,7 @@ func TestUnitBadOCSPResponses(t *testing.T) {
 	type tests struct {
 		name        string
 		ocspRes     ocsp.Response
-		maxTTL      time.Duration
+		maxAge      time.Duration
 		errContains string
 	}
 
@@ -360,15 +360,15 @@ func TestUnitBadOCSPResponses(t *testing.T) {
 			errContains: "OCSP status unknown",
 		},
 		{
-			name: "over-max-TTL",
+			name: "over-max-age",
 			ocspRes: ocsp.Response{
 				SerialNumber: leafCert.SerialNumber,
 				ThisUpdate:   now.Add(-1 * time.Hour),
 				NextUpdate:   now.Add(30 * time.Minute),
 				Status:       ocsp.Good,
 			},
-			maxTTL:      10 * time.Minute,
-			errContains: "is greater than max TTL",
+			maxAge:      10 * time.Minute,
+			errContains: "is greater than max age",
 		},
 	}
 	for _, tc := range tt {
@@ -390,7 +390,7 @@ func TestUnitBadOCSPResponses(t *testing.T) {
 				OcspServersOverride:  []string{ts.URL},
 				OcspFailureMode:      FailOpenFalse,
 				QueryAllServers:      false,
-				OcspThisUpdateMaxAge: tc.maxTTL,
+				OcspThisUpdateMaxAge: tc.maxAge,
 			}
 
 			status, err := client.GetRevocationStatus(ctx, leafCert, rootCa, config)
