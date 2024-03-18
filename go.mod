@@ -156,7 +156,7 @@ require (
 	github.com/hashicorp/vault/sdk v0.10.2
 	github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
-	github.com/jackc/pgx/v4 v4.18.2
+	github.com/jackc/pgx/v4 v4.18.3
 	github.com/jcmturner/gokrb5/v8 v8.4.4
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
 	github.com/jefferai/jsonx v1.0.0
