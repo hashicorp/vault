@@ -42,14 +42,6 @@ type RaftBackendConfig struct {
 	AutopilotRedundancyZone            string
 }
 
-// EnterpriseConfig is the configuration values that only apply for Vault
-// Enterprise. We define them here in CE too for historical reasons and so that
-// configurations that are valid with Vault Enterprise don't cause hard errors
-// if uses with CE. By defining them here we can also provide warnings to CE
-// users if they have configured a feature that is only available in Vault
-// Enterprise and so won't have any effect.
-type EnterpriseConfig struct{}
-
 func parseRaftBackendConfig(conf map[string]string, logger log.Logger) (*RaftBackendConfig, error) {
 	c := &RaftBackendConfig{}
 
