@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"os"
 	"os/exec"
+	"runtime"
 	"testing"
 )
 
@@ -89,6 +90,7 @@ func TestSign(t *testing.T) {
 }
 
 func TestDSASignAndVerifyWithOpenSSL(t *testing.T) {
+	t.Log(runtime.Version())
 	content := []byte("Hello World")
 	// write the content to a temp file
 	tmpContentFile, err := ioutil.TempFile("", "TestDSASignAndVerifyWithOpenSSL_content")
