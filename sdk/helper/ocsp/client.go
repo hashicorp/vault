@@ -776,12 +776,27 @@ func (c *Client) extractOCSPCacheResponseValue(cacheValue *ocspCachedResponse, s
 		}, nil
 	}
 
+	sdkOcspStatus := internalStatusCodeToSDK(cacheValue.status)
+
 	return validateOCSP(&ocsp.Response{
 		ProducedAt: time.Unix(int64(cacheValue.producedAt), 0).UTC(),
 		ThisUpdate: time.Unix(int64(cacheValue.thisUpdate), 0).UTC(),
 		NextUpdate: time.Unix(int64(cacheValue.nextUpdate), 0).UTC(),
-		Status:     int(cacheValue.status),
+		Status:     sdkOcspStatus,
 	})
+}
+
+func internalStatusCodeToSDK(internalStatusCode ocspStatusCode) int {
+	switch internalStatusCode {
+	case ocspStatusGood:
+		return ocsp.Good
+	case ocspStatusRevoked:
+		return ocsp.Revoked
+	case ocspStatusUnknown:
+		return ocsp.Unknown
+	default:
+		return int(internalStatusCode)
+	}
 }
 
 /*
