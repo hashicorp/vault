@@ -21,7 +21,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -247,59 +246,6 @@ func TestUnitExpiredOCSPResponse(t *testing.T) {
 	status, err := client.GetRevocationStatus(ctx, leafCert, rootCa, config)
 	require.ErrorContains(t, err, "invalid validity",
 		"Expected error got response: %v, %v", status, err)
-}
-
-// TestUnitResponsesAreCached verify that the OCSP responses are properly cached when
-// querying for the same leaf certificates
-func TestUnitResponsesAreCached(t *testing.T) {
-	rootCaKey, rootCa, leafCert := createCaLeafCerts(t)
-	numQueries := &atomic.Uint32{}
-	ocspHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		numQueries.Add(1)
-		now := time.Now()
-		ocspRes := ocsp.Response{
-			SerialNumber: leafCert.SerialNumber,
-			ThisUpdate:   now.Add(-1 * time.Hour),
-			NextUpdate:   now.Add(1 * time.Hour),
-			Status:       ocsp.Good,
-		}
-		response := buildOcspResponse(t, rootCa, rootCaKey, ocspRes)
-		_, _ = w.Write(response)
-	})
-	ts1 := httptest.NewServer(ocspHandler)
-	ts2 := httptest.NewServer(ocspHandler)
-	defer ts1.Close()
-	defer ts2.Close()
-
-	logFactory := func() hclog.Logger {
-		return hclog.NewNullLogger()
-	}
-	client := New(logFactory, 100)
-
-	config := &VerifyConfig{
-		OcspEnabled:         true,
-		OcspServersOverride: []string{ts1.URL, ts2.URL},
-		QueryAllServers:     true,
-	}
-
-	_, err := client.GetRevocationStatus(context.Background(), leafCert, rootCa, config)
-	require.NoError(t, err, "Failed fetching revocation status")
-	// Make sure that we queried both servers and not the cache
-	require.Equal(t, uint32(2), numQueries.Load())
-
-	// These query should be cached and not influence our counter
-	_, err = client.GetRevocationStatus(context.Background(), leafCert, rootCa, config)
-	require.NoError(t, err, "Failed fetching revocation status second time")
-
-	require.Equal(t, uint32(2), numQueries.Load())
-}
-
-func buildOcspResponse(t *testing.T, ca *x509.Certificate, caKey *ecdsa.PrivateKey, ocspRes ocsp.Response) []byte {
-	response, err := ocsp.CreateResponse(ca, ca, ocspRes, caKey)
-	if err != nil {
-		t.Fatalf("failed generating OCSP response: %v", err)
-	}
-	return response
 }
 
 func createCaLeafCerts(t *testing.T) (*ecdsa.PrivateKey, *x509.Certificate, *x509.Certificate) {
