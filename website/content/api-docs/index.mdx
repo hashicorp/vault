@@ -291,7 +291,7 @@ warnings are generated during the operation.
   requests.
 - `404` - Invalid path. This can both mean that the path truly doesn't exist or
   that you don't have permission to view a specific path. We use 404 in some
-  cases to avoid state leakage.
+  cases to avoid state leakage. LIST requests with no results will also return 404s.
 - `405` - Unsupported operation.  You tried to use a method inappropriate to
   the request path, e.g. a POST on an endpoint that only accepts GETs.
 - `412` - Precondition failed.  Returned on Enterprise when a request can't be
