@@ -21,7 +21,7 @@
         {{/each}}
         {{#unless (is-empty-value bannerMessage.link)}}
           {{#each-in bannerMessage.link as |title href|}}
-            <A.Link::Standalone
+            <A.LinkStandalone
               @color="secondary"
               @icon="external-link"
               @isHrefExternal={{true}}

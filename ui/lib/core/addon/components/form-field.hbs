@@ -59,7 +59,7 @@
     {{else if (eq @attr.options.editType "checkboxList")}}
       <Hds::Form::Checkbox::Group @name={{@attr.name}} data-test-input={{@attr.name}} as |G|>
         {{#each @attr.options.possibleValues as |option|}}
-          <G.Checkbox::Field
+          <G.CheckboxField
             class={{if this.validationError "has-error-border"}}
             checked={{includes option (get @model this.valuePath)}}
             @value={{option}}
@@ -68,7 +68,7 @@
             as |F|
           >
             <F.Label>{{option}}</F.Label>
-          </G.Checkbox::Field>
+          </G.CheckboxField>
         {{/each}}
       </Hds::Form::Checkbox::Group>
     {{else}}

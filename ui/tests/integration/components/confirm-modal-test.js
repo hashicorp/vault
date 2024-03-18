@@ -13,12 +13,13 @@ module('Integration | Component | confirm-modal', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.onConfirm = sinon.spy();
-    this.onClose = sinon.spy();
+    this.onConfirm = sinon.stub();
+    this.onClose = sinon.stub();
   });
 
   test('it renders a reasonable default', async function (assert) {
     await render(hbs`<ConfirmModal @onConfirm={{this.onConfirm}} @onClose={{this.onClose}} />`);
+
     assert
       .dom('[data-test-confirm-modal]')
       .hasClass('hds-modal--color-warning', 'renders warning modal color');
@@ -29,9 +30,10 @@ module('Integration | Component | confirm-modal', function (hooks) {
     assert
       .dom('[data-test-confirm-action-message]')
       .hasText('You will not be able to recover it later.', 'renders default body text');
+
     await click('[data-test-confirm-cancel-button]');
-    assert.ok(this.onClose.called, 'calls the onClose action when Cancel is clicked');
+    assert.true(this.onClose.called, 'calls the onClose action when Cancel is clicked');
     await click('[data-test-confirm-button]');
-    assert.ok(this.onConfirm.called, 'calls the onConfirm action when Confirm is clicked');
+    assert.true(this.onConfirm.called, 'calls the onConfirm action when Confirm is clicked');
   });
 });
