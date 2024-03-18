@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-/* eslint qunit/no-conditional-assertions: "warn" */
 import { click, fillIn, settled, visit, currentURL } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -11,9 +10,9 @@ import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
-import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { supportedManagedAuthBackends } from 'vault/helpers/supported-managed-auth-backends';
 import { deleteAuthCmd, mountAuthCmd, runCmd, createNS } from 'vault/tests/helpers/commands';
+import { methods } from 'vault/helpers/mountable-auth-methods';
 
 const SELECTORS = {
   backendLink: (path) => `[data-test-auth-backend-link="${path}"]`,
@@ -75,14 +74,34 @@ module('Acceptance | auth backend list', function (hooks) {
   });
 
   test('auth methods are linkable and link to correct view', async function (assert) {
-    assert.expect(24);
+    assert.expect(45);
     const uid = uuidv4();
     await visit('/vault/access');
 
     const supportManaged = supportedManagedAuthBackends();
-    const backends = supportedAuthBackends();
-    for (const backend of backends) {
-      const { type } = backend;
+    // Test all auth methods, not just those you can log in with
+    const backends = methods().map((backend) => backend.type);
+    assert.deepEqual(
+      backends,
+      [
+        'alicloud',
+        'approle',
+        'aws',
+        'azure',
+        'gcp',
+        'github',
+        'jwt',
+        'oidc',
+        'kubernetes',
+        'ldap',
+        'okta',
+        'radius',
+        'cert',
+        'userpass',
+      ],
+      'non-enterprise auth methods are available'
+    );
+    for (const type of backends) {
       const path = type === 'token' ? 'token' : `auth-list-${type}-${uid}`;
       if (type !== 'token') {
         await enablePage.enable(type, path);
@@ -122,41 +141,25 @@ module('Acceptance | auth backend list', function (hooks) {
   });
 
   test('enterprise: auth methods are linkable and link to correct view', async function (assert) {
-    assert.expect(19);
+    assert.expect(3);
     const uid = uuidv4();
     await visit('/vault/access');
 
-    const supportManaged = supportedManagedAuthBackends();
-    const backends = allSupportedAuthBackends();
-    for (const backend of backends) {
-      const { type } = backend;
-      const path = `auth-list-${type}-${uid}`;
-      if (type !== 'token') {
-        await enablePage.enable(type, path);
-      }
-      await settled();
-      await visit('/vault/access');
+    // Only SAML is enterprise-only for now
+    const type = 'saml';
+    const path = `auth-list-${type}-${uid}`;
+    await enablePage.enable(type, path);
+    await settled();
+    await visit('/vault/access');
 
-      // all auth methods should be linkable
-      await click(`[data-test-auth-backend-link="${type === 'token' ? type : path}"]`);
-      if (!supportManaged.includes(type)) {
-        assert.dom('[data-test-auth-section-tab]').exists({ count: 1 });
-        assert
-          .dom('[data-test-auth-section-tab]')
-          .hasText('Configuration', `only shows configuration tab for ${type} auth method`);
-        assert.dom('[data-test-doc-link] .doc-link').exists(`includes doc link for ${type} auth method`);
-      } else {
-        let expectedTabs = 2;
-        if (type == 'ldap' || type === 'okta') {
-          expectedTabs = 3;
-        }
-        assert
-          .dom('[data-test-auth-section-tab]')
-          .exists({ count: expectedTabs }, `has management tabs for ${type} auth method`);
-        // cleanup method
-        await runCmd(deleteAuthCmd(path));
-      }
-    }
+    // all auth methods should be linkable
+    await click(`[data-test-auth-backend-link="${path}"]`);
+    assert.dom('[data-test-auth-section-tab]').exists({ count: 1 });
+    assert
+      .dom('[data-test-auth-section-tab]')
+      .hasText('Configuration', `only shows configuration tab for ${type} auth method`);
+    assert.dom('[data-test-doc-link] .doc-link').exists(`includes doc link for ${type} auth method`);
+    await runCmd(deleteAuthCmd(path));
   });
 
   test('enterprise: token config within namespace', async function (assert) {

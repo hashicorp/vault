@@ -29,5 +29,10 @@
 {{/each}}
 
 <div class="field is-grouped box is-fullwidth is-bottomless">
-  <Hds::Button @text="Cancel" @color="secondary" @route="vault.cluster.secrets.backends" />
+  <Hds::Button
+    @text="Cancel"
+    @color="secondary"
+    @route={{if (eq @mountType "secret") "vault.cluster.secrets.backends" "vault.cluster.access.methods"}}
+    data-test-cancel
+  />
 </div>
