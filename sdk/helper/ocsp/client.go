@@ -269,7 +269,7 @@ func validateOCSP(conf *VerifyConfig, ocspRes *ocsp.Response) (*ocspStatus, erro
 	if conf.OcspThisUpdateMaxAge > 0 && curTime.Sub(ocspRes.ThisUpdate) > conf.OcspThisUpdateMaxAge {
 		return &ocspStatus{
 			code: ocspInvalidValidity,
-			err:  fmt.Errorf("invalid validity: thisUpdate: %v is greater than max TTL: %s", ocspRes.ThisUpdate, conf.OcspThisUpdateMaxAge),
+			err:  fmt.Errorf("invalid validity: thisUpdate: %v is greater than max age: %s", ocspRes.ThisUpdate, conf.OcspThisUpdateMaxAge),
 		}, nil
 	}
 	return returnOCSPStatus(ocspRes), nil
