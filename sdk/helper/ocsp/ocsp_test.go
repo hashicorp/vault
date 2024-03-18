@@ -264,8 +264,8 @@ func TestUnitValidOCSPResponse(t *testing.T) {
 		},
 	}
 	for _, tc := range tt {
-		for _, maxTTL := range []time.Duration{time.Duration(0), time.Duration(2 * time.Hour)} {
-			t.Run(tc.name+"-max-ttl-"+maxTTL.String(), func(t *testing.T) {
+		for _, maxAge := range []time.Duration{time.Duration(0), time.Duration(2 * time.Hour)} {
+			t.Run(tc.name+"-max-age-"+maxAge.String(), func(t *testing.T) {
 				ocspHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					response := buildOcspResponse(t, rootCa, rootCaKey, tc.ocspRes)
 					_, _ = w.Write(response)
@@ -282,7 +282,7 @@ func TestUnitValidOCSPResponse(t *testing.T) {
 					OcspServersOverride:  []string{ts.URL},
 					OcspFailureMode:      FailOpenFalse,
 					QueryAllServers:      false,
-					OcspThisUpdateMaxTTL: maxTTL,
+					OcspThisUpdateMaxAge: maxAge,
 				}
 
 				status, err := client.GetRevocationStatus(ctx, leafCert, rootCa, config)
@@ -390,7 +390,7 @@ func TestUnitBadOCSPResponses(t *testing.T) {
 				OcspServersOverride:  []string{ts.URL},
 				OcspFailureMode:      FailOpenFalse,
 				QueryAllServers:      false,
-				OcspThisUpdateMaxTTL: tc.maxTTL,
+				OcspThisUpdateMaxAge: tc.maxTTL,
 			}
 
 			status, err := client.GetRevocationStatus(ctx, leafCert, rootCa, config)

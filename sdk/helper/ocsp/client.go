@@ -266,10 +266,10 @@ func validateOCSP(conf *VerifyConfig, ocspRes *ocsp.Response) (*ocspStatus, erro
 		}, nil
 	}
 
-	if conf.OcspThisUpdateMaxTTL > 0 && curTime.Sub(ocspRes.ThisUpdate) > conf.OcspThisUpdateMaxTTL {
+	if conf.OcspThisUpdateMaxAge > 0 && curTime.Sub(ocspRes.ThisUpdate) > conf.OcspThisUpdateMaxAge {
 		return &ocspStatus{
 			code: ocspInvalidValidity,
-			err:  fmt.Errorf("invalid validity: thisUpdate: %v is greater than max TTL: %s", ocspRes.ThisUpdate, conf.OcspThisUpdateMaxTTL),
+			err:  fmt.Errorf("invalid validity: thisUpdate: %v is greater than max TTL: %s", ocspRes.ThisUpdate, conf.OcspThisUpdateMaxAge),
 		}, nil
 	}
 	return returnOCSPStatus(ocspRes), nil
@@ -638,7 +638,7 @@ type VerifyConfig struct {
 	OcspServersOverride  []string
 	OcspFailureMode      FailOpenMode
 	QueryAllServers      bool
-	OcspThisUpdateMaxTTL time.Duration
+	OcspThisUpdateMaxAge time.Duration
 }
 
 // VerifyLeafCertificate verifies just the subject against it's direct issuer

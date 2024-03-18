@@ -662,7 +662,7 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 				conf.OcspFailureMode = ocsp.FailOpenFalse
 			}
 			conf.QueryAllServers = conf.QueryAllServers || entry.OcspQueryAllServers
-			conf.OcspThisUpdateMaxTTL = entry.OcspThisUpdateMaxTTL
+			conf.OcspThisUpdateMaxAge = entry.OcspThisUpdateMaxAge
 		}
 	}
 
