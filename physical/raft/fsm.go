@@ -677,24 +677,24 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 	// Do the unmarshalling first so we don't hold locks
 	var latestConfiguration *ConfigurationValue
 	commands := make([]interface{}, 0, numLogs)
-	for _, log := range logs {
-		switch log.Type {
+	for _, l := range logs {
+		switch l.Type {
 		case raft.LogCommand:
 			command := &LogData{}
 
 			// explicitly check for zero length Data, which will be the case for verifier no-ops
-			if len(log.Data) > 0 {
-				err := proto.Unmarshal(log.Data, command)
+			if len(l.Data) > 0 {
+				err := proto.Unmarshal(l.Data, command)
 				if err != nil {
-					f.logger.Error("error proto unmarshaling log data", "error", err, "data", log.Data)
-					panic("error proto unmarshaling log data")
+					f.logger.Error("error proto unmarshaling l data", "error", err, "data", l.Data)
+					panic("error proto unmarshaling l data")
 				}
 			}
 
 			commands = append(commands, command)
 		case raft.LogConfiguration:
-			configuration := raft.DecodeConfiguration(log.Data)
-			config := raftConfigurationToProtoConfiguration(log.Index, configuration)
+			configuration := raft.DecodeConfiguration(l.Data)
+			config := raftConfigurationToProtoConfiguration(l.Index, configuration)
 
 			commands = append(commands, config)
 
@@ -703,7 +703,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 			latestConfiguration = config
 
 		default:
-			panic(fmt.Sprintf("got unexpected log type: %d", log.Type))
+			panic(fmt.Sprintf("got unexpected l type: %d", l.Type))
 		}
 	}
 
