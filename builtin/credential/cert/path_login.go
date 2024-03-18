@@ -25,7 +25,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
-	glob "github.com/ryanuber/go-glob"
+	"github.com/ryanuber/go-glob"
 )
 
 // ParsedCert is a certificate that has been configured as trusted
@@ -663,6 +663,7 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 				conf.OcspFailureMode = ocsp.FailOpenFalse
 			}
 			conf.QueryAllServers = conf.QueryAllServers || entry.OcspQueryAllServers
+			conf.OcspThisUpdateMaxAge = entry.OcspThisUpdateMaxAge
 		}
 	}
 
