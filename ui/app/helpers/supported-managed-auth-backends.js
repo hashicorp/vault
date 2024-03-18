@@ -5,7 +5,7 @@
 
 import { helper as buildHelper } from '@ember/component/helper';
 
-const MANAGED_AUTH_BACKENDS = ['cert', 'userpass', 'ldap', 'okta', 'radius'];
+const MANAGED_AUTH_BACKENDS = ['cert', 'kubernetes', 'ldap', 'okta', 'radius', 'userpass'];
 
 export function supportedManagedAuthBackends() {
   return MANAGED_AUTH_BACKENDS;
