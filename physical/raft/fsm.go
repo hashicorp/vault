@@ -686,8 +686,8 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 			if len(l.Data) > 0 {
 				err := proto.Unmarshal(l.Data, command)
 				if err != nil {
-					f.logger.Error("error proto unmarshaling l data", "error", err, "data", l.Data)
-					panic("error proto unmarshaling l data")
+					f.logger.Error("error proto unmarshaling log data", "error", err, "data", l.Data)
+					panic("error proto unmarshaling log data")
 				}
 			}
 
@@ -703,7 +703,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 			latestConfiguration = config
 
 		default:
-			panic(fmt.Sprintf("got unexpected l type: %d", l.Type))
+			panic(fmt.Sprintf("got unexpected log type: %d", l.Type))
 		}
 	}
 
