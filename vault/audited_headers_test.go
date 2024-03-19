@@ -5,12 +5,15 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func mockAuditedHeadersConfig(t *testing.T) *AuditedHeadersConfig {
@@ -346,4 +349,39 @@ func BenchmarkAuditedHeaderConfig_ApplyConfig(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		conf.ApplyConfig(context.Background(), reqHeaders, salter)
 	}
+}
+
+// TestAuditedHeaders_auditedHeadersKey is used to check the key we use to handle
+// invalidation doesn't change when we weren't expecting it to.
+func TestAuditedHeaders_auditedHeadersKey(t *testing.T) {
+	require.Equal(t, "audited-headers-config/audited-headers", auditedHeadersKey())
+}
+
+// TestAuditedHeaders_NewAuditedHeadersConfig checks supplying incorrect params to
+// the constructor for AuditedHeadersConfig returns an error.
+func TestAuditedHeaders_NewAuditedHeadersConfig(t *testing.T) {
+	ac, err := NewAuditedHeadersConfig(nil)
+	require.Error(t, err)
+	require.Nil(t, ac)
+
+	ac, err = NewAuditedHeadersConfig(&BarrierView{})
+	require.NoError(t, err)
+	require.NotNil(t, ac)
+}
+
+// TestAuditedHeaders_invalidate ensures that we can update the headers on AuditedHeadersConfig
+// when we invalidate, and load the updated headers from the view/storage.
+func TestAuditedHeaders_invalidate(t *testing.T) {
+	fakeHeaders1 := map[string]*auditedHeaderSettings{"x-magic-header": {}}
+	fakeBytes1, err := json.Marshal(fakeHeaders1)
+	require.NoError(t, err)
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, auditedHeadersSubPath)
+	ahc, err := NewAuditedHeadersConfig(view)
+	require.Len(t, ahc.Headers, 0)
+	err = view.Put(context.Background(), &logical.StorageEntry{Key: auditedHeadersEntry, Value: fakeBytes1})
+	require.NoError(t, err)
+	err = ahc.invalidate(context.Background())
+	require.NoError(t, err)
+	require.Len(t, ahc.Headers, 1)
 }
