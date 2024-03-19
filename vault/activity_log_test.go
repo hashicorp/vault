@@ -4290,7 +4290,7 @@ func TestActivityLog_processClientRecord(t *testing.T) {
 		require.Equal(t, byMonth[monthIndex].Namespaces, byNS)
 		require.Equal(t, byMonth[monthIndex].NewClients.Namespaces, byNS)
 
-		for _, typ := range []string{nonEntityTokenActivityType, secretSyncActivityType, entityActivityType, ACMEActivityType} {
+		for _, typ := range ActivityClientTypes {
 			if clientType == typ {
 				require.Contains(t, byMonth[monthIndex].Counts.clientsByType(typ), clientID)
 				require.Contains(t, byMonth[monthIndex].NewClients.Counts.clientsByType(typ), clientID)
