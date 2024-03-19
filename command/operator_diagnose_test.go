@@ -41,7 +41,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 		{
 			"diagnose_ok",
 			[]string{
-				"-config", "./server/test-fixtures/config_diagnose_ok.hcl",
+				"-config", "./server/test-fixtures/config_diagnose_ok_singleseal.hcl",
 			},
 			[]*diagnose.Result{
 				{
