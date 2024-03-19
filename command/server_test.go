@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: BUSL-1.1
 
-//go:build !race && !hsm && !fips_140_3
+//go:build !race && !fips_140_3
 
 // NOTE: we can't use this with HSM. We can't set testing mode on and it's not
 // safe to use env vars since that provides an attack vector in the real world.
@@ -14,6 +14,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -21,6 +22,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/physical"
 
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
@@ -404,6 +407,41 @@ func TestConfigureSeals(t *testing.T) {
 
 	if setSealResponse.barrierSeal.BarrierSealConfigType() != vault.SealConfigTypeShamir {
 		t.Fatalf("expected shamir seal, got seal type %s", setSealResponse.barrierSeal.BarrierSealConfigType())
+	}
+
+	sealGenInfo := &seal.SealGenerationInfo{
+		Generation: 2,
+		Seals: []*configutil.KMS{
+			{
+				Name: "A",
+				Type: "test",
+			},
+			{
+				Name: "B",
+				Type: "test",
+			},
+		},
+	}
+	// Test multi-seal to single seal safety, should error out
+	// Encode the seal generation info
+	buf, err := json.Marshal(sealGenInfo)
+	if err != nil {
+		t.Fatalf("failed to encode seal generation info: %v", err)
+	}
+
+	// Store the seal generation info
+	pe := &physical.Entry{
+		Key:   vault.SealGenInfoPath,
+		Value: buf,
+	}
+
+	if err := backend.Put(context.Background(), pe); err != nil {
+		t.Fatalf("failed to write seal generation info: %v", err)
+	}
+
+	_, _, err = testCommand.configureSeals(context.Background(), &testConfig, backend, []string{}, map[string]string{})
+	if err == nil {
+		t.Fatal("expected error")
 	}
 }
 
