@@ -294,7 +294,7 @@ export default Service.extend(DEFAULTS, {
       return;
     }
     this.startFeature();
-    const nextFeature = this.featureList.length > 1 ? capitalize(this.featureList.objectAt(1)) : 'Finish';
+    const nextFeature = this.featureList.length > 1 ? capitalize(this.featureList[1]) : 'Finish';
     this.set('nextFeature', nextFeature);
     let next;
     if (this.currentMachine === 'secrets' && this.featureState === 'display') {
@@ -312,9 +312,9 @@ export default Service.extend(DEFAULTS, {
   },
 
   startFeature() {
-    const FeatureMachineConfig = MACHINES[this.featureList.objectAt(0)];
+    const FeatureMachineConfig = MACHINES[this.featureList[0]];
     FeatureMachine = Machine(FeatureMachineConfig);
-    this.set('currentMachine', this.featureList.objectAt(0));
+    this.set('currentMachine', this.featureList[0]);
     if (this.storageHasKey(FEATURE_STATE)) {
       this.saveState('featureState', this.getExtState(FEATURE_STATE));
     } else {

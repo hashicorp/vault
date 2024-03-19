@@ -147,7 +147,7 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
 
     await this.renderComponent();
 
-    await click('[data-test-string-list-button="delete"]');
+    await click('[data-test-string-list-row="0"] [data-test-string-list-button="delete"]');
     await click('[data-test-input="disable_check_in_enforcement"] input#Disabled');
     await click('[data-test-save]');
 
