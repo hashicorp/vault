@@ -899,10 +899,13 @@ The [/sys/internal/ui/resultant-acl](/vault/api-docs/system/internal-ui-resultan
 is required for appropriate adaptation to responses used by the UI and if it were
 inaccessible then you may observe related warning or error messages within the UI itself.
 
-~> **Note:** [/sys/internal/ui/mounts](/vault/api-docs/system/internal-ui-mounts) is only used 
-internally for UI or CLI preflight checks and it is an unauthenticated API. When a `X-Vault-Token` 
-is presented with requests, the response will include additional mounts which the token has 
-been granted path capabilities on.
+<Note title="The ui/mounts endpoint is unauthenticated"> 
+
+  Vault uses the endpoint for UI and CLI preflight checks and is intended for
+  internal use only. Requests that include an `X-Vault-Token` will return
+  all mounts the token has path capabilities on.
+
+</Note>
 
 !> **Note:** No policy adjustment or overwrite can be made to these UI related path. The 
 default `deny` or other policies targeting these paths with an [explicit `deny`](/vault/docs/concepts/policies#deny)
