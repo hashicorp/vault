@@ -79,6 +79,8 @@ Sets a CA cert and associated parameters in a role name.
 - `ocsp_this_update_max_age` `(integer:0 or string: "")` - If greater than 0, specifies
   the maximum age of an OCSP thisUpdate field. This avoids accepting old responses
   without a nextUpdate field.
+- `ocsp_max_retries` `(integer: 4)` - The number of retries attempted before giving
+  up on an OCSP request. 0 will disable retries
 - `ocsp_query_all_servers` `(bool: false)` - If set to true, rather than accepting
   the first successful OCSP response, query all servers and consider the certificate
   valid only if all servers agree.
