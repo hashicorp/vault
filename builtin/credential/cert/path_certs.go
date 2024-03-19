@@ -96,6 +96,11 @@ from the AuthorityInformationAccess extension on the certificate being inspected
 				Default:     0,
 				Description: "If greater than 0, specifies the maximum age of an OCSP thisUpdate field to avoid accepting old responses without a nextUpdate field.",
 			},
+			"ocsp_max_retries": {
+				Type:        framework.TypeInt,
+				Default:     4,
+				Description: "The number of retries the OCSP client should attempt per query.",
+			},
 			"allowed_names": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of names.
@@ -248,7 +253,7 @@ func (b *backend) Cert(ctx context.Context, s logical.Storage, n string) (*CertE
 		return nil, nil
 	}
 
-	var result CertEntry
+	result := CertEntry{OcspMaxRetries: defaultOcspMaxRetries} // Specify our defaults if the key is missing
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
@@ -315,6 +320,7 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 		"ocsp_fail_open":               cert.OcspFailOpen,
 		"ocsp_query_all_servers":       cert.OcspQueryAllServers,
 		"ocsp_this_update_max_age":     int64(cert.OcspThisUpdateMaxAge.Seconds()),
+		"ocsp_max_retries":             cert.OcspMaxRetries,
 	}
 	cert.PopulateTokenData(data)
 
@@ -350,7 +356,8 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 
 	if cert == nil {
 		cert = &CertEntry{
-			Name: name,
+			Name:           name,
+			OcspMaxRetries: defaultOcspMaxRetries,
 		}
 	}
 
@@ -379,6 +386,12 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 			return nil, fmt.Errorf("failed to parse ocsp_this_update_max_age: %w", err)
 		}
 		cert.OcspThisUpdateMaxAge = maxAgeDuration
+	}
+	if ocspMaxRetries, ok := d.GetOk("ocsp_max_retries"); ok {
+		cert.OcspMaxRetries = ocspMaxRetries.(int)
+		if cert.OcspMaxRetries < 0 {
+			return nil, fmt.Errorf("ocsp_max_retries can not be a negative number")
+		}
 	}
 	if displayNameRaw, ok := d.GetOk("display_name"); ok {
 		cert.DisplayName = displayNameRaw.(string)
@@ -531,6 +544,7 @@ type CertEntry struct {
 	OcspFailOpen         bool
 	OcspQueryAllServers  bool
 	OcspThisUpdateMaxAge time.Duration
+	OcspMaxRetries       int
 }
 
 const pathCertHelpSyn = `

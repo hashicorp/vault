@@ -516,6 +516,7 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 		timeout := defaultOCSPResponderTimeout
 
 		ocspClient := retryablehttp.NewClient()
+		ocspClient.RetryMax = conf.OcspMaxRetries
 		ocspClient.HTTPClient.Timeout = timeout
 		ocspClient.HTTPClient.Transport = newInsecureOcspTransport(conf.ExtraCas)
 
@@ -594,6 +595,14 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 		}
 	}
 
+	// If querying all servers is enabled, and we have an error from a host, we can't trust
+	// a good status from the other as we can't confirm the other server would have returned the
+	// same response, we do allow revoke responses through
+	if conf.QueryAllServers && firstError != nil && (ret != nil && ret.code == ocspStatusGood) {
+		return nil, fmt.Errorf("encountered an error on a server, "+
+			"ignoring good response status as ocsp_query_all_servers is set to true: %w", firstError)
+	}
+
 	// If no server reported the cert revoked, but we did have an error, report it
 	if (ret == nil || ret.code == ocspStatusUnknown) && firstError != nil {
 		return nil, firstError
@@ -639,6 +648,7 @@ type VerifyConfig struct {
 	OcspFailureMode      FailOpenMode
 	QueryAllServers      bool
 	OcspThisUpdateMaxAge time.Duration
+	OcspMaxRetries       int
 }
 
 // VerifyLeafCertificate verifies just the subject against it's direct issuer
