@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/hashicorp/go-hclog"
 	autopilot "github.com/hashicorp/raft-autopilot"
 )
 
@@ -21,6 +22,10 @@ func (b *RaftBackend) autopilotPromoter() autopilot.Promoter {
 // AddNonVotingPeer adds a new server to the raft cluster
 func (b *RaftBackend) AddNonVotingPeer(ctx context.Context, peerID, clusterAddr string) error {
 	return errors.New("adding non voting peer is not allowed")
+}
+
+func (b *RaftBackend) entrySizeLimitForPath(path string) uint64 {
+	return b.maxEntrySize
 }
 
 func autopilotToAPIServerEnterprise(_ *autopilot.Server, _ *AutopilotServer) error {
@@ -41,4 +46,8 @@ func (d *Delegate) autopilotServerExt(_ *FollowerState) interface{} {
 
 func (d *Delegate) meta(_ *FollowerState) map[string]string {
 	return nil
+}
+
+func emitEntWarning(logger hclog.Logger, field string) {
+	logger.Warn("%s is configuration for a Vault Enterprise feature and has been ignored.", field)
 }
