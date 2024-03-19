@@ -179,7 +179,6 @@ type FSM struct {
 
 	localID         string
 	desiredSuffrage string
-	unknownOpTypes  sync.Map
 }
 
 // NewFSM constructs a FSM using the given directory
@@ -763,10 +762,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 							go f.restoreCb(context.Background())
 						}
 					default:
-						if _, ok := f.unknownOpTypes.Load(op.OpType); !ok {
-							f.logger.Error("unsupported transaction operation", "op", op.OpType)
-							f.unknownOpTypes.Store(op.OpType, struct{}{})
-						}
+						return fmt.Errorf("%q is not a supported transaction operation", op.OpType)
 					}
 					if err != nil {
 						return err
