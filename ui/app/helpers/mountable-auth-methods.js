@@ -5,6 +5,12 @@
 
 import { helper as buildHelper } from '@ember/component/helper';
 
+/**
+ * These are all the auth methods that can be mounted.
+ * Some methods may not be available for login via the UI,
+ * which are in the `supported-auth-backends` helper.
+ */
+
 const MOUNTABLE_AUTH_METHODS = [
   {
     displayName: 'AliCloud',
