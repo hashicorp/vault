@@ -30,6 +30,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
       start_time: { timestamp: START_TIME },
       end_time: { timestamp: END_TIME },
     };
+    // set this to 0
     this.activity = await this.store.queryRecord('clients/activity', activityQuery);
     this.startTimestamp = START_TIME;
     this.endTimestamp = END_TIME;

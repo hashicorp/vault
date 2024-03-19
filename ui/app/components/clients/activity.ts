@@ -21,6 +21,7 @@ import type {
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
 
 interface Args {
+  secretsSyncActivated?: boolean;
   activity: ClientsActivityModel;
   versionHistory: ClientsVersionHistoryModel[];
   startTimestamp: number;
