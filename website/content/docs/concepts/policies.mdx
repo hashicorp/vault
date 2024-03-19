@@ -896,9 +896,10 @@ parameter of the mount. Visibility can be set when the mount is enabled or tuned
 at a later time with the [sys/auth](/vault/api-docs/system/auth#tune-auth-method)
 endpoint.
 
-The [/sys/internal/ui/resultant-acl](/vault/api-docs/system/internal-ui-resultant-acl) API 
-is required for appropriate adaptation to responses used by the UI and if it were
-inaccessible then you may observe related warning or error messages within the UI itself.
+Vault uses the [/sys/internal/ui/resultant-acl](/vault/api-docs/system/internal-ui-resultant-acl)
+endpoint to repackage information used by the UI. If you do not have have
+permission to call the `ui/resultant-acl` endpoint, you may receive warnings or
+errors in the UI.
 
 <Note title="The ui/mounts endpoint is unauthenticated"> 
 
