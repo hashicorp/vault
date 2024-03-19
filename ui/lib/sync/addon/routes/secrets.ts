@@ -8,6 +8,7 @@ import { service } from '@ember/service';
 
 import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
+import type VersionService from 'vault/services/version';
 import type AdapterError from '@ember-data/adapter';
 
 interface ActivationFlagsResponse {
@@ -20,17 +21,23 @@ interface ActivationFlagsResponse {
 export default class SyncSecretsRoute extends Route {
   @service declare readonly router: RouterService;
   @service declare readonly store: StoreService;
+  @service declare readonly version: VersionService;
 
   async fetchActivatedFeatures() {
-    return await this.store
-      .adapterFor('application')
-      .ajax('/v1/sys/activation-flags', 'GET')
-      .then((resp: ActivationFlagsResponse) => {
-        return resp.data?.activated;
-      })
-      .catch((error: AdapterError) => {
-        return error;
-      });
+    // only fetch activated features for enterprise licenses that include the secrets-sync feature
+    if (this.version.features.includes('secrets-sync')) {
+      return await this.store
+        .adapterFor('application')
+        .ajax('/v1/sys/activation-flags', 'GET')
+        .then((resp: ActivationFlagsResponse) => {
+          return resp.data?.activated;
+        })
+        .catch((error: AdapterError) => {
+          return error;
+        });
+    } else {
+      return [];
+    }
   }
 
   async model() {

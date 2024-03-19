@@ -52,6 +52,10 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
     return this.args.activatedFeatures.includes('secrets-sync');
   }
 
+  get hasSecretsSyncFeature() {
+    return this.version.features.includes('secrets-sync');
+  }
+
   fetchAssociationsForDestinations = task(this, {}, async (page = 1) => {
     try {
       const total = page * this.pageSize;
