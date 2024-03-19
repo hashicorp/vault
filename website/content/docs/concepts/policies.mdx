@@ -889,11 +889,12 @@ subsequent policies** once you
 
 </Note>
 
-The [/sys/internal/ui/mounts](/vault/api-docs/system/internal-ui-mounts) API provide a 
-list of mounts as per what's typically visible when logging into Vault and observing the 
-personal cubbyhole for example. The listing of mounts are determined by [the `listing_visibility` parameter](/vault/api-docs/system/mounts#listing_visibility) 
-that may be configured during the initial enabling of the mount or otherwise 
-[tuned afterwards](/vault/api-docs/system/auth#tune-auth-method).
+The `/sys/internal/ui/mounts` endpoint provides a list of currently visible
+mounts. The visibility of a mount is determined by the
+[`listing_visibility`](/vault/api-docs/system/mounts#listing_visibility)
+parameter of the mount. Visibility can be set when the mount is enabled or tuned
+at a later time with the [sys/auth](/vault/api-docs/system/auth#tune-auth-method)
+endpoint.
 
 The [/sys/internal/ui/resultant-acl](/vault/api-docs/system/internal-ui-resultant-acl) API 
 is required for appropriate adaptation to responses used by the UI and if it were
