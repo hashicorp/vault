@@ -82,7 +82,7 @@ jobs:
       - name: Set Up Git
         run: git config --global url."https://${{ secrets.elevated_github_token }}:@github.com".insteadOf "https://github.com"
       - name: Set Up Node
-        uses: actions/setup-node@b39b52d1213e96004bfcb1c61a8a6fa8ab84f3e8 # v4.0.1
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version-file: './ui/package.json'
       - name: Set Up Terraform
@@ -108,12 +108,12 @@ jobs:
           sudo apt install -y libnss3-dev libgdk-pixbuf2.0-dev libgtk-3-dev libxss-dev libasound2
       - name: Install Chrome
         if: steps.chrome-check.outputs.chrome-version == 'not-installed'
-        uses: browser-actions/setup-chrome@52f10de5479c69bcbbab2eab094c9d373148005e # v1.4.0
+        uses: browser-actions/setup-chrome@97349de5c98094d4fc9412f31c524d7697115ad8 # v1.5.0
       - name: Installed Chrome Version
         run: |
           echo "Installed Chrome Version = [$(chrome --version 2> /dev/null || google-chrome --version 2> /dev/null || google-chrome-stable --version 2> /dev/null)]"
       - name: Configure AWS credentials from Test account
-        uses: aws-actions/configure-aws-credentials@010d0da01d0b5a38af31e9c3470dbfdabdecca3a # v4.0.1
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}

@@ -41,32 +41,64 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     const store = this.owner.lookup('service:store');
     this.destinations = await store.query('sync/destination', {});
+    this.activatedFeatures = ['secrets-sync'];
 
-    await render(
-      hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} />`,
-      {
-        owner: this.engine,
-      }
-    );
+    this.renderComponent = () =>
+      render(
+        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @activatedFeatures={{this.activatedFeatures}} @adapterError={{null}} />`,
+        {
+          owner: this.engine,
+        }
+      );
   });
 
   test('it should render landing cta component for community', async function (assert) {
     this.version.type = 'community';
-    this.set('destinations', []);
-    await settled();
+    this.destinations = [];
+
+    await this.renderComponent();
+
     assert.dom(title).hasText('Secrets Sync Enterprise feature', 'Page title renders');
     assert.dom(cta.button).doesNotExist('Create first destination button does not render');
   });
 
   test('it should render landing cta component for enterprise', async function (assert) {
-    this.set('destinations', []);
-    await settled();
+    this.destinations = [];
+
+    await this.renderComponent();
+
     assert.dom(title).hasText('Secrets Sync', 'Page title renders');
     assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
     assert.dom(cta.summary).exists('CTA renders');
   });
 
+  test('it should render adapter error if post to activate secret sync fails', async function (assert) {
+    assert.expect(3);
+    this.activatedFeatures = [''];
+    this.destinations = [''];
+    const error = { errors: ['Permission denied'] };
+    this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
+      assert.ok(true, 'Request made to activate secrets-sync');
+      return new Response(403, {}, error);
+    });
+
+    await render(
+      hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @activatedFeatures={{this.activatedFeatures}} @adapterError={{null}} />`,
+      {
+        owner: this.engine,
+      }
+    );
+
+    await click(overview.optInBannerEnable);
+    await click(overview.optInCheck);
+    await click(overview.optInConfirm);
+    assert.dom(overview.optInModal).doesNotExist('Opt-in modal closed');
+    assert.dom(overview.optInError).exists('Opt-in modal error displays');
+  });
+
   test('it should render header, tabs and toolbar for overview state', async function (assert) {
+    await this.renderComponent();
+
     assert.dom(title).hasText('Secrets Sync', 'Page title renders');
     assert.dom(breadcrumb).exists({ count: 1 }, 'Correct number of breadcrumbs render');
     assert.dom(breadcrumb).includesText('Secrets Sync', 'Top level breadcrumb renders');
@@ -82,6 +114,9 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       [new Date('2023-09-20T10:51:53.961861096-04:00'), 'MMMM do yyyy, h:mm:ss a'],
       {}
     );
+
+    await this.renderComponent();
+
     assert
       .dom(overviewCard.title('Secrets by destination'))
       .hasText('Secrets by destination', 'Overview card title renders for table');
@@ -110,6 +145,8 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
   });
 
   test('it should paginate secrets by destination table', async function (assert) {
+    await this.renderComponent();
+
     const { name, row } = overview.table;
     assert.dom(row).exists({ count: 3 }, 'Correct number of table rows render based on page size');
     assert.dom(name(0)).hasText('destination-aws', 'First destination renders on page 1');
@@ -124,9 +161,9 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     this.server.get('/sys/sync/destinations/:type/:name/associations', () => {
       return new Response(403, {}, { errors: ['Permission denied'] });
     });
-    // since the request resolved trigger a page change and return an error from the associations endpoint
-    await click(pagination.next);
-    await settled();
+
+    await this.renderComponent();
+
     assert.dom(emptyStateTitle).hasText('Error fetching information', 'Empty state title renders');
     assert
       .dom(emptyStateMessage)
@@ -134,6 +171,8 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
   });
 
   test('it should render totals cards', async function (assert) {
+    await this.renderComponent();
+
     const { title, description, action, content } = overviewCard;
     const cardData = [
       {

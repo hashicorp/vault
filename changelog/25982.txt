@@ -1,0 +1,3 @@
+```release-note:bug
+auth/cert: Allow cert auth login attempts if ocsp_fail_open is true and OCSP servers are unreachable
+```
