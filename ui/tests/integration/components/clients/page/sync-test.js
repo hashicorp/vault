@@ -34,9 +34,12 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     this.activity = await this.store.queryRecord('clients/activity', activityQuery);
     this.startTimestamp = START_TIME;
     this.endTimestamp = END_TIME;
+    this.secretsSyncActivated = true;
+
     this.renderComponent = () =>
       render(hbs`
       <Clients::Page::Sync
+        @secretsSyncActivated={{this.secretsSyncActivated}}
         @activity={{this.activity}}
         @versionHistory={{this.versionHistory}}
         @startTimestamp={{this.startTimestamp}}
@@ -84,7 +87,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     assert.strictEqual(dataBars.length, this.activity.byMonth.filter((m) => m.counts !== null).length);
   });
 
-  test('it should render empty state for no monthly data', async function (assert) {
+  test('it should render an empty state for no monthly data', async function (assert) {
     assert.expect(5);
     this.activity.set('byMonth', []);
 
@@ -116,5 +119,21 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
       );
     assert.dom(syncTab.total).doesNotExist('total sync counts does not exist');
     assert.dom(syncTab.average).doesNotExist('average sync client counts does not exist');
+  });
+
+  test('it should render an empty state if secrets sync is not activated', async function (assert) {
+    this.secretsSyncActivated = false;
+
+    await this.renderComponent();
+
+    assert.dom(SELECTORS.emptyStateTitle).hasText('No Secrets Sync clients');
+    assert
+      .dom(SELECTORS.emptyStateMessage)
+      .hasText('No data is available because Secrets Sync has not been activated.');
+    assert.dom(SELECTORS.emptyStateActions).hasText('Activate Secrets Sync');
+
+    assert.dom(charts.chart('Secrets sync usage')).doesNotExist();
+    assert.dom(syncTab.total).doesNotExist();
+    assert.dom(syncTab.average).doesNotExist();
   });
 });
