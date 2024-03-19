@@ -225,7 +225,8 @@
     "underscore": "^1.12.1",
     "trim": "^0.0.3",
     "xmlhttprequest-ssl": "^1.6.2",
-    "@embroider/macros": "^1.0.0"
+    "@embroider/macros": "^1.0.0",
+    "browserify-sign": "^4.2.2"
   },
   "engines": {
     "node": "16"
