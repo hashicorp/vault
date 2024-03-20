@@ -8,6 +8,7 @@ import { service } from '@ember/service';
 
 import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
+import { DEBUG } from '@glimmer/env';
 
 interface ActivationFlagsResponse {
   data: {
@@ -28,6 +29,10 @@ export default class SyncSecretsRoute extends Route {
       .ajax('/v1/sys/activation-flags', 'GET', { unauthenticated: true, namespace: null })
       .then((resp: ActivationFlagsResponse) => {
         return resp.data?.activated;
+      })
+      .catch((error: unknown) => {
+        if (DEBUG) console.error(error); // eslint-disable-line no-console
+        return [];
       });
   }
 
