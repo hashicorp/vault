@@ -372,16 +372,23 @@ func TestAuditedHeaders_NewAuditedHeadersConfig(t *testing.T) {
 // TestAuditedHeaders_invalidate ensures that we can update the headers on AuditedHeadersConfig
 // when we invalidate, and load the updated headers from the view/storage.
 func TestAuditedHeaders_invalidate(t *testing.T) {
-	fakeHeaders1 := map[string]*auditedHeaderSettings{"x-magic-header": {}}
-	fakeBytes1, err := json.Marshal(fakeHeaders1)
-	require.NoError(t, err)
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, auditedHeadersSubPath)
 	ahc, err := NewAuditedHeadersConfig(view)
+	require.NoError(t, err)
 	require.Len(t, ahc.Headers, 0)
+
+	// Store some data using the view.
+	fakeHeaders1 := map[string]*auditedHeaderSettings{"x-magic-header": {}}
+	fakeBytes1, err := json.Marshal(fakeHeaders1)
+	require.NoError(t, err)
 	err = view.Put(context.Background(), &logical.StorageEntry{Key: auditedHeadersEntry, Value: fakeBytes1})
 	require.NoError(t, err)
+
+	// Invalidate and check we now see the header we stored
 	err = ahc.invalidate(context.Background())
 	require.NoError(t, err)
 	require.Len(t, ahc.Headers, 1)
+	_, ok := ahc.Headers["x-magic-header"]
+	require.True(t, ok)
 }
