@@ -129,6 +129,10 @@ The secret synced with the old granularity will be deleted and new secrets will 
 
 ## Security
 
+~> Note: Vault does not control the permissions at the destination. It is the responsibility
+of the operator to configure and maintain proper access controls on the external system so synced
+secrets are not accessed unintentionally.
+
 ### Vault access requirements
 
 Vault verifies the client has read access on the secret before syncing it with any destination. This additional check is
@@ -192,9 +196,6 @@ Likewise, if the client tries to sync this secret to any destination they will r
 
 This read access verification is only done when creating or updating an association. Once the association is created, revoking
 read access to the policy that was used to sync the secret has no effect.
-
-Vault does not control the permissions at the destination. It is the responsibility of the operator to configure proper
-read access on the external system so synced secrets are not accessed unintentionally.
 
 ### Collisions and overwrites
 
