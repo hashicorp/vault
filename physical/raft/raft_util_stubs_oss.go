@@ -14,5 +14,5 @@ func (b *RaftBackend) entrySizeLimitForPath(path string) uint64 {
 }
 
 func emitEntWarning(logger hclog.Logger, field string) {
-	logger.Warn("%s is configuration for a Vault Enterprise feature and has been ignored.", field)
+	logger.Warn("configuration for a Vault Enterprise feature has been ignored", "field", field)
 }
