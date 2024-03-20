@@ -18,11 +18,7 @@ interface Args {
 export default class SyncHeaderComponent extends Component<Args> {
   @service declare readonly version: VersionService;
 
-  get badgeTitle() {
-    return this.version.features.includes('Secrets Sync')
-      ? ''
-      : this.version.isCommunity
-      ? 'Enterprise'
-      : 'Premium';
+  get badgeText() {
+    return this.version.hasSecretsSync ? '' : this.version.isCommunity ? 'Enterprise' : 'Premium';
   }
 }
