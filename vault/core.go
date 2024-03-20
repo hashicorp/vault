@@ -2652,8 +2652,9 @@ func (c *Core) runUnsealSetupForPrimary(ctx context.Context, logger log.Logger) 
 		case existingGenerationInfo == nil:
 			// This is the first time we store seal generation information
 			fallthrough
-		case existingGenerationInfo.Generation < sealGenerationInfo.Generation:
-			// We have incremented the seal generation
+		case existingGenerationInfo.Generation < sealGenerationInfo.Generation || !existingGenerationInfo.Enabled:
+			// We have incremented the seal generation or we've just become enabled again after previously being disabled,
+			// trust the operator in the latter case
 			if err := c.SetPhysicalSealGenInfo(ctx, sealGenerationInfo); err != nil {
 				logger.Error("failed to store seal generation info", "error", err)
 				return err
@@ -2664,8 +2665,8 @@ func (c *Core) runUnsealSetupForPrimary(ctx context.Context, logger log.Logger) 
 			// changed its value. In other words, a rewrap may have happened, or a rewrap may have been
 			// started but not completed.
 			c.seal.GetAccess().GetSealGenerationInfo().SetRewrapped(existingGenerationInfo.IsRewrapped())
-			if existingGenerationInfo.Enabled != sealGenerationInfo.Enabled {
-				// Enablement has changed, no need for new gen but need to persist the enabled flag
+			if !existingGenerationInfo.Enabled {
+				// Weren't enabled but are now, persist the flag
 				if err := c.SetPhysicalSealGenInfo(ctx, sealGenerationInfo); err != nil {
 					logger.Error("failed to store seal generation info", "error", err)
 					return err
