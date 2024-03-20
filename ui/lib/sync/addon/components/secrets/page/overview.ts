@@ -15,29 +15,33 @@ import Ember from 'ember';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type StoreService from 'vault/services/store';
 import type RouterService from '@ember/routing/router-service';
-import type VersionService from 'vault/services/version';
 import type { SyncDestinationAssociationMetrics } from 'vault/vault/adapters/sync/association';
 import type SyncDestinationModel from 'vault/vault/models/sync/destination';
-import type AdapterError from '@ember/test/adapter';
+// import type AdapterError from '@ember/test/adapter';
 
 interface Args {
   destinations: Array<SyncDestinationModel>;
   totalVaultSecrets: number;
   activatedFeatures: Array<string>;
-  adapterError: AdapterError | null;
+  adapterError: any;
+  // adapterError: AdapterError | null;
+  licenseFeatures: Array<string>;
 }
 
 export default class SyncSecretsDestinationsPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly store: StoreService;
   @service declare readonly router: RouterService;
-  @service declare readonly version: VersionService;
 
   @tracked destinationMetrics: SyncDestinationAssociationMetrics[] = [];
   @tracked page = 1;
   @tracked showActivateSecretsSyncModal = false;
   @tracked hasConfirmedDocs = false;
   @tracked error = null;
+  // eventually remove when we deal with permissions on activation-features
+  @tracked hideOptIn = false;
+  @tracked hideAdapterError = false;
+  @tracked hideError = false;
 
   pageSize = Ember.testing ? 3 : 5; // lower in tests to test pagination without seeding more data
 
@@ -53,7 +57,25 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   }
 
   get hasSecretsSyncFeature() {
-    return this.version.features.includes('secrets-sync');
+    return this.args.licenseFeatures.includes('Secrets Sync');
+  }
+
+  get adapterErrorMessage() {
+    // make clear if this is a permissions issue
+    if (this.args.adapterError) {
+      return this.args.adapterError.httpStatus === 403
+        ? 'You do not have read access to the sys/activation-flags endpoint. We cannot determine if Secrets Sync has been activated or not.'
+        : this.args.adapterError.message;
+    }
+    return '';
+  }
+
+  get postErrorMessage() {
+    // make clear if this is a permissions issue
+    if (this.error) {
+      return 'Activation failed. You do not seem to have the permission to enable the feature.';
+    }
+    return '';
   }
 
   fetchAssociationsForDestinations = task(this, {}, async (page = 1) => {

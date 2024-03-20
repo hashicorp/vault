@@ -14,9 +14,9 @@
         <Icon @name={{@icon}} @size="24" />
       {{/if}}
       {{@title}}
-      {{#unless (includes this.version.features "secrets sync")}}
+      {{#if this.badgeTitle}}
         <Hds::Badge @text={{this.badgeTitle}} @color="highlight" @size="large" />
-      {{/unless}}
+      {{/if}}
     </h1>
   </p.levelLeft>
 
