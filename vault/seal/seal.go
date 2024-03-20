@@ -82,6 +82,15 @@ func (sgi *SealGenerationInfo) Validate(existingSgi *SealGenerationInfo, hasPart
 		return nil
 	}
 
+	// Validate that we're in a safe spot with respect to disabling multiseal
+	if existingSgi.Enabled && !sgi.Enabled {
+		if len(existingSgi.Seals) > 1 {
+			return fmt.Errorf("multi-seal is disabled but previous configuration had multiple seals.  re-enable and migrate to a single seal before disabling multi-seal")
+		} else if !existingSgi.IsRewrapped() {
+			return fmt.Errorf("multi-seal is disabled but previous storage was not fully re-wrapped, re-enable multi-seal and allow rewrapping to complete before disabling multi-seal")
+		}
+	}
+
 	existingSealNameAndType := sealNameAndTypeAsStr(existingSgi.Seals)
 	previousShamirConfigured := false
 
@@ -235,6 +244,7 @@ type sealGenerationInfoJson struct {
 	Generation uint64
 	Seals      []*configutil.KMS
 	Rewrapped  bool
+	Enabled    bool
 }
 
 func (sgi *SealGenerationInfo) MarshalJSON() ([]byte, error) {
@@ -242,6 +252,7 @@ func (sgi *SealGenerationInfo) MarshalJSON() ([]byte, error) {
 		Generation: sgi.Generation,
 		Seals:      sgi.Seals,
 		Rewrapped:  sgi.IsRewrapped(),
+		Enabled:    sgi.Enabled,
 	})
 }
 
@@ -254,6 +265,7 @@ func (sgi *SealGenerationInfo) UnmarshalJSON(b []byte) error {
 	sgi.Generation = value.Generation
 	sgi.Seals = value.Seals
 	sgi.SetRewrapped(value.Rewrapped)
+	sgi.Enabled = value.Enabled
 
 	return nil
 }

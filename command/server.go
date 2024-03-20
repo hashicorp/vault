@@ -1829,9 +1829,6 @@ func (c *ServerCommand) configureSeals(ctx context.Context, config *server.Confi
 		return nil, nil, fmt.Errorf("Error getting seal generation info: %v", err)
 	}
 	if !config.IsMultisealEnabled() {
-		if err == nil && existingSealGenerationInfo != nil && len(existingSealGenerationInfo.Seals) > 1 {
-			return nil, nil, fmt.Errorf("multi-seal is disabled but previous configuration had multiple seals.  re-enable and migrate to a single seal before disabling multi-seal")
-		}
 		existingSealGenerationInfo = nil
 	}
 

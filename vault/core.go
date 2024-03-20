@@ -2664,7 +2664,13 @@ func (c *Core) runUnsealSetupForPrimary(ctx context.Context, logger log.Logger) 
 			// changed its value. In other words, a rewrap may have happened, or a rewrap may have been
 			// started but not completed.
 			c.seal.GetAccess().GetSealGenerationInfo().SetRewrapped(existingGenerationInfo.IsRewrapped())
-
+			if existingGenerationInfo.Enabled != sealGenerationInfo.Enabled {
+				// Enablement has changed, no need for new gen but need to persist the enabled flag
+				if err := c.SetPhysicalSealGenInfo(ctx, sealGenerationInfo); err != nil {
+					logger.Error("failed to store seal generation info", "error", err)
+					return err
+				}
+			}
 		case existingGenerationInfo.Generation > sealGenerationInfo.Generation:
 			// Our seal information is out of date. The previous active node used a newer generation.
 			logger.Error("A newer seal generation was found in storage. The seal configuration in this node should be updated to match that of the previous active node, and this node should be restarted.")
