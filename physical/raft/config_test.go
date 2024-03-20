@@ -58,7 +58,7 @@ func TestRaft_ParseConfig(t *testing.T) {
 				cfg.RaftLogVerifierEnabled = true
 				cfg.RaftLogVerificationInterval = defaultRaftLogVerificationInterval
 			},
-			wantWarns: ceOnlyWarnings("raft_log_verification_interval is less than the minimum allowed"),
+			wantWarns: []string{"raft_log_verification_interval is less than the minimum allowed"},
 		},
 		{
 			name: "WAL verifier interval, one",
@@ -72,7 +72,7 @@ func TestRaft_ParseConfig(t *testing.T) {
 				// Below min so should get default
 				cfg.RaftLogVerificationInterval = defaultRaftLogVerificationInterval
 			},
-			wantWarns: ceOnlyWarnings("raft_log_verification_interval is less than the minimum allowed"),
+			wantWarns: []string{"raft_log_verification_interval is less than the minimum allowed"},
 		},
 		{
 			name: "WAL verifier interval, nothing",
@@ -84,7 +84,7 @@ func TestRaft_ParseConfig(t *testing.T) {
 				cfg.RaftLogVerifierEnabled = true
 				cfg.RaftLogVerificationInterval = defaultRaftLogVerificationInterval
 			},
-			wantWarns: ceOnlyWarnings("raft_log_verification_interval is less than the minimum allowed"),
+			wantWarns: []string{"raft_log_verification_interval is less than the minimum allowed"},
 		},
 		{
 			name: "WAL verifier interval, valid",
