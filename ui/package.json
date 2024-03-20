@@ -227,7 +227,8 @@
     "xmlhttprequest-ssl": "^1.6.2",
     "@embroider/macros": "^1.0.0",
     "browserify-sign": "^4.2.2",
-    "socket.io": "^4.6.2"
+    "socket.io": "^4.6.2",
+    "json5": "^1.0.2"
   },
   "engines": {
     "node": "16"
