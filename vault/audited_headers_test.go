@@ -17,22 +17,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// mockStorage is a struct that is used to mock barrier storage.
 type mockStorage struct {
 	mock.Mock
 }
 
+// List implements List from BarrierStorage interface.
+// ignore-nil-nil-function-check.
 func (m *mockStorage) List(_ context.Context, _ string) ([]string, error) {
 	return nil, nil
 }
 
+// Get implements Get from BarrierStorage interface.
+// ignore-nil-nil-function-check.
 func (m *mockStorage) Get(_ context.Context, _ string) (*logical.StorageEntry, error) {
 	return nil, nil
 }
 
+// Put implements Put from BarrierStorage interface.
 func (m *mockStorage) Put(_ context.Context, _ *logical.StorageEntry) error {
 	return nil
 }
 
+// Delete implements Delete from BarrierStorage interface.
 func (m *mockStorage) Delete(_ context.Context, _ string) error {
 	return nil
 }
