@@ -127,15 +127,15 @@ func (a *AuditedHeadersConfig) invalidate(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to read config: %w", err)
 	}
-	if out == nil {
-		// We didn't get any data from this view.
-		return nil
-	}
 
+	// If we cannot update the stored 'new' headers, we will clear the existing
+	// ones as part of invalidation.
 	headers := make(map[string]*auditedHeaderSettings)
-	err = out.DecodeJSON(&headers)
-	if err != nil {
-		return err
+	if out != nil {
+		err = out.DecodeJSON(&headers)
+		if err != nil {
+			return fmt.Errorf("failed to parse config: %w", err)
+		}
 	}
 
 	// Ensure that we are able to case-sensitively access the headers;
