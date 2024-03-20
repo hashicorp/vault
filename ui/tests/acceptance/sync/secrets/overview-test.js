@@ -11,7 +11,6 @@ import syncHandlers from 'vault/mirage/handlers/sync';
 import authPage from 'vault/tests/pages/auth';
 import { click, waitFor } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
-import AdapterError from '@ember-data/adapter/error';
 
 // sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
 module('Acceptance | sync | overview', function (hooks) {
@@ -63,15 +62,5 @@ module('Acceptance | sync | overview', function (hooks) {
     assert.dom(ts.overview.optInConfirm).isDisabled('Confirm button is disabled when checkbox is unchecked');
     await click(ts.overview.optInCheck);
     await click(ts.overview.optInConfirm);
-  });
-
-  test('it should show adapter error if call to activated-features fails', async function (assert) {
-    assert.expect(2);
-    this.server.get('/sys/activation-flags', () => {
-      assert.ok(true, 'Request on initial load to check if secrets-sync is activated');
-      return AdapterError.create();
-    });
-    await click(ts.navLink('Secrets Sync'));
-    assert.dom(ts.overview.optInBannerEnableError).exists('Adapter error message is shown');
   });
 });

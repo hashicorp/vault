@@ -18,7 +18,7 @@ import type RouterService from '@ember/routing/router-service';
 import type VersionService from 'vault/services/version';
 import type { SyncDestinationAssociationMetrics } from 'vault/vault/adapters/sync/association';
 import type SyncDestinationModel from 'vault/vault/models/sync/destination';
-import FeatureFlagService from 'vault/vault/services/feature-flag';
+import type FeatureFlagService from 'vault/vault/services/feature-flag';
 
 interface Args {
   destinations: Array<SyncDestinationModel>;
