@@ -23,20 +23,44 @@ const (
 	auditedHeadersSubPath = "audited-headers-config/"
 )
 
+// auditedHeadersKey returns the key at which audit header configuration is stored.
+func auditedHeadersKey() string {
+	return auditedHeadersSubPath + auditedHeadersEntry
+}
+
 type auditedHeaderSettings struct {
+	// HMAC is used to indicate whether the value of the header should be HMAC'd.
 	HMAC bool `json:"hmac"`
 }
 
 // AuditedHeadersConfig is used by the Audit Broker to write only approved
 // headers to the audit logs. It uses a BarrierView to persist the settings.
 type AuditedHeadersConfig struct {
+	// Headers stores the current headers that should be audited, and their settings.
 	Headers map[string]*auditedHeaderSettings
 
+	// view is the barrier view which should be used to access underlying audit header config data.
 	view *BarrierView
+
 	sync.RWMutex
 }
 
+// NewAuditedHeadersConfig should be used to create AuditedHeadersConfig.
+func NewAuditedHeadersConfig(view *BarrierView) (*AuditedHeadersConfig, error) {
+	if view == nil {
+		return nil, fmt.Errorf("barrier view cannot be nil")
+	}
+
+	// This should be the only place where the AuditedHeadersConfig struct is initialized.
+	// Store the view so that we can reload headers when we 'invalidate'.
+	return &AuditedHeadersConfig{
+		view:    view,
+		Headers: make(map[string]*auditedHeaderSettings),
+	}, nil
+}
+
 // add adds or overwrites a header in the config and updates the barrier view
+// NOTE: add will acquire a write lock in order to update the underlying headers.
 func (a *AuditedHeadersConfig) add(ctx context.Context, header string, hmac bool) error {
 	if header == "" {
 		return fmt.Errorf("header value cannot be empty")
@@ -64,6 +88,7 @@ func (a *AuditedHeadersConfig) add(ctx context.Context, header string, hmac bool
 }
 
 // remove deletes a header out of the header config and updates the barrier view
+// NOTE: remove will acquire a write lock in order to update the underlying headers.
 func (a *AuditedHeadersConfig) remove(ctx context.Context, header string) error {
 	if header == "" {
 		return fmt.Errorf("header value cannot be empty")
@@ -91,8 +116,40 @@ func (a *AuditedHeadersConfig) remove(ctx context.Context, header string) error 
 	return nil
 }
 
-// ApplyConfig returns a map of approved headers and their values, either
-// hmac'ed or plaintext
+// invalidate attempts to refresh the allowed audit headers and their settings.
+// NOTE: invalidate will acquire a write lock in order to update the underlying headers.
+func (a *AuditedHeadersConfig) invalidate(ctx context.Context) error {
+	a.Lock()
+	defer a.Unlock()
+
+	// Get the actual headers entries, e.g. sys/audited-headers-config/audited-headers
+	out, err := a.view.Get(ctx, auditedHeadersEntry)
+	if err != nil {
+		return fmt.Errorf("failed to read config: %w", err)
+	}
+
+	// If we cannot update the stored 'new' headers, we will clear the existing
+	// ones as part of invalidation.
+	headers := make(map[string]*auditedHeaderSettings)
+	if out != nil {
+		err = out.DecodeJSON(&headers)
+		if err != nil {
+			return fmt.Errorf("failed to parse config: %w", err)
+		}
+	}
+
+	// Ensure that we are able to case-sensitively access the headers;
+	// necessary for the upgrade case
+	lowerHeaders := make(map[string]*auditedHeaderSettings, len(headers))
+	for k, v := range headers {
+		lowerHeaders[strings.ToLower(k)] = v
+	}
+
+	a.Headers = lowerHeaders
+	return nil
+}
+
+// ApplyConfig returns a map of approved headers and their values, either hmac'ed or plaintext.
 func (a *AuditedHeadersConfig) ApplyConfig(ctx context.Context, headers map[string][]string, salter audit.Salter) (result map[string][]string, retErr error) {
 	// Grab a read lock
 	a.RLock()
@@ -130,36 +187,25 @@ func (a *AuditedHeadersConfig) ApplyConfig(ctx context.Context, headers map[stri
 	return result, nil
 }
 
-// Initialize the headers config by loading from the barrier view
+// setupAuditedHeadersConfig will initialize new audited headers configuration on
+// the Core by loading data from the barrier view.
 func (c *Core) setupAuditedHeadersConfig(ctx context.Context) error {
-	// Create a sub-view
+	// Create a sub-view, e.g. sys/audited-headers-config/
 	view := c.systemBarrierView.SubView(auditedHeadersSubPath)
 
-	// Create the config
-	out, err := view.Get(ctx, auditedHeadersEntry)
+	headers, err := NewAuditedHeadersConfig(view)
 	if err != nil {
-		return fmt.Errorf("failed to read config: %w", err)
+		return err
 	}
 
-	headers := make(map[string]*auditedHeaderSettings)
-	if out != nil {
-		err = out.DecodeJSON(&headers)
-		if err != nil {
-			return err
-		}
+	// Invalidate the headers now in order to load them for the first time.
+	err = headers.invalidate(ctx)
+	if err != nil {
+		return err
 	}
 
-	// Ensure that we are able to case-sensitively access the headers;
-	// necessary for the upgrade case
-	lowerHeaders := make(map[string]*auditedHeaderSettings, len(headers))
-	for k, v := range headers {
-		lowerHeaders[strings.ToLower(k)] = v
-	}
-
-	c.auditedHeaders = &AuditedHeadersConfig{
-		Headers: lowerHeaders,
-		view:    view,
-	}
+	// Update the Core.
+	c.auditedHeaders = headers
 
 	return nil
 }
