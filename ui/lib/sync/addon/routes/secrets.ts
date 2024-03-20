@@ -22,6 +22,8 @@ export default class SyncSecretsRoute extends Route {
   @service declare readonly store: StoreService;
 
   async fetchActivatedFeatures() {
+    // The read request to the activation-flags endpoint is unauthenticated and root namespace
+    // but the POST is not which is why it's not in the NAMESPACE_ROOT_URLS list
     return await this.store
       .adapterFor('application')
       .ajax('/v1/sys/activation-flags', 'GET', { unauthenticated: true, namespace: null })
