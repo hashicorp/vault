@@ -8,7 +8,6 @@ import { service } from '@ember/service';
 
 import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
-import type AdapterError from '@ember-data/adapter';
 
 interface ActivationFlagsResponse {
   data: {
