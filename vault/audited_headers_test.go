@@ -391,4 +391,23 @@ func TestAuditedHeaders_invalidate(t *testing.T) {
 	require.Len(t, ahc.Headers, 1)
 	_, ok := ahc.Headers["x-magic-header"]
 	require.True(t, ok)
+
+	// Do it again with more headers and random casing.
+	fakeHeaders2 := map[string]*auditedHeaderSettings{
+		"x-magic-header":           {},
+		"x-even-MORE-magic-header": {},
+	}
+	fakeBytes2, err := json.Marshal(fakeHeaders2)
+	require.NoError(t, err)
+	err = view.Put(context.Background(), &logical.StorageEntry{Key: auditedHeadersEntry, Value: fakeBytes2})
+	require.NoError(t, err)
+
+	// Invalidate and check we now see the header we stored
+	err = ahc.invalidate(context.Background())
+	require.NoError(t, err)
+	require.Len(t, ahc.Headers, 2)
+	_, ok = ahc.Headers["x-magic-header"]
+	require.True(t, ok)
+	_, ok = ahc.Headers["x-even-more-magic-header"]
+	require.True(t, ok)
 }
