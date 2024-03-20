@@ -216,7 +216,10 @@
     "serialize-javascript": "^3.1.0",
     "underscore": "^1.12.1",
     "trim": "^0.0.3",
-    "xmlhttprequest-ssl": "^1.6.2"
+    "xmlhttprequest-ssl": "^1.6.2",
+    "browserify-sign": "^4.2.2",
+    "socket.io": "^4.6.2",
+    "json5": "^1.0.2"
   },
   "engines": {
     "node": "16"
