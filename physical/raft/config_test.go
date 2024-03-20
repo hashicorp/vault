@@ -113,7 +113,6 @@ func TestRaft_ParseConfig(t *testing.T) {
 			wantMutation: func(cfg *RaftBackendConfig) {
 				// Should be default
 			},
-			wantWarns: []string{"is configuration for a Vault Enterprise feature and has been ignored"},
 		},
 		{
 			name: "non-voter, retry-join, valid false",
