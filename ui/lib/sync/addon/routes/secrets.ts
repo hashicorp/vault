@@ -24,7 +24,7 @@ export default class SyncSecretsRoute extends Route {
   async fetchActivatedFeatures() {
     return await this.store
       .adapterFor('application')
-      .ajax('/v1/sys/activation-flags', 'GET')
+      .ajax('/v1/sys/activation-flags', 'GET', { unauthenticated: true, namespace: null })
       .then((resp: ActivationFlagsResponse) => {
         return resp.data?.activated;
       })
