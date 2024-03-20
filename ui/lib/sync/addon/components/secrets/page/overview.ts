@@ -40,7 +40,6 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @tracked error = null;
   // eventually remove when we deal with permissions on activation-features
   @tracked hideOptIn = false;
-  @tracked hideAdapterError = false;
   @tracked hideError = false;
 
   pageSize = Ember.testing ? 3 : 5; // lower in tests to test pagination without seeding more data
@@ -54,24 +53,6 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
 
   get isActivated() {
     return this.args.activatedFeatures.includes('secrets-sync');
-  }
-
-  get adapterErrorMessage() {
-    // make clear if this is a permissions issue
-    if (this.args.adapterError) {
-      return this.args.adapterError.httpStatus === 403
-        ? 'You do not have read access to the sys/activation-flags endpoint. We cannot determine if Secrets Sync has been activated or not.'
-        : this.args.adapterError.message;
-    }
-    return '';
-  }
-
-  get postErrorMessage() {
-    // make clear if this is a permissions issue
-    if (this.error) {
-      return 'Activation failed. You do not seem to have the permission to enable the feature.';
-    }
-    return '';
   }
 
   fetchAssociationsForDestinations = task(this, {}, async (page = 1) => {

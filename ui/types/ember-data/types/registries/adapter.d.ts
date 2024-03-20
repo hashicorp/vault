@@ -32,6 +32,5 @@ export default interface AdapterRegistry {
 }
 
 export default interface AdapterError extends Error {
-  message: string;
   httpStatus: number;
 }

@@ -37,7 +37,7 @@ module('Integration | Component | sync | Secrets::LandingCta', function (hooks) 
     assert.dom(cta.button).doesNotExist('does not render create destination button');
   });
 
-  test('it should render copy and when feature exists on license but is not activated', async function (assert) {
+  test('it should render copy when feature exists on license but is not activated', async function (assert) {
     await render(hbs`<Secrets::LandingCta @isActivated={{false}} @hasSecretsSync={{true}} /> `, {
       owner: this.engine,
     });
