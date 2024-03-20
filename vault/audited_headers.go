@@ -53,7 +53,10 @@ func NewAuditedHeadersConfig(view *BarrierView) (*AuditedHeadersConfig, error) {
 
 	// This should be the only place where the AuditedHeadersConfig struct is initialized.
 	// Store the view so that we can reload headers when we 'invalidate'.
-	return &AuditedHeadersConfig{view: view}, nil
+	return &AuditedHeadersConfig{
+		view:    view,
+		Headers: make(map[string]*auditedHeaderSettings),
+	}, nil
 }
 
 // add adds or overwrites a header in the config and updates the barrier view
@@ -142,7 +145,7 @@ func (a *AuditedHeadersConfig) invalidate(ctx context.Context) error {
 		lowerHeaders[strings.ToLower(k)] = v
 	}
 
-	a.Headers = headers
+	a.Headers = lowerHeaders
 	return nil
 }
 
