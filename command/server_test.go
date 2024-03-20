@@ -411,6 +411,7 @@ func TestConfigureSeals(t *testing.T) {
 
 	sealGenInfo := &seal.SealGenerationInfo{
 		Generation: 2,
+		Enabled:    true,
 		Seals: []*configutil.KMS{
 			{
 				Name: "A",
