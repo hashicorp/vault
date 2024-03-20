@@ -10,9 +10,7 @@ module github.com/hashicorp/vault
 // semantic related to Go module handling), this comment should be updated to explain that.
 //
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
-go 1.21
-
-toolchain go1.21.8
+go 1.22.1
 
 replace github.com/hashicorp/vault/api => ./api
 
@@ -115,6 +113,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/nonceutil v0.1.0
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.8
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
+	github.com/hashicorp/go-secure-stdlib/random v0.0.0-20240319184836-90fcdf1d959f
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
 	github.com/hashicorp/go-secure-stdlib/tlsutil v0.1.3
