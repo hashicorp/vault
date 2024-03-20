@@ -238,7 +238,7 @@ func parseRaftBackendConfig(conf map[string]string, logger log.Logger) (*RaftBac
 	}
 
 	c.AutopilotRedundancyZone = conf["autopilot_redundancy_zone"]
-	if c.AutopilotRedundancyZone == "" {
+	if c.AutopilotRedundancyZone != "" {
 		emitEntWarning(logger, "autopilot_redundancy_zone")
 	}
 
