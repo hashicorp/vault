@@ -25,7 +25,7 @@ export default class SyncSecretsRoute extends Route {
 
   async fetchActivatedFeatures() {
     // only fetch activated features for enterprise licenses that include the secrets-sync feature
-    if (this.version.features.includes('Secrets Sync')) {
+    if (this.version.hasSecretsSync) {
       return await this.store
         .adapterFor('application')
         .ajax('/v1/sys/activation-flags', 'GET')
