@@ -60,12 +60,16 @@ export default Model.extend({
       'A policy is an object in AWS that, when associated with an identity or resource, defines their permissions.',
     // Cannot have a default_value on policy_document because in some cases AWS expects this value to be empty.
   }),
+  enablePolicyDocumentTemplating: attr('boolean', {
+    defaultValue: false,
+    helpText: 'Enable templating of the policy document with Identity metadata.',
+  }),
   fields: computed('credentialType', function () {
     const credentialType = this.credentialType;
     const keysForType = {
-      iam_user: ['name', 'credentialType', 'policyArns', 'policyDocument'],
-      assumed_role: ['name', 'credentialType', 'roleArns', 'policyDocument'],
-      federation_token: ['name', 'credentialType', 'policyDocument'],
+      iam_user: ['name', 'credentialType', 'policyArns', 'policyDocument', 'enablePolicyDocumentTemplating'],
+      assumed_role: ['name', 'credentialType', 'roleArns', 'policyDocument', 'enablePolicyDocumentTemplating'],
+      federation_token: ['name', 'credentialType', 'policyDocument', 'enablePolicyDocumentTemplating'],
       session_token: [],
     };
 

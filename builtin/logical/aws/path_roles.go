@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -90,6 +91,11 @@ iam_user, then it will attach the contents of the policy_document to the IAM
 user generated. When credential_type is assumed_role or federation_token, this
 will be passed in as the Policy parameter to the AssumeRole or
 GetFederationToken API call, acting as a filter on permissions available.`,
+			},
+
+			"enable_policy_document_templating": {
+				Type:        framework.TypeBool,
+				Description: `If set, the specified policy document will be templated using identity template policies.`,
 			},
 
 			"iam_groups": {
@@ -298,6 +304,10 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 			}
 		}
 		roleEntry.PolicyDocument = compacted
+	}
+
+	if enablePolicyDocumentTemplating, ok := d.GetOk("enable_policy_document_templating"); ok {
+		roleEntry.EnablePolicyDocumentTemplating = enablePolicyDocumentTemplating.(bool)
 	}
 
 	if defaultSTSTTLRaw, ok := d.GetOk("default_sts_ttl"); ok {
@@ -521,35 +531,37 @@ func setAwsRole(ctx context.Context, s logical.Storage, roleName string, roleEnt
 }
 
 type awsRoleEntry struct {
-	CredentialTypes          []string          `json:"credential_types"`                      // Entries must all be in the set of ("iam_user", "assumed_role", "federation_token")
-	PolicyArns               []string          `json:"policy_arns"`                           // ARNs of managed policies to attach to an IAM user
-	RoleArns                 []string          `json:"role_arns"`                             // ARNs of roles to assume for AssumedRole credentials
-	PolicyDocument           string            `json:"policy_document"`                       // JSON-serialized inline policy to attach to IAM users and/or to specify as the Policy parameter in AssumeRole calls
-	IAMGroups                []string          `json:"iam_groups"`                            // Names of IAM groups that generated IAM users will be added to
-	IAMTags                  map[string]string `json:"iam_tags"`                              // IAM tags that will be added to the generated IAM users
-	InvalidData              string            `json:"invalid_data,omitempty"`                // Invalid role data. Exists to support converting the legacy role data into the new format
-	ProhibitFlexibleCredPath bool              `json:"prohibit_flexible_cred_path,omitempty"` // Disallow accessing STS credentials via the creds path and vice verse
-	Version                  int               `json:"version"`                               // Version number of the role format
-	DefaultSTSTTL            time.Duration     `json:"default_sts_ttl"`                       // Default TTL for STS credentials
-	MaxSTSTTL                time.Duration     `json:"max_sts_ttl"`                           // Max allowed TTL for STS credentials
-	UserPath                 string            `json:"user_path"`                             // The path for the IAM user when using "iam_user" credential type
-	PermissionsBoundaryARN   string            `json:"permissions_boundary_arn"`              // ARN of an IAM policy to attach as a permissions boundary
-	SerialNumber             string            `json:"mfa_serial_number"`                     // Serial number or ARN of the MFA device
+	CredentialTypes                []string          `json:"credential_types"`                      // Entries must all be in the set of ("iam_user", "assumed_role", "federation_token")
+	PolicyArns                     []string          `json:"policy_arns"`                           // ARNs of managed policies to attach to an IAM user
+	RoleArns                       []string          `json:"role_arns"`                             // ARNs of roles to assume for AssumedRole credentials
+	PolicyDocument                 string            `json:"policy_document"`                       // JSON-serialized inline policy to attach to IAM users and/or to specify as the Policy parameter in AssumeRole calls
+	EnablePolicyDocumentTemplating bool              `json:"enable_policy_document_templating"`     // Enable templating of the policy document with Identity metadata
+	IAMGroups                      []string          `json:"iam_groups"`                            // Names of IAM groups that generated IAM users will be added to
+	IAMTags                        map[string]string `json:"iam_tags"`                              // IAM tags that will be added to the generated IAM users
+	InvalidData                    string            `json:"invalid_data,omitempty"`                // Invalid role data. Exists to support converting the legacy role data into the new format
+	ProhibitFlexibleCredPath       bool              `json:"prohibit_flexible_cred_path,omitempty"` // Disallow accessing STS credentials via the creds path and vice verse
+	Version                        int               `json:"version"`                               // Version number of the role format
+	DefaultSTSTTL                  time.Duration     `json:"default_sts_ttl"`                       // Default TTL for STS credentials
+	MaxSTSTTL                      time.Duration     `json:"max_sts_ttl"`                           // Max allowed TTL for STS credentials
+	UserPath                       string            `json:"user_path"`                             // The path for the IAM user when using "iam_user" credential type
+	PermissionsBoundaryARN         string            `json:"permissions_boundary_arn"`              // ARN of an IAM policy to attach as a permissions boundary
+	SerialNumber                   string            `json:"mfa_serial_number"`                     // Serial number or ARN of the MFA device
 }
 
 func (r *awsRoleEntry) toResponseData() map[string]interface{} {
 	respData := map[string]interface{}{
-		"credential_type":          strings.Join(r.CredentialTypes, ","),
-		"policy_arns":              r.PolicyArns,
-		"role_arns":                r.RoleArns,
-		"policy_document":          r.PolicyDocument,
-		"iam_groups":               r.IAMGroups,
-		"iam_tags":                 r.IAMTags,
-		"default_sts_ttl":          int64(r.DefaultSTSTTL.Seconds()),
-		"max_sts_ttl":              int64(r.MaxSTSTTL.Seconds()),
-		"user_path":                r.UserPath,
-		"permissions_boundary_arn": r.PermissionsBoundaryARN,
-		"mfa_serial_number":        r.SerialNumber,
+		"credential_type":                   strings.Join(r.CredentialTypes, ","),
+		"policy_arns":                       r.PolicyArns,
+		"role_arns":                         r.RoleArns,
+		"policy_document":                   r.PolicyDocument,
+		"enable_policy_document_templating": r.EnablePolicyDocumentTemplating,
+		"iam_groups":                        r.IAMGroups,
+		"iam_tags":                          r.IAMTags,
+		"default_sts_ttl":                   int64(r.DefaultSTSTTL.Seconds()),
+		"max_sts_ttl":                       int64(r.MaxSTSTTL.Seconds()),
+		"user_path":                         r.UserPath,
+		"permissions_boundary_arn":          r.PermissionsBoundaryARN,
+		"mfa_serial_number":                 r.SerialNumber,
 	}
 
 	if r.InvalidData != "" {
@@ -606,6 +618,10 @@ func (r *awsRoleEntry) validate() error {
 
 	if (r.PolicyDocument != "" || len(r.PolicyArns) != 0) && strutil.StrListContains(r.CredentialTypes, sessionTokenCred) {
 		errors = multierror.Append(errors, fmt.Errorf("cannot supply a policy or role when using credential_type %s", sessionTokenCred))
+	}
+
+	if r.EnablePolicyDocumentTemplating && strutil.StrListContains(r.CredentialTypes, sessionTokenCred) {
+		errors = multierror.Append(errors, fmt.Errorf("cannot enable policy document templating when using credential_type %s", sessionTokenCred))
 	}
 
 	if len(r.RoleArns) > 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) {
