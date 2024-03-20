@@ -29,18 +29,13 @@ export default class SyncSecretsRoute extends Route {
       .ajax('/v1/sys/activation-flags', 'GET', { unauthenticated: true, namespace: null })
       .then((resp: ActivationFlagsResponse) => {
         return resp.data?.activated;
-      })
-      .catch((error: AdapterError) => {
-        return error;
       });
   }
 
   async model() {
     const activatedFeatures = await this.fetchActivatedFeatures();
-    const { isAdapterError } = activatedFeatures;
     return {
-      activatedFeatures: isAdapterError ? [] : activatedFeatures,
-      adapterError: isAdapterError ? activatedFeatures : null,
+      activatedFeatures,
     };
   }
 

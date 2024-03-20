@@ -18,14 +18,12 @@ import type RouterService from '@ember/routing/router-service';
 import type VersionService from 'vault/services/version';
 import type { SyncDestinationAssociationMetrics } from 'vault/vault/adapters/sync/association';
 import type SyncDestinationModel from 'vault/vault/models/sync/destination';
-import type AdapterError from '@ember/test/adapter';
 import FeatureFlagService from 'vault/vault/services/feature-flag';
 
 interface Args {
   destinations: Array<SyncDestinationModel>;
   totalVaultSecrets: number;
   activatedFeatures: Array<string>;
-  adapterError: AdapterError | null;
 }
 
 export default class SyncSecretsDestinationsPageComponent extends Component<Args> {
