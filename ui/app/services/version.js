@@ -43,7 +43,7 @@ export default class VersionService extends Service {
   }
 
   get hasSecretsSync() {
-    return this.features.includes('secrets-sync');
+    return this.features.includes('Secrets Sync');
   }
 
   get versionDisplay() {
