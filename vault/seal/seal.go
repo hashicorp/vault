@@ -59,6 +59,7 @@ type SealGenerationInfo struct {
 	Generation uint64
 	Seals      []*configutil.KMS
 	rewrapped  atomic.Bool
+	Enabled    bool
 }
 
 // Validate is used to sanity check the seal generation info being created

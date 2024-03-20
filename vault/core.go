@@ -2640,7 +2640,7 @@ func (c *Core) runUnsealSetupForPrimary(ctx context.Context, logger log.Logger) 
 
 	if c.IsMultisealEnabled() {
 		// Retrieve the seal generation information from storage
-		existingGenerationInfo, err := PhysicalSealGenInfo(ctx, c.physical, c.IsMultisealEnabled())
+		existingGenerationInfo, err := PhysicalSealGenInfo(ctx, c.physical)
 		if err != nil {
 			logger.Error("cannot read existing seal generation info from storage", "error", err)
 			return err

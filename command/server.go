@@ -544,7 +544,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	ctx := context.Background()
-	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(ctx, backend, config.IsMultisealEnabled())
+	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(ctx, backend)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error getting seal generation info: %v", err))
 		return 1
@@ -1824,7 +1824,7 @@ func (c *ServerCommand) Run(args []string) int {
 }
 
 func (c *ServerCommand) configureSeals(ctx context.Context, config *server.Config, backend physical.Backend, infoKeys []string, info map[string]string) (*SetSealResponse, io.Reader, error) {
-	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(ctx, backend, true)
+	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(ctx, backend)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Error getting seal generation info: %v", err)
 	}
@@ -2844,7 +2844,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	}, nil
 }
 
-func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal.SealGenerationInfo, sealConfigs []*configutil.KMS, hasPartiallyWrappedPaths, shouldValidate bool) (*vaultseal.SealGenerationInfo, error) {
+func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal.SealGenerationInfo, sealConfigs []*configutil.KMS, hasPartiallyWrappedPaths, multisealEnabled bool) (*vaultseal.SealGenerationInfo, error) {
 	generation := uint64(1)
 
 	if existingSealGenInfo != nil {
@@ -2864,9 +2864,10 @@ func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal
 	newSealGenInfo := &vaultseal.SealGenerationInfo{
 		Generation: generation,
 		Seals:      sealConfigs,
+		Enabled:    multisealEnabled,
 	}
 
-	if shouldValidate {
+	if multisealEnabled {
 		err := newSealGenInfo.Validate(existingSealGenInfo, hasPartiallyWrappedPaths)
 		if err != nil {
 			return nil, err

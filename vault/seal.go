@@ -339,10 +339,6 @@ func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor sea
 }
 
 func (c *Core) SetPhysicalSealGenInfo(ctx context.Context, sealGenInfo *seal.SealGenerationInfo) error {
-	if !c.IsMultisealEnabled() {
-		return nil
-	}
-
 	if sealGenInfo == nil {
 		return errors.New("invalid seal generation information: generation is unknown")
 	}
@@ -366,10 +362,7 @@ func (c *Core) SetPhysicalSealGenInfo(ctx context.Context, sealGenInfo *seal.Sea
 	return nil
 }
 
-func PhysicalSealGenInfo(ctx context.Context, storage physical.Backend, multiSealEnabled bool) (*seal.SealGenerationInfo, error) {
-	if !multiSealEnabled { // Not ideal, but this function has access neither to config or Core
-		return nil, nil
-	}
+func PhysicalSealGenInfo(ctx context.Context, storage physical.Backend) (*seal.SealGenerationInfo, error) {
 	pe, err := storage.Get(ctx, SealGenInfoPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch seal generation info: %w", err)
