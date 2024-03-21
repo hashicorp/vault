@@ -39,6 +39,9 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @tracked hasConfirmedDocs = false;
   @tracked error = null;
 
+  @tracked hideOptIn = false;
+  @tracked hideError = false;
+
   pageSize = Ember.testing ? 3 : 5; // lower in tests to test pagination without seeding more data
 
   constructor(owner: unknown, args: Args) {
