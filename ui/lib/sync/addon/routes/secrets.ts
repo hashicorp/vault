@@ -9,9 +9,6 @@ import { service } from '@ember/service';
 import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
 import { DEBUG } from '@glimmer/env';
-import { buildWaiter } from '@ember/test-waiters';
-
-const waiter = buildWaiter('secrets');
 
 interface ActivationFlagsResponse {
   data: {
@@ -25,7 +22,6 @@ export default class SyncSecretsRoute extends Route {
   @service declare readonly store: StoreService;
 
   async fetchActivatedFeatures() {
-    const waiterToken = waiter.beginAsync();
     // The read request to the activation-flags endpoint is unauthenticated and root namespace
     // but the POST is not which is why it's not in the NAMESPACE_ROOT_URLS list
     return await this.store
@@ -37,9 +33,6 @@ export default class SyncSecretsRoute extends Route {
       .catch((error: unknown) => {
         if (DEBUG) console.error(error); // eslint-disable-line no-console
         return [];
-      })
-      .finally(() => {
-        waiter.endAsync(waiterToken);
       });
   }
 

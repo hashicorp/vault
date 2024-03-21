@@ -57,6 +57,7 @@ module('Acceptance | sync | overview', function (hooks) {
       return {};
     });
     await click(ts.navLink('Secrets Sync'));
+    await waitFor(ts.overview.optInBanner);
     assert.dom(ts.overview.optInBanner).exists('Opt-in banner is shown');
     await click(ts.overview.optInBannerEnable);
     assert.dom(ts.overview.optInModal).exists('Opt-in modal is shown');
