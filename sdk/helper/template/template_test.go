@@ -152,12 +152,12 @@ Some string 6841cf80`,
 		}
 	})
 
-	t.Run("overflow", func(t *testing.T) {
+	t.Run("too-large-overflow", func(t *testing.T) {
 		data := "{{" + strings.Repeat("(", 1000000)
 		_, err := NewTemplate(
 			Template(data),
 		)
-		// We expect an error due to unterminated {{, but also
+		// We expect an error due it being too large,
 		// this test should not fail with an overflow
 		require.Error(t, err)
 	})
