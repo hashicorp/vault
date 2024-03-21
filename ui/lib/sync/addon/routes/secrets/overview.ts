@@ -8,15 +8,13 @@ import { service } from '@ember/service';
 import { hash } from 'rsvp';
 
 import type StoreService from 'vault/services/store';
-import type AdapterError from '@ember-data/adapter';
 
 export default class SyncSecretsOverviewRoute extends Route {
   @service declare readonly store: StoreService;
 
   async model() {
-    const { activatedFeatures, adapterError } = this.modelFor('secrets') as {
+    const { activatedFeatures } = this.modelFor('secrets') as {
       activatedFeatures: Array<string>;
-      adapterError: AdapterError;
     };
     return hash({
       destinations: this.store.query('sync/destination', {}).catch(() => []),
@@ -25,7 +23,6 @@ export default class SyncSecretsOverviewRoute extends Route {
         .queryAll()
         .catch(() => []),
       activatedFeatures,
-      adapterError,
     });
   }
 }
