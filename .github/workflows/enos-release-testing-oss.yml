@@ -6,6 +6,11 @@ on:
       - enos-release-testing-oss
       - enos-release-testing-oss::*
 
+# cancel existing runs of the same workflow on the same ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   product-metadata:
     if: ${{ startsWith(github.event.client_payload.payload.branch, 'release/') }}

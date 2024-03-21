@@ -5,6 +5,11 @@ on:
       - '.github/**'
     types: [opened, synchronize, reopened, ready_for_review]
 
+# cancel existing runs of the same workflow on the same ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   actionlint:
     runs-on: ubuntu-latest
