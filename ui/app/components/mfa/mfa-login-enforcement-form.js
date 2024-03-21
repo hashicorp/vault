@@ -65,7 +65,7 @@ export default class MfaLoginEnforcementForm extends Component {
     for (const { label, key } of this.targetTypes) {
       const targetArray = await this.args.model[key];
       const targets = targetArray.map((value) => ({ label, key, value }));
-      this.targets = addManyToArray(this.targets, targets); //  [...this.targets, ...targets];
+      this.targets = addManyToArray(this.targets, targets);
     }
   }
   async resetTargetState() {
@@ -168,8 +168,6 @@ export default class MfaLoginEnforcementForm extends Component {
   }
   @action
   removeTarget(target) {
-    // const targets = [...this.targets];
-    // targets.splice(targets.indexOf(target), 1);
     this.targets = removeFromArray(this.targets, target);
     // recalculate value for appropriate model property
     this.updateModelForKey(target.key);

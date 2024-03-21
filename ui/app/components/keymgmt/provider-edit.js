@@ -95,8 +95,9 @@ export default class KeymgmtProviderEdit extends Component {
   @action
   async onDeleteKey(model) {
     try {
+      const providerKeys = removeFromArray(this.args.model.keys, model);
       await model.destroyRecord();
-      this.args.model.keys = removeFromArray(this.args.model.keys, model);
+      this.args.model.keys = providerKeys;
     } catch (error) {
       this.flashMessages.danger(error.errors.join('. '));
     }

@@ -11,7 +11,7 @@ export function initialize() {
     // filter deprecations that are scheduled to be removed in a specific version
     // when upgrading or addressing deprecation warnings be sure to update this or remove if not needed
     if (options?.until.includes('5.0')) {
-      // return;
+      return;
     }
     next(message, options);
   });

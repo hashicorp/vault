@@ -96,6 +96,7 @@ export default class MfaMethodCreateController extends Controller {
         // first save method
         yield this.method.save();
         if (this.enforcement) {
+          // mfa_methods is type PromiseManyArray so slice in necessary to convert it to an Array
           this.enforcement.mfa_methods = addToArray(this.enforcement.mfa_methods.slice(), this.method);
           try {
             // now save enforcement and catch error separately
