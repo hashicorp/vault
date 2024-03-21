@@ -14,12 +14,7 @@
     data-test-sidebar-nav-link="Secrets Engines"
   />
   {{#if this.showSync}}
-    <Nav.Link
-      @route="vault.cluster.sync"
-      @text="Secrets Sync"
-      @badge={{this.syncBadge}}
-      data-test-sidebar-nav-link="Secrets Sync"
-    />
+    <Nav.Link @route="vault.cluster.sync" @text="Secrets Sync" data-test-sidebar-nav-link="Secrets Sync" />
   {{/if}}
   {{#if (has-permission "access")}}
     <Nav.Link
