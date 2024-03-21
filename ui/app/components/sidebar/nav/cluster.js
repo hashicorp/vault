@@ -30,6 +30,6 @@ export default class SidebarNavClusterComponent extends Component {
   get syncBadge() {
     if (this.version.isCommunity) return 'Enterprise';
     if (!this.version.hasSecretsSync) return 'Premium';
-    return '';
+    return undefined;
   }
 }
