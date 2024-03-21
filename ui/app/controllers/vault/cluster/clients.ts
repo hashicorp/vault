@@ -5,7 +5,7 @@
 
 import Controller from '@ember/controller';
 import { service } from '@ember/service';
-import VersionService from 'vault/services/version';
+import type VersionService from 'vault/services/version';
 
 export default class ClientsController extends Controller {
   @service declare readonly version: VersionService;
