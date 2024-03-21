@@ -75,6 +75,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			b.pathConfigKeys(),
 			b.pathCreateCsr(),
 			b.pathImportCertChain(),
+			b.pathCMAC(),
 		},
 
 		Secrets:      []*framework.Secret{},

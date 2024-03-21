@@ -1341,6 +1341,8 @@ github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a/go.mod h1:D73UA
 github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d/go.mod h1:HI8ITrYtUY+O+ZhtlqUnD8+KwNPOyugEhfP9fdUIaEQ=
 github.com/abdullin/seq v0.0.0-20160510034733-d5467c17e7af h1:DBNMBMuMiWYu0b+8KMJuWmfCkcxl09JwdlqwDZZ6U14=
 github.com/abdullin/seq v0.0.0-20160510034733-d5467c17e7af/go.mod h1:5Jv4cbFiHJMsVxt52+i0Ha45fjshj6wxYr1r19tB9bw=
+github.com/aead/cmac v0.0.0-20160719120800-7af84192f0b1 h1:+JkXLHME8vLJafGhOH4aoV2Iu8bR55nU6iKMVfYVLjY=
+github.com/aead/cmac v0.0.0-20160719120800-7af84192f0b1/go.mod h1:nuudZmJhzWtx2212z+pkuy7B6nkBqa+xwNXZHL1j8cg=
 github.com/aerospike/aerospike-client-go/v5 v5.6.0 h1:tRxcUq0HY8fFPQEzF3EgrknF+w1xFO0YDfUb9Nm8yRI=
 github.com/aerospike/aerospike-client-go/v5 v5.6.0/go.mod h1:rJ/KpmClE7kiBPfvAPrGw9WuNOiz8v2uKbQaUyYPXtI=
 github.com/agext/levenshtein v1.2.1 h1:QmvMAjj2aEICytGiWzmxoE0x2KZvE0fvmqMOfy2tjT8=
