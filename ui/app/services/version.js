@@ -6,6 +6,9 @@
 import Service, { inject as service } from '@ember/service';
 import { keepLatestTask, task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
+import { buildWaiter } from '@ember/test-waiters';
+
+const waiter = buildWaiter('version');
 
 export default class VersionService extends Service {
   @service store;
@@ -74,7 +77,9 @@ export default class VersionService extends Service {
 
   @keepLatestTask
   *getFeatures() {
+    const waiterToken = waiter.beginAsync();
     if (this.features?.length || this.isCommunity) {
+      waiter.endAsync(waiterToken);
       return;
     }
     try {
@@ -83,6 +88,8 @@ export default class VersionService extends Service {
       return;
     } catch (err) {
       // if we fail here, we're likely in DR Secondary mode and don't need to worry about it
+    } finally {
+      waiter.endAsync(waiterToken);
     }
   }
 
