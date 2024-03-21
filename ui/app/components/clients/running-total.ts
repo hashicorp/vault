@@ -9,7 +9,7 @@ interface Args {
   isSecretsSyncActivated: boolean;
 }
 
-export default class VerticalBarChart extends Component<Args> {
+export default class RunningTotal extends Component<Args> {
   get chartContainerText() {
     const { isSecretsSyncActivated } = this.args;
     const prefix = 'The total clients in the specified date range. This includes entity';
