@@ -9,7 +9,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
 import authPage from 'vault/tests/pages/auth';
-import { click, visit, fillIn, currentURL, currentRouteName, waitFor } from '@ember/test-helpers';
+import { click, visit, fillIn, currentURL, currentRouteName } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 import { syncDestinations } from 'vault/helpers/sync-destinations';
 
@@ -21,6 +21,8 @@ module('Acceptance | sync | destinations', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    this.version = this.owner.lookup('service:version');
+    this.version.features = ['Secrets Sync'];
     syncScenario(this.server);
     syncHandlers(this.server);
     return authPage.login();
@@ -30,8 +32,15 @@ module('Acceptance | sync | destinations', function (hooks) {
     // remove destinations from mirage so cta shows when 404 is returned
     this.server.db.syncDestinations.remove();
 
+    this.server.get('/sys/activation-flags', () => {
+      return {
+        data: {
+          activated: ['secrets-sync'],
+          unactivated: [],
+        },
+      };
+    });
     await click(ts.navLink('Secrets Sync'));
-    await waitFor(ts.cta.button);
     await click(ts.cta.button);
     await click(ts.selectType('aws-sm'));
     await fillIn(ts.inputByAttr('name'), 'foo');
@@ -52,9 +61,16 @@ module('Acceptance | sync | destinations', function (hooks) {
     test(`it should render default values for destination: ${type}`, async function (assert) {
       // remove destinations from mirage so cta shows when 404 is returned
       this.server.db.syncDestinations.remove();
+      this.server.get('/sys/activation-flags', () => {
+        return {
+          data: {
+            activated: ['secrets-sync'],
+            unactivated: [],
+          },
+        };
+      });
 
       await click(ts.navLink('Secrets Sync'));
-      await waitFor(ts.cta.button);
       await click(ts.cta.button);
       await click(ts.selectType(type));
 
