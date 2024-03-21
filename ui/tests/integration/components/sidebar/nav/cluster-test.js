@@ -83,6 +83,30 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     });
   });
 
+  test('it should render badge for promotional links on community version', async function (assert) {
+    const promotionalLinks = ['Secrets Sync'];
+    stubFeaturesAndPermissions(this.owner, false, true);
+    await renderComponent();
+
+    promotionalLinks.forEach((link) => {
+      assert
+        .dom(`[data-test-sidebar-nav-link="${link}"]`)
+        .hasText(`${link} Enterprise`, `${link} link renders Enterprise badge`);
+    });
+  });
+
+  test('it should render badge for premium license features', async function (assert) {
+    const premiumFeatures = ['Secrets Sync'];
+    stubFeaturesAndPermissions(this.owner, true, true, []);
+    await renderComponent();
+
+    premiumFeatures.forEach((link) => {
+      assert
+        .dom(`[data-test-sidebar-nav-link="${link}"]`)
+        .hasText(`${link} Premium`, `${link} link renders Enterprise badge`);
+    });
+  });
+
   test('it should hide enterprise related links in child namespace', async function (assert) {
     const links = [
       'Disaster Recovery',
