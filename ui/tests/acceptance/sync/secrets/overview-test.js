@@ -19,6 +19,8 @@ module('Acceptance | sync | overview', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    this.version = this.owner.lookup('service:version');
+    this.version.features = ['Secrets Sync'];
     syncScenario(this.server);
     syncHandlers(this.server);
     return authPage.login();
@@ -57,7 +59,6 @@ module('Acceptance | sync | overview', function (hooks) {
       return {};
     });
     await click(ts.navLink('Secrets Sync'));
-    await waitFor(ts.overview.optInBanner);
     assert.dom(ts.overview.optInBanner).exists('Opt-in banner is shown');
     await click(ts.overview.optInBannerEnable);
     assert.dom(ts.overview.optInModal).exists('Opt-in modal is shown');
