@@ -34,12 +34,12 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     this.activity = await this.store.queryRecord('clients/activity', activityQuery);
     this.startTimestamp = START_TIME;
     this.endTimestamp = END_TIME;
-    this.secretsSyncActivated = true;
+    this.isSecretsSyncActivated = true;
 
     this.renderComponent = () =>
       render(hbs`
       <Clients::Page::Sync
-        @secretsSyncActivated={{this.secretsSyncActivated}}
+        @isSecretsSyncActivated={{this.isSecretsSyncActivated}}
         @activity={{this.activity}}
         @versionHistory={{this.versionHistory}}
         @startTimestamp={{this.startTimestamp}}
@@ -122,7 +122,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
   });
 
   test('it should render an empty state if secrets sync is not activated', async function (assert) {
-    this.secretsSyncActivated = false;
+    this.isSecretsSyncActivated = false;
 
     await this.renderComponent();
 

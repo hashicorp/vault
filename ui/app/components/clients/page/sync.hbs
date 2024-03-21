@@ -2,7 +2,7 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 ~}}
-{{#if @secretsSyncActivated}}
+{{#if @isSecretsSyncActivated}}
   {{#if this.isDateRange}}
     <Clients::ChartContainer
       @title={{this.title}}

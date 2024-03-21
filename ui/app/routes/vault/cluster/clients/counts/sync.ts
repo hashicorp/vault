@@ -33,7 +33,7 @@ export default class ClientsCountsSyncRoute extends Route {
     }
   }
 
-  async secretsSyncActivated(activity: ClientsActivityModel | undefined) {
+  async isSecretsSyncActivated(activity: ClientsActivityModel | undefined) {
     // if there are secrets, the feature is activated
     if (activity && activity.total?.secret_syncs > 0) return true;
 
@@ -47,11 +47,11 @@ export default class ClientsCountsSyncRoute extends Route {
       'vault.cluster.clients.counts'
     ) as ClientsCountsRouteModel;
 
-    const secretsSyncActivated = await this.secretsSyncActivated(activity);
+    const isSecretsSyncActivated = await this.isSecretsSyncActivated(activity);
 
     return {
       activity,
-      secretsSyncActivated,
+      isSecretsSyncActivated,
       versionHistory,
       startTimestamp,
       endTimestamp,
