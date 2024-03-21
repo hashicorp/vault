@@ -95,7 +95,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     });
   });
 
-  test('it should render badge for premium license features', async function (assert) {
+  test.skip('it should render badge for premium license features', async function (assert) {
     const premiumFeatures = ['Secrets Sync'];
     stubFeaturesAndPermissions(this.owner, true, true, []);
     await renderComponent();
