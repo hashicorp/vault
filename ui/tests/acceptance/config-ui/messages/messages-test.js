@@ -19,14 +19,6 @@ module('Acceptance | Community | config-ui/messages', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    this.server.get('sys/internal/ui/version', function () {
-      return {
-        data: {
-          version: '1.16.0',
-        },
-      };
-    });
-
     this.server.get('/sys/health', function () {
       return {
         enterprise: false,
@@ -100,13 +92,6 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
 
       await click(PAGE.button('create-message'));
     };
-    this.server.get('sys/internal/ui/version', function () {
-      return {
-        data: {
-          version: '1.16.0+ent',
-        },
-      };
-    });
     this.server.get('/sys/health', function () {
       return {
         enterprise: true,

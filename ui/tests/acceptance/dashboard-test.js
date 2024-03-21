@@ -83,7 +83,9 @@ module('Acceptance | landing page dashboard', function (hooks) {
     await visit('/vault/dashboard');
     const version = this.owner.lookup('service:version');
     // Since we're using mirage, version is mocked static value
-    const versionText = version.isEnterprise ? `Vault v1.9.0 root` : `Vault v1.9.0`;
+    const versionText = version.isEnterprise
+      ? `Vault ${version.versionDisplay} root`
+      : `Vault ${version.versionDisplay}`;
 
     assert.dom(SELECTORS.cardHeader('Vault version')).hasText(versionText);
   });
