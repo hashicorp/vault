@@ -18,17 +18,17 @@ import type RouterService from '@ember/routing/router-service';
 import type VersionService from 'vault/services/version';
 import type { SyncDestinationAssociationMetrics } from 'vault/vault/adapters/sync/association';
 import type SyncDestinationModel from 'vault/vault/models/sync/destination';
-import type AdapterError from '@ember/test/adapter';
+import type FeatureFlagService from 'vault/services/feature-flag';
 
 interface Args {
   destinations: Array<SyncDestinationModel>;
   totalVaultSecrets: number;
   activatedFeatures: Array<string>;
-  adapterError: AdapterError | null;
 }
 
 export default class SyncSecretsDestinationsPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly featureFlag: FeatureFlagService;
   @service declare readonly store: StoreService;
   @service declare readonly router: RouterService;
   @service declare readonly version: VersionService;
@@ -74,10 +74,11 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @task
   @waitFor
   *onFeatureConfirm() {
+    const namespace = this.featureFlag.managedNamespaceRoot;
     try {
       yield this.store
         .adapterFor('application')
-        .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST');
+        .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST', { namespace });
       this.router.transitionTo('vault.cluster.sync.secrets.overview');
     } catch (error) {
       this.error = errorMessage(error);

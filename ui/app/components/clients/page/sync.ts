@@ -4,7 +4,6 @@
  */
 
 import ActivityComponent from '../activity';
-
 export default class SyncComponent extends ActivityComponent {
   title = 'Secrets sync usage';
   description =

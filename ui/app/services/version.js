@@ -42,6 +42,10 @@ export default class VersionService extends Service {
     return this.features.includes('Control Groups');
   }
 
+  get hasSecretsSync() {
+    return this.features.includes('Secrets Sync');
+  }
+
   get versionDisplay() {
     if (!this.version) {
       return '';

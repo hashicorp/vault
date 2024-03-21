@@ -23,7 +23,7 @@ export interface ClientsCountsRouteParams {
   mountPath?: string | undefined;
 }
 
-interface ClientsCountsRouteModel {
+export interface ClientsCountsRouteModel {
   config: ClientsConfigModel;
   versionHistory: ClientsVersionHistoryModel;
   activity?: ClientsActivityModel;
