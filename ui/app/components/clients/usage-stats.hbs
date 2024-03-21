@@ -47,7 +47,7 @@
         data-test-stat-text="non-entity-clients"
       />
     </div>
-    {{#if (gte @totalUsageCounts.secret_syncs 0)}}
+    {{#if this.showSecretsSync}}
       <div class="column">
         <StatText
           class="column"
