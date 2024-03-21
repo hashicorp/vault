@@ -222,6 +222,18 @@ export default class Attribution extends Component {
       : `clients_by_namespace_${csvDateRange}`;
   }
 
+  get modalExportText() {
+    const { isSecretsSyncActivated } = this.args;
+
+    const prefix = 'This export will include the namespace path, mount path and associated total, entity';
+    const mid = isSecretsSyncActivated ? ', non-entity and secrets sync clients' : ' and non-entity clients';
+    const suffix = ` for the
+    ${this.formattedEndDate ? 'date range' : 'month'}
+    below.`;
+
+    return `${prefix}${mid}${suffix}`;
+  }
+
   @action
   exportChartData(filename) {
     const contents = this.generateCsvData();
