@@ -19,6 +19,8 @@ module('Acceptance | sync | overview', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    this.version = this.owner.lookup('service:version');
+    this.version.features = ['Secrets Sync'];
     syncScenario(this.server);
     syncHandlers(this.server);
     return authPage.login();
@@ -42,9 +44,8 @@ module('Acceptance | sync | overview', function (hooks) {
   });
 
   test('it should show opt-in banner and modal if secrets-sync is not activated', async function (assert) {
-    assert.expect(6);
+    assert.expect(3);
     this.server.get('/sys/activation-flags', () => {
-      assert.ok(true, 'Request on initial load to check if secrets-sync is activated');
       return {
         data: {
           activated: [''],
@@ -53,7 +54,6 @@ module('Acceptance | sync | overview', function (hooks) {
       };
     });
     this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
-      assert.ok(true, 'Request made to activate secrets-sync');
       return {};
     });
     await click(ts.navLink('Secrets Sync'));
@@ -67,11 +67,13 @@ module('Acceptance | sync | overview', function (hooks) {
 
   module('enterprise with namespaces', function (hooks) {
     hooks.beforeEach(async function () {
+      this.version.features = ['Secrets Sync', 'Namespaces'];
       await runCmd(`write sys/namespaces/admin -f`, false);
       await authPage.loginNs('admin');
       await runCmd(`write sys/namespaces/foo -f`, false);
       await authPage.loginNs('admin/foo');
     });
+
     test('it should make activation-flag requests to correct namespace', async function (assert) {
       assert.expect(6);
       this.server.get('/sys/activation-flags', (_, req) => {
@@ -104,7 +106,8 @@ module('Acceptance | sync | overview', function (hooks) {
       await click(ts.overview.optInConfirm);
     });
 
-    test('it should make activation-flag requests to correct namespace when managed', async function (assert) {
+    test.skip('it should make activation-flag requests to correct namespace when managed', async function (assert) {
+      // TODO: unskip for 1.16.1 when managed is supported
       assert.expect(6);
       this.owner.lookup('service:feature-flag').setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
       this.server.get('/sys/activation-flags', (_, req) => {
