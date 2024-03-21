@@ -31,8 +31,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	backendplugin "github.com/hashicorp/vault/sdk/plugin"
 	"github.com/hashicorp/vault/version"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 )
 
 var (
@@ -69,78 +67,6 @@ type PluginCatalog struct {
 	wrapper pluginutil.RunnerUtil
 
 	runtimeCatalog *PluginRuntimeCatalog
-}
-
-// Only plugins running with identical PluginRunner config can be multiplexed,
-// so we use the PluginRunner input as the key for the external plugins map.
-//
-// However, to be a map key, it must be comparable:
-// https://go.dev/ref/spec#Comparison_operators.
-// In particular, the PluginRunner struct has slices and a function which are not
-// comparable, so we need to transform it into a struct which is.
-type externalPluginsKey struct {
-	name     string
-	typ      consts.PluginType
-	version  string
-	command  string
-	ociImage string
-	runtime  string
-	args     string
-	env      string
-	sha256   string
-	builtin  bool
-}
-
-func makeExternalPluginsKey(p *pluginutil.PluginRunner) (externalPluginsKey, error) {
-	args, err := json.Marshal(p.Args)
-	if err != nil {
-		return externalPluginsKey{}, err
-	}
-
-	env, err := json.Marshal(p.Env)
-	if err != nil {
-		return externalPluginsKey{}, err
-	}
-
-	return externalPluginsKey{
-		name:     p.Name,
-		typ:      p.Type,
-		version:  p.Version,
-		command:  p.Command,
-		ociImage: p.OCIImage,
-		runtime:  p.Runtime,
-		args:     string(args),
-		env:      string(env),
-		sha256:   hex.EncodeToString(p.Sha256),
-		builtin:  p.Builtin,
-	}, nil
-}
-
-// externalPlugin holds client connections for multiplexed and
-// non-multiplexed plugin processes
-type externalPlugin struct {
-	// connections holds client connections by ID
-	connections map[string]*pluginClient
-
-	multiplexingSupport bool
-}
-
-// pluginClient represents a connection to a plugin process
-type pluginClient struct {
-	logger log.Logger
-
-	// id is the connection ID
-	id       string
-	pluginID string
-
-	// client handles the lifecycle of a plugin process
-	// multiplexed plugins share the same client
-	client      *plugin.Client
-	clientConn  grpc.ClientConnInterface
-	cleanupFunc func() error
-	reloadFunc  func() error
-
-	plugin.ClientProtocol
 }
 
 type PluginCatalogInput struct {
@@ -218,38 +144,6 @@ func envKeys(env []string) map[string]struct{} {
 	return keys
 }
 
-type pluginClientConn struct {
-	*grpc.ClientConn
-	id string
-}
-
-var _ grpc.ClientConnInterface = &pluginClientConn{}
-
-func (d *pluginClientConn) Invoke(ctx context.Context, method string, args interface{}, reply interface{}, opts ...grpc.CallOption) error {
-	// Inject ID to the context
-	md := metadata.Pairs(pluginutil.MultiplexingCtxKey, d.id)
-	idCtx := metadata.NewOutgoingContext(ctx, md)
-
-	return d.ClientConn.Invoke(idCtx, method, args, reply, opts...)
-}
-
-func (d *pluginClientConn) NewStream(ctx context.Context, desc *grpc.StreamDesc, method string, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-	// Inject ID to the context
-	md := metadata.Pairs(pluginutil.MultiplexingCtxKey, d.id)
-	idCtx := metadata.NewOutgoingContext(ctx, md)
-
-	return d.ClientConn.NewStream(idCtx, desc, method, opts...)
-}
-
-func (p *pluginClient) Conn() grpc.ClientConnInterface {
-	return p.clientConn
-}
-
-func (p *pluginClient) Reload() error {
-	p.logger.Debug("reload external plugin process")
-	return p.reloadFunc()
-}
-
 func (c *PluginCatalog) Processes() int {
 	return len(c.externalPlugins)
 }
@@ -279,14 +173,6 @@ func (c *PluginCatalog) reloadExternalPlugin(key externalPluginsKey, id, pluginB
 	c.logger.Debug("killed external plugin process for reload", "plugin", pluginBinaryRef, "pluginID", pc.pluginID)
 
 	return nil
-}
-
-// Close calls the plugin client's cleanupFunc to do any necessary cleanup on
-// the plugin client and the PluginCatalog. This implements the
-// plugin.ClientProtocol interface.
-func (p *pluginClient) Close() error {
-	p.logger.Debug("cleaning up plugin client connection", "id", p.id)
-	return p.cleanupFunc()
 }
 
 // cleanupExternalPlugin will kill plugin processes and perform any necessary
