@@ -58,12 +58,12 @@ export default class ConsoleService extends Service {
     const log = this.log.slice();
     if (command) {
       log.push({ type: 'command', content: command });
+      this.commandIndex = null;
     }
     if (logContent) {
       log.push(logContent);
     }
     this.log = log;
-    this.commandIndex = null;
   }
 
   ajax(operation, path, options = {}) {
