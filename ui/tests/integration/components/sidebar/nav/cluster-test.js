@@ -95,6 +95,18 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     });
   });
 
+  test('it should render badge for promotional links on enterprise version', async function (assert) {
+    const promotionalLinks = ['Secrets Sync'];
+    stubFeaturesAndPermissions(this.owner, true, true, ['Namespaces']);
+    await renderComponent();
+
+    promotionalLinks.forEach((link) => {
+      assert
+        .dom(`[data-test-sidebar-nav-link="${link}"]`)
+        .hasText(`${link} Premium`, `${link} link renders Premium badge`);
+    });
+  });
+
   test('it should hide enterprise related links in child namespace', async function (assert) {
     const links = [
       'Disaster Recovery',
