@@ -24,6 +24,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/patrickmn/go-cache"
+	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -700,7 +702,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 				// cache. Clearing the cache. Writing to storage can't be
 				// performed by perf standbys. So only doing this in the active
 				// node of the secondary.
-				if i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && i.localNode.HAState() != consts.PerfStandby {
+				if i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && i.localNode.HAState() == consts.Active {
 					if err := i.localAliasPacker.DeleteItem(ctx, entity.ID+tmpSuffix); err != nil {
 						i.logger.Error("failed to clear local alias entity cache", "error", err, "entity_id", entity.ID)
 						return
@@ -715,7 +717,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		// represent entities that are valid after invalidation. Clear the
 		// storage entries of local aliases for those entities that are
 		// indicated deleted by this invalidation.
-		if i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && i.localNode.HAState() != consts.PerfStandby {
+		if i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && i.localNode.HAState() == consts.Active {
 			for _, entity := range entitiesFetched {
 				if !strutil.StrListContains(entityIDs, entity.ID) {
 					if err := i.localAliasPacker.DeleteItem(ctx, entity.ID); err != nil {
@@ -1010,7 +1012,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 	}
 
 	if persistNeeded && !i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
-		entityAsAny, err := ptypes.MarshalAny(&entity)
+		entityAsAny, err := anypb.New(&entity)
 		if err != nil {
 			return nil, err
 		}
@@ -1199,7 +1201,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		}
 		a := entity.Aliases[idx]
 		a.Metadata = alias.Metadata
-		a.LastUpdateTime = ptypes.TimestampNow()
+		a.LastUpdateTime = timestamppb.Now()
 
 		update = true
 	}
