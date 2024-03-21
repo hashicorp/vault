@@ -306,9 +306,10 @@ func Test_ActivityLog_ClientTypeResponse(t *testing.T) {
 	}
 }
 
-// Test_ActivityLogCurrentMonth_SecretSyncResponse creates 10 secret sync
-// clients and verifies that the activity log partial month response returns
-// 10 secret sync clients at every level of the response hierarchy
+// Test_ActivityLogCurrentMonth_Response runs for each client type. The subtest
+// creates 10 clients of the type and verifies that the activity log partial
+// month response returns 10 clients of that type at every level of the response
+// hierarchy
 func Test_ActivityLogCurrentMonth_Response(t *testing.T) {
 	t.Parallel()
 
@@ -356,12 +357,12 @@ func Test_ActivityLogCurrentMonth_Response(t *testing.T) {
 	}
 }
 
-// Test_ActivityLog_Deduplication verifies that secret sync clients are
-// deduplicated across months. The test creates 10 secret sync clients and
-// repeats those clients in later months, then also registers 3 and then 2 new
-// secret sync clients. The test verifies that the total number of secret sync
-// clients is 15 (10 + 2 + 3), ensuring that the duplicates are not included
-func Test_SecretSync_Deduplication(t *testing.T) {
+// Test_ActivityLog_Deduplication runs for all client types. The subtest
+// verifies that the clients of that type are deduplicated across months. The
+// test creates 10 clients and repeats those clients in later months, then also
+// registers 3 and then 2 new clients. The test verifies that the total number
+// of clients is 15 (10 + 2 + 3), ensuring that the duplicates are not included
+func Test_ActivityLog_Deduplication(t *testing.T) {
 	t.Parallel()
 	for _, tc := range allClientTypeTestCases {
 		tc := tc
