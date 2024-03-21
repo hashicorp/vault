@@ -67,6 +67,7 @@ module('Acceptance | sync | overview', function (hooks) {
 
   module('enterprise with namespaces', function (hooks) {
     hooks.beforeEach(async function () {
+      this.version.features = ['Secrets Sync', 'Namespaces'];
       await runCmd(`write sys/namespaces/admin -f`, false);
       await authPage.loginNs('admin');
       await runCmd(`write sys/namespaces/foo -f`, false);
