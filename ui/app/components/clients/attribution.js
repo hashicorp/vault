@@ -48,11 +48,17 @@ export default class Attribution extends Component {
 
   parseAPITimestamp = (time, format) => parseAPITimestamp(time, format);
 
-  attributionLegend = [
-    { key: 'entity_clients', label: 'entity clients' },
-    { key: 'non_entity_clients', label: 'non-entity clients' },
-    { key: 'secret_syncs', label: 'secrets sync clients' },
-  ];
+  get attributionLegend() {
+    const attributionLegend = [
+      { key: 'entity_clients', label: 'entity clients' },
+      { key: 'non_entity_clients', label: 'non-entity clients' },
+    ];
+
+    if (this.args.isSecretsSyncActivated) {
+      attributionLegend.push({ key: 'secret_syncs', label: 'secrets sync clients' });
+    }
+    return attributionLegend;
+  }
 
   get formattedEndDate() {
     if (!this.args.startTimestamp && !this.args.endTimestamp) return null;
@@ -128,7 +134,9 @@ export default class Attribution extends Component {
     // destructure the namespace object  {label: 'some-namespace', entity_clients: 171, non_entity_clients: 20, secret_syncs: 10, clients: 201}
     // to get integers for CSV file
     const { clients, entity_clients, non_entity_clients, secret_syncs } = object;
-    return [clients, entity_clients, non_entity_clients, secret_syncs];
+    const { isSecretsSyncActivated } = this.args;
+
+    return [clients, entity_clients, non_entity_clients, ...(isSecretsSyncActivated ? [secret_syncs] : [])];
   }
 
   constructCsvRow(namespaceColumn, mountColumn = null, totalColumns, newColumns = null) {
@@ -145,6 +153,7 @@ export default class Attribution extends Component {
   generateCsvData() {
     const totalAttribution = this.args.totalClientAttribution;
     const newAttribution = this.barChartNewClients ? this.args.newClientAttribution : null;
+    const { isSecretsSyncActivated } = this.args;
     const csvData = [];
     // added to clarify that the row of namespace totals without an auth method (blank) are not additional clients
     // but indicate the total clients for that ns, including its auth methods
@@ -160,12 +169,14 @@ export default class Attribution extends Component {
       'Total clients',
       'Entity clients',
       'Non-entity clients',
-      'Secrets sync clients',
+      ...(isSecretsSyncActivated ? ['Secrets sync clients'] : []),
     ];
 
     if (newAttribution) {
       csvHeader.push(
-        'Total new clients, New entity clients, New non-entity clients, New secrets sync clients'
+        `Total new clients, New entity clients, New non-entity clients${
+          isSecretsSyncActivated ? ', New secrets sync clients' : ''
+        }`
       );
     }
 
