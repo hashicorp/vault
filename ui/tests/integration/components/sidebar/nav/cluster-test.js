@@ -122,4 +122,14 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
         .doesNotExist(`${link} is hidden in child namespace`);
     });
   });
+
+  test('it should not show sync links for managed cluster', async function (assert) {
+    this.owner.lookup('service:feature-flag').setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
+    stubFeaturesAndPermissions(this.owner, true, true, ['Secrets Sync']);
+    await renderComponent();
+
+    assert
+      .dom(`[data-test-sidebar-nav-link="Secrets Sync"]`)
+      .doesNotExist(`Secret Sync is hidden in managed vault`);
+  });
 });
