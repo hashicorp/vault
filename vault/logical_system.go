@@ -190,6 +190,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 			},
 		},
 	}
+	b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, entUnauthenticatedPaths()...)
 
 	b.Backend.Paths = append(b.Backend.Paths, entPaths(b)...)
 	b.Backend.Paths = append(b.Backend.Paths, b.configPaths()...)
