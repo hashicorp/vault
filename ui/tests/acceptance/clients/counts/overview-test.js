@@ -243,6 +243,9 @@ module('Acceptance | clients | overview', function (hooks) {
 });
 
 module('Acceptance | clients | overview | sync in license, activated', function (hooks) {
+  setupApplicationTest(hooks);
+  setupMirage(hooks);
+
   hooks.before(function () {
     sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
   });
@@ -270,16 +273,16 @@ module('Acceptance | clients | overview | sync in license, activated', function 
     assert.dom(SELECTORS.tab('sync')).exists();
   });
 
-  test('it should show secrets sync charts', async function (assert) {
-    assert.dom(SELECTORS.tab('sync')).exists('sync tab is shown because feature is in license');
+  test('it should show secrets sync data in overview and tab', async function (assert) {
+    assert
+      .dom(SELECTORS.charts.statTextValue('Secrets sync clients'))
+      .exists('shows secret sync data on overview');
+    await click(SELECTORS.tab('sync'));
+    assert.dom(SELECTORS.tab('sync')).hasClass('active');
+    assert.dom(SELECTORS.emptyStateTitle).doesNotExist();
     assert
       .dom(SELECTORS.charts.chart('Secrets sync usage'))
-      .doesNotExist('chart is hidden because feature is not activated');
-
-    assert
-      .dom(SELECTORS.charts.chart('running total'))
-      .exists('Shows running totals with monthly breakdown charts');
-    assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
+      .exists('chart is shown because feature is active and has data');
   });
 });
 
