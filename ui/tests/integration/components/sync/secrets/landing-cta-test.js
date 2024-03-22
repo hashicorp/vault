@@ -20,39 +20,47 @@ module('Integration | Component | sync | Secrets::LandingCta', function (hooks) 
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.version = this.owner.lookup('service:version');
     this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
-
-    this.renderComponent = () =>
-      render(
-        hbs`
-          <Secrets::LandingCta @isActivated={{true}}/>
-        `,
-        { owner: this.engine }
-      );
   });
 
-  test('it should render promotional copy for community version', async function (assert) {
-    await this.renderComponent();
+  test('it should render promotional copy for community or enterprise version without feature', async function (assert) {
+    await render(hbs`<Secrets::LandingCta @isActivated={{false}} @hasSecretsSync={{false}} /> `, {
+      owner: this.engine,
+    });
 
     assert
       .dom(cta.summary)
       .hasText(
-        'This enterprise feature allows you to sync secrets to platforms and tools across your stack to get secrets when and where you need them. Learn more about secrets sync'
+        'This premium enterprise feature allows you to sync secrets to platforms and tools across your stack to get secrets when and where you need them. Learn more about Secrets Sync'
       );
-    assert.dom(cta.link).hasText('Learn more about secrets sync');
+    assert.dom(cta.link).hasText('Learn more about Secrets Sync');
+    assert.dom(cta.button).doesNotExist('does not render create destination button');
   });
 
-  test('it should render enterprise copy and action', async function (assert) {
-    this.version.type = 'enterprise';
+  test('it should render CTA copy but not action when feature exists on enterprise license and is not activated', async function (assert) {
+    await render(hbs`<Secrets::LandingCta @isActivated={{false}} @hasSecretsSync={{true}} /> `, {
+      owner: this.engine,
+    });
+    assert
+      .dom(cta.summary)
+      .hasText(
+        'Sync secrets to platforms and tools across your stack to get secrets when and where you need them. Secrets Sync tutorial'
+      );
+    assert.dom(cta.link).hasText('Secrets Sync tutorial');
+    assert.dom(cta.button).doesNotExist('does not render create destination button');
+  });
 
-    await this.renderComponent();
+  test('it should render CTA copy and action when feature exists on enterprise license and is activated', async function (assert) {
+    await render(hbs`<Secrets::LandingCta @isActivated={{true}} @hasSecretsSync={{true}} /> `, {
+      owner: this.engine,
+    });
 
     assert
       .dom(cta.summary)
       .hasText(
-        'Sync secrets to platforms and tools across your stack to get secrets when and where you need them. Secrets sync tutorial'
+        'Sync secrets to platforms and tools across your stack to get secrets when and where you need them. Secrets Sync tutorial'
       );
-    assert.dom(cta.link).hasText('Secrets sync tutorial');
+    assert.dom(cta.link).hasText('Secrets Sync tutorial');
+    assert.dom(cta.button).exists('it renders create destination button');
   });
 });
