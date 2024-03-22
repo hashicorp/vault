@@ -23,7 +23,8 @@
 
       <:stats>
         {{#let (this.average this.byMonthActivityData "secret_syncs") as |avg|}}
-          {{#if (not-eq (avg) 0)}}
+          {{! intentionally hides a 0 average (0 is falsy) }}
+          {{#if avg}}
             <StatText
               @label="Average sync clients per month"
               @value={{avg}}
