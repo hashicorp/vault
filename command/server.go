@@ -1829,9 +1829,6 @@ func (c *ServerCommand) configureSeals(ctx context.Context, config *server.Confi
 	if err != nil {
 		return nil, nil, fmt.Errorf("Error getting seal generation info: %v", err)
 	}
-	if !config.IsMultisealEnabled() {
-		existingSealGenerationInfo = nil
-	}
 
 	hasPartialPaths, err := hasPartiallyWrappedPaths(ctx, backend)
 	if err != nil {
@@ -3358,7 +3355,7 @@ func (c *ServerCommand) reloadSeals(ctx context.Context, core *vault.Core, confi
 	infoKeysReload := make([]string, 0)
 	infoReload := make(map[string]string)
 
-	core.SetMultisealEnabled(newConfig.IsMultisealEnabled())
+	core.SetMultisealEnabled(config.IsMultisealEnabled())
 	setSealResponse, secureRandomReader, err := c.configureSeals(ctx, config, core.PhysicalAccess(), infoKeysReload, infoReload)
 	if err != nil {
 		return nil, err
