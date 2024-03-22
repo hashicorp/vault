@@ -10,6 +10,7 @@ import timestamp from 'core/utils/timestamp';
 import { getUnixTime } from 'date-fns';
 
 import type StoreService from 'vault/services/store';
+import type VersionService from 'vault/services/version';
 import type { ClientsRouteModel } from '../clients';
 import type ClientsConfigModel from 'vault/models/clients/config';
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
@@ -50,6 +51,7 @@ interface ActivationFlagsResponse {
 
 export default class ClientsCountsRoute extends Route {
   @service declare readonly store: StoreService;
+  @service declare readonly version: VersionService;
 
   queryParams = {
     start_time: { refreshModel: true, replace: true },
@@ -94,6 +96,8 @@ export default class ClientsCountsRoute extends Route {
   async isSecretsSyncActivated(activity: ClientsActivityModel | Record<string, never> | undefined) {
     // if there are secrets, the feature is activated
     if (activity && activity.total?.secret_syncs > 0) return true;
+
+    if (!this.version.hasSecretsSync) return false;
 
     // otherwise check explicitly if the feature has been activated
     const activatedFeatures = await this.getActivatedFeatures();
