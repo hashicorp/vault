@@ -39,6 +39,15 @@ module('Acceptance | clients | overview', function (hooks) {
     timestamp.now.restore();
   });
 
+  test('it should render the correct tabs', async function (assert) {
+    assert.dom(SELECTORS.tab('overview')).exists();
+    assert.dom(SELECTORS.tab('entities')).exists();
+    assert.dom(SELECTORS.tab('sync')).exists();
+    assert.dom(SELECTORS.tab('configuration')).exists();
+
+    assert.dom(SELECTORS.charts.chart('Secrets sync usage')).exists();
+  });
+
   test('it should render charts', async function (assert) {
     assert
       .dom(SELECTORS.counts.startMonth)
@@ -233,5 +242,49 @@ module('Acceptance | clients | overview', function (hooks) {
         `${formatNumber([topNamespace.clients])}`,
         'top attribution clients back to unfiltered value'
       );
+  });
+});
+
+module('Acceptance | clients | overview | sync in license, not activated', function (hooks) {
+  setupApplicationTest(hooks);
+  setupMirage(hooks);
+
+  hooks.beforeEach(async function () {
+    this.store = this.owner.lookup('service:store');
+    await authPage.login();
+    return visit('/vault/clients/counts/overview');
+  });
+
+  test('it should hide secrets sync charts', async function (assert) {
+    assert.dom(SELECTORS.tab('sync')).exists('sync tab is shown because feature is in license');
+    assert
+      .dom(SELECTORS.charts.chart('Secrets sync usage'))
+      .doesNotExist('chart is hidden because feature is not activated');
+
+    assert
+      .dom(SELECTORS.charts.chart('running total'))
+      .exists('Shows running totals with monthly breakdown charts');
+    assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
+  });
+});
+
+module('Acceptance | clients | overview | sync not in license', function (hooks) {
+  setupApplicationTest(hooks);
+  setupMirage(hooks);
+
+  hooks.beforeEach(async function () {
+    this.store = this.owner.lookup('service:store');
+    await authPage.login();
+    return visit('/vault/clients/counts/overview');
+  });
+
+  test('it should hide secrets sync charts and tab if feature is not in license', async function (assert) {
+    assert.dom(SELECTORS.tab('sync')).doesNotExist();
+    assert.dom(SELECTORS.charts.chart('Secrets sync usage')).doesNotExist();
+
+    assert
+      .dom(SELECTORS.charts.chart('running total'))
+      .exists('Shows running totals with monthly breakdown charts');
+    assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
   });
 });
