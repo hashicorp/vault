@@ -2865,7 +2865,7 @@ func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal
 		Enabled:    multisealEnabled,
 	}
 
-	if multisealEnabled {
+	if multisealEnabled || (existingSealGenInfo != nil && existingSealGenInfo.Enabled) {
 		err := newSealGenInfo.Validate(existingSealGenInfo, hasPartiallyWrappedPaths)
 		if err != nil {
 			return nil, err
@@ -3358,6 +3358,7 @@ func (c *ServerCommand) reloadSeals(ctx context.Context, core *vault.Core, confi
 	infoKeysReload := make([]string, 0)
 	infoReload := make(map[string]string)
 
+	core.SetMultisealEnabled(newConfig.IsMultisealEnabled())
 	setSealResponse, secureRandomReader, err := c.configureSeals(ctx, config, core.PhysicalAccess(), infoKeysReload, infoReload)
 	if err != nil {
 		return nil, err
