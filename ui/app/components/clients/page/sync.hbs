@@ -22,13 +22,15 @@
       </:subTitle>
 
       <:stats>
-        <StatText
-          @label="Average sync clients per month"
-          @value={{this.average this.byMonthActivityData "secret_syncs"}}
-          @size="m"
-          class="data-details-top has-top-padding-l"
-          data-test-average-sync-clients
-        />
+        {{#if (not-eq (this.average this.byMonthActivityData "secret_syncs") 0)}}
+          <StatText
+            @label="Average sync clients per month"
+            @value={{this.average this.byMonthActivityData "secret_syncs"}}
+            @size="m"
+            class="data-details-top has-top-padding-l"
+            data-test-average-sync-clients
+          />
+        {{/if}}
       </:stats>
 
       <:chart>

@@ -136,4 +136,49 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     assert.dom(syncTab.total).doesNotExist();
     assert.dom(syncTab.average).doesNotExist();
   });
+
+  test('it should render an empty chart if secrets sync is activated but no secrets synced', async function (assert) {
+    this.isSecretsSyncActivated = true;
+    const counts = {
+      clients: 10,
+      entity_clients: 4,
+      non_entity_clients: 6,
+      secret_syncs: 0,
+    };
+    const monthData = {
+      month: '1/24',
+      timestamp: '2024-01-01T00:00:00-08:00',
+      ...counts,
+      namespaces: [
+        {
+          label: 'root',
+          ...counts,
+          mounts: [],
+        },
+      ],
+    };
+    this.activity.byMonth = [
+      {
+        ...monthData,
+        namespaces_by_key: {
+          root: {
+            ...monthData,
+            mounts_by_key: {},
+          },
+        },
+        new_clients: {
+          ...monthData,
+        },
+      },
+    ];
+    this.activity.total = counts;
+    await this.renderComponent();
+
+    assert
+      .dom(syncTab.total)
+      .hasText(
+        'Total sync clients The total number of secrets synced from Vault to other destinations during this date range. 0'
+      );
+    assert.dom(syncTab.average).doesNotExist('Does not render average if the calculation is 0');
+  });
 });
