@@ -36,14 +36,15 @@ for encrypting and decrypting cache information:
 
 ```shell-session
 export VAULT_NAMESPACE=<VAULT_NAMESPACE>
+export VAULT_TRANSIT_PATH=<VAULT_TRANSIT_PATH>
 
-vault write -f transit/keys/vso-client-cache
+vault write -f ${VAULT_TRANSIT_PATH}/keys/vso-client-cache
 
 vault policy write operator - <<EOH
-path "transit/encrypt/vso-client-cache" {
+path "${VAULT_TRANSIT_PATH}/encrypt/vso-client-cache" {
   capabilities = ["create", "update"]
 }
-path "transit/decrypt/vso-client-cache" {
+path "${VAULT_TRANSIT_PATH}/decrypt/vso-client-cache" {
   capabilities = ["create", "update"]
 }
 EOH
@@ -53,37 +54,41 @@ EOH
 <CodeBlockConfig>
 
 ```hcl
-resource "vault_mount" "transit" {
-  namespace   = "<VAULT_NAMESPACE>"
-  path        = "transit"
-  type        = "transit"
-  description = "VSO Client Cache"
+locals {
+  transit_path      = "<VAULT_TRANSIT_PATH>"
+  transit_namespace = "<VAULT_NAMESPACE>"
 }
 
 resource "vault_transit_secret_cache_config" "cache" {
-  namespace = vault_mount.transit.namespace
-  backend   = vault_mount.transit.path
+  namespace = local.transit_namespace
+  backend   = local.transit_path
   size      = 500
 }
 
 resource "vault_transit_secret_backend_key" "cache" {
-  namespace        = vault_mount.transit.namespace
-  backend          = vault_mount.transit.path
+  namespace        = local.transit_namespace
+  backend          = local.transit_path
   name             = "vso-client-cache"
   deletion_allowed = true
+}
+
+data "vault_policy_document" "operator_transit" {
+  rule {
+    path         = "${local.transit_path}/encrypt/${vault_transit_secret_backend_key.cache.name}"
+    capabilities = ["create", "update"]
+    description  = "encrypt"
+  }
+  rule {
+    path         = "${local.transit_path}/decrypt/${vault_transit_secret_backend_key.cache.name}"
+    capabilities = ["create", "update"]
+    description  = "decrypt"
+  }
 }
 
 resource "vault_policy" "operator" {
   namespace = vault_transit_secret_backend_key.cache.namespace
   name      = "operator"
-  policy    = <<EOT
-path "${vault_mount.transit.path}/encrypt/${vault_transit_secret_backend_key.cache.name}" {
-  capabilities = ["create", "update"]
-}
-path "${vault_mount.transit.path}/decrypt/${vault_transit_secret_backend_key.cache.name}" {
-  capabilities = ["create", "update"]
-}
-EOT
+  policy    = data.vault_policy_document.operator_transit.hcl
 }
 ```
 
@@ -99,8 +104,9 @@ Vault Secrets Operator.
 <CodeBlockConfig>
 
 ```shell-session
+export VAULT_NAMESPACE=<VAULT_NAMESPACE>
 
-vault write auth/kubernetes/role/operator \
+vault write auth/<VAULT_KUBERNETES_PATH>/role/operator \
   bound_service_account_names=vault-secrets-operator-controller-manager \
   bound_service_account_namespaces=vault-secrets-operator \
   token_period="24h" \
@@ -112,20 +118,19 @@ vault write auth/kubernetes/role/operator \
 <CodeBlockConfig>
 
 ```hcl
- resource "vault_auth_backend" "kubernetes" {
+data "vault_auth_backend" "kubernetes" {
   namespace = "<VAULT_NAMESPACE>"
-  path      = "kubernetes"
-  type      = "kubernetes"
+  path      = "<VAULT_KUBERNETES_PATH>"
 }
 
 resource "vault_kubernetes_auth_backend_config" "local" {
-  namespace       = vault_auth_backend.kubernetes.namespace
-  backend         = vault_auth_backend.kubernetes.path
+  namespace       = data.vault_auth_backend.kubernetes.namespace
+  backend         = data.vault_auth_backend.kubernetes.path
   kubernetes_host = "https://kubernetes.default.svc"
 }
 
 resource "vault_kubernetes_auth_backend_role" "operator" {
-  namespace                        = vault_auth_backend.kubernetes.namespace
+  namespace                        = data.vault_auth_backend.kubernetes.namespace
   backend                          = vault_kubernetes_auth_backend_config.local.backend
   role_name                        = "operator"
   bound_service_account_names      = ["vault-secrets-operator-controller-manager"]
@@ -178,10 +183,10 @@ controller:
         enabled: true
         vaultConnectionRef: local-vault-server
         keyName: vso-client-cache
-        transitMount: transit
+        transitMount: <VAULT_TRANSIT_PATH>
         namespace: <VAULT_NAMESPACE>
         method: kubernetes
-        mount: kubernetes
+        mount: <VAULT_KUBERNETES_PATH>
         kubernetes:
           role: operator
           serviceAccount: vault-secrets-operator-controller-manager
@@ -216,11 +221,11 @@ installs:
         tokenExpirationSeconds: 600
         audiences: ["vault"]
       method: kubernetes
-      mount: kubernetes
+      mount: <VAULT_KUBERNETES_PATH>
       namespace: <VAULT_NAMESPACE>
       storageEncryption:
         keyName: vso-client-cache
-        mount: transit
+        mount: <VAULT_TRANSIT_PATH>
       vaultConnectionRef: local-vault-server
     ```
 
@@ -308,4 +313,3 @@ The pod in the operator deployment restarts once the
     ```
 
     </CodeBlockConfig>
-
