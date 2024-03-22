@@ -7,11 +7,13 @@ your the [storage
 stanza](/vault/docs/configuration/storage/raft#max_entry_size). Vault
 automatically chunks any storage entry that is larger than 512 KiB but smaller
 than `max_entry_size` into smaller pieces before writing the entry to Raft.
+
 Vault Enterprise 1.17 and higher also exposes a
 `max_mount_and_namespace_table_entry_size` configuration that allows the limit
 to be increased but only for the KV entries necessary for the mount table and
-namespace metedata. Increasing this is recommended where available to avoid
-unintentionally allowing other storage entries to grow to be very large.
+namespace metadata. To allow for more mounts or namespaces than the default
+entry size can support, it is recommended over `max_entry_size` where available
+as it avoids unintentionally allowing other storage entries to grow very large.
 
 For Vault deployments using the Consul storage backend, the default entry size
 limit is 512 KiB. The default size is enforced by Consul rather than Vault. You
