@@ -144,9 +144,10 @@ migration method to migrate back to a Shamir seal.
 
 ### Removing Seal HA
 
-If an operator wishes to revert to single seal behavior, to prevent possible data
-loss it imperative than an operator do so by using the HA feature to migrate to 
-a single seal, then monitor for seal re-wrapping to fully complete.  In particular, 
-the result of the [`sys/sealwrap/rewrap`](/vault/docs/api-docs/system/sealwrap-rewrap)
-should contain `fully_wrapped=true`.  Then, remove the `enable_multiseal` element 
-and restart Vault.
+Migrating back to a single seal may result in data loss if an operator does not 
+use the HA seal feature. To migrate back to a single seal:
+
+1. Perform a [seal migration](/vault/docs/concepts/seal#seal-migration) as described.
+2. Monitor [`sys/sealwrap/rewrap`](/vault/docs/api-docs/system/sealwrap-rewrap) until the API returns `fully_wrapped=true`.
+3. Remove `enable_multiseal` from all Vault configuration files in the cluster.
+4. Restart Vault.
