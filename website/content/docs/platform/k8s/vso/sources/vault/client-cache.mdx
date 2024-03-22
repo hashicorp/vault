@@ -8,14 +8,15 @@ description: >-
 
 # Persist and encrypt the Vault client cache
 
-By default, the Vault client cache does not persist. You can use the
-[transit secrets engine](/vault/docs/secrets/transit) with Vault Secrets Operator
+By default, the [Vault client cache](/vault/docs/platform/k8s/vso/sources/vault#vault-client-cache) does not persist. You can use the
+[transit secrets engine](/vault/docs/secrets/transit) with Vault Secrets Operator (VSO)
 to store and encrypt the client cache in your Vault server.
 
 <Highlight title="Dynamic secrets best practice">
 
   We strongly recommend persisting and encrypting the client cache if you use
-  [Vault dynamic secrets](/vault/docs/platform/k8s/vso/api-reference#vaultdynamicsecret).
+  [Vault dynamic secrets](/vault/docs/platform/k8s/vso/api-reference#vaultdynamicsecret),
+  so that dynamic secret leases are maintained through restarts and upgrades.
 
 </Highlight>
 
@@ -146,7 +147,7 @@ resource "vault_kubernetes_auth_backend_role" "operator" {
 </CodeBlockConfig>
 </CodeTabs>
 
-## Step 3: Add a Vault connection for VSO
+## Step 3: Configure a Vault connection for VSO
 
 Use the Vault Secrets Operator API to add a
 [VaultConnection](/vault/docs/platform/k8s/vso/api-reference#vaultconnection)
@@ -273,7 +274,7 @@ The pod in the operator deployment restarts once the
 
 </Tabs>
 
-## Step 5: Verify client cache storage and encryption
+## Optional: Verify client cache storage and encryption
 
 1. Confirm the Vault Secrets Operator logs the following information on startup:
 
