@@ -3392,6 +3392,9 @@ func (c *ServerCommand) reloadSeals(ctx context.Context, grabStateLock bool, cor
 
 	currentConfig := core.GetCoreConfigInternal()
 
+	// we need to persist seal information if multiseal is being enabled
+	addEnableMultiseal := !currentConfig.IsMultisealEnabled() && newConfig.IsMultisealEnabled()
+
 	if core.SealAccess().BarrierSealConfigType() == vault.SealConfigTypeShamir {
 		switch {
 		case len(newConfig.Seals) == 0:
@@ -3413,7 +3416,7 @@ func (c *ServerCommand) reloadSeals(ctx context.Context, grabStateLock bool, cor
 		}
 	}
 
-	if cmp.Equal(currentConfig.Seals, newConfig.Seals) {
+	if cmp.Equal(currentConfig.Seals, newConfig.Seals) && !addEnableMultiseal {
 		return false, nil
 	}
 
