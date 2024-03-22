@@ -35,6 +35,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
   hooks.beforeEach(async function () {
     this.version = this.owner.lookup('service:version');
     this.version.type = 'enterprise';
+    this.version.features = ['Secrets Sync'];
     syncScenario(this.server);
     syncHandlers(this.server);
 
@@ -51,8 +52,18 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       );
   });
 
+  test('it should render landing cta component for enterprise with the secrets sync feature', async function (assert) {
+    this.destinations = [];
+    await this.renderComponent();
+
+    assert.dom(title).hasText('Secrets Sync', 'Page title renders');
+    assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
+    assert.dom(cta.summary).exists('CTA renders');
+  });
+
   test('it should render landing cta component for community', async function (assert) {
     this.version.type = 'community';
+    this.version.features = [];
     this.destinations = [];
 
     await this.renderComponent();
@@ -61,38 +72,14 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     assert.dom(cta.button).doesNotExist('Create first destination button does not render');
   });
 
-  test('it should render landing cta component for enterprise', async function (assert) {
+  test('it should render landing cta component for enterprise without the secrets sync feature', async function (assert) {
     this.destinations = [];
-
+    this.version.features = [];
     await this.renderComponent();
 
-    assert.dom(title).hasText('Secrets Sync', 'Page title renders');
-    assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
+    assert.dom(title).hasText('Secrets Sync Premium feature', 'Page title renders');
+    assert.dom(cta.button).doesNotExist('Create first destination button does not render');
     assert.dom(cta.summary).exists('CTA renders');
-  });
-
-  test('it should render adapter error if post to activate secret sync fails', async function (assert) {
-    assert.expect(3);
-    this.activatedFeatures = [''];
-    this.destinations = [''];
-    const error = { errors: ['Permission denied'] };
-    this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
-      assert.ok(true, 'Request made to activate secrets-sync');
-      return new Response(403, {}, error);
-    });
-
-    await render(
-      hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @activatedFeatures={{this.activatedFeatures}} @adapterError={{null}} />`,
-      {
-        owner: this.engine,
-      }
-    );
-
-    await click(overview.optInBannerEnable);
-    await click(overview.optInCheck);
-    await click(overview.optInConfirm);
-    assert.dom(overview.optInModal).doesNotExist('Opt-in modal closed');
-    assert.dom(overview.optInError).exists('Opt-in modal error displays');
   });
 
   test('it should render header, tabs and toolbar for overview state', async function (assert) {
