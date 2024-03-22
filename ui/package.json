@@ -168,7 +168,7 @@
     "ember-template-lint": "5.7.2",
     "ember-template-lint-plugin-prettier": "4.0.0",
     "ember-test-selectors": "6.0.0",
-    "ember-tether": "^2.0.1",
+    "ember-tether": "3.0.0",
     "ember-truth-helpers": "3.0.0",
     "escape-string-regexp": "^2.0.0",
     "eslint": "^8.37.0",
@@ -226,7 +226,9 @@
     "underscore": "^1.12.1",
     "trim": "^0.0.3",
     "xmlhttprequest-ssl": "^1.6.2",
-    "@embroider/macros": "^1.0.0"
+    "@embroider/macros": "^1.0.0",
+    "socket.io": "^4.6.2",
+    "json5": "^1.0.2"
   },
   "engines": {
     "node": "18"

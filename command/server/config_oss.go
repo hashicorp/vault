@@ -5,8 +5,6 @@
 
 package server
 
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker
-
-func IsMultisealSupported() bool {
+func (c *Config) IsMultisealEnabled() bool {
 	return false
 }

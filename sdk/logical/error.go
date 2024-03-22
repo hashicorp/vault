@@ -28,7 +28,7 @@ var (
 	// The status code returned does not change because of this error
 	ErrInvalidCredentials = errors.New("invalid credentials")
 
-	// ErrMultiAuthzPending is returned if the the request needs more
+	// ErrMultiAuthzPending is returned if the request needs more
 	// authorizations
 	ErrMultiAuthzPending = errors.New("request needs further approval")
 

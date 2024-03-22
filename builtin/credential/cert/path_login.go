@@ -14,6 +14,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -25,7 +26,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
-	glob "github.com/ryanuber/go-glob"
+	"github.com/ryanuber/go-glob"
 )
 
 // ParsedCert is a certificate that has been configured as trusted
@@ -663,6 +664,8 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 				conf.OcspFailureMode = ocsp.FailOpenFalse
 			}
 			conf.QueryAllServers = conf.QueryAllServers || entry.OcspQueryAllServers
+			conf.OcspThisUpdateMaxAge = entry.OcspThisUpdateMaxAge
+			conf.OcspMaxRetries = entry.OcspMaxRetries
 		}
 	}
 
@@ -685,6 +688,16 @@ func (b *backend) checkForCertInOCSP(ctx context.Context, clientCert *x509.Certi
 	defer b.ocspClientMutex.RUnlock()
 	err := b.ocspClient.VerifyLeafCertificate(ctx, clientCert, chain[1], conf)
 	if err != nil {
+		if ocsp.IsOcspVerificationError(err) {
+			// We don't want anything to override an OCSP verification error
+			return false, err
+		}
+		if conf.OcspFailureMode == ocsp.FailOpenTrue {
+			onlyNetworkErrors := b.handleOcspErrorInFailOpen(err)
+			if onlyNetworkErrors {
+				return true, nil
+			}
+		}
 		// We want to preserve error messages when they have additional,
 		// potentially useful information. Just having a revoked cert
 		// isn't additionally useful.
@@ -694,6 +707,28 @@ func (b *backend) checkForCertInOCSP(ctx context.Context, clientCert *x509.Certi
 		return false, nil
 	}
 	return true, nil
+}
+
+func (b *backend) handleOcspErrorInFailOpen(err error) bool {
+	urlError := &url.Error{}
+	allNetworkErrors := true
+	if multiError, ok := err.(*multierror.Error); ok {
+		for _, myErr := range multiError.Errors {
+			if !errors.As(myErr, &urlError) {
+				allNetworkErrors = false
+			}
+		}
+	} else if !errors.As(err, &urlError) {
+		allNetworkErrors = false
+	}
+
+	if allNetworkErrors {
+		b.Logger().Warn("OCSP is set to fail-open, and could not retrieve "+
+			"OCSP based revocation but proceeding.", "detail", err)
+		return true
+	}
+
+	return false
 }
 
 func (b *backend) checkForChainInCRLs(chain []*x509.Certificate) bool {

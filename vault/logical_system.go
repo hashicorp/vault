@@ -190,6 +190,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 			},
 		},
 	}
+	b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, entUnauthenticatedPaths()...)
 
 	b.Backend.Paths = append(b.Backend.Paths, entPaths(b)...)
 	b.Backend.Paths = append(b.Backend.Paths, b.configPaths()...)
@@ -5245,18 +5246,6 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 
 	resp.Data["exact_paths"] = exact
 	resp.Data["glob_paths"] = glob
-
-	return resp, nil
-}
-
-// pathInternalUIVersion is the framework.PathOperation callback function for
-// the sys/internal/ui/version path. It simply returns the Vault version.
-func (b *SystemBackend) pathInternalUIVersion(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	resp := &logical.Response{
-		Data: map[string]any{
-			"version": version.GetVersion().VersionNumber(),
-		},
-	}
 
 	return resp, nil
 }
