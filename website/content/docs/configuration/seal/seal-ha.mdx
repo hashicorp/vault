@@ -11,7 +11,8 @@ description: |-
 
 [Seal High Availability](/vault/docs/concepts/seal#seal-high-availability-enterprise)
 provides the means to configure at least two auto-seals (and no more than three)
-in order to have resilience against outage of a seal service or mechanism.
+in order to have resilience against outage of a seal service or mechanism. 
+Shamir seals cannot be used in a Seal HA setup.
 
 Using Seal HA involves configuring extra seals in Vault's server configuration file
 and restarting Vault or triggering a reload of it's configuration via sending

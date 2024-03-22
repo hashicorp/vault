@@ -357,6 +357,11 @@ allowed.
 In additional to high availability, Seal HA can be used to migrate between two
 auto seals in a [simplified manner.](#migration-post-vault-1-16-0-via-seal-ha-for-auto-seals-enterprise)
 
+Note that Shamir seals are not auto seals and cannot be included in a Seal
+HA setup.  This is because auto seals support seal wrap while Shamir seals
+do not, so the loss of the auto seal does not necessarily leave Vault in a
+fully available state. 
+
 ### Use and Configuration
 
 Refer to the [configuration](/vault/docs/configuration/seal/seal-ha) section
