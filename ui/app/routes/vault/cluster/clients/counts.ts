@@ -97,6 +97,7 @@ export default class ClientsCountsRoute extends Route {
     // if there are secrets, the feature is activated
     if (activity && activity.total?.secret_syncs > 0) return true;
 
+    // if feature is not in license, it's definitely not activated
     if (!this.version.hasSecretsSync) return false;
 
     // otherwise check explicitly if the feature has been activated
