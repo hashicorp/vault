@@ -97,7 +97,7 @@ export default class ClientsCountsRoute extends Route {
 
     // otherwise check explicitly if the feature has been activated
     const activatedFeatures = await this.getActivatedFeatures();
-    return activatedFeatures.includes('secret-sync');
+    return activatedFeatures.includes('secrets-sync');
   }
 
   async model(params: ClientsCountsRouteParams) {
