@@ -18,7 +18,12 @@ Using Seal HA involves configuring extra seals in Vault's server configuration f
 and restarting Vault or triggering a reload of it's configuration via sending
 it the SIGHUP signal.
 
-Before using Seal HA, one must have upgraded to Vault 1.16 or higher.
+Before using Seal HA, one must have upgraded to Vault 1.16 or higher.  Seal HA is enabled
+by adding the following line to Vault's configuration:
+
+```
+enable_multiseal = true
+```
 
 ## Adding and Removing Seals
 
@@ -137,3 +142,13 @@ instructions to add a second auto seal.
 Correspondingly, to migrate back to a shamir seal, first use the above
 instructions to move to a single auto seal, and use the traditional
 migration method to migrate back to a Shamir seal.
+
+### Removing Seal HA
+
+Migrating back to a single seal may result in data loss if an operator does not 
+use the HA seal feature. To migrate back to a single seal:
+
+1. Perform a [seal migration](/vault/docs/concepts/seal#seal-migration) as described.
+2. Monitor [`sys/sealwrap/rewrap`](/vault/docs/api-docs/system/sealwrap-rewrap) until the API returns `fully_wrapped=true`.
+3. Remove `enable_multiseal` from all Vault configuration files in the cluster.
+4. Restart Vault.
