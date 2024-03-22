@@ -37,23 +37,254 @@ called an association. These associations are created via Vault's API by adding 
 destinations. Each association keeps track of that secret's current sync status, the timestamp of its last status change, and
 the error code of the last sync or unsync operation if it failed. Each destination can have any number of secret associations.
 
-## Sync Statuses
+## Sync statuses
 
 There are several sync statuses which relay information about the outcome of the latest sync
 operation to have occurred on that secret. The status information is stored inside each
 association object returned by the endpoint and, upon failure, includes an error code describing the cause of the failure.
 
-* `SYNCING` - The sync operation for the secret is currently in-progress.
-* `SYNCED` - The sync operation was successful and sent the secret to the external destination.
-* `UNSYNCING` - The unsync operation for the secret is currently in-progress.
-* `UNSYNCED` - The unsync operation was successful and removed the secret from the external destination.
-	This is returned when a secret itself is deleted but the association is not.
-* `INTERNAL_VAULT_ERROR` - The sync or unsync operation failed due to an issue internal to Vault.
-* `CLIENT_SIDE_ERROR` - The sync or unsync operation failed due to a configuration error.
-	For example, the credentials used to configure the destination expired or were revoked.
-* `EXTERNAL_SERVICE_ERROR` - The sync or unsync operation failed due to an issue with the
-	external service provider's side.
-* `UNKNOWN` - Vault is unable to determine the current state of the secret in regards to the external service.
+| Status                   | Description                                                                                     |
+|:-------------------------|:------------------------------------------------------------------------------------------------|
+| `UNKNOWN`                | Vault is unable to determine the current state of the secret in regard to the external service. |
+| `PENDING`                | An operation is queued for that secret and has not been processed yet.                          |
+| `SYNCED`                 | The sync operation was successful and sent the secret to the external destination.              |
+| `UNSYNCED`               | The unsync operation was successful and removed the secret from the external destination.       |
+| `INTERNAL_VAULT_ERROR`   | The operation failed due to an issue internal to Vault.                                         |
+| `CLIENT_SIDE_ERROR`      | The operation failed due to a configuration error such as invalid privileges.                   |
+| `EXTERNAL_SERVICE_ERROR` | The operation failed due to an issue with the external service such as a temporary downtime.    |
+
+## Name template
+
+By default, the name of synced secrets follows this format: `vault/<accessor>/<secret-path>`. The casing and delimiters
+may change according to the valid character set of each destination type. This pattern was chosen to prevent accidental
+name collisions and to clearly identify where the secret is coming from.
+
+Every destination allows you to customize this name pattern by configuring a `secret_name_template` field to best suit
+individual use cases. The templates use a subset of the go-template syntax for extra flexibility.
+
+The following placeholders are available:
+
+| Placeholder         | Description                                                                                                 |
+|:--------------------|:------------------------------------------------------------------------------------------------------------|
+| `DestinationType`   | The type of the destination, e.g. "aws-sm"                                                                  |
+| `DestinationName`   | The name of the destination                                                                                 |
+| `NamespacePath`     | The full namespace path where the secret being synced is located                                            |
+| `NamespaceBaseName` | The segment following the last `/` character from the full path                                             |
+| `NamespaceID`       | The internal unique ID identifying the namespace, e.g. `RQegM`                                              |
+| `MountPath`         | The full mount path where the secret being synced is located                                                |
+| `MountBaseName`     | The segment following the last `/` character from the full path                                             |
+| `MountAccessor`     | The internal unique ID identifying the mount, e.g. `kv_1234`                                                |
+| `SecretPath`        | The full secret path                                                                                        |
+| `SecretBaseName`    | The segment following the last `/` character from the full path                                             |
+| `SecretKey`         | The individual secret key being synced, only available if the destination uses the `secret-key` granularity |
+
+Let's assume we want to sync the following secret:
+
+  <CodeBlockConfig hideClipboard>
+
+    $ VAULT_NAMESPACE=ns1/ns2 vault kv get -mount=path/to/kv1 path/to/secret1
+
+    ========== Secret Path ==========
+    path/to/kv1/data/path/to/secret1
+
+    ======= Metadata =======
+    (...)
+
+    === Data ===
+    Key    Value
+    ---    -----
+    foo    bar
+
+  </CodeBlockConfig>
+
+Let's look at some name template examples and the resulting secret name at the sync destination.
+
+| Name template                            | Result                 |
+|:-----------------------------------------|:-----------------------|
+| prefix-{{ .SecretPath }}                 | prefix-path/to/secret1 |
+| {{ .SecretBaseName \| uppercase }}       | SECRET1                |
+| {{ .MountAccessor }}_{{ .SecretKey }}    | kv_1234_foo            |
+| {{ .SecretPath \| replace \"/\" \"_\" }} | path_to_secret1        |
+
+Name templates can be updated. The new template is only effective for new secrets associated with the destination and does
+not affect the secrets synced with the previous template. It is possible to update an association to force a recreate operation.
+The secret synced with the old template will be deleted and a new secret using the new template version will be synced.
+
+## Granularity
+
+Vault KV-v2 secrets are multi-value and their data is represented in JSON. Multi-value secrets are useful to bundle closely
+related information together like a username & password pair. However, most secret management systems only support single-value
+entries. Secrets sync allows you to choose the granularity that best suits your use case for each destination by specifying a `granularity`
+field.
+
+The `secret-path` granularity syncs the entire JSON content of the Vault secret as a single entry at the destination. If
+the destination does not support multi-value secret the JSON is encoded as a single-value JSON-string.
+
+The `secret-key` granularity syncs each Vault key-value pair as a distinct entry at the destination. If the value itself is a list or map
+it is encoded as a JSON blob.
+
+Granularity can be updated. The new granularity only affects secrets newly associated with the destination and does
+not modify the previously synced secrets. It is possible to update an association to force a recreate operation.
+The secret synced with the old granularity will be deleted and new secrets will be synced according to the new granularity.
+
+## Security
+
+  <Note>
+  Vault does not control the permissions at the destination. It is the responsibility
+  of the operator to configure and maintain proper access controls on the external system so synced
+  secrets are not accessed unintentionally.
+  </Note>
+
+### Vault access requirements
+
+Vault verifies the client has read access on the secret before syncing it with any destination. This additional check is
+there to prevent users from maliciously or unintentionally leveraging elevated permissions on an external system to access
+secrets they normally wouldn't be able to.
+
+Let's assume we have a secret located at `path/to/data/secret1` and a user with write access to the sync feature,
+but no read access to that secret. This scenario is equivalent to this ACL policy:
+
+  <CodeBlockConfig hideClipboard>
+
+    # Allow full access to the sync feature
+    path "sys/sync/*" {
+      capabilities = ["read", "list", "create", "update", "delete"]
+    }
+
+    # Allow read access to the secret mount path/to
+    path "path/to/*" {
+      capabilities = ["read"]
+    }
+
+    # Deny access to a specific secret
+    path "path/to/data/my-secret-1" {
+      capabilities = ["deny"]
+    }
+
+  </CodeBlockConfig>
+
+If a client with this policy tries to read this secret they will receive an unauthorized error:
+
+  <CodeBlockConfig hideClipboard>
+
+    $ vault kv get -mount=path/to my-secret-1
+
+    Error reading path/to/data/my-secret-1: Error making API request.
+
+    URL: GET http://127.0.0.1:8200/v1/path/to/data/my-secret-1
+    Code: 403. Errors:
+
+    * 1 error occurred:
+      * permission denied
+
+  </CodeBlockConfig>
+
+Likewise, if the client tries to sync this secret to any destination they will receive a similar unauthorized error:
+
+  <CodeBlockConfig hideClipboard>
+
+    $ vault write sys/sync/destinations/$TYPE/$NAME/associations/set \
+    mount="path/to" \
+    secret_name="my-secret-1"
+
+    Error writing data to sys/sync/destinations/$TYPE/$NAME/associations/set: Error making API request.
+
+    URL: PUT http://127.0.0.1:8200/v1/sys/sync/destinations/$TYPE/$NAME/associations/set
+    Code: 403. Errors:
+
+    * permission denied to read the content of the secret my-secret-1 in mount path/to
+
+  </CodeBlockConfig>
+
+This read access verification is only done when creating or updating an association. Once the association is created, revoking
+read access to the policy that was used to sync the secret has no effect.
+
+### Collisions and overwrites
+
+Secrets Sync operates with a last-write-wins strategy. If a secret with the same name already exists at the destination,
+Vault overwrites it when syncing a secret. There are also no automatic mechanisms to prevent a principal with sufficient
+privileges at the destination from overwriting a secret synced by Vault.
+
+To prevent Vault from accidentally overwriting existing secrets, it is recommended to use either the name pattern or
+built-in tag as an extra policy condition on the role used to configure a Vault sync destination. For example, the
+following AWS IAM policy prevents Vault from being able to modify secrets that were not created by a sync operation:
+
+  <CodeBlockConfig hideClipboard>
+
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "secretsmanager:*",
+          ],
+          "Resource": "*",
+          "Condition": {
+            "StringEquals": {
+              "secretsmanager:ResourceTag/hashicorp:vault": "" # This tag is automatically added by Vault on every synced secrets
+            }
+          }
+        }
+      ]
+    }
+
+  </CodeBlockConfig>
+
+Likewise, is it recommended to add a negative condition on other policies not used by Vault that grant write access to
+secrets to prevent out-of-band overwrites:
+
+  <CodeBlockConfig hideClipboard>
+
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Deny",
+          "Action": [
+            "secretsmanager:*"
+          ],
+          "Resource": "*",
+          "Condition": {
+            "StringNotEquals": {
+              "secretsmanager:ResourceTag/hashicorp:vault": "" # This tag is automatically added by Vault on every synced secrets
+            }
+          }
+        }
+      ]
+    }
+
+  </CodeBlockConfig>
+
+  <Note>
+  Wildcards are used in the example above for brevity, but it is recommended to use the least privilege principle and restrict
+  the actions and resources to the minimum requirements for each use case.
+  </Note>
+
+This policy condition strategy is also applicable to most other destination types. Please refer to the specific destination's
+access management documentation for more details.
+
+
+## Reconciliation
+
+Vault Secrets Sync is designed to automatically recover from transient failures
+in two ways: operation retries and reconciliation scans.
+
+Operation retries happen when a sync operation fails. Vault automatically
+retries the operation with exponential backoff. Operation retries help in
+situations where your network becomes unreliable or overwhelmed.
+
+Reconciliation scans happen periodically in a background thread. Vault scans all
+secrets currently managed by the sync system to identify and update out-of-date
+secrets, and to ensure that any configured destinations are up-to-date.
+Reconciliation scans help in situations where there are external service downtimes
+that are outside of your control and provide a way to automatically recover and self-heal.
+
+Operation retries and reconciliation scans are both enabled by default.
+
+Note that reconciliation process do not protect from out-of-band updates
+that occur directly in the external service. The secrets sync system is designed to be
+one-way and does not support bidirectional sync at this time.
 
 ## Client Counts
 
