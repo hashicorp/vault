@@ -149,7 +149,7 @@ func (f *BoltSnapshotStore) List() ([]*raft.SnapshotMeta, error) {
 	return []*raft.SnapshotMeta{meta}, nil
 }
 
-// getBoltSnapshotMeta returns the fsm's latest state and configuration.
+// getMetaFromFSM returns the fsm's latest state and configuration.
 func (f *BoltSnapshotStore) getMetaFromFSM() (*raft.SnapshotMeta, error) {
 	latestIndex, latestConfig := f.fsm.LatestState()
 	meta := &raft.SnapshotMeta{

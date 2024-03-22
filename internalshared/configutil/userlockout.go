@@ -147,7 +147,7 @@ func setUserLockoutValueAllInMap(userLockoutAll *UserLockout) *UserLockout {
 	return setNilValuesForRawUserLockoutFields(userLockoutAll)
 }
 
-// setDefaultUserLockoutValuesInMap sets missing user lockout fields for auth methods
+// setMissingUserLockoutValuesInMap sets missing user lockout fields for auth methods
 // with default values (from key "all") that are not configured using config file
 func setMissingUserLockoutValuesInMap(userLockoutsMap map[string]*UserLockout) map[string]*UserLockout {
 	// set values for "all" key with default values for "all" user lockout fields that are not configured
