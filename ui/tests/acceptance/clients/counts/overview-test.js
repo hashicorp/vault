@@ -42,10 +42,7 @@ module('Acceptance | clients | overview', function (hooks) {
   test('it should render the correct tabs', async function (assert) {
     assert.dom(SELECTORS.tab('overview')).exists();
     assert.dom(SELECTORS.tab('entities')).exists();
-    assert.dom(SELECTORS.tab('sync')).exists();
     assert.dom(SELECTORS.tab('configuration')).exists();
-
-    assert.dom(SELECTORS.charts.chart('Secrets sync usage')).exists();
   });
 
   test('it should render charts', async function (assert) {
@@ -245,18 +242,64 @@ module('Acceptance | clients | overview', function (hooks) {
   });
 });
 
+module('Acceptance | clients | overview | sync in license, activated', function (hooks) {
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
+  });
+
+  hooks.beforeEach(async function () {
+    clientsHandler(this.server);
+    this.store = this.owner.lookup('service:store');
+
+    // add feature to license
+    this.server.get('/sys/license/features', () => ({ features: ['Secrets Sync'] }));
+    // activate feature
+    this.server.get('/sys/activation-flags', () => ({
+      data: { activated: ['secrets-sync'], unactivated: [] },
+    }));
+
+    await authPage.login();
+    return visit('/vault/clients/counts/overview');
+  });
+
+  hooks.after(function () {
+    timestamp.now.restore();
+  });
+
+  test('it should render the correct tabs', async function (assert) {
+    assert.dom(SELECTORS.tab('sync')).exists();
+  });
+
+  test('it should show secrets sync charts', async function (assert) {
+    assert.dom(SELECTORS.tab('sync')).exists('sync tab is shown because feature is in license');
+    assert
+      .dom(SELECTORS.charts.chart('Secrets sync usage'))
+      .doesNotExist('chart is hidden because feature is not activated');
+
+    assert
+      .dom(SELECTORS.charts.chart('running total'))
+      .exists('Shows running totals with monthly breakdown charts');
+    assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
+  });
+});
+
 module('Acceptance | clients | overview | sync in license, not activated', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
     this.store = this.owner.lookup('service:store');
+    this.server.get('/sys/license/features', () => ({ features: ['Secrets Sync'] }));
+
     await authPage.login();
     return visit('/vault/clients/counts/overview');
   });
 
-  test('it should hide secrets sync charts', async function (assert) {
+  test('it should show the secrets sync tab', async function (assert) {
     assert.dom(SELECTORS.tab('sync')).exists('sync tab is shown because feature is in license');
+  });
+
+  test('it should hide secrets sync charts', async function (assert) {
     assert
       .dom(SELECTORS.charts.chart('Secrets sync usage'))
       .doesNotExist('chart is hidden because feature is not activated');
