@@ -2173,7 +2173,7 @@
         "path": "upgrading/plugins"
       },
       {
-        "title": "Upgrade to raft-wal",
+        "title": "Upgrade to Raft WAL",
         "path": "upgrading/raft-wal"
       },
       {
