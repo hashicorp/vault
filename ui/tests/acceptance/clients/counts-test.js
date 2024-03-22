@@ -6,11 +6,11 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import clientsHandler from 'vault/mirage/handlers/clients';
+import clientsHandler, { STATIC_NOW } from 'vault/mirage/handlers/clients';
 import sinon from 'sinon';
 import { visit, click, currentURL } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
-import { SELECTORS as ts, STATIC_NOW } from 'vault/tests/helpers/clients';
+import { SELECTORS as ts } from 'vault/tests/helpers/clients';
 import timestamp from 'core/utils/timestamp';
 
 module('Acceptance | clients | counts', function (hooks) {
@@ -29,6 +29,15 @@ module('Acceptance | clients | counts', function (hooks) {
 
   hooks.after(function () {
     timestamp.now.restore();
+  });
+
+  test('it should prompt user to query start time for community version', async function (assert) {
+    assert.expect(2);
+    this.owner.lookup('service:version').type = 'community';
+    await visit('/vault/clients/counts/overview');
+
+    assert.dom(ts.emptyStateTitle).hasText('No data received');
+    assert.dom(ts.emptyStateMessage).hasText('Select a start date above to query client count data.');
   });
 
   test('it should redirect to counts overview route for transitions to parent', async function (assert) {

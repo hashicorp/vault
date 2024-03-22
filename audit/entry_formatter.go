@@ -8,11 +8,15 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"reflect"
+	"runtime/debug"
 	"strings"
 	"time"
 
 	"github.com/go-jose/go-jose/v3/jwt"
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -26,21 +30,38 @@ var (
 	_ eventlogger.Node = (*EntryFormatter)(nil)
 )
 
+// timeProvider offers a way to supply a pre-configured time.
+type timeProvider interface {
+	// formatTime provides the pre-configured time in a particular format.
+	formattedTime() string
+}
+
 // EntryFormatter should be used to format audit requests and responses.
 type EntryFormatter struct {
-	salter          Salter
-	headerFormatter HeaderFormatter
 	config          FormatterConfig
+	salter          Salter
+	logger          hclog.Logger
+	headerFormatter HeaderFormatter
+	name            string
 	prefix          string
 }
 
 // NewEntryFormatter should be used to create an EntryFormatter.
 // Accepted options: WithHeaderFormatter, WithPrefix.
-func NewEntryFormatter(config FormatterConfig, salter Salter, opt ...Option) (*EntryFormatter, error) {
+func NewEntryFormatter(name string, config FormatterConfig, salter Salter, logger hclog.Logger, opt ...Option) (*EntryFormatter, error) {
 	const op = "audit.NewEntryFormatter"
+
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, fmt.Errorf("%s: name is required: %w", op, event.ErrInvalidParameter)
+	}
 
 	if salter == nil {
 		return nil, fmt.Errorf("%s: cannot create a new audit formatter with nil salter: %w", op, event.ErrInvalidParameter)
+	}
+
+	if logger == nil || reflect.ValueOf(logger).IsNil() {
+		return nil, fmt.Errorf("%s: cannot create a new audit formatter with nil logger: %w", op, event.ErrInvalidParameter)
 	}
 
 	// We need to ensure that the format isn't just some default empty string.
@@ -54,9 +75,11 @@ func NewEntryFormatter(config FormatterConfig, salter Salter, opt ...Option) (*E
 	}
 
 	return &EntryFormatter{
-		salter:          salter,
 		config:          config,
+		salter:          salter,
+		logger:          logger,
 		headerFormatter: opts.withHeaderFormatter,
+		name:            name,
 		prefix:          opts.withPrefix,
 	}, nil
 }
@@ -73,15 +96,19 @@ func (*EntryFormatter) Type() eventlogger.NodeType {
 
 // Process will attempt to parse the incoming event data into a corresponding
 // audit Request/Response which is serialized to JSON/JSONx and stored within the event.
-func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
+func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *eventlogger.Event, retErr error) {
 	const op = "audit.(EntryFormatter).Process"
 
+	// Return early if the context was cancelled, eventlogger will not carry on
+	// asking nodes to process, so any sink node in the pipeline won't be called.
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
 	}
 
+	// Perform validation on the event, then retrieve the underlying AuditEvent
+	// and LogInput (from the AuditEvent Data).
 	if e == nil {
 		return nil, fmt.Errorf("%s: event is nil: %w", op, event.ErrInvalidParameter)
 	}
@@ -95,24 +122,37 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		return nil, fmt.Errorf("%s: cannot audit event (%s) with no data: %w", op, a.Subtype, event.ErrInvalidParameter)
 	}
 
+	// Handle panics
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
+		}
+
+		f.logger.Error("panic during logging",
+			"request_path", a.Data.Request.Path,
+			"audit_device_path", f.name,
+			"error", r,
+			"stacktrace", string(debug.Stack()))
+
+		// Ensure that we add this error onto any pre-existing error that was being returned.
+		retErr = multierror.Append(retErr, fmt.Errorf("%s: panic generating audit log: %q", op, f.name)).ErrorOrNil()
+	}()
+
 	// Take a copy of the event data before we modify anything.
 	data, err := a.Data.Clone()
 	if err != nil {
 		return nil, fmt.Errorf("%s: unable to copy audit event data: %w", op, err)
 	}
 
-	var headers map[string][]string
-	if data.Request != nil && data.Request.Headers != nil {
-		headers = data.Request.Headers
-	}
-
-	if f.headerFormatter != nil {
-		adjustedHeaders, err := f.headerFormatter.ApplyConfig(ctx, headers, f.salter)
+	// Ensure that any headers in the request, are formatted as required, and are
+	// only present if they have been configured to appear in the audit log.
+	// e.g. via: /sys/config/auditing/request-headers/:name
+	if f.headerFormatter != nil && data.Request != nil && data.Request.Headers != nil {
+		data.Request.Headers, err = f.headerFormatter.ApplyConfig(ctx, data.Request.Headers, f.salter)
 		if err != nil {
 			return nil, fmt.Errorf("%s: unable to transform headers for auditing: %w", op, err)
 		}
-
-		data.Request.Headers = adjustedHeaders
 	}
 
 	// If the request contains a Server-Side Consistency Token (SSCT), and we
@@ -122,31 +162,25 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		data.Auth.ClientToken = data.Request.InboundSSCToken
 	}
 
-	var result []byte
+	// Using 'any' as we have two different types that we can get back from either
+	// FormatRequest or FormatResponse, but the JSON encoder doesn't care about types.
+	var entry any
 
 	switch a.Subtype {
 	case RequestType:
-		entry, err := f.FormatRequest(ctx, data)
-		if err != nil {
-			return nil, fmt.Errorf("%s: unable to parse request from audit event: %w", op, err)
-		}
-
-		result, err = jsonutil.EncodeJSON(entry)
-		if err != nil {
-			return nil, fmt.Errorf("%s: unable to format request: %w", op, err)
-		}
+		entry, err = f.FormatRequest(ctx, data, a)
 	case ResponseType:
-		entry, err := f.FormatResponse(ctx, data)
-		if err != nil {
-			return nil, fmt.Errorf("%s: unable to parse response from audit event: %w", op, err)
-		}
-
-		result, err = jsonutil.EncodeJSON(entry)
-		if err != nil {
-			return nil, fmt.Errorf("%s: unable to format response: %w", op, err)
-		}
+		entry, err = f.FormatResponse(ctx, data, a)
 	default:
 		return nil, fmt.Errorf("%s: unknown audit event subtype: %q", op, a.Subtype)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("%s: unable to parse %s from audit event: %w", op, a.Subtype.String(), err)
+	}
+
+	result, err := jsonutil.EncodeJSON(entry)
+	if err != nil {
+		return nil, fmt.Errorf("%s: unable to format %s: %w", op, a.Subtype.String(), err)
 	}
 
 	if f.config.RequiredFormat == JSONxFormat {
@@ -191,7 +225,7 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 }
 
 // FormatRequest attempts to format the specified logical.LogInput into a RequestEntry.
-func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput) (*RequestEntry, error) {
+func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput, provider timeProvider) (*RequestEntry, error) {
 	switch {
 	case in == nil || in.Request == nil:
 		return nil, errors.New("request to request-audit a nil request")
@@ -314,14 +348,15 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 	}
 
 	if !f.config.OmitTime {
-		reqEntry.Time = time.Now().UTC().Format(time.RFC3339Nano)
+		// Use the time provider to supply the time for this entry.
+		reqEntry.Time = provider.formattedTime()
 	}
 
 	return reqEntry, nil
 }
 
 // FormatResponse attempts to format the specified logical.LogInput into a ResponseEntry.
-func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInput) (*ResponseEntry, error) {
+func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInput, provider timeProvider) (*ResponseEntry, error) {
 	switch {
 	case f == nil:
 		return nil, errors.New("formatter is nil")
@@ -534,7 +569,8 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 	}
 
 	if !f.config.OmitTime {
-		respEntry.Time = time.Now().UTC().Format(time.RFC3339Nano)
+		// Use the time provider to supply the time for this entry.
+		respEntry.Time = provider.formattedTime()
 	}
 
 	return respEntry, nil

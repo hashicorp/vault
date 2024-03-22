@@ -3,56 +3,199 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { resolve } from 'rsvp';
-import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, settled } from '@ember/test-helpers';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { click, fillIn, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import sinon from 'sinon';
-import { create } from 'ember-cli-page-object';
-import authConfigForm from 'vault/tests/pages/components/auth-config-form/options';
+import { SELECTORS } from 'vault/tests/helpers/general-selectors';
+import { methods } from 'vault/helpers/mountable-auth-methods';
 
-const component = create(authConfigForm);
+const userLockoutSupported = ['approle', 'ldap', 'userpass'];
+const userLockoutUnsupported = methods()
+  .map((m) => m.type)
+  .filter((m) => !userLockoutSupported.includes(m));
 
 module('Integration | Component | auth-config-form options', function (hooks) {
   setupRenderingTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.owner.lookup('service:flash-messages').registerTypes(['success']);
     this.router = this.owner.lookup('service:router');
+    this.store = this.owner.lookup('service:store');
+    this.createModel = (path, type) => {
+      this.model = this.store.createRecord('auth-method', { path, type });
+      this.model.set('config', this.store.createRecord('mount-config'));
+    };
+  });
+
+  for (const type of userLockoutSupported) {
+    test(`it submits data correctly for ${type} method (supports user_lockout_config)`, async function (assert) {
+      assert.expect(3);
+      const path = `my-${type}-auth/`;
+      this.createModel(path, type);
+
+      this.router.reopen({
+        transitionTo() {
+          return {
+            followRedirects() {
+              assert.ok(true, `saving ${type} calls transitionTo on save`);
+            },
+          };
+        },
+      });
+
+      this.server.post(`sys/mounts/auth/${path}/tune`, (schema, req) => {
+        const payload = JSON.parse(req.requestBody);
+        const expected = {
+          default_lease_ttl: '30s',
+          listing_visibility: 'unauth',
+          token_type: 'default-batch',
+          user_lockout_config: {
+            lockout_threshold: '7',
+            lockout_duration: '600s',
+            lockout_counter_reset: '5s',
+            lockout_disable: true,
+          },
+        };
+        assert.propEqual(payload, expected, `${type} method payload contains tune parameters`);
+        return { payload };
+      });
+      await render(hbs`<AuthConfigForm::Options @model={{this.model}} />`);
+
+      assert.dom('[data-test-user-lockout-section]').hasText('User lockout configuration');
+
+      await click(SELECTORS.inputByAttr('config.listingVisibility'));
+      await fillIn(SELECTORS.inputByAttr('config.tokenType'), 'default-batch');
+
+      await click(SELECTORS.ttl.toggle('Default Lease TTL'));
+      await fillIn(SELECTORS.ttl.input('Default Lease TTL'), '30');
+
+      await fillIn(SELECTORS.inputByAttr('config.lockoutThreshold'), '7');
+
+      await click(SELECTORS.ttl.toggle('Lockout duration'));
+      await fillIn(SELECTORS.ttl.input('Lockout duration'), '10');
+      await fillIn(
+        `${SELECTORS.inputByAttr('config.lockoutDuration')} ${SELECTORS.selectByAttr('ttl-unit')}`,
+        'm'
+      );
+      await click(SELECTORS.ttl.toggle('Lockout counter reset'));
+      await fillIn(SELECTORS.ttl.input('Lockout counter reset'), '5');
+
+      await click(SELECTORS.inputByAttr('config.lockoutDisable'));
+
+      await click('[data-test-save-config]');
+    });
+  }
+
+  for (const type of userLockoutUnsupported) {
+    if (type === 'token') return; // separate test below because does not include tokenType field
+
+    test(`it submits data correctly for ${type} auth method`, async function (assert) {
+      assert.expect(7);
+
+      const path = `my-${type}-auth/`;
+      this.createModel(path, type);
+
+      this.router.reopen({
+        transitionTo() {
+          return {
+            followRedirects() {
+              assert.ok(true, `saving ${type} calls transitionTo on save`);
+            },
+          };
+        },
+      });
+
+      this.server.post(`sys/mounts/auth/${path}/tune`, (schema, req) => {
+        const payload = JSON.parse(req.requestBody);
+        const expected = {
+          default_lease_ttl: '30s',
+          listing_visibility: 'unauth',
+          token_type: 'default-batch',
+        };
+        assert.propEqual(payload, expected, `${type} method payload contains tune parameters`);
+        return { payload };
+      });
+      await render(hbs`<AuthConfigForm::Options @model={{this.model}} />`);
+
+      assert
+        .dom('[data-test-user-lockout-section]')
+        .doesNotExist(`${type} method does not render user lockout section`);
+
+      await click(SELECTORS.inputByAttr('config.listingVisibility'));
+      await fillIn(SELECTORS.inputByAttr('config.tokenType'), 'default-batch');
+
+      await click(SELECTORS.ttl.toggle('Default Lease TTL'));
+      await fillIn(SELECTORS.ttl.input('Default Lease TTL'), '30');
+
+      assert
+        .dom(SELECTORS.inputByAttr('config.lockoutThreshold'))
+        .doesNotExist(`${type} method does not render lockout threshold`);
+      assert
+        .dom(SELECTORS.ttl.toggle('Lockout duration'))
+        .doesNotExist(`${type} method does not render lockout duration `);
+      assert
+        .dom(SELECTORS.ttl.toggle('Lockout counter reset'))
+        .doesNotExist(`${type} method does not render lockout counter reset`);
+      assert
+        .dom(SELECTORS.inputByAttr('config.lockoutDisable'))
+        .doesNotExist(`${type} method does not render lockout disable`);
+
+      await click('[data-test-save-config]');
+    });
+  }
+
+  test('it submits data correctly for token auth method', async function (assert) {
+    assert.expect(8);
+    const type = 'token';
+    const path = `my-${type}-auth/`;
+    this.createModel(path, type);
+
     this.router.reopen({
       transitionTo() {
         return {
           followRedirects() {
-            return resolve();
+            assert.ok(true, `saving token calls transitionTo on save`);
           },
         };
       },
-      replaceWith() {
-        return resolve();
-      },
     });
-  });
 
-  test('it submits data correctly', async function (assert) {
-    assert.expect(1);
-    const model = EmberObject.create({
-      tune() {
-        return resolve();
-      },
-      config: {
-        serialize() {
-          return {};
-        },
-      },
+    this.server.post(`sys/mounts/auth/${path}/tune`, (schema, req) => {
+      const payload = JSON.parse(req.requestBody);
+      const expected = {
+        default_lease_ttl: '30s',
+        listing_visibility: 'unauth',
+      };
+      assert.propEqual(payload, expected, `${type} method payload contains tune parameters`);
+      return { payload };
     });
-    sinon.spy(model.config, 'serialize');
-    this.set('model', model);
     await render(hbs`<AuthConfigForm::Options @model={{this.model}} />`);
-    component.save();
-    return settled().then(() => {
-      assert.strictEqual(model.config.serialize.callCount, 1, 'config serialize was called once');
-    });
+
+    assert
+      .dom(SELECTORS.inputByAttr('config.tokenType'))
+      .doesNotExist('does not render tokenType for token auth method');
+
+    await click(SELECTORS.inputByAttr('config.listingVisibility'));
+    await click(SELECTORS.ttl.toggle('Default Lease TTL'));
+    await fillIn(SELECTORS.ttl.input('Default Lease TTL'), '30');
+
+    assert.dom('[data-test-user-lockout-section]').doesNotExist('token does not render user lockout section');
+    assert
+      .dom(SELECTORS.inputByAttr('config.lockoutThreshold'))
+      .doesNotExist('token method does not render lockout threshold');
+    assert
+      .dom(SELECTORS.ttl.toggle('Lockout duration'))
+      .doesNotExist('token method does not render lockout duration ');
+    assert
+      .dom(SELECTORS.ttl.toggle('Lockout counter reset'))
+      .doesNotExist('token method does not render lockout counter reset');
+    assert
+      .dom(SELECTORS.inputByAttr('config.lockoutDisable'))
+      .doesNotExist('token method does not render lockout disable');
+
+    await click('[data-test-save-config]');
   });
 });

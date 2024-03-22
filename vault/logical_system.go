@@ -15,6 +15,7 @@ import (
 	"hash"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -189,10 +190,10 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 			},
 		},
 	}
+	b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, entUnauthenticatedPaths()...)
 
 	b.Backend.Paths = append(b.Backend.Paths, entPaths(b)...)
 	b.Backend.Paths = append(b.Backend.Paths, b.configPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.uiCustomMessagePaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.rekeyPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.sealPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.statusPaths()...)
@@ -225,10 +226,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	b.Backend.Paths = append(b.Backend.Paths, b.loginMFAPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.experimentPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.introspectionPaths()...)
-
-	if requestLimiterRead := b.requestLimiterReadPath(); requestLimiterRead != nil {
-		b.Backend.Paths = append(b.Backend.Paths, b.requestLimiterReadPath())
-	}
+	b.Backend.Paths = append(b.Backend.Paths, b.wellKnownPaths()...)
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
@@ -5252,18 +5250,6 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 	return resp, nil
 }
 
-// pathInternalUIVersion is the framework.PathOperation callback function for
-// the sys/internal/ui/version path. It simply returns the Vault version.
-func (b *SystemBackend) pathInternalUIVersion(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	resp := &logical.Response{
-		Data: map[string]any{
-			"version": version.GetVersion().VersionNumber(),
-		},
-	}
-
-	return resp, nil
-}
-
 func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Limit output to authorized paths
 	resp, err := b.pathInternalUIMountsRead(ctx, req, d)
@@ -5488,6 +5474,8 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 
 	hcpLinkStatus, resourceIDonHCP := core.GetHCPLinkStatus()
 
+	redactVersion, _, redactClusterName, _ := logical.CtxRedactionSettingsValue(ctx)
+
 	if sealConfig == nil {
 		s := &SealStatusResponse{
 			Type:         core.SealAccess().BarrierSealConfigType().String(),
@@ -5497,6 +5485,11 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 			StorageType:  core.StorageType(),
 			Version:      version.GetVersion().VersionNumber(),
 			BuildDate:    version.BuildDate,
+		}
+
+		if redactVersion {
+			s.Version = ""
+			s.BuildDate = ""
 		}
 
 		if resourceIDonHCP != "" {
@@ -5553,6 +5546,15 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 	if resourceIDonHCP != "" {
 		s.HCPLinkStatus = hcpLinkStatus
 		s.HCPLinkResourceID = resourceIDonHCP
+	}
+
+	if redactVersion {
+		s.Version = ""
+		s.BuildDate = ""
+	}
+
+	if redactClusterName {
+		s.ClusterName = ""
 	}
 
 	return s, nil
@@ -5616,14 +5618,14 @@ type LeaderResponse struct {
 	RaftAppliedIndex   uint64 `json:"raft_applied_index,omitempty"`
 }
 
-func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
+func (core *Core) GetLeaderStatus(ctx context.Context) (*LeaderResponse, error) {
 	core.stateLock.RLock()
 	defer core.stateLock.RUnlock()
 
-	return core.GetLeaderStatusLocked()
+	return core.GetLeaderStatusLocked(ctx)
 }
 
-func (core *Core) GetLeaderStatusLocked() (*LeaderResponse, error) {
+func (core *Core) GetLeaderStatusLocked(ctx context.Context) (*LeaderResponse, error) {
 	haEnabled := true
 	isLeader, address, clusterAddr, err := core.LeaderLocked()
 	if errwrap.Contains(err, ErrHANotEnabled.Error()) {
@@ -5650,11 +5652,29 @@ func (core *Core) GetLeaderStatusLocked() (*LeaderResponse, error) {
 		resp.LastWAL = core.EntLastWAL()
 	}
 
+	_, redactAddresses, _, _ := logical.CtxRedactionSettingsValue(ctx)
+	if redactAddresses {
+		resp.LeaderAddress = ""
+		resp.LeaderClusterAddress = ""
+	}
+
 	resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexesLocked()
+
 	return resp, nil
 }
 
 func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var tokenPresent bool
+	token := req.ClientToken
+	if token != "" {
+		// We don't care about the error, we just want to know if the token exists
+		_, tokenEntry, _, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
+		tokenPresent = err == nil && tokenEntry != nil
+	}
+	// If there is a valid token then we will not redact any values
+	if tokenPresent {
+		ctx = logical.CreateContextRedactionSettings(ctx, false, false, false)
+	}
 	status, err := b.Core.GetSealStatus(ctx, false)
 	if err != nil {
 		return nil, err
@@ -5674,7 +5694,19 @@ func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Reque
 }
 
 func (b *SystemBackend) handleLeaderStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	status, err := b.Core.GetLeaderStatusLocked()
+	var tokenPresent bool
+	token := req.ClientToken
+
+	if token != "" {
+		// We don't care about the error, we just want to know if token exists
+		_, tokenEntry, _, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
+		tokenPresent = err == nil && tokenEntry != nil
+	}
+
+	if tokenPresent {
+		ctx = logical.CreateContextRedactionSettings(ctx, false, false, false)
+	}
+	status, err := b.Core.GetLeaderStatusLocked(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -5981,6 +6013,62 @@ func (b *SystemBackend) handleReadExperiments(ctx context.Context, _ *logical.Re
 			"enabled":   enabled,
 		},
 	}, nil
+}
+
+// handleWellKnownList handles /sys/well-known/ endpoint to provide the list of registered labels
+// within the /.well-known path on this server
+func (b *SystemBackend) handleWellKnownList() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		labels := b.Core.WellKnownRedirects.List()
+
+		respKeys := []string{}
+		respKeyInfo := map[string]interface{}{}
+
+		for label, wk := range labels {
+			respKeys = append(respKeys, label)
+
+			mountPath := ""
+			m := b.Core.router.MatchingMountByUUID(wk.mountUUID)
+			if m != nil {
+				mountPath, _ = url.JoinPath(m.namespace.Path, m.Path)
+			}
+
+			respKeyInfo[label] = map[string]interface{}{
+				"mount_path": mountPath,
+				"mount_uuid": wk.mountUUID,
+				"prefix":     wk.prefix,
+			}
+		}
+
+		return logical.ListResponseWithInfo(respKeys, respKeyInfo), nil
+	}
+}
+
+// handleWellKnownRead handles the "/sys/well-known/<name>" endpoint to read a registered well-known label
+func (b *SystemBackend) handleWellKnownRead() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		label := data.Get("label").(string)
+
+		wk, ok := b.Core.WellKnownRedirects.Get(label)
+		if !ok {
+			return nil, nil
+		}
+
+		mountPath := ""
+		m := b.Core.router.MatchingMountByUUID(wk.mountUUID)
+		if m != nil {
+			mountPath, _ = url.JoinPath(m.namespace.Path, m.Path)
+		}
+
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"label":      label,
+				"mount_path": mountPath,
+				"mount_uuid": wk.mountUUID,
+				"prefix":     wk.prefix,
+			},
+		}, nil
+	}
 }
 
 func sanitizePath(path string) string {
@@ -6986,5 +7074,32 @@ This path responds to the following HTTP methods.
 	POST /
 		returns the manual license reporting data.
 		`,
+	},
+
+	"well-known-list": {
+		`List the registered well-known labels to associated mounts.`,
+		`
+This path responds to the following HTTP methods.
+    LIST /
+        List the names of the registered labels within the .well-known folder on this server.
+
+    GET /
+        List the names of the registered labels within the .well-known folder on this server.
+
+    GET /<label>
+        Retrieve the information regarding a specific registered label on this server.
+	    `,
+	},
+
+	"well-known": {
+		`Read the associated mount info for a registered label within the well-known path prefix`,
+		`
+        Retrieve the information regarding a specific registered label on this server.
+		`,
+	},
+
+	"well-known-label": {
+		`The label representing a path-prefix within the /.well-known/ path`,
+		"",
 	},
 }
