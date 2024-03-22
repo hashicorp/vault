@@ -30,6 +30,12 @@ var (
 	_ eventlogger.Node = (*EntryFormatter)(nil)
 )
 
+// timeProvider offers a way to supply a pre-configured time.
+type timeProvider interface {
+	// formatTime provides the pre-configured time in a particular format.
+	formattedTime() string
+}
+
 // EntryFormatter should be used to format audit requests and responses.
 type EntryFormatter struct {
 	config          FormatterConfig
@@ -162,9 +168,9 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 
 	switch a.Subtype {
 	case RequestType:
-		entry, err = f.FormatRequest(ctx, data)
+		entry, err = f.FormatRequest(ctx, data, a)
 	case ResponseType:
-		entry, err = f.FormatResponse(ctx, data)
+		entry, err = f.FormatResponse(ctx, data, a)
 	default:
 		return nil, fmt.Errorf("%s: unknown audit event subtype: %q", op, a.Subtype)
 	}
@@ -219,7 +225,7 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 }
 
 // FormatRequest attempts to format the specified logical.LogInput into a RequestEntry.
-func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput) (*RequestEntry, error) {
+func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput, provider timeProvider) (*RequestEntry, error) {
 	switch {
 	case in == nil || in.Request == nil:
 		return nil, errors.New("request to request-audit a nil request")
@@ -342,14 +348,15 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 	}
 
 	if !f.config.OmitTime {
-		reqEntry.Time = time.Now().UTC().Format(time.RFC3339Nano)
+		// Use the time provider to supply the time for this entry.
+		reqEntry.Time = provider.formattedTime()
 	}
 
 	return reqEntry, nil
 }
 
 // FormatResponse attempts to format the specified logical.LogInput into a ResponseEntry.
-func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInput) (*ResponseEntry, error) {
+func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInput, provider timeProvider) (*ResponseEntry, error) {
 	switch {
 	case f == nil:
 		return nil, errors.New("formatter is nil")
@@ -562,7 +569,8 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 	}
 
 	if !f.config.OmitTime {
-		respEntry.Time = time.Now().UTC().Format(time.RFC3339Nano)
+		// Use the time provider to supply the time for this entry.
+		respEntry.Time = provider.formattedTime()
 	}
 
 	return respEntry, nil

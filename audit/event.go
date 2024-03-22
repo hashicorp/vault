@@ -26,6 +26,9 @@ const (
 	JSONxFormat format = "jsonx"
 )
 
+// Check AuditEvent implements the timeProvider at compile time.
+var _ timeProvider = (*AuditEvent)(nil)
+
 // AuditEvent is the audit event.
 type AuditEvent struct {
 	ID        string            `json:"id"`
@@ -153,4 +156,10 @@ func (t subtype) String() string {
 	}
 
 	return string(t)
+}
+
+// formattedTime returns the UTC time the AuditEvent was created in the RFC3339Nano
+// format (which removes trailing zeros from the seconds field).
+func (a *AuditEvent) formattedTime() string {
+	return a.Timestamp.UTC().Format(time.RFC3339Nano)
 }
