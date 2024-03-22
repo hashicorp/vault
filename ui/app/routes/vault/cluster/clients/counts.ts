@@ -11,6 +11,7 @@ import { getUnixTime } from 'date-fns';
 
 import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
+
 import type { ClientsRouteModel } from '../clients';
 import type ClientsConfigModel from 'vault/models/clients/config';
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
@@ -60,12 +61,9 @@ export default class ClientsCountsRoute extends Route {
     mountPath: { refreshModel: false, replace: true },
   };
 
-  async getActivity(
-    start_time: number,
-    end_time: number
-  ): Promise<[ClientsActivityModel | undefined, AdapterError | unknown] | [Record<string, never>, null]> {
+  async getActivity(start_time: number | null, end_time: number) {
     let activity, activityError;
-    // if there is no billingStartTimestamp or selected start date initially we allow the user to manually choose a date
+    // if there is no start_time we want the user to manually choose a date
     // in that case bypass the query so that the user isn't stuck viewing the activity error
     if (start_time) {
       try {
@@ -93,7 +91,7 @@ export default class ClientsCountsRoute extends Route {
     }
   }
 
-  async isSecretsSyncActivated(activity: ClientsActivityModel | Record<string, never> | undefined) {
+  async isSecretsSyncActivated(activity: ClientsActivityModel) {
     // if there are secrets, the feature is activated
     if (activity && activity.total?.secret_syncs > 0) return true;
 
@@ -107,12 +105,13 @@ export default class ClientsCountsRoute extends Route {
 
   async model(params: ClientsCountsRouteParams) {
     const { config, versionHistory } = this.modelFor('vault.cluster.clients') as ClientsRouteModel;
-    // we could potentially make an additional request to fetch the license and get the start date from there if the config request fails
-    const startTimestamp = Number(params.start_time) || getUnixTime(config.billingStartTimestamp);
+    // only enterprise versions will have a relevant billing start date, pass null so community users must select initial start time
+    const startTime = this.version.isEnterprise ? getUnixTime(config.billingStartTimestamp) : null;
+    const startTimestamp = Number(params.start_time) || startTime;
     const endTimestamp = Number(params.end_time) || getUnixTime(timestamp.now());
     const [activity, activityError] = await this.getActivity(startTimestamp, endTimestamp);
 
-    const isSecretsSyncActivated = await this.isSecretsSyncActivated(activity);
+    const isSecretsSyncActivated = await this.isSecretsSyncActivated(activity as ClientsActivityModel);
 
     return {
       activity,
