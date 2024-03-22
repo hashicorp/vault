@@ -9,6 +9,7 @@ import { tracked } from '@glimmer/tracking';
 
 export default class VersionService extends Service {
   @service store;
+  @service featureFlag;
   @tracked features = [];
   @tracked version = null;
   @tracked type = null;
@@ -40,6 +41,11 @@ export default class VersionService extends Service {
 
   get hasControlGroups() {
     return this.features.includes('Control Groups');
+  }
+
+  get hasSecretsSync() {
+    if (this.featureFlag.managedNamespaceRoot !== null) return false;
+    return this.features.includes('Secrets Sync');
   }
 
   get versionDisplay() {

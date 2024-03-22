@@ -8,7 +8,7 @@ import { service } from '@ember/service';
 
 import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
-import type AdapterError from '@ember-data/adapter';
+import { DEBUG } from '@glimmer/env';
 
 interface ActivationFlagsResponse {
   data: {
@@ -22,23 +22,24 @@ export default class SyncSecretsRoute extends Route {
   @service declare readonly store: StoreService;
 
   async fetchActivatedFeatures() {
+    // The read request to the activation-flags endpoint is unauthenticated and root namespace
+    // but the POST is not which is why it's not in the NAMESPACE_ROOT_URLS list
     return await this.store
       .adapterFor('application')
-      .ajax('/v1/sys/activation-flags', 'GET')
+      .ajax('/v1/sys/activation-flags', 'GET', { unauthenticated: true, namespace: null })
       .then((resp: ActivationFlagsResponse) => {
         return resp.data?.activated;
       })
-      .catch((error: AdapterError) => {
-        return error;
+      .catch((error: unknown) => {
+        if (DEBUG) console.error(error); // eslint-disable-line no-console
+        return [];
       });
   }
 
   async model() {
     const activatedFeatures = await this.fetchActivatedFeatures();
-    const { isAdapterError } = activatedFeatures;
     return {
-      activatedFeatures: isAdapterError ? [] : activatedFeatures,
-      adapterError: isAdapterError ? activatedFeatures : null,
+      activatedFeatures,
     };
   }
 

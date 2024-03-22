@@ -32,8 +32,9 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.owner.lookup('service:version').type = 'enterprise';
-
+    this.version = this.owner.lookup('service:version');
+    this.version.type = 'enterprise';
+    this.version.features = ['Secrets Sync'];
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
 
     const store = this.owner.lookup('service:store');

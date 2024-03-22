@@ -14,8 +14,8 @@
         <Icon @name={{@icon}} @size="24" />
       {{/if}}
       {{@title}}
-      {{#if this.version.isCommunity}}
-        <Hds::Badge @text="Enterprise feature" @color="highlight" @size="large" />
+      {{#if this.badgeText}}
+        <Hds::Badge @text={{this.badgeText}} @color="highlight" @size="large" />
       {{/if}}
     </h1>
   </p.levelLeft>

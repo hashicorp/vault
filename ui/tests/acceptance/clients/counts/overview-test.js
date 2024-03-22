@@ -39,6 +39,12 @@ module('Acceptance | clients | overview', function (hooks) {
     timestamp.now.restore();
   });
 
+  test('it should render the correct tabs', async function (assert) {
+    assert.dom(SELECTORS.tab('overview')).exists();
+    assert.dom(SELECTORS.tab('token')).exists();
+    assert.dom(SELECTORS.tab('config')).exists();
+  });
+
   test('it should render charts', async function (assert) {
     assert
       .dom(SELECTORS.counts.startMonth)
@@ -233,5 +239,97 @@ module('Acceptance | clients | overview', function (hooks) {
         `${formatNumber([topNamespace.clients])}`,
         'top attribution clients back to unfiltered value'
       );
+  });
+});
+
+module('Acceptance | clients | overview | sync in license, activated', function (hooks) {
+  setupApplicationTest(hooks);
+  setupMirage(hooks);
+
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
+  });
+
+  hooks.beforeEach(async function () {
+    clientsHandler(this.server);
+    this.store = this.owner.lookup('service:store');
+
+    // add feature to license
+    this.server.get('/sys/license/features', () => ({ features: ['Secrets Sync'] }));
+    // activate feature
+    this.server.get('/sys/activation-flags', () => ({
+      data: { activated: ['secrets-sync'], unactivated: [] },
+    }));
+
+    await authPage.login();
+    return visit('/vault/clients/counts/overview');
+  });
+
+  hooks.after(function () {
+    timestamp.now.restore();
+  });
+
+  test('it should render the correct tabs', async function (assert) {
+    assert.dom(SELECTORS.tab('sync')).exists();
+  });
+
+  test('it should show secrets sync data in overview and tab', async function (assert) {
+    assert
+      .dom(SELECTORS.charts.statTextValue('Secrets sync clients'))
+      .exists('shows secret sync data on overview');
+    await click(SELECTORS.tab('sync'));
+    assert.dom(SELECTORS.tab('sync')).hasClass('active');
+    assert.dom(SELECTORS.emptyStateTitle).doesNotExist();
+    assert
+      .dom(SELECTORS.charts.chart('Secrets sync usage'))
+      .exists('chart is shown because feature is active and has data');
+  });
+});
+
+module('Acceptance | clients | overview | sync in license, not activated', function (hooks) {
+  setupApplicationTest(hooks);
+  setupMirage(hooks);
+
+  hooks.beforeEach(async function () {
+    this.store = this.owner.lookup('service:store');
+    this.server.get('/sys/license/features', () => ({ features: ['Secrets Sync'] }));
+
+    await authPage.login();
+    return visit('/vault/clients/counts/overview');
+  });
+
+  test('it should show the secrets sync tab', async function (assert) {
+    assert.dom(SELECTORS.tab('sync')).exists('sync tab is shown because feature is in license');
+  });
+
+  test('it should hide secrets sync charts', async function (assert) {
+    assert
+      .dom(SELECTORS.charts.chart('Secrets sync usage'))
+      .doesNotExist('chart is hidden because feature is not activated');
+
+    assert.dom(SELECTORS.usageStats).exists();
+    assert.dom('[data-test-stat-text="secret-syncs"]').doesNotExist();
+  });
+});
+
+module('Acceptance | clients | overview | sync not in license', function (hooks) {
+  setupApplicationTest(hooks);
+  setupMirage(hooks);
+
+  hooks.beforeEach(async function () {
+    this.store = this.owner.lookup('service:store');
+    await authPage.login();
+    return visit('/vault/clients/counts/overview');
+  });
+
+  test('it should hide the secrets sync tab', async function (assert) {
+    assert.dom(SELECTORS.tab('sync')).doesNotExist();
+  });
+
+  test('it should hide secrets sync charts', async function (assert) {
+    assert.dom(SELECTORS.charts.chart('Secrets sync usage')).doesNotExist();
+
+    assert.dom(SELECTORS.usageStats).exists();
+    assert.dom('[data-test-stat-text="secret-syncs"]').doesNotExist();
   });
 });
