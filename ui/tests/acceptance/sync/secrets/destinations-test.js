@@ -20,6 +20,8 @@ module('Acceptance | enterprise | sync | destinations', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    this.version = this.owner.lookup('service:version');
+    this.version.features = ['Secrets Sync'];
     syncScenario(this.server);
     syncHandlers(this.server);
     return authPage.login();
@@ -29,6 +31,14 @@ module('Acceptance | enterprise | sync | destinations', function (hooks) {
     // remove destinations from mirage so cta shows when 404 is returned
     this.server.db.syncDestinations.remove();
 
+    this.server.get('/sys/activation-flags', () => {
+      return {
+        data: {
+          activated: ['secrets-sync'],
+          unactivated: [],
+        },
+      };
+    });
     await click(ts.navLink('Secrets Sync'));
     await click(ts.cta.button);
     await click(ts.selectType('aws-sm'));
@@ -50,6 +60,14 @@ module('Acceptance | enterprise | sync | destinations', function (hooks) {
     test(`it should render default values for destination: ${type}`, async function (assert) {
       // remove destinations from mirage so cta shows when 404 is returned
       this.server.db.syncDestinations.remove();
+      this.server.get('/sys/activation-flags', () => {
+        return {
+          data: {
+            activated: ['secrets-sync'],
+            unactivated: [],
+          },
+        };
+      });
 
       await click(ts.navLink('Secrets Sync'));
       await click(ts.cta.button);
