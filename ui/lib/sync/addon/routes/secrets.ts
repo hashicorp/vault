@@ -8,7 +8,6 @@ import { service } from '@ember/service';
 
 import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
-import type VersionService from 'vault/services/version';
 import { DEBUG } from '@glimmer/env';
 
 interface ActivationFlagsResponse {
@@ -21,7 +20,6 @@ interface ActivationFlagsResponse {
 export default class SyncSecretsRoute extends Route {
   @service declare readonly router: RouterService;
   @service declare readonly store: StoreService;
-  @service declare readonly version: VersionService;
 
   async fetchActivatedFeatures() {
     // The read request to the activation-flags endpoint is unauthenticated and root namespace
