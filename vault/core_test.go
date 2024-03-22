@@ -3460,7 +3460,8 @@ func TestSetSeals(t *testing.T) {
 		Generation:   2,
 	})
 
-	err := testCore.SetSeals(newSeal, nil, false)
+	ctx := context.Background()
+	err := testCore.SetSeals(ctx, true, newSeal, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
