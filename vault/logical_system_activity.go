@@ -18,6 +18,14 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+var (
+	// retentionMonthsOutOfBounds is an error string for invalid values of retention_months
+	retentionMonthsOutOfBounds = fmt.Sprintf("retention_months value outside valid range: [%d, %d]", ActivityLogMinimumRetentionMonths, activityLogMaximumRetentionMonths)
+
+	// defaultToRetentionMonthsMaxWarning is a warning message for setting the max retention_months value when retention_months value is more than activityLogMaximumRetentionMonths
+	defaultToRetentionMonthsMaxWarning = fmt.Sprintf("%s: defaulting to max: %d", retentionMonthsOutOfBounds, activityLogMaximumRetentionMonths)
+)
+
 // activityQueryPath is available in every namespace
 func (b *SystemBackend) activityQueryPath() *framework.Path {
 	return &framework.Path{
@@ -109,7 +117,7 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 				},
 				"retention_months": {
 					Type:        framework.TypeInt,
-					Default:     24,
+					Default:     ActivityLogMinimumRetentionMonths,
 					Description: "Number of months of client data to retain. Setting to 0 will clear all existing data.",
 				},
 				"enabled": {
@@ -367,13 +375,13 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 			config.RetentionMonths = retentionMonthsRaw.(int)
 		}
 
-		if config.RetentionMonths < 0 {
-			return logical.ErrorResponse("retention_months must be greater than or equal to 0"), logical.ErrInvalidRequest
+		if config.RetentionMonths < ActivityLogMinimumRetentionMonths {
+			return logical.ErrorResponse(retentionMonthsOutOfBounds), logical.ErrInvalidRequest
 		}
 
-		if config.RetentionMonths > 36 {
-			config.RetentionMonths = 36
-			warnings = append(warnings, "retention_months cannot be greater than 36; capped to 36.")
+		if config.RetentionMonths > activityLogMaximumRetentionMonths {
+			config.RetentionMonths = activityLogMaximumRetentionMonths
+			warnings = append(warnings, defaultToRetentionMonthsMaxWarning)
 		}
 	}
 
@@ -416,7 +424,7 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 		return logical.ErrorResponse("retention_months cannot be 0 while enabled"), logical.ErrInvalidRequest
 	}
 
-	// if manual license reporting is enabled, retention months must at least be 24 months
+	// if manual license reporting is enabled, retention months must at least be 48 months
 	if a.core.ManualLicenseReportingEnabled() && config.RetentionMonths < minimumRetentionMonths {
 		return logical.ErrorResponse("retention_months must be at least %d while Reporting is enabled", minimumRetentionMonths), logical.ErrInvalidRequest
 	}

@@ -10,6 +10,14 @@ import "time"
 // CensusAgent is a stub for OSS
 type CensusReporter interface{}
 
+const (
+	// ActivityLogMinimumRetentionMonths sets the default minimum retention_months
+	ActivityLogMinimumRetentionMonths = 0
+
+	// activityLogMaximumRetentionMonths sets the default maximum retention_months
+	activityLogMaximumRetentionMonths = 36
+)
+
 func (c *Core) setupCensusManager() error                        { return nil }
 func (c *Core) BillingStart() time.Time                          { return time.Time{} }
 func (c *Core) AutomatedLicenseReportingEnabled() bool           { return false }

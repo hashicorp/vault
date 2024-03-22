@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -1893,7 +1894,7 @@ type activityConfig struct {
 func defaultActivityConfig() activityConfig {
 	return activityConfig{
 		DefaultReportMonths: 12,
-		RetentionMonths:     24,
+		RetentionMonths:     ActivityLogMinimumRetentionMonths,
 		Enabled:             "default",
 	}
 }
@@ -1913,7 +1914,34 @@ func (a *ActivityLog) loadConfigOrDefault(ctx context.Context) (activityConfig, 
 		return config, err
 	}
 
+	// check if the retention time is lesser than the default
+	if config.RetentionMonths < ActivityLogMinimumRetentionMonths {
+		updatedConfig, err := a.setDefaultRetentionMonthsInConfig(ctx, config)
+		if err != nil {
+			return config, err
+		}
+		return updatedConfig, nil
+	}
 	return config, nil
+}
+
+// setDefaultRetentionMonthsInConfig sets the retention months in activity config with default value.
+// This supports upgrades from versions prior to set the new default ActivityLogMinimumRetentionMonths.
+func (a *ActivityLog) setDefaultRetentionMonthsInConfig(ctx context.Context, inputConfig activityConfig) (activityConfig, error) {
+	inputConfig.RetentionMonths = ActivityLogMinimumRetentionMonths
+
+	// Store the config
+	entry, err := logical.StorageEntryJSON(path.Join(activitySubPath, activityConfigKey), inputConfig)
+	if err != nil {
+		return inputConfig, err
+	}
+	if err := a.view.Put(ctx, entry); err != nil {
+		return inputConfig, err
+	}
+
+	// Set the new config on the activity log
+	a.SetConfig(ctx, inputConfig)
+	return inputConfig, nil
 }
 
 // HandleTokenUsage adds the TokenEntry to the current fragment of the activity log
