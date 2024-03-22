@@ -1639,12 +1639,7 @@
     "routes": [
       {
         "title": "Overview",
-        "path": "sync",
-        "badge": {
-          "text": "BETA",
-          "type": "outlined",
-          "color": "highlight"
-        }
+        "path": "sync"
       },
       {
         "title": "AWS Secrets Manager",
@@ -2636,14 +2631,14 @@
       {
         "title": "Replication",
         "routes": [
-            {
-                "title": "Overview",
-                "path": "enterprise/replication"
-            },
-            {
-                "title": "Check for Merkle tree corruption",
-                "path": "enterprise/replication/check-merkle-tree-corruption"
-            }
+          {
+            "title": "Overview",
+            "path": "enterprise/replication"
+          },
+          {
+            "title": "Check for Merkle tree corruption",
+            "path": "enterprise/replication/check-merkle-tree-corruption"
+          }
         ]
       },
       {
