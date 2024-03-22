@@ -318,6 +318,9 @@ module('Acceptance | clients | overview | sync not in license', function (hooks)
 
   hooks.beforeEach(async function () {
     this.store = this.owner.lookup('service:store');
+    // mocks endpoint for no additional license modules or CE edition
+    this.server.get('/sys/license/features', () => ({ features: [] }));
+
     await authPage.login();
     return visit('/vault/clients/counts/overview');
   });
