@@ -52,9 +52,9 @@ type Salter interface {
 // It is recommended that you pass data through Hash prior to formatting it.
 type Formatter interface {
 	// FormatRequest formats the logical.LogInput into an RequestEntry.
-	FormatRequest(context.Context, *logical.LogInput) (*RequestEntry, error)
+	FormatRequest(context.Context, *logical.LogInput, timeProvider) (*RequestEntry, error)
 	// FormatResponse formats the logical.LogInput into an ResponseEntry.
-	FormatResponse(context.Context, *logical.LogInput) (*ResponseEntry, error)
+	FormatResponse(context.Context, *logical.LogInput, timeProvider) (*ResponseEntry, error)
 }
 
 // HeaderFormatter is an interface defining the methods of the
