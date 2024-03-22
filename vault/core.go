@@ -282,6 +282,9 @@ type Core struct {
 	// seal is our seal, for seal configuration information
 	seal Seal
 
+	// sealReloadFunc is a function that can be used to trigger seal configuration reloading
+	sealReloadFunc func(context.Context) error
+
 	// raftJoinDoneCh is used by the raft retry join routine to inform unseal process
 	// that the join is complete
 	raftJoinDoneCh chan struct{}
@@ -3401,6 +3404,20 @@ func (c *Core) IsSealMigrated(lock bool) bool {
 	return done
 }
 
+func (c *Core) SetSealReloadFunc(f func(context.Context) error) {
+	c.sealReloadFunc = f
+}
+
+// TriggerSealReload triggers reloading of the seal configuration and resetting of the seal.
+// The caller should hold the write statelock.
+func (c *Core) TriggerSealReload(ctx context.Context) error {
+	if c.sealReloadFunc == nil {
+		return nil
+	}
+
+	return c.sealReloadFunc(ctx)
+}
+
 func (c *Core) BarrierEncryptorAccess() *BarrierEncryptorAccess {
 	return NewBarrierEncryptorAccess(c.barrier)
 }
@@ -4449,11 +4466,13 @@ func (c *Core) Events() *eventbus.EventBus {
 	return c.events
 }
 
-func (c *Core) SetSeals(barrierSeal Seal, secureRandomReader io.Reader, shouldRewrap bool) error {
-	ctx, _ := c.GetContext()
+func (c *Core) SetSeals(ctx context.Context, grabLock bool, barrierSeal Seal, secureRandomReader io.Reader, shouldRewrap bool) error {
+	if grabLock {
+		ctx, _ = c.GetContext()
 
-	c.stateLock.Lock()
-	defer c.stateLock.Unlock()
+		c.stateLock.Lock()
+		defer c.stateLock.Unlock()
+	}
 
 	currentSealBarrierConfig, err := c.SealAccess().BarrierConfig(ctx)
 	if err != nil {
