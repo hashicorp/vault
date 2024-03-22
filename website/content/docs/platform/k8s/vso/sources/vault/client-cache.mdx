@@ -229,42 +229,47 @@ installs:
       vaultConnectionRef: local-vault-server
     ```
 
-1. Set the `VSO_CLIENT_CACHE_PERSISTENCE_MODEL` environment variable in your
-   `spec.config.env` file:
+1. Set the `VSO_CLIENT_CACHE_PERSISTENCE_MODEL` environment variable in VSO's
+   subscription:
+
+    <CodeBlockConfig highlight="6-7">
+
     ```yaml
     spec:
-    name: vault-secrets-operator
-    channel: stable
-    config:
-    env:
-      - name: VSO_CLIENT_CACHE_PERSISTENCE_MODEL
-        value: direct-encrypted
+      name: vault-secrets-operator
+      channel: stable
+      config:
+        env:
+          - name: VSO_CLIENT_CACHE_PERSISTENCE_MODEL
+            value: direct-encrypted
     ```
 
-1. With the operator installed through OperatorHub, edit your subscription and
-   set the `VSO_CLIENT_CACHE_PERSISTENCE_MODEL` environment.
+    </CodeBlockConfig>
 
-    <Tabs>
-      <Tab heading="Web Console">
-      
-        <ol>
-          <li>Navigate to the <b>Operators</b> menu</li>
-          <li>Select <b>Installed Operators</b></li>
-          <li>Select "Vault Secrets Operator"</li>
-          <li>Click "Edit Subscription" in the top right action menu</li>
-        </ol>
+   With the operator installed through OperatorHub, edit your subscription and
+   set the `VSO_CLIENT_CACHE_PERSISTENCE_MODEL` environment variable.
 
-      </Tab>
-      <Tab heading="CLI">
-      
-        <pre><code language="shell-session">
-        oc edit subscription      \
-          vault-secrets-operator  \
-          -n vault-secrets-operator
-        </code></pre>
-      
-      </Tab>
-    </Tabs>
+<Tabs>
+<Tab heading="Web Console">
+
+  <ol>
+    <li>Navigate to the <b>Operators</b> menu</li>
+    <li>Select <b>Installed Operators</b></li>
+    <li>Select "Vault Secrets Operator"</li>
+    <li>Click "Edit Subscription" in the top right action menu</li>
+  </ol>
+
+</Tab>
+<Tab heading="CLI">
+
+  ```shell-session
+  oc edit subscription      \
+    vault-secrets-operator  \
+    -n vault-secrets-operator
+  ```
+
+</Tab>
+</Tabs>
 
 The pod in the operator deployment restarts once the
 `VSO_CLIENT_CACHE_PERSISTENCE_MODEL` environment variable persists.
