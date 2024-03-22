@@ -14,7 +14,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/cli"
-	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/vault/diagnose"
 )
