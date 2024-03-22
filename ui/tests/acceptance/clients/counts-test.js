@@ -31,6 +31,15 @@ module('Acceptance | clients | counts', function (hooks) {
     timestamp.now.restore();
   });
 
+  test('it should prompt user to query start time for community version', async function (assert) {
+    assert.expect(2);
+    this.owner.lookup('service:version').type = 'community';
+    await visit('/vault/clients/counts/overview');
+
+    assert.dom(ts.emptyStateTitle).hasText('No data received');
+    assert.dom(ts.emptyStateMessage).hasText('Select a start date above to query client count data.');
+  });
+
   test('it should redirect to counts overview route for transitions to parent', async function (assert) {
     await visit('/vault/clients');
     assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'Redirects to counts overview route');

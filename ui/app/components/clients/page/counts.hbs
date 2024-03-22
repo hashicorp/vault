@@ -146,7 +146,11 @@
     {{else}}
       <EmptyState
         @title="No data received {{if this.dateRangeMessage this.dateRangeMessage}}"
-        @message="Update the filter values or click the button to reset them."
+        @message={{if
+          this.version.isCommunity
+          "Select a start date above to query client count data."
+          "Update the filter values or click the button to reset them."
+        }}
       >
         <Hds::Button @text="Reset filters" @color="tertiary" @icon="reload" {{on "click" this.resetFilters}} />
       </EmptyState>
