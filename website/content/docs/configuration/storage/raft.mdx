@@ -136,15 +136,16 @@ delay) mode. The maximum allowed value is 10.
     default to a value larger than the Integrated Storage default of 1MB, then you will 
     need to make the same change in Vault's Integrated Storage config.
 
-- `max_mount_and_namespace_table_entry_size` - This is a subset of
+- `max_mount_and_namespace_table_entry_size` `(integer)`- This is a subset of
   `max_entry_size` that allows a different limit to be set for the specific KV
   entries that contain mount tables, auth tables and namespace configuration
   data. Increasing this allows Vault to store more mounts and namespaces without
   increasing the risk of other user-controlled storage entries becoming too
   large. All other notes on [`max_entry_size`](#max-entry-size) apply. See
   [/vault/docs/enterprise/namespaces/namespace-limits](Run Vault Enterprise with
-  many namespaces) for more details. Use of this feature requires Vault
-  Enterprise.
+  many namespaces) for more details. If not explicitly configured, the
+  `max_entry_size` will continue to apply to mount and namespace tables. Use of
+  this feature requires Vault Enterprise.
 
 - `autopilot_reconcile_interval` `(string: "10s")` - This is the interval after
   which autopilot will pick up any state changes. State change could mean multiple
