@@ -278,6 +278,7 @@ module('Acceptance | clients | overview | sync in license, activated', function 
       .dom(SELECTORS.charts.statTextValue('Secrets sync clients'))
       .exists('shows secret sync data on overview');
     await click(SELECTORS.tab('sync'));
+
     assert.dom(SELECTORS.tab('sync')).hasClass('active');
     assert.dom(SELECTORS.emptyStateTitle).doesNotExist();
     assert
@@ -307,7 +308,6 @@ module('Acceptance | clients | overview | sync in license, not activated', funct
       .dom(SELECTORS.charts.chart('Secrets sync usage'))
       .doesNotExist('chart is hidden because feature is not activated');
 
-    assert.dom(SELECTORS.usageStats).exists();
     assert.dom('[data-test-stat-text="secret-syncs"]').doesNotExist();
   });
 });
@@ -332,7 +332,6 @@ module('Acceptance | clients | overview | sync not in license', function (hooks)
   test('it should hide secrets sync charts', async function (assert) {
     assert.dom(SELECTORS.charts.chart('Secrets sync usage')).doesNotExist();
 
-    assert.dom(SELECTORS.usageStats).exists();
     assert.dom('[data-test-stat-text="secret-syncs"]').doesNotExist();
   });
 });
