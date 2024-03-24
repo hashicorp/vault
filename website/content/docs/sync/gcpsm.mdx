@@ -264,21 +264,20 @@ This overrides the project ID derived from the service account JSON credentials 
 default credentials. The service account must be [authorized](https://cloud.google.com/iam/docs/service-account-overview#locations)
 to perform Secret Manager actions in the target project.
 
-## Security
+## Access management
 
 You can allow or restrict access to secrets based on
 [IAM conditions](https://cloud.google.com/iam/docs/conditions-resource-attributes#resource-name)
-against the fully-qualified resource name.
-
-<Tip title="Use the project number, not the project ID">
-
-  For Secret Manager secrets in GCP, a fully-qualified resource name must have the following format:
+against the fully-qualified resource name. For secrets in Secret Manager, a fully-qualified resource name must have the following
+format:
 
   `projects/<project_number>/secrets/<secret_name>`
 
+<Tip title="Use the project number, not the project ID"> 
+
   The project **number** is not the same as the project **ID**. Project numbers
   are **numeric** while project IDs are **alphanumeric**. They can be found on
-  the Project info panel on the web dashboard.
+  the Project info panel in the web dashboard or on the Welcome screen.
 
 </Tip>
 

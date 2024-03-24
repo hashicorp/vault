@@ -202,12 +202,15 @@ Secrets Sync operates with a last-write-wins strategy. If a secret with the same
 Vault overwrites it when syncing a secret. There are also no automatic mechanisms to prevent a principal with sufficient
 privileges at the destination from overwriting a secret synced by Vault.
 
-To prevent Vault from accidentally overwriting existing secrets, it is recommended to use either the name pattern or
-built-in tag as an extra policy condition on the role used to configure a Vault sync destination. A negative condition on other
+To prevent Vault from accidentally overwriting existing secrets, it is recommended to use either a name pattern or
+built-in tags as an extra policy condition on the role used to configure a Vault sync destination. A negative condition on other
 policies may be used to prevent out-of-band overwrites to Vault secrets from non-Vault roles.
 
-To see examples of policies that
-provide this type of restriction, refer to the access management section of the documentation for each [destination type](#destinations).
+To see examples of policies that provide this type of restriction, refer to the access management section of the documentation
+for each destination type below:
+
+* [AWS Access Management](/vault/docs/sync/awssm#access-management)
+* [GCP Access Management](/vault/docs/sync/gcpsm#access-management)
 
 ## Reconciliation
 
