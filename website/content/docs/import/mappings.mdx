@@ -6,8 +6,9 @@ description: Mappings lets users apply various filtering methods to secrets bein
 
 # Import mappings
 
-There are multiple types of mapping blocks that can be defined in the import plan. Each type enables a
-different mechanism for filtering out secrets from an external system during the execution of an import.
+Vault supports multiple filter types for mapping blocks. You can use the
+different types to filter the information Vault reads in during the import
+process.
 
 ## Argument reference
 
@@ -22,7 +23,7 @@ All types of mapping blocks, no matter the type, have four shared arguments:
 * `priority` - (Required) Controls the order in which multiple mapping blocks will be applied to the secrets being imported. The
 lower the value specified, the higher the priority will be during filtering.
 
-## Passthrough
+## Passthrough mapping filters
 
 Passthrough mapping blocks `mapping_passthrough` allow all secrets through from the specified source to the
 specified destination. For example, one use case is using it as a base-case for imported secrets. By assigning
