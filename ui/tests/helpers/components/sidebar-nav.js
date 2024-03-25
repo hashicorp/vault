@@ -6,16 +6,15 @@
 import { allFeatures } from 'vault/helpers/all-features';
 import sinon from 'sinon';
 
-export const stubFeaturesAndPermissions = (owner, isEnterprise = false, setCluster = false) => {
+export const stubFeaturesAndPermissions = (owner, isEnterprise = false, setCluster = false, features) => {
   const permissions = owner.lookup('service:permissions');
   const hasNavPermission = sinon.stub(permissions, 'hasNavPermission');
   hasNavPermission.returns(true);
   sinon.stub(permissions, 'navPathParams');
 
   const version = owner.lookup('service:version');
-  const features = sinon.stub(version, 'features');
-  features.value(allFeatures());
-  sinon.stub(version, 'isEnterprise').value(isEnterprise);
+  version.type = isEnterprise ? 'enterprise' : 'community';
+  version.features = features || allFeatures();
 
   const auth = owner.lookup('service:auth');
   sinon.stub(auth, 'authData').value({});
