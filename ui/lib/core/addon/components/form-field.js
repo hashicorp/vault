@@ -201,7 +201,6 @@ export default class FormFieldComponent extends Component {
     } else {
       updatedValue = removeFromArray(updatedValue, event.target.value);
     }
-    this.args.model[this.valuePath] = updatedValue;
     this.setAndBroadcast(updatedValue);
   }
 }
