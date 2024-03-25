@@ -6,17 +6,16 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render, click, settled } from '@ember/test-helpers';
+import { render, click, settled, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import clientsHandler from 'vault/mirage/handlers/clients';
+import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { getUnixTime } from 'date-fns';
 import { SELECTORS as ts, dateDropdownSelect } from 'vault/tests/helpers/clients';
 import { selectChoose } from 'ember-power-select/test-support/helpers';
 import timestamp from 'core/utils/timestamp';
 import sinon from 'sinon';
 
-const STATIC_NOW = new Date('2024-01-25T23:59:59Z');
-const START_TIME = getUnixTime(new Date('2023-10-01T00:00:00Z'));
+const START_TIME = getUnixTime(LICENSE_START);
 const END_TIME = getUnixTime(STATIC_NOW);
 
 module('Integration | Component | clients | Page::Counts', function (hooks) {
@@ -29,21 +28,23 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
   hooks.beforeEach(async function () {
     clientsHandler(this.server);
-    const store = this.owner.lookup('service:store');
+    this.store = this.owner.lookup('service:store');
     const activityQuery = {
       start_time: { timestamp: START_TIME },
       end_time: { timestamp: END_TIME },
     };
-    this.activity = await store.queryRecord('clients/activity', activityQuery);
-    this.config = await store.queryRecord('clients/config', {});
+    this.activity = await this.store.queryRecord('clients/activity', activityQuery);
+    this.config = await this.store.queryRecord('clients/config', {});
     this.startTimestamp = START_TIME;
     this.endTimestamp = END_TIME;
+    this.versionHistory = [];
     this.renderComponent = () =>
       render(hbs`
       <Clients::Page::Counts
         @activity={{this.activity}}
         @activityError={{this.activityError}}
         @config={{this.config}}
+        @versionHistory={{this.versionHistory}}
         @startTimestamp={{this.startTimestamp}}
         @endTimestamp={{this.endTimestamp}}
         @namespace={{this.namespace}}
@@ -86,10 +87,10 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
   test('it should populate start and end month displays', async function (assert) {
     await this.renderComponent();
 
-    assert.dom(ts.counts.startMonth).hasText('October 2023', 'Start month renders');
+    assert.dom(ts.counts.startMonth).hasText('July 2023', 'Start month renders');
     assert
       .dom(ts.calendarWidget.trigger)
-      .hasText('Oct 2023 - Jan 2024', 'Start and end months render in filter bar');
+      .hasText('Jul 2023 - Jan 2024', 'Start and end months render in filter bar');
   });
 
   test('it should render no data empty state', async function (assert) {
@@ -99,7 +100,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
     assert
       .dom(ts.emptyStateTitle)
-      .hasText('No data received from October 2023 to January 2024', 'No data empty state renders');
+      .hasText('No data received from July 2023 to January 2024', 'No data empty state renders');
   });
 
   test('it should render activity error', async function (assert) {
@@ -191,8 +192,50 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     assert
       .dom(ts.counts.startDiscrepancy)
       .hasText(
-        'Warning You requested data from June 2022. We only have data from October 2023, and that is what is being shown here.',
+        'You requested data from June 2022. We only have data from July 2023, and that is what is being shown here.',
         'Start discrepancy alert renders'
+      );
+  });
+
+  test('it renders alert if upgrade happened within queried activity', async function (assert) {
+    assert.expect(4);
+    this.versionHistory = await this.store.findAll('clients/version-history').then((resp) => {
+      return resp.map(({ version, previousVersion, timestampInstalled }) => {
+        return {
+          version,
+          previousVersion,
+          timestampInstalled,
+        };
+      });
+    });
+
+    await this.renderComponent();
+
+    assert
+      .dom(ts.upgradeWarning)
+      .hasTextContaining(
+        `Client count data contains 2 upgrades Vault was upgraded during this time period. Keep this in mind while looking at the data. Visit our Client count FAQ for more information.`,
+        'it renders title and subtext'
+      );
+    assert
+      .dom(`${ts.upgradeWarning} ul`)
+      .doesNotHaveTextContaining(
+        '1.9.1',
+        'Warning does not include subsequent patch releases (e.g. 1.9.1) of the same notable upgrade.'
+      );
+    const [first, second] = findAll(`${ts.upgradeWarning} li`);
+    assert
+      .dom(first)
+      .hasText(
+        `1.9.0 (upgraded on Jul 2, 2023) - We introduced changes to non-entity token and local auth mount logic for client counting in 1.9.`,
+        'alert includes 1.9.0 upgrade'
+      );
+
+    assert
+      .dom(second)
+      .hasTextContaining(
+        `1.10.1 (upgraded on Sep 2, 2023) - We added monthly breakdowns and mount level attribution starting in 1.10.`,
+        'alert includes 1.10.1 upgrade'
       );
   });
 
@@ -214,6 +257,6 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
     assert
       .dom(ts.emptyStateTitle)
-      .hasText('No data received from October 2023 to January 2024', 'Empty state renders');
+      .hasText('No data received from July 2023 to January 2024', 'Empty state renders');
   });
 });

@@ -25,7 +25,6 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
-	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 	"go.uber.org/atomic"
@@ -86,10 +85,9 @@ const (
 	nonEntityTokenActivityType = "non-entity-token"
 	entityActivityType         = "entity"
 	secretSyncActivityType     = "secret-sync"
-
-	// FeatureSecretSyncBilling will always be false
-	FeatureSecretSyncBilling = license.FeatureNone
 )
+
+var ActivityClientTypes = []string{nonEntityTokenActivityType, entityActivityType, secretSyncActivityType, ACMEActivityType}
 
 type segmentInfo struct {
 	startTimestamp       int64
@@ -1483,9 +1481,6 @@ func (a *ActivityLog) AddClientToFragment(clientID string, namespaceID string, t
 // fragment. The timestamp is a Unix timestamp *without* nanoseconds,
 // as that is what token.CreationTime uses.
 func (a *ActivityLog) AddActivityToFragment(clientID string, namespaceID string, timestamp int64, activityType string, mountAccessor string) {
-	if activityType == secretSyncActivityType && !a.core.HasFeature(FeatureSecretSyncBilling) {
-		return
-	}
 	// Check whether entity ID already recorded
 	var present bool
 
@@ -1580,6 +1575,7 @@ type ResponseCounts struct {
 	NonEntityClients int `json:"non_entity_clients" mapstructure:"non_entity_clients"`
 	Clients          int `json:"clients"`
 	SecretSyncs      int `json:"secret_syncs" mapstructure:"secret_syncs"`
+	ACMEClients      int `json:"acme_clients" mapstructure:"acme_clients"`
 }
 
 // Add adds the new record's counts to the existing record
@@ -1592,6 +1588,7 @@ func (r *ResponseCounts) Add(newRecord *ResponseCounts) {
 	r.DistinctEntities += newRecord.DistinctEntities
 	r.NonEntityClients += newRecord.NonEntityClients
 	r.NonEntityTokens += newRecord.NonEntityTokens
+	r.ACMEClients += newRecord.ACMEClients
 	r.SecretSyncs += newRecord.SecretSyncs
 }
 
@@ -2042,6 +2039,7 @@ func (p *processCounts) toCountsRecord() *activity.CountsRecord {
 	return &activity.CountsRecord{
 		EntityClients:    p.countByType(entityActivityType),
 		NonEntityClients: p.countByType(nonEntityTokenActivityType),
+		ACMEClients:      p.countByType(ACMEActivityType),
 		SecretSyncs:      p.countByType(secretSyncActivityType),
 	}
 }
@@ -2052,7 +2050,7 @@ func (p *processCounts) toCountsRecord() *activity.CountsRecord {
 func (p *processCounts) countByType(typ string) int {
 	switch typ {
 	case nonEntityTokenActivityType:
-		return len(p.ClientsByType[nonEntityTokenActivityType]) + int(p.Tokens) + len(p.ClientsByType[ACMEActivityType])
+		return len(p.ClientsByType[nonEntityTokenActivityType]) + int(p.Tokens)
 	}
 	return len(p.ClientsByType[typ])
 }
@@ -2060,17 +2058,6 @@ func (p *processCounts) countByType(typ string) int {
 // clientsByType returns the set of client IDs with the given type.
 // ACME clients are included in the non entity results
 func (p *processCounts) clientsByType(typ string) clientIDSet {
-	switch typ {
-	case nonEntityTokenActivityType:
-		clients := make(clientIDSet)
-		for c := range p.ClientsByType[nonEntityTokenActivityType] {
-			clients[c] = struct{}{}
-		}
-		for c := range p.ClientsByType[ACMEActivityType] {
-			clients[c] = struct{}{}
-		}
-		return clients
-	}
 	return p.ClientsByType[typ]
 }
 
@@ -2799,6 +2786,7 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]i
 	responseData["non_entity_clients"] = totalCounts.NonEntityClients
 	responseData["clients"] = totalCounts.Clients
 	responseData["secret_syncs"] = totalCounts.SecretSyncs
+	responseData["acme_clients"] = totalCounts.ACMEClients
 
 	// The partialMonthClientCount should not have more than one month worth of data.
 	// If it does, something has gone wrong and we should warn that the activity log data

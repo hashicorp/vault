@@ -2896,31 +2896,6 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			},
 		},
 		{
-			Pattern: "internal/ui/version",
-			DisplayAttrs: &framework.DisplayAttributes{
-				OperationPrefix: "internal-ui",
-				OperationVerb:   "read",
-				OperationSuffix: "version",
-			},
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.pathInternalUIVersion,
-					Summary:  "Backwards compatibility is not guaranteed for this API",
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"version": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-							},
-						}},
-					},
-				},
-			},
-		},
-		{
 			Pattern: "internal/counters/requests",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "internal",
@@ -5206,14 +5181,14 @@ func (b *SystemBackend) wellKnownPaths() []*framework.Path {
 		{
 			Pattern: "well-known/?$",
 
-			DisplayAttrs: &framework.DisplayAttributes{
-				OperationPrefix: "well-known",
-				OperationVerb:   "list",
-			},
-
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleWellKnownList(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "well-known",
+						OperationVerb:   "list",
+						OperationSuffix: "labels-2",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -5228,6 +5203,11 @@ func (b *SystemBackend) wellKnownPaths() []*framework.Path {
 				},
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handleWellKnownList(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "well-known",
+						OperationVerb:   "list",
+						OperationSuffix: "labels",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",

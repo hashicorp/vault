@@ -5,13 +5,44 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
+
+// mockStorage is a struct that is used to mock barrier storage.
+type mockStorage struct {
+	mock.Mock
+}
+
+// List implements List from BarrierStorage interface.
+// ignore-nil-nil-function-check.
+func (m *mockStorage) List(_ context.Context, _ string) ([]string, error) {
+	return nil, nil
+}
+
+// Get implements Get from BarrierStorage interface.
+// ignore-nil-nil-function-check.
+func (m *mockStorage) Get(_ context.Context, _ string) (*logical.StorageEntry, error) {
+	return nil, nil
+}
+
+// Put implements Put from BarrierStorage interface.
+func (m *mockStorage) Put(_ context.Context, _ *logical.StorageEntry) error {
+	return nil
+}
+
+// Delete implements Delete from BarrierStorage interface.
+func (m *mockStorage) Delete(_ context.Context, _ string) error {
+	return nil
+}
 
 func mockAuditedHeadersConfig(t *testing.T) *AuditedHeadersConfig {
 	_, barrier, _ := mockBarrier(t)
@@ -346,4 +377,121 @@ func BenchmarkAuditedHeaderConfig_ApplyConfig(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		conf.ApplyConfig(context.Background(), reqHeaders, salter)
 	}
+}
+
+// TestAuditedHeaders_auditedHeadersKey is used to check the key we use to handle
+// invalidation doesn't change when we weren't expecting it to.
+func TestAuditedHeaders_auditedHeadersKey(t *testing.T) {
+	require.Equal(t, "audited-headers-config/audited-headers", auditedHeadersKey())
+}
+
+// TestAuditedHeaders_NewAuditedHeadersConfig checks supplying incorrect params to
+// the constructor for AuditedHeadersConfig returns an error.
+func TestAuditedHeaders_NewAuditedHeadersConfig(t *testing.T) {
+	ac, err := NewAuditedHeadersConfig(nil)
+	require.Error(t, err)
+	require.Nil(t, ac)
+
+	ac, err = NewAuditedHeadersConfig(&BarrierView{})
+	require.NoError(t, err)
+	require.NotNil(t, ac)
+}
+
+// TestAuditedHeaders_invalidate ensures that we can update the headers on AuditedHeadersConfig
+// when we invalidate, and load the updated headers from the view/storage.
+func TestAuditedHeaders_invalidate(t *testing.T) {
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, auditedHeadersSubPath)
+	ahc, err := NewAuditedHeadersConfig(view)
+	require.NoError(t, err)
+	require.Len(t, ahc.Headers, 0)
+
+	// Store some data using the view.
+	fakeHeaders1 := map[string]*auditedHeaderSettings{"x-magic-header": {}}
+	fakeBytes1, err := json.Marshal(fakeHeaders1)
+	require.NoError(t, err)
+	err = view.Put(context.Background(), &logical.StorageEntry{Key: auditedHeadersEntry, Value: fakeBytes1})
+	require.NoError(t, err)
+
+	// Invalidate and check we now see the header we stored
+	err = ahc.invalidate(context.Background())
+	require.NoError(t, err)
+	require.Len(t, ahc.Headers, 1)
+	_, ok := ahc.Headers["x-magic-header"]
+	require.True(t, ok)
+
+	// Do it again with more headers and random casing.
+	fakeHeaders2 := map[string]*auditedHeaderSettings{
+		"x-magic-header":           {},
+		"x-even-MORE-magic-header": {},
+	}
+	fakeBytes2, err := json.Marshal(fakeHeaders2)
+	require.NoError(t, err)
+	err = view.Put(context.Background(), &logical.StorageEntry{Key: auditedHeadersEntry, Value: fakeBytes2})
+	require.NoError(t, err)
+
+	// Invalidate and check we now see the header we stored
+	err = ahc.invalidate(context.Background())
+	require.NoError(t, err)
+	require.Len(t, ahc.Headers, 2)
+	_, ok = ahc.Headers["x-magic-header"]
+	require.True(t, ok)
+	_, ok = ahc.Headers["x-even-more-magic-header"]
+	require.True(t, ok)
+}
+
+// TestAuditedHeaders_invalidate_nil_view ensures that we invalidate the headers
+// correctly (clear them) when we get nil for the storage entry from the view.
+func TestAuditedHeaders_invalidate_nil_view(t *testing.T) {
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, auditedHeadersSubPath)
+	ahc, err := NewAuditedHeadersConfig(view)
+	require.NoError(t, err)
+	require.Len(t, ahc.Headers, 0)
+
+	// Store some data using the view.
+	fakeHeaders1 := map[string]*auditedHeaderSettings{"x-magic-header": {}}
+	fakeBytes1, err := json.Marshal(fakeHeaders1)
+	require.NoError(t, err)
+	err = view.Put(context.Background(), &logical.StorageEntry{Key: auditedHeadersEntry, Value: fakeBytes1})
+	require.NoError(t, err)
+
+	// Invalidate and check we now see the header we stored
+	err = ahc.invalidate(context.Background())
+	require.NoError(t, err)
+	require.Len(t, ahc.Headers, 1)
+	_, ok := ahc.Headers["x-magic-header"]
+	require.True(t, ok)
+
+	// Swap out the view with a mock that returns nil when we try to invalidate.
+	// This should mean we end up just clearing the headers (no errors).
+	mockStorageBarrier := new(mockStorage)
+	mockStorageBarrier.On("Get", mock.Anything, mock.Anything).Return(nil, nil)
+	ahc.view = NewBarrierView(mockStorageBarrier, auditedHeadersSubPath)
+
+	// Invalidate should clear out the existing headers without error
+	err = ahc.invalidate(context.Background())
+	require.NoError(t, err)
+	require.Len(t, ahc.Headers, 0)
+}
+
+// TestAuditedHeaders_invalidate_bad_data ensures that we correctly error if the
+// underlying data cannot be parsed as expected.
+func TestAuditedHeaders_invalidate_bad_data(t *testing.T) {
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, auditedHeadersSubPath)
+	ahc, err := NewAuditedHeadersConfig(view)
+	require.NoError(t, err)
+	require.Len(t, ahc.Headers, 0)
+
+	// Store some bad data using the view.
+	badBytes, err := json.Marshal("i am bad")
+	require.NoError(t, err)
+	err = view.Put(context.Background(), &logical.StorageEntry{Key: auditedHeadersEntry, Value: badBytes})
+	require.NoError(t, err)
+
+	// Invalidate should
+	err = ahc.invalidate(context.Background())
+	require.Error(t, err)
+	require.ErrorContains(t, err, "failed to parse config")
 }

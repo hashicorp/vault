@@ -6,7 +6,6 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { A } from '@ember/array';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import handleHasManySelection from 'core/utils/search-select-has-many';
@@ -41,14 +40,14 @@ export default class MfaLoginEnforcementForm extends Component {
   searchSelectOptions = null;
 
   @tracked name;
-  @tracked targets = A([]);
+  @tracked targets = [];
   @tracked selectedTargetType = 'accessor';
   @tracked selectedTargetValue = null;
   @tracked searchSelect = {
     options: [],
     selected: [],
   };
-  @tracked authMethods = A([]);
+  @tracked authMethods = [];
   @tracked modelErrors;
 
   constructor() {
@@ -75,7 +74,7 @@ export default class MfaLoginEnforcementForm extends Component {
       const types = ['identity/group', 'identity/entity'];
       for (const type of types) {
         try {
-          options[type] = (await this.store.query(type, {})).toArray();
+          options[type] = await this.store.query(type, {});
         } catch (error) {
           options[type] = [];
         }
@@ -90,7 +89,7 @@ export default class MfaLoginEnforcementForm extends Component {
     }
   }
   async fetchAuthMethods() {
-    const mounts = (await this.store.findAll('auth-method')).toArray();
+    const mounts = await this.store.findAll('auth-method');
     this.authMethods = mounts.map((auth) => auth.type);
   }
 
