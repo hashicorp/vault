@@ -29,8 +29,10 @@ import (
 	"golang.org/x/crypto/ed25519"
 )
 
+const ExportedNameRegex = `(?P<exported>exported|internal|kms|existing)`
+
 func pathGenerateRoot(b *backend) *framework.Path {
-	pattern := "root/generate/" + framework.GenericNameRegex("exported")
+	pattern := "root/generate/" + ExportedNameRegex
 
 	displayAttrs := &framework.DisplayAttributes{
 		OperationPrefix: operationPrefixPKI,
