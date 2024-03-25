@@ -1,0 +1,4 @@
+
+```release-note:improvement
+auth/aws: Add inferred_hostname metadata for IAM AWS authentication method.
+```

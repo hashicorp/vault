@@ -1454,6 +1454,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 
 	inferredEntityType := ""
 	inferredEntityID := ""
+	inferredHostname := ""
 	if roleEntry.InferredEntityType == ec2EntityType {
 		instance, err := b.validateInstance(ctx, req.Storage, entity.SessionInfo, roleEntry.InferredAWSRegion, callerID.Account)
 		if err != nil {
@@ -1480,6 +1481,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 
 		inferredEntityType = ec2EntityType
 		inferredEntityID = entity.SessionInfo
+		inferredHostname = *instance.PrivateDnsName
 	}
 
 	auth := &logical.Auth{
@@ -1494,6 +1496,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 			"inferred_entity_id":  inferredEntityID,
 			"inferred_aws_region": roleEntry.InferredAWSRegion,
 			"account_id":          entity.AccountNumber,
+			"inferred_hostname":   inferredHostname,
 		},
 		DisplayName: entity.FriendlyName,
 		Alias: &logical.Alias{
@@ -1515,6 +1518,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		"inferred_entity_id":   inferredEntityID,
 		"inferred_aws_region":  roleEntry.InferredAWSRegion,
 		"account_id":           entity.AccountNumber,
+		"inferred_hostname":    inferredHostname,
 	}); err != nil {
 		b.Logger().Warn(fmt.Sprintf("unable to set alias metadata due to %s", err))
 	}
