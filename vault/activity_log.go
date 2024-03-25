@@ -86,6 +86,16 @@ const (
 	nonEntityTokenActivityType = "non-entity-token"
 	entityActivityType         = "entity"
 	secretSyncActivityType     = "secret-sync"
+
+	// ActivityLogMinimumRetentionMonths sets the default minimum retention_months
+	// to enforce when reporting is enabled. Note that this value is also statically
+	// defined in the UI. Any updates here should also be made to
+	// ui/app/models/clients/config.js.
+	ActivityLogMinimumRetentionMonths = 48
+
+	// activityLogMaximumRetentionMonths sets the default maximum retention_months
+	// to enforce when reporting is enabled.
+	activityLogMaximumRetentionMonths = 60
 )
 
 var ActivityClientTypes = []string{nonEntityTokenActivityType, entityActivityType, secretSyncActivityType, ACMEActivityType}
@@ -259,7 +269,7 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 		precomputedQueryWritten:  make(chan struct{}),
 	}
 
-	config, err := a.loadConfigOrDefault(core.activeContext)
+	config, err := a.loadConfigOrDefault(core.activeContext, core.ManualLicenseReportingEnabled())
 	if err != nil {
 		return nil, err
 	}
@@ -1899,7 +1909,7 @@ func defaultActivityConfig() activityConfig {
 	}
 }
 
-func (a *ActivityLog) loadConfigOrDefault(ctx context.Context) (activityConfig, error) {
+func (a *ActivityLog) loadConfigOrDefault(ctx context.Context, isReportingEnabled bool) (activityConfig, error) {
 	// Load from storage
 	var config activityConfig
 	configRaw, err := a.view.Get(ctx, activityConfigKey)
@@ -1914,8 +1924,8 @@ func (a *ActivityLog) loadConfigOrDefault(ctx context.Context) (activityConfig, 
 		return config, err
 	}
 
-	// check if the retention time is lesser than the default
-	if config.RetentionMonths < ActivityLogMinimumRetentionMonths {
+	// check if the retention time is lesser than the default when reporting is enabled
+	if (config.RetentionMonths < ActivityLogMinimumRetentionMonths) && isReportingEnabled {
 		updatedConfig, err := a.setDefaultRetentionMonthsInConfig(ctx, config)
 		if err != nil {
 			return config, err

@@ -18,13 +18,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var (
-	// retentionMonthsOutOfBounds is an error string for invalid values of retention_months
-	retentionMonthsOutOfBounds = fmt.Sprintf("retention_months value outside valid range: [%d, %d]", ActivityLogMinimumRetentionMonths, activityLogMaximumRetentionMonths)
-
-	// defaultToRetentionMonthsMaxWarning is a warning message for setting the max retention_months value when retention_months value is more than activityLogMaximumRetentionMonths
-	defaultToRetentionMonthsMaxWarning = fmt.Sprintf("%s: defaulting to max: %d", retentionMonthsOutOfBounds, activityLogMaximumRetentionMonths)
-)
+// defaultToRetentionMonthsMaxWarning is a warning message for setting the max retention_months value when retention_months value is more than activityLogMaximumRetentionMonths
+var defaultToRetentionMonthsMaxWarning = fmt.Sprintf("retention_months cannot be greater than %d; capped to %d.", activityLogMaximumRetentionMonths, activityLogMaximumRetentionMonths)
 
 // activityQueryPath is available in every namespace
 func (b *SystemBackend) activityQueryPath() *framework.Path {
@@ -316,7 +311,7 @@ func (b *SystemBackend) handleActivityConfigRead(ctx context.Context, req *logic
 		return logical.ErrorResponse("no activity log present"), nil
 	}
 
-	config, err := a.loadConfigOrDefault(ctx)
+	config, err := a.loadConfigOrDefault(ctx, b.Core.ManualLicenseReportingEnabled())
 	if err != nil {
 		return nil, err
 	}
@@ -353,7 +348,7 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 
 	warnings := make([]string, 0)
 
-	config, err := a.loadConfigOrDefault(ctx)
+	config, err := a.loadConfigOrDefault(ctx, b.Core.ManualLicenseReportingEnabled())
 	if err != nil {
 		return nil, err
 	}
@@ -371,12 +366,14 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 
 	{
 		// Parse the retention months
+		// For CE, this value can be between 0 and 60
+		// When reporting is enabled, this value can be between 48 and 60
 		if retentionMonthsRaw, ok := d.GetOk("retention_months"); ok {
 			config.RetentionMonths = retentionMonthsRaw.(int)
 		}
 
-		if config.RetentionMonths < ActivityLogMinimumRetentionMonths {
-			return logical.ErrorResponse(retentionMonthsOutOfBounds), logical.ErrInvalidRequest
+		if config.RetentionMonths < 0 {
+			return logical.ErrorResponse("retention_months must be greater than or equal to 0"), logical.ErrInvalidRequest
 		}
 
 		if config.RetentionMonths > activityLogMaximumRetentionMonths {

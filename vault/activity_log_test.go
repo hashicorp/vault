@@ -861,7 +861,7 @@ func TestActivityLog_API_ConfigCRUD_Census(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error")
 		}
-		if resp.Data["error"] != retentionMonthsOutOfBounds {
+		if resp.Data["error"] != `retention_months must be at least 48 while Reporting is enabled` {
 			t.Fatalf("bad: %v", resp)
 		}
 	} else {
@@ -877,15 +877,8 @@ func TestActivityLog_API_ConfigCRUD_Census(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if core.ManualLicenseReportingEnabled() {
-		if resp != nil {
-			t.Fatalf("bad: %#v", resp)
-		}
-	} else {
-		expectedWarning := defaultToRetentionMonthsMaxWarning
-		if resp.Warnings[0] != expectedWarning {
-			t.Fatalf("expected warning not present")
-		}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
 	}
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
@@ -925,14 +918,10 @@ func TestActivityLog_API_ConfigCRUD_Census(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	expectedRetentionMonths := activityLogMaximumRetentionMonths
-	if core.ManualLicenseReportingEnabled() {
-		expectedRetentionMonths = 56
-	}
 
 	expected := map[string]interface{}{
 		"default_report_months":    12,
-		"retention_months":         expectedRetentionMonths,
+		"retention_months":         56,
 		"enabled":                  "enable",
 		"queries_available":        false,
 		"reporting_enabled":        core.AutomatedLicenseReportingEnabled(),
