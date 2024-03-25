@@ -13,7 +13,7 @@ restoration process. Integrated storage is a "built-in" storage option that
 supports backup/restore workflows, high availability, and Enterprise replication
 features without relying on third party systems.
 
-## Raft protocol overview                               
+## Raft protocol overview
 
 <Highlight>
 
@@ -126,7 +126,7 @@ node in bootstrap mode so it self-elects as leader.
 When a single Vault server (node)
 [initializes](/vault/docs/commands/operator/init/#operator-init), it establishes
 a cluster (peer set) of size 1 and self-elects itself as leader. Once the
-cluster has a leader, additional servers can join the cluster using an 
+cluster has a leader, additional servers can join the cluster using an
 encrypted challenge/answer workflow. For the join process to work, all all nodes
 in a single Raft cluster must share the same seal configuration. If the cluster
 is configured to use auto-unseal, the join process automatically decrypts the
@@ -170,9 +170,9 @@ but you can also configure Vault to use the
 logs.
 
 Library       | Filename  | Storage directory
-------------- | --------- | ----------------
+------------- |-----------| ----------------
 `raft-boltdb` | `raft.db` | `raft`
-`raft-wal`    | `raft.db` | `raft/wal`
+`raft-wal`    | various   | `raft/wal`
 
 The `raft-wal` library is designed specifically for storing Raft logs. Rather
 than using a freelist like `raft-boltdb`, `raft-wal` maintains a directory of
@@ -210,7 +210,7 @@ Autopilot also includes a dead server cleanup feature. When you enable dead
 server cleanup with the
 [Autopilot API](/vault/api-docs/system/storage/raftautopilot), Vault
 automatically removes unhealthy nodes from the Raft cluster without manual
-operator intervention. 
+operator intervention.
 
 ### Without autopilot
 
@@ -234,7 +234,7 @@ indexes with the `vault status` CLI command.
 ## Quorum size and failure tolerance
 
 The table below compares quorum size and failure tolerance for various
-cluster sizes. 
+cluster sizes.
 
 Servers | Quorum size | Failure tolerance
 :-----: | :---------: | :---------------:
@@ -252,7 +252,7 @@ Servers | Quorum size | Failure tolerance
   production deployment to maintained a minimum failure tolerance of 2. We also
   recommend maintaining a cluster with an odd number of nodes to avoid voting
   stalemates.
-  
+
   We **strongly discourage** single server deployments for production use due to
   the high risk of data loss during failure scenarios.
 
