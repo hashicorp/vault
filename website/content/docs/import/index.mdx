@@ -50,37 +50,35 @@ destination_vault {
 }
 ```
 
-* `name` - (Required) The name of the Vault destination block used to internally reference this destination inside of a mapping.
+- `name (string: <required>)` - A unique name for the destination block that can
+  be referenced in subsequent mapping blocks.
 
-* `address` - (Optional) The address of the Vault server with the KVv2 Secrets Engine for which the secrets will be imported into.
+- `address (string)` - Optional network address of the Vault server with the
+  KVv2 secrets engine enabled.
 
 * `token` - (Optional) A token for authentication to the Vault server located at the specified address.
 
-* `namespace` - (Optional) The name of the Vault namespace containing the specified KVv2 mount.
+- `namespace (string)` - Optional namespace path containing the specified KVv2
+  mount. By default, Vault looks for the KVv2 mount under the root namespace.
 
-* `mount` - (Optional) The name of the KVv2 mount in Vault for which the secrets will be imported into.
+- `mount (string)` - Optional mount path for the target KVv2 instance.
 
 
 
 ## Data migration sources
 
-Secrets can be imported from various external systems, called sources. The supported destinations are:
-* [GCP Secret Manager](/vault/docs/import/gcpsm)
+Vault can import secrets from the following sources:
+- [GCP Secret Manager](/vault/docs/import/gcpsm)
 
-A source requires the credentials necessary to read the external system's secrets and their values so that it may import
-them into Vault. Either credentials to the system can be directly provided, or you can leverage Vault's capabilities to
-geneerate a dynamic secret for the importer to use if you have the corresponding secrets engine configured. A source is
-defined by an HCL block in the format of `source_<external_system>`. For example, `source_gcp` defines a source block
-for GCP Secret Manager.
+To pull data from a source during import, Vault needs read credentials for the
+external system. You can provide credentials directly as part of the import
+plan, or use Vault to generate dynamic credentials for the importer if you already
+have dynamic credentials configured for the corresponding secrets engine.
 
 ### HCL syntax
 
-Refer to a [specific source's documentation](#sources) for details on how to define all remaining arguments of a source
-block for that external system type.
-
-#### Example
-
-A `source_<external_system>` block may look like the following, using GCP as an example:
+Source blocks start with `source_<external_system>` and include any connection
+information required by the target system or engine. For example:
 
 ```hcl
 source_gcp {
@@ -89,36 +87,65 @@ source_gcp {
 }
 ```
 
-## Mappings
+- `name (string: <required>)` - A unique name for the source block that can be
+  referenced in subsequent mapping blocks.
 
-Mappings blocks are what glue together a source block to a destination block. The supported mapping types are:
-* [mapping_passthrough](/vault/docs/import/mappings#passthrough)
-* [mapping_metadata](/vault/docs/import/mappings#metadata)
-* [mapping_regex](/vault/docs/import/mappings#regex)
+- `credentials (string: <required>)` - Path to a credential file or token with
+  read permissions for the target system.
 
-A mapping is where filtering logic is defined to control which secrets in the external system will be imported and which will
-be ignored. The definition of the rule depends on the type of mapping block that is being configured. Mapping blocks are
-applied in order of their given priority.
+Depending on the source system, additional information may be required. Refer to
+the connection documentation for your source system to determine the full set of
+required fields for that system type.
 
-Once a secret being imported matches a single mapping's rule, it cannot match to another mapping again. A mapping is defined
-by an HCL block in the format of `mapping_<filter_type>`. For example, `mapping_regex` defines a mapping block to pass
-all secrets through whose secret name passes the given regular expression.
+
+
+## Data migration mappings
+
+Mappings glue the source and destination together and filter the migrated data
+to control what is imported and what is ignored. Vault currently supports the
+following mapping methods:
+
+- [mapping_passthrough](/vault/docs/import/mappings#passthrough)
+- [mapping_metadata](/vault/docs/import/mappings#metadata)
+- [mapping_regex](/vault/docs/import/mappings#regex)
 
 ### HCL syntax
 
-See the [mapping documentation](/vault/docs/import/mappings) to see more info regarding specific mapping types and
-their arguments.
-
-#### Example
-
-A `mapping_<filter_type>` block may look like the following, using regex as an example:
+Mapping blocks start with `mapping_<filter_type>` and include a source name,
+destination name, and any transformations or filters that apply. For example:
 
 ```hcl
 mapping_regex {
-  name = "my-map-1"
-  source = "my-gcp-source-1"
+  name        = "my-map-1"
+  source      = "my-gcp-source-1"
   destination = "my-dest-1"
-  priority = 1
-  expression = "^database/.*$"
+  priority    = 1
+  expression  = "^database/.*$"
 }
 ```
+
+- `name (string: <required>)` - A unique name for the mapping block.
+
+- `source (string: <required>)` - The name of a previously defined source block
+  **from** which the data should be read.
+
+- `destination (string: <required>)` - The name of a previously defined
+  destination block **to** which the data should be written.
+
+- `priority (integer: <required>)` - The order in which Vault should apply the
+  mapping block during the import process. The lower the number, the higher the
+  priority. For example, a mapping with priority 1 executes before a mapping
+  with priority 2.
+
+Depending on the filter type, additional fields may be required/possible. Refer
+to the filter documentation for the different mappings for a list of
+mapping-specific fields.
+
+<Tip title="Priority matters">
+
+  Vault applies mapping definitions in priority order and a given secret only
+  matches to the first mapping that applies. Once Vault imports a secret with a
+  particular mapping, subsequent reads from the same source will ignore that
+  secret.
+
+</Tip>
