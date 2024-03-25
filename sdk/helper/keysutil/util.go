@@ -66,7 +66,7 @@ func isEd25519OID(oid asn1.ObjectIdentifier) bool {
 	return oidNSSPKIXEd25519.Equal(oid) || oidRFC8410Ed25519.Equal(oid)
 }
 
-// ParsePKCS8PrivateKey parses an unencrypted private key in PKCS #8, ASN.1 DER form.
+// ParsePKCS8Ed25519PrivateKey parses an unencrypted private key in PKCS #8, ASN.1 DER form.
 //
 // It returns a *rsa.PrivateKey, a *ecdsa.PrivateKey, or a ed25519.PrivateKey.
 // More types might be supported in the future.
@@ -121,7 +121,7 @@ func ParsePKCS8Ed25519PrivateKey(der []byte) (key interface{}, err error) {
 	return ed25519.NewKeyFromSeed(ed25519Key.PrivateKey), nil
 }
 
-// ParsePKCS8PrivateKey parses an unencrypted private key in PKCS #8, ASN.1 DER form.
+// ParsePKCS8RSAPSSPrivateKey parses an unencrypted private key in PKCS #8, ASN.1 DER form.
 //
 // This helper only supports RSA/PSS keys (with OID 1.2.840.113549.1.1.10).
 //

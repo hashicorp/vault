@@ -18,7 +18,6 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
 
   hooks.beforeEach(function () {
     this.version = this.owner.lookup('service:version');
-    this.version.type = 'enterprise';
     this.title = 'Secrets Sync';
     this.renderComponent = () => {
       return render(hbs`<SyncHeader @title={{this.title}} @breadcrumbs={{this.breadcrumbs}} />`, {
@@ -39,13 +38,22 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
     assert.dom(breadcrumb).includesText('Destinations', 'renders breadcrumb');
   });
 
-  test('it should just render title for enterprise version', async function (assert) {
+  test('it should just render title for enterprise with secrets sync feature', async function (assert) {
+    this.version.type = 'enterprise';
+    this.version.features = ['Secrets Sync'];
     await this.renderComponent();
     assert.dom(title).hasText('Secrets Sync');
   });
 
+  test('it should render title and premium badge for enterprise without secrets sync feature', async function (assert) {
+    this.version.type = 'enterprise';
+    this.version.features = [];
+    await this.renderComponent();
+    assert.dom(title).hasText('Secrets Sync Premium feature');
+  });
+
   test('it should render title and promotional enterprise badge for community version', async function (assert) {
-    this.version.type = null;
+    this.version.type = 'community';
     await this.renderComponent();
     assert.dom(title).hasText('Secrets Sync Enterprise feature');
   });
