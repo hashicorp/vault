@@ -6,15 +6,15 @@ description: The Google Cloud Platform Secret Manager source imports secrets fro
 
 # GCP import source
 
-The GCP source enables users to import secret data from GCP Secret Manager into their Vault instance. To be able
-to import secret data from here into your Vault destination, the following permissions are required:
+
+Use the GCP source to import secret data from the GCP secret manager into your Vault instance. To use a GCP  source, you must grant GCP the following permissions:
 
 ```shell-session
 "secretmanager.secrets.list",
 "secretmanager.versions.access",
 ```
 
-## Argument reference
+## GCP source parameters
 
 * `name` - (Required) The name of the source block used to internally reference this source inside of a mapping.
 
@@ -30,7 +30,7 @@ used to generate a dynamic credential for the importer to use. If `vault_role_na
 
 ## Example
 
-In this example, a GCP source is defined and configured to use 
+Define and configure the `my-gcp-source-1` GCP source:
 
 ```hcl
 source_gcp {
