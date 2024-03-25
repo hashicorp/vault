@@ -9,8 +9,9 @@ import (
 	"crypto/sha256"
 	"testing"
 
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSalt(t *testing.T) {
@@ -88,4 +89,16 @@ func TestSaltID(t *testing.T) {
 	if sid1 != sid2 {
 		t.Fatalf("mismatch")
 	}
+}
+
+// TestSalt_GetHMAC_Ignored ensures that when attempting to HMAC a default value
+// we don't return a HMAC, and instead just return the default (empty string).
+// This means that when we write audit entries and encode the request/response to
+// JSON we can successfully ignore empty fields if they've been marked as such via
+// the use of struct tags.
+func TestSalt_GetHMAC_Ignored(t *testing.T) {
+	s, err := NewSalt(context.Background(), nil, nil)
+	require.NoError(t, err)
+	require.Equal(t, "", s.GetIdentifiedHMAC(""))
+	require.NotEqual(t, "", s.GetIdentifiedHMAC("juan"))
 }
