@@ -285,7 +285,7 @@
         "badge": {
           "text": "ENTERPRISE",
           "type": "outlined",
-          "color": "highlight"
+          "color": "neutral"
         }
       },
       {
@@ -1858,6 +1858,15 @@
       {
         "title": "Plugin Development",
         "path": "plugins/plugin-development"
+      },
+      {
+        "title": "Plugin Development — Event Notifications",
+        "path": "plugins/plugin-development-event-notifications",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
       },
       {
         "title": "Plugin Management",
