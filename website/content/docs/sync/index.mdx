@@ -201,65 +201,15 @@ Secrets Sync operates with a last-write-wins strategy. If a secret with the same
 Vault overwrites it when syncing a secret. There are also no automatic mechanisms to prevent a principal with sufficient
 privileges at the destination from overwriting a secret synced by Vault.
 
-To prevent Vault from accidentally overwriting existing secrets, it is recommended to use either the name pattern or
-built-in tag as an extra policy condition on the role used to configure a Vault sync destination. For example, the
-following AWS IAM policy prevents Vault from being able to modify secrets that were not created by a sync operation:
+To prevent Vault from accidentally overwriting existing secrets, it is recommended to use either a name pattern or
+built-in tags as an extra policy condition on the role used to configure a Vault sync destination. A negative condition on other
+policies may be used to prevent out-of-band overwrites to Vault secrets from non-Vault roles.
 
-  <CodeBlockConfig hideClipboard>
+To see examples of policies that provide this type of restriction, refer to the access management section of the documentation
+for each destination type below:
 
-    {
-      "Version": "2012-10-17",
-      "Statement": [
-        {
-          "Effect": "Allow",
-          "Action": [
-            "secretsmanager:*",
-          ],
-          "Resource": "*",
-          "Condition": {
-            "StringEquals": {
-              "secretsmanager:ResourceTag/hashicorp:vault": "" # This tag is automatically added by Vault on every synced secrets
-            }
-          }
-        }
-      ]
-    }
-
-  </CodeBlockConfig>
-
-Likewise, is it recommended to add a negative condition on other policies not used by Vault that grant write access to
-secrets to prevent out-of-band overwrites:
-
-  <CodeBlockConfig hideClipboard>
-
-    {
-      "Version": "2012-10-17",
-      "Statement": [
-        {
-          "Effect": "Deny",
-          "Action": [
-            "secretsmanager:*"
-          ],
-          "Resource": "*",
-          "Condition": {
-            "StringNotEquals": {
-              "secretsmanager:ResourceTag/hashicorp:vault": "" # This tag is automatically added by Vault on every synced secrets
-            }
-          }
-        }
-      ]
-    }
-
-  </CodeBlockConfig>
-
-  <Note>
-  Wildcards are used in the example above for brevity, but it is recommended to use the least privilege principle and restrict
-  the actions and resources to the minimum requirements for each use case.
-  </Note>
-
-This policy condition strategy is also applicable to most other destination types. Please refer to the specific destination's
-access management documentation for more details.
-
+* [AWS Access Management](/vault/docs/sync/awssm#access-management)
+* [GCP Access Management](/vault/docs/sync/gcpsm#access-management)
 
 ## Reconciliation
 
