@@ -19,24 +19,24 @@ several challenges, including:
 - Increased risk of outdated and out-of-sync information.
 
 Using Vault as a single source of truth (SSOT) for sensitive data increases
-security and reduces management overhead, but migrating data from multiple and
-varied sources can be complex and costly. 
+security and reduces management overhead, but migrating preexisting data from multiple
+and/or varied sources can be complex and costly. 
 
-The secrets import process helps you automate and streamline your data
-migration with codified import plans as HCL files. Import plans tell Vault
-which data to read from a given source and where to store the data in the KVv2
-secrets engine:
+The secrets import process helps you automate and streamline your sensitive data
+migration with codified import plans as HCL files. Import plans tell Vault which KVv2 secrets
+engine instance to store the expected secret data in, the source system for which data will be
+read from, and how to filter this data. Three HCL blocks make this possible:
 
-- The `source` block provides credentials for connecting to the source system.
-- The `destination` block defines target mounts in KVv2.
-- The `mapping` block define how Vault should transform the imported data before
+- The `destination` block defines target KVv2 mounts.
+- The `source` block provides credentials for connecting to the external system.
+- The `mapping` block defines how Vault should decide which data gets imported before
   writing the information to KVv2.
 
-## Data migration destinations
+## Destinations
 
 Vault stores imported secrets in a Vault KVv2 secrets engine mount. Destination
 blocks start with `destination_vault` and define the desired KVv2 mount path and
-an optional namespace. The combination of a path and namespace represent the exact location in your
+an optional namespace. The combination of these represent the exact location in your
 Vault instance you want the information stored.
 
 ### HCL syntax
@@ -66,20 +66,20 @@ destination_vault {
 
 
 
-## Data migration sources
+## Sources
 
 Vault can import secrets from the following sources:
 - [GCP Secret Manager](/vault/docs/import/gcpsm)
 
 To pull data from a source during import, Vault needs read credentials for the
 external system. You can provide credentials directly as part of the import
-plan, or use Vault to generate dynamic credentials for the importer if you already
-have dynamic credentials configured for the corresponding secrets engine.
+plan, or use Vault to automatically generate dynamic credentials if you already
+have the corresponding secrets engine configured.
 
 ### HCL syntax
 
 Source blocks start with `source_<external_system>` and include any connection
-information required by the target system or engine. For example:
+information required by the target system or the secrets engine to leverage. For example:
 
 ```hcl
 source_gcp {
@@ -100,10 +100,10 @@ required fields for that system type.
 
 
 
-## Data migration mappings
+## Mappings
 
-Mappings glue the source and destination together and filter the migrated data
-to control what is imported and what is ignored. Vault currently supports the
+Mappings glue the source and destination together and filter the migrated data,
+to determine what is imported and what is ignored. Vault currently supports the
 following mapping methods:
 
 - [mapping_passthrough](/vault/docs/import/mappings#passthrough)
@@ -112,8 +112,9 @@ following mapping methods:
 
 ### HCL syntax
 
-Mapping blocks start with `mapping_<filter_type>` and include a source name,
-destination name, and any transformations or filters that apply. For example:
+Mapping blocks start with `mapping_<filter_type>` and require a source name,
+destination name, an execution priority, and any corresponding transformations
+or filters that apply for each mapping type. For example:
 
 ```hcl
 mapping_regex {
@@ -138,15 +139,15 @@ mapping_regex {
   priority. For example, a mapping with priority 1 executes before a mapping
   with priority 2.
 
-Depending on the filter type, additional fields may be required/possible. Refer
-to the filter documentation for the different mappings for a list of
-mapping-specific fields.
+Depending on the filter type, additional fields may be required or possible. Refer
+to the [import mappings documentation](/vault/docs/import/mappings) for the available
+supported options and for a list of each mapping's specific fields.
 
 <Tip title="Priority matters">
 
   Vault applies mapping definitions in priority order and a given secret only
   matches to the first mapping that applies. Once Vault imports a secret with a
   particular mapping, subsequent reads from the same source will ignore that
-  secret.
+  secret. See the [priority section](/vault/docs/import/mappings#priority) for an example.
 
 </Tip>

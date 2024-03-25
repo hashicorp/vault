@@ -14,7 +14,7 @@ Secrets with the same name at the same storage path will be overwritten upon imp
 <Note title="Imports can be long-running processes">
 
 You can write import plans that read from as many sources as you want. The
-amount of data migrated for each source depends on the filters applied and the
+amount of data migrated from each source depends on the filters applied and the
 dataset available. Be mindful of the time needed to read from each source,
 apply any filters, and store the data in Vault.
 
@@ -50,8 +50,8 @@ Output:
 ## Configuration
 
 The `operator import` command uses a dedicated configuration file to specify the source,
-destination, and mapping rules. To learn more about these types and secrets importing,
-refer to [the Secrets Import documentation](/vault/docs/import).
+destination, and mapping rules. To learn more about these types and secrets importing in 
+general, refer to the [Secrets Import documentation](/vault/docs/import).
 
 ```hcl
 source_gcp {
@@ -81,8 +81,8 @@ mapping_passthrough {
 
 - `plan` - Executes a read-only operation to let operators preview the secrets to import based on the configuration file.
 
-- `apply` - Executes the secrets import operations to bring the specified secrets from the source into Vault. Apply first
-  executes a plan, then asks the user to approve the results before performing the actual import.
+- `apply` - Executes the import operations to read the specified secrets from the source and write them into Vault.
+  Apply first executes a plan, then asks the user to approve the results before performing the actual import.
 
 ### Flags
 
@@ -90,9 +90,9 @@ The `operator import` command accepts the following flags:
 
 - `-config` `(string: "import.hcl")` - Path to the import configuration HCL file. The default path is `import.hcl`.
 
-- `-auto-approve` `(bool: <false>)` - Automatically response "yes" to all user-input prompts for the `apply` command.
+- `-auto-approve` `(bool: <false>)` - Automatically responds "yes" to all user-input prompts for the `apply` command.
 
-- `-auto-create` `(bool: <false>)` - Automatically creates any missing namespaces and mounts when
+- `-auto-create` `(bool: <false>)` - Automatically creates any missing namespaces and KVv2 mounts when
   running the `apply` command.
 
 - `-log-level` ((#\_log_level)) `(string: "info")` - Log verbosity level. Supported values (in
