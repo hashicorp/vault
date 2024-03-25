@@ -46,13 +46,13 @@ export default class PathHelpService extends Service {
    * @returns void - as side effect, registers model in store
    */
   async hydrateModel(modelType, backend) {
-    debug(`HYDRATING MODEL ${modelType} ${backend}`);
     // get the existing model factory for type
     const owner = getOwner(this);
     const modelFactory = owner.factoryFor(`model:${modelType}`);
     if (!modelFactory) {
       throw new Error(`Model factory not found for ${modelType}`);
     }
+    debug(`HYDRATING MODEL ${modelType} ${backend}`);
     let newModel = modelFactory.class;
     const modelProto = newModel.proto();
     if (newModel.merged || modelProto.useOpenAPI !== true) {
@@ -93,13 +93,13 @@ export default class PathHelpService extends Service {
    * @returns void - as side effect, registers model in store
    */
   async newModelFromOpenApi(modelType, backend, apiPath, itemType) {
-    debug(`NEW OPENAPI MODEL ${modelType} ${backend}`);
     const owner = getOwner(this);
     const modelFactory = owner.factoryFor(`model:${modelType}`);
     if (modelFactory?.class.merged) {
       // if the model is already merged, we don't need to do anything
       return resolve();
     }
+    debug(`NEW OPENAPI MODEL ${modelType} ${backend}`);
     // dynamically create help url
     const pathInfo = await this.getPaths(apiPath, backend, itemType);
     // if we have an item we want the create info for that itemType

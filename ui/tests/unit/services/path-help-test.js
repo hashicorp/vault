@@ -433,7 +433,7 @@ module('Unit | Service | path-help', function (hooks) {
     });
 
     const modelType = 'generated-user-userpass';
-    await this.pathHelp.hydrateModel(modelType, 'userpass', 'auth/userpass/', 'user');
+    await this.pathHelp.newModelFromOpenApi(modelType, 'userpass', 'auth/userpass/', 'user');
     const model = this.store.createRecord(modelType);
     model.set('mutableId', 'test');
     await model.save();
