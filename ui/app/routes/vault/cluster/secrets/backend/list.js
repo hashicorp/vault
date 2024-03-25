@@ -84,7 +84,7 @@ export default Route.extend({
       return this.router.transitionTo(`vault.cluster.secrets.backend.${engineRoute}`, backend);
     }
     const modelType = this.getModelType(backend, tab);
-    return this.pathHelp.getNewModel(modelType, backend).then(() => {
+    return this.pathHelp.hydrateModel(modelType, backend).then(() => {
       this.store.unloadAll('capabilities');
     });
   },

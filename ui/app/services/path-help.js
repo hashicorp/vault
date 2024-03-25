@@ -40,7 +40,106 @@ export default class PathHelpService extends Service {
   }
 
   /**
-   * getNewModel instantiates models which use OpenAPI fully or partially
+   * hydrateModel is used to hydrate an existing model with OpenAPI data
+   * @param {string} modelType
+   * @param {string} backend
+   * @returns void - as side effect, registers model in store
+   */
+  async hydrateModel(modelType, backend) {
+    debug(`HYDRATING MODEL ${modelType} ${backend}`);
+    // get the existing model factory for type
+    const owner = getOwner(this);
+    const modelFactory = owner.factoryFor(`model:${modelType}`);
+    if (!modelFactory) {
+      throw new Error(`Model factory not found for ${modelType}`);
+    }
+    let newModel = modelFactory.class;
+    const modelProto = newModel.proto();
+    if (newModel.merged || modelProto.useOpenAPI !== true) {
+      return resolve();
+    }
+
+    // get openAPI url from model
+    const helpUrl = modelProto.getHelpUrl(backend);
+    // fetch props from openAPI
+    const props = await this.getProps(helpUrl, backend);
+    // combine existing attributes with openAPI data
+    const { attrs, newFields } = combineAttributes(newModel.attributes, props);
+    newModel = newModel.extend(attrs, { newFields });
+    // TODO: not creating fieldgroups -- check if irrelevant for extended models
+    // hydrate model with extra attributes
+    newModel.reopen({
+      mutableId: computed('id', '_id', {
+        get() {
+          return this._id || this.id;
+        },
+        set(key, value) {
+          return (this._id = value);
+        },
+      }),
+    });
+    newModel.reopenClass({ merged: true });
+    owner.unregister(`model:${modelType}`);
+    owner.register(`model:${modelType}`, newModel);
+  }
+
+  /**
+   * newModelFromOpenAPI is used to create a new model from an OpenAPI document
+   * without any existing models or adapters
+   * @param {string} modelType
+   * @param {string} backend
+   * @param {string} apiPath
+   * @param {string | null} itemType
+   * @returns void - as side effect, registers model in store
+   */
+  async newModelFromOpenApi(modelType, backend, apiPath, itemType) {
+    debug(`NEW OPENAPI MODEL ${modelType} ${backend}`);
+    const owner = getOwner(this);
+    const modelFactory = owner.factoryFor(`model:${modelType}`);
+    if (modelFactory?.class.merged) {
+      // if the model is already merged, we don't need to do anything
+      return resolve();
+    }
+    // dynamically create help url
+    const pathInfo = await this.getPaths(apiPath, backend, itemType);
+    // if we have an item we want the create info for that itemType
+    const paths = itemType ? filterPathsByItemType(pathInfo, itemType) : pathInfo.paths;
+    const createPath = paths.find((path) => path.operations.includes('post') && path.action !== 'Delete');
+    const path = pathToHelpUrlSegment(createPath.path);
+    const helpUrl = `/v1/${apiPath}${path.slice(1)}?help=true` || newModel.proto().getHelpUrl(backend);
+    // create & register adapter for modelType if it doesn't already exist
+    const adapterFactory = owner.factoryFor(`adapter:${modelType}`);
+    if (!adapterFactory) {
+      debug(`Creating new adapter for ${modelType}`);
+      const adapter = this.getNewAdapter(pathInfo, itemType);
+      owner.register(`adapter:${modelType}`, adapter);
+    }
+    // fetch props from openAPI
+    const props = await this.getProps(helpUrl, backend);
+    // format props for model
+    const { attrs, newFields } = combineAttributes(null, props);
+    let newModel = Model.extend(attrs, { newFields });
+    // create fieldGroups
+    const fieldGroups = this.getFieldGroups(newModel);
+    newModel = newModel.extend({ fieldGroups });
+    // hydrate model with extra attributes
+    newModel.reopen({
+      mutableId: computed('id', '_id', {
+        get() {
+          return this._id || this.id;
+        },
+        set(key, value) {
+          return (this._id = value);
+        },
+      }),
+    });
+    newModel.reopenClass({ merged: true });
+    owner.unregister(`model:${modelType}`);
+    owner.register(`model:${modelType}`, newModel);
+  }
+
+  /**
+   * getNewModel [DEPRECATED] instantiates models which use OpenAPI fully or partially
    * @param {string} modelType
    * @param {string} backend
    * @param {string} apiPath (optional) if passed, this method will call getPaths and build submodels for item types
@@ -125,13 +224,14 @@ export default class PathHelpService extends Service {
       const pathInfo = help.openapi.paths;
       const paths = Object.entries(pathInfo);
 
-      return paths.reduce(reducePathsByPathName, {
+      const outcome = paths.reduce(reducePathsByPathName, {
         apiPath,
         itemType,
         itemTypes: [],
         paths: [],
         itemID,
       });
+      return outcome;
     });
   }
 

@@ -15,7 +15,7 @@ export default Route.extend({
   },
   beforeModel() {
     this.store.unloadAll('kmip/role');
-    return this.pathHelp.getNewModel('kmip/role', this.secretMountPath.currentPath);
+    return this.pathHelp.hydrateModel('kmip/role', this.secretMountPath.currentPath);
   },
   model() {
     const model = this.store.createRecord('kmip/role', {

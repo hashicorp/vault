@@ -111,7 +111,7 @@ export default Route.extend({
     if (modelType === 'secret') {
       return resolve();
     }
-    return this.pathHelp.getNewModel(modelType, backend);
+    return this.pathHelp.hydrateModel(modelType, backend);
   },
 
   modelType(backend, secret, options = {}) {
