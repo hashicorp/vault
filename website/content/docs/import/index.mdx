@@ -11,30 +11,44 @@ description: Secrets import allows you to safely onboard secrets from external s
 
 @include 'alerts/beta.mdx'
 
-Having collections of secrets across various external systems can present several challenges to an organization, such as
-increased operational overhead, a greater risk of secrets sprawl, and more. Vault can offer a single source of truth (SSOT)
-solution to managing these secrets, providing increased security and reducing that overhead, yet the effort required
-to migrate all your secrets from multiple external sources into Vault can be steep. To aid in this onboarding process,
-secrets import provides a mechanism to automate it. 
+Distributing sensitive information across multiple external systems creates
+several challenges, including:
 
-A secret that is imported from an external system is stored in Vault's KVv2 Secrets Engine. The import process is defined 
-an import plan, which is an HCL file. Using HCL enables users to declaratively configure which of their secrets will be read
-from an external source and where exactly they will be stored in Vault.
+- increased operational overhead.
+- increased exposure risk from data sprawl.
+- increased risk of outdated and out-of-sync information.
 
-There are three main types of HCL blocks used to configure a secrets import plan. They are source blocks, the Vault destination
-block, and mapping blocks.
+Using Vault as a single source of truth (SSOT) for sensitive data increases
+security and reduces management overhead, but migrating data from multiple and
+varied sources can be complex and costly. 
 
-## Vault destinations
+The secrets import process helps you automate and streamline your data
+migration with codified import plans as HCL files. Import plans tell Vault
+which data to read from a given source and where to store the data in the KVv2
+secrets engine:
 
-Secrets that get imported are stored into a Vault KVv2 Secrets Engine mount. The destination will accept the mount path of
-the desired KVv2 mount and optionally a namespace. This specifies the exact location to store the secrets in. A destination
-is defined by an HCL block in the format of `destination_vault`.
+- the `source` block provides credentials for connecting to the source system.
+- the `destination` block defines target mounts in KVv2.
+- the `mapping` block define how Vault should transform the imported data before
+  writing the information to KVv2.
+
+## Data migration destinations
+
+Vault stores imported secrets in a Vault KVv2 secrets engine mount. Destination
+blocks start with `destination_vault` and define the desired KVv2 mount path and
+an optional namespace. The combination of a path and namespace represent the exact location in your
+Vault instance you want the information stored.
 
 ### HCL syntax
 
-#### Argument reference
 
-The following arguments are supported:
+```hcl
+destination_vault {
+  name      = "my-dest-1"
+  namespace = "ns-1"
+  mount     = "mount-1"
+}
+```
 
 * `name` - (Required) The name of the Vault destination block used to internally reference this destination inside of a mapping.
 
@@ -46,21 +60,9 @@ The following arguments are supported:
 
 * `mount` - (Optional) The name of the KVv2 mount in Vault for which the secrets will be imported into.
 
-#### Example
 
-An example `destination_vault` block may look like the following:
 
-```hcl
-destination_vault {
-  name = "my-dest-1"
-  address = "http://127.0.0.1:8200/"
-  token = "root"
-  namespace = "ns-1"
-  mount = "mount-1"
-}
-```
-
-## Sources
+## Data migration sources
 
 Secrets can be imported from various external systems, called sources. The supported destinations are:
 * [GCP Secret Manager](/vault/docs/import/gcpsm)
