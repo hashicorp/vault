@@ -20,8 +20,6 @@ export default Component.extend({
   modelValidations: null,
   // public API
   model: null,
-  successMessage: 'Saved!',
-  deleteSuccessMessage: 'Deleted!',
   deleteButtonText: 'Delete',
   saveButtonText: 'Save',
   cancelButtonText: 'Cancel',
@@ -55,7 +53,7 @@ export default Component.extend({
   save: task(
     waitFor(function* (model, options = { method: 'save' }) {
       const { method } = options;
-      const messageKey = method === 'save' ? 'successMessage' : 'deleteSuccessMessage';
+      const message = method === 'save' ? 'Saved!' : 'Deleted!';
       if (method === 'save' && !this.checkModelValidity(model)) {
         // if saving and model invalid, don't continue
         return;
@@ -71,7 +69,7 @@ export default Component.extend({
         return;
       }
       if (this.flashEnabled) {
-        this.flashMessages.success(this.get(messageKey));
+        this.flashMessages.success(message);
       }
       if (this.callOnSaveAfterRender) {
         next(() => {
@@ -87,7 +85,7 @@ export default Component.extend({
     // components are torn down after store is unloaded and will cause an error if attempt to unload record
     const noTeardown = this.store && !this.store.isDestroying;
     const { model } = this;
-    if (noTeardown && model && model.get('isDirty') && !model.isDestroyed && !model.isDestroying) {
+    if (noTeardown && model && model.isDirty && !model.isDestroyed && !model.isDestroying) {
       model.rollbackAttributes();
     }
     this._super(...arguments);
