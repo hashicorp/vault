@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/vault/seal"
+
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
@@ -33,7 +35,6 @@ import (
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/hashicorp/vault/vault/hcp_link"
-	"github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
 	"github.com/posener/complete"
 	"golang.org/x/term"
