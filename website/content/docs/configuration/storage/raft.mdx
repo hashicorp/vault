@@ -138,13 +138,13 @@ delay) mode. The maximum allowed value is 10.
 
 - `max_mount_and_namespace_table_entry_size` `(integer)`- <EnterpriseAlert
   inline /> Overrides `max_entry_size` to set a different limit for the specific
-  KV entries that contain mount tables, auth tables and namespace configuration
-  data. If you are reaching limits on the mount table size, you can use this to
-  increase the number of mounts and namespaces that can be stored without the
-  risk of other storage entries becoming too large. All other notes on
-  [`max_entry_size`](#max-entry-size) apply. Before changing this, read the
-  [/vault/docs/enterprise/namespaces/namespace-limits](Run Vault Enterprise with
-  many namespaces) guide regarding important performance considerations.
+  storage entries that contain mount tables, auth tables and namespace
+  configuration data. If you are reaching limits on the mount table size, you
+  can use this to increase the number of mounts and namespaces that can be
+  stored without the risk of other storage entries becoming too large. All other
+  notes on [`max_entry_size`](#max-entry-size) apply. Before changing this, read
+  the [/vault/docs/enterprise/namespaces/namespace-limits](Run Vault Enterprise
+  with many namespaces) guide regarding important performance considerations.
 
 - `autopilot_reconcile_interval` `(string: "10s")` - This is the interval after
   which autopilot will pick up any state changes. State change could mean multiple
