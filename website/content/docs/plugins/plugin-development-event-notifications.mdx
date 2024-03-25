@@ -47,7 +47,7 @@ While there are no strict rules for what events a plugin may generate, there are
 
 - Prefix event types with your plugin name to avoid clashing with other plugins' event types. For example, the database plugin uses the `database/` prefix for all of its event notifications.
 
-- Use [common metadata keys](https://github.com/hashicorp/vault/blob/main/sdk/logical/events.go#L13-L25), such as `data_path` for the API path to the secret the event notification is about, and `operation` to indicate what modification took place.
+- Use [common metadata keys](https://github.com/hashicorp/vault/blob/da00addcb60e5fc4fef308715c0a1bd81c475167/sdk/logical/events.go#L13-L25), such as `data_path` for the API path to the secret the event notification is about, and `operation` to indicate what modification took place.
 
 - Document the event types that your plugin produces, including descriptions of when those are generated.
 
