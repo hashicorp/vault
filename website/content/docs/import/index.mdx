@@ -7,16 +7,16 @@ description: Secrets import allows you to safely onboard secrets from external s
 
 # Secrets import
 
-<EnterpriseAlert product="vault" />
+@include 'alerts/enterprise-only.mdx'
 
-@include 'alerts/beta.mdx'
+@include 'alerts/experimental.mdx'
 
 Distributing sensitive information across multiple external systems creates
 several challenges, including:
 
-- increased operational overhead.
-- increased exposure risk from data sprawl.
-- increased risk of outdated and out-of-sync information.
+- Increased operational overhead.
+- Increased exposure risk from data sprawl.
+- Increased risk of outdated and out-of-sync information.
 
 Using Vault as a single source of truth (SSOT) for sensitive data increases
 security and reduces management overhead, but migrating data from multiple and
@@ -27,9 +27,9 @@ migration with codified import plans as HCL files. Import plans tell Vault
 which data to read from a given source and where to store the data in the KVv2
 secrets engine:
 
-- the `source` block provides credentials for connecting to the source system.
-- the `destination` block defines target mounts in KVv2.
-- the `mapping` block define how Vault should transform the imported data before
+- The `source` block provides credentials for connecting to the source system.
+- The `destination` block defines target mounts in KVv2.
+- The `mapping` block define how Vault should transform the imported data before
   writing the information to KVv2.
 
 ## Data migration destinations
@@ -50,19 +50,19 @@ destination_vault {
 }
 ```
 
-- `name (string: <required>)` - A unique name for the destination block that can
+- `name` `(string: <required>)` - A unique name for the destination block that can
   be referenced in subsequent mapping blocks.
 
-- `address (string)` - Optional network address of the Vault server with the
-  KVv2 secrets engine enabled.
+- `mount` `(string: <required>)` - The mount path for the target KVv2 instance.
 
-- `token (string)` - Optional authentication token for the Vault server at the
-  specified address.
+- `address` `(string)` - Optional network address of the Vault server with the
+  KVv2 secrets engine enabled. By default, the Vault client's address will be used.
 
-- `namespace (string)` - Optional namespace path containing the specified KVv2
+- `token` `(string)` - Optional authentication token for the Vault server at the
+  specified address. By default, the Vault client's token will be used.
+
+- `namespace` `(string)` - Optional namespace path containing the specified KVv2
   mount. By default, Vault looks for the KVv2 mount under the root namespace.
-
-- `mount (string)` - Optional mount path for the target KVv2 instance.
 
 
 
@@ -88,10 +88,10 @@ source_gcp {
 }
 ```
 
-- `name (string: <required>)` - A unique name for the source block that can be
+- `name` `(string: <required>)` - A unique name for the source block that can be
   referenced in subsequent mapping blocks.
 
-- `credentials (string: <required>)` - Path to a credential file or token with
+- `credentials` `(string: <required>)` - Path to a credential file or token with
   read permissions for the target system.
 
 Depending on the source system, additional information may be required. Refer to
@@ -125,15 +125,15 @@ mapping_regex {
 }
 ```
 
-- `name (string: <required>)` - A unique name for the mapping block.
+- `name` `(string: <required>)` - A unique name for the mapping block.
 
-- `source (string: <required>)` - The name of a previously defined source block
+- `source` `(string: <required>)` - The name of a previously-defined source block
   **from** which the data should be read.
 
-- `destination (string: <required>)` - The name of a previously defined
+- `destination` `(string: <required>)` - The name of a previously defined
   destination block **to** which the data should be written.
 
-- `priority (integer: <required>)` - The order in which Vault should apply the
+- `priority` `(integer: <required>)` - The order in which Vault should apply the
   mapping block during the import process. The lower the number, the higher the
   priority. For example, a mapping with priority 1 executes before a mapping
   with priority 2.

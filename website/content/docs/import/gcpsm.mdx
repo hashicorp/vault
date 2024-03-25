@@ -7,19 +7,16 @@ description: The Google Cloud Platform Secret Manager source imports secrets fro
 # GCP import source
 
 
-Use the GCP source to import secret data from the GCP secret manager into your Vault instance. To use a GCP  source, you must grant GCP the following permissions:
-
-```shell-session
-"secretmanager.secrets.list",
-"secretmanager.versions.access",
-```
+Use the GCP source to import secret data from the GCP Secret Manager into your Vault instance. To use dynamic
+credentials for this source, ensure that the [GCP secrets engine](/vault/docs/secrets/gcp) has
+already been configured.
 
 ## GCP source parameters
 
 - `name` - (Required) The unique name used by Vault to reference the GCP source elsewhere (e.g., in a mapping).
 
-* `credentials` - (Optional) The path to the service account key credentials file for the service account with the necessary
-permissions. If `credentials` is set, then `vault_mount_path` and `vault_role_name` must be unset.
+- `credentials` - (Optional) The path to the service account key credentials file for the service account with
+  the necessary permissions. If `credentials` is set, then `vault_mount_path` and `vault_role_name` must be unset.
 
 - `vault_mount_path` - (Optional) The Vault mount path to a pre-configured GCP
   secrets engine used to generate dynamic credentials for the importer. If
@@ -37,8 +34,17 @@ Define and configure the `my-gcp-source-1` GCP source:
 
 ```hcl
 source_gcp {
-  name = "my-gcp-source-1"
+  name                 = "my-gcp-source-1"
   secrets_engine_mount = "gcp"
-  secrets_engine_role = "my-gcp-role-1"
+  secrets_engine_role  = "my-gcp-role-1"
 }
+```
+
+## Permissions
+
+To use a GCP source, you must grant the GCP identity being used to read secrets the following permissions:
+
+```shell-session
+"secretmanager.secrets.list",
+"secretmanager.versions.access",
 ```

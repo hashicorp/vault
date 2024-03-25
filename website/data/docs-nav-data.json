@@ -1619,7 +1619,7 @@
         "title": "Overview",
         "path": "import",
         "badge": {
-          "text": "BETA",
+          "text": "EXPERIMENTAL",
           "type": "outlined",
           "color": "highlight"
         }

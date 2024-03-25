@@ -10,19 +10,6 @@ Vault supports multiple filter types for mapping blocks. You can use the
 different types to filter the information Vault reads in during the import
 process.
 
-## Argument reference
-
-All types of mapping blocks, no matter the type, have four shared arguments:
-
-* `name` - (Required) The name of the mapping block used internally to track secrets imported from a source to a destination.
-
-* `source` - (Required) The name of the source block for which this mapping's filter logic will be applied to.
-
-* `destination` - (Required) The name of the Vault destination block for which this mapping will place the matching secrets into.
-
-* `priority` - (Required) Controls the order in which multiple mapping blocks will be applied to the secrets being imported. The
-lower the value specified, the higher the priority will be during filtering.
-
 ## Passthrough mapping filters
 
 Passthrough mapping blocks `mapping_passthrough` allow all secrets through from the specified source to the
@@ -60,16 +47,59 @@ on secrets while [GCP](/vault/docs/import/gcpsm) allows labels.
 
 * `tags` - (Required) A set of key-value pairs to match on secrets from the external system. All of the specified
 keys must be found on a secret and all of the values must be exact matches. A key with an empty value, i.e. `""`,
-must also match an empty value from the external system.
+acts as a wildcard match to the external system's values.
 
 ### Example
 
-In this example, there are two metadata mappings. The first, `my-map-1`, has a priority of 1. This will only import
-the secrets into the destination `my-dest-1` that contain both tag keys `database` and `importable`. Each of these
-keys' values must also match to `users` and `true` respectively to be imported. The second, `my-map-2`, has a
-priority of 2. Even though all the secrets in the first map would also qualify for the second map's filtering rule,
-those secrets will only be imported into `my-dest-1` because of the lower priority set in the second mapping. All
-remaining secrets that have the tag `importable` with a value of `true` will be imported into `my-dest-2`. 
+In this example, `my-map-1` will only import the secrets into the destination `my-dest-1` that contain a tag with
+a key named `importable` and its value set to `true`. 
+
+```hcl
+mapping_metadata {
+  name = "my-map-1"
+  source = "my-gcp-source-1"
+  destination = "my-dest-1"
+  priority = 1
+  tags = {
+    "importable" = "true"
+  }
+}
+```
+
+## Regex
+
+Regex mapping blocks `mapping_regex` allow secrets through from the specified source to the specified
+destination if their secret name passes a regular expression check.
+
+### Additional arguments
+
+* `expression` - (Required) A regular expression to match the secrets names from the external system.
+
+### Example
+
+In this example, any secret in the GCP source whose name begins with `database/` will be imported into Vault.
+
+```hcl
+mapping_regex {
+  name = "my-map-1"
+  source = "my-gcp-source-1"
+  destination = "my-dest-1"
+  priority = 1
+  expression = "^database/.*$"
+}
+```
+
+## Priority
+
+Priority works in a "first match" fashion where lower values are higher priority. To explain in more detail,
+consider the above metadata example with a second additional mapping.
+
+Below are two metadata mappings. The first, `my-map-1`, has a priority of 1. This will only import the secrets
+into the destination `my-dest-1` that contain both tag keys `database` and `importable`. Each of these keys' values
+must also match to `users` and `true` respectively. The second, `my-map-2`, has a priority of 2. Even though all
+the secrets in the first mapping would also qualify for the second mapping's filtering rule, those secrets will only
+be imported into `my-dest-1` because of `my-map-2`'s lower priority. All remaining secrets that have the tag
+`importable` with a value of `true` will be imported into `my-dest-2`. 
 
 ```hcl
 mapping_metadata {
@@ -91,30 +121,5 @@ mapping_metadata {
   tags = {
     "importable" = "true"
   }
-}
-```
-
-## Regex
-
-Regex mapping blocks `mapping_regex` allow secrets through from the specified source to the specified
-destination if their secret name passes a regular expression check.
-
-### Additional arguments
-
-* `expression` - (Required) A regular expression to match secrets names from the external system. All of
-the specified keys must be found on a secret and all of the values must be exact matches. A key with an empty
-value, e.g. `""`, must also match an empty value from the external system.
-
-### Example
-
-In this example, any secret in the GCP source whose name begins with `database/` will be imported into Vault.
-
-```hcl
-mapping_regex {
-  name = "my-map-1"
-  source = "my-gcp-source-1"
-  destination = "my-dest-1"
-  priority = 1
-  expression = "^database/.*$"
 }
 ```
