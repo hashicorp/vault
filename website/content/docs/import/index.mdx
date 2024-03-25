@@ -56,7 +56,8 @@ destination_vault {
 - `address (string)` - Optional network address of the Vault server with the
   KVv2 secrets engine enabled.
 
-* `token` - (Optional) A token for authentication to the Vault server located at the specified address.
+- `token (string)` - Optional authentication token for the Vault server at the
+  specified address.
 
 - `namespace (string)` - Optional namespace path containing the specified KVv2
   mount. By default, Vault looks for the KVv2 mount under the root namespace.
