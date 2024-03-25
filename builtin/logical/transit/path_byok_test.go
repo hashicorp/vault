@@ -30,6 +30,10 @@ func TestTransit_BYOKExportImport(t *testing.T) {
 
 	// Test HMAC sign/verify after a restore for supported keys.
 	testBYOKExportImport(t, "hmac", "hmac-verify")
+
+	// Test CMAC sign/verify after a restore for supported keys.
+	testBYOKExportImport(t, "aes128-cmac", "cmac-verify")
+	testBYOKExportImport(t, "aes256-cmac", "cmac-verify")
 }
 
 func testBYOKExportImport(t *testing.T, keyType, feature string) {
@@ -111,8 +115,8 @@ func testBYOKExportImport(t *testing.T, keyType, feature string) {
 
 	plaintextB64 := "dGhlIHF1aWNrIGJyb3duIGZveA==" // "the quick brown fox"
 	// Perform encryption, signing or hmac-ing based on the set 'feature'
-	var encryptReq, signReq, hmacReq *logical.Request
-	var ciphertext, signature, hmac string
+	var encryptReq, signReq, hmacReq, cmacReq *logical.Request
+	var ciphertext, signature, hmac, cmac string
 	switch feature {
 	case "encrypt-decrypt":
 		encryptReq = &logical.Request{
@@ -158,6 +162,22 @@ func testBYOKExportImport(t *testing.T, keyType, feature string) {
 			t.Fatalf("resp: %#v\nerr: %v", resp, err)
 		}
 		hmac = resp.Data["hmac"].(string)
+	case "cmac-verify":
+		cmacReq = &logical.Request{
+			Path:      "cmac/test-source",
+			Operation: logical.UpdateOperation,
+			Storage:   s,
+			Data: map[string]interface{}{
+				"input": plaintextB64,
+			},
+		}
+
+		resp, err = b.HandleRequest(context.Background(), cmacReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("resp: %#v\nerr: %v", resp, err)
+		}
+
+		cmac = resp.Data["cmac"].(string)
 	}
 
 	// validationFunc verifies the ciphertext, signature or hmac based on the
@@ -217,6 +237,24 @@ func testBYOKExportImport(t *testing.T, keyType, feature string) {
 			}
 			if resp.Data["valid"].(bool) != true {
 				t.Fatalf("bad: HMAC verification failed for key type %q", keyType)
+			}
+		case "cmac-verify":
+			verifyReq = &logical.Request{
+				Path:      "verify/" + keyName,
+				Operation: logical.UpdateOperation,
+				Storage:   s,
+				Data: map[string]interface{}{
+					"cmac":  cmac,
+					"input": plaintextB64,
+				},
+			}
+
+			resp, err = b.HandleRequest(context.Background(), verifyReq)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("resp: %#v\nerr: %v", resp, err)
+			}
+			if resp.Data["valid"].(bool) != true {
+				t.Fatalf("bad: CMAC verification failed for key type %q", keyType)
 			}
 		}
 	}
