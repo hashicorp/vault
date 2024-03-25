@@ -187,6 +187,12 @@ func (o *testOptMarshaler) MarshalJSONWithOptions(options *logical.MarshalOption
 
 var _ logical.OptMarshaler = &testOptMarshaler{}
 
+type testStruct struct {
+	S       string
+	I       int
+	private string
+}
+
 func TestHashRequest(t *testing.T) {
 	cases := []struct {
 		Input           *logical.Request
@@ -201,6 +207,7 @@ func TestHashRequest(t *testing.T) {
 					"baz":              "foobar",
 					"private_key_type": certutil.PrivateKeyType("rsa"),
 					"om":               &testOptMarshaler{S: "bar", I: 1},
+					"ts":               &testStruct{S: "bar", I: 1, private: "foo"},
 				},
 			},
 			&logical.Request{
@@ -209,6 +216,7 @@ func TestHashRequest(t *testing.T) {
 					"baz":              "foobar",
 					"private_key_type": "hmac-sha256:995230dca56fffd310ff591aa404aab52b2abb41703c787cfa829eceb4595bf1",
 					"om":               json.RawMessage(`{"S":"hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317","I":1}`),
+					"ts":               &testStruct{S: "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317", I: 1},
 				},
 			},
 			[]string{"baz"},
@@ -252,6 +260,7 @@ func TestHashResponse(t *testing.T) {
 					// a known fixed value.
 					"bar": now,
 					"om":  &testOptMarshaler{S: "bar", I: 1},
+					"ts":  &testStruct{S: "bar", I: 1, private: "foo"},
 				},
 				WrapInfo: &wrapping.ResponseWrapInfo{
 					TTL:             60,
@@ -267,6 +276,7 @@ func TestHashResponse(t *testing.T) {
 					"baz": "foobar",
 					"bar": now.Format(time.RFC3339Nano),
 					"om":  json.RawMessage(`{"S":"hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317","I":1}`),
+					"ts":  &testStruct{S: "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317", I: 1},
 				},
 				WrapInfo: &wrapping.ResponseWrapInfo{
 					TTL:             60,
@@ -294,7 +304,7 @@ func TestHashResponse(t *testing.T) {
 			t.Fatalf("err: %s\n\n%s", err, input)
 		}
 		if diff := deep.Equal(out, tc.Output); len(diff) > 0 {
-			t.Fatalf("bad:\nInput:\n%s\nDiff:\n%#v", input, diff)
+			t.Fatalf("bad:\nInput:\n%s\nOutput:\n%#v\nDiff:\n%#v", input, out, diff)
 		}
 	}
 }
