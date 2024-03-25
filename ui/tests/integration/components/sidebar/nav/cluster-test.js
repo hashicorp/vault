@@ -79,13 +79,32 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       .dom('[data-test-sidebar-nav-link]')
       .exists({ count: links.length }, 'Correct number of links render');
     links.forEach((link) => {
-      if (link === 'Secrets Sync') return;
       assert.dom(`[data-test-sidebar-nav-link="${link}"]`).hasText(link, `${link} link renders`);
     });
-    // after SYNC BETA - remove assertion below and return on line 82
-    assert
-      .dom('[data-test-sidebar-nav-link="Secrets Sync"]')
-      .hasText('Secrets Sync Beta', 'Secrets Sync nav link includes beta tag');
+  });
+
+  test('it should render badge for promotional links on community version', async function (assert) {
+    const promotionalLinks = ['Secrets Sync'];
+    stubFeaturesAndPermissions(this.owner, false, true);
+    await renderComponent();
+
+    promotionalLinks.forEach((link) => {
+      assert
+        .dom(`[data-test-sidebar-nav-link="${link}"]`)
+        .hasText(`${link} Enterprise`, `${link} link renders Enterprise badge`);
+    });
+  });
+
+  test('it should render badge for promotional links on enterprise version', async function (assert) {
+    const promotionalLinks = ['Secrets Sync'];
+    stubFeaturesAndPermissions(this.owner, true, true, ['Namespaces']);
+    await renderComponent();
+
+    promotionalLinks.forEach((link) => {
+      assert
+        .dom(`[data-test-sidebar-nav-link="${link}"]`)
+        .hasText(`${link} Premium`, `${link} link renders Premium badge`);
+    });
   });
 
   test('it should hide enterprise related links in child namespace', async function (assert) {
@@ -114,5 +133,15 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
         .dom(`[data-test-sidebar-nav-link="${link}"]`)
         .doesNotExist(`${link} is hidden in child namespace`);
     });
+  });
+
+  test('it should not show sync links for managed cluster', async function (assert) {
+    this.owner.lookup('service:feature-flag').setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
+    stubFeaturesAndPermissions(this.owner, true, true, ['Secrets Sync']);
+    await renderComponent();
+
+    assert
+      .dom(`[data-test-sidebar-nav-link="Secrets Sync"]`)
+      .doesNotExist(`Secret Sync is hidden in managed vault`);
   });
 });

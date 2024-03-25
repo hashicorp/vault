@@ -5,9 +5,44 @@ package audit
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/vault/internal/observability/event"
+	"github.com/hashicorp/vault/sdk/logical"
 )
+
+// version defines the version of audit events.
+const version = "v0.1"
+
+// Audit subtypes.
+const (
+	RequestType  subtype = "AuditRequest"
+	ResponseType subtype = "AuditResponse"
+)
+
+// Audit formats.
+const (
+	JSONFormat  format = "json"
+	JSONxFormat format = "jsonx"
+)
+
+// Check AuditEvent implements the timeProvider at compile time.
+var _ timeProvider = (*AuditEvent)(nil)
+
+// AuditEvent is the audit event.
+type AuditEvent struct {
+	ID        string            `json:"id"`
+	Version   string            `json:"version"`
+	Subtype   subtype           `json:"subtype"` // the subtype of the audit event.
+	Timestamp time.Time         `json:"timestamp"`
+	Data      *logical.LogInput `json:"data"`
+}
+
+// format defines types of format audit events support.
+type format string
+
+// subtype defines the type of audit event.
+type subtype string
 
 // NewEvent should be used to create an audit event. The subtype field is needed
 // for audit events. It will generate an ID if no ID is supplied. Supported
@@ -99,13 +134,32 @@ func (f format) String() string {
 }
 
 // MetricTag returns a tag corresponding to this subtype to include in metrics.
-func (st subtype) MetricTag() string {
-	switch st {
+// If a tag cannot be found the value is returned 'as-is' in string format.
+func (t subtype) MetricTag() string {
+	switch t {
 	case RequestType:
 		return "log_request"
 	case ResponseType:
 		return "log_response"
 	}
 
-	return ""
+	return t.String()
+}
+
+// String returns the subtype as a human-readable string.
+func (t subtype) String() string {
+	switch t {
+	case RequestType:
+		return "request"
+	case ResponseType:
+		return "response"
+	}
+
+	return string(t)
+}
+
+// formattedTime returns the UTC time the AuditEvent was created in the RFC3339Nano
+// format (which removes trailing zeros from the seconds field).
+func (a *AuditEvent) formattedTime() string {
+	return a.Timestamp.UTC().Format(time.RFC3339Nano)
 }

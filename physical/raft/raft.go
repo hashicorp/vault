@@ -26,8 +26,6 @@ import (
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
-	"github.com/hashicorp/go-uuid"
-	goversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
 	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
@@ -80,11 +78,12 @@ var getMmapFlags = func(string) int { return 0 }
 
 // Verify RaftBackend satisfies the correct interfaces
 var (
-	_ physical.Backend             = (*RaftBackend)(nil)
-	_ physical.Transactional       = (*RaftBackend)(nil)
-	_ physical.TransactionalLimits = (*RaftBackend)(nil)
-	_ physical.HABackend           = (*RaftBackend)(nil)
-	_ physical.Lock                = (*RaftLock)(nil)
+	_ physical.Backend                   = (*RaftBackend)(nil)
+	_ physical.Transactional             = (*RaftBackend)(nil)
+	_ physical.TransactionalLimits       = (*RaftBackend)(nil)
+	_ physical.HABackend                 = (*RaftBackend)(nil)
+	_ physical.MountTableLimitingBackend = (*RaftBackend)(nil)
+	_ physical.Lock                      = (*RaftLock)(nil)
 )
 
 var (
@@ -179,6 +178,13 @@ type RaftBackend struct {
 	// performance.
 	maxEntrySize uint64
 
+	// maxMountAndNamespaceEntrySize imposes a size limit (in bytes) on a raft
+	// entry (put or transaction) for paths related to mount table and namespace
+	// metadata. The Raft storage doesn't "know" about these paths but Vault can
+	// call RegisterMountTablePath to inform it so that it can apply this
+	// alternate limit if one is configured.
+	maxMountAndNamespaceEntrySize uint64
+
 	// maxBatchEntries is the number of operation entries in each batch. It is set
 	// by default to a value we've tested to work well but may be overridden by
 	// Environment variable VAULT_RAFT_MAX_BATCH_ENTRIES.
@@ -241,6 +247,10 @@ type RaftBackend struct {
 	// it writes checkpoints.
 	raftLogVerifierEnabled      bool
 	raftLogVerificationInterval time.Duration
+
+	// specialPathLimits is a map of special paths to their configured entrySize
+	// limits.
+	specialPathLimits map[string]uint64
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -273,7 +283,7 @@ type LeaderJoinInfo struct {
 	// client authentication during TLS.
 	LeaderClientKey string `json:"leader_client_key"`
 
-	// LeaderCACertFile is the path on disk to the the CA cert file of the
+	// LeaderCACertFile is the path on disk to the CA cert file of the
 	// leader node. This should only be provided via Vault's configuration file.
 	LeaderCACertFile string `json:"leader_ca_cert_file"`
 
@@ -296,25 +306,6 @@ type LeaderJoinInfo struct {
 
 	// TLSConfig for the API client to use when communicating with the leader node
 	TLSConfig *tls.Config `json:"-"`
-}
-
-type RaftBackendConfig struct {
-	Path                        string
-	NodeId                      string
-	ApplyDelay                  time.Duration
-	RaftWal                     bool
-	RaftLogVerifierEnabled      bool
-	RaftLogVerificationInterval time.Duration
-	SnapshotDelay               time.Duration
-	MaxEntrySize                uint64
-	MaxBatchEntries             int
-	MaxBatchSize                int
-	AutopilotReconcileInterval  time.Duration
-	AutopilotUpdateInterval     time.Duration
-	AutopilotUpgradeVersion     string
-	AutopilotRedundancyZone     string
-	RaftNonVoter                bool
-	RetryJoin                   string
 }
 
 // JoinConfig returns a list of information about possible leader nodes that
@@ -568,30 +559,46 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	}
 
 	return &RaftBackend{
-		logger:                      logger,
-		fsm:                         fsm,
-		raftInitCh:                  make(chan struct{}),
-		conf:                        conf,
-		logStore:                    logStore,
-		stableStore:                 stableStore,
-		snapStore:                   snapStore,
-		closers:                     closers,
-		dataDir:                     backendConfig.Path,
-		localID:                     backendConfig.NodeId,
-		permitPool:                  physical.NewPermitPool(physical.DefaultParallelOperations),
-		maxEntrySize:                backendConfig.MaxEntrySize,
-		maxBatchEntries:             backendConfig.MaxBatchEntries,
-		maxBatchSize:                backendConfig.MaxBatchSize,
-		followerHeartbeatTicker:     time.NewTicker(time.Second),
-		autopilotReconcileInterval:  backendConfig.AutopilotReconcileInterval,
-		autopilotUpdateInterval:     backendConfig.AutopilotUpdateInterval,
-		redundancyZone:              backendConfig.AutopilotRedundancyZone,
-		nonVoter:                    backendConfig.RaftNonVoter,
-		upgradeVersion:              backendConfig.AutopilotUpgradeVersion,
-		failGetInTxn:                new(uint32),
-		raftLogVerifierEnabled:      backendConfig.RaftLogVerifierEnabled,
-		raftLogVerificationInterval: backendConfig.RaftLogVerificationInterval,
+		logger:                        logger,
+		fsm:                           fsm,
+		raftInitCh:                    make(chan struct{}),
+		conf:                          conf,
+		logStore:                      logStore,
+		stableStore:                   stableStore,
+		snapStore:                     snapStore,
+		closers:                       closers,
+		dataDir:                       backendConfig.Path,
+		localID:                       backendConfig.NodeId,
+		permitPool:                    physical.NewPermitPool(physical.DefaultParallelOperations),
+		maxEntrySize:                  backendConfig.MaxEntrySize,
+		maxMountAndNamespaceEntrySize: backendConfig.MaxMountAndNamespaceTableEntrySize,
+		maxBatchEntries:               backendConfig.MaxBatchEntries,
+		maxBatchSize:                  backendConfig.MaxBatchSize,
+		followerHeartbeatTicker:       time.NewTicker(time.Second),
+		autopilotReconcileInterval:    backendConfig.AutopilotReconcileInterval,
+		autopilotUpdateInterval:       backendConfig.AutopilotUpdateInterval,
+		redundancyZone:                backendConfig.AutopilotRedundancyZone,
+		nonVoter:                      backendConfig.RaftNonVoter,
+		upgradeVersion:                backendConfig.AutopilotUpgradeVersion,
+		failGetInTxn:                  new(uint32),
+		raftLogVerifierEnabled:        backendConfig.RaftLogVerifierEnabled,
+		raftLogVerificationInterval:   backendConfig.RaftLogVerificationInterval,
 	}, nil
+}
+
+// RegisterMountTablePath informs the Backend that the given path represents
+// part of the mount tables or related metadata. This allows the backend to
+// apply different limits for this entry if configured to do so.
+func (b *RaftBackend) RegisterMountTablePath(path string) {
+	// We don't need to lock here because this is only called during startup
+
+	if b.maxMountAndNamespaceEntrySize > 0 {
+		// Set up the limit for this special path.
+		if b.specialPathLimits == nil {
+			b.specialPathLimits = make(map[string]uint64)
+		}
+		b.specialPathLimits[path] = b.maxMountAndNamespaceEntrySize
+	}
 }
 
 type snapshotStoreDelay struct {
@@ -1717,9 +1724,10 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 	entry, err := b.fsm.Get(ctx, path)
 	if entry != nil {
 		valueLen := len(entry.Value)
-		if uint64(valueLen) > b.maxEntrySize {
-			b.logger.Warn("retrieved entry value is too large, has raft's max_entry_size been reduced?",
-				"size", valueLen, "max_entry_size", b.maxEntrySize)
+		maxSize := b.entrySizeLimitForPath(path)
+		if uint64(valueLen) > maxSize {
+			b.logger.Warn("retrieved entry value is too large, has raft's max_entry_size or max_mount_and_namespace_table_entry_size been reduced?",
+				"size", valueLen, "max_size", maxSize)
 		}
 	}
 
@@ -1847,6 +1855,31 @@ func (b *RaftBackend) TransactionLimits() (int, int) {
 	return b.maxBatchEntries, b.maxBatchSize
 }
 
+// validateCommandEntrySizes is a helper to check the size of each transaction
+// value isn't larger than is allowed. It must take into account the path in
+// case any special limits have been set for mount table paths. Finally it
+// returns the largest limit it needed to use so that calling code can size the
+// overall log entry check correctly. In other words if max_entry_size is 1MB
+// and max_mount_and_namespace_table_entry_size is 2MB, we check each key
+// against the right limit and then return 1MB unless there is at least one
+// mount table key being written in which case we allow the larger limit of 2MB.
+func (b *RaftBackend) validateCommandEntrySizes(command *LogData) (uint64, error) {
+	largestEntryLimit := b.maxEntrySize
+
+	for _, op := range command.Operations {
+		if op.OpType == putOp {
+			entrySize := b.entrySizeLimitForPath(op.Key)
+			if len(op.Value) > int(entrySize) {
+				return 0, fmt.Errorf("%s, max value size for key %s is %d, got %d", physical.ErrValueTooLarge, op.Key, entrySize, len(op.Value))
+			}
+			if entrySize > largestEntryLimit {
+				largestEntryLimit = entrySize
+			}
+		}
+	}
+	return largestEntryLimit, nil
+}
+
 // applyLog will take a given log command and apply it to the raft log. applyLog
 // doesn't return until the log has been applied to a quorum of servers and is
 // persisted to the local FSM. Caller should hold the backend's read lock.
@@ -1858,14 +1891,19 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 		return err
 	}
 
+	totalLogSizeLimit, err := b.validateCommandEntrySizes(command)
+	if err != nil {
+		return err
+	}
+
 	commandBytes, err := proto.Marshal(command)
 	if err != nil {
 		return err
 	}
 
 	cmdSize := len(commandBytes)
-	if uint64(cmdSize) > b.maxEntrySize {
-		return fmt.Errorf("%s; got %d bytes, max: %d bytes", physical.ErrValueTooLarge, cmdSize, b.maxEntrySize)
+	if uint64(cmdSize) > totalLogSizeLimit {
+		return fmt.Errorf("%s; got %d bytes, max: %d bytes", physical.ErrValueTooLarge, cmdSize, totalLogSizeLimit)
 	}
 
 	defer metrics.AddSample([]string{"raft-storage", "entry_size"}, float32(cmdSize))
@@ -2118,248 +2156,6 @@ func fileExists(name string) (bool, error) {
 	// We hit some other error trying to stat the file which leaves us in an
 	// unknown state so we can't proceed.
 	return false, err
-}
-
-func parseRaftBackendConfig(conf map[string]string, logger log.Logger) (*RaftBackendConfig, error) {
-	c := &RaftBackendConfig{}
-
-	c.Path = conf["path"]
-	envPath := os.Getenv(EnvVaultRaftPath)
-	if envPath != "" {
-		c.Path = envPath
-	}
-
-	if c.Path == "" {
-		return nil, fmt.Errorf("'path' must be set")
-	}
-
-	c.NodeId = conf["node_id"]
-	envNodeId := os.Getenv(EnvVaultRaftNodeID)
-	if envNodeId != "" {
-		c.NodeId = envNodeId
-	}
-
-	if c.NodeId == "" {
-		localIDRaw, err := os.ReadFile(filepath.Join(c.Path, "node-id"))
-		if err == nil && len(localIDRaw) > 0 {
-			c.NodeId = string(localIDRaw)
-		}
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			return nil, err
-		}
-	}
-
-	if c.NodeId == "" {
-		id, err := uuid.GenerateUUID()
-		if err != nil {
-			return nil, err
-		}
-
-		if err = os.WriteFile(filepath.Join(c.Path, "node-id"), []byte(id), 0o600); err != nil {
-			return nil, err
-		}
-
-		c.NodeId = id
-	}
-
-	if delayRaw, ok := conf["apply_delay"]; ok {
-		delay, err := parseutil.ParseDurationSecond(delayRaw)
-		if err != nil {
-			return nil, fmt.Errorf("apply_delay does not parse as a duration: %w", err)
-		}
-
-		c.ApplyDelay = delay
-	}
-
-	if walRaw, ok := conf["raft_wal"]; ok {
-		useRaftWal, err := strconv.ParseBool(walRaw)
-		if err != nil {
-			return nil, fmt.Errorf("raft_wal does not parse as a boolean: %w", err)
-		}
-
-		c.RaftWal = useRaftWal
-	}
-
-	if rlveRaw, ok := conf["raft_log_verifier_enabled"]; ok {
-		rlve, err := strconv.ParseBool(rlveRaw)
-		if err != nil {
-			return nil, fmt.Errorf("raft_log_verifier_enabled does not parse as a boolean: %w", err)
-		}
-		c.RaftLogVerifierEnabled = rlve
-
-		c.RaftLogVerificationInterval = defaultRaftLogVerificationInterval
-		if rlviRaw, ok := conf["raft_log_verification_interval"]; ok {
-			rlvi, err := parseutil.ParseDurationSecond(rlviRaw)
-			if err != nil {
-				return nil, fmt.Errorf("raft_log_verification_interval does not parse as a duration: %w", err)
-			}
-
-			// Make sure our interval is capped to a reasonable value, so e.g. people don't use 0s or 1s
-			if rlvi >= minimumRaftLogVerificationInterval {
-				c.RaftLogVerificationInterval = rlvi
-			} else {
-				logger.Warn("raft_log_verification_interval is less than the minimum allowed, using default instead",
-					"given", rlveRaw,
-					"minimum", minimumRaftLogVerificationInterval,
-					"default", defaultRaftLogVerificationInterval)
-			}
-		}
-	}
-
-	if delayRaw, ok := conf["snapshot_delay"]; ok {
-		delay, err := parseutil.ParseDurationSecond(delayRaw)
-		if err != nil {
-			return nil, fmt.Errorf("snapshot_delay does not parse as a duration: %w", err)
-		}
-		c.SnapshotDelay = delay
-	}
-
-	c.MaxEntrySize = defaultMaxEntrySize
-	if maxEntrySizeCfg := conf["max_entry_size"]; len(maxEntrySizeCfg) != 0 {
-		i, err := strconv.Atoi(maxEntrySizeCfg)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse 'max_entry_size': %w", err)
-		}
-
-		c.MaxEntrySize = uint64(i)
-	}
-
-	c.MaxBatchEntries, c.MaxBatchSize = batchLimitsFromEnv(logger)
-
-	if interval := conf["autopilot_reconcile_interval"]; interval != "" {
-		interval, err := parseutil.ParseDurationSecond(interval)
-		if err != nil {
-			return nil, fmt.Errorf("autopilot_reconcile_interval does not parse as a duration: %w", err)
-		}
-		c.AutopilotReconcileInterval = interval
-	}
-
-	if interval := conf["autopilot_update_interval"]; interval != "" {
-		interval, err := parseutil.ParseDurationSecond(interval)
-		if err != nil {
-			return nil, fmt.Errorf("autopilot_update_interval does not parse as a duration: %w", err)
-		}
-		c.AutopilotUpdateInterval = interval
-	}
-
-	effectiveReconcileInterval := autopilot.DefaultReconcileInterval
-	effectiveUpdateInterval := autopilot.DefaultUpdateInterval
-
-	if c.AutopilotReconcileInterval != 0 {
-		effectiveReconcileInterval = c.AutopilotReconcileInterval
-	}
-	if c.AutopilotUpdateInterval != 0 {
-		effectiveUpdateInterval = c.AutopilotUpdateInterval
-	}
-
-	if effectiveReconcileInterval < effectiveUpdateInterval {
-		return nil, fmt.Errorf("autopilot_reconcile_interval (%v) should be larger than autopilot_update_interval (%v)", effectiveReconcileInterval, effectiveUpdateInterval)
-	}
-
-	if uv, ok := conf["autopilot_upgrade_version"]; ok && uv != "" {
-		_, err := goversion.NewVersion(uv)
-		if err != nil {
-			return nil, fmt.Errorf("autopilot_upgrade_version does not parse as a semantic version: %w", err)
-		}
-
-		c.AutopilotUpgradeVersion = uv
-	}
-
-	c.RaftNonVoter = false
-	if v := os.Getenv(EnvVaultRaftNonVoter); v != "" {
-		// Consistent with handling of other raft boolean env vars
-		// VAULT_RAFT_AUTOPILOT_DISABLE and VAULT_RAFT_FREELIST_SYNC
-		c.RaftNonVoter = true
-	} else if v, ok := conf[raftNonVoterConfigKey]; ok {
-		nonVoter, err := strconv.ParseBool(v)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse %s config value %q as a boolean: %w", raftNonVoterConfigKey, v, err)
-		}
-
-		c.RaftNonVoter = nonVoter
-	}
-
-	if c.RaftNonVoter && conf["retry_join"] == "" {
-		return nil, fmt.Errorf("setting %s to true is only valid if at least one retry_join stanza is specified", raftNonVoterConfigKey)
-	}
-
-	c.AutopilotRedundancyZone = conf["autopilot_redundancy_zone"]
-
-	return c, nil
-}
-
-// boltOptions returns a bolt.Options struct, suitable for passing to
-// bolt.Open(), pre-configured with all of our preferred defaults.
-func boltOptions(path string) *bolt.Options {
-	o := &bolt.Options{
-		Timeout:        1 * time.Second,
-		FreelistType:   bolt.FreelistMapType,
-		NoFreelistSync: true,
-		MmapFlags:      getMmapFlags(path),
-	}
-
-	if os.Getenv("VAULT_RAFT_FREELIST_TYPE") == "array" {
-		o.FreelistType = bolt.FreelistArrayType
-	}
-
-	if os.Getenv("VAULT_RAFT_FREELIST_SYNC") != "" {
-		o.NoFreelistSync = false
-	}
-
-	// By default, we want to set InitialMmapSize to 100GB, but only on 64bit platforms.
-	// Otherwise, we set it to whatever the value of VAULT_RAFT_INITIAL_MMAP_SIZE
-	// is, assuming it can be parsed as an int. Bolt itself sets this to 0 by default,
-	// so if users are wanting to turn this off, they can also set it to 0. Setting it
-	// to a negative value is the same as not setting it at all.
-	if os.Getenv("VAULT_RAFT_INITIAL_MMAP_SIZE") == "" {
-		o.InitialMmapSize = initialMmapSize
-	} else {
-		imms, err := strconv.Atoi(os.Getenv("VAULT_RAFT_INITIAL_MMAP_SIZE"))
-
-		// If there's an error here, it means they passed something that's not convertible to
-		// a number. Rather than fail startup, just ignore it.
-		if err == nil && imms > 0 {
-			o.InitialMmapSize = imms
-		}
-	}
-
-	return o
-}
-
-func etcdboltOptions(path string) *etcdbolt.Options {
-	o := &etcdbolt.Options{
-		Timeout:        1 * time.Second,
-		FreelistType:   etcdbolt.FreelistMapType,
-		NoFreelistSync: true,
-		MmapFlags:      getMmapFlags(path),
-	}
-
-	if os.Getenv("VAULT_RAFT_FREELIST_TYPE") == "array" {
-		o.FreelistType = etcdbolt.FreelistArrayType
-	}
-
-	if os.Getenv("VAULT_RAFT_FREELIST_SYNC") != "" {
-		o.NoFreelistSync = false
-	}
-
-	// By default, we want to set InitialMmapSize to 100GB, but only on 64bit platforms.
-	// Otherwise, we set it to whatever the value of VAULT_RAFT_INITIAL_MMAP_SIZE
-	// is, assuming it can be parsed as an int. Bolt itself sets this to 0 by default,
-	// so if users are wanting to turn this off, they can also set it to 0. Setting it
-	// to a negative value is the same as not setting it at all.
-	if os.Getenv("VAULT_RAFT_INITIAL_MMAP_SIZE") == "" {
-		o.InitialMmapSize = initialMmapSize
-	} else {
-		imms, err := strconv.Atoi(os.Getenv("VAULT_RAFT_INITIAL_MMAP_SIZE"))
-
-		// If there's an error here, it means they passed something that's not convertible to
-		// a number. Rather than fail startup, just ignore it.
-		if err == nil && imms > 0 {
-			o.InitialMmapSize = imms
-		}
-	}
-
-	return o
 }
 
 func isRaftLogVerifyCheckpoint(l *raft.Log) bool {

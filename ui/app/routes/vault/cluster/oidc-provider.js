@@ -73,7 +73,7 @@ export default class VaultClusterOidcProviderRoute extends Route {
     if (namespace) {
       queryParams.namespace = namespace;
     }
-    return this.transitionTo(AUTH, cluster_name, { queryParams });
+    return this.router.transitionTo(AUTH, cluster_name, { queryParams });
   }
 
   _buildUrl(urlString, params) {

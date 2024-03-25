@@ -26,6 +26,9 @@
         class="has-bottom-margin-s"
         @textToCopy={{this.pgpKey}}
         @color="secondary"
+        @onError={{(fn
+          (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+        )}}
         data-test-pgp-key-copy
         @container="#shamir-flow-modal"
       />

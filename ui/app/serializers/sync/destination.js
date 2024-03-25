@@ -50,7 +50,7 @@ export default class SyncDestinationSerializer extends ApplicationSerializer {
         const type = key.replace(/\/$/, '');
         const id = `${type}/${name}`;
         // create object with destination's id and attributes, add to payload
-        transformedPayload.pushObject({ id, name, type });
+        transformedPayload.push({ id, name, type });
       });
     }
     return transformedPayload;
@@ -68,6 +68,11 @@ export default class SyncDestinationSerializer extends ApplicationSerializer {
       data.id = data.name;
       delete data.connection_details;
       delete data.options;
+      // granularity keys differ from payload to response -- normalize to payload format
+      if (options) {
+        options.granularity = options.granularity_level;
+        delete options.granularity_level;
+      }
       return { data: { ...data, ...connection_details, ...options } };
     }
     return payload;
