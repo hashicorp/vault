@@ -102,7 +102,7 @@ func (a *ActivityLog) SetStandbyEnable(ctx context.Context, enabled bool) {
 	// TODO only patch enabled?
 	a.SetConfigStandby(ctx, activityConfig{
 		DefaultReportMonths: 12,
-		RetentionMonths:     24,
+		RetentionMonths:     ActivityLogMinimumRetentionMonths,
 		Enabled:             enableStr,
 	})
 }

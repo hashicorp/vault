@@ -865,7 +865,7 @@ func TestActivityLog_API_ConfigCRUD_Census(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error")
 		}
-		if resp.Data["error"] != `retention_months must be at least 24 while Reporting is enabled` {
+		if resp.Data["error"] != `retention_months must be at least 48 while Reporting is enabled` {
 			t.Fatalf("bad: %v", resp)
 		}
 	} else {
@@ -876,7 +876,7 @@ func TestActivityLog_API_ConfigCRUD_Census(t *testing.T) {
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
 	req.Storage = view
-	req.Data["retention_months"] = 26
+	req.Data["retention_months"] = 56
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -922,9 +922,10 @@ func TestActivityLog_API_ConfigCRUD_Census(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
 	expected := map[string]interface{}{
 		"default_report_months":    12,
-		"retention_months":         26,
+		"retention_months":         56,
 		"enabled":                  "enable",
 		"queries_available":        false,
 		"reporting_enabled":        core.AutomatedLicenseReportingEnabled(),
