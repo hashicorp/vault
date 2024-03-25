@@ -50,15 +50,21 @@ func main() {
 		DetectDotGit: true,
 	})
 	if err != nil {
-		fatal(err)
+		if err.Error() != "repository does not exist" {
+			fatal(err)
+		}
+		repo = nil
 	}
 
-	wt, err := repo.Worktree()
-	if err != nil {
-		fatal(err)
-	}
-	if !isEnterprise(wt) {
-		return
+	var wt *git.Worktree
+	if repo != nil {
+		wt, err = repo.Worktree()
+		if err != nil {
+			fatal(err)
+		}
+		if !isEnterprise(wt) {
+			return
+		}
 	}
 
 	// Read the file and figure out if we need to do anything.
@@ -88,26 +94,28 @@ func main() {
 
 	// We'd like to write the file, but first make sure that we're not going
 	// to blow away anyone's work or overwrite a file already in git.
-	head, err := repo.Head()
-	if err != nil {
-		fatal(err)
-	}
-	obj, err := repo.Object(plumbing.AnyObject, head.Hash())
-	if err != nil {
-		fatal(err)
-	}
+	if repo != nil {
+		head, err := repo.Head()
+		if err != nil {
+			fatal(err)
+		}
+		obj, err := repo.Object(plumbing.AnyObject, head.Hash())
+		if err != nil {
+			fatal(err)
+		}
 
-	st, err := wt.Status()
-	if err != nil {
-		fatal(err)
-	}
+		st, err := wt.Status()
+		if err != nil {
+			fatal(err)
+		}
 
-	tracked, err := inGit(wt, st, obj, outputFile)
-	if err != nil {
-		fatal(err)
-	}
-	if tracked {
-		fatal(fmt.Errorf("output file %s exists in git, not overwriting", outputFile))
+		tracked, err := inGit(wt, st, obj, outputFile)
+		if err != nil {
+			fatal(err)
+		}
+		if tracked {
+			fatal(fmt.Errorf("output file %s exists in git, not overwriting", outputFile))
+		}
 	}
 
 	// Now we can finally write the file
