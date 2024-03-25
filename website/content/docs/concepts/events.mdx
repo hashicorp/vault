@@ -172,11 +172,11 @@ To subscribe to an event notification, you must have the following policy grants
 2. `list` and `subscribe` capabilities on the *path of the secret* for events
     related to secrets. The policy must also provide a `subscribe_event_types`
     entry with the specific event notifications subscribers are allowed to use. For example,
-    to receive event notifications related to the KV secrets engine path,
+    to receive event notifications related to the kv-v2 secrets engine path,
      `secret/my-data`, a valid policy would be:
 
    ```hcl
-   path "secret/my-data" {
+   path "secret/data/my-data" {
      capabilities = ["list", "subscribe"]
      subscribe_event_types = ["*"]
    }
