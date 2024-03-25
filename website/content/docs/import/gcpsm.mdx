@@ -7,22 +7,26 @@ description: The Google Cloud Platform Secret Manager source imports secrets fro
 # GCP import source
 
 
-Use the GCP source to import secret data from the GCP Secret Manager into your Vault instance. To use dynamic
+Use the GCP source to import secret data from GCP Secret Manager into your Vault instance. To use dynamic
 credentials for this source, ensure that the [GCP secrets engine](/vault/docs/secrets/gcp) has
 already been configured.
 
+## Argument reference
+
+Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common to all source types.
+
 ## Additional arguments
 
-- `credentials` - (Optional) The path to the service account key credentials file for the service account with
-  the [necessary permissions](#permissions). If `credentials` is set, then `vault_mount_path` and
+- `credentials` `(string: "")` - The path to the service account key credentials file for the service account
+  with the [necessary permissions](#permissions). If `credentials` is set, then `vault_mount_path` and
   `vault_role_name` must be unset.
 
-- `vault_mount_path` - (Optional) The Vault mount path to a pre-configured GCP
+- `vault_mount_path` `(string: "")` - The Vault mount path to a pre-configured GCP
   secrets engine used to generate dynamic credentials for the importer. If
   `vault_mount_path` or `vault_role_name` are set, then `credentials` must be
   unset.
 
-- `vault_role_name` - (Optional) The Vault role used to generate a dynamic
+- `vault_role_name` `(string: "")` - The Vault role used to generate a dynamic
   credential for the importer. The role name must exist in the pre-configured
   GCP secrets engine mount. If `vault_role_name` or `vault_mount_path` are set,
   then `credentials` must be unset.
@@ -41,7 +45,7 @@ source_gcp {
 
 ## Permissions
 
-To use a GCP source, you must grant the GCP identity being used to read secrets the following permissions:
+To use this source type, you must grant the GCP identity being used to read secrets the following permissions:
 
 ```shell-session
 "secretmanager.secrets.list",

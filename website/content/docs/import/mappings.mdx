@@ -6,17 +6,21 @@ description: Mappings lets users apply various filtering methods to secrets bein
 
 # Import mappings
 
-Vault supports multiple filter types for mapping blocks. You can use the
-different types to filter the information Vault reads in during the import
-process.
+Vault supports multiple filter types for mapping blocks. Each of the types provides a different mechanism
+used to filter the scanned secrets and determine which will be imported in to Vault.
+
+
+## Argument reference
+
+Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-2) for arguments common to all mapping types.
 
 ## Passthrough mapping filters
 
-Passthrough mapping blocks `mapping_passthrough` allow all secrets through from the specified source to the
-specified destination. For example, one use case is using it as a base-case for imported secrets. By assigning
+The passthrough mapping block `mapping_passthrough` allows all secrets through from the specified source to the
+specified destination. For example, one use case is setting it as a base-case for imported secrets. By assigning
 it the lowest priority in the import plan, all other mapping blocks will be applied first. Secrets that fail
 to match any of the previous mappings will fall through to the passthrough block and be collected in a single
-KVv2 bucket.
+KVv2 location.
 
 ### Additional arguments
 
@@ -24,8 +28,8 @@ There are no extra arguments to specify in a `mapping_passthrough` block.
 
 ### Example
 
-In this example, every single secret that `my-gcp-source-1` is reads from GCP Secret Manager will be imported
-to the KVv2 Secrets Engine mount defined in `my-dest-1`.
+In this example, every single secret that `my-gcp-source-1` scans from GCP Secret Manager will be imported
+to the KVv2 secrets engine mount defined in `my-dest-1`.
 
 ```hcl
 mapping_passthrough {
@@ -38,16 +42,16 @@ mapping_passthrough {
 
 ## Metadata
 
-Metadata mapping blocks `mapping_metadata` allow secrets through from the specified source to the specified
+The metadata mapping block `mapping_metadata` allows secrets through from the specified source to the specified
 destination if they contain matching metadata key-value pairs. Metadata is not supported in all external secret
-manageement systems, and ones that do may use different terminology for metadata. For example, AWS allows tags
+management systems, and ones that do may use different terminology for metadata. For example, AWS allows tags
 on secrets while [GCP](/vault/docs/import/gcpsm) allows labels.
 
 ### Additional arguments
 
-* `tags` - (Required) A set of key-value pairs to match on secrets from the external system. All of the specified
-keys must be found on a secret and all of the values must be exact matches. A key with an empty value, i.e. `""`,
-acts as a wildcard match to the external system's values.
+* `tags` `(string: <required>)` - A set of key-value pairs to match on secrets from the external system. All of the specified
+keys must be found on a secret and all of the values must be exact matches. Specifying a key in this mapping with
+an empty value, i.e. `""`, acts as a wildcard match to the external system's key's value.
 
 ### Example
 
@@ -69,12 +73,12 @@ mapping_metadata {
 
 ## Regex
 
-Regex mapping blocks `mapping_regex` allow secrets through from the specified source to the specified
+The regex mapping block `mapping_regex` allows secrets through from the specified source to the specified
 destination if their secret name passes a regular expression check.
 
 ### Additional arguments
 
-* `expression` - (Required) A regular expression to match the secrets names from the external system.
+* `expression` `(string: <required>)` - The regular expression used to match secrets' names from the external system.
 
 ### Example
 
