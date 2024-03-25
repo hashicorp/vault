@@ -169,10 +169,10 @@ but you can also configure Vault to use the
 [`raft-wal`](https://github.com/hashicorp/raft-wal) library for write-ahead Raft
 logs.
 
-Library       | Filename  | Storage directory
-------------- |-----------| ----------------
-`raft-boltdb` | `raft.db` | `raft`
-`raft-wal`    | various   | `raft/wal`
+Library       | Filename(s)                                                | Storage directory
+------------- |------------------------------------------------------------| ----------------
+`raft-boltdb` | `raft.db`                                                  | `raft`
+`raft-wal`    | `wal-meta.db`, `XXXXXXXXXXXXXXXXXXXX-XXXXXXXXXXXXXXXX.wal` | `raft/wal`
 
 The `raft-wal` library is designed specifically for storing Raft logs. Rather
 than using a freelist like `raft-boltdb`, `raft-wal` maintains a directory of
