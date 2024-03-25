@@ -118,8 +118,8 @@ delay) mode. The maximum allowed value is 10.
   the `vault operator raft join` command, but only affects voting status when
   joining via `retry_join` config. You can override the non-voter configuration
   by setting the `VAULT_RAFT_RETRY_JOIN_AS_NON_VOTER` environment variable to
-  any non-empty value. This flag is only valid if there is at least one
-  `retry_join` stanza.
+  any non-empty value. Configuring a node as a non-voter is only valid if there
+  is at least one `retry_join` stanza.
 
 - `max_entry_size` `(integer: 1048576)` - This configures the maximum number of
   bytes for a Raft entry. It applies to both Put operations and transactions.
