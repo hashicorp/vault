@@ -292,14 +292,23 @@ name with the `startsWith` condition:
 
   </CodeBlockConfig>
 
-To prevent out-of-band overwrites, we recommend adding a negative condition on
-all write-access role bindings not used by Vault:
+To prevent out-of-band overwrites, simply add a negative condition with `!` on any
+write-access role bindings not being used by Vault that contain Secret Manager permissions:
 
   <CodeBlockConfig hideClipboard>
 
     !(resource.name.startsWith("projects/<project_number>/secrets/vault"))
 
   </CodeBlockConfig>
+
+To add these conditions and others to IAM principals in GCP, refer to the image below and the 
+[IAM Conditions overview documentation](https://cloud.google.com/iam/docs/conditions-overview).
+
+![GCP IAM Conditions](/img/gcp-add-iam-conditions_light.png#light-theme-only)
+![GCP IAM Conditions](/img/gcp-add-iam-conditions_dark.png#dark-theme-only)
+
+![GCP IAM Conditions](/img/gcp-add-iam-conditions_light2.png#light-theme-only)
+![GCP IAM Conditions](/img/gcp-add-iam-conditions_dark2.png#dark-theme-only)
 
 ## API
 
