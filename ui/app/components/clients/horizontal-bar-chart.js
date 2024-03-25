@@ -175,7 +175,9 @@ export default class HorizontalBarChart extends Component {
         this.isLabel = false;
         this.tooltipText = []; // clear stats
         this.args.chartLegend.forEach(({ key, label }) => {
-          this.tooltipText.pushObject(`${formatNumber([data[key]])} ${label}`);
+          // since we're relying on D3 not ember reactivity,
+          // pushing directly to this.tooltipText updates the DOM
+          this.tooltipText.push(`${formatNumber([data[key]])} ${label}`);
         });
 
         select(hoveredElement).style('opacity', 1);

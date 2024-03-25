@@ -50,7 +50,7 @@
       </nav>
     {{/if}}
     <div class="box is-marginless is-shadowless">
-      <MessageError @errorMessage={{if (and this.cluster.standby this.hasCSPError) this.cspErrorText this.error}} />
+      <MessageError @errorMessage={{if (and this.cluster.standby this.cspError) this.cspError this.error}} />
       {{#if this.selectedAuthBackend.path}}
         <div class="has-bottom-margin-s">
           <p class="is-label">{{this.selectedAuthBackend.path}}</p>

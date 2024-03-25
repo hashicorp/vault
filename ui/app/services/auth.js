@@ -17,6 +17,7 @@ import { resolve, reject } from 'rsvp';
 import getStorage from 'vault/lib/token-storage';
 import ENV from 'vault/config/environment';
 import { allSupportedAuthBackends } from 'vault/helpers/supported-auth-backends';
+import { addToArray } from 'vault/helpers/add-to-array';
 
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
@@ -250,7 +251,6 @@ export default Service.extend({
 
   persistAuthData() {
     const [firstArg, resp] = arguments;
-    const tokens = this.tokens;
     const currentNamespace = this.namespaceService.path || '';
     // dropdown vs tab format
     const mountPath = firstArg?.data?.path || firstArg?.selectedAuth;
@@ -303,8 +303,7 @@ export default Service.extend({
     if (!data.displayName) {
       data.displayName = (this.getTokenData(tokenName) || {}).displayName;
     }
-    tokens.addObject(tokenName);
-    this.set('tokens', tokens);
+    this.set('tokens', addToArray(this.tokens, tokenName));
     this.set('allowExpiration', false);
     this.setTokenData(tokenName, data);
     return resolve({

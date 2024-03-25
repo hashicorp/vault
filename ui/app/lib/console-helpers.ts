@@ -241,7 +241,8 @@ export function shiftCommandIndex(keyCode: number, history: CommandLog[], index:
   }
 
   if (newInputValue !== '') {
-    newInputValue = history.objectAt(index)?.content;
+    const objAt = history[index];
+    newInputValue = objAt?.content;
   }
 
   return [index, newInputValue];

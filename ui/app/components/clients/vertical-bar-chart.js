@@ -155,7 +155,9 @@ export default class VerticalBarChart extends Component {
       this.tooltipStats = []; // clear stats
       this.args.chartLegend.forEach(({ key, label }) => {
         stackedNumbers.push(data[key]);
-        this.tooltipStats.pushObject(`${formatNumber([data[key]])} ${label}`);
+        // since we're relying on D3 not ember reactivity,
+        // pushing directly to this.tooltipStats updates the DOM
+        this.tooltipStats.push(`${formatNumber([data[key]])} ${label}`);
       });
       this.tooltipTotal = `${formatNumber([calculateSum(stackedNumbers)])} ${
         data.new_clients ? 'total' : 'new'

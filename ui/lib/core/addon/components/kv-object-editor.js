@@ -40,6 +40,7 @@ import KVObject from 'vault/lib/kv-object';
  */
 
 export default class KvObjectEditor extends Component {
+  // kvData is type ArrayProxy, so addObject etc are fine here
   @tracked kvData;
 
   get placeholders() {

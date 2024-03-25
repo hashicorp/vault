@@ -6,7 +6,7 @@
 import Ember from 'ember';
 import { next } from '@ember/runloop';
 import { service } from '@ember/service';
-import { match, alias, or } from '@ember/object/computed';
+import { match, or } from '@ember/object/computed';
 import { dasherize } from '@ember/string';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
@@ -166,9 +166,12 @@ export default Component.extend(DEFAULTS, {
     return templateName;
   }),
 
-  hasCSPError: alias('csp.connectionViolations'),
-
-  cspErrorText: `This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`,
+  cspError: computed('csp.connectionViolations.length', function () {
+    if (this.csp.connectionViolations.length) {
+      return `This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`;
+    }
+    return '';
+  }),
 
   allSupportedMethods: computed('methodsToShow', 'hasMethodsWithPath', 'authMethods', function () {
     const hasMethodsWithPath = this.hasMethodsWithPath;
