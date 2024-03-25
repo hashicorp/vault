@@ -35,7 +35,7 @@ func testFixture(t *testing.T) (*AzureBackend, func()) {
 	t.Helper()
 
 	ts := time.Now().UnixNano()
-	name := fmt.Sprintf("vault-test-%d", ts)
+	name := fmt.Sprintf("vlt%d", ts)
 	_ = os.Setenv("AZURE_BLOB_CONTAINER", name)
 
 	cleanup := func() {}
