@@ -66,7 +66,6 @@ export const SELECTORS = {
       plotPoint: '[data-test-line-chart="plot-point"]',
     },
   },
-  emptyStateTitle: '[data-test-empty-state-title]',
   usageStats: '[data-test-usage-stats]',
   dateDisplay: '[data-test-date-display]',
   attributionBlock: '[data-test-clients-attribution]',
