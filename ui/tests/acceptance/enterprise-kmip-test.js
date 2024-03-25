@@ -34,7 +34,7 @@ const mount = async (backend) => {
 const mountWithConfig = async (backend) => {
   const addr = `127.0.0.1:${getRandomPort()}`; // use random port
   await mount(backend);
-  const res = await runCmd(`write ${backend}/config listen_addrs=${addr}`);
+  const res = await runCmd(`write ${backend}/config listen_addrs=${addr}`, false);
   if (res.includes('Error')) {
     throw new Error(`Error configuring KMIP: ${res}`);
   }
@@ -89,7 +89,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
 
   hooks.afterEach(async function () {
     // cleanup after
-    await runCmd([`delete sys/mounts/${this.backend}`], false);
+    await runCmd([`delete sys/mounts/${this.backend}`]);
   });
 
   test('it should enables KMIP & transitions to addon engine route after mount success', async function (assert) {

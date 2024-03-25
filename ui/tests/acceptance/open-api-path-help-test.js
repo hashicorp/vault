@@ -32,7 +32,7 @@ module('Acceptance | OpenAPI provides expected attributes enterprise', function 
         await runCmd(mountEngineCmd(testCase, this.backend), false);
       });
       hooks.afterEach(async function () {
-        await runCmd(deleteEngineCmd(this.backend), false);
+        await runCmd(deleteEngineCmd(this.backend));
       });
 
       secretEngineHelper(test, testCase);
