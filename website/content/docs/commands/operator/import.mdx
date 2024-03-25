@@ -11,13 +11,18 @@ description: >-
 The `operator import` command imports secrets from external systems in to Vault.
 Secrets with the same name at the same storage path will be overwritten upon import.
 
-~> **NOTE:** This has the potential to be a long-running process. Import plans can be
-written to read from as many sources as desired and each source may migrate as many
-secrets as requested based on filters. 
+<Note title="Imports can be long-running processes">
+
+You can write import plans that read from as many sources as you want. The
+amount of data migrated for each source depends on the filters applied and the
+dataset available. Be mindful of the time needed to read from each source,
+apply any filters, and store the data in Vault.
+
+</Note>
 
 ## Examples
 
-Execute an import config file named import.hcl to generate an import plan:
+Read the config file `import.hcl` to generate a new import plan:
 
 ```shell-session
 $ vault operator import -config import.hcl plan
@@ -71,17 +76,14 @@ mapping_passthrough {
 
 ## Usage
 
-The following flags are available for the `operator import` command.
+The `operator import` command accepts the following flags:
 
-- `-config` `(string: "<import.hcl>")` - Path to the import configuration HCL file. If unspecified,
-a file named import.hcl will be automatically looked for.
+- `-config` `(string: "<import.hcl>")` - Path to the import configuration HCL file. The default path is `import.hcl`.
 
-- `auto-approve` `(bool: <false>)` - Automatically skips the user-input requirement of "yes" when
-  running the "apply" command.
+- `auto-approve` `(bool: <false>)` - Automatically response "yes" to all user-input prompts for the `apply` command.
 
 - `auto-create` `(bool: <false>)` - Automatically creates any missing namespaces and mounts when
   "running the "apply" command.
 
 - `-log-level` ((#\_log_level)) `(string: "info")` - Log verbosity level. Supported values (in
-  order of descending detail) are `trace`, `debug`, `info`, `warn`, and `error`. This can
-  also be specified via the `VAULT_LOG_LEVEL` environment variable.
+  order of descending detail) are `trace`, `debug`, `info`, `warn`, and `error`. You can also set log-level with the `VAULT_LOG_LEVEL` environment variable.
