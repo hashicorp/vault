@@ -438,6 +438,9 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		if role.UseCSRSANs && data.Get("alt_names").(string) != "" {
 			resp.AddWarning("the alt_names field was provided but the role is set with \"use_csr_sans\" set to true")
 		}
+		if role.UseCSRSerialNumber && data.Get("serial_number").(string) != "" {
+			resp.AddWarning("the serial_number field was provided but the role is set with \"use_csr_serial_number\" set to true")
+		}
 	}
 
 	resp = addWarnings(resp, warnings)

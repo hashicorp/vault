@@ -278,6 +278,13 @@ include the Common Name (cn); use use_csr_common_name
 for that. Defaults to true.`,
 		},
 
+		"use_csr_serial_number": {
+			Type:     framework.TypeBool,
+			Required: true,
+			Description: `If set, when used with a signing profile,
+the serial number from the CSR's subject will be used. Defaults to true.`,
+		},
+
 		"ou": {
 			Type: framework.TypeCommaStringSlice,
 			Description: `If set, OU (OrganizationalUnit) will be set to
@@ -674,6 +681,17 @@ for that. Defaults to true.`,
 				},
 			},
 
+			"use_csr_serial_number": {
+				Type:    framework.TypeBool,
+				Default: true,
+				Description: `If set, when used with a signing profile,
+the serial number from the CSR's subject will be used. Defaults to true.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Use CSR Subject Serial Number",
+					Value: true,
+				},
+			},
+
 			"ou": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, OU (OrganizationalUnit) will be set to
@@ -962,6 +980,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		UsePSS:                        data.Get("use_pss").(bool),
 		UseCSRCommonName:              data.Get("use_csr_common_name").(bool),
 		UseCSRSANs:                    data.Get("use_csr_sans").(bool),
+		UseCSRSerialNumber:            data.Get("use_csr_serial_number").(bool),
 		KeyUsage:                      data.Get("key_usage").([]string),
 		ExtKeyUsage:                   data.Get("ext_key_usage").([]string),
 		ExtKeyUsageOIDs:               data.Get("ext_key_usage_oids").([]string),
@@ -1162,6 +1181,7 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		UsePSS:                        getWithExplicitDefault(data, "use_pss", oldEntry.UsePSS).(bool),
 		UseCSRCommonName:              getWithExplicitDefault(data, "use_csr_common_name", oldEntry.UseCSRCommonName).(bool),
 		UseCSRSANs:                    getWithExplicitDefault(data, "use_csr_sans", oldEntry.UseCSRSANs).(bool),
+		UseCSRSerialNumber:            getWithExplicitDefault(data, "use_csr_serial_number", oldEntry.UseCSRSerialNumber).(bool),
 		KeyUsage:                      getWithExplicitDefault(data, "key_usage", oldEntry.KeyUsage).([]string),
 		ExtKeyUsage:                   getWithExplicitDefault(data, "ext_key_usage", oldEntry.ExtKeyUsage).([]string),
 		ExtKeyUsageOIDs:               getWithExplicitDefault(data, "ext_key_usage_oids", oldEntry.ExtKeyUsageOIDs).([]string),

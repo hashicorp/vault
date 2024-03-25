@@ -106,7 +106,7 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 		ridSerialNumber = cb.GetSerialNumber()
 
 		// only take serial number from CSR if one was not supplied via API
-		if ridSerialNumber == "" && csr != nil {
+		if role.UseCSRSerialNumber && ridSerialNumber == "" && csr != nil {
 			ridSerialNumber = csr.Subject.SerialNumber
 		}
 
