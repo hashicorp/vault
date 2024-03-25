@@ -51,7 +51,8 @@ type RunOptions struct {
 	NetworkName            string
 	NetworkID              string
 	CopyFromTo             map[string]string
-	Ports                  []string
+	Ports                  []string    // The exposed ports in "X/tcp" format to expose on a random host port.
+	PortBindings           nat.PortMap // The explicit port bindings to use.
 	DoNotAutoRemove        bool
 	AuthUsername           string
 	AuthPassword           string
@@ -400,6 +401,10 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*St
 		}
 	}
 
+	if d.RunOptions.PortBindings != nil {
+		hostConfig.PortBindings = d.RunOptions.PortBindings
+	}
+
 	// best-effort pull
 	var opts types.ImageCreateOptions
 	if d.RunOptions.AuthUsername != "" && d.RunOptions.AuthPassword != "" {
@@ -471,7 +476,7 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*St
 	var realIP string
 	if d.RunOptions.NetworkID == "" {
 		if len(inspect.NetworkSettings.Networks) > 1 {
-			return nil, fmt.Errorf("Set d.RunOptions.NetworkName instead for container with multiple networks: %v", inspect.NetworkSettings.Networks)
+			return nil, fmt.Errorf("set d.RunOptions.NetworkName instead for container with multiple networks: %v", inspect.NetworkSettings.Networks)
 		}
 		for _, network := range inspect.NetworkSettings.Networks {
 			realIP = network.IPAddress
