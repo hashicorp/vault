@@ -59,6 +59,15 @@ const testFormatJSONReqBasicStrFmt = `
 }
 `
 
+// testTimeProvider is just a test struct used to imitate an AuditEvent's ability
+// to provide a formatted time.
+type testTimeProvider struct{}
+
+// formattedTime always returns the same value for 22nd March 2024 at 10:00:05 (and 10 nanos).
+func (p *testTimeProvider) formattedTime() string {
+	return time.Date(2024, time.March, 22, 10, 0o0, 5, 10, time.UTC).UTC().Format(time.RFC3339Nano)
+}
+
 // TestNewEntryFormatter ensures we can create new EntryFormatter structs.
 func TestNewEntryFormatter(t *testing.T) {
 	t.Parallel()
@@ -455,6 +464,7 @@ func TestEntryFormatter_FormatRequest(t *testing.T) {
 
 	tests := map[string]struct {
 		Input                *logical.LogInput
+		ShouldOmitTime       bool
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
 		RootNamespace        bool
@@ -480,6 +490,11 @@ func TestEntryFormatter_FormatRequest(t *testing.T) {
 			IsErrorExpected: false,
 			RootNamespace:   true,
 		},
+		"omit-time": {
+			Input:          &logical.LogInput{Request: &logical.Request{ID: "123"}},
+			ShouldOmitTime: true,
+			RootNamespace:  true,
+		},
 	}
 
 	for name, tc := range tests {
@@ -489,7 +504,7 @@ func TestEntryFormatter_FormatRequest(t *testing.T) {
 			t.Parallel()
 
 			ss := newStaticSalt(t)
-			cfg, err := NewFormatterConfig()
+			cfg, err := NewFormatterConfig(WithOmitTime(tc.ShouldOmitTime))
 			require.NoError(t, err)
 			f, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 			require.NoError(t, err)
@@ -502,16 +517,22 @@ func TestEntryFormatter_FormatRequest(t *testing.T) {
 				ctx = context.Background()
 			}
 
-			entry, err := f.FormatRequest(ctx, tc.Input)
+			entry, err := f.FormatRequest(ctx, tc.Input, &testTimeProvider{})
 
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 				require.Nil(t, entry)
+			case tc.ShouldOmitTime:
+				require.NoError(t, err)
+				require.NotNil(t, entry)
+				require.Zero(t, entry.Time)
 			default:
 				require.NoError(t, err)
 				require.NotNil(t, entry)
+				require.NotZero(t, entry.Time)
+				require.Equal(t, "2024-03-22T10:00:05.00000001Z", entry.Time)
 			}
 		})
 	}
@@ -524,6 +545,7 @@ func TestEntryFormatter_FormatResponse(t *testing.T) {
 
 	tests := map[string]struct {
 		Input                *logical.LogInput
+		ShouldOmitTime       bool
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
 		RootNamespace        bool
@@ -549,6 +571,12 @@ func TestEntryFormatter_FormatResponse(t *testing.T) {
 			IsErrorExpected: false,
 			RootNamespace:   true,
 		},
+		"omit-time": {
+			Input:           &logical.LogInput{Request: &logical.Request{ID: "123"}},
+			ShouldOmitTime:  true,
+			IsErrorExpected: false,
+			RootNamespace:   true,
+		},
 	}
 
 	for name, tc := range tests {
@@ -558,7 +586,7 @@ func TestEntryFormatter_FormatResponse(t *testing.T) {
 			t.Parallel()
 
 			ss := newStaticSalt(t)
-			cfg, err := NewFormatterConfig()
+			cfg, err := NewFormatterConfig(WithOmitTime(tc.ShouldOmitTime))
 			require.NoError(t, err)
 			f, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 			require.NoError(t, err)
@@ -571,16 +599,22 @@ func TestEntryFormatter_FormatResponse(t *testing.T) {
 				ctx = context.Background()
 			}
 
-			entry, err := f.FormatResponse(ctx, tc.Input)
+			entry, err := f.FormatResponse(ctx, tc.Input, &testTimeProvider{})
 
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 				require.Nil(t, entry)
+			case tc.ShouldOmitTime:
+				require.NoError(t, err)
+				require.NotNil(t, entry)
+				require.Zero(t, entry.Time)
 			default:
 				require.NoError(t, err)
 				require.NotNil(t, entry)
+				require.NotZero(t, entry.Time)
+				require.Equal(t, "2024-03-22T10:00:05.00000001Z", entry.Time)
 			}
 		})
 	}
@@ -956,7 +990,7 @@ func TestEntryFormatter_FormatResponse_ElideListResponses(t *testing.T) {
 			Response: &logical.Response{Data: inputData},
 		}
 
-		resp, err := formatter.FormatResponse(ctx, in)
+		resp, err := formatter.FormatResponse(ctx, in, &testTimeProvider{})
 		require.NoError(t, err)
 
 		return resp
