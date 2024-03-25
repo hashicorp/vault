@@ -29,10 +29,10 @@ to the KVv2 Secrets Engine mount defined in `my-dest-1`.
 
 ```hcl
 mapping_passthrough {
-  name = "my-map-1"
-  source = "my-gcp-source-1"
+  name        = "my-map-1"
+  source      = "my-gcp-source-1"
   destination = "my-dest-1"
-  priority = 1
+  priority    = 1
 }
 ```
 
@@ -56,10 +56,11 @@ a key named `importable` and its value set to `true`.
 
 ```hcl
 mapping_metadata {
-  name = "my-map-1"
-  source = "my-gcp-source-1"
+  name        = "my-map-1"
+  source      = "my-gcp-source-1"
   destination = "my-dest-1"
-  priority = 1
+  priority    = 1
+
   tags = {
     "importable" = "true"
   }
@@ -81,11 +82,11 @@ In this example, any secret in the GCP source whose name begins with `database/`
 
 ```hcl
 mapping_regex {
-  name = "my-map-1"
-  source = "my-gcp-source-1"
+  name        = "my-map-1"
+  source      = "my-gcp-source-1"
   destination = "my-dest-1"
-  priority = 1
-  expression = "^database/.*$"
+  priority    = 1
+  expression  = "^database/.*$"
 }
 ```
 
@@ -103,21 +104,23 @@ be imported into `my-dest-1` because of `my-map-2`'s lower priority. All remaini
 
 ```hcl
 mapping_metadata {
-  name = "my-map-1"
-  source = "my-gcp-source-1"
+  name        = "my-map-1"
+  source      = "my-gcp-source-1"
   destination = "my-dest-1"
-  priority = 1
+  priority    = 1
+
   tags = {
-    "database" = "users"
+    "database"   = "users"
     "importable" = "true"
   }
 }
 
 mapping_metadata {
-  name = "my-map-2"
-  source = "my-gcp-source-1"
+  name        = "my-map-2"
+  source      = "my-gcp-source-1"
   destination = "my-dest-2"
-  priority = 2
+  priority    = 2
+
   tags = {
     "importable" = "true"
   }
