@@ -870,44 +870,9 @@ However, the _contents_ of policies are parsed in real-time whenever the token i
 As a result, if a policy is modified, the modified rules will be in force the
 next time a token, with that policy attached, is used to make a call to Vault.
 
-## UI policy restrictions
+## UI policy requirements
 
-The Vault UI may require different ACL capabilities compared to the CLI. The
-`default` UI policy includes the following paths, **which cannot be modified with
-subsequent policies** once you
-[enable](/vault/docs/configuration/ui#activating-the-vault-ui) the UI:
-
- - [/sys/internal/ui/mounts](/vault/api-docs/system/internal-ui-mounts) 
- - [/sys/internal/ui/resultant-acl](/vault/api-docs/system/internal-ui-resultant-acl) 
-
-<Note title="Set UI policies before enabling the UI"> 
-
-  You cannot make policy adjustments or overwrites to the `ui/mounts` and
-  `ui/resultant-acl` endpoints once you enable the Vault UI. Vault ignores
-  policy updates that target these paths with
-  [explicit `deny`](/vault/docs/concepts/policies#deny) capabilities.
-
-</Note>
-
-The `/sys/internal/ui/mounts` endpoint provides a list of currently visible
-mounts. The visibility of a mount is determined by the
-[`listing_visibility`](/vault/api-docs/system/mounts#listing_visibility)
-parameter of the mount. Visibility can be set when the mount is enabled or tuned
-at a later time with the [sys/auth](/vault/api-docs/system/auth#tune-auth-method)
-endpoint.
-
-Vault uses the [/sys/internal/ui/resultant-acl](/vault/api-docs/system/internal-ui-resultant-acl)
-endpoint to repackage information used by the UI. If you do not have have
-permission to call the `ui/resultant-acl` endpoint, you may receive warnings or
-errors in the UI.
-
-<Note title="The ui/mounts endpoint is unauthenticated"> 
-
-  Vault uses the endpoint for UI and CLI preflight checks and is intended for
-  internal use only. Requests that include an `X-Vault-Token` will return
-  all mounts the token has path capabilities on.
-
-</Note>
+@include 'ui/policy-requirements.mdx'
 
 
 ## Tutorial
