@@ -9,8 +9,6 @@ description: Secrets sync allows you to safely sync Vault-managed secrets with e
 
 <EnterpriseAlert product="vault" />
 
-@include 'alerts/beta.mdx'
-
 In certain circumstances, fetching secrets directly from Vault is impossible or impractical. To help with this challenge,
 Vault can maintain a one-way sync for KVv2 secrets into various destinations that are easier to access for some clients.
 With this, Vault remains the system of records but can cache a subset of secrets on various external systems acting as
@@ -129,6 +127,10 @@ The secret synced with the old granularity will be deleted and new secrets will 
 
 ## Security
 
+~> Note: Vault does not control the permissions at the destination. It is the responsibility
+of the operator to configure and maintain proper access controls on the external system so synced
+secrets are not accessed unintentionally.
+
 ### Vault access requirements
 
 Vault verifies the client has read access on the secret before syncing it with any destination. This additional check is
@@ -192,9 +194,6 @@ Likewise, if the client tries to sync this secret to any destination they will r
 
 This read access verification is only done when creating or updating an association. Once the association is created, revoking
 read access to the policy that was used to sync the secret has no effect.
-
-Vault does not control the permissions at the destination. It is the responsibility of the operator to configure proper
-read access on the external system so synced secrets are not accessed unintentionally.
 
 ### Collisions and overwrites
 
@@ -260,6 +259,35 @@ secrets to prevent out-of-band overwrites:
 
 This policy condition strategy is also applicable to most other destination types. Please refer to the specific destination's
 access management documentation for more details.
+
+
+## Reconciliation
+
+Vault Secrets Sync is designed to automatically recover from transient failures
+in two ways: operation retries and reconciliation scans.
+
+Operation retries happen when a sync operation fails. Vault automatically
+retries the operation with exponential backoff. Operation retries help in
+situations where your network becomes unreliable or overwhelmed.
+
+Reconciliation scans happen periodically in a background thread. Vault scans all
+secrets currently managed by the sync system to identify and update out-of-date
+secrets, and to ensure that any configured destinations are up-to-date.
+Reconciliation scans help in situations where there are external service downtimes
+that are outside of your control and provide a way to automatically recover and self-heal.
+
+Operation retries and reconciliation scans are both enabled by default.
+
+Note that reconciliation process do not protect from out-of-band updates
+that occur directly in the external service. The secrets sync system is designed to be
+one-way and does not support bidirectional sync at this time.
+
+## Client counts
+
+Each secret that is synced with one or more destinations is counted as a
+distinct client in Vault's client counting. See [entity assignments with secret
+sync](/vault/docs/concepts/client-count#entity-assignment-with-secret-sync)
+for more information.
 
 ## API
 

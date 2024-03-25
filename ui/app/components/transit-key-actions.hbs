@@ -2,7 +2,6 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 ~}}
-
 <div {{did-update this.updateProps @selectedAction}}>
   <MessageError @errorMessage={{this.errors}} />
 
@@ -109,7 +108,7 @@
       @submitIsRunning={{this.doSubmit.isRunning}}
       data-test-transit-action={{@selectedAction}}
     />
-  {{else if (or (eq @selectedAction "export") (eq @key.supportedActions.firstObject "export"))}}
+  {{else if (or (eq @selectedAction "export") (eq (get @key.supportedActions 0) "export"))}}
     <TransitKeyAction::Export
       @key={{@key}}
       @keys={{this.props.keys}}

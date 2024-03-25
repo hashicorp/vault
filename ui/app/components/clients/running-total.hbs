@@ -6,8 +6,7 @@
 {{#if (gt @byMonthActivityData.length 1)}}
   <Clients::ChartContainer
     @title="Vault client counts"
-    {{! * add "secrets sync" clients to list here - unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release }}
-    @description="The total clients in the specified date range. This includes entity and non-entity clients. The total client count number is an important consideration for Vault billing."
+    @description={{this.chartContainerText}}
     @timestamp={{@responseTimestamp}}
     @hasChartData={{true}}
     data-test-chart="running total"
@@ -30,15 +29,15 @@
             @size="m"
             data-test-chart-stat="running total entity"
           />
-          {{!--  * unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
-          <StatText
-            @label="Secrets sync clients"
-            @value={{@runningTotals.secret_syncs}}
-            @size="m"
-            class="has-left-margin-l"
-            data-test-chart-stat="running total sync"
-          /> 
-          --}}
+          {{#if @isSecretsSyncActivated}}
+            <StatText
+              @label="Secrets sync clients"
+              @value={{@runningTotals.secret_syncs}}
+              @size="m"
+              class="has-left-margin-l"
+              data-test-chart-stat="running total sync"
+            />
+          {{/if}}
         </div>
       </div>
       <StatText
@@ -80,11 +79,11 @@
           <div class="single-month-breakdown-nonentity">
             <StatText @label="Non-entity clients" @value={{singleMonthData.new_clients.non_entity_clients}} @size="m" />
           </div>
-          {{!-- * unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
-          <div class="single-month-breakdown-sync">
-            <StatText @label="Secrets sync clients" @value={{singleMonthData.new_clients.secret_syncs}} @size="m" />
-          </div>
-           --}}
+          {{#if @isSecretsSyncActivated}}
+            <div class="single-month-breakdown-sync">
+              <StatText @label="Secrets sync clients" @value={{singleMonthData.new_clients.secret_syncs}} @size="m" />
+            </div>
+          {{/if}}
         </div>
         <div class="single-month-stats" data-test-total>
           <div class="single-month-section-title">
@@ -101,11 +100,11 @@
           <div class="single-month-breakdown-nonentity">
             <StatText @label="Non-entity clients" @value={{singleMonthData.non_entity_clients}} @size="m" />
           </div>
-          {{!-- * unavailable during SYNC BETA (1.16.0), planned for 1.16.1 release
-          <div class="single-month-breakdown-sync">
-            <StatText @label="Secrets sync clients" @value={{singleMonthData.secret_syncs}} @size="m" />
-          </div>
-           --}}
+          {{#if @isSecretsSyncActivated}}
+            <div class="single-month-breakdown-sync">
+              <StatText @label="Secrets sync clients" @value={{singleMonthData.secret_syncs}} @size="m" />
+            </div>
+          {{/if}}
         </div>
       </div>
     {{else}}
@@ -119,6 +118,7 @@
           @isCurrentMonth
           "Only totals are available when viewing the current month. To see a breakdown of new and total clients for this month, select the 'Current billing period' filter."
         }}"
+        @isSecretsSyncActivated={{@isSecretsSyncActivated}}
         @totalUsageCounts={{@runningTotals}}
       />
     {{/if}}

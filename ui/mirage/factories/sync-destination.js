@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { Factory, trait } from 'ember-cli-mirage';
+import { Factory, trait } from 'miragejs';
 
 export default Factory.extend({
   ['aws-sm']: trait({
@@ -16,7 +16,7 @@ export default Factory.extend({
     role_arn: 'test-role',
     external_id: 'id12345',
     // options
-    granularity: 'secret-path', // default option (same for all destinations) so edit test can update to 'secret-key'
+    granularity: 'secret-path', // default varies per destination, but setting all as secret-path so edit test loop updates each to 'secret-key'
     secret_name_template: 'vault-{{ .MountAccessor }}-{{ .SecretPath }}',
     custom_tags: { foo: 'bar' },
   }),
@@ -66,6 +66,7 @@ export default Factory.extend({
     team_id: 'team_12345',
     deployment_environments: ['development', 'preview'], // 'production' is also an option, but left out for testing to assert form changes value
     // options
+    granularity: 'secret-path',
     secret_name_template: 'vault-{{ .MountAccessor }}-{{ .SecretPath }}',
   }),
 });
