@@ -15,7 +15,7 @@ plugins, we recommend not reading this section of the documentation.
 [Event notifications](/vault/docs/concepts/events) can provide useful information from your plugin that might be helpful to operators and clients of Vault clusters. Any plugin running in Vault Enterprise 1.16+ can generate such events.
 
 This article assumes that the plugin is written in the Go programming language.
-It is possible for non-Go plugins to send events as well by calling the [`SendEvent` gRPC call](https://github.com/hashicorp/vault/blob/main/sdk/plugin/pb/backend.proto#L713) directly.
+It is possible for non-Go plugins to send events as well by calling the [`SendEvent` gRPC call](https://github.com/hashicorp/vault/blob/da00addcb60e5fc4fef308715c0a1bd81c475167/sdk/plugin/pb/backend.proto#L713) directly.
 
 ## Sending event notifications in plugins
 
