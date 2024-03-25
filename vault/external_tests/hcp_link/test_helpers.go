@@ -110,7 +110,7 @@ func TestClusterWithHCPLinkEnabled(t *testing.T, cluster *vault.TestCluster, ena
 
 	for _, c := range cluster.Cores {
 		logger := c.Logger().Named("hcpLink")
-		vaultHCPLink, err := hcp_link.NewHCPLink(hcpConfig, c.Core, logger)
+		vaultHCPLink, err := hcp_link.NewHCPLink(hcpConfig, &configutil.HCPLinkTLSBundle{}, c.Core, logger)
 		if err != nil {
 			t.Fatalf("failed to start HCP link, %v", err)
 		}
