@@ -205,8 +205,8 @@ func validateContainerName(name string) error {
 		return errors.New("name must be between 3 and 63 characters long")
 	}
 
-	if containerNameRegex.MatchString(name) {
-		return errors.New("name has invalid characters")
+	if !containerNameRegex.MatchString(name) {
+		return errors.New("name is invalid")
 	}
 	return nil
 }
@@ -219,8 +219,8 @@ func validateAccountName(name string) error {
 	if len(name) < 3 || len(name) > 24 {
 		return errors.New("name must be between 3 and 24 characters long")
 	}
-	if accountNameRegex.MatchString(name) {
-		return errors.New("name has invalid characters")
+	if !accountNameRegex.MatchString(name) {
+		return errors.New("name is invalid")
 	}
 	return nil
 }
