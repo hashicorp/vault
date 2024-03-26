@@ -1679,7 +1679,7 @@
         "title": "Overview",
         "path": "import",
         "badge": {
-          "text": "EXPERIMENTAL",
+          "text": "ALPHA",
           "type": "outlined",
           "color": "highlight"
         }
