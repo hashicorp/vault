@@ -1545,7 +1545,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	core.SetSealReloadFunc(func(ctx context.Context) error {
+	core.SetSealReloadFunc(func(ctx context.Context, forceReload bool) error {
 		// This function performs the same seal reloading functionality as in the SIGHUP handler below.
 		config, _, err := c.reloadConfigFiles()
 		if err != nil {
@@ -1554,7 +1554,7 @@ func (c *ServerCommand) Run(args []string) int {
 		if config == nil {
 			return errors.New("no config found at reload time")
 		}
-		reloaded, err := c.reloadSeals(ctx, false, core, config)
+		reloaded, err := c.reloadSeals(ctx, false, forceReload, core, config)
 		if reloaded {
 			core.SetConfig(config)
 		}
@@ -1662,7 +1662,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 			// Note that seal reloading can also be triggered via Core.TriggerSealReload.
 			// See the call to Core.SetSealReloadFunc above.
-			if reloaded, err := c.reloadSealsLocking(ctx, core, config); err != nil {
+			if reloaded, err := c.reloadSealsLocking(ctx, false, core, config); err != nil {
 				c.UI.Error(fmt.Errorf("error reloading seal config: %s", err).Error())
 				config.Seals = core.GetCoreConfigInternal().Seals
 				goto RUNRELOADFUNCS
@@ -3375,8 +3375,8 @@ func startHttpServers(c *ServerCommand, core *vault.Core, config *server.Config,
 	return nil
 }
 
-func (c *ServerCommand) reloadSealsLocking(ctx context.Context, core *vault.Core, config *server.Config) (bool, error) {
-	return c.reloadSeals(ctx, true, core, config)
+func (c *ServerCommand) reloadSealsLocking(ctx context.Context, forceReload bool, core *vault.Core, config *server.Config) (bool, error) {
+	return c.reloadSeals(ctx, true, forceReload, core, config)
 }
 
 // reloadSeals reloads configuration files and determines whether it needs to re-create the Seal.Access() objects.
@@ -3384,7 +3384,7 @@ func (c *ServerCommand) reloadSealsLocking(ctx context.Context, core *vault.Core
 // in the seal configuration files.
 // This function returns true if the newConfig was used to re-create the Seal.Access() objects. In other words,
 // if false is returned, there were no changes done to the seals.
-func (c *ServerCommand) reloadSeals(ctx context.Context, grabStateLock bool, core *vault.Core, newConfig *server.Config) (ret bool, err error) {
+func (c *ServerCommand) reloadSeals(ctx context.Context, grabStateLock, forceReload bool, core *vault.Core, newConfig *server.Config) (ret bool, err error) {
 	defer func() {
 		if err != nil {
 			// We do not log here, as the error will be logged higher in the call chain
@@ -3427,7 +3427,7 @@ func (c *ServerCommand) reloadSeals(ctx context.Context, grabStateLock bool, cor
 		}
 	}
 
-	if cmp.Equal(currentConfig.Seals, newConfig.Seals) && !addEnableMultiseal {
+	if !forceReload && cmp.Equal(currentConfig.Seals, newConfig.Seals) && !addEnableMultiseal {
 		return false, nil
 	}
 
