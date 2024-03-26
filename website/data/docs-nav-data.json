@@ -285,7 +285,7 @@
         "badge": {
           "text": "ENTERPRISE",
           "type": "outlined",
-          "color": "highlight"
+          "color": "neutral"
         }
       },
       {
@@ -1860,6 +1860,15 @@
         "path": "plugins/plugin-development"
       },
       {
+        "title": "Plugin Development — Event Notifications",
+        "path": "plugins/plugin-development-event-notifications",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "Plugin Management",
         "path": "plugins/plugin-management"
       },
@@ -2231,6 +2240,10 @@
       {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
+      },
+      {
+        "title": "Upgrade to Raft WAL",
+        "path": "upgrading/raft-wal"
       },
       {
         "title": "Upgrade to 1.16.x",
