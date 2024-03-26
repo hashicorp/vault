@@ -60,7 +60,8 @@ func NewAuditedHeadersConfig(view *BarrierView) (*AuditedHeadersConfig, error) {
 }
 
 // header attempts to retrieve a copy of the settings associated with the specified header.
-// The second return parameter indicates whether the header existed in configuration.
+// The second boolean return parameter indicates whether the header existed in configuration,
+// it should be checked as when 'false' the returned settings will have the default values.
 func (a *AuditedHeadersConfig) header(name string) (auditedHeaderSettings, bool) {
 	a.RLock()
 	defer a.RUnlock()

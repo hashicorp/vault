@@ -495,3 +495,45 @@ func TestAuditedHeaders_invalidate_bad_data(t *testing.T) {
 	require.Error(t, err)
 	require.ErrorContains(t, err, "failed to parse config")
 }
+
+// TestAuditedHeaders_header checks we can return a copy of settings associated with
+// an existing header, and we also know when a header wasn't found.
+func TestAuditedHeaders_header(t *testing.T) {
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, auditedHeadersSubPath)
+	ahc, err := NewAuditedHeadersConfig(view)
+	require.NoError(t, err)
+	require.Len(t, ahc.headerSettings, 0)
+
+	err = ahc.add(context.Background(), "juan", true)
+	require.NoError(t, err)
+	require.Len(t, ahc.headerSettings, 1)
+
+	s, ok := ahc.header("juan")
+	require.True(t, ok)
+	require.Equal(t, true, s.HMAC)
+
+	s, ok = ahc.header("x-magic-token")
+	require.False(t, ok)
+}
+
+// TestAuditedHeaders_headers checks we are able to return a copy of the existing
+// configured headers.
+func TestAuditedHeaders_headers(t *testing.T) {
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, auditedHeadersSubPath)
+	ahc, err := NewAuditedHeadersConfig(view)
+	require.NoError(t, err)
+	require.Len(t, ahc.headerSettings, 0)
+
+	err = ahc.add(context.Background(), "juan", true)
+	require.NoError(t, err)
+	err = ahc.add(context.Background(), "john", false)
+	require.NoError(t, err)
+	require.Len(t, ahc.headerSettings, 2)
+
+	s := ahc.headers()
+	require.Len(t, s, 2)
+	require.Equal(t, true, s["juan"].HMAC)
+	require.Equal(t, false, s["john"].HMAC)
+}
