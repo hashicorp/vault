@@ -37,7 +37,7 @@
             <div class="has-left-margin-xs">
               <label
                 for="{{or val.value val}}"
-                class="has-left-margin-xs has-text-black is-size-7"
+                class="has-left-margin-xs is-size-7"
                 data-test-radio-label={{or val.label val.value val}}
               >
                 {{or val.label val.value val}}
@@ -59,7 +59,7 @@
     {{else if (eq @attr.options.editType "checkboxList")}}
       <Hds::Form::Checkbox::Group @name={{@attr.name}} data-test-input={{@attr.name}} as |G|>
         {{#each @attr.options.possibleValues as |option|}}
-          <G.Checkbox::Field
+          <G.CheckboxField
             class={{if this.validationError "has-error-border"}}
             checked={{includes option (get @model this.valuePath)}}
             @value={{option}}
@@ -68,7 +68,7 @@
             as |F|
           >
             <F.Label>{{option}}</F.Label>
-          </G.Checkbox::Field>
+          </G.CheckboxField>
         {{/each}}
       </Hds::Form::Checkbox::Group>
     {{else}}
@@ -342,7 +342,7 @@
         onchange={{this.onChangeWithEvent}}
         data-test-input={{@attr.name}}
       />
-      <label for={{@attr.name}} class="is-label">
+      <label for={{@attr.name}} class="is-label" data-test-form-field-label>
         {{this.labelString}}
         {{#if (and this.showHelpText @attr.options.helpText)}}
           <InfoTooltip>{{@attr.options.helpText}}</InfoTooltip>

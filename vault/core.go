@@ -49,7 +49,6 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/osutil"
-	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/plugins/event"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -258,7 +257,7 @@ type Core struct {
 	// HABackend may be available depending on the physical backend
 	ha physical.HABackend
 
-	// storageType is the the storage type set in the storage configuration
+	// storageType is the storage type set in the storage configuration
 	storageType string
 
 	// redirectAddr is the address we advertise as leader if held
@@ -282,6 +281,9 @@ type Core struct {
 
 	// seal is our seal, for seal configuration information
 	seal Seal
+
+	// sealReloadFunc is a function that can be used to trigger seal configuration reloading
+	sealReloadFunc func(context.Context) error
 
 	// raftJoinDoneCh is used by the raft retry join routine to inform unseal process
 	// that the join is complete
@@ -715,9 +717,6 @@ type Core struct {
 	periodicLeaderRefreshInterval time.Duration
 
 	clusterAddrBridge *raft.ClusterAddrBridge
-
-	limiterRegistry     *limits.LimiterRegistry
-	limiterRegistryLock sync.Mutex
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -726,12 +725,6 @@ func (c *Core) ActiveNodeClockSkewMillis() int64 {
 
 func (c *Core) EchoDuration() time.Duration {
 	return c.echoDuration.Load()
-}
-
-func (c *Core) GetRequestLimiter(key string) *limits.RequestLimiter {
-	c.limiterRegistryLock.Lock()
-	defer c.limiterRegistryLock.Unlock()
-	return c.limiterRegistry.GetLimiter(key)
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -751,6 +744,10 @@ func (c *Core) HAStateWithLock() consts.HAState {
 	defer c.stateLock.RUnlock()
 
 	return c.HAState()
+}
+
+func (c *Core) HALock() sync.Locker {
+	return c.stateLock.RLocker()
 }
 
 // CoreConfig is used to parameterize a core
@@ -902,9 +899,6 @@ type CoreConfig struct {
 	PeriodicLeaderRefreshInterval time.Duration
 
 	ClusterAddrBridge *raft.ClusterAddrBridge
-
-	DisableRequestLimiter bool
-	LimiterRegistry       *limits.LimiterRegistry
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -1005,10 +999,6 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		for k, v := range detectDeadlocks {
 			detectDeadlocks[k] = strings.ToLower(strings.TrimSpace(v))
 		}
-	}
-
-	if conf.LimiterRegistry == nil {
-		conf.LimiterRegistry = limits.NewLimiterRegistry(conf.Logger.Named("limits"))
 	}
 
 	// Use imported logging deadlock if requested
@@ -1314,14 +1304,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	c.limiterRegistry = conf.LimiterRegistry
-	c.limiterRegistryLock.Lock()
-	c.limiterRegistry.Disable()
-	if !conf.DisableRequestLimiter {
-		c.limiterRegistry.Enable()
-	}
-	c.limiterRegistryLock.Unlock()
 
 	err = c.adjustForSealMigration(conf.UnwrapSeal)
 	if err != nil {
@@ -2659,47 +2641,56 @@ func (c *Core) runUnsealSetupForPrimary(ctx context.Context, logger log.Logger) 
 		return err
 	}
 
-	// Retrieve the seal generation information from storage
-	existingGenerationInfo, err := PhysicalSealGenInfo(ctx, c.physical)
-	if err != nil {
-		logger.Error("cannot read existing seal generation info from storage", "error", err)
-		return err
-	}
-
-	sealGenerationInfo := c.seal.GetAccess().GetSealGenerationInfo()
-
-	switch {
-	case existingGenerationInfo == nil:
-		// This is the first time we store seal generation information
-		fallthrough
-	case existingGenerationInfo.Generation < sealGenerationInfo.Generation:
-		// We have incremented the seal generation
-		if err := c.SetPhysicalSealGenInfo(ctx, sealGenerationInfo); err != nil {
-			logger.Error("failed to store seal generation info", "error", err)
+	if c.IsMultisealEnabled() {
+		// Retrieve the seal generation information from storage
+		existingGenerationInfo, err := PhysicalSealGenInfo(ctx, c.physical)
+		if err != nil {
+			logger.Error("cannot read existing seal generation info from storage", "error", err)
 			return err
 		}
 
-	case existingGenerationInfo.Generation == sealGenerationInfo.Generation:
-		// Same generation, update the rewrapped flag in case the previous active node
-		// changed its value. In other words, a rewrap may have happened, or a rewrap may have been
-		// started but not completed.
-		c.seal.GetAccess().GetSealGenerationInfo().SetRewrapped(existingGenerationInfo.IsRewrapped())
+		sealGenerationInfo := c.seal.GetAccess().GetSealGenerationInfo()
 
-	case existingGenerationInfo.Generation > sealGenerationInfo.Generation:
-		// Our seal information is out of date. The previous active node used a newer generation.
-		logger.Error("A newer seal generation was found in storage. The seal configuration in this node should be updated to match that of the previous active node, and this node should be restarted.")
-		return errors.New("newer seal generation found in storage, in memory seal configuration is out of date")
+		switch {
+		case existingGenerationInfo == nil:
+			// This is the first time we store seal generation information
+			fallthrough
+		case existingGenerationInfo.Generation < sealGenerationInfo.Generation || !existingGenerationInfo.Enabled:
+			// We have incremented the seal generation or we've just become enabled again after previously being disabled,
+			// trust the operator in the latter case
+			if err := c.SetPhysicalSealGenInfo(ctx, sealGenerationInfo); err != nil {
+				logger.Error("failed to store seal generation info", "error", err)
+				return err
+			}
+
+		case existingGenerationInfo.Generation == sealGenerationInfo.Generation:
+			// Same generation, update the rewrapped flag in case the previous active node
+			// changed its value. In other words, a rewrap may have happened, or a rewrap may have been
+			// started but not completed.
+			c.seal.GetAccess().GetSealGenerationInfo().SetRewrapped(existingGenerationInfo.IsRewrapped())
+			if !existingGenerationInfo.Enabled {
+				// Weren't enabled but are now, persist the flag
+				if err := c.SetPhysicalSealGenInfo(ctx, sealGenerationInfo); err != nil {
+					logger.Error("failed to store seal generation info", "error", err)
+					return err
+				}
+			}
+		case existingGenerationInfo.Generation > sealGenerationInfo.Generation:
+			// Our seal information is out of date. The previous active node used a newer generation.
+			logger.Error("A newer seal generation was found in storage. The seal configuration in this node should be updated to match that of the previous active node, and this node should be restarted.")
+			return errors.New("newer seal generation found in storage, in memory seal configuration is out of date")
+		}
+
+		if !sealGenerationInfo.IsRewrapped() {
+
+			// Set the migration done flag so that a seal-rewrap gets triggered later.
+			// Note that in the case where multi seal is not supported, Core.migrateSeal() takes care of
+			// triggering the rewrap when necessary.
+			logger.Trace("seal generation information indicates that a seal-rewrap is needed", "generation", sealGenerationInfo.Generation)
+			atomic.StoreUint32(c.sealMigrationDone, 1)
+		}
+		startPartialSealRewrapping(c)
 	}
-
-	if server.IsMultisealSupported() && !sealGenerationInfo.IsRewrapped() {
-		// Set the migration done flag so that a seal-rewrap gets triggered later.
-		// Note that in the case where multi seal is not supported, Core.migrateSeal() takes care of
-		// triggering the rewrap when necessary.
-		logger.Trace("seal generation information indicates that a seal-rewrap is needed", "generation", sealGenerationInfo.Generation)
-		atomic.StoreUint32(c.sealMigrationDone, 1)
-	}
-
-	startPartialSealRewrapping(c)
 
 	return nil
 }
@@ -2815,6 +2806,11 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	c.loginMFABackend.usedCodes = cache.New(0, 30*time.Second)
 	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
 		c.systemBackend.mfaBackend.usedCodes = cache.New(0, 30*time.Second)
+	}
+	if c.systemBackend != nil {
+		// all mounts need to be initialized before activity log reporting
+		// starts, which happens in the post-unseal functions above.
+		sysActivityLogReporting(c.systemBackend)
 	}
 	c.logger.Info("post-unseal setup complete")
 	return nil
@@ -3070,7 +3066,7 @@ func (c *Core) checkForSealMigration(ctx context.Context, unwrapSeal Seal) (seal
 			// This is a migration away from Shamir.
 
 			return sealMigrationCheckAdjust, nil
-		case configuredType == SealConfigTypeMultiseal && server.IsMultisealSupported():
+		case configuredType == SealConfigTypeMultiseal && c.IsMultisealEnabled():
 			// We are going from a single non-shamir seal to multiseal, and multi seal is supported.
 			// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
 			// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).
@@ -3406,6 +3402,20 @@ func (c *Core) IsSealMigrated(lock bool) bool {
 	}
 	done, _ := c.sealMigrated(context.Background())
 	return done
+}
+
+func (c *Core) SetSealReloadFunc(f func(context.Context) error) {
+	c.sealReloadFunc = f
+}
+
+// TriggerSealReload triggers reloading of the seal configuration and resetting of the seal.
+// The caller should hold the write statelock.
+func (c *Core) TriggerSealReload(ctx context.Context) error {
+	if c.sealReloadFunc == nil {
+		return nil
+	}
+
+	return c.sealReloadFunc(ctx)
 }
 
 func (c *Core) BarrierEncryptorAccess() *BarrierEncryptorAccess {
@@ -4104,27 +4114,6 @@ func (c *Core) ReloadLogRequestsLevel() {
 	}
 }
 
-func (c *Core) ReloadRequestLimiter() {
-	c.limiterRegistry.Logger.Info("reloading request limiter config")
-	conf := c.rawConfig.Load()
-	if conf == nil {
-		return
-	}
-
-	disable := true
-	requestLimiterConfig := conf.(*server.Config).RequestLimiter
-	if requestLimiterConfig != nil {
-		disable = requestLimiterConfig.Disable
-	}
-
-	switch disable {
-	case true:
-		c.limiterRegistry.Disable()
-	default:
-		c.limiterRegistry.Enable()
-	}
-}
-
 func (c *Core) ReloadIntrospectionEndpointEnabled() {
 	conf := c.rawConfig.Load()
 	if conf == nil {
@@ -4477,11 +4466,13 @@ func (c *Core) Events() *eventbus.EventBus {
 	return c.events
 }
 
-func (c *Core) SetSeals(barrierSeal Seal, secureRandomReader io.Reader, shouldRewrap bool) error {
-	ctx, _ := c.GetContext()
+func (c *Core) SetSeals(ctx context.Context, grabLock bool, barrierSeal Seal, secureRandomReader io.Reader, shouldRewrap bool) error {
+	if grabLock {
+		ctx, _ = c.GetContext()
 
-	c.stateLock.Lock()
-	defer c.stateLock.Unlock()
+		c.stateLock.Lock()
+		defer c.stateLock.Unlock()
+	}
 
 	currentSealBarrierConfig, err := c.SealAccess().BarrierConfig(ctx)
 	if err != nil {
@@ -4515,9 +4506,7 @@ func (c *Core) SetSeals(barrierSeal Seal, secureRandomReader io.Reader, shouldRe
 
 	c.seal = barrierSeal
 
-	c.reloadSealsEnt(secureRandomReader, barrierSeal, c.logger, shouldRewrap)
-
-	return nil
+	return c.reloadSealsEnt(secureRandomReader, barrierSeal, c.logger, shouldRewrap)
 }
 
 func (c *Core) GetWellKnownRedirect(ctx context.Context, path string) (string, error) {

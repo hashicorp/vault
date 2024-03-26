@@ -12,7 +12,7 @@ module github.com/hashicorp/vault
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
 go 1.21
 
-toolchain go1.21.3
+toolchain go1.21.8
 
 replace github.com/hashicorp/vault/api => ./api
 
@@ -67,7 +67,7 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-errors/errors v1.5.1
 	github.com/go-git/go-git/v5 v5.11.0
-	github.com/go-jose/go-jose/v3 v3.0.1
+	github.com/go-jose/go-jose/v3 v3.0.3
 	github.com/go-ldap/ldap/v3 v3.4.4
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/go-test/deep v1.1.0
@@ -141,7 +141,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-centrify v0.15.1
 	github.com/hashicorp/vault-plugin-auth-cf v0.16.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.16.2
-	github.com/hashicorp/vault-plugin-auth-jwt v0.20.0
+	github.com/hashicorp/vault-plugin-auth-jwt v0.20.1
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.11.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.18.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.15.1
@@ -169,7 +169,7 @@ require (
 	github.com/hashicorp/vault/sdk v0.11.0
 	github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
-	github.com/jackc/pgx/v4 v4.18.1
+	github.com/jackc/pgx/v4 v4.18.3
 	github.com/jcmturner/gokrb5/v8 v8.4.4
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
 	github.com/jefferai/jsonx v1.0.0
@@ -188,7 +188,6 @@ require (
 	github.com/mitchellh/go-wordwrap v1.0.1
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mitchellh/reflectwalk v1.0.2
-	github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
 	github.com/ncw/swift v1.0.47
 	github.com/oklog/run v1.1.0
 	github.com/okta/okta-sdk-golang/v2 v2.12.1
@@ -198,11 +197,10 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pires/go-proxyproto v0.6.1
 	github.com/pkg/errors v0.9.1
-	github.com/platinummonkey/go-concurrency-limits v0.7.0
 	github.com/posener/complete v1.2.3
 	github.com/pquerna/otp v1.2.1-0.20191009055518-468c2dd2b58d
-	github.com/prometheus/client_golang v1.14.0
-	github.com/prometheus/common v0.37.0
+	github.com/prometheus/client_golang v1.19.0
+	github.com/prometheus/common v0.49.0
 	github.com/rboyer/safeio v0.2.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/ryanuber/columnize v2.1.2+incompatible
@@ -222,7 +220,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.23.1
 	go.uber.org/atomic v1.11.0
 	go.uber.org/goleak v1.2.1
-	golang.org/x/crypto v0.19.0
+	golang.org/x/crypto v0.20.0
 	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
 	golang.org/x/net v0.21.0
 	golang.org/x/oauth2 v0.17.0
@@ -233,7 +231,7 @@ require (
 	golang.org/x/tools v0.18.0
 	google.golang.org/api v0.163.0
 	google.golang.org/grpc v1.61.0
-	google.golang.org/protobuf v1.32.0
+	google.golang.org/protobuf v1.33.0
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	k8s.io/apimachinery v0.29.1
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
@@ -412,10 +410,10 @@ require (
 	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
-	github.com/jackc/pgconn v1.14.0 // indirect
+	github.com/jackc/pgconn v1.14.3 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
-	github.com/jackc/pgproto3/v2 v2.3.2 // indirect
+	github.com/jackc/pgproto3/v2 v2.3.3 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/pgtype v1.14.0 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible // indirect
@@ -440,7 +438,6 @@ require (
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-ieproxy v0.0.1 // indirect
-	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mediocregopher/radix/v4 v4.1.4 // indirect
 	github.com/microsoft/kiota-abstractions-go v1.5.6 // indirect
 	github.com/microsoft/kiota-authentication-azure-go v1.0.1 // indirect
@@ -465,6 +462,7 @@ require (
 	github.com/montanaflynn/stats v0.7.0 // indirect
 	github.com/mtibben/percent v0.2.1 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/natefinch/atomic v1.0.1 // indirect
 	github.com/nicolai86/scaleway-sdk v1.10.2-0.20180628010248-798f60e20bb2 // indirect
 	github.com/nwaples/rardecode v1.1.2 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
@@ -483,8 +481,8 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
-	github.com/prometheus/client_model v0.4.0 // indirect
-	github.com/prometheus/procfs v0.8.0 // indirect
+	github.com/prometheus/client_model v0.6.0 // indirect
+	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/renier/xmlrpc v0.0.0-20170708154548-ce4a1a486c03 // indirect
 	github.com/rogpeppe/go-internal v1.11.0 // indirect
 	github.com/segmentio/fasthash v1.0.3 // indirect
