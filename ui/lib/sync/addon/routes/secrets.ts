@@ -5,11 +5,10 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { hash } from 'rsvp';
 
 import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
-import type AdapterError from '@ember-data/adapter';
+import { DEBUG } from '@glimmer/env';
 
 interface ActivationFlagsResponse {
   data: {
@@ -22,22 +21,29 @@ export default class SyncSecretsRoute extends Route {
   @service declare readonly router: RouterService;
   @service declare readonly store: StoreService;
 
-  model() {
-    return hash({
-      activatedFeatures: this.store
-        .adapterFor('application')
-        .ajax('/v1/sys/activation-flags', 'GET')
-        .then((resp: ActivationFlagsResponse) => {
-          return resp.data.activated;
-        })
-        .catch((error: AdapterError) => {
-          // we break out this error while passing args to the component and handle the error in the overview template
-          return error;
-        }),
-    });
+  async fetchActivatedFeatures() {
+    // The read request to the activation-flags endpoint is unauthenticated and root namespace
+    // but the POST is not which is why it's not in the NAMESPACE_ROOT_URLS list
+    return await this.store
+      .adapterFor('application')
+      .ajax('/v1/sys/activation-flags', 'GET', { unauthenticated: true, namespace: null })
+      .then((resp: ActivationFlagsResponse) => {
+        return resp.data?.activated;
+      })
+      .catch((error: unknown) => {
+        if (DEBUG) console.error(error); // eslint-disable-line no-console
+        return [];
+      });
   }
 
-  afterModel(model: { activatedFeatures: Array<string> | AdapterError }) {
+  async model() {
+    const activatedFeatures = await this.fetchActivatedFeatures();
+    return {
+      activatedFeatures,
+    };
+  }
+
+  afterModel(model: { activatedFeatures: Array<string> }) {
     if (!model.activatedFeatures) {
       this.router.transitionTo('vault.cluster.sync.secrets.overview');
     }
