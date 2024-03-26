@@ -52,7 +52,7 @@ func (s *systemViewWrapper) GetPinnedPluginVersion(ctx context.Context, pluginTy
 
 func (s *systemViewWrapper) LookupPluginVersion(ctx context.Context, pluginName string, pluginType consts.PluginType, version string) (*pluginutil.PluginRunner, error) {
 	return &pluginutil.PluginRunner{
-		Name:           "mockv5",
+		Name:           mockv5,
 		Type:           consts.PluginTypeDatabase,
 		Builtin:        true,
 		BuiltinFactory: New,
@@ -93,8 +93,8 @@ func TestGetConnectionRaceCondition(t *testing.T) {
 	errs := make([]error, goroutines)
 	for i := 0; i < goroutines; i++ {
 		go func(i int) {
-			dbis[i], errs[i] = b.GetConnection(ctx, s, "mockv5")
-			wg.Done()
+			defer wg.Done()
+			dbis[i], errs[i] = b.GetConnection(ctx, s, mockv5)
 		}(i)
 	}
 	wg.Wait()

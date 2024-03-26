@@ -348,7 +348,7 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 	conn, ok := b.connections.PutIfEmpty(name, dbi)
 	if !ok {
 		// this is a bug
-		b.Logger().Error("Error: there was a race condition adding to the database connection map")
+		b.Logger().Warn("BUG: there was a race condition adding to the database connection map")
 		// There was already an existing connection, so we will use that and close our new one to avoid a race condition.
 		err := dbi.Close()
 		if err != nil {
