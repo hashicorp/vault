@@ -192,7 +192,7 @@ able to use the `TokenReview` API and client authentication will fail.
 #### Use the system's trust store for CA certificates
 
 Omitting `kubernetes_ca_cert` and setting `disable_local_ca_jwt` to `true` will lead to Vault
-using the system's trust store.
+using the system's trust store for TLS certificate verification.
 
 #### Use the Vault client's JWT as the reviewer JWT
 
