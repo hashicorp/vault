@@ -70,7 +70,7 @@ If Vault is running in a Kubernetes Pod, the `kubernetes_ca_cert` and
 account JWT (`/var/run/secrets/kubernetes.io/serviceaccount/token`).
 
 If this behavior is disabled by setting `disable_local_ca_jwt` to `true`,
-the plugin's TLS client will automatically default to use the system's trust store.
+the plugin's TLS client will automatically default to use the system's trust store for TLS certificate verification.
 
 ### Sample payload
 
