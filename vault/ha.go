@@ -583,7 +583,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		// Trigger a seal reload if necessary. A seal reload is necessary when a node
 		// becomes the leader since its seal generation information may be out of
 		// date (as is the case, for example, when a new node joins the cluster).
-		if err := c.TriggerSealReload(c.activeContext, true); err != nil {
+		if err := c.TriggerSealReload(c.activeContext, c.isPrimary()); err != nil {
 			c.logger.Error("seal configuration reload error", "error", err)
 			c.barrier.Seal()
 			c.logger.Warn("vault is sealed")
