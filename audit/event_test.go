@@ -368,3 +368,13 @@ func TestAuditEvent_Subtype_String(t *testing.T) {
 		})
 	}
 }
+
+// TestAuditEvent_formattedTime is used to check the output from the formattedTime
+// method returns the correct format.
+func TestAuditEvent_formattedTime(t *testing.T) {
+	theTime := time.Date(2024, time.March, 22, 10, 0o0, 5, 10, time.UTC)
+	a, err := NewEvent(ResponseType, WithNow(theTime))
+	require.NoError(t, err)
+	require.NotNil(t, a)
+	require.Equal(t, "2024-03-22T10:00:05.00000001Z", a.formattedTime())
+}

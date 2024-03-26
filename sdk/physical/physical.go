@@ -139,6 +139,16 @@ type RedirectDetect interface {
 	DetectHostAddr() (string, error)
 }
 
+// MountTableLimitingBackend is an optional interface a Backend can implement
+// that allows it to support different entry size limits for mount-table-related
+// paths. It will only be called in Vault Enterprise.
+type MountTableLimitingBackend interface {
+	// RegisterMountTablePath informs the Backend that the given path represents
+	// part of the mount tables or related metadata. This allows the backend to
+	// apply different limits for this entry if configured to do so.
+	RegisterMountTablePath(path string)
+}
+
 type Lock interface {
 	// Lock is used to acquire the given lock
 	// The stopCh is optional and if closed should interrupt the lock

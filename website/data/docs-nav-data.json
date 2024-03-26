@@ -285,7 +285,7 @@
         "badge": {
           "text": "ENTERPRISE",
           "type": "outlined",
-          "color": "highlight"
+          "color": "neutral"
         }
       },
       {
@@ -1639,12 +1639,7 @@
     "routes": [
       {
         "title": "Overview",
-        "path": "sync",
-        "badge": {
-          "text": "BETA",
-          "type": "outlined",
-          "color": "highlight"
-        }
+        "path": "sync"
       },
       {
         "title": "AWS Secrets Manager",
@@ -1863,6 +1858,15 @@
       {
         "title": "Plugin Development",
         "path": "plugins/plugin-development"
+      },
+      {
+        "title": "Plugin Development — Event Notifications",
+        "path": "plugins/plugin-development-event-notifications",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
       },
       {
         "title": "Plugin Management",
@@ -2236,6 +2240,10 @@
       {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
+      },
+      {
+        "title": "Upgrade to Raft WAL",
+        "path": "upgrading/raft-wal"
       },
       {
         "title": "Upgrade to 1.16.x",
@@ -2636,14 +2644,14 @@
       {
         "title": "Replication",
         "routes": [
-            {
-                "title": "Overview",
-                "path": "enterprise/replication"
-            },
-            {
-                "title": "Check for Merkle tree corruption",
-                "path": "enterprise/replication/check-merkle-tree-corruption"
-            }
+          {
+            "title": "Overview",
+            "path": "enterprise/replication"
+          },
+          {
+            "title": "Check for Merkle tree corruption",
+            "path": "enterprise/replication/check-merkle-tree-corruption"
+          }
         ]
       },
       {

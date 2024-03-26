@@ -190,6 +190,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 			},
 		},
 	}
+	b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, entUnauthenticatedPaths()...)
 
 	b.Backend.Paths = append(b.Backend.Paths, entPaths(b)...)
 	b.Backend.Paths = append(b.Backend.Paths, b.configPaths()...)
@@ -1138,8 +1139,7 @@ func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, req *logi
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	headerConfig := b.Core.AuditedHeadersConfig()
-	err := headerConfig.add(ctx, header, hmac)
+	err := b.Core.AuditedHeadersConfig().add(ctx, header, hmac)
 	if err != nil {
 		return nil, err
 	}
@@ -1154,8 +1154,7 @@ func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, req *logi
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	headerConfig := b.Core.AuditedHeadersConfig()
-	err := headerConfig.remove(ctx, header)
+	err := b.Core.AuditedHeadersConfig().remove(ctx, header)
 	if err != nil {
 		return nil, err
 	}
@@ -1164,14 +1163,13 @@ func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, req *logi
 }
 
 // handleAuditedHeaderRead returns the header configuration for the given header name
-func (b *SystemBackend) handleAuditedHeaderRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditedHeaderRead(_ context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
 	if header == "" {
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	headerConfig := b.Core.AuditedHeadersConfig()
-	settings, ok := headerConfig.Headers[strings.ToLower(header)]
+	settings, ok := b.Core.AuditedHeadersConfig().header(header)
 	if !ok {
 		return logical.ErrorResponse("Could not find header in config"), nil
 	}
@@ -1184,12 +1182,12 @@ func (b *SystemBackend) handleAuditedHeaderRead(ctx context.Context, req *logica
 }
 
 // handleAuditedHeadersRead returns the whole audited headers config
-func (b *SystemBackend) handleAuditedHeadersRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	headerConfig := b.Core.AuditedHeadersConfig()
+func (b *SystemBackend) handleAuditedHeadersRead(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	headerSettings := b.Core.AuditedHeadersConfig().headers()
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"headers": headerConfig.Headers,
+			"headers": headerSettings,
 		},
 	}, nil
 }
@@ -5245,18 +5243,6 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 
 	resp.Data["exact_paths"] = exact
 	resp.Data["glob_paths"] = glob
-
-	return resp, nil
-}
-
-// pathInternalUIVersion is the framework.PathOperation callback function for
-// the sys/internal/ui/version path. It simply returns the Vault version.
-func (b *SystemBackend) pathInternalUIVersion(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	resp := &logical.Response{
-		Data: map[string]any{
-			"version": version.GetVersion().VersionNumber(),
-		},
-	}
 
 	return resp, nil
 }

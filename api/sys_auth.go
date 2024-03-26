@@ -20,7 +20,9 @@ func (c *Sys) GetAuthWithContext(ctx context.Context, path string) (*AuthMount, 
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest(http.MethodGet, fmt.Sprintf("/v1/sys/auth/%s", path))
+	// use `sys/mounts/auth/:path` so we don't require sudo permissions
+	// historically, `sys/auth` doesn't require sudo, so we don't require it here either
+	r := c.c.NewRequest(http.MethodGet, fmt.Sprintf("/v1/sys/mounts/auth/%s", path))
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
