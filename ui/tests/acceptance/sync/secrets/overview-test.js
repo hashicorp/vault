@@ -11,13 +11,16 @@ import syncHandlers from 'vault/mirage/handlers/sync';
 import authPage from 'vault/tests/pages/auth';
 import { click, waitFor } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
+import { runCmd } from 'vault/tests/helpers/commands';
 
 // sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
-module('Acceptance | sync | destination', function (hooks) {
+module('Acceptance | sync | overview', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    this.version = this.owner.lookup('service:version');
+    this.version.features = ['Secrets Sync'];
     syncScenario(this.server);
     syncHandlers(this.server);
     return authPage.login();
@@ -38,5 +41,103 @@ module('Acceptance | sync | destination', function (hooks) {
     await click(ts.overview.table.actionToggle(0));
     await click(ts.overview.table.action('details'));
     assert.dom(ts.tab('Secrets')).hasClass('active', 'Navigates to secrets view for destination');
+  });
+
+  test('it should show opt-in banner and modal if secrets-sync is not activated', async function (assert) {
+    assert.expect(3);
+    this.server.get('/sys/activation-flags', () => {
+      return {
+        data: {
+          activated: [''],
+          unactivated: ['secrets-sync'],
+        },
+      };
+    });
+    this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
+      return {};
+    });
+    await click(ts.navLink('Secrets Sync'));
+    assert.dom(ts.overview.optInBanner).exists('Opt-in banner is shown');
+    await click(ts.overview.optInBannerEnable);
+    assert.dom(ts.overview.optInModal).exists('Opt-in modal is shown');
+    assert.dom(ts.overview.optInConfirm).isDisabled('Confirm button is disabled when checkbox is unchecked');
+    await click(ts.overview.optInCheck);
+    await click(ts.overview.optInConfirm);
+  });
+
+  module('enterprise with namespaces', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.version.features = ['Secrets Sync', 'Namespaces'];
+      await runCmd(`write sys/namespaces/admin -f`, false);
+      await authPage.loginNs('admin');
+      await runCmd(`write sys/namespaces/foo -f`, false);
+      await authPage.loginNs('admin/foo');
+    });
+
+    test('it should make activation-flag requests to correct namespace', async function (assert) {
+      assert.expect(6);
+      this.server.get('/sys/activation-flags', (_, req) => {
+        assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
+        return {
+          data: {
+            activated: [''],
+            unactivated: ['secrets-sync'],
+          },
+        };
+      });
+      this.server.post('/sys/activation-flags/secrets-sync/activate', (_, req) => {
+        assert.strictEqual(
+          req.requestHeaders['X-Vault-Namespace'],
+          undefined,
+          'Request is made to root namespace'
+        );
+        return {};
+      });
+
+      assert.dom('[data-test-badge-namespace]').hasText('foo'); // confirm we're in admin/foo
+      await click(ts.navLink('Secrets Sync'));
+      assert.dom(ts.overview.optInBanner).exists('Opt-in banner is shown');
+      await click(ts.overview.optInBannerEnable);
+      assert.dom(ts.overview.optInModal).exists('Opt-in modal is shown');
+      assert
+        .dom(ts.overview.optInConfirm)
+        .isDisabled('Confirm button is disabled when checkbox is unchecked');
+      await click(ts.overview.optInCheck);
+      await click(ts.overview.optInConfirm);
+    });
+
+    test.skip('it should make activation-flag requests to correct namespace when managed', async function (assert) {
+      // TODO: unskip for 1.16.1 when managed is supported
+      assert.expect(6);
+      this.owner.lookup('service:feature-flag').setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
+      this.server.get('/sys/activation-flags', (_, req) => {
+        assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
+        return {
+          data: {
+            activated: [''],
+            unactivated: ['secrets-sync'],
+          },
+        };
+      });
+      this.server.post('/sys/activation-flags/secrets-sync/activate', (_, req) => {
+        assert.strictEqual(
+          req.requestHeaders['X-Vault-Namespace'],
+          'admin',
+          'Request is made to admin namespace'
+        );
+        return {};
+      });
+
+      assert.dom('[data-test-badge-namespace]').hasText('foo'); // confirm we're in admin/foo
+      await click(ts.navLink('Secrets Sync'));
+      assert.dom(ts.overview.optInBanner).exists('Opt-in banner is shown');
+      await click(ts.overview.optInBannerEnable);
+      assert.dom(ts.overview.optInModal).exists('Opt-in modal is shown');
+      assert
+        .dom(ts.overview.optInConfirm)
+        .isDisabled('Confirm button is disabled when checkbox is unchecked');
+      await click(ts.overview.optInCheck);
+      await click(ts.overview.optInConfirm);
+    });
   });
 });

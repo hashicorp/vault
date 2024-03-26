@@ -36,6 +36,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
   hooks.beforeEach(async function () {
     this.version = this.owner.lookup('service:version');
     this.version.type = 'enterprise';
+    this.version.features = ['Secrets Sync'];
     syncScenario(this.server);
     syncHandlers(this.server);
 
@@ -45,15 +46,25 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     this.renderComponent = () =>
       render(
-        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @activatedFeatures={{this.activatedFeatures}} @isAdapterError={{false}} />`,
+        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @activatedFeatures={{this.activatedFeatures}} @adapterError={{null}} />`,
         {
           owner: this.engine,
         }
       );
   });
 
+  test('it should render landing cta component for enterprise with the secrets sync feature', async function (assert) {
+    this.destinations = [];
+    await this.renderComponent();
+
+    assert.dom(title).hasText('Secrets Sync', 'Page title renders');
+    assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
+    assert.dom(cta.summary).exists('CTA renders');
+  });
+
   test('it should render landing cta component for community', async function (assert) {
     this.version.type = 'community';
+    this.version.features = [];
     this.destinations = [];
 
     await this.renderComponent();
@@ -62,13 +73,13 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     assert.dom(cta.button).doesNotExist('Create first destination button does not render');
   });
 
-  test('it should render landing cta component for enterprise', async function (assert) {
+  test('it should render landing cta component for enterprise without the secrets sync feature', async function (assert) {
     this.destinations = [];
-
+    this.version.features = [];
     await this.renderComponent();
 
-    assert.dom(title).hasText('Secrets Sync', 'Page title renders');
-    assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
+    assert.dom(title).hasText('Secrets Sync Premium feature', 'Page title renders');
+    assert.dom(cta.button).doesNotExist('Create first destination button does not render');
     assert.dom(cta.summary).exists('CTA renders');
   });
 

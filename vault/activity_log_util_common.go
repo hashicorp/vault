@@ -115,13 +115,11 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 		return nil, errors.New(fmt.Sprintf("multiple months of data found in partial month's client count breakdowns: %+v\n", byMonth))
 	}
 
-	activityTypes := []string{entityActivityType, nonEntityTokenActivityType, secretSyncActivityType}
-
 	// Now we will add the clients for the current month to a copy of the billing period's hll to
 	// see how the cardinality grows.
-	hllByType := make(map[string]*hyperloglog.Sketch, len(activityTypes))
-	totalByType := make(map[string]int, len(activityTypes))
-	for _, typ := range activityTypes {
+	hllByType := make(map[string]*hyperloglog.Sketch, len(ActivityClientTypes))
+	totalByType := make(map[string]int, len(ActivityClientTypes))
+	for _, typ := range ActivityClientTypes {
 		hllByType[typ] = billingPeriodHLL.Clone()
 	}
 
@@ -130,7 +128,7 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 			return nil, errors.New("malformed current month used to calculate current month's activity")
 		}
 
-		for _, typ := range activityTypes {
+		for _, typ := range ActivityClientTypes {
 			// Note that the following calculations assume that all clients seen are currently in
 			// the NewClients section of byMonth. It is best to explicitly check this, just verify
 			// our assumptions about the passed in byMonth argument.
@@ -146,8 +144,9 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 			}
 		}
 	}
-	currentMonthNewByType := make(map[string]int, len(activityTypes))
-	for _, typ := range activityTypes {
+
+	currentMonthNewByType := make(map[string]int, len(ActivityClientTypes))
+	for _, typ := range ActivityClientTypes {
 		// The number of new entities for the current month is approximately the size of the hll with
 		// the current month's entities minus the size of the initial billing period hll.
 		currentMonthNewByType[typ] = int(hllByType[typ].Estimate() - billingPeriodHLL.Estimate())
@@ -159,11 +158,13 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 			EntityClients:    currentMonthNewByType[entityActivityType],
 			NonEntityClients: currentMonthNewByType[nonEntityTokenActivityType],
 			SecretSyncs:      currentMonthNewByType[secretSyncActivityType],
+			ACMEClients:      currentMonthNewByType[ACMEActivityType],
 		}},
 		Counts: &activity.CountsRecord{
 			EntityClients:    totalByType[entityActivityType],
 			NonEntityClients: totalByType[nonEntityTokenActivityType],
 			SecretSyncs:      totalByType[secretSyncActivityType],
+			ACMEClients:      totalByType[ACMEActivityType],
 		},
 	}, nil
 }
@@ -188,6 +189,7 @@ func (a *ActivityLog) transformALNamespaceBreakdowns(nsData map[string]*processB
 			Entities:        uint64(ns.Counts.countByType(entityActivityType)),
 			NonEntityTokens: uint64(ns.Counts.countByType(nonEntityTokenActivityType)),
 			SecretSyncs:     uint64(ns.Counts.countByType(secretSyncActivityType)),
+			ACMEClients:     uint64(ns.Counts.countByType(ACMEActivityType)),
 			Mounts:          a.transformActivityLogMounts(ns.Mounts),
 		}
 		byNamespace = append(byNamespace, &nsRecord)
@@ -390,8 +392,9 @@ func (a *ActivityLog) countsRecordToCountsResponse(record *activity.CountsRecord
 	response := &ResponseCounts{
 		EntityClients:    record.EntityClients,
 		NonEntityClients: record.NonEntityClients,
-		Clients:          record.EntityClients + record.NonEntityClients + record.SecretSyncs,
+		Clients:          record.EntityClients + record.NonEntityClients + record.SecretSyncs + record.ACMEClients,
 		SecretSyncs:      record.SecretSyncs,
+		ACMEClients:      record.ACMEClients,
 	}
 	if includeDeprecated {
 		response.NonEntityTokens = response.NonEntityClients
@@ -409,7 +412,8 @@ func (a *ActivityLog) namespaceRecordToCountsResponse(record *activity.Namespace
 		EntityClients:    int(record.Entities),
 		NonEntityTokens:  int(record.NonEntityTokens),
 		NonEntityClients: int(record.NonEntityTokens),
-		Clients:          int(record.Entities + record.NonEntityTokens + record.SecretSyncs),
+		Clients:          int(record.Entities + record.NonEntityTokens + record.SecretSyncs + record.ACMEClients),
 		SecretSyncs:      int(record.SecretSyncs),
+		ACMEClients:      int(record.ACMEClients),
 	}
 }
