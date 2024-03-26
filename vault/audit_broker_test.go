@@ -27,8 +27,8 @@ func testAuditBackend(t *testing.T, path string, config map[string]string) audit
 	t.Helper()
 
 	headersCfg := &AuditedHeadersConfig{
-		Headers: make(map[string]*auditedHeaderSettings),
-		view:    nil,
+		headerSettings: make(map[string]*auditedHeaderSettings),
+		view:           nil,
 	}
 
 	view := &logical.InmemStorage{}
