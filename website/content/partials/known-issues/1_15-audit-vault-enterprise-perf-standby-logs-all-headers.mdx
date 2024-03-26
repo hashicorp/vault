@@ -6,12 +6,12 @@
 
 #### Issue
 
-Due to a bug in the Enterprise unsealing process, when using the new event framework Performance
-Standby nodes in a Vault Enterprise cluster do not correctly receive configuration
-providing them with the settings for which request headers should be written to the audit log.
+Due to an issue in the new event framework, Performance Standby nodes in a Vault
+Enterprise cluster do not correctly receive configuration regarding which request
+headers should be written to the audit log.
 
-Rather than no headers appearing in the audit logs, Vault Enterprise logs **all**
-headers on Performance Standby nodes.
+Rather than no headers appearing in the audit logs by default, Vault Enterprise
+logs **all** headers on Performance Standby nodes.
 
 The header issue was resolved in `1.15.8`.
 
