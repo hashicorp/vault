@@ -82,12 +82,16 @@ func (*EntryFormatter) Type() eventlogger.NodeType {
 func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *eventlogger.Event, retErr error) {
 	const op = "audit.(EntryFormatter).Process"
 
+	// Return early if the context was cancelled, eventlogger will not carry on
+	// asking nodes to process, so any sink node in the pipeline won't be called.
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
 	}
 
+	// Perform validation on the event, then retrieve the underlying AuditEvent
+	// and LogInput (from the AuditEvent Data).
 	if e == nil {
 		return nil, fmt.Errorf("%s: event is nil: %w", op, event.ErrInvalidParameter)
 	}
@@ -124,18 +128,14 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 		return nil, fmt.Errorf("%s: unable to copy audit event data: %w", op, err)
 	}
 
-	var headers map[string][]string
-	if data.Request != nil && data.Request.Headers != nil {
-		headers = data.Request.Headers
-	}
-
-	if f.headerFormatter != nil {
-		adjustedHeaders, err := f.headerFormatter.ApplyConfig(ctx, headers, f.salter)
+	// Ensure that any headers in the request, are formatted as required, and are
+	// only present if they have been configured to appear in the audit log.
+	// e.g. via: /sys/config/auditing/request-headers/:name
+	if f.headerFormatter != nil && data.Request != nil && data.Request.Headers != nil {
+		data.Request.Headers, err = f.headerFormatter.ApplyConfig(ctx, data.Request.Headers, f.salter)
 		if err != nil {
 			return nil, fmt.Errorf("%s: unable to transform headers for auditing: %w", op, err)
 		}
-
-		data.Request.Headers = adjustedHeaders
 	}
 
 	var result []byte
