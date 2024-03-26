@@ -3,9 +3,12 @@ setlocal
 
 set _EXITCODE=0
 set _DEV_BUILD=0
+set _BUILD_TAGS=""
+set _UI_TAG="ui"
 
 if not exist %1 exit /b 1
 if x%2 == xVAULT_DEV set _DEV_BUILD=1
+if x%3 == xVAULT_UI set _BUILD_TAGS=%_BUILD_TAGS% %_UI_TAG%
 
 cd %1
 md bin 2>nul
@@ -65,6 +68,7 @@ echo ==^> Building...
 go build^
  -ldflags "-X github.com/hashicorp/vault/version.GitCommit=%_GIT_COMMIT%%_GIT_DIRTY% -X github.com/hashicorp/vault/version.BuildDate=%_BUILD_DATE%"^
  -o "bin/vault.exe"^
+ -tags "%_BUILD_TAGS%"^
  .
 
 if %ERRORLEVEL% equ 1 set %_EXITCODE%=1

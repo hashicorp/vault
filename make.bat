@@ -6,7 +6,7 @@ set _EXITCODE=0
 REM If no target is provided, default to test.
 if [%1]==[] goto test
 
-set _TARGETS=bin,bootstrap,dev,generate,test,testacc,testrace,vet
+set _TARGETS=bin,bootstrap,dev,dev-ui,ember-dist,generate,install-ui-dependencies,testacc,testrace,vet
 set _EXTERNAL_TOOLS=github.com/kardianos/govendor
 
 REM Run target.
@@ -111,3 +111,21 @@ REM any common errors.
 	echo target defaults to test if none is provided.
 	exit /b 2
 	goto :eof
+
+:install-ui-dependencies
+       echo Installing JavaScript assets
+       cd ui\ & call yarn
+       goto :eof
+
+:ember-dist
+	cd ui\ & call npm rebuild node-sass
+	echo Building Ember application
+	call yarn run build_windows
+	goto :eof
+
+:dev-ui
+	call .\scripts\windows\assetcheck.bat
+	call :generate
+	call .\scripts\windows\build.bat "%CD%" VAULT_DEV VAULT_UI
+	goto :eof
+
