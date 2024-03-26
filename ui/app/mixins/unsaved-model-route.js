@@ -9,7 +9,7 @@ import Ember from 'ember';
 export default Mixin.create({
   actions: {
     willTransition(transition) {
-      const model = this.controller.get('model');
+      const model = this.controller.model;
       if (!model) {
         return true;
       }
