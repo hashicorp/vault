@@ -33,7 +33,7 @@ access the Kubernetes API.
 - `kubernetes_ca_cert` `(string: "")` - Optional PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API.
   NOTE: Every line must end with a newline: `\n`
   If not set, the local CA cert will be used if running in a Kubernetes pod.
-  If not set and `disable_local_ca_jwt` set to true, the system's trust store will be used.
+  If not set and `disable_local_ca_jwt` set to true, the system's trusted CA certificate pool will be used.
 - `token_reviewer_jwt` `(string: "")` - A service account JWT (or other token) used as a bearer
   token to access the TokenReview API to validate other JWTs during login. If not set,
   the local service account token is used if running in a Kubernetes pod, otherwise
