@@ -6,7 +6,7 @@ set _EXITCODE=0
 REM If no target is provided, default to test.
 if [%1]==[] goto test
 
-set _TARGETS=bin,bootstrap,dev,dev-ui,ember-dist,generate,install-ui-dependencies,testacc,testrace,vet
+set _TARGETS=bin,bootstrap,dev,dev-ui,ember-dist,ember-dist-dev,generate,install-ui-dependencies,testacc,testrace,vet
 set _EXTERNAL_TOOLS=github.com/kardianos/govendor
 
 REM Run target.
@@ -121,6 +121,12 @@ REM any common errors.
 	cd ui\ & call npm rebuild node-sass
 	echo Building Ember application
 	call yarn run build_windows
+	goto :eof
+
+:ember-dist-dev
+	cd ui\ & call npm rebuild node-sass
+	echo Building Ember application
+	call yarn run build:dev
 	goto :eof
 
 :dev-ui
