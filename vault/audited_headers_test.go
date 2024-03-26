@@ -48,8 +48,8 @@ func mockAuditedHeadersConfig(t *testing.T) *AuditedHeadersConfig {
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "foo/")
 	return &AuditedHeadersConfig{
-		Headers: make(map[string]*auditedHeaderSettings),
-		view:    view,
+		headerSettings: make(map[string]*auditedHeaderSettings),
+		view:           view,
 	}
 }
 
@@ -66,7 +66,7 @@ func testAuditedHeadersConfig_Add(t *testing.T, conf *AuditedHeadersConfig) {
 		t.Fatalf("Error when adding header to config: %s", err)
 	}
 
-	settings, ok := conf.Headers["x-test-header"]
+	settings, ok := conf.headerSettings["x-test-header"]
 	if !ok {
 		t.Fatal("Expected header to be found in config")
 	}
@@ -104,7 +104,7 @@ func testAuditedHeadersConfig_Add(t *testing.T, conf *AuditedHeadersConfig) {
 		t.Fatalf("Error when adding header to config: %s", err)
 	}
 
-	settings, ok = conf.Headers["x-vault-header"]
+	settings, ok = conf.headerSettings["x-vault-header"]
 	if !ok {
 		t.Fatal("Expected header to be found in config")
 	}
@@ -142,7 +142,7 @@ func testAuditedHeadersConfig_Remove(t *testing.T, conf *AuditedHeadersConfig) {
 		t.Fatalf("Error when adding header to config: %s", err)
 	}
 
-	_, ok := conf.Headers["x-Test-HeAder"]
+	_, ok := conf.headerSettings["x-Test-HeAder"]
 	if ok {
 		t.Fatal("Expected header to not be found in config")
 	}
@@ -176,7 +176,7 @@ func testAuditedHeadersConfig_Remove(t *testing.T, conf *AuditedHeadersConfig) {
 		t.Fatalf("Error when adding header to config: %s", err)
 	}
 
-	_, ok = conf.Headers["x-vault-header"]
+	_, ok = conf.headerSettings["x-vault-header"]
 	if ok {
 		t.Fatal("Expected header to not be found in config")
 	}
@@ -355,11 +355,11 @@ func TestAuditedHeadersConfig_ApplyConfig_HashStringError(t *testing.T) {
 
 func BenchmarkAuditedHeaderConfig_ApplyConfig(b *testing.B) {
 	conf := &AuditedHeadersConfig{
-		Headers: make(map[string]*auditedHeaderSettings),
-		view:    nil,
+		headerSettings: make(map[string]*auditedHeaderSettings),
+		view:           nil,
 	}
 
-	conf.Headers = map[string]*auditedHeaderSettings{
+	conf.headerSettings = map[string]*auditedHeaderSettings{
 		"X-Test-Header":  {false},
 		"X-Vault-Header": {true},
 	}
@@ -404,7 +404,7 @@ func TestAuditedHeaders_invalidate(t *testing.T) {
 	view := NewBarrierView(barrier, auditedHeadersSubPath)
 	ahc, err := NewAuditedHeadersConfig(view)
 	require.NoError(t, err)
-	require.Len(t, ahc.Headers, 0)
+	require.Len(t, ahc.headerSettings, 0)
 
 	// Store some data using the view.
 	fakeHeaders1 := map[string]*auditedHeaderSettings{"x-magic-header": {}}
@@ -416,8 +416,8 @@ func TestAuditedHeaders_invalidate(t *testing.T) {
 	// Invalidate and check we now see the header we stored
 	err = ahc.invalidate(context.Background())
 	require.NoError(t, err)
-	require.Len(t, ahc.Headers, 1)
-	_, ok := ahc.Headers["x-magic-header"]
+	require.Len(t, ahc.headerSettings, 1)
+	_, ok := ahc.headerSettings["x-magic-header"]
 	require.True(t, ok)
 
 	// Do it again with more headers and random casing.
@@ -433,10 +433,10 @@ func TestAuditedHeaders_invalidate(t *testing.T) {
 	// Invalidate and check we now see the header we stored
 	err = ahc.invalidate(context.Background())
 	require.NoError(t, err)
-	require.Len(t, ahc.Headers, 2)
-	_, ok = ahc.Headers["x-magic-header"]
+	require.Len(t, ahc.headerSettings, 2)
+	_, ok = ahc.headerSettings["x-magic-header"]
 	require.True(t, ok)
-	_, ok = ahc.Headers["x-even-more-magic-header"]
+	_, ok = ahc.headerSettings["x-even-more-magic-header"]
 	require.True(t, ok)
 }
 
@@ -447,7 +447,7 @@ func TestAuditedHeaders_invalidate_nil_view(t *testing.T) {
 	view := NewBarrierView(barrier, auditedHeadersSubPath)
 	ahc, err := NewAuditedHeadersConfig(view)
 	require.NoError(t, err)
-	require.Len(t, ahc.Headers, 0)
+	require.Len(t, ahc.headerSettings, 0)
 
 	// Store some data using the view.
 	fakeHeaders1 := map[string]*auditedHeaderSettings{"x-magic-header": {}}
@@ -459,8 +459,8 @@ func TestAuditedHeaders_invalidate_nil_view(t *testing.T) {
 	// Invalidate and check we now see the header we stored
 	err = ahc.invalidate(context.Background())
 	require.NoError(t, err)
-	require.Len(t, ahc.Headers, 1)
-	_, ok := ahc.Headers["x-magic-header"]
+	require.Len(t, ahc.headerSettings, 1)
+	_, ok := ahc.headerSettings["x-magic-header"]
 	require.True(t, ok)
 
 	// Swap out the view with a mock that returns nil when we try to invalidate.
@@ -472,7 +472,7 @@ func TestAuditedHeaders_invalidate_nil_view(t *testing.T) {
 	// Invalidate should clear out the existing headers without error
 	err = ahc.invalidate(context.Background())
 	require.NoError(t, err)
-	require.Len(t, ahc.Headers, 0)
+	require.Len(t, ahc.headerSettings, 0)
 }
 
 // TestAuditedHeaders_invalidate_bad_data ensures that we correctly error if the
@@ -482,7 +482,7 @@ func TestAuditedHeaders_invalidate_bad_data(t *testing.T) {
 	view := NewBarrierView(barrier, auditedHeadersSubPath)
 	ahc, err := NewAuditedHeadersConfig(view)
 	require.NoError(t, err)
-	require.Len(t, ahc.Headers, 0)
+	require.Len(t, ahc.headerSettings, 0)
 
 	// Store some bad data using the view.
 	badBytes, err := json.Marshal("i am bad")

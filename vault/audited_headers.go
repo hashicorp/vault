@@ -36,8 +36,8 @@ type auditedHeaderSettings struct {
 // AuditedHeadersConfig is used by the Audit Broker to write only approved
 // headers to the audit logs. It uses a BarrierView to persist the settings.
 type AuditedHeadersConfig struct {
-	// Headers stores the current headers that should be audited, and their settings.
-	Headers map[string]*auditedHeaderSettings
+	// headerSettings stores the current headers that should be audited, and their settings.
+	headerSettings map[string]*auditedHeaderSettings
 
 	// view is the barrier view which should be used to access underlying audit header config data.
 	view *BarrierView
@@ -54,9 +54,41 @@ func NewAuditedHeadersConfig(view *BarrierView) (*AuditedHeadersConfig, error) {
 	// This should be the only place where the AuditedHeadersConfig struct is initialized.
 	// Store the view so that we can reload headers when we 'invalidate'.
 	return &AuditedHeadersConfig{
-		view:    view,
-		Headers: make(map[string]*auditedHeaderSettings),
+		view:           view,
+		headerSettings: make(map[string]*auditedHeaderSettings),
 	}, nil
+}
+
+// header attempts to retrieve a copy of the settings associated with the specified header.
+// The second return parameter indicates whether the header existed in configuration.
+func (a *AuditedHeadersConfig) header(name string) (auditedHeaderSettings, bool) {
+	a.RLock()
+	defer a.RUnlock()
+
+	var s auditedHeaderSettings
+	v, ok := a.headerSettings[strings.ToLower(name)]
+
+	if ok {
+		s.HMAC = v.HMAC
+	}
+
+	return s, ok
+}
+
+// headers returns a copy of all existing headers along with their current settings.
+func (a *AuditedHeadersConfig) headers() map[string]auditedHeaderSettings {
+	a.RLock()
+	defer a.RUnlock()
+
+	// We know how many entries the map should have.
+	headers := make(map[string]auditedHeaderSettings, len(a.headerSettings))
+
+	// Clone the headers
+	for name, setting := range a.headerSettings {
+		headers[name] = auditedHeaderSettings{HMAC: setting.HMAC}
+	}
+
+	return headers
 }
 
 // add adds or overwrites a header in the config and updates the barrier view
@@ -70,12 +102,12 @@ func (a *AuditedHeadersConfig) add(ctx context.Context, header string, hmac bool
 	a.Lock()
 	defer a.Unlock()
 
-	if a.Headers == nil {
-		a.Headers = make(map[string]*auditedHeaderSettings, 1)
+	if a.headerSettings == nil {
+		a.headerSettings = make(map[string]*auditedHeaderSettings, 1)
 	}
 
-	a.Headers[strings.ToLower(header)] = &auditedHeaderSettings{hmac}
-	entry, err := logical.StorageEntryJSON(auditedHeadersEntry, a.Headers)
+	a.headerSettings[strings.ToLower(header)] = &auditedHeaderSettings{hmac}
+	entry, err := logical.StorageEntryJSON(auditedHeadersEntry, a.headerSettings)
 	if err != nil {
 		return fmt.Errorf("failed to persist audited headers config: %w", err)
 	}
@@ -99,12 +131,12 @@ func (a *AuditedHeadersConfig) remove(ctx context.Context, header string) error 
 	defer a.Unlock()
 
 	// Nothing to delete
-	if len(a.Headers) == 0 {
+	if len(a.headerSettings) == 0 {
 		return nil
 	}
 
-	delete(a.Headers, strings.ToLower(header))
-	entry, err := logical.StorageEntryJSON(auditedHeadersEntry, a.Headers)
+	delete(a.headerSettings, strings.ToLower(header))
+	entry, err := logical.StorageEntryJSON(auditedHeadersEntry, a.headerSettings)
 	if err != nil {
 		return fmt.Errorf("failed to persist audited headers config: %w", err)
 	}
@@ -145,7 +177,7 @@ func (a *AuditedHeadersConfig) invalidate(ctx context.Context) error {
 		lowerHeaders[strings.ToLower(k)] = v
 	}
 
-	a.Headers = lowerHeaders
+	a.headerSettings = lowerHeaders
 	return nil
 }
 
@@ -162,8 +194,8 @@ func (a *AuditedHeadersConfig) ApplyConfig(ctx context.Context, headers map[stri
 		lowerHeaders[strings.ToLower(k)] = v
 	}
 
-	result = make(map[string][]string, len(a.Headers))
-	for key, settings := range a.Headers {
+	result = make(map[string][]string, len(a.headerSettings))
+	for key, settings := range a.headerSettings {
 		if val, ok := lowerHeaders[key]; ok {
 			// copy the header values so we don't overwrite them
 			hVals := make([]string, len(val))
