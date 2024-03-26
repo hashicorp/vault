@@ -31,7 +31,7 @@ access the Kubernetes API.
 
 - `kubernetes_host` `(string: <required>)` - Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server.
 - `kubernetes_ca_cert` `(string: "")` - Optional PEM encoded CA cert that the TLS client can use to talk with the Kubernetes API.
-  NOTE: Every line must end with a newline: `\n`
+  **Every line must end with a newline `\n`.**
   If `kubernetes_ca_cert` is unset, the TLS client uses the local CA cert if Vault is running in a Kubernetes pod.
   If `kubernetes_ca_cert` is unset and `disable_local_ca_jwt` set to true, the TLS client uses the system's trusted CA certificate pool.
 - `token_reviewer_jwt` `(string: "")` - A service account JWT (or other token) used as a bearer
