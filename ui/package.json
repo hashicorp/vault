@@ -10,6 +10,7 @@
   },
   "scripts": {
     "build": "ember build --environment=production && cp metadata.json ../http/web_ui/metadata.json",
+    "build_windows": "ember build --environment=production && copy metadata.json ../http/web_ui/metadata.json",
     "build:dev": "ember build",
     "lint:css": "stylelint \"**/*.css\"",
     "lint:css:fix": "yarn lint:css --fix",
