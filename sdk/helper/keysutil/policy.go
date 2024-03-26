@@ -170,6 +170,15 @@ func (kt KeyType) AssociatedDataSupported() bool {
 	return false
 }
 
+func (kt KeyType) CMACSupported() bool {
+	switch kt {
+	case KeyType_AES128_CMAC, KeyType_AES256_CMAC:
+		return true
+	default:
+		return false
+	}
+}
+
 func (kt KeyType) ImportPublicKeySupported() bool {
 	switch kt {
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519:
@@ -1075,6 +1084,25 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 		return nil, fmt.Errorf("no HMAC key exists for that key version")
 	}
 	return keyEntry.HMACKey, nil
+}
+
+func (p *Policy) CMACKey(version int) ([]byte, error) {
+	switch {
+	case version < 0:
+		return nil, fmt.Errorf("key version does not exist (cannot be negative)")
+	case version > p.LatestVersion:
+		return nil, fmt.Errorf("key version does not exist; latest key version is %d", p.LatestVersion)
+	}
+	keyEntry, err := p.safeGetKeyEntry(version)
+	if err != nil {
+		return nil, err
+	}
+
+	if p.Type.CMACSupported() {
+		return keyEntry.Key, nil
+	}
+
+	return nil, fmt.Errorf("key type %s does not support CMAC operations", p.Type)
 }
 
 func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, sigAlgorithm string, marshaling MarshalingType) (*SigningResult, error) {
