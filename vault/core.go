@@ -283,7 +283,7 @@ type Core struct {
 	seal Seal
 
 	// sealReloadFunc is a function that can be used to trigger seal configuration reloading
-	sealReloadFunc func(context.Context) error
+	sealReloadFunc func(context.Context, bool) error
 
 	// raftJoinDoneCh is used by the raft retry join routine to inform unseal process
 	// that the join is complete
@@ -3404,18 +3404,18 @@ func (c *Core) IsSealMigrated(lock bool) bool {
 	return done
 }
 
-func (c *Core) SetSealReloadFunc(f func(context.Context) error) {
+func (c *Core) SetSealReloadFunc(f func(context.Context, bool) error) {
 	c.sealReloadFunc = f
 }
 
 // TriggerSealReload triggers reloading of the seal configuration and resetting of the seal.
 // The caller should hold the write statelock.
-func (c *Core) TriggerSealReload(ctx context.Context) error {
+func (c *Core) TriggerSealReload(ctx context.Context, forceReload bool) error {
 	if c.sealReloadFunc == nil {
 		return nil
 	}
 
-	return c.sealReloadFunc(ctx)
+	return c.sealReloadFunc(ctx, forceReload)
 }
 
 func (c *Core) BarrierEncryptorAccess() *BarrierEncryptorAccess {
