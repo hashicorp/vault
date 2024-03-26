@@ -1,7 +1,7 @@
 ---
 layout: docs
 page_title: Integrated Storage - Storage Backends - Configuration
-description: |-
+description: >-
 
   The Integrated Storage (Raft) backend is used to persist Vault's data. Unlike all the other
   storage backends, this backend does not operate from a single source for the
@@ -54,12 +54,12 @@ set [`disable_mlock`](/vault/docs/configuration#disable_mlock) to `true`, and to
   GUID during initialization and writes the value to `data/node-id` in the
   directory specified by the `path` parameter.
 
-- `performance_multiplier` `(integer: 0)` - An integer multiplier used by 
+- `performance_multiplier` `(integer: 0)` - An integer multiplier used by
   servers to scale key Raft timing parameters, where each increment translates to approximately 1 – 2 seconds of delay. For example, setting the multiplier to "3" translates to 3 – 6 seconds of total delay.  Tuning  the multiplier affects the time it
   takes Vault to detect leader failures and to perform leader elections, at the
   expense of requiring more network and CPU resources for better performance.
-  Omitting this value or setting it to 0 uses default timing described below. 
-  Lower values are used to tighten timing and increase sensitivity while higher 
+  Omitting this value or setting it to 0 uses default timing described below.
+  Lower values are used to tighten timing and increase sensitivity while higher
   values relax timings and reduce sensitivity.
 
 
@@ -69,7 +69,7 @@ telemetry indicators that a change is needed or different timing is required due
 to the overall reliability your platform (network, etc.).
 
 Setting the timing value to 1 configures Raft to its highest performance (lowest
-delay) mode. The maximum allowed value is 10. 
+delay) mode. The maximum allowed value is 10.
 
 - `trailing_logs` `(integer: 10000)` - This controls how many log entries are
   left in the log store on disk after a snapshot is made. This should only be
@@ -133,7 +133,7 @@ delay) mode. The maximum allowed value is 10.
   - **Note:** This option corresponds to [Consul's `kv_max_value_size` parameter](/consul/docs/agent/config/config-files#kv_max_value_size) for
     Vault clusters using a Consul storage backend.  If you are migrating from Consul
     storage to Raft Integrated Storage,  and have changed this value in Consul from its
-    default to a value larger than the Integrated Storage default of 1MB, then you will 
+    default to a value larger than the Integrated Storage default of 1MB, then you will
     need to make the same change in Vault's Integrated Storage config.
 
 - `max_mount_and_namespace_table_entry_size` `(integer)`- <EnterpriseAlert
@@ -170,6 +170,24 @@ delay) mode. The maximum allowed value is 10.
   Specifies a [redundancy zone](/vault/docs/enterprise/redundancy-zones) which
   is used by Autopilot to automatically swap out failed servers for enhanced
   reliability.
+
+<Warning title="Experimental">
+
+- `raft_wal` `(boolean: false)` - Enables the
+  [write-ahead](/vault/docs/internals/integrated-storage#configurable-raft-log-store)
+  log store instead of the default of BoltDB.
+
+- `raft_log_verifier_enabled` `(boolean: false)` - Enables the raft log verifier.
+  The verifier periodically writes small raft logs and verifies checksums to 
+  ensure that data has been written correctly. The verifier works with raft
+  write-ahead **and** BoltDB log stores.
+
+- `raft_log_verification_interval` `(string: "60s")` - Sets the interval at
+  which the raft log verifier write verification logs. The default interval is
+  `60s` and the minimum supported interval is `10s`. The `raft_log_verification_interval`
+  parameter has no effect if `raft_log_verifier_enabled` is `false`.
+
+</Warning>
 
 ### `retry_join` stanza
 
