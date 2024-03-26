@@ -1,6 +1,6 @@
 ---
 layout: docs
-page_title: Google Cloud Platform Secret Manager - Secrets Import Source
+page_title: GCP secret import source
 description: The Google Cloud Platform Secret Manager source imports secrets from GCP to Vault.
 ---
 
@@ -8,8 +8,8 @@ description: The Google Cloud Platform Secret Manager source imports secrets fro
 
 
 Use the GCP source to import secret data from GCP Secret Manager into your Vault instance. To use dynamic
-credentials for this source, ensure that the [GCP secrets engine](/vault/docs/secrets/gcp) has
-already been configured.
+credentials with GCP import, ensure the [GCP secrets engine](/vault/docs/secrets/gcp) is
+already configured.
 
 ## Argument reference
 
@@ -45,7 +45,7 @@ source_gcp {
 
 ## Permissions
 
-To use this source type, you must grant the GCP identity being used to read secrets the following permissions:
+To use GCP import, you must grant the associated GCP identity permission to read secrets:
 
 ```shell-session
 "secretmanager.secrets.list",
