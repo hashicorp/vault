@@ -76,7 +76,7 @@ func (a *AuditedHeadersConfig) header(name string) (auditedHeaderSettings, bool)
 	return s, ok
 }
 
-// headers returns a copy of all existing headers along with their current settings.
+// headers returns all existing headers along with a copy of their current settings.
 func (a *AuditedHeadersConfig) headers() map[string]auditedHeaderSettings {
 	a.RLock()
 	defer a.RUnlock()
