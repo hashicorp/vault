@@ -629,202 +629,21 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	// Check if the key is a storage entry key for an group bucket
 	// For those entities that are deleted, clear up the local alias entries
 	case strings.HasPrefix(key, groupBucketsPrefix):
-		// Create a MemDB transaction
-		txn := i.db.Txn(true)
-		defer txn.Abort()
-
-		groupsFetched, err := i.MemDBGroupsByBucketKeyInTxn(txn, key)
-		if err != nil {
-			i.logger.Error("failed to fetch groups using the bucket key", "key", key)
-			return
-		}
-
-		for _, group := range groupsFetched {
-			// Delete the group using the same transaction
-			err = i.MemDBDeleteGroupByIDInTxn(txn, group.ID)
-			if err != nil {
-				i.logger.Error("failed to delete group from MemDB", "group_id", group.ID, "error", err)
-				return
-			}
-
-			if group.Alias != nil {
-				err := i.MemDBDeleteAliasByIDInTxn(txn, group.Alias.ID, true)
-				if err != nil {
-					i.logger.Error("failed to delete group alias from MemDB", "error", err)
-					return
-				}
-			}
-		}
-
-		// Get the storage bucket entry
-		bucket, err := i.groupPacker.GetBucket(ctx, key)
-		if err != nil {
-			i.logger.Error("failed to refresh group", "key", key, "error", err)
-			return
-		}
-
-		if bucket != nil {
-			for _, item := range bucket.Items {
-				group, err := i.parseGroupFromBucketItem(item)
-				if err != nil {
-					i.logger.Error("failed to parse group from bucket entry item", "error", err)
-					return
-				}
-
-				// Before updating the group, check if the group exists. If it
-				// does, then delete the group alias from memdb, for the
-				// invalidation would have sent an update.
-				groupFetched, err := i.MemDBGroupByIDInTxn(txn, group.ID, true)
-				if err != nil {
-					i.logger.Error("failed to fetch group from MemDB", "error", err)
-					return
-				}
-
-				// If the group has an alias remove it from memdb
-				if groupFetched != nil && groupFetched.Alias != nil {
-					err := i.MemDBDeleteAliasByIDInTxn(txn, groupFetched.Alias.ID, true)
-					if err != nil {
-						i.logger.Error("failed to delete old group alias from MemDB", "error", err)
-						return
-					}
-				}
-
-				// Only update MemDB and don't touch the storage
-				err = i.UpsertGroupInTxn(ctx, txn, group, false)
-				if err != nil {
-					i.logger.Error("failed to update group in MemDB", "error", err)
-					return
-				}
-			}
-		}
-
-		txn.Commit()
+		i.invalidateGroupBucket(ctx, key)
 		return
 
 	case strings.HasPrefix(key, oidcTokensPrefix):
-		ns, err := namespace.FromContext(ctx)
-		if err != nil {
-			i.logger.Error("error retrieving namespace", "error", err)
-			return
-		}
-
-		// Wipe the cache for the requested namespace. This will also clear
-		// the shared namespace as well.
-		if err := i.oidcCache.Flush(ns); err != nil {
-			i.logger.Error("error flushing oidc cache", "error", err)
-		}
-	case strings.HasPrefix(key, clientPath):
-		name := strings.TrimPrefix(key, clientPath)
-
-		// Invalidate the cached client in memdb
-		if err := i.memDBDeleteClientByName(ctx, name); err != nil {
-			i.logger.Error("error invalidating client", "error", err, "key", key)
-			return
-		}
-	case strings.HasPrefix(key, localAliasesBucketsPrefix):
-		//
-		// This invalidation only happens on perf standbys
-		//
-
-		txn := i.db.Txn(true)
-		defer txn.Abort()
-
-		// Find all the local aliases belonging to this bucket and remove it
-		// both from aliases table and entities table. We will add the local
-		// aliases back by parsing the storage key. This way the deletion
-		// invalidation gets handled.
-		aliases, err := i.MemDBLocalAliasesByBucketKeyInTxn(txn, key)
-		if err != nil {
-			i.logger.Error("failed to fetch entities using the bucket key", "key", key)
-			return
-		}
-
-		for _, alias := range aliases {
-			entity, err := i.MemDBEntityByIDInTxn(txn, alias.CanonicalID, true)
-			if err != nil {
-				i.logger.Error("failed to fetch entity during local alias invalidation", "entity_id", alias.CanonicalID, "error", err)
-				return
-			}
-			if entity == nil {
-				i.logger.Error("failed to fetch entity during local alias invalidation, missing entity", "entity_id", alias.CanonicalID, "error", err)
-				continue
-			}
-
-			// Delete local aliases from the entity.
-			err = i.deleteAliasesInEntityInTxn(txn, entity, []*identity.Alias{alias})
-			if err != nil {
-				i.logger.Error("failed to delete aliases in entity", "entity_id", entity.ID, "error", err)
-				return
-			}
-
-			// Update the entity with removed alias.
-			if err := i.MemDBUpsertEntityInTxn(txn, entity); err != nil {
-				i.logger.Error("failed to delete entity from MemDB", "entity_id", entity.ID, "error", err)
-				return
-			}
-		}
-
-		// Now read the invalidated storage key
-		bucket, err := i.localAliasPacker.GetBucket(ctx, key)
-		if err != nil {
-			i.logger.Error("failed to refresh local aliases", "key", key, "error", err)
-			return
-		}
-		if bucket != nil {
-			for _, item := range bucket.Items {
-				if strings.HasSuffix(item.ID, tmpSuffix) {
-					continue
-				}
-
-				var localAliases identity.LocalAliases
-				err = ptypes.UnmarshalAny(item.Message, &localAliases)
-				if err != nil {
-					i.logger.Error("failed to parse local aliases during invalidation", "error", err)
-					return
-				}
-				for _, alias := range localAliases.Aliases {
-					// Add to the aliases table
-					if err := i.MemDBUpsertAliasInTxn(txn, alias, false); err != nil {
-						i.logger.Error("failed to insert local alias to memdb during invalidation", "error", err)
-						return
-					}
-
-					// Fetch the associated entity and add the alias to that too.
-					entity, err := i.MemDBEntityByIDInTxn(txn, alias.CanonicalID, false)
-					if err != nil {
-						i.logger.Error("failed to fetch entity during local alias invalidation", "error", err)
-						return
-					}
-					if entity == nil {
-						cachedEntityItem, err := i.localAliasPacker.GetItem(alias.CanonicalID + tmpSuffix)
-						if err != nil {
-							i.logger.Error("failed to fetch cached entity", "key", key, "error", err)
-							return
-						}
-						if cachedEntityItem != nil {
-							entity, err = i.parseCachedEntity(cachedEntityItem)
-							if err != nil {
-								i.logger.Error("failed to parse cached entity", "key", key, "error", err)
-								return
-							}
-						}
-					}
-					if entity == nil {
-						i.logger.Error("received local alias invalidation for an invalid entity", "item.ID", item.ID)
-						return
-					}
-					entity.UpsertAlias(alias)
-
-					// Update the entities table
-					if err := i.MemDBUpsertEntityInTxn(txn, entity); err != nil {
-						i.logger.Error("failed to upsert entity during local alias invalidation", "error", err)
-						return
-					}
-				}
-			}
-		}
-		txn.Commit()
+		i.invalidateOIDCToken(ctx)
 		return
+
+	case strings.HasPrefix(key, clientPath):
+		i.invalidateClientPath(ctx, key)
+		return
+
+	case strings.HasPrefix(key, localAliasesBucketsPrefix):
+		i.invalidateLocalAliasBucket(ctx, key)
+		return
+
 	}
 }
 
@@ -936,6 +755,216 @@ func (i *IdentityStore) invalidateEntityBucket(ctx context.Context, key string) 
 		}
 	}
 
+	txn.Commit()
+}
+
+// invalidateGroupBucket is called by the Invalidate function to handle the
+// invalidation of a Group bucket storage entry.
+func (i *IdentityStore) invalidateGroupBucket(ctx context.Context, key string) {
+	// Create a MemDB transaction
+	txn := i.db.Txn(true)
+	defer txn.Abort()
+
+	groupsFetched, err := i.MemDBGroupsByBucketKeyInTxn(txn, key)
+	if err != nil {
+		i.logger.Error("failed to fetch groups using the bucket key", "key", key)
+		return
+	}
+
+	for _, group := range groupsFetched {
+		// Delete the group using the same transaction
+		err = i.MemDBDeleteGroupByIDInTxn(txn, group.ID)
+		if err != nil {
+			i.logger.Error("failed to delete group from MemDB", "group_id", group.ID, "error", err)
+			return
+		}
+
+		if group.Alias != nil {
+			err := i.MemDBDeleteAliasByIDInTxn(txn, group.Alias.ID, true)
+			if err != nil {
+				i.logger.Error("failed to delete group alias from MemDB", "error", err)
+				return
+			}
+		}
+	}
+
+	// Get the storage bucket entry
+	bucket, err := i.groupPacker.GetBucket(ctx, key)
+	if err != nil {
+		i.logger.Error("failed to refresh group", "key", key, "error", err)
+		return
+	}
+
+	if bucket != nil {
+		for _, item := range bucket.Items {
+			group, err := i.parseGroupFromBucketItem(item)
+			if err != nil {
+				i.logger.Error("failed to parse group from bucket entry item", "error", err)
+				return
+			}
+
+			// Before updating the group, check if the group exists. If it
+			// does, then delete the group alias from memdb, for the
+			// invalidation would have sent an update.
+			groupFetched, err := i.MemDBGroupByIDInTxn(txn, group.ID, true)
+			if err != nil {
+				i.logger.Error("failed to fetch group from MemDB", "error", err)
+				return
+			}
+
+			// If the group has an alias remove it from memdb
+			if groupFetched != nil && groupFetched.Alias != nil {
+				err := i.MemDBDeleteAliasByIDInTxn(txn, groupFetched.Alias.ID, true)
+				if err != nil {
+					i.logger.Error("failed to delete old group alias from MemDB", "error", err)
+					return
+				}
+			}
+
+			// Only update MemDB and don't touch the storage
+			err = i.UpsertGroupInTxn(ctx, txn, group, false)
+			if err != nil {
+				i.logger.Error("failed to update group in MemDB", "error", err)
+				return
+			}
+		}
+	}
+
+	txn.Commit()
+}
+
+// invalidateOIDCToken is called by the Invalidate function to handle the
+// invalidation of an OIDC token storage entry.
+func (i *IdentityStore) invalidateOIDCToken(ctx context.Context) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		i.logger.Error("error retrieving namespace", "error", err)
+		return
+	}
+
+	// Wipe the cache for the requested namespace. This will also clear
+	// the shared namespace as well.
+	if err := i.oidcCache.Flush(ns); err != nil {
+		i.logger.Error("error flushing oidc cache", "error", err)
+	}
+}
+
+// invalidateClientPath is called by the Invalidate function to handle the
+// invalidation of a client path storage entry.
+func (i *IdentityStore) invalidateClientPath(ctx context.Context, key string) {
+	name := strings.TrimPrefix(key, clientPath)
+
+	// Invalidate the cached client in memdb
+	if err := i.memDBDeleteClientByName(ctx, name); err != nil {
+		i.logger.Error("error invalidating client", "error", err, "key", key)
+		return
+	}
+}
+
+// invalidateLocalAliasBucket is called by the Invalidate function to handle the
+// invalidation of a local alias bucket storage entry.
+func (i *IdentityStore) invalidateLocalAliasBucket(ctx context.Context, key string) {
+	//
+	// This invalidation only happens on perf standbys
+	//
+
+	txn := i.db.Txn(true)
+	defer txn.Abort()
+
+	// Find all the local aliases belonging to this bucket and remove it
+	// both from aliases table and entities table. We will add the local
+	// aliases back by parsing the storage key. This way the deletion
+	// invalidation gets handled.
+	aliases, err := i.MemDBLocalAliasesByBucketKeyInTxn(txn, key)
+	if err != nil {
+		i.logger.Error("failed to fetch entities using the bucket key", "key", key)
+		return
+	}
+
+	for _, alias := range aliases {
+		entity, err := i.MemDBEntityByIDInTxn(txn, alias.CanonicalID, true)
+		if err != nil {
+			i.logger.Error("failed to fetch entity during local alias invalidation", "entity_id", alias.CanonicalID, "error", err)
+			return
+		}
+		if entity == nil {
+			i.logger.Error("failed to fetch entity during local alias invalidation, missing entity", "entity_id", alias.CanonicalID, "error", err)
+			continue
+		}
+
+		// Delete local aliases from the entity.
+		err = i.deleteAliasesInEntityInTxn(txn, entity, []*identity.Alias{alias})
+		if err != nil {
+			i.logger.Error("failed to delete aliases in entity", "entity_id", entity.ID, "error", err)
+			return
+		}
+
+		// Update the entity with removed alias.
+		if err := i.MemDBUpsertEntityInTxn(txn, entity); err != nil {
+			i.logger.Error("failed to delete entity from MemDB", "entity_id", entity.ID, "error", err)
+			return
+		}
+	}
+
+	// Now read the invalidated storage key
+	bucket, err := i.localAliasPacker.GetBucket(ctx, key)
+	if err != nil {
+		i.logger.Error("failed to refresh local aliases", "key", key, "error", err)
+		return
+	}
+	if bucket != nil {
+		for _, item := range bucket.Items {
+			if strings.HasSuffix(item.ID, tmpSuffix) {
+				continue
+			}
+
+			var localAliases identity.LocalAliases
+			err = ptypes.UnmarshalAny(item.Message, &localAliases)
+			if err != nil {
+				i.logger.Error("failed to parse local aliases during invalidation", "error", err)
+				return
+			}
+			for _, alias := range localAliases.Aliases {
+				// Add to the aliases table
+				if err := i.MemDBUpsertAliasInTxn(txn, alias, false); err != nil {
+					i.logger.Error("failed to insert local alias to memdb during invalidation", "error", err)
+					return
+				}
+
+				// Fetch the associated entity and add the alias to that too.
+				entity, err := i.MemDBEntityByIDInTxn(txn, alias.CanonicalID, false)
+				if err != nil {
+					i.logger.Error("failed to fetch entity during local alias invalidation", "error", err)
+					return
+				}
+				if entity == nil {
+					cachedEntityItem, err := i.localAliasPacker.GetItem(alias.CanonicalID + tmpSuffix)
+					if err != nil {
+						i.logger.Error("failed to fetch cached entity", "key", key, "error", err)
+						return
+					}
+					if cachedEntityItem != nil {
+						entity, err = i.parseCachedEntity(cachedEntityItem)
+						if err != nil {
+							i.logger.Error("failed to parse cached entity", "key", key, "error", err)
+							return
+						}
+					}
+				}
+				if entity == nil {
+					i.logger.Error("received local alias invalidation for an invalid entity", "item.ID", item.ID)
+					return
+				}
+				entity.UpsertAlias(alias)
+
+				// Update the entities table
+				if err := i.MemDBUpsertEntityInTxn(txn, entity); err != nil {
+					i.logger.Error("failed to upsert entity during local alias invalidation", "error", err)
+					return
+				}
+			}
+		}
+	}
 	txn.Commit()
 }
 
