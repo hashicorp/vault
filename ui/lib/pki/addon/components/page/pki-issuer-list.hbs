@@ -20,12 +20,12 @@
       <D.Content @defaultClass="popup-menu-content">
         <nav class="box menu" aria-label="generate options">
           <ul class="menu-list">
-            <li class="action">
+            <li>
               <LinkTo @route="issuers.generate-root" {{on "click" (fn this.onLinkClick D)}} data-test-generate-issuer="root">
                 Root
               </LinkTo>
             </li>
-            <li class="action">
+            <li>
               <LinkTo
                 @route="issuers.generate-intermediate"
                 {{on "click" (fn this.onLinkClick D)}}
