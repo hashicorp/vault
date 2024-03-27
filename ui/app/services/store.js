@@ -59,7 +59,7 @@ export default class StoreService extends Store {
     const cacheKey = keyForCache(key);
     const modelCache = this.lazyCacheForModel(modelName);
     if (modelCache) {
-      return modelCache[cacheKey];
+      return modelCache.get(cacheKey);
     }
   }
 
