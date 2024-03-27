@@ -365,7 +365,7 @@
           {
             "title": "High Availability",
             "badge": {
-              "text": "ENTERPRISE",
+              "text": "BETA",
               "type": "outlined",
               "color": "highlight"
             },
