@@ -144,6 +144,8 @@ type NewUserResponse struct {
 	Username string
 }
 
+//go:generate enumer -type=CredentialType -trimprefix=CredentialType -transform=snake
+
 // CredentialType is a type of database credential.
 type CredentialType int
 
@@ -152,19 +154,6 @@ const (
 	CredentialTypeRSAPrivateKey
 	CredentialTypeClientCertificate
 )
-
-func (k CredentialType) String() string {
-	switch k {
-	case CredentialTypePassword:
-		return "password"
-	case CredentialTypeRSAPrivateKey:
-		return "rsa_private_key"
-	case CredentialTypeClientCertificate:
-		return "client_certificate"
-	default:
-		return "unknown"
-	}
-}
 
 // ///////////////////////////////////////////////////////
 // UpdateUser()

@@ -31,6 +31,7 @@ var (
 	DefaultRenewerRenewBuffer = 5
 )
 
+//go:generate enumer -type=RenewBehavior -trimprefix=RenewBehavior
 type RenewBehavior uint
 
 const (

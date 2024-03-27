@@ -394,6 +394,7 @@ func Clients(vc VaultCluster) []*api.Client {
 	return ret
 }
 
+//go:generate enumer -type=GenerateRootKind -trimprefix=GenerateRoot
 type GenerateRootKind int
 
 const (
