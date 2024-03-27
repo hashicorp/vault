@@ -624,6 +624,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	// Check if the key is a storage entry key for an entity bucket
 	case strings.HasPrefix(key, storagepacker.StoragePackerBucketsPrefix):
 		i.invalidateEntityBucket(ctx, key)
+		return
 
 	// Check if the key is a storage entry key for an group bucket
 	// For those entities that are deleted, clear up the local alias entries
