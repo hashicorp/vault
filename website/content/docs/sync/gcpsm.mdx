@@ -124,14 +124,9 @@ The credentials given to Vault must have the following permissions to synchroniz
 ```shell-session
 secretmanager.secrets.create
 secretmanager.secrets.delete
-secretmanager.secrets.get
-secretmanager.secrets.list
 secretmanager.secrets.update
-secretmanager.versions.access
 secretmanager.versions.add
-secretmanager.versions.destroy
-secretmanager.versions.get
-secretmanager.versions.list
+secretmanager.versions.destroy 
 ```
 
 ## Provision service account
@@ -159,9 +154,10 @@ to provision a GCP Service Account with the appropriate policies.
       // Environment Variables
       // GOOGLE_REGION (optional)
       // GOOGLE_PROJECT
-      // GOOGLE_CREDENTIALS	(The path to a service account key file with the
-      //				        "Service Account Admin", "Service Account Key
-      //					    Admin", and "Security Admin" roles attached)
+      // GOOGLE_CREDENTIALS (The path to a service account key file with the
+      //                    "Service Account Admin", "Service Account Key Admin",
+      //                    "Secret Manager Admin", and "Project IAM Admin" roles
+      //                    attached)
   }
 
   data "google_client_config" "config" {}
