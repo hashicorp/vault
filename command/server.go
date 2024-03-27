@@ -1546,19 +1546,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	core.SetSealReloadFunc(func(ctx context.Context) error {
-		// This function performs the same seal reloading functionality as in the SIGHUP handler below.
-		config, _, err := c.reloadConfigFiles()
-		if err != nil {
-			return err
-		}
-		if config == nil {
-			return errors.New("no config found at reload time")
-		}
-		reloaded, err := c.reloadSeals(ctx, false, core, config)
-		if reloaded {
-			core.SetConfig(config)
-		}
-		return err
+		return c.reloadSealsOnLeaderActivation(ctx, core)
 	})
 
 	// Output the header that the server has started
@@ -1662,7 +1650,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 			// Note that seal reloading can also be triggered via Core.TriggerSealReload.
 			// See the call to Core.SetSealReloadFunc above.
-			if reloaded, err := c.reloadSealsLocking(ctx, core, config); err != nil {
+			if reloaded, err := c.reloadSealsOnSigHup(ctx, core, config); err != nil {
 				c.UI.Error(fmt.Errorf("error reloading seal config: %s", err).Error())
 				config.Seals = core.GetCoreConfigInternal().Seals
 				goto RUNRELOADFUNCS
@@ -3376,7 +3364,46 @@ func startHttpServers(c *ServerCommand, core *vault.Core, config *server.Config,
 	return nil
 }
 
-func (c *ServerCommand) reloadSealsLocking(ctx context.Context, core *vault.Core, config *server.Config) (bool, error) {
+// reloadSealsOnLeaderActivation checks to see if the in-memory seal generation info is stale, and if so,
+// reloads the seal configuration.
+func (c *ServerCommand) reloadSealsOnLeaderActivation(ctx context.Context, core *vault.Core) error {
+	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(ctx, core.PhysicalAccess())
+	if err != nil {
+		return fmt.Errorf("error checking for stale seal generation info: %w", err)
+	}
+	if existingSealGenerationInfo == nil {
+		c.logger.Debug("not reloading seals config since there is no seal generation info in storage")
+		return nil
+	}
+
+	currentSealGenerationInfo := core.SealAccess().GetAccess().GetSealGenerationInfo()
+	if currentSealGenerationInfo == nil {
+		c.logger.Debug("not reloading seal config since there is no current generation info (the seal has not been initialized)")
+		return nil
+	}
+	if currentSealGenerationInfo.Generation >= existingSealGenerationInfo.Generation {
+		c.logger.Debug("seal generation info is up to date, not reloading seal configuration")
+		return nil
+	}
+
+	// Reload seal configuration
+
+	config, _, err := c.reloadConfigFiles()
+	if err != nil {
+		return fmt.Errorf("error reading configuration files while reloading seal configuration: %w", err)
+	}
+	if config == nil {
+		return errors.New("no configuration files found while reloading seal configuration")
+	}
+	reloaded, err := c.reloadSeals(ctx, false, core, config)
+	if reloaded {
+		core.SetConfig(config)
+	}
+	return err
+}
+
+// reloadSealsOnSigHup will reload seal configurtion as a result of receiving a SIGHUP signal.
+func (c *ServerCommand) reloadSealsOnSigHup(ctx context.Context, core *vault.Core, config *server.Config) (bool, error) {
 	return c.reloadSeals(ctx, true, core, config)
 }
 
@@ -3385,38 +3412,39 @@ func (c *ServerCommand) reloadSealsLocking(ctx context.Context, core *vault.Core
 // in the seal configuration files.
 // This function returns true if the newConfig was used to re-create the Seal.Access() objects. In other words,
 // if false is returned, there were no changes done to the seals.
-func (c *ServerCommand) reloadSeals(ctx context.Context, grabStateLock bool, core *vault.Core, newConfig *server.Config) (ret bool, err error) {
-	defer func() {
-		if err != nil {
-			// We do not log here, as the error will be logged higher in the call chain
-			return
-		}
-		if ret {
-			c.logger.Info("seal configuration reloaded successfully")
-		} else {
-			c.logger.Info("seal configuration was not reloaded")
-		}
-	}()
-
+func (c *ServerCommand) reloadSeals(ctx context.Context, grabStateLock bool, core *vault.Core, newConfig *server.Config) (bool, error) {
 	if core.IsInSealMigrationMode(grabStateLock) {
+		c.logger.Debug("not reloading seal configuration since Vault is in migration mode")
 		return false, nil
 	}
 
 	currentConfig := core.GetCoreConfigInternal()
 
-	// we need to persist seal information if multiseal is being enabled
-	addEnableMultiseal := !currentConfig.IsMultisealEnabled() && newConfig.IsMultisealEnabled()
+	// We only want to reload if multiseal is currently enabled, or it is being enabled
+	if !(currentConfig.IsMultisealEnabled() || newConfig.IsMultisealEnabled()) {
+		c.logger.Debug("not reloading seal configuration since enable_multiseal is not set, nor is it being disabled")
+		return false, nil
+	}
+
+	if conf, err := core.PhysicalBarrierSealConfig(ctx); err != nil {
+		return false, fmt.Errorf("error reading barrier seal configuration from storage while reloading seals: %w", err)
+	} else if conf == nil {
+		c.logger.Debug("not reloading seal configuration since there is no barrier config in storage (the seal has not been initialized)")
+		return false, nil
+	}
 
 	if core.SealAccess().BarrierSealConfigType() == vault.SealConfigTypeShamir {
 		switch {
 		case len(newConfig.Seals) == 0:
 			// We are fine, our ServerCommand.reloadConfigFiles() does not do the "automagic" creation
 			// of the Shamir seal configuration.
+			c.logger.Debug("not reloading seal configuration since the new one has no seal stanzas")
 			return false, nil
 
 		case len(newConfig.Seals) == 1 && newConfig.Seals[0].Disabled:
 			// If we have only one seal and it is disabled, it means that the newConfig wants to migrate
 			// to Shamir, which is not supported by seal reloading.
+			c.logger.Debug("not reloading seal configuration since the new one specifies migration to Shamir")
 			return false, nil
 
 		case len(newConfig.Seals) == 1 && newConfig.Seals[0].Type == vault.SealConfigTypeShamir.String():
@@ -3424,24 +3452,23 @@ func (c *ServerCommand) reloadSeals(ctx context.Context, grabStateLock bool, cor
 			// is specified in configuration by *not* having a seal stanza. If we were to hit this
 			// case, though, it is equivalent to trying to migrate to Shamir, which is not supported
 			// by seal reloading.
+			c.logger.Debug("not reloading seal configuration since the new one has single Shamir stanza")
 			return false, nil
 		}
-	}
-
-	if cmp.Equal(currentConfig.Seals, newConfig.Seals) && !addEnableMultiseal {
-		return false, nil
 	}
 
 	// Verify that the new config we picked up is not trying to migrate from autoseal to shamir
 	if len(newConfig.Seals) == 1 && newConfig.Seals[0].Disabled {
 		// If we get here, it means the node was not started in migration mode, but the new config says
-		// we should go into migration mode.
-		return false, errors.New("moving from autoseal to shamir requires seal migration")
+		// we should go into migration mode. This case should be caught by the core.IsInSealMigrationMode()
+		// above.
+
+		return false, errors.New("not reloading seal configuration: moving from autoseal to shamir requires seal migration")
 	}
 
 	// Verify that the new config we picked up is not trying to migrate shamir to autoseal
 	if core.SealAccess().BarrierSealConfigType() == vault.SealConfigTypeShamir {
-		return false, errors.New("moving from shamir to autoseal requires seal migration")
+		return false, errors.New("not reloading seal configuration: moving from Shamir to autoseal requires seal migration")
 	}
 
 	infoKeysReload := make([]string, 0)
@@ -3450,10 +3477,10 @@ func (c *ServerCommand) reloadSeals(ctx context.Context, grabStateLock bool, cor
 	core.SetMultisealEnabled(newConfig.IsMultisealEnabled())
 	setSealResponse, secureRandomReader, err := c.configureSeals(ctx, newConfig, core.PhysicalAccess(), infoKeysReload, infoReload)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("error reloading seal configuration: %w", err)
 	}
 	if setSealResponse.sealConfigError != nil {
-		return false, err
+		return false, fmt.Errorf("error reloading seal configuration: %w", setSealResponse.sealConfigError)
 	}
 
 	newGen := setSealResponse.barrierSeal.GetAccess().GetSealGenerationInfo()
@@ -3469,6 +3496,8 @@ func (c *ServerCommand) reloadSeals(ctx context.Context, grabStateLock bool, cor
 
 	// finalize the old seals and set the new seals as the current ones
 	c.setSealsToFinalize(setSealResponse.getCreatedSeals())
+
+	c.logger.Debug("seal configuration reloaded successfully")
 
 	return true, nil
 }

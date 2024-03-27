@@ -52,6 +52,11 @@ const (
 	mountTableType = "mounts"
 )
 
+func init() {
+	// Register the keys we use for mount tables
+	registerMountOrNamespaceTablePaths(coreMountConfigPath, coreLocalMountConfigPath)
+}
+
 // ListingVisibilityType represents the types for listing visibility
 type ListingVisibilityType string
 

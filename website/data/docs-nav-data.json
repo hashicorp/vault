@@ -365,7 +365,7 @@
           {
             "title": "High Availability",
             "badge": {
-              "text": "ENTERPRISE",
+              "text": "BETA",
               "type": "outlined",
               "color": "highlight"
             },
@@ -783,6 +783,10 @@
           {
             "title": "<code>generate-root</code>",
             "path": "commands/operator/generate-root"
+          },
+          {
+            "title": "<code>import</code>",
+            "path": "commands/operator/import"
           },
           {
             "title": "<code>init</code>",
@@ -1664,6 +1668,33 @@
     ]
   },
   {
+    "title": "Secrets Import",
+    "badge": {
+      "text": "ENTERPRISE",
+      "type": "outlined",
+      "color": "neutral"
+    },
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "import",
+        "badge": {
+          "text": "ALPHA",
+          "type": "outlined",
+          "color": "highlight"
+        }
+      },
+      {
+        "title": "GCP Secret Manager",
+        "path": "import/gcpsm"
+      },
+      {
+        "title": "Mappings",
+        "path": "import/mappings"
+      }
+    ]
+  },
+  {
     "title": "Auth Methods",
     "routes": [
       {
@@ -2240,6 +2271,10 @@
       {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
+      },
+      {
+        "title": "Upgrade to Raft WAL",
+        "path": "upgrading/raft-wal"
       },
       {
         "title": "Upgrade to 1.16.x",
