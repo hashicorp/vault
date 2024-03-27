@@ -1747,10 +1747,8 @@ func (b *SystemBackend) handleReadMount(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
-// used to intercept an HTTPCodedError so it goes back to callee
-func handleError(
-	err error,
-) (*logical.Response, error) {
+// handleError is used to intercept an HTTPCodedError, so it goes back to callee.
+func handleError(err error) (*logical.Response, error) {
 	if strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
 		return logical.ErrorResponse(err.Error()), err
 	}
@@ -3894,8 +3892,9 @@ func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Requ
 
 	// Attempt enabling
 	if err := b.Core.enableAudit(ctx, me, true); err != nil {
-		b.Backend.Logger().Error("enable audit mount failed", "path", me.Path, "error", err)
-		return handleError(err)
+		b.Backend.Logger().Error("enable audit mount failed", "path", me.Path, "error", err.Internal())
+		// TODO: PW: Can we 'handle error' on an External() error here?
+		return handleError(err.External())
 	}
 	return nil, nil
 }
@@ -3936,6 +3935,7 @@ func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Req
 	// Attempt disable
 	if existed, err := b.Core.disableAudit(ctx, path, true); existed && err != nil {
 		b.Backend.Logger().Error("disable audit mount failed", "path", path, "error", err)
+		// TODO: PW: Can we 'handle error' on an External() error here?
 		return handleError(err)
 	}
 	return nil, nil

@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -48,30 +47,30 @@ type EntryFormatter struct {
 
 // NewEntryFormatter should be used to create an EntryFormatter.
 // Accepted options: WithHeaderFormatter, WithPrefix.
-func NewEntryFormatter(name string, config FormatterConfig, salter Salter, logger hclog.Logger, opt ...Option) (*EntryFormatter, error) {
+func NewEntryFormatter(name string, config FormatterConfig, salter Salter, logger hclog.Logger, opt ...Option) (*EntryFormatter, *AuditError) {
 	const op = "audit.NewEntryFormatter"
 
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return nil, fmt.Errorf("%s: name is required: %w", op, event.ErrInvalidParameter)
+		return nil, NewAuditError(op, "name is required", ErrInvalidParameter)
 	}
 
 	if salter == nil {
-		return nil, fmt.Errorf("%s: cannot create a new audit formatter with nil salter: %w", op, event.ErrInvalidParameter)
+		return nil, NewAuditError(op, "cannot create a new audit formatter with nil salter", ErrInvalidParameter)
 	}
 
 	if logger == nil || reflect.ValueOf(logger).IsNil() {
-		return nil, fmt.Errorf("%s: cannot create a new audit formatter with nil logger: %w", op, event.ErrInvalidParameter)
+		return nil, NewAuditError(op, "cannot create a new audit formatter with nil logger", ErrInvalidParameter)
 	}
 
 	// We need to ensure that the format isn't just some default empty string.
 	if err := config.RequiredFormat.validate(); err != nil {
-		return nil, fmt.Errorf("%s: format not valid: %w", op, err)
+		return nil, NewAuditError(op, "format is not valid", ErrInvalidParameter).SetUpstream(err)
 	}
 
 	opts, err := getOpts(opt...)
 	if err != nil {
-		return nil, fmt.Errorf("%s: error applying options: %w", op, err)
+		return nil, NewAuditError(op, "error applying options", ErrInvalidParameter).SetUpstream(err)
 	}
 
 	return &EntryFormatter{
@@ -110,16 +109,16 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 	// Perform validation on the event, then retrieve the underlying AuditEvent
 	// and LogInput (from the AuditEvent Data).
 	if e == nil {
-		return nil, fmt.Errorf("%s: event is nil: %w", op, event.ErrInvalidParameter)
+		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
 	}
 
 	a, ok := e.Payload.(*AuditEvent)
 	if !ok {
-		return nil, fmt.Errorf("%s: cannot parse event payload: %w", op, event.ErrInvalidParameter)
+		return nil, fmt.Errorf("%s: cannot parse event payload: %w", op, ErrInvalidParameter)
 	}
 
 	if a.Data == nil {
-		return nil, fmt.Errorf("%s: cannot audit event (%s) with no data: %w", op, a.Subtype, event.ErrInvalidParameter)
+		return nil, fmt.Errorf("%s: cannot audit event (%s) with no data: %w", op, a.Subtype, ErrInvalidParameter)
 	}
 
 	// Handle panics
@@ -578,12 +577,12 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 
 // NewFormatterConfig should be used to create a FormatterConfig.
 // Accepted options: WithElision, WithHMACAccessor, WithOmitTime, WithRaw, WithFormat.
-func NewFormatterConfig(opt ...Option) (FormatterConfig, error) {
+func NewFormatterConfig(opt ...Option) (FormatterConfig, *AuditError) {
 	const op = "audit.NewFormatterConfig"
 
 	opts, err := getOpts(opt...)
 	if err != nil {
-		return FormatterConfig{}, fmt.Errorf("%s: error applying options: %w", op, err)
+		return FormatterConfig{}, NewAuditError(op, "error applying options", ErrInvalidParameter).SetUpstream(err)
 	}
 
 	return FormatterConfig{

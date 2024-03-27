@@ -49,18 +49,18 @@ type AuditBroker struct {
 }
 
 // NewAuditBroker creates a new audit broker
-func NewAuditBroker(log hclog.Logger) (*AuditBroker, error) {
+func NewAuditBroker(log hclog.Logger) (*AuditBroker, *audit.AuditError) {
 	const op = "vault.NewAuditBroker"
 
 	eventBroker, err := eventlogger.NewBroker()
 	if err != nil {
-		return nil, fmt.Errorf("%s: error creating event broker for audit events: %w", op, err)
+		return nil, audit.NewAuditError(op, "error creating event broker for audit events", audit.ErrUnknown).SetUpstream(err)
 	}
 
 	// Set up the broker that will support a single fallback device.
 	fallbackEventBroker, err := eventlogger.NewBroker()
 	if err != nil {
-		return nil, fmt.Errorf("%s: error creating event fallback broker for audit event: %w", op, err)
+		return nil, audit.NewAuditError(op, "error creating event fallback broker for audit events", audit.ErrUnknown).SetUpstream(err)
 	}
 
 	broker := &AuditBroker{
@@ -74,7 +74,7 @@ func NewAuditBroker(log hclog.Logger) (*AuditBroker, error) {
 }
 
 // Register is used to add new audit backend to the broker
-func (a *AuditBroker) Register(name string, backend audit.Backend, local bool) error {
+func (a *AuditBroker) Register(name string, backend audit.Backend, local bool) *audit.AuditError {
 	const op = "vault.(AuditBroker).Register"
 
 	a.Lock()
@@ -82,38 +82,38 @@ func (a *AuditBroker) Register(name string, backend audit.Backend, local bool) e
 
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return fmt.Errorf("%s: name is required: %w", op, event.ErrInvalidParameter)
+		return audit.NewAuditError(op, "name is required", audit.ErrInvalidParameter)
 	}
 
 	// If the backend is already registered, we cannot re-register it.
 	if a.isRegistered(name) {
-		return fmt.Errorf("%s: backend already registered '%s'", op, name)
+		return audit.NewAuditError(op, fmt.Sprintf("backend already registered %q", name), audit.ErrConflict)
 	}
 
 	// Fallback devices are singleton instances, we cannot register more than one or overwrite the existing one.
 	if backend.IsFallback() && a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
 		existing, err := a.existingFallbackName()
 		if err != nil {
-			return fmt.Errorf("%s: existing fallback device already registered: %w", op, err)
+			return audit.NewAuditError(op, "existing fallback device already registered", audit.ErrConflict).SetUpstream(err)
 		}
 
-		return fmt.Errorf("%s: existing fallback device already registered: %q", op, existing)
+		return audit.NewAuditError(op, fmt.Sprintf("existing fallback device already registered %q", existing), audit.ErrConflict)
 	}
 
 	if name != backend.Name() {
-		return fmt.Errorf("%s: audit registration failed due to device name mismatch: %q, %q", op, name, backend.Name())
+		return audit.NewAuditError(op, fmt.Sprintf("audit registration failed due to device name mismatch: %q, %q", name, backend.Name()), audit.ErrBrokerRegistration)
 	}
 
 	switch {
 	case backend.IsFallback():
 		err := a.registerFallback(name, backend)
 		if err != nil {
-			return fmt.Errorf("%s: unable to register fallback device for %q: %w", op, name, err)
+			return audit.NewAuditError(op, fmt.Sprintf("unable to register fallback device for %q", name), audit.ErrBrokerRegistration).SetUpstream(err)
 		}
 	default:
 		err := a.register(name, backend)
 		if err != nil {
-			return fmt.Errorf("%s: unable to register device for %q: %w", op, name, err)
+			return audit.NewAuditError(op, fmt.Sprintf("unable to register device for %q", name), audit.ErrBrokerRegistration).SetUpstream(err)
 		}
 	}
 
@@ -134,7 +134,7 @@ func (a *AuditBroker) Deregister(ctx context.Context, name string) error {
 
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return fmt.Errorf("%s: name is required: %w", op, event.ErrInvalidParameter)
+		return fmt.Errorf("%s: name is required: %w", op, audit.ErrInvalidParameter)
 	}
 
 	// If the backend isn't actually registered, then there's nothing to do.

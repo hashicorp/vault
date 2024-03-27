@@ -73,7 +73,7 @@ func TestBackend_formatterConfig(t *testing.T) {
 			},
 			want:           audit.FormatterConfig{},
 			wantErr:        true,
-			expectedErrMsg: "socket.formatterConfig: unable to parse 'hmac_accessor': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedErrMsg: "socket.newFormatterConfig: unable to parse 'hmac_accessor': strconv.ParseBool: parsing \"maybe\": invalid syntax",
 		},
 		"invalid-log-raw": {
 			config: map[string]string{
@@ -83,7 +83,7 @@ func TestBackend_formatterConfig(t *testing.T) {
 			},
 			want:           audit.FormatterConfig{},
 			wantErr:        true,
-			expectedErrMsg: "socket.formatterConfig: unable to parse 'log_raw': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedErrMsg: "socket.newFormatterConfig: unable to parse 'log_raw': strconv.ParseBool: parsing \"maybe\": invalid syntax",
 		},
 		"invalid-elide-bool": {
 			config: map[string]string{
@@ -94,7 +94,7 @@ func TestBackend_formatterConfig(t *testing.T) {
 			},
 			want:           audit.FormatterConfig{},
 			wantErr:        true,
-			expectedErrMsg: "socket.formatterConfig: unable to parse 'elide_list_responses': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedErrMsg: "socket.newFormatterConfig: unable to parse 'elide_list_responses': strconv.ParseBool: parsing \"maybe\": invalid syntax",
 		},
 	}
 	for name, tc := range tests {
@@ -103,12 +103,12 @@ func TestBackend_formatterConfig(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := formatterConfig(tc.config)
+			got, err := newFormatterConfig(tc.config)
 			if tc.wantErr {
 				require.Error(t, err)
 				require.EqualError(t, err, tc.expectedErrMsg)
 			} else {
-				require.NoError(t, err)
+				require.Nil(t, err)
 			}
 			require.Equal(t, tc.want, got)
 		})
@@ -126,11 +126,10 @@ func TestBackend_configureFormatterNode(t *testing.T) {
 	}
 
 	formatConfig, err := audit.NewFormatterConfig()
-	require.NoError(t, err)
+	require.Nil(t, err)
 
-	err = b.configureFormatterNode("juan", formatConfig, hclog.NewNullLogger())
-
-	require.NoError(t, err)
+	fmtNodeErr := b.configureFormatterNode("juan", formatConfig, hclog.NewNullLogger())
+	require.Nil(t, fmtNodeErr)
 	require.Len(t, b.nodeIDList, 1)
 	require.Len(t, b.nodeMap, 1)
 	id := b.nodeIDList[0]
@@ -248,14 +247,14 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				SaltConfig: nil,
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "socket.Factory: nil salt config",
+			expectedErrorMessage: "socket.Factory: nil salt config: invalid parameter",
 		},
 		"nil-salt-view": {
 			backendConfig: &audit.BackendConfig{
 				SaltConfig: &salt.Config{},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "socket.Factory: nil salt view",
+			expectedErrorMessage: "socket.Factory: nil salt view: invalid parameter",
 		},
 		"nil-logger": {
 			backendConfig: &audit.BackendConfig{
@@ -265,7 +264,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				Logger:     nil,
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "socket.Factory: nil logger",
+			expectedErrorMessage: "socket.Factory: nil logger: invalid parameter",
 		},
 		"no-address": {
 			backendConfig: &audit.BackendConfig{
@@ -276,7 +275,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				Config:     map[string]string{},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "socket.Factory: address is required",
+			expectedErrorMessage: "socket.Factory: address is required: invalid parameter",
 		},
 		"empty-address": {
 			backendConfig: &audit.BackendConfig{
@@ -377,7 +376,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				require.Error(t, err)
 				require.EqualError(t, err, tc.expectedErrorMessage)
 			default:
-				require.NoError(t, err)
+				require.Nil(t, err)
 				require.NotNil(t, be)
 			}
 		})
@@ -432,7 +431,7 @@ func TestBackend_IsFallback(t *testing.T) {
 			t.Parallel()
 
 			be, err := Factory(ctx, tc.backendConfig, nil)
-			require.NoError(t, err)
+			require.Nil(t, err)
 			require.NotNil(t, be)
 			require.Equal(t, tc.isFallbackExpected, be.IsFallback())
 		})

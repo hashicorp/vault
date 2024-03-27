@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-bexpr"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -26,17 +25,17 @@ type EntryFilter struct {
 
 // NewEntryFilter should be used to create an EntryFilter node.
 // The filter supplied should be in bexpr format and reference fields from logical.LogInputBexpr.
-func NewEntryFilter(filter string) (*EntryFilter, error) {
+func NewEntryFilter(filter string) (*EntryFilter, *AuditError) {
 	const op = "audit.NewEntryFilter"
 
 	filter = strings.TrimSpace(filter)
 	if filter == "" {
-		return nil, fmt.Errorf("%s: cannot create new audit filter with empty filter expression: %w", op, event.ErrInvalidParameter)
+		return nil, NewAuditError(op, "cannot create new audit filter with empty filter expression", ErrFilterParameter)
 	}
 
 	eval, err := bexpr.CreateEvaluator(filter)
 	if err != nil {
-		return nil, fmt.Errorf("%s: cannot create new audit filter: %w", op, err)
+		return nil, NewAuditError(op, "cannot create new audit filter", ErrFilterParameter).SetUpstream(err)
 	}
 
 	// Validate the filter by attempting to evaluate it with an empty input.
@@ -45,7 +44,7 @@ func NewEntryFilter(filter string) (*EntryFilter, error) {
 	li := logical.LogInputBexpr{}
 	_, err = eval.Evaluate(li)
 	if err != nil {
-		return nil, fmt.Errorf("%s: filter references an unsupported field: %s", op, filter)
+		return nil, NewAuditError(op, fmt.Sprintf("filter references an unsupported field: %s", filter), ErrFilterParameter).SetUpstream(err)
 	}
 
 	return &EntryFilter{evaluator: eval}, nil
@@ -73,12 +72,12 @@ func (f *EntryFilter) Process(ctx context.Context, e *eventlogger.Event) (*event
 	}
 
 	if e == nil {
-		return nil, fmt.Errorf("%s: event is nil: %w", op, event.ErrInvalidParameter)
+		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
 	}
 
 	a, ok := e.Payload.(*AuditEvent)
 	if !ok {
-		return nil, fmt.Errorf("%s: cannot parse event payload: %w", op, event.ErrInvalidParameter)
+		return nil, fmt.Errorf("%s: cannot parse event payload: %w", op, ErrInvalidParameter)
 	}
 
 	// If we don't have data to process, then we're done.

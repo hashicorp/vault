@@ -28,7 +28,7 @@ import (
 
 func TestAudit_ReadOnlyViewDuringMount(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, *audit.AuditError) {
 		err := config.SaltView.Put(ctx, &logical.StorageEntry{
 			Key:   "bar",
 			Value: []byte("baz"),
@@ -60,9 +60,9 @@ func TestCore_EnableAudit(t *testing.T) {
 		Path:  "foo",
 		Type:  "noop",
 	}
-	err := c.enableAudit(namespace.RootContext(context.Background()), me, true)
-	if err != nil {
-		t.Fatalf("err: %v", err)
+	auditErr := c.enableAudit(namespace.RootContext(context.Background()), me, true)
+	if auditErr != nil {
+		t.Fatalf("err: %v", auditErr)
 	}
 
 	if !c.auditBroker.IsRegistered("foo/") {
@@ -104,8 +104,8 @@ func TestCore_EnableAudit(t *testing.T) {
 func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
-	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
-		return nil, fmt.Errorf("failing enabling")
+	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, *audit.AuditError) {
+		return nil, audit.NewAuditError("tests", "failing enabling", audit.ErrUnknown)
 	}
 
 	c.audit = &MountTable{
@@ -153,8 +153,8 @@ func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 func TestCore_EnableAudit_Local(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
-	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
-		return nil, fmt.Errorf("failing enabling")
+	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, *audit.AuditError) {
+		return nil, audit.NewAuditError("tests", "failing enabling", audit.ErrUnknown)
 	}
 
 	c.audit = &MountTable{
@@ -250,9 +250,9 @@ func TestCore_DisableAudit(t *testing.T) {
 		Path:  "foo",
 		Type:  "noop",
 	}
-	err = c.enableAudit(namespace.RootContext(context.Background()), me, true)
-	if err != nil {
-		t.Fatalf("err: %v", err)
+	enableErr := c.enableAudit(namespace.RootContext(context.Background()), me, true)
+	if enableErr != nil {
+		t.Fatalf("err: %v", enableErr)
 	}
 
 	existed, err = c.disableAudit(namespace.RootContext(context.Background()), "foo", true)
@@ -341,16 +341,16 @@ func verifyDefaultAuditTable(t *testing.T, table *MountTable) {
 
 func TestAuditBroker_LogRequest(t *testing.T) {
 	l := logging.NewVaultLogger(log.Trace)
-	b, err := NewAuditBroker(l)
-	if err != nil {
-		t.Fatal(err)
+	b, brokerErr := NewAuditBroker(l)
+	if brokerErr != nil {
+		t.Fatal(brokerErr)
 	}
 	a1 := corehelpers.TestNoopAudit(t, "foo", nil)
 	a2 := corehelpers.TestNoopAudit(t, "bar", nil)
-	err = b.Register("foo", a1, false)
-	require.NoError(t, err)
-	err = b.Register("bar", a2, false)
-	require.NoError(t, err)
+	brokerErr = b.Register("foo", a1, false)
+	require.Nil(t, brokerErr)
+	brokerErr = b.Register("bar", a2, false)
+	require.Nil(t, brokerErr)
 
 	auth := &logical.Auth{
 		ClientToken: "foo",
@@ -429,16 +429,16 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 
 func TestAuditBroker_LogResponse(t *testing.T) {
 	l := logging.NewVaultLogger(log.Trace)
-	b, err := NewAuditBroker(l)
-	if err != nil {
-		t.Fatal(err)
+	b, brokerErr := NewAuditBroker(l)
+	if brokerErr != nil {
+		t.Fatal(brokerErr)
 	}
 	a1 := corehelpers.TestNoopAudit(t, "foo", nil)
 	a2 := corehelpers.TestNoopAudit(t, "bar", nil)
-	err = b.Register("foo", a1, false)
-	require.NoError(t, err)
-	err = b.Register("bar", a2, false)
-	require.NoError(t, err)
+	brokerErr = b.Register("foo", a1, false)
+	require.Nil(t, brokerErr)
+	brokerErr = b.Register("bar", a2, false)
+	require.Nil(t, brokerErr)
 
 	auth := &logical.Auth{
 		NumUses:     10,
@@ -533,9 +533,9 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 func TestAuditBroker_AuditHeaders(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Trace)
 
-	b, err := NewAuditBroker(logger)
-	if err != nil {
-		t.Fatal(err)
+	b, brokerErr := NewAuditBroker(logger)
+	if brokerErr != nil {
+		t.Fatal(brokerErr)
 	}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "headers/")
@@ -543,7 +543,7 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	headersConf := &AuditedHeadersConfig{
 		view: view,
 	}
-	err = headersConf.add(context.Background(), "X-Test-Header", false)
+	err := headersConf.add(context.Background(), "X-Test-Header", false)
 	require.NoError(t, err)
 	err = headersConf.add(context.Background(), "X-Vault-Header", false)
 	require.NoError(t, err)
@@ -552,9 +552,9 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	a2 := corehelpers.TestNoopAudit(t, "bar", nil, audit.WithHeaderFormatter(headersConf))
 
 	err = b.Register("foo", a1, false)
-	require.NoError(t, err)
+	require.Nil(t, err)
 	err = b.Register("bar", a2, false)
-	require.NoError(t, err)
+	require.Nil(t, err)
 
 	auth := &logical.Auth{
 		ClientToken: "foo",

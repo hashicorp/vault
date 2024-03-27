@@ -21,8 +21,7 @@ import (
 )
 
 // testAuditBackend will create an audit.Backend (which expects to use the eventlogger).
-// NOTE: this will create the backend, it does not care whether or not Enterprise
-// only options are in place.
+// NOTE: this will create the backend, it does not care whether Enterprise-only options are in place.
 func testAuditBackend(t *testing.T, path string, config map[string]string) audit.Backend {
 	t.Helper()
 
@@ -48,7 +47,7 @@ func testAuditBackend(t *testing.T, path string, config map[string]string) audit
 	}
 
 	be, err := syslog.Factory(context.Background(), cfg, headersCfg)
-	require.NoError(t, err)
+	require.Nil(t, err)
 	require.NotNil(t, be)
 
 	return be
@@ -60,11 +59,11 @@ func TestAuditBroker_Deregister_Multiple(t *testing.T) {
 	t.Parallel()
 
 	l := corehelpers.NewTestLogger(t)
-	a, err := NewAuditBroker(l)
-	require.NoError(t, err)
+	a, brokerErr := NewAuditBroker(l)
+	require.Nil(t, brokerErr)
 	require.NotNil(t, a)
 
-	err = a.Deregister(context.Background(), "foo")
+	err := a.Deregister(context.Background(), "foo")
 	require.NoError(t, err)
 
 	err = a.Deregister(context.Background(), "foo2")
@@ -78,17 +77,17 @@ func TestAuditBroker_Register_MultipleFails(t *testing.T) {
 
 	l := corehelpers.NewTestLogger(t)
 	a, err := NewAuditBroker(l)
-	require.NoError(t, err)
+	require.Nil(t, err)
 	require.NotNil(t, a)
 
 	path := "b2-no-filter"
 	noFilterBackend := testAuditBackend(t, path, map[string]string{})
 
 	err = a.Register(path, noFilterBackend, false)
-	require.NoError(t, err)
+	require.Nil(t, err)
 
 	err = a.Register(path, noFilterBackend, false)
-	require.Error(t, err)
+	require.Nil(t, err)
 	require.EqualError(t, err, "vault.(AuditBroker).Register: backend already registered 'b2-no-filter'")
 }
 
@@ -118,14 +117,14 @@ func BenchmarkAuditBroker_File_Request_DevNull(b *testing.B) {
 		Logger:     hclog.NewNullLogger(),
 	}
 
-	sink, err := file.Factory(context.Background(), backendConfig, nil)
-	require.NoError(b, err)
+	sink, factoryErr := file.Factory(context.Background(), backendConfig, nil)
+	require.NoError(b, factoryErr)
 
-	broker, err := NewAuditBroker(nil)
-	require.NoError(b, err)
+	broker, brokerErr := NewAuditBroker(nil)
+	require.Nil(b, brokerErr)
 
-	err = broker.Register("test", sink, false)
-	require.NoError(b, err)
+	regErr := broker.Register("test", sink, false)
+	require.Nil(b, regErr)
 
 	in := &logical.LogInput{
 		Auth: &logical.Auth{

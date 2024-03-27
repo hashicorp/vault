@@ -2669,7 +2669,7 @@ func TestSystemBackend_enableAudit(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
 	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo/")
 	req.Data["type"] = "noop"
 
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)

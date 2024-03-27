@@ -83,19 +83,19 @@ func (a *AuditEvent) validate() error {
 	const op = "audit.(AuditEvent).validate"
 
 	if a == nil {
-		return fmt.Errorf("%s: event is nil: %w", op, event.ErrInvalidParameter)
+		return fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
 	}
 
 	if a.ID == "" {
-		return fmt.Errorf("%s: missing ID: %w", op, event.ErrInvalidParameter)
+		return fmt.Errorf("%s: missing ID: %w", op, ErrInvalidParameter)
 	}
 
 	if a.Version != version {
-		return fmt.Errorf("%s: event version unsupported: %w", op, event.ErrInvalidParameter)
+		return fmt.Errorf("%s: event version unsupported: %w", op, ErrInvalidParameter)
 	}
 
 	if a.Timestamp.IsZero() {
-		return fmt.Errorf("%s: event timestamp cannot be the zero time instant: %w", op, event.ErrInvalidParameter)
+		return fmt.Errorf("%s: event timestamp cannot be the zero time instant: %w", op, ErrInvalidParameter)
 	}
 
 	err := a.Subtype.validate()
@@ -113,7 +113,7 @@ func (t subtype) validate() error {
 	case RequestType, ResponseType:
 		return nil
 	default:
-		return fmt.Errorf("%s: '%s' is not a valid event subtype: %w", op, t, event.ErrInvalidParameter)
+		return fmt.Errorf("%s: '%s' is not a valid event subtype: %w", op, t, ErrInvalidParameter)
 	}
 }
 
@@ -124,7 +124,7 @@ func (f format) validate() error {
 	case JSONFormat, JSONxFormat:
 		return nil
 	default:
-		return fmt.Errorf("%s: '%s' is not a valid format: %w", op, f, event.ErrInvalidParameter)
+		return fmt.Errorf("%s: '%s' is not a valid format: %w", op, f, ErrInvalidParameter)
 	}
 }
 
