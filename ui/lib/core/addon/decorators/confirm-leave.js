@@ -71,6 +71,7 @@ export function withConfirmLeave(modelPath = 'model', silentCleanupPaths) {
           // defined calling it will throw an error.
         }
         const model = this.controller.get(modelPath);
+
         if (model && model.hasDirtyAttributes && !model.isSaving) {
           if (
             Ember.testing ||

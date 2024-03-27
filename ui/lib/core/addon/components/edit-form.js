@@ -20,6 +20,8 @@ export default Component.extend({
   modelValidations: null,
   // public API
   model: null,
+  successMessage: 'Saved!',
+  deleteSuccessMessage: 'Deleted!',
   deleteButtonText: 'Delete',
   saveButtonText: 'Save',
   cancelButtonText: 'Cancel',
@@ -53,7 +55,7 @@ export default Component.extend({
   save: task(
     waitFor(function* (model, options = { method: 'save' }) {
       const { method } = options;
-      const message = method === 'save' ? 'Saved!' : 'Deleted!';
+      const messageKey = method === 'save' ? 'successMessage' : 'deleteSuccessMessage';
       if (method === 'save' && !this.checkModelValidity(model)) {
         // if saving and model invalid, don't continue
         return;
@@ -69,7 +71,7 @@ export default Component.extend({
         return;
       }
       if (this.flashEnabled) {
-        this.flashMessages.success(message);
+        this.flashMessages.success(this[messageKey]);
       }
       if (this.callOnSaveAfterRender) {
         next(() => {

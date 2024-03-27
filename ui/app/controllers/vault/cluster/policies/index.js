@@ -62,7 +62,7 @@ export default Controller.extend({
       this.set('filterFocused', bool);
     },
     deletePolicy(model) {
-      const policyType = model.policyType;
+      const { policyType } = model;
       const name = model.id;
       const flash = this.flashMessages;
       model
