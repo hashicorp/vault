@@ -54,7 +54,7 @@ export function withConfirmLeave(modelPath = 'model', silentCleanupPaths) {
       @service store;
 
       _rollbackModel(modelPath) {
-        const model = this.controller.get(modelPath);
+        const model = this.controller[modelPath];
         // we only want to complete rollback if the model is dirty and not saving
         if (model && model.hasDirtyAttributes && !model.isSaving) {
           const method = model.isNew ? 'unloadRecord' : 'rollbackAttributes';
@@ -70,7 +70,7 @@ export function withConfirmLeave(modelPath = 'model', silentCleanupPaths) {
           // if the SuperClass doesn't have willTransition
           // defined calling it will throw an error.
         }
-        const model = this.controller.get(modelPath);
+        const model = this.controller[modelPath];
 
         if (model && model.hasDirtyAttributes && !model.isSaving) {
           if (
