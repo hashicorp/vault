@@ -64,7 +64,7 @@ export default class StoreService extends Store {
   }
 
   lazyCacheForModel(modelName) {
-    return this.lazyCaches[normalizeModelName(modelName)];
+    return this.lazyCaches.get(normalizeModelName(modelName));
   }
 
   // This is the public interface for the store extension - to be used just
