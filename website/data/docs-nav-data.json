@@ -2673,6 +2673,10 @@
         ]
       },
       {
+        "title": "Long-term support",
+        "path": "enterprise/lts"
+      },
+      {
         "title": "Replication",
         "routes": [
           {
