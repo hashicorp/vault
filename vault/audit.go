@@ -79,7 +79,7 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 
 	// We can check early to ensure that non-Enterprise versions aren't trying to supply Enterprise only options.
 	if hasInvalidAuditOptions(entry.Options) {
-		return audit.NewAuditError(op, "invalid options", audit.ErrInvalidParameter)
+		return audit.NewAuditError(op, "invalid options", audit.ErrEnterpriseOnly)
 	}
 
 	if fallbackRaw, ok := entry.Options["fallback"]; ok {
@@ -543,7 +543,7 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		},
 		c.auditedHeaders)
 	if err != nil {
-		return nil, audit.NewAuditError(op, "unable to create new audit backend", audit.ErrUnknown)
+		return nil, audit.NewAuditError(op, "unable to create new audit backend", err.Downstream()).SetUpstream(err)
 	}
 	if be == nil {
 		return nil, audit.NewAuditError(op, fmt.Sprintf("nil backend returned from %q factory function", entry.Type), audit.ErrUnknown)
