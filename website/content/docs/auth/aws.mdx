@@ -709,9 +709,9 @@ curl -X POST -H "X-Vault-Token:123" "http://127.0.0.1:8200/v1/auth/aws/config/cl
 #### Configure the policies on the role.
 
 ```
-curl -X POST -H "X-Vault-Token:123" "http://127.0.0.1:8200/v1/auth/aws/role/dev-role -d '{"bound_ami_id":"ami-fce3c696","policies":"prod,dev","max_ttl":"500h"}'
+curl -X POST -H "X-Vault-Token:123" "http://127.0.0.1:8200/v1/auth/aws/role/dev-role" -d '{"bound_ami_id":"ami-fce3c696","policies":"prod,dev","max_ttl":"500h"}'
 
-curl -X POST -H "X-Vault-Token:123" "http://127.0.0.1:8200/v1/auth/aws/role/dev-role-iam -d '{"auth_type":"iam","policies":"prod,dev","max_ttl":"500h","bound_iam_principal_arn":"arn:aws:iam::123456789012:role/MyRole"}'
+curl -X POST -H "X-Vault-Token:123" "http://127.0.0.1:8200/v1/auth/aws/role/dev-role-iam" -d '{"auth_type":"iam","policies":"prod,dev","max_ttl":"500h","bound_iam_principal_arn":"arn:aws:iam::123456789012:role/MyRole"}'
 ```
 
 #### Perform the login operation
