@@ -22,13 +22,14 @@ import (
 
 // Verify interfaces are satisfied
 var (
-	_ physical.Backend             = (*InmemBackend)(nil)
-	_ physical.HABackend           = (*InmemHABackend)(nil)
-	_ physical.HABackend           = (*TransactionalInmemHABackend)(nil)
-	_ physical.Lock                = (*InmemLock)(nil)
-	_ physical.Transactional       = (*TransactionalInmemBackend)(nil)
-	_ physical.Transactional       = (*TransactionalInmemHABackend)(nil)
-	_ physical.TransactionalLimits = (*TransactionalInmemBackend)(nil)
+	_ physical.Backend                   = (*InmemBackend)(nil)
+	_ physical.MountTableLimitingBackend = (*InmemBackend)(nil)
+	_ physical.HABackend                 = (*InmemHABackend)(nil)
+	_ physical.HABackend                 = (*TransactionalInmemHABackend)(nil)
+	_ physical.Lock                      = (*InmemLock)(nil)
+	_ physical.Transactional             = (*TransactionalInmemBackend)(nil)
+	_ physical.Transactional             = (*TransactionalInmemHABackend)(nil)
+	_ physical.TransactionalLimits       = (*TransactionalInmemBackend)(nil)
 )
 
 var (
@@ -55,6 +56,8 @@ type InmemBackend struct {
 	logOps       bool
 	maxValueSize int
 	writeLatency time.Duration
+
+	mountTablePaths map[string]struct{}
 }
 
 type TransactionalInmemBackend struct {
@@ -328,6 +331,24 @@ func (i *InmemBackend) FailList(fail bool) {
 		val = 1
 	}
 	atomic.StoreUint32(i.failList, val)
+}
+
+// RegisterMountTablePath implements physical.MountTableLimitingBackend
+func (i *InmemBackend) RegisterMountTablePath(path string) {
+	if i.mountTablePaths == nil {
+		i.mountTablePaths = make(map[string]struct{})
+	}
+	i.mountTablePaths[path] = struct{}{}
+}
+
+// GetMountTablePaths returns any paths registered as mount table or namespace
+// metadata paths. It's intended for testing.
+func (i *InmemBackend) GetMountTablePaths() []string {
+	var paths []string
+	for path := range i.mountTablePaths {
+		paths = append(paths, path)
+	}
+	return paths
 }
 
 // Transaction implements the transaction interface

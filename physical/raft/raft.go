@@ -601,6 +601,13 @@ func (b *RaftBackend) RegisterMountTablePath(path string) {
 	}
 }
 
+// GetSpecialPathLimits returns any paths registered with special entry size
+// limits. It's really only used to make integration testing of the plumbing for
+// these paths simpler.
+func (b *RaftBackend) GetSpecialPathLimits() map[string]uint64 {
+	return b.specialPathLimits
+}
+
 type snapshotStoreDelay struct {
 	logger  log.Logger
 	wrapped raft.SnapshotStore
