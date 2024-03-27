@@ -43,7 +43,7 @@ require (
 	github.com/SAP/go-hdb v0.14.1
 	github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a
 	github.com/aerospike/aerospike-client-go/v5 v5.6.0
-	github.com/aliyun/alibaba-cloud-sdk-go v1.62.676
+	github.com/aliyun/alibaba-cloud-sdk-go v1.62.685
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
 	github.com/apple/foundationdb/bindings/go v0.0.0-20190411004307-cd5c9d91fad2
 	github.com/armon/go-metrics v0.4.1
@@ -136,7 +136,7 @@ require (
 	github.com/hashicorp/raft-snapshot v1.0.4
 	github.com/hashicorp/raft-wal v0.4.0
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20240126195955-473e9a48e7b7
-	github.com/hashicorp/vault-plugin-auth-alicloud v0.17.0
+	github.com/hashicorp/vault-plugin-auth-alicloud v0.17.1-0.20240301001341-996b6071b65b
 	github.com/hashicorp/vault-plugin-auth-azure v0.17.0
 	github.com/hashicorp/vault-plugin-auth-centrify v0.15.1
 	github.com/hashicorp/vault-plugin-auth-cf v0.16.0
