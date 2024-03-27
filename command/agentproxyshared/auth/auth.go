@@ -10,6 +10,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -51,6 +52,8 @@ type AuthHandler struct {
 	OutputCh                     chan string
 	TemplateTokenCh              chan string
 	ExecTokenCh                  chan string
+	AuthInProgress               *atomic.Bool
+	InvalidToken                 chan error
 	token                        string
 	userAgent                    string
 	metricsSignifier             string
@@ -92,6 +95,8 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		OutputCh:                     make(chan string, 1),
 		TemplateTokenCh:              make(chan string, 1),
 		ExecTokenCh:                  make(chan string, 1),
+		InvalidToken:                 make(chan error, 1),
+		AuthInProgress:               &atomic.Bool{},
 		token:                        conf.Token,
 		logger:                       conf.Logger,
 		client:                       conf.Client,
@@ -180,6 +185,17 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	first := true
 
 	for {
+		// We will unset this bool in sink.go once the token has been written to
+		// any sinks, or the sink server stops
+		ah.AuthInProgress.Store(true)
+		// Drain any Invalid Token errors from the channel that could have been sent before AuthInProgress
+		// was set to true
+		select {
+		case <-ah.InvalidToken:
+			ah.logger.Info("renewal already in progress, draining extra auth renewal triggers")
+		default:
+			// Do nothing, keep going
+		}
 		select {
 		case <-ctx.Done():
 			return nil
@@ -494,6 +510,14 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			case <-credCh:
 				ah.logger.Info("auth method found new credentials, re-authenticating")
 				break LifetimeWatcherLoop
+			default:
+				select {
+				case <-ah.InvalidToken:
+					ah.logger.Info("invalid token found, re-authenticating")
+					break LifetimeWatcherLoop
+				default:
+					continue
+				}
 			}
 		}
 	}
