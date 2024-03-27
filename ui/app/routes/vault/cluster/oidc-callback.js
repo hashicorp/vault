@@ -15,7 +15,7 @@ export function getParamsForCallback(qp, searchString) {
   // some SSO providers do not return a url-encoded state param
   // check for namespace using URLSearchParams instead of paramsFor
   const urlParams = new URLSearchParams(queryString);
-  const checkState = urlParams.get('state');
+  const checkState = urlParams.state;
   if (checkState?.includes(',ns=')) {
     [state, namespace] = checkState.split(',ns=');
   }
