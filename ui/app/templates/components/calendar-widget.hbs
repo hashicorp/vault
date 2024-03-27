@@ -15,7 +15,7 @@
       <Hds::Text::Body class="calendar-title" @color="faint">DATE OPTIONS</Hds::Text::Body>
       {{! TODO Hds::Dropdown swapout }}
       <ul class="menu-list">
-        <li class="action">
+        <li>
           <button
             data-test-current-month
             class="link is-no-underline has-text-weight-semibold is-ghost"
@@ -26,7 +26,7 @@
             Current month
           </button>
         </li>
-        <li class="action">
+        <li>
           <button
             data-test-current-billing-period
             class="link is-no-underline has-text-weight-semibold is-ghost"
@@ -37,7 +37,7 @@
             Current billing period
           </button>
         </li>
-        <li class="action">
+        <li>
           <button
             data-test-show-calendar
             class={{concat "link is-no-underline has-text-weight-semibold is-ghost" (if this.showCalendar " is-active")}}
