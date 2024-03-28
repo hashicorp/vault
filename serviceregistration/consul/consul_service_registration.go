@@ -4,6 +4,7 @@
 package consul
 
 import (
+	"encoding/json"
 	"context"
 	"errors"
 	"fmt"
@@ -71,6 +72,7 @@ type serviceRegistration struct {
 	redirectPort        int64
 	serviceName         string
 	serviceTags         []string
+	serviceMeta         map[string]string
 	serviceAddress      *string
 	disableRegistration bool
 	checkTimeout        time.Duration
@@ -124,6 +126,22 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 		logger.Debug("config service_tags set", "service_tags", tags)
 	}
 
+	// Get user-defined meta tags to attach to the registered service name
+	metaTagsJSON, ok := conf["service_meta"]
+	var metaTags = map[string]string{}
+	if ok {
+		metaTagList := []map[string]string{}
+		err := json.Unmarshal([]byte(metaTagsJSON), &metaTagList)
+		if err != nil {
+			return nil, errors.New("service tags must be a dictionary of string keys and values")
+		}
+		metaTags = metaTagList[0]
+
+		if logger.IsDebug() {
+			logger.Debug("config service_meta set", "service_meta", metaTags)
+		}
+	}
+
 	// Get the service-specific address to override the use of the HA redirect address
 	var serviceAddr *string
 	serviceAddrStr, ok := conf["service_address"]
@@ -172,6 +190,7 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 
 		logger:              logger,
 		serviceName:         service,
+		serviceMeta:         metaTags,
 		serviceTags:         strutil.ParseDedupAndSortStrings(tags, ","),
 		serviceAddress:      serviceAddr,
 		checkTimeout:        checkTimeout,
@@ -256,6 +275,7 @@ func SetupSecureTLS(ctx context.Context, consulConf *api.Config, conf map[string
 			diagnose.Skipped(ctx, "HTTPS is not used, Skipping TLS verification.")
 		}
 	}
+
 	return nil
 }
 
@@ -511,6 +531,7 @@ func (c *serviceRegistration) reconcileConsul(registeredServiceID string) (servi
 		ID:                serviceID,
 		Name:              c.serviceName,
 		Tags:              tags,
+		Meta:              c.serviceMeta,
 		Port:              int(c.redirectPort),
 		Address:           serviceAddress,
 		EnableTagOverride: false,
