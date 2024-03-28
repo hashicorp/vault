@@ -51,13 +51,13 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     const { cluster_name } = params;
     const records = this.store.peekAll('cluster');
     const cluster = records.find((record) => record.name === cluster_name);
-    return cluster ? cluster.get('id') : null;
+    return cluster?.id ?? null;
   },
 
   async beforeModel() {
     const params = this.paramsFor(this.routeName);
     let namespace = params.namespaceQueryParam;
-    const currentTokenName = this.auth.get('currentTokenName');
+    const currentTokenName = this.auth.currentTokenName;
     const managedRoot = this.featureFlagService.managedNamespaceRoot;
     assert(
       'Cannot use VAULT_CLOUD_ADMIN_NAMESPACE flag with non-enterprise Vault version',

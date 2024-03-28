@@ -40,7 +40,7 @@ export default class MessagesList extends Component {
     super.willDestroy();
     const noTeardown = this.store && !this.store.isDestroying;
     const { model } = this;
-    if (noTeardown && model && model.get('isDirty') && !model.isDestroyed && !model.isDestroying) {
+    if (noTeardown && model && model.isDirty && !model.isDestroyed && !model.isDestroying) {
       model.rollbackAttributes();
     }
   }

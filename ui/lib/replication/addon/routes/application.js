@@ -33,10 +33,10 @@ export default Route.extend(ClusterRoute, {
     return hash({
       canEnablePrimary: this.store
         .findRecord('capabilities', 'sys/replication/primary/enable')
-        .then((c) => c.get('canUpdate')),
+        .then((c) => c.canUpdate),
       canEnableSecondary: this.store
         .findRecord('capabilities', 'sys/replication/secondary/enable')
-        .then((c) => c.get('canUpdate')),
+        .then((c) => c.canUpdate),
     }).then(({ canEnablePrimary, canEnableSecondary }) => {
       setProperties(model, {
         canEnablePrimary,

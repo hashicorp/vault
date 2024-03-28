@@ -106,9 +106,9 @@ export default class StringList extends Component {
 
   @action
   addInput() {
-    const inputList = this.inputList;
-    if (inputList.get('lastObject.value') !== '') {
-      inputList.pushObject({ value: '' });
+    const [lastItem] = this.inputList.slice(-1);
+    if (lastItem?.value !== '') {
+      this.inputList.pushObject({ value: '' });
     }
   }
 
