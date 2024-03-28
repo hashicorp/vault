@@ -45,12 +45,6 @@ variable "aws_ssh_private_key_path" {
   default     = "./support/private_key.pem"
 }
 
-variable "backend_edition" {
-  description = "The backend release edition if applicable"
-  type        = string
-  default     = "ce" // or "ent"
-}
-
 variable "backend_instance_type" {
   description = "The instance type to use for the Vault backend. Must be arm64/nitro compatible"
   type        = string
@@ -75,10 +69,34 @@ variable "project_name" {
   default     = "vault-enos-integration"
 }
 
-variable "rhel_distro_version" {
+variable "distro_version_amzn2" {
+  description = "The version of Amazon Linux 2 to use"
+  type        = string
+  default     = "2"
+}
+
+variable "distro_version_leap" {
+  description = "The version of openSUSE leap to use"
+  type        = string
+  default     = "15.5" // or "15.4"
+}
+
+variable "distro_version_rhel" {
   description = "The version of RHEL to use"
   type        = string
   default     = "9.1" // or "8.8"
+}
+
+variable "distro_version_sles" {
+  description = "The version of SUSE SLES to use"
+  type        = string
+  default     = "v15_sp5_standard"
+}
+
+variable "distro_version_ubuntu" {
+  description = "The version of ubuntu to use"
+  type        = string
+  default     = "22.04" // or "20.04", "18.04"
 }
 
 variable "tags" {
@@ -97,12 +115,6 @@ variable "tfc_api_token" {
   description = "The Terraform Cloud QTI Organization API token. This is used to download the enos Terraform provider."
   type        = string
   sensitive   = true
-}
-
-variable "ubuntu_distro_version" {
-  description = "The version of ubuntu to use"
-  type        = string
-  default     = "22.04" // or "20.04", "18.04"
 }
 
 variable "ui_test_filter" {

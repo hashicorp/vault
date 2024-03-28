@@ -1,6 +1,12 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
+variable "arch" {
+  type        = string
+  description = "The architecture being used"
+  default     = null
+}
+
 variable "artifactory_release" {
   type = object({
     username = string
@@ -39,6 +45,12 @@ variable "config_dir" {
 variable "config_env_vars" {
   description = "Optional Vault configuration environment variables to set starting Vault"
   type        = map(string)
+  default     = null
+}
+
+variable "consul_bind_addr" {
+  type        = string
+  description = "The IP that Consul should bind to"
   default     = null
 }
 
@@ -90,6 +102,17 @@ variable "consul_release" {
   }
 }
 
+variable "distro" {
+  type        = string
+  description = "The Linux distro being used"
+}
+
+variable "distro_version" {
+  type        = string
+  description = "The Linux distro version"
+  default     = null
+}
+
 variable "enable_audit_devices" {
   description = "If true every audit device will be enabled"
   type        = bool
@@ -110,7 +133,7 @@ variable "initialize_cluster" {
 
 variable "install_dir" {
   type        = string
-  description = "The directory where the vault binary will be installed"
+  description = "The directory where the Vault binary will be installed"
   default     = "/opt/vault/bin"
 }
 
@@ -142,6 +165,11 @@ variable "manage_service" {
   type        = bool
   description = "Manage the Vault service users and systemd unit. Disable this to use configuration in RPM and Debian packages"
   default     = true
+}
+
+variable "package_manager" {
+  type        = string
+  description = "The package manager that comes with each Linux distro"
 }
 
 variable "packages" {

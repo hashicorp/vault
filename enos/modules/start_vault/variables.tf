@@ -12,6 +12,11 @@ variable "config_dir" {
   default     = "/etc/vault.d"
 }
 
+variable "distro" {
+  type        = string
+  description = "The Linux distro being used"
+}
+
 variable "environment" {
   description = "Optional Vault configuration environment variables to set starting Vault"
   type        = map(string)
