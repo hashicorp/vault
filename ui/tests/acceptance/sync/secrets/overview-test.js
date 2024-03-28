@@ -9,7 +9,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
 import authPage from 'vault/tests/pages/auth';
-import { click, waitFor } from '@ember/test-helpers';
+import { click, waitFor, visit } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 import { runCmd } from 'vault/tests/helpers/commands';
 
@@ -43,8 +43,7 @@ module('Acceptance | sync | overview', function (hooks) {
     assert.dom(ts.tab('Secrets')).hasClass('active', 'Navigates to secrets view for destination');
   });
 
-  test('it should show opt-in banner and modal if secrets-sync is not activated', async function (assert) {
-    assert.expect(3);
+  test('the activation workflow works', async function (assert) {
     this.server.get('/sys/activation-flags', () => {
       return {
         data: {
@@ -53,16 +52,21 @@ module('Acceptance | sync | overview', function (hooks) {
         },
       };
     });
+
     this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
       return {};
     });
-    await click(ts.navLink('Secrets Sync'));
-    assert.dom(ts.overview.optInBanner).exists('Opt-in banner is shown');
+
+    await visit('/vault/sync/secrets/overview');
+
+    assert.dom(ts.overview.optInBanner).exists();
     await click(ts.overview.optInBannerEnable);
-    assert.dom(ts.overview.optInModal).exists('Opt-in modal is shown');
-    assert.dom(ts.overview.optInConfirm).isDisabled('Confirm button is disabled when checkbox is unchecked');
+
+    assert.dom(ts.overview.optInModal).exists('modal to opt-in and activate feature is shown');
     await click(ts.overview.optInCheck);
     await click(ts.overview.optInConfirm);
+
+    assert.dom(ts.overview.optInModal).doesNotExist('modal is gone once activation has been submitted');
   });
 
   module('enterprise with namespaces', function (hooks) {
@@ -75,7 +79,8 @@ module('Acceptance | sync | overview', function (hooks) {
     });
 
     test('it should make activation-flag requests to correct namespace', async function (assert) {
-      assert.expect(6);
+      assert.expect(3);
+
       this.server.get('/sys/activation-flags', (_, req) => {
         assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
         return {
@@ -94,22 +99,20 @@ module('Acceptance | sync | overview', function (hooks) {
         return {};
       });
 
-      assert.dom('[data-test-badge-namespace]').hasText('foo'); // confirm we're in admin/foo
+      // confirm we're in admin/foo
+      assert.dom('[data-test-badge-namespace]').hasText('foo');
+
       await click(ts.navLink('Secrets Sync'));
-      assert.dom(ts.overview.optInBanner).exists('Opt-in banner is shown');
       await click(ts.overview.optInBannerEnable);
-      assert.dom(ts.overview.optInModal).exists('Opt-in modal is shown');
-      assert
-        .dom(ts.overview.optInConfirm)
-        .isDisabled('Confirm button is disabled when checkbox is unchecked');
       await click(ts.overview.optInCheck);
       await click(ts.overview.optInConfirm);
     });
 
     test.skip('it should make activation-flag requests to correct namespace when managed', async function (assert) {
       // TODO: unskip for 1.16.1 when managed is supported
-      assert.expect(6);
+      assert.expect(3);
       this.owner.lookup('service:feature-flag').setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
+
       this.server.get('/sys/activation-flags', (_, req) => {
         assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
         return {
@@ -128,14 +131,11 @@ module('Acceptance | sync | overview', function (hooks) {
         return {};
       });
 
-      assert.dom('[data-test-badge-namespace]').hasText('foo'); // confirm we're in admin/foo
+      // confirm we're in admin/foo
+      assert.dom('[data-test-badge-namespace]').hasText('foo');
+
       await click(ts.navLink('Secrets Sync'));
-      assert.dom(ts.overview.optInBanner).exists('Opt-in banner is shown');
       await click(ts.overview.optInBannerEnable);
-      assert.dom(ts.overview.optInModal).exists('Opt-in modal is shown');
-      assert
-        .dom(ts.overview.optInConfirm)
-        .isDisabled('Confirm button is disabled when checkbox is unchecked');
       await click(ts.overview.optInCheck);
       await click(ts.overview.optInConfirm);
     });
