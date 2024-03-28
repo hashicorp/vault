@@ -190,7 +190,6 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	// Only prepare ha-related statements if we need them
 	if haEnabled {
 		statements["get_lock"] = "SELECT current_leader FROM " + dbLockTable + " WHERE node_job = ?"
-		statements["used_lock"] = "SELECT IS_USED_LOCK(?)"
 	}
 
 	for name, query := range statements {
@@ -486,6 +485,7 @@ func (i *MySQLHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	}
 
 	// Attempt an async acquisition
+	i.leaderCh = make(chan struct{})
 	didLock := make(chan struct{})
 	failLock := make(chan error, 1)
 	releaseCh := make(chan bool, 1)
@@ -504,9 +504,6 @@ func (i *MySQLHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 
 	// Create the leader channel
 	i.held = true
-	i.leaderCh = make(chan struct{})
-
-	go i.monitorLock(i.leaderCh)
 
 	i.stopCh = stopCh
 
@@ -523,7 +520,7 @@ func (i *MySQLHALock) attemptLock(key, value string, didLock chan struct{}, fail
 	// Set node value
 	i.lock = lock
 
-	err = lock.Lock()
+	err = lock.Lock(i.leaderCh)
 	if err != nil {
 		failLock <- err
 		return
@@ -536,23 +533,6 @@ func (i *MySQLHALock) attemptLock(key, value string, didLock chan struct{}, fail
 	release := <-releaseCh
 	if release {
 		lock.Unlock()
-	}
-}
-
-func (i *MySQLHALock) monitorLock(leaderCh chan struct{}) {
-	for {
-		// The only way to lose this lock is if someone is
-		// logging into the DB and altering system tables or you lose a connection in
-		// which case you will lose the lock anyway.
-		err := i.hasLock(i.key)
-		if err != nil {
-			// Somehow we lost the lock.... likely because the connection holding
-			// the lock was closed or someone was playing around with the locks in the DB.
-			close(leaderCh)
-			return
-		}
-
-		time.Sleep(5 * time.Second)
 	}
 }
 
@@ -571,27 +551,6 @@ func (i *MySQLHALock) Unlock() error {
 	}
 
 	return err
-}
-
-// hasLock will check if a lock is held by checking the current lock id against our known ID.
-func (i *MySQLHALock) hasLock(key string) error {
-	var result sql.NullInt64
-	err := i.in.statements["used_lock"].QueryRow(key).Scan(&result)
-	if err == sql.ErrNoRows || !result.Valid {
-		// This is not an error to us since it just means the lock isn't held
-		return nil
-	}
-
-	if err != nil {
-		return err
-	}
-
-	// IS_USED_LOCK will return the ID of the connection that created the lock.
-	if result.Int64 != GlobalLockID {
-		return ErrLockHeld
-	}
-
-	return nil
 }
 
 func (i *MySQLHALock) GetLeader() (string, error) {
@@ -658,6 +617,7 @@ func NewMySQLLock(in *MySQLBackend, l log.Logger, key, value string) (*MySQLLock
 	statements := map[string]string{
 		"put": "INSERT INTO " + in.dbLockTable +
 			" VALUES( ?, ? ) ON DUPLICATE KEY UPDATE current_leader=VALUES(current_leader)",
+		"used_lock": "SELECT IS_USED_LOCK(?)",
 	}
 
 	for name, query := range statements {
@@ -690,9 +650,47 @@ func (i *MySQLLock) becomeLeader() error {
 	return nil
 }
 
+func (i *MySQLLock) monitorLock(leaderCh chan struct{}) {
+	for {
+		// The only way to lose this lock is if someone is
+		// logging into the DB and altering system tables or you lose a connection in
+		// which case you will lose the lock anyway.
+		err := i.hasLock(i.key)
+		if err != nil {
+			// Somehow we lost the lock.... likely because the connection holding
+			// the lock was closed or someone was playing around with the locks in the DB.
+			close(leaderCh)
+			return
+		}
+
+		time.Sleep(5 * time.Second)
+	}
+}
+
+// hasLock will check if a lock is held by checking the current lock id against our known ID.
+func (i *MySQLLock) hasLock(key string) error {
+	var result sql.NullInt64
+	err := i.statements["used_lock"].QueryRow(key).Scan(&result)
+	if err == sql.ErrNoRows || !result.Valid {
+		// This is not an error to us since it just means the lock isn't held
+		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+
+	// IS_USED_LOCK will return the ID of the connection that created the lock.
+	if result.Int64 != GlobalLockID {
+		return ErrLockHeld
+	}
+
+	return nil
+}
+
 // Lock will try to get a lock for an indefinite amount of time
 // based on the given key that has been requested.
-func (i *MySQLLock) Lock() error {
+func (i *MySQLLock) Lock(leaderCh chan struct{}) error {
 	defer metrics.MeasureSince([]string{"mysql", "get_lock"}, time.Now())
 
 	// Lock timeout math.MaxInt32 instead of -1 solves compatibility issues with
@@ -733,6 +731,8 @@ func (i *MySQLLock) Lock() error {
 	}
 
 	GlobalLockID = connectionID.Int64
+
+	go i.monitorLock(leaderCh)
 
 	return nil
 }
