@@ -3606,6 +3606,8 @@ func TestBuildUnsealSetupFunctionSlice(t *testing.T) {
 	}
 }
 
+// TestCore_HandleRequest_WithUnsealSetupFunctions verifies that the
+// DeadlockDetection is correctly enabled and disabled when the core is unsealed
 func TestBarrier_DeadlockDetection(t *testing.T) {
 	testCore := TestCore(t)
 	testCoreUnsealed(t, testCore)

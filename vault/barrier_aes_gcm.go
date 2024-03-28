@@ -145,9 +145,6 @@ func NewAESGCMBarrier(physical physical.Backend, detectDeadlocks bool) (*AESGCMB
 	if detectDeadlocks {
 		b.l = &locking.DeadlockRWMutex{}
 	}
-	if detectDeadlocks {
-		b.l = &locking.DeadlockRWMutex{}
-	}
 	return b, nil
 }
 
