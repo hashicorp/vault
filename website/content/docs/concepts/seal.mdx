@@ -112,20 +112,20 @@ For a list of examples and supported providers, please see the
 
 -> **Warning:** Recovery keys cannot decrypt the root key, and thus are not
 sufficient to unseal Vault if the Auto Unseal mechanism isn't working. They
-are purely an authorization mechanism.  Using Auto Unseal 
-creates a strict Vault lifecycle dependency on the underlying seal mechanism. 
-This means that if the seal mechanism (such as the Cloud KMS key) becomes unavailable, 
-or deleted before the seal is migrated, then there is no ability to recover 
-access to the Vault cluster until the mechanism is available again. **If the seal 
+are purely an authorization mechanism.  Using Auto Unseal
+creates a strict Vault lifecycle dependency on the underlying seal mechanism.
+This means that if the seal mechanism (such as the Cloud KMS key) becomes unavailable,
+or deleted before the seal is migrated, then there is no ability to recover
+access to the Vault cluster until the mechanism is available again. **If the seal
 mechanism or its keys are permanently deleted, then the Vault cluster cannot be recovered, even
 from backups.**
 To mitigate this risk, we recommend careful controls around management of the seal
-mechanism, for example using 
+mechanism, for example using
 [AWS Service Control Policies](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html)
-or similar.  
+or similar.
 With Vault Enterprise secondary clusters (disaster or performance) can have a
-seal configured independently of the primary, and when properly configured guards 
-against *some* of this risk.  Unreplicated items such as local mounts could still 
+seal configured independently of the primary, and when properly configured guards
+against *some* of this risk.  Unreplicated items such as local mounts could still
 be lost.
 
 
@@ -210,6 +210,8 @@ different Auto Unseal type (HSM, Azure KMS, etc.) is also supported on older
 versions as well.
 
 ### Migration post Vault 1.16.0 via Seal HA for Auto Seals (Enterprise)
+
+@include 'alerts/beta.mdx'
 
 With Seal HA, migration between auto-unseal types (not including any Shamir
 seals) can be done fully online using Seal High Availability (Seal HA) without
@@ -333,29 +335,36 @@ migration will not happen again on the peer nodes.
 
 ## Seal High Availability (Enterprise)
 
-Seal High Availability (Seal HA) allows the configuration of more than one auto 
-seal mechanism such that Vault can tolerate the temporary loss of a seal service 
+@include 'alerts/beta.mdx'
+
+Seal High Availability (Seal HA) allows the configuration of more than one auto
+seal mechanism such that Vault can tolerate the temporary loss of a seal service
 or device for a time.  With Seal HA configured with at least two and no more than
-three auto seals, Vault can also start up and unseal if one of the 
-configured seals is still available (though Vault will remain in a degraded mode in 
-this case). While seals are unavailable, seal wrapping and entropy augmentation can 
+three auto seals, Vault can also start up and unseal if one of the
+configured seals is still available (though Vault will remain in a degraded mode in
+this case). While seals are unavailable, seal wrapping and entropy augmentation can
 still occur using the remaining seals, and values produced while a seal is down will
 be re-wrapped with all the seals when all seals become healthy again.
 
-An operator should choose two seals that are unlikely to become unavailable at the 
+An operator should choose two seals that are unlikely to become unavailable at the
 same time.  For example, they may choose KMS keys in two cloud regions, from
 two different providers; or a mix of HSM, KMS, or Transit seals.
 
 When an operator configures an additional seal or removes a seal (one at a time)
-and restarts or triggers a configuration reload on receipt of a `SIGHUP` signal, 
+and restarts or triggers a configuration reload on receipt of a `SIGHUP` signal,
 Vault will automatically detect that it needs to re-wrap CSPs and seal wrapped
-values, and will start the process.  Seal re-wrapping can be monitored via the 
-logs or via the `sys/seal-status` endpoint.  While a re-wrap is in progress (or 
-could not complete successfully), changes to the seal configuration are not 
+values, and will start the process.  Seal re-wrapping can be monitored via the
+logs or via the `sys/seal-status` endpoint.  While a re-wrap is in progress (or
+could not complete successfully), changes to the seal configuration are not
 allowed.
 
-In additional to high availability, Seal HA can be used to migrate between two 
+In additional to high availability, Seal HA can be used to migrate between two
 auto seals in a [simplified manner.](#migration-post-vault-1-16-0-via-seal-ha-for-auto-seals-enterprise)
+
+Note that Shamir seals are not auto seals and cannot be included in a Seal
+HA setup.  This is because auto seals support seal wrap while Shamir seals
+do not, so the loss of the auto seal does not necessarily leave Vault in a
+fully available state. 
 
 ### Use and Configuration
 
@@ -371,7 +380,7 @@ a re-wrap.  Re-wraps can take some time, depending on the number of
 seal wrapped values.  While re-wrapping is in progress, no configuration changes
 to the seals can be made.
 
-Progress of the re-wrap can be monitored using 
+Progress of the re-wrap can be monitored using
 the [`sys/sealwrap/rewrap`](/vault/api-docs/system/sealwrap-rewrap) endpoint.
 
 ### Limitations and Known Issues
@@ -386,8 +395,8 @@ Extra seals can then be added.
 be mixed.
 * A maximum of three seals can be configured.
 * As seal wrapped values must be wrapped by all configured seals, it is possible
-that large values may fail to persist as the size of the entry is multiplied by 
+that large values may fail to persist as the size of the entry is multiplied by
 the number of seals causing it to exceed the storage entry size limit.   An example
 would be storing a large document in KVv2 with seal wrapping enabled.
-
-
+* It is not possible to rotate the data encryption key nor the recovery keys while
+unless all seals are healthy.

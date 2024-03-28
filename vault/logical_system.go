@@ -15,6 +15,7 @@ import (
 	"hash"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -189,6 +190,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 			},
 		},
 	}
+	b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, entUnauthenticatedPaths()...)
 
 	b.Backend.Paths = append(b.Backend.Paths, entPaths(b)...)
 	b.Backend.Paths = append(b.Backend.Paths, b.configPaths()...)
@@ -224,6 +226,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	b.Backend.Paths = append(b.Backend.Paths, b.loginMFAPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.experimentPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.introspectionPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.wellKnownPaths()...)
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
@@ -1136,8 +1139,7 @@ func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, req *logi
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	headerConfig := b.Core.AuditedHeadersConfig()
-	err := headerConfig.add(ctx, header, hmac)
+	err := b.Core.AuditedHeadersConfig().add(ctx, header, hmac)
 	if err != nil {
 		return nil, err
 	}
@@ -1152,8 +1154,7 @@ func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, req *logi
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	headerConfig := b.Core.AuditedHeadersConfig()
-	err := headerConfig.remove(ctx, header)
+	err := b.Core.AuditedHeadersConfig().remove(ctx, header)
 	if err != nil {
 		return nil, err
 	}
@@ -1162,14 +1163,13 @@ func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, req *logi
 }
 
 // handleAuditedHeaderRead returns the header configuration for the given header name
-func (b *SystemBackend) handleAuditedHeaderRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditedHeaderRead(_ context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
 	if header == "" {
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	headerConfig := b.Core.AuditedHeadersConfig()
-	settings, ok := headerConfig.Headers[strings.ToLower(header)]
+	settings, ok := b.Core.AuditedHeadersConfig().header(header)
 	if !ok {
 		return logical.ErrorResponse("Could not find header in config"), nil
 	}
@@ -1182,12 +1182,12 @@ func (b *SystemBackend) handleAuditedHeaderRead(ctx context.Context, req *logica
 }
 
 // handleAuditedHeadersRead returns the whole audited headers config
-func (b *SystemBackend) handleAuditedHeadersRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	headerConfig := b.Core.AuditedHeadersConfig()
+func (b *SystemBackend) handleAuditedHeadersRead(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	headerSettings := b.Core.AuditedHeadersConfig().headers()
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"headers": headerConfig.Headers,
+			"headers": headerSettings,
 		},
 	}, nil
 }
@@ -5247,18 +5247,6 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 	return resp, nil
 }
 
-// pathInternalUIVersion is the framework.PathOperation callback function for
-// the sys/internal/ui/version path. It simply returns the Vault version.
-func (b *SystemBackend) pathInternalUIVersion(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	resp := &logical.Response{
-		Data: map[string]any{
-			"version": version.GetVersion().VersionNumber(),
-		},
-	}
-
-	return resp, nil
-}
-
 func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Limit output to authorized paths
 	resp, err := b.pathInternalUIMountsRead(ctx, req, d)
@@ -5673,6 +5661,17 @@ func (core *Core) GetLeaderStatusLocked(ctx context.Context) (*LeaderResponse, e
 }
 
 func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var tokenPresent bool
+	token := req.ClientToken
+	if token != "" {
+		// We don't care about the error, we just want to know if the token exists
+		_, tokenEntry, _, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
+		tokenPresent = err == nil && tokenEntry != nil
+	}
+	// If there is a valid token then we will not redact any values
+	if tokenPresent {
+		ctx = logical.CreateContextRedactionSettings(ctx, false, false, false)
+	}
 	status, err := b.Core.GetSealStatus(ctx, false)
 	if err != nil {
 		return nil, err
@@ -5692,6 +5691,18 @@ func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Reque
 }
 
 func (b *SystemBackend) handleLeaderStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var tokenPresent bool
+	token := req.ClientToken
+
+	if token != "" {
+		// We don't care about the error, we just want to know if token exists
+		_, tokenEntry, _, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
+		tokenPresent = err == nil && tokenEntry != nil
+	}
+
+	if tokenPresent {
+		ctx = logical.CreateContextRedactionSettings(ctx, false, false, false)
+	}
 	status, err := b.Core.GetLeaderStatusLocked(ctx)
 	if err != nil {
 		return nil, err
@@ -5999,6 +6010,62 @@ func (b *SystemBackend) handleReadExperiments(ctx context.Context, _ *logical.Re
 			"enabled":   enabled,
 		},
 	}, nil
+}
+
+// handleWellKnownList handles /sys/well-known/ endpoint to provide the list of registered labels
+// within the /.well-known path on this server
+func (b *SystemBackend) handleWellKnownList() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		labels := b.Core.WellKnownRedirects.List()
+
+		respKeys := []string{}
+		respKeyInfo := map[string]interface{}{}
+
+		for label, wk := range labels {
+			respKeys = append(respKeys, label)
+
+			mountPath := ""
+			m := b.Core.router.MatchingMountByUUID(wk.mountUUID)
+			if m != nil {
+				mountPath, _ = url.JoinPath(m.namespace.Path, m.Path)
+			}
+
+			respKeyInfo[label] = map[string]interface{}{
+				"mount_path": mountPath,
+				"mount_uuid": wk.mountUUID,
+				"prefix":     wk.prefix,
+			}
+		}
+
+		return logical.ListResponseWithInfo(respKeys, respKeyInfo), nil
+	}
+}
+
+// handleWellKnownRead handles the "/sys/well-known/<name>" endpoint to read a registered well-known label
+func (b *SystemBackend) handleWellKnownRead() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		label := data.Get("label").(string)
+
+		wk, ok := b.Core.WellKnownRedirects.Get(label)
+		if !ok {
+			return nil, nil
+		}
+
+		mountPath := ""
+		m := b.Core.router.MatchingMountByUUID(wk.mountUUID)
+		if m != nil {
+			mountPath, _ = url.JoinPath(m.namespace.Path, m.Path)
+		}
+
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"label":      label,
+				"mount_path": mountPath,
+				"mount_uuid": wk.mountUUID,
+				"prefix":     wk.prefix,
+			},
+		}, nil
+	}
 }
 
 func sanitizePath(path string) string {
@@ -7004,5 +7071,32 @@ This path responds to the following HTTP methods.
 	POST /
 		returns the manual license reporting data.
 		`,
+	},
+
+	"well-known-list": {
+		`List the registered well-known labels to associated mounts.`,
+		`
+This path responds to the following HTTP methods.
+    LIST /
+        List the names of the registered labels within the .well-known folder on this server.
+
+    GET /
+        List the names of the registered labels within the .well-known folder on this server.
+
+    GET /<label>
+        Retrieve the information regarding a specific registered label on this server.
+	    `,
+	},
+
+	"well-known": {
+		`Read the associated mount info for a registered label within the well-known path prefix`,
+		`
+        Retrieve the information regarding a specific registered label on this server.
+		`,
+	},
+
+	"well-known-label": {
+		`The label representing a path-prefix within the /.well-known/ path`,
+		"",
 	},
 }

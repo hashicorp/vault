@@ -46,7 +46,7 @@
         <D.Content @defaultClass="popup-menu-content">
           <nav class="box menu" aria-label="snapshots actions">
             <ul class="menu-list">
-              <li class="action">
+              <li>
                 <DownloadButton
                   class="link"
                   @filename={{@newRootModel.issuerId}}
@@ -57,7 +57,7 @@
                   @hideIcon={{true}}
                 />
               </li>
-              <li class="action">
+              <li>
                 <DownloadButton
                   class="link"
                   @filename={{@newRootModel.issuerId}}
@@ -93,7 +93,7 @@
         If you’re ready, you can begin cross-signing issuers now. If not, the option to cross-sign is available when you use
         this certificate.
       </A.Description>
-      <A.Link::Standalone
+      <A.LinkStandalone
         @icon="arrow-right"
         @iconPosition="trailing"
         @text="Cross-sign issuers"

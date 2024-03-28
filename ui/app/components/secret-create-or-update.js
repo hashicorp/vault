@@ -195,6 +195,7 @@ export default class SecretCreateOrUpdate extends Component {
     if (isBlank(item.name)) {
       return;
     }
+    // secretData is a KVObject/ArrayProxy so removeObject is fine here
     data.removeObject(item);
     this.checkRows();
     this.handleChange();

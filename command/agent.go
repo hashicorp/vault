@@ -83,8 +83,7 @@ type AgentCommand struct {
 
 	// Telemetry object
 	metricsHelper *metricsutil.MetricsHelper
-
-	cleanupGuard sync.Once
+	cleanupGuard  sync.Once
 
 	startedCh  chan struct{} // for tests
 	reloadedCh chan struct{} // for tests
@@ -565,6 +564,7 @@ func (c *AgentCommand) Run(args []string) int {
 			lnBundle, err := cache.StartListener(lnConfig)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
+				c.tlsReloadFuncsLock.Unlock()
 				return 1
 			}
 
@@ -587,6 +587,7 @@ func (c *AgentCommand) Run(args []string) int {
 				}, leaseCache)
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("Error creating inmem sink for cache: %v", err))
+					c.tlsReloadFuncsLock.Unlock()
 					return 1
 				}
 				sinks = append(sinks, &sink.SinkConfig{
@@ -785,7 +786,7 @@ func (c *AgentCommand) Run(args []string) int {
 		})
 
 		g.Add(func() error {
-			err := ss.Run(ctx, ah.OutputCh, sinks)
+			err := ss.Run(ctx, ah.OutputCh, sinks, ah.AuthInProgress)
 			c.logger.Info("sinks finished, exiting")
 
 			// Start goroutine to drain from ah.OutputCh from this point onward
@@ -816,7 +817,7 @@ func (c *AgentCommand) Run(args []string) int {
 		})
 
 		g.Add(func() error {
-			return ts.Run(ctx, ah.TemplateTokenCh, config.Templates)
+			return ts.Run(ctx, ah.TemplateTokenCh, config.Templates, ah.AuthInProgress, ah.InvalidToken)
 		}, func(error) {
 			// Let the lease cache know this is a shutdown; no need to evict
 			// everything
