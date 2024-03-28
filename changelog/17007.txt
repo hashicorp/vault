@@ -1,0 +1,3 @@
+```release-note:bug
+auth/token: fixes an edge case bug that "identity_policies" is nil and causes cli vault login error
+```

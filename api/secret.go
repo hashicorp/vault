@@ -159,6 +159,10 @@ TOKEN_DONE:
 			goto DONE
 		}
 
+		if s.Data["identity_policies"] == nil {
+			goto DONE
+		}
+
 		sList, ok := s.Data["identity_policies"].([]string)
 		if ok {
 			identityPolicies = sList
