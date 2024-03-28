@@ -1,0 +1,3 @@
+```release-note:feature
+secrets/aws: Add AWS secrets engine policy templating support
+```

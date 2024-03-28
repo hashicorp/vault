@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -342,12 +343,7 @@ func readConfig(ctx context.Context, storage logical.Storage) (rootConfig, error
 	return connConfig, nil
 }
 
-func (b *backend) secretAccessKeysCreate(
-	ctx context.Context,
-	s logical.Storage,
-	displayName, policyName string,
-	role *awsRoleEntry,
-) (*logical.Response, error) {
+func (b *backend) secretAccessKeysCreate(ctx context.Context, s logical.Storage, displayName, policyName string, role *awsRoleEntry, rolePolicyDocument string) (*logical.Response, error) {
 	iamClient, err := b.clientIAM(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -415,12 +411,12 @@ func (b *backend) secretAccessKeysCreate(
 		}
 
 	}
-	if role.PolicyDocument != "" {
+	if rolePolicyDocument != "" {
 		// Add new inline user policy against user
 		_, err = iamClient.PutUserPolicyWithContext(ctx, &iam.PutUserPolicyInput{
 			UserName:       aws.String(username),
 			PolicyName:     aws.String(policyName),
-			PolicyDocument: aws.String(role.PolicyDocument),
+			PolicyDocument: aws.String(rolePolicyDocument),
 		})
 		if err != nil {
 			return logical.ErrorResponse("Error putting user policy: %s", err), awsutil.CheckAWSError(err)
