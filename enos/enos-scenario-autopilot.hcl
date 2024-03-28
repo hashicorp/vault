@@ -540,6 +540,7 @@ scenario "autopilot" {
     }
 
     variables {
+      vault_install_dir                  = local.vault_install_dir
       vault_instances                    = step.upgrade_vault_cluster_with_autopilot.target_hosts
       vault_root_token                   = step.create_vault_cluster.root_token
       vault_autopilot_default_max_leases = local.vault_autopilot_default_max_leases
