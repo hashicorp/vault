@@ -68,7 +68,7 @@ export default Route.extend({
   },
 
   backendType() {
-    return this.modelFor('vault.cluster.secrets.backend').get('engineType');
+    return this.modelFor('vault.cluster.secrets.backend').engineType;
   },
 
   templateName: 'vault/cluster/secrets/backend/secretEditLayout',
@@ -116,7 +116,7 @@ export default Route.extend({
 
   modelType(backend, secret, options = {}) {
     const backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
-    const type = backendModel.get('engineType');
+    const { engineType } = backendModel;
     const types = {
       database: secret && secret.startsWith('role/') ? 'database/role' : 'database/connection',
       transit: 'transit-key',
@@ -128,12 +128,12 @@ export default Route.extend({
       keymgmt: `keymgmt/${options.queryParams?.itemType || 'key'}`,
       generic: 'secret',
     };
-    return types[type];
+    return types[engineType];
   },
 
   handleSecretModelError(capabilities, secretId, modelType, error) {
     // can't read the path and don't have update capability, so re-throw
-    if (!capabilities.get('canUpdate') && modelType === 'secret') {
+    if (!capabilities.canUpdate && modelType === 'secret') {
       throw error;
     }
     this.store.push({
@@ -192,7 +192,7 @@ export default Route.extend({
     const backend = this.enginePathParam();
     const preferAdvancedEdit =
       /* eslint-disable-next-line ember/no-controller-access-in-routes */
-      this.controllerFor('vault.cluster.secrets.backend').get('preferAdvancedEdit') || false;
+      this.controllerFor('vault.cluster.secrets.backend').preferAdvancedEdit || false;
     const backendType = this.backendType();
     model.secret.setProperties({ backend });
     controller.setProperties({

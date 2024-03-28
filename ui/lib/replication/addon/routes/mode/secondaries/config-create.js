@@ -46,8 +46,8 @@ export default Base.extend({
     if (
       !this.version.hasPerfReplication ||
       replicationMode !== 'performance' ||
-      !cluster.get(`${replicationMode}.isPrimary`) ||
-      !cluster.get('canAddSecondary')
+      !cluster[replicationMode].isPrimary ||
+      !cluster.canAddSecondary
     ) {
       return this.router.transitionTo('vault.cluster.replication.mode', replicationMode);
     }

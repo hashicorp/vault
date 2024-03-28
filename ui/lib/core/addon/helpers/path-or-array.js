@@ -9,7 +9,7 @@ export function pathOrArray([maybeArray, target]) {
   if (Array.isArray(maybeArray)) {
     return maybeArray;
   }
-  return target.get(maybeArray);
+  return target[maybeArray];
 }
 
 export default buildHelper(pathOrArray);

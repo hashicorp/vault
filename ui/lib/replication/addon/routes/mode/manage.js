@@ -27,12 +27,12 @@ export default Route.extend({
     const model = this.modelFor('mode');
 
     const replicationMode = this.paramsFor('mode').replication_mode;
-    const clusterMode = model.get(replicationMode).get('modeForUrl');
+    const clusterMode = model[replicationMode].modeForUrl;
     const actions = replicationActionForMode([replicationMode, clusterMode]);
     return all(
       actions.map((action) => {
         return store.findRecord('capabilities', pathForAction(action)).then((capability) => {
-          model.set(`can${camelize(action)}`, capability.get('canUpdate'));
+          model.set(`can${camelize(action)}`, capability.canUpdate);
         });
       })
     ).then(() => {
@@ -43,10 +43,8 @@ export default Route.extend({
   beforeModel() {
     const model = this.modelFor('mode');
     const replicationMode = this.paramsFor('mode').replication_mode;
-    if (
-      model.get(replicationMode).get('replicationDisabled') ||
-      model.get(replicationMode).get('replicationUnsupported')
-    ) {
+    const modeModel = model[replicationMode];
+    if (modeModel.replicationDisabled || modeModel.replicationUnsupported) {
       this.router.transitionTo('vault.cluster.replication.mode', replicationMode);
     }
   },

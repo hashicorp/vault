@@ -30,7 +30,7 @@ export default Component.extend({
     if (model.operationNone) {
       return falseString;
     }
-    return model.get(field.name) ? trueString : falseString;
+    return model[field.name] ? trueString : falseString;
   },
 
   actions: {

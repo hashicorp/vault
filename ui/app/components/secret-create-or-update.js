@@ -105,7 +105,7 @@ export default class SecretCreateOrUpdate extends Component {
     const secret = this.args.model;
     const secretData = this.args.modelForData;
 
-    let key = secretData.get('path') || secret.id;
+    let key = secretData?.path || secret.id;
 
     if (key.startsWith('/')) {
       key = key.replace(/^\/+/g, '');
