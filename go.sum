@@ -2327,8 +2327,8 @@ github.com/hashicorp-forge/bbolt v1.3.8-hc3/go.mod h1:sQBu5UIJ+rcUFU4Fo9rpTHNV93
 github.com/hashicorp/cap v0.6.0 h1:uOSdbtXu8zsbRyjwpiTy6QiuX3+5paAbNkYlop7QexM=
 github.com/hashicorp/cap v0.6.0/go.mod h1:DwzHkoG6pxSARiqwvAgxmCPUpTTCCw2wVuPrIFOzpe0=
 github.com/hashicorp/cap/ldap v0.0.0-20230914221201-c4eecc7e31f7/go.mod h1:q+c9XV1VqloZFZMu+zdvfb0cm7UrvKbvtmTF5wX5Q9o=
-github.com/hashicorp/cap/ldap v0.0.0-20240328145301-d44e724283cc h1:MUly1ujI7ItJVK1TNW9AeB6jJvYsnNcgh3xo4eVh1RY=
-github.com/hashicorp/cap/ldap v0.0.0-20240328145301-d44e724283cc/go.mod h1:Ofp5fMLl1ImcwjNGu9FtEwNOdxA0LYoWpcWQE2vltuI=
+github.com/hashicorp/cap/ldap v0.0.0-20240328153749-fcfe271d0227 h1:R5CMNyBNZqODw2DcGaSa2X96AgtLotXsH7aOa07zTTI=
+github.com/hashicorp/cap/ldap v0.0.0-20240328153749-fcfe271d0227/go.mod h1:Ofp5fMLl1ImcwjNGu9FtEwNOdxA0LYoWpcWQE2vltuI=
 github.com/hashicorp/cli v1.1.6 h1:CMOV+/LJfL1tXCOKrgAX0uRKnzjj/mpmqNXloRSy2K8=
 github.com/hashicorp/cli v1.1.6/go.mod h1:MPon5QYlgjjo0BSoAiN0ESeT5fRzDjVRp+uioJ0piz4=
 github.com/hashicorp/consul-template v0.37.3 h1:zN03UckwrrRB0EwH3+Io8S5h0Zl+Aa9RpYkma207t2g=
