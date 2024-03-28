@@ -14,17 +14,7 @@ import sinon from 'sinon';
 
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 
-const {
-  breadcrumb,
-  title,
-  tab,
-  filter,
-  searchSelect,
-  emptyStateTitle,
-  destinations,
-  menuTrigger,
-  confirmButton,
-} = PAGE;
+const { title, tab, filter, searchSelect, emptyStateTitle, destinations, menuTrigger, confirmButton } = PAGE;
 
 module('Integration | Component | sync | Page::Destinations', function (hooks) {
   setupRenderingTest(hooks);
@@ -71,7 +61,6 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
 
   test('it should render header and tabs', async function (assert) {
     await this.renderComponent();
-    assert.dom(breadcrumb).includesText('Secrets Sync', 'Breadcrumb renders');
     assert.dom(title).hasText('Secrets Sync', 'Page title renders');
     assert.dom(tab('Overview')).exists('Overview tab renders');
     assert.dom(tab('Destinations')).exists('Destinations tab renders');

@@ -10,7 +10,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { render } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 
-const { breadcrumb, title } = PAGE;
+const { title, breadcrumb } = PAGE;
 
 module('Integration | Component | sync | SyncHeader', function (hooks) {
   setupRenderingTest(hooks);
@@ -24,12 +24,6 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
         owner: this.engine,
       });
     };
-  });
-
-  test('it should render default breadcrumb', async function (assert) {
-    await this.renderComponent();
-    assert.dom(breadcrumb).exists({ count: 1 }, 'Correct number of breadcrumbs render');
-    assert.dom(breadcrumb).includesText('Secrets Sync', 'renders default breadcrumb');
   });
 
   test('it should render breadcrumbs', async function (assert) {

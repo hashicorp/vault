@@ -4,9 +4,11 @@
 ~}}
 
 <PageHeader as |p|>
-  <p.top>
-    <Page::Breadcrumbs @breadcrumbs={{or @breadcrumbs (array (hash label="Secrets Sync"))}} />
-  </p.top>
+  {{#if @breadcrumbs}}
+    <p.top>
+      <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+    </p.top>
+  {{/if}}
 
   <p.levelLeft>
     <h1 class="title is-3 has-bottom-margin-m" data-test-page-title>
