@@ -31,7 +31,6 @@ import { removeFromArray } from 'vault/helpers/remove-from-array';
 
 export default class StringList extends Component {
   @tracked indicesWithComma = [];
-  @tracked inputList;
 
   constructor() {
     super(...arguments);
