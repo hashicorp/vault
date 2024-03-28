@@ -438,6 +438,10 @@ func mfaOktaPaths(i *IdentityStore) []*framework.Path {
 				Type:        framework.TypeBool,
 				Description: "(DEPRECATED) Use base_url instead.",
 			},
+			"use_passcode": {
+				Type:        framework.TypeBool,
+				Description: `If true, the user is reminded to use the passcode upon MFA validation. This option does not enforce using the passcode. Defaults to false.`,
+			},
 		},
 		i,
 	)
