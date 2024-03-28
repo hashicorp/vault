@@ -1200,7 +1200,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	// Construct a new AES-GCM barrier
-	c.barrier, err = NewAESGCMBarrier(c.physical)
+	detectDeadlocks := slices.Contains(c.detectDeadlocks, "barrier")
+	if detectDeadlocks {
+		c.Logger().Debug("enabling deadlock detection for the barrier")
+	}
+	c.barrier, err = NewAESGCMBarrier(c.physical, detectDeadlocks)
 	if err != nil {
 		return nil, fmt.Errorf("barrier setup failed: %w", err)
 	}
@@ -1299,8 +1303,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	quotasLogger := conf.Logger.Named("quotas")
 	c.allLoggers = append(c.allLoggers, quotasLogger)
 
-	detectDeadlocks := slices.Contains(c.detectDeadlocks, "quotas")
-	c.quotaManager, err = quotas.NewManager(quotasLogger, c.quotaLeaseWalker, c.metricSink, detectDeadlocks)
+	detectDeadlocksQuotas := slices.Contains(c.detectDeadlocks, "quotas")
+	c.quotaManager, err = quotas.NewManager(quotasLogger, c.quotaLeaseWalker, c.metricSink, detectDeadlocksQuotas)
 	if err != nil {
 		return nil, err
 	}
