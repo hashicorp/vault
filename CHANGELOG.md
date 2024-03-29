@@ -5,7 +5,6 @@
 ## 1.16.0-rc3
 ### March 13, 2024
 
-
 SECURITY:
 
 * auth/cert: compare public keys of trusted non-CA certificates with incoming
@@ -349,6 +348,34 @@ leading to failure to complete merkle sync without a full re-index. [[GH-23013](
 * ui: fix issue where kv v2 capabilities checks were not passing in the full secret path if secret was inside a directory. [[GH-24404](https://github.com/hashicorp/vault/pull/24404)]
 * ui: fix navigation items shown to user when chroot_namespace configured [[GH-24492](https://github.com/hashicorp/vault/pull/24492)]
 * ui: show error from API when seal fails [[GH-23921](https://github.com/hashicorp/vault/pull/23921)]
+
+## 1.15.7 Enterprise
+### March 28, 2024
+
+SECURITY:
+
+* auth/cert: validate OCSP response was signed by the expected issuer and serial number matched request [[GH-26091](https://github.com/hashicorp/vault/pull/26091)]
+
+IMPROVEMENTS:
+
+* auth/cert: Allow validation with OCSP responses with no NextUpdate time [[GH-25912](https://github.com/hashicorp/vault/pull/25912)]
+* core (enterprise): Avoid seal rewrapping in some specific unnecessary cases.
+* core (enterprise): persist seal rewrap status, so rewrap status API is consistent on secondary nodes.
+* ui: remove leading slash from KV version 2 secret paths [[GH-25874](https://github.com/hashicorp/vault/pull/25874)]
+
+BUG FIXES:
+
+* audit: Operator changes to configured audit headers (via `/sys/config/auditing`) 
+will now force invalidation and be reloaded from storage when data is replicated 
+to other nodes.
+* auth/cert: Address an issue in which OCSP query responses were not cached [[GH-25986](https://github.com/hashicorp/vault/pull/25986)]
+* auth/cert: Allow cert auth login attempts if ocsp_fail_open is true and OCSP servers are unreachable [[GH-25982](https://github.com/hashicorp/vault/pull/25982)]
+* cli: fixes plugin register CLI failure to error when plugin image doesn't exist [[GH-24990](https://github.com/hashicorp/vault/pull/24990)]
+* core (enterprise): fix issue where the Seal HA rewrap system may remain running when an active node steps down.
+* core/login: Fixed a potential deadlock when a login fails and user lockout is enabled. [[GH-25697](https://github.com/hashicorp/vault/pull/25697)]
+* replication (enterprise): fixed data integrity issue with the processing of identity aliases causing duplicates to occur in rare cases
+* ui: Fix kubernetes auth method roles tab [[GH-25999](https://github.com/hashicorp/vault/pull/25999)]
+* ui: call resultant-acl without namespace header when user mounted at root namespace [[GH-25766](https://github.com/hashicorp/vault/pull/25766)]
 
 ## 1.15.6
 ### February 29, 2024
@@ -828,6 +855,31 @@ sdk/ldaputil: use EscapeLDAPValue implementation from cap/ldap [[GH-22249](https
 * ui: fixes long namespace names overflow in the sidebar
 * ui: fixes model defaults overwriting input value when user tries to clear form input [[GH-22458](https://github.com/hashicorp/vault/pull/22458)]
 * ui: fixes text readability issue in revoke token confirmation dialog [[GH-22390](https://github.com/hashicorp/vault/pull/22390)]
+
+## 1.14.11 Enterprise
+### March 28, 2024
+
+SECURITY:
+
+* auth/cert: validate OCSP response was signed by the expected issuer and serial number matched request [[GH-26091](https://github.com/hashicorp/vault/pull/26091)]
+
+CHANGES:
+
+* core: Bump Go version to 1.21.8.
+
+IMPROVEMENTS:
+
+* auth/cert: Allow validation with OCSP responses with no NextUpdate time [[GH-25912](https://github.com/hashicorp/vault/pull/25912)]
+* openapi: Fix generated types for duration strings [[GH-20841](https://github.com/hashicorp/vault/pull/20841)]
+* raft/snapshotagent (enterprise): upgrade raft-snapshotagent to v0.0.0-20221104090112-13395acd02c5
+
+BUG FIXES:
+
+* auth/cert: Address an issue in which OCSP query responses were not cached [[GH-25986](https://github.com/hashicorp/vault/pull/25986)]
+* auth/cert: Allow cert auth login attempts if ocsp_fail_open is true and OCSP servers are unreachable [[GH-25982](https://github.com/hashicorp/vault/pull/25982)]
+* core/login: Fixed a potential deadlock when a login fails and user lockout is enabled. [[GH-25697](https://github.com/hashicorp/vault/pull/25697)]
+* openapi: Fixing response fields for rekey operations [[GH-25509](https://github.com/hashicorp/vault/pull/25509)]
+* ui: Fix kubernetes auth method roles tab [[GH-25999](https://github.com/hashicorp/vault/pull/25999)]
 
 ## 1.14.10
 ### February 29, 2024
