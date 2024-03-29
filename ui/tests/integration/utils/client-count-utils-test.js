@@ -10,7 +10,7 @@ import {
   flattenDataset,
   formatByMonths,
   formatByNamespace,
-  homogenizeClientNaming,
+  destructureCounts,
   namespaceArrayToObject,
   sortMonthsByTimestamp,
 } from 'core/utils/client-count-utils';
@@ -785,53 +785,38 @@ module('Integration | Util | client count utils', function (hooks) {
     assert.strictEqual(formatByNamespace(SOME_OBJECT), SOME_OBJECT, 'it returns if arg is not an array');
   });
 
-  test('homogenizeClientNaming: homogenizes key names when both old and new keys exist, or just old key names', async function (assert) {
-    assert.expect(168);
-    const keyNameAssertions = (object, objectName) => {
-      const objectKeys = Object.keys(object);
-      assert.false(
-        objectKeys.includes('distinct_entities'),
-        `${objectName} doesn't include 'distinct_entities' key`
-      );
-      assert.false(
-        objectKeys.includes('non_entity_tokens'),
-        `${objectName} doesn't include 'non_entity_tokens' key`
-      );
-      assert.true(objectKeys.includes('entity_clients'), `${objectName} includes 'entity_clients' key`);
-      assert.true(
-        objectKeys.includes('non_entity_clients'),
-        `${objectName} includes 'non_entity_clients' key`
-      );
+  test('destructureCounts: homogenizes key names when both old and new keys exist, or just old key names', async function (assert) {
+    assert.expect(2);
+    const original = {
+      distinct_entities: 3,
+      entity_clients: 3,
+      non_entity_tokens: 5,
+      non_entity_clients: 5,
+      secret_syncs: 10,
+      acme_clients: 4,
+      clients: 22,
     };
-
-    const transformedMonths = [...MONTHS];
-    transformedMonths.forEach((month) => {
-      month.counts = homogenizeClientNaming(month.counts);
-      keyNameAssertions(month.counts, 'month counts');
-
-      month.new_clients.counts = homogenizeClientNaming(month.new_clients.counts);
-      keyNameAssertions(month.new_clients.counts, 'month new counts');
-
-      month.namespaces.forEach((ns) => {
-        ns.counts = homogenizeClientNaming(ns.counts);
-        keyNameAssertions(ns.counts, 'namespace counts');
-
-        ns.mounts.forEach((mount) => {
-          mount.counts = homogenizeClientNaming(mount.counts);
-          keyNameAssertions(mount.counts, 'mount counts');
-        });
-      });
-
-      month.new_clients.namespaces.forEach((ns) => {
-        ns.counts = homogenizeClientNaming(ns.counts);
-        keyNameAssertions(ns.counts, 'namespace new counts');
-
-        ns.mounts.forEach((mount) => {
-          mount.counts = homogenizeClientNaming(mount.counts);
-          keyNameAssertions(mount.counts, 'mount new counts');
-        });
-      });
-    });
+    const expected = {
+      entity_clients: 3,
+      non_entity_clients: 5,
+      secret_syncs: 10,
+      acme_clients: 4,
+      clients: 22,
+    };
+    assert.propEqual(destructureCounts(original), expected);
+    assert.propEqual(
+      original,
+      {
+        distinct_entities: 3,
+        entity_clients: 3,
+        non_entity_tokens: 5,
+        non_entity_clients: 5,
+        secret_syncs: 10,
+        acme_clients: 4,
+        clients: 22,
+      },
+      'original array is not modified'
+    );
   });
 
   test('flattenDataset: removes the counts key and flattens the dataset', async function (assert) {

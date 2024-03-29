@@ -5,7 +5,7 @@
 
 import ApplicationSerializer from '../application';
 import { formatISO } from 'date-fns';
-import { formatByMonths, formatByNamespace, homogenizeClientNaming } from 'core/utils/client-count-utils';
+import { formatByMonths, formatByNamespace, destructureCounts } from 'core/utils/client-count-utils';
 import timestamp from 'core/utils/timestamp';
 export default class ActivitySerializer extends ApplicationSerializer {
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
@@ -18,7 +18,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
       response_timestamp,
       by_namespace: formatByNamespace(payload.data.by_namespace),
       by_month: formatByMonths(payload.data.months),
-      total: homogenizeClientNaming(payload.data.total),
+      total: destructureCounts(payload.data.total),
     };
     delete payload.data.by_namespace;
     delete payload.data.months;

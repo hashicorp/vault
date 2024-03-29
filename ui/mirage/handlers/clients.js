@@ -35,6 +35,7 @@ function getTotalCounts(array) {
     non_entity_tokens: getSum(array, 'non_entity_clients'),
     non_entity_clients: getSum(array, 'non_entity_clients'),
     secret_syncs: getSum(array, 'secret_syncs'),
+    acme_clients: getSum(array, 'acme_clients'),
     clients: getSum(array, 'clients'),
   };
 }
@@ -66,17 +67,33 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
   const mounts = [];
 
   Array.from(Array(5)).forEach((mount, index) => {
+    const [acmeClients] = arrayOfCounts(randomBetween(min, max), 1);
+    mounts.push({
+      mount_path: `pki-engine-${index}`,
+      counts: {
+        clients: acmeClients,
+        entity_clients: 0,
+        non_entity_clients: 0,
+        distinct_entities: 0,
+        non_entity_tokens: 0,
+        secret_syncs: 0,
+        acme_clients: acmeClients,
+      },
+    });
+  });
+
+  Array.from(Array(5)).forEach((mount, index) => {
     const [secretSyncs] = arrayOfCounts(randomBetween(min, max), 1);
     mounts.push({
       mount_path: `kvv2-engine-${index}`,
       counts: {
         clients: secretSyncs,
-        // TODO test with live backend to confirm entity keys are present (and 0) for kv mounts
         entity_clients: 0,
         non_entity_clients: 0,
         distinct_entities: 0,
         non_entity_tokens: 0,
         secret_syncs: secretSyncs,
+        acme_clients: 0,
       },
     });
   });
@@ -93,8 +110,8 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
         non_entity_clients: nonEntity,
         distinct_entities: entity,
         non_entity_tokens: nonEntity,
-        // TODO test with live backend to confirm this key is present (and 0) for auth mounts (non-kv mounts)
         secret_syncs: 0,
+        acme_clients: 0,
       },
     });
   });
