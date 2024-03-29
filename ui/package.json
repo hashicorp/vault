@@ -27,7 +27,6 @@
     "start": "VAULT_ADDR=http://127.0.0.1:8200; ember server --proxy=$VAULT_ADDR",
     "start2": "ember server --proxy=http://127.0.0.1:8202 --port=4202",
     "start:chroot": "ember server --proxy=http://127.0.0.1:8300 --port=4300",
-    "start:mirage": "start () { MIRAGE_DEV_HANDLER=$1 yarn run start; }; start",
     "test": "concurrently --kill-others-on-fail -P -c \"auto\" -n lint:js,lint:hbs,vault \"yarn:lint:js:quiet\" \"yarn:lint:hbs:quiet\" \"node scripts/start-vault.js {@}\" --",
     "test:enos": "concurrently --kill-others-on-fail -P -c \"auto\" -n lint:js,lint:hbs,enos \"yarn:lint:js:quiet\" \"yarn:lint:hbs:quiet\" \"node scripts/enos-test-ember.js {@}\" --",
     "test:oss": "yarn run test -f='!enterprise' --split=8 --preserve-test-name --parallel",
