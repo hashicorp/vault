@@ -2534,8 +2534,8 @@ github.com/hashicorp/vault-plugin-auth-gcp v0.16.2 h1:HC1PpXxGNzfu7IUfN7Ok7dIMV2
 github.com/hashicorp/vault-plugin-auth-gcp v0.16.2/go.mod h1:8FWNvFElzQBWJGCZ3SBPqsSc/x9bge9Et+JuwVLlJPM=
 github.com/hashicorp/vault-plugin-auth-jwt v0.20.1 h1:98BDtyvh+43u7SkMWN1rIzSGHMhXqD4xt8XniB3R9EU=
 github.com/hashicorp/vault-plugin-auth-jwt v0.20.1/go.mod h1:yGd5YGkjbnW9xAarwjSHVR+t8lp7HDfTY+qn/UB/gpE=
-github.com/hashicorp/vault-plugin-auth-kerberos v0.11.0 h1:XjdH8nqosqgKeAwBptMS7DoXsdi8IKL2fbBSyvL/HRM=
-github.com/hashicorp/vault-plugin-auth-kerberos v0.11.0/go.mod h1:xupzh9O6Us6bqKLZ6wfRsjqlf1Mb1TRylKpxZPJd5rA=
+github.com/hashicorp/vault-plugin-auth-kerberos v0.11.1-0.20240401002049-383d8985b27f h1:ASdF1bDI0MAd4HnF/xOLSQqeGpVtNw0UhneBBhF7Ozk=
+github.com/hashicorp/vault-plugin-auth-kerberos v0.11.1-0.20240401002049-383d8985b27f/go.mod h1:L9trU4ermpgU/ftac65Da+EaoEiTONQlGgB6GxedzFI=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.18.0 h1:mGVVdcTI55t/NrMefkLjnenAVunJiQZg5o0opuU7ixw=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.18.0/go.mod h1:ju7B2fxYr3EtC2jX0ft79mUMuEGozz1Ws/ABpVvtlto=
 github.com/hashicorp/vault-plugin-auth-oci v0.15.1 h1:frikend6vdC09I60qmFkRwBVgXLlBz2qe1869bC5J5s=
@@ -2596,6 +2596,7 @@ github.com/imdario/mergo v0.3.8/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJ
 github.com/imdario/mergo v0.3.10/go.mod h1:jmQim1M+e3UYxmgPu/WyfjB3N3VflVyUjjjwH0dnCYA=
 github.com/imdario/mergo v0.3.11/go.mod h1:jmQim1M+e3UYxmgPu/WyfjB3N3VflVyUjjjwH0dnCYA=
 github.com/imdario/mergo v0.3.12/go.mod h1:jmQim1M+e3UYxmgPu/WyfjB3N3VflVyUjjjwH0dnCYA=
+github.com/imdario/mergo v0.3.13/go.mod h1:4lJ1jqUDcsbIECGy0RUJAXNIhg+6ocWgb1ALK2O4oXg=
 github.com/imdario/mergo v0.3.16 h1:wwQJbIsHYGMUyLSPrEq1CT16AhnhNJQ51+4fdHUnCl4=
 github.com/imdario/mergo v0.3.16/go.mod h1:WBLT9ZmE3lPoWsEzCh9LPo3TiwVN+ZKEjmz+hD27ysY=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
