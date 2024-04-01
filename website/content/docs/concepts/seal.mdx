@@ -110,6 +110,8 @@ that would be provided with Shamir. The process remains the same.
 For a list of examples and supported providers, please see the
 [seal documentation](/vault/docs/configuration/seal).
 
+When DR replication is enabled in Vault Enterprise, [Performance Standby](/vault/docs/enterprise/performance-standby) nodes on the DR cluster will seal themselves, so they must be restarted to be unsealed.
+
 -> **Warning:** Recovery keys cannot decrypt the root key, and thus are not
 sufficient to unseal Vault if the Auto Unseal mechanism isn't working. They
 are purely an authorization mechanism.  Using Auto Unseal
