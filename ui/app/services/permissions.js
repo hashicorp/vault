@@ -117,6 +117,27 @@ export default class PermissionsService extends Service {
     }
   }
 
+  get wildcardPath() {
+    const ns = [sanitizePath(this.chrootNamespace), sanitizePath(this.namespace.userRootNamespace)].join('/');
+    // wildcard path comes back from root namespace as empty string,
+    // while within a namespace it's the namespace itself ending with a slash
+    return ns === '/' ? '' : `${sanitizePath(ns)}/`;
+  }
+
+  /**
+   *
+   * @param {object} globPaths key is path, value is object with capabilities
+   * @returns {boolean} whether the user's policy includes wildcard access to NS
+   */
+  hasWildcardAccess(globPaths = {}) {
+    // First check if the wildcard path is in the globPaths object
+    if (!Object.keys(globPaths).includes(this.wildcardPath)) return false;
+
+    // if so, make sure the current namespace is a child of the wildcard path
+    return this.namespace.path.startsWith(this.wildcardPath);
+  }
+
+  // This method is called to recalculate whether to show the permissionsBanner when the namespace changes
   calcNsAccess() {
     if (this.canViewAll) {
       this.permissionsBanner = null;
