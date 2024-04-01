@@ -6,6 +6,14 @@
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { compareAsc, getUnixTime, isWithinInterval } from 'date-fns';
 
+export const CLIENT_TYPES = [
+  'acme_clients',
+  'clients', // summation of total clients
+  'entity_clients',
+  'non_entity_clients',
+  'secret_syncs',
+];
+
 // returns array of VersionHistoryModels for noteworthy upgrades: 1.9, 1.10
 // that occurred between timestamps (i.e. queried activity data)
 export const filterVersionHistory = (versionHistory, start, end) => {
@@ -105,7 +113,7 @@ export const formatByNamespace = (namespaceArray) => {
 
 // In 1.10 'distinct_entities' changed to 'entity_clients' and
 // 'non_entity_tokens' to 'non_entity_clients'
-// these deprecated key still exist on the response, so remove irrelevant keys here
+// these deprecated keys still exist on the response, so only return relevant keys here
 export const destructureCounts = (object) => {
   const { clients, entity_clients, non_entity_clients, secret_syncs, acme_clients } = object;
   return {

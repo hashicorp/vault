@@ -785,7 +785,7 @@ module('Integration | Util | client count utils', function (hooks) {
     assert.strictEqual(formatByNamespace(SOME_OBJECT), SOME_OBJECT, 'it returns if arg is not an array');
   });
 
-  test('destructureCounts: homogenizes key names when both old and new keys exist, or just old key names', async function (assert) {
+  test('destructureCounts: returns only relevant client keys from an object', async function (assert) {
     assert.expect(2);
     const original = {
       distinct_entities: 3,

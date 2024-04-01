@@ -17,6 +17,7 @@ import {
   subMonths,
 } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
+import { CLIENT_TYPES } from 'core/utils/client-count-utils';
 
 export const LICENSE_START = new Date('2023-07-02T00:00:00Z');
 export const STATIC_NOW = new Date('2024-01-25T23:59:59Z');
@@ -29,14 +30,16 @@ function getSum(array, key) {
 }
 
 function getTotalCounts(array) {
+  const counts = CLIENT_TYPES.reduce((obj, key) => {
+    obj[key] = getSum(array, key);
+    return obj;
+  }, {});
+
+  // add deprecated keys
   return {
-    distinct_entities: getSum(array, 'entity_clients'),
-    entity_clients: getSum(array, 'entity_clients'),
-    non_entity_tokens: getSum(array, 'non_entity_clients'),
-    non_entity_clients: getSum(array, 'non_entity_clients'),
-    secret_syncs: getSum(array, 'secret_syncs'),
-    acme_clients: getSum(array, 'acme_clients'),
-    clients: getSum(array, 'clients'),
+    ...counts,
+    distinct_entities: counts.entity_clients,
+    non_entity_tokens: counts.non_entity_clients,
   };
 }
 
@@ -55,6 +58,25 @@ function arrayOfCounts(max, arrayLength) {
   return result.sort((a, b) => b - a);
 }
 
+function generateMounts(pathPrefix, counts) {
+  const baseObject = CLIENT_TYPES.reduce((obj, key) => {
+    obj[key] = 0;
+    return obj;
+  }, {});
+  return Array.from(Array(5)).map((mount, index) => {
+    return {
+      mount_path: `${pathPrefix}${index}`,
+      counts: {
+        ...baseObject,
+        distinct_entities: 0,
+        non_entity_tokens: 0,
+        // object contains keys for which 0-values of base object to overwrite
+        ...counts,
+      },
+    };
+  });
+}
+
 function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
   const min = isLowerCounts ? 10 : 50;
   const max = isLowerCounts ? 100 : 5000;
@@ -64,57 +86,19 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
     counts: {},
     mounts: {},
   };
-  const mounts = [];
 
-  Array.from(Array(5)).forEach((mount, index) => {
-    const [acmeClients] = arrayOfCounts(randomBetween(min, max), 1);
-    mounts.push({
-      mount_path: `pki-engine-${index}`,
-      counts: {
-        clients: acmeClients,
-        entity_clients: 0,
-        non_entity_clients: 0,
-        distinct_entities: 0,
-        non_entity_tokens: 0,
-        secret_syncs: 0,
-        acme_clients: acmeClients,
-      },
-    });
-  });
+  const authClients = randomBetween(min, max);
+  const [non_entity_clients, entity_clients] = arrayOfCounts(authClients, 2);
+  const [secret_syncs] = arrayOfCounts(randomBetween(min, max), 1);
+  const [acme_clients] = arrayOfCounts(randomBetween(min, max), 1);
 
-  Array.from(Array(5)).forEach((mount, index) => {
-    const [secretSyncs] = arrayOfCounts(randomBetween(min, max), 1);
-    mounts.push({
-      mount_path: `kvv2-engine-${index}`,
-      counts: {
-        clients: secretSyncs,
-        entity_clients: 0,
-        non_entity_clients: 0,
-        distinct_entities: 0,
-        non_entity_tokens: 0,
-        secret_syncs: secretSyncs,
-        acme_clients: 0,
-      },
-    });
-  });
+  // each mount type generates a different type of client
+  const mounts = [
+    ...generateMounts('auth/authid/', { clients: authClients, non_entity_clients, entity_clients }),
+    ...generateMounts('kvv2-engine-', { clients: secret_syncs, secret_syncs }),
+    ...generateMounts('pki-engine-', { clients: acme_clients, acme_clients }),
+  ];
 
-  // generate auth mounts array
-  Array.from(Array(10)).forEach((mount, index) => {
-    const mountClients = randomBetween(min, max);
-    const [nonEntity, entity] = arrayOfCounts(mountClients, 2);
-    mounts.push({
-      mount_path: `auth/authid${index}`,
-      counts: {
-        clients: mountClients,
-        entity_clients: entity,
-        non_entity_clients: nonEntity,
-        distinct_entities: entity,
-        non_entity_tokens: nonEntity,
-        secret_syncs: 0,
-        acme_clients: 0,
-      },
-    });
-  });
   mounts.sort((a, b) => b.counts.clients - a.counts.clients);
   nsBlock.mounts = mounts;
   nsBlock.counts = getTotalCounts(mounts);
