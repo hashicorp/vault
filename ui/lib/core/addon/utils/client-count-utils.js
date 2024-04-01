@@ -114,22 +114,38 @@ export const formatByNamespace = (namespaceArray) => {
 // In 1.10 'distinct_entities' changed to 'entity_clients' and
 // 'non_entity_tokens' to 'non_entity_clients'
 // these deprecated keys still exist on the response, so only return relevant keys here
-export const destructureCounts = (object) => {
-  const { clients, entity_clients, non_entity_clients, secret_syncs, acme_clients } = object;
-  return {
-    clients,
-    entity_clients,
-    non_entity_clients,
-    secret_syncs,
-    acme_clients,
-  };
+export const homogenizeClientNaming = (object) => {
+  // if new key names exist, only return those key/value pairs
+  if (Object.keys(object).includes('entity_clients')) {
+    const { clients, entity_clients, non_entity_clients, secret_syncs, acme_clients } = object;
+    return {
+      clients,
+      entity_clients,
+      non_entity_clients,
+      secret_syncs,
+      acme_clients,
+    };
+  }
+  // TODO cmb - follow up in vault storage channel thread to confirm this block can be deleted
+  // if object only has outdated key names, update naming
+  if (Object.keys(object).includes('distinct_entities')) {
+    const { clients, distinct_entities, non_entity_tokens, secret_syncs, acme_clients } = object;
+    return {
+      clients,
+      entity_clients: distinct_entities,
+      non_entity_clients: non_entity_tokens,
+      secret_syncs,
+      acme_clients,
+    };
+  }
+  return object;
 };
 
 export const flattenDataset = (object) => {
   if (object?.counts) {
     const flattenedObject = {};
     Object.keys(object['counts']).forEach((key) => (flattenedObject[key] = object['counts'][key]));
-    return destructureCounts(flattenedObject);
+    return homogenizeClientNaming(flattenedObject);
   }
   return object;
 };
@@ -161,7 +177,7 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
         ...ns,
         new_clients: {
           label: ns.label,
-          ...destructureCounts(newNamespaceCounts),
+          ...homogenizeClientNaming(newNamespaceCounts),
           mounts: newClientsByMount,
         },
         mounts: [...nestNewClientsWithinMounts],
@@ -190,7 +206,7 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
     namespaces_by_key[label] = {
       month,
       timestamp,
-      ...destructureCounts(namespaceObject),
+      ...homogenizeClientNaming(namespaceObject),
       new_clients: { month, ...new_clients },
       mounts_by_key,
     };
