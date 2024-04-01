@@ -82,7 +82,9 @@
 {{#if this.auth.isActiveSession}}
   <TokenExpireWarning @expirationDate={{this.auth.tokenExpirationDate}} @allowingExpiration={{this.auth.allowExpiration}}>
     {{#if this.permissionBanner}}
-      <ResultantAclBanner @isEnterprise={{this.activeCluster.version.isEnterprise}} @failType={{this.permissionBanner}} />
+      <div class="has-top-margin-m">
+        <ResultantAclBanner @isEnterprise={{this.activeCluster.version.isEnterprise}} @failType={{this.permissionBanner}} />
+      </div>
     {{/if}}
     {{outlet}}
   </TokenExpireWarning>
