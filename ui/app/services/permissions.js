@@ -86,8 +86,8 @@ const API_PATHS_TO_ROUTE_PARAMS = {
   chroot_namespace is set, all of the paths in the response will be prefixed
   with that namespace. Additionally, this endpoint is only added to the default
   policy in the user's root namespace, so we make the call to the user's root
-  namespace (the namespace where the user's auth method is mounted) no matter what
-  the current namespace is.
+  namespace (the namespace where the user's auth method is mounted) no matter
+  what the current namespace is.
 */
 
 export default class PermissionsService extends Service {
@@ -125,12 +125,12 @@ export default class PermissionsService extends Service {
   get wildcardPath() {
     const ns = [sanitizePath(this.chrootNamespace), sanitizePath(this.namespace.userRootNamespace)].join('/');
     // wildcard path comes back from root namespace as empty string,
-    // while within a namespace it's the namespace itself ending with a slash
+    // but within a namespace it's the namespace itself ending with a slash
     return ns === '/' ? '' : `${sanitizePath(ns)}/`;
   }
 
   /**
-   *
+   * hasWildcardAccess checks if the user has a wildcard policy
    * @param {object} globPaths key is path, value is object with capabilities
    * @returns {boolean} whether the user's policy includes wildcard access to NS
    */
