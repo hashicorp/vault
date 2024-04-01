@@ -161,12 +161,12 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kv v0.17.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.11.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.12.1
-	github.com/hashicorp/vault-plugin-secrets-terraform v0.7.5
+	github.com/hashicorp/vault-plugin-secrets-terraform v0.7.6-0.20240401001459-8cccc443fe12
 	github.com/hashicorp/vault-testing-stepwise v0.1.4
-	github.com/hashicorp/vault/api v1.12.0
+	github.com/hashicorp/vault/api v1.12.2
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.11.0
+	github.com/hashicorp/vault/sdk v0.11.1
 	github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jackc/pgx/v4 v4.18.3
@@ -398,8 +398,8 @@ require (
 	github.com/hashicorp/go-msgpack/v2 v2.1.1 // indirect
 	github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.3.0 // indirect
-	github.com/hashicorp/go-slug v0.13.4 // indirect
-	github.com/hashicorp/go-tfe v1.44.0 // indirect
+	github.com/hashicorp/go-slug v0.14.0 // indirect
+	github.com/hashicorp/go-tfe v1.48.0 // indirect
 	github.com/hashicorp/jsonapi v1.3.1 // indirect
 	github.com/hashicorp/logutils v1.0.0 // indirect
 	github.com/hashicorp/mdns v1.0.4 // indirect
