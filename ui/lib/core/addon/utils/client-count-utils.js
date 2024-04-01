@@ -62,51 +62,42 @@ export const formatByMonths = (monthsArray) => {
     const month = parseAPITimestamp(m.timestamp, 'M/yy');
     const totalClientsByNamespace = formatByNamespace(m.namespaces);
     const newClientsByNamespace = formatByNamespace(m.new_clients?.namespaces);
-    if (Object.keys(m).includes('counts')) {
-      const totalCounts = flattenDataset(m);
-      const newCounts = m.new_clients ? flattenDataset(m.new_clients) : {};
-      return {
+    return {
+      month,
+      timestamp: m.timestamp,
+      ...homogenizeClientNaming(m?.counts),
+      namespaces: formatByNamespace(m.namespaces) || [],
+      namespaces_by_key: namespaceArrayToObject(
+        totalClientsByNamespace,
+        newClientsByNamespace,
+        month,
+        m.timestamp
+      ),
+      new_clients: {
         month,
         timestamp: m.timestamp,
-        ...totalCounts,
-        namespaces: formatByNamespace(m.namespaces) || [],
-        namespaces_by_key: namespaceArrayToObject(
-          totalClientsByNamespace,
-          newClientsByNamespace,
-          month,
-          m.timestamp
-        ),
-        new_clients: {
-          month,
-          timestamp: m.timestamp,
-          ...newCounts,
-          namespaces: formatByNamespace(m.new_clients?.namespaces) || [],
-        },
-      };
-    }
+        ...homogenizeClientNaming(m?.new_clients?.counts),
+        namespaces: formatByNamespace(m.new_clients?.namespaces) || [],
+      },
+    };
   });
 };
 
 export const formatByNamespace = (namespaceArray) => {
   if (!Array.isArray(namespaceArray)) return namespaceArray;
   return namespaceArray?.map((ns) => {
-    // 'namespace_path' is an empty string for root
-    if (ns['namespace_id'] === 'root') ns['namespace_path'] = 'root';
-    const label = ns['namespace_path'];
-    const flattenedNs = flattenDataset(ns);
+    // 'namespace_path' is an empty string for root, so use namespace_id
+    const label = ns['namespace_id'] === '' ? ns['namespace_id'] : ns['namespace_path'];
+    // TODO ask backend what pre 1.10 data looks like, does "mounts" key exist?
     // if no mounts, mounts will be an empty array
-    flattenedNs.mounts = [];
+    let mounts = [];
     if (ns?.mounts && ns.mounts.length > 0) {
-      flattenedNs.mounts = ns.mounts.map((mount) => {
-        return {
-          label: mount['mount_path'],
-          ...flattenDataset(mount),
-        };
-      });
+      mounts = ns.mounts.map((m) => ({ label: m['mount_path'], ...homogenizeClientNaming(m?.counts) }));
     }
     return {
       label,
-      ...flattenedNs,
+      ...homogenizeClientNaming(ns.counts),
+      mounts,
     };
   });
 };
@@ -115,6 +106,7 @@ export const formatByNamespace = (namespaceArray) => {
 // 'non_entity_tokens' to 'non_entity_clients'
 // these deprecated keys still exist on the response, so only return relevant keys here
 export const homogenizeClientNaming = (object) => {
+  if (!object) return;
   // if new key names exist, only return those key/value pairs
   if (Object.keys(object).includes('entity_clients')) {
     const { clients, entity_clients, non_entity_clients, secret_syncs, acme_clients } = object;
@@ -138,16 +130,6 @@ export const homogenizeClientNaming = (object) => {
       acme_clients,
     };
   }
-  return object;
-};
-
-export const flattenDataset = (object) => {
-  if (object?.counts) {
-    const flattenedObject = {};
-    Object.keys(object['counts']).forEach((key) => (flattenedObject[key] = object['counts'][key]));
-    return homogenizeClientNaming(flattenedObject);
-  }
-  return object;
 };
 
 export const sortMonthsByTimestamp = (monthsArray) => {

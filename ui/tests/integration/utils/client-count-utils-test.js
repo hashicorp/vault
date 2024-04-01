@@ -7,7 +7,6 @@ import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import {
   filterVersionHistory,
-  flattenDataset,
   formatByMonths,
   formatByNamespace,
   homogenizeClientNaming,
@@ -832,60 +831,6 @@ module('Integration | Util | client count utils', function (hooks) {
         });
       });
     });
-  });
-
-  test('flattenDataset: removes the counts key and flattens the dataset', async function (assert) {
-    assert.expect(22);
-    const flattenedNamespace = flattenDataset(BY_NAMESPACE[0]);
-    const flattenedMount = flattenDataset(BY_NAMESPACE[0].mounts[0]);
-    const flattenedMonth = flattenDataset(MONTHS[0]);
-    const flattenedNewMonthClients = flattenDataset(MONTHS[0].new_clients);
-    const objectNullCounts = { counts: null, foo: 'bar' };
-
-    const keyNameAssertions = (object, objectName) => {
-      const objectKeys = Object.keys(object);
-      assert.false(objectKeys.includes('counts'), `${objectName} doesn't include 'counts' key`);
-      assert.true(objectKeys.includes('clients'), `${objectName} includes 'clients' key`);
-      assert.true(objectKeys.includes('entity_clients'), `${objectName} includes 'entity_clients' key`);
-      assert.true(
-        objectKeys.includes('non_entity_clients'),
-        `${objectName} includes 'non_entity_clients' key`
-      );
-    };
-
-    keyNameAssertions(flattenedNamespace, 'namespace object');
-    keyNameAssertions(flattenedMount, 'mount object');
-    keyNameAssertions(flattenedMonth, 'month object');
-    keyNameAssertions(flattenedNewMonthClients, 'month new_clients object');
-
-    assert.strictEqual(
-      flattenDataset(SOME_OBJECT),
-      SOME_OBJECT,
-      "it returns original object if counts key doesn't exist"
-    );
-
-    assert.strictEqual(
-      flattenDataset(objectNullCounts),
-      objectNullCounts,
-      'it returns original object if counts are null'
-    );
-
-    assert.propEqual(
-      flattenDataset(['some array']),
-      ['some array'],
-      'it fails gracefully if an array is passed in'
-    );
-    assert.strictEqual(flattenDataset(null), null, 'it fails gracefully if null is passed in');
-    assert.strictEqual(
-      flattenDataset('some string'),
-      'some string',
-      'it fails gracefully if a string is passed in'
-    );
-    assert.propEqual(
-      flattenDataset(new Object()),
-      new Object(),
-      'it fails gracefully if an empty object is passed in'
-    );
   });
 
   test('sortMonthsByTimestamp: sorts timestamps chronologically, oldest to most recent', async function (assert) {
