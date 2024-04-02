@@ -198,7 +198,7 @@ func TestNewEntryFormatter(t *testing.T) {
 
 			cfg, err := NewFormatterConfig(&testHeaderFormatter{}, tc.Options...)
 			require.NoError(t, err)
-			f, err := NewEntryFormatter(tc.Name, cfg, ss, tc.Logger /*, tc.Options...*/)
+			f, err := NewEntryFormatter(tc.Name, cfg, ss, tc.Logger)
 
 			switch {
 			case tc.IsErrorExpected:
