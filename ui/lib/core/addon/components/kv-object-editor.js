@@ -50,7 +50,7 @@ export default class KvObjectEditor extends Component {
     };
   }
   get hasDuplicateKeys() {
-    return this.kvData.uniqBy('name').length !== this.kvData.get('length');
+    return this.kvData.uniqBy('name').length !== this.kvData.length;
   }
 
   // fired on did-insert from render modifier
