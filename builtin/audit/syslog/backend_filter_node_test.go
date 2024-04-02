@@ -74,7 +74,7 @@ func TestBackend_configureFilterFormatterSink(t *testing.T) {
 		nodeMap:    map[eventlogger.NodeID]eventlogger.Node{},
 	}
 
-	formatConfig, err := audit.NewFormatterConfig()
+	formatConfig, err := audit.NewFormatterConfig(&testHeaderFormatter{})
 	require.NoError(t, err)
 
 	err = b.configureFilterNode("path == bar")

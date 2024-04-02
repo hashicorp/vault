@@ -1547,7 +1547,7 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
 		var err error
-		noop, err = corehelpers.NewNoopAudit(config, audit.WithHeaderFormatter(headerFormatter))
+		noop, err = corehelpers.NewNoopAudit(config, headerFormatter)
 		return noop, err
 	}
 
@@ -1610,7 +1610,7 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
 		var err error
-		noop, err = corehelpers.NewNoopAudit(config, audit.WithHeaderFormatter(headerFormatter))
+		noop, err = corehelpers.NewNoopAudit(config, headerFormatter)
 		return noop, err
 	}
 
@@ -1731,7 +1731,7 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	}
 	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
 		var err error
-		noop, err = corehelpers.NewNoopAudit(config, audit.WithHeaderFormatter(headerFormatter))
+		noop, err = corehelpers.NewNoopAudit(config, headerFormatter)
 		return noop, err
 	}
 

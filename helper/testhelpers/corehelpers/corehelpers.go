@@ -216,13 +216,13 @@ func (m *mockBuiltinRegistry) DeprecationStatus(name string, pluginType consts.P
 	return consts.Unknown, false
 }
 
-func TestNoopAudit(t testing.T, path string, config map[string]string, opts ...audit.Option) *NoopAudit {
+func TestNoopAudit(t testing.T, path string, config map[string]string, formatter audit.HeaderFormatter) *NoopAudit {
 	cfg := &audit.BackendConfig{
 		Config:    config,
 		MountPath: path,
 		Logger:    NewTestLogger(t),
 	}
-	n, err := NewNoopAudit(cfg, opts...)
+	n, err := NewNoopAudit(cfg, formatter)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,7 +232,7 @@ func TestNoopAudit(t testing.T, path string, config map[string]string, opts ...a
 // NewNoopAudit should be used to create a NoopAudit as it handles creation of a
 // predictable salt and wraps eventlogger nodes so information can be retrieved on
 // what they've seen or formatted.
-func NewNoopAudit(config *audit.BackendConfig, opts ...audit.Option) (*NoopAudit, error) {
+func NewNoopAudit(config *audit.BackendConfig, headerFormatter audit.HeaderFormatter) (*NoopAudit, error) {
 	view := &logical.InmemStorage{}
 
 	// Create the salt with a known key for predictable hmac values.
@@ -259,7 +259,7 @@ func NewNoopAudit(config *audit.BackendConfig, opts ...audit.Option) (*NoopAudit
 		nodeMap:    make(map[eventlogger.NodeID]eventlogger.Node, 2),
 	}
 
-	cfg, err := audit.NewFormatterConfig()
+	cfg, err := audit.NewFormatterConfig(headerFormatter)
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +269,7 @@ func NewNoopAudit(config *audit.BackendConfig, opts ...audit.Option) (*NoopAudit
 		return nil, fmt.Errorf("error generating random NodeID for formatter node: %w", err)
 	}
 
-	formatterNode, err := audit.NewEntryFormatter(config.MountPath, cfg, noopBackend, config.Logger, opts...)
+	formatterNode, err := audit.NewEntryFormatter(config.MountPath, cfg, noopBackend, config.Logger)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
@@ -297,7 +297,7 @@ func NewNoopAudit(config *audit.BackendConfig, opts ...audit.Option) (*NoopAudit
 // The records parameter will be repointed to the one used within the pipeline.
 func NoopAuditFactory(records **[][]byte) audit.Factory {
 	return func(_ context.Context, config *audit.BackendConfig, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
-		n, err := NewNoopAudit(config, audit.WithHeaderFormatter(headerFormatter))
+		n, err := NewNoopAudit(config, headerFormatter)
 		if err != nil {
 			return nil, err
 		}

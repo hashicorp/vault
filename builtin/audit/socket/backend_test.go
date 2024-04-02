@@ -16,8 +16,26 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestBackend_formatterConfig ensures that all the configuration values are parsed correctly.
-func TestBackend_formatterConfig(t *testing.T) {
+// testHeaderFormatter is a stub to prevent the need to import the vault package
+// to bring in vault.AuditedHeadersConfig for testing.
+type testHeaderFormatter struct {
+	shouldReturnEmpty bool
+}
+
+// ApplyConfig satisfies the HeaderFormatter interface for testing.
+// It will either return the headers it was supplied or empty headers depending
+// on how it is configured.
+// ignore-nil-nil-function-check.
+func (f *testHeaderFormatter) ApplyConfig(_ context.Context, headers map[string][]string, salter audit.Salter) (result map[string][]string, retErr error) {
+	if f.shouldReturnEmpty {
+		return make(map[string][]string), nil
+	}
+
+	return headers, nil
+}
+
+// TestBackend_newFormatterConfig ensures that all the configuration values are parsed correctly.
+func TestBackend_newFormatterConfig(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -73,7 +91,7 @@ func TestBackend_formatterConfig(t *testing.T) {
 			},
 			want:           audit.FormatterConfig{},
 			wantErr:        true,
-			expectedErrMsg: "socket.formatterConfig: unable to parse 'hmac_accessor': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedErrMsg: "socket.newFormatterConfig: unable to parse 'hmac_accessor': strconv.ParseBool: parsing \"maybe\": invalid syntax",
 		},
 		"invalid-log-raw": {
 			config: map[string]string{
@@ -83,7 +101,7 @@ func TestBackend_formatterConfig(t *testing.T) {
 			},
 			want:           audit.FormatterConfig{},
 			wantErr:        true,
-			expectedErrMsg: "socket.formatterConfig: unable to parse 'log_raw': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedErrMsg: "socket.newFormatterConfig: unable to parse 'log_raw': strconv.ParseBool: parsing \"maybe\": invalid syntax",
 		},
 		"invalid-elide-bool": {
 			config: map[string]string{
@@ -94,7 +112,18 @@ func TestBackend_formatterConfig(t *testing.T) {
 			},
 			want:           audit.FormatterConfig{},
 			wantErr:        true,
-			expectedErrMsg: "socket.formatterConfig: unable to parse 'elide_list_responses': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedErrMsg: "socket.newFormatterConfig: unable to parse 'elide_list_responses': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+		},
+		"prefix": {
+			config: map[string]string{
+				"format": audit.JSONFormat.String(),
+				"prefix": "foo",
+			},
+			want: audit.FormatterConfig{
+				RequiredFormat: audit.JSONFormat,
+				Prefix:         "foo",
+				HMACAccessor:   true,
+			},
 		},
 	}
 	for name, tc := range tests {
@@ -103,14 +132,19 @@ func TestBackend_formatterConfig(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := formatterConfig(tc.config)
+			got, err := newFormatterConfig(&testHeaderFormatter{}, tc.config)
 			if tc.wantErr {
 				require.Error(t, err)
 				require.EqualError(t, err, tc.expectedErrMsg)
 			} else {
 				require.NoError(t, err)
 			}
-			require.Equal(t, tc.want, got)
+			require.Equal(t, tc.want.RequiredFormat, got.RequiredFormat)
+			require.Equal(t, tc.want.Raw, got.Raw)
+			require.Equal(t, tc.want.ElideListResponses, got.ElideListResponses)
+			require.Equal(t, tc.want.HMACAccessor, got.HMACAccessor)
+			require.Equal(t, tc.want.OmitTime, got.OmitTime)
+			require.Equal(t, tc.want.Prefix, got.Prefix)
 		})
 	}
 }
@@ -125,7 +159,7 @@ func TestBackend_configureFormatterNode(t *testing.T) {
 		nodeMap:    map[eventlogger.NodeID]eventlogger.Node{},
 	}
 
-	formatConfig, err := audit.NewFormatterConfig()
+	formatConfig, err := audit.NewFormatterConfig(&testHeaderFormatter{})
 	require.NoError(t, err)
 
 	err = b.configureFormatterNode("juan", formatConfig, hclog.NewNullLogger())
@@ -370,7 +404,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			be, err := Factory(ctx, tc.backendConfig, nil)
+			be, err := Factory(ctx, tc.backendConfig, &testHeaderFormatter{})
 
 			switch {
 			case tc.isErrorExpected:
@@ -431,7 +465,7 @@ func TestBackend_IsFallback(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			be, err := Factory(ctx, tc.backendConfig, nil)
+			be, err := Factory(ctx, tc.backendConfig, &testHeaderFormatter{})
 			require.NoError(t, err)
 			require.NotNil(t, be)
 			require.Equal(t, tc.isFallbackExpected, be.IsFallback())
