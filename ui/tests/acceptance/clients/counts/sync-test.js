@@ -12,6 +12,7 @@ import { visit, click, currentURL } from '@ember/test-helpers';
 import sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
 import authPage from 'vault/tests/pages/auth';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SELECTORS } from 'vault/tests/helpers/clients';
 
 module('Acceptance | clients | sync | activated', function (hooks) {
@@ -37,7 +38,7 @@ module('Acceptance | clients | sync | activated', function (hooks) {
 
     assert.dom(SELECTORS.charts.chart('Secrets sync usage')).exists('Secrets sync usage chart is rendered');
     assert.dom(SELECTORS.syncTab.total).exists('Total sync clients chart is rendered');
-    assert.dom(SELECTORS.emptyStateTitle).doesNotExist();
+    assert.dom(GENERAL.emptyStateTitle).doesNotExist();
   });
 });
 
@@ -84,9 +85,9 @@ module('Acceptance | clients | sync | not activated', function (hooks) {
       };
     });
 
-    assert.dom(SELECTORS.emptyStateTitle).exists('Shows empty state when secrets-sync is not activated');
+    assert.dom(GENERAL.emptyStateTitle).exists('Shows empty state when secrets-sync is not activated');
 
-    await click(`${SELECTORS.emptyStateActions} .hds-link-standalone`);
+    await click(`${GENERAL.emptyStateActions} .hds-link-standalone`);
     assert.strictEqual(
       currentURL(),
       '/vault/sync/secrets/overview',

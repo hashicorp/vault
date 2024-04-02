@@ -4,7 +4,6 @@
  */
 
 import { Response } from 'miragejs';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { click } from '@ember/test-helpers';
 
 import { LICENSE_START } from 'vault/mirage/handlers/clients';
@@ -27,7 +26,6 @@ import { addMonths } from 'date-fns';
   License start date this month
 */
 export const SELECTORS = {
-  ...GENERAL,
   counts: {
     startLabel: '[data-test-counts-start-label]',
     description: '[data-test-counts-description]',
@@ -77,7 +75,22 @@ export const SELECTORS = {
   monthDropdown: '[data-test-toggle-month]',
   yearDropdown: '[data-test-toggle-year]',
   currentBillingPeriod: '[data-test-current-billing-period]',
-  dateDropdownSubmit: '[data-test-date-dropdown-submit]',
+  dateDropdown: {
+    toggleMonth: '[data-test-toggle-month]',
+    toggleYear: '[data-test-toggle-year]',
+    selectMonth: (month) => `[data-test-dropdown-month="${month}"]`,
+    selectYear: (year) => `[data-test-dropdown-year="${year}"]`,
+    submit: '[data-test-date-dropdown-submit]',
+  },
+  calendarWidget: {
+    trigger: '[data-test-calendar-widget-trigger]',
+    currentMonth: '[data-test-current-month]',
+    currentBillingPeriod: '[data-test-current-billing-period]',
+    customEndMonth: '[data-test-show-calendar]',
+    previousYear: '[data-test-previous-year]',
+    nextYear: '[data-test-next-year]',
+    calendarMonth: (month) => `[data-test-calendar-month="${month}"]`,
+  },
   runningTotalMonthStats: '[data-test-running-total="single-month-stats"]',
   runningTotalMonthlyCharts: '[data-test-running-total="monthly-charts"]',
   selectedAuthMount: 'div#auth-method-search-select [data-test-selected-option] div',

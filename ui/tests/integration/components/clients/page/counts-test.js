@@ -10,6 +10,7 @@ import { render, click, settled, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { getUnixTime } from 'date-fns';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SELECTORS as ts, dateDropdownSelect } from 'vault/tests/helpers/clients';
 import { selectChoose } from 'ember-power-select/test-support/helpers';
 import timestamp from 'core/utils/timestamp';
@@ -99,7 +100,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     await this.renderComponent();
 
     assert
-      .dom(ts.emptyStateTitle)
+      .dom(GENERAL.emptyStateTitle)
       .hasText('No data received from July 2023 to January 2024', 'No data empty state renders');
   });
 
@@ -109,7 +110,9 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom(ts.emptyStateTitle).hasText('You are not authorized', 'Activity error empty state renders');
+    assert
+      .dom(GENERAL.emptyStateTitle)
+      .hasText('You are not authorized', 'Activity error empty state renders');
   });
 
   test('it should render config disabled alert', async function (assert) {
@@ -246,7 +249,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom(ts.emptyStateTitle).hasText('No start date found', 'Empty state renders');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No start date found', 'Empty state renders');
     assert.dom(ts.counts.startDropdown).exists('Date dropdown renders when start time is not provided');
   });
 
@@ -256,7 +259,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     await this.renderComponent();
 
     assert
-      .dom(ts.emptyStateTitle)
+      .dom(GENERAL.emptyStateTitle)
       .hasText('No data received from July 2023 to January 2024', 'Empty state renders');
   });
 });
