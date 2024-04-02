@@ -4,7 +4,7 @@
  */
 
 import { click, fillIn } from '@ember/test-helpers';
-import { SELECTORS as GENERAL } from 'vault/tests/helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 export const PAGE = {
   ...GENERAL,
