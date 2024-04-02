@@ -1,0 +1,4 @@
+```release-note:bug
+cli: fixed issue where Vault CLI would error out if HOME was not set for 
+the user.
+```
