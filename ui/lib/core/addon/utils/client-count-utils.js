@@ -86,8 +86,8 @@ export const formatByMonths = (monthsArray) => {
 export const formatByNamespace = (namespaceArray) => {
   if (!Array.isArray(namespaceArray)) return namespaceArray;
   return namespaceArray?.map((ns) => {
-    // 'namespace_path' is an empty string for root, so use namespace_id
-    const label = ns['namespace_id'] === '' ? ns['namespace_id'] : ns['namespace_path'];
+    // i.e. 'namespace_path' is an empty string for 'root', so use namespace_id
+    const label = ns.namespace_path === '' ? ns.namespace_id : ns.namespace_path;
     // TODO ask backend what pre 1.10 data looks like, does "mounts" key exist?
     // if no mounts, mounts will be an empty array
     let mounts = [];

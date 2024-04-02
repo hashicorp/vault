@@ -47,13 +47,12 @@ module('Integration | Util | client count utils', function (hooks) {
   });
 
   test('formatByMonths: formats the months array', async function (assert) {
-    assert.expect(2);
+    assert.expect(5);
     const original = [...RESPONSE.months];
     const expected = [
       {
         month: '8/23',
         timestamp: '2023-08-01T00:00:00-07:00',
-        counts: null,
         namespaces: [],
         new_clients: {
           month: '8/23',
@@ -314,7 +313,29 @@ module('Integration | Util | client count utils', function (hooks) {
       },
     ];
 
-    assert.propEqual(formatByMonths(RESPONSE.months), expected);
+    const [formattedNoData, formattedWithActivity] = formatByMonths(RESPONSE.months);
+
+    // instead of asserting the whole expected response, broken up so tests are easier to debug
+    // but kept whole above to copy/paste updated response expectations in the future
+    const [expectedNoData, expectedWithActivity] = expected;
+    const { namespaces, namespaces_by_key, new_clients } = expectedWithActivity;
+
+    assert.propEqual(formattedNoData, expectedNoData, 'it formats months without data');
+    assert.propEqual(
+      formattedWithActivity.namespaces,
+      namespaces,
+      'it formats namespaces array for months with data'
+    );
+    assert.propEqual(
+      formattedWithActivity.namespaces_by_key,
+      namespaces_by_key,
+      'it formats namespaces_by_key for months with data'
+    );
+    assert.propEqual(
+      formattedWithActivity.new_clients,
+      new_clients,
+      'it formats new_clients block for months with data'
+    );
     assert.propEqual(RESPONSE.months, original, 'it does not modify original months array');
   });
 
