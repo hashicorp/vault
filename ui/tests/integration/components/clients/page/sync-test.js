@@ -11,14 +11,14 @@ import hbs from 'htmlbars-inline-precompile';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { getUnixTime } from 'date-fns';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { SELECTORS } from 'vault/tests/helpers/clients';
+import { CLIENT_COUNT } from 'vault/tests/helpers/clients';
 import { formatNumber } from 'core/helpers/format-number';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 import { dateFormat } from 'core/helpers/date-format';
 
 const START_TIME = getUnixTime(LICENSE_START);
 const END_TIME = getUnixTime(STATIC_NOW);
-const { syncTab, charts, usageStats } = SELECTORS;
+const { syncTab, charts, usageStats } = CLIENT_COUNT;
 
 module('Integration | Component | clients | Clients::Page::Sync', function (hooks) {
   setupRenderingTest(hooks);
