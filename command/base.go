@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/mattn/go-isatty"
+	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
 )
@@ -216,7 +217,14 @@ func (c *BaseCommand) applyHCPConfig() error {
 		c.hcpTokenHelper = c.HCPTokenHelper()
 	}
 
-	hcpToken, err := c.hcpTokenHelper.GetHCPToken()
+	// Silently bailing here because if HOME is not set it's going
+	// to spam the user with errors or warnings.
+	path, err := homedir.Dir()
+	if err != nil {
+		return nil
+	}
+
+	hcpToken, err := c.hcpTokenHelper.GetHCPToken(path)
 	if err != nil {
 		return err
 	}
