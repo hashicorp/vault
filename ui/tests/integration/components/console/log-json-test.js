@@ -13,7 +13,6 @@ module('Integration | Component | console/log json', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.codeMirror = this.owner.lookup('service:code-mirror');
     // TODO: Fix JSONEditor/CodeMirror
     setRunOptions({
       rules: {
@@ -30,7 +29,7 @@ module('Integration | Component | console/log json', function (hooks) {
 
     this.set('content', objectContent);
 
-    await render(hbs`{{console/log-json content=this.content}}`);
+    await render(hbs`<Console::LogJson @content={{this.content}} />`);
     const instance = find('[data-test-component=code-mirror-modifier]').innerText;
     assert.strictEqual(instance, expectedText);
   });
