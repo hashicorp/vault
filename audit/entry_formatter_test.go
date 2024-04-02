@@ -1173,15 +1173,16 @@ func TestEntryFormatter_Process_Panic(t *testing.T) {
 	require.Nil(t, e2)
 }
 
-// TODO: PW: DOCS
+// TestEntryFormatter_NewFormatterConfig_NilHeaderFormatter ensures we cannot
+// create a FormatterConfig using NewFormatterConfig if we supply a nil formatter.
 func TestEntryFormatter_NewFormatterConfig_NilHeaderFormatter(t *testing.T) {
 	_, err := NewFormatterConfig(nil)
 	require.Error(t, err)
-
-	// TODO: PW: Test applying various options.
 }
 
-// TODO: PW: DOCS
+// TestEntryFormatter_Process_NeverLeaksHeaders ensures that if we never accidentally
+// leak headers if applying them means we don't have any. This is more like a sense
+// check to ensure the returned event doesn't somehow end up with the headers 'back'.
 func TestEntryFormatter_Process_NeverLeaksHeaders(t *testing.T) {
 	t.Parallel()
 
@@ -1189,8 +1190,6 @@ func TestEntryFormatter_Process_NeverLeaksHeaders(t *testing.T) {
 	cfg, err := NewFormatterConfig(&testHeaderFormatter{shouldReturnEmpty: true})
 	require.NoError(t, err)
 	ss := newStaticSalt(t)
-
-	// Create a formatter with no header formatting config.
 	formatter, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 	require.NoError(t, err)
 	require.NotNil(t, formatter)
@@ -1206,19 +1205,18 @@ func TestEntryFormatter_Process_NeverLeaksHeaders(t *testing.T) {
 
 	e := fakeEvent(t, RequestType, input)
 
-	// Process ....
+	// Process the node.
 	ctx := namespace.RootContext(context.Background())
 	e2, err := formatter.Process(ctx, e)
 	require.NoError(t, err)
 	require.NotNil(t, e2)
 
-	// now check the formatted as ... (JSON).
-	x2, b2 := e2.Format(JSONFormat.String())
+	// Now check we can retrieve the formatted JSON.
+	jsonFormatted, b2 := e2.Format(JSONFormat.String())
 	require.True(t, b2)
-	require.NotNil(t, x2)
-
+	require.NotNil(t, jsonFormatted)
 	var input2 *logical.LogInput
-	err = json.Unmarshal(x2, &input2)
+	err = json.Unmarshal(jsonFormatted, &input2)
 	require.NoError(t, err)
 	require.NotNil(t, input2)
 	require.Len(t, input2.Request.Headers, 0)
