@@ -132,6 +132,15 @@ export const homogenizeClientNaming = (object) => {
   }
 };
 
+export const flattenDataset = (object) => {
+  if (object?.counts) {
+    const flattenedObject = {};
+    Object.keys(object['counts']).forEach((key) => (flattenedObject[key] = object['counts'][key]));
+    return homogenizeClientNaming(flattenedObject);
+  }
+  return object;
+};
+
 export const sortMonthsByTimestamp = (monthsArray) => {
   const sortedPayload = [...monthsArray];
   return sortedPayload.sort((a, b) =>
