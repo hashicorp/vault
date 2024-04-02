@@ -4,7 +4,7 @@
  */
 
 import { Response } from 'miragejs';
-import { SELECTORS as GENERAL } from 'vault/tests/helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { click } from '@ember/test-helpers';
 
 import { LICENSE_START } from 'vault/mirage/handlers/clients';

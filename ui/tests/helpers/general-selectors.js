@@ -5,7 +5,7 @@
 
 import { findAll } from '@ember/test-helpers';
 
-export const SELECTORS = {
+export const GENERAL = {
   breadcrumb: '[data-test-breadcrumbs] li',
   breadcrumbAtIdx: (idx) => `[data-test-breadcrumbs] li:nth-child(${idx + 1}) a`,
   breadcrumbs: '[data-test-breadcrumbs]',
