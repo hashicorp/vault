@@ -24,22 +24,6 @@ export const GENERAL = {
   emptyStateActions: '[data-test-empty-state-actions]',
   menuTrigger: '[data-test-popup-menu-trigger]',
   listItem: '[data-test-list-item-link]',
-  calendarWidget: {
-    trigger: '[data-test-calendar-widget-trigger]',
-    currentMonth: '[data-test-current-month]',
-    currentBillingPeriod: '[data-test-current-billing-period]',
-    customEndMonth: '[data-test-show-calendar]',
-    previousYear: '[data-test-previous-year]',
-    nextYear: '[data-test-next-year]',
-    calendarMonth: (month) => `[data-test-calendar-month="${month}"]`,
-  },
-  dateDropdown: {
-    toggleMonth: '[data-test-toggle-month]',
-    toggleYear: '[data-test-toggle-year]',
-    selectMonth: (month) => `[data-test-dropdown-month="${month}"]`,
-    selectYear: (year) => `[data-test-dropdown-year="${year}"]`,
-    submit: '[data-test-date-dropdown-submit]',
-  },
   // FORMS
   infoRowLabel: (label) => `[data-test-row-label="${label}"]`,
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,

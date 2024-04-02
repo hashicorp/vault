@@ -10,6 +10,7 @@ import { render, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { getUnixTime } from 'date-fns';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SELECTORS } from 'vault/tests/helpers/clients';
 import { formatNumber } from 'core/helpers/format-number';
 import { calculateAverage } from 'vault/utils/chart-helpers';
@@ -94,7 +95,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     await this.renderComponent();
 
     assert.dom(charts.chart('Secrets sync usage')).doesNotExist('vertical bar chart does not render');
-    assert.dom(SELECTORS.emptyStateTitle).hasText('No monthly secrets sync clients');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No monthly secrets sync clients');
     const formattedTimestamp = dateFormat([this.activity.responseTimestamp, 'MMM d yyyy, h:mm:ss aaa'], {
       withTimeZone: true,
     });
@@ -126,11 +127,11 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
 
     await this.renderComponent();
 
-    assert.dom(SELECTORS.emptyStateTitle).hasText('No Secrets Sync clients');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No Secrets Sync clients');
     assert
-      .dom(SELECTORS.emptyStateMessage)
+      .dom(GENERAL.emptyStateMessage)
       .hasText('No data is available because Secrets Sync has not been activated.');
-    assert.dom(SELECTORS.emptyStateActions).hasText('Activate Secrets Sync');
+    assert.dom(GENERAL.emptyStateActions).hasText('Activate Secrets Sync');
 
     assert.dom(charts.chart('Secrets sync usage')).doesNotExist();
     assert.dom(syncTab.total).doesNotExist();

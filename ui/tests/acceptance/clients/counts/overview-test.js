@@ -11,6 +11,7 @@ import sinon from 'sinon';
 import { visit, click, findAll, settled } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SELECTORS } from 'vault/tests/helpers/clients';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
@@ -40,9 +41,9 @@ module('Acceptance | clients | overview', function (hooks) {
   });
 
   test('it should render the correct tabs', async function (assert) {
-    assert.dom(SELECTORS.tab('overview')).exists();
-    assert.dom(SELECTORS.tab('token')).exists();
-    assert.dom(SELECTORS.tab('config')).exists();
+    assert.dom(GENERAL.tab('overview')).exists();
+    assert.dom(GENERAL.tab('token')).exists();
+    assert.dom(GENERAL.tab('config')).exists();
   });
 
   test('it should render charts', async function (assert) {
@@ -270,17 +271,17 @@ module('Acceptance | clients | overview | sync in license, activated', function 
   });
 
   test('it should render the correct tabs', async function (assert) {
-    assert.dom(SELECTORS.tab('sync')).exists();
+    assert.dom(GENERAL.tab('sync')).exists();
   });
 
   test('it should show secrets sync data in overview and tab', async function (assert) {
     assert
       .dom(SELECTORS.charts.statTextValue('Secrets sync clients'))
       .exists('shows secret sync data on overview');
-    await click(SELECTORS.tab('sync'));
+    await click(GENERAL.tab('sync'));
 
-    assert.dom(SELECTORS.tab('sync')).hasClass('active');
-    assert.dom(SELECTORS.emptyStateTitle).doesNotExist();
+    assert.dom(GENERAL.tab('sync')).hasClass('active');
+    assert.dom(GENERAL.emptyStateTitle).doesNotExist();
     assert
       .dom(SELECTORS.charts.chart('Secrets sync usage'))
       .exists('chart is shown because feature is active and has data');
@@ -300,7 +301,7 @@ module('Acceptance | clients | overview | sync in license, not activated', funct
   });
 
   test('it should show the secrets sync tab', async function (assert) {
-    assert.dom(SELECTORS.tab('sync')).exists('sync tab is shown because feature is in license');
+    assert.dom(GENERAL.tab('sync')).exists('sync tab is shown because feature is in license');
   });
 
   test('it should hide secrets sync charts', async function (assert) {
@@ -326,7 +327,7 @@ module('Acceptance | clients | overview | sync not in license', function (hooks)
   });
 
   test('it should hide the secrets sync tab', async function (assert) {
-    assert.dom(SELECTORS.tab('sync')).doesNotExist();
+    assert.dom(GENERAL.tab('sync')).doesNotExist();
   });
 
   test('it should hide secrets sync charts', async function (assert) {

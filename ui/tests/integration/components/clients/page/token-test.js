@@ -13,6 +13,7 @@ import { getUnixTime } from 'date-fns';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import { dateFormat } from 'core/helpers/date-format';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SELECTORS as ts } from 'vault/tests/helpers/clients';
 
 const START_TIME = getUnixTime(LICENSE_START);
@@ -151,7 +152,7 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
 
     assert.dom(`${chart} ${ts.charts.verticalBar}`).doesNotExist('Chart does not render');
     assert.dom(`${chart} ${ts.charts.legend}`).doesNotExist('Legend does not render');
-    assert.dom(ts.emptyStateTitle).hasText('No new clients');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No new clients');
     assert.dom(ts.tokenTab.entity).doesNotExist('New client counts does not exist');
     assert.dom(ts.tokenTab.nonentity).doesNotExist('Average new client counts does not exist');
   });
