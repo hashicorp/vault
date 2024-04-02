@@ -14,7 +14,7 @@ import { calculateAverage } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import { dateFormat } from 'core/helpers/date-format';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { SELECTORS as ts } from 'vault/tests/helpers/clients';
+import { CLIENT_COUNT as ts } from 'vault/tests/helpers/clients';
 
 const START_TIME = getUnixTime(LICENSE_START);
 const END_TIME = getUnixTime(STATIC_NOW);

@@ -22,7 +22,7 @@ import { click } from '@ember/test-helpers';
   queries unavailable
   License start date this month
 */
-export const SELECTORS = {
+export const CLIENT_COUNT = {
   counts: {
     startLabel: '[data-test-counts-start-label]',
     description: '[data-test-counts-description]',
@@ -137,7 +137,7 @@ export function overrideResponse(httpStatus, data) {
 }
 
 export async function dateDropdownSelect(month, year) {
-  const { dateDropdown, counts } = SELECTORS;
+  const { dateDropdown, counts } = CLIENT_COUNT;
   await click(counts.startEdit);
   await click(dateDropdown.toggleMonth);
   await click(dateDropdown.selectMonth(month));

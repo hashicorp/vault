@@ -11,7 +11,7 @@ import sinon from 'sinon';
 import { visit, click, currentURL } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { SELECTORS as ts } from 'vault/tests/helpers/clients';
+import { CLIENT_COUNT as ts } from 'vault/tests/helpers/clients';
 import timestamp from 'core/utils/timestamp';
 
 module('Acceptance | clients | counts', function (hooks) {
