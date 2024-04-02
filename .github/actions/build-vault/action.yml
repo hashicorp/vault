@@ -149,7 +149,7 @@ runs:
         path: out/${{ steps.metadata.outputs.artifact-basename }}.zip
         if-no-files-found: error
     - if: inputs.create-packages == 'true'
-      uses: hashicorp/actions-packaging-linux@v1
+      uses: hashicorp/actions-packaging-linux@main
       with:
         name: ${{ inputs.package-name }}
         description: Vault is a tool for secrets management, encryption as a service, and privileged access management.
