@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { Response } from 'miragejs';
 import { click } from '@ember/test-helpers';
 
 /** Scenarios
@@ -103,38 +102,6 @@ export const CHART_ELEMENTS = {
   labelActionBars: '[data-test-group="label-action-bars"]',
   totalValues: '[data-test-group="total-values"]',
 };
-
-export function sendResponse(data, httpStatus = 200) {
-  if (httpStatus === 403) {
-    return [
-      httpStatus,
-      { 'Content-Type': 'application/json' },
-      JSON.stringify({ errors: ['permission denied'] }),
-    ];
-  }
-  if (httpStatus === 204) {
-    // /activity endpoint returns 204 when no data, while
-    // /activity/monthly returns 200 with zero values on data
-    return [httpStatus, { 'Content-Type': 'application/json' }];
-  }
-  return [httpStatus, { 'Content-Type': 'application/json' }, JSON.stringify(data)];
-}
-
-export function overrideResponse(httpStatus, data) {
-  if (httpStatus === 403) {
-    return new Response(
-      403,
-      { 'Content-Type': 'application/json' },
-      JSON.stringify({ errors: ['permission denied'] })
-    );
-  }
-  // /activity endpoint returns 204 when no data, while
-  // /activity/monthly returns 200 with zero values on data
-  if (httpStatus === 204) {
-    return new Response(204, { 'Content-Type': 'application/json' });
-  }
-  return new Response(200, { 'Content-Type': 'application/json' }, JSON.stringify(data));
-}
 
 export async function dateDropdownSelect(month, year) {
   const { dateDropdown, counts } = CLIENT_COUNT;

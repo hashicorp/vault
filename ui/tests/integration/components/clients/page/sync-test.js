@@ -11,7 +11,7 @@ import hbs from 'htmlbars-inline-precompile';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { getUnixTime } from 'date-fns';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { CLIENT_COUNT } from 'vault/tests/helpers/clients';
+import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 import { dateFormat } from 'core/helpers/date-format';
