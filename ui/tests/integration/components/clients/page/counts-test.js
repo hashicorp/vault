@@ -11,7 +11,7 @@ import hbs from 'htmlbars-inline-precompile';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { getUnixTime } from 'date-fns';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { CLIENT_COUNT as ts, dateDropdownSelect } from 'vault/tests/helpers/clients';
+import { CLIENT_COUNT as ts, dateDropdownSelect } from 'vault/tests/helpers/clients/client-count-helpers';
 import { selectChoose } from 'ember-power-select/test-support/helpers';
 import timestamp from 'core/utils/timestamp';
 import sinon from 'sinon';

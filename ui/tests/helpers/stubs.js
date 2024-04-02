@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { Response } from 'miragejs';
+
 export function capabilitiesStub(requestPath, capabilitiesArray) {
   // sample of capabilitiesArray: ['read', 'update']
   return {
@@ -56,4 +58,26 @@ export function allowAllCapabilitiesStub(capabilitiesList = ['root']) {
       auth: null,
     };
   };
+}
+
+/**
+ * returns a response with the given httpStatus and data based on status
+ * @param {number} httpStatus 403, 204, or 200
+ * @param {object} data what to return in the response if status is 200
+ * @returns {Response}
+ */
+export function overrideResponse(httpStatus = 200, data = {}) {
+  if (httpStatus === 403) {
+    return new Response(
+      403,
+      { 'Content-Type': 'application/json' },
+      JSON.stringify({ errors: ['permission denied'] })
+    );
+  }
+  // /activity endpoint returns 204 when no data, while
+  // /activity/monthly returns 200 with zero values on data
+  if (httpStatus === 204) {
+    return new Response(204, { 'Content-Type': 'application/json' });
+  }
+  return new Response(200, { 'Content-Type': 'application/json' }, JSON.stringify(data));
 }
