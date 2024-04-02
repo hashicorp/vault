@@ -9,23 +9,7 @@ import (
 	"syscall"
 
 	"github.com/hashicorp/cli"
-	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/version"
-
-	/*
-		The builtinplugins package is initialized here because it, in turn,
-		initializes the database plugins.
-		They register multiple database drivers for the "database/sql" package.
-	*/
-	_ "github.com/hashicorp/vault/helper/builtinplugins"
-
-	auditFile "github.com/hashicorp/vault/builtin/audit/file"
-	auditSocket "github.com/hashicorp/vault/builtin/audit/socket"
-	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
-
+	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
 	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
 	credCF "github.com/hashicorp/vault-plugin-auth-cf"
@@ -33,6 +17,11 @@ import (
 	credOIDC "github.com/hashicorp/vault-plugin-auth-jwt"
 	credKerb "github.com/hashicorp/vault-plugin-auth-kerberos"
 	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
+	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
+	"github.com/hashicorp/vault/audit"
+	auditFile "github.com/hashicorp/vault/builtin/audit/file"
+	auditSocket "github.com/hashicorp/vault/builtin/audit/socket"
+	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
@@ -40,10 +29,9 @@ import (
 	credOkta "github.com/hashicorp/vault/builtin/credential/okta"
 	credToken "github.com/hashicorp/vault/builtin/credential/token"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
-
-	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
-
+	"github.com/hashicorp/vault/builtin/plugin"
+	_ "github.com/hashicorp/vault/helper/builtinplugins"
 	physAerospike "github.com/hashicorp/vault/physical/aerospike"
 	physAliCloudOSS "github.com/hashicorp/vault/physical/alicloudoss"
 	physAzure "github.com/hashicorp/vault/physical/azure"
@@ -65,12 +53,15 @@ import (
 	physSpanner "github.com/hashicorp/vault/physical/spanner"
 	physSwift "github.com/hashicorp/vault/physical/swift"
 	physZooKeeper "github.com/hashicorp/vault/physical/zookeeper"
+	"github.com/hashicorp/vault/plugins/event"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	physFile "github.com/hashicorp/vault/sdk/physical/file"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
-
 	sr "github.com/hashicorp/vault/serviceregistration"
 	csr "github.com/hashicorp/vault/serviceregistration/consul"
 	ksr "github.com/hashicorp/vault/serviceregistration/kubernetes"
+	"github.com/hashicorp/vault/version"
 )
 
 const (
@@ -96,6 +87,9 @@ const (
 	// logged at startup _per node_. This was initially introduced for the events
 	// system being developed over multiple release cycles.
 	EnvVaultExperiments = "VAULT_EXPERIMENTS"
+	// EnvVaultPluginTmpdir sets the folder to use for Unix sockets when setting
+	// up containerized plugins.
+	EnvVaultPluginTmpdir = "VAULT_PLUGIN_TMPDIR"
 
 	// flagNameAddress is the flag used in the base command to read in the
 	// address of the Vault server.
@@ -136,6 +130,8 @@ const (
 	flagNameAllowedManagedKeys = "allowed-managed-keys"
 	// flagNamePluginVersion selects what version of a plugin should be used.
 	flagNamePluginVersion = "plugin-version"
+	// flagNameIdentityTokenKey selects the key used to sign plugin identity tokens
+	flagNameIdentityTokenKey = "identity-token-key"
 	// flagNameUserLockoutThreshold is the flag name used for tuning the auth mount lockout threshold parameter
 	flagNameUserLockoutThreshold = "user-lockout-threshold"
 	// flagNameUserLockoutDuration is the flag name used for tuning the auth mount lockout duration parameter
@@ -178,6 +174,8 @@ var (
 	credentialBackends = map[string]logical.Factory{
 		"plugin": plugin.Factory,
 	}
+
+	eventBackends = map[string]event.Factory{}
 
 	logicalBackends = map[string]logical.Factory{
 		"plugin":   plugin.Factory,
@@ -250,10 +248,11 @@ var (
 func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
 	getBaseCommand := func() *BaseCommand {
 		return &BaseCommand{
-			UI:          ui,
-			tokenHelper: runOpts.TokenHelper,
-			flagAddress: runOpts.Address,
-			client:      runOpts.Client,
+			UI:             ui,
+			tokenHelper:    runOpts.TokenHelper,
+			flagAddress:    runOpts.Address,
+			client:         runOpts.Client,
+			hcpTokenHelper: runOpts.HCPTokenHelper,
 		}
 	}
 
@@ -527,6 +526,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"operator utilization": func() (cli.Command, error) {
+			return &OperatorUtilizationCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"operator unseal": func() (cli.Command, error) {
 			return &OperatorUnsealCommand{
 				BaseCommand: getBaseCommand(),
@@ -730,6 +734,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				},
 				AuditBackends:      auditBackends,
 				CredentialBackends: credentialBackends,
+				EventBackends:      eventBackends,
 				LogicalBackends:    logicalBackends,
 				PhysicalBackends:   physicalBackends,
 
@@ -915,7 +920,22 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 	}
 
 	entInitCommands(ui, serverCmdUi, runOpts, commands)
+	initHCPCommands(ui, commands)
+
 	return commands
+}
+
+func initHCPCommands(ui cli.Ui, commands map[string]cli.CommandFactory) {
+	for cmd, cmdFactory := range hcpvlib.InitHCPCommand(ui) {
+		// check for conflicts and only put command in the map in case it doesn't conflict with existing one
+		_, ok := commands[cmd]
+		if !ok {
+			commands[cmd] = cmdFactory
+		} else {
+			ui.Error("Failed to initialize HCP commands.")
+			break
+		}
+	}
 }
 
 // MakeShutdownCh returns a channel that can be used for shutdown

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import ControlGroupError from 'vault/lib/control-group-error';
 
@@ -58,7 +58,7 @@ export default Route.extend({
       // Assuming we have a URL, push it into browser history and update the
       // location bar for the user
       if (errorURL) {
-        router.get('location').setURL(errorURL);
+        router.location.setURL(errorURL);
       }
 
       return true;

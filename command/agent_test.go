@@ -5,9 +5,11 @@ package command
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -350,11 +352,13 @@ listener "tcp" {
     address = "%s"
     tls_disable = true
     require_request_header = false
+    disable_request_limiter = false
 }
 listener "tcp" {
     address = "%s"
     tls_disable = true
     require_request_header = true
+	disable_request_limiter = true
 }
 `
 	listenAddr1 := generateListenerAddress(t)
@@ -2820,6 +2824,36 @@ func TestAgent_LogFile_Config(t *testing.T) {
 	assert.Equal(t, 1048576, cfg.LogRotateBytes)
 }
 
+// TestAgent_EnvVar_Overrides tests that environment variables are properly
+// parsed and override defaults.
+func TestAgent_EnvVar_Overrides(t *testing.T) {
+	configFile := populateTempFile(t, "agent-config.hcl", BasicHclConfig)
+
+	cfg, err := agentConfig.LoadConfigFile(configFile.Name())
+	if err != nil {
+		t.Fatal("Cannot load config to test update/merge", err)
+	}
+
+	assert.Equal(t, false, cfg.Vault.TLSSkipVerify)
+
+	t.Setenv("VAULT_SKIP_VERIFY", "true")
+	// Parse the cli flags (but we pass in an empty slice)
+	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
+	f := cmd.Flags()
+	err = f.Parse([]string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cmd.applyConfigOverrides(f, cfg)
+	assert.Equal(t, true, cfg.Vault.TLSSkipVerify)
+
+	t.Setenv("VAULT_SKIP_VERIFY", "false")
+
+	cmd.applyConfigOverrides(f, cfg)
+	assert.Equal(t, false, cfg.Vault.TLSSkipVerify)
+}
+
 func TestAgent_Config_NewLogger_Default(t *testing.T) {
 	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
 	cmd.config = agentConfig.NewConfig()
@@ -3170,6 +3204,159 @@ auto_auth {
 	}
 
 	require.Truef(t, found, "unable to find consul-template partial message in logs", runnerLogMessage)
+}
+
+// TestAgent_DeleteAfterVersion_Rendering Validates that Vault Agent
+// can correctly render a secret with delete_after_version set.
+func TestAgent_DeleteAfterVersion_Rendering(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := vault.NewTestCluster(t,
+		&vault.CoreConfig{
+			Logger: logger,
+		},
+		&vault.TestClusterOptions{
+			NumCores:    1,
+			HandlerFunc: vaulthttp.Handler,
+		})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	serverClient := cluster.Cores[0].Client
+
+	// Set up KVv2
+	err := serverClient.Sys().Mount("kv-v2", &api.MountInput{
+		Type: "kv-v2",
+	})
+	require.NoError(t, err)
+
+	// Configure the mount to set delete_version_after on all of its secrets
+	_, err = serverClient.Logical().Write("kv-v2/config", map[string]interface{}{
+		"delete_version_after": "1h",
+	})
+	require.NoError(t, err)
+
+	// Set up the secret (which will have delete_version_after set to 1h)
+	data, err := serverClient.KVv2("kv-v2").Put(context.Background(), "foo", map[string]interface{}{
+		"bar": "baz",
+	})
+	require.NoError(t, err)
+
+	// Ensure Deletion Time was correctly set
+	require.NotZero(t, data.VersionMetadata.DeletionTime)
+	require.True(t, data.VersionMetadata.DeletionTime.After(time.Now()))
+	require.NotNil(t, data.VersionMetadata.CreatedTime)
+	require.True(t, data.VersionMetadata.DeletionTime.After(data.VersionMetadata.CreatedTime))
+
+	// Unset the environment variable so that Agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Setenv(api.EnvVaultAddress, serverClient.Address())
+
+	// create temp dir for this test run
+	tmpDir, err := os.MkdirTemp("", "TestAgent_DeleteAfterVersion_Rendering")
+	require.NoError(t, err)
+
+	tokenFileName := makeTempFile(t, "token-file", serverClient.Token())
+	defer os.Remove(tokenFileName)
+
+	autoAuthConfig := fmt.Sprintf(`
+auto_auth {
+    method {
+		type = "token_file"
+        config = {
+            token_file_path = "%s"
+        }
+    }
+}`, tokenFileName)
+
+	// Create a config file
+	config := `
+vault {
+  address = "%s"
+	tls_skip_verify = true
+}
+
+%s
+
+%s
+`
+
+	fileName := "secret.txt"
+	templateConfig := fmt.Sprintf(`
+template {
+  destination  = "%s/%s"
+  contents     = "{{ with secret \"kv-v2/foo\" }}{{ .Data.data.bar }}{{ end }}"
+}
+`, tmpDir, fileName)
+
+	config = fmt.Sprintf(config, serverClient.Address(), autoAuthConfig, templateConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start the agent
+	ui, cmd := testAgentCommand(t, logger)
+	cmd.client = serverClient
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		code := cmd.Run([]string{"-config", configPath})
+		if code != 0 {
+			t.Errorf("non-zero return code when running agent: %d", code)
+			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+		}
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	// We need to shut down the Agent command
+	defer func() {
+		cmd.ShutdownCh <- struct{}{}
+		wg.Wait()
+	}()
+
+	filePath := fmt.Sprintf("%s/%s", tmpDir, fileName)
+
+	waitForFiles := func() error {
+		tick := time.Tick(100 * time.Millisecond)
+		timeout := time.After(10 * time.Second)
+		// We need to wait for the templates to render...
+		for {
+			select {
+			case <-timeout:
+				t.Fatalf("timed out waiting for templates to render, last error: %v", err)
+			case <-tick:
+			}
+
+			_, err := os.Stat(filePath)
+			if err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					continue
+				}
+				return err
+			}
+
+			return nil
+		}
+	}
+
+	err = waitForFiles()
+	require.NoError(t, err)
+
+	// Ensure the file has the
+	fileData, err := os.ReadFile(filePath)
+	require.NoError(t, err)
+	if string(fileData) != "baz" {
+		t.Fatalf("Unexpected file contents. Expected 'baz', got %s", string(fileData))
+	}
 }
 
 // Get a randomly assigned port and then free it again before returning it.

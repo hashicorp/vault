@@ -24,6 +24,11 @@ const assertDeleteActions = (assert, expected = ['delete', 'destroy']) => {
     }
   });
 };
+
+const makeToken = (name, mountPath, policyGenerator) => {
+  return tokenWithPolicyCmd(`${name}-${mountPath}`, policyGenerator(mountPath));
+};
+
 /**
  * This test set is for testing delete, undelete, destroy flows
  * Letter(s) in parenthesis at the end are shorthand for the persona,
@@ -54,7 +59,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
 
   module('admin persona', function (hooks) {
     hooks.beforeEach(async function () {
-      const token = await runCmd(tokenWithPolicyCmd('admin', personas.admin(this.backend)));
+      const token = await runCmd(makeToken('admin', this.backend, personas.admin));
       await authPage.login(token);
       clearRecords(this.store);
       return;
@@ -155,7 +160,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
 
   module('data-reader persona', function (hooks) {
     hooks.beforeEach(async function () {
-      const token = await runCmd(tokenWithPolicyCmd('data-reader', personas.dataReader(this.backend)));
+      const token = await runCmd(makeToken('data-reader', this.backend, personas.dataReader));
       await authPage.login(token);
       clearRecords(this.store);
       return;
@@ -202,9 +207,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
 
   module('data-list-reader persona', function (hooks) {
     hooks.beforeEach(async function () {
-      const token = await runCmd(
-        tokenWithPolicyCmd('data-list-reader', personas.dataListReader(this.backend))
-      );
+      const token = await runCmd(makeToken('data-list-reader', this.backend, personas.dataListReader));
       await authPage.login(token);
       clearRecords(this.store);
       return;
@@ -262,9 +265,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
 
   module('metadata-maintainer persona', function (hooks) {
     hooks.beforeEach(async function () {
-      const token = await runCmd(
-        tokenWithPolicyCmd('metadata-maintainer', personas.metadataMaintainer(this.backend))
-      );
+      const token = await runCmd(makeToken('metadata-maintainer', this.backend, personas.metadataMaintainer));
       await authPage.login(token);
       clearRecords(this.store);
       return;
@@ -354,7 +355,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
   module('secret-nested-creator persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(
-        tokenWithPolicyCmd('secret-nested-creator', personas.secretNestedCreator(this.backend))
+        makeToken('secret-nested-creator', this.backend, personas.secretNestedCreator)
       );
       await authPage.login(token);
       clearRecords(this.store);
@@ -380,7 +381,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
 
   module('secret-creator persona', function (hooks) {
     hooks.beforeEach(async function () {
-      const token = await runCmd(tokenWithPolicyCmd('secret-creator', personas.secretCreator(this.backend)));
+      const token = await runCmd(makeToken('secret-creator', this.backend, personas.secretCreator));
       await authPage.login(token);
       clearRecords(this.store);
       return;
@@ -464,7 +465,7 @@ path "sys/control-group/request" {
 }
 `;
 
-      const { userToken } = await setupControlGroup({ userPolicy });
+      const { userToken } = await setupControlGroup({ userPolicy, backend: this.backend });
       this.userToken = userToken;
       await authPage.login(userToken);
       clearRecords(this.store);

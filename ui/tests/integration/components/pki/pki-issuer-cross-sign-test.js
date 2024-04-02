@@ -133,14 +133,20 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
         },
         'payload contains correct key ref'
       );
-      return { data: { csr: newCSR.csr, key_id: this.intIssuerData.key_id } };
+      return {
+        data: { csr: newCSR.csr, key_id: this.intIssuerData.key_id },
+        request_id: '1234',
+      };
     });
     this.server.post(
       `/${this.backend}/issuer/${this.parentIssuerData.issuer_name}/sign-intermediate`,
       (schema, req) => {
         assert.ok(true, 'Step 3. POST request is made to sign CSR with new parent issuer');
         assert.propEqual(JSON.parse(req.requestBody), newCSR, 'payload has common name and csr');
-        return { data: { ca_chain: [newlySignedCert, parentIssuerCert] } };
+        return {
+          data: { ca_chain: [newlySignedCert, parentIssuerCert] },
+          request_id: '1234',
+        };
       }
     );
     this.server.post(`/${this.intMountPath}/issuers/import/bundle`, (schema, req) => {
@@ -151,6 +157,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
         'payload contains pem bundle'
       );
       return {
+        request_id: '1234',
         data: {
           imported_issuers: null,
           imported_keys: null,

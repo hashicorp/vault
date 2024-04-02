@@ -5,14 +5,14 @@
     "ember-engine"
   ],
   "dependencies": {
+    "ember-cli-htmlbars": "*",
+    "ember-cli-babel": "*",
+    "ember-concurrency": "*",
     "@ember/test-waiters": "*",
+    "ember-inflector": "*",
     "@hashicorp/design-system-components": "*",
     "date-fns": "*",
-    "ember-auto-import": "*",
-    "ember-cli-babel": "*",
-    "ember-cli-htmlbars": "*",
-    "ember-concurrency": "*",
-    "ember-inflector": "*"
+    "ember-auto-import": "*"
   },
   "ember-addon": {
     "paths": [

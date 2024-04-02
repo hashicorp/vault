@@ -13,12 +13,14 @@
     @text="Secrets Engines"
     data-test-sidebar-nav-link="Secrets Engines"
   />
-  <Nav.Link
-    @route="vault.cluster.sync"
-    @text="Secrets Sync"
-    @badge={{unless this.version.isEnterprise "Enterprise"}}
-    data-test-sidebar-nav-link="Secrets Sync"
-  />
+  {{#if this.showSync}}
+    <Nav.Link
+      @route="vault.cluster.sync"
+      @text="Secrets Sync"
+      @badge={{this.syncBadge}}
+      data-test-sidebar-nav-link="Secrets Sync"
+    />
+  {{/if}}
   {{#if (has-permission "access")}}
     <Nav.Link
       @route={{get (route-params-for "access") "route"}}
@@ -103,6 +105,15 @@
       @model={{this.cluster.name}}
       @text="Seal Vault"
       data-test-sidebar-nav-link="Seal Vault"
+    />
+  {{/if}}
+
+  {{#if (and this.version.isEnterprise (has-permission "settings"))}}
+    <Nav.Title data-test-sidebar-nav-heading="Settings">Settings</Nav.Title>
+    <Nav.Link
+      @route="vault.cluster.config-ui.messages"
+      @text="Custom Messages"
+      data-test-sidebar-nav-link="Custom Messages"
     />
   {{/if}}
 </Hds::SideNav::Portal>

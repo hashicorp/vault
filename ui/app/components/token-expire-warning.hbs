@@ -10,7 +10,13 @@
       Your auth token expired on
       {{date-format @expirationDate "MMMM do yyyy, h:mm:ss a"}}. You will need to re-authenticate.
     </A.Description>
-    <A.Link::Standalone @icon="arrow-right" @iconPosition="trailing" @text="Reauthenticate" @route="vault.cluster.logout" />
+    <A.LinkStandalone
+      @icon="arrow-right"
+      @iconPosition="trailing"
+      @text="Reauthenticate"
+      @route="vault.cluster.logout"
+      @query={{this.queryParams}}
+    />
   </Hds::Alert>
 {{else}}
   <section class="section">
@@ -40,7 +46,7 @@
             {{on "click" (perform this.renewToken)}}
             data-test-renew-token-button
           />
-          <A.Link::Standalone
+          <A.LinkStandalone
             @icon="arrow-right"
             @iconPosition="trailing"
             @color="secondary"

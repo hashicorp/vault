@@ -9,11 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRouter_Mount(t *testing.T) {
@@ -581,7 +580,7 @@ func TestParseUnauthenticatedPaths(t *testing.T) {
 		{segments: []string{"+", "begin", ""}, isPrefix: true},
 		{segments: []string{"middle", "+", "bar"}, isPrefix: true},
 	}
-	expected := &loginPathsEntry{
+	expected := &specialPathsEntry{
 		paths:         pathsToRadix(paths),
 		wildcardPaths: wildcardPathsEntry,
 	}

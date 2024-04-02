@@ -15,6 +15,7 @@ Router.map(function () {
   this.route('vault', { path: '/' }, function () {
     this.route('cluster', { path: '/:cluster_name' }, function () {
       this.route('dashboard');
+      this.mount('config-ui');
       this.mount('sync');
       this.route('oidc-provider-ns', { path: '/*namespace/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-provider', { path: '/identity/oidc/provider/:provider_name/authorize' });
@@ -26,7 +27,11 @@ Router.map(function () {
       this.route('license');
       this.route('mfa-setup');
       this.route('clients', function () {
-        this.route('dashboard');
+        this.route('counts', function () {
+          this.route('overview');
+          this.route('sync');
+          this.route('token');
+        });
         this.route('config');
         this.route('edit');
       });

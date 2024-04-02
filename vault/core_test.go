@@ -14,26 +14,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/command/server"
-
-	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
-	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
-
-	"github.com/hashicorp/vault/builtin/plugin"
-
-	"github.com/hashicorp/vault/builtin/audit/syslog"
-
-	"github.com/hashicorp/vault/builtin/audit/file"
-	"github.com/hashicorp/vault/builtin/audit/socket"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
+	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/builtin/audit/file"
+	"github.com/hashicorp/vault/builtin/audit/socket"
+	"github.com/hashicorp/vault/builtin/audit/syslog"
+	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
+	"github.com/hashicorp/vault/builtin/plugin"
+	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -46,6 +39,8 @@ import (
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
 	"github.com/sasha-s/go-deadlock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // invalidKey is used to test Unseal
@@ -1180,7 +1175,7 @@ func TestCore_HandleRequest_InvalidToken(t *testing.T) {
 	if err == nil || !errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != "permission denied" {
+	if !strings.Contains(resp.Data["error"].(string), "permission denied") {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
@@ -1256,6 +1251,26 @@ func TestCore_HandleRequest_RootPath_WithSudo(t *testing.T) {
 	}
 }
 
+// TestCore_HandleRequest_TokenErrInvalidToken checks that a request made
+// with a non-existent token will return the "permission denied" and "invalid token" error
+func TestCore_HandleRequest_TokenErrInvalidToken(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "secret/test",
+		Data: map[string]interface{}{
+			"foo":   "bar",
+			"lease": "1h",
+		},
+		ClientToken: "bogus",
+	}
+	resp, err := c.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil || !errwrap.Contains(err, logical.ErrInvalidToken.Error()) || !errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
+		t.Fatalf("err: %v, resp: %v", err, resp)
+	}
+}
+
 // Check that standard permissions work
 func TestCore_HandleRequest_PermissionDenied(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
@@ -1272,6 +1287,69 @@ func TestCore_HandleRequest_PermissionDenied(t *testing.T) {
 	}
 	resp, err := c.HandleRequest(namespace.RootContext(nil), req)
 	if err == nil || !errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
+		t.Fatalf("err: %v, resp: %v", err, resp)
+	}
+}
+
+// TestCore_RevokedToken_InvalidTokenError checks that a request
+// returns an "invalid token" and a "permission denied" error when a token
+// that has been revoked is used in a request
+func TestCore_RevokedToken_InvalidTokenError(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+
+	// Set the 'test' policy object to permit access to sys/policy
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "sys/policy/test", // root protected!
+		Data: map[string]interface{}{
+			"rules": `path "sys/policy" { policy = "sudo" }`,
+		},
+		ClientToken: root,
+	}
+	resp, err := c.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Child token (non-root) but with 'test' policy should have access
+	testMakeServiceTokenViaCore(t, c, root, "child", "", []string{"test"})
+	req = &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "sys/policy", // root protected!
+		ClientToken: "child",
+	}
+	resp, err = c.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Revoke the token
+	req = &logical.Request{
+		ClientToken: root,
+		Operation:   logical.UpdateOperation,
+		Path:        "auth/token/revoke",
+		Data: map[string]interface{}{
+			"token": "child",
+		},
+	}
+	resp, err = c.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req = &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "sys/policy", // root protected!
+		ClientToken: "child",
+	}
+	_, err = c.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil || !errwrap.Contains(err, logical.ErrPermissionDenied.Error()) || !errwrap.Contains(err, logical.ErrInvalidToken.Error()) {
 		t.Fatalf("err: %v, resp: %v", err, resp)
 	}
 }
@@ -1467,7 +1545,7 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 	// Create a noop audit backend
 	var noop *corehelpers.NoopAudit
 	c, _, root := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
 		var err error
 		noop, err = corehelpers.NewNoopAudit(config, audit.WithHeaderFormatter(headerFormatter))
 		return noop, err
@@ -1530,7 +1608,7 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 	// Create a noop audit backend
 	var noop *corehelpers.NoopAudit
 	c, _, root := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
 		var err error
 		noop, err = corehelpers.NewNoopAudit(config, audit.WithHeaderFormatter(headerFormatter))
 		return noop, err
@@ -1651,7 +1729,7 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noopBack, nil
 	}
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
 		var err error
 		noop, err = corehelpers.NewNoopAudit(config, audit.WithHeaderFormatter(headerFormatter))
 		return noop, err
@@ -3382,7 +3460,8 @@ func TestSetSeals(t *testing.T) {
 		Generation:   2,
 	})
 
-	err := testCore.SetSeals(newSeal, nil)
+	ctx := context.Background()
+	err := testCore.SetSeals(ctx, true, newSeal, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}

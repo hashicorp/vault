@@ -52,6 +52,7 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
+	"github.com/hashicorp/vault/plugins/event"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -96,6 +97,7 @@ type ServerCommand struct {
 	CredentialBackends map[string]logical.Factory
 	LogicalBackends    map[string]logical.Factory
 	PhysicalBackends   map[string]physical.Factory
+	EventBackends      map[string]event.Factory
 
 	ServiceRegistrations map[string]sr.Factory
 
@@ -146,6 +148,8 @@ type ServerCommand struct {
 	flagTestServerConfig   bool
 	flagDevConsul          bool
 	flagExitOnCoreShutdown bool
+
+	sealsToFinalize []*vault.Seal
 }
 
 func (c *ServerCommand) Synopsis() string {
@@ -901,6 +905,8 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 		}
 		props["max_request_duration"] = lnConfig.MaxRequestDuration.String()
 
+		props["disable_request_limiter"] = strconv.FormatBool(lnConfig.DisableRequestLimiter)
+
 		if lnConfig.ChrootNamespace != "" {
 			props["chroot_namespace"] = lnConfig.ChrootNamespace
 		}
@@ -1151,6 +1157,10 @@ func (c *ServerCommand) Run(args []string) int {
 		config.License = envLicense
 	}
 
+	if envPluginTmpdir := os.Getenv(EnvVaultPluginTmpdir); envPluginTmpdir != "" {
+		config.PluginTmpdir = envPluginTmpdir
+	}
+
 	if err := server.ExperimentsFromEnvAndCLI(config, EnvVaultExperiments, c.flagExperiments); err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -1246,8 +1256,10 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	currentSeals := setSealResponse.getCreatedSeals()
-	defer c.finalizeSeals(ctx, &currentSeals)
+	c.setSealsToFinalize(setSealResponse.getCreatedSeals())
+	defer func() {
+		c.finalizeSeals(ctx, c.sealsToFinalize)
+	}()
 
 	coreConfig := createCoreConfig(c, config, backend, configSR, setSealResponse.barrierSeal, setSealResponse.unwrapSeal, metricsHelper, metricSink, secureRandomReader)
 	if c.flagDevThreeNode {
@@ -1429,6 +1441,12 @@ func (c *ServerCommand) Run(args []string) int {
 		info["HCP resource ID"] = config.HCPLinkConf.Resource.ID
 	}
 
+	requestLimiterStatus := entGetRequestLimiterStatus(coreConfig)
+	if requestLimiterStatus != "" {
+		infoKeys = append(infoKeys, "request limiter")
+		info["request limiter"] = requestLimiterStatus
+	}
+
 	infoKeys = append(infoKeys, "administrative namespace")
 	info["administrative namespace"] = config.AdministrativeNamespacePath
 
@@ -1527,6 +1545,10 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	core.SetSealReloadFunc(func(ctx context.Context) error {
+		return c.reloadSealsOnLeaderActivation(ctx, core)
+	})
+
 	// Output the header that the server has started
 	if !c.logFlags.flagCombineLogs {
 		c.UI.Output("==> Vault server started! Log data will stream in below:\n")
@@ -1609,22 +1631,10 @@ func (c *ServerCommand) Run(args []string) int {
 			c.notifySystemd(systemd.SdNotifyReloading)
 
 			// Check for new log level
-			var config *server.Config
-			var configErrors []configutil.ConfigError
-			for _, path := range c.flagConfigs {
-				current, err := server.LoadConfig(path)
-				if err != nil {
-					c.logger.Error("could not reload config", "path", path, "error", err)
-					goto RUNRELOADFUNCS
-				}
-
-				configErrors = append(configErrors, current.Validate(path)...)
-
-				if config == nil {
-					config = current
-				} else {
-					config = config.Merge(current)
-				}
+			config, configErrors, err := c.reloadConfigFiles()
+			if err != nil {
+				c.logger.Error("could not reload config", "error", err)
+				goto RUNRELOADFUNCS
 			}
 
 			// Ensure at least one config was found.
@@ -1638,16 +1648,14 @@ func (c *ServerCommand) Run(args []string) int {
 				c.logger.Warn(cErr.String())
 			}
 
-			if !cmp.Equal(core.GetCoreConfigInternal().Seals, config.Seals) {
-				setSealResponse, err = c.reloadSeals(ctx, core, config)
-				if err != nil {
-					c.UI.Error(fmt.Errorf("error reloading seal config: %s", err).Error())
-					config.Seals = core.GetCoreConfigInternal().Seals
-				} else {
-					// finalize the old seals and set the new seals as the current ones
-					c.finalizeSeals(ctx, &currentSeals)
-					currentSeals = setSealResponse.getCreatedSeals()
-				}
+			// Note that seal reloading can also be triggered via Core.TriggerSealReload.
+			// See the call to Core.SetSealReloadFunc above.
+			if reloaded, err := c.reloadSealsOnSigHup(ctx, core, config); err != nil {
+				c.UI.Error(fmt.Errorf("error reloading seal config: %s", err).Error())
+				config.Seals = core.GetCoreConfigInternal().Seals
+				goto RUNRELOADFUNCS
+			} else if !reloaded {
+				config.Seals = core.GetCoreConfigInternal().Seals
 			}
 
 			core.SetConfig(config)
@@ -1660,6 +1668,8 @@ func (c *ServerCommand) Run(args []string) int {
 
 			// Setting log request with the new value in the config after reload
 			core.ReloadLogRequestsLevel()
+
+			core.ReloadRequestLimiter()
 
 			// reloading HCP link
 			hcpLink, err = c.reloadHCPLink(hcpLink, config, core, hcpLogger)
@@ -1744,42 +1754,43 @@ func (c *ServerCommand) Run(args []string) int {
 			// We can only get pprof outputs via the API but sometimes Vault can get
 			// into a state where it cannot process requests so we can get pprof outputs
 			// via SIGUSR2.
-			if os.Getenv("VAULT_PPROF_WRITE_TO_FILE") != "" {
-				dir := ""
-				path := os.Getenv("VAULT_PPROF_FILE_PATH")
-				if path != "" {
-					if _, err := os.Stat(path); err != nil {
-						c.logger.Error("Checking pprof path failed", "error", err)
-						continue
-					}
-					dir = path
-				} else {
-					dir, err = os.MkdirTemp("", "vault-pprof")
-					if err != nil {
-						c.logger.Error("Could not create temporary directory for pprof", "error", err)
-						continue
-					}
+			pprofPath := filepath.Join(os.TempDir(), "vault-pprof")
+			err := os.MkdirAll(pprofPath, os.ModePerm)
+			if err != nil {
+				c.logger.Error("Could not create temporary directory for pprof", "error", err)
+				continue
+			}
+
+			dumps := []string{"goroutine", "heap", "allocs", "threadcreate", "profile"}
+			for _, dump := range dumps {
+				pFile, err := os.Create(filepath.Join(pprofPath, dump))
+				if err != nil {
+					c.logger.Error("error creating pprof file", "name", dump, "error", err)
+					break
 				}
 
-				dumps := []string{"goroutine", "heap", "allocs", "threadcreate"}
-				for _, dump := range dumps {
-					pFile, err := os.Create(filepath.Join(dir, dump))
-					if err != nil {
-						c.logger.Error("error creating pprof file", "name", dump, "error", err)
-						break
-					}
-
+				if dump != "profile" {
 					err = pprof.Lookup(dump).WriteTo(pFile, 0)
 					if err != nil {
 						c.logger.Error("error generating pprof data", "name", dump, "error", err)
 						pFile.Close()
 						break
 					}
-					pFile.Close()
+				} else {
+					// CPU profiles need to run for a duration so we're going to run it
+					// just for one second to avoid blocking here.
+					if err := pprof.StartCPUProfile(pFile); err != nil {
+						c.logger.Error("could not start CPU profile: ", err)
+						pFile.Close()
+						break
+					}
+					time.Sleep(time.Second * 1)
+					pprof.StopCPUProfile()
 				}
-
-				c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", dir))
+				pFile.Close()
 			}
+
+			c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", pprofPath))
 		}
 	}
 	// Notify systemd that the server is shutting down
@@ -1804,6 +1815,27 @@ func (c *ServerCommand) Run(args []string) int {
 	// Wait for dependent goroutines to complete
 	c.WaitGroup.Wait()
 	return retCode
+}
+
+func (c *ServerCommand) reloadConfigFiles() (*server.Config, []configutil.ConfigError, error) {
+	var config *server.Config
+	var configErrors []configutil.ConfigError
+	for _, path := range c.flagConfigs {
+		current, err := server.LoadConfig(path)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		configErrors = append(configErrors, current.Validate(path)...)
+
+		if config == nil {
+			config = current
+		} else {
+			config = config.Merge(current)
+		}
+	}
+
+	return config, configErrors, nil
 }
 
 func (c *ServerCommand) configureSeals(ctx context.Context, config *server.Config, backend physical.Backend, infoKeys []string, info map[string]string) (*SetSealResponse, io.Reader, error) {
@@ -1847,8 +1879,15 @@ func (c *ServerCommand) configureSeals(ctx context.Context, config *server.Confi
 	return setSealResponse, secureRandomReader, nil
 }
 
-func (c *ServerCommand) finalizeSeals(ctx context.Context, seals *[]*vault.Seal) {
-	for _, seal := range *seals {
+func (c *ServerCommand) setSealsToFinalize(seals []*vault.Seal) {
+	prev := c.sealsToFinalize
+	c.sealsToFinalize = seals
+
+	c.finalizeSeals(context.Background(), prev)
+}
+
+func (c *ServerCommand) finalizeSeals(ctx context.Context, seals []*vault.Seal) {
+	for _, seal := range seals {
 		// Ensure that the seal finalizer is called, even if using verify-only
 		err := (*seal).Finalize(ctx)
 		if err != nil {
@@ -2557,8 +2596,9 @@ type SetSealResponse struct {
 	unwrapSeal  vault.Seal
 
 	// sealConfigError is present if there was an error configuring wrappers, other than KeyNotFound.
-	sealConfigError   error
-	sealConfigWarning error
+	sealConfigError          error
+	sealConfigWarning        error
+	hasPartiallyWrappedPaths bool
 }
 
 func (r *SetSealResponse) getCreatedSeals() []*vault.Seal {
@@ -2653,7 +2693,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 				wrapper = aeadwrapper.NewShamirWrapper()
 			}
 			configuredSeals++
-		} else if server.IsMultisealSupported() {
+		} else if config.IsMultisealEnabled() {
 			recordSealConfigWarning(fmt.Errorf("error configuring seal: %v", wrapperConfigError))
 		} else {
 			// It seems that we are checking for this particular error here is to distinguish between a
@@ -2721,7 +2761,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Compute seal generation
-	sealGenerationInfo, err := c.computeSealGenerationInfo(existingSealGenerationInfo, allSealKmsConfigs, hasPartiallyWrappedPaths)
+	sealGenerationInfo, err := c.computeSealGenerationInfo(existingSealGenerationInfo, allSealKmsConfigs, hasPartiallyWrappedPaths, config.IsMultisealEnabled())
 	if err != nil {
 		return nil, err
 	}
@@ -2761,6 +2801,9 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 				return nil, err
 			}
 			unwrapSeal = vault.NewAutoSeal(a)
+		} else if sealGenerationInfo.Generation == 1 {
+			// First generation, and shamir, with no disabled wrapperrs, so there can be no wrapped values
+			sealGenerationInfo.SetRewrapped(true)
 		}
 
 	case len(disabledSealWrappers) == 1 && containsShamir(disabledSealWrappers):
@@ -2776,7 +2819,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		}
 		unwrapSeal = vault.NewDefaultSeal(a)
 
-	case server.IsMultisealSupported():
+	case config.IsMultisealEnabled():
 		// We know we are not using Shamir seal, that we are not migrating away from one, and multi seal is supported,
 		// so just put enabled and disabled wrappers on the same seal Access
 		allSealWrappers := append(enabledSealWrappers, disabledSealWrappers...)
@@ -2809,14 +2852,15 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	}
 
 	return &SetSealResponse{
-		barrierSeal:       barrierSeal,
-		unwrapSeal:        unwrapSeal,
-		sealConfigError:   sealConfigError,
-		sealConfigWarning: sealConfigWarning,
+		barrierSeal:              barrierSeal,
+		unwrapSeal:               unwrapSeal,
+		sealConfigError:          sealConfigError,
+		sealConfigWarning:        sealConfigWarning,
+		hasPartiallyWrappedPaths: hasPartiallyWrappedPaths,
 	}, nil
 }
 
-func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal.SealGenerationInfo, sealConfigs []*configutil.KMS, hasPartiallyWrappedPaths bool) (*vaultseal.SealGenerationInfo, error) {
+func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal.SealGenerationInfo, sealConfigs []*configutil.KMS, hasPartiallyWrappedPaths, multisealEnabled bool) (*vaultseal.SealGenerationInfo, error) {
 	generation := uint64(1)
 
 	if existingSealGenInfo != nil {
@@ -2836,9 +2880,10 @@ func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal
 	newSealGenInfo := &vaultseal.SealGenerationInfo{
 		Generation: generation,
 		Seals:      sealConfigs,
+		Enabled:    multisealEnabled,
 	}
 
-	if server.IsMultisealSupported() {
+	if multisealEnabled || (existingSealGenInfo != nil && existingSealGenInfo.Enabled) {
 		err := newSealGenInfo.Validate(existingSealGenInfo, hasPartiallyWrappedPaths)
 		if err != nil {
 			return nil, err
@@ -3060,6 +3105,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		AuditBackends:                  c.AuditBackends,
 		CredentialBackends:             c.CredentialBackends,
 		LogicalBackends:                c.LogicalBackends,
+		EventBackends:                  c.EventBackends,
 		LogLevel:                       config.LogLevel,
 		Logger:                         c.logger,
 		DetectDeadlocks:                config.DetectDeadlocks,
@@ -3072,6 +3118,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		ClusterName:                    config.ClusterName,
 		CacheSize:                      config.CacheSize,
 		PluginDirectory:                config.PluginDirectory,
+		PluginTmpdir:                   config.PluginTmpdir,
 		PluginFileUid:                  config.PluginFileUid,
 		PluginFilePermissions:          config.PluginFilePermissions,
 		EnableUI:                       config.EnableUI,
@@ -3317,38 +3364,142 @@ func startHttpServers(c *ServerCommand, core *vault.Core, config *server.Config,
 	return nil
 }
 
-func (c *ServerCommand) reloadSeals(ctx context.Context, core *vault.Core, config *server.Config) (*SetSealResponse, error) {
-	if len(config.Seals) == 1 && config.Seals[0].Disabled {
-		return nil, errors.New("moving from autoseal to shamir requires seal migration")
+// reloadSealsOnLeaderActivation checks to see if the in-memory seal generation info is stale, and if so,
+// reloads the seal configuration.
+func (c *ServerCommand) reloadSealsOnLeaderActivation(ctx context.Context, core *vault.Core) error {
+	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(ctx, core.PhysicalAccess())
+	if err != nil {
+		return fmt.Errorf("error checking for stale seal generation info: %w", err)
+	}
+	if existingSealGenerationInfo == nil {
+		c.logger.Debug("not reloading seals config since there is no seal generation info in storage")
+		return nil
+	}
+
+	currentSealGenerationInfo := core.SealAccess().GetAccess().GetSealGenerationInfo()
+	if currentSealGenerationInfo == nil {
+		c.logger.Debug("not reloading seal config since there is no current generation info (the seal has not been initialized)")
+		return nil
+	}
+	if currentSealGenerationInfo.Generation >= existingSealGenerationInfo.Generation {
+		c.logger.Debug("seal generation info is up to date, not reloading seal configuration")
+		return nil
+	}
+
+	// Reload seal configuration
+
+	config, _, err := c.reloadConfigFiles()
+	if err != nil {
+		return fmt.Errorf("error reading configuration files while reloading seal configuration: %w", err)
+	}
+	if config == nil {
+		return errors.New("no configuration files found while reloading seal configuration")
+	}
+	reloaded, err := c.reloadSeals(ctx, false, core, config)
+	if reloaded {
+		core.SetConfig(config)
+	}
+	return err
+}
+
+// reloadSealsOnSigHup will reload seal configurtion as a result of receiving a SIGHUP signal.
+func (c *ServerCommand) reloadSealsOnSigHup(ctx context.Context, core *vault.Core, config *server.Config) (bool, error) {
+	return c.reloadSeals(ctx, true, core, config)
+}
+
+// reloadSeals reloads configuration files and determines whether it needs to re-create the Seal.Access() objects.
+// This function needs do detect that core.SealAccess() is no longer using the seal Wrapper that is specified
+// in the seal configuration files.
+// This function returns true if the newConfig was used to re-create the Seal.Access() objects. In other words,
+// if false is returned, there were no changes done to the seals.
+func (c *ServerCommand) reloadSeals(ctx context.Context, grabStateLock bool, core *vault.Core, newConfig *server.Config) (bool, error) {
+	if core.IsInSealMigrationMode(grabStateLock) {
+		c.logger.Debug("not reloading seal configuration since Vault is in migration mode")
+		return false, nil
+	}
+
+	currentConfig := core.GetCoreConfigInternal()
+
+	// We only want to reload if multiseal is currently enabled, or it is being enabled
+	if !(currentConfig.IsMultisealEnabled() || newConfig.IsMultisealEnabled()) {
+		c.logger.Debug("not reloading seal configuration since enable_multiseal is not set, nor is it being disabled")
+		return false, nil
+	}
+
+	if conf, err := core.PhysicalBarrierSealConfig(ctx); err != nil {
+		return false, fmt.Errorf("error reading barrier seal configuration from storage while reloading seals: %w", err)
+	} else if conf == nil {
+		c.logger.Debug("not reloading seal configuration since there is no barrier config in storage (the seal has not been initialized)")
+		return false, nil
 	}
 
 	if core.SealAccess().BarrierSealConfigType() == vault.SealConfigTypeShamir {
-		return nil, errors.New("moving from shamir to autoseal requires seal migration")
+		switch {
+		case len(newConfig.Seals) == 0:
+			// We are fine, our ServerCommand.reloadConfigFiles() does not do the "automagic" creation
+			// of the Shamir seal configuration.
+			c.logger.Debug("not reloading seal configuration since the new one has no seal stanzas")
+			return false, nil
+
+		case len(newConfig.Seals) == 1 && newConfig.Seals[0].Disabled:
+			// If we have only one seal and it is disabled, it means that the newConfig wants to migrate
+			// to Shamir, which is not supported by seal reloading.
+			c.logger.Debug("not reloading seal configuration since the new one specifies migration to Shamir")
+			return false, nil
+
+		case len(newConfig.Seals) == 1 && newConfig.Seals[0].Type == vault.SealConfigTypeShamir.String():
+			// Having a single Shamir seal in newConfig is not really possible, since a Shamir seal
+			// is specified in configuration by *not* having a seal stanza. If we were to hit this
+			// case, though, it is equivalent to trying to migrate to Shamir, which is not supported
+			// by seal reloading.
+			c.logger.Debug("not reloading seal configuration since the new one has single Shamir stanza")
+			return false, nil
+		}
+	}
+
+	// Verify that the new config we picked up is not trying to migrate from autoseal to shamir
+	if len(newConfig.Seals) == 1 && newConfig.Seals[0].Disabled {
+		// If we get here, it means the node was not started in migration mode, but the new config says
+		// we should go into migration mode. This case should be caught by the core.IsInSealMigrationMode()
+		// above.
+
+		return false, errors.New("not reloading seal configuration: moving from autoseal to shamir requires seal migration")
+	}
+
+	// Verify that the new config we picked up is not trying to migrate shamir to autoseal
+	if core.SealAccess().BarrierSealConfigType() == vault.SealConfigTypeShamir {
+		return false, errors.New("not reloading seal configuration: moving from Shamir to autoseal requires seal migration")
 	}
 
 	infoKeysReload := make([]string, 0)
 	infoReload := make(map[string]string)
 
-	setSealResponse, secureRandomReader, err := c.configureSeals(ctx, config, core.PhysicalAccess(), infoKeysReload, infoReload)
+	core.SetMultisealEnabled(newConfig.IsMultisealEnabled())
+	setSealResponse, secureRandomReader, err := c.configureSeals(ctx, newConfig, core.PhysicalAccess(), infoKeysReload, infoReload)
 	if err != nil {
-		return nil, err
+		return false, fmt.Errorf("error reloading seal configuration: %w", err)
 	}
 	if setSealResponse.sealConfigError != nil {
-		return nil, err
-	}
-
-	err = core.SetSeals(setSealResponse.barrierSeal, secureRandomReader)
-	if err != nil {
-		return nil, fmt.Errorf("error setting seal: %s", err)
+		return false, fmt.Errorf("error reloading seal configuration: %w", setSealResponse.sealConfigError)
 	}
 
 	newGen := setSealResponse.barrierSeal.GetAccess().GetSealGenerationInfo()
+
+	err = core.SetSeals(ctx, grabStateLock, setSealResponse.barrierSeal, secureRandomReader, !newGen.IsRewrapped() || setSealResponse.hasPartiallyWrappedPaths)
+	if err != nil {
+		return false, fmt.Errorf("error setting seal: %s", err)
+	}
 
 	if err := core.SetPhysicalSealGenInfo(ctx, newGen); err != nil {
 		c.logger.Warn("could not update seal information in storage", "err", err)
 	}
 
-	return setSealResponse, nil
+	// finalize the old seals and set the new seals as the current ones
+	c.setSealsToFinalize(setSealResponse.getCreatedSeals())
+
+	c.logger.Debug("seal configuration reloaded successfully")
+
+	return true, nil
 }
 
 func SetStorageMigration(b physical.Backend, active bool) error {

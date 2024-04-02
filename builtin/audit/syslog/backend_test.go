@@ -4,10 +4,15 @@
 package syslog
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/internal/observability/event"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
 )
 
@@ -110,70 +115,6 @@ func TestBackend_formatterConfig(t *testing.T) {
 	}
 }
 
-// TestBackend_configureFilterNode ensures that configureFilterNode handles various
-// filter values as expected. Empty (including whitespace) strings should return
-// no error but skip configuration of the node.
-func TestBackend_configureFilterNode(t *testing.T) {
-	t.Parallel()
-
-	tests := map[string]struct {
-		filter           string
-		shouldSkipNode   bool
-		wantErr          bool
-		expectedErrorMsg string
-	}{
-		"happy": {
-			filter: "foo == bar",
-		},
-		"empty": {
-			filter:         "",
-			shouldSkipNode: true,
-		},
-		"spacey": {
-			filter:         "    ",
-			shouldSkipNode: true,
-		},
-		"bad": {
-			filter:           "___qwerty",
-			wantErr:          true,
-			expectedErrorMsg: "syslog.(Backend).configureFilterNode: error creating filter node: audit.NewEntryFilter: cannot create new audit filter",
-		},
-	}
-	for name, tc := range tests {
-		name := name
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			b := &Backend{
-				nodeIDList: []eventlogger.NodeID{},
-				nodeMap:    map[eventlogger.NodeID]eventlogger.Node{},
-			}
-
-			err := b.configureFilterNode(tc.filter)
-
-			switch {
-			case tc.wantErr:
-				require.Error(t, err)
-				require.ErrorContains(t, err, tc.expectedErrorMsg)
-				require.Len(t, b.nodeIDList, 0)
-				require.Len(t, b.nodeMap, 0)
-			case tc.shouldSkipNode:
-				require.NoError(t, err)
-				require.Len(t, b.nodeIDList, 0)
-				require.Len(t, b.nodeMap, 0)
-			default:
-				require.NoError(t, err)
-				require.Len(t, b.nodeIDList, 1)
-				require.Len(t, b.nodeMap, 1)
-				id := b.nodeIDList[0]
-				node := b.nodeMap[id]
-				require.Equal(t, eventlogger.NodeTypeFilter, node.Type())
-			}
-		})
-	}
-}
-
 // TestBackend_configureFormatterNode ensures that configureFormatterNode
 // populates the nodeIDList and nodeMap on Backend when given valid formatConfig.
 func TestBackend_configureFormatterNode(t *testing.T) {
@@ -187,7 +128,7 @@ func TestBackend_configureFormatterNode(t *testing.T) {
 	formatConfig, err := audit.NewFormatterConfig()
 	require.NoError(t, err)
 
-	err = b.configureFormatterNode(formatConfig)
+	err = b.configureFormatterNode("juan", formatConfig, hclog.NewNullLogger())
 
 	require.NoError(t, err)
 	require.Len(t, b.nodeIDList, 1)
@@ -264,50 +205,136 @@ func TestBackend_configureSinkNode(t *testing.T) {
 				id := b.nodeIDList[0]
 				node := b.nodeMap[id]
 				require.Equal(t, eventlogger.NodeTypeSink, node.Type())
-				sw, ok := node.(*audit.SinkWrapper)
+				mc, ok := node.(*event.MetricsCounter)
 				require.True(t, ok)
-				require.Equal(t, tc.expectedName, sw.Name)
+				require.Equal(t, tc.expectedName, mc.Name)
 			}
 		})
 	}
 }
 
-// TestBackend_configureFilterFormatterSink ensures that configuring all three
-// types of nodes on a Backend works as expected, i.e. we have all three nodes
-// at the end and nothing gets overwritten. The order of calls influences the
-// slice of IDs on the Backend.
-func TestBackend_configureFilterFormatterSink(t *testing.T) {
+// TestBackend_Factory_Conf is used to ensure that any configuration which is
+// supplied, is validated and tested.
+func TestBackend_Factory_Conf(t *testing.T) {
 	t.Parallel()
 
-	b := &Backend{
-		nodeIDList: []eventlogger.NodeID{},
-		nodeMap:    map[eventlogger.NodeID]eventlogger.Node{},
+	ctx := context.Background()
+
+	tests := map[string]struct {
+		backendConfig        *audit.BackendConfig
+		isErrorExpected      bool
+		expectedErrorMessage string
+	}{
+		"nil-salt-config": {
+			backendConfig: &audit.BackendConfig{
+				SaltConfig: nil,
+			},
+			isErrorExpected:      true,
+			expectedErrorMessage: "syslog.Factory: nil salt config",
+		},
+		"nil-salt-view": {
+			backendConfig: &audit.BackendConfig{
+				SaltConfig: &salt.Config{},
+			},
+			isErrorExpected:      true,
+			expectedErrorMessage: "syslog.Factory: nil salt view",
+		},
+		"non-fallback-device-with-filter": {
+			backendConfig: &audit.BackendConfig{
+				MountPath:  "discard",
+				SaltConfig: &salt.Config{},
+				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
+				Config: map[string]string{
+					"fallback": "false",
+					"filter":   "mount_type == kv",
+				},
+			},
+			isErrorExpected: false,
+		},
+		"fallback-device-with-filter": {
+			backendConfig: &audit.BackendConfig{
+				MountPath:  "discard",
+				SaltConfig: &salt.Config{},
+				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
+				Config: map[string]string{
+					"fallback": "true",
+					"filter":   "mount_type == kv",
+				},
+			},
+			isErrorExpected:      true,
+			expectedErrorMessage: "syslog.Factory: cannot configure a fallback device with a filter: invalid parameter",
+		},
 	}
 
-	formatConfig, err := audit.NewFormatterConfig()
-	require.NoError(t, err)
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	err = b.configureFilterNode("foo == bar")
-	require.NoError(t, err)
+			be, err := Factory(ctx, tc.backendConfig, nil)
 
-	err = b.configureFormatterNode(formatConfig)
-	require.NoError(t, err)
+			switch {
+			case tc.isErrorExpected:
+				require.Error(t, err)
+				require.EqualError(t, err, tc.expectedErrorMessage)
+			default:
+				require.NoError(t, err)
+				require.NotNil(t, be)
+			}
+		})
+	}
+}
 
-	err = b.configureSinkNode("foo", "json")
-	require.NoError(t, err)
+// TestBackend_IsFallback ensures that the 'fallback' config setting is parsed
+// and set correctly, then exposed via the interface method IsFallback().
+func TestBackend_IsFallback(t *testing.T) {
+	t.Parallel()
 
-	require.Len(t, b.nodeIDList, 3)
-	require.Len(t, b.nodeMap, 3)
+	ctx := context.Background()
 
-	id := b.nodeIDList[0]
-	node := b.nodeMap[id]
-	require.Equal(t, eventlogger.NodeTypeFilter, node.Type())
+	tests := map[string]struct {
+		backendConfig      *audit.BackendConfig
+		isFallbackExpected bool
+	}{
+		"fallback": {
+			backendConfig: &audit.BackendConfig{
+				MountPath:  "qwerty",
+				SaltConfig: &salt.Config{},
+				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
+				Config: map[string]string{
+					"fallback": "true",
+				},
+			},
+			isFallbackExpected: true,
+		},
+		"no-fallback": {
+			backendConfig: &audit.BackendConfig{
+				MountPath:  "qwerty",
+				SaltConfig: &salt.Config{},
+				SaltView:   &logical.InmemStorage{},
+				Logger:     hclog.NewNullLogger(),
+				Config: map[string]string{
+					"fallback": "false",
+				},
+			},
+			isFallbackExpected: false,
+		},
+	}
 
-	id = b.nodeIDList[1]
-	node = b.nodeMap[id]
-	require.Equal(t, eventlogger.NodeTypeFormatter, node.Type())
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	id = b.nodeIDList[2]
-	node = b.nodeMap[id]
-	require.Equal(t, eventlogger.NodeTypeSink, node.Type())
+			be, err := Factory(ctx, tc.backendConfig, nil)
+			require.NoError(t, err)
+			require.NotNil(t, be)
+			require.Equal(t, tc.isFallbackExpected, be.IsFallback())
+		})
+	}
 }

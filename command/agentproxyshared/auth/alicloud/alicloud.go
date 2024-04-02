@@ -63,10 +63,10 @@ func NewAliCloudAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	// Check for an optional custom frequency at which we should poll for creds.
 	credCheckFreqSec := defaultCredCheckFreqSeconds
 	if checkFreqRaw, ok := conf.Config["credential_poll_interval"]; ok {
-		if credFreq, ok := checkFreqRaw.(int); ok {
+		if credFreq, ok := checkFreqRaw.(int); ok && credFreq > 0 {
 			credCheckFreqSec = credFreq
 		} else {
-			return nil, errors.New("could not convert 'credential_poll_interval' config value to int")
+			return nil, errors.New("could not convert 'credential_poll_interval' config value to positive int")
 		}
 	}
 

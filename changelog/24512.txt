@@ -1,0 +1,6 @@
+```release-note:change
+plugins: Add a warning to the response from sys/plugins/reload/backend if no plugins were reloaded.
+```
+```release-note:improvement
+secrets/database: Support reloading named database plugins using the sys/plugins/reload/backend API endpoint.
+```

@@ -4,7 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
@@ -99,11 +99,11 @@ export default class CreateAndEditRolePageComponent extends Component {
     this.selectedTemplateId = '1';
 
     if (generatedRoleRules) {
-      const template = rulesTemplates.findBy('rules', generatedRoleRules);
+      const template = rulesTemplates.find((t) => t.rules === generatedRoleRules);
       if (template) {
         this.selectedTemplateId = template.id;
       } else {
-        rulesTemplates.findBy('id', '1').rules = generatedRoleRules;
+        rulesTemplates.find((t) => t.id === '1').rules = generatedRoleRules;
       }
     }
     this.roleRulesTemplates = rulesTemplates;
@@ -134,7 +134,7 @@ export default class CreateAndEditRolePageComponent extends Component {
   *save() {
     try {
       // set generatedRoleRoles to value of selected template
-      const selectedTemplate = this.roleRulesTemplates?.findBy('id', this.selectedTemplateId);
+      const selectedTemplate = this.roleRulesTemplates?.find((t) => t.id === this.selectedTemplateId);
       if (selectedTemplate) {
         this.args.model.generatedRoleRules = selectedTemplate.rules;
       }

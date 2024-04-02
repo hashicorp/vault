@@ -33,13 +33,7 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
-	raftlib "github.com/hashicorp/raft"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
-	"github.com/mitchellh/copystructure"
-	"github.com/mitchellh/go-testing-interface"
-	"golang.org/x/crypto/ed25519"
-	"golang.org/x/net/http2"
-
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
@@ -60,6 +54,10 @@ import (
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/vault/seal"
+	"github.com/mitchellh/copystructure"
+	"github.com/mitchellh/go-testing-interface"
+	"golang.org/x/crypto/ed25519"
+	"golang.org/x/net/http2"
 )
 
 // This file contains a number of methods that are useful for unit
@@ -233,7 +231,6 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.PluginDirectory = opts.PluginDirectory
 	conf.DetectDeadlocks = opts.DetectDeadlocks
 	conf.Experiments = opts.Experiments
-	conf.CensusAgent = opts.CensusAgent
 	conf.AdministrativeNamespacePath = opts.AdministrativeNamespacePath
 	conf.ImpreciseLeaseRoleTracking = opts.ImpreciseLeaseRoleTracking
 
@@ -521,7 +518,7 @@ func TestKeyCopy(key []byte) []byte {
 	return result
 }
 
-func TestDynamicSystemView(c *Core, ns *namespace.Namespace) *dynamicSystemView {
+func TestDynamicSystemView(c *Core, ns *namespace.Namespace) logical.SystemView {
 	me := &MountEntry{
 		Config: MountConfig{
 			DefaultLeaseTTL: 24 * time.Hour,
@@ -536,7 +533,9 @@ func TestDynamicSystemView(c *Core, ns *namespace.Namespace) *dynamicSystemView 
 		me.namespace = ns
 	}
 
-	return &dynamicSystemView{c, me, c.perfStandby}
+	return &extendedSystemViewImpl{
+		dynamicSystemView{c, me, c.perfStandby},
+	}
 }
 
 func TestAddTestPlugin(t testing.T, core *Core, name string, pluginType consts.PluginType, version string, testFunc string, env []string) {
@@ -716,6 +715,9 @@ type TestCluster struct {
 
 func (c *TestCluster) SetRootToken(token string) {
 	c.RootToken = token
+	for _, c := range c.Cores {
+		c.Client.SetToken(token)
+	}
 }
 
 func (c *TestCluster) Start() {
@@ -1041,6 +1043,12 @@ type PhysicalBackendBundle struct {
 	Backend   physical.Backend
 	HABackend physical.HABackend
 	Cleanup   func()
+	// MutateCoreConfig is invoked when applying the bundle to core config
+	// during core creation.  We do it this way rather than providing the input
+	// directly as part of the CoreConfig passed in to NewTestCluster so that
+	// the same input conf and opts can be used for multiple clusters, but at
+	// the same time can have per-cluster configuration specified by the backend.
+	MutateCoreConfig func(conf *CoreConfig)
 }
 
 type HandlerHandler interface {
@@ -1103,14 +1111,6 @@ type TestClusterOptions struct {
 	// InmemClusterLayers is a shorthand way of asking for ClusterLayers to be
 	// built using the inmem implementation.
 	InmemClusterLayers bool
-
-	// RaftAddressProvider is used to set the raft ServerAddressProvider on
-	// each core.
-	//
-	// If SkipInit is true, then RaftAddressProvider has no effect.
-	// RaftAddressProvider should only be specified if the underlying physical
-	// storage is Raft.
-	RaftAddressProvider raftlib.ServerAddressProvider
 
 	CoreMetricSinkProvider func(clusterName string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper)
 
@@ -1433,6 +1433,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.MaxLeaseTTL = base.MaxLeaseTTL
 		coreConfig.CacheSize = base.CacheSize
 		coreConfig.PluginDirectory = base.PluginDirectory
+		coreConfig.PluginTmpdir = base.PluginTmpdir
 		coreConfig.Seal = base.Seal
 		coreConfig.UnwrapSeal = base.UnwrapSeal
 		coreConfig.DevToken = base.DevToken
@@ -1509,6 +1510,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.ExpirationRevokeRetryBase = base.ExpirationRevokeRetryBase
 		coreConfig.PeriodicLeaderRefreshInterval = base.PeriodicLeaderRefreshInterval
 		coreConfig.ClusterAddrBridge = base.ClusterAddrBridge
+
 		testApplyEntBaseConfig(coreConfig, base)
 	}
 	if coreConfig.ClusterName == "" {
@@ -1862,6 +1864,10 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 			// Cleanup setup
 			if physBundle.Cleanup != nil {
 				cleanupFunc = physBundle.Cleanup
+			}
+
+			if physBundle.MutateCoreConfig != nil {
+				physBundle.MutateCoreConfig(&localConfig)
 			}
 		}
 	}

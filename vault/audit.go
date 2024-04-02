@@ -8,14 +8,14 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -40,12 +40,6 @@ const (
 	// auditTableType is the value we expect to find for the audit table and
 	// corresponding entries
 	auditTableType = "audit"
-
-	// featureFlagDisableEventLogger contains the feature flag name which can be
-	// used to disable internal eventlogger behavior for the audit system.
-	// NOTE: this is an undocumented and temporary feature flag, it should not
-	// be relied on to remain part of Vault for any subsequent releases.
-	featureFlagDisableEventLogger = "VAULT_AUDIT_DISABLE_EVENTLOGGER"
 )
 
 // loadAuditFailed if loading audit tables encounters an error
@@ -81,6 +75,22 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 		return fmt.Errorf("backend path must be specified")
 	}
 
+	// We can check early to ensure that non-Enterprise versions aren't trying to supply Enterprise only options.
+	if hasInvalidAuditOptions(entry.Options) {
+		return fmt.Errorf("enterprise-only options supplied")
+	}
+
+	if fallbackRaw, ok := entry.Options["fallback"]; ok {
+		fallback, err := parseutil.ParseBool(fallbackRaw)
+		if err != nil {
+			return fmt.Errorf("unable to enable audit device '%s', cannot parse supplied 'fallback' setting: %w", entry.Path, err)
+		}
+
+		// Reassigning the fallback value means we can ensure that the formatting
+		// of it as a string is consistent for future comparisons.
+		entry.Options["fallback"] = strconv.FormatBool(fallback)
+	}
+
 	// Update the audit table
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
@@ -88,6 +98,8 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	// Look for matching name
 	for _, ent := range c.audit.Entries {
 		switch {
+		case entry.Options["fallback"] == "true" && ent.Options["fallback"] == "true":
+			return fmt.Errorf("unable to enable audit device '%s', a fallback device already exists '%s'", entry.Path, ent.Path)
 		// Existing is sql/mysql/ new is sql/ or
 		// existing is sql/ and new is sql/mysql/
 		case strings.HasPrefix(ent.Path, entry.Path):
@@ -138,7 +150,7 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 		if err != nil {
 			return err
 		}
-		err = backend.LogTestMessage(ctx, testProbe, entry.Options)
+		err = backend.LogTestMessage(ctx, testProbe)
 		if err != nil {
 			c.logger.Error("new audit backend failed test", "path", entry.Path, "type", entry.Type, "error", err)
 			return fmt.Errorf("audit backend failed test message: %w", err)
@@ -402,17 +414,13 @@ func (c *Core) setupAudits(ctx context.Context) error {
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
 
-	disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
-	if err != nil {
-		return fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
-	}
-
 	brokerLogger := c.baseLogger.Named("audit")
 
-	broker, err := NewAuditBroker(brokerLogger, !disableEventLogger)
+	broker, err := NewAuditBroker(brokerLogger)
 	if err != nil {
 		return err
 	}
+	c.auditBroker = broker
 
 	var successCount int
 
@@ -456,7 +464,6 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		return errLoadAuditFailed
 	}
 
-	c.auditBroker = broker
 	c.AddLogger(brokerLogger)
 	return nil
 }
@@ -506,6 +513,11 @@ func (c *Core) removeAuditReloadFunc(entry *MountEntry) {
 
 // newAuditBackend is used to create and configure a new audit backend by name
 func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logical.Storage, conf map[string]string) (audit.Backend, error) {
+	// Ensure that non-Enterprise versions aren't trying to supply Enterprise only options.
+	if hasInvalidAuditOptions(entry.Options) {
+		return nil, fmt.Errorf("enterprise-only options supplied")
+	}
+
 	f, ok := c.auditBackends[entry.Type]
 	if !ok {
 		return nil, fmt.Errorf("unknown backend type: %q", entry.Type)
@@ -515,11 +527,7 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		HMACType: "hmac-sha256",
 		Location: salt.DefaultLocation,
 	}
-
-	disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
-	}
+	auditLogger := c.baseLogger.Named("audit")
 
 	be, err := f(
 		ctx, &audit.BackendConfig{
@@ -527,17 +535,15 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 			SaltConfig: saltConfig,
 			Config:     conf,
 			MountPath:  entry.Path,
+			Logger:     auditLogger,
 		},
-		!disableEventLogger,
 		c.auditedHeaders)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to create new audit backend: %w", err)
 	}
 	if be == nil {
 		return nil, fmt.Errorf("nil backend returned from %q factory function", entry.Type)
 	}
-
-	auditLogger := c.baseLogger.Named("audit")
 
 	switch entry.Type {
 	case "file":
@@ -593,14 +599,14 @@ func (b *basicAuditor) AuditRequest(ctx context.Context, input *logical.LogInput
 	if b.c.auditBroker == nil {
 		return consts.ErrSealed
 	}
-	return b.c.auditBroker.LogRequest(ctx, input, b.c.auditedHeaders)
+	return b.c.auditBroker.LogRequest(ctx, input)
 }
 
 func (b *basicAuditor) AuditResponse(ctx context.Context, input *logical.LogInput) error {
 	if b.c.auditBroker == nil {
 		return consts.ErrSealed
 	}
-	return b.c.auditBroker.LogResponse(ctx, input, b.c.auditedHeaders)
+	return b.c.auditBroker.LogResponse(ctx, input)
 }
 
 type genericAuditor struct {
@@ -613,12 +619,38 @@ func (g genericAuditor) AuditRequest(ctx context.Context, input *logical.LogInpu
 	ctx = namespace.ContextWithNamespace(ctx, g.namespace)
 	logInput := *input
 	logInput.Type = g.mountType + "-request"
-	return g.c.auditBroker.LogRequest(ctx, &logInput, g.c.auditedHeaders)
+	return g.c.auditBroker.LogRequest(ctx, &logInput)
 }
 
 func (g genericAuditor) AuditResponse(ctx context.Context, input *logical.LogInput) error {
 	ctx = namespace.ContextWithNamespace(ctx, g.namespace)
 	logInput := *input
 	logInput.Type = g.mountType + "-response"
-	return g.c.auditBroker.LogResponse(ctx, &logInput, g.c.auditedHeaders)
+	return g.c.auditBroker.LogResponse(ctx, &logInput)
+}
+
+// hasInvalidAuditOptions is used to determine if a non-Enterprise version of Vault
+// is being used when supplying options that contain options exclusive to Enterprise.
+func hasInvalidAuditOptions(options map[string]string) bool {
+	return !constants.IsEnterprise && hasEnterpriseAuditOptions(options)
+}
+
+// hasValidEnterpriseAuditOptions is used to check if any of the options supplied
+// are only for use in the Enterprise version of Vault.
+func hasEnterpriseAuditOptions(options map[string]string) bool {
+	const enterpriseAuditOptionFilter = "filter"
+	const enterpriseAuditOptionFallback = "fallback"
+
+	enterpriseAuditOptions := []string{
+		enterpriseAuditOptionFallback,
+		enterpriseAuditOptionFilter,
+	}
+
+	for _, o := range enterpriseAuditOptions {
+		if _, ok := options[o]; ok {
+			return true
+		}
+	}
+
+	return false
 }

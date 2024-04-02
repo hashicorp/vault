@@ -171,6 +171,12 @@ const cert = {
       fieldGroup: 'default',
       type: 'number',
     },
+    roleCacheSize: {
+      editType: 'number',
+      fieldGroup: 'default',
+      helpText: 'The size of the in memory role cache',
+      type: 'number',
+    },
   },
   cert: {
     name: {
@@ -489,6 +495,12 @@ const jwt = {
       fieldGroup: 'default',
       type: 'string',
     },
+    jwksPairs: {
+      editType: 'objectArray',
+      fieldGroup: 'default',
+      helpText:
+        'Set of JWKS Url and CA certificate (or chain of certificates) pairs. CA certificates must be in PEM format. Cannot be used with "jwks_url" or "jwks_ca_pem".',
+    },
     jwksUrl: {
       editType: 'string',
       helpText:
@@ -604,6 +616,14 @@ const kubernetes = {
       fieldGroup: 'default',
       label: 'Token Reviewer JWT',
       type: 'string',
+    },
+    useAnnotationsAsAliasMetadata: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText:
+        'Use annotations from the client token\'s associated service account as alias metadata for the Vault entity. Only annotations with the prefix "vault.hashicorp.com/alias-metadata-" will be used. Note that Vault will need permission to read service accounts from the Kubernetes API.',
+      label: 'Use annotations of JWT service account as alias metadata',
+      type: 'boolean',
     },
   },
   role: {

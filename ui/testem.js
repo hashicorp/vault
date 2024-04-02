@@ -31,6 +31,7 @@ module.exports = {
       target: 'http://127.0.0.1:9200',
     },
   },
+  parallel: process.env.EMBER_EXAM_SPLIT_COUNT || 1,
 };
 
 if (process.env.CI) {

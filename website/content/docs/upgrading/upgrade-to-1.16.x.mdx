@@ -1,0 +1,51 @@
+---
+layout: docs
+page_title: Upgrade to Vault 1.16.x - Guides
+description: |-
+  Deprecations, important or breaking changes, and remediation recommendations
+  for anyone upgrading to 1.16.x from Vault 1.15.x.
+---
+
+# Overview
+
+The Vault 1.16.x upgrade guide contains information on deprecations, important
+or breaking changes, and remediation recommendations for anyone upgrading from
+Vault 1.15. **Please read carefully**.
+
+## Plugin environment variables
+
+Starting in 1.16.0, plugin-specific environment variables take precedence when
+they conflict with the main Vault process' environment.
+
+For example, if an external plugin is registered with `SOURCE=child` in the
+[env](/vault/api-docs/system/plugins-catalog#env) parameter, but the main Vault
+process has `SOURCE=parent` in its environment, versions prior to 1.16.0 will
+start the plugin process with `SOURCE=parent`. 1.16.0+ will start the plugin
+process with `SOURCE=child`.
+
+For any users relying on the old behavior, you can opt out of this change by setting
+`VAULT_PLUGIN_USE_LEGACY_ENV_LAYERING=true` for the main Vault process. If this
+flag is detected, Vault will continue to prioritize Vault process environment
+variables when there is a conflict. Additionally, during unseal Vault will enumerate
+all plugins in the catalog and print a warning for any plugins whose environment
+conflicts with the main process. If the flag is set and you see an informational
+log that there are no conflicts, the flag can safely be removed.
+
+Note that containerized plugins do not inherit any environment variables from
+the main Vault process, so are unaffected. Builtin plugins and external plugins
+that do not specify additional environment variables are also unaffected.
+
+See [plugin management](/vault/docs/plugins/plugin-management) for more details
+on plugin environment variables.
+
+## Known issues and workarounds
+
+@include 'known-issues/1_16-ldap_auth_login_anonymous_group_search.mdx'
+
+@include 'known-issues/1_16-ldap_auth_login_missing_entity_alias.mdx'
+
+@include 'known-issues/1_16-default-policy-needs-to-be-updated.mdx'
+
+@include 'known-issues/1_16-default-lcq-pre-1_9-upgrade.mdx'
+
+@include 'known-issues/ocsp-redirect.mdx'
