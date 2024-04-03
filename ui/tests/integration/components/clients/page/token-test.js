@@ -89,8 +89,8 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
     assert
       .dom(`${chart} ${ts.charts.bar.dataBar}`)
       .exists(
-        { count: this.activity.byMonth.filter((m) => m.counts !== null).length * 2 },
-        'renders correct number of data bars'
+        { count: this.activity.byMonth.filter((m) => m.clients).length * 2 },
+        'renders two stacked data bars of entity/non-entity clients for each month'
       );
     const formattedTimestamp = dateFormat([this.activity.responseTimestamp, 'MMM d yyyy, h:mm:ss aaa'], {
       withTimeZone: true,
@@ -127,8 +127,8 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
     assert
       .dom(`${chart} ${ts.charts.bar.dataBar}`)
       .exists(
-        { count: this.activity.byMonth.filter((m) => m.counts !== null).length * 2 },
-        'renders correct number of data bars'
+        { count: this.activity.byMonth.filter((m) => m.clients).length * 2 },
+        'renders two stacked bars of new entity/non-entity clients for each month'
       );
     const formattedTimestamp = dateFormat([this.activity.responseTimestamp, 'MMM d yyyy, h:mm:ss aaa'], {
       withTimeZone: true,
