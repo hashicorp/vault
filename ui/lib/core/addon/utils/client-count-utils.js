@@ -103,24 +103,16 @@ export const formatByNamespace = (namespaceArray) => {
   });
 };
 
-// In 1.10 'distinct_entities' changed to 'entity_clients' and
-// 'non_entity_tokens' to 'non_entity_clients'
+// In 1.10 'distinct_entities' changed to 'entity_clients' and 'non_entity_tokens' to 'non_entity_clients'
 // these deprecated keys still exist on the response, so only return relevant keys here
+// when querying historical data the response will always contain the latest client type keys because the activity log is
+// constructed based on the version of Vault the user is on (key values will be 0)
 export const destructureClientCounts = (verboseObject) => {
   if (!verboseObject) return;
   return CLIENT_TYPES.reduce((newObj, clientType) => {
     newObj[clientType] = verboseObject[clientType];
     return newObj;
   }, {});
-};
-
-export const flattenDataset = (object) => {
-  if (object?.counts) {
-    const flattenedObject = {};
-    Object.keys(object['counts']).forEach((key) => (flattenedObject[key] = object['counts'][key]));
-    return destructureClientCounts(flattenedObject);
-  }
-  return object;
 };
 
 export const sortMonthsByTimestamp = (monthsArray) => {
