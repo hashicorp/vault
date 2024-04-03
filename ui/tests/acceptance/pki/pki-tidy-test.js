@@ -15,6 +15,8 @@ import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { PKI_TIDY } from 'vault/tests/helpers/components/pki/page/pki-tidy';
+import { PKI_TIDY_FORM } from 'vault/tests/helpers/components/pki/page/pki-tidy-form';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | pki tidy', function (hooks) {
   setupApplicationTest(hooks);
@@ -49,10 +51,10 @@ module('Acceptance | pki tidy', function (hooks) {
       .dom(PKI_TIDY.tidyConfigureModal.tidyModalManualButton)
       .exists('Configure manual tidy button exists');
     await click(PKI_TIDY.tidyConfigureModal.tidyModalManualButton);
-    assert.dom(PKI_TIDY.tidyForm.tidyFormName('manual')).exists('Manual tidy form exists');
-    await click(PKI_TIDY.tidyForm.inputByAttr('tidyCertStore'));
-    await fillIn(PKI_TIDY.tidyForm.tidyPauseDuration, '10');
-    await click(PKI_TIDY.tidyForm.tidySave);
+    assert.dom(PKI_TIDY_FORM.tidyFormName('manual')).exists('Manual tidy form exists');
+    await click(PKI_TIDY_FORM.inputByAttr('tidyCertStore'));
+    await fillIn(PKI_TIDY_FORM.tidyPauseDuration, '10');
+    await click(PKI_TIDY_FORM.tidySave);
     await click(PKI_TIDY.cancelTidyAction);
     assert.dom(PKI_TIDY.cancelTidyModalBackground).exists('Confirm cancel tidy modal exits');
     await click(PKI_TIDY.tidyConfigureModal.tidyModalCancelButton);
@@ -122,23 +124,23 @@ module('Acceptance | pki tidy', function (hooks) {
       .dom(PKI_TIDY.tidyConfigureModal.tidyModalManualButton)
       .exists('Configure manual tidy button exists');
     await click(PKI_TIDY.tidyConfigureModal.tidyModalAutoButton);
-    assert.dom(PKI_TIDY.tidyForm.tidyFormName('auto')).exists('Auto tidy form exists');
-    await click(PKI_TIDY.tidyForm.tidyCancel);
+    assert.dom(PKI_TIDY_FORM.tidyFormName('auto')).exists('Auto tidy form exists');
+    await click(PKI_TIDY_FORM.tidyCancel);
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.tidy.index');
     await click(PKI_TIDY.tidyEmptyStateConfigure);
     await click(PKI_TIDY.tidyConfigureModal.tidyModalAutoButton);
-    assert.dom(PKI_TIDY.tidyForm.tidyFormName('auto')).exists('Auto tidy form exists');
-    await click(PKI_TIDY.tidyForm.toggleLabel('Automatic tidy disabled'));
+    assert.dom(PKI_TIDY_FORM.tidyFormName('auto')).exists('Auto tidy form exists');
+    await click(PKI_TIDY_FORM.toggleLabel('Automatic tidy disabled'));
     assert
-      .dom(PKI_TIDY.tidyForm.tidySectionHeader('ACME operations'))
+      .dom(PKI_TIDY_FORM.tidySectionHeader('ACME operations'))
       .exists('Auto tidy form enabled shows ACME operations field');
-    await click(PKI_TIDY.tidyForm.inputByAttr('tidyCertStore'));
-    await click(PKI_TIDY.tidyForm.tidySave);
+    await click(PKI_TIDY_FORM.inputByAttr('tidyCertStore'));
+    await click(PKI_TIDY_FORM.tidySave);
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.tidy.auto.index');
-    await click(PKI_TIDY.tidyForm.editAutoTidyButton);
+    await click(PKI_TIDY_FORM.editAutoTidyButton);
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.tidy.auto.configure');
-    await click(PKI_TIDY.tidyForm.inputByAttr('tidyRevokedCerts'));
-    await click(PKI_TIDY.tidyForm.tidySave);
+    await click(PKI_TIDY_FORM.inputByAttr('tidyRevokedCerts'));
+    await click(PKI_TIDY_FORM.tidySave);
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.tidy.auto.index');
   });
 
@@ -152,7 +154,7 @@ module('Acceptance | pki tidy', function (hooks) {
       .dom(PKI_TIDY.tidyConfigureModal.tidyModalManualButton)
       .exists('Configure manual tidy button exists');
     await click(PKI_TIDY.tidyConfigureModal.tidyModalCancelButton);
-    assert.dom(PKI_TIDY.tidyEmptyState).exists();
+    assert.dom(GENERAL.emptyStateTitle).exists();
   });
 
   test('it should show correct toolbar action depending on whether auto tidy is enabled', async function (assert) {
@@ -164,10 +166,10 @@ module('Acceptance | pki tidy', function (hooks) {
     await click(PKI_TIDY.tidyConfigureModal.tidyOptionsModal);
     assert.dom(PKI_TIDY.tidyConfigureModal.configureTidyModal).exists('Configure tidy modal exists');
     await click(PKI_TIDY.tidyConfigureModal.tidyModalAutoButton);
-    await click(PKI_TIDY.tidyForm.toggleLabel('Automatic tidy disabled'));
-    await click(PKI_TIDY.tidyForm.inputByAttr('tidyCertStore'));
-    await click(PKI_TIDY.tidyForm.inputByAttr('tidyRevokedCerts'));
-    await click(PKI_TIDY.tidyForm.tidySave);
+    await click(PKI_TIDY_FORM.toggleLabel('Automatic tidy disabled'));
+    await click(PKI_TIDY_FORM.inputByAttr('tidyCertStore'));
+    await click(PKI_TIDY_FORM.inputByAttr('tidyRevokedCerts'));
+    await click(PKI_TIDY_FORM.tidySave);
     await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);
     assert
       .dom(PKI_TIDY.manualTidyToolbar)

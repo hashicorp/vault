@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export const SELECTORS = {
+export const PKI_ROLE_DETAILS = {
   issuerLabel: '[data-test-row-label="Issuer"]',
   noStoreValue: '[data-test-value-div="Store in storage backend"]',
   keyUsageValue: '[data-test-value-div="Key usage"]',

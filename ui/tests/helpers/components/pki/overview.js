@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export const SELECTORS = {
+export const PKI_OVERVIEW = {
   issuersCardTitle: '[data-test-overview-card-title="Issuers"]',
   issuersCardSubtitle: '[data-test-overview-card-subtitle="Issuers"]',
   issuersCardLink: '[data-test-overview-card-container="Issuers"] a',

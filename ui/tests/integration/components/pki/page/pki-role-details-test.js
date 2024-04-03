@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { SELECTORS } from 'vault/tests/helpers/components/pki/page/pki-role-details';
+import { PKI_ROLE_DETAILS } from 'vault/tests/helpers/components/pki/page/pki-role-details';
 
 module('Integration | Component | pki role details page', function (hooks) {
   setupRenderingTest(hooks);
@@ -34,15 +34,17 @@ module('Integration | Component | pki role details page', function (hooks) {
   `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.issuerLabel).hasText('Issuer', 'Label is');
+    assert.dom(PKI_ROLE_DETAILS.issuerLabel).hasText('Issuer', 'Label is');
     assert
-      .dom(`${SELECTORS.keyUsageValue} [data-test-icon="minus"]`)
+      .dom(`${PKI_ROLE_DETAILS.keyUsageValue} [data-test-icon="minus"]`)
       .exists('Key usage shows dash when array is empty');
     assert
-      .dom(SELECTORS.extKeyUsageValue)
+      .dom(PKI_ROLE_DETAILS.extKeyUsageValue)
       .hasText('bar,baz', 'Key usage shows comma-joined values when array has items');
-    assert.dom(SELECTORS.noStoreValue).containsText('Yes', 'noStore shows opposite of what the value is');
-    assert.dom(SELECTORS.customTtlValue).containsText('10 minutes', 'TTL shown as duration');
+    assert
+      .dom(PKI_ROLE_DETAILS.noStoreValue)
+      .containsText('Yes', 'noStore shows opposite of what the value is');
+    assert.dom(PKI_ROLE_DETAILS.customTtlValue).containsText('10 minutes', 'TTL shown as duration');
   });
 
   test('it should render the notAfter date if present', async function (assert) {
@@ -61,6 +63,8 @@ module('Integration | Component | pki role details page', function (hooks) {
   `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.customTtlValue).containsText('May', 'Formats the notAfter date instead of TTL');
+    assert
+      .dom(PKI_ROLE_DETAILS.customTtlValue)
+      .containsText('May', 'Formats the notAfter date instead of TTL');
   });
 });

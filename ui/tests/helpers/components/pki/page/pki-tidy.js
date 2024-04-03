@@ -2,7 +2,6 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-import { PKI_TIDY_FORM } from './pki-tidy-form';
 
 export const PKI_TIDY = {
   hdsAlertTitle: '[data-test-tidy-status-alert-title]',
@@ -22,9 +21,5 @@ export const PKI_TIDY = {
     tidyModalManualButton: '[data-test-tidy-modal-manual-button]',
     tidyModalCancelButton: '[data-test-tidy-modal-cancel-button]',
     tidyOptionsModal: '[data-test-pki-tidy-options-modal]',
-  },
-  tidyEmptyState: '[data-test-component="empty-state"]',
-  tidyForm: {
-    ...PKI_TIDY_FORM,
   },
 };

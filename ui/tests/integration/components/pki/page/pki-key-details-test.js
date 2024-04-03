@@ -9,7 +9,7 @@ import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { SELECTORS } from 'vault/tests/helpers/components/pki/page/pki-keys';
+import { PKI_KEYS } from 'vault/tests/helpers/components/pki/page/pki-keys';
 
 module('Integration | Component | pki key details page', function (hooks) {
   setupRenderingTest(hooks);
@@ -48,14 +48,14 @@ module('Integration | Component | pki key details page', function (hooks) {
       { owner: this.engine }
     );
 
-    assert.dom(SELECTORS.keyIdValue).hasText(' 724862ff-6438-bad0-b598-77a6c7f4e934', 'key id renders');
-    assert.dom(SELECTORS.keyNameValue).hasText('test-key', 'key name renders');
-    assert.dom(SELECTORS.keyTypeValue).hasText('ec', 'key type renders');
-    assert.dom(SELECTORS.keyBitsValue).doesNotExist('does not render empty value');
-    assert.dom(SELECTORS.keyEditLink).exists('renders edit link');
-    assert.dom(SELECTORS.keyDeleteButton).exists('renders delete button');
-    await click(SELECTORS.keyDeleteButton);
-    await click(SELECTORS.confirmDelete);
+    assert.dom(PKI_KEYS.keyIdValue).hasText(' 724862ff-6438-bad0-b598-77a6c7f4e934', 'key id renders');
+    assert.dom(PKI_KEYS.keyNameValue).hasText('test-key', 'key name renders');
+    assert.dom(PKI_KEYS.keyTypeValue).hasText('ec', 'key type renders');
+    assert.dom(PKI_KEYS.keyBitsValue).doesNotExist('does not render empty value');
+    assert.dom(PKI_KEYS.keyEditLink).exists('renders edit link');
+    assert.dom(PKI_KEYS.keyDeleteButton).exists('renders delete button');
+    await click(PKI_KEYS.keyDeleteButton);
+    await click(PKI_KEYS.confirmDelete);
   });
 
   test('it does not render actions when capabilities are false', async function (assert) {
@@ -72,8 +72,8 @@ module('Integration | Component | pki key details page', function (hooks) {
       { owner: this.engine }
     );
 
-    assert.dom(SELECTORS.keyDeleteButton).doesNotExist('does not render delete button if no permission');
-    assert.dom(SELECTORS.keyEditLink).doesNotExist('does not render edit button if no permission');
+    assert.dom(PKI_KEYS.keyDeleteButton).doesNotExist('does not render delete button if no permission');
+    assert.dom(PKI_KEYS.keyEditLink).doesNotExist('does not render edit button if no permission');
   });
 
   test('it renders the private key as a <CertificateCard> component when there is a private key', async function (assert) {

@@ -18,7 +18,8 @@ import {
   parentIssuerCert,
   unsupportedOids,
 } from 'vault/tests/helpers/pki/values';
-import { SELECTORS } from 'vault/tests/helpers/components/pki/pki-issuer-cross-sign';
+import { PKI_CROSS_SIGN } from 'vault/tests/helpers/components/pki/pki-issuer-cross-sign';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const FIELDS = [
   {
@@ -189,19 +190,19 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
     });
     // fill out form and submit
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.objectListInput(field.key), this.testInputs[field.key]);
+      await fillIn(PKI_CROSS_SIGN.objectListInput(field.key), this.testInputs[field.key]);
     }
-    await click(SELECTORS.submitButton);
+    await click(GENERAL.saveButton);
 
-    assert.dom(SELECTORS.statusCount).hasText('Cross-signing complete (1 successful, 0 errors)');
+    assert.dom(PKI_CROSS_SIGN.statusCount).hasText('Cross-signing complete (1 successful, 0 errors)');
     assert
-      .dom(`${SELECTORS.signedIssuerRow()} [data-test-icon="check-circle"]`)
+      .dom(`${PKI_CROSS_SIGN.signedIssuerRow()} [data-test-icon="check-circle"]`)
       .exists('row has success icon');
     for (const field of FIELDS) {
       assert
-        .dom(`${SELECTORS.signedIssuerCol(field.key)}`)
+        .dom(`${PKI_CROSS_SIGN.signedIssuerCol(field.key)}`)
         .hasText(this.testInputs[field.key], `${field.key} displays correct value`);
-      assert.dom(`${SELECTORS.signedIssuerCol(field.key)} a`).hasTagName('a');
+      assert.dom(`${PKI_CROSS_SIGN.signedIssuerCol(field.key)} a`).hasTagName('a');
     }
   });
 
@@ -247,32 +248,32 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
 
     // fill out form and submit
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.objectListInput(field.key), this.testInputs[field.key]);
+      await fillIn(PKI_CROSS_SIGN.objectListInput(field.key), this.testInputs[field.key]);
     }
-    await click(SELECTORS.addRow);
+    await click(PKI_CROSS_SIGN.addRow);
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.objectListInput(field.key, 1), nonexistentIssuer[field.key]);
+      await fillIn(PKI_CROSS_SIGN.objectListInput(field.key, 1), nonexistentIssuer[field.key]);
     }
-    await click(SELECTORS.addRow);
+    await click(PKI_CROSS_SIGN.addRow);
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.objectListInput(field.key, 2), unsupportedCert[field.key]);
+      await fillIn(PKI_CROSS_SIGN.objectListInput(field.key, 2), unsupportedCert[field.key]);
     }
-    await click(SELECTORS.submitButton);
+    await click(GENERAL.saveButton);
 
-    assert.dom(SELECTORS.statusCount).hasText('Cross-signing complete (0 successful, 3 errors)');
+    assert.dom(PKI_CROSS_SIGN.statusCount).hasText('Cross-signing complete (0 successful, 3 errors)');
     for (const field of FIELDS) {
       assert
-        .dom(`${SELECTORS.signedIssuerRow()} ${SELECTORS.signedIssuerCol(field.key)}`)
+        .dom(`${PKI_CROSS_SIGN.signedIssuerRow()} ${PKI_CROSS_SIGN.signedIssuerCol(field.key)}`)
         .hasText(this.testInputs[field.key], `first row has correct values`);
     }
     for (const field of FIELDS) {
       assert
-        .dom(`${SELECTORS.signedIssuerRow(1)} ${SELECTORS.signedIssuerCol(field.key)}`)
+        .dom(`${PKI_CROSS_SIGN.signedIssuerRow(1)} ${PKI_CROSS_SIGN.signedIssuerCol(field.key)}`)
         .hasText(nonexistentIssuer[field.key], `second row has correct values`);
     }
     for (const field of FIELDS) {
       assert
-        .dom(`${SELECTORS.signedIssuerRow(2)} ${SELECTORS.signedIssuerCol(field.key)}`)
+        .dom(`${PKI_CROSS_SIGN.signedIssuerRow(2)} ${PKI_CROSS_SIGN.signedIssuerCol(field.key)}`)
         .hasText(unsupportedCert[field.key], `third row has correct values`);
     }
   });
@@ -295,13 +296,13 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
 
     // fill out form and submit
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.objectListInput(field.key), this.testInputs[field.key]);
+      await fillIn(PKI_CROSS_SIGN.objectListInput(field.key), this.testInputs[field.key]);
     }
-    await click(SELECTORS.submitButton);
+    await click(GENERAL.saveButton);
 
-    assert.dom(SELECTORS.statusCount).hasText('Cross-signing complete (0 successful, 1 error)');
+    assert.dom(PKI_CROSS_SIGN.statusCount).hasText('Cross-signing complete (0 successful, 1 error)');
     assert
-      .dom(`${SELECTORS.signedIssuerRow()} [data-test-icon="alert-circle-fill"]`)
+      .dom(`${PKI_CROSS_SIGN.signedIssuerRow()} [data-test-icon="alert-circle-fill"]`)
       .exists('row has failure icon');
 
     assert.dom('[data-test-cross-sign-alert-title]').hasText('Cross-sign failed');
@@ -311,7 +312,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
 
     for (const field of FIELDS) {
       assert
-        .dom(`${SELECTORS.signedIssuerCol(field.key)}`)
+        .dom(`${PKI_CROSS_SIGN.signedIssuerCol(field.key)}`)
         .hasText(this.testInputs[field.key], `${field.key} displays correct value`);
     }
   });
@@ -328,12 +329,12 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
     });
     // fill out form and submit
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.objectListInput(field.key), this.testInputs[field.key]);
+      await fillIn(PKI_CROSS_SIGN.objectListInput(field.key), this.testInputs[field.key]);
     }
-    await click(SELECTORS.submitButton);
-    assert.dom(SELECTORS.statusCount).hasText('Cross-signing complete (0 successful, 1 error)');
+    await click(GENERAL.saveButton);
+    assert.dom(PKI_CROSS_SIGN.statusCount).hasText('Cross-signing complete (0 successful, 1 error)');
     assert
-      .dom(`${SELECTORS.signedIssuerRow()} [data-test-icon="alert-circle-fill"]`)
+      .dom(`${PKI_CROSS_SIGN.signedIssuerRow()} [data-test-icon="alert-circle-fill"]`)
       .exists('row has failure icon');
     assert
       .dom('[data-test-cross-sign-alert-title]')
@@ -346,7 +347,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
 
     for (const field of FIELDS) {
       assert
-        .dom(`${SELECTORS.signedIssuerCol(field.key)}`)
+        .dom(`${PKI_CROSS_SIGN.signedIssuerCol(field.key)}`)
         .hasText(this.testInputs[field.key], `${field.key} displays correct value`);
     }
   });
@@ -367,12 +368,12 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
     });
     // fill out form and submit
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.objectListInput(field.key), this.testInputs[field.key]);
+      await fillIn(PKI_CROSS_SIGN.objectListInput(field.key), this.testInputs[field.key]);
     }
-    await click(SELECTORS.submitButton);
-    assert.dom(SELECTORS.statusCount).hasText('Cross-signing complete (0 successful, 1 error)');
+    await click(GENERAL.saveButton);
+    assert.dom(PKI_CROSS_SIGN.statusCount).hasText('Cross-signing complete (0 successful, 1 error)');
     assert
-      .dom(`${SELECTORS.signedIssuerRow()} [data-test-icon="alert-circle-fill"]`)
+      .dom(`${PKI_CROSS_SIGN.signedIssuerRow()} [data-test-icon="alert-circle-fill"]`)
       .exists('row has failure icon');
     assert.dom('[data-test-cross-sign-alert-title]').hasText('Cross-sign failed');
     assert
@@ -381,7 +382,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
 
     for (const field of FIELDS) {
       assert
-        .dom(`${SELECTORS.signedIssuerCol(field.key)}`)
+        .dom(`${PKI_CROSS_SIGN.signedIssuerCol(field.key)}`)
         .hasText(this.testInputs[field.key], `${field.key} displays correct value`);
     }
   });
