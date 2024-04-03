@@ -87,7 +87,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     assert.strictEqual(
       dataBars.length,
       this.activity.byMonth.filter((m) => m.clients).length,
-      'it renders a bar for each month'
+      'it renders a bar for each non-zero month'
     );
   });
 
