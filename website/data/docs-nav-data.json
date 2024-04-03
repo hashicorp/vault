@@ -365,7 +365,7 @@
           {
             "title": "High Availability",
             "badge": {
-              "text": "BETA",
+              "text": "ENTERPRISE | BETA",
               "type": "outlined",
               "color": "highlight"
             },
@@ -1908,21 +1908,11 @@
         "routes": [
           {
             "title": "Overview",
-            "path": "plugins/containerized-plugins",
-            "badge": {
-              "text": "BETA",
-              "type": "outlined",
-              "color": "highlight"
-            }
+            "path": "plugins/containerized-plugins"
           },
           {
             "title": "Add a containerized plugin",
-            "path": "plugins/containerized-plugins/add-a-containerized-plugin",
-            "badge": {
-              "text": "BETA",
-              "type": "outlined",
-              "color": "highlight"
-            }
+            "path": "plugins/containerized-plugins/add-a-containerized-plugin"
           }
         ]
       },
@@ -2541,8 +2531,8 @@
         "path": "release-notes"
       },
       {
-        "title": "1.16.0",
-        "path": "release-notes/1.16.0"
+        "title": "1.16.1",
+        "path": "release-notes/1.16.1"
       },
       {
         "title": "1.15.0",
