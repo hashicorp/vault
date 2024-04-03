@@ -6,6 +6,7 @@
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { compareAsc, getUnixTime, isWithinInterval } from 'date-fns';
 
+// add new types here
 export const CLIENT_TYPES = [
   'acme_clients',
   'clients', // summation of total clients
@@ -65,7 +66,7 @@ export const formatByMonths = (monthsArray) => {
     return {
       month,
       timestamp: m.timestamp,
-      ...homogenizeClientNaming(m?.counts),
+      ...destructureClientCounts(m?.counts),
       namespaces: formatByNamespace(m.namespaces) || [],
       namespaces_by_key: namespaceArrayToObject(
         totalClientsByNamespace,
@@ -76,7 +77,7 @@ export const formatByMonths = (monthsArray) => {
       new_clients: {
         month,
         timestamp: m.timestamp,
-        ...homogenizeClientNaming(m?.new_clients?.counts),
+        ...destructureClientCounts(m?.new_clients?.counts),
         namespaces: formatByNamespace(m.new_clients?.namespaces) || [],
       },
     };
@@ -92,11 +93,11 @@ export const formatByNamespace = (namespaceArray) => {
     // if no mounts, mounts will be an empty array
     let mounts = [];
     if (ns?.mounts && ns.mounts.length > 0) {
-      mounts = ns.mounts.map((m) => ({ label: m['mount_path'], ...homogenizeClientNaming(m?.counts) }));
+      mounts = ns.mounts.map((m) => ({ label: m['mount_path'], ...destructureClientCounts(m?.counts) }));
     }
     return {
       label,
-      ...homogenizeClientNaming(ns.counts),
+      ...destructureClientCounts(ns.counts),
       mounts,
     };
   });
@@ -105,38 +106,19 @@ export const formatByNamespace = (namespaceArray) => {
 // In 1.10 'distinct_entities' changed to 'entity_clients' and
 // 'non_entity_tokens' to 'non_entity_clients'
 // these deprecated keys still exist on the response, so only return relevant keys here
-export const homogenizeClientNaming = (object) => {
-  if (!object) return;
-  // if new key names exist, only return those key/value pairs
-  if (Object.keys(object).includes('entity_clients')) {
-    const { clients, entity_clients, non_entity_clients, secret_syncs, acme_clients } = object;
-    return {
-      clients,
-      entity_clients,
-      non_entity_clients,
-      secret_syncs,
-      acme_clients,
-    };
-  }
-  // TODO cmb - follow up in vault storage channel thread to confirm this block can be deleted
-  // if object only has outdated key names, update naming
-  if (Object.keys(object).includes('distinct_entities')) {
-    const { clients, distinct_entities, non_entity_tokens, secret_syncs, acme_clients } = object;
-    return {
-      clients,
-      entity_clients: distinct_entities,
-      non_entity_clients: non_entity_tokens,
-      secret_syncs,
-      acme_clients,
-    };
-  }
+export const destructureClientCounts = (verboseObject) => {
+  if (!verboseObject) return;
+  return CLIENT_TYPES.reduce((newObj, clientType) => {
+    newObj[clientType] = verboseObject[clientType];
+    return newObj;
+  }, {});
 };
 
 export const flattenDataset = (object) => {
   if (object?.counts) {
     const flattenedObject = {};
     Object.keys(object['counts']).forEach((key) => (flattenedObject[key] = object['counts'][key]));
-    return homogenizeClientNaming(flattenedObject);
+    return destructureClientCounts(flattenedObject);
   }
   return object;
 };
@@ -168,7 +150,7 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
         ...ns,
         new_clients: {
           label: ns.label,
-          ...homogenizeClientNaming(newNamespaceCounts),
+          ...destructureClientCounts(newNamespaceCounts),
           mounts: newClientsByMount,
         },
         mounts: [...nestNewClientsWithinMounts],
@@ -197,7 +179,7 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
     namespaces_by_key[label] = {
       month,
       timestamp,
-      ...homogenizeClientNaming(namespaceObject),
+      ...destructureClientCounts(namespaceObject),
       new_clients: { month, ...new_clients },
       mounts_by_key,
     };

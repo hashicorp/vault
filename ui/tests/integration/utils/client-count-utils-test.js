@@ -9,7 +9,7 @@ import {
   filterVersionHistory,
   formatByMonths,
   formatByNamespace,
-  homogenizeClientNaming,
+  destructureClientCounts,
   namespaceArrayToObject,
   sortMonthsByTimestamp,
 } from 'core/utils/client-count-utils';
@@ -21,7 +21,7 @@ import {
 } from 'vault/tests/helpers/clients';
 
 /*
-formatByNamespace, formatByMonths, homogenizeClientNaming are utils 
+formatByNamespace, formatByMonths, destructureClientCounts are utils 
 used to normalize the sys/counters/activity response in the clients/activity 
 serializer. these functions are tested individually here, instead of all at once 
 in a serializer test for easier debugging
@@ -194,7 +194,7 @@ module('Integration | Util | client count utils', function (hooks) {
     assert.propEqual(formatByNamespace(noMounts), expected, 'it formats namespace without mounts');
   });
 
-  test('homogenizeClientNaming: homogenizes key names when both old and new keys exist, or just old key names', async function (assert) {
+  test('destructureClientCounts: homogenizes key names when both old and new keys exist, or just old key names', async function (assert) {
     assert.expect(2);
     const original = { ...RESPONSE.total };
     const expected = {
@@ -204,7 +204,7 @@ module('Integration | Util | client count utils', function (hooks) {
       acme_clients: 200,
       clients: 7805,
     };
-    assert.propEqual(homogenizeClientNaming(RESPONSE.total), expected);
+    assert.propEqual(destructureClientCounts(RESPONSE.total), expected);
     assert.propEqual(RESPONSE.total, original, 'it does not modify original object');
   });
 
