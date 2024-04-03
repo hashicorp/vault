@@ -59,6 +59,24 @@ const testFormatJSONReqBasicStrFmt = `
 }
 `
 
+// testHeaderFormatter is a stub to prevent the need to import the vault package
+// to bring in vault.AuditedHeadersConfig for testing.
+type testHeaderFormatter struct {
+	shouldReturnEmpty bool
+}
+
+// ApplyConfig satisfies the HeaderFormatter interface for testing.
+// It will either return the headers it was supplied or empty headers depending
+// on how it is configured.
+// ignore-nil-nil-function-check.
+func (f *testHeaderFormatter) ApplyConfig(_ context.Context, headers map[string][]string, salter Salter) (result map[string][]string, retErr error) {
+	if f.shouldReturnEmpty {
+		return make(map[string][]string), nil
+	}
+
+	return headers, nil
+}
+
 // testTimeProvider is just a test struct used to imitate an AuditEvent's ability
 // to provide a formatted time.
 type testTimeProvider struct{}
@@ -178,9 +196,9 @@ func TestNewEntryFormatter(t *testing.T) {
 				ss = newStaticSalt(t)
 			}
 
-			cfg, err := NewFormatterConfig(tc.Options...)
-			require.Nil(t, err)
-			f, err := NewEntryFormatter(tc.Name, cfg, ss, tc.Logger, tc.Options...)
+			cfg, err := NewFormatterConfig(&testHeaderFormatter{}, tc.Options...)
+			require.NoError(t, err)
+			f, err := NewEntryFormatter(tc.Name, cfg, ss, tc.Logger)
 
 			switch {
 			case tc.IsErrorExpected:
@@ -191,7 +209,7 @@ func TestNewEntryFormatter(t *testing.T) {
 				require.Nil(t, err)
 				require.NotNil(t, f)
 				require.Equal(t, tc.ExpectedFormat, f.config.RequiredFormat)
-				require.Equal(t, tc.ExpectedPrefix, f.prefix)
+				require.Equal(t, tc.ExpectedPrefix, f.config.Prefix)
 			}
 		})
 	}
@@ -202,8 +220,8 @@ func TestEntryFormatter_Reopen(t *testing.T) {
 	t.Parallel()
 
 	ss := newStaticSalt(t)
-	cfg, err := NewFormatterConfig()
-	require.Nil(t, err)
+	cfg, err := NewFormatterConfig(&testHeaderFormatter{})
+	require.NoError(t, err)
 
 	f, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 	require.Nil(t, err)
@@ -216,7 +234,7 @@ func TestEntryFormatter_Type(t *testing.T) {
 	t.Parallel()
 
 	ss := newStaticSalt(t)
-	cfg, err := NewFormatterConfig()
+	cfg, err := NewFormatterConfig(&testHeaderFormatter{})
 	require.Nil(t, err)
 
 	f, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
@@ -361,8 +379,8 @@ func TestEntryFormatter_Process(t *testing.T) {
 			require.NotNil(t, e)
 
 			ss := newStaticSalt(t)
-			cfg, cfgErr := NewFormatterConfig(WithFormat(tc.RequiredFormat.String()))
-			require.Nil(t, cfgErr)
+			cfg, cfgErr := NewFormatterConfig(&testHeaderFormatter{}, WithFormat(tc.RequiredFormat.String()))
+			require.NoError(t, cfgErr)
 
 			f, entryErr := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 			require.Nil(t, entryErr)
@@ -426,8 +444,8 @@ func BenchmarkAuditFileSink_Process(b *testing.B) {
 	ctx := namespace.RootContext(context.Background())
 
 	// Create the formatter node.
-	cfg, cfgErr := NewFormatterConfig()
-	require.NoError(b, cfgErr)
+	cfg, cfgErr := NewFormatterConfig(&testHeaderFormatter{})
+	require.Nil(b, cfgErr)
 	ss := newStaticSalt(b)
 	formatter, entryErr := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 	require.NoError(b, entryErr)
@@ -504,7 +522,7 @@ func TestEntryFormatter_FormatRequest(t *testing.T) {
 			t.Parallel()
 
 			ss := newStaticSalt(t)
-			cfg, cfgErr := NewFormatterConfig(WithOmitTime(tc.ShouldOmitTime))
+			cfg, cfgErr := NewFormatterConfig(&testHeaderFormatter{}, WithOmitTime(tc.ShouldOmitTime))
 			require.Nil(t, cfgErr)
 			f, entryErr := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 			require.Nil(t, entryErr)
@@ -586,7 +604,7 @@ func TestEntryFormatter_FormatResponse(t *testing.T) {
 			t.Parallel()
 
 			ss := newStaticSalt(t)
-			cfg, cfgErr := NewFormatterConfig(WithOmitTime(tc.ShouldOmitTime))
+			cfg, cfgErr := NewFormatterConfig(&testHeaderFormatter{}, WithOmitTime(tc.ShouldOmitTime))
 			require.Nil(t, cfgErr)
 			f, entryErr := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 			require.Nil(t, entryErr)
@@ -702,9 +720,9 @@ func TestEntryFormatter_Process_JSON(t *testing.T) {
 	}
 
 	for name, tc := range cases {
-		cfg, cfgErr := NewFormatterConfig(WithHMACAccessor(false))
+		cfg, cfgErr := NewFormatterConfig(&testHeaderFormatter{}, WithHMACAccessor(false), WithPrefix(tc.Prefix))
 		require.Nil(t, cfgErr)
-		formatter, entryErr := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger(), WithPrefix(tc.Prefix))
+		formatter, entryErr := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 		require.Nil(t, entryErr)
 
 		in := &logical.LogInput{
@@ -860,12 +878,14 @@ func TestEntryFormatter_Process_JSONx(t *testing.T) {
 
 	for name, tc := range cases {
 		cfg, cfgErr := NewFormatterConfig(
+			&testHeaderFormatter{},
 			WithOmitTime(true),
 			WithHMACAccessor(false),
 			WithFormat(JSONxFormat.String()),
+			WithPrefix(tc.Prefix),
 		)
 		require.Nil(t, cfgErr)
-		formatter, entryErr := NewEntryFormatter("juan", cfg, tempStaticSalt, hclog.NewNullLogger(), WithPrefix(tc.Prefix))
+		formatter, entryErr := NewEntryFormatter("juan", cfg, tempStaticSalt, hclog.NewNullLogger())
 		require.Nil(t, entryErr)
 		require.NotNil(t, formatter)
 
@@ -997,7 +1017,7 @@ func TestEntryFormatter_FormatResponse_ElideListResponses(t *testing.T) {
 	}
 
 	t.Run("Default case", func(t *testing.T) {
-		config, err := NewFormatterConfig(WithElision(true))
+		config, err := NewFormatterConfig(&testHeaderFormatter{}, WithElision(true))
 		require.Nil(t, err)
 		for name, tc := range tests {
 			name := name
@@ -1010,7 +1030,7 @@ func TestEntryFormatter_FormatResponse_ElideListResponses(t *testing.T) {
 	})
 
 	t.Run("When Operation is not list, eliding does not happen", func(t *testing.T) {
-		config, err := NewFormatterConfig(WithElision(true))
+		config, err := NewFormatterConfig(&testHeaderFormatter{}, WithElision(true))
 		require.Nil(t, err)
 		tc := oneInterestingTestCase
 		entry := format(t, config, logical.ReadOperation, tc.inputData)
@@ -1018,7 +1038,7 @@ func TestEntryFormatter_FormatResponse_ElideListResponses(t *testing.T) {
 	})
 
 	t.Run("When ElideListResponses is false, eliding does not happen", func(t *testing.T) {
-		config, err := NewFormatterConfig(WithElision(false), WithFormat(JSONFormat.String()))
+		config, err := NewFormatterConfig(&testHeaderFormatter{}, WithElision(false), WithFormat(JSONFormat.String()))
 		require.Nil(t, err)
 		tc := oneInterestingTestCase
 		entry := format(t, config, logical.ListOperation, tc.inputData)
@@ -1026,7 +1046,7 @@ func TestEntryFormatter_FormatResponse_ElideListResponses(t *testing.T) {
 	})
 
 	t.Run("When Raw is true, eliding still happens", func(t *testing.T) {
-		config, err := NewFormatterConfig(WithElision(true), WithRaw(true), WithFormat(JSONFormat.String()))
+		config, err := NewFormatterConfig(&testHeaderFormatter{}, WithElision(true), WithRaw(true), WithFormat(JSONFormat.String()))
 		require.Nil(t, err)
 		tc := oneInterestingTestCase
 		entry := format(t, config, logical.ListOperation, tc.inputData)
@@ -1040,7 +1060,7 @@ func TestEntryFormatter_Process_NoMutation(t *testing.T) {
 	t.Parallel()
 
 	// Create the formatter node.
-	cfg, cfgErr := NewFormatterConfig()
+	cfg, cfgErr := NewFormatterConfig(&testHeaderFormatter{})
 	require.Nil(t, cfgErr)
 	ss := newStaticSalt(t)
 	formatter, entryErr := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
@@ -1100,7 +1120,7 @@ func TestEntryFormatter_Process_Panic(t *testing.T) {
 	t.Parallel()
 
 	// Create the formatter node.
-	cfg, cfgErr := NewFormatterConfig()
+	cfg, cfgErr := NewFormatterConfig(&testHeaderFormatter{})
 	require.Nil(t, cfgErr)
 	ss := newStaticSalt(t)
 	formatter, entryErr := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
@@ -1151,6 +1171,53 @@ func TestEntryFormatter_Process_Panic(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "audit.(EntryFormatter).Process: panic generating audit log: \"juan\"")
 	require.Nil(t, e2)
+}
+
+// TestEntryFormatter_NewFormatterConfig_NilHeaderFormatter ensures we cannot
+// create a FormatterConfig using NewFormatterConfig if we supply a nil formatter.
+func TestEntryFormatter_NewFormatterConfig_NilHeaderFormatter(t *testing.T) {
+	_, err := NewFormatterConfig(nil)
+	require.Error(t, err)
+}
+
+// TestEntryFormatter_Process_NeverLeaksHeaders ensures that if we never accidentally
+// leak headers if applying them means we don't have any. This is more like a sense
+// check to ensure the returned event doesn't somehow end up with the headers 'back'.
+func TestEntryFormatter_Process_NeverLeaksHeaders(t *testing.T) {
+	t.Parallel()
+
+	// Create the formatter node.
+	cfg, cfgErr := NewFormatterConfig(&testHeaderFormatter{shouldReturnEmpty: true})
+	require.Nil(t, cfgErr)
+	ss := newStaticSalt(t)
+	formatter, entryErr := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
+	require.Nil(t, entryErr)
+	require.NotNil(t, formatter)
+
+	// Set up the input and verify we have a single foo:bar header.
+	var input *logical.LogInput
+	err := json.Unmarshal([]byte(testFormatJSONReqBasicStrFmt), &input)
+	require.NoError(t, err)
+	require.NotNil(t, input)
+	require.ElementsMatch(t, input.Request.Headers["foo"], []string{"bar"})
+
+	e := fakeEvent(t, RequestType, input)
+
+	// Process the node.
+	ctx := namespace.RootContext(context.Background())
+	e2, err := formatter.Process(ctx, e)
+	require.NoError(t, err)
+	require.NotNil(t, e2)
+
+	// Now check we can retrieve the formatted JSON.
+	jsonFormatted, b2 := e2.Format(JSONFormat.String())
+	require.True(t, b2)
+	require.NotNil(t, jsonFormatted)
+	var input2 *logical.LogInput
+	err = json.Unmarshal(jsonFormatted, &input2)
+	require.NoError(t, err)
+	require.NotNil(t, input2)
+	require.Len(t, input2.Request.Headers, 0)
 }
 
 // hashExpectedValueForComparison replicates enough of the audit HMAC process on a piece of expected data in a test,

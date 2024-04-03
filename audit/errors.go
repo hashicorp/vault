@@ -26,7 +26,7 @@ type AuditError struct {
 	msg      string
 	op       string
 	err      AuditErrorType
-	upstream error
+	upstream *AuditError
 }
 
 // NewAuditError is used to create an AuditError which can be used to provide errors

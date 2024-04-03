@@ -16,17 +16,7 @@ import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { Response } from 'miragejs';
 import { dateFormat } from 'core/helpers/date-format';
 
-const {
-  title,
-  breadcrumb,
-  tab,
-  overviewCard,
-  cta,
-  overview,
-  pagination,
-  emptyStateTitle,
-  emptyStateMessage,
-} = PAGE;
+const { title, tab, overviewCard, cta, overview, pagination, emptyStateTitle, emptyStateMessage } = PAGE;
 
 module('Integration | Component | sync | Page::Overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -87,8 +77,6 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     await this.renderComponent();
 
     assert.dom(title).hasText('Secrets Sync', 'Page title renders');
-    assert.dom(breadcrumb).exists({ count: 1 }, 'Correct number of breadcrumbs render');
-    assert.dom(breadcrumb).includesText('Secrets Sync', 'Top level breadcrumb renders');
     assert.dom(cta.button).doesNotExist('CTA does not render');
     assert.dom(tab('Overview')).hasText('Overview', 'Overview tab renders');
     assert.dom(tab('Destinations')).hasText('Destinations', 'Destinations tab renders');

@@ -2165,6 +2165,10 @@
                             "path": "platform/k8s/vso/sources/vault/auth/gcp"
                           }
                         ]
+                      },
+                      {
+                        "title": "Encrypted client cache",
+                        "path": "platform/k8s/vso/sources/vault/client-cache"
                       }
                     ]
                   },
@@ -2216,6 +2220,10 @@
           {
             "title": "Configuration",
             "path": "platform/mssql/configuration"
+          },
+          {
+            "title": "Key Rotation",
+            "path": "platform/mssql/rotation"
           },
           {
             "title": "Upgrading",

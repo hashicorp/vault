@@ -345,6 +345,7 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 	if brokerErr != nil {
 		t.Fatal(brokerErr)
 	}
+
 	a1 := corehelpers.TestNoopAudit(t, "foo", nil)
 	a2 := corehelpers.TestNoopAudit(t, "bar", nil)
 	brokerErr = b.Register("foo", a1, false)
@@ -433,6 +434,7 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 	if brokerErr != nil {
 		t.Fatal(brokerErr)
 	}
+
 	a1 := corehelpers.TestNoopAudit(t, "foo", nil)
 	a2 := corehelpers.TestNoopAudit(t, "bar", nil)
 	brokerErr = b.Register("foo", a1, false)
@@ -537,24 +539,14 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	if brokerErr != nil {
 		t.Fatal(brokerErr)
 	}
-	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, "headers/")
 
-	headersConf := &AuditedHeadersConfig{
-		view: view,
-	}
-	err := headersConf.add(context.Background(), "X-Test-Header", false)
-	require.NoError(t, err)
-	err = headersConf.add(context.Background(), "X-Vault-Header", false)
-	require.NoError(t, err)
+	a1 := corehelpers.TestNoopAudit(t, "foo", nil)
+	a2 := corehelpers.TestNoopAudit(t, "bar", nil)
 
-	a1 := corehelpers.TestNoopAudit(t, "foo", nil, audit.WithHeaderFormatter(headersConf))
-	a2 := corehelpers.TestNoopAudit(t, "bar", nil, audit.WithHeaderFormatter(headersConf))
-
-	err = b.Register("foo", a1, false)
-	require.Nil(t, err)
-	err = b.Register("bar", a2, false)
-	require.Nil(t, err)
+	regErr := b.Register("foo", a1, false)
+	require.Nil(t, regErr)
+	regErr = b.Register("bar", a2, false)
+	require.Nil(t, regErr)
 
 	auth := &logical.Auth{
 		ClientToken: "foo",
@@ -570,7 +562,6 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 		Headers: map[string][]string{
 			"X-Test-Header":  {"foo"},
 			"X-Vault-Header": {"bar"},
-			"Content-Type":   {"baz"},
 		},
 	}
 	respErr := fmt.Errorf("permission denied")

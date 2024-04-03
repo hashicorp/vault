@@ -99,6 +99,12 @@ type FormatterConfig struct {
 
 	// The required/target format for the event (supported: JSONFormat and JSONxFormat).
 	RequiredFormat format
+
+	// headerFormatter specifies the formatter used for headers that existing in any incoming audit request.
+	headerFormatter HeaderFormatter
+
+	// Prefix specifies a Prefix that should be prepended to any formatted request or response before serialization.
+	Prefix string
 }
 
 // RequestEntry is the structure of a request audit log entry.

@@ -14,6 +14,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -216,23 +217,44 @@ func (m *mockBuiltinRegistry) DeprecationStatus(name string, pluginType consts.P
 	return consts.Unknown, false
 }
 
-func TestNoopAudit(t testing.T, path string, config map[string]string, opts ...audit.Option) *NoopAudit {
+func TestNoopAudit(t testing.T, path string, config map[string]string) *NoopAudit {
 	cfg := &audit.BackendConfig{
 		Config:    config,
 		MountPath: path,
 		Logger:    NewTestLogger(t),
 	}
-	n, err := NewNoopAudit(cfg, opts...)
+	n, err := NewNoopAudit(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return n
 }
 
+// NoopHeaderFormatter can be used within no-op audit devices to do nothing when
+// it comes to only allow configured headers to appear in the result.
+// Whatever is passed in will be returned (nil becomes an empty map) in lowercase.
+type NoopHeaderFormatter struct{}
+
+// ApplyConfig implements the relevant interface to make NoopHeaderFormatter an audit.HeaderFormatter.
+func (f *NoopHeaderFormatter) ApplyConfig(_ context.Context, headers map[string][]string, _ audit.Salter) (result map[string][]string, retErr error) {
+	if len(headers) < 1 {
+		return map[string][]string{}, nil
+	}
+
+	// Make a copy of the incoming headers with everything lower so we can
+	// case-insensitively compare
+	lowerHeaders := make(map[string][]string, len(headers))
+	for k, v := range headers {
+		lowerHeaders[strings.ToLower(k)] = v
+	}
+
+	return lowerHeaders, nil
+}
+
 // NewNoopAudit should be used to create a NoopAudit as it handles creation of a
 // predictable salt and wraps eventlogger nodes so information can be retrieved on
 // what they've seen or formatted.
-func NewNoopAudit(config *audit.BackendConfig, opts ...audit.Option) (*NoopAudit, *audit.AuditError) {
+func NewNoopAudit(config *audit.BackendConfig) (*NoopAudit, *audit.AuditError) {
 	const op = "corehelpers.NewNoopAudit"
 
 	view := &logical.InmemStorage{}
@@ -261,7 +283,7 @@ func NewNoopAudit(config *audit.BackendConfig, opts ...audit.Option) (*NoopAudit
 		nodeMap:    make(map[eventlogger.NodeID]eventlogger.Node, 2),
 	}
 
-	cfg, cfgErr := audit.NewFormatterConfig()
+	cfg, cfgErr := audit.NewFormatterConfig(&NoopHeaderFormatter{})
 	if cfgErr != nil {
 		return nil, audit.NewAuditError(op, "error creating formatter config", cfgErr.Downstream()).SetUpstream(cfgErr)
 	}
@@ -271,7 +293,7 @@ func NewNoopAudit(config *audit.BackendConfig, opts ...audit.Option) (*NoopAudit
 		return nil, audit.NewAuditError(op, "error generating random NodeID for formatter node", audit.ErrUnknown).SetUpstream(err)
 	}
 
-	formatterNode, fmtErr := audit.NewEntryFormatter(config.MountPath, cfg, noopBackend, config.Logger, opts...)
+	formatterNode, fmtErr := audit.NewEntryFormatter(config.MountPath, cfg, noopBackend, config.Logger)
 	if fmtErr != nil {
 		return nil, audit.NewAuditError(op, "error creating formatter", fmtErr.Downstream()).SetUpstream(err)
 	}
@@ -298,8 +320,8 @@ func NewNoopAudit(config *audit.BackendConfig, opts ...audit.Option) (*NoopAudit
 // have been formatted by the pipeline during audit requests.
 // The records parameter will be repointed to the one used within the pipeline.
 func NoopAuditFactory(records **[][]byte) audit.Factory {
-	return func(_ context.Context, config *audit.BackendConfig, headerFormatter audit.HeaderFormatter) (audit.Backend, *audit.AuditError) {
-		n, err := NewNoopAudit(config, audit.WithHeaderFormatter(headerFormatter))
+	return func(_ context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, *audit.AuditError) {
+		n, err := NewNoopAudit(config)
 		if err != nil {
 			return nil, audit.NewAuditError("corehelpers.NoopAuditFactory", "error creating noop audit device", audit.ErrUnknown).SetUpstream(err)
 		}

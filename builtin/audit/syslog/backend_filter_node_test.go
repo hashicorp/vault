@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/stretchr/testify/require"
 )
 
@@ -74,7 +75,7 @@ func TestBackend_configureFilterFormatterSink(t *testing.T) {
 		nodeMap:    map[eventlogger.NodeID]eventlogger.Node{},
 	}
 
-	formatConfig, cfgErr := audit.NewFormatterConfig()
+	formatConfig, cfgErr := audit.NewFormatterConfig(&corehelpers.NoopHeaderFormatter{})
 	require.Nil(t, cfgErr)
 
 	err := b.configureFilterNode("path == bar")

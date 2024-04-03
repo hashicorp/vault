@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -40,7 +41,8 @@ func TestAuditFile_fileModeNew(t *testing.T) {
 		SaltView:   &logical.InmemStorage{},
 		Logger:     hclog.NewNullLogger(),
 	}
-	_, factoryErr := Factory(context.Background(), backendConfig, nil)
+
+	_, factoryErr := Factory(context.Background(), backendConfig, &corehelpers.NoopHeaderFormatter{})
 	require.Nil(t, factoryErr)
 
 	info, err := os.Stat(file)
@@ -73,7 +75,7 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 		Logger:     hclog.NewNullLogger(),
 	}
 
-	_, err = Factory(context.Background(), backendConfig, nil)
+	_, err = Factory(context.Background(), backendConfig, &corehelpers.NoopHeaderFormatter{})
 	require.Nil(t, err)
 
 	info, err := os.Stat(f.Name())
@@ -107,7 +109,7 @@ func TestAuditFile_fileMode0000(t *testing.T) {
 		Logger:     hclog.NewNullLogger(),
 	}
 
-	_, err = Factory(context.Background(), backendConfig, nil)
+	_, err = Factory(context.Background(), backendConfig, &corehelpers.NoopHeaderFormatter{})
 	require.Nil(t, err)
 
 	info, err := os.Stat(f.Name())
@@ -136,7 +138,7 @@ func TestAuditFile_EventLogger_fileModeNew(t *testing.T) {
 		Logger:     hclog.NewNullLogger(),
 	}
 
-	_, err = Factory(context.Background(), backendConfig, nil)
+	_, err = Factory(context.Background(), backendConfig, &corehelpers.NoopHeaderFormatter{})
 	require.Nil(t, err)
 
 	info, err := os.Stat(file)
@@ -144,8 +146,8 @@ func TestAuditFile_EventLogger_fileModeNew(t *testing.T) {
 	require.Equalf(t, os.FileMode(mode), info.Mode(), "File mode does not match.")
 }
 
-// TestBackend_formatterConfig ensures that all the configuration values are parsed correctly.
-func TestBackend_formatterConfig(t *testing.T) {
+// TestBackend_newFormatterConfig ensures that all the configuration values are parsed correctly.
+func TestBackend_newFormatterConfig(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -224,6 +226,17 @@ func TestBackend_formatterConfig(t *testing.T) {
 			wantErr:         true,
 			expectedMessage: "file.newFormatterConfig: unable to parse 'elide_list_responses': strconv.ParseBool: parsing \"maybe\": invalid syntax",
 		},
+		"prefix": {
+			config: map[string]string{
+				"format": audit.JSONFormat.String(),
+				"prefix": "foo",
+			},
+			want: audit.FormatterConfig{
+				RequiredFormat: audit.JSONFormat,
+				Prefix:         "foo",
+				HMACAccessor:   true,
+			},
+		},
 	}
 	for name, tc := range tests {
 		name := name
@@ -231,14 +244,20 @@ func TestBackend_formatterConfig(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := newFormatterConfig(tc.config)
+			got, err := newFormatterConfig(&corehelpers.NoopHeaderFormatter{}, tc.config)
+
 			if tc.wantErr {
 				require.Error(t, err)
 				require.EqualError(t, err, tc.expectedMessage)
 			} else {
 				require.Nil(t, err)
 			}
-			require.Equal(t, tc.want, got)
+			require.Equal(t, tc.want.RequiredFormat, got.RequiredFormat)
+			require.Equal(t, tc.want.Raw, got.Raw)
+			require.Equal(t, tc.want.ElideListResponses, got.ElideListResponses)
+			require.Equal(t, tc.want.HMACAccessor, got.HMACAccessor)
+			require.Equal(t, tc.want.OmitTime, got.OmitTime)
+			require.Equal(t, tc.want.Prefix, got.Prefix)
 		})
 	}
 }
@@ -253,7 +272,7 @@ func TestBackend_configureFormatterNode(t *testing.T) {
 		nodeMap:    map[eventlogger.NodeID]eventlogger.Node{},
 	}
 
-	formatConfig, cfgErr := audit.NewFormatterConfig()
+	formatConfig, cfgErr := audit.NewFormatterConfig(&corehelpers.NoopHeaderFormatter{})
 	require.Nil(t, cfgErr)
 
 	err := b.configureFormatterNode("juan", formatConfig, hclog.NewNullLogger())
@@ -475,7 +494,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			be, err := Factory(ctx, tc.backendConfig, nil)
+			be, err := Factory(ctx, tc.backendConfig, &corehelpers.NoopHeaderFormatter{})
 
 			switch {
 			case tc.isErrorExpected:
@@ -534,7 +553,7 @@ func TestBackend_IsFallback(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			be, err := Factory(ctx, tc.backendConfig, nil)
+			be, err := Factory(ctx, tc.backendConfig, &corehelpers.NoopHeaderFormatter{})
 			require.Nil(t, err)
 			require.NotNil(t, be)
 			require.Equal(t, tc.isFallbackExpected, be.IsFallback())

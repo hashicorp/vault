@@ -93,17 +93,12 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 		return nil, audit.NewAuditError(op, "error configuring filter node", audit.ErrFilterParameter).SetUpstream(err)
 	}
 
-	cfg, cfgErr := newFormatterConfig(conf.Config)
+	cfg, cfgErr := newFormatterConfig(headersConfig, conf.Config)
 	if cfgErr != nil {
 		return nil, audit.NewAuditError(op, "failed to create formatter config", audit.ErrInvalidParameter).SetUpstream(cfgErr)
 	}
 
-	opts := []audit.Option{
-		audit.WithHeaderFormatter(headersConfig),
-		audit.WithPrefix(conf.Config["prefix"]),
-	}
-
-	fmtNodeErr := b.configureFormatterNode(conf.MountPath, cfg, conf.Logger, opts...)
+	fmtNodeErr := b.configureFormatterNode(conf.MountPath, cfg, conf.Logger)
 	if fmtNodeErr != nil {
 		return nil, audit.NewAuditError(op, "error configuring formatter node", audit.ErrInvalidParameter).SetUpstream(fmtNodeErr)
 	}
@@ -167,7 +162,7 @@ func (b *Backend) Invalidate(_ context.Context) {
 
 // newFormatterConfig creates the configuration required by a formatter node using
 // the config map supplied to the factory.
-func newFormatterConfig(config map[string]string) (audit.FormatterConfig, *audit.AuditError) {
+func newFormatterConfig(headerFormatter audit.HeaderFormatter, config map[string]string) (audit.FormatterConfig, *audit.AuditError) {
 	const op = "socket.newFormatterConfig"
 
 	var opts []audit.Option
@@ -202,11 +197,11 @@ func newFormatterConfig(config map[string]string) (audit.FormatterConfig, *audit
 		opts = append(opts, audit.WithElision(v))
 	}
 
-	return audit.NewFormatterConfig(opts...)
+	return audit.NewFormatterConfig(headerFormatter, opts...)
 }
 
 // configureFormatterNode is used to configure a formatter node and associated ID on the Backend.
-func (b *Backend) configureFormatterNode(name string, formatConfig audit.FormatterConfig, logger hclog.Logger, opts ...audit.Option) *audit.AuditError {
+func (b *Backend) configureFormatterNode(name string, formatConfig audit.FormatterConfig, logger hclog.Logger) *audit.AuditError {
 	const op = "socket.(Backend).configureFormatterNode"
 
 	formatterNodeID, err := event.GenerateNodeID()
@@ -214,7 +209,7 @@ func (b *Backend) configureFormatterNode(name string, formatConfig audit.Formatt
 		return audit.NewAuditError(op, "error generating random NodeID for formatter node", audit.ErrUnknown).SetUpstream(err)
 	}
 
-	formatterNode, entryErr := audit.NewEntryFormatter(name, formatConfig, b, logger, opts...)
+	formatterNode, entryErr := audit.NewEntryFormatter(name, formatConfig, b, logger)
 	if entryErr != nil {
 		return audit.NewAuditError(op, "error creating formatter", audit.ErrConfiguration).SetUpstream(entryErr)
 	}
