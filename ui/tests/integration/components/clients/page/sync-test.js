@@ -84,7 +84,11 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     });
 
     const dataBars = findAll(charts.dataBar).filter((b) => b.hasAttribute('height'));
-    assert.strictEqual(dataBars.length, this.activity.byMonth.filter((m) => m.counts !== null).length);
+    assert.strictEqual(
+      dataBars.length,
+      this.activity.byMonth.filter((m) => m.clients).length,
+      'it renders a bar for each month'
+    );
   });
 
   test('it should render an empty state for no monthly data', async function (assert) {
