@@ -44,25 +44,25 @@ type EntryFormatter struct {
 }
 
 // NewEntryFormatter should be used to create an EntryFormatter.
-func NewEntryFormatter(name string, config FormatterConfig, salter Salter, logger hclog.Logger) (*EntryFormatter, *AuditError) {
+func NewEntryFormatter(name string, config FormatterConfig, salter Salter, logger hclog.Logger) (*EntryFormatter, *Error) {
 	const op = "audit.NewEntryFormatter"
 
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return nil, NewAuditError(op, "name is required", ErrInvalidParameter)
+		return nil, NewError(op, "name is required", ErrInvalidParameter)
 	}
 
 	if salter == nil {
-		return nil, NewAuditError(op, "cannot create a new audit formatter with nil salter", ErrInvalidParameter)
+		return nil, NewError(op, "cannot create a new audit formatter with nil salter", ErrInvalidParameter)
 	}
 
 	if logger == nil || reflect.ValueOf(logger).IsNil() {
-		return nil, NewAuditError(op, "cannot create a new audit formatter with nil logger", ErrInvalidParameter)
+		return nil, NewError(op, "cannot create a new audit formatter with nil logger", ErrInvalidParameter)
 	}
 
 	// We need to ensure that the format isn't just some default empty string.
 	if err := config.RequiredFormat.validate(); err != nil {
-		return nil, NewAuditError(op, "format is not valid", ErrInvalidParameter).SetUpstream(err)
+		return nil, NewError(op, "format is not valid", err)
 	}
 
 	return &EntryFormatter{
@@ -570,16 +570,16 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 
 // NewFormatterConfig should be used to create a FormatterConfig.
 // Accepted options: WithElision, WithFormat, WithHMACAccessor, WithOmitTime, WithPrefix, WithRaw.
-func NewFormatterConfig(headerFormatter HeaderFormatter, opt ...Option) (FormatterConfig, *AuditError) {
+func NewFormatterConfig(headerFormatter HeaderFormatter, opt ...Option) (FormatterConfig, *Error) {
 	const op = "audit.NewFormatterConfig"
 
 	if headerFormatter == nil || reflect.ValueOf(headerFormatter).IsNil() {
-		return FormatterConfig{}, NewAuditError(op, "header formatter is required", ErrInvalidParameter)
+		return FormatterConfig{}, NewError(op, "header formatter is required", ErrInvalidParameter)
 	}
 
 	opts, err := getOpts(opt...)
 	if err != nil {
-		return FormatterConfig{}, NewAuditError(op, "error applying options", ErrInvalidParameter).SetUpstream(err)
+		return FormatterConfig{}, NewError(op, "error applying options", err)
 	}
 
 	return FormatterConfig{

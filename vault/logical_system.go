@@ -3893,7 +3893,7 @@ func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Requ
 	// Attempt enabling
 	if err := b.Core.enableAudit(ctx, me, true); err != nil {
 		b.Backend.Logger().Error("enable audit mount failed", "path", me.Path, "error", err.Internal())
-		// TODO: PW: Can we 'handle error' on an External() error here?
+
 		return handleError(err.External())
 	}
 	return nil, nil
@@ -3935,7 +3935,7 @@ func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Req
 	// Attempt disable
 	if existed, err := b.Core.disableAudit(ctx, path, true); existed && err != nil {
 		b.Backend.Logger().Error("disable audit mount failed", "path", path, "error", err)
-		// TODO: PW: Can we 'handle error' on an External() error here?
+
 		return handleError(err)
 	}
 	return nil, nil

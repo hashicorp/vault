@@ -34,19 +34,19 @@ type Backend struct {
 	saltView   logical.Storage
 }
 
-func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.HeaderFormatter) (audit.Backend, *audit.AuditError) {
+func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.HeaderFormatter) (audit.Backend, *audit.Error) {
 	const op = "syslog.Factory"
 
 	if conf.SaltConfig == nil {
-		return nil, audit.NewAuditError(op, "nil salt config", audit.ErrInvalidParameter)
+		return nil, audit.NewError(op, "nil salt config", audit.ErrInvalidParameter)
 	}
 
 	if conf.SaltView == nil {
-		return nil, audit.NewAuditError(op, "nil salt view", audit.ErrInvalidParameter)
+		return nil, audit.NewError(op, "nil salt view", audit.ErrInvalidParameter)
 	}
 
 	if conf.Logger == nil || reflect.ValueOf(conf.Logger).IsNil() {
-		return nil, audit.NewAuditError(op, "nil logger", audit.ErrInvalidParameter)
+		return nil, audit.NewError(op, "nil logger", audit.ErrInvalidParameter)
 	}
 
 	// Get facility or default to AUTH
@@ -68,12 +68,12 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 	if fallbackRaw, ok := conf.Config["fallback"]; ok {
 		fallback, err = parseutil.ParseBool(fallbackRaw)
 		if err != nil {
-			return nil, audit.NewAuditError(op, "unable to parse 'fallback", audit.ErrInvalidParameter).SetUpstream(err)
+			return nil, audit.NewError(op, "unable to parse 'fallback", audit.ErrInvalidParameter).Detail(err)
 		}
 	}
 
 	if _, ok := conf.Config["filter"]; ok && fallback {
-		return nil, audit.NewAuditError(op, "cannot configure a fallback device with a filter", audit.ErrInvalidParameter)
+		return nil, audit.NewError(op, "cannot configure a fallback device with a filter", audit.ErrInvalidParameter)
 	}
 
 	b := &Backend{
@@ -87,17 +87,17 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 
 	err = b.configureFilterNode(conf.Config["filter"])
 	if err != nil {
-		return nil, audit.NewAuditError(op, "error configuring filter node", audit.ErrFilterParameter).SetUpstream(err)
+		return nil, audit.NewError(op, "error configuring filter node", audit.ErrFilterParameter).Detail(err)
 	}
 
 	cfg, cfgErr := newFormatterConfig(headersConfig, conf.Config)
 	if cfgErr != nil {
-		return nil, audit.NewAuditError(op, "failed to create formatter config", audit.ErrInvalidParameter).SetUpstream(cfgErr)
+		return nil, audit.NewError(op, "failed to create formatter config", audit.ErrInvalidParameter).Wrap(cfgErr)
 	}
 
 	fmtNodeErr := b.configureFormatterNode(conf.MountPath, cfg, conf.Logger)
 	if fmtNodeErr != nil {
-		return nil, audit.NewAuditError(op, "error configuring formatter node", audit.ErrInvalidParameter).SetUpstream(fmtNodeErr)
+		return nil, audit.NewError(op, "error configuring formatter node", audit.ErrInvalidParameter).Wrap(fmtNodeErr)
 	}
 
 	sinkOpts := []event.Option{
@@ -107,7 +107,7 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 
 	err = b.configureSinkNode(conf.MountPath, cfg.RequiredFormat.String(), sinkOpts...)
 	if err != nil {
-		return nil, audit.NewAuditError(op, "error configuring sink node", audit.ErrInvalidParameter).SetUpstream(err)
+		return nil, audit.NewError(op, "error configuring sink node", audit.ErrInvalidParameter).Detail(err)
 	}
 
 	return b, nil
@@ -153,7 +153,7 @@ func (b *Backend) Invalidate(_ context.Context) {
 
 // newFormatterConfig creates the configuration required by a formatter node using
 // the config map supplied to the factory.
-func newFormatterConfig(headerFormatter audit.HeaderFormatter, config map[string]string) (audit.FormatterConfig, *audit.AuditError) {
+func newFormatterConfig(headerFormatter audit.HeaderFormatter, config map[string]string) (audit.FormatterConfig, *audit.Error) {
 	const op = "syslog.newFormatterConfig"
 
 	var opts []audit.Option
@@ -166,7 +166,7 @@ func newFormatterConfig(headerFormatter audit.HeaderFormatter, config map[string
 	if hmacAccessorRaw, ok := config["hmac_accessor"]; ok {
 		v, err := strconv.ParseBool(hmacAccessorRaw)
 		if err != nil {
-			return audit.FormatterConfig{}, audit.NewAuditError(op, "unable to parse 'hmac_accessor'", audit.ErrInvalidParameter).SetUpstream(err)
+			return audit.FormatterConfig{}, audit.NewError(op, "unable to parse 'hmac_accessor'", audit.ErrInvalidParameter).Detail(err)
 		}
 		opts = append(opts, audit.WithHMACAccessor(v))
 	}
@@ -175,7 +175,7 @@ func newFormatterConfig(headerFormatter audit.HeaderFormatter, config map[string
 	if raw, ok := config["log_raw"]; ok {
 		v, err := strconv.ParseBool(raw)
 		if err != nil {
-			return audit.FormatterConfig{}, audit.NewAuditError(op, "unable to parse 'log_raw'", audit.ErrInvalidParameter).SetUpstream(err)
+			return audit.FormatterConfig{}, audit.NewError(op, "unable to parse 'log_raw'", audit.ErrInvalidParameter).Detail(err)
 		}
 		opts = append(opts, audit.WithRaw(v))
 	}
@@ -183,7 +183,7 @@ func newFormatterConfig(headerFormatter audit.HeaderFormatter, config map[string
 	if elideListResponsesRaw, ok := config["elide_list_responses"]; ok {
 		v, err := strconv.ParseBool(elideListResponsesRaw)
 		if err != nil {
-			return audit.FormatterConfig{}, audit.NewAuditError(op, "unable to parse 'elide_list_responses'", audit.ErrInvalidParameter).SetUpstream(err)
+			return audit.FormatterConfig{}, audit.NewError(op, "unable to parse 'elide_list_responses'", audit.ErrInvalidParameter).Detail(err)
 		}
 		opts = append(opts, audit.WithElision(v))
 	}
@@ -196,17 +196,17 @@ func newFormatterConfig(headerFormatter audit.HeaderFormatter, config map[string
 }
 
 // configureFormatterNode is used to configure a formatter node and associated ID on the Backend.
-func (b *Backend) configureFormatterNode(name string, formatConfig audit.FormatterConfig, logger hclog.Logger) *audit.AuditError {
+func (b *Backend) configureFormatterNode(name string, formatConfig audit.FormatterConfig, logger hclog.Logger) *audit.Error {
 	const op = "syslog.(Backend).configureFormatterNode"
 
 	formatterNodeID, err := event.GenerateNodeID()
 	if err != nil {
-		return audit.NewAuditError(op, "error generating random NodeID for formatter node", audit.ErrUnknown).SetUpstream(err)
+		return audit.NewError(op, "error generating random NodeID for formatter node", audit.ErrUnknown).Detail(err)
 	}
 
 	formatterNode, entryErr := audit.NewEntryFormatter(name, formatConfig, b, logger)
 	if entryErr != nil {
-		return audit.NewAuditError(op, "error creating formatter", audit.ErrConfiguration).SetUpstream(entryErr)
+		return audit.NewError(op, "error creating formatter", audit.ErrConfiguration).Wrap(entryErr)
 	}
 
 	b.nodeIDList = append(b.nodeIDList, formatterNodeID)

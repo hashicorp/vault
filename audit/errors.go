@@ -6,74 +6,85 @@ import (
 )
 
 var (
-	ErrFilterParameter    = AuditErrorType{errors.New("filter parameter")}
-	ErrFallbackParameter  = AuditErrorType{errors.New("fallback parameter")}
-	ErrContextDone        = AuditErrorType{errors.New("context error")}
-	ErrInvalidParameter   = AuditErrorType{errors.New("invalid parameter")}
-	ErrEnterpriseOnly     = AuditErrorType{errors.New("enterprise-only")}
-	ErrConfiguration      = AuditErrorType{errors.New("configuration error")}
-	ErrConflict           = AuditErrorType{errors.New("audit conflict")}
-	ErrUnknown            = AuditErrorType{errors.New("unknown error")}
-	ErrPersistence        = AuditErrorType{errors.New("persistence error")}
-	ErrBrokerRegistration = AuditErrorType{errors.New("registration error")}
+	ErrFilterParameter    = errors.New("filter parameter")
+	ErrFallbackParameter  = errors.New("fallback parameter")
+	ErrInvalidParameter   = errors.New("invalid parameter")
+	ErrEnterpriseOnly     = errors.New("enterprise-only")
+	ErrConfiguration      = errors.New("configuration error")
+	ErrConflict           = errors.New("audit conflict")
+	ErrUnknown            = errors.New("unknown error")
+	ErrPersistence        = errors.New("persistence error")
+	ErrBrokerRegistration = errors.New("registration error")
 )
 
-type AuditErrorType struct {
-	error
+// Error represents an error within the audit subsystem.
+type Error struct {
+	op  string
+	msg string
+	err error
+	// detail should be used to store any extra error information that may
+	// have been returned from other upstream function calls.
+	detail  error
+	wrapped *Error
 }
 
-type AuditError struct {
-	msg      string
-	op       string
-	err      AuditErrorType
-	upstream *AuditError
-}
-
-// NewAuditError is used to create an AuditError which can be used to provide errors
-// which are appropriate for internal or external consumption.
-func NewAuditError(op string, msg string, err AuditErrorType) *AuditError {
-	return &AuditError{
-		op:  op,
-		msg: msg,
+// NewError should be used to create instances of an Error.
+func NewError(operation string, message string, err error) *Error {
+	return &Error{
+		op:  operation,
+		msg: message,
 		err: err,
 	}
 }
 
-// SetUpstream should be used to configure the upstream error that prompted the
-// creation of the AuditError.
-// The original AuditError is returned after updating the upstream error.
-func (e *AuditError) SetUpstream(err error) *AuditError {
-	e.upstream = err
+// Wrap should be used to wrap an upstream Error.
+// The original Error is returned after wrapping the upstream error.
+func (e *Error) Wrap(e2 *Error) *Error {
+	e.wrapped = e2
 
 	return e
 }
 
-// TODO: PW: remove?
-func (e *AuditError) Upstream() error {
-	return e.upstream
+// Detail is used to set a detailed Go error which came from upstream.
+func (e *Error) Detail(err error) *Error {
+	e.detail = err
+
+	return e
 }
 
-func (e *AuditError) Downstream() AuditErrorType {
-	return e.err
+// Error satisfies the Go Error interface.
+func (e *Error) Error() string {
+	return e.Internal().Error()
 }
 
-func (e *AuditError) Internal() error {
-	err := e.upstream
-	if err == nil {
-		err = e.err
+// String satisfies the Go Stringer interface
+func (e *Error) String() string {
+	return e.Error()
+}
+
+// Internal should be used when an error is required for internal systems such as logs.
+func (e *Error) Internal() error {
+	err := fmt.Errorf("%s: %s: %w", e.op, e.msg, e.err)
+
+	if e.detail != nil {
+		err = fmt.Errorf("%w: %w", err, e.detail)
 	}
 
-	return fmt.Errorf("%s: %s: %w", e.op, e.msg, err)
+	if e.wrapped != nil {
+		err = fmt.Errorf("%w: %w", err, e.wrapped.Internal())
+	}
+
+	return err
 }
 
-func (e *AuditError) External() error {
-	return fmt.Errorf("%s: %w", e.msg, e.err)
-}
+// External should be used when an error is required for external systems, such
+// as API responses.
+func (e *Error) External() error {
+	err := fmt.Errorf("%s: %w", e.msg, e.err)
 
-func (e *AuditError) Error() string {
-	return e.Internal().Error()
-}
+	if e.wrapped != nil {
+		err = fmt.Errorf("%w: %w", err, e.wrapped.External())
+	}
 
-func (e *AuditError) String() string {
-	return e.Internal().Error()
+	return err
 }

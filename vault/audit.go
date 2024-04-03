@@ -64,7 +64,7 @@ func (c *Core) generateAuditTestProbe() (*logical.LogInput, error) {
 }
 
 // enableAudit is used to enable a new audit backend
-func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage bool) *audit.AuditError {
+func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage bool) *audit.Error {
 	const op = "vault.(Core).enableAudit"
 
 	// Ensure we end the path in a slash
@@ -74,18 +74,18 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 
 	// Ensure there is a name
 	if entry.Path == "/" {
-		return audit.NewAuditError(op, "backend path must be specified", audit.ErrInvalidParameter)
+		return audit.NewError(op, "backend path must be specified", audit.ErrInvalidParameter)
 	}
 
 	// We can check early to ensure that non-Enterprise versions aren't trying to supply Enterprise only options.
 	if hasInvalidAuditOptions(entry.Options) {
-		return audit.NewAuditError(op, "invalid options", audit.ErrEnterpriseOnly)
+		return audit.NewError(op, "invalid options", audit.ErrEnterpriseOnly)
 	}
 
 	if fallbackRaw, ok := entry.Options["fallback"]; ok {
 		fallback, err := parseutil.ParseBool(fallbackRaw)
 		if err != nil {
-			return audit.NewAuditError(op, fmt.Sprintf("unable to enable audit device '%s', cannot parse supplied 'fallback' setting", entry.Path), audit.ErrFallbackParameter).SetUpstream(err)
+			return audit.NewError(op, fmt.Sprintf("unable to enable audit device '%s', cannot parse supplied 'fallback' setting", entry.Path), audit.ErrFallbackParameter).Detail(err)
 		}
 
 		// Reassigning the fallback value means we can ensure that the formatting
@@ -101,13 +101,13 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	for _, ent := range c.audit.Entries {
 		switch {
 		case entry.Options["fallback"] == "true" && ent.Options["fallback"] == "true":
-			return audit.NewAuditError(op, fmt.Sprintf("unable to enable audit device '%s', a fallback device already exists '%s'", entry.Path, ent.Path), audit.ErrFallbackParameter)
+			return audit.NewError(op, fmt.Sprintf("unable to enable audit device '%s', a fallback device already exists '%s'", entry.Path, ent.Path), audit.ErrFallbackParameter)
 		// Existing is sql/mysql/ new is sql/ or
 		// existing is sql/ and new is sql/mysql/
 		case strings.HasPrefix(ent.Path, entry.Path):
 			fallthrough
 		case strings.HasPrefix(entry.Path, ent.Path):
-			return audit.NewAuditError(op, "path already in use", audit.ErrConflict)
+			return audit.NewError(op, "path already in use", audit.ErrConflict)
 		}
 	}
 
@@ -115,14 +115,14 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	if entry.UUID == "" {
 		entryUUID, err := uuid.GenerateUUID()
 		if err != nil {
-			return audit.NewAuditError(op, "cannot generate UUID", audit.ErrUnknown).SetUpstream(err)
+			return audit.NewError(op, "cannot generate UUID", audit.ErrUnknown).Detail(err)
 		}
 		entry.UUID = entryUUID
 	}
 	if entry.Accessor == "" {
 		accessor, err := c.generateMountAccessor("audit_" + entry.Type)
 		if err != nil {
-			return audit.NewAuditError(op, "cannot generate mount accessor", audit.ErrUnknown).SetUpstream(err)
+			return audit.NewError(op, "cannot generate mount accessor", audit.ErrUnknown).Detail(err)
 		}
 		entry.Accessor = accessor
 	}
@@ -140,22 +140,22 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	// Lookup the new backend
 	backend, err := c.newAuditBackend(ctx, entry, view, entry.Options)
 	if err != nil {
-		return audit.NewAuditError(op, "cannot create new audit backend", err.Downstream()).SetUpstream(err)
+		return audit.NewError(op, "cannot create new audit backend", audit.ErrUnknown).Wrap(err)
 	}
 	if backend == nil {
-		return audit.NewAuditError(op, fmt.Sprintf("nil audit backend of type %q returned from factory", entry.Type), audit.ErrUnknown).SetUpstream(err)
+		return audit.NewError(op, fmt.Sprintf("nil audit backend of type %q returned from factory", entry.Type), audit.ErrUnknown)
 	}
 
 	if entry.Options["skip_test"] != "true" {
 		// Test the new audit device and report failure if it doesn't work.
 		testProbe, err := c.generateAuditTestProbe()
 		if err != nil {
-			return audit.NewAuditError(op, "unable to generate audit test message", audit.ErrUnknown).SetUpstream(err)
+			return audit.NewError(op, "unable to generate audit test message", err)
 		}
 		err = backend.LogTestMessage(ctx, testProbe)
 		if err != nil {
 			c.logger.Error("new audit backend failed test", "path", entry.Path, "type", entry.Type, "error", err)
-			return audit.NewAuditError(op, "audit backend failed to log test message", audit.ErrUnknown).SetUpstream(err)
+			return audit.NewError(op, "audit backend failed to log test message", err)
 		}
 	}
 
@@ -164,14 +164,14 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 
 	ns, nsErr := namespace.FromContext(ctx)
 	if nsErr != nil {
-		return audit.NewAuditError(op, "error getting namespace from context", audit.ErrContextDone).SetUpstream(nsErr)
+		return audit.NewError(op, "error getting namespace from context", nsErr)
 	}
 	entry.NamespaceID = ns.ID
 	entry.namespace = ns
 
 	if updateStorage {
 		if err := c.persistAudit(ctx, newTable, entry.Local); err != nil {
-			return audit.NewAuditError(op, "failed to updated audit table", audit.ErrUnknown)
+			return audit.NewError(op, "failed to updated audit table", audit.ErrPersistence).Detail(err)
 		}
 	}
 
@@ -180,14 +180,13 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	// Register the backend
 	err = c.auditBroker.Register(entry.Path, backend, entry.Local)
 	if err != nil {
-		return audit.NewAuditError(op, fmt.Sprintf("failed to register %q audit backend %q", entry.Type, entry.Path), audit.ErrUnknown).SetUpstream(err)
+		return audit.NewError(op, fmt.Sprintf("failed to register %q audit backend %q", entry.Type, entry.Path), audit.ErrBrokerRegistration).Wrap(err)
 	}
 
 	c.logger.Info("enabled audit backend", "path", entry.Path, "type", entry.Type)
 	return nil
 }
 
-// TODO: PW: *audit.AuditError?
 // disableAudit is used to disable an existing audit backend.
 // It returns whether the entry existed, and any errors in disabling it.
 func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool) (bool, error) {
@@ -514,17 +513,17 @@ func (c *Core) removeAuditReloadFunc(entry *MountEntry) {
 }
 
 // newAuditBackend is used to create and configure a new audit backend by name
-func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logical.Storage, conf map[string]string) (audit.Backend, *audit.AuditError) {
+func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logical.Storage, conf map[string]string) (audit.Backend, *audit.Error) {
 	const op = "vault.(Core).newAuditBackend"
 
 	// Ensure that non-Enterprise versions aren't trying to supply Enterprise only options.
 	if hasInvalidAuditOptions(entry.Options) {
-		return nil, audit.NewAuditError(op, "invalid options", audit.ErrEnterpriseOnly)
+		return nil, audit.NewError(op, "invalid options", audit.ErrEnterpriseOnly)
 	}
 
 	f, ok := c.auditBackends[entry.Type]
 	if !ok {
-		return nil, audit.NewAuditError(op, fmt.Sprintf("unknown backend type: %q", entry.Type), audit.ErrInvalidParameter)
+		return nil, audit.NewError(op, fmt.Sprintf("unknown backend type: %q", entry.Type), audit.ErrInvalidParameter)
 	}
 	saltConfig := &salt.Config{
 		HMAC:     sha256.New,
@@ -543,10 +542,10 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		},
 		c.auditedHeaders)
 	if err != nil {
-		return nil, audit.NewAuditError(op, "unable to create new audit backend", err.Downstream()).SetUpstream(err)
+		return nil, audit.NewError(op, "unable to create new audit backend", audit.ErrUnknown).Wrap(err)
 	}
 	if be == nil {
-		return nil, audit.NewAuditError(op, fmt.Sprintf("nil backend returned from %q factory function", entry.Type), audit.ErrUnknown)
+		return nil, audit.NewError(op, fmt.Sprintf("nil backend returned from %q factory function", entry.Type), audit.ErrUnknown)
 	}
 
 	switch entry.Type {

@@ -196,8 +196,8 @@ func TestNewEntryFormatter(t *testing.T) {
 				ss = newStaticSalt(t)
 			}
 
-			cfg, err := NewFormatterConfig(&testHeaderFormatter{}, tc.Options...)
-			require.NoError(t, err)
+			cfg, cfgErr := NewFormatterConfig(&testHeaderFormatter{}, tc.Options...)
+			require.Nil(t, cfgErr)
 			f, err := NewEntryFormatter(tc.Name, cfg, ss, tc.Logger)
 
 			switch {
@@ -220,8 +220,8 @@ func TestEntryFormatter_Reopen(t *testing.T) {
 	t.Parallel()
 
 	ss := newStaticSalt(t)
-	cfg, err := NewFormatterConfig(&testHeaderFormatter{})
-	require.NoError(t, err)
+	cfg, cfgErr := NewFormatterConfig(&testHeaderFormatter{})
+	require.Nil(t, cfgErr)
 
 	f, err := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 	require.Nil(t, err)
@@ -380,7 +380,7 @@ func TestEntryFormatter_Process(t *testing.T) {
 
 			ss := newStaticSalt(t)
 			cfg, cfgErr := NewFormatterConfig(&testHeaderFormatter{}, WithFormat(tc.RequiredFormat.String()))
-			require.NoError(t, cfgErr)
+			require.Nil(t, cfgErr)
 
 			f, entryErr := NewEntryFormatter("juan", cfg, ss, hclog.NewNullLogger())
 			require.Nil(t, entryErr)

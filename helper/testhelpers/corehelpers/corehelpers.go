@@ -254,7 +254,7 @@ func (f *NoopHeaderFormatter) ApplyConfig(_ context.Context, headers map[string]
 // NewNoopAudit should be used to create a NoopAudit as it handles creation of a
 // predictable salt and wraps eventlogger nodes so information can be retrieved on
 // what they've seen or formatted.
-func NewNoopAudit(config *audit.BackendConfig) (*NoopAudit, *audit.AuditError) {
+func NewNoopAudit(config *audit.BackendConfig) (*NoopAudit, *audit.Error) {
 	const op = "corehelpers.NewNoopAudit"
 
 	view := &logical.InmemStorage{}
@@ -263,7 +263,7 @@ func NewNoopAudit(config *audit.BackendConfig) (*NoopAudit, *audit.AuditError) {
 	se := &logical.StorageEntry{Key: "salt", Value: []byte("foo")}
 	err := view.Put(context.Background(), se)
 	if err != nil {
-		return nil, audit.NewAuditError(op, "error storing salt", audit.ErrUnknown).SetUpstream(err)
+		return nil, audit.NewError(op, "error storing salt", audit.ErrUnknown).Detail(err)
 	}
 
 	// Override the salt related config settings.
@@ -285,17 +285,17 @@ func NewNoopAudit(config *audit.BackendConfig) (*NoopAudit, *audit.AuditError) {
 
 	cfg, cfgErr := audit.NewFormatterConfig(&NoopHeaderFormatter{})
 	if cfgErr != nil {
-		return nil, audit.NewAuditError(op, "error creating formatter config", cfgErr.Downstream()).SetUpstream(cfgErr)
+		return nil, audit.NewError(op, "error creating formatter config", cfgErr)
 	}
 
 	formatterNodeID, err := event.GenerateNodeID()
 	if err != nil {
-		return nil, audit.NewAuditError(op, "error generating random NodeID for formatter node", audit.ErrUnknown).SetUpstream(err)
+		return nil, audit.NewError(op, "error generating random NodeID for formatter node", audit.ErrUnknown).Detail(err)
 	}
 
 	formatterNode, fmtErr := audit.NewEntryFormatter(config.MountPath, cfg, noopBackend, config.Logger)
 	if fmtErr != nil {
-		return nil, audit.NewAuditError(op, "error creating formatter", fmtErr.Downstream()).SetUpstream(err)
+		return nil, audit.NewError(op, "error creating formatter", fmtErr)
 	}
 
 	// Wrap the formatting node, so we can get any bytes that were formatted etc.
@@ -307,7 +307,7 @@ func NewNoopAudit(config *audit.BackendConfig) (*NoopAudit, *audit.AuditError) {
 	sinkNode := event.NewNoopSink()
 	sinkNodeID, err := event.GenerateNodeID()
 	if err != nil {
-		return nil, audit.NewAuditError(op, "error generating random NodeID for sink node", audit.ErrUnknown).SetUpstream(err)
+		return nil, audit.NewError(op, "error generating random NodeID for sink node", audit.ErrUnknown).Detail(err)
 	}
 
 	noopBackend.nodeIDList[1] = sinkNodeID
@@ -320,10 +320,10 @@ func NewNoopAudit(config *audit.BackendConfig) (*NoopAudit, *audit.AuditError) {
 // have been formatted by the pipeline during audit requests.
 // The records parameter will be repointed to the one used within the pipeline.
 func NoopAuditFactory(records **[][]byte) audit.Factory {
-	return func(_ context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, *audit.AuditError) {
+	return func(_ context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, *audit.Error) {
 		n, err := NewNoopAudit(config)
 		if err != nil {
-			return nil, audit.NewAuditError("corehelpers.NoopAuditFactory", "error creating noop audit device", audit.ErrUnknown).SetUpstream(err)
+			return nil, audit.NewError("corehelpers.NoopAuditFactory", "error creating noop audit device", audit.ErrUnknown).Detail(err)
 		}
 		if records != nil {
 			*records = &n.records

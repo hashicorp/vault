@@ -25,17 +25,17 @@ type EntryFilter struct {
 
 // NewEntryFilter should be used to create an EntryFilter node.
 // The filter supplied should be in bexpr format and reference fields from logical.LogInputBexpr.
-func NewEntryFilter(filter string) (*EntryFilter, *AuditError) {
+func NewEntryFilter(filter string) (*EntryFilter, *Error) {
 	const op = "audit.NewEntryFilter"
 
 	filter = strings.TrimSpace(filter)
 	if filter == "" {
-		return nil, NewAuditError(op, "cannot create new audit filter with empty filter expression", ErrFilterParameter)
+		return nil, NewError(op, "cannot create new audit filter with empty filter expression", ErrFilterParameter)
 	}
 
 	eval, err := bexpr.CreateEvaluator(filter)
 	if err != nil {
-		return nil, NewAuditError(op, "cannot create new audit filter", ErrFilterParameter).SetUpstream(err)
+		return nil, NewError(op, "cannot create new audit filter", err)
 	}
 
 	// Validate the filter by attempting to evaluate it with an empty input.
@@ -44,7 +44,7 @@ func NewEntryFilter(filter string) (*EntryFilter, *AuditError) {
 	li := logical.LogInputBexpr{}
 	_, err = eval.Evaluate(li)
 	if err != nil {
-		return nil, NewAuditError(op, fmt.Sprintf("filter references an unsupported field: %s", filter), ErrFilterParameter).SetUpstream(err)
+		return nil, NewError(op, fmt.Sprintf("filter references an unsupported field: %s", filter), err)
 	}
 
 	return &EntryFilter{evaluator: eval}, nil

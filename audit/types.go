@@ -244,4 +244,4 @@ type BackendConfig struct {
 }
 
 // Factory is the factory function to create an audit backend.
-type Factory func(context.Context, *BackendConfig, HeaderFormatter) (Backend, *AuditError)
+type Factory func(context.Context, *BackendConfig, HeaderFormatter) (Backend, *Error)
