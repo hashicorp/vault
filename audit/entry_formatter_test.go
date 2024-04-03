@@ -1199,9 +1199,7 @@ func TestEntryFormatter_Process_NeverLeaksHeaders(t *testing.T) {
 	err = json.Unmarshal([]byte(testFormatJSONReqBasicStrFmt), &input)
 	require.NoError(t, err)
 	require.NotNil(t, input)
-	require.Len(t, input.Request.Headers, 1)
-	require.Len(t, input.Request.Headers["foo"], 1)
-	require.Equal(t, "bar", input.Request.Headers["foo"][0])
+	require.ElementsMatch(t, input.Request.Headers["foo"], []string{"bar"})
 
 	e := fakeEvent(t, RequestType, input)
 
