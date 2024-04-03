@@ -90,17 +90,12 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 		return nil, fmt.Errorf("%s: error configuring filter node: %w", op, err)
 	}
 
-	cfg, err := formatterConfig(conf.Config)
+	cfg, err := newFormatterConfig(headersConfig, conf.Config)
 	if err != nil {
 		return nil, fmt.Errorf("%s: failed to create formatter config: %w", op, err)
 	}
 
-	formatterOpts := []audit.Option{
-		audit.WithHeaderFormatter(headersConfig),
-		audit.WithPrefix(conf.Config["prefix"]),
-	}
-
-	err = b.configureFormatterNode(conf.MountPath, cfg, conf.Logger, formatterOpts...)
+	err = b.configureFormatterNode(conf.MountPath, cfg, conf.Logger)
 	if err != nil {
 		return nil, fmt.Errorf("%s: error configuring formatter node: %w", op, err)
 	}
@@ -156,10 +151,10 @@ func (b *Backend) Invalidate(_ context.Context) {
 	b.salt = nil
 }
 
-// formatterConfig creates the configuration required by a formatter node using
+// newFormatterConfig creates the configuration required by a formatter node using
 // the config map supplied to the factory.
-func formatterConfig(config map[string]string) (audit.FormatterConfig, error) {
-	const op = "syslog.formatterConfig"
+func newFormatterConfig(headerFormatter audit.HeaderFormatter, config map[string]string) (audit.FormatterConfig, error) {
+	const op = "syslog.newFormatterConfig"
 
 	var opts []audit.Option
 
@@ -193,11 +188,15 @@ func formatterConfig(config map[string]string) (audit.FormatterConfig, error) {
 		opts = append(opts, audit.WithElision(v))
 	}
 
-	return audit.NewFormatterConfig(opts...)
+	if prefix, ok := config["prefix"]; ok {
+		opts = append(opts, audit.WithPrefix(prefix))
+	}
+
+	return audit.NewFormatterConfig(headerFormatter, opts...)
 }
 
 // configureFormatterNode is used to configure a formatter node and associated ID on the Backend.
-func (b *Backend) configureFormatterNode(name string, formatConfig audit.FormatterConfig, logger hclog.Logger, opts ...audit.Option) error {
+func (b *Backend) configureFormatterNode(name string, formatConfig audit.FormatterConfig, logger hclog.Logger) error {
 	const op = "syslog.(Backend).configureFormatterNode"
 
 	formatterNodeID, err := event.GenerateNodeID()
@@ -205,7 +204,7 @@ func (b *Backend) configureFormatterNode(name string, formatConfig audit.Formatt
 		return fmt.Errorf("%s: error generating random NodeID for formatter node: %w", op, err)
 	}
 
-	formatterNode, err := audit.NewEntryFormatter(name, formatConfig, b, logger, opts...)
+	formatterNode, err := audit.NewEntryFormatter(name, formatConfig, b, logger)
 	if err != nil {
 		return fmt.Errorf("%s: error creating formatter: %w", op, err)
 	}
