@@ -136,7 +136,7 @@ export async function dateDropdownSelect(month, year) {
   await click(dateDropdown.submit);
 }
 
-export const ACTIVITY_RESPONSE = {
+export const ACTIVITY_RESPONSE_STUB = {
   start_time: '2023-08-01T00:00:00Z',
   end_time: '2023-09-30T23:59:59Z', // is always the last day and hour of the month queried
   by_namespace: [
@@ -523,7 +523,7 @@ export const VERSION_HISTORY = [
 ];
 
 // order of this array matters because index 0 is a month without data
-export const EXPECTED_FORMAT = [
+export const SERIALIZED_ACTIVITY_RESPONSE = [
   {
     month: '8/23',
     timestamp: '2023-08-01T00:00:00Z',

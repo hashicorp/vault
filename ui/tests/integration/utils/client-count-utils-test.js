@@ -14,8 +14,18 @@ import {
   sortMonthsByTimestamp,
 } from 'core/utils/client-count-utils';
 import { LICENSE_START } from 'vault/mirage/handlers/clients';
-import { ACTIVITY_RESPONSE as RESPONSE, VERSION_HISTORY, EXPECTED_FORMAT } from 'vault/tests/helpers/clients';
+import {
+  ACTIVITY_RESPONSE_STUB as RESPONSE,
+  VERSION_HISTORY,
+  SERIALIZED_ACTIVITY_RESPONSE,
+} from 'vault/tests/helpers/clients';
 
+/*
+formatByNamespace, formatByMonths, homogenizeClientNaming are utils 
+used to normalize the sys/counters/activity response in the clients/activity 
+serializer. these functions are tested individually here, instead of all at once 
+in a serializer test for easier debugging
+*/
 module('Integration | Util | client count utils', function (hooks) {
   setupTest(hooks);
 
@@ -54,7 +64,7 @@ module('Integration | Util | client count utils', function (hooks) {
 
     // instead of asserting the whole expected response, broken up so tests are easier to debug
     // but kept whole above to copy/paste updated response expectations in the future
-    const [expectedNoData, expectedWithActivity] = EXPECTED_FORMAT;
+    const [expectedNoData, expectedWithActivity] = SERIALIZED_ACTIVITY_RESPONSE;
     const { namespaces, new_clients } = expectedWithActivity;
 
     assert.propEqual(formattedNoData, expectedNoData, 'it formats months without data');
@@ -210,7 +220,7 @@ module('Integration | Util | client count utils', function (hooks) {
 
   test('namespaceArrayToObject: it generates namespaces_by_key without modifying original', async function (assert) {
     assert.expect(3);
-    const { namespaces_by_key: expected } = EXPECTED_FORMAT[1];
+    const { namespaces_by_key: expected } = SERIALIZED_ACTIVITY_RESPONSE[1];
 
     const { namespaces, new_clients } = RESPONSE.months[1];
     const original = { ...RESPONSE.months[1] };

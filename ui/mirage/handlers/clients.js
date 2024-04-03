@@ -17,6 +17,7 @@ import {
   subMonths,
 } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
+// add new types to this CLIENT_TYPES const and where comment "ADD NEW CLIENT TYPES HERE" is below
 import { CLIENT_TYPES } from 'core/utils/client-count-utils';
 
 export const LICENSE_START = new Date('2023-07-02T00:00:00Z');
@@ -87,6 +88,7 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
     mounts: {},
   };
 
+  // *ADD NEW CLIENT TYPES HERE and spread to the mounts array below
   const authClients = randomBetween(min, max);
   const [non_entity_clients, entity_clients] = arrayOfCounts(authClients, 2);
   const [secret_syncs] = arrayOfCounts(randomBetween(min, max), 1);
