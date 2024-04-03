@@ -273,21 +273,22 @@ func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
 func TestAuditedHeadersConfig_ApplyConfig_NoRequestHeaders(t *testing.T) {
 	conf := mockAuditedHeadersConfig(t)
 
-	conf.add(context.Background(), "X-TesT-Header", false)
-	conf.add(context.Background(), "X-Vault-HeAdEr", true)
-
-	reqHeaders := map[string][]string{}
+	err := conf.add(context.Background(), "X-TesT-Header", false)
+	require.NoError(t, err)
+	err = conf.add(context.Background(), "X-Vault-HeAdEr", true)
+	require.NoError(t, err)
 
 	salter := &TestSalter{}
 
-	result, err := conf.ApplyConfig(context.Background(), reqHeaders, salter)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Test sending in nil headers first.
+	result, err := conf.ApplyConfig(context.Background(), nil, salter)
+	require.NoError(t, err)
+	require.NotNil(t, result)
 
-	if len(result) != 0 {
-		t.Fatalf("Expected no headers but actually got: %d\n", len(result))
-	}
+	result, err = conf.ApplyConfig(context.Background(), map[string][]string{}, salter)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Len(t, result, 0)
 }
 
 func TestAuditedHeadersConfig_ApplyConfig_NoConfiguredHeaders(t *testing.T) {
