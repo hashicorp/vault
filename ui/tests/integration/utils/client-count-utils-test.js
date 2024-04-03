@@ -94,7 +94,6 @@ module('Integration | Util | client count utils', function (hooks) {
 
   test('formatByNamespace: formats namespace array with no mounts (activity log data < 1.10)', async function (assert) {
     assert.expect(1);
-    // TODO waiting to hear from backend whether the mounts key will actually exist or not
     const noMounts = [
       {
         namespace_id: 'root',
@@ -108,6 +107,7 @@ module('Integration | Util | client count utils', function (hooks) {
           acme_clients: 0,
           clients: 30,
         },
+        mounts: 'no mount accessor (pre-1.10 upgrade?)',
       },
     ];
     const expected = [
