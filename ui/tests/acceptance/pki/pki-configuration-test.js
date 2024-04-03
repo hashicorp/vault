@@ -14,13 +14,13 @@ import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { runCmd } from 'vault/tests/helpers/commands';
-import { PKI_WORKFLOW } from 'vault/tests/helpers/pki/pki-workflow-helpers';
-import { issuerPemBundle } from 'vault/tests/helpers/pki/values';
+import { CERTIFICATES, PKI_WORKFLOW } from 'vault/tests/helpers/pki/pki-workflow-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { PKI_GENERATE_ROOT } from 'vault/tests/helpers/components/pki/pki-generate-root';
 import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/components/pki/pki-configure-create';
 import { PKI_DELETE_ALL_ISSUERS } from 'vault/tests/helpers/components/pki/pki-delete-all-issuers';
 
+const { issuerPemBundle } = CERTIFICATES;
 module('Acceptance | pki configuration test', function (hooks) {
   setupApplicationTest(hooks);
 

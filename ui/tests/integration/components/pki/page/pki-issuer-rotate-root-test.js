@@ -9,12 +9,12 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import sinon from 'sinon';
 import { hbs } from 'ember-cli-htmlbars';
-import { loadedCert } from 'vault/tests/helpers/pki/values';
 import camelizeKeys from 'vault/utils/camelize-object-keys';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/components/pki/pki-configure-create';
+import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-workflow-helpers';
 
 const SELECTORS = {
   nextSteps: '[data-test-rotate-next-steps]',
@@ -30,6 +30,7 @@ const SELECTORS = {
   // root form
   generateRootForm: '[data-test-pki-config-generate-root-form]',
 };
+const { loadedCert } = CERTIFICATES;
 
 module('Integration | Component | page/pki-issuer-rotate-root', function (hooks) {
   setupRenderingTest(hooks);

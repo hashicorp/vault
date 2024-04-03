@@ -10,16 +10,9 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import { hbs } from 'ember-cli-htmlbars';
-import {
-  intIssuerCert,
-  newCSR,
-  newlySignedCert,
-  oldParentIssuerCert,
-  parentIssuerCert,
-  unsupportedOids,
-} from 'vault/tests/helpers/pki/values';
 import { PKI_CROSS_SIGN } from 'vault/tests/helpers/components/pki/pki-issuer-cross-sign';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-workflow-helpers';
 
 const FIELDS = [
   {
@@ -41,6 +34,8 @@ const FIELDS = [
     helpText: `This is your new issuer’s name in the API.`,
   },
 ];
+const { intIssuerCert, newCSR, newlySignedCert, oldParentIssuerCert, parentIssuerCert, unsupportedOids } =
+  CERTIFICATES;
 module('Integration | Component | pki issuer cross sign', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');

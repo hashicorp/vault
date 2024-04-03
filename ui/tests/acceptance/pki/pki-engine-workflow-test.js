@@ -13,17 +13,17 @@ import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, fillIn, find, isSettled, visit } from '@ember/test-helpers';
 import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/pki/policy-generator';
 import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
-import { unsupportedPem } from 'vault/tests/helpers/pki/values';
 import { create } from 'ember-cli-page-object';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { PKI_WORKFLOW, clearRecords } from 'vault/tests/helpers/pki/pki-workflow-helpers';
+import { CERTIFICATES, PKI_WORKFLOW, clearRecords } from 'vault/tests/helpers/pki/pki-workflow-helpers';
 import { PKI_KEYS } from 'vault/tests/helpers/components/pki/page/pki-keys';
 import { PKI_ISSUER_DETAILS } from 'vault/tests/helpers/components/pki/pki-issuer-details';
 import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/components/pki/pki-configure-create';
 import { PKI_CONFIG_EDIT } from 'vault/tests/helpers/components/pki/page/pki-configuration-edit';
 
 const flash = create(flashMessage);
+const { unsupportedPem } = CERTIFICATES;
 /**
  * This test module should test the PKI workflow, including:
  * - link between pages and confirm that the url is as expected
