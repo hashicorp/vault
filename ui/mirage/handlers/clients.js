@@ -22,7 +22,7 @@ import { CLIENT_TYPES } from 'core/utils/client-count-utils';
 /*
 HOW TO ADD NEW TYPES:
 1. add key to CLIENT_TYPES 
-2. Find "ADD NEW CLIENT TYPES HERE" comment below and generate mock counts for that key
+2. Find "ADD NEW CLIENT TYPES HERE" comment below and add type to destructuring array
 3. Add generateMounts() for that client type to the mounts array
 */
 export const LICENSE_START = new Date('2023-07-02T00:00:00Z');
@@ -51,18 +51,6 @@ function getTotalCounts(array) {
 
 function randomBetween(min, max) {
   return Math.floor(Math.random() * (max - min + 1) + min);
-}
-
-// generates array of counts that add up to max
-function arrayOfCounts(max, arrayLength) {
-  var result = [];
-  var sum = 0;
-  for (var i = 0; i < arrayLength - 1; i++) {
-    result[i] = randomBetween(1, max - (arrayLength - i - 1) - sum);
-    sum += result[i];
-  }
-  result[arrayLength - 1] = max - sum;
-  return result.sort((a, b) => b - a);
 }
 
 function generateMounts(pathPrefix, counts) {
@@ -94,15 +82,18 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
     mounts: {},
   };
 
-  // * ADD NEW CLIENT TYPES HERE and spread to the mounts array below
-  const authClients = randomBetween(min, max);
-  const [non_entity_clients, entity_clients] = arrayOfCounts(authClients, 2);
-  const secret_syncs = randomBetween(min, max);
-  const acme_clients = randomBetween(min, max);
+  // * ADD NEW CLIENT TYPES HERE and pass to a new generateMounts() function below
+  const [acme_clients, entity_clients, non_entity_clients, secret_syncs] = CLIENT_TYPES.map(() =>
+    randomBetween(min, max)
+  );
 
   // each mount type generates a different type of client
   const mounts = [
-    ...generateMounts('auth/authid/', { clients: authClients, non_entity_clients, entity_clients }),
+    ...generateMounts('auth/authid/', {
+      clients: non_entity_clients + entity_clients,
+      non_entity_clients,
+      entity_clients,
+    }),
     ...generateMounts('kvv2-engine-', { clients: secret_syncs, secret_syncs }),
     ...generateMounts('pki-engine-', { clients: acme_clients, acme_clients }),
   ];
