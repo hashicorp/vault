@@ -12,7 +12,7 @@ import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, fillIn, visit } from '@ember/test-helpers';
 import { runCmd } from 'vault/tests/helpers/commands';
-import { PKI_WORKFLOW } from 'vault/tests/helpers/pki/workflow';
+import { PKI_WORKFLOW } from 'vault/tests/helpers/pki/pki-workflow-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/components/pki/pki-configure-create';
 import { PKI_KEYS } from 'vault/tests/helpers/components/pki/page/pki-keys';
