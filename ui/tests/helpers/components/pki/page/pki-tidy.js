@@ -2,9 +2,9 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-import { SELECTORS as TIDY_FORM } from './pki-tidy-form';
+import { PKI_TIDY_FORM } from './pki-tidy-form';
 
-export const SELECTORS = {
+export const PKI_TIDY = {
   hdsAlertTitle: '[data-test-tidy-status-alert-title]',
   hdsAlertDescription: '[data-test-tidy-status-alert-description]',
   alertUpdatedAt: '[data-test-tidy-status-alert-updated-at]',
@@ -25,6 +25,6 @@ export const SELECTORS = {
   },
   tidyEmptyState: '[data-test-component="empty-state"]',
   tidyForm: {
-    ...TIDY_FORM,
+    ...PKI_TIDY_FORM,
   },
 };

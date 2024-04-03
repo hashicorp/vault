@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export const SELECTORS = {
+export const PKI_KEYS = {
   // key index
   importKey: '[data-test-pki-key-import]',
   generateKey: '[data-test-pki-key-generate]',

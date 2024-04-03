@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, render } from '@ember/test-helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { hbs } from 'ember-cli-htmlbars';
-import { SELECTORS } from 'vault/tests/helpers/pki/pki-configure-create';
+import { SELECTORS } from 'vault/tests/helpers/components/pki/pki-configure-create';
 import sinon from 'sinon';
 
 module('Integration | Component | page/pki-configure-create', function (hooks) {

@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { runCmd } from 'vault/tests/helpers/commands';
-import { SELECTORS } from 'vault/tests/helpers/pki/pki-issuer-cross-sign';
+import { SELECTORS } from 'vault/tests/helpers/components/pki/pki-issuer-cross-sign';
 import { verifyCertificates } from 'vault/utils/parse-pki-cert';
 module('Acceptance | pki/pki cross sign', function (hooks) {
   setupApplicationTest(hooks);

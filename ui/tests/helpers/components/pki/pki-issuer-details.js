@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export const SELECTORS = {
+export const PKI_ISSUER_DETAILS = {
   configure: '[data-test-pki-issuer-configure]',
   copyButtonByName: (name) => `[data-test-value-div="${name}"] [data-test-copy-button]`,
   crossSign: '[data-test-pki-issuer-cross-sign]',

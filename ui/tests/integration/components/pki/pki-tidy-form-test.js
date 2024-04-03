@@ -9,7 +9,7 @@ import { click, render, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { SELECTORS } from 'vault/tests/helpers/pki/page/pki-tidy-form';
+import { SELECTORS } from 'vault/tests/helpers/components/pki/page/pki-tidy-form';
 
 module('Integration | Component | pki tidy form', function (hooks) {
   setupRenderingTest(hooks);

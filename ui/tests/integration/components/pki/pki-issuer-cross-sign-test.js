@@ -18,7 +18,7 @@ import {
   parentIssuerCert,
   unsupportedOids,
 } from 'vault/tests/helpers/pki/values';
-import { SELECTORS } from 'vault/tests/helpers/pki/pki-issuer-cross-sign';
+import { SELECTORS } from 'vault/tests/helpers/components/pki/pki-issuer-cross-sign';
 
 const FIELDS = [
   {

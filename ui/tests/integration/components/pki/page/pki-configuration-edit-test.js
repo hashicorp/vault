@@ -10,7 +10,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
-import { SELECTORS } from 'vault/tests/helpers/pki/page/pki-configuration-edit';
+import { SELECTORS } from 'vault/tests/helpers/components/pki/page/pki-configuration-edit';
 import sinon from 'sinon';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 

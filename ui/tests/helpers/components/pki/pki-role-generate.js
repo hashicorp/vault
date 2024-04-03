@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export const SELECTORS = {
+export const PKI_ROLE_GENERATE = {
   form: '[data-test-pki-generate-cert-form]',
   commonNameField: '[data-test-input="commonName"]',
   optionsToggle: '[data-test-toggle-group="Subject Alternative Name (SAN) Options"]',

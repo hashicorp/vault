@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export const SELECTORS = {
+export const PKI_CONFIG_EDIT = {
   errorBanner: '[data-test-config-edit-error]',
   acmeEditSection: '[data-test-acme-edit-section]',
   configEditSection: '[data-test-cluster-config-edit-section]',

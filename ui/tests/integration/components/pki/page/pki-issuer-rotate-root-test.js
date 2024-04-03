@@ -12,7 +12,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { loadedCert } from 'vault/tests/helpers/pki/values';
 import camelizeKeys from 'vault/utils/camelize-object-keys';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
-import { SELECTORS as S } from 'vault/tests/helpers/pki/pki-generate-root';
+import { SELECTORS as S } from 'vault/tests/helpers/components/pki/pki-generate-root';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const SELECTORS = {

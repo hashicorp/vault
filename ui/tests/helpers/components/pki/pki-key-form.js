@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export const SELECTORS = {
+export const PKI_KEY_FORM = {
   keyCreateButton: '[data-test-pki-key-save]',
   keyCancelButton: '[data-test-pki-key-cancel]',
   keyNameInput: '[data-test-input="keyName"]',

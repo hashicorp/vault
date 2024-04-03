@@ -11,7 +11,7 @@ import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, currentRouteName, visit } from '@ember/test-helpers';
-import { SELECTORS } from 'vault/tests/helpers/pki/overview';
+import { SELECTORS } from 'vault/tests/helpers/components/pki/overview';
 import { clearRecords } from 'vault/tests/helpers/pki/pki-run-commands';
 import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 

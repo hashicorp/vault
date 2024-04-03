@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { SELECTORS } from 'vault/tests/helpers/pki/pki-role-form';
+import { SELECTORS } from 'vault/tests/helpers/components/pki/pki-role-form';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | pki key parameters', function (hooks) {

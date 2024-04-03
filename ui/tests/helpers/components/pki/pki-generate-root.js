@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export const SELECTORS = {
+export const PKI_GENERATE_ROOT = {
   mainSectionTitle: '[data-test-generate-root-title="Root parameters"]',
   urlSectionTitle: '[data-test-generate-root-title="Issuer URLs"]',
   keyParamsGroupToggle: '[data-test-toggle-group="Key parameters"]',

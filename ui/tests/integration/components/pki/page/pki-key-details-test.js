@@ -9,7 +9,7 @@ import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { SELECTORS } from 'vault/tests/helpers/pki/page/pki-keys';
+import { SELECTORS } from 'vault/tests/helpers/components/pki/page/pki-keys';
 
 module('Integration | Component | pki key details page', function (hooks) {
   setupRenderingTest(hooks);
@@ -81,9 +81,9 @@ module('Integration | Component | pki key details page', function (hooks) {
     await render(
       hbs`
         <Page::PkiKeyDetails
-          @key={{this.model}} 
+          @key={{this.model}}
           @canDelete={{false}}
-          @canEdit={{false}} 
+          @canEdit={{false}}
         />
       `,
       { owner: this.engine }

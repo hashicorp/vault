@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, settled } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { SELECTORS } from 'vault/tests/helpers/pki/pki-issuer-details';
+import { SELECTORS } from 'vault/tests/helpers/components/pki/pki-issuer-details';
 
 module('Integration | Component | page/pki-issuer-details', function (hooks) {
   setupRenderingTest(hooks);

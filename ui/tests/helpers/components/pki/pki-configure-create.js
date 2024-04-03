@@ -5,7 +5,7 @@
 
 import { SELECTORS as GENERATE_ROOT } from './pki-generate-root';
 
-export const SELECTORS = {
+export const PKI_CONFIGURE_CREATE = {
   // page::pki-configure-create
   breadcrumbContainer: '[data-test-breadcrumbs]',
   title: '[data-test-pki-engine-page-title]',

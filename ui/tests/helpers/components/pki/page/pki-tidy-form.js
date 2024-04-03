@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export const SELECTORS = {
+export const PKI_TIDY_FORM = {
   tidyFormName: (attr) => `[data-test-tidy-form="${attr}"]`,
   inputByAttr: (attr) => `[data-test-input="${attr}"]`,
   toggleInput: (attr) => `[data-test-input="${attr}"] input`,

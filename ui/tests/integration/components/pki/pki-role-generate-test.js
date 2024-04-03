@@ -10,7 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupEngine } from 'ember-engines/test-support';
 import Sinon from 'sinon';
-import { SELECTORS } from 'vault/tests/helpers/pki/pki-role-generate';
+import { SELECTORS } from 'vault/tests/helpers/components/pki/pki-role-generate';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | pki-role-generate', function (hooks) {

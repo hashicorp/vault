@@ -12,7 +12,7 @@ import { Response } from 'miragejs';
 import { v4 as uuidv4 } from 'uuid';
 
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { SELECTORS } from 'vault/tests/helpers/pki/pki-configure-create';
+import { SELECTORS } from 'vault/tests/helpers/components/pki/pki-configure-create';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 

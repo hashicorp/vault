@@ -9,7 +9,7 @@ import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { SELECTORS } from 'vault/tests/helpers/pki/page/pki-keys';
+import { SELECTORS } from 'vault/tests/helpers/components/pki/page/pki-keys';
 import { STANDARD_META } from 'vault/tests/helpers/pki';
 
 module('Integration | Component | pki key list page', function (hooks) {

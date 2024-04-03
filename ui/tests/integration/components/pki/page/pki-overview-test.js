@@ -9,7 +9,7 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { SELECTORS } from 'vault/tests/helpers/pki/overview';
+import { SELECTORS } from 'vault/tests/helpers/components/pki/overview';
 
 module('Integration | Component | Page::PkiOverview', function (hooks) {
   setupRenderingTest(hooks);

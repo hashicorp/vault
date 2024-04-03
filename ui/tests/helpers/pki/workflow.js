@@ -3,16 +3,16 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { SELECTORS as ROLEFORM } from './pki-role-form';
-import { SELECTORS as GENERATECERT } from './pki-role-generate';
-import { SELECTORS as KEYFORM } from './pki-key-form';
-import { SELECTORS as KEYPAGES } from './page/pki-keys';
-import { SELECTORS as ISSUERDETAILS } from './pki-issuer-details';
-import { SELECTORS as CONFIGURATION } from './pki-configure-create';
-import { SELECTORS as DELETE } from './pki-delete-all-issuers';
-import { SELECTORS as TIDY } from './page/pki-tidy-form';
-import { SELECTORS as CONFIGEDIT } from './page/pki-configuration-edit';
-import { SELECTORS as GENROOT } from './pki-generate-root';
+import { PKI_ROLE_FORM } from '../components/pki/pki-role-form';
+import { PKI_ROLE_GENERATE } from '../components/pki/pki-role-generate';
+import { PKI_KEY_FORM } from '../components/pki/pki-key-form';
+import { PKI_KEYS } from '../components/pki/page/pki-keys';
+import { PKI_ISSUER_DETAILS } from '../components/pki/pki-issuer-details';
+import { PKI_CONFIGURE_CREATE } from '../components/pki/pki-configure-create';
+import { PKI_DELETE_ALL_ISSUERS } from '../components/pki/pki-delete-all-issuers';
+import { PKI_TIDY_FORM } from '../components/pki/page/pki-tidy-form';
+import { PKI_CONFIG_EDIT } from '../components/pki/page/pki-configuration-edit';
+import { PKI_GENERATE_ROOT } from '../components/pki/pki-generate-root';
 
 export const SELECTORS = {
   breadcrumbContainer: '[data-test-breadcrumbs]',
@@ -38,17 +38,17 @@ export const SELECTORS = {
   editRoleLink: '[data-test-pki-role-edit-link]',
   createRoleLink: '[data-test-pki-role-create-link]',
   roleForm: {
-    ...ROLEFORM,
+    ...PKI_ROLE_FORM,
   },
   generateCertForm: {
-    ...GENERATECERT,
+    ...PKI_ROLE_GENERATE,
   },
   // KEYS
   keyForm: {
-    ...KEYFORM,
+    ...PKI_KEY_FORM,
   },
   keyPages: {
-    ...KEYPAGES,
+    ...PKI_KEYS,
   },
   // ISSUERS
   issuerListItem: (id) => `[data-test-issuer-list="${id}"]`,
@@ -60,7 +60,7 @@ export const SELECTORS = {
   issuerPopupDetails: '[data-test-popup-menu-details]',
   issuerDetails: {
     title: '[data-test-pki-issuer-page-title]',
-    ...ISSUERDETAILS,
+    ...PKI_ISSUER_DETAILS,
   },
   // CONFIGURATION
   configuration: {
@@ -70,13 +70,13 @@ export const SELECTORS = {
     importError: '[data-test-message-error]',
     pkiBetaBanner: '[data-test-pki-configuration-banner]',
     pkiBetaBannerLink: '[data-test-pki-configuration-banner] a',
-    ...CONFIGURATION,
-    ...DELETE,
-    ...TIDY,
-    ...GENROOT,
+    ...PKI_CONFIGURE_CREATE,
+    ...PKI_DELETE_ALL_ISSUERS,
+    ...PKI_TIDY_FORM,
+    ...PKI_GENERATE_ROOT,
   },
   // EDIT CONFIGURATION
   configEdit: {
-    ...CONFIGEDIT,
+    ...PKI_CONFIG_EDIT,
   },
 };
