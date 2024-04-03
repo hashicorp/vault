@@ -182,12 +182,12 @@ func (a *AuditedHeadersConfig) invalidate(ctx context.Context) error {
 	return nil
 }
 
-// ApplyConfig returns a map of approved headers and their values, either hmac'ed or plaintext.
-// If the supplied headers are empty or nil, the input value is returned as-is.
+// ApplyConfig returns a map of approved headers and their values, either HMAC'd or plaintext.
+// If the supplied headers are empty or nil, an empty set of headers will be returned.
 func (a *AuditedHeadersConfig) ApplyConfig(ctx context.Context, headers map[string][]string, salter audit.Salter) (result map[string][]string, retErr error) {
 	// Return early if we don't have headers.
-	if headers == nil || len(headers) < 1 {
-		return headers, nil
+	if len(headers) < 1 {
+		return map[string][]string{}, nil
 	}
 
 	// Grab a read lock
