@@ -8,8 +8,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { overrideCapabilities } from 'vault/tests/helpers/oidc-config';
-import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { allowAllCapabilitiesStub, capabilitiesStub } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | oidc/client-list', function (hooks) {
   setupRenderingTest(hooks);
@@ -39,9 +38,9 @@ module('Integration | Component | oidc/client-list', function (hooks) {
     this.server.post('/sys/capabilities-self', (schema, req) => {
       const { paths } = JSON.parse(req.requestBody);
       if (paths[0] === 'identity/oidc/client/first-client') {
-        return overrideCapabilities('identity/oidc/client/first-client', ['read']);
+        return capabilitiesStub('identity/oidc/client/first-client', ['read']);
       } else {
-        return overrideCapabilities('identity/oidc/client/second-client', ['deny']);
+        return capabilitiesStub('identity/oidc/client/second-client', ['deny']);
       }
     });
     await render(hbs`<Oidc::ClientList @model={{this.model}} />`);
