@@ -64,7 +64,7 @@ module('Integration | Util | client count utils', function (hooks) {
 
     // instead of asserting the whole expected response, broken up so tests are easier to debug
     // but kept whole above to copy/paste updated response expectations in the future
-    const [expectedNoData, expectedWithActivity] = SERIALIZED_ACTIVITY_RESPONSE;
+    const [expectedNoData, expectedWithActivity] = SERIALIZED_ACTIVITY_RESPONSE.by_month;
     const { namespaces, new_clients } = expectedWithActivity;
 
     assert.propEqual(formattedNoData, expectedNoData, 'it formats months without data');
@@ -84,78 +84,8 @@ module('Integration | Util | client count utils', function (hooks) {
   test('formatByNamespace: formats namespace array with mounts', async function (assert) {
     assert.expect(3);
     const original = [...RESPONSE.by_namespace];
-    const expected = [
-      {
-        label: 'root',
-        clients: 5429,
-        entity_clients: 1033,
-        non_entity_clients: 1924,
-        secret_syncs: 2397,
-        acme_clients: 75,
-        mounts: [
-          {
-            acme_clients: 0,
-            clients: 2957,
-            entity_clients: 1033,
-            label: 'auth/authid0',
-            non_entity_clients: 1924,
-            secret_syncs: 0,
-          },
-          {
-            acme_clients: 0,
-            clients: 2397,
-            entity_clients: 0,
-            label: 'kvv2-engine-0',
-            non_entity_clients: 0,
-            secret_syncs: 2397,
-          },
-          {
-            acme_clients: 75,
-            clients: 75,
-            entity_clients: 0,
-            label: 'pki-engine-0',
-            non_entity_clients: 0,
-            secret_syncs: 0,
-          },
-        ],
-      },
-      {
-        label: 'ns/1',
-        clients: 2376,
-        entity_clients: 783,
-        non_entity_clients: 1193,
-        secret_syncs: 275,
-        acme_clients: 125,
-        mounts: [
-          {
-            label: 'auth/authid0',
-            clients: 1976,
-            entity_clients: 783,
-            non_entity_clients: 1193,
-            secret_syncs: 0,
-            acme_clients: 0,
-          },
-          {
-            label: 'kvv2-engine-0',
-            clients: 275,
-            entity_clients: 0,
-            non_entity_clients: 0,
-            secret_syncs: 275,
-            acme_clients: 0,
-          },
-          {
-            label: 'pki-engine-0',
-            acme_clients: 125,
-            clients: 125,
-            entity_clients: 0,
-            non_entity_clients: 0,
-            secret_syncs: 0,
-          },
-        ],
-      },
-    ];
     const [formattedRoot, formattedNs1] = formatByNamespace(RESPONSE.by_namespace);
-    const [root, ns1] = expected;
+    const [root, ns1] = SERIALIZED_ACTIVITY_RESPONSE.by_namespace;
 
     assert.propEqual(formattedRoot, root, 'it formats root namespace');
     assert.propEqual(formattedNs1, ns1, 'it formats ns1/ namespace');
@@ -220,8 +150,8 @@ module('Integration | Util | client count utils', function (hooks) {
 
   test('namespaceArrayToObject: it generates namespaces_by_key without modifying original', async function (assert) {
     assert.expect(3);
-    const { namespaces_by_key: expected } = SERIALIZED_ACTIVITY_RESPONSE[1];
 
+    // month at 0-index has no data so use second month in array
     const { namespaces, new_clients } = RESPONSE.months[1];
     const original = { ...RESPONSE.months[1] };
     const byNamespaceKeyObject = namespaceArrayToObject(
@@ -233,7 +163,7 @@ module('Integration | Util | client count utils', function (hooks) {
 
     assert.propEqual(
       byNamespaceKeyObject,
-      expected,
+      SERIALIZED_ACTIVITY_RESPONSE.by_month[1].namespaces_by_key,
       'it returns object with namespaces by key and includes mounts_by_key'
     );
     assert.propEqual(
