@@ -10,7 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { PKI_KEYS } from 'vault/tests/helpers/components/pki/page/pki-keys';
-import { STANDARD_META } from 'vault/tests/helpers/pki';
+import { STANDARD_META } from 'vault/tests/helpers/pagination';
 
 module('Integration | Component | pki key list page', function (hooks) {
   setupRenderingTest(hooks);
