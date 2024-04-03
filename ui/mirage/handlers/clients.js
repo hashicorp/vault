@@ -17,9 +17,14 @@ import {
   subMonths,
 } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-// add new types to this CLIENT_TYPES const and where comment "ADD NEW CLIENT TYPES HERE" is below
 import { CLIENT_TYPES } from 'core/utils/client-count-utils';
 
+/*
+HOW TO ADD NEW TYPES:
+1. add key to CLIENT_TYPES 
+2. Find "ADD NEW CLIENT TYPES HERE" comment below and generate mock counts for that key
+3. Add generateMounts() for that client type to the mounts array
+*/
 export const LICENSE_START = new Date('2023-07-02T00:00:00Z');
 export const STATIC_NOW = new Date('2024-01-25T23:59:59Z');
 const COUNTS_START = subMonths(STATIC_NOW, 12); // user started Vault cluster on 2023-01-25
@@ -48,6 +53,7 @@ function randomBetween(min, max) {
   return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
+// generates array of counts that add up to max
 function arrayOfCounts(max, arrayLength) {
   var result = [];
   var sum = 0;
@@ -88,11 +94,11 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
     mounts: {},
   };
 
-  // *ADD NEW CLIENT TYPES HERE and spread to the mounts array below
+  // * ADD NEW CLIENT TYPES HERE and spread to the mounts array below
   const authClients = randomBetween(min, max);
   const [non_entity_clients, entity_clients] = arrayOfCounts(authClients, 2);
-  const [secret_syncs] = arrayOfCounts(randomBetween(min, max), 1);
-  const [acme_clients] = arrayOfCounts(randomBetween(min, max), 1);
+  const secret_syncs = randomBetween(min, max);
+  const acme_clients = randomBetween(min, max);
 
   // each mount type generates a different type of client
   const mounts = [
