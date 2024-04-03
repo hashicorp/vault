@@ -7,7 +7,6 @@ import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import {
   filterVersionHistory,
-  flattenDataset,
   formatByMonths,
   formatByNamespace,
   homogenizeClientNaming,
@@ -15,587 +14,278 @@ import {
   sortMonthsByTimestamp,
 } from 'core/utils/client-count-utils';
 import { LICENSE_START } from 'vault/mirage/handlers/clients';
-import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { addMonths, isAfter, isBefore } from 'date-fns';
+import { addMonths } from 'date-fns';
 
-const MONTHS = [
-  {
-    timestamp: '2021-05-01T00:00:00Z',
-    counts: {
-      distinct_entities: 25,
-      non_entity_tokens: 25,
-      clients: 50,
-    },
-    namespaces: [
-      {
-        namespace_id: 'root',
-        namespace_path: '',
-        counts: {
-          distinct_entities: 13,
-          non_entity_tokens: 7,
-          clients: 20,
-        },
-        mounts: [
-          {
-            mount_path: 'auth/up2/',
-            counts: {
-              distinct_entities: 8,
-              non_entity_tokens: 0,
-              clients: 8,
-            },
-          },
-          {
-            mount_path: 'auth/up1/',
-            counts: {
-              distinct_entities: 0,
-              non_entity_tokens: 7,
-              clients: 7,
-            },
-          },
-        ],
-      },
-      {
-        namespace_id: 's07UR',
-        namespace_path: 'ns1/',
-        counts: {
-          distinct_entities: 5,
-          non_entity_tokens: 5,
-          clients: 10,
-        },
-        mounts: [
-          {
-            mount_path: 'auth/up1/',
-            counts: {
-              distinct_entities: 0,
-              non_entity_tokens: 5,
-              clients: 5,
-            },
-          },
-          {
-            mount_path: 'auth/up2/',
-            counts: {
-              distinct_entities: 5,
-              non_entity_tokens: 0,
-              clients: 5,
-            },
-          },
-        ],
-      },
-    ],
-    new_clients: {
+const RESPONSE = {
+  start_time: '2023-08-01T00:00:00.000Z',
+  end_time: '2023-09-30T00:00:00.000Z',
+  by_namespace: [
+    {
+      namespace_id: 'root',
+      namespace_path: '',
       counts: {
-        distinct_entities: 3,
-        non_entity_tokens: 2,
-        clients: 5,
+        distinct_entities: 1033,
+        entity_clients: 1033,
+        non_entity_tokens: 1924,
+        non_entity_clients: 1924,
+        secret_syncs: 2397,
+        clients: 5354,
+      },
+      mounts: [
+        {
+          mount_path: 'auth/authid0',
+          counts: {
+            clients: 2957,
+            entity_clients: 1033,
+            non_entity_clients: 1924,
+            distinct_entities: 1033,
+            non_entity_tokens: 1924,
+            secret_syncs: 0,
+          },
+        },
+        {
+          mount_path: 'kvv2-engine-0',
+          counts: {
+            clients: 2397,
+            entity_clients: 0,
+            non_entity_clients: 0,
+            distinct_entities: 0,
+            non_entity_tokens: 0,
+            secret_syncs: 2397,
+          },
+        },
+      ],
+    },
+    {
+      namespace_id: '81ry61',
+      namespace_path: 'ns/1',
+      counts: {
+        distinct_entities: 783,
+        entity_clients: 783,
+        non_entity_tokens: 1193,
+        non_entity_clients: 1193,
+        secret_syncs: 275,
+        clients: 2251,
+      },
+      mounts: [
+        {
+          mount_path: 'auth/authid0',
+          counts: {
+            clients: 1976,
+            entity_clients: 783,
+            non_entity_clients: 1193,
+            distinct_entities: 783,
+            non_entity_tokens: 1193,
+            secret_syncs: 0,
+          },
+        },
+        {
+          mount_path: 'kvv2-engine-0',
+          counts: {
+            clients: 275,
+            entity_clients: 0,
+            non_entity_clients: 0,
+            distinct_entities: 0,
+            non_entity_tokens: 0,
+            secret_syncs: 275,
+          },
+        },
+      ],
+    },
+  ],
+  months: [
+    {
+      timestamp: '2023-08-01T00:00:00-07:00',
+      counts: null,
+      namespaces: null,
+      new_clients: null,
+    },
+    {
+      timestamp: '2023-09-01T00:00:00-07:00',
+      counts: {
+        distinct_entities: 1329,
+        entity_clients: 1329,
+        non_entity_tokens: 1738,
+        non_entity_clients: 1738,
+        secret_syncs: 5525,
+        clients: 8592,
       },
       namespaces: [
         {
           namespace_id: 'root',
           namespace_path: '',
           counts: {
-            distinct_entities: 3,
-            non_entity_tokens: 2,
-            clients: 5,
+            distinct_entities: 1279,
+            entity_clients: 1279,
+            non_entity_tokens: 1598,
+            non_entity_clients: 1598,
+            secret_syncs: 2755,
+            clients: 5632,
           },
           mounts: [
             {
-              mount_path: 'auth/up2/',
+              mount_path: 'auth/authid0',
               counts: {
-                distinct_entities: 3,
-                non_entity_tokens: 0,
-                clients: 3,
+                clients: 2877,
+                entity_clients: 1279,
+                non_entity_clients: 1598,
+                distinct_entities: 1279,
+                non_entity_tokens: 1598,
+                secret_syncs: 0,
               },
             },
             {
-              mount_path: 'auth/up1/',
+              mount_path: 'kvv2-engine-0',
               counts: {
+                clients: 2755,
+                entity_clients: 0,
+                non_entity_clients: 0,
                 distinct_entities: 0,
-                non_entity_tokens: 2,
-                clients: 2,
+                non_entity_tokens: 0,
+                secret_syncs: 2755,
+              },
+            },
+          ],
+        },
+        {
+          namespace_id: '81ry61',
+          namespace_path: 'ns/1',
+          counts: {
+            distinct_entities: 50,
+            entity_clients: 50,
+            non_entity_tokens: 140,
+            non_entity_clients: 140,
+            secret_syncs: 2770,
+            clients: 2960,
+          },
+          mounts: [
+            {
+              mount_path: 'kvv2-engine-0',
+              counts: {
+                clients: 2770,
+                entity_clients: 0,
+                non_entity_clients: 0,
+                distinct_entities: 0,
+                non_entity_tokens: 0,
+                secret_syncs: 2770,
+              },
+            },
+            {
+              mount_path: 'auth/authid0',
+              counts: {
+                clients: 190,
+                entity_clients: 50,
+                non_entity_clients: 140,
+                distinct_entities: 50,
+                non_entity_tokens: 140,
+                secret_syncs: 0,
               },
             },
           ],
         },
       ],
-    },
-  },
-  {
-    timestamp: '2021-10-01T00:00:00Z',
-    counts: {
-      distinct_entities: 20,
-      entity_clients: 20,
-      non_entity_tokens: 20,
-      non_entity_clients: 20,
-      clients: 40,
-    },
-    namespaces: [
-      {
-        namespace_id: 'root',
-        namespace_path: '',
+      new_clients: {
         counts: {
-          distinct_entities: 8,
-          entity_clients: 8,
-          non_entity_tokens: 7,
-          non_entity_clients: 7,
-          clients: 15,
+          distinct_entities: 39,
+          entity_clients: 39,
+          non_entity_tokens: 81,
+          non_entity_clients: 81,
+          secret_syncs: 166,
+          clients: 286,
         },
-        mounts: [
+        namespaces: [
           {
-            mount_path: 'auth/up2/',
+            namespace_id: '81ry61',
+            namespace_path: 'ns/1',
             counts: {
-              distinct_entities: 8,
-              entity_clients: 8,
-              non_entity_tokens: 0,
-              non_entity_clients: 0,
-              clients: 8,
+              distinct_entities: 30,
+              entity_clients: 30,
+              non_entity_tokens: 62,
+              non_entity_clients: 62,
+              secret_syncs: 100,
+              clients: 192,
             },
+            mounts: [
+              {
+                mount_path: 'kvv2-engine-0',
+                counts: {
+                  clients: 100,
+                  entity_clients: 0,
+                  non_entity_clients: 0,
+                  distinct_entities: 0,
+                  non_entity_tokens: 0,
+                  secret_syncs: 100,
+                },
+              },
+              {
+                mount_path: 'auth/authid0',
+                counts: {
+                  clients: 92,
+                  entity_clients: 30,
+                  non_entity_clients: 62,
+                  distinct_entities: 30,
+                  non_entity_tokens: 62,
+                  secret_syncs: 0,
+                },
+              },
+            ],
           },
           {
-            mount_path: 'auth/up1/',
+            namespace_id: 'root',
+            namespace_path: '',
             counts: {
-              distinct_entities: 0,
-              entity_clients: 0,
-              non_entity_tokens: 7,
-              non_entity_clients: 7,
-              clients: 7,
+              distinct_entities: 9,
+              entity_clients: 9,
+              non_entity_tokens: 19,
+              non_entity_clients: 19,
+              secret_syncs: 66,
+              clients: 94,
             },
+            mounts: [
+              {
+                mount_path: 'kvv2-engine-0',
+                counts: {
+                  clients: 66,
+                  entity_clients: 0,
+                  non_entity_clients: 0,
+                  distinct_entities: 0,
+                  non_entity_tokens: 0,
+                  secret_syncs: 66,
+                },
+              },
+              {
+                mount_path: 'auth/authid0',
+                counts: {
+                  clients: 28,
+                  entity_clients: 9,
+                  non_entity_clients: 19,
+                  distinct_entities: 9,
+                  non_entity_tokens: 19,
+                  secret_syncs: 0,
+                },
+              },
+            ],
           },
         ],
       },
-      {
-        namespace_id: 's07UR',
-        namespace_path: 'ns1/',
-        counts: {
-          distinct_entities: 5,
-          entity_clients: 5,
-          non_entity_tokens: 5,
-          non_entity_clients: 5,
-          clients: 10,
-        },
-        mounts: [
-          {
-            mount_path: 'auth/up1/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 0,
-              non_entity_tokens: 5,
-              non_entity_clients: 5,
-              clients: 5,
-            },
-          },
-          {
-            mount_path: 'auth/up2/',
-            counts: {
-              distinct_entities: 5,
-              entity_clients: 5,
-              non_entity_tokens: 0,
-              non_entity_clients: 0,
-              clients: 5,
-            },
-          },
-        ],
-      },
-    ],
-    new_clients: {
-      counts: {
-        distinct_entities: 3,
-        entity_clients: 3,
-        non_entity_tokens: 2,
-        non_entity_clients: 2,
-        clients: 5,
-      },
-      namespaces: [
-        {
-          namespace_id: 'root',
-          namespace_path: '',
-          counts: {
-            distinct_entities: 3,
-            entity_clients: 3,
-            non_entity_tokens: 2,
-            non_entity_clients: 2,
-            clients: 5,
-          },
-          mounts: [
-            {
-              mount_path: 'auth/up2/',
-              counts: {
-                distinct_entities: 3,
-                entity_clients: 3,
-                non_entity_tokens: 0,
-                non_entity_clients: 0,
-                clients: 3,
-              },
-            },
-            {
-              mount_path: 'auth/up1/',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 0,
-                non_entity_tokens: 2,
-                non_entity_clients: 2,
-                clients: 2,
-              },
-            },
-          ],
-        },
-      ],
     },
+  ],
+  total: {
+    distinct_entities: 1816,
+    entity_clients: 1816,
+    non_entity_tokens: 3117,
+    non_entity_clients: 3117,
+    secret_syncs: 2672,
+    clients: 7605,
   },
-  {
-    timestamp: '2021-09-01T00:00:00Z',
-    counts: {
-      distinct_entities: 0,
-      entity_clients: 17,
-      non_entity_tokens: 0,
-      non_entity_clients: 18,
-      clients: 35,
-    },
-    namespaces: [
-      {
-        namespace_id: 'oImjk',
-        namespace_path: 'ns2/',
-        counts: {
-          distinct_entities: 0,
-          entity_clients: 5,
-          non_entity_tokens: 0,
-          non_entity_clients: 5,
-          clients: 10,
-        },
-        mounts: [
-          {
-            mount_path: 'auth/up1/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 0,
-              non_entity_tokens: 0,
-              non_entity_clients: 5,
-              clients: 5,
-            },
-          },
-          {
-            mount_path: 'auth/up2/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 5,
-              non_entity_tokens: 0,
-              non_entity_clients: 0,
-              clients: 5,
-            },
-          },
-        ],
-      },
-      {
-        namespace_id: 'root',
-        namespace_path: '',
-        counts: {
-          distinct_entities: 0,
-          entity_clients: 2,
-          non_entity_tokens: 0,
-          non_entity_clients: 3,
-          clients: 5,
-        },
-        mounts: [
-          {
-            mount_path: 'auth/up1/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 0,
-              non_entity_tokens: 0,
-              non_entity_clients: 3,
-              clients: 3,
-            },
-          },
-          {
-            mount_path: 'auth/up2/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 2,
-              non_entity_tokens: 0,
-              non_entity_clients: 0,
-              clients: 2,
-            },
-          },
-        ],
-      },
-      {
-        namespace_id: 's07UR',
-        namespace_path: 'ns1/',
-        counts: {
-          distinct_entities: 0,
-          entity_clients: 3,
-          non_entity_tokens: 0,
-          non_entity_clients: 2,
-          clients: 5,
-        },
-        mounts: [
-          {
-            mount_path: 'auth/up2/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 3,
-              non_entity_tokens: 0,
-              non_entity_clients: 0,
-              clients: 3,
-            },
-          },
-          {
-            mount_path: 'auth/up1/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 0,
-              non_entity_tokens: 0,
-              non_entity_clients: 2,
-              clients: 2,
-            },
-          },
-        ],
-      },
-    ],
-    new_clients: {
-      counts: {
-        distinct_entities: 0,
-        entity_clients: 10,
-        non_entity_tokens: 0,
-        non_entity_clients: 10,
-        clients: 20,
-      },
-      namespaces: [
-        {
-          namespace_id: 'oImjk',
-          namespace_path: 'ns2/',
-          counts: {
-            distinct_entities: 0,
-            entity_clients: 5,
-            non_entity_tokens: 0,
-            non_entity_clients: 5,
-            clients: 10,
-          },
-          mounts: [
-            {
-              mount_path: 'auth/up1/',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 0,
-                non_entity_tokens: 0,
-                non_entity_clients: 5,
-                clients: 5,
-              },
-            },
-            {
-              mount_path: 'auth/up2/',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 5,
-                non_entity_tokens: 0,
-                non_entity_clients: 0,
-                clients: 5,
-              },
-            },
-          ],
-        },
-        {
-          namespace_id: 'root',
-          namespace_path: '',
-          counts: {
-            distinct_entities: 0,
-            entity_clients: 2,
-            non_entity_tokens: 0,
-            non_entity_clients: 3,
-            clients: 5,
-          },
-          mounts: [
-            {
-              mount_path: 'auth/up1/',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 0,
-                non_entity_tokens: 0,
-                non_entity_clients: 3,
-                clients: 3,
-              },
-            },
-            {
-              mount_path: 'auth/up2/',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 2,
-                non_entity_tokens: 0,
-                non_entity_clients: 0,
-                clients: 2,
-              },
-            },
-          ],
-        },
-        {
-          namespace_id: 's07UR',
-          namespace_path: 'ns1/',
-          counts: {
-            distinct_entities: 0,
-            entity_clients: 3,
-            non_entity_tokens: 0,
-            non_entity_clients: 2,
-            clients: 5,
-          },
-          mounts: [
-            {
-              mount_path: 'auth/up2/',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 3,
-                non_entity_tokens: 0,
-                non_entity_clients: 0,
-                clients: 3,
-              },
-            },
-            {
-              mount_path: 'auth/up1/',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 0,
-                non_entity_tokens: 0,
-                non_entity_clients: 2,
-                clients: 2,
-              },
-            },
-          ],
-        },
-      ],
-    },
-  },
-];
-
-const BY_NAMESPACE = [
-  {
-    namespace_id: '96OwG',
-    namespace_path: 'test-ns/',
-    counts: {
-      distinct_entities: 18290,
-      entity_clients: 18290,
-      non_entity_tokens: 18738,
-      non_entity_clients: 18738,
-      clients: 37028,
-    },
-    mounts: [
-      {
-        mount_path: 'path-1',
-        counts: {
-          distinct_entities: 6403,
-          entity_clients: 6403,
-          non_entity_tokens: 6300,
-          non_entity_clients: 6300,
-          clients: 12703,
-        },
-      },
-      {
-        mount_path: 'path-2',
-        counts: {
-          distinct_entities: 5699,
-          entity_clients: 5699,
-          non_entity_tokens: 6777,
-          non_entity_clients: 6777,
-          clients: 12476,
-        },
-      },
-      {
-        mount_path: 'path-3',
-        counts: {
-          distinct_entities: 6188,
-          entity_clients: 6188,
-          non_entity_tokens: 5661,
-          non_entity_clients: 5661,
-          clients: 11849,
-        },
-      },
-    ],
-  },
-  {
-    namespace_id: 'root',
-    namespace_path: '',
-    counts: {
-      distinct_entities: 19099,
-      entity_clients: 19099,
-      non_entity_tokens: 17781,
-      non_entity_clients: 17781,
-      clients: 36880,
-    },
-    mounts: [
-      {
-        mount_path: 'path-3',
-        counts: {
-          distinct_entities: 6863,
-          entity_clients: 6863,
-          non_entity_tokens: 6801,
-          non_entity_clients: 6801,
-          clients: 13664,
-        },
-      },
-      {
-        mount_path: 'path-2',
-        counts: {
-          distinct_entities: 6047,
-          entity_clients: 6047,
-          non_entity_tokens: 5957,
-          non_entity_clients: 5957,
-          clients: 12004,
-        },
-      },
-      {
-        mount_path: 'path-1',
-        counts: {
-          distinct_entities: 6189,
-          entity_clients: 6189,
-          non_entity_tokens: 5023,
-          non_entity_clients: 5023,
-          clients: 11212,
-        },
-      },
-      {
-        mount_path: 'auth/up2/',
-        counts: {
-          distinct_entities: 0,
-          entity_clients: 50,
-          non_entity_tokens: 0,
-          non_entity_clients: 23,
-          clients: 73,
-        },
-      },
-      {
-        mount_path: 'auth/up1/',
-        counts: {
-          distinct_entities: 0,
-          entity_clients: 25,
-          non_entity_tokens: 0,
-          non_entity_clients: 15,
-          clients: 40,
-        },
-      },
-    ],
-  },
-];
-
-const EMPTY_MONTHS = [
-  {
-    timestamp: '2021-06-01T00:00:00Z',
-    counts: null,
-    namespaces: null,
-    new_clients: null,
-  },
-  {
-    timestamp: '2021-07-01T00:00:00Z',
-    counts: null,
-    namespaces: null,
-    new_clients: null,
-  },
-];
-
-const SOME_OBJECT = { foo: 'bar' };
+};
 
 module('Integration | Util | client count utils', function (hooks) {
   setupTest(hooks);
 
-  test('filterVersionHistory: returns version data that occurred during activity date range', async function (assert) {
-    assert.expect(1);
-    // LICENSE_START: '2023-07-02T00:00:00Z'
+  test('filterVersionHistory: returns version data for relevant upgrades that occurred during date range', async function (assert) {
+    assert.expect(2);
+    // LICENSE_START is '2023-07-02T00:00:00Z'
     const versionHistory = [
       {
         version: '1.9.0',
@@ -623,6 +313,7 @@ module('Integration | Util | client count utils', function (hooks) {
         timestampInstalled: addMonths(LICENSE_START, 4).toISOString(),
       },
     ];
+    const original = [...versionHistory];
     const expected = [
       {
         previousVersion: null,
@@ -635,334 +326,525 @@ module('Integration | Util | client count utils', function (hooks) {
         version: '1.10.1',
       },
     ];
-    const activity = {
-      startTime: '2023-07-02T00:00:00Z', // same as license start to catch same day edge cases
-      endTime: '2024-03-04T16:14:21.000Z',
-    };
+
+    const startTime = LICENSE_START.toISOString(); // same as license start to catch same day edge cases
+    const endTime = '2024-03-04T16:14:21.000Z';
     assert.propEqual(
-      filterVersionHistory(versionHistory, activity.startTime, activity.endTime),
+      filterVersionHistory(versionHistory, startTime, endTime),
       expected,
-      'it returns only upgrades that happened between given start and end times.'
+      'it only returns upgrades between given start and end times'
     );
+    assert.propEqual(versionHistory, original, 'it does not modify original array');
   });
 
   test('formatByMonths: formats the months array', async function (assert) {
-    assert.expect(103);
-    const keyNameAssertions = (object, objectName) => {
-      const objectKeys = Object.keys(object);
-      assert.false(objectKeys.includes('counts'), `${objectName} doesn't include 'counts' key`);
-      assert.true(objectKeys.includes('clients'), `${objectName} includes 'clients' key`);
-      assert.true(objectKeys.includes('entity_clients'), `${objectName} includes 'entity_clients' key`);
-      assert.true(
-        objectKeys.includes('non_entity_clients'),
-        `${objectName} includes 'non_entity_clients' key`
-      );
-    };
-    const assertClientCounts = (object, originalObject) => {
-      const newObjectKeys = ['clients', 'entity_clients', 'non_entity_clients'];
-      const originalKeys = Object.keys(originalObject.counts).includes('entity_clients')
-        ? newObjectKeys
-        : ['clients', 'distinct_entities', 'non_entity_tokens'];
-
-      newObjectKeys.forEach((key, i) => {
-        assert.strictEqual(
-          object[key],
-          originalObject.counts[originalKeys[i]],
-          `${object.month} ${key} equal original counts`
-        );
-      });
-    };
-
-    const formattedMonths = formatByMonths(MONTHS);
-    assert.notEqual(formattedMonths, MONTHS, 'does not modify original array');
-
-    formattedMonths.forEach((month) => {
-      const originalMonth = MONTHS.find((m) => month.month === parseAPITimestamp(m.timestamp, 'M/yy'));
-      // if originalMonth is found (not undefined) then the formatted month has an accurate, parsed timestamp
-      assert.ok(originalMonth, `month has parsed timestamp of ${month.month}`);
-      assert.ok(month.namespaces_by_key, `month includes 'namespaces_by_key' key`);
-
-      keyNameAssertions(month, 'formatted month');
-      assertClientCounts(month, originalMonth);
-
-      assert.ok(month.new_clients.month, 'new clients key has a month key');
-      keyNameAssertions(month.new_clients, 'formatted month new_clients');
-      assertClientCounts(month.new_clients, originalMonth.new_clients);
-
-      month.namespaces.forEach((namespace) => keyNameAssertions(namespace, 'namespace within month'));
-      month.new_clients.namespaces.forEach((namespace) =>
-        keyNameAssertions(namespace, 'new client namespaces within month')
-      );
-    });
-
-    // method fails gracefully
+    assert.expect(2);
+    const original = [...RESPONSE.months];
     const expected = [
       {
+        month: '8/23',
+        timestamp: '2023-08-01T00:00:00-07:00',
         counts: null,
-        month: '6/21',
         namespaces: [],
-        namespaces_by_key: {},
         new_clients: {
-          month: '6/21',
+          month: '8/23',
+          timestamp: '2023-08-01T00:00:00-07:00',
           namespaces: [],
-          timestamp: '2021-06-01T00:00:00Z',
         },
-        timestamp: '2021-06-01T00:00:00Z',
+        namespaces_by_key: {},
       },
       {
-        counts: null,
-        month: '7/21',
-        namespaces: [],
-        namespaces_by_key: {},
-        new_clients: {
-          month: '7/21',
-          namespaces: [],
-          timestamp: '2021-07-01T00:00:00Z',
+        month: '9/23',
+        timestamp: '2023-09-01T00:00:00-07:00',
+        clients: 8592,
+        entity_clients: 1329,
+        non_entity_clients: 1738,
+        secret_syncs: 5525,
+        namespaces: [
+          {
+            label: 'root',
+            clients: 5632,
+            entity_clients: 1279,
+            non_entity_clients: 1598,
+            secret_syncs: 2755,
+            mounts: [
+              {
+                label: 'auth/authid0',
+                clients: 2877,
+                entity_clients: 1279,
+                non_entity_clients: 1598,
+                secret_syncs: 0,
+              },
+              {
+                label: 'kvv2-engine-0',
+                clients: 2755,
+                entity_clients: 0,
+                non_entity_clients: 0,
+                secret_syncs: 2755,
+              },
+            ],
+          },
+          {
+            label: 'ns/1',
+            clients: 2960,
+            entity_clients: 50,
+            non_entity_clients: 140,
+            secret_syncs: 2770,
+            mounts: [
+              {
+                label: 'kvv2-engine-0',
+                clients: 2770,
+                entity_clients: 0,
+                non_entity_clients: 0,
+                secret_syncs: 2770,
+              },
+              {
+                label: 'auth/authid0',
+                clients: 190,
+                entity_clients: 50,
+                non_entity_clients: 140,
+                secret_syncs: 0,
+              },
+            ],
+          },
+        ],
+        namespaces_by_key: {
+          root: {
+            month: '9/23',
+            timestamp: '2023-09-01T00:00:00-07:00',
+            clients: 5632,
+            entity_clients: 1279,
+            non_entity_clients: 1598,
+            secret_syncs: 2755,
+            new_clients: {
+              month: '9/23',
+              label: 'root',
+              clients: 94,
+              entity_clients: 9,
+              non_entity_clients: 19,
+              secret_syncs: 66,
+              mounts: [
+                {
+                  label: 'kvv2-engine-0',
+                  clients: 66,
+                  entity_clients: 0,
+                  non_entity_clients: 0,
+                  secret_syncs: 66,
+                },
+                {
+                  label: 'auth/authid0',
+                  clients: 28,
+                  entity_clients: 9,
+                  non_entity_clients: 19,
+                  secret_syncs: 0,
+                },
+              ],
+            },
+            mounts_by_key: {
+              'auth/authid0': {
+                month: '9/23',
+                timestamp: '2023-09-01T00:00:00-07:00',
+                label: 'auth/authid0',
+                clients: 2877,
+                entity_clients: 1279,
+                non_entity_clients: 1598,
+                secret_syncs: 0,
+                new_clients: {
+                  month: '9/23',
+                  label: 'auth/authid0',
+                  clients: 28,
+                  entity_clients: 9,
+                  non_entity_clients: 19,
+                  secret_syncs: 0,
+                },
+              },
+              'kvv2-engine-0': {
+                month: '9/23',
+                timestamp: '2023-09-01T00:00:00-07:00',
+                label: 'kvv2-engine-0',
+                clients: 2755,
+                entity_clients: 0,
+                non_entity_clients: 0,
+                secret_syncs: 2755,
+                new_clients: {
+                  month: '9/23',
+                  label: 'kvv2-engine-0',
+                  clients: 66,
+                  entity_clients: 0,
+                  non_entity_clients: 0,
+                  secret_syncs: 66,
+                },
+              },
+            },
+          },
+          'ns/1': {
+            month: '9/23',
+            timestamp: '2023-09-01T00:00:00-07:00',
+            clients: 2960,
+            entity_clients: 50,
+            non_entity_clients: 140,
+            secret_syncs: 2770,
+            new_clients: {
+              month: '9/23',
+              label: 'ns/1',
+              clients: 192,
+              entity_clients: 30,
+              non_entity_clients: 62,
+              secret_syncs: 100,
+              mounts: [
+                {
+                  label: 'kvv2-engine-0',
+                  clients: 100,
+                  entity_clients: 0,
+                  non_entity_clients: 0,
+                  secret_syncs: 100,
+                },
+                {
+                  label: 'auth/authid0',
+                  clients: 92,
+                  entity_clients: 30,
+                  non_entity_clients: 62,
+                  secret_syncs: 0,
+                },
+              ],
+            },
+            mounts_by_key: {
+              'kvv2-engine-0': {
+                month: '9/23',
+                timestamp: '2023-09-01T00:00:00-07:00',
+                label: 'kvv2-engine-0',
+                clients: 2770,
+                entity_clients: 0,
+                non_entity_clients: 0,
+                secret_syncs: 2770,
+                new_clients: {
+                  month: '9/23',
+                  label: 'kvv2-engine-0',
+                  clients: 100,
+                  entity_clients: 0,
+                  non_entity_clients: 0,
+                  secret_syncs: 100,
+                },
+              },
+              'auth/authid0': {
+                month: '9/23',
+                timestamp: '2023-09-01T00:00:00-07:00',
+                label: 'auth/authid0',
+                clients: 190,
+                entity_clients: 50,
+                non_entity_clients: 140,
+                secret_syncs: 0,
+                new_clients: {
+                  month: '9/23',
+                  label: 'auth/authid0',
+                  clients: 92,
+                  entity_clients: 30,
+                  non_entity_clients: 62,
+                  secret_syncs: 0,
+                },
+              },
+            },
+          },
         },
-        timestamp: '2021-07-01T00:00:00Z',
+        new_clients: {
+          month: '9/23',
+          timestamp: '2023-09-01T00:00:00-07:00',
+          clients: 286,
+          entity_clients: 39,
+          non_entity_clients: 81,
+          secret_syncs: 166,
+          namespaces: [
+            {
+              label: 'ns/1',
+              clients: 192,
+              entity_clients: 30,
+              non_entity_clients: 62,
+              secret_syncs: 100,
+              mounts: [
+                {
+                  label: 'kvv2-engine-0',
+                  clients: 100,
+                  entity_clients: 0,
+                  non_entity_clients: 0,
+                  secret_syncs: 100,
+                },
+                {
+                  label: 'auth/authid0',
+                  clients: 92,
+                  entity_clients: 30,
+                  non_entity_clients: 62,
+                  secret_syncs: 0,
+                },
+              ],
+            },
+            {
+              label: 'root',
+              clients: 94,
+              entity_clients: 9,
+              non_entity_clients: 19,
+              secret_syncs: 66,
+              mounts: [
+                {
+                  label: 'kvv2-engine-0',
+                  clients: 66,
+                  entity_clients: 0,
+                  non_entity_clients: 0,
+                  secret_syncs: 66,
+                },
+                {
+                  label: 'auth/authid0',
+                  clients: 28,
+                  entity_clients: 9,
+                  non_entity_clients: 19,
+                  secret_syncs: 0,
+                },
+              ],
+            },
+          ],
+        },
       },
     ];
-    assert.strictEqual(formatByMonths(SOME_OBJECT), SOME_OBJECT, 'it returns if arg is not an array');
-    assert.propEqual(formatByMonths(EMPTY_MONTHS), expected, 'it does not error with null months');
-    assert.ok(formatByMonths([...EMPTY_MONTHS, ...MONTHS]), 'it does not error with combined data');
+
+    assert.propEqual(formatByMonths(RESPONSE.months), expected);
+    assert.propEqual(RESPONSE.months, original, 'it does not modify original months array');
   });
 
   test('formatByNamespace: formats namespace arrays with and without mounts', async function (assert) {
-    assert.expect(102);
-    const keyNameAssertions = (object, objectName) => {
-      const objectKeys = Object.keys(object);
-      assert.false(objectKeys.includes('counts'), `${objectName} doesn't include 'counts' key`);
-      assert.true(objectKeys.includes('label'), `${objectName} includes 'label' key`);
-      assert.true(objectKeys.includes('clients'), `${objectName} includes 'clients' key`);
-      assert.true(objectKeys.includes('entity_clients'), `${objectName} includes 'entity_clients' key`);
-      assert.true(
-        objectKeys.includes('non_entity_clients'),
-        `${objectName} includes 'non_entity_clients' key`
-      );
-    };
-    const keyValueAssertions = (object, pathName, originalObject) => {
-      const keysToAssert = ['clients', 'entity_clients', 'non_entity_clients'];
-      assert.strictEqual(object.label, originalObject[pathName], `${pathName} matches label`);
-
-      keysToAssert.forEach((key) => {
-        assert.strictEqual(object[key], originalObject.counts[key], `number of ${key} equal original`);
-      });
-    };
-
-    const formattedNamespaces = formatByNamespace(BY_NAMESPACE);
-    assert.notEqual(formattedNamespaces, MONTHS, 'does not modify original array');
-
-    formattedNamespaces.forEach((namespace) => {
-      const origNamespace = BY_NAMESPACE.find((ns) => ns.namespace_path === namespace.label);
-      keyNameAssertions(namespace, 'formatted namespace');
-      keyValueAssertions(namespace, 'namespace_path', origNamespace);
-
-      namespace.mounts.forEach((mount) => {
-        const origMount = origNamespace.mounts.find((m) => m.mount_path === mount.label);
-        keyNameAssertions(mount, 'formatted mount');
-        keyValueAssertions(mount, 'mount_path', origMount);
-      });
-    });
-
-    const nsWithoutMounts = {
-      namespace_id: '96OwG',
-      namespace_path: 'no-mounts-ns/',
-      counts: {
-        distinct_entities: 18290,
-        entity_clients: 18290,
-        non_entity_tokens: 18738,
-        non_entity_clients: 18738,
-        clients: 37028,
+    assert.expect(2);
+    const original = [...RESPONSE.by_namespace];
+    const expected = [
+      {
+        clients: 5354,
+        entity_clients: 1033,
+        label: 'root',
+        mounts: [
+          {
+            clients: 2957,
+            entity_clients: 1033,
+            label: 'auth/authid0',
+            non_entity_clients: 1924,
+            secret_syncs: 0,
+          },
+          {
+            clients: 2397,
+            entity_clients: 0,
+            label: 'kvv2-engine-0',
+            non_entity_clients: 0,
+            secret_syncs: 2397,
+          },
+        ],
+        non_entity_clients: 1924,
+        secret_syncs: 2397,
       },
-      mounts: [],
-    };
-
-    const formattedNsWithoutMounts = formatByNamespace([nsWithoutMounts])[0];
-    keyNameAssertions(formattedNsWithoutMounts, 'namespace without mounts');
-    keyValueAssertions(formattedNsWithoutMounts, 'namespace_path', nsWithoutMounts);
-    assert.strictEqual(formattedNsWithoutMounts.mounts.length, 0, 'formatted namespace has no mounts');
-
-    assert.strictEqual(formatByNamespace(SOME_OBJECT), SOME_OBJECT, 'it returns if arg is not an array');
+      {
+        clients: 2251,
+        entity_clients: 783,
+        label: 'ns/1',
+        mounts: [
+          {
+            clients: 1976,
+            entity_clients: 783,
+            label: 'auth/authid0',
+            non_entity_clients: 1193,
+            secret_syncs: 0,
+          },
+          {
+            clients: 275,
+            entity_clients: 0,
+            label: 'kvv2-engine-0',
+            non_entity_clients: 0,
+            secret_syncs: 275,
+          },
+        ],
+        non_entity_clients: 1193,
+        secret_syncs: 275,
+      },
+    ];
+    assert.propEqual(formatByNamespace(RESPONSE.by_namespace), expected);
+    assert.propEqual(RESPONSE.by_namespace, original, 'it does not modify original by_namespace array');
   });
 
   test('homogenizeClientNaming: homogenizes key names when both old and new keys exist, or just old key names', async function (assert) {
-    assert.expect(168);
-    const keyNameAssertions = (object, objectName) => {
-      const objectKeys = Object.keys(object);
-      assert.false(
-        objectKeys.includes('distinct_entities'),
-        `${objectName} doesn't include 'distinct_entities' key`
-      );
-      assert.false(
-        objectKeys.includes('non_entity_tokens'),
-        `${objectName} doesn't include 'non_entity_tokens' key`
-      );
-      assert.true(objectKeys.includes('entity_clients'), `${objectName} includes 'entity_clients' key`);
-      assert.true(
-        objectKeys.includes('non_entity_clients'),
-        `${objectName} includes 'non_entity_clients' key`
-      );
+    assert.expect(2);
+    const original = { ...RESPONSE.total };
+    const expected = {
+      entity_clients: 1816,
+      non_entity_clients: 3117,
+      secret_syncs: 2672,
+      clients: 7605,
     };
-
-    const transformedMonths = [...MONTHS];
-    transformedMonths.forEach((month) => {
-      month.counts = homogenizeClientNaming(month.counts);
-      keyNameAssertions(month.counts, 'month counts');
-
-      month.new_clients.counts = homogenizeClientNaming(month.new_clients.counts);
-      keyNameAssertions(month.new_clients.counts, 'month new counts');
-
-      month.namespaces.forEach((ns) => {
-        ns.counts = homogenizeClientNaming(ns.counts);
-        keyNameAssertions(ns.counts, 'namespace counts');
-
-        ns.mounts.forEach((mount) => {
-          mount.counts = homogenizeClientNaming(mount.counts);
-          keyNameAssertions(mount.counts, 'mount counts');
-        });
-      });
-
-      month.new_clients.namespaces.forEach((ns) => {
-        ns.counts = homogenizeClientNaming(ns.counts);
-        keyNameAssertions(ns.counts, 'namespace new counts');
-
-        ns.mounts.forEach((mount) => {
-          mount.counts = homogenizeClientNaming(mount.counts);
-          keyNameAssertions(mount.counts, 'mount new counts');
-        });
-      });
-    });
-  });
-
-  test('flattenDataset: removes the counts key and flattens the dataset', async function (assert) {
-    assert.expect(22);
-    const flattenedNamespace = flattenDataset(BY_NAMESPACE[0]);
-    const flattenedMount = flattenDataset(BY_NAMESPACE[0].mounts[0]);
-    const flattenedMonth = flattenDataset(MONTHS[0]);
-    const flattenedNewMonthClients = flattenDataset(MONTHS[0].new_clients);
-    const objectNullCounts = { counts: null, foo: 'bar' };
-
-    const keyNameAssertions = (object, objectName) => {
-      const objectKeys = Object.keys(object);
-      assert.false(objectKeys.includes('counts'), `${objectName} doesn't include 'counts' key`);
-      assert.true(objectKeys.includes('clients'), `${objectName} includes 'clients' key`);
-      assert.true(objectKeys.includes('entity_clients'), `${objectName} includes 'entity_clients' key`);
-      assert.true(
-        objectKeys.includes('non_entity_clients'),
-        `${objectName} includes 'non_entity_clients' key`
-      );
-    };
-
-    keyNameAssertions(flattenedNamespace, 'namespace object');
-    keyNameAssertions(flattenedMount, 'mount object');
-    keyNameAssertions(flattenedMonth, 'month object');
-    keyNameAssertions(flattenedNewMonthClients, 'month new_clients object');
-
-    assert.strictEqual(
-      flattenDataset(SOME_OBJECT),
-      SOME_OBJECT,
-      "it returns original object if counts key doesn't exist"
-    );
-
-    assert.strictEqual(
-      flattenDataset(objectNullCounts),
-      objectNullCounts,
-      'it returns original object if counts are null'
-    );
-
-    assert.propEqual(
-      flattenDataset(['some array']),
-      ['some array'],
-      'it fails gracefully if an array is passed in'
-    );
-    assert.strictEqual(flattenDataset(null), null, 'it fails gracefully if null is passed in');
-    assert.strictEqual(
-      flattenDataset('some string'),
-      'some string',
-      'it fails gracefully if a string is passed in'
-    );
-    assert.propEqual(
-      flattenDataset(new Object()),
-      new Object(),
-      'it fails gracefully if an empty object is passed in'
-    );
+    assert.propEqual(homogenizeClientNaming(RESPONSE.total), expected);
+    assert.propEqual(RESPONSE.total, original, 'it does not modify original object');
   });
 
   test('sortMonthsByTimestamp: sorts timestamps chronologically, oldest to most recent', async function (assert) {
-    assert.expect(4);
-    const sortedMonths = sortMonthsByTimestamp(MONTHS);
-    assert.ok(
-      isBefore(parseAPITimestamp(sortedMonths[0].timestamp), parseAPITimestamp(sortedMonths[1].timestamp)),
-      'first timestamp date is earlier than second'
-    );
-    assert.ok(
-      isAfter(parseAPITimestamp(sortedMonths[2].timestamp), parseAPITimestamp(sortedMonths[1].timestamp)),
-      'third timestamp date is later second'
-    );
-    assert.notEqual(sortedMonths[1], MONTHS[1], 'it does not modify original array');
-    assert.strictEqual(sortedMonths[0], MONTHS[0], 'it does not modify original array');
+    assert.expect(2);
+    // API returns them in order so this test is extra extra
+    const unOrdered = [RESPONSE.months[1], RESPONSE.months[0]]; // mixup order
+    const original = [...RESPONSE.months];
+    const expected = RESPONSE.months;
+    assert.propEqual(sortMonthsByTimestamp(unOrdered), expected);
+    assert.propEqual(RESPONSE.months, original, 'it does not modify original array');
   });
 
   test('namespaceArrayToObject: transforms data without modifying original', async function (assert) {
-    assert.expect(30);
-
-    const assertClientCounts = (object, originalObject) => {
-      const valuesToCheck = ['clients', 'entity_clients', 'non_entity_clients'];
-
-      valuesToCheck.forEach((key) => {
-        assert.strictEqual(object[key], originalObject[key], `${key} equal original counts`);
-      });
-    };
-    const totalClientsByNamespace = formatByNamespace(MONTHS[1].namespaces);
-    const newClientsByNamespace = formatByNamespace(MONTHS[1].new_clients.namespaces);
-
+    assert.expect(2);
+    const { namespaces, new_clients } = RESPONSE.months[1];
+    const monthNamespaces = formatByNamespace(namespaces);
+    const newClients = formatByNamespace(new_clients.namespaces);
     const byNamespaceKeyObject = namespaceArrayToObject(
-      totalClientsByNamespace,
-      newClientsByNamespace,
-      '10/21',
-      '2021-10-01T00:00:00Z'
+      monthNamespaces,
+      newClients,
+      '9/23',
+      '2023-9-01T00:00:00Z'
     );
-
+    const expected = {
+      root: {
+        month: '9/23',
+        timestamp: '2023-9-01T00:00:00Z',
+        clients: 5632,
+        entity_clients: 1279,
+        non_entity_clients: 1598,
+        secret_syncs: 2755,
+        new_clients: {
+          month: '9/23',
+          label: 'root',
+          clients: 94,
+          entity_clients: 9,
+          non_entity_clients: 19,
+          secret_syncs: 66,
+          mounts: [
+            {
+              label: 'kvv2-engine-0',
+              clients: 66,
+              entity_clients: 0,
+              non_entity_clients: 0,
+              secret_syncs: 66,
+            },
+            {
+              label: 'auth/authid0',
+              clients: 28,
+              entity_clients: 9,
+              non_entity_clients: 19,
+              secret_syncs: 0,
+            },
+          ],
+        },
+        mounts_by_key: {
+          'auth/authid0': {
+            month: '9/23',
+            timestamp: '2023-9-01T00:00:00Z',
+            label: 'auth/authid0',
+            clients: 2877,
+            entity_clients: 1279,
+            non_entity_clients: 1598,
+            secret_syncs: 0,
+            new_clients: {
+              month: '9/23',
+              label: 'auth/authid0',
+              clients: 28,
+              entity_clients: 9,
+              non_entity_clients: 19,
+              secret_syncs: 0,
+            },
+          },
+          'kvv2-engine-0': {
+            month: '9/23',
+            timestamp: '2023-9-01T00:00:00Z',
+            label: 'kvv2-engine-0',
+            clients: 2755,
+            entity_clients: 0,
+            non_entity_clients: 0,
+            secret_syncs: 2755,
+            new_clients: {
+              month: '9/23',
+              label: 'kvv2-engine-0',
+              clients: 66,
+              entity_clients: 0,
+              non_entity_clients: 0,
+              secret_syncs: 66,
+            },
+          },
+        },
+      },
+      'ns/1': {
+        month: '9/23',
+        timestamp: '2023-9-01T00:00:00Z',
+        clients: 2960,
+        entity_clients: 50,
+        non_entity_clients: 140,
+        secret_syncs: 2770,
+        new_clients: {
+          month: '9/23',
+          label: 'ns/1',
+          clients: 192,
+          entity_clients: 30,
+          non_entity_clients: 62,
+          secret_syncs: 100,
+          mounts: [
+            {
+              label: 'kvv2-engine-0',
+              clients: 100,
+              entity_clients: 0,
+              non_entity_clients: 0,
+              secret_syncs: 100,
+            },
+            {
+              label: 'auth/authid0',
+              clients: 92,
+              entity_clients: 30,
+              non_entity_clients: 62,
+              secret_syncs: 0,
+            },
+          ],
+        },
+        mounts_by_key: {
+          'kvv2-engine-0': {
+            month: '9/23',
+            timestamp: '2023-9-01T00:00:00Z',
+            label: 'kvv2-engine-0',
+            clients: 2770,
+            entity_clients: 0,
+            non_entity_clients: 0,
+            secret_syncs: 2770,
+            new_clients: {
+              month: '9/23',
+              label: 'kvv2-engine-0',
+              clients: 100,
+              entity_clients: 0,
+              non_entity_clients: 0,
+              secret_syncs: 100,
+            },
+          },
+          'auth/authid0': {
+            month: '9/23',
+            timestamp: '2023-9-01T00:00:00Z',
+            label: 'auth/authid0',
+            clients: 190,
+            entity_clients: 50,
+            non_entity_clients: 140,
+            secret_syncs: 0,
+            new_clients: {
+              month: '9/23',
+              label: 'auth/authid0',
+              clients: 92,
+              entity_clients: 30,
+              non_entity_clients: 62,
+              secret_syncs: 0,
+            },
+          },
+        },
+      },
+    };
     assert.propEqual(
-      formatByNamespace(MONTHS[1].namespaces),
-      totalClientsByNamespace,
-      'it does not modify original array'
+      byNamespaceKeyObject,
+      expected,
+      'it returns object with namespaces by key and includes mounts_by_key'
     );
-    assert.propEqual(
-      formatByNamespace(MONTHS[1].new_clients.namespaces),
-      newClientsByNamespace,
-      'it does not modify original array'
-    );
-
-    const namespaceKeys = Object.keys(byNamespaceKeyObject);
-    namespaceKeys.forEach((nsKey) => {
-      const newNsObject = byNamespaceKeyObject[nsKey];
-      const originalNsData = totalClientsByNamespace.find((ns) => ns.label === nsKey);
-      assertClientCounts(newNsObject, originalNsData);
-      const mountKeys = Object.keys(newNsObject.mounts_by_key);
-      mountKeys.forEach((mKey) => {
-        const mountData = originalNsData.mounts.find((m) => m.label === mKey);
-        assertClientCounts(newNsObject.mounts_by_key[mKey], mountData);
-      });
-    });
-
-    namespaceKeys.forEach((nsKey) => {
-      const newNsObject = byNamespaceKeyObject[nsKey];
-      const originalNsData = newClientsByNamespace.find((ns) => ns.label === nsKey);
-      if (!originalNsData) return;
-      assertClientCounts(newNsObject.new_clients, originalNsData);
-      const mountKeys = Object.keys(newNsObject.mounts_by_key);
-
-      mountKeys.forEach((mKey) => {
-        const mountData = originalNsData.mounts.find((m) => m.label === mKey);
-        assertClientCounts(newNsObject.mounts_by_key[mKey].new_clients, mountData);
-      });
-    });
-
     assert.propEqual(
       namespaceArrayToObject(null, null, '10/21', 'timestamp-here'),
       {},
-      'returns an empty object when totalClientsByNamespace = null'
+      'returns an empty object when monthByNamespace = null'
     );
   });
 });

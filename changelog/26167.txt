@@ -1,0 +1,3 @@
+```release-note:bug
+cli/debug: Fix resource leak in CLI debug command.
+```
