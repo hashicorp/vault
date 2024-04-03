@@ -70,9 +70,6 @@
       @autoloaded={{eq this.activeCluster.licenseState "autoloaded"}}
     />
   {{/if}}
-  {{#if this.permissionBanner}}
-    <ResultantAclBanner @isEnterprise={{this.activeCluster.version.isEnterprise}} @failType={{this.permissionBanner}} />
-  {{/if}}
 </div>
 <div class="global-flash">
   {{#each this.flashMessages.queue as |flash|}}
@@ -84,6 +81,11 @@
 
 {{#if this.auth.isActiveSession}}
   <TokenExpireWarning @expirationDate={{this.auth.tokenExpirationDate}} @allowingExpiration={{this.auth.allowExpiration}}>
+    {{#if this.permissionBanner}}
+      <div class="has-top-margin-m">
+        <ResultantAclBanner @isEnterprise={{this.activeCluster.version.isEnterprise}} @failType={{this.permissionBanner}} />
+      </div>
+    {{/if}}
     {{outlet}}
   </TokenExpireWarning>
 {{else}}
