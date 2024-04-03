@@ -153,8 +153,8 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
   test('it should populate fields with model data', async function (assert) {
     this.model.name = 'foo';
     const [method] = await this.store.query('mfa-method', {});
-    this.model.mfa_methods.addObject(method);
-    this.model.auth_method_accessors.addObject('auth_userpass_1234');
+    this.model.mfa_methods = [method];
+    this.model.auth_method_accessors = ['auth_userpass_1234'];
 
     await render(hbs`
       <Mfa::MfaLoginEnforcementForm
@@ -207,12 +207,12 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
         keys: ['1234'],
       },
     }));
-    this.model.auth_method_accessors.addObject('auth_userpass_1234');
-    this.model.auth_method_types.addObject('userpass');
+    this.model.auth_method_accessors = ['auth_userpass_1234'];
+    this.model.auth_method_types = ['userpass'];
     const [entity] = await this.store.query('identity/entity', {});
-    this.model.identity_entities.addObject(entity);
+    this.model.identity_entities = [entity];
     const [group] = await this.store.query('identity/group', {});
-    this.model.identity_groups.addObject(group);
+    this.model.identity_groups = [group];
 
     await render(hbs`
       <Mfa::MfaLoginEnforcementForm
