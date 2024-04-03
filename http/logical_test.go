@@ -35,7 +35,6 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
-	"github.com/stretchr/testify/require"
 )
 
 func TestLogical(t *testing.T) {
@@ -570,9 +569,7 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 
 func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
 	// Create a noop audit backend
-	ahc, err := vault.NewAuditedHeadersConfig(&vault.BarrierView{})
-	require.NoError(t, err)
-	noop := corehelpers.TestNoopAudit(t, "noop/", nil, ahc)
+	noop := corehelpers.TestNoopAudit(t, "noop/", nil)
 	c, _, root := vault.TestCoreUnsealedWithConfig(t, &vault.CoreConfig{
 		AuditBackends: map[string]audit.Factory{
 			"noop": func(ctx context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {

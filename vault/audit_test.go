@@ -37,12 +37,7 @@ func TestAudit_ReadOnlyViewDuringMount(t *testing.T) {
 			t.Fatalf("expected a read-only error")
 		}
 		factory := corehelpers.NoopAuditFactory(nil)
-		_, barrier, _ := mockBarrier(t)
-		view := NewBarrierView(barrier, auditedHeadersSubPath)
-		ahc, err := NewAuditedHeadersConfig(view)
-		require.NoError(t, err)
-		require.Len(t, ahc.headerSettings, 0)
-		return factory(ctx, config, ahc)
+		return factory(ctx, config, nil)
 	}
 
 	me := &MountEntry{
@@ -350,10 +345,9 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ahc, err := NewAuditedHeadersConfig(&BarrierView{})
-	require.NoError(t, err)
-	a1 := corehelpers.TestNoopAudit(t, "foo", nil, ahc)
-	a2 := corehelpers.TestNoopAudit(t, "bar", nil, ahc)
+
+	a1 := corehelpers.TestNoopAudit(t, "foo", nil)
+	a2 := corehelpers.TestNoopAudit(t, "bar", nil)
 	err = b.Register("foo", a1, false)
 	require.NoError(t, err)
 	err = b.Register("bar", a2, false)
@@ -441,10 +435,8 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ahc, err := NewAuditedHeadersConfig(&BarrierView{})
-	require.NoError(t, err)
-	a1 := corehelpers.TestNoopAudit(t, "foo", nil, ahc)
-	a2 := corehelpers.TestNoopAudit(t, "bar", nil, ahc)
+	a1 := corehelpers.TestNoopAudit(t, "foo", nil)
+	a2 := corehelpers.TestNoopAudit(t, "bar", nil)
 	err = b.Register("foo", a1, false)
 	require.NoError(t, err)
 	err = b.Register("bar", a2, false)
@@ -547,18 +539,9 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, "headers/")
-	headersConf, err := NewAuditedHeadersConfig(view)
-	require.NoError(t, err)
 
-	err = headersConf.add(context.Background(), "X-Test-Header", false)
-	require.NoError(t, err)
-	err = headersConf.add(context.Background(), "X-Vault-Header", false)
-	require.NoError(t, err)
-
-	a1 := corehelpers.TestNoopAudit(t, "foo", nil, headersConf)
-	a2 := corehelpers.TestNoopAudit(t, "bar", nil, headersConf)
+	a1 := corehelpers.TestNoopAudit(t, "foo", nil)
+	a2 := corehelpers.TestNoopAudit(t, "bar", nil)
 
 	err = b.Register("foo", a1, false)
 	require.NoError(t, err)
@@ -579,7 +562,6 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 		Headers: map[string][]string{
 			"X-Test-Header":  {"foo"},
 			"X-Vault-Header": {"bar"},
-			"Content-Type":   {"baz"},
 		},
 	}
 	respErr := fmt.Errorf("permission denied")

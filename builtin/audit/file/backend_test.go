@@ -13,29 +13,12 @@ import (
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
 )
-
-// testHeaderFormatter is a stub to prevent the need to import the vault package
-// to bring in vault.AuditedHeadersConfig for testing.
-type testHeaderFormatter struct {
-	shouldReturnEmpty bool
-}
-
-// ApplyConfig satisfies the HeaderFormatter interface for testing.
-// It will either return the headers it was supplied or empty headers depending
-// on how it is configured.
-// ignore-nil-nil-function-check.
-func (f *testHeaderFormatter) ApplyConfig(_ context.Context, headers map[string][]string, salter audit.Salter) (result map[string][]string, retErr error) {
-	if f.shouldReturnEmpty {
-		return make(map[string][]string), nil
-	}
-
-	return headers, nil
-}
 
 // TestAuditFile_fileModeNew verifies that the backend Factory correctly sets
 // the file mode when the mode argument is set.
@@ -58,7 +41,7 @@ func TestAuditFile_fileModeNew(t *testing.T) {
 		SaltView:   &logical.InmemStorage{},
 		Logger:     hclog.NewNullLogger(),
 	}
-	_, err = Factory(context.Background(), backendConfig, &testHeaderFormatter{})
+	_, err = Factory(context.Background(), backendConfig, &corehelpers.NoopHeaderFormatter{})
 	require.NoError(t, err)
 
 	info, err := os.Stat(file)
@@ -91,7 +74,7 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 		Logger:     hclog.NewNullLogger(),
 	}
 
-	_, err = Factory(context.Background(), backendConfig, &testHeaderFormatter{})
+	_, err = Factory(context.Background(), backendConfig, &corehelpers.NoopHeaderFormatter{})
 	require.NoError(t, err)
 
 	info, err := os.Stat(f.Name())
@@ -125,7 +108,7 @@ func TestAuditFile_fileMode0000(t *testing.T) {
 		Logger:     hclog.NewNullLogger(),
 	}
 
-	_, err = Factory(context.Background(), backendConfig, &testHeaderFormatter{})
+	_, err = Factory(context.Background(), backendConfig, &corehelpers.NoopHeaderFormatter{})
 	require.NoError(t, err)
 
 	info, err := os.Stat(f.Name())
@@ -154,7 +137,7 @@ func TestAuditFile_EventLogger_fileModeNew(t *testing.T) {
 		Logger:     hclog.NewNullLogger(),
 	}
 
-	_, err = Factory(context.Background(), backendConfig, &testHeaderFormatter{})
+	_, err = Factory(context.Background(), backendConfig, &corehelpers.NoopHeaderFormatter{})
 	require.NoError(t, err)
 
 	info, err := os.Stat(file)
@@ -260,7 +243,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := newFormatterConfig(&testHeaderFormatter{}, tc.config)
+			got, err := newFormatterConfig(&corehelpers.NoopHeaderFormatter{}, tc.config)
 			if tc.wantErr {
 				require.Error(t, err)
 				require.EqualError(t, err, tc.expectedMessage)
@@ -287,7 +270,7 @@ func TestBackend_configureFormatterNode(t *testing.T) {
 		nodeMap:    map[eventlogger.NodeID]eventlogger.Node{},
 	}
 
-	formatConfig, err := audit.NewFormatterConfig(&testHeaderFormatter{})
+	formatConfig, err := audit.NewFormatterConfig(&corehelpers.NoopHeaderFormatter{})
 	require.NoError(t, err)
 
 	err = b.configureFormatterNode("juan", formatConfig, hclog.NewNullLogger())
@@ -510,7 +493,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			be, err := Factory(ctx, tc.backendConfig, &testHeaderFormatter{})
+			be, err := Factory(ctx, tc.backendConfig, &corehelpers.NoopHeaderFormatter{})
 
 			switch {
 			case tc.isErrorExpected:
@@ -569,7 +552,7 @@ func TestBackend_IsFallback(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			be, err := Factory(ctx, tc.backendConfig, &testHeaderFormatter{})
+			be, err := Factory(ctx, tc.backendConfig, &corehelpers.NoopHeaderFormatter{})
 			require.NoError(t, err)
 			require.NotNil(t, be)
 			require.Equal(t, tc.isFallbackExpected, be.IsFallback())
