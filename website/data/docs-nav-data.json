@@ -2222,6 +2222,10 @@
             "path": "platform/mssql/configuration"
           },
           {
+            "title": "Key Rotation",
+            "path": "platform/mssql/rotation"
+          },
+          {
             "title": "Upgrading",
             "path": "platform/mssql/upgrading"
           },
