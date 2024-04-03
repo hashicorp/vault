@@ -14,6 +14,8 @@ export const GENERAL = {
   headerContainer: 'header.page-header',
   icon: (name) => `[data-test-icon="${name}"]`,
   tab: (name) => `[data-test-tab="${name}"]`,
+  secretTab: (name) => `[data-test-secret-list-tab="${name}"]`,
+
   filter: (name) => `[data-test-filter="${name}"]`,
   filterInput: '[data-test-filter-input]',
   confirmModalInput: '[data-test-confirmation-modal-input]',
@@ -29,6 +31,7 @@ export const GENERAL = {
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   inputByAttr: (attr) => `[data-test-input="${attr}"]`,
   selectByAttr: (attr) => `[data-test-select="${attr}"]`,
+  checkboxByAttr: (attr) => `[data-test-checkbox="${attr}"]`,
   fieldByAttr: (attr) => `[data-test-field="${attr}"]`,
   enableField: (attr) => `[data-test-enable-field="${attr}"] button`,
   ttl: {
