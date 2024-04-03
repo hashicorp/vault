@@ -364,6 +364,11 @@
           },
           {
             "title": "High Availability",
+            "badge": {
+              "text": "ENTERPRISE | BETA",
+              "type": "outlined",
+              "color": "highlight"
+            },
             "path": "configuration/seal/seal-ha"
           },
           {
