@@ -7,9 +7,8 @@
 
 #### Behavior change
 
-In environment variable definition conflicts between the main Vault process and
-external plugins, Vault gives precedence to the plugin variables when loading
-the plugin. The behavior for builtin plugins and plugins that do not specify
+Vault gives precedence to plugin environment variables over system environment variables when loading
+external plugins. The behavior for builtin plugins and plugins that do not specify
 additional environment variables is unaffected.
 
 For example, if you register an external plugin with `SOURCE=child` in the
