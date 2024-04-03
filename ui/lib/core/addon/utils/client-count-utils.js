@@ -125,89 +125,28 @@ export const sortMonthsByTimestamp = (monthsArray) => {
 
 export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByNamespace, month, timestamp) => {
   if (!totalClientsByNamespace) return {}; // return if no data for that month
-  // all 'new_client' data resides within a separate key of each month (see data structure below)
-  // FIRST: iterate and nest respective 'new_clients' data within each namespace and mount object
-  // note: this is happening within the month object
-  const nestNewClientsWithinNamespace = totalClientsByNamespace?.map((ns) => {
-    const newNamespaceCounts = newClientsByNamespace?.find((n) => n.label === ns.label);
-    if (newNamespaceCounts) {
-      const newClientsByMount = [...newNamespaceCounts.mounts];
-      const nestNewClientsWithinMounts = ns.mounts?.map((mount) => {
-        const new_clients = newClientsByMount?.find((m) => m.label === mount.label) || {};
-        return {
-          ...mount,
-          new_clients,
-        };
-      });
-      return {
-        ...ns,
-        new_clients: {
-          label: ns.label,
-          ...destructureClientCounts(newNamespaceCounts),
-          mounts: newClientsByMount,
-        },
-        mounts: [...nestNewClientsWithinMounts],
-      };
-    }
-    return {
-      ...ns,
-      new_clients: {},
-    };
-  });
-  // SECOND: create a new object (namespace_by_key) in which each namespace label is a key
-  const namespaces_by_key = {};
-  nestNewClientsWithinNamespace?.forEach((namespaceObject) => {
-    // THIRD: make another object within the namespace where each mount label is a key
-    const mounts_by_key = {};
-    namespaceObject.mounts.forEach((mountObject) => {
-      mounts_by_key[mountObject.label] = {
-        month,
-        timestamp,
-        ...mountObject,
-        new_clients: { month, ...mountObject.new_clients },
-      };
-    });
 
-    const { label, new_clients } = namespaceObject;
-    namespaces_by_key[label] = {
-      month,
-      timestamp,
-      ...destructureClientCounts(namespaceObject),
-      new_clients: { month, ...new_clients },
-      mounts_by_key,
-    };
-  });
+  // namespaces_by_key is used to filter monthly activity data by namespace
+  // it's an object in each month data block where the keys are namespace paths
+  // and values include new and total client counts for that namespace in that month
+  const namespaces_by_key = totalClientsByNamespace.reduce((nsObject, ns) => {
+    const newNsClients = newClientsByNamespace?.find((n) => n.label === ns.label) || { month };
+
+    // mounts_by_key is is used to filter further in a namespace and get monthly activity by mount
+    // it's an object inside the namespace block where the keys are mount paths
+    // and the values include new and total client counts for that mount in that month
+    const mounts_by_key = ns.mounts.reduce((mountObj, mount) => {
+      const newMountClients = newNsClients.mounts.find((m) => m.label === mount.label) || { month };
+      mountObj[mount.label] = { ...mount, timestamp, month, new_clients: { month, ...newMountClients } };
+      return mountObj;
+    }, {});
+
+    nsObject[ns.label] = { ...ns, timestamp, month, new_clients: { month, ...newNsClients }, mounts_by_key };
+    // remove unnecessary data
+    delete nsObject[ns.label].mounts;
+    delete nsObject[ns.label].label;
+    return nsObject;
+  }, {});
+
   return namespaces_by_key;
-  /*
-  structure of object returned
-  namespace_by_key: {
-    "namespace_label": {
-      month: "3/22",
-      clients: 32,
-      entity_clients: 16,
-      non_entity_clients: 16,
-      new_clients: {
-        month: "3/22",
-        clients: 5,
-        entity_clients: 2,
-        non_entity_clients: 3,
-        mounts: [...array of this namespace's mounts and their new client counts],
-      },
-      mounts_by_key: {
-        "mount_label": {
-           month: "3/22",
-           clients: 3,
-           entity_clients: 2,
-           non_entity_clients: 1,
-           new_clients: {
-            month: "3/22",
-            clients: 5,
-            entity_clients: 2,
-            non_entity_clients: 3,
-          },
-        },
-      },
-    },
-  };
-  */
 };

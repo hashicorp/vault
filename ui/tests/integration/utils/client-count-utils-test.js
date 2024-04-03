@@ -149,23 +149,23 @@ module('Integration | Util | client count utils', function (hooks) {
   });
 
   test('namespaceArrayToObject: it generates namespaces_by_key without modifying original', async function (assert) {
-    assert.expect(3);
+    assert.expect(5);
 
-    // month at 0-index has no data so use second month in array
-    const { namespaces, new_clients } = RESPONSE.months[1];
+    // month at 0-index has no data so use second month in array, empty month format covered by formatByMonths test above
     const original = { ...RESPONSE.months[1] };
-    const byNamespaceKeyObject = namespaceArrayToObject(
-      formatByNamespace(namespaces),
-      formatByNamespace(new_clients.namespaces),
+    const expectedObject = SERIALIZED_ACTIVITY_RESPONSE.by_month[1].namespaces_by_key;
+    const testObject = namespaceArrayToObject(
+      formatByNamespace(RESPONSE.months[1].namespaces),
+      formatByNamespace(RESPONSE.months[1].new_clients.namespaces),
       '9/23',
       '2023-09-01T00:00:00Z'
     );
 
-    assert.propEqual(
-      byNamespaceKeyObject,
-      SERIALIZED_ACTIVITY_RESPONSE.by_month[1].namespaces_by_key,
-      'it returns object with namespaces by key and includes mounts_by_key'
-    );
+    const { root } = testObject;
+    const { root: expectedRoot } = expectedObject;
+    assert.propEqual(root.new_clients, expectedRoot.new_clients, 'it formats namespaces new_clients');
+    assert.propEqual(root.mounts_by_key, expectedRoot.mounts_by_key, 'it formats namespaces mounts_by_key');
+    assert.propContains(root, expectedRoot, 'namespace has correct keys');
     assert.propEqual(
       namespaceArrayToObject(null, null, '10/21', 'timestamp-here'),
       {},

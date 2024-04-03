@@ -193,7 +193,7 @@ export const ACTIVITY_RESPONSE_STUB = {
     },
     {
       namespace_id: '81ry61',
-      namespace_path: 'ns/1',
+      namespace_path: 'ns1',
       counts: {
         distinct_entities: 783,
         entity_clients: 783,
@@ -315,7 +315,7 @@ export const ACTIVITY_RESPONSE_STUB = {
         },
         {
           namespace_id: '81ry61',
-          namespace_path: 'ns/1',
+          namespace_path: 'ns1',
           counts: {
             distinct_entities: 50,
             entity_clients: 50,
@@ -378,7 +378,7 @@ export const ACTIVITY_RESPONSE_STUB = {
         namespaces: [
           {
             namespace_id: '81ry61',
-            namespace_path: 'ns/1',
+            namespace_path: 'ns1',
             counts: {
               distinct_entities: 30,
               entity_clients: 30,
@@ -560,7 +560,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
       ],
     },
     {
-      label: 'ns/1',
+      label: 'ns1',
       clients: 2376,
       entity_clients: 783,
       non_entity_clients: 1193,
@@ -649,7 +649,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
           ],
         },
         {
-          label: 'ns/1',
+          label: 'ns1',
           clients: 3085,
           entity_clients: 50,
           non_entity_clients: 140,
@@ -787,7 +787,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
             },
           },
         },
-        'ns/1': {
+        ns1: {
           month: '9/23',
           timestamp: '2023-09-01T00:00:00Z',
           clients: 3085,
@@ -797,7 +797,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
           acme_clients: 125,
           new_clients: {
             month: '9/23',
-            label: 'ns/1',
+            label: 'ns1',
             clients: 222,
             entity_clients: 30,
             non_entity_clients: 62,
@@ -901,7 +901,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
         acme_clients: 50,
         namespaces: [
           {
-            label: 'ns/1',
+            label: 'ns1',
             clients: 222,
             entity_clients: 30,
             non_entity_clients: 62,
