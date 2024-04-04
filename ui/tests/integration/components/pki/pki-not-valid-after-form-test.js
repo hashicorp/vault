@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { PKI_NOT_VALID_AFTER } from 'vault/tests/helpers/components/pki/pki-not-valid-after-form';
+import { PKI_NOT_VALID_AFTER } from 'vault/tests/helpers/components/pki/pki-not-valid-after-form-selectors';
 
 module('Integration | Component | pki-not-valid-after-form', function (hooks) {
   setupRenderingTest(hooks);

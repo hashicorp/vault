@@ -13,7 +13,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/components/pki/pki-configure-create';
+import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/components/pki/pki-configure-create-selectors';
 
 /**
  * this test is for the page component only. A separate test is written for the form rendered

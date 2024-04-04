@@ -10,7 +10,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import { hbs } from 'ember-cli-htmlbars';
-import { PKI_CROSS_SIGN } from 'vault/tests/helpers/components/pki/pki-issuer-cross-sign';
+import { PKI_CROSS_SIGN } from 'vault/tests/helpers/components/pki/pki-issuer-cross-sign-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-workflow-helpers';
 

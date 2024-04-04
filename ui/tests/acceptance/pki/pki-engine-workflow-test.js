@@ -17,12 +17,12 @@ import { create } from 'ember-cli-page-object';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CERTIFICATES, clearRecords } from 'vault/tests/helpers/pki/pki-workflow-helpers';
-import { PKI_KEYS } from 'vault/tests/helpers/components/pki/page/pki-keys';
-import { PKI_ISSUER_DETAILS } from 'vault/tests/helpers/components/pki/pki-issuer-details';
-import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/components/pki/pki-configure-create';
-import { PKI_CONFIG_EDIT } from 'vault/tests/helpers/components/pki/page/pki-configuration-edit';
-import { PKI_ROLE_DETAILS } from 'vault/tests/helpers/components/pki/page/pki-role-details';
-import { PKI_ISSUER_LIST } from 'vault/tests/helpers/components/pki/page/pki-issuer-list';
+import { PKI_KEYS } from 'vault/tests/helpers/components/pki/page/pki-keys-selectors';
+import { PKI_ISSUER_DETAILS } from 'vault/tests/helpers/components/pki/pki-issuer-details-selectors';
+import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/components/pki/pki-configure-create-selectors';
+import { PKI_CONFIG_EDIT } from 'vault/tests/helpers/components/pki/page/pki-configuration-edit-selectors';
+import { PKI_ROLE_DETAILS } from 'vault/tests/helpers/components/pki/page/pki-role-details-selectors';
+import { PKI_ISSUER_LIST } from 'vault/tests/helpers/components/pki/page/pki-issuer-list-selectors';
 
 const flash = create(flashMessage);
 const { unsupportedPem } = CERTIFICATES;

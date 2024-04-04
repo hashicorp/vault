@@ -14,8 +14,8 @@ import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { runCmd } from 'vault/tests/helpers/commands';
-import { PKI_TIDY } from 'vault/tests/helpers/components/pki/page/pki-tidy';
-import { PKI_TIDY_FORM } from 'vault/tests/helpers/components/pki/page/pki-tidy-form';
+import { PKI_TIDY } from 'vault/tests/helpers/components/pki/page/pki-tidy-selectors';
+import { PKI_TIDY_FORM } from 'vault/tests/helpers/components/pki/page/pki-tidy-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | pki tidy', function (hooks) {

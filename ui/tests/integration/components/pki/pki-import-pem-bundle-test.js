@@ -9,7 +9,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/components/pki/pki-configure-create';
+import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/components/pki/pki-configure-create-selectors';
 import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-workflow-helpers';
 
 const { issuerPemBundle } = CERTIFICATES;

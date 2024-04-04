@@ -13,9 +13,9 @@ import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { verifyCertificates } from 'vault/utils/parse-pki-cert';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { PKI_CROSS_SIGN } from 'vault/tests/helpers/components/pki/pki-issuer-cross-sign';
-import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/components/pki/pki-configure-create';
-import { PKI_ISSUER_DETAILS } from 'vault/tests/helpers/components/pki/pki-issuer-details';
+import { PKI_CROSS_SIGN } from 'vault/tests/helpers/components/pki/pki-issuer-cross-sign-selectors';
+import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/components/pki/pki-configure-create-selectors';
+import { PKI_ISSUER_DETAILS } from 'vault/tests/helpers/components/pki/pki-issuer-details-selectors';
 module('Acceptance | pki/pki cross sign', function (hooks) {
   setupApplicationTest(hooks);
 

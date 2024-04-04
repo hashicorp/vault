@@ -11,7 +11,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupEngine } from 'ember-engines/test-support';
 import Sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { PKI_ROLE_GENERATE } from 'vault/tests/helpers/components/pki/pki-role-generate';
+import { PKI_ROLE_GENERATE } from 'vault/tests/helpers/components/pki/pki-role-generate-selectors';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | pki-role-generate', function (hooks) {

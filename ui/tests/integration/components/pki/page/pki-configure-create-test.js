@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, render } from '@ember/test-helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { hbs } from 'ember-cli-htmlbars';
-import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/components/pki/pki-configure-create';
+import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/components/pki/pki-configure-create-selectors';
 import sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
