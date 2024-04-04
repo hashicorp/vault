@@ -104,7 +104,6 @@ overloading the Vault server. [[GH-25093](https://github.com/hashicorp/vault/pul
 * **Secrets Sync UI (enterprise)**: Adds secret syncing for KV v2 secrets to external destinations using the UI. [[GH-23667](https://github.com/hashicorp/vault/pull/23667)]
 * **Vault PKI EST Server (Enterprise/Beta)**: Beta support for the PKI Enrollment over Secure Transport (EST) certificate management protocol has been added to the Vault PKI Plugin. This allows standard EST clients to request certificates from a Vault server with no knowledge of Vault APIs.
 * **Vault Proxy Static Secret Caching (enterprise)**: Adds support for static secret (KVv1 and KVv2) caching to Vault Proxy. [[GH-23621](https://github.com/hashicorp/vault/pull/23621)]
-* **raft-wal**: Add experimental support for raft-wal, a new backend engine for integrated storage. [[GH-21460](https://github.com/hashicorp/vault/pull/21460)]
 * **secrets-import (enterprise)**: Support importing secrets from external sources into KVv2
 * **secrets/aws**: Support issuing an STS Session Token directly from the root credential. [[GH-23690](https://github.com/hashicorp/vault/pull/23690)]
 * cli: introduce new command group hcp which groups subcommands for authentication of users or machines to HCP using
