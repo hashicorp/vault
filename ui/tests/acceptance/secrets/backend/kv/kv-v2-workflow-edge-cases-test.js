@@ -281,7 +281,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   }
 }`;
     await visit(`/vault/secrets/${this.backend}/kv/create`);
-    await fillIn(KV_FORM.inputByAttr('path'), 'complex');
+    await fillIn(GENERAL.inputByAttr('path'), 'complex');
 
     await click(KV_FORM.toggleJson);
     assert.strictEqual(codemirror().getValue(), '{ "": "" }');
@@ -320,7 +320,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 }`;
 
     await visit(`/vault/secrets/${this.backend}/kv/create`);
-    await fillIn(KV_FORM.inputByAttr('path'), 'complex_version_test');
+    await fillIn(GENERAL.inputByAttr('path'), 'complex_version_test');
 
     await click(KV_FORM.toggleJson);
     codemirror().setValue('{ "foo1": { "name": "bar1" } }');
@@ -344,7 +344,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
   test('does not register as advanced when value includes {', async function (assert) {
     await visit(`/vault/secrets/${this.backend}/kv/create`);
-    await fillIn(KV_FORM.inputByAttr('path'), 'not-advanced');
+    await fillIn(GENERAL.inputByAttr('path'), 'not-advanced');
 
     await fillIn(KV_FORM.keyInput(), 'foo');
     await fillIn(KV_FORM.maskedValueInput(), '{bar}');
@@ -432,7 +432,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       );
       // Create first version of secret
       await click(KV_WORKFLOW.list.createSecret);
-      await fillIn(KV_FORM.inputByAttr('path'), secret);
+      await fillIn(GENERAL.inputByAttr('path'), secret);
       assert.dom(KV_FORM.toggleMetadata).exists('Shows metadata toggle when creating new secret');
       await fillIn(KV_FORM.keyInput(), 'foo');
       await fillIn(KV_FORM.maskedValueInput(), 'woahsecret');
@@ -445,8 +445,8 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
 
       // Create a new version
       await click(KV_SECRET.createNewVersion);
-      assert.dom(KV_FORM.inputByAttr('path')).isDisabled('path input is disabled');
-      assert.dom(KV_FORM.inputByAttr('path')).hasValue(secret);
+      assert.dom(GENERAL.inputByAttr('path')).isDisabled('path input is disabled');
+      assert.dom(GENERAL.inputByAttr('path')).hasValue(secret);
       assert
         .dom(KV_FORM.toggleMetadata)
         .doesNotExist('Does not show metadata toggle when creating new version');

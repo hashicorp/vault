@@ -15,7 +15,7 @@ export const writeSecret = async function (backend, path, key, val, ns = null) {
   const url = `vault/secrets/${backend}/kv/create`;
   ns ? await visit(url + `?namespace=${ns}`) : await visit(url);
   await settled();
-  await fillIn(KV_FORM.inputByAttr('path'), path);
+  await fillIn(GENERAL.inputByAttr('path'), path);
   await fillIn(KV_FORM.keyInput(), key);
   await fillIn(KV_FORM.maskedValueInput(), val);
   await click(GENERAL.saveButton);

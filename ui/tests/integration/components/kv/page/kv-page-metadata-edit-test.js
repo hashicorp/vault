@@ -59,8 +59,8 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
       }
     );
     assert.dom(KV_FORM.kvRow).exists({ count: 1 }, 'renders one kv row when model is new.');
-    assert.dom(KV_FORM.inputByAttr('maxVersions')).exists('renders Max versions.');
-    assert.dom(KV_FORM.inputByAttr('casRequired')).exists('renders Required Check and Set.');
+    assert.dom(GENERAL.inputByAttr('maxVersions')).exists('renders Max versions.');
+    assert.dom(GENERAL.inputByAttr('casRequired')).exists('renders Required Check and Set.');
     assert
       .dom('[data-test-toggle-label="Automate secret deletion"]')
       .exists('the label for automate secret deletion renders.');
@@ -92,10 +92,10 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
       .dom(KV_FORM.kvRow)
       .exists({ count: 4 }, 'renders all kv rows including previous data and one extra to fill out.');
     assert
-      .dom(KV_FORM.inputByAttr('maxVersions'))
+      .dom(GENERAL.inputByAttr('maxVersions'))
       .hasValue('15', 'renders Max versions that was on the record.');
     assert
-      .dom(KV_FORM.inputByAttr('casRequired'))
+      .dom(GENERAL.inputByAttr('casRequired'))
       .hasValue('on', 'renders Required Check and Set that was on the record.');
     assert
       .dom(KV_FORM.ttlValue('Automate secret deletion'))
@@ -105,8 +105,8 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
     await click(KV_FORM.deleteRow()); // delete the first kv row
     await fillIn(KV_FORM.keyInput(2), 'last');
     await fillIn(KV_FORM.valueInput(2), 'value');
-    await fillIn(KV_FORM.inputByAttr('maxVersions'), '8');
-    await click(KV_FORM.inputByAttr('casRequired'));
+    await fillIn(GENERAL.inputByAttr('maxVersions'), '8');
+    await click(GENERAL.inputByAttr('casRequired'));
     await fillIn(KV_FORM.ttlValue('Automate secret deletion'), '1000');
     // save test and check record
     this.server.post('/kv-engine/metadata/my-secret', (schema, req) => {
@@ -146,7 +146,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
       }
     );
     // trigger validation error
-    await fillIn(KV_FORM.inputByAttr('maxVersions'), 'a');
+    await fillIn(GENERAL.inputByAttr('maxVersions'), 'a');
     await click(GENERAL.saveButton);
     assert
       .dom(KV_FORM.inlineAlert)

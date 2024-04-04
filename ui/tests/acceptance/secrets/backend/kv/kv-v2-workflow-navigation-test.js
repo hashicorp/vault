@@ -244,7 +244,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         'Url includes version query param'
       );
       assert.dom(KV_FORM.versionAlert).doesNotExist('Does not show version alert for current version');
-      assert.dom(KV_FORM.inputByAttr('path')).isDisabled();
+      assert.dom(GENERAL.inputByAttr('path')).isDisabled();
 
       await click(GENERAL.cancelButton);
       assert.strictEqual(
@@ -270,7 +270,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details/edit?version=1`,
         'Url includes version query param'
       );
-      assert.dom(KV_FORM.inputByAttr('path')).isDisabled();
+      assert.dom(GENERAL.inputByAttr('path')).isDisabled();
       assert.dom(KV_FORM.keyInput()).hasValue('key-1', 'pre-populates form with selected version data');
       assert
         .dom(KV_FORM.maskedValueInput())
@@ -1031,7 +1031,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
           'Warning You do not have read permissions for this secret data. Saving will overwrite the existing secret.',
           'Shows warning about no read permissions'
         );
-      assert.dom(KV_FORM.inputByAttr('path')).isDisabled();
+      assert.dom(GENERAL.inputByAttr('path')).isDisabled();
 
       await click(GENERAL.cancelButton);
       assert.strictEqual(
@@ -1051,7 +1051,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details/edit?version=1`,
         'Url includes version query param'
       );
-      assert.dom(KV_FORM.inputByAttr('path')).isDisabled();
+      assert.dom(GENERAL.inputByAttr('path')).isDisabled();
       assert.dom(KV_FORM.keyInput()).hasValue('', 'form does not pre-populate');
       assert.dom(KV_FORM.maskedValueInput()).hasValue('', 'form does not pre-populate');
       assert.dom(KV_FORM.noReadAlert).exists('Shows no read alert');

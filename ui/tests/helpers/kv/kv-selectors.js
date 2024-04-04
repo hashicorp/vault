@@ -60,8 +60,6 @@ export const KV_WORKFLOW = {
 
 // Form/Interactive selectors that are common between pages and forms
 export const KV_FORM = {
-  inputByAttr: (attr) => `[data-test-input="${attr}"]`,
-  fieldByAttr: (attr) => `[data=test=field="${attr}"]`, // formfield
   toggleJson: '[data-test-toggle-input="json"]',
   toggleJsonValues: '[data-test-toggle-input="revealValues"]',
   toggleMasked: '[data-test-button="toggle-masked"]',
@@ -87,9 +85,6 @@ export const KV_FORM = {
   invalidFormAlert: '[data-test-invalid-form-alert]',
   versionAlert: '[data-test-secret-version-alert]',
   noReadAlert: '[data-test-secret-no-read-alert]',
-  // Form btns
-  saveBtn: '[data-test-save]',
-  cancelBtn: '[data-test-cancel]',
 };
 
 export const parseJsonEditor = (find) => {

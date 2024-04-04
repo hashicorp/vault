@@ -91,14 +91,14 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
       { owner: this.engine }
     );
 
-    await fillIn(KV_FORM.inputByAttr('path'), this.path);
+    await fillIn(GENERAL.inputByAttr('path'), this.path);
     await fillIn(KV_FORM.keyInput(), 'foo');
     await fillIn(KV_FORM.maskedValueInput(), 'bar');
 
     await click(KV_FORM.toggleMetadata);
     await fillIn(`[data-test-field="customMetadata"] ${KV_FORM.keyInput()}`, 'my-custom');
     await fillIn(`[data-test-field="customMetadata"] ${KV_FORM.valueInput()}`, 'metadata');
-    await fillIn(KV_FORM.inputByAttr('maxVersions'), this.maxVersions);
+    await fillIn(GENERAL.inputByAttr('maxVersions'), this.maxVersions);
 
     await click(GENERAL.saveButton);
 
@@ -141,7 +141,7 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
       { owner: this.engine }
     );
 
-    await fillIn(KV_FORM.inputByAttr('path'), this.path);
+    await fillIn(GENERAL.inputByAttr('path'), this.path);
     await fillIn(KV_FORM.keyInput(), 'foo');
     await fillIn(KV_FORM.maskedValueInput(), 'bar');
     await click(GENERAL.saveButton);
@@ -179,8 +179,8 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
       { owner: this.engine }
     );
 
-    assert.dom(KV_FORM.inputByAttr('path')).hasValue(pathToSecret);
-    await typeIn(KV_FORM.inputByAttr('path'), this.path);
+    assert.dom(GENERAL.inputByAttr('path')).hasValue(pathToSecret);
+    await typeIn(GENERAL.inputByAttr('path'), this.path);
     await fillIn(KV_FORM.keyInput(), 'foo');
     await fillIn(KV_FORM.maskedValueInput(), 'bar');
     await click(GENERAL.saveButton);
@@ -209,7 +209,7 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
       { owner: this.engine }
     );
 
-    await fillIn(KV_FORM.inputByAttr('path'), this.path);
+    await fillIn(GENERAL.inputByAttr('path'), this.path);
     await click(GENERAL.saveButton);
     assert.dom(KV_FORM.messageError).hasText('Error nope', 'it renders API error');
     assert.dom(KV_FORM.inlineAlert).hasText('There was an error submitting this form.');
@@ -232,18 +232,18 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
       { owner: this.engine }
     );
 
-    await typeIn(KV_FORM.inputByAttr('path'), 'space ');
+    await typeIn(GENERAL.inputByAttr('path'), 'space ');
     assert
       .dom(KV_FORM.validation('path'))
       .hasText(
         `Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.`
       );
 
-    await fillIn(KV_FORM.inputByAttr('path'), ''); // clear input
-    await typeIn(KV_FORM.inputByAttr('path'), 'slash/');
+    await fillIn(GENERAL.inputByAttr('path'), ''); // clear input
+    await typeIn(GENERAL.inputByAttr('path'), 'slash/');
     assert.dom(KV_FORM.validation('path')).hasText(`Path can't end in forward slash '/'.`);
 
-    await typeIn(KV_FORM.inputByAttr('path'), 'secret');
+    await typeIn(GENERAL.inputByAttr('path'), 'secret');
     assert
       .dom(KV_FORM.validation('path'))
       .doesNotExist('it removes validation on key up when secret contains slash but does not end in one');
@@ -255,7 +255,7 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
       .hasText('JSON is unparsable. Fix linting errors to avoid data discrepancies.');
 
     codemirror().setValue('{}'); // clear linting error
-    await fillIn(KV_FORM.inputByAttr('path'), '');
+    await fillIn(GENERAL.inputByAttr('path'), '');
     await click(GENERAL.saveButton);
     const [pathValidation, formAlert] = findAll(KV_FORM.inlineAlert);
     assert.dom(pathValidation).hasText(`Path can't be blank.`);
@@ -297,7 +297,7 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
     assert.dom(KV_FORM.dataInputLabel({ isJson: true })).hasText('Secret data');
 
     codemirror().setValue(`{ "hello": "there"}`);
-    await fillIn(KV_FORM.inputByAttr('path'), this.path);
+    await fillIn(GENERAL.inputByAttr('path'), this.path);
     await click(GENERAL.saveButton);
   });
 });

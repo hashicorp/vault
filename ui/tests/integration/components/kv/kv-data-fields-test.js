@@ -12,6 +12,7 @@ import { fillIn, render, click } from '@ember/test-helpers';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { KV_WORKFLOW, KV_FORM } from 'vault/tests/helpers/kv/kv-selectors';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
   setupRenderingTest(hooks);
@@ -37,7 +38,7 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
     await render(hbs`<KvDataFields @showJson={{false}} @secret={{this.secret}} @type="create" />`, {
       owner: this.engine,
     });
-    await fillIn(KV_FORM.inputByAttr('path'), this.path);
+    await fillIn(GENERAL.inputByAttr('path'), this.path);
     await fillIn(KV_FORM.keyInput(), 'foo');
     await fillIn(KV_FORM.maskedValueInput(), 'bar');
     assert.strictEqual(this.secret.path, this.path);
@@ -74,8 +75,8 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
       owner: this.engine,
     });
 
-    assert.dom(KV_FORM.inputByAttr('path')).isDisabled();
-    assert.dom(KV_FORM.inputByAttr('path')).hasValue(this.path);
+    assert.dom(GENERAL.inputByAttr('path')).isDisabled();
+    assert.dom(GENERAL.inputByAttr('path')).hasValue(this.path);
     assert.dom(KV_FORM.keyInput()).hasValue('foo');
     assert.dom(KV_FORM.maskedValueInput()).hasValue('bar');
     assert.dom(KV_FORM.dataInputLabel({ isJson: false })).hasText('Version data');

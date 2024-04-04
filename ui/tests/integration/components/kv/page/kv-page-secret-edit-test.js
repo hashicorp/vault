@@ -82,8 +82,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       { owner: this.engine }
     );
 
-    assert.dom(KV_FORM.inputByAttr('path')).isDisabled();
-    assert.dom(KV_FORM.inputByAttr('path')).hasValue(this.path);
+    assert.dom(GENERAL.inputByAttr('path')).isDisabled();
+    assert.dom(GENERAL.inputByAttr('path')).hasValue(this.path);
     assert.dom(KV_FORM.keyInput()).hasValue('foo');
     assert.dom(KV_FORM.maskedValueInput()).hasValue('bar');
     assert.dom(KV_FORM.dataInputLabel({ isJson: false })).hasText('Version data');
@@ -172,7 +172,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       { owner: this.engine }
     );
 
-    assert.dom(KV_FORM.inputByAttr('path')).hasValue(nestedSecret);
+    assert.dom(GENERAL.inputByAttr('path')).hasValue(nestedSecret);
     await click(GENERAL.saveButton);
   });
 
