@@ -57,6 +57,6 @@ module('Integration | Component | page/pki-configure-create', function (hooks) {
     assert.dom(PKI_CONFIGURE_CREATE.optionByKey('generate-root')).isChecked();
 
     await click(GENERAL.cancelButton);
-    assert.ok(this.cancelSpy.calledOnce, 'cancel action is called');
+    assert.true(this.cancelSpy.calledOnce, 'cancel action is called');
   });
 });
