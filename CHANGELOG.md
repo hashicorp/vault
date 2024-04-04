@@ -2,8 +2,10 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
-## 1.16.1
+## 1.16.1 
 ### April 04, 2024
+
+**Please note that Vault 1.16.1 is the first Enterprise release of the Vault Enterprise 1.16 series.**
 
 BUG FIXES:
 
