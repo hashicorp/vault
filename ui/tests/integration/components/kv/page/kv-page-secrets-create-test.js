@@ -11,7 +11,7 @@ import { Response } from 'miragejs';
 import { hbs } from 'ember-cli-htmlbars';
 import { click, fillIn, findAll, render, typeIn } from '@ember/test-helpers';
 import codemirror from 'vault/tests/helpers/codemirror';
-import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
+import { KV_FORM } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 
@@ -90,16 +90,16 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
       { owner: this.engine }
     );
 
-    await fillIn(FORM.inputByAttr('path'), this.path);
-    await fillIn(FORM.keyInput(), 'foo');
-    await fillIn(FORM.maskedValueInput(), 'bar');
+    await fillIn(KV_FORM.inputByAttr('path'), this.path);
+    await fillIn(KV_FORM.keyInput(), 'foo');
+    await fillIn(KV_FORM.maskedValueInput(), 'bar');
 
-    await click(FORM.toggleMetadata);
-    await fillIn(`[data-test-field="customMetadata"] ${FORM.keyInput()}`, 'my-custom');
-    await fillIn(`[data-test-field="customMetadata"] ${FORM.valueInput()}`, 'metadata');
-    await fillIn(FORM.inputByAttr('maxVersions'), this.maxVersions);
+    await click(KV_FORM.toggleMetadata);
+    await fillIn(`[data-test-field="customMetadata"] ${KV_FORM.keyInput()}`, 'my-custom');
+    await fillIn(`[data-test-field="customMetadata"] ${KV_FORM.valueInput()}`, 'metadata');
+    await fillIn(KV_FORM.inputByAttr('maxVersions'), this.maxVersions);
 
-    await click(FORM.saveBtn);
+    await click(KV_FORM.saveBtn);
 
     assert.ok(
       this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.secret.details'),
@@ -140,10 +140,10 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
       { owner: this.engine }
     );
 
-    await fillIn(FORM.inputByAttr('path'), this.path);
-    await fillIn(FORM.keyInput(), 'foo');
-    await fillIn(FORM.maskedValueInput(), 'bar');
-    await click(FORM.saveBtn);
+    await fillIn(KV_FORM.inputByAttr('path'), this.path);
+    await fillIn(KV_FORM.keyInput(), 'foo');
+    await fillIn(KV_FORM.maskedValueInput(), 'bar');
+    await click(KV_FORM.saveBtn);
   });
 
   test('it saves nested secrets', async function (assert) {
@@ -178,11 +178,11 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
       { owner: this.engine }
     );
 
-    assert.dom(FORM.inputByAttr('path')).hasValue(pathToSecret);
-    await typeIn(FORM.inputByAttr('path'), this.path);
-    await fillIn(FORM.keyInput(), 'foo');
-    await fillIn(FORM.maskedValueInput(), 'bar');
-    await click(FORM.saveBtn);
+    assert.dom(KV_FORM.inputByAttr('path')).hasValue(pathToSecret);
+    await typeIn(KV_FORM.inputByAttr('path'), this.path);
+    await fillIn(KV_FORM.keyInput(), 'foo');
+    await fillIn(KV_FORM.maskedValueInput(), 'bar');
+    await click(KV_FORM.saveBtn);
   });
 
   test('it renders API errors', async function (assert) {
@@ -208,11 +208,11 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
       { owner: this.engine }
     );
 
-    await fillIn(FORM.inputByAttr('path'), this.path);
-    await click(FORM.saveBtn);
-    assert.dom(FORM.messageError).hasText('Error nope', 'it renders API error');
-    assert.dom(FORM.inlineAlert).hasText('There was an error submitting this form.');
-    await click(FORM.cancelBtn);
+    await fillIn(KV_FORM.inputByAttr('path'), this.path);
+    await click(KV_FORM.saveBtn);
+    assert.dom(KV_FORM.messageError).hasText('Error nope', 'it renders API error');
+    assert.dom(KV_FORM.inlineAlert).hasText('There was an error submitting this form.');
+    await click(KV_FORM.cancelBtn);
     assert.ok(
       this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.list'),
       'router transitions to secret list route on cancel'
@@ -231,32 +231,32 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
       { owner: this.engine }
     );
 
-    await typeIn(FORM.inputByAttr('path'), 'space ');
+    await typeIn(KV_FORM.inputByAttr('path'), 'space ');
     assert
-      .dom(FORM.validation('path'))
+      .dom(KV_FORM.validation('path'))
       .hasText(
         `Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.`
       );
 
-    await fillIn(FORM.inputByAttr('path'), ''); // clear input
-    await typeIn(FORM.inputByAttr('path'), 'slash/');
-    assert.dom(FORM.validation('path')).hasText(`Path can't end in forward slash '/'.`);
+    await fillIn(KV_FORM.inputByAttr('path'), ''); // clear input
+    await typeIn(KV_FORM.inputByAttr('path'), 'slash/');
+    assert.dom(KV_FORM.validation('path')).hasText(`Path can't end in forward slash '/'.`);
 
-    await typeIn(FORM.inputByAttr('path'), 'secret');
+    await typeIn(KV_FORM.inputByAttr('path'), 'secret');
     assert
-      .dom(FORM.validation('path'))
+      .dom(KV_FORM.validation('path'))
       .doesNotExist('it removes validation on key up when secret contains slash but does not end in one');
 
-    await click(FORM.toggleJson);
+    await click(KV_FORM.toggleJson);
     codemirror().setValue('i am a string and not JSON');
     assert
-      .dom(FORM.inlineAlert)
+      .dom(KV_FORM.inlineAlert)
       .hasText('JSON is unparsable. Fix linting errors to avoid data discrepancies.');
 
     codemirror().setValue('{}'); // clear linting error
-    await fillIn(FORM.inputByAttr('path'), '');
-    await click(FORM.saveBtn);
-    const [pathValidation, formAlert] = findAll(FORM.inlineAlert);
+    await fillIn(KV_FORM.inputByAttr('path'), '');
+    await click(KV_FORM.saveBtn);
+    const [pathValidation, formAlert] = findAll(KV_FORM.inlineAlert);
     assert.dom(pathValidation).hasText(`Path can't be blank.`);
     assert.dom(formAlert).hasText('There is an error with this form.');
   });
@@ -291,12 +291,12 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
       { owner: this.engine }
     );
 
-    assert.dom(FORM.dataInputLabel({ isJson: false })).hasText('Secret data');
-    await click(FORM.toggleJson);
-    assert.dom(FORM.dataInputLabel({ isJson: true })).hasText('Secret data');
+    assert.dom(KV_FORM.dataInputLabel({ isJson: false })).hasText('Secret data');
+    await click(KV_FORM.toggleJson);
+    assert.dom(KV_FORM.dataInputLabel({ isJson: true })).hasText('Secret data');
 
     codemirror().setValue(`{ "hello": "there"}`);
-    await fillIn(FORM.inputByAttr('path'), this.path);
-    await click(FORM.saveBtn);
+    await fillIn(KV_FORM.inputByAttr('path'), this.path);
+    await click(KV_FORM.saveBtn);
   });
 });

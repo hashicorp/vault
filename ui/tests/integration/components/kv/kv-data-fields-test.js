@@ -10,7 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { hbs } from 'ember-cli-htmlbars';
 import { fillIn, render, click } from '@ember/test-helpers';
 import codemirror from 'vault/tests/helpers/codemirror';
-import { PAGE, FORM } from 'vault/tests/helpers/kv/kv-selectors';
+import { KV_WORKFLOW, KV_FORM } from 'vault/tests/helpers/kv/kv-selectors';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
@@ -37,9 +37,9 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
     await render(hbs`<KvDataFields @showJson={{false}} @secret={{this.secret}} @type="create" />`, {
       owner: this.engine,
     });
-    await fillIn(FORM.inputByAttr('path'), this.path);
-    await fillIn(FORM.keyInput(), 'foo');
-    await fillIn(FORM.maskedValueInput(), 'bar');
+    await fillIn(KV_FORM.inputByAttr('path'), this.path);
+    await fillIn(KV_FORM.keyInput(), 'foo');
+    await fillIn(KV_FORM.maskedValueInput(), 'bar');
     assert.strictEqual(this.secret.path, this.path);
     assert.propEqual(this.secret.secretData, { foo: 'bar' });
   });
@@ -53,7 +53,7 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
       `{ \"\": \"\" }`, // eslint-disable-line no-useless-escape
       'json editor initializes with empty object'
     );
-    await fillIn(`${FORM.jsonEditor} textarea`, 'blah');
+    await fillIn(`${KV_FORM.jsonEditor} textarea`, 'blah');
     assert.strictEqual(codemirror().state.lint.marked.length, 1, 'codemirror lints input');
     codemirror().setValue(`{ "hello": "there"}`);
     assert.propEqual(this.secret.secretData, { hello: 'there' }, 'json editor updates secret data');
@@ -74,11 +74,11 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
       owner: this.engine,
     });
 
-    assert.dom(FORM.inputByAttr('path')).isDisabled();
-    assert.dom(FORM.inputByAttr('path')).hasValue(this.path);
-    assert.dom(FORM.keyInput()).hasValue('foo');
-    assert.dom(FORM.maskedValueInput()).hasValue('bar');
-    assert.dom(FORM.dataInputLabel({ isJson: false })).hasText('Version data');
+    assert.dom(KV_FORM.inputByAttr('path')).isDisabled();
+    assert.dom(KV_FORM.inputByAttr('path')).hasValue(this.path);
+    assert.dom(KV_FORM.keyInput()).hasValue('foo');
+    assert.dom(KV_FORM.maskedValueInput()).hasValue('bar');
+    assert.dom(KV_FORM.dataInputLabel({ isJson: false })).hasText('Version data');
   });
 
   test('it shows readonly info rows when viewing secret details of simple secret', async function (assert) {
@@ -89,10 +89,10 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
     await render(hbs`<KvDataFields @showJson={{false}} @secret={{this.secret}} @type="details" />`, {
       owner: this.engine,
     });
-    assert.dom(PAGE.infoRow).exists({ count: 1 }, '1 row of data shows');
-    assert.dom(PAGE.infoRowValue('foo')).hasText('***********');
-    await click(PAGE.infoRowToggleMasked('foo'));
-    assert.dom(PAGE.infoRowValue('foo')).hasText('bar', 'secret value shows after toggle');
+    assert.dom(KV_WORKFLOW.infoRow).exists({ count: 1 }, '1 row of data shows');
+    assert.dom(KV_WORKFLOW.infoRowValue('foo')).hasText('***********');
+    await click(KV_WORKFLOW.infoRowToggleMasked('foo'));
+    assert.dom(KV_WORKFLOW.infoRowValue('foo')).hasText('bar', 'secret value shows after toggle');
   });
 
   test('it shows readonly json editor when viewing secret details of complex secret', async function (assert) {
@@ -107,12 +107,12 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
     await render(hbs`<KvDataFields @showJson={{true}} @secret={{this.secret}} @type="details" />`, {
       owner: this.engine,
     });
-    assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
+    assert.dom(KV_WORKFLOW.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
     assert.dom('[data-test-component="code-mirror-modifier"]').hasClass('readonly-codemirror');
     assert
       .dom('[data-test-component="code-mirror-modifier"]')
       .includesText(`{ "foo": { "bar": "********" }}`);
-    await click(FORM.toggleJsonValues);
+    await click(KV_FORM.toggleJsonValues);
     assert.dom('[data-test-component="code-mirror-modifier"]').includesText(`{ "foo": { "bar": "baz" }}`);
   });
 });

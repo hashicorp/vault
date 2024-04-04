@@ -11,7 +11,7 @@ import { Response } from 'miragejs';
 import { hbs } from 'ember-cli-htmlbars';
 import { click, fillIn, render } from '@ember/test-helpers';
 import codemirror from 'vault/tests/helpers/codemirror';
-import { FORM, KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
+import { KV_FORM, KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 
@@ -81,22 +81,22 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       { owner: this.engine }
     );
 
-    assert.dom(FORM.inputByAttr('path')).isDisabled();
-    assert.dom(FORM.inputByAttr('path')).hasValue(this.path);
-    assert.dom(FORM.keyInput()).hasValue('foo');
-    assert.dom(FORM.maskedValueInput()).hasValue('bar');
-    assert.dom(FORM.dataInputLabel({ isJson: false })).hasText('Version data');
-    await click(FORM.toggleJson);
+    assert.dom(KV_FORM.inputByAttr('path')).isDisabled();
+    assert.dom(KV_FORM.inputByAttr('path')).hasValue(this.path);
+    assert.dom(KV_FORM.keyInput()).hasValue('foo');
+    assert.dom(KV_FORM.maskedValueInput()).hasValue('bar');
+    assert.dom(KV_FORM.dataInputLabel({ isJson: false })).hasText('Version data');
+    await click(KV_FORM.toggleJson);
     assert.strictEqual(
       codemirror().getValue(' '),
       `{   \"foo": \"bar" }`, // eslint-disable-line no-useless-escape
       'json editor initializes with empty object'
     );
-    assert.dom(FORM.dataInputLabel({ isJson: true })).hasText('Version data');
-    await click(FORM.toggleJson);
-    await fillIn(FORM.keyInput(1), 'foo2');
-    await fillIn(FORM.maskedValueInput(1), 'bar2');
-    await click(FORM.saveBtn);
+    assert.dom(KV_FORM.dataInputLabel({ isJson: true })).hasText('Version data');
+    await click(KV_FORM.toggleJson);
+    await fillIn(KV_FORM.keyInput(1), 'foo2');
+    await fillIn(KV_FORM.maskedValueInput(1), 'bar2');
+    await click(KV_FORM.saveBtn);
     assert.ok(
       this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.secret.details'),
       'router transitions to secret details route on save'
@@ -120,8 +120,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       .hasText('No changes to show. Update secret to view diff');
     assert.dom(KV_WORKFLOW.diff.visualDiff).doesNotExist('Does not show visual diff');
 
-    await fillIn(FORM.keyInput(1), 'foo2');
-    await fillIn(FORM.maskedValueInput(1), 'bar2');
+    await fillIn(KV_FORM.keyInput(1), 'foo2');
+    await fillIn(KV_FORM.maskedValueInput(1), 'bar2');
 
     assert.dom(KV_WORKFLOW.edit.toggleDiff).isNotDisabled('Diff toggle is not disabled');
     assert.dom(KV_WORKFLOW.edit.toggleDiffDescription).hasText('Showing the diff will reveal secret values');
@@ -130,7 +130,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     assert.dom(KV_WORKFLOW.diff.visualDiff).exists('Shows visual diff');
     assert.dom(KV_WORKFLOW.diff.added).hasText(`foo2"bar2"`);
 
-    await click(FORM.toggleJson);
+    await click(KV_FORM.toggleJson);
     codemirror().setValue('{ "foo3": "bar3" }');
 
     assert.dom(KV_WORKFLOW.diff.visualDiff).exists('Visual diff updates');
@@ -171,8 +171,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       { owner: this.engine }
     );
 
-    assert.dom(FORM.inputByAttr('path')).hasValue(nestedSecret);
-    await click(FORM.saveBtn);
+    assert.dom(KV_FORM.inputByAttr('path')).hasValue(nestedSecret);
+    await click(KV_FORM.saveBtn);
   });
 
   test('it renders API errors', async function (assert) {
@@ -191,10 +191,10 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       { owner: this.engine }
     );
 
-    await click(FORM.saveBtn);
-    assert.dom(FORM.messageError).hasText('Error nope', 'it renders API error');
-    assert.dom(FORM.inlineAlert).hasText('There was an error submitting this form.');
-    await click(FORM.cancelBtn);
+    await click(KV_FORM.saveBtn);
+    assert.dom(KV_FORM.messageError).hasText('Error nope', 'it renders API error');
+    assert.dom(KV_FORM.inlineAlert).hasText('There was an error submitting this form.');
+    await click(KV_FORM.cancelBtn);
     assert.ok(
       this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.secret.details'),
       'router transitions to details on cancel'
@@ -214,15 +214,15 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       { owner: this.engine }
     );
 
-    await click(FORM.toggleJson);
+    await click(KV_FORM.toggleJson);
     codemirror().setValue('i am a string and not JSON');
     assert
-      .dom(FORM.inlineAlert)
+      .dom(KV_FORM.inlineAlert)
       .hasText('JSON is unparsable. Fix linting errors to avoid data discrepancies.');
 
     codemirror().setValue(`""`);
-    await click(FORM.saveBtn);
-    assert.dom(FORM.inlineAlert).hasText('Vault expects data to be formatted as an JSON object.');
+    await click(KV_FORM.saveBtn);
+    assert.dom(KV_FORM.inlineAlert).hasText('Vault expects data to be formatted as an JSON object.');
   });
 
   test('it toggles JSON view and saves modified data', async function (assert) {
@@ -256,12 +256,12 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
 />`,
       { owner: this.engine }
     );
-    assert.dom(FORM.dataInputLabel({ isJson: false })).hasText('Version data');
-    await click(FORM.toggleJson);
-    assert.dom(FORM.dataInputLabel({ isJson: true })).hasText('Version data');
+    assert.dom(KV_FORM.dataInputLabel({ isJson: false })).hasText('Version data');
+    await click(KV_FORM.toggleJson);
+    assert.dom(KV_FORM.dataInputLabel({ isJson: true })).hasText('Version data');
 
     codemirror().setValue(`{ "hello": "there"}`);
-    await click(FORM.saveBtn);
+    await click(KV_FORM.saveBtn);
   });
 
   test('it renders alert when creating a new secret version from an old version', async function (assert) {
@@ -278,7 +278,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     );
 
     assert
-      .dom(FORM.versionAlert)
+      .dom(KV_FORM.versionAlert)
       .hasText(
         `Warning You are creating a new version based on data from Version 1. The current version for my-secret is Version 4.`
       );

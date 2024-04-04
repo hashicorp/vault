@@ -23,7 +23,7 @@ import {
   metadataPolicy,
 } from 'vault/tests/helpers/kv/policy-generator';
 import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
-import { FORM, KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
+import { KV_FORM, KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { KV_METADATA_DETAILS } from 'vault/tests/helpers/components/kv/page/secret/metadata/details-selectors';
@@ -267,9 +267,9 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await click(KV_WORKFLOW.list.item('two'));
     await click(GENERAL.tab('Metadata'));
     await click(KV_METADATA_DETAILS.editBtn);
-    await fillIn(FORM.keyInput(), 'foo');
-    await fillIn(FORM.valueInput(), 'bar');
-    await click(FORM.saveBtn);
+    await fillIn(KV_FORM.keyInput(), 'foo');
+    await fillIn(KV_FORM.valueInput(), 'bar');
+    await click(KV_FORM.saveBtn);
     await click(GENERAL.breadcrumbAtIdx(2));
     assert.dom(KV_WORKFLOW.list.item()).exists({ count: 2 }, 'two secrets are listed');
   });
@@ -281,16 +281,16 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   }
 }`;
     await visit(`/vault/secrets/${this.backend}/kv/create`);
-    await fillIn(FORM.inputByAttr('path'), 'complex');
+    await fillIn(KV_FORM.inputByAttr('path'), 'complex');
 
-    await click(FORM.toggleJson);
+    await click(KV_FORM.toggleJson);
     assert.strictEqual(codemirror().getValue(), '{ "": "" }');
     codemirror().setValue('{ "foo3": { "name": "bar3" } }');
-    await click(FORM.saveBtn);
+    await click(KV_FORM.saveBtn);
 
     // Details view
-    assert.dom(FORM.toggleJson).isNotDisabled();
-    assert.dom(FORM.toggleJson).isChecked();
+    assert.dom(KV_FORM.toggleJson).isNotDisabled();
+    assert.dom(KV_FORM.toggleJson).isChecked();
     assert.strictEqual(
       codemirror().getValue(),
       obscuredData,
@@ -301,8 +301,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
     // New version view
     await click(KV_SECRET.createNewVersion);
-    assert.dom(FORM.toggleJson).isNotDisabled();
-    assert.dom(FORM.toggleJson).isChecked();
+    assert.dom(KV_FORM.toggleJson).isNotDisabled();
+    assert.dom(KV_FORM.toggleJson).isChecked();
     assert.false(codemirror().getValue().includes('*'), 'Values are not obscured on edit view');
   });
 
@@ -320,16 +320,16 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 }`;
 
     await visit(`/vault/secrets/${this.backend}/kv/create`);
-    await fillIn(FORM.inputByAttr('path'), 'complex_version_test');
+    await fillIn(KV_FORM.inputByAttr('path'), 'complex_version_test');
 
-    await click(FORM.toggleJson);
+    await click(KV_FORM.toggleJson);
     codemirror().setValue('{ "foo1": { "name": "bar1" } }');
-    await click(FORM.saveBtn);
+    await click(KV_FORM.saveBtn);
 
     // Create another version
     await click(KV_SECRET.createNewVersion);
     codemirror().setValue('{ "foo2": { "name": "bar2" } }');
-    await click(FORM.saveBtn);
+    await click(KV_FORM.saveBtn);
 
     // View the first version and make sure the secret data is correct
     await click(KV_SECRET.versionDropdown);
@@ -344,14 +344,14 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
   test('does not register as advanced when value includes {', async function (assert) {
     await visit(`/vault/secrets/${this.backend}/kv/create`);
-    await fillIn(FORM.inputByAttr('path'), 'not-advanced');
+    await fillIn(KV_FORM.inputByAttr('path'), 'not-advanced');
 
-    await fillIn(FORM.keyInput(), 'foo');
-    await fillIn(FORM.maskedValueInput(), '{bar}');
-    await click(FORM.saveBtn);
+    await fillIn(KV_FORM.keyInput(), 'foo');
+    await fillIn(KV_FORM.maskedValueInput(), '{bar}');
+    await click(KV_FORM.saveBtn);
     await click(KV_SECRET.createNewVersion);
-    assert.dom(FORM.toggleJson).isNotDisabled();
-    assert.dom(FORM.toggleJson).isNotChecked();
+    assert.dom(KV_FORM.toggleJson).isNotDisabled();
+    assert.dom(KV_FORM.toggleJson).isNotChecked();
   });
 });
 
@@ -432,11 +432,11 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       );
       // Create first version of secret
       await click(KV_WORKFLOW.list.createSecret);
-      await fillIn(FORM.inputByAttr('path'), secret);
-      assert.dom(FORM.toggleMetadata).exists('Shows metadata toggle when creating new secret');
-      await fillIn(FORM.keyInput(), 'foo');
-      await fillIn(FORM.maskedValueInput(), 'woahsecret');
-      await click(FORM.saveBtn);
+      await fillIn(KV_FORM.inputByAttr('path'), secret);
+      assert.dom(KV_FORM.toggleMetadata).exists('Shows metadata toggle when creating new secret');
+      await fillIn(KV_FORM.keyInput(), 'foo');
+      await fillIn(KV_FORM.maskedValueInput(), 'woahsecret');
+      await click(KV_FORM.saveBtn);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${secret}/details?namespace=${ns}&version=1`,
@@ -445,14 +445,16 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
 
       // Create a new version
       await click(KV_SECRET.createNewVersion);
-      assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
-      assert.dom(FORM.inputByAttr('path')).hasValue(secret);
-      assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');
-      assert.dom(FORM.keyInput()).hasValue('foo');
-      assert.dom(FORM.maskedValueInput()).hasValue('woahsecret');
-      await fillIn(FORM.keyInput(1), 'foo-two');
-      await fillIn(FORM.maskedValueInput(1), 'supersecret');
-      await click(FORM.saveBtn);
+      assert.dom(KV_FORM.inputByAttr('path')).isDisabled('path input is disabled');
+      assert.dom(KV_FORM.inputByAttr('path')).hasValue(secret);
+      assert
+        .dom(KV_FORM.toggleMetadata)
+        .doesNotExist('Does not show metadata toggle when creating new version');
+      assert.dom(KV_FORM.keyInput()).hasValue('foo');
+      assert.dom(KV_FORM.maskedValueInput()).hasValue('woahsecret');
+      await fillIn(KV_FORM.keyInput(1), 'foo-two');
+      await fillIn(KV_FORM.maskedValueInput(1), 'supersecret');
+      await click(KV_FORM.saveBtn);
 
       // Check details
       assert.strictEqual(

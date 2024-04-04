@@ -23,7 +23,7 @@ import {
   writeSecret,
   writeVersionedSecret,
 } from 'vault/tests/helpers/kv/kv-run-commands';
-import { FORM, KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
+import { KV_FORM, KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import { setupControlGroup, grantAccess } from 'vault/tests/helpers/control-groups';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { KV_METADATA_DETAILS } from 'vault/tests/helpers/components/kv/page/secret/metadata/details-selectors';
@@ -143,7 +143,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
 
       // Click cancel btn
-      await click(FORM.cancelBtn);
+      await click(KV_FORM.cancelBtn);
       assert.ok(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/list`),
         `url includes /vault/secrets/${backend}/kv/list`
@@ -243,10 +243,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details/edit?version=3`,
         'Url includes version query param'
       );
-      assert.dom(FORM.versionAlert).doesNotExist('Does not show version alert for current version');
-      assert.dom(FORM.inputByAttr('path')).isDisabled();
+      assert.dom(KV_FORM.versionAlert).doesNotExist('Does not show version alert for current version');
+      assert.dom(KV_FORM.inputByAttr('path')).isDisabled();
 
-      await click(FORM.cancelBtn);
+      await click(KV_FORM.cancelBtn);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details?version=3`,
@@ -270,11 +270,13 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details/edit?version=1`,
         'Url includes version query param'
       );
-      assert.dom(FORM.inputByAttr('path')).isDisabled();
-      assert.dom(FORM.keyInput()).hasValue('key-1', 'pre-populates form with selected version data');
-      assert.dom(FORM.maskedValueInput()).hasValue('val-1', 'pre-populates form with selected version data');
-      assert.dom(FORM.versionAlert).exists('Shows version alert');
-      await click(FORM.cancelBtn);
+      assert.dom(KV_FORM.inputByAttr('path')).isDisabled();
+      assert.dom(KV_FORM.keyInput()).hasValue('key-1', 'pre-populates form with selected version data');
+      assert
+        .dom(KV_FORM.maskedValueInput())
+        .hasValue('val-1', 'pre-populates form with selected version data');
+      assert.dom(KV_FORM.versionAlert).exists('Shows version alert');
+      await click(KV_FORM.cancelBtn);
 
       await click(GENERAL.tab('Metadata'));
       assert.strictEqual(
@@ -299,7 +301,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `goes to metadata edit page`
       );
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'metadata', 'edit']);
-      await click(FORM.cancelBtn);
+      await click(KV_FORM.cancelBtn);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/metadata`,
@@ -402,7 +404,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
 
       // Click cancel btn
-      await click(FORM.cancelBtn);
+      await click(KV_FORM.cancelBtn);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/list`,
@@ -573,7 +575,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
 
       // Click cancel btn
-      await click(FORM.cancelBtn);
+      await click(KV_FORM.cancelBtn);
       assert.ok(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/list`),
         `url includes /vault/secrets/${backend}/kv/list`
@@ -746,7 +748,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
 
       // Click cancel btn
-      await click(FORM.cancelBtn);
+      await click(KV_FORM.cancelBtn);
       assert.ok(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/list`),
         `url includes /vault/secrets/${backend}/kv/list`
@@ -863,7 +865,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `goes to metadata edit page`
       );
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'metadata', 'edit']);
-      await click(FORM.cancelBtn);
+      await click(KV_FORM.cancelBtn);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/metadata`,
@@ -950,7 +952,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
 
       // Click cancel btn
-      await click(FORM.cancelBtn);
+      await click(KV_FORM.cancelBtn);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/list`,
@@ -1022,16 +1024,16 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details/edit`,
         'Goes to edit page'
       );
-      assert.dom(FORM.versionAlert).doesNotExist('Does not show version alert for current version');
+      assert.dom(KV_FORM.versionAlert).doesNotExist('Does not show version alert for current version');
       assert
-        .dom(FORM.noReadAlert)
+        .dom(KV_FORM.noReadAlert)
         .hasText(
           'Warning You do not have read permissions for this secret data. Saving will overwrite the existing secret.',
           'Shows warning about no read permissions'
         );
-      assert.dom(FORM.inputByAttr('path')).isDisabled();
+      assert.dom(KV_FORM.inputByAttr('path')).isDisabled();
 
-      await click(FORM.cancelBtn);
+      await click(KV_FORM.cancelBtn);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details`,
@@ -1049,11 +1051,11 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details/edit?version=1`,
         'Url includes version query param'
       );
-      assert.dom(FORM.inputByAttr('path')).isDisabled();
-      assert.dom(FORM.keyInput()).hasValue('', 'form does not pre-populate');
-      assert.dom(FORM.maskedValueInput()).hasValue('', 'form does not pre-populate');
-      assert.dom(FORM.noReadAlert).exists('Shows no read alert');
-      await click(FORM.cancelBtn);
+      assert.dom(KV_FORM.inputByAttr('path')).isDisabled();
+      assert.dom(KV_FORM.keyInput()).hasValue('', 'form does not pre-populate');
+      assert.dom(KV_FORM.maskedValueInput()).hasValue('', 'form does not pre-populate');
+      assert.dom(KV_FORM.noReadAlert).exists('Shows no read alert');
+      await click(KV_FORM.cancelBtn);
 
       await click(GENERAL.tab('Metadata'));
       assert.strictEqual(

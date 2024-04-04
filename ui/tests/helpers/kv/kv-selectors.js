@@ -59,7 +59,7 @@ export const KV_WORKFLOW = {
 };
 
 // Form/Interactive selectors that are common between pages and forms
-export const FORM = {
+export const KV_FORM = {
   inputByAttr: (attr) => `[data-test-input="${attr}"]`,
   fieldByAttr: (attr) => `[data=test=field="${attr}"]`, // formfield
   toggleJson: '[data-test-toggle-input="json"]',
@@ -93,5 +93,5 @@ export const FORM = {
 };
 
 export const parseJsonEditor = (find) => {
-  return JSON.parse(find(FORM.jsonEditor).innerText);
+  return JSON.parse(find(KV_FORM.jsonEditor).innerText);
 };

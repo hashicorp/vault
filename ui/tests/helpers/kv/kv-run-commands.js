@@ -5,7 +5,7 @@
 
 /* eslint-disable ember/no-settled-after-test-helper */
 import { click, fillIn, visit, settled } from '@ember/test-helpers';
-import { FORM } from './kv-selectors';
+import { KV_FORM } from './kv-selectors';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 // CUSTOM ACTIONS RELEVANT TO KV-V2
@@ -14,10 +14,10 @@ export const writeSecret = async function (backend, path, key, val, ns = null) {
   const url = `vault/secrets/${backend}/kv/create`;
   ns ? await visit(url + `?namespace=${ns}`) : await visit(url);
   await settled();
-  await fillIn(FORM.inputByAttr('path'), path);
-  await fillIn(FORM.keyInput(), key);
-  await fillIn(FORM.maskedValueInput(), val);
-  await click(FORM.saveBtn);
+  await fillIn(KV_FORM.inputByAttr('path'), path);
+  await fillIn(KV_FORM.keyInput(), key);
+  await fillIn(KV_FORM.maskedValueInput(), val);
+  await click(KV_FORM.saveBtn);
   await settled();
   return;
 };
@@ -30,13 +30,13 @@ export const writeVersionedSecret = async function (backend, path, key, val, ver
     ns ? await visit(url + `?namespace=${ns}`) : await visit(url);
     await settled();
     if (currentVersion === version) {
-      await fillIn(FORM.keyInput(), key);
-      await fillIn(FORM.maskedValueInput(), val);
+      await fillIn(KV_FORM.keyInput(), key);
+      await fillIn(KV_FORM.maskedValueInput(), val);
     } else {
-      await fillIn(FORM.keyInput(), `key-${currentVersion}`);
-      await fillIn(FORM.maskedValueInput(), `val-${currentVersion}`);
+      await fillIn(KV_FORM.keyInput(), `key-${currentVersion}`);
+      await fillIn(KV_FORM.maskedValueInput(), `val-${currentVersion}`);
     }
-    await click(FORM.saveBtn);
+    await click(KV_FORM.saveBtn);
     await settled();
   }
   return;
