@@ -13,8 +13,7 @@ import showPage from 'vault/tests/pages/secrets/backend/kv/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
 import consolePanel from 'vault/tests/pages/components/console/ui-panel';
 import authPage from 'vault/tests/pages/auth';
-import { writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
-import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
+import { KV_WORKFLOW, writeSecret } from 'vault/tests/helpers/kv/kv-selectors';
 
 import { create } from 'ember-cli-page-object';
 import { deleteEngineCmd, runCmd } from 'vault/tests/helpers/commands';

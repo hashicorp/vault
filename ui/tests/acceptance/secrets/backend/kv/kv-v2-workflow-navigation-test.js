@@ -18,12 +18,13 @@ import {
 } from 'vault/tests/helpers/commands';
 import { personas } from 'vault/tests/helpers/kv/policy-generator';
 import {
+  KV_FORM,
+  KV_WORKFLOW,
   addSecretMetadataCmd,
   clearRecords,
   writeSecret,
   writeVersionedSecret,
-} from 'vault/tests/helpers/kv/kv-run-commands';
-import { KV_FORM, KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
+} from 'vault/tests/helpers/kv/kv-selectors';
 import { setupControlGroup, grantAccess } from 'vault/tests/helpers/control-groups';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { KV_METADATA_DETAILS } from 'vault/tests/helpers/components/kv/page/secret/metadata/details-selectors';

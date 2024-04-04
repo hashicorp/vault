@@ -8,15 +8,15 @@ import { v4 as uuidv4 } from 'uuid';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
+import { click, currentURL, visit } from '@ember/test-helpers';
 import { personas } from 'vault/tests/helpers/kv/policy-generator';
 import {
+  KV_WORKFLOW,
   clearRecords,
   deleteLatestCmd,
   setupControlGroup,
   writeVersionedSecret,
-} from 'vault/tests/helpers/kv/kv-run-commands';
-import { click, currentURL, visit } from '@ember/test-helpers';
-import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
+} from 'vault/tests/helpers/kv/kv-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { KV_METADATA_DETAILS } from 'vault/tests/helpers/components/kv/page/secret/metadata/details-selectors';
 import { KV_SECRET } from 'vault/tests/helpers/components/kv/page/secret/details-selectors';

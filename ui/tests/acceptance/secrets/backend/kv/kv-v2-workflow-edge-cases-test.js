@@ -22,8 +22,13 @@ import {
   metadataListPolicy,
   metadataPolicy,
 } from 'vault/tests/helpers/kv/policy-generator';
-import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
-import { KV_FORM, KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
+import {
+  KV_FORM,
+  KV_WORKFLOW,
+  clearRecords,
+  writeSecret,
+  writeVersionedSecret,
+} from 'vault/tests/helpers/kv/kv-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { KV_METADATA_DETAILS } from 'vault/tests/helpers/components/kv/page/secret/metadata/details-selectors';

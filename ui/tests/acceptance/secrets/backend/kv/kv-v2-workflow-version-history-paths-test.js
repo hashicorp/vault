@@ -9,14 +9,14 @@ import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { personas } from 'vault/tests/helpers/kv/policy-generator';
+
 import {
+  KV_WORKFLOW,
   clearRecords,
   deleteVersionCmd,
   destroyVersionCmd,
   writeVersionedSecret,
-} from 'vault/tests/helpers/kv/kv-run-commands';
-
-import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
+} from 'vault/tests/helpers/kv/kv-selectors';
 import { click, currentRouteName, currentURL, visit, waitUntil } from '@ember/test-helpers';
 import { grantAccess, setupControlGroup } from 'vault/tests/helpers/control-groups';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';

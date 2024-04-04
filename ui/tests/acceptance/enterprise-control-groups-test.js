@@ -13,7 +13,7 @@ import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import authForm from 'vault/tests/pages/components/auth-form';
 import controlGroup from 'vault/tests/pages/components/control-group';
 import controlGroupSuccess from 'vault/tests/pages/components/control-group-success';
-import { writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import { writeSecret } from 'vault/tests/helpers/kv/kv-selectors';
 import authPage from 'vault/tests/pages/auth';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { runCmd } from 'vault/tests/helpers/commands';
