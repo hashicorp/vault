@@ -91,6 +91,7 @@ func TestExternalPluginInContainer_MountAndUnmount(t *testing.T) {
 		t.Setenv("DOCKER_HOST", fmt.Sprintf("unix:///run/user/%d/docker.sock", os.Getuid()))
 		c, plugins := testClusterWithContainerPlugins(t, []consts.PluginType{consts.PluginTypeCredential})
 		mountAndUnmountContainerPlugin_WithRuntime(t, c, plugins[0], "runsc", true)
+
 	})
 }
 
