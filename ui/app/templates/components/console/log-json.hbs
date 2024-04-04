@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div class="console-ui-output has-text-grey">
+<div class="console-ui-output">
   <JsonEditor
     @showToolbar={{false}}
     @value={{stringify this.content}}
@@ -16,6 +16,9 @@
     @text="Copy"
     @isIconOnly={{true}}
     @textToCopy={{stringify this.content}}
+    @onError={{(fn
+      (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+    )}}
     class="transparent icon-grey-500 top-right-absolute"
   />
 </div>

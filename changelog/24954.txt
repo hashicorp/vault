@@ -1,0 +1,4 @@
+```release-note:bug
+core: upgrade github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 to 
+support azure workload identities.
+```

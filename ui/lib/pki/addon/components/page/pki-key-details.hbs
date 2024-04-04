@@ -7,14 +7,13 @@
   <ToolbarActions>
     {{#if @canDelete}}
       <ConfirmAction
-        @buttonClasses="toolbar-link"
+        class="toolbar-button"
+        @buttonColor="secondary"
         @onConfirmAction={{this.deleteKey}}
         @confirmTitle="Delete key?"
-        @confirmButtonText="Delete"
+        @buttonText="Delete"
         data-test-pki-key-delete
-      >
-        Delete
-      </ConfirmAction>
+      />
       <div class="toolbar-separator"></div>
     {{/if}}
     {{#if @key.privateKey}}

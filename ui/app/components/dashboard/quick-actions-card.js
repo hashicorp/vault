@@ -1,12 +1,12 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 /**
  * @module DashboardQuickActionsCard
@@ -140,7 +140,7 @@ export default class DashboardQuickActionsCard extends Component {
   @action
   navigateToPage() {
     let route = this.searchSelectParams.route;
-    // If search-select falls back to stringInput, paramVlue is a string not object
+    // If search-select falls back to stringInput, paramValue is a string not object
     let param = this.paramValue.id || this.paramValue;
 
     // kv has a special use case where if the paramValue ends in a '/' you should

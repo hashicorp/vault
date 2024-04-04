@@ -50,8 +50,8 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
     assert.dom('[data-test-breadcrumbs] li:nth-child(2) a').hasText(this.backend, 'engine name renders');
     assert.dom('[data-test-breadcrumbs] li:nth-child(3) a').hasText(this.path, 'secret path renders');
     assert
-      .dom('[data-test-breadcrumbs] li:nth-child(4)')
-      .hasText('/ edit', 'final breadcrumb renders and it is not a link.');
+      .dom('[data-test-breadcrumbs] li:nth-child(4) .hds-breadcrumb__current')
+      .exists('final breadcrumb renders and it is not a link.');
   });
 
   test('it renders a custom title for a non engine view', async function (assert) {
@@ -70,8 +70,10 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
     });
     assert
       .dom('[data-test-header-title]')
-      .hasText(`${this.backend} Version 2`, 'Mount path and Version tag render for title.');
-    assert.dom('[data-test-header-title] span').hasClass('hs-icon', 'An icon renders next to title.');
+      .hasText(`${this.backend} version 2`, 'Mount path and version tag render for title.');
+    assert
+      .dom('[data-test-header-title] [data-test-icon="key-values"]')
+      .exists('An icon renders next to title.');
   });
 
   test('it renders tabs', async function (assert) {
@@ -79,8 +81,8 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
     await render(
       hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @mountName="my-engine">
   <:tabLinks>
-    <LinkTo @route="list" data-test-secrets-tab="Secrets">Secrets</LinkTo>
-    <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
+    <li><LinkTo @route="list" data-test-secrets-tab="Secrets">Secrets</LinkTo></li>
+    <li><LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo></li>
   </:tabLinks>
   </KvPageHeader>
     `,

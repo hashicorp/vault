@@ -4,7 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import parseURL from 'core/utils/parse-url';
@@ -29,13 +29,13 @@ export default class SwaggerUiComponent extends Component {
           return (
             taggedOps
               .map((tagObj) => {
-                const operations = tagObj.get('operations').filter((operationObj) => {
-                  return operationObj.get('path').includes(phrase);
+                const operations = tagObj.operations.filter((operationObj) => {
+                  return operationObj.path.includes(phrase);
                 });
                 return tagObj.set('operations', operations);
               })
               // then traverse again and remove the top level item if there are no operations left after filtering
-              .filter((tagObj) => !!tagObj.get('operations').size)
+              .filter((tagObj) => !!tagObj.operations.size)
           );
         },
       },

@@ -14,12 +14,14 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -37,6 +39,9 @@ const (
 
 	autoRotateCheckInterval = 5 * time.Minute
 	legacyRotateReason      = "legacy rotation"
+	// The keyring is persisted before the root key.
+	defaultKeyringTimeout            = 1 * time.Second
+	bestEffortKeyringTimeoutOverride = "VAULT_ENCRYPTION_COUNT_PERSIST_TIMEOUT"
 )
 
 // Versions of the AESGCM storage methodology
@@ -89,6 +94,8 @@ type AESGCMBarrier struct {
 	// Used only for testing
 	RemoteEncryptions     *atomic.Int64
 	totalLocalEncryptions *atomic.Int64
+
+	bestEffortKeyringTimeout time.Duration
 }
 
 func (b *AESGCMBarrier) RotationConfig() (kc KeyRotationConfig, err error) {
@@ -113,6 +120,15 @@ func (b *AESGCMBarrier) SetRotationConfig(ctx context.Context, rotConfig KeyRota
 // NewAESGCMBarrier is used to construct a new barrier that uses
 // the provided physical backend for storage.
 func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
+	keyringTimeout := defaultKeyringTimeout
+	keyringTimeoutStr := os.Getenv(bestEffortKeyringTimeoutOverride)
+	if keyringTimeoutStr != "" {
+		t, err := parseutil.ParseDurationSecond(keyringTimeoutStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed parsing %s environment variable: %w", bestEffortKeyringTimeoutOverride, err)
+		}
+		keyringTimeout = t
+	}
 	b := &AESGCMBarrier{
 		backend:                  physical,
 		sealed:                   true,
@@ -121,6 +137,7 @@ func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
 		UnaccountedEncryptions:   atomic.NewInt64(0),
 		RemoteEncryptions:        atomic.NewInt64(0),
 		totalLocalEncryptions:    atomic.NewInt64(0),
+		bestEffortKeyringTimeout: keyringTimeout,
 	}
 	return b, nil
 }
@@ -211,11 +228,18 @@ func (b *AESGCMBarrier) Initialize(ctx context.Context, key []byte, sealKey []by
 // persistKeyring is used to write out the keyring using the
 // root key to encrypt it.
 func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) error {
-	const (
-		// The keyring is persisted before the root key.
-		keyringTimeout = 1 * time.Second
-	)
+	return b.persistKeyringInternal(ctx, keyring, false)
+}
 
+// persistKeyringBestEffort is like persistKeyring but 'best effort', ie times out early
+// for non critical keyring writes (encryption/rotation tracking)
+func (b *AESGCMBarrier) persistKeyringBestEffort(ctx context.Context, keyring *Keyring) error {
+	return b.persistKeyringInternal(ctx, keyring, true)
+}
+
+// persistKeyring is used to write out the keyring using the
+// root key to encrypt it.
+func (b *AESGCMBarrier) persistKeyringInternal(ctx context.Context, keyring *Keyring, bestEffort bool) error {
 	// Create the keyring entry
 	keyringBuf, err := keyring.Serialize()
 	defer memzero(keyringBuf)
@@ -241,10 +265,16 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 		Value: value,
 	}
 
-	// We reduce the timeout on the initial 'put' but if this succeeds we will
-	// allow longer later on when we try to persist the root key .
-	ctxKeyring, cancelKeyring := context.WithTimeout(ctx, keyringTimeout)
-	defer cancelKeyring()
+	ctxKeyring := ctx
+
+	if bestEffort {
+		// We reduce the timeout on the initial 'put' but if this succeeds we will
+		// allow longer later on when we try to persist the root key .
+		var cancelKeyring func()
+		ctxKeyring, cancelKeyring = context.WithTimeout(ctx, b.bestEffortKeyringTimeout)
+		defer cancelKeyring()
+	}
+
 	if err := b.backend.Put(ctxKeyring, pe); err != nil {
 		return fmt.Errorf("failed to persist keyring: %w", err)
 	}
@@ -1231,7 +1261,7 @@ func (b *AESGCMBarrier) persistEncryptions(ctx context.Context) error {
 			newEncs := upe + 1
 			activeKey.Encryptions += uint64(newEncs)
 			newKeyring := b.keyring.Clone()
-			err := b.persistKeyring(ctx, newKeyring)
+			err := b.persistKeyringBestEffort(ctx, newKeyring)
 			if err != nil {
 				return err
 			}

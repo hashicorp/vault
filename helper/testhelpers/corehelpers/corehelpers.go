@@ -6,28 +6,34 @@
 package corehelpers
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
-
-	"github.com/hashicorp/vault/internal/observability/event"
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/credential/approle"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/plugins/database/mysql"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/go-testing-interface"
+)
+
+var (
+	_ audit.Backend    = (*NoopAudit)(nil)
+	_ eventlogger.Node = (*noopWrapper)(nil)
 )
 
 var externalPlugins = []string{"transform", "kmip", "keymgmt"}
@@ -49,36 +55,27 @@ func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
 
 // MakeTestPluginDir creates a temporary directory suitable for holding plugins.
 // This helper also resolves symlinks to make tests happy on OS X.
-func MakeTestPluginDir(t testing.T) (string, func(t testing.T)) {
-	if t != nil {
-		t.Helper()
-	}
+func MakeTestPluginDir(t testing.T) string {
+	t.Helper()
 
 	dir, err := os.MkdirTemp("", "")
 	if err != nil {
-		if t == nil {
-			panic(err)
-		}
 		t.Fatal(err)
 	}
 
 	// OSX tempdir are /var, but actually symlinked to /private/var
 	dir, err = filepath.EvalSymlinks(dir)
 	if err != nil {
-		if t == nil {
-			panic(err)
-		}
 		t.Fatal(err)
 	}
 
-	return dir, func(t testing.T) {
+	t.Cleanup(func() {
 		if err := os.RemoveAll(dir); err != nil {
-			if t == nil {
-				panic(err)
-			}
 			t.Fatal(err)
 		}
-	}
+	})
+
+	return dir
 }
 
 func NewMockBuiltinRegistry() *mockBuiltinRegistry {
@@ -220,62 +217,90 @@ func (m *mockBuiltinRegistry) DeprecationStatus(name string, pluginType consts.P
 	return consts.Unknown, false
 }
 
-func TestNoopAudit(t testing.T, config map[string]string) *NoopAudit {
-	n, err := NewNoopAudit(config)
+func TestNoopAudit(t testing.T, path string, config map[string]string) *NoopAudit {
+	cfg := &audit.BackendConfig{
+		Config:    config,
+		MountPath: path,
+		Logger:    NewTestLogger(t),
+	}
+	n, err := NewNoopAudit(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return n
 }
 
-func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
+// NoopHeaderFormatter can be used within no-op audit devices to do nothing when
+// it comes to only allow configured headers to appear in the result.
+// Whatever is passed in will be returned (nil becomes an empty map) in lowercase.
+type NoopHeaderFormatter struct{}
+
+// ApplyConfig implements the relevant interface to make NoopHeaderFormatter an audit.HeaderFormatter.
+func (f *NoopHeaderFormatter) ApplyConfig(_ context.Context, headers map[string][]string, _ audit.Salter) (result map[string][]string, retErr error) {
+	if len(headers) < 1 {
+		return map[string][]string{}, nil
+	}
+
+	// Make a copy of the incoming headers with everything lower so we can
+	// case-insensitively compare
+	lowerHeaders := make(map[string][]string, len(headers))
+	for k, v := range headers {
+		lowerHeaders[strings.ToLower(k)] = v
+	}
+
+	return lowerHeaders, nil
+}
+
+// NewNoopAudit should be used to create a NoopAudit as it handles creation of a
+// predictable salt and wraps eventlogger nodes so information can be retrieved on
+// what they've seen or formatted.
+func NewNoopAudit(config *audit.BackendConfig) (*NoopAudit, error) {
 	view := &logical.InmemStorage{}
-	err := view.Put(context.Background(), &logical.StorageEntry{
-		Key:   "salt",
-		Value: []byte("foo"),
-	})
+
+	// Create the salt with a known key for predictable hmac values.
+	se := &logical.StorageEntry{Key: "salt", Value: []byte("foo")}
+	err := view.Put(context.Background(), se)
 	if err != nil {
 		return nil, err
 	}
 
-	n := &NoopAudit{
-		Config: &audit.BackendConfig{
-			SaltView: view,
-			SaltConfig: &salt.Config{
-				HMAC:     sha256.New,
-				HMACType: "hmac-sha256",
-			},
-			Config: config,
+	// Override the salt related config settings.
+	backendConfig := &audit.BackendConfig{
+		SaltView: view,
+		SaltConfig: &salt.Config{
+			HMAC:     sha256.New,
+			HMACType: "hmac-sha256",
 		},
+		Config:    config.Config,
+		MountPath: config.MountPath,
 	}
 
-	cfg, err := audit.NewFormatterConfig()
+	noopBackend := &NoopAudit{
+		Config:     backendConfig,
+		nodeIDList: make([]eventlogger.NodeID, 2),
+		nodeMap:    make(map[eventlogger.NodeID]eventlogger.Node, 2),
+	}
+
+	cfg, err := audit.NewFormatterConfig(&NoopHeaderFormatter{})
 	if err != nil {
 		return nil, err
 	}
-
-	f, err := audit.NewEntryFormatter(cfg, n)
-	if err != nil {
-		return nil, fmt.Errorf("error creating formatter: %w", err)
-	}
-
-	fw, err := audit.NewEntryFormatterWriter(cfg, f, &audit.JSONWriter{})
-	if err != nil {
-		return nil, fmt.Errorf("error creating formatter writer: %w", err)
-	}
-
-	n.formatter = fw
-
-	n.nodeIDList = make([]eventlogger.NodeID, 2)
-	n.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node)
 
 	formatterNodeID, err := event.GenerateNodeID()
 	if err != nil {
 		return nil, fmt.Errorf("error generating random NodeID for formatter node: %w", err)
 	}
 
-	n.nodeIDList[0] = formatterNodeID
-	n.nodeMap[formatterNodeID] = f
+	formatterNode, err := audit.NewEntryFormatter(config.MountPath, cfg, noopBackend, config.Logger)
+	if err != nil {
+		return nil, fmt.Errorf("error creating formatter: %w", err)
+	}
+
+	// Wrap the formatting node, so we can get any bytes that were formatted etc.
+	wrappedFormatter := &noopWrapper{format: "json", node: formatterNode, backend: noopBackend}
+
+	noopBackend.nodeIDList[0] = formatterNodeID
+	noopBackend.nodeMap[formatterNodeID] = wrappedFormatter
 
 	sinkNode := event.NewNoopSink()
 	sinkNodeID, err := event.GenerateNodeID()
@@ -283,15 +308,18 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 		return nil, fmt.Errorf("error generating random NodeID for sink node: %w", err)
 	}
 
-	n.nodeIDList[1] = sinkNodeID
-	n.nodeMap[sinkNodeID] = sinkNode
+	noopBackend.nodeIDList[1] = sinkNodeID
+	noopBackend.nodeMap[sinkNodeID] = sinkNode
 
-	return n, nil
+	return noopBackend, nil
 }
 
+// NoopAuditFactory should be used when the test needs a way to access bytes that
+// have been formatted by the pipeline during audit requests.
+// The records parameter will be repointed to the one used within the pipeline.
 func NoopAuditFactory(records **[][]byte) audit.Factory {
-	return func(_ context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
-		n, err := NewNoopAudit(config.Config)
+	return func(_ context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
+		n, err := NewNoopAudit(config)
 		if err != nil {
 			return nil, err
 		}
@@ -303,8 +331,23 @@ func NoopAuditFactory(records **[][]byte) audit.Factory {
 	}
 }
 
+// noopWrapper is designed to wrap a formatter node in order to allow access to
+// bytes formatted, headers formatted and parts of the logical.LogInput.
+// Some older tests relied on being able to query this information so while those
+// tests stick around we should look after them.
+type noopWrapper struct {
+	format  string
+	node    eventlogger.Node
+	backend *NoopAudit
+}
+
+// NoopAuditEventListener is a callback used by noopWrapper.Process() to notify
+// of each received audit event.
+type NoopAuditEventListener func(*audit.AuditEvent)
+
 type NoopAudit struct {
-	Config         *audit.BackendConfig
+	Config *audit.BackendConfig
+
 	ReqErr         error
 	ReqAuth        []*logical.Auth
 	Req            []*logical.Request
@@ -319,80 +362,115 @@ type NoopAudit struct {
 	RespNonHMACKeys    [][]string
 	RespReqNonHMACKeys [][]string
 	RespErrs           []error
-
-	formatter *audit.EntryFormatterWriter
-	records   [][]byte
-	l         sync.RWMutex
-	salt      *salt.Salt
-	saltMutex sync.RWMutex
+	records            [][]byte
+	l                  sync.RWMutex
+	salt               *salt.Salt
+	saltMutex          sync.RWMutex
 
 	nodeIDList []eventlogger.NodeID
 	nodeMap    map[eventlogger.NodeID]eventlogger.Node
+
+	listener NoopAuditEventListener
 }
 
-func (n *NoopAudit) LogRequest(ctx context.Context, in *logical.LogInput) error {
-	n.l.Lock()
-	defer n.l.Unlock()
-	if n.formatter != nil {
-		var w bytes.Buffer
-		err := n.formatter.FormatAndWriteRequest(ctx, &w, in)
-		if err != nil {
-			return err
+// Process handles the contortions required by older test code to ensure behavior.
+// It will attempt to do some pre/post processing of the logical.LogInput that should
+// form part of the event's payload data, as well as capturing the resulting headers
+// that were formatted and track the overall bytes that a formatted event uses when
+// it's ready to head down the pipeline to the sink node (a noop for us).
+func (n *noopWrapper) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
+	n.backend.l.Lock()
+	defer n.backend.l.Unlock()
+
+	var err error
+
+	// We're expecting audit events since this is an audit device.
+	a, ok := e.Payload.(*audit.AuditEvent)
+	if !ok {
+		return nil, errors.New("cannot parse payload as an audit event")
+	}
+
+	if n.backend.listener != nil {
+		n.backend.listener(a)
+	}
+
+	in := a.Data
+
+	// Depending on the type of the audit event (request or response) we need to
+	// track different things.
+	switch a.Subtype {
+	case audit.RequestType:
+		n.backend.ReqAuth = append(n.backend.ReqAuth, in.Auth)
+		n.backend.Req = append(n.backend.Req, in.Request)
+		n.backend.ReqNonHMACKeys = in.NonHMACReqDataKeys
+		n.backend.ReqErrs = append(n.backend.ReqErrs, in.OuterErr)
+
+		if n.backend.ReqErr != nil {
+			return nil, n.backend.ReqErr
 		}
-		n.records = append(n.records, w.Bytes())
-	}
+	case audit.ResponseType:
+		n.backend.RespAuth = append(n.backend.RespAuth, in.Auth)
+		n.backend.RespReq = append(n.backend.RespReq, in.Request)
+		n.backend.Resp = append(n.backend.Resp, in.Response)
+		n.backend.RespErrs = append(n.backend.RespErrs, in.OuterErr)
 
-	n.ReqAuth = append(n.ReqAuth, in.Auth)
-	n.Req = append(n.Req, in.Request)
-	n.ReqHeaders = append(n.ReqHeaders, in.Request.Headers)
-	n.ReqNonHMACKeys = in.NonHMACReqDataKeys
-	n.ReqErrs = append(n.ReqErrs, in.OuterErr)
-
-	return n.ReqErr
-}
-
-func (n *NoopAudit) LogResponse(ctx context.Context, in *logical.LogInput) error {
-	n.l.Lock()
-	defer n.l.Unlock()
-
-	if n.formatter != nil {
-		var w bytes.Buffer
-		err := n.formatter.FormatAndWriteResponse(ctx, &w, in)
-		if err != nil {
-			return err
+		if in.Response != nil {
+			n.backend.RespNonHMACKeys = append(n.backend.RespNonHMACKeys, in.NonHMACRespDataKeys)
+			n.backend.RespReqNonHMACKeys = append(n.backend.RespReqNonHMACKeys, in.NonHMACReqDataKeys)
 		}
-		n.records = append(n.records, w.Bytes())
+
+		if n.backend.RespErr != nil {
+			return nil, n.backend.RespErr
+		}
+	default:
+		return nil, fmt.Errorf("unknown audit event type: %q", a.Subtype)
 	}
 
-	n.RespAuth = append(n.RespAuth, in.Auth)
-	n.RespReq = append(n.RespReq, in.Request)
-	n.Resp = append(n.Resp, in.Response)
-	n.RespErrs = append(n.RespErrs, in.OuterErr)
-
-	if in.Response != nil {
-		n.RespNonHMACKeys = append(n.RespNonHMACKeys, in.NonHMACRespDataKeys)
-		n.RespReqNonHMACKeys = append(n.RespReqNonHMACKeys, in.NonHMACReqDataKeys)
+	// Once we've taken note of the relevant properties of the event, we get the
+	// underlying (wrapped) node to process it as normal.
+	e, err = n.node.Process(ctx, e)
+	if err != nil {
+		return nil, fmt.Errorf("error processing wrapped node: %w", err)
 	}
 
-	return n.RespErr
+	// Once processing has been carried out, the underlying node (a formatter node)
+	// should contain the output ready for the sink node. We'll get that in order
+	// to track how many bytes we formatted.
+	b, ok := e.Format(n.format)
+	if ok {
+		n.backend.records = append(n.backend.records, b)
+	}
+
+	// Finally, the last bit of post-processing is to make sure that we track the
+	// formatted headers that would have made it to the logs via the sink node.
+	// They only appear in requests.
+	if a.Subtype == audit.RequestType {
+		reqEntry := &audit.RequestEntry{}
+		err = json.Unmarshal(b, &reqEntry)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse formatted audit entry data: %w", err)
+		}
+
+		n.backend.ReqHeaders = append(n.backend.ReqHeaders, reqEntry.Request.Headers)
+	}
+
+	// Return the event and no error in order to let the pipeline continue on.
+	return e, nil
 }
 
-func (n *NoopAudit) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
-	n.l.Lock()
-	defer n.l.Unlock()
-	var w bytes.Buffer
+func (n *noopWrapper) Reopen() error {
+	return n.node.Reopen()
+}
 
-	tempFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
-	if err != nil {
-		return err
+func (n *noopWrapper) Type() eventlogger.NodeType {
+	return n.node.Type()
+}
+
+// LogTestMessage will manually crank the handle on the nodes associated with this backend.
+func (n *NoopAudit) LogTestMessage(ctx context.Context, in *logical.LogInput) error {
+	if len(n.nodeIDList) > 0 {
+		return audit.ProcessManual(ctx, in, n.nodeIDList, n.nodeMap)
 	}
-
-	err = tempFormatter.FormatAndWriteResponse(ctx, &w, in)
-	if err != nil {
-		return err
-	}
-
-	n.records = append(n.records, w.Bytes())
 
 	return nil
 }
@@ -437,8 +515,8 @@ func (n *NoopAudit) Invalidate(_ context.Context) {
 
 // RegisterNodesAndPipeline registers the nodes and a pipeline as required by
 // the audit.Backend interface.
-func (b *NoopAudit) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
-	for id, node := range b.nodeMap {
+func (n *NoopAudit) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
+	for id, node := range n.nodeMap {
 		if err := broker.RegisterNode(id, node); err != nil {
 			return err
 		}
@@ -446,11 +524,15 @@ func (b *NoopAudit) RegisterNodesAndPipeline(broker *eventlogger.Broker, name st
 
 	pipeline := eventlogger.Pipeline{
 		PipelineID: eventlogger.PipelineID(name),
-		EventType:  eventlogger.EventType("audit"),
-		NodeIDs:    b.nodeIDList,
+		EventType:  eventlogger.EventType(event.AuditType.String()),
+		NodeIDs:    n.nodeIDList,
 	}
 
 	return broker.RegisterPipeline(pipeline)
+}
+
+func (n *NoopAudit) SetListener(listener NoopAuditEventListener) {
+	n.listener = listener
 }
 
 type TestLogger struct {
@@ -515,4 +597,28 @@ func NewTestLogger(t testing.T) *TestLogger {
 
 func (tl *TestLogger) StopLogging() {
 	tl.InterceptLogger.DeregisterSink(tl.sink)
+}
+
+func (n *NoopAudit) EventType() eventlogger.EventType {
+	return eventlogger.EventType(event.AuditType.String())
+}
+
+func (n *NoopAudit) HasFiltering() bool {
+	return false
+}
+
+func (n *NoopAudit) Name() string {
+	return n.Config.MountPath
+}
+
+func (n *NoopAudit) Nodes() map[eventlogger.NodeID]eventlogger.Node {
+	return n.nodeMap
+}
+
+func (n *NoopAudit) NodeIDs() []eventlogger.NodeID {
+	return n.nodeIDList
+}
+
+func (n *NoopAudit) IsFallback() bool {
+	return false
 }

@@ -19,9 +19,9 @@ cluster_addr  = "https://127.0.0.1:8201"
 api_addr      = "https://127.0.0.1:8200"
 disable_mlock = true
 
-storage "consul" {
-  address = "127.0.0.1:8500"
-  path    = "vault/"
+storage "raft" {
+  path = "/path/to/raft/data"
+  node_id = "raft_node_id"
 }
 
 listener "tcp" {
@@ -130,6 +130,16 @@ to specify where the configuration is.
   allowed to be loaded. Vault must have permission to read files in this
   directory to successfully load plugins, and the value cannot be a symbolic link.
 
+- `plugin_tmpdir` `(string: "")` - A directory that Vault can create temporary
+  files in to support Unix socket communication with containerized plugins. If
+  not set, Vault will use the system's default directory for temporary files.
+  Generally not necessary unless you are using
+  [containerized plugins](/vault/docs/plugins/containerized-plugins) and Vault
+  does not share a temporary folder with other processes, such as if using
+  systemd's [PrivateTmp](https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#PrivateTmp=)
+  setting. This can also be specified via the `VAULT_PLUGIN_TMPDIR` environment
+  variable.
+
   @include 'plugin-file-permissions-check.mdx'
 
 - `plugin_file_uid` `(integer: 0)` – Uid of the plugin directories and plugin binaries if they
@@ -226,6 +236,9 @@ can have a negative effect on performance due to the tracking of each lock attem
   When `imprecise_lease_role_tracking` is set to true and a new role-based quota is enabled, subsequent lease counts start from 0.
   `imprecise_lease_role_tracking` affects role-based lease count quotas, but reduces latencies when not using role based quotas.
 
+- `request_limiter` `([Request Limiter][request-limiter]: <none>)` – Allows
+  operators to enable Vault's Request Limiter functionality.
+
 ### High availability parameters
 
 The following parameters are used on backends that support [high availability][high-availability].
@@ -278,3 +291,4 @@ The following parameters are only used with Vault Enterprise
 [sentinel]: /vault/docs/configuration/sentinel
 [high-availability]: /vault/docs/concepts/ha
 [plugins]: /vault/docs/plugins
+[request-limiter]: /vault/docs/concepts/request-limiter

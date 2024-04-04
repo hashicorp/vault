@@ -4,9 +4,9 @@
 ~}}
 
 {{#let (find-by "name" "path" @secret.allFields) as |attr|}}
-  {{#if @isEdit}}
+  {{#if (eq @type "edit")}}
     <ReadonlyFormField @attr={{attr}} @value={{get @secret attr.name}} />
-  {{else}}
+  {{else if (eq @type "create")}}
     <FormField @attr={{attr}} @model={{@secret}} @modelValidations={{@modelValidations}} @onKeyUp={{@pathValidations}} />
   {{/if}}
 {{/let}}
@@ -14,25 +14,38 @@
 <hr class="is-marginless has-background-gray-200" />
 {{#if @showJson}}
   <JsonEditor
-    @title="{{if @isEdit 'Version' 'Secret'}} data"
-    @value={{or (stringify @secret.secretData) this.emptyJson}}
+    @title="{{if (eq @type 'create') 'Secret' 'Version'}} data"
+    @value={{this.stringifiedSecretData}}
+    @allowObscure={{true}}
     @valueUpdated={{this.handleJson}}
+    @readOnly={{eq @type "details"}}
   />
   {{#if (or @modelValidations.secretData.errors this.lintingErrors)}}
-    <AlertInline @type={{if this.lintingErrors "warning" "danger"}} @paddingTop={{true}}>
-      {{#if @modelValidations.secretData.errors}}
-        {{@modelValidations.secretData.errors}}
-      {{else}}
-        JSON is unparsable. Fix linting errors to avoid data discrepancies.
-      {{/if}}
-    </AlertInline>
+    <AlertInline
+      @color={{if this.lintingErrors "warning" "critical"}}
+      class="has-top-padding-s"
+      @message={{if
+        @modelValidations.secretData.errors
+        @modelValidations.secretData.errors
+        "JSON is unparsable. Fix linting errors to avoid data discrepancies."
+      }}
+    />
   {{/if}}
+{{else if (eq @type "details")}}
+  {{#each-in @secret.secretData as |key value|}}
+    <InfoTableRow @label={{key}} @value={{value}} @alwaysRender={{true}}>
+      <MaskedInput @name={{key}} @value={{value}} @displayOnly={{true}} @allowCopy={{true}} @allowDownload={{true}} />
+    </InfoTableRow>
+  {{else}}
+    <InfoTableRow @label="" @value="" @alwaysRender={{true}} />
+  {{/each-in}}
 {{else}}
   <KvObjectEditor
     class="has-top-margin-m"
-    @label="{{if @isEdit 'Version' 'Secret'}} data"
+    @label="{{if (eq @type 'create') 'Secret' 'Version'}} data"
     @value={{@secret.secretData}}
     @onChange={{fn (mut @secret.secretData)}}
     @isMasked={{true}}
+    @warnNonStringValues={{true}}
   />
 {{/if}}

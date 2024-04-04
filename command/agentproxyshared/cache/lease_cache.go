@@ -400,18 +400,18 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return nil, err
 	}
 	if cachedResp != nil {
-		c.logger.Debug("returning cached response", "path", req.Request.URL.Path)
+		c.logger.Debug("returning cached dynamic secret response", "path", req.Request.URL.Path)
 		return cachedResp, nil
 	}
 
 	// Check if the response for this request is already in the static secret cache
-	if staticSecretCacheId != "" && req.Request.Method == http.MethodGet {
+	if staticSecretCacheId != "" && req.Request.Method == http.MethodGet && req.Token != "" {
 		cachedResp, err = c.checkCacheForStaticSecretRequest(staticSecretCacheId, req)
 		if err != nil {
 			return nil, err
 		}
 		if cachedResp != nil {
-			c.logger.Debug("returning cached response", "id", staticSecretCacheId, "path", req.Request.URL.Path)
+			c.logger.Debug("returning cached static secret response", "id", staticSecretCacheId, "path", req.Request.URL.Path)
 			return cachedResp, nil
 		}
 	}

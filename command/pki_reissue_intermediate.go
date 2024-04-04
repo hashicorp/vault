@@ -4,18 +4,14 @@
 package command
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
 	"io"
-	"net"
-	"net/url"
 	"os"
 	"strings"
 
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/posener/complete"
 )
 
@@ -150,13 +146,13 @@ func parseTemplateCertificate(certificate x509.Certificate, useExistingKey bool,
 	// Generate Certificate Signing Parameters
 	templateData = map[string]interface{}{
 		"common_name": certificate.Subject.CommonName,
-		"alt_names":   makeAltNamesCommaSeparatedString(certificate.DNSNames, certificate.EmailAddresses),
-		"ip_sans":     makeIpAddressCommaSeparatedString(certificate.IPAddresses),
-		"uri_sans":    makeUriCommaSeparatedString(certificate.URIs),
+		"alt_names":   certutil.MakeAltNamesCommaSeparatedString(certificate.DNSNames, certificate.EmailAddresses),
+		"ip_sans":     certutil.MakeIpAddressCommaSeparatedString(certificate.IPAddresses),
+		"uri_sans":    certutil.MakeUriCommaSeparatedString(certificate.URIs),
 		// other_sans (string: "") - Specifies custom OID/UTF8-string SANs. These must match values specified on the role in allowed_other_sans (see role creation for allowed_other_sans globbing rules). The format is the same as OpenSSL: <oid>;<type>:<value> where the only current valid type is UTF8. This can be a comma-delimited list or a JSON string slice.
 		// Punting on Other_SANs, shouldn't really be on CAs
-		"signature_bits":        findSignatureBits(certificate.SignatureAlgorithm),
-		"exclude_cn_from_sans":  determineExcludeCnFromSans(certificate),
+		"signature_bits":        certutil.FindSignatureBits(certificate.SignatureAlgorithm),
+		"exclude_cn_from_sans":  certutil.DetermineExcludeCnFromCertSans(certificate),
 		"ou":                    certificate.Subject.OrganizationalUnit,
 		"organization":          certificate.Subject.Organization,
 		"country":               certificate.Subject.Country,
@@ -168,7 +164,7 @@ func parseTemplateCertificate(certificate x509.Certificate, useExistingKey bool,
 		"ttl":                   (certificate.NotAfter.Sub(certificate.NotBefore)).String(),
 		"max_path_length":       certificate.MaxPathLen,
 		"permitted_dns_domains": strings.Join(certificate.PermittedDNSDomains, ","),
-		"use_pss":               isPSS(certificate.SignatureAlgorithm),
+		"use_pss":               certutil.IsPSS(certificate.SignatureAlgorithm),
 	}
 
 	if useExistingKey {
@@ -178,116 +174,9 @@ func parseTemplateCertificate(certificate x509.Certificate, useExistingKey bool,
 		}
 		templateData["key_ref"] = keyRef
 	} else {
-		templateData["key_type"] = getKeyType(certificate.PublicKeyAlgorithm.String())
-		templateData["key_bits"] = findBitLength(certificate.PublicKey)
+		templateData["key_type"] = certutil.GetKeyType(certificate.PublicKeyAlgorithm.String())
+		templateData["key_bits"] = certutil.FindBitLength(certificate.PublicKey)
 	}
 
 	return templateData, nil
-}
-
-func isPSS(algorithm x509.SignatureAlgorithm) bool {
-	switch algorithm {
-	case x509.SHA384WithRSAPSS, x509.SHA512WithRSAPSS, x509.SHA256WithRSAPSS:
-		return true
-	default:
-		return false
-	}
-}
-
-func makeAltNamesCommaSeparatedString(names []string, emails []string) string {
-	return strings.Join(names, ",") + "," + strings.Join(emails, ",")
-}
-
-func makeUriCommaSeparatedString(uris []*url.URL) string {
-	stringAddresses := make([]string, len(uris))
-	for i, uri := range uris {
-		stringAddresses[i] = uri.String()
-	}
-	return strings.Join(stringAddresses, ",")
-}
-
-func makeIpAddressCommaSeparatedString(addresses []net.IP) string {
-	stringAddresses := make([]string, len(addresses))
-	for i, address := range addresses {
-		stringAddresses[i] = address.String()
-	}
-	return strings.Join(stringAddresses, ",")
-}
-
-func determineExcludeCnFromSans(certificate x509.Certificate) bool {
-	cn := certificate.Subject.CommonName
-	if cn == "" {
-		return false
-	}
-
-	emails := certificate.EmailAddresses
-	for _, email := range emails {
-		if email == cn {
-			return false
-		}
-	}
-
-	dnses := certificate.DNSNames
-	for _, dns := range dnses {
-		if dns == cn {
-			return false
-		}
-	}
-
-	return true
-}
-
-func findBitLength(publicKey any) int {
-	if publicKey == nil {
-		return 0
-	}
-	switch pub := publicKey.(type) {
-	case *rsa.PublicKey:
-		return pub.N.BitLen()
-	case *ecdsa.PublicKey:
-		switch pub.Curve {
-		case elliptic.P224():
-			return 224
-		case elliptic.P256():
-			return 256
-		case elliptic.P384():
-			return 384
-		case elliptic.P521():
-			return 521
-		default:
-			return 0
-		}
-	default:
-		return 0
-	}
-}
-
-func findSignatureBits(algo x509.SignatureAlgorithm) int {
-	switch algo {
-	case x509.MD2WithRSA, x509.MD5WithRSA, x509.SHA1WithRSA, x509.DSAWithSHA1, x509.ECDSAWithSHA1:
-		return -1
-	case x509.SHA256WithRSA, x509.DSAWithSHA256, x509.ECDSAWithSHA256, x509.SHA256WithRSAPSS:
-		return 256
-	case x509.SHA384WithRSA, x509.ECDSAWithSHA384, x509.SHA384WithRSAPSS:
-		return 384
-	case x509.SHA512WithRSA, x509.SHA512WithRSAPSS, x509.ECDSAWithSHA512:
-		return 512
-	case x509.PureEd25519:
-		return 0
-	default:
-		return -1
-	}
-}
-
-func getKeyType(goKeyType string) string {
-	switch goKeyType {
-	case "RSA":
-		return "rsa"
-	case "ECDSA":
-		return "ec"
-	case "Ed25519":
-		return "ed25519"
-	default:
-		return ""
-	}
 }

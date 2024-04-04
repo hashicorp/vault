@@ -4,7 +4,6 @@
 package audit
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -13,6 +12,8 @@ import (
 
 // TestOptions_WithFormat exercises WithFormat Option to ensure it performs as expected.
 func TestOptions_WithFormat(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value                string
 		IsErrorExpected      bool
@@ -68,6 +69,8 @@ func TestOptions_WithFormat(t *testing.T) {
 
 // TestOptions_WithSubtype exercises WithSubtype Option to ensure it performs as expected.
 func TestOptions_WithSubtype(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value                string
 		IsErrorExpected      bool
@@ -113,6 +116,8 @@ func TestOptions_WithSubtype(t *testing.T) {
 
 // TestOptions_WithNow exercises WithNow Option to ensure it performs as expected.
 func TestOptions_WithNow(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value                time.Time
 		IsErrorExpected      bool
@@ -154,6 +159,8 @@ func TestOptions_WithNow(t *testing.T) {
 
 // TestOptions_WithID exercises WithID Option to ensure it performs as expected.
 func TestOptions_WithID(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value                string
 		IsErrorExpected      bool
@@ -199,6 +206,8 @@ func TestOptions_WithID(t *testing.T) {
 
 // TestOptions_WithPrefix exercises WithPrefix Option to ensure it performs as expected.
 func TestOptions_WithPrefix(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value                string
 		IsErrorExpected      bool
@@ -244,6 +253,8 @@ func TestOptions_WithPrefix(t *testing.T) {
 
 // TestOptions_WithRaw exercises WithRaw Option to ensure it performs as expected.
 func TestOptions_WithRaw(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value         bool
 		ExpectedValue bool
@@ -274,6 +285,8 @@ func TestOptions_WithRaw(t *testing.T) {
 
 // TestOptions_WithElision exercises WithElision Option to ensure it performs as expected.
 func TestOptions_WithElision(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value         bool
 		ExpectedValue bool
@@ -304,6 +317,8 @@ func TestOptions_WithElision(t *testing.T) {
 
 // TestOptions_WithHMACAccessor exercises WithHMACAccessor Option to ensure it performs as expected.
 func TestOptions_WithHMACAccessor(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value         bool
 		ExpectedValue bool
@@ -334,6 +349,8 @@ func TestOptions_WithHMACAccessor(t *testing.T) {
 
 // TestOptions_WithOmitTime exercises WithOmitTime Option to ensure it performs as expected.
 func TestOptions_WithOmitTime(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value         bool
 		ExpectedValue bool
@@ -362,47 +379,10 @@ func TestOptions_WithOmitTime(t *testing.T) {
 	}
 }
 
-// TestOptions_WithHeaderFormatter exercises the WithHeaderFormatter Option to
-// ensure it applies the option as expected under various circumstances.
-func TestOptions_WithHeaderFormatter(t *testing.T) {
-	tests := map[string]struct {
-		Value                    HeaderFormatter
-		ExpectedValue            HeaderFormatter
-		ShouldLeaveUninitialized bool
-	}{
-		"nil": {
-			Value:         nil,
-			ExpectedValue: nil,
-		},
-		"unassigned-interface": {
-			ShouldLeaveUninitialized: true,
-		},
-		"happy-path": {
-			Value:         &testHeaderFormatter{},
-			ExpectedValue: &testHeaderFormatter{},
-		},
-	}
-
-	for name, tc := range tests {
-		name := name
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			opts := &options{}
-			var f HeaderFormatter
-			if !tc.ShouldLeaveUninitialized {
-				f = tc.Value
-			}
-			applyOption := WithHeaderFormatter(f)
-			err := applyOption(opts)
-			require.NoError(t, err)
-			require.Equal(t, tc.ExpectedValue, opts.withHeaderFormatter)
-		})
-	}
-}
-
 // TestOptions_Default exercises getDefaultOptions to assert the default values.
 func TestOptions_Default(t *testing.T) {
+	t.Parallel()
+
 	opts := getDefaultOptions()
 	require.NotNil(t, opts)
 	require.True(t, time.Now().After(opts.withNow))
@@ -411,6 +391,8 @@ func TestOptions_Default(t *testing.T) {
 
 // TestOptions_Opts exercises GetOpts with various Option values.
 func TestOptions_Opts(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		opts                 []Option
 		IsErrorExpected      bool
@@ -524,13 +506,4 @@ func TestOptions_Opts(t *testing.T) {
 			}
 		})
 	}
-}
-
-// testHeaderFormatter is a stub to prevent the need to import the vault package
-// to bring in vault.AuditedHeadersConfig for testing.
-type testHeaderFormatter struct{}
-
-// ApplyConfig satisfied the HeaderFormatter interface for testing.
-func (f *testHeaderFormatter) ApplyConfig(ctx context.Context, headers map[string][]string, salter Salter) (result map[string][]string, retErr error) {
-	return nil, nil
 }

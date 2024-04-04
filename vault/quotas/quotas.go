@@ -316,8 +316,23 @@ func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.Clust
 	return manager, nil
 }
 
-// SetQuota adds or updates a quota rule.
+// SetQuota adds or updates a quota rule in the Quota Manager's storage view and
+// the associated index in memdb.
 func (m *Manager) SetQuota(ctx context.Context, qType string, quota Quota, loading bool) error {
+	entry, err := logical.StorageEntryJSON(QuotaStoragePath(qType, quota.QuotaName()), quota)
+	if err != nil {
+		return err
+	}
+
+	if err := m.storage.Put(ctx, entry); err != nil {
+		return err
+	}
+
+	return m.setQuotaIndex(ctx, qType, quota, loading)
+}
+
+// setQuotaIndex adds or updates a quota rule in memdb.
+func (m *Manager) setQuotaIndex(ctx context.Context, qType string, quota Quota, loading bool) error {
 	m.quotaLock.Lock()
 	m.dbAndCacheLock.RLock()
 	defer m.quotaLock.Unlock()
@@ -667,8 +682,18 @@ func (m *Manager) QueryResolveRoleQuotas(req *Request) (bool, error) {
 	return false, nil
 }
 
-// DeleteQuota removes a quota rule from the db for a given name
+// DeleteQuota removes a quota rule the QuotaManager's storage view and then
+// updates the associated index in memdb.
 func (m *Manager) DeleteQuota(ctx context.Context, qType string, name string) error {
+	if err := m.storage.Delete(ctx, QuotaStoragePath(qType, name)); err != nil {
+		return err
+	}
+
+	return m.deleteQuotaIndex(ctx, qType, name)
+}
+
+// deleteQuotaIndex removes a quota rule memdb for a given quota type and name.
+func (m *Manager) deleteQuotaIndex(ctx context.Context, qType string, name string) error {
 	m.quotaLock.Lock()
 	m.dbAndCacheLock.RLock()
 	defer m.quotaLock.Unlock()
@@ -1058,13 +1083,13 @@ func (m *Manager) Invalidate(key string) {
 		switch {
 		case quota == nil:
 			// Handle quota deletion
-			if err := m.DeleteQuota(m.ctx, qType, name); err != nil {
+			if err := m.deleteQuotaIndex(m.ctx, qType, name); err != nil {
 				m.logger.Error("failed to delete invalidated quota rule", "error", err)
 				return
 			}
 		default:
 			// Handle quota update
-			if err := m.SetQuota(m.ctx, qType, quota, false); err != nil {
+			if err := m.setQuotaIndex(m.ctx, qType, quota, false); err != nil {
 				m.logger.Error("failed to update invalidated quota rule", "error", err)
 				return
 			}
@@ -1119,9 +1144,15 @@ func Load(ctx context.Context, storage logical.Storage, qType, name string) (Quo
 	return quota, nil
 }
 
+type ManagerFlags struct {
+	IsPerfStandby bool
+	IsDRSecondary bool
+	IsNewInstall  bool
+}
+
 // Setup loads the quota configuration and all the quota rules into the
 // quota manager.
-func (m *Manager) Setup(ctx context.Context, storage logical.Storage, isPerfStandby, isDRSecondary bool) error {
+func (m *Manager) Setup(ctx context.Context, storage logical.Storage, flags *ManagerFlags) error {
 	m.quotaLock.Lock()
 	m.quotaConfigLock.Lock()
 	m.dbAndCacheLock.Lock()
@@ -1131,8 +1162,13 @@ func (m *Manager) Setup(ctx context.Context, storage logical.Storage, isPerfStan
 
 	m.storage = storage
 	m.ctx = ctx
-	m.isPerfStandby = isPerfStandby
-	m.isDRSecondary = isDRSecondary
+
+	if flags == nil {
+		flags = &ManagerFlags{}
+	}
+	m.isPerfStandby = flags.IsPerfStandby
+	m.isDRSecondary = flags.IsDRSecondary
+	m.isNewInstall = flags.IsNewInstall
 
 	// Load the quota configuration from storage and load it into the quota
 	// manager.
@@ -1165,6 +1201,11 @@ func (m *Manager) Setup(ctx context.Context, storage logical.Storage, isPerfStan
 	m.setEnableRateLimitAuditLoggingLocked(config.EnableRateLimitAuditLogging)
 	m.setEnableRateLimitResponseHeadersLocked(config.EnableRateLimitResponseHeaders)
 	m.setRateLimitExemptPathsLocked(exemptPaths)
+
+	if err := m.setupDefaultLeaseCountQuotaInStorage(ctx); err != nil {
+		m.logger.Warn("skipping initialization of default lease count quota", "error", err)
+	}
+
 	if err = m.resetCache(); err != nil {
 		return err
 	}

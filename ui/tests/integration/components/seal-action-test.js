@@ -24,7 +24,7 @@ module('Integration | Component | seal-action', function (hooks) {
     await render(hbs`<SealAction @onSeal={{action this.handleSeal}} />`);
 
     // attempt seal
-    await click('[data-test-seal] button');
+    await click('[data-test-seal]');
     await click('[data-test-confirm-button]');
 
     assert.ok(this.sealSuccess.calledOnce, 'called onSeal action');
@@ -36,7 +36,7 @@ module('Integration | Component | seal-action', function (hooks) {
     await render(hbs`<SealAction @onSeal={{action this.handleSeal}} />`);
 
     // attempt seal
-    await click('[data-test-seal] button');
+    await click('[data-test-seal]');
     await click('[data-test-confirm-button]');
 
     assert.ok(this.sealError.calledOnce, 'called onSeal action');

@@ -9,10 +9,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/go-multierror"
-
 	"github.com/golang/protobuf/ptypes"
 	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
@@ -21,6 +20,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 func entityPathFields() map[string]*framework.FieldSchema {
@@ -68,8 +68,10 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 			},
 
 			Fields: entityPathFields(),
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleEntityUpdateCommon(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleEntityUpdateCommon(),
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity"][0]),
@@ -158,8 +160,10 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleEntityBatchDelete(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleEntityBatchDelete(),
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["batch-delete"][0]),
@@ -173,8 +177,10 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 				OperationSuffix: "by-name",
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.pathEntityNameList(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.pathEntityNameList(),
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-name-list"][0]),
@@ -188,8 +194,10 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 				OperationSuffix: "by-id",
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.pathEntityIDList(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.pathEntityIDList(),
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-id-list"][0]),
@@ -221,8 +229,11 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 					Description: "Setting this will follow the 'mine' strategy for merging MFA secrets. If there are secrets of the same type both in entities that are merged from and in entity into which all others are getting merged, secrets in the destination will be unaltered. If not set, this API will throw an error containing all the conflicts.",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathEntityMergeID(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:                  i.pathEntityMergeID(),
+					ForwardPerformanceStandby: true,
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-merge-id"][0]),
@@ -883,6 +894,15 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		}
 
 		if fromEntity == nil {
+			// If forceMergeAliases is true, and we didn't find a fromEntity, then something
+			// is wrong with storage. This function was called as part of an automated
+			// merge from CreateOrFetchEntity or Invalidate to repatriate an alias with its 'true'
+			// entity. As a result, the entity _should_ exist, but we can't find it.
+			// MemDb may be in a bad state, because fromEntity should be non-nil in the
+			// automated merge case.
+			if forceMergeAliases {
+				return fmt.Errorf("fromEntity %s was not found in memdb as part of an automated entity merge into %s; storage/memdb may be in a bad state", fromEntityID, toEntity.ID), nil, nil
+			}
 			return errors.New("entity id to merge from is invalid"), nil, nil
 		}
 
@@ -995,6 +1015,15 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		}
 
 		if fromEntity == nil {
+			// If forceMergeAliases is true, and we didn't find a fromEntity, then something
+			// is wrong with storage. This function was called as part of an automated
+			// merge from CreateOrFetchEntity or Invalidate to repatriate an alias with its 'true'
+			// entity. As a result, the entity _should_ exist, but we can't find it.
+			// MemDb may be in a bad state, because fromEntity should be non-nil in the
+			// automated merge case.
+			if forceMergeAliases {
+				return fmt.Errorf("fromEntity %s was not found in memdb as part of an automated entity merge into %s; storage/memdb may be in a bad state", fromEntityID, toEntity.ID), nil, nil
+			}
 			return errors.New("entity id to merge from is invalid"), nil, nil
 		}
 
@@ -1112,7 +1141,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 
 	if persist && !isPerfSecondaryOrStandby {
 		// Persist the entity which we are merging to
-		toEntityAsAny, err := ptypes.MarshalAny(toEntity)
+		toEntityAsAny, err := anypb.New(toEntity)
 		if err != nil {
 			return nil, err, nil
 		}

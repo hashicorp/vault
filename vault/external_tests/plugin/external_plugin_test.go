@@ -12,11 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/audit"
-	auditFile "github.com/hashicorp/vault/builtin/audit/file"
-
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/api/auth/approle"
+	"github.com/hashicorp/vault/audit"
+	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/builtin/logical/database"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/consul"
@@ -25,15 +24,14 @@ import (
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
-func getClusterWithFileAuditBackend(t *testing.T, typ consts.PluginType, numCores int) *vault.TestCluster {
-	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-	t.Cleanup(func() { cleanup(t) })
+func getCluster(t *testing.T, numCores int, types ...consts.PluginType) *vault.TestCluster {
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	coreConfig := &vault.CoreConfig{
 		PluginDirectory: pluginDir,
 		LogicalBackends: map[string]logical.Factory{
@@ -47,36 +45,16 @@ func getClusterWithFileAuditBackend(t *testing.T, typ consts.PluginType, numCore
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		TempDir:  pluginDir,
 		NumCores: numCores,
-		Plugins: &vault.TestPluginConfig{
-			Typ:      typ,
-			Versions: []string{""},
-		},
-		HandlerFunc: vaulthttp.Handler,
-	})
-
-	cluster.Start()
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
-
-	return cluster
-}
-
-func getCluster(t *testing.T, typ consts.PluginType, numCores int) *vault.TestCluster {
-	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-	t.Cleanup(func() { cleanup(t) })
-	coreConfig := &vault.CoreConfig{
-		PluginDirectory: pluginDir,
-		LogicalBackends: map[string]logical.Factory{
-			"database": database.Factory,
-		},
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		TempDir:  pluginDir,
-		NumCores: numCores,
-		Plugins: &vault.TestPluginConfig{
-			Typ:      typ,
-			Versions: []string{""},
-		},
+		Plugins: func() []*vault.TestPluginConfig {
+			var plugins []*vault.TestPluginConfig
+			for _, typ := range types {
+				plugins = append(plugins, &vault.TestPluginConfig{
+					Typ:      typ,
+					Versions: []string{""},
+				})
+			}
+			return plugins
+		}(),
 		HandlerFunc: vaulthttp.Handler,
 	})
 
@@ -90,8 +68,7 @@ func getCluster(t *testing.T, typ consts.PluginType, numCores int) *vault.TestCl
 // rollback and reload a plugin without triggering race conditions by the go
 // race detector
 func TestExternalPlugin_RollbackAndReload(t *testing.T) {
-	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-	t.Cleanup(func() { cleanup(t) })
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	coreConfig := &vault.CoreConfig{
 		// set rollback period to a short interval to make conditions more "racy"
 		RollbackPeriod:  1 * time.Second,
@@ -101,9 +78,11 @@ func TestExternalPlugin_RollbackAndReload(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		TempDir:  pluginDir,
 		NumCores: 1,
-		Plugins: &vault.TestPluginConfig{
-			Typ:      consts.PluginTypeSecrets,
-			Versions: []string{""},
+		Plugins: []*vault.TestPluginConfig{
+			{
+				Typ:      consts.PluginTypeSecrets,
+				Versions: []string{""},
+			},
 		},
 		HandlerFunc: vaulthttp.Handler,
 	})
@@ -124,32 +103,47 @@ func TestExternalPlugin_RollbackAndReload(t *testing.T) {
 	}
 }
 
-func testRegisterAndEnable(t *testing.T, client *api.Client, plugin pluginhelpers.TestPlugin) {
+func testRegisterVersion(t *testing.T, client *api.Client, plugin pluginhelpers.TestPlugin, version string) {
 	t.Helper()
 	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 		Name:    plugin.Name,
 		Type:    api.PluginType(plugin.Typ),
 		Command: plugin.Name,
 		SHA256:  plugin.Sha256,
-		Version: plugin.Version,
+		Version: version,
 	}); err != nil {
 		t.Fatal(err)
 	}
+}
 
+func testEnableVersion(t *testing.T, client *api.Client, plugin pluginhelpers.TestPlugin, version string) {
+	t.Helper()
 	switch plugin.Typ {
 	case consts.PluginTypeSecrets:
 		if err := client.Sys().Mount(plugin.Name, &api.MountInput{
 			Type: plugin.Name,
+			Config: api.MountConfigInput{
+				PluginVersion: version,
+			},
 		}); err != nil {
 			t.Fatal(err)
 		}
 	case consts.PluginTypeCredential:
 		if err := client.Sys().EnableAuthWithOptions(plugin.Name, &api.EnableAuthOptions{
 			Type: plugin.Name,
+			Config: api.MountConfigInput{
+				PluginVersion: version,
+			},
 		}); err != nil {
 			t.Fatal(err)
 		}
 	}
+}
+
+func testRegisterAndEnable(t *testing.T, client *api.Client, plugin pluginhelpers.TestPlugin) {
+	t.Helper()
+	testRegisterVersion(t, client, plugin, plugin.Version)
+	testEnableVersion(t, client, plugin, plugin.Version)
 }
 
 // TestExternalPlugin_ContinueOnError tests that vault can recover from a
@@ -183,7 +177,7 @@ func TestExternalPlugin_ContinueOnError(t *testing.T) {
 }
 
 func testExternalPlugin_ContinueOnError(t *testing.T, mismatch bool, pluginType consts.PluginType) {
-	cluster := getCluster(t, pluginType, 1)
+	cluster := getCluster(t, 1, pluginType)
 	defer cluster.Cleanup()
 
 	core := cluster.Cores[0]
@@ -219,7 +213,7 @@ func testExternalPlugin_ContinueOnError(t *testing.T, mismatch bool, pluginType 
 			t.Fatalf("err:%v resp:%#v", err, resp)
 		}
 	} else {
-		err := os.Remove(filepath.Join(cluster.TempDir, filepath.Base(command)))
+		err := os.Remove(filepath.Join(cluster.Cores[0].CoreConfig.PluginDirectory, filepath.Base(command)))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -291,7 +285,7 @@ func testExternalPlugin_ContinueOnError(t *testing.T, mismatch bool, pluginType 
 // TestExternalPlugin_AuthMethod tests that we can build, register and use an
 // external auth method
 func TestExternalPlugin_AuthMethod(t *testing.T) {
-	cluster := getCluster(t, consts.PluginTypeCredential, 5)
+	cluster := getCluster(t, 5, consts.PluginTypeCredential)
 	defer cluster.Cleanup()
 
 	plugin := cluster.Plugins[0]
@@ -299,15 +293,7 @@ func TestExternalPlugin_AuthMethod(t *testing.T) {
 	client.SetToken(cluster.RootToken)
 
 	// Register
-	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
-		Name:    plugin.Name,
-		Type:    api.PluginType(plugin.Typ),
-		Command: plugin.Name,
-		SHA256:  plugin.Sha256,
-		Version: plugin.Version,
-	}); err != nil {
-		t.Fatal(err)
-	}
+	testRegisterVersion(t, client, plugin, plugin.Version)
 
 	// define a group of parallel tests so we wait for their execution before
 	// continuing on to cleanup
@@ -410,7 +396,7 @@ func TestExternalPlugin_AuthMethod(t *testing.T) {
 // TestExternalPlugin_AuthMethodReload tests that we can use an external auth
 // method after reload
 func TestExternalPlugin_AuthMethodReload(t *testing.T) {
-	cluster := getCluster(t, consts.PluginTypeCredential, 1)
+	cluster := getCluster(t, 1, consts.PluginTypeCredential)
 	defer cluster.Cleanup()
 
 	plugin := cluster.Plugins[0]
@@ -485,7 +471,7 @@ func TestExternalPlugin_AuthMethodReload(t *testing.T) {
 // TestExternalPlugin_SecretsEngine tests that we can build, register and use an
 // external secrets engine
 func TestExternalPlugin_SecretsEngine(t *testing.T) {
-	cluster := getCluster(t, consts.PluginTypeSecrets, 1)
+	cluster := getCluster(t, 1, consts.PluginTypeSecrets)
 	defer cluster.Cleanup()
 
 	plugin := cluster.Plugins[0]
@@ -493,15 +479,7 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 	client.SetToken(cluster.RootToken)
 
 	// Register
-	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
-		Name:    plugin.Name,
-		Type:    api.PluginType(plugin.Typ),
-		Command: plugin.Name,
-		SHA256:  plugin.Sha256,
-		Version: plugin.Version,
-	}); err != nil {
-		t.Fatal(err)
-	}
+	testRegisterVersion(t, client, plugin, plugin.Version)
 
 	// define a group of parallel tests so we wait for their execution before
 	// continuing on to cleanup
@@ -565,7 +543,7 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 // TestExternalPlugin_SecretsEngineReload tests that we can use an external
 // secrets engine after reload
 func TestExternalPlugin_SecretsEngineReload(t *testing.T) {
-	cluster := getCluster(t, consts.PluginTypeSecrets, 1)
+	cluster := getCluster(t, 1, consts.PluginTypeSecrets)
 	defer cluster.Cleanup()
 
 	plugin := cluster.Plugins[0]
@@ -631,7 +609,7 @@ func TestExternalPlugin_SecretsEngineReload(t *testing.T) {
 // TestExternalPlugin_Database tests that we can build, register and use an
 // external database secrets engine
 func TestExternalPlugin_Database(t *testing.T) {
-	cluster := getCluster(t, consts.PluginTypeDatabase, 1)
+	cluster := getCluster(t, 1, consts.PluginTypeDatabase)
 	defer cluster.Cleanup()
 
 	plugin := cluster.Plugins[0]
@@ -639,15 +617,7 @@ func TestExternalPlugin_Database(t *testing.T) {
 	client.SetToken(cluster.RootToken)
 
 	// Register
-	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
-		Name:    plugin.Name,
-		Type:    api.PluginType(consts.PluginTypeDatabase),
-		Command: plugin.Name,
-		SHA256:  plugin.Sha256,
-		Version: plugin.Version,
-	}); err != nil {
-		t.Fatal(err)
-	}
+	testRegisterVersion(t, client, plugin, plugin.Version)
 
 	// Enable
 	if err := client.Sys().Mount(consts.PluginTypeDatabase.String(), &api.MountInput{
@@ -746,7 +716,7 @@ func TestExternalPlugin_Database(t *testing.T) {
 				client.SetToken(cluster.RootToken)
 
 				// Lookup - expect FAILURE
-				resp, err = client.Sys().Lookup(revokeLease)
+				_, err = client.Sys().Lookup(revokeLease)
 				if err == nil {
 					t.Fatalf("expected error, got nil")
 				}
@@ -767,7 +737,7 @@ func TestExternalPlugin_Database(t *testing.T) {
 // TestExternalPlugin_DatabaseReload tests that we can use an external database
 // secrets engine after reload
 func TestExternalPlugin_DatabaseReload(t *testing.T) {
-	cluster := getCluster(t, consts.PluginTypeDatabase, 1)
+	cluster := getCluster(t, 1, consts.PluginTypeDatabase)
 	defer cluster.Cleanup()
 
 	plugin := cluster.Plugins[0]
@@ -775,15 +745,7 @@ func TestExternalPlugin_DatabaseReload(t *testing.T) {
 	client.SetToken(cluster.RootToken)
 
 	// Register
-	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
-		Name:    plugin.Name,
-		Type:    api.PluginType(consts.PluginTypeDatabase),
-		Command: plugin.Name,
-		SHA256:  plugin.Sha256,
-		Version: plugin.Version,
-	}); err != nil {
-		t.Fatal(err)
-	}
+	testRegisterVersion(t, client, plugin, plugin.Version)
 
 	// Enable
 	if err := client.Sys().Mount(consts.PluginTypeDatabase.String(), &api.MountInput{
@@ -881,7 +843,7 @@ func testExternalPluginMetadataAuditLog(t *testing.T, log map[string]interface{}
 // TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Auth tests that we have plugin metadata of an auth plugin
 // in audit log when it is enabled
 func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Auth(t *testing.T) {
-	cluster := getClusterWithFileAuditBackend(t, consts.PluginTypeCredential, 1)
+	cluster := getCluster(t, 1, consts.PluginTypeCredential)
 	defer cluster.Cleanup()
 
 	plugin := cluster.Plugins[0]
@@ -896,6 +858,7 @@ func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Auth(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer auditLogFile.Close()
 
 	err = client.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
 		Type: "file",
@@ -951,7 +914,7 @@ func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Auth(t *testing.T) 
 // TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Secret tests that we have plugin metadata of a secret plugin
 // in audit log when it is enabled
 func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T) {
-	cluster := getClusterWithFileAuditBackend(t, consts.PluginTypeSecrets, 1)
+	cluster := getCluster(t, 1, consts.PluginTypeSecrets)
 	defer cluster.Cleanup()
 
 	plugin := cluster.Plugins[0]
@@ -966,6 +929,7 @@ func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer auditLogFile.Close()
 
 	err = client.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
 		Type: "file",
@@ -1018,5 +982,192 @@ func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T
 		Version: plugin.Version,
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func testPin(t *testing.T, client *api.Client, op logical.Operation, pin *pluginutil.PinnedVersion) *api.Secret {
+	t.Helper()
+	switch op {
+	case logical.CreateOperation, logical.UpdateOperation:
+		resp, err := client.Logical().Write(fmt.Sprintf("sys/plugins/pins/%s/%s", pin.Type.String(), pin.Name), map[string]any{
+			"version": pin.Version,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return resp
+	case logical.DeleteOperation:
+		resp, err := client.Logical().Delete(fmt.Sprintf("sys/plugins/pins/%s/%s", pin.Type.String(), pin.Name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return resp
+	default:
+		t.Fatal("unsupported operation")
+		// Satisfy the compiler that there's no escape from the switch statement.
+		return nil
+	}
+}
+
+func testReload(t *testing.T, client *api.Client, plugin pluginhelpers.TestPlugin) {
+	_, err := client.Sys().RootReloadPlugin(context.Background(), &api.RootReloadPluginInput{
+		Plugin: plugin.Name,
+		Type:   api.PluginType(plugin.Typ),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func expectRunningVersion(t *testing.T, client *api.Client, plugin pluginhelpers.TestPlugin, expectedVersion string) {
+	t.Helper()
+	switch plugin.Typ {
+	case consts.PluginTypeCredential:
+		auth, err := client.Logical().Read("sys/auth/" + plugin.Name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if auth.Data["running_plugin_version"] != expectedVersion {
+			t.Fatalf("expected running_plugin_version to be %s but got %s", expectedVersion, auth.Data["running_plugin_version"])
+		}
+	case consts.PluginTypeSecrets:
+		mount, err := client.Logical().Read("sys/mounts/" + plugin.Name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if mount.Data["running_plugin_version"] != expectedVersion {
+			t.Fatalf("expected running_plugin_version to be %s but got %s", expectedVersion, mount.Data["running_plugin_version"])
+		}
+	case consts.PluginTypeDatabase:
+		resp, err := client.Logical().Read("database/config/" + plugin.Name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp.Data["running_plugin_version"] != expectedVersion {
+			t.Fatalf("expected running_plugin_version to be %s but got %s", expectedVersion, resp.Data["running_plugin_version"])
+		}
+		expectedWarnings := 0
+		if resp.Data["plugin_version"] != resp.Data["running_plugin_version"] {
+			expectedWarnings = 1
+		}
+
+		if expectedWarnings != len(resp.Warnings) {
+			t.Fatalf("expected %d warning(s) but got %v", expectedWarnings, resp.Warnings)
+		}
+	default:
+		t.Fatal("unsupported plugin type")
+	}
+}
+
+// TestCore_UpgradePluginUsingPinnedVersion_AuthAndSecret tests a full workflow
+// of upgrading an external plugin gated by pinned versions.
+func TestCore_UpgradePluginUsingPinnedVersion_AuthAndSecret(t *testing.T) {
+	cluster := getCluster(t, 1, consts.PluginTypeCredential, consts.PluginTypeSecrets)
+	t.Cleanup(cluster.Cleanup)
+
+	client := cluster.Cores[0].Client
+
+	for name, idx := range map[string]int{
+		"credential plugin": 0,
+		"secrets plugin":    1,
+	} {
+		t.Run(name, func(t *testing.T) {
+			plugin := cluster.Plugins[idx]
+
+			// Register the same plugin with two versions.
+			for _, version := range []string{"v1.0.0", "v1.0.1"} {
+				testRegisterVersion(t, client, plugin, version)
+			}
+
+			pin101 := &pluginutil.PinnedVersion{
+				Name:    plugin.Name,
+				Type:    plugin.Typ,
+				Version: "v1.0.1",
+			}
+
+			// Mount 1.0.0 then pin to 1.0.1
+			testEnableVersion(t, client, plugin, "v1.0.0")
+			testPin(t, client, logical.CreateOperation, pin101)
+			expectRunningVersion(t, client, plugin, "v1.0.0")
+
+			// Pinned version should be in effect after reloading.
+			testReload(t, client, plugin)
+			expectRunningVersion(t, client, plugin, "v1.0.1")
+
+			// Deregistering a pinned plugin should fail.
+			if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
+				Name:    plugin.Name,
+				Type:    api.PluginType(plugin.Typ),
+				Version: "v1.0.1",
+			}); err == nil {
+				t.Fatal("expected error, got nil")
+			}
+
+			// Now delete, reload, and we should be back to 1.0.0
+			testPin(t, client, logical.DeleteOperation, pin101)
+			testReload(t, client, plugin)
+			expectRunningVersion(t, client, plugin, "v1.0.0")
+		})
+	}
+}
+
+// TestCore_UpgradePluginUsingPinnedVersion_Database tests a full workflow
+// of upgrading an external database plugin gated by pinned versions.
+func TestCore_UpgradePluginUsingPinnedVersion_Database(t *testing.T) {
+	cluster := getCluster(t, 3, consts.PluginTypeDatabase)
+	t.Cleanup(cluster.Cleanup)
+
+	client := cluster.Cores[0].Client
+	plugin := cluster.Plugins[0]
+
+	// Register the same plugin with two versions.
+	for _, version := range []string{"v1.0.0", "v1.0.1"} {
+		testRegisterVersion(t, client, plugin, version)
+	}
+
+	pin101 := &pluginutil.PinnedVersion{
+		Name:    plugin.Name,
+		Type:    plugin.Typ,
+		Version: "v1.0.1",
+	}
+
+	// Enable the combined db engine first.
+	if err := client.Sys().Mount(consts.PluginTypeDatabase.String(), &api.MountInput{
+		Type: consts.PluginTypeDatabase.String(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	cleanupPG, connURL := postgreshelper.PrepareTestContainerWithVaultUser(t, context.Background(), "13.4-buster")
+	t.Cleanup(cleanupPG)
+
+	// Mount 1.0.0 then pin to 1.0.1
+	_, err := client.Logical().Write("database/config/"+plugin.Name, map[string]interface{}{
+		"plugin_name":    plugin.Name,
+		"plugin_version": "v1.0.0",
+		"connection_url": connURL,
+		"username":       "vaultadmin",
+		"password":       "vaultpass",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	testPin(t, client, logical.CreateOperation, pin101)
+	expectRunningVersion(t, client, plugin, "v1.0.0")
+
+	// Pinned version should be in effect after reloading.
+	testReload(t, client, plugin)
+	// All nodes in the cluster should report the same info, because although
+	// the running_plugin_version info is local to the leader, the standbys
+	// should forward the request to the leader.
+	for i := 0; i < 3; i++ {
+		expectRunningVersion(t, cluster.Cores[i].Client, plugin, "v1.0.1")
+	}
+
+	// Now delete, reload, and we should be back to 1.0.0
+	testPin(t, client, logical.DeleteOperation, pin101)
+	testReload(t, client, plugin)
+	for i := 0; i < 3; i++ {
+		expectRunningVersion(t, client, plugin, "v1.0.0")
 	}
 }

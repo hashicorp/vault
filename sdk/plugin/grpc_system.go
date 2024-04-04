@@ -211,6 +211,21 @@ func (s gRPCSystemViewClient) ClusterID(ctx context.Context) (string, error) {
 	return reply.ClusterID, nil
 }
 
+func (s *gRPCSystemViewClient) GenerateIdentityToken(ctx context.Context, req *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error) {
+	resp, err := s.client.GenerateIdentityToken(ctx, &pb.GenerateIdentityTokenRequest{
+		Audience: req.Audience,
+		TTL:      int64(req.TTL.Seconds()),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &pluginutil.IdentityTokenResponse{
+		Token: pluginutil.IdentityToken(resp.Token),
+		TTL:   time.Duration(resp.TTL) * time.Second,
+	}, nil
+}
+
 type gRPCSystemViewServer struct {
 	pb.UnimplementedSystemViewServer
 
@@ -392,5 +407,25 @@ func (s *gRPCSystemViewServer) ClusterInfo(ctx context.Context, _ *pb.Empty) (*p
 
 	return &pb.ClusterInfoReply{
 		ClusterID: clusterId,
+	}, nil
+}
+
+func (s *gRPCSystemViewServer) GenerateIdentityToken(ctx context.Context, req *pb.GenerateIdentityTokenRequest) (*pb.GenerateIdentityTokenResponse, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
+
+	res, err := s.impl.GenerateIdentityToken(ctx, &pluginutil.IdentityTokenRequest{
+		Audience: req.GetAudience(),
+		TTL:      time.Duration(req.GetTTL()) * time.Second,
+	})
+	if err != nil {
+		return &pb.GenerateIdentityTokenResponse{}, status.Errorf(codes.Internal,
+			"failed to generate plugin identity token")
+	}
+
+	return &pb.GenerateIdentityTokenResponse{
+		Token: res.Token.Token(),
+		TTL:   int64(res.TTL.Seconds()),
 	}, nil
 }

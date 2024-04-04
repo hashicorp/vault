@@ -13,9 +13,9 @@
     <nav class="box menu">
       <ul class="menu-list">
         {{#each @metadata.sortedVersions as |versionData|}}
-          <li data-test-version={{versionData.version}} class="action">
+          <li data-test-version={{versionData.version}}>
             {{#if @onSelect}}
-              {{! TODO Hds::Button manual update }}
+              {{! TODO use Hds::Dropdown instead https://helios.hashicorp.design/components/dropdown }}
               <button
                 disabled={{or versionData.destroyed versionData.isSecretDeleted}}
                 {{on "click" (fn @onSelect versionData.version D.actions)}}

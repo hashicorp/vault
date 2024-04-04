@@ -113,7 +113,7 @@ div > .ember-power-select-options {
 }
 
 .search-select-list-key {
-  color: $grey;
+  color: var(--token-color-foreground-faint);
   font-size: $size-8;
 }
 

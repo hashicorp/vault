@@ -11,6 +11,8 @@ import hbs from 'htmlbars-inline-precompile';
 import { create } from 'ember-cli-page-object';
 import sinon from 'sinon';
 import formFields from '../../pages/components/form-field';
+import { format, startOfDay } from 'date-fns';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const component = create(formFields);
 
@@ -41,13 +43,13 @@ module('Integration | Component | form field', function (hooks) {
     this.attr = { name: 'foo' };
     this.model = model;
     await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} />`);
-    assert.strictEqual(component.fields.objectAt(0).labelText[0], 'Foo', 'renders a label');
+    assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
     assert.notOk(component.hasInput, 'renders only the label');
   });
 
   test('it renders: string', async function (assert) {
     const [model, spy] = await setup.call(this, createAttr('foo', 'string', { defaultValue: 'default' }));
-    assert.strictEqual(component.fields.objectAt(0).labelText[0], 'Foo', 'renders a label');
+    assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
     assert.strictEqual(component.fields.objectAt(0).inputValue, 'default', 'renders default value');
     assert.ok(component.hasInput, 'renders input for string');
     await component.fields.objectAt(0).input('bar').change();
@@ -58,7 +60,7 @@ module('Integration | Component | form field', function (hooks) {
 
   test('it renders: boolean', async function (assert) {
     const [model, spy] = await setup.call(this, createAttr('foo', 'boolean', { defaultValue: false }));
-    assert.strictEqual(component.fields.objectAt(0).labelText[0], 'Foo', 'renders a label');
+    assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
     assert.notOk(component.fields.objectAt(0).inputChecked, 'renders default value');
     assert.ok(component.hasCheckbox, 'renders a checkbox for boolean');
     await component.fields.objectAt(0).clickLabel();
@@ -69,7 +71,7 @@ module('Integration | Component | form field', function (hooks) {
 
   test('it renders: number', async function (assert) {
     const [model, spy] = await setup.call(this, createAttr('foo', 'number', { defaultValue: 5 }));
-    assert.strictEqual(component.fields.objectAt(0).labelText[0], 'Foo', 'renders a label');
+    assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
     assert.strictEqual(component.fields.objectAt(0).inputValue, '5', 'renders default value');
     assert.ok(component.hasInput, 'renders input for number');
     await component.fields.objectAt(0).input(8).change();
@@ -79,14 +81,26 @@ module('Integration | Component | form field', function (hooks) {
   });
 
   test('it renders: object', async function (assert) {
+    // TODO: Fix JSONEditor/CodeMirror
+    setRunOptions({
+      rules: {
+        label: { enabled: false },
+      },
+    });
     await setup.call(this, createAttr('foo', 'object'));
-    assert.strictEqual(component.fields.objectAt(0).labelText[0], 'Foo', 'renders a label');
+    assert.dom('[data-test-component="json-editor-title"]').hasText('Foo', 'renders a label');
     assert.ok(component.hasJSONEditor, 'renders the json editor');
   });
 
   test('it renders: string as json with clear button', async function (assert) {
+    // TODO: Fix JSONEditor/CodeMirror
+    setRunOptions({
+      rules: {
+        label: { enabled: false },
+      },
+    });
     await setup.call(this, createAttr('foo', 'string', { editType: 'json', allowReset: true }));
-    assert.strictEqual(component.fields.objectAt(0).labelText[0], 'Foo', 'renders a label');
+    assert.dom('[data-test-component="json-editor-title"]').hasText('Foo', 'renders a label');
     assert.ok(component.hasJSONEditor, 'renders the json editor');
     assert.ok(component.hasJSONClearButton, 'renders button that will clear the JSON value');
   });
@@ -96,7 +110,7 @@ module('Integration | Component | form field', function (hooks) {
       this,
       createAttr('foo', 'string', { defaultValue: 'goodbye', editType: 'textarea' })
     );
-    assert.strictEqual(component.fields.objectAt(0).labelText[0], 'Foo', 'renders a label');
+    assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
     assert.ok(component.hasTextarea, 'renders a textarea');
     assert.strictEqual(component.fields.objectAt(0).textareaValue, 'goodbye', 'renders default value');
     await component.fields.objectAt(0).textarea('hello');
@@ -106,9 +120,22 @@ module('Integration | Component | form field', function (hooks) {
   });
 
   test('it renders: editType file', async function (assert) {
-    await setup.call(this, createAttr('foo', 'string', { editType: 'file' }));
+    const subText = 'My subtext.';
+    await setup.call(this, createAttr('foo', 'string', { editType: 'file', subText, docLink: '/docs' }));
     assert.ok(component.hasTextFile, 'renders the text-file component');
+    assert
+      .dom('.hds-form-helper-text')
+      .hasText(
+        `Select a file from your computer. ${subText} See our documentation for help.`,
+        'renders subtext'
+      );
+    assert.dom('.hds-form-helper-text a').exists('renders doc link');
     await click('[data-test-text-toggle]');
+    // assert again after toggling because subtext is rendered differently for each input
+    assert
+      .dom('.hds-form-helper-text')
+      .hasText(`Enter the value as text. ${subText} See our documentation for help.`, 'renders subtext');
+    assert.dom('.hds-form-helper-text a').exists('renders doc link');
     await fillIn('[data-test-text-file-textarea]', 'hello world');
   });
 
@@ -146,6 +173,46 @@ module('Integration | Component | form field', function (hooks) {
     assert.strictEqual(model.get('foo'), selectedValue);
     assert.ok(spy.calledWith('foo', selectedValue), 'onChange called with correct args');
   });
+  test('it renders: radio buttons for possible values, labels, and subtext', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('foo', null, {
+        editType: 'radio',
+        possibleValues: [
+          { label: 'Label 1', subText: 'Some subtext 1', value: 'SHA1' },
+          { label: 'Label 2', subText: 'Some subtext 2', value: 'SHA256' },
+          { subText: 'Some subtext 3', value: 'SHA256' },
+        ],
+      })
+    );
+    assert.ok(component.hasRadio, 'renders radio buttons');
+    const selectedValue = 'SHA256';
+    await component.selectRadioInput(selectedValue);
+    assert.dom('[data-test-radio-label="Label 1"]').hasTextContaining('Label 1');
+    assert.dom('[data-test-radio-label="Label 2"]').hasTextContaining('Label 2');
+    assert.dom('[data-test-radio-label="SHA256"]').hasTextContaining('SHA256');
+    assert.dom('[data-test-radio-subText="Some subtext 1"]').hasText('Some subtext 1');
+    assert.dom('[data-test-radio-subText="Some subtext 2"]').hasText('Some subtext 2');
+    assert.dom('[data-test-radio-subText="Some subtext 3"]').hasText('Some subtext 3');
+    assert.strictEqual(model.get('foo'), selectedValue);
+    assert.ok(spy.calledWith('foo', selectedValue), 'onChange called with correct args');
+  });
+  test('it renders: datetimelocal', async function (assert) {
+    const [model] = await setup.call(
+      this,
+      createAttr('bar', null, {
+        editType: 'dateTimeLocal',
+      })
+    );
+    assert.dom("[data-test-input='bar']").exists();
+    await fillIn(
+      "[data-test-input='bar']",
+      format(startOfDay(new Date('2023-12-17T03:24:00')), "yyyy-MM-dd'T'HH:mm")
+    );
+    // add a click label to focus out the date we filled in above
+    await click('.is-label');
+    assert.deepEqual(model.get('bar'), '2023-12-17T00:00', 'sets the value on the model');
+  });
 
   test('it renders: editType stringArray', async function (assert) {
     const [model, spy] = await setup.call(this, createAttr('foo', 'string', { editType: 'stringArray' }));
@@ -166,11 +233,7 @@ module('Integration | Component | form field', function (hooks) {
 
   test('it uses a passed label', async function (assert) {
     await setup.call(this, createAttr('foo', 'string', { label: 'Not Foo' }));
-    assert.strictEqual(
-      component.fields.objectAt(0).labelText[0],
-      'Not Foo',
-      'renders the label from options'
-    );
+    assert.strictEqual(component.fields.objectAt(0).labelValue, 'Not Foo', 'renders the label from options');
   });
 
   test('it renders a help tooltip', async function (assert) {

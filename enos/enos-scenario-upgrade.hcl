@@ -3,19 +3,21 @@
 
 scenario "upgrade" {
   matrix {
-    arch            = ["amd64", "arm64"]
-    artifact_source = ["local", "crt", "artifactory"]
-    artifact_type   = ["bundle", "package"]
-    backend         = ["consul", "raft"]
-    consul_version  = ["1.14.9", "1.15.5", "1.16.1"]
-    distro          = ["ubuntu", "rhel"]
-    edition         = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+    arch            = global.archs
+    artifact_source = global.artifact_sources
+    artifact_type   = global.artifact_types
+    backend         = global.backends
+    consul_version  = global.consul_versions
+    distro          = global.distros
+    edition         = global.editions
     // NOTE: when backporting the initial version make sure we don't include initial versions that
     // are a higher minor version that our release candidate. Also, prior to 1.11.x the
     // /v1/sys/seal-status API has known issues that could cause this scenario to fail when using
-    // those earlier versions.
-    initial_version = ["1.11.12", "1.12.11", "1.13.6", "1.14.2"]
-    seal            = ["awskms", "shamir"]
+    // those earlier versions, therefore support from 1.8.x to 1.10.x is unreliable. Prior to 1.8.x
+    // is not supported due to changes with vault's signaling of systemd and the enos-provider
+    // no longer supporting setting the license via the license API.
+    initial_version = global.upgrade_initial_versions
+    seal            = global.seals
     seal_ha_beta    = ["true", "false"]
 
     # Our local builder always creates bundles
@@ -34,6 +36,12 @@ scenario "upgrade" {
     exclude {
       edition         = ["ent.fips1402", "ent.hsm.fips1402"]
       initial_version = ["1.8.12", "1.9.10"]
+    }
+
+    # PKCS#11 can only be used on ent.hsm and ent.hsm.fips1402.
+    exclude {
+      seal    = ["pkcs11"]
+      edition = ["ce", "ent", "ent.fips1402"]
     }
   }
 
@@ -94,15 +102,6 @@ scenario "upgrade" {
     }
   }
 
-  step "create_seal_key" {
-    module = "seal_key_${matrix.seal}"
-
-    variables {
-      cluster_id  = step.create_vpc.cluster_id
-      common_tags = global.tags
-    }
-  }
-
   // This step reads the contents of the backend license if we're using a Consul backend and
   // the edition is "ent".
   step "read_backend_license" {
@@ -120,6 +119,20 @@ scenario "upgrade" {
 
     variables {
       file_name = global.vault_license_path
+    }
+  }
+
+  step "create_seal_key" {
+    module     = "seal_${matrix.seal}"
+    depends_on = [step.create_vpc]
+
+    providers = {
+      enos = provider.enos.ubuntu
+    }
+
+    variables {
+      cluster_id  = step.create_vpc.id
+      common_tags = global.tags
     }
   }
 
@@ -209,7 +222,7 @@ scenario "upgrade" {
         version = matrix.initial_version
       }
       seal_ha_beta    = matrix.seal_ha_beta
-      seal_key_name   = step.create_seal_key.resource_name
+      seal_attributes = step.create_seal_key.attributes
       seal_type       = matrix.seal
       storage_backend = matrix.backend
       target_hosts    = step.create_vault_cluster_targets.hosts
@@ -464,9 +477,9 @@ scenario "upgrade" {
     value       = step.create_vault_cluster.recovery_keys_hex
   }
 
-  output "seal_key_name" {
-    description = "The Vault cluster seal key name"
-    value       = step.create_seal_key.resource_name
+  output "seal_name" {
+    description = "The Vault cluster seal attributes"
+    value       = step.create_seal_key.attributes
   }
 
   output "unseal_keys_b64" {

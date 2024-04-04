@@ -22,8 +22,10 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/audit"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -32,9 +34,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
-
-	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -323,7 +322,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
 
-	lreq, _, status, err := buildLogicalRequest(core, nil, req)
+	lreq, _, status, err := buildLogicalRequest(core, nil, req, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -338,7 +337,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
 
-	lreq, _, status, err = buildLogicalRequest(core, nil, req)
+	lreq, _, status, err = buildLogicalRequest(core, nil, req, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -358,7 +357,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	lreq, _, status, err = buildLogicalRequest(core, nil, req)
+	lreq, _, status, err = buildLogicalRequest(core, nil, req, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -517,7 +516,7 @@ func TestLogical_ListWithQueryParameters(t *testing.T) {
 			req = req.WithContext(namespace.RootContext(nil))
 			req.Header.Add(consts.AuthHeaderName, rootToken)
 
-			lreq, _, status, err := buildLogicalRequest(core, nil, req)
+			lreq, _, status, err := buildLogicalRequest(core, nil, req, "")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -569,13 +568,11 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 }
 
 func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
-	t.Setenv("VAULT_AUDIT_DISABLE_EVENTLOGGER", "true")
-
 	// Create a noop audit backend
-	noop := corehelpers.TestNoopAudit(t, nil)
+	noop := corehelpers.TestNoopAudit(t, "noop/", nil)
 	c, _, root := vault.TestCoreUnsealedWithConfig(t, &vault.CoreConfig{
 		AuditBackends: map[string]audit.Factory{
-			"noop": func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
+			"noop": func(ctx context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 				return noop, nil
 			},
 		},
@@ -584,7 +581,6 @@ func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
 	defer ln.Close()
 
 	// Enable the audit backend
-
 	resp := testHttpPost(t, root, addr+"/v1/sys/audit/noop", map[string]interface{}{
 		"type": "noop",
 	})

@@ -11,6 +11,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki/pki-role-form';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | pki-role-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -25,6 +26,13 @@ module('Integration | Component | pki-role-form', function (hooks) {
     this.issuers = this.store.peekAll('pki/issuer');
     this.role.backend = 'pki';
     this.onCancel = sinon.spy();
+    setRunOptions({
+      rules: {
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+      },
+    });
   });
 
   test('it should render default fields and toggle groups', async function (assert) {

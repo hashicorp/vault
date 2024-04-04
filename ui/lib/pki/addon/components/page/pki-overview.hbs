@@ -39,15 +39,15 @@
         @fallbackComponent="input-search"
         data-test-issue-certificate-input
       />
-      <button
+      <Hds::Button
+        @text="Issue"
+        @color="secondary"
+        class="has-left-margin-s align-self-baseline"
         type="submit"
-        class="button is-secondary has-left-margin-s"
         disabled={{unless this.rolesValue true}}
         {{on "click" this.transitionToIssueCertificates}}
         data-test-issue-certificate-button
-      >
-        Issue
-      </button>
+      />
     </div>
   </OverviewCard>
 
@@ -64,15 +64,14 @@
         @fallbackComponent="input-search"
         data-test-view-certificate-input
       />
-      <button
-        type="button"
-        class="button is-secondary {{unless this.certificateValue 'has-left-margin-s'}}"
+      <Hds::Button
+        @text="View"
+        @color="secondary"
+        class="align-self-baseline {{unless this.certificateValue 'has-left-margin-s'}}"
         disabled={{unless this.certificateValue true}}
         {{on "click" this.transitionToViewCertificates}}
         data-test-view-certificate-button
-      >
-        View
-      </button>
+      />
     </div>
   </OverviewCard>
 
@@ -91,15 +90,15 @@
         @nameKey={{"issuerName"}}
         data-test-issue-issuer-input
       />
-      <button
+      <Hds::Button
+        @text="View"
+        @color="secondary"
+        class="has-left-margin-s align-self-baseline"
         type="submit"
-        class="button is-secondary has-left-margin-s"
         disabled={{unless this.issuerValue true}}
         {{on "click" this.transitionToIssuerDetails}}
         data-test-view-issuer-button
-      >
-        View
-      </button>
+      />
     </div>
   </OverviewCard>
 </div>

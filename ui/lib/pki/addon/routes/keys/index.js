@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { withConfig } from 'pki/decorators/check-issuers';
 import { hash } from 'rsvp';
 import { PKI_DEFAULT_EMPTY_STATE_MSG } from 'pki/routes/overview';
@@ -23,7 +23,7 @@ export default class PkiKeysIndexRoute extends Route {
   model(params) {
     const page = Number(params.page) || 1;
     return hash({
-      hasConfig: this.shouldPromptConfig,
+      hasConfig: this.pkiMountHasConfig,
       parentModel: this.modelFor('keys'),
       keyModels: this.store
         .lazyPaginatedQuery('pki/key', {

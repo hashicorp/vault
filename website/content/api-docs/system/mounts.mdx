@@ -169,10 +169,17 @@ This endpoint enables a new secrets engine at the given path.
   - `plugin_version` `(string: "")` – Specifies the semantic version of the plugin
     to use, e.g. "v1.0.0". If unspecified, the server will select any matching
     unversioned plugin that may have been registered, the latest versioned plugin
-    registered, or a built-in plugin in that order of precendence.
+    registered, or a built-in plugin in that order of precedence.
 
   - `allowed_managed_keys` `(array: [])` - List of managed key registry entry names
     that the mount in question is allowed to access.
+
+  - `delegated_auth_accessors` `(array: [])` - List of allowed authentication mount
+    accessors the backend can request delegated authentication for.
+
+  - `identity_token_key` `(string: "")` - The key to use for signing plugin workload
+    identity tokens. If not provided, this will default to Vault's OIDC
+    [default key](/vault/docs/concepts/oidc-provider#keys).
 
 - `options` `(map<string|string>: nil)` - Specifies mount type specific options
   that are passed to the backend.
@@ -381,6 +388,9 @@ This endpoint tunes configuration parameters for a given mount point.
 
 - `plugin_version` `(string: "")` – Specifies the semantic version of the plugin
   to use, e.g. "v1.0.0". Changes will not take effect until the mount is reloaded.
+
+- `delegated_auth_accessors` `(array: [])` - List of allowed authentication mount
+  accessors the backend can request delegated authentication for.
 
 ### Sample payload
 

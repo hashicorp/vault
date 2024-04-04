@@ -4,7 +4,55 @@
  */
 
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { compareAsc } from 'date-fns';
+import { compareAsc, getUnixTime, isWithinInterval } from 'date-fns';
+
+// add new types here
+export const CLIENT_TYPES = [
+  'acme_clients',
+  'clients', // summation of total clients
+  'entity_clients',
+  'non_entity_clients',
+  'secret_syncs',
+];
+
+// returns array of VersionHistoryModels for noteworthy upgrades: 1.9, 1.10
+// that occurred between timestamps (i.e. queried activity data)
+export const filterVersionHistory = (versionHistory, start, end) => {
+  if (versionHistory) {
+    const upgrades = versionHistory.reduce((array, upgradeData) => {
+      const includesVersion = (v) =>
+        // only add first match, disregard subsequent patch releases of the same version
+        upgradeData.version.match(v) && !array.some((d) => d.version.match(v));
+
+      ['1.9', '1.10'].forEach((v) => {
+        if (includesVersion(v)) array.push(upgradeData);
+      });
+
+      return array;
+    }, []);
+
+    // if there are noteworthy upgrades, only return those during queried date range
+    if (upgrades.length) {
+      const startDate = parseAPITimestamp(start);
+      const endDate = parseAPITimestamp(end);
+      return upgrades.filter(({ timestampInstalled }) => {
+        const upgradeDate = parseAPITimestamp(timestampInstalled);
+        return isWithinInterval(upgradeDate, { start: startDate, end: endDate });
+      });
+    }
+  }
+  return [];
+};
+
+export const formatDateObject = (dateObj, isEnd) => {
+  if (dateObj) {
+    const { year, monthIdx } = dateObj;
+    // day=0 for Date.UTC() returns the last day of the month before
+    // increase monthIdx by one to get last day of queried month
+    const utc = isEnd ? Date.UTC(year, monthIdx + 1, 0) : Date.UTC(year, monthIdx, 1);
+    return getUnixTime(utc);
+  }
+};
 
 export const formatByMonths = (monthsArray) => {
   // the monthsArray will always include a timestamp of the month and either new/total client data or counts = null
@@ -15,81 +63,57 @@ export const formatByMonths = (monthsArray) => {
     const month = parseAPITimestamp(m.timestamp, 'M/yy');
     const totalClientsByNamespace = formatByNamespace(m.namespaces);
     const newClientsByNamespace = formatByNamespace(m.new_clients?.namespaces);
-    if (Object.keys(m).includes('counts')) {
-      const totalCounts = flattenDataset(m);
-      const newCounts = m.new_clients ? flattenDataset(m.new_clients) : {};
-      return {
+    return {
+      month,
+      timestamp: m.timestamp,
+      ...destructureClientCounts(m?.counts),
+      namespaces: formatByNamespace(m.namespaces) || [],
+      namespaces_by_key: namespaceArrayToObject(
+        totalClientsByNamespace,
+        newClientsByNamespace,
+        month,
+        m.timestamp
+      ),
+      new_clients: {
         month,
         timestamp: m.timestamp,
-        ...totalCounts,
-        namespaces: formatByNamespace(m.namespaces) || [],
-        namespaces_by_key: namespaceArrayToObject(totalClientsByNamespace, newClientsByNamespace, month),
-        new_clients: {
-          month,
-          timestamp: m.timestamp,
-          ...newCounts,
-          namespaces: formatByNamespace(m.new_clients?.namespaces) || [],
-        },
-      };
-    }
+        ...destructureClientCounts(m?.new_clients?.counts),
+        namespaces: formatByNamespace(m.new_clients?.namespaces) || [],
+      },
+    };
   });
 };
 
 export const formatByNamespace = (namespaceArray) => {
   if (!Array.isArray(namespaceArray)) return namespaceArray;
   return namespaceArray?.map((ns) => {
-    // 'namespace_path' is an empty string for root
-    if (ns['namespace_id'] === 'root') ns['namespace_path'] = 'root';
-    const label = ns['namespace_path'];
-    const flattenedNs = flattenDataset(ns);
-    // if no mounts, mounts will be an empty array
-    flattenedNs.mounts = [];
-    if (ns?.mounts && ns.mounts.length > 0) {
-      flattenedNs.mounts = ns.mounts.map((mount) => {
-        return {
-          label: mount['mount_path'],
-          ...flattenDataset(mount),
-        };
-      });
+    // i.e. 'namespace_path' is an empty string for 'root', so use namespace_id
+    const label = ns.namespace_path === '' ? ns.namespace_id : ns.namespace_path;
+    // data prior to adding mount granularity will still have a mounts key,
+    // but with the value: "no mount accessor (pre-1.10 upgrade?)" (ref: vault/activity_log_util_common.go)
+    // transform to an empty array for type consistency
+    let mounts = [];
+    if (Array.isArray(ns.mounts)) {
+      mounts = ns.mounts.map((m) => ({ label: m['mount_path'], ...destructureClientCounts(m?.counts) }));
     }
     return {
       label,
-      ...flattenedNs,
+      ...destructureClientCounts(ns.counts),
+      mounts,
     };
   });
 };
 
-// In 1.10 'distinct_entities' changed to 'entity_clients' and
-// 'non_entity_tokens' to 'non_entity_clients'
-export const homogenizeClientNaming = (object) => {
-  // if new key names exist, only return those key/value pairs
-  if (Object.keys(object).includes('entity_clients')) {
-    const { clients, entity_clients, non_entity_clients } = object;
-    return {
-      clients,
-      entity_clients,
-      non_entity_clients,
-    };
-  }
-  // if object only has outdated key names, update naming
-  if (Object.keys(object).includes('distinct_entities')) {
-    const { clients, distinct_entities, non_entity_tokens } = object;
-    return {
-      clients,
-      entity_clients: distinct_entities,
-      non_entity_clients: non_entity_tokens,
-    };
-  }
-  return object;
-};
-
-export const flattenDataset = (object) => {
-  if (object?.counts) {
-    const flattenedObject = {};
-    Object.keys(object['counts']).forEach((key) => (flattenedObject[key] = object['counts'][key]));
-    return homogenizeClientNaming(flattenedObject);
-  }
-  return object;
+// In 1.10 'distinct_entities' changed to 'entity_clients' and 'non_entity_tokens' to 'non_entity_clients'
+// these deprecated keys still exist on the response, so only return relevant keys here
+// when querying historical data the response will always contain the latest client type keys because the activity log is
+// constructed based on the version of Vault the user is on (key values will be 0)
+export const destructureClientCounts = (verboseObject) => {
+  if (!verboseObject) return;
+  return CLIENT_TYPES.reduce((newObj, clientType) => {
+    newObj[clientType] = verboseObject[clientType];
+    return newObj;
+  }, {});
 };
 
 export const sortMonthsByTimestamp = (monthsArray) => {
@@ -99,7 +123,7 @@ export const sortMonthsByTimestamp = (monthsArray) => {
   );
 };
 
-export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByNamespace, month) => {
+export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByNamespace, month, timestamp) => {
   if (!totalClientsByNamespace) return {}; // return if no data for that month
   // all 'new_client' data resides within a separate key of each month (see data structure below)
   // FIRST: iterate and nest respective 'new_clients' data within each namespace and mount object
@@ -107,7 +131,6 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
   const nestNewClientsWithinNamespace = totalClientsByNamespace?.map((ns) => {
     const newNamespaceCounts = newClientsByNamespace?.find((n) => n.label === ns.label);
     if (newNamespaceCounts) {
-      const { label, clients, entity_clients, non_entity_clients } = newNamespaceCounts;
       const newClientsByMount = [...newNamespaceCounts.mounts];
       const nestNewClientsWithinMounts = ns.mounts?.map((mount) => {
         const new_clients = newClientsByMount?.find((m) => m.label === mount.label) || {};
@@ -119,10 +142,8 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
       return {
         ...ns,
         new_clients: {
-          label,
-          clients,
-          entity_clients,
-          non_entity_clients,
+          label: ns.label,
+          ...destructureClientCounts(newNamespaceCounts),
           mounts: newClientsByMount,
         },
         mounts: [...nestNewClientsWithinMounts],
@@ -141,17 +162,17 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
     namespaceObject.mounts.forEach((mountObject) => {
       mounts_by_key[mountObject.label] = {
         month,
+        timestamp,
         ...mountObject,
         new_clients: { month, ...mountObject.new_clients },
       };
     });
 
-    const { label, clients, entity_clients, non_entity_clients, new_clients } = namespaceObject;
+    const { label, new_clients } = namespaceObject;
     namespaces_by_key[label] = {
       month,
-      clients,
-      entity_clients,
-      non_entity_clients,
+      timestamp,
+      ...destructureClientCounts(namespaceObject),
       new_clients: { month, ...new_clients },
       mounts_by_key,
     };
@@ -190,70 +211,3 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
   };
   */
 };
-
-/*
-API RESPONSE STRUCTURE:
-data: {
-  ** by_namespace organized in descending order of client count number **
-  by_namespace: [
-    {
-      namespace_id: '96OwG',
-      namespace_path: 'test-ns/',
-      counts: {},
-      mounts: [{ mount_path: 'path-1', counts: {} }],
-    },
-  ],
-  ** months organized in ascending order of timestamps, oldest to most recent
-  months: [
-    {
-      timestamp: '2022-03-01T00:00:00Z',
-      counts: {},
-      namespaces: [
-        {
-          namespace_id: 'root',
-          namespace_path: '',
-          counts: {},
-          mounts: [{ mount_path: 'auth/up2/', counts: {} }],
-        },
-      ],
-      new_clients: {
-        counts: {},
-        namespaces: [
-          {
-            namespace_id: 'root',
-            namespace_path: '',
-            counts: {},
-            mounts: [{ mount_path: 'auth/up2/', counts: {} }],
-          },
-        ],
-      },
-    },
-    {
-      timestamp: '2022-04-01T00:00:00Z',
-      counts: {},
-      namespaces: [
-        {
-          namespace_id: 'root',
-          namespace_path: '',
-          counts: {},
-          mounts: [{ mount_path: 'auth/up2/', counts: {} }],
-        },
-      ],
-      new_clients: {
-        counts: {},
-        namespaces: [
-          {
-            namespace_id: 'root',
-            namespace_path: '',
-            counts: {},
-            mounts: [{ mount_path: 'auth/up2/', counts: {} }],
-          },
-        ],
-      },
-    },
-  ],
-  start_time: 'start timestamp string',
-  end_time: 'end timestamp string',
-  total: { clients: 300, non_entity_clients: 100, entity_clients: 400} ,
-}
-*/

@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ldapMirageScenario from 'vault/mirage/scenarios/ldap';
-import ENV from 'vault/config/environment';
+import ldapHandlers from 'vault/mirage/handlers/ldap';
 import authPage from 'vault/tests/pages/auth';
 import { click, fillIn, visit } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
@@ -17,16 +17,9 @@ module('Acceptance | ldap | overview', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'ldap';
-  });
-
   hooks.beforeEach(async function () {
+    ldapHandlers(this.server);
     return authPage.login();
-  });
-
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
   });
 
   test('it should transition to ldap overview on mount success', async function (assert) {
@@ -55,7 +48,7 @@ module('Acceptance | ldap | overview', function (hooks) {
     await click('[data-test-config-cta] a');
     assert.true(isURL('configure'), 'Transitions to configure route on cta link click');
 
-    await click('[data-test-breadcrumb="ldap-test"]');
+    await click('[data-test-breadcrumb="ldap-test"] a');
     await click('[data-test-toolbar-action="config"]');
     assert.true(isURL('configure'), 'Transitions to configure route on toolbar link click');
   });
@@ -92,7 +85,7 @@ module('Acceptance | ldap | overview', function (hooks) {
       'Transitions to role credentials route on generate credentials action'
     );
 
-    await click('[data-test-breadcrumb="ldap-test"]');
+    await click('[data-test-breadcrumb="ldap-test"] a');
     await selectChoose('.search-select', 'dynamic-role');
     await click('[data-test-generate-credential-button]');
     assert.true(

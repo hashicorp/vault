@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/mitchellh/cli"
 )
 
 func testOperatorRaftSnapshotInspectCommand(tb testing.TB) (*cli.MockUi, *OperatorRaftSnapshotInspectCommand) {

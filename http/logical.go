@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -110,10 +112,8 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 		// add the HTTP request to the logical request object for later consumption.
 		contentType := r.Header.Get("Content-Type")
 
-		if ra != nil && ra.IsBinaryPath(r.Context(), path) {
-			passHTTPReq = true
-			origBody = r.Body
-		} else if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" {
+		if (ra != nil && ra.IsBinaryPath(r.Context(), path)) ||
+			path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" {
 			passHTTPReq = true
 			origBody = r.Body
 		} else {
@@ -194,6 +194,11 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 		return nil, nil, http.StatusMethodNotAllowed, nil
 	}
 
+	// RFC 5785 Redirect, keep the request for auditing purposes
+	if r.URL.Path != r.RequestURI {
+		passHTTPReq = true
+	}
+
 	requestId, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, nil, http.StatusInternalServerError, fmt.Errorf("failed to generate identifier for the request: %w", err)
@@ -206,6 +211,10 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 		Data:       data,
 		Connection: getConnection(r),
 		Headers:    r.Header,
+	}
+
+	if ra != nil && ra.IsLimitedPath(r.Context(), path) {
+		req.PathLimited = true
 	}
 
 	if passHTTPReq {
@@ -257,11 +266,12 @@ func buildLogicalPath(r *http.Request) (string, int, error) {
 	return path, 0, nil
 }
 
-func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
+func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Request, chrootNamespace string) (*logical.Request, io.ReadCloser, int, error) {
 	req, origBody, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), core.RouterAccess(), w, r)
 	if err != nil || status != 0 {
 		return nil, nil, status, err
 	}
+	req.ChrootNamespace = chrootNamespace
 
 	req.SetRequiredState(r.Header.Values(VaultIndexHeaderName))
 	requestAuth(r, req)
@@ -290,22 +300,22 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 //   - Perf standby and token with limited use count.
 //   - Perf standby and token re-validation needed (e.g. due to invalid token).
 //   - Perf standby and control group error.
-func handleLogical(core *vault.Core) http.Handler {
-	return handleLogicalInternal(core, false, false)
+func handleLogical(core *vault.Core, chrootNamespace string) http.Handler {
+	return handleLogicalInternal(core, false, false, chrootNamespace)
 }
 
 // handleLogicalWithInjector returns a handler for processing logical requests
 // that also have their logical response data injected at the top-level payload.
 // All forwarding behavior remains the same as `handleLogical`.
-func handleLogicalWithInjector(core *vault.Core) http.Handler {
-	return handleLogicalInternal(core, true, false)
+func handleLogicalWithInjector(core *vault.Core, chrootNamespace string) http.Handler {
+	return handleLogicalInternal(core, true, false, chrootNamespace)
 }
 
 // handleLogicalNoForward returns a handler for processing logical local-only
 // requests. These types of requests never forwarded, and return an
 // `vault.ErrCannotForwardLocalOnly` error if attempted to do so.
-func handleLogicalNoForward(core *vault.Core) http.Handler {
-	return handleLogicalInternal(core, false, true)
+func handleLogicalNoForward(core *vault.Core, chrootNamespace string) http.Handler {
+	return handleLogicalInternal(core, false, true, chrootNamespace)
 }
 
 func handleLogicalRecovery(raw *vault.RawBackend, token *atomic.String) http.Handler {
@@ -338,9 +348,9 @@ func handleLogicalRecovery(raw *vault.RawBackend, token *atomic.String) http.Han
 // handleLogicalInternal is a common helper that returns a handler for
 // processing logical requests. The behavior depends on the various boolean
 // toggles. Refer to usage on functions for possible behaviors.
-func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForward bool) http.Handler {
+func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForward bool, chrootNamespace string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		req, origBody, statusCode, err := buildLogicalRequest(core, w, r)
+		req, origBody, statusCode, err := buildLogicalRequest(core, w, r, chrootNamespace)
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
 			return
@@ -357,9 +367,11 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 			nsPath = ""
 		}
 		if strings.HasPrefix(r.URL.Path, fmt.Sprintf("/v1/%ssys/events/subscribe/", nsPath)) {
-			handler := handleEventsSubscribe(core, req)
-			handler.ServeHTTP(w, r)
-			return
+			handler := entHandleEventsSubscribe(core, req)
+			if handler != nil {
+				handler.ServeHTTP(w, r)
+				return
+			}
 		}
 		handler := handleEntPaths(nsPath, core, r)
 		if handler != nil {
@@ -374,6 +386,9 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 		// success.
 		resp, ok, needsForward := request(core, w, r, req)
 		switch {
+		case errors.Is(resp.Error(), limits.ErrCapacity):
+			respondError(w, http.StatusServiceUnavailable, limits.ErrCapacity)
+			return
 		case needsForward && noForward:
 			respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
 			return

@@ -4,7 +4,7 @@
  */
 
 import AdapterError from '@ember-data/adapter/error';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import RSVP from 'rsvp';
@@ -53,7 +53,7 @@ export default Route.extend(UnloadModelRoute, {
         section,
       });
     }
-    const modelType = this.modelType(backend.get('type'), section);
+    const modelType = this.modelType(backend.type, section);
     if (!modelType) {
       const error = new AdapterError();
       set(error, 'httpStatus', 404);

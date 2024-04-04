@@ -1,0 +1,102 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if (and this.byMonthActivityData this.isDateRange)}}
+  <Clients::ChartContainer
+    @title="Entity/Non-entity clients"
+    @description="This data can be used to understand how many entity and non-entity clients are using Vault each month for this date range."
+    @timestamp={{@activity.responseTimestamp}}
+    @legend={{this.legend}}
+    @hasChartData={{true}}
+    data-test-chart="monthly total"
+  >
+    <:subTitle>
+      <h2 class="chart-title">Total monthly clients</h2>
+      <p class="chart-subtext">
+        Each client is counted once per month. This can help with capacity planning.
+      </p>
+    </:subTitle>
+
+    <:stats>
+      <StatText
+        @label="Average total clients per month"
+        @value={{this.averageTotalClients}}
+        @size="m"
+        class="data-details-top has-top-padding-l"
+        data-test-chart-stat="monthly total"
+      />
+
+      <StatText
+        @label="Average new clients per month"
+        @value={{this.averageNewClients}}
+        @size="m"
+        class="data-details-bottom has-top-padding-l"
+        data-test-chart-stat="monthly new"
+      />
+    </:stats>
+
+    <:chart>
+      <Clients::VerticalBarChart @dataset={{this.byMonthActivityData}} @chartLegend={{this.legend}} />
+    </:chart>
+  </Clients::ChartContainer>
+
+  <Clients::ChartContainer
+    @title="Monthly new"
+    @description="Entity or non-entity clients which interacted with Vault for the first time during this date range, displayed per month."
+    @timestamp={{@activity.responseTimestamp}}
+    @legend={{this.legend}}
+    @hasChartData={{this.averageNewClients}}
+    class={{unless this.averageNewClients "no-legend"}}
+    data-test-chart="monthly new"
+  >
+    <:stats>
+      <StatText
+        @label="Average new entity clients per month"
+        @value={{this.average this.byMonthNewClients "entity_clients"}}
+        @size="m"
+        class="chart-subTitle has-top-padding-l"
+        data-test-chart-stat="entity"
+      />
+
+      <StatText
+        @label="Average new non-entity clients per month"
+        @value={{this.average this.byMonthNewClients "non_entity_clients"}}
+        @size="m"
+        class="data-details-top has-top-padding-l"
+        data-test-chart-stat="nonentity"
+      />
+    </:stats>
+
+    <:chart>
+      <Clients::VerticalBarChart @dataset={{this.byMonthNewClients}} @chartLegend={{this.legend}} />
+    </:chart>
+
+    <:emptyState>
+      <EmptyState
+        @title="No new clients"
+        @subTitle="There is no new client data available for this {{if
+          this.countsController.mountPath
+          'auth method'
+          'namespace'
+        }} in this date range."
+        @bottomBorder={{true}}
+      />
+    </:emptyState>
+  </Clients::ChartContainer>
+{{else}}
+  {{! UsageStats render when viewing a single, historical month AND activity data predates new client breakdown (< v1.10.0)
+    or viewing the current month filtered down to auth method }}
+  <Clients::UsageStats
+    @title="Total usage"
+    @description="These totals are within
+    {{or @mountPath 'this namespace and all its children'}}.
+    {{if
+      this.isCurrentMonth
+      "Only totals are available when viewing the current month. To see a breakdown of new and total clients for this month, select the 'Current Billing Period' filter."
+    }}"
+    @isSecretsSyncActivated={{@isSecretsSyncActivated}}
+    @totalUsageCounts={{this.tokenUsageCounts}}
+  />
+{{/if}}

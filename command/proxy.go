@@ -18,6 +18,7 @@ import (
 	"time"
 
 	systemd "github.com/coreos/go-systemd/daemon"
+	"github.com/hashicorp/cli"
 	ctconfig "github.com/hashicorp/consul-template/config"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
@@ -27,7 +28,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
-	cache "github.com/hashicorp/vault/command/agentproxyshared/cache"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/inmem"
@@ -42,7 +43,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/version"
 	"github.com/kr/pretty"
-	"github.com/mitchellh/cli"
 	"github.com/oklog/run"
 	"github.com/posener/complete"
 	"golang.org/x/text/cases"
@@ -59,6 +59,7 @@ const (
 	// flagNameProxyExitAfterAuth is used as a Proxy specific flag to indicate
 	// that proxy should exit after a single successful auth
 	flagNameProxyExitAfterAuth = "exit-after-auth"
+	nameProxy                  = "proxy"
 )
 
 type ProxyCommand struct {
@@ -209,6 +210,11 @@ func (c *ProxyCommand) Run(args []string) int {
 	}
 	c.logger = l
 
+	// release log gate if the disable-gated-logs flag is set
+	if c.logFlags.flagDisableGatedLogs {
+		c.logGate.Flush()
+	}
+
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
 	info["log level"] = config.LogLevel
@@ -278,10 +284,21 @@ func (c *ProxyCommand) Run(args []string) int {
 	}
 	c.metricsHelper = metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
 
+	// This indicates whether the namespace for the client has been set by environment variable.
+	// If it has, we don't touch it
+	namespaceSetByEnvironmentVariable := client.Namespace() != ""
+
+	if !namespaceSetByEnvironmentVariable && config.Vault != nil && config.Vault.Namespace != "" {
+		client.SetNamespace(config.Vault.Namespace)
+	}
+
 	var method auth.AuthMethod
 	var sinks []*sink.SinkConfig
 	if config.AutoAuth != nil {
-		if client.Headers().Get(consts.NamespaceHeaderName) == "" && config.AutoAuth.Method.Namespace != "" {
+		// Note: This will only set namespace header to the value in config.AutoAuth.Method.Namespace
+		// only if it hasn't been set by config.Vault.Namespace above. In that case, the config value
+		// present at config.AutoAuth.Method.Namespace will still be used for auto-auth.
+		if !namespaceSetByEnvironmentVariable && config.AutoAuth.Method.Namespace != "" {
 			client.SetNamespace(config.AutoAuth.Method.Namespace)
 		}
 
@@ -415,12 +432,13 @@ func (c *ProxyCommand) Run(args []string) int {
 
 	// The API proxy to be used, if listeners are configured
 	apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
-		Client:                  proxyClient,
-		Logger:                  apiProxyLogger,
-		EnforceConsistency:      enforceConsistency,
-		WhenInconsistentAction:  whenInconsistent,
-		UserAgentStringFunction: useragent.ProxyStringWithProxiedUserAgent,
-		UserAgentString:         useragent.ProxyAPIProxyString(),
+		Client:                     proxyClient,
+		Logger:                     apiProxyLogger,
+		EnforceConsistency:         enforceConsistency,
+		WhenInconsistentAction:     whenInconsistent,
+		UserAgentStringFunction:    useragent.ProxyStringWithProxiedUserAgent,
+		UserAgentString:            useragent.ProxyAPIProxyString(),
+		PrependConfiguredNamespace: config.APIProxy != nil && config.APIProxy.PrependConfiguredNamespace,
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
@@ -530,6 +548,7 @@ func (c *ProxyCommand) Run(args []string) int {
 			lnBundle, err := cache.StartListener(lnConfig)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
+				c.tlsReloadFuncsLock.Unlock()
 				return 1
 			}
 
@@ -552,6 +571,7 @@ func (c *ProxyCommand) Run(args []string) int {
 				}, leaseCache)
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("Error creating inmem sink for cache: %v", err))
+					c.tlsReloadFuncsLock.Unlock()
 					return 1
 				}
 				sinks = append(sinks, &sink.SinkConfig{
@@ -680,6 +700,11 @@ func (c *ProxyCommand) Run(args []string) int {
 			return 1
 		}
 
+		// Override the set namespace with the auto-auth specific namespace
+		if !namespaceSetByEnvironmentVariable && config.AutoAuth.Method.Namespace != "" {
+			ahClient.SetNamespace(config.AutoAuth.Method.Namespace)
+		}
+
 		if config.DisableIdleConnsAutoAuth {
 			ahClient.SetMaxIdleConnections(-1)
 		}
@@ -719,7 +744,7 @@ func (c *ProxyCommand) Run(args []string) int {
 		})
 
 		g.Add(func() error {
-			err := ss.Run(ctx, ah.OutputCh, sinks)
+			err := ss.Run(ctx, ah.OutputCh, sinks, ah.AuthInProgress)
 			c.logger.Info("sinks finished, exiting")
 
 			// Start goroutine to drain from ah.OutputCh from this point onward
@@ -916,7 +941,12 @@ func (c *ProxyCommand) setBoolFlag(f *FlagSets, configVal bool, fVar *BoolVar) {
 		// Don't do anything as the flag is already set from the command line
 	case flagEnvSet:
 		// Use value from env var
-		*fVar.Target = flagEnvValue != ""
+		val, err := parseutil.ParseBool(flagEnvValue)
+		if err != nil {
+			c.logger.Error("error parsing bool from environment variable, using default instead", "environment variable", fVar.EnvVar, "provided value", flagEnvValue, "default", fVar.Default, "err", err)
+			val = fVar.Default
+		}
+		*fVar.Target = val
 	case configVal:
 		// Use value from config
 		*fVar.Target = configVal
@@ -1040,15 +1070,17 @@ func (c *ProxyCommand) newLogger() (log.InterceptLogger, error) {
 		return nil, errors
 	}
 
-	logCfg := &logging.LogConfig{
-		Name:              "proxy",
-		LogLevel:          logLevel,
-		LogFormat:         logFormat,
-		LogFilePath:       c.config.LogFile,
-		LogRotateDuration: logRotateDuration,
-		LogRotateBytes:    c.config.LogRotateBytes,
-		LogRotateMaxFiles: c.config.LogRotateMaxFiles,
+	logCfg, err := logging.NewLogConfig(nameProxy)
+	if err != nil {
+		return nil, err
 	}
+	logCfg.Name = nameProxy
+	logCfg.LogLevel = logLevel
+	logCfg.LogFormat = logFormat
+	logCfg.LogFilePath = c.config.LogFile
+	logCfg.LogRotateDuration = logRotateDuration
+	logCfg.LogRotateBytes = c.config.LogRotateBytes
+	logCfg.LogRotateMaxFiles = c.config.LogRotateMaxFiles
 
 	l, err := logging.Setup(logCfg, c.logWriter)
 	if err != nil {

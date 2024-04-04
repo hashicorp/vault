@@ -7,9 +7,9 @@
   <:toolbarFilters>
     {{#if (and (not @promptConfig) @roles.meta.total)}}
       <FilterInput
-        @placeholder="Filter roles"
-        @value={{@pageFilter}}
-        @wait={{500}}
+        aria-label="Filter roles"
+        placeholder="Filter roles"
+        value={{@pageFilter}}
         @autofocus={{true}}
         @onInput={{this.onFilterChange}}
       />
@@ -38,11 +38,7 @@
       data-test-config-cta
       @title="No roles created yet"
       @message="Roles in Vault will allow you to manage LDAP credentials. Create a role to get started."
-    >
-      <LinkTo class="has-top-margin-xs" @route="roles.create">
-        Create role
-      </LinkTo>
-    </EmptyState>
+    />
   {{/if}}
 {{else}}
   <div class="has-bottom-margin-s">
@@ -53,75 +49,63 @@
           <span data-test-role={{role.name}}>{{role.name}}</span>
           <Hds::Badge @text={{role.type}} data-test-role-type-badge={{role.name}} />
         </Item.content>
-        <Item.menu as |Menu|>
-          {{#if role.rolePath.isLoading}}
-            <li class="action">
-              <Hds::Button disabled @color="tertiary" @icon="loading" @text="loading" @isIconOnly={{true}} />
-            </li>
-          {{else}}
-            <li class="action">
-              <LinkTo
-                class="has-text-black has-text-weight-semibold"
-                data-test-edit
-                @route="roles.role.edit"
-                @models={{array role.type role.name}}
-                @disabled={{not role.canEdit}}
-              >
-                Edit
-              </LinkTo>
-            </li>
-            <li class="action">
-              <LinkTo
-                class="has-text-black has-text-weight-semibold"
+        <Item.menu>
+          <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+            <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
+            {{#if role.canEdit}}
+              <dd.Interactive @text="Edit" data-test-edit @route="roles.role.edit" @models={{array role.type role.name}} />
+            {{/if}}
+            {{#if role.canReadCreds}}
+              <dd.Interactive
+                @text="Get credentials"
                 data-test-get-creds
                 @route="roles.role.credentials"
                 @models={{array role.type role.name}}
-                @disabled={{not role.canReadCreds}}
-              >
-                Get credentials
-              </LinkTo>
-            </li>
+              />
+            {{/if}}
             {{#if role.canRotateStaticCreds}}
-              <li class="action">
-                <Menu.Message
-                  data-test-rotate-creds
-                  @id={{concat "rotate-" role.id}}
-                  @triggerText="Rotate credentials"
-                  @title="Are you sure?"
-                  @message="When manually rotating credentials, the rotation period will start over."
-                  @confirmButtonText="Rotate"
-                  @onConfirm={{fn this.onRotate role}}
-                />
-              </li>
+              <dd.Interactive
+                @text="Rotate credentials"
+                data-test-rotate-creds
+                @color="critical"
+                {{on "click" (fn (mut this.credsToRotate) role)}}
+              />
             {{/if}}
-            <li class="action">
-              <LinkTo
-                class="has-text-black has-text-weight-semibold"
-                data-test-details
-                @route="roles.role.details"
-                {{! this will force the roles.role model hook to fire since we may only have a partial model loaded in the list view }}
-                @models={{array role.type role.name}}
-                @disabled={{not role.canRead}}
-              >
-                Details
-              </LinkTo>
-            </li>
+            <dd.Interactive
+              @text="Details"
+              data-test-details
+              @route="roles.role.details"
+              {{! this will force the roles.role model hook to fire since we may only have a partial model loaded in the list view }}
+              @models={{array role.type role.name}}
+            />
             {{#if role.canDelete}}
-              <li class="action">
-                <Menu.Message
-                  data-test-delete
-                  @id={{concat "delete-" role.id}}
-                  @triggerText="Delete"
-                  @title="Are you sure?"
-                  @message="Deleting this role means that you’ll need to recreate it in order to generate credentials again."
-                  @onConfirm={{fn this.onDelete role}}
-                />
-              </li>
+              <dd.Interactive
+                @text="Delete"
+                data-test-delete
+                @color="critical"
+                {{on "click" (fn (mut this.roleToDelete) role)}}
+              />
             {{/if}}
-          {{/if}}
+          </Hds::Dropdown>
         </Item.menu>
       </ListItem>
     {{/each}}
+
+    {{#if this.credsToRotate}}
+      <ConfirmModal
+        @confirmMessage="When manually rotating credentials, the rotation period will start over."
+        @onConfirm={{fn this.onRotate this.credsToRotate}}
+        @onClose={{fn (mut this.credsToRotate) null}}
+      />
+    {{/if}}
+    {{#if this.roleToDelete}}
+      <ConfirmModal
+        @color="critical"
+        @confirmMessage="Deleting this role means that you’ll need to recreate it in order to generate credentials again."
+        @onConfirm={{fn this.onDelete this.roleToDelete}}
+        @onClose={{fn (mut this.roleToDelete) null}}
+      />
+    {{/if}}
 
     <Hds::Pagination::Numbered
       @currentPage={{@roles.meta.currentPage}}

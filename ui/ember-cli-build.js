@@ -23,7 +23,7 @@ const appConfig = {
     //optimize: false,
     //paths: [],
     optimizer: {},
-    sourceDirs: ['node_modules/@hashicorp/structure-icons/dist', 'public'],
+    sourceDirs: ['public'],
     rootURL: '/ui/',
   },
   fingerprint: {
@@ -47,7 +47,8 @@ const appConfig = {
     onlyIncluded: true,
     precision: 4,
     includePaths: [
-      './node_modules/@hashicorp/design-system-components/app/styles',
+      './node_modules/@hashicorp/design-system-components/dist/styles',
+      './node_modules/@hashicorp/ember-flight-icons/dist/styles',
       './node_modules/@hashicorp/design-system-tokens/dist/products/css',
     ],
   },
@@ -90,9 +91,6 @@ module.exports = function (defaults) {
   app.import('node_modules/jsondiffpatch/dist/formatters-styles/html.css');
 
   app.import('app/styles/bulma/bulma-radio-checkbox.css');
-
-  app.import('node_modules/@hashicorp/structure-icons/dist/loading.css');
-  app.import('node_modules/@hashicorp/structure-icons/dist/run.css');
 
   return app.toTree();
 };

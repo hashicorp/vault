@@ -62,3 +62,11 @@ output "unseal_shares" {
 output "unseal_threshold" {
   value = try(enos_vault_init.leader[0].unseal_keys_threshold, -1)
 }
+
+output "keys_base64" {
+  value = try(module.start_vault.keys_base64, null)
+}
+
+output "keys_base64_secondary" {
+  value = try(module.start_vault.keys_base64_secondary, null)
+}

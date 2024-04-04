@@ -25,15 +25,14 @@
     <ToolbarActions>
       {{#if @model.canDelete}}
         <ConfirmAction
-          @buttonClasses="toolbar-link"
+          @buttonText="Delete role"
+          class="toolbar-button"
+          @buttonColor="secondary"
           @onConfirmAction={{action "delete"}}
           @confirmTitle="Delete role?"
           @confirmMessage="This role will be permanently deleted. You will need to recreate it to use it again."
-          @confirmButtonText="Delete"
           data-test-database-role-delete
-        >
-          Delete role
-        </ConfirmAction>
+        />
         <div class="toolbar-separator"></div>
       {{/if}}
       {{#if (and @model.canRotateRoleCredentials (eq @model.type "static"))}}

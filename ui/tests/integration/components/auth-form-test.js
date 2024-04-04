@@ -43,6 +43,7 @@ module('Integration | Component | auth form', function (hooks) {
   hooks.beforeEach(function () {
     this.owner.register('service:router', routerService);
     this.router = this.owner.lookup('service:router');
+    this.onSuccess = sinon.spy();
   });
 
   const CSP_ERR_TEXT = `Error This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`;
@@ -50,9 +51,9 @@ module('Integration | Component | auth form', function (hooks) {
     assert.expect(2);
     this.set('cluster', EmberObject.create({ standby: true }));
     this.set('selectedAuth', 'token');
-    await render(hbs`{{auth-form cluster=this.cluster selectedAuth=this.selectedAuth}}`);
+    await render(hbs`<AuthForm @cluster={{this.cluster}} @selectedAuth={{this.selectedAuth}} />`);
     assert.false(component.errorMessagePresent, false);
-    this.owner.lookup('service:csp-event').events.addObject({ violatedDirective: 'connect-src' });
+    this.owner.lookup('service:csp-event').handleEvent({ violatedDirective: 'connect-src' });
     await settled();
     assert.strictEqual(component.errorText, CSP_ERR_TEXT);
   });
@@ -74,7 +75,7 @@ module('Integration | Component | auth form', function (hooks) {
 
     this.set('cluster', EmberObject.create({}));
     this.set('selectedAuth', 'token');
-    await render(hbs`{{auth-form cluster=this.cluster selectedAuth=this.selectedAuth}}`);
+    await render(hbs`<AuthForm @cluster={{this.cluster}} @selectedAuth={{this.selectedAuth}} />`);
     return component.login().then(() => {
       assert.strictEqual(component.errorText, 'Error Authentication failed: Not allowed');
       server.shutdown();
@@ -85,17 +86,20 @@ module('Integration | Component | auth form', function (hooks) {
     assert.expect(1);
     const server = new Pretender(function () {
       this.get('/v1/auth/**', () => {
-        return [400, { 'Content-Type': 'application/json' }];
+        return [400, { 'Content-Type': 'application/json' }, JSON.stringify({ errors: ['API Error here'] })];
       });
       this.get('/v1/sys/internal/ui/mounts', this.passthrough);
     });
 
     this.set('cluster', EmberObject.create({}));
     this.set('selectedAuth', 'token');
-    await render(hbs`{{auth-form cluster=this.cluster selectedAuth=this.selectedAuth}}`);
-    // returns null because test does not return details of failed network request. On the app it will return the details of the error instead of null.
+    await render(hbs`<AuthForm @cluster={{this.cluster}} @selectedAuth={{this.selectedAuth}} />`);
     return component.login().then(() => {
-      assert.strictEqual(component.errorText, 'Error Authentication failed: null');
+      assert.strictEqual(
+        component.errorText,
+        'Error Authentication failed: API Error here',
+        'shows the error from the API'
+      );
       server.shutdown();
     });
   });
@@ -133,7 +137,7 @@ module('Integration | Component | auth form', function (hooks) {
     });
 
     this.set('cluster', EmberObject.create({}));
-    await render(hbs`{{auth-form cluster=this.cluster }}`);
+    await render(hbs`<AuthForm @cluster={{this.cluster}} />`);
 
     assert.strictEqual(component.tabs.length, 2, 'renders a tab for userpass and Other');
     assert.strictEqual(component.tabs.objectAt(0).name, 'foo', 'uses the path in the label');
@@ -154,7 +158,7 @@ module('Integration | Component | auth form', function (hooks) {
       });
     });
     this.set('cluster', EmberObject.create({}));
-    await render(hbs`{{auth-form cluster=this.cluster }}`);
+    await render(hbs`<AuthForm @cluster={{this.cluster}} />`);
 
     assert.strictEqual(
       component.descriptionText,
@@ -182,7 +186,7 @@ module('Integration | Component | auth form', function (hooks) {
 
     this.set('cluster', EmberObject.create({}));
     this.set('selectedAuth', 'foo/');
-    await render(hbs`{{auth-form cluster=this.cluster selectedAuth=this.selectedAuth}}`);
+    await render(hbs`<AuthForm @cluster={{this.cluster}} @selectedAuth={{this.selectedAuth}} />`);
     await component.login();
 
     await settled();
@@ -232,7 +236,9 @@ module('Integration | Component | auth form', function (hooks) {
     const wrappedToken = '54321';
     this.set('wrappedToken', wrappedToken);
     this.set('cluster', EmberObject.create({}));
-    await render(hbs`<AuthForm @cluster={{this.cluster}} @wrappedToken={{this.wrappedToken}} />`);
+    await render(
+      hbs`<AuthForm @cluster={{this.cluster}} @wrappedToken={{this.wrappedToken}} @onSuccess={{this.onSuccess}} />`
+    );
     later(() => cancelTimers(), 50);
     await settled();
     assert.strictEqual(
@@ -241,7 +247,7 @@ module('Integration | Component | auth form', function (hooks) {
       'makes call to unwrap the token'
     );
     assert.strictEqual(
-      server.handledRequests[0].requestHeaders['X-Vault-Token'],
+      server.handledRequests[0].requestHeaders['x-vault-token'],
       wrappedToken,
       'uses passed wrapped token for the unwrap'
     );
@@ -264,7 +270,7 @@ module('Integration | Component | auth form', function (hooks) {
     });
 
     this.set('wrappedToken', '54321');
-    await render(hbs`{{auth-form cluster=this.cluster wrappedToken=this.wrappedToken}}`);
+    await render(hbs`<AuthForm @cluster={{this.cluster}} @wrappedToken={{this.wrappedToken}} />`);
     later(() => cancelTimers(), 50);
 
     await settled();

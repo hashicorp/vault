@@ -1,0 +1,61 @@
+---
+layout: api
+page_title: /sys/internal/ui/unauthenticated-messages - HTTP API
+description: >-
+  The `/sys/internal/ui/unauthenticated-messages` endpoint retrieves active pre-login custom messages.
+---
+
+# `/sys/internal/ui/unauthenticated-messages`
+
+The `/sys/internal/ui/unauthenticated-messages` endpoint is used by the UI to
+retrieve the active pre-login custom messages so that it can display them.
+
+You must install Vault Enterprise 1.16.0 or higher to create custom messages
+that can be retrieved using this endpoint.
+
+When retrieving custom messages, the results will include active messages from
+the current namespace along with custom messages that exist all of the ancestral
+namespaces up to and including the root namespace.
+This should only be used internally by the UI. Due to the nature of its
+intended usage, there is no guarantee on backwards compatibility for this endpoint.
+
+## Get pre-login custom messages
+
+This endpoint lists the active pre-login custom messages.
+
+| Method | Path                                        |
+| :----- | :------------------------------------------ |
+| `GET`  | `/sys/internal/ui/unauthenticated-messages` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/sys/internal/ui/unauthenticated-messages
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "key_info": {
+      "01234567-89ab-cdef-0123-456789abcdef": {
+        "title": "Pre-login Warning",
+        "message": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur nulla augue, placerat quis risus blandit, molestie imperdiet massa. Sed blandit rutrum odio quis varius. Fusce purus orci, maximus ac libero.",
+        "type": "modal",
+        "authenticated": false,
+        "start_time": "2024-01-01T00:00:00.000000000Z",
+        "end_time": null,
+        "options": null,
+        "link": {
+          "Details": "https://www.example.org/details"
+        }
+      }
+    },
+    "keys": [
+      "01234567-89ab-cdef-0123-456789abcdef"
+    ]
+  }
+}
+```

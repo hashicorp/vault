@@ -11,18 +11,27 @@
   ...attributes
 >
   <div class="flex row-wrap space-between has-bottom-margin-m" data-test-overview-card={{@cardTitle}}>
-    <h3 class="has-text-weight-bold is-size-5">{{@cardTitle}}</h3>
+    <Hds::Text::Display @weight="bold" @size="300" data-test-overview-card-title={{@cardTitle}}>
+      {{@cardTitle}}
+    </Hds::Text::Display>
     {{#if @actionText}}
       <Hds::Link::Standalone
         @icon={{or @actionIcon "chevron-right"}}
         @iconPosition="trailing"
         @text={{@actionText}}
         @route={{@actionTo}}
+        @isRouteExternal={{@actionExternal}}
         @query={{@actionQuery}}
         data-test-action-text={{@actionText}}
       />
     {{/if}}
   </div>
-  <p class="has-text-grey is-size-8 {{unless @actionText 'has-top-margin-s'}}">{{@subText}}</p>
+  <Hds::Text::Body
+    @color="faint"
+    class="{{unless @actionText 'has-top-margin-s'}}"
+    data-test-overview-card-subtitle={{@cardTitle}}
+  >
+    {{@subText}}
+  </Hds::Text::Body>
   {{yield}}
 </Hds::Card::Container>

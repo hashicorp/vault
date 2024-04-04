@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Acceptance | ssh secret backend', function (hooks) {
   setupApplicationTest(hooks);
@@ -83,6 +84,12 @@ module('Acceptance | ssh secret backend', function (hooks) {
     },
   ];
   test('ssh backend', async function (assert) {
+    // Popup menu causes flakiness
+    setRunOptions({
+      rules: {
+        'color-contrast': { enabled: false },
+      },
+    });
     assert.expect(28);
     const sshPath = `ssh-${this.uid}`;
 

@@ -17,11 +17,11 @@ enabled at a time.
 This endpoint lists only the enabled audit devices (it does not list all
 available audit devices).
 
-- **`sudo` required** – This endpoint requires `sudo` capability in addition to
+- **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
 | Method | Path         |
-| :----- | :----------- |
+|:-------|:-------------|
 | `GET`  | `/sys/audit` |
 
 ### Sample request
@@ -51,32 +51,39 @@ $ curl \
 This endpoint enables a new audit device at the supplied path. The path can be a
 single word name or a more complex, nested path.
 
-- **`sudo` required** – This endpoint requires `sudo` capability in addition to
+- **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
 | Method | Path               |
-| :----- | :----------------- |
+|:-------|:-------------------|
 | `POST` | `/sys/audit/:path` |
 
 ### Parameters
 
-- `path` `(string: <required>)` – Specifies the path in which to enable the audit
+- `path` `(string: <required>)` – Specifies the path in which to enable the audit
   device. This is part of the request URL.
 
-- `description` `(string: "")` – Specifies a human-friendly description of the
+- `description` `(string: "")` – Specifies a human-friendly description of the
   audit device.
 
-- `options` `(map<string|string>: nil)` – Specifies configuration options to pass to the audit device itself.
-  For more details, please see the relevant page for an audit device `type`, under [Audit Devices docs](/vault/docs/audit).
+- `options` `(map<string|string>: nil)` – Specifies configuration options to pass to the audit device itself.
+  There are a set of [common options](#common-configuration-options)
+  which can be applied to all types of audit device.
+  For more details, please see the relevant page for an audit device `type`,
+  under [Audit Devices docs](/vault/docs/audit).
 
-- `type` `(string: <required>)` – Specifies the type of the audit device.
+- `type` `(string: <required>)` – Specifies the type of the audit device.
   Valid types are `file`, `socket` and `syslog`.
 
-Additionally, the following options are allowed in Vault open-source, but
+Additionally, the following options are allowed in Vault Community Edition, but
 relevant functionality is only supported in Vault Enterprise:
 
-- `local` `(bool: false)` – Specifies if the audit device is local within the cluster only. Local
+- `local` `(bool: false)` – Applies exclusively to performance replication. Specifies if the audit device is local within the cluster only. Local
   audit devices are not replicated nor (if a secondary) removed by replication.
+
+#### Common configuration options
+
+@include 'audit-options-common.mdx'
 
 ### Sample payload
 
@@ -107,16 +114,16 @@ This endpoint disables the audit device at the given path.
 for comparison with entries in the audit logs. This is true even if you re-enable
 the audit device at the same path, as a new salt will be created for hashing.
 
-- **`sudo` required** – This endpoint requires `sudo` capability in addition to
+- **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
 | Method   | Path               |
-| :------- | :----------------- |
+|:---------|:-------------------|
 | `DELETE` | `/sys/audit/:path` |
 
 ### Parameters
 
-- `path` `(string: <required>)` – Specifies the path of the audit device to
+- `path` `(string: <required>)` – Specifies the path of the audit device to
   delete. This is part of the request URL.
 
 ### Sample request

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -222,7 +221,7 @@ func (b *backend) acmeAccountSearchHandler(acmeCtx *acmeContext, userCtx *jwsCtx
 		return nil, fmt.Errorf("failed generating thumbprint for key: %w", err)
 	}
 
-	account, err := b.acmeState.LoadAccountByKey(acmeCtx, thumbprint)
+	account, err := b.GetAcmeState().LoadAccountByKey(acmeCtx, thumbprint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load account by thumbprint: %w", err)
 	}
@@ -253,7 +252,7 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jws
 		return nil, fmt.Errorf("failed generating thumbprint for key: %w", err)
 	}
 
-	accountByKey, err := b.acmeState.LoadAccountByKey(acmeCtx, thumbprint)
+	accountByKey, err := b.GetAcmeState().LoadAccountByKey(acmeCtx, thumbprint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load account by thumbprint: %w", err)
 	}
@@ -267,7 +266,7 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jws
 
 	var eab *eabType
 	if len(eabData) != 0 {
-		eab, err = verifyEabPayload(b.acmeState, acmeCtx, userCtx, r.Path, eabData)
+		eab, err = verifyEabPayload(b.GetAcmeState(), acmeCtx, userCtx, r.Path, eabData)
 		if err != nil {
 			return nil, err
 		}
@@ -288,7 +287,7 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jws
 		// We delete the EAB to prevent future re-use after associating it with an account, worst
 		// case if we fail creating the account we simply nuked the EAB which they can create another
 		// and retry
-		wasDeleted, err := b.acmeState.DeleteEab(acmeCtx.sc, eab.KeyID)
+		wasDeleted, err := b.GetAcmeState().DeleteEab(acmeCtx.sc, eab.KeyID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to delete eab reference: %w", err)
 		}
@@ -302,7 +301,7 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jws
 	b.acmeAccountLock.RLock() // Prevents Account Creation and Tidy Interfering
 	defer b.acmeAccountLock.RUnlock()
 
-	accountByKid, err := b.acmeState.CreateAccount(acmeCtx, userCtx, contact, termsOfServiceAgreed, eab)
+	accountByKid, err := b.GetAcmeState().CreateAccount(acmeCtx, userCtx, contact, termsOfServiceAgreed, eab)
 	if err != nil {
 		if eab != nil {
 			return nil, fmt.Errorf("failed to create account: %w; the EAB key used for this request has been deleted as a result of this operation; fetch a new EAB key before retrying", err)
@@ -329,7 +328,7 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 		return nil, fmt.Errorf("%w: not allowed to update EAB data in accounts", ErrMalformed)
 	}
 
-	account, err := b.acmeState.LoadAccount(acmeCtx, userCtx.Kid)
+	account, err := b.GetAcmeState().LoadAccount(acmeCtx, userCtx.Kid)
 	if err != nil {
 		return nil, fmt.Errorf("error loading account: %w", err)
 	}
@@ -363,7 +362,7 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 	}
 
 	if shouldUpdate {
-		err = b.acmeState.UpdateAccount(acmeCtx.sc, account)
+		err = b.GetAcmeState().UpdateAccount(acmeCtx.sc, account)
 		if err != nil {
 			return nil, fmt.Errorf("failed to update account: %w", err)
 		}

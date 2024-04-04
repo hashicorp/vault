@@ -3,14 +3,14 @@
 
 scenario "smoke" {
   matrix {
-    arch            = ["amd64", "arm64"]
-    artifact_source = ["local", "crt", "artifactory"]
-    artifact_type   = ["bundle", "package"]
-    backend         = ["consul", "raft"]
-    consul_version  = ["1.12.9", "1.13.9", "1.14.9", "1.15.5", "1.16.1"]
-    distro          = ["ubuntu", "rhel"]
-    edition         = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
-    seal            = ["awskms", "shamir"]
+    arch            = global.archs
+    artifact_source = global.artifact_sources
+    artifact_type   = global.artifact_types
+    backend         = global.backends
+    consul_version  = global.consul_versions
+    distro          = global.distros
+    edition         = global.editions
+    seal            = global.seals
     seal_ha_beta    = ["true", "false"]
 
     # Our local builder always creates bundles
@@ -23,6 +23,12 @@ scenario "smoke" {
     exclude {
       arch    = ["arm64"]
       edition = ["ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+    }
+
+    # PKCS#11 can only be used on ent.hsm and ent.hsm.fips1402.
+    exclude {
+      seal    = ["pkcs11"]
+      edition = ["ce", "ent", "ent.fips1402"]
     }
   }
 
@@ -82,15 +88,6 @@ scenario "smoke" {
     }
   }
 
-  step "create_seal_key" {
-    module = "seal_key_${matrix.seal}"
-
-    variables {
-      cluster_id  = step.create_vpc.cluster_id
-      common_tags = global.tags
-    }
-  }
-
   // This step reads the contents of the backend license if we're using a Consul backend and
   // the edition is "ent".
   step "read_backend_license" {
@@ -108,6 +105,20 @@ scenario "smoke" {
 
     variables {
       file_name = global.vault_license_path
+    }
+  }
+
+  step "create_seal_key" {
+    module     = "seal_${matrix.seal}"
+    depends_on = [step.create_vpc]
+
+    providers = {
+      enos = provider.enos.ubuntu
+    }
+
+    variables {
+      cluster_id  = step.create_vpc.id
+      common_tags = global.tags
     }
   }
 
@@ -172,7 +183,7 @@ scenario "smoke" {
     depends_on = [
       step.create_backend_cluster,
       step.build_vault,
-      step.create_vault_cluster_targets
+      step.create_vault_cluster_targets,
     ]
 
     providers = {
@@ -196,7 +207,7 @@ scenario "smoke" {
       manage_service       = local.manage_service
       packages             = concat(global.packages, global.distro_packages[matrix.distro])
       seal_ha_beta         = matrix.seal_ha_beta
-      seal_key_name        = step.create_seal_key.resource_name
+      seal_attributes      = step.create_seal_key.attributes
       seal_type            = matrix.seal
       storage_backend      = matrix.backend
       target_hosts         = step.create_vault_cluster_targets.hosts
@@ -403,9 +414,9 @@ scenario "smoke" {
     value       = step.create_vault_cluster.recovery_keys_hex
   }
 
-  output "seal_key_name" {
-    description = "The Vault cluster seal key name"
-    value       = step.create_seal_key.name
+  output "seal_key_attributes" {
+    description = "The Vault cluster seal attributes"
+    value       = step.create_seal_key.attributes
   }
 
   output "unseal_keys_b64" {

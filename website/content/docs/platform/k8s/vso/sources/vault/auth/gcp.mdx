@@ -1,0 +1,80 @@
+---
+layout: docs
+page_title: GCP auth support for Vault Secrets Operator
+description: >-
+  Learn how GCP authentication works for Vault Secrets Operator
+---
+
+# GCP auth support for Vault Secrets Operator
+
+The Vault Secrets Operator (VSO) supports authenticating to Vault's [GCP auth](/vault/docs/auth/gcp) method, using Google's Kubernetes Engine (GKE) workload identity.
+
+1. Follow Google's [Use Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity) guide to enable workload identity on a GKE cluster so your Kubernetes service account can impersonate a Google IAM service account. 
+
+1. Create an appropriate authentication role in your Vault instance:
+
+  <CodeTabs>
+  <CodeBlockConfig>
+
+  ```shell-session
+  $ vault write auth/gcp/role/<VAULT_GCP_ROLE> \
+      type="iam" \
+      policies="default" \
+      max_jwt_exp=3600 \
+      bound_service_accounts="<SERVICE_ACCOUNT>@<GCP_PROJECT>.iam.gserviceaccount.com"
+  ```
+
+  </CodeBlockConfig>
+  <CodeBlockConfig>
+
+  ```hcl
+  resource "vault_gcp_auth_backend_role" "gcp_role" {
+    backend                = "auth/gcp"
+    role                   = <VAULT_GCP_ROLE>
+    type                   = "iam"
+    token_policies         = "default"
+    max_jwt_exp            = 3600
+    bound_service_accounts = [
+      "<SERVICE_ACCOUNT>@<GCP_PROJECT>.iam.gserviceaccount.com",
+    ]
+  }
+  ```
+
+  </CodeBlockConfig>
+  </CodeTabs>
+
+  <Note>
+
+    `max_jwt_exp` needs to be greater than or equal to 1 hour (3600)
+  
+  </Note>
+
+1. Create the corresponding authentication object for VSO:
+
+  ```yaml
+  apiVersion: secrets.hashicorp.com/v1beta1
+  kind: VaultAuth
+  metadata:
+    name: vaultauth-gcp-example
+    namespace: <K8S_NAMESPACE>
+  spec:
+    vaultConnectionRef: <VAULT_CONNECTION_NAME>
+    mount: gcp
+    method: gcp
+    gcp:
+      role: <VAULT_GCP_ROLE>
+      workloadIdentityServiceAccount: <K8S_SERVICE_ACCOUNT>
+  ```
+
+<Tip title="Terraform has workload identity support">
+
+  If you use Terraform to manage your GKE cluster, the
+  [GKE module](https://registry.terraform.io/modules/terraform-google-modules/kubernetes-engine/google/latest)
+  includes workload identity support through the
+  [workload identity submodule](https://registry.terraform.io/modules/terraform-google-modules/kubernetes-engine/google/latest/submodules/workload-identity).
+
+</Tip>
+
+# API
+
+See the full list of GCP VaultAuth options on the [VSO API page](/vault/docs/platform/k8s/vso/api-reference#vaultauthconfiggcp).

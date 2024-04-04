@@ -19,6 +19,7 @@ const ENTERPRISE_SECRET_ENGINES = [
     type: 'transform',
     category: 'generic',
     requiredFeature: 'Transform Secrets Engine',
+    glyph: 'transform-data',
   },
   {
     displayName: 'Key Management',
@@ -59,6 +60,7 @@ const MOUNTABLE_SECRET_ENGINES = [
     displayName: 'Databases',
     type: 'database',
     category: 'infra',
+    glyph: 'database',
   },
   {
     displayName: 'Google Cloud',
@@ -95,6 +97,7 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'RabbitMQ',
     type: 'rabbitmq',
+    glyph: 'rabbitmq-color',
     category: 'infra',
   },
   {
@@ -141,7 +144,7 @@ export function allEngines() {
 
 export function isAddonEngine(type, version) {
   if (type === 'kv' && version === 1) return false;
-  const engineRoute = allEngines().findBy('type', type)?.engineRoute;
+  const engineRoute = allEngines().find((engine) => engine.type === type)?.engineRoute;
   return !!engineRoute;
 }
 

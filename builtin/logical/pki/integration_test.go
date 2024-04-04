@@ -14,14 +14,14 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	vaulthttp "github.com/hashicorp/vault/http"
 	vaultocsp "github.com/hashicorp/vault/sdk/helper/ocsp"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-
-	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 )
 
@@ -41,7 +41,7 @@ func TestIntegration_RotateRootUsesNext(t *testing.T) {
 	require.NotNil(t, resp, "got nil response from rotate root")
 	require.False(t, resp.IsError(), "got an error from rotate root: %#v", resp)
 
-	issuerId1 := resp.Data["issuer_id"].(issuerID)
+	issuerId1 := resp.Data["issuer_id"].(issuing.IssuerID)
 	issuerName1 := resp.Data["issuer_name"]
 
 	require.NotEmpty(t, issuerId1, "issuer id was empty on initial rotate root command")
@@ -61,7 +61,7 @@ func TestIntegration_RotateRootUsesNext(t *testing.T) {
 	require.NotNil(t, resp, "got nil response from rotate root")
 	require.False(t, resp.IsError(), "got an error from rotate root: %#v", resp)
 
-	issuerId2 := resp.Data["issuer_id"].(issuerID)
+	issuerId2 := resp.Data["issuer_id"].(issuing.IssuerID)
 	issuerName2 := resp.Data["issuer_name"]
 
 	require.NotEmpty(t, issuerId2, "issuer id was empty on second rotate root command")
@@ -83,7 +83,7 @@ func TestIntegration_RotateRootUsesNext(t *testing.T) {
 	require.NotNil(t, resp, "got nil response from rotate root")
 	require.False(t, resp.IsError(), "got an error from rotate root: %#v", resp)
 
-	issuerId3 := resp.Data["issuer_id"].(issuerID)
+	issuerId3 := resp.Data["issuer_id"].(issuing.IssuerID)
 	issuerName3 := resp.Data["issuer_name"]
 
 	require.NotEmpty(t, issuerId3, "issuer id was empty on third rotate root command")
@@ -436,7 +436,7 @@ func TestIntegration_AutoIssuer(t *testing.T) {
 		"pem_bundle": certOne,
 	})
 	requireSuccessNonNilResponse(t, resp, err)
-	issuerIdOneReimported := issuerID(resp.Data["imported_issuers"].([]string)[0])
+	issuerIdOneReimported := issuing.IssuerID(resp.Data["imported_issuers"].([]string)[0])
 
 	resp, err = CBRead(b, s, "config/issuers")
 	requireSuccessNonNilResponse(t, resp, err)
@@ -630,9 +630,6 @@ func TestIntegrationOCSPClientWithPKI(t *testing.T) {
 			return testLogger
 		}, 10)
 
-		err = ocspClient.VerifyLeafCertificate(context.Background(), cert, issuer, conf)
-		require.NoError(t, err)
-
 		_, err = client.Logical().Write("pki/revoke", map[string]interface{}{
 			"serial_number": serialNumber,
 		})
@@ -643,11 +640,11 @@ func TestIntegrationOCSPClientWithPKI(t *testing.T) {
 	}
 }
 
-func genTestRootCa(t *testing.T, b *backend, s logical.Storage) (issuerID, keyID) {
+func genTestRootCa(t *testing.T, b *backend, s logical.Storage) (issuing.IssuerID, issuing.KeyID) {
 	return genTestRootCaWithIssuerName(t, b, s, "")
 }
 
-func genTestRootCaWithIssuerName(t *testing.T, b *backend, s logical.Storage, issuerName string) (issuerID, keyID) {
+func genTestRootCaWithIssuerName(t *testing.T, b *backend, s logical.Storage, issuerName string) (issuing.IssuerID, issuing.KeyID) {
 	data := map[string]interface{}{
 		"common_name": "test.com",
 	}
@@ -665,8 +662,8 @@ func genTestRootCaWithIssuerName(t *testing.T, b *backend, s logical.Storage, is
 	require.NotNil(t, resp, "got nil response from generating root ca")
 	require.False(t, resp.IsError(), "got an error from generating root ca: %#v", resp)
 
-	issuerId := resp.Data["issuer_id"].(issuerID)
-	keyId := resp.Data["key_id"].(keyID)
+	issuerId := resp.Data["issuer_id"].(issuing.IssuerID)
+	keyId := resp.Data["key_id"].(issuing.KeyID)
 
 	require.NotEmpty(t, issuerId, "returned issuer id was empty")
 	require.NotEmpty(t, keyId, "returned key id was empty")

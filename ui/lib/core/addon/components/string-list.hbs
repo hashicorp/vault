@@ -32,7 +32,7 @@
           class="input {{if (includes index this.indicesWithComma) 'has-warning-border'}}"
           @value={{data.value}}
           name={{concat this.elementId "-" index}}
-          id={{concat this.elementId "-" index}}
+          aria-label="{{@label}} list item {{index}}"
           {{on "keyup" (action "inputChanged" index)}}
           {{on "change" (action "inputChanged" index)}}
         />
@@ -53,15 +53,15 @@
         {{/if}}
       </div>
       {{#if (includes index this.indicesWithComma)}}
-        <Icon class="is-flex-v-centered has-text-highlight" @name="alert-triangle-fill" />
+        <FlightIcon @name="alert-triangle" @color="var(--token-color-foreground-warning)" @size="24" />
       {{/if}}
     </div>
   {{/each}}
   {{#if this.indicesWithComma}}
-    <AlertInline
-      @type="warning"
-      @message="Input contains a comma. Please separate values into individual rows."
-      @isMarginless={{true}}
-    />
+    <Hds::Alert @type="inline" @color="warning" as |A|>
+      <A.Description>
+        Input contains a comma. Please separate values into individual rows.
+      </A.Description>
+    </Hds::Alert>
   {{/if}}
 </div>

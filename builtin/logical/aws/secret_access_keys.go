@@ -9,15 +9,14 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/template"
-	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/template"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -453,7 +452,6 @@ func (b *backend) secretAccessKeysCreate(
 			Tags:     tags,
 			UserName: &username,
 		})
-
 		if err != nil {
 			return logical.ErrorResponse("Error adding tags to user: %s", err), awsutil.CheckAWSError(err)
 		}

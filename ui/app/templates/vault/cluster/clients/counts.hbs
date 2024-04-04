@@ -1,0 +1,19 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Clients::Page::Counts
+  @activity={{this.model.activity}}
+  @activityError={{this.model.activityError}}
+  @config={{this.model.config}}
+  @endTimestamp={{this.model.endTimestamp}}
+  @isSecretsSyncActivated={{this.model.isSecretsSyncActivated}}
+  @mountPath={{this.mountPath}}
+  @namespace={{this.ns}}
+  @onFilterChange={{this.updateQueryParams}}
+  @startTimestamp={{this.model.startTimestamp}}
+  @versionHistory={{this.model.versionHistory}}
+>
+  {{outlet}}
+</Clients::Page::Counts>
