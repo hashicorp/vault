@@ -14,9 +14,14 @@ import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { runCmd } from 'vault/tests/helpers/commands';
-import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
-import { issuerPemBundle } from 'vault/tests/helpers/pki/values';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-workflow-helpers';
+import { PKI_GENERATE_ROOT } from 'vault/tests/helpers/components/pki/pki-generate-root';
+import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/components/pki/pki-configure-create';
+import { PKI_DELETE_ALL_ISSUERS } from 'vault/tests/helpers/components/pki/pki-delete-all-issuers';
+import { PKI_ISSUER_LIST } from 'vault/tests/helpers/components/pki/page/pki-issuer-list';
 
+const { issuerPemBundle } = CERTIFICATES;
 module('Acceptance | pki configuration test', function (hooks) {
   setupApplicationTest(hooks);
 
@@ -43,68 +48,66 @@ module('Acceptance | pki configuration test', function (hooks) {
     test('it shows the delete all issuers modal', async function (assert) {
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-      await click(SELECTORS.configuration.configureButton);
+      await click(PKI_CONFIGURE_CREATE.configureButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
       await settled();
-      await click(SELECTORS.configuration.generateRootOption);
-      await fillIn(SELECTORS.configuration.typeField, 'exported');
-      await fillIn(SELECTORS.configuration.generateRootCommonNameField, 'issuer-common-0');
-      await fillIn(SELECTORS.configuration.generateRootIssuerNameField, 'issuer-0');
-      await click(SELECTORS.configuration.generateRootSave);
-      await click(SELECTORS.configuration.doneButton);
+      await click(PKI_CONFIGURE_CREATE.generateRootOption);
+      await fillIn(GENERAL.inputByAttr('type'), 'exported');
+      await fillIn(GENERAL.inputByAttr('commonName'), 'issuer-common-0');
+      await fillIn(GENERAL.inputByAttr('issuerName'), 'issuer-0');
+      await click(GENERAL.saveButton);
+      await click(PKI_CONFIGURE_CREATE.doneButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
       await settled();
-      await click(SELECTORS.configTab);
+      await click(GENERAL.secretTab('Configuration'));
       await settled();
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
-      await click(SELECTORS.configuration.issuerLink);
+      await click(PKI_DELETE_ALL_ISSUERS.issuerLink);
       await settled();
-      await waitFor(SELECTORS.configuration.deleteAllIssuerModal, { timeout: 5000 });
-      assert.dom(SELECTORS.configuration.deleteAllIssuerModal).exists();
-      await fillIn(SELECTORS.configuration.deleteAllIssuerInput, 'delete-all');
-      await click(SELECTORS.configuration.deleteAllIssuerButton);
+      await waitFor(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal, { timeout: 5000 });
+      assert.dom(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal).exists();
+      await fillIn(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerInput, 'delete-all');
+      await click(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerButton);
       await settled();
-      await waitUntil(() => !find(SELECTORS.configuration.deleteAllIssuerModal));
+      await waitUntil(() => !find(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal));
 
-      assert.dom(SELECTORS.configuration.deleteAllIssuerModal).doesNotExist();
+      assert.dom(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal).doesNotExist();
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
     });
 
     test('it shows the correct empty state message if certificates exists after delete all issuers', async function (assert) {
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-      await click(SELECTORS.configuration.configureButton);
+      await click(PKI_CONFIGURE_CREATE.configureButton);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.mountPath}/pki/configuration/create`,
         'goes to pki configure page'
       );
-      await click(SELECTORS.configuration.generateRootOption);
-      await fillIn(SELECTORS.configuration.typeField, 'exported');
-      await fillIn(SELECTORS.configuration.generateRootCommonNameField, 'issuer-common-0');
-      await fillIn(SELECTORS.configuration.generateRootIssuerNameField, 'issuer-0');
-      await click(SELECTORS.configuration.generateRootSave);
-      await click(SELECTORS.configuration.doneButton);
+      await click(PKI_CONFIGURE_CREATE.generateRootOption);
+      await fillIn(GENERAL.inputByAttr('type'), 'exported');
+      await fillIn(GENERAL.inputByAttr('commonName'), 'issuer-common-0');
+      await fillIn(GENERAL.inputByAttr('issuerName'), 'issuer-0');
+      await click(GENERAL.saveButton);
+      await click(PKI_CONFIGURE_CREATE.doneButton);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.mountPath}/pki/overview`,
         'goes to overview page'
       );
-      await click(SELECTORS.configTab);
+      await click(GENERAL.secretTab('Configuration'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.mountPath}/pki/configuration`,
         'goes to configuration page'
       );
-      await click(SELECTORS.configuration.issuerLink);
-      await waitFor(SELECTORS.configuration.deleteAllIssuerModal);
-      assert.dom(SELECTORS.configuration.deleteAllIssuerModal).exists();
-      await fillIn(SELECTORS.configuration.deleteAllIssuerInput, 'delete-all');
-      await click(SELECTORS.configuration.deleteAllIssuerButton);
-      await waitUntil(() => !find(SELECTORS.configuration.deleteAllIssuerModal));
-      assert
-        .dom(SELECTORS.configuration.deleteAllIssuerModal)
-        .doesNotExist('delete all issuers modal closes');
+      await click(PKI_DELETE_ALL_ISSUERS.issuerLink);
+      await waitFor(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal);
+      assert.dom(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal).exists();
+      await fillIn(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerInput, 'delete-all');
+      await click(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerButton);
+      await waitUntil(() => !find(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal));
+      assert.dom(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal).doesNotExist('delete all issuers modal closes');
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.mountPath}/pki/configuration`,
@@ -119,7 +122,7 @@ module('Acceptance | pki configuration test', function (hooks) {
         'goes to overview page'
       );
       assert
-        .dom(SELECTORS.emptyStateMessage)
+        .dom(GENERAL.emptyStateMessage)
         .hasText(
           "This PKI mount hasn't yet been configured with a certificate issuer. There are existing certificates. Use the CLI to perform any operations with them until an issuer is configured."
         );
@@ -127,25 +130,25 @@ module('Acceptance | pki configuration test', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/roles`);
       await settled();
       assert
-        .dom(SELECTORS.emptyStateMessage)
+        .dom(GENERAL.emptyStateMessage)
         .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
 
       await visit(`/vault/secrets/${this.mountPath}/pki/issuers`);
       await settled();
       assert
-        .dom(SELECTORS.emptyStateMessage)
+        .dom(GENERAL.emptyStateMessage)
         .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
 
       await visit(`/vault/secrets/${this.mountPath}/pki/keys`);
       await settled();
       assert
-        .dom(SELECTORS.emptyStateMessage)
+        .dom(GENERAL.emptyStateMessage)
         .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
 
       await visit(`/vault/secrets/${this.mountPath}/pki/certificates`);
       await settled();
       assert
-        .dom(SELECTORS.emptyStateMessage)
+        .dom(GENERAL.emptyStateMessage)
         .hasText(
           "This PKI mount hasn't yet been configured with a certificate issuer. There are existing certificates. Use the CLI to perform any operations with them until an issuer is configured."
         );
@@ -155,14 +158,14 @@ module('Acceptance | pki configuration test', function (hooks) {
       await authPage.login(this.pkiAdminToken);
       // Configure PKI
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-      await click(SELECTORS.configuration.configureButton);
+      await click(PKI_CONFIGURE_CREATE.configureButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
-      await click(SELECTORS.configuration.generateRootOption);
-      await fillIn(SELECTORS.configuration.typeField, 'exported');
-      await fillIn(SELECTORS.configuration.generateRootCommonNameField, 'issuer-common-0');
-      await fillIn(SELECTORS.configuration.generateRootIssuerNameField, 'issuer-0');
-      await click(SELECTORS.configuration.generateRootSave);
-      await click(SELECTORS.configuration.doneButton);
+      await click(PKI_CONFIGURE_CREATE.generateRootOption);
+      await fillIn(GENERAL.inputByAttr('type'), 'exported');
+      await fillIn(GENERAL.inputByAttr('commonName'), 'issuer-common-0');
+      await fillIn(GENERAL.inputByAttr('issuerName'), 'issuer-0');
+      await click(GENERAL.saveButton);
+      await click(PKI_CONFIGURE_CREATE.doneButton);
       // Create role and root CA"
       await runCmd([
         `write ${this.mountPath}/roles/some-role \
@@ -173,23 +176,23 @@ module('Acceptance | pki configuration test', function (hooks) {
       ]);
       await runCmd([`write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test"`]);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
-      await click(SELECTORS.configTab);
+      await click(GENERAL.secretTab('Configuration'));
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
-      await click(SELECTORS.configuration.issuerLink);
-      await waitFor(SELECTORS.configuration.deleteAllIssuerModal);
-      assert.dom(SELECTORS.configuration.deleteAllIssuerModal).exists();
-      await fillIn(SELECTORS.configuration.deleteAllIssuerInput, 'delete-all');
-      await click(SELECTORS.configuration.deleteAllIssuerButton);
+      await click(PKI_DELETE_ALL_ISSUERS.issuerLink);
+      await waitFor(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal);
+      assert.dom(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal).exists();
+      await fillIn(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerInput, 'delete-all');
+      await click(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerButton);
       await settled();
-      await waitUntil(() => !find(SELECTORS.configuration.deleteAllIssuerModal));
-      assert.dom(SELECTORS.configuration.deleteAllIssuerModal).doesNotExist();
+      await waitUntil(() => !find(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal));
+      assert.dom(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal).doesNotExist();
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
       await settled();
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await settled();
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
       assert
-        .dom(SELECTORS.emptyStateMessage)
+        .dom(GENERAL.emptyStateMessage)
         .hasText(
           "This PKI mount hasn't yet been configured with a certificate issuer. There are existing roles and certificates. Use the CLI to perform any operations with them until an issuer is configured."
         );
@@ -197,7 +200,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/roles`);
       await settled();
       assert
-        .dom(SELECTORS.emptyStateMessage)
+        .dom(GENERAL.emptyStateMessage)
         .hasText(
           "This PKI mount hasn't yet been configured with a certificate issuer. There are existing roles. Use the CLI to perform any operations with them until an issuer is configured."
         );
@@ -205,19 +208,19 @@ module('Acceptance | pki configuration test', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/issuers`);
       await settled();
       assert
-        .dom(SELECTORS.emptyStateMessage)
+        .dom(GENERAL.emptyStateMessage)
         .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
 
       await visit(`/vault/secrets/${this.mountPath}/pki/keys`);
       await settled();
       assert
-        .dom(SELECTORS.emptyStateMessage)
+        .dom(GENERAL.emptyStateMessage)
         .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
 
       await visit(`/vault/secrets/${this.mountPath}/pki/certificates`);
       await settled();
       assert
-        .dom(SELECTORS.emptyStateMessage)
+        .dom(GENERAL.emptyStateMessage)
         .hasText(
           "This PKI mount hasn't yet been configured with a certificate issuer. There are existing certificates. Use the CLI to perform any operations with them until an issuer is configured."
         );
@@ -228,24 +231,24 @@ module('Acceptance | pki configuration test', function (hooks) {
       assert.expect(4);
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-      await click(SELECTORS.issuersTab);
-      await click(SELECTORS.generateIssuerDropdown);
-      await click(SELECTORS.generateIssuerRoot);
-      await fillIn(SELECTORS.configuration.inputByName('type'), 'internal');
-      await fillIn(SELECTORS.configuration.inputByName('commonName'), 'my-certificate');
-      await click(SELECTORS.configuration.keyParamsGroupToggle);
-      await fillIn(SELECTORS.configuration.inputByName('keyType'), 'ed25519');
-      await click(SELECTORS.configuration.generateRootSave);
+      await click(GENERAL.secretTab('Issuers'));
+      await click(PKI_ISSUER_LIST.generateIssuerDropdown);
+      await click(PKI_ISSUER_LIST.generateIssuerRoot);
+      await fillIn(GENERAL.inputByAttr('type'), 'internal');
+      await fillIn(GENERAL.inputByAttr('commonName'), 'my-certificate');
+      await click(PKI_GENERATE_ROOT.keyParamsGroupToggle);
+      await fillIn(GENERAL.inputByAttr('keyType'), 'ed25519');
+      await click(GENERAL.saveButton);
 
-      const issuerId = find(SELECTORS.configuration.saved.issuerLink).innerHTML;
+      const issuerId = find(PKI_GENERATE_ROOT.saved.issuerLink).innerHTML;
       await visit(`/vault/secrets/${this.mountPath}/pki/issuers`);
-      assert.dom(SELECTORS.issuerListItem(issuerId)).exists();
+      assert.dom(PKI_ISSUER_LIST.issuerListItem(issuerId)).exists();
       assert
         .dom('[data-test-common-name="0"]')
         .hasText('my-certificate', 'parses certificate metadata in the list view');
-      await click(SELECTORS.issuerListItem(issuerId));
+      await click(PKI_ISSUER_LIST.issuerListItem(issuerId));
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/details`);
-      assert.dom(SELECTORS.configuration.saved.commonName).exists('renders issuer details');
+      assert.dom(PKI_GENERATE_ROOT.saved.commonName).exists('renders issuer details');
     });
   });
 });

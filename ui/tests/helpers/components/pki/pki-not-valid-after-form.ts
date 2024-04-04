@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export const SELECTORS = {
+export const PKI_NOT_VALID_AFTER = {
   radioTtl: '[data-test-radio-button="ttl"]',
   radioTtlLabel: '[data-test-radio-label="ttl"]',
   radioDate: '[data-test-radio-button="not_after"]',
