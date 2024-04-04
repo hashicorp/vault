@@ -14,6 +14,7 @@ import codemirror from 'vault/tests/helpers/codemirror';
 import { KV_FORM } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hooks) {
   setupRenderingTest(hooks);
@@ -99,7 +100,7 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
     await fillIn(`[data-test-field="customMetadata"] ${KV_FORM.valueInput()}`, 'metadata');
     await fillIn(KV_FORM.inputByAttr('maxVersions'), this.maxVersions);
 
-    await click(KV_FORM.saveBtn);
+    await click(GENERAL.saveButton);
 
     assert.ok(
       this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.secret.details'),
@@ -143,7 +144,7 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
     await fillIn(KV_FORM.inputByAttr('path'), this.path);
     await fillIn(KV_FORM.keyInput(), 'foo');
     await fillIn(KV_FORM.maskedValueInput(), 'bar');
-    await click(KV_FORM.saveBtn);
+    await click(GENERAL.saveButton);
   });
 
   test('it saves nested secrets', async function (assert) {
@@ -182,7 +183,7 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
     await typeIn(KV_FORM.inputByAttr('path'), this.path);
     await fillIn(KV_FORM.keyInput(), 'foo');
     await fillIn(KV_FORM.maskedValueInput(), 'bar');
-    await click(KV_FORM.saveBtn);
+    await click(GENERAL.saveButton);
   });
 
   test('it renders API errors', async function (assert) {
@@ -209,10 +210,10 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
     );
 
     await fillIn(KV_FORM.inputByAttr('path'), this.path);
-    await click(KV_FORM.saveBtn);
+    await click(GENERAL.saveButton);
     assert.dom(KV_FORM.messageError).hasText('Error nope', 'it renders API error');
     assert.dom(KV_FORM.inlineAlert).hasText('There was an error submitting this form.');
-    await click(KV_FORM.cancelBtn);
+    await click(GENERAL.cancelButton);
     assert.ok(
       this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.list'),
       'router transitions to secret list route on cancel'
@@ -255,7 +256,7 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
 
     codemirror().setValue('{}'); // clear linting error
     await fillIn(KV_FORM.inputByAttr('path'), '');
-    await click(KV_FORM.saveBtn);
+    await click(GENERAL.saveButton);
     const [pathValidation, formAlert] = findAll(KV_FORM.inlineAlert);
     assert.dom(pathValidation).hasText(`Path can't be blank.`);
     assert.dom(formAlert).hasText('There is an error with this form.');
@@ -297,6 +298,6 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
 
     codemirror().setValue(`{ "hello": "there"}`);
     await fillIn(KV_FORM.inputByAttr('path'), this.path);
-    await click(KV_FORM.saveBtn);
+    await click(GENERAL.saveButton);
   });
 });

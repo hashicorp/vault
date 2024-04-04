@@ -53,7 +53,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
       await click(KV_WORKFLOW.list.createSecret);
       await fillIn(KV_FORM.inputByAttr('path'), 'jk');
-      await click(KV_FORM.cancelBtn);
+      await click(GENERAL.cancelButton);
       assert.dom(KV_WORKFLOW.list.item()).exists({ count: 1 }, 'same amount of secrets');
       assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
       await click(KV_WORKFLOW.list.createSecret);
@@ -68,7 +68,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(GENERAL.infoRowValue('foo')).exists('key has expected value');
       await click(KV_SECRET.createNewVersion);
       await fillIn(KV_FORM.keyInput(), 'bar');
-      await click(KV_FORM.cancelBtn);
+      await click(GENERAL.cancelButton);
       assert.dom(GENERAL.infoRowValue('foo')).exists('secret is previous value');
       await click(KV_SECRET.createNewVersion);
       await fillIn(KV_FORM.keyInput(), 'bar');
@@ -82,7 +82,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(KV_WORKFLOW.list.createSecret);
 
       // Create secret form -- validations
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.dom(KV_FORM.invalidFormAlert).hasText('There is an error with this form.');
       assert.dom(KV_FORM.validation('path')).hasText("Path can't be blank.");
       await typeIn(KV_FORM.inputByAttr('path'), secretPath);
@@ -94,12 +94,12 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_WORKFLOW.create.metadataSection).doesNotExist('Hides metadata section by default');
 
       // Submit with API errors
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.dom(KV_FORM.messageError).hasText('Error no data provided', 'API error shows on form');
 
       await fillIn(KV_FORM.keyInput(), 'api_key');
       await fillIn(KV_FORM.maskedValueInput(), 'partyparty');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
 
       // Details page
       assert.strictEqual(
@@ -139,7 +139,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_FORM.maskedValueInput()).hasValue('partyparty');
       await fillIn(KV_FORM.keyInput(1), 'api_url');
       await fillIn(KV_FORM.maskedValueInput(1), 'hashicorp.com');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
 
       // Back to details page
       assert.strictEqual(
@@ -176,10 +176,10 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_FORM.toggleByLabel('Automate secret deletion')).isNotChecked();
       // MaxVersions validation
       await fillIn(KV_FORM.inputByAttr('maxVersions'), 'seven');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.dom(KV_FORM.validation('maxVersions')).hasText('Maximum versions must be a number.');
       await fillIn(KV_FORM.inputByAttr('maxVersions'), '99999999999999999');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.dom(KV_FORM.validation('maxVersions')).hasText('You cannot go over 16 characters.');
       await fillIn(KV_FORM.inputByAttr('maxVersions'), '7');
 
@@ -192,7 +192,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await fillIn(`${KV_WORKFLOW.create.metadataSection} ${KV_FORM.keyInput()}`, 'team');
       await fillIn(`${KV_WORKFLOW.create.metadataSection} ${KV_FORM.valueInput()}`, 'UI');
       // Fill in metadata
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
 
       // Details
       assert.strictEqual(
@@ -237,7 +237,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await typeIn(KV_FORM.inputByAttr('path'), 'new');
       await fillIn(KV_FORM.keyInput(), 'api_key');
       await fillIn(KV_FORM.maskedValueInput(), 'partyparty');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${encodeURIComponent('app/new')}/details?version=1`,
@@ -275,7 +275,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       await fillIn(KV_FORM.keyInput(), 'my-key');
       await fillIn(KV_FORM.maskedValueInput(), 'my-value');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
 
       assert.strictEqual(
         currentURL(),
@@ -302,7 +302,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_WORKFLOW.list.item()).doesNotExist('list view has no items');
       await click(KV_WORKFLOW.list.createSecret);
       await fillIn(KV_FORM.inputByAttr('path'), 'jk');
-      await click(KV_FORM.cancelBtn);
+      await click(GENERAL.cancelButton);
       assert.dom(KV_WORKFLOW.list.item()).doesNotExist('list view still has no items');
       await click(KV_WORKFLOW.list.createSecret);
       await fillIn(KV_FORM.inputByAttr('path'), 'psych');
@@ -322,7 +322,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(KV_WORKFLOW.list.createSecret);
 
       // Create secret form -- validations
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.dom(KV_FORM.invalidFormAlert).hasText('There is an error with this form.');
       assert.dom(KV_FORM.validation('path')).hasText("Path can't be blank.");
       await typeIn(KV_FORM.inputByAttr('path'), secretPath);
@@ -334,7 +334,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_WORKFLOW.create.metadataSection).doesNotExist('Hides metadata section by default');
 
       // Submit with API errors
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert
         .dom(KV_FORM.messageError)
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
@@ -381,10 +381,10 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_FORM.toggleByLabel('Automate secret deletion')).isNotChecked();
       // MaxVersions validation
       await fillIn(KV_FORM.inputByAttr('maxVersions'), 'seven');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.dom(KV_FORM.validation('maxVersions')).hasText('Maximum versions must be a number.');
       await fillIn(KV_FORM.inputByAttr('maxVersions'), '99999999999999999');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.dom(KV_FORM.validation('maxVersions')).hasText('You cannot go over 16 characters.');
       await fillIn(KV_FORM.inputByAttr('maxVersions'), '7');
 
@@ -397,7 +397,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await fillIn(`${KV_WORKFLOW.create.metadataSection} ${KV_FORM.keyInput()}`, 'team');
       await fillIn(`${KV_WORKFLOW.create.metadataSection} ${KV_FORM.valueInput()}`, 'UI');
       // Fill in metadata
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert
         .dom(KV_FORM.messageError)
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
@@ -415,7 +415,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await typeIn(KV_FORM.inputByAttr('path'), 'new');
       await fillIn(KV_FORM.keyInput(), 'api_key');
       await fillIn(KV_FORM.maskedValueInput(), 'partyparty');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert
         .dom(KV_FORM.messageError)
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
@@ -445,7 +445,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
       await click(KV_WORKFLOW.list.createSecret);
       await fillIn(KV_FORM.inputByAttr('path'), 'jk');
-      await click(KV_FORM.cancelBtn);
+      await click(GENERAL.cancelButton);
       assert.dom(KV_WORKFLOW.list.item()).exists({ count: 1 }, 'same amount of secrets');
       assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
       await click(KV_WORKFLOW.list.createSecret);
@@ -467,7 +467,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(KV_WORKFLOW.list.createSecret);
 
       // Create secret form -- validations
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.dom(KV_FORM.invalidFormAlert).hasText('There is an error with this form.');
       assert.dom(KV_FORM.validation('path')).hasText("Path can't be blank.");
       await typeIn(KV_FORM.inputByAttr('path'), secretPath);
@@ -479,7 +479,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_WORKFLOW.create.metadataSection).doesNotExist('Hides metadata section by default');
 
       // Submit with API errors
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert
         .dom(KV_FORM.messageError)
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
@@ -526,10 +526,10 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_FORM.toggleByLabel('Automate secret deletion')).isNotChecked();
       // MaxVersions validation
       await fillIn(KV_FORM.inputByAttr('maxVersions'), 'seven');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.dom(KV_FORM.validation('maxVersions')).hasText('Maximum versions must be a number.');
       await fillIn(KV_FORM.inputByAttr('maxVersions'), '99999999999999999');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.dom(KV_FORM.validation('maxVersions')).hasText('You cannot go over 16 characters.');
       await fillIn(KV_FORM.inputByAttr('maxVersions'), '7');
 
@@ -542,7 +542,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await fillIn(`${KV_WORKFLOW.create.metadataSection} ${KV_FORM.keyInput()}`, 'team');
       await fillIn(`${KV_WORKFLOW.create.metadataSection} ${KV_FORM.valueInput()}`, 'UI');
       // Fill in metadata
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert
         .dom(KV_FORM.messageError)
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
@@ -560,7 +560,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await typeIn(KV_FORM.inputByAttr('path'), 'new');
       await fillIn(KV_FORM.keyInput(), 'api_key');
       await fillIn(KV_FORM.maskedValueInput(), 'partyparty');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert
         .dom(KV_FORM.messageError)
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
@@ -590,7 +590,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
       await click(KV_WORKFLOW.list.createSecret);
       await fillIn(KV_FORM.inputByAttr('path'), 'jk');
-      await click(KV_FORM.cancelBtn);
+      await click(GENERAL.cancelButton);
       assert.dom(KV_WORKFLOW.list.item()).exists({ count: 1 }, 'same amount of secrets');
       assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
       await click(KV_WORKFLOW.list.createSecret);
@@ -614,7 +614,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(KV_WORKFLOW.list.createSecret);
 
       // Create secret form -- validations
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.dom(KV_FORM.invalidFormAlert).hasText('There is an error with this form.');
       assert.dom(KV_FORM.validation('path')).hasText("Path can't be blank.");
       await typeIn(KV_FORM.inputByAttr('path'), secretPath);
@@ -626,7 +626,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_WORKFLOW.create.metadataSection).doesNotExist('Hides metadata section by default');
 
       // Submit with API errors
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert
         .dom(KV_FORM.messageError)
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
@@ -671,7 +671,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_FORM.maskedValueInput()).hasValue('', 'first row has no value');
       await fillIn(KV_FORM.keyInput(), 'api_url');
       await fillIn(KV_FORM.maskedValueInput(), 'hashicorp.com');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert
         .dom(KV_FORM.messageError)
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
@@ -697,10 +697,10 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_FORM.toggleByLabel('Automate secret deletion')).isNotChecked();
       // MaxVersions validation
       await fillIn(KV_FORM.inputByAttr('maxVersions'), 'seven');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.dom(KV_FORM.validation('maxVersions')).hasText('Maximum versions must be a number.');
       await fillIn(KV_FORM.inputByAttr('maxVersions'), '99999999999999999');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.dom(KV_FORM.validation('maxVersions')).hasText('You cannot go over 16 characters.');
       await fillIn(KV_FORM.inputByAttr('maxVersions'), '7');
 
@@ -713,7 +713,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await fillIn(`${KV_WORKFLOW.create.metadataSection} ${KV_FORM.keyInput()}`, 'team');
       await fillIn(`${KV_WORKFLOW.create.metadataSection} ${KV_FORM.valueInput()}`, 'UI');
 
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert
         .dom(KV_FORM.messageError)
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
@@ -732,7 +732,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await typeIn(KV_FORM.inputByAttr('path'), 'new');
       await fillIn(KV_FORM.keyInput(), 'api_key');
       await fillIn(KV_FORM.maskedValueInput(), 'partyparty');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert
         .dom(KV_FORM.messageError)
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
@@ -768,7 +768,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_FORM.maskedValueInput()).hasValue('', 'first row has no value');
       await fillIn(KV_FORM.keyInput(), 'api_url');
       await fillIn(KV_FORM.maskedValueInput(), 'hashicorp.com');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert
         .dom(KV_FORM.messageError)
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
@@ -790,7 +790,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_WORKFLOW.list.item()).doesNotExist('list view has no items');
       await click(KV_WORKFLOW.list.createSecret);
       await fillIn(KV_FORM.inputByAttr('path'), 'jk');
-      await click(KV_FORM.cancelBtn);
+      await click(GENERAL.cancelButton);
       assert.dom(KV_WORKFLOW.list.item()).doesNotExist('list view still has no items');
       await click(KV_WORKFLOW.list.createSecret);
       await fillIn(KV_FORM.inputByAttr('path'), 'psych');
@@ -805,7 +805,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         .hasText('You do not have permission to read this secret', 'no permissions state shows');
       await click(KV_SECRET.createNewVersion);
       await fillIn(KV_FORM.keyInput(), 'bar');
-      await click(KV_FORM.cancelBtn);
+      await click(GENERAL.cancelButton);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`,
@@ -829,7 +829,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(KV_WORKFLOW.list.createSecret);
 
       // Create secret form -- validations
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.dom(KV_FORM.invalidFormAlert).hasText('There is an error with this form.');
       assert.dom(KV_FORM.validation('path')).hasText("Path can't be blank.");
       await typeIn(KV_FORM.inputByAttr('path'), secretPath);
@@ -841,12 +841,12 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_WORKFLOW.create.metadataSection).doesNotExist('Hides metadata section by default');
 
       // Submit with API errors
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.dom(KV_FORM.messageError).hasText('Error no data provided', 'API error shows on form');
 
       await fillIn(KV_FORM.keyInput(), 'api_key');
       await fillIn(KV_FORM.maskedValueInput(), 'partyparty');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
 
       // Details page
       assert.strictEqual(
@@ -884,7 +884,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_FORM.maskedValueInput()).hasValue('', 'row 1 has empty value');
       await fillIn(KV_FORM.keyInput(), 'api_url');
       await fillIn(KV_FORM.maskedValueInput(), 'hashicorp.com');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
 
       // Back to details page
       assert.strictEqual(
@@ -919,10 +919,10 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_FORM.toggleByLabel('Automate secret deletion')).isNotChecked();
       // MaxVersions validation
       await fillIn(KV_FORM.inputByAttr('maxVersions'), 'seven');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.dom(KV_FORM.validation('maxVersions')).hasText('Maximum versions must be a number.');
       await fillIn(KV_FORM.inputByAttr('maxVersions'), '99999999999999999');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.dom(KV_FORM.validation('maxVersions')).hasText('You cannot go over 16 characters.');
       await fillIn(KV_FORM.inputByAttr('maxVersions'), '7');
 
@@ -935,7 +935,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await fillIn(`${KV_WORKFLOW.create.metadataSection} ${KV_FORM.keyInput()}`, 'team');
       await fillIn(`${KV_WORKFLOW.create.metadataSection} ${KV_FORM.valueInput()}`, 'UI');
       // Fill in metadata
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
 
       // Details
       assert.strictEqual(
@@ -974,7 +974,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await typeIn(KV_FORM.inputByAttr('path'), 'new');
       await fillIn(KV_FORM.keyInput(), 'api_key');
       await fillIn(KV_FORM.maskedValueInput(), 'partyparty');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${encodeURIComponent('app/new')}/details`,
@@ -1006,7 +1006,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       await fillIn(KV_FORM.keyInput(), 'my-key');
       await fillIn(KV_FORM.maskedValueInput(), 'my-value');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
 
       assert.strictEqual(
         currentURL(),
@@ -1086,7 +1086,7 @@ path "${this.backend}/metadata/*" {
       await click(KV_WORKFLOW.list.createSecret);
 
       // Create secret form -- validations
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.dom(KV_FORM.invalidFormAlert).hasText('There is an error with this form.');
       assert.dom(KV_FORM.validation('path')).hasText("Path can't be blank.");
       await typeIn(KV_FORM.inputByAttr('path'), secretPath);
@@ -1094,7 +1094,7 @@ path "${this.backend}/metadata/*" {
 
       await fillIn(KV_FORM.keyInput(), 'api_key');
       await fillIn(KV_FORM.maskedValueInput(), 'partyparty');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       let tokenToUnwrap = this.controlGroup.tokenToUnwrap;
       assert.deepEqual(
         Object.keys(tokenToUnwrap),
@@ -1125,7 +1125,7 @@ path "${this.backend}/metadata/*" {
       await typeIn(KV_FORM.inputByAttr('path'), secretPath);
       await fillIn(KV_FORM.keyInput(), 'this can be anything');
       await fillIn(KV_FORM.maskedValueInput(), 'this too, gonna use the wrapped data');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.strictEqual(this.controlGroup.tokenToUnwrap, null, 'clears tokenToUnwrap after successful save');
       // Details page
       assert.strictEqual(
@@ -1165,7 +1165,7 @@ path "${this.backend}/metadata/*" {
       assert.dom(KV_FORM.maskedValueInput()).hasValue('partyparty');
       await fillIn(KV_FORM.keyInput(1), 'api_url');
       await fillIn(KV_FORM.maskedValueInput(1), 'hashicorp.com');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       tokenToUnwrap = this.controlGroup.tokenToUnwrap;
       assert.strictEqual(
         tokenToUnwrap.creation_path,
@@ -1194,7 +1194,7 @@ path "${this.backend}/metadata/*" {
       this.controlGroup.markTokenForUnwrap(tokenToUnwrap.accessor);
       // No need to fill in data because we're using the stored wrapped request
       // and the path already exists
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.strictEqual(
         this.controlGroup.tokenToUnwrap,
         null,

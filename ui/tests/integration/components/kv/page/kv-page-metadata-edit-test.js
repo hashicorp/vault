@@ -123,7 +123,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
       };
       assert.propEqual(data, expected, 'POST request made to save metadata with correct properties.');
     });
-    await click(KV_FORM.saveBtn);
+    await click(GENERAL.saveButton);
   });
 
   test('it displays validation errors and does not save inputs on cancel', async function (assert) {
@@ -147,12 +147,12 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
     );
     // trigger validation error
     await fillIn(KV_FORM.inputByAttr('maxVersions'), 'a');
-    await click(KV_FORM.saveBtn);
+    await click(GENERAL.saveButton);
     assert
       .dom(KV_FORM.inlineAlert)
       .hasText('Maximum versions must be a number.', 'Validation message is shown for max_versions');
 
-    await click(KV_FORM.cancelBtn);
+    await click(GENERAL.cancelButton);
     assert.strictEqual(this.metadataModelEdit.maxVersions, 15, 'Model is rolled back on cancel.');
   });
 

@@ -88,8 +88,8 @@ export const KV_FORM = {
   versionAlert: '[data-test-secret-version-alert]',
   noReadAlert: '[data-test-secret-no-read-alert]',
   // Form btns
-  saveBtn: '[data-test-kv-save]',
-  cancelBtn: '[data-test-kv-cancel]',
+  saveBtn: '[data-test-save]',
+  cancelBtn: '[data-test-cancel]',
 };
 
 export const parseJsonEditor = (find) => {

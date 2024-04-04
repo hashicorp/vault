@@ -269,7 +269,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await click(KV_METADATA_DETAILS.editBtn);
     await fillIn(KV_FORM.keyInput(), 'foo');
     await fillIn(KV_FORM.valueInput(), 'bar');
-    await click(KV_FORM.saveBtn);
+    await click(GENERAL.saveButton);
     await click(GENERAL.breadcrumbAtIdx(2));
     assert.dom(KV_WORKFLOW.list.item()).exists({ count: 2 }, 'two secrets are listed');
   });
@@ -286,7 +286,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await click(KV_FORM.toggleJson);
     assert.strictEqual(codemirror().getValue(), '{ "": "" }');
     codemirror().setValue('{ "foo3": { "name": "bar3" } }');
-    await click(KV_FORM.saveBtn);
+    await click(GENERAL.saveButton);
 
     // Details view
     assert.dom(KV_FORM.toggleJson).isNotDisabled();
@@ -324,12 +324,12 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
     await click(KV_FORM.toggleJson);
     codemirror().setValue('{ "foo1": { "name": "bar1" } }');
-    await click(KV_FORM.saveBtn);
+    await click(GENERAL.saveButton);
 
     // Create another version
     await click(KV_SECRET.createNewVersion);
     codemirror().setValue('{ "foo2": { "name": "bar2" } }');
-    await click(KV_FORM.saveBtn);
+    await click(GENERAL.saveButton);
 
     // View the first version and make sure the secret data is correct
     await click(KV_SECRET.versionDropdown);
@@ -348,7 +348,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
     await fillIn(KV_FORM.keyInput(), 'foo');
     await fillIn(KV_FORM.maskedValueInput(), '{bar}');
-    await click(KV_FORM.saveBtn);
+    await click(GENERAL.saveButton);
     await click(KV_SECRET.createNewVersion);
     assert.dom(KV_FORM.toggleJson).isNotDisabled();
     assert.dom(KV_FORM.toggleJson).isNotChecked();
@@ -436,7 +436,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       assert.dom(KV_FORM.toggleMetadata).exists('Shows metadata toggle when creating new secret');
       await fillIn(KV_FORM.keyInput(), 'foo');
       await fillIn(KV_FORM.maskedValueInput(), 'woahsecret');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${secret}/details?namespace=${ns}&version=1`,
@@ -454,7 +454,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       assert.dom(KV_FORM.maskedValueInput()).hasValue('woahsecret');
       await fillIn(KV_FORM.keyInput(1), 'foo-two');
       await fillIn(KV_FORM.maskedValueInput(1), 'supersecret');
-      await click(KV_FORM.saveBtn);
+      await click(GENERAL.saveButton);
 
       // Check details
       assert.strictEqual(

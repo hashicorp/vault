@@ -14,6 +14,7 @@ import codemirror from 'vault/tests/helpers/codemirror';
 import { KV_FORM, KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) {
   setupRenderingTest(hooks);
@@ -96,7 +97,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     await click(KV_FORM.toggleJson);
     await fillIn(KV_FORM.keyInput(1), 'foo2');
     await fillIn(KV_FORM.maskedValueInput(1), 'bar2');
-    await click(KV_FORM.saveBtn);
+    await click(GENERAL.saveButton);
     assert.ok(
       this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.secret.details'),
       'router transitions to secret details route on save'
@@ -172,7 +173,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     );
 
     assert.dom(KV_FORM.inputByAttr('path')).hasValue(nestedSecret);
-    await click(KV_FORM.saveBtn);
+    await click(GENERAL.saveButton);
   });
 
   test('it renders API errors', async function (assert) {
@@ -191,10 +192,10 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       { owner: this.engine }
     );
 
-    await click(KV_FORM.saveBtn);
+    await click(GENERAL.saveButton);
     assert.dom(KV_FORM.messageError).hasText('Error nope', 'it renders API error');
     assert.dom(KV_FORM.inlineAlert).hasText('There was an error submitting this form.');
-    await click(KV_FORM.cancelBtn);
+    await click(GENERAL.cancelButton);
     assert.ok(
       this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.secret.details'),
       'router transitions to details on cancel'
@@ -221,7 +222,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       .hasText('JSON is unparsable. Fix linting errors to avoid data discrepancies.');
 
     codemirror().setValue(`""`);
-    await click(KV_FORM.saveBtn);
+    await click(GENERAL.saveButton);
     assert.dom(KV_FORM.inlineAlert).hasText('Vault expects data to be formatted as an JSON object.');
   });
 
@@ -261,7 +262,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     assert.dom(KV_FORM.dataInputLabel({ isJson: true })).hasText('Version data');
 
     codemirror().setValue(`{ "hello": "there"}`);
-    await click(KV_FORM.saveBtn);
+    await click(GENERAL.saveButton);
   });
 
   test('it renders alert when creating a new secret version from an old version', async function (assert) {

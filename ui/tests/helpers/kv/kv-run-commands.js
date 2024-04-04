@@ -7,6 +7,7 @@
 import { click, fillIn, visit, settled } from '@ember/test-helpers';
 import { KV_FORM } from './kv-selectors';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 // CUSTOM ACTIONS RELEVANT TO KV-V2
 
@@ -17,7 +18,7 @@ export const writeSecret = async function (backend, path, key, val, ns = null) {
   await fillIn(KV_FORM.inputByAttr('path'), path);
   await fillIn(KV_FORM.keyInput(), key);
   await fillIn(KV_FORM.maskedValueInput(), val);
-  await click(KV_FORM.saveBtn);
+  await click(GENERAL.saveButton);
   await settled();
   return;
 };
@@ -36,7 +37,7 @@ export const writeVersionedSecret = async function (backend, path, key, val, ver
       await fillIn(KV_FORM.keyInput(), `key-${currentVersion}`);
       await fillIn(KV_FORM.maskedValueInput(), `val-${currentVersion}`);
     }
-    await click(KV_FORM.saveBtn);
+    await click(GENERAL.saveButton);
     await settled();
   }
   return;
