@@ -22,7 +22,7 @@ module('Acceptance | auth', function (hooks) {
   test('auth query params', async function (assert) {
     const backends = supportedAuthBackends();
     assert.expect(backends.length + 1);
-    await visit('/vault/auth?with=token');
+    await visit('/vault/auth');
     assert.strictEqual(currentURL(), '/vault/auth?with=token');
     for (const backend of backends.reverse()) {
       await component.selectMethod(backend.type);
