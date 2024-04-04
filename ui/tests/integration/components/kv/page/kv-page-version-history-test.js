@@ -10,7 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { kvMetadataPath } from 'vault/utils/kv-path';
-import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | kv | Page::Secret::Metadata::Version-History', function (hooks) {
@@ -59,16 +59,18 @@ module('Integration | Component | kv | Page::Secret::Metadata::Version-History',
 
     for (const version in this.metadata.versions) {
       const data = this.metadata.versions[version];
-      assert.dom(PAGE.versions.linkedBlock(version)).exists(`renders the linked blocks for each version`);
+      assert
+        .dom(KV_WORKFLOW.versions.linkedBlock(version))
+        .exists(`renders the linked blocks for each version`);
 
       if (data.destroyed) {
         assert
-          .dom(`${PAGE.versions.icon(version)} [data-test-icon="x-square-fill"]`)
+          .dom(`${KV_WORKFLOW.versions.icon(version)} [data-test-icon="x-square-fill"]`)
           .hasStyle({ color: 'rgb(199, 52, 69)' });
       }
       if (data.isSecretDeleted) {
         assert
-          .dom(`${PAGE.versions.icon(version)} [data-test-icon="x-square-fill"]`)
+          .dom(`${KV_WORKFLOW.versions.icon(version)} [data-test-icon="x-square-fill"]`)
           .hasStyle({ color: 'rgb(101, 106, 118)' });
       }
     }
@@ -87,7 +89,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::Version-History',
       { owner: this.engine }
     );
     // because the popup menu is nested in a linked block we must combine the two selectors
-    const popupSelector = `${PAGE.versions.linkedBlock(1)} ${PAGE.popup}`;
+    const popupSelector = `${KV_WORKFLOW.versions.linkedBlock(1)} ${KV_WORKFLOW.popup}`;
     await click(popupSelector);
     assert
       .dom('[data-test-create-new-version-from="1"]')

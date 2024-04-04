@@ -10,7 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, findAll, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { kvMetadataPath, kvDataPath } from 'vault/utils/kv-path';
-import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', function (hooks) {
@@ -50,7 +50,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', fun
     await render(
       hbs`
        <Page::Secret::Metadata::VersionDiff
-        @metadata={{this.metadata}} 
+        @metadata={{this.metadata}}
         @path={{this.path}}
         @backend={{this.backend}}
         @breadcrumbs={{this.breadcrumbs}}
@@ -58,9 +58,9 @@ module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', fun
       `,
       { owner: this.engine }
     );
-    assert.dom(PAGE.emptyStateTitle).hasText(`Version ${currentVersion} has been destroyed`);
+    assert.dom(KV_WORKFLOW.emptyStateTitle).hasText(`Version ${currentVersion} has been destroyed`);
     assert
-      .dom(PAGE.emptyStateMessage)
+      .dom(KV_WORKFLOW.emptyStateMessage)
       .hasText('The current version of this secret has been destroyed. Select another version to compare.');
 
     // deleted
@@ -69,7 +69,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', fun
     await render(
       hbs`
        <Page::Secret::Metadata::VersionDiff
-        @metadata={{this.metadata}} 
+        @metadata={{this.metadata}}
         @path={{this.path}}
         @backend={{this.backend}}
         @breadcrumbs={{this.breadcrumbs}}
@@ -78,9 +78,9 @@ module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', fun
       { owner: this.engine }
     );
 
-    assert.dom(PAGE.emptyStateTitle).hasText(`Version ${currentVersion} has been deleted`);
+    assert.dom(KV_WORKFLOW.emptyStateTitle).hasText(`Version ${currentVersion} has been deleted`);
     assert
-      .dom(PAGE.emptyStateMessage)
+      .dom(KV_WORKFLOW.emptyStateMessage)
       .hasText('The current version of this secret has been deleted. Select another version to compare.');
   });
 
@@ -108,7 +108,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', fun
     await render(
       hbs`
        <Page::Secret::Metadata::VersionDiff
-        @metadata={{this.metadata}} 
+        @metadata={{this.metadata}}
         @path={{this.path}}
         @backend={{this.backend}}
         @breadcrumbs={{this.breadcrumbs}}
@@ -117,13 +117,13 @@ module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', fun
       { owner: this.engine }
     );
 
-    const [left, right] = findAll(PAGE.detail.versionDropdown);
-    assert.dom(PAGE.diff.visualDiff).hasText(
+    const [left, right] = findAll(KV_WORKFLOW.detail.versionDropdown);
+    assert.dom(KV_WORKFLOW.diff.visualDiff).hasText(
       `foo\"bar\"hello\"world\"`, // eslint-disable-line no-useless-escape
       'correctly pull in the data from version 4 and compared to version 1.'
     );
-    assert.dom(PAGE.diff.deleted).hasText(`hello"world"`);
-    assert.dom(PAGE.diff.added).hasText(`foo"bar"`);
+    assert.dom(KV_WORKFLOW.diff.deleted).hasText(`hello"world"`);
+    assert.dom(KV_WORKFLOW.diff.added).hasText(`foo"bar"`);
     assert.dom(right).hasText('Version 4', 'shows the current version for the left side default version.');
     assert.dom(left).hasText('Version 1', 'shows the latest active version on init.');
 
@@ -131,16 +131,16 @@ module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', fun
 
     for (const num in this.metadata.versions) {
       const data = this.metadata.versions[num];
-      assert.dom(PAGE.detail.version(num)).exists('renders the button for each version.');
+      assert.dom(KV_WORKFLOW.detail.version(num)).exists('renders the button for each version.');
 
       if (data.destroyed || data.deletion_time) {
         assert
-          .dom(`${PAGE.detail.version(num)} [data-test-icon="x-square-fill"]`)
+          .dom(`${KV_WORKFLOW.detail.version(num)} [data-test-icon="x-square-fill"]`)
           .hasClass(`${data.destroyed ? 'has-text-danger' : 'has-text-grey'}`);
       }
     }
     assert
-      .dom(`${PAGE.detail.version('1')} button`)
+      .dom(`${KV_WORKFLOW.detail.version('1')} button`)
       .hasClass('is-active', 'correctly shows the selected version 1 as active.');
   });
 });

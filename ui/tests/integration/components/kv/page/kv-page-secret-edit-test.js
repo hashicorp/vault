@@ -11,7 +11,7 @@ import { Response } from 'miragejs';
 import { hbs } from 'ember-cli-htmlbars';
 import { click, fillIn, render } from '@ember/test-helpers';
 import codemirror from 'vault/tests/helpers/codemirror';
-import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { FORM, KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 
@@ -114,26 +114,28 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       { owner: this.engine }
     );
 
-    assert.dom(PAGE.edit.toggleDiff).isNotDisabled('Diff toggle is not disabled');
-    assert.dom(PAGE.edit.toggleDiffDescription).hasText('No changes to show. Update secret to view diff');
-    assert.dom(PAGE.diff.visualDiff).doesNotExist('Does not show visual diff');
+    assert.dom(KV_WORKFLOW.edit.toggleDiff).isNotDisabled('Diff toggle is not disabled');
+    assert
+      .dom(KV_WORKFLOW.edit.toggleDiffDescription)
+      .hasText('No changes to show. Update secret to view diff');
+    assert.dom(KV_WORKFLOW.diff.visualDiff).doesNotExist('Does not show visual diff');
 
     await fillIn(FORM.keyInput(1), 'foo2');
     await fillIn(FORM.maskedValueInput(1), 'bar2');
 
-    assert.dom(PAGE.edit.toggleDiff).isNotDisabled('Diff toggle is not disabled');
-    assert.dom(PAGE.edit.toggleDiffDescription).hasText('Showing the diff will reveal secret values');
-    assert.dom(PAGE.diff.visualDiff).doesNotExist('Does not show visual diff');
-    await click(PAGE.edit.toggleDiff);
-    assert.dom(PAGE.diff.visualDiff).exists('Shows visual diff');
-    assert.dom(PAGE.diff.added).hasText(`foo2"bar2"`);
+    assert.dom(KV_WORKFLOW.edit.toggleDiff).isNotDisabled('Diff toggle is not disabled');
+    assert.dom(KV_WORKFLOW.edit.toggleDiffDescription).hasText('Showing the diff will reveal secret values');
+    assert.dom(KV_WORKFLOW.diff.visualDiff).doesNotExist('Does not show visual diff');
+    await click(KV_WORKFLOW.edit.toggleDiff);
+    assert.dom(KV_WORKFLOW.diff.visualDiff).exists('Shows visual diff');
+    assert.dom(KV_WORKFLOW.diff.added).hasText(`foo2"bar2"`);
 
     await click(FORM.toggleJson);
     codemirror().setValue('{ "foo3": "bar3" }');
 
-    assert.dom(PAGE.diff.visualDiff).exists('Visual diff updates');
-    assert.dom(PAGE.diff.deleted).hasText(`foo"bar"`);
-    assert.dom(PAGE.diff.added).hasText(`foo3"bar3"`);
+    assert.dom(KV_WORKFLOW.diff.visualDiff).exists('Visual diff updates');
+    assert.dom(KV_WORKFLOW.diff.deleted).hasText(`foo"bar"`);
+    assert.dom(KV_WORKFLOW.diff.added).hasText(`foo3"bar3"`);
   });
 
   test('it saves nested secrets', async function (assert) {

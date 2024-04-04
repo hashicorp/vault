@@ -17,7 +17,7 @@ import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { runCmd } from 'vault/tests/helpers/commands';
-import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
 
 const deleteEngine = async function (enginePath, assert) {
@@ -57,16 +57,16 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await fillIn('[data-test-ttl-value="Automate secret deletion"]', '1');
       await click('[data-test-mount-submit="true"]');
 
-      await click(PAGE.secretTab('Configuration'));
+      await click(KV_WORKFLOW.secretTab('Configuration'));
 
       assert
-        .dom(PAGE.infoRowValue('Maximum number of versions'))
+        .dom(KV_WORKFLOW.infoRowValue('Maximum number of versions'))
         .hasText(maxVersion, 'displays the max version set when configuring the secret-engine');
       assert
-        .dom(PAGE.infoRowValue('Require check and set'))
+        .dom(KV_WORKFLOW.infoRowValue('Require check and set'))
         .hasText('Yes', 'displays the cas set when configuring the secret-engine');
       assert
-        .dom(PAGE.infoRowValue('Automate secret deletion'))
+        .dom(KV_WORKFLOW.infoRowValue('Automate secret deletion'))
         .hasText('1 second', 'displays the delete version after set when configuring the secret-engine');
       await deleteEngine(enginePath, assert);
     });
@@ -104,20 +104,20 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         'vault.cluster.secrets.backend.kv.secret.details.index',
         'redirects to the show page'
       );
-      assert.dom(PAGE.detail.createNewVersion).exists('shows the edit button');
+      assert.dom(KV_WORKFLOW.detail.createNewVersion).exists('shows the edit button');
     });
     test('it navigates to version history and to a specific version', async function (assert) {
       assert.expect(4);
       const secretPath = `specific-version`;
       await writeVersionedSecret(this.backend, secretPath, 'foo', 'bar', 4);
       assert
-        .dom(PAGE.detail.versionTimestamp)
+        .dom(KV_WORKFLOW.detail.versionTimestamp)
         .includesText('Version 4 created', 'shows version created time');
 
-      await click(PAGE.secretTab('Version History'));
-      assert.dom(PAGE.versions.linkedBlock()).exists({ count: 4 }, 'Lists 4 versions in history');
-      assert.dom(PAGE.versions.icon(4)).includesText('Current', 'shows current version on v4');
-      await click(PAGE.versions.linkedBlock(2));
+      await click(KV_WORKFLOW.secretTab('Version History'));
+      assert.dom(KV_WORKFLOW.versions.linkedBlock()).exists({ count: 4 }, 'Lists 4 versions in history');
+      assert.dom(KV_WORKFLOW.versions.icon(4)).includesText('Current', 'shows current version on v4');
+      await click(KV_WORKFLOW.versions.linkedBlock(2));
 
       assert.strictEqual(
         currentURL(),

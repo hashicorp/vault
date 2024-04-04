@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 
 module('Integration | Component | kv-v2 | Page::Configuration', function (hooks) {
   setupRenderingTest(hooks);
@@ -72,17 +72,17 @@ module('Integration | Component | kv-v2 | Page::Configuration', function (hooks)
       { owner: this.engine }
     );
 
-    assert.dom(PAGE.title).includesText(this.mountData.path, 'renders engine path as page title');
-    assert.dom(PAGE.infoRowValue('Require check and set')).hasText('No');
-    assert.dom(PAGE.infoRowValue('Automate secret deletion')).hasText('Never delete');
-    assert.dom(PAGE.infoRowValue('Maximum number of versions')).hasText('0');
-    assert.dom(PAGE.infoRowValue('Accessor')).hasText(this.mountData.accessor);
-    assert.dom(PAGE.infoRowValue('Path')).hasText(this.mountData.path);
-    assert.dom(PAGE.infoRowValue('Type')).hasText(this.mountData.type);
-    assert.dom(PAGE.infoRowValue('Description')).doesNotExist();
-    assert.dom(PAGE.infoRowValue('Seal wrap')).hasText('No');
-    assert.dom(PAGE.infoRowValue('Default Lease TTL')).hasText('3 days');
-    assert.dom(PAGE.infoRowValue('Max Lease TTL')).hasText('5 days 3 hours');
+    assert.dom(KV_WORKFLOW.title).includesText(this.mountData.path, 'renders engine path as page title');
+    assert.dom(KV_WORKFLOW.infoRowValue('Require check and set')).hasText('No');
+    assert.dom(KV_WORKFLOW.infoRowValue('Automate secret deletion')).hasText('Never delete');
+    assert.dom(KV_WORKFLOW.infoRowValue('Maximum number of versions')).hasText('0');
+    assert.dom(KV_WORKFLOW.infoRowValue('Accessor')).hasText(this.mountData.accessor);
+    assert.dom(KV_WORKFLOW.infoRowValue('Path')).hasText(this.mountData.path);
+    assert.dom(KV_WORKFLOW.infoRowValue('Type')).hasText(this.mountData.type);
+    assert.dom(KV_WORKFLOW.infoRowValue('Description')).doesNotExist();
+    assert.dom(KV_WORKFLOW.infoRowValue('Seal wrap')).hasText('No');
+    assert.dom(KV_WORKFLOW.infoRowValue('Default Lease TTL')).hasText('3 days');
+    assert.dom(KV_WORKFLOW.infoRowValue('Max Lease TTL')).hasText('5 days 3 hours');
   });
 
   test('it renders non default kv engine config data', async function (assert) {
@@ -101,8 +101,8 @@ module('Integration | Component | kv-v2 | Page::Configuration', function (hooks)
       `,
       { owner: this.engine }
     );
-    assert.dom(PAGE.infoRowValue('Require check and set')).hasText('Yes');
-    assert.dom(PAGE.infoRowValue('Automate secret deletion')).hasText('10 days');
-    assert.dom(PAGE.infoRowValue('Maximum number of versions')).hasText('10');
+    assert.dom(KV_WORKFLOW.infoRowValue('Require check and set')).hasText('Yes');
+    assert.dom(KV_WORKFLOW.infoRowValue('Automate secret deletion')).hasText('10 days');
+    assert.dom(KV_WORKFLOW.infoRowValue('Maximum number of versions')).hasText('10');
   });
 });

@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 /* eslint-disable no-useless-escape */
 
 module('Integration | Component | kv-v2 | Page::Secret::Paths', function (hooks) {
@@ -50,8 +50,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Paths', function (hooks)
     );
 
     for (const path of paths) {
-      assert.dom(PAGE.infoRowValue(path.label)).hasText(path.expected);
-      this.assertClipboard(assert, PAGE.paths.copyButton(path.label), path.expected);
+      assert.dom(KV_WORKFLOW.infoRowValue(path.label)).hasText(path.expected);
+      this.assertClipboard(assert, KV_WORKFLOW.paths.copyButton(path.label), path.expected);
     }
   });
 
@@ -85,8 +85,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Paths', function (hooks)
     );
 
     for (const path of paths) {
-      assert.dom(PAGE.infoRowValue(path.label)).hasText(path.expected);
-      this.assertClipboard(assert, PAGE.paths.copyButton(path.label), path.expected);
+      assert.dom(KV_WORKFLOW.infoRowValue(path.label)).hasText(path.expected);
+      this.assertClipboard(assert, KV_WORKFLOW.paths.copyButton(path.label), path.expected);
     }
   });
 
@@ -107,8 +107,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Paths', function (hooks)
       { owner: this.engine }
     );
 
-    assert.dom(PAGE.paths.codeSnippet('cli')).hasText(expected.cli);
-    assert.dom(PAGE.paths.codeSnippet('api')).hasText(expected.api);
+    assert.dom(KV_WORKFLOW.paths.codeSnippet('cli')).hasText(expected.cli);
+    assert.dom(KV_WORKFLOW.paths.codeSnippet('api')).hasText(expected.api);
   });
 
   test('it renders copyable encoded mount and path commands', async function (assert) {
@@ -134,7 +134,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Paths', function (hooks)
       { owner: this.engine }
     );
 
-    assert.dom(PAGE.paths.codeSnippet('cli')).hasText(expected.cli);
-    assert.dom(PAGE.paths.codeSnippet('api')).hasText(expected.api);
+    assert.dom(KV_WORKFLOW.paths.codeSnippet('cli')).hasText(expected.cli);
+    assert.dom(KV_WORKFLOW.paths.codeSnippet('api')).hasText(expected.api);
   });
 });

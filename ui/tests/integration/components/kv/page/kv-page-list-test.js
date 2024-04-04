@@ -11,7 +11,7 @@ import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
-import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const CREATE_RECORDS = (number, store, server) => {
@@ -76,22 +76,22 @@ module('Integration | Component | kv | Page::List', function (hooks) {
       }
     );
 
-    assert.dom(PAGE.list.pagination).exists('shows hds pagination component');
-    assert.dom(PAGE.list.paginationInfo).hasText('1–15 of 16', 'shows correct page of pages');
-    assert.dom(PAGE.title).includesText(this.backend, 'shows backend as title');
+    assert.dom(KV_WORKFLOW.list.pagination).exists('shows hds pagination component');
+    assert.dom(KV_WORKFLOW.list.paginationInfo).hasText('1–15 of 16', 'shows correct page of pages');
+    assert.dom(KV_WORKFLOW.title).includesText(this.backend, 'shows backend as title');
 
     this.model.forEach((record) => {
-      assert.dom(PAGE.list.item(record.path)).exists('lists all records from 0-14 on the first page');
+      assert.dom(KV_WORKFLOW.list.item(record.path)).exists('lists all records from 0-14 on the first page');
     });
 
     this.server.delete(kvMetadataPath('kv-engine', 'my-secret-0'), () => {
       assert.ok(true, 'request made to correct endpoint on delete metadata.');
     });
 
-    const popupSelector = `${PAGE.list.item('my-secret-0')} ${PAGE.popup}`;
+    const popupSelector = `${KV_WORKFLOW.list.item('my-secret-0')} ${KV_WORKFLOW.popup}`;
     await click(popupSelector);
     await click('[data-test-popup-metadata-delete]');
     await click('[data-test-confirm-button]');
-    assert.dom(PAGE.list.item('my-secret-0')).doesNotExist('deleted the first record from the list');
+    assert.dom(KV_WORKFLOW.list.item('my-secret-0')).doesNotExist('deleted the first record from the list');
   });
 });

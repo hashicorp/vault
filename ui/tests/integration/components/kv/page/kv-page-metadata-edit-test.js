@@ -12,7 +12,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
 import { kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
-import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { FORM, KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 
 module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (hooks) {
   setupRenderingTest(hooks);
@@ -175,6 +175,6 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
         owner: this.engine,
       }
     );
-    assert.dom(PAGE.emptyStateTitle).hasText('You do not have permissions to edit metadata');
+    assert.dom(KV_WORKFLOW.emptyStateTitle).hasText('You do not have permissions to edit metadata');
   });
 });

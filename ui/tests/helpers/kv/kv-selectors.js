@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export const PAGE = {
+export const KV_WORKFLOW = {
   // General selectors that are common between pages
   title: '[data-test-header-title]',
   breadcrumbs: '[data-test-breadcrumbs]',
@@ -85,7 +85,7 @@ export const PAGE = {
     metadataSection: '[data-test-metadata-section]',
   },
   paths: {
-    copyButton: (label) => `${PAGE.infoRowValue(label)} button`,
+    copyButton: (label) => `${KV_WORKFLOW.infoRowValue(label)} button`,
     codeSnippet: (section) => `[data-test-commands="${section}"] code`,
     snippetCopy: (section) => `[data-test-commands="${section}"] button`,
   },

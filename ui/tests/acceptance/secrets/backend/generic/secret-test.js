@@ -14,7 +14,7 @@ import listPage from 'vault/tests/pages/secrets/backend/list';
 import consolePanel from 'vault/tests/pages/components/console/ui-panel';
 import authPage from 'vault/tests/pages/auth';
 import { writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
-import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 
 import { create } from 'ember-cli-page-object';
 import { deleteEngineCmd, runCmd } from 'vault/tests/helpers/commands';
@@ -66,16 +66,16 @@ module('Acceptance | secrets/generic/create', function (hooks) {
     await visit(`/vault/secrets/${path}/kv/list`);
 
     assert
-      .dom(PAGE.list.item('foo'))
+      .dom(KV_WORKFLOW.list.item('foo'))
       .exists('lists secret created under kv1 engine as secret in the kv2 list view');
 
     await writeSecret(path, 'bar', 'key', 'value');
     await visit(`/vault/secrets/${path}/kv/list`);
 
     ['foo', 'bar'].forEach((secret) => {
-      assert.dom(PAGE.list.item(secret.path)).exists('lists both records');
+      assert.dom(KV_WORKFLOW.list.item(secret.path)).exists('lists both records');
     });
-    assert.dom(PAGE.list.item()).exists({ count: 2 }, 'lists only the two secrets');
+    assert.dom(KV_WORKFLOW.list.item()).exists({ count: 2 }, 'lists only the two secrets');
 
     // Clean up
     await runCmd(deleteEngineCmd(path));
