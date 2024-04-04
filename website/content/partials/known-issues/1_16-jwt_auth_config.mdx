@@ -1,0 +1,16 @@
+### Error configuring the JWT auth method
+
+#### Affected versions
+
+- 1.16.1
+
+#### Issue
+An error will occur when configuring the built-in jwt auth method. This will
+affect new mounts and updates to existing mounts. Existing mounts should not
+encounter an error if no modifcations are made.
+
+See this [issue](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/290) for more details.
+
+#### Workaround
+
+Do not attempt to update an existing mount's config. New mounts can run the plugin as an external plugin to avoid the error.
