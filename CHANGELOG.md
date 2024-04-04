@@ -106,9 +106,6 @@ overloading the Vault server. [[GH-25093](https://github.com/hashicorp/vault/pul
 * **Vault Proxy Static Secret Caching (enterprise)**: Adds support for static secret (KVv1 and KVv2) caching to Vault Proxy. [[GH-23621](https://github.com/hashicorp/vault/pull/23621)]
 * **secrets-import (enterprise)**: Support importing secrets from external sources into KVv2
 * **secrets/aws**: Support issuing an STS Session Token directly from the root credential. [[GH-23690](https://github.com/hashicorp/vault/pull/23690)]
-* cli: introduce new command group hcp which groups subcommands for authentication of users or machines to HCP using
-either provided arguments or retrieved HCP token through browser login. [[GH-23897](https://github.com/hashicorp/vault/pull/23897)]
-* sys (enterprise): Enable sys/config/group-application-policy in privileged namespace
 
 IMPROVEMENTS:
 
@@ -131,6 +128,8 @@ auth/ldap: deprecates `connection_timeout` in favor of `request_timeout` for tim
 sdk/ldaputil: deprecates Client in favor of cap/ldap.Client [[GH-22185](https://github.com/hashicorp/vault/pull/22185)]
 * auth/saml: Update plugin to v0.2.0
 * auto-auth/azure: Support setting the `authenticate_from_environment` variable to "true" and "false" string literals, too. [[GH-22996](https://github.com/hashicorp/vault/pull/22996)]
+* cli: introduce new command group hcp which groups subcommands for authentication of users or machines to HCP using
+either provided arguments or retrieved HCP token through browser login. [[GH-23897](https://github.com/hashicorp/vault/pull/23897)]
 * cli: Improved error messages for `vault plugin` sub-commands. [[GH-24250](https://github.com/hashicorp/vault/pull/24250)]
 * cli: adds plugin identity token to enable and tune commands for secret engines and auth methods [[GH-24980](https://github.com/hashicorp/vault/pull/24980)]
 * cli: include secret syncs counts in the `vault operator usage` command output [[GH-25751](https://github.com/hashicorp/vault/pull/25751)]
@@ -190,6 +189,7 @@ entries rather than being limited to 62 like Consul is. Performance testing
 shows improvements in throughput and latency under some write-heavy workloads.
 * storage/raft: Add support for larger transactions when using raft storage. [[GH-24991](https://github.com/hashicorp/vault/pull/24991)]
 * storage/raft: Upgrade to bbolt 1.3.8, along with an extra patch to reduce time scanning large freelist maps. [[GH-24010](https://github.com/hashicorp/vault/pull/24010)]
+* sys (enterprise): Enable sys/config/group-application-policy in privileged namespace
 * sys (enterprise): Adds the chroot_namespace field to this sys/internal/ui/resultant-acl endpoint, which exposes the value of the chroot namespace from the
 listener config.
 * sys: adds configuration of the key used to sign plugin identity tokens during mount enable and tune [[GH-24962](https://github.com/hashicorp/vault/pull/24962)]
@@ -367,7 +367,6 @@ leading to failure to complete merkle sync without a full re-index. [[GH-23013](
 * ui: fix navigation items shown to user when chroot_namespace configured [[GH-24492](https://github.com/hashicorp/vault/pull/24492)]
 * ui: remove user_lockout_config settings for unsupported methods [[GH-25867](https://github.com/hashicorp/vault/pull/25867)]
 * ui: show error from API when seal fails [[GH-23921](https://github.com/hashicorp/vault/pull/23921)]
-
 
 ## 1.15.7 Enterprise
 ### March 28, 2024
