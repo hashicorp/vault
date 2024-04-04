@@ -104,7 +104,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     assert
       .dom(ts.charts.line.plotPoint)
       .exists(
-        { count: this.byMonthActivity.filter((m) => m.counts !== null).length },
+        { count: this.byMonthActivity.filter((m) => m.clients).length },
         'renders correct number of plot points'
       );
   });
