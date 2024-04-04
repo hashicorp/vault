@@ -109,8 +109,6 @@ overloading the Vault server. [[GH-25093](https://github.com/hashicorp/vault/pul
 * **secrets/aws**: Support issuing an STS Session Token directly from the root credential. [[GH-23690](https://github.com/hashicorp/vault/pull/23690)]
 * cli: introduce new command group hcp which groups subcommands for authentication of users or machines to HCP using
 either provided arguments or retrieved HCP token through browser login. [[GH-23897](https://github.com/hashicorp/vault/pull/23897)]
-* config/listener: allow per-listener configuration setting to disable replication status endpoints. [[GH-23547](https://github.com/hashicorp/vault/pull/23547)]
-* config/listener: allow per-listener configuration settings to redact sensitive parts of response to unauthenticated endpoints. [[GH-23534](https://github.com/hashicorp/vault/pull/23534)]
 * sys (enterprise): Enable sys/config/group-application-policy in privileged namespace
 
 IMPROVEMENTS:
