@@ -19,6 +19,7 @@ import {
 import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import { click, currentRouteName, currentURL, visit, waitUntil } from '@ember/test-helpers';
 import { grantAccess, setupControlGroup } from 'vault/tests/helpers/control-groups';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const makeToken = (name, mountPath, policyGenerator) => {
   return tokenWithPolicyCmd(`${name}-${mountPath}`, policyGenerator(mountPath));
@@ -61,7 +62,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
     });
     test('can navigate to the version history page (a)', async function (assert) {
       await this.navToSecret();
-      await click(KV_WORKFLOW.secretTab('Version History'));
+      await click(GENERAL.tab('Version History'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.urlPath}/metadata/versions`,
@@ -87,19 +88,17 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
     });
     test('can navigate to the paths page (a)', async function (assert) {
       await this.navToSecret();
-      await click(KV_WORKFLOW.secretTab('Paths'));
+      await click(GENERAL.tab('Paths'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.urlPath}/paths`,
         'navigates to secret paths route'
       );
       assert.dom(KV_WORKFLOW.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
-      assert.dom(KV_WORKFLOW.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(GENERAL.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(GENERAL.infoRowValue('CLI path')).hasText(`-mount="${this.backend}" "${this.secretPath}"`);
       assert
-        .dom(KV_WORKFLOW.infoRowValue('CLI path'))
-        .hasText(`-mount="${this.backend}" "${this.secretPath}"`);
-      assert
-        .dom(KV_WORKFLOW.infoRowValue('API path for metadata'))
+        .dom(GENERAL.infoRowValue('API path for metadata'))
         .hasText(`/v1/${this.backend}/metadata/${this.secretPath}`);
     });
   });
@@ -112,25 +111,21 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
     });
     test('cannot navigate to the version history page (dr)', async function (assert) {
       await this.navToSecret();
-      assert
-        .dom(KV_WORKFLOW.secretTab('Version History'))
-        .doesNotExist('Does not render Version History tab');
+      assert.dom(GENERAL.tab('Version History')).doesNotExist('Does not render Version History tab');
     });
     test('can navigate to the paths page (dr)', async function (assert) {
       await this.navToSecret();
-      await click(KV_WORKFLOW.secretTab('Paths'));
+      await click(GENERAL.tab('Paths'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.urlPath}/paths`,
         'navigates to secret paths route'
       );
       assert.dom(KV_WORKFLOW.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
-      assert.dom(KV_WORKFLOW.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(GENERAL.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(GENERAL.infoRowValue('CLI path')).hasText(`-mount="${this.backend}" "${this.secretPath}"`);
       assert
-        .dom(KV_WORKFLOW.infoRowValue('CLI path'))
-        .hasText(`-mount="${this.backend}" "${this.secretPath}"`);
-      assert
-        .dom(KV_WORKFLOW.infoRowValue('API path for metadata'))
+        .dom(GENERAL.infoRowValue('API path for metadata'))
         .hasText(`/v1/${this.backend}/metadata/${this.secretPath}`);
     });
   });
@@ -143,25 +138,21 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
     });
     test('cannot navigate to the version history page (dlr)', async function (assert) {
       await this.navToSecret();
-      assert
-        .dom(KV_WORKFLOW.secretTab('Version History'))
-        .doesNotExist('Does not render Version History tab');
+      assert.dom(GENERAL.tab('Version History')).doesNotExist('Does not render Version History tab');
     });
     test('can navigate to the paths page (dlr)', async function (assert) {
       await this.navToSecret();
-      await click(KV_WORKFLOW.secretTab('Paths'));
+      await click(GENERAL.tab('Paths'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.urlPath}/paths`,
         'navigates to secret paths route'
       );
       assert.dom(KV_WORKFLOW.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
-      assert.dom(KV_WORKFLOW.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(GENERAL.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(GENERAL.infoRowValue('CLI path')).hasText(`-mount="${this.backend}" "${this.secretPath}"`);
       assert
-        .dom(KV_WORKFLOW.infoRowValue('CLI path'))
-        .hasText(`-mount="${this.backend}" "${this.secretPath}"`);
-      assert
-        .dom(KV_WORKFLOW.infoRowValue('API path for metadata'))
+        .dom(GENERAL.infoRowValue('API path for metadata'))
         .hasText(`/v1/${this.backend}/metadata/${this.secretPath}`);
     });
   });
@@ -174,7 +165,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
     });
     test('can navigate to the version history page (mm)', async function (assert) {
       await this.navToSecret();
-      await click(KV_WORKFLOW.secretTab('Version History'));
+      await click(GENERAL.tab('Version History'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.urlPath}/metadata/versions`,
@@ -200,19 +191,17 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
     });
     test('can navigate to the paths page (mm)', async function (assert) {
       await this.navToSecret();
-      await click(KV_WORKFLOW.secretTab('Paths'));
+      await click(GENERAL.tab('Paths'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.urlPath}/paths`,
         'navigates to secret paths route'
       );
       assert.dom(KV_WORKFLOW.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
-      assert.dom(KV_WORKFLOW.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(GENERAL.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(GENERAL.infoRowValue('CLI path')).hasText(`-mount="${this.backend}" "${this.secretPath}"`);
       assert
-        .dom(KV_WORKFLOW.infoRowValue('CLI path'))
-        .hasText(`-mount="${this.backend}" "${this.secretPath}"`);
-      assert
-        .dom(KV_WORKFLOW.infoRowValue('API path for metadata'))
+        .dom(GENERAL.infoRowValue('API path for metadata'))
         .hasText(`/v1/${this.backend}/metadata/${this.secretPath}`);
     });
   });
@@ -225,25 +214,21 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
     });
     test('cannot navigate to the version history page (sc)', async function (assert) {
       await this.navToSecret();
-      assert
-        .dom(KV_WORKFLOW.secretTab('Version History'))
-        .doesNotExist('Does not render Version History tab');
+      assert.dom(GENERAL.tab('Version History')).doesNotExist('Does not render Version History tab');
     });
     test('can navigate to the paths page (sc)', async function (assert) {
       await this.navToSecret();
-      await click(KV_WORKFLOW.secretTab('Paths'));
+      await click(GENERAL.tab('Paths'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.urlPath}/paths`,
         'navigates to secret paths route'
       );
       assert.dom(KV_WORKFLOW.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
-      assert.dom(KV_WORKFLOW.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(GENERAL.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(GENERAL.infoRowValue('CLI path')).hasText(`-mount="${this.backend}" "${this.secretPath}"`);
       assert
-        .dom(KV_WORKFLOW.infoRowValue('CLI path'))
-        .hasText(`-mount="${this.backend}" "${this.secretPath}"`);
-      assert
-        .dom(KV_WORKFLOW.infoRowValue('API path for metadata'))
+        .dom(GENERAL.infoRowValue('API path for metadata'))
         .hasText(`/v1/${this.backend}/metadata/${this.secretPath}`);
     });
   });
@@ -276,7 +261,7 @@ path "${this.backend}/*" {
     });
     test('can navigate to the version history page (cg)', async function (assert) {
       await this.navToSecret();
-      await click(KV_WORKFLOW.secretTab('Version History'));
+      await click(GENERAL.tab('Version History'));
       assert.ok(
         await waitUntil(() => currentRouteName() === 'vault.cluster.access.control-group-accessor'),
         'redirects to access control group route'
@@ -292,7 +277,7 @@ path "${this.backend}/*" {
         `/vault/secrets/${this.urlPath}/details`,
         'navigates back to secret overview after authorized'
       );
-      await click(KV_WORKFLOW.secretTab('Version History'));
+      await click(GENERAL.tab('Version History'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.urlPath}/metadata/versions`,
@@ -318,19 +303,17 @@ path "${this.backend}/*" {
     });
     test('can navigate to the paths page (cg)', async function (assert) {
       await this.navToSecret();
-      await click(KV_WORKFLOW.secretTab('Paths'));
+      await click(GENERAL.tab('Paths'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.urlPath}/paths`,
         'navigates to secret paths route'
       );
       assert.dom(KV_WORKFLOW.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
-      assert.dom(KV_WORKFLOW.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(GENERAL.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(GENERAL.infoRowValue('CLI path')).hasText(`-mount="${this.backend}" "${this.secretPath}"`);
       assert
-        .dom(KV_WORKFLOW.infoRowValue('CLI path'))
-        .hasText(`-mount="${this.backend}" "${this.secretPath}"`);
-      assert
-        .dom(KV_WORKFLOW.infoRowValue('API path for metadata'))
+        .dom(GENERAL.infoRowValue('API path for metadata'))
         .hasText(`/v1/${this.backend}/metadata/${this.secretPath}`);
     });
   });

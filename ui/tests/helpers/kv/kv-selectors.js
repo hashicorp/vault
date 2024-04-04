@@ -5,18 +5,9 @@
 
 export const KV_WORKFLOW = {
   // General selectors that are common between pages
-  title: '[data-test-header-title]',
-  breadcrumbs: '[data-test-breadcrumbs]',
   breadcrumb: '[data-test-breadcrumbs] li',
-  breadcrumbAtIdx: (idx) => `[data-test-breadcrumbs] li:nth-child(${idx + 1}) a`,
   infoRow: '[data-test-component="info-table-row"]',
-  infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   infoRowToggleMasked: (label) => `[data-test-value-div="${label}"] [data-test-button="toggle-masked"]`,
-  secretTab: (tab) => (tab ? `[data-test-secrets-tab="${tab}"]` : '[data-test-secrets-tab]'),
-  emptyStateTitle: '[data-test-empty-state-title]',
-  emptyStateMessage: '[data-test-empty-state-message]',
-  emptyStateActions: '[data-test-empty-state-actions]',
-  popup: '[data-test-popup-menu-trigger]',
   error: {
     title: '[data-test-page-error] h1',
     message: '[data-test-page-error] p',
@@ -85,7 +76,6 @@ export const KV_WORKFLOW = {
     metadataSection: '[data-test-metadata-section]',
   },
   paths: {
-    copyButton: (label) => `${KV_WORKFLOW.infoRowValue(label)} button`,
     codeSnippet: (section) => `[data-test-commands="${section}"] code`,
     snippetCopy: (section) => `[data-test-commands="${section}"] button`,
   },

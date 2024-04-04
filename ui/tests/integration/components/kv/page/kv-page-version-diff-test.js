@@ -12,6 +12,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { kvMetadataPath, kvDataPath } from 'vault/utils/kv-path';
 import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', function (hooks) {
   setupRenderingTest(hooks);
@@ -58,9 +59,9 @@ module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', fun
       `,
       { owner: this.engine }
     );
-    assert.dom(KV_WORKFLOW.emptyStateTitle).hasText(`Version ${currentVersion} has been destroyed`);
+    assert.dom(GENERAL.emptyStateTitle).hasText(`Version ${currentVersion} has been destroyed`);
     assert
-      .dom(KV_WORKFLOW.emptyStateMessage)
+      .dom(GENERAL.emptyStateMessage)
       .hasText('The current version of this secret has been destroyed. Select another version to compare.');
 
     // deleted
@@ -78,9 +79,9 @@ module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', fun
       { owner: this.engine }
     );
 
-    assert.dom(KV_WORKFLOW.emptyStateTitle).hasText(`Version ${currentVersion} has been deleted`);
+    assert.dom(GENERAL.emptyStateTitle).hasText(`Version ${currentVersion} has been deleted`);
     assert
-      .dom(KV_WORKFLOW.emptyStateMessage)
+      .dom(GENERAL.emptyStateMessage)
       .hasText('The current version of this secret has been deleted. Select another version to compare.');
   });
 

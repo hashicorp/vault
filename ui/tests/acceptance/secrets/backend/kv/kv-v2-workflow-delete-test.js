@@ -17,6 +17,8 @@ import {
 } from 'vault/tests/helpers/kv/kv-run-commands';
 import { click, currentURL, visit } from '@ember/test-helpers';
 import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { KV_METADATA_DETAILS } from 'vault/tests/helpers/components/kv/page/secret/metadata/details-selectors';
 
 const ALL_DELETE_ACTIONS = ['delete', 'destroy', 'undelete'];
 const assertDeleteActions = (assert, expected = ['delete', 'destroy']) => {
@@ -86,7 +88,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await click(KV_WORKFLOW.detail.deleteConfirm);
       // details update accordingly
       assert
-        .dom(KV_WORKFLOW.emptyStateTitle)
+        .dom(GENERAL.emptyStateTitle)
         .hasText('Version 4 of this secret has been deleted', 'Shows deleted message');
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 4 deleted');
       // updated toolbar options
@@ -117,7 +119,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await click(KV_WORKFLOW.detail.deleteConfirm);
       // details update accordingly
       assert
-        .dom(KV_WORKFLOW.emptyStateTitle)
+        .dom(GENERAL.emptyStateTitle)
         .hasText('Version 2 of this secret has been deleted', 'Shows deleted message');
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 2 deleted');
       // updated toolbar options
@@ -144,7 +146,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await click(KV_WORKFLOW.detail.deleteConfirm);
       // details update accordingly
       assert
-        .dom(KV_WORKFLOW.emptyStateTitle)
+        .dom(GENERAL.emptyStateTitle)
         .hasText('Version 3 of this secret has been permanently destroyed', 'Shows destroyed message');
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('does not show version timestamp');
       // updated toolbar options
@@ -154,12 +156,12 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
       // Check metadata toolbar
-      await click(KV_WORKFLOW.secretTab('Metadata'));
+      await click(GENERAL.tab('Metadata'));
       assert
-        .dom(KV_WORKFLOW.metadata.deleteMetadata)
+        .dom(KV_METADATA_DETAILS.deleteMetadata)
         .hasText('Permanently delete', 'shows delete metadata button');
       // delete flow
-      await click(KV_WORKFLOW.metadata.deleteMetadata);
+      await click(KV_METADATA_DETAILS.deleteMetadata);
       assert
         .dom(KV_WORKFLOW.detail.deleteModalTitle)
         .includesText('Delete metadata and secret data?', 'modal has correct title');
@@ -189,7 +191,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
       assertDeleteActions(assert, []);
       assert
-        .dom(KV_WORKFLOW.emptyStateTitle)
+        .dom(GENERAL.emptyStateTitle)
         .hasText('Version 2 of this secret has been deleted', 'Shows deleted message');
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 2 deleted');
     });
@@ -212,8 +214,8 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
       // Check metadata toolbar
-      await click(KV_WORKFLOW.secretTab('Metadata'));
-      assert.dom(KV_WORKFLOW.metadata.deleteMetadata).doesNotExist('does not show delete metadata button');
+      await click(GENERAL.tab('Metadata'));
+      assert.dom(KV_METADATA_DETAILS.deleteMetadata).doesNotExist('does not show delete metadata button');
     });
   });
 
@@ -242,7 +244,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await click(KV_WORKFLOW.detail.deleteConfirm);
       // details update accordingly
       assert
-        .dom(KV_WORKFLOW.emptyStateTitle)
+        .dom(GENERAL.emptyStateTitle)
         .hasText('Version 4 of this secret has been deleted', 'Shows deleted message');
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 4 deleted');
       // updated toolbar options
@@ -274,8 +276,8 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
       // Check metadata toolbar
-      await click(KV_WORKFLOW.secretTab('Metadata'));
-      assert.dom(KV_WORKFLOW.metadata.deleteMetadata).doesNotExist('does not show delete metadata button');
+      await click(GENERAL.tab('Metadata'));
+      assert.dom(KV_METADATA_DETAILS.deleteMetadata).doesNotExist('does not show delete metadata button');
     });
   });
 
@@ -292,7 +294,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
       // correct toolbar options & details show
       assertDeleteActions(assert);
-      assert.dom(KV_WORKFLOW.emptyStateTitle).hasText('You do not have permission to read this secret');
+      assert.dom(GENERAL.emptyStateTitle).hasText('You do not have permission to read this secret');
       // delete flow
       await click(KV_WORKFLOW.detail.delete);
       assert
@@ -303,14 +305,14 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
 
       // Can't delete latest, try with pre-deleted secret
       await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
-      assert.dom(KV_WORKFLOW.emptyStateTitle).hasText('You do not have permission to read this secret');
+      assert.dom(GENERAL.emptyStateTitle).hasText('You do not have permission to read this secret');
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
       // updated toolbar options
       assertDeleteActions(assert, ['undelete', 'destroy']);
       // undelete flow
       await click(KV_WORKFLOW.detail.undelete);
       // details update accordingly
-      assert.dom(KV_WORKFLOW.emptyStateTitle).hasText('You do not have permission to read this secret');
+      assert.dom(GENERAL.emptyStateTitle).hasText('You do not have permission to read this secret');
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
       // correct toolbar options
       assertDeleteActions(assert, ['delete', 'destroy']);
@@ -321,7 +323,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
       // correct toolbar options & details show
       assertDeleteActions(assert);
-      assert.dom(KV_WORKFLOW.emptyStateTitle).hasText('You do not have permission to read this secret');
+      assert.dom(GENERAL.emptyStateTitle).hasText('You do not have permission to read this secret');
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
       // delete flow
       await click(KV_WORKFLOW.detail.delete);
@@ -333,14 +335,14 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await click(KV_WORKFLOW.detail.deleteOption);
       await click(KV_WORKFLOW.detail.deleteConfirm);
       // details update accordingly
-      assert.dom(KV_WORKFLOW.emptyStateTitle).hasText('You do not have permission to read this secret');
+      assert.dom(GENERAL.emptyStateTitle).hasText('You do not have permission to read this secret');
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
       // updated toolbar options
       assertDeleteActions(assert, ['undelete', 'destroy']);
       // undelete flow
       await click(KV_WORKFLOW.detail.undelete);
       // details update accordingly
-      assert.dom(KV_WORKFLOW.emptyStateTitle).hasText('You do not have permission to read this secret');
+      assert.dom(GENERAL.emptyStateTitle).hasText('You do not have permission to read this secret');
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
       // correct toolbar options
       assertDeleteActions(assert);
@@ -359,7 +361,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await click(KV_WORKFLOW.detail.deleteConfirm);
       // details update accordingly
       assert
-        .dom(KV_WORKFLOW.emptyStateTitle)
+        .dom(GENERAL.emptyStateTitle)
         .hasText('You do not have permission to read this secret', 'Shows permissions message');
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('does not show version timestamp');
       // updated toolbar options
@@ -369,8 +371,8 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
       // Check metadata toolbar
-      await click(KV_WORKFLOW.secretTab('Metadata'));
-      assert.dom(KV_WORKFLOW.metadata.deleteMetadata).doesNotExist('does not show delete metadata button');
+      await click(GENERAL.tab('Metadata'));
+      assert.dom(KV_METADATA_DETAILS.deleteMetadata).doesNotExist('does not show delete metadata button');
     });
   });
 
@@ -388,7 +390,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // go to nested secret directory list view
       await visit(`/vault/secrets/${this.backend}/kv/list/app/nested`);
       // correct popup menu items appear on list view
-      const popupSelector = `${KV_WORKFLOW.list.item('bad-secret')} ${KV_WORKFLOW.popup}`;
+      const popupSelector = `${KV_WORKFLOW.list.item('bad-secret')} ${GENERAL.menuTrigger}`;
       await click(popupSelector);
       assert.dom(KV_WORKFLOW.list.listMenuDelete).exists('shows the option to permanently delete');
     });
@@ -414,11 +416,11 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
       // correct toolbar options & details show
       assertDeleteActions(assert, []);
-      assert.dom(KV_WORKFLOW.emptyStateTitle).hasText('You do not have permission to read this secret');
+      assert.dom(GENERAL.emptyStateTitle).hasText('You do not have permission to read this secret');
 
       // test with already deleted method
       await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
-      assert.dom(KV_WORKFLOW.emptyStateTitle).hasText('You do not have permission to read this secret');
+      assert.dom(GENERAL.emptyStateTitle).hasText('You do not have permission to read this secret');
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('version timestamp not rendered');
       // updated toolbar options
       assertDeleteActions(assert, []);
@@ -429,7 +431,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
       // correct toolbar options & details show
       assertDeleteActions(assert, []);
-      assert.dom(KV_WORKFLOW.emptyStateTitle).hasText('You do not have permission to read this secret');
+      assert.dom(GENERAL.emptyStateTitle).hasText('You do not have permission to read this secret');
     });
     test('cannot destroy a secret version (sc)', async function (assert) {
       assert.expect(3);
@@ -442,12 +444,12 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
       // Check metadata toolbar
-      await click(KV_WORKFLOW.secretTab('Metadata'));
+      await click(GENERAL.tab('Metadata'));
       assert
-        .dom(KV_WORKFLOW.metadata.deleteMetadata)
+        .dom(KV_METADATA_DETAILS.deleteMetadata)
         .hasText('Permanently delete', 'shows delete metadata button');
       // delete flow
-      await click(KV_WORKFLOW.metadata.deleteMetadata);
+      await click(KV_METADATA_DETAILS.deleteMetadata);
       assert
         .dom(KV_WORKFLOW.detail.deleteModalTitle)
         .includesText('Delete metadata and secret data?', 'modal has correct title');

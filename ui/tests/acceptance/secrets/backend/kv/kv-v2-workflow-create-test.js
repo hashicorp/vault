@@ -14,6 +14,8 @@ import { personas } from 'vault/tests/helpers/kv/policy-generator';
 import { clearRecords, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import { grantAccessForWrite, setupControlGroup } from 'vault/tests/helpers/control-groups';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { KV_METADATA_DETAILS } from 'vault/tests/helpers/components/kv/page/secret/metadata/details-selectors';
 
 /**
  * This test set is for testing the flow for creating new secrets and versions.
@@ -55,22 +57,22 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
       await click(KV_WORKFLOW.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'psych');
-      await click(KV_WORKFLOW.breadcrumbAtIdx(1));
+      await click(GENERAL.breadcrumbAtIdx(1));
       assert.dom(KV_WORKFLOW.list.item()).exists({ count: 1 }, 'same amount of secrets');
       assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
     });
     test('cancel on new version rolls back model (a)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
-      assert.dom(KV_WORKFLOW.infoRowValue('foo')).exists('key has expected value');
+      assert.dom(GENERAL.infoRowValue('foo')).exists('key has expected value');
       await click(KV_WORKFLOW.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
       await click(FORM.cancelBtn);
-      assert.dom(KV_WORKFLOW.infoRowValue('foo')).exists('secret is previous value');
+      assert.dom(GENERAL.infoRowValue('foo')).exists('secret is previous value');
       await click(KV_WORKFLOW.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
-      await click(KV_WORKFLOW.breadcrumbAtIdx(3));
-      assert.dom(KV_WORKFLOW.infoRowValue('foo')).exists('secret is previous value');
+      await click(GENERAL.breadcrumbAtIdx(3));
+      assert.dom(GENERAL.infoRowValue('foo')).exists('secret is previous value');
     });
     test('create & update root secret with default metadata (a)', async function (assert) {
       const backend = this.backend;
@@ -106,28 +108,26 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       );
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 1 created');
       assert.dom(KV_WORKFLOW.infoRow).exists({ count: 1 }, '1 row of data shows');
-      assert.dom(KV_WORKFLOW.infoRowValue('api_key')).hasText('***********');
+      assert.dom(GENERAL.infoRowValue('api_key')).hasText('***********');
       await click(KV_WORKFLOW.infoRowToggleMasked('api_key'));
-      assert
-        .dom(KV_WORKFLOW.infoRowValue('api_key'))
-        .hasText('partyparty', 'secret value shows after toggle');
+      assert.dom(GENERAL.infoRowValue('api_key')).hasText('partyparty', 'secret value shows after toggle');
 
       // Metadata page
-      await click(KV_WORKFLOW.secretTab('Metadata'));
+      await click(GENERAL.tab('Metadata'));
       assert
-        .dom(`${KV_WORKFLOW.metadata.customMetadataSection} ${KV_WORKFLOW.emptyStateTitle}`)
+        .dom(`${KV_METADATA_DETAILS.customMetadataSection} ${GENERAL.emptyStateTitle}`)
         .hasText('No custom metadata', 'No custom metadata empty state');
       assert
-        .dom(`${KV_WORKFLOW.metadata.secretMetadataSection} ${KV_WORKFLOW.infoRow}`)
+        .dom(`${KV_METADATA_DETAILS.secretMetadataSection} ${KV_WORKFLOW.infoRow}`)
         .exists({ count: 4 }, '4 metadata rows show');
-      assert.dom(KV_WORKFLOW.infoRowValue('Maximum versions')).hasText('0', 'max versions shows 0');
-      assert.dom(KV_WORKFLOW.infoRowValue('Check-and-Set required')).hasText('No', 'cas not enforced');
+      assert.dom(GENERAL.infoRowValue('Maximum versions')).hasText('0', 'max versions shows 0');
+      assert.dom(GENERAL.infoRowValue('Check-and-Set required')).hasText('No', 'cas not enforced');
       assert
-        .dom(KV_WORKFLOW.infoRowValue('Delete version after'))
+        .dom(GENERAL.infoRowValue('Delete version after'))
         .hasText('Never delete', 'Delete version after has default 0s');
 
       // Add new version
-      await click(KV_WORKFLOW.secretTab('Secret'));
+      await click(GENERAL.tab('Secret'));
       await click(KV_WORKFLOW.detail.createNewVersion);
       assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
       assert.dom(FORM.inputByAttr('path')).hasValue(secretPath);
@@ -145,16 +145,12 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       );
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 2 created');
       assert.dom(KV_WORKFLOW.infoRow).exists({ count: 2 }, '2 rows of data shows');
-      assert.dom(KV_WORKFLOW.infoRowValue('api_key')).hasText('***********');
-      assert.dom(KV_WORKFLOW.infoRowValue('api_url')).hasText('***********');
+      assert.dom(GENERAL.infoRowValue('api_key')).hasText('***********');
+      assert.dom(GENERAL.infoRowValue('api_url')).hasText('***********');
       await click(KV_WORKFLOW.infoRowToggleMasked('api_key'));
       await click(KV_WORKFLOW.infoRowToggleMasked('api_url'));
-      assert
-        .dom(KV_WORKFLOW.infoRowValue('api_key'))
-        .hasText('partyparty', 'secret value shows after toggle');
-      assert
-        .dom(KV_WORKFLOW.infoRowValue('api_url'))
-        .hasText('hashicorp.com', 'secret value shows after toggle');
+      assert.dom(GENERAL.infoRowValue('api_key')).hasText('partyparty', 'secret value shows after toggle');
+      assert.dom(GENERAL.infoRowValue('api_url')).hasText('hashicorp.com', 'secret value shows after toggle');
     });
     test('create nested secret with metadata (a)', async function (assert) {
       const backend = this.backend;
@@ -202,28 +198,26 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       );
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 1 created');
       assert.dom(KV_WORKFLOW.infoRow).exists({ count: 1 }, '1 row of data shows');
-      assert.dom(KV_WORKFLOW.infoRowValue('password')).hasText('***********');
+      assert.dom(GENERAL.infoRowValue('password')).hasText('***********');
       await click(KV_WORKFLOW.infoRowToggleMasked('password'));
-      assert
-        .dom(KV_WORKFLOW.infoRowValue('password'))
-        .hasText('kittens1234', 'secret value shows after toggle');
+      assert.dom(GENERAL.infoRowValue('password')).hasText('kittens1234', 'secret value shows after toggle');
 
       // Metadata
-      await click(KV_WORKFLOW.secretTab('Metadata'));
+      await click(GENERAL.tab('Metadata'));
       assert
-        .dom(`${KV_WORKFLOW.metadata.customMetadataSection} ${KV_WORKFLOW.infoRow}`)
+        .dom(`${KV_METADATA_DETAILS.customMetadataSection} ${KV_WORKFLOW.infoRow}`)
         .exists({ count: 1 }, 'One custom metadata row shows');
       assert
-        .dom(`${KV_WORKFLOW.metadata.customMetadataSection} ${KV_WORKFLOW.infoRowValue('team')}`)
+        .dom(`${KV_METADATA_DETAILS.customMetadataSection} ${GENERAL.infoRowValue('team')}`)
         .hasText('UI');
 
       assert
-        .dom(`${KV_WORKFLOW.metadata.secretMetadataSection} ${KV_WORKFLOW.infoRow}`)
+        .dom(`${KV_METADATA_DETAILS.secretMetadataSection} ${KV_WORKFLOW.infoRow}`)
         .exists({ count: 4 }, '4 metadata rows show');
-      assert.dom(KV_WORKFLOW.infoRowValue('Maximum versions')).hasText('7', 'max versions shows 0');
-      assert.dom(KV_WORKFLOW.infoRowValue('Check-and-Set required')).hasText('Yes', 'cas enforced');
+      assert.dom(GENERAL.infoRowValue('Maximum versions')).hasText('7', 'max versions shows 0');
+      assert.dom(GENERAL.infoRowValue('Check-and-Set required')).hasText('Yes', 'cas enforced');
       assert
-        .dom(KV_WORKFLOW.infoRowValue('Delete version after'))
+        .dom(GENERAL.infoRowValue('Delete version after'))
         .hasText('16 minutes 40 seconds', 'Delete version after has custom value');
     });
     test('creates a secret at a sub-directory (a)', async function (assert) {
@@ -246,7 +240,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         `/vault/secrets/${backend}/kv/${encodeURIComponent('app/new')}/details?version=1`,
         'Redirects to detail after save'
       );
-      await click(KV_WORKFLOW.breadcrumbAtIdx(2));
+      await click(GENERAL.breadcrumbAtIdx(2));
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`, 'sub-dir page');
       assert.dom(KV_WORKFLOW.list.item('new')).exists('Lists new secret in sub-dir');
     });
@@ -286,7 +280,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         'goes to latest version 3'
       );
       await click(KV_WORKFLOW.infoRowToggleMasked('my-key'));
-      assert.dom(KV_WORKFLOW.infoRowValue('my-key')).hasText('my-value', 'has new value');
+      assert.dom(GENERAL.infoRowValue('my-key')).hasText('my-value', 'has new value');
     });
   });
 
@@ -309,13 +303,13 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_WORKFLOW.list.item()).doesNotExist('list view still has no items');
       await click(KV_WORKFLOW.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'psych');
-      await click(KV_WORKFLOW.breadcrumbAtIdx(1));
+      await click(GENERAL.breadcrumbAtIdx(1));
       assert.dom(KV_WORKFLOW.list.item()).doesNotExist('list view still has no items');
     });
     test('cancel on new version rolls back model (dr)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
-      assert.dom(KV_WORKFLOW.infoRowValue('foo')).exists('key has expected value');
+      assert.dom(GENERAL.infoRowValue('foo')).exists('key has expected value');
       assert.dom(KV_WORKFLOW.detail.createNewVersion).doesNotExist();
     });
     test('create & update root secret with default metadata (dr)', async function (assert) {
@@ -346,21 +340,21 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 2 created');
       assert.dom(KV_WORKFLOW.infoRow).exists({ count: 1 }, '1 row of data shows');
-      assert.dom(KV_WORKFLOW.infoRowValue('foo')).hasText('***********');
+      assert.dom(GENERAL.infoRowValue('foo')).hasText('***********');
       await click(KV_WORKFLOW.infoRowToggleMasked('foo'));
-      assert.dom(KV_WORKFLOW.infoRowValue('foo')).hasText('bar', 'secret value shows after toggle');
+      assert.dom(GENERAL.infoRowValue('foo')).hasText('bar', 'secret value shows after toggle');
 
       // Metadata page
-      await click(KV_WORKFLOW.secretTab('Metadata'));
+      await click(GENERAL.tab('Metadata'));
       assert
-        .dom(`${KV_WORKFLOW.metadata.customMetadataSection} ${KV_WORKFLOW.emptyStateTitle}`)
+        .dom(`${KV_METADATA_DETAILS.customMetadataSection} ${GENERAL.emptyStateTitle}`)
         .hasText('No custom metadata', 'No custom metadata empty state');
       assert
-        .dom(`${KV_WORKFLOW.metadata.secretMetadataSection} ${KV_WORKFLOW.emptyStateTitle}`)
+        .dom(`${KV_METADATA_DETAILS.secretMetadataSection} ${GENERAL.emptyStateTitle}`)
         .hasText('You do not have access to secret metadata', 'shows no access state on metadata');
 
       // Add new version
-      await click(KV_WORKFLOW.secretTab('Secret'));
+      await click(GENERAL.tab('Secret'));
       assert.dom(KV_WORKFLOW.detail.createNewVersion).doesNotExist('cannot create new version');
     });
     test('create nested secret with metadata (dr)', async function (assert) {
@@ -453,14 +447,14 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
       await click(KV_WORKFLOW.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'psych');
-      await click(KV_WORKFLOW.breadcrumbAtIdx(1));
+      await click(GENERAL.breadcrumbAtIdx(1));
       assert.dom(KV_WORKFLOW.list.item()).exists({ count: 1 }, 'same amount of secrets');
       assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
     });
     test('cancel on new version rolls back model (dlr)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
-      assert.dom(KV_WORKFLOW.infoRowValue('foo')).exists('key has expected value');
+      assert.dom(GENERAL.infoRowValue('foo')).exists('key has expected value');
       assert.dom(KV_WORKFLOW.detail.createNewVersion).doesNotExist('cannot create new version');
     });
     test('create & update root secret with default metadata (dlr)', async function (assert) {
@@ -491,21 +485,21 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 2 created');
       assert.dom(KV_WORKFLOW.infoRow).exists({ count: 1 }, '1 row of data shows');
-      assert.dom(KV_WORKFLOW.infoRowValue('foo')).hasText('***********');
+      assert.dom(GENERAL.infoRowValue('foo')).hasText('***********');
       await click(KV_WORKFLOW.infoRowToggleMasked('foo'));
-      assert.dom(KV_WORKFLOW.infoRowValue('foo')).hasText('bar', 'secret value shows after toggle');
+      assert.dom(GENERAL.infoRowValue('foo')).hasText('bar', 'secret value shows after toggle');
 
       // Metadata page
-      await click(KV_WORKFLOW.secretTab('Metadata'));
+      await click(GENERAL.tab('Metadata'));
       assert
-        .dom(`${KV_WORKFLOW.metadata.customMetadataSection} ${KV_WORKFLOW.emptyStateTitle}`)
+        .dom(`${KV_METADATA_DETAILS.customMetadataSection} ${GENERAL.emptyStateTitle}`)
         .hasText('No custom metadata', 'No custom metadata empty state');
       assert
-        .dom(`${KV_WORKFLOW.metadata.secretMetadataSection} ${KV_WORKFLOW.emptyStateTitle}`)
+        .dom(`${KV_METADATA_DETAILS.secretMetadataSection} ${GENERAL.emptyStateTitle}`)
         .hasText('You do not have access to secret metadata', 'shows no access state on metadata');
 
       // Add new version
-      await click(KV_WORKFLOW.secretTab('Secret'));
+      await click(GENERAL.tab('Secret'));
       assert.dom(KV_WORKFLOW.detail.createNewVersion).doesNotExist('cannot create new version');
     });
     test('create nested secret with metadata (dlr)', async function (assert) {
@@ -598,14 +592,14 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
       await click(KV_WORKFLOW.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'psych');
-      await click(KV_WORKFLOW.breadcrumbAtIdx(1));
+      await click(GENERAL.breadcrumbAtIdx(1));
       assert.dom(KV_WORKFLOW.list.item()).exists({ count: 1 }, 'same amount of secrets');
       assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
     });
     test('cancel on new version rolls back model (mm)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
-      assert.dom(KV_WORKFLOW.emptyStateTitle).hasText('You do not have permission to read this secret');
+      assert.dom(GENERAL.emptyStateTitle).hasText('You do not have permission to read this secret');
       assert
         .dom(KV_WORKFLOW.detail.createNewVersion)
         .doesNotExist('create new version button now allowed since user cannot read existing');
@@ -638,24 +632,24 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('Version created tooltip does not show');
       assert.dom(KV_WORKFLOW.infoRow).doesNotExist('secret data not shown');
-      assert.dom(KV_WORKFLOW.emptyStateTitle).hasText('You do not have permission to read this secret');
+      assert.dom(GENERAL.emptyStateTitle).hasText('You do not have permission to read this secret');
 
       // Metadata page
-      await click(KV_WORKFLOW.secretTab('Metadata'));
+      await click(GENERAL.tab('Metadata'));
       assert
-        .dom(`${KV_WORKFLOW.metadata.customMetadataSection} ${KV_WORKFLOW.emptyStateTitle}`)
+        .dom(`${KV_METADATA_DETAILS.customMetadataSection} ${GENERAL.emptyStateTitle}`)
         .hasText('No custom metadata', 'No custom metadata empty state');
       assert
-        .dom(`${KV_WORKFLOW.metadata.secretMetadataSection} ${KV_WORKFLOW.infoRow}`)
+        .dom(`${KV_METADATA_DETAILS.secretMetadataSection} ${KV_WORKFLOW.infoRow}`)
         .exists({ count: 4 }, '4 metadata rows show');
-      assert.dom(KV_WORKFLOW.infoRowValue('Maximum versions')).hasText('0', 'max versions shows 0');
-      assert.dom(KV_WORKFLOW.infoRowValue('Check-and-Set required')).hasText('No', 'cas not enforced');
+      assert.dom(GENERAL.infoRowValue('Maximum versions')).hasText('0', 'max versions shows 0');
+      assert.dom(GENERAL.infoRowValue('Check-and-Set required')).hasText('No', 'cas not enforced');
       assert
-        .dom(KV_WORKFLOW.infoRowValue('Delete version after'))
+        .dom(GENERAL.infoRowValue('Delete version after'))
         .hasText('Never delete', 'Delete version after has default 0s');
 
       // Add new version
-      await click(KV_WORKFLOW.secretTab('Secret'));
+      await click(GENERAL.tab('Secret'));
       assert.dom(KV_WORKFLOW.detail.createNewVersion).doesNotExist('create new version button not rendered');
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details/edit?version=1`);
       assert
@@ -793,14 +787,14 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_WORKFLOW.list.item()).doesNotExist('list view still has no items');
       await click(KV_WORKFLOW.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'psych');
-      await click(KV_WORKFLOW.breadcrumbAtIdx(1));
+      await click(GENERAL.breadcrumbAtIdx(1));
       assert.dom(KV_WORKFLOW.list.item()).doesNotExist('list view still has no items');
     });
     test('cancel on new version rolls back model (sc)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
       assert
-        .dom(KV_WORKFLOW.emptyStateTitle)
+        .dom(GENERAL.emptyStateTitle)
         .hasText('You do not have permission to read this secret', 'no permissions state shows');
       await click(KV_WORKFLOW.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
@@ -813,7 +807,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_WORKFLOW.list.item()).doesNotExist('list view has no items');
       await click(KV_WORKFLOW.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
-      await click(KV_WORKFLOW.breadcrumbAtIdx(3));
+      await click(GENERAL.breadcrumbAtIdx(3));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`,
@@ -856,23 +850,23 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('Version created not shown');
       assert.dom(KV_WORKFLOW.infoRow).doesNotExist('does not show data contents');
       assert
-        .dom(KV_WORKFLOW.emptyStateTitle)
+        .dom(GENERAL.emptyStateTitle)
         .hasText('You do not have permission to read this secret', 'shows permissions empty state');
 
       // Metadata page
-      await click(KV_WORKFLOW.secretTab('Metadata'));
+      await click(GENERAL.tab('Metadata'));
       assert
-        .dom(`${KV_WORKFLOW.metadata.customMetadataSection} ${KV_WORKFLOW.emptyStateTitle}`)
+        .dom(`${KV_METADATA_DETAILS.customMetadataSection} ${GENERAL.emptyStateTitle}`)
         .hasText(
           'You do not have access to read custom metadata',
           'permissions empty state for custom metadata'
         );
       assert
-        .dom(`${KV_WORKFLOW.metadata.secretMetadataSection} ${KV_WORKFLOW.emptyStateTitle}`)
+        .dom(`${KV_METADATA_DETAILS.secretMetadataSection} ${GENERAL.emptyStateTitle}`)
         .hasText('You do not have access to secret metadata', 'permissions empty state for secret metadata');
 
       // Add new version
-      await click(KV_WORKFLOW.secretTab('Secret'));
+      await click(GENERAL.tab('Secret'));
       await click(KV_WORKFLOW.detail.createNewVersion);
       assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
       assert.dom(FORM.inputByAttr('path')).hasValue(secretPath);
@@ -892,7 +886,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('Version created does not show');
       assert.dom(KV_WORKFLOW.infoRow).doesNotExist('does not show data contents');
       assert
-        .dom(KV_WORKFLOW.emptyStateTitle)
+        .dom(GENERAL.emptyStateTitle)
         .hasText('You do not have permission to read this secret', 'shows permissions empty state');
     });
     test('create nested secret with metadata (sc)', async function (assert) {
@@ -943,19 +937,19 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('version created not shown');
       assert.dom(KV_WORKFLOW.infoRow).doesNotExist('does not show data contents');
       assert
-        .dom(KV_WORKFLOW.emptyStateTitle)
+        .dom(GENERAL.emptyStateTitle)
         .hasText('You do not have permission to read this secret', 'shows permissions empty state');
 
       // Metadata
-      await click(KV_WORKFLOW.secretTab('Metadata'));
+      await click(GENERAL.tab('Metadata'));
       assert
-        .dom(`${KV_WORKFLOW.metadata.customMetadataSection} ${KV_WORKFLOW.emptyStateTitle}`)
+        .dom(`${KV_METADATA_DETAILS.customMetadataSection} ${GENERAL.emptyStateTitle}`)
         .hasText(
           'You do not have access to read custom metadata',
           'permissions empty state for custom metadata'
         );
       assert
-        .dom(`${KV_WORKFLOW.metadata.secretMetadataSection} ${KV_WORKFLOW.emptyStateTitle}`)
+        .dom(`${KV_METADATA_DETAILS.secretMetadataSection} ${GENERAL.emptyStateTitle}`)
         .hasText('You do not have access to secret metadata', 'permissions empty state for secret metadata');
     });
     test('creates a secret at a sub-directory (sc)', async function (assert) {
@@ -977,7 +971,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         `/vault/secrets/${backend}/kv/${encodeURIComponent('app/new')}/details`,
         'Redirects to detail after save'
       );
-      await click(KV_WORKFLOW.breadcrumbAtIdx(2));
+      await click(GENERAL.breadcrumbAtIdx(2));
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`, 'sub-dir page');
       assert.dom(KV_WORKFLOW.list.item()).doesNotExist('Does not list any secrets');
     });
@@ -1012,7 +1006,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       );
       assert.dom(KV_WORKFLOW.infoRow).doesNotExist('does not show data contents');
       assert
-        .dom(KV_WORKFLOW.emptyStateTitle)
+        .dom(GENERAL.emptyStateTitle)
         .hasText('You do not have permission to read this secret', 'shows permissions empty state');
     });
   });
@@ -1034,7 +1028,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // go to nested secret directory list view
       await visit(`/vault/secrets/${this.backend}/kv/list/app/`);
       // correct popup menu items appear on list view
-      const popupSelector = `${KV_WORKFLOW.list.item('first')} ${KV_WORKFLOW.popup}`;
+      const popupSelector = `${KV_WORKFLOW.list.item('first')} ${GENERAL.menuTrigger}`;
       await click(popupSelector);
       assert.dom(KV_WORKFLOW.list.listMenuCreate).exists('shows the option to create new version');
     });
@@ -1132,28 +1126,26 @@ path "${this.backend}/metadata/*" {
       );
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 1 created');
       assert.dom(KV_WORKFLOW.infoRow).exists({ count: 1 }, '1 row of data shows');
-      assert.dom(KV_WORKFLOW.infoRowValue('api_key')).hasText('***********');
+      assert.dom(GENERAL.infoRowValue('api_key')).hasText('***********');
       await click(KV_WORKFLOW.infoRowToggleMasked('api_key'));
-      assert
-        .dom(KV_WORKFLOW.infoRowValue('api_key'))
-        .hasText('partyparty', 'secret value shows after toggle');
+      assert.dom(GENERAL.infoRowValue('api_key')).hasText('partyparty', 'secret value shows after toggle');
 
       // Metadata page
-      await click(KV_WORKFLOW.secretTab('Metadata'));
+      await click(GENERAL.tab('Metadata'));
       assert
-        .dom(`${KV_WORKFLOW.metadata.customMetadataSection} ${KV_WORKFLOW.emptyStateTitle}`)
+        .dom(`${KV_METADATA_DETAILS.customMetadataSection} ${GENERAL.emptyStateTitle}`)
         .hasText('No custom metadata', 'No custom metadata empty state');
       assert
-        .dom(`${KV_WORKFLOW.metadata.secretMetadataSection} ${KV_WORKFLOW.infoRow}`)
+        .dom(`${KV_METADATA_DETAILS.secretMetadataSection} ${KV_WORKFLOW.infoRow}`)
         .exists({ count: 4 }, '4 metadata rows show');
-      assert.dom(KV_WORKFLOW.infoRowValue('Maximum versions')).hasText('0', 'max versions shows 0');
-      assert.dom(KV_WORKFLOW.infoRowValue('Check-and-Set required')).hasText('No', 'cas not enforced');
+      assert.dom(GENERAL.infoRowValue('Maximum versions')).hasText('0', 'max versions shows 0');
+      assert.dom(GENERAL.infoRowValue('Check-and-Set required')).hasText('No', 'cas not enforced');
       assert
-        .dom(KV_WORKFLOW.infoRowValue('Delete version after'))
+        .dom(GENERAL.infoRowValue('Delete version after'))
         .hasText('Never delete', 'Delete version after has default 0s');
 
       // Add new version
-      await click(KV_WORKFLOW.secretTab('Secret'));
+      await click(GENERAL.tab('Secret'));
       await click(KV_WORKFLOW.detail.createNewVersion);
       assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
       assert.dom(FORM.inputByAttr('path')).hasValue(secretPath);
@@ -1205,16 +1197,12 @@ path "${this.backend}/metadata/*" {
       );
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 2 created');
       assert.dom(KV_WORKFLOW.infoRow).exists({ count: 2 }, '2 rows of data shows');
-      assert.dom(KV_WORKFLOW.infoRowValue('api_key')).hasText('***********');
-      assert.dom(KV_WORKFLOW.infoRowValue('api_url')).hasText('***********');
+      assert.dom(GENERAL.infoRowValue('api_key')).hasText('***********');
+      assert.dom(GENERAL.infoRowValue('api_url')).hasText('***********');
       await click(KV_WORKFLOW.infoRowToggleMasked('api_key'));
       await click(KV_WORKFLOW.infoRowToggleMasked('api_url'));
-      assert
-        .dom(KV_WORKFLOW.infoRowValue('api_key'))
-        .hasText('partyparty', 'secret value shows after toggle');
-      assert
-        .dom(KV_WORKFLOW.infoRowValue('api_url'))
-        .hasText('hashicorp.com', 'secret value shows after toggle');
+      assert.dom(GENERAL.infoRowValue('api_key')).hasText('partyparty', 'secret value shows after toggle');
+      assert.dom(GENERAL.infoRowValue('api_url')).hasText('hashicorp.com', 'secret value shows after toggle');
     });
   });
 });

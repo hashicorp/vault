@@ -19,6 +19,7 @@ import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run
 import { runCmd } from 'vault/tests/helpers/commands';
 import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const deleteEngine = async function (enginePath, assert) {
   await logout.visit();
@@ -57,16 +58,16 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await fillIn('[data-test-ttl-value="Automate secret deletion"]', '1');
       await click('[data-test-mount-submit="true"]');
 
-      await click(KV_WORKFLOW.secretTab('Configuration'));
+      await click(GENERAL.tab('Configuration'));
 
       assert
-        .dom(KV_WORKFLOW.infoRowValue('Maximum number of versions'))
+        .dom(GENERAL.infoRowValue('Maximum number of versions'))
         .hasText(maxVersion, 'displays the max version set when configuring the secret-engine');
       assert
-        .dom(KV_WORKFLOW.infoRowValue('Require check and set'))
+        .dom(GENERAL.infoRowValue('Require check and set'))
         .hasText('Yes', 'displays the cas set when configuring the secret-engine');
       assert
-        .dom(KV_WORKFLOW.infoRowValue('Automate secret deletion'))
+        .dom(GENERAL.infoRowValue('Automate secret deletion'))
         .hasText('1 second', 'displays the delete version after set when configuring the secret-engine');
       await deleteEngine(enginePath, assert);
     });
@@ -114,7 +115,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         .dom(KV_WORKFLOW.detail.versionTimestamp)
         .includesText('Version 4 created', 'shows version created time');
 
-      await click(KV_WORKFLOW.secretTab('Version History'));
+      await click(GENERAL.tab('Version History'));
       assert.dom(KV_WORKFLOW.versions.linkedBlock()).exists({ count: 4 }, 'Lists 4 versions in history');
       assert.dom(KV_WORKFLOW.versions.icon(4)).includesText('Current', 'shows current version on v4');
       await click(KV_WORKFLOW.versions.linkedBlock(2));

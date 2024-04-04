@@ -13,6 +13,7 @@ import { kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const CREATE_RECORDS = (number, store, server) => {
   const mirageList = server.createList('kv-metadatum', number, 'withCustomPath');
@@ -78,7 +79,7 @@ module('Integration | Component | kv | Page::List', function (hooks) {
 
     assert.dom(KV_WORKFLOW.list.pagination).exists('shows hds pagination component');
     assert.dom(KV_WORKFLOW.list.paginationInfo).hasText('1–15 of 16', 'shows correct page of pages');
-    assert.dom(KV_WORKFLOW.title).includesText(this.backend, 'shows backend as title');
+    assert.dom(GENERAL.title).includesText(this.backend, 'shows backend as title');
 
     this.model.forEach((record) => {
       assert.dom(KV_WORKFLOW.list.item(record.path)).exists('lists all records from 0-14 on the first page');
@@ -88,7 +89,7 @@ module('Integration | Component | kv | Page::List', function (hooks) {
       assert.ok(true, 'request made to correct endpoint on delete metadata.');
     });
 
-    const popupSelector = `${KV_WORKFLOW.list.item('my-secret-0')} ${KV_WORKFLOW.popup}`;
+    const popupSelector = `${KV_WORKFLOW.list.item('my-secret-0')} ${GENERAL.menuTrigger}`;
     await click(popupSelector);
     await click('[data-test-popup-metadata-delete]');
     await click('[data-test-confirm-button]');

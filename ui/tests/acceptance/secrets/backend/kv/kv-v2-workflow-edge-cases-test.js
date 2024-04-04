@@ -25,6 +25,8 @@ import {
 import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { KV_METADATA_DETAILS } from 'vault/tests/helpers/components/kv/page/secret/metadata/details-selectors';
 
 /**
  * This test set is for testing edge cases, such as specific bug fixes or reported user workflows
@@ -81,7 +83,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
         .dom(KV_WORKFLOW.list.overviewButton)
         .hasText('View list', 'shows list and not secret because search is a directory');
       await click(KV_WORKFLOW.list.overviewButton);
-      assert.dom(KV_WORKFLOW.emptyStateTitle).hasText(`There are no secrets matching "${root}/no-access/".`);
+      assert.dom(GENERAL.emptyStateTitle).hasText(`There are no secrets matching "${root}/no-access/".`);
 
       await visit(`/vault/secrets/${backend}/kv/list`);
       await typeIn(KV_WORKFLOW.list.overviewInput, `${root}/`); // add slash because this is a directory
@@ -95,12 +97,12 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       );
 
       // Title correct
-      assert.dom(KV_WORKFLOW.title).hasText(`${backend} version 2`);
+      assert.dom(GENERAL.title).hasText(`${backend} version 2`);
       // Tabs correct
-      assert.dom(KV_WORKFLOW.secretTab('Secrets')).hasText('Secrets');
-      assert.dom(KV_WORKFLOW.secretTab('Secrets')).hasClass('active');
-      assert.dom(KV_WORKFLOW.secretTab('Configuration')).hasText('Configuration');
-      assert.dom(KV_WORKFLOW.secretTab('Configuration')).doesNotHaveClass('active');
+      assert.dom(GENERAL.tab('Secrets')).hasText('Secrets');
+      assert.dom(GENERAL.tab('Secrets')).hasClass('active');
+      assert.dom(GENERAL.tab('Configuration')).hasText('Configuration');
+      assert.dom(GENERAL.tab('Configuration')).doesNotHaveClass('active');
       // Toolbar correct
       assert.dom(KV_WORKFLOW.toolbarAction).exists({ count: 1 }, 'toolbar only renders create secret action');
       assert.dom(KV_WORKFLOW.list.filter).hasValue(`${root}/`);
@@ -110,13 +112,13 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert.dom(KV_WORKFLOW.list.item(secret)).exists('renders linked block for child secret');
       await click(KV_WORKFLOW.list.item(secret));
       // Secret details visible
-      assert.dom(KV_WORKFLOW.title).hasText(this.fullSecretPath);
-      assert.dom(KV_WORKFLOW.secretTab('Secret')).hasText('Secret');
-      assert.dom(KV_WORKFLOW.secretTab('Secret')).hasClass('active');
-      assert.dom(KV_WORKFLOW.secretTab('Metadata')).hasText('Metadata');
-      assert.dom(KV_WORKFLOW.secretTab('Metadata')).doesNotHaveClass('active');
-      assert.dom(KV_WORKFLOW.secretTab('Version History')).hasText('Version History');
-      assert.dom(KV_WORKFLOW.secretTab('Version History')).doesNotHaveClass('active');
+      assert.dom(GENERAL.title).hasText(this.fullSecretPath);
+      assert.dom(GENERAL.tab('Secret')).hasText('Secret');
+      assert.dom(GENERAL.tab('Secret')).hasClass('active');
+      assert.dom(GENERAL.tab('Metadata')).hasText('Metadata');
+      assert.dom(GENERAL.tab('Metadata')).doesNotHaveClass('active');
+      assert.dom(GENERAL.tab('Version History')).hasText('Version History');
+      assert.dom(GENERAL.tab('Version History')).doesNotHaveClass('active');
       assert.dom(KV_WORKFLOW.toolbarAction).exists({ count: 4 }, 'toolbar renders all actions');
     });
 
@@ -128,7 +130,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       await visit(`vault/secrets/${backend}/kv/${encodeURIComponent(this.fullSecretPath)}/details?version=1`);
       // navigate back through crumbs
       let previousCrumb = findAll('[data-test-breadcrumbs] li').length - 2;
-      await click(KV_WORKFLOW.breadcrumbAtIdx(previousCrumb));
+      await click(GENERAL.breadcrumbAtIdx(previousCrumb));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/list/${root}/${subdirectory}/`,
@@ -139,7 +141,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
       // back again
       previousCrumb = findAll('[data-test-breadcrumbs] li').length - 2;
-      await click(KV_WORKFLOW.breadcrumbAtIdx(previousCrumb));
+      await click(GENERAL.breadcrumbAtIdx(previousCrumb));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/list/${root}/`,
@@ -149,7 +151,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
       // and back to the engine list view
       previousCrumb = findAll('[data-test-breadcrumbs] li').length - 2;
-      await click(KV_WORKFLOW.breadcrumbAtIdx(previousCrumb));
+      await click(GENERAL.breadcrumbAtIdx(previousCrumb));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/list`,
@@ -171,10 +173,10 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
         .dom(KV_WORKFLOW.error.message)
         .hasText(`Sorry, we were unable to find any content at /v1/${backend}/data/${root}/${subdirectory}.`);
 
-      assert.dom(KV_WORKFLOW.breadcrumbAtIdx(0)).hasText('secrets');
-      assert.dom(KV_WORKFLOW.breadcrumbAtIdx(1)).hasText(backend);
-      assert.dom(KV_WORKFLOW.secretTab('Secrets')).doesNotHaveClass('is-active');
-      assert.dom(KV_WORKFLOW.secretTab('Configuration')).doesNotHaveClass('is-active');
+      assert.dom(GENERAL.breadcrumbAtIdx(0)).hasText('secrets');
+      assert.dom(GENERAL.breadcrumbAtIdx(1)).hasText(backend);
+      assert.dom(GENERAL.tab('Secrets')).doesNotHaveClass('is-active');
+      assert.dom(GENERAL.tab('Configuration')).doesNotHaveClass('is-active');
     });
   });
 
@@ -248,8 +250,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
       const testSecret = 'destroy-metadata-only';
       await visit(`/vault/secrets/${this.backend}/kv/${testSecret}/metadata`);
-      assert.dom(KV_WORKFLOW.metadata.deleteMetadata).exists('renders delete metadata button');
-      await click(KV_WORKFLOW.metadata.deleteMetadata);
+      assert.dom(KV_METADATA_DETAILS.deleteMetadata).exists('renders delete metadata button');
+      await click(KV_METADATA_DETAILS.deleteMetadata);
       assert
         .dom(KV_WORKFLOW.detail.deleteModal)
         .hasText(
@@ -262,12 +264,12 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await visit(`/vault/secrets/${this.backend}/kv/list/edge/`);
     assert.dom(KV_WORKFLOW.list.item()).exists({ count: 2 }, 'two secrets are listed');
     await click(KV_WORKFLOW.list.item('two'));
-    await click(KV_WORKFLOW.secretTab('Metadata'));
-    await click(KV_WORKFLOW.metadata.editBtn);
+    await click(GENERAL.tab('Metadata'));
+    await click(KV_METADATA_DETAILS.editBtn);
     await fillIn(FORM.keyInput(), 'foo');
     await fillIn(FORM.valueInput(), 'bar');
     await click(FORM.saveBtn);
-    await click(KV_WORKFLOW.breadcrumbAtIdx(2));
+    await click(GENERAL.breadcrumbAtIdx(2));
     assert.dom(KV_WORKFLOW.list.item()).exists({ count: 2 }, 'two secrets are listed');
   });
 
@@ -461,11 +463,9 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       assert
         .dom(`${KV_WORKFLOW.detail.version(2)} [data-test-icon="check-circle"]`)
         .exists('renders current version icon');
-      assert.dom(KV_WORKFLOW.infoRowValue('foo-two')).hasText('***********');
+      assert.dom(GENERAL.infoRowValue('foo-two')).hasText('***********');
       await click(KV_WORKFLOW.infoRowToggleMasked('foo-two'));
-      assert
-        .dom(KV_WORKFLOW.infoRowValue('foo-two'))
-        .hasText('supersecret', 'secret value shows after toggle');
+      assert.dom(GENERAL.infoRowValue('foo-two')).hasText('supersecret', 'secret value shows after toggle');
     });
 
     test('namespace: it manages state throughout delete, destroy and undelete operations', async function (assert) {
@@ -493,19 +493,19 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       // check empty state and toolbar
       assertDeleteActions(assert, ['undelete', 'destroy']);
       assert
-        .dom(KV_WORKFLOW.emptyStateTitle)
+        .dom(GENERAL.emptyStateTitle)
         .hasText('Version 2 of this secret has been deleted', 'Shows deleted message');
       assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 2 deleted');
       await assertVersionDropdown(assert, [2]); // important to test dropdown versions are accurate
 
       // navigate to sibling route to make sure empty state remains for details tab
-      await click(KV_WORKFLOW.secretTab('Version History'));
+      await click(GENERAL.tab('Version History'));
       assert.dom(KV_WORKFLOW.versions.linkedBlock()).exists({ count: 2 });
 
       // back to secret tab to confirm deleted state
-      await click(KV_WORKFLOW.secretTab('Secret'));
+      await click(GENERAL.tab('Secret'));
       // if this assertion fails, the view is rendering a stale model
-      assert.dom(KV_WORKFLOW.emptyStateTitle).exists('still renders empty state!!');
+      assert.dom(GENERAL.emptyStateTitle).exists('still renders empty state!!');
       await assertVersionDropdown(assert, [2]);
 
       // undelete flow
@@ -520,17 +520,17 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       await click(KV_WORKFLOW.detail.deleteConfirm);
       assertDeleteActions(assert, []);
       assert
-        .dom(KV_WORKFLOW.emptyStateTitle)
+        .dom(GENERAL.emptyStateTitle)
         .hasText('Version 2 of this secret has been permanently destroyed', 'Shows destroyed message');
 
       // navigate to sibling route to make sure empty state remains for details tab
-      await click(KV_WORKFLOW.secretTab('Version History'));
+      await click(GENERAL.tab('Version History'));
       assert.dom(KV_WORKFLOW.versions.linkedBlock()).exists({ count: 2 });
 
       // back to secret tab to confirm destroyed state
-      await click(KV_WORKFLOW.secretTab('Secret'));
+      await click(GENERAL.tab('Secret'));
       // if this assertion fails, the view is rendering a stale model
-      assert.dom(KV_WORKFLOW.emptyStateTitle).exists('still renders empty state!!');
+      assert.dom(GENERAL.emptyStateTitle).exists('still renders empty state!!');
       await assertVersionDropdown(assert, [2]);
     });
   });

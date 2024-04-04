@@ -12,6 +12,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { kvMetadataPath } from 'vault/utils/kv-path';
 import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kv | Page::Secret::Metadata::Version-History', function (hooks) {
   setupRenderingTest(hooks);
@@ -89,7 +90,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::Version-History',
       { owner: this.engine }
     );
     // because the popup menu is nested in a linked block we must combine the two selectors
-    const popupSelector = `${KV_WORKFLOW.versions.linkedBlock(1)} ${KV_WORKFLOW.popup}`;
+    const popupSelector = `${KV_WORKFLOW.versions.linkedBlock(1)} ${GENERAL.menuTrigger}`;
     await click(popupSelector);
     assert
       .dom('[data-test-create-new-version-from="1"]')

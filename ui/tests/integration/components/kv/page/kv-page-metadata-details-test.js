@@ -11,7 +11,8 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { kvDataPath, kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
-import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { KV_METADATA_DETAILS } from 'vault/tests/helpers/components/kv/page/secret/metadata/details-selectors';
 
 module('Integration | Component | kv-v2 | Page::Secret::Metadata::Details', function (hooks) {
   setupRenderingTest(hooks);
@@ -77,19 +78,19 @@ module('Integration | Component | kv-v2 | Page::Secret::Metadata::Details', func
       { owner: this.engine }
     );
 
-    assert.dom(KV_WORKFLOW.title).includesText(this.model.path, 'renders secret path as page title');
-    assert.dom(KV_WORKFLOW.emptyStateTitle).hasText('No custom metadata', 'renders the correct empty state');
-    assert.dom(KV_WORKFLOW.metadata.deleteMetadata).exists();
-    assert.dom(KV_WORKFLOW.metadata.editBtn).exists();
+    assert.dom(GENERAL.title).includesText(this.model.path, 'renders secret path as page title');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No custom metadata', 'renders the correct empty state');
+    assert.dom(KV_METADATA_DETAILS.deleteMetadata).exists();
+    assert.dom(KV_METADATA_DETAILS.editBtn).exists();
 
     // Metadata details
     assert
-      .dom(KV_WORKFLOW.infoRowValue('Last updated'))
+      .dom(GENERAL.infoRowValue('Last updated'))
       .hasTextContaining('Mar', 'Displays updated date with formatting');
-    assert.dom(KV_WORKFLOW.infoRowValue('Maximum versions')).hasText('15');
-    assert.dom(KV_WORKFLOW.infoRowValue('Check-and-Set required')).hasText('Yes');
+    assert.dom(GENERAL.infoRowValue('Maximum versions')).hasText('15');
+    assert.dom(GENERAL.infoRowValue('Check-and-Set required')).hasText('Yes');
     assert
-      .dom(KV_WORKFLOW.infoRowValue('Delete version after'))
+      .dom(GENERAL.infoRowValue('Delete version after'))
       .hasText('3 hours 25 minutes 19 seconds', 'correctly shows and formats the timestamp.');
   });
 
@@ -109,8 +110,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Metadata::Details', func
       { owner: this.engine }
     );
 
-    assert.dom(KV_WORKFLOW.emptyStateTitle).doesNotExist();
-    assert.dom(KV_WORKFLOW.infoRowValue('hi')).hasText('there', 'renders custom metadata from secret');
+    assert.dom(GENERAL.emptyStateTitle).doesNotExist();
+    assert.dom(GENERAL.infoRowValue('hi')).hasText('there', 'renders custom metadata from secret');
   });
 
   test('it renders custom metadata from metadata model', async function (assert) {
@@ -128,10 +129,10 @@ module('Integration | Component | kv-v2 | Page::Secret::Metadata::Details', func
       { owner: this.engine }
     );
 
-    assert.dom(KV_WORKFLOW.emptyStateTitle).doesNotExist();
+    assert.dom(GENERAL.emptyStateTitle).doesNotExist();
     // Metadata details
-    assert.dom(KV_WORKFLOW.infoRowValue('foo')).hasText('abc');
-    assert.dom(KV_WORKFLOW.infoRowValue('bar')).hasText('123');
-    assert.dom(KV_WORKFLOW.infoRowValue('baz')).hasText('5c07d823-3810-48f6-a147-4c06b5219e84');
+    assert.dom(GENERAL.infoRowValue('foo')).hasText('abc');
+    assert.dom(GENERAL.infoRowValue('bar')).hasText('123');
+    assert.dom(GENERAL.infoRowValue('baz')).hasText('5c07d823-3810-48f6-a147-4c06b5219e84');
   });
 });

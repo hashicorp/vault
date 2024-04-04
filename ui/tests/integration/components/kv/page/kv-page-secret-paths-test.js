@@ -9,6 +9,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 /* eslint-disable no-useless-escape */
 
 module('Integration | Component | kv-v2 | Page::Secret::Paths', function (hooks) {
@@ -50,8 +51,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Paths', function (hooks)
     );
 
     for (const path of paths) {
-      assert.dom(KV_WORKFLOW.infoRowValue(path.label)).hasText(path.expected);
-      this.assertClipboard(assert, KV_WORKFLOW.paths.copyButton(path.label), path.expected);
+      assert.dom(GENERAL.infoRowValue(path.label)).hasText(path.expected);
+      this.assertClipboard(assert, `${GENERAL.infoRowValue(path.label)} button`, path.expected);
     }
   });
 
@@ -85,8 +86,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Paths', function (hooks)
     );
 
     for (const path of paths) {
-      assert.dom(KV_WORKFLOW.infoRowValue(path.label)).hasText(path.expected);
-      this.assertClipboard(assert, KV_WORKFLOW.paths.copyButton(path.label), path.expected);
+      assert.dom(GENERAL.infoRowValue(path.label)).hasText(path.expected);
+      this.assertClipboard(assert, `${GENERAL.infoRowValue(path.label)} button`, path.expected);
     }
   });
 

@@ -5,8 +5,8 @@
 
 <KvPageHeader @breadcrumbs={{@breadcrumbs}} @mountName={{@backend}}>
   <:tabLinks>
-    <li><LinkTo @route={{this.router.currentRoute.localName}} data-test-secrets-tab="Secrets">Secrets</LinkTo></li>
-    <li><LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo></li>
+    <li><LinkTo @route={{this.router.currentRoute.localName}} data-test-tab="Secrets">Secrets</LinkTo></li>
+    <li><LinkTo @route="configuration" data-test-tab="Configuration">Configuration</LinkTo></li>
   </:tabLinks>
 
   <:toolbarFilters>
