@@ -82,10 +82,12 @@ FEATURES:
 
 * **Add Snapshot Inspector Tool**: Add CLI tool to inspect Vault snapshots [[GH-23457](https://github.com/hashicorp/vault/pull/23457)]
 * **Audit Filtering**: Audit devices support expression-based filter rules (powered by go-bexpr) to determine which entries are written to the audit log. [[GH-24558](https://github.com/hashicorp/vault/pull/24558)]
+* **Controlled Access to Unauthenticated Endpoints (enterprise)**: Gives admins more control over how unauthenticated endpoints in Vault can be accessed and in some cases what information they return. [[GH-23547](https://github.com/hashicorp/vault/pull/23547)] [[GH-23534](https://github.com/hashicorp/vault/pull/23534)] [[GH-23740](https://github.com/hashicorp/vault/pull/23740)]
 * **Custom messages (enterprise)**: Introduces custom messages settings, allowing users to view, and operators to configure system-wide messages.
 * **Database Event Notifications**: The database plugin now emits event notifications. [[GH-24718](https://github.com/hashicorp/vault/pull/24718)]
 * **Default Lease Count Quota (enterprise)**: Apply a new global default lease count quota of 300k leases for all
 new installs of Vault. [[GH-24382](https://github.com/hashicorp/vault/pull/24382)]
+* **Experimental Raft-WAL Option**: Reduces risk of infinite snapshot loops for follower nodes in large-scale Integrated Storage deployments. [[GH-21460](https://github.com/hashicorp/vault/pull/21460)]
 * **Manual License Utilization Reporting**: Added manual license
 utilization reporting, which allows users to create manual exports of product-license [metering
 data] to report to Hashicorp.
@@ -102,13 +104,10 @@ overloading the Vault server. [[GH-25093](https://github.com/hashicorp/vault/pul
 * **Secrets Sync UI (enterprise)**: Adds secret syncing for KV v2 secrets to external destinations using the UI. [[GH-23667](https://github.com/hashicorp/vault/pull/23667)]
 * **Vault PKI EST Server (Enterprise/Beta)**: Beta support for the PKI Enrollment over Secure Transport (EST) certificate management protocol has been added to the Vault PKI Plugin. This allows standard EST clients to request certificates from a Vault server with no knowledge of Vault APIs.
 * **Vault Proxy Static Secret Caching (enterprise)**: Adds support for static secret (KVv1 and KVv2) caching to Vault Proxy. [[GH-23621](https://github.com/hashicorp/vault/pull/23621)]
-* **raft-wal**: Add experimental support for raft-wal, a new backend engine for integrated storage. [[GH-21460](https://github.com/hashicorp/vault/pull/21460)]
 * **secrets-import (enterprise)**: Support importing secrets from external sources into KVv2
 * **secrets/aws**: Support issuing an STS Session Token directly from the root credential. [[GH-23690](https://github.com/hashicorp/vault/pull/23690)]
 * cli: introduce new command group hcp which groups subcommands for authentication of users or machines to HCP using
 either provided arguments or retrieved HCP token through browser login. [[GH-23897](https://github.com/hashicorp/vault/pull/23897)]
-* config/listener: allow per-listener configuration setting to disable replication status endpoints. [[GH-23547](https://github.com/hashicorp/vault/pull/23547)]
-* config/listener: allow per-listener configuration settings to redact sensitive parts of response to unauthenticated endpoints. [[GH-23534](https://github.com/hashicorp/vault/pull/23534)]
 * sys (enterprise): Enable sys/config/group-application-policy in privileged namespace
 
 IMPROVEMENTS:
