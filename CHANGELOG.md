@@ -86,6 +86,7 @@ FEATURES:
 * **Database Event Notifications**: The database plugin now emits event notifications. [[GH-24718](https://github.com/hashicorp/vault/pull/24718)]
 * **Default Lease Count Quota (enterprise)**: Apply a new global default lease count quota of 300k leases for all
 new installs of Vault. [[GH-24382](https://github.com/hashicorp/vault/pull/24382)]
+* **Experimental Raft-WAL Option**: Reduces risk of infinite snapshot loops for follower nodes in large-scale Integrated Storage deployments. [[GH-21460](https://github.com/hashicorp/vault/pull/21460)]
 * **Manual License Utilization Reporting**: Added manual license
 utilization reporting, which allows users to create manual exports of product-license [metering
 data] to report to Hashicorp.
