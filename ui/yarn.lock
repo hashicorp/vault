@@ -11330,7 +11330,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"d3-array@npm:2 - 3, d3-array@npm:2.10.0 - 3, d3-array@npm:^3.2.0":
+"d3-array@npm:2 - 3, d3-array@npm:2.10.0 - 3, d3-array@npm:^3.2.0, d3-array@npm:^3.2.4":
   version: 3.2.4
   resolution: "d3-array@npm:3.2.4"
   dependencies:
@@ -11395,7 +11395,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"d3-format@npm:1 - 3":
+"d3-format@npm:1 - 3, d3-format@npm:^3.1.0":
   version: 3.1.0
   resolution: "d3-format@npm:3.1.0"
   checksum: f345ec3b8ad3cab19bff5dead395bd9f5590628eb97a389b1dd89f0b204c7c4fc1d9520f13231c2c7cf14b7c9a8cf10f8ef15bde2befbab41454a569bd706ca2
@@ -11462,7 +11462,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"d3-shape@npm:^3.1.0":
+"d3-shape@npm:^3.1.0, d3-shape@npm:^3.2.0":
   version: 3.2.0
   resolution: "d3-shape@npm:3.2.0"
   dependencies:
@@ -24602,10 +24602,13 @@ __metadata:
     codemirror: ^5.58.2
     columnify: ^1.5.4
     concurrently: ^8.2.2
+    d3-array: ^3.2.4
     d3-axis: ^1.0.8
     d3-ease: ^1.0.5
+    d3-format: ^3.1.0
     d3-scale: ^1.0.7
     d3-selection: ^1.3.0
+    d3-shape: ^3.2.0
     d3-time-format: ^2.1.1
     d3-tip: ^0.9.1
     d3-transition: ^1.2.0
