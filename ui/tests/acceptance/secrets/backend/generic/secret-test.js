@@ -17,7 +17,8 @@ import { writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 
 import { create } from 'ember-cli-page-object';
-import { deleteEngineCmd, runCmd } from 'vault/tests/helpers/commands';
+
+import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 
 const cli = create(consolePanel);
 
@@ -26,7 +27,12 @@ module('Acceptance | secrets/generic/create', function (hooks) {
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();
+    this.server = apiStub({ usePassthrough: true });
     return authPage.login();
+  });
+
+  hooks.afterEach(function () {
+    this.server.shutdown();
   });
 
   test('it creates and can view a secret with the generic backend', async function (assert) {
@@ -49,10 +55,6 @@ module('Acceptance | secrets/generic/create', function (hooks) {
       'redirects to the show page'
     );
     assert.ok(showPage.editIsPresent, 'shows the edit button');
-
-    // Clean up
-    await runCmd(deleteEngineCmd(path));
-    await runCmd(deleteEngineCmd(kvPath));
   });
 
   test('upgrading generic to version 2 lists all existing secrets, and CRUD continues to work', async function (assert) {
@@ -76,8 +78,5 @@ module('Acceptance | secrets/generic/create', function (hooks) {
       assert.dom(PAGE.list.item(secret.path)).exists('lists both records');
     });
     assert.dom(PAGE.list.item()).exists({ count: 2 }, 'lists only the two secrets');
-
-    // Clean up
-    await runCmd(deleteEngineCmd(path));
   });
 });
