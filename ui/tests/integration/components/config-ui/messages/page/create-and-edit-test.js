@@ -65,19 +65,19 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
     await click(CUSTOM_MESSAGES.button('create-message'));
     assert.dom(CUSTOM_MESSAGES.input('title')).hasClass('has-error-border');
     assert
-      .dom(`${CUSTOM_MESSAGES.fieldValidation('title')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
+      .dom(`${GENERAL.validation('title')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
       .hasText('Title is required.');
     assert.dom(CUSTOM_MESSAGES.input('message')).hasClass('has-error-border');
     assert
-      .dom(`${CUSTOM_MESSAGES.fieldValidation('message')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
+      .dom(`${GENERAL.validation('message')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
       .hasText('Message is required.');
     assert.dom(CUSTOM_MESSAGES.input('startTime')).hasClass('has-error-border');
     assert
-      .dom(`${CUSTOM_MESSAGES.fieldValidation('startTime')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
+      .dom(`${GENERAL.validation('startTime')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
       .hasText('Start time is after end time.');
     assert.dom(CUSTOM_MESSAGES.input('endTime')).hasClass('has-error-border');
     assert
-      .dom(`${CUSTOM_MESSAGES.fieldValidation('endTime')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
+      .dom(`${GENERAL.validation('endTime')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
       .hasText('End time is before start time.');
   });
 
@@ -120,13 +120,13 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
       .dom(CUSTOM_MESSAGES.input('title'))
       .hasClass('has-error-border', 'show error border for title field');
     assert
-      .dom(`${CUSTOM_MESSAGES.fieldValidation('title')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
+      .dom(`${GENERAL.validation('title')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
       .hasText('Title is required.');
     assert
       .dom(CUSTOM_MESSAGES.input('message'))
       .hasClass('has-error-border', 'show error border for message field');
     assert
-      .dom(`${CUSTOM_MESSAGES.fieldValidation('message')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
+      .dom(`${GENERAL.validation('message')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
       .hasText('Message is required.');
   });
 

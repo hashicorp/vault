@@ -26,7 +26,7 @@
             class={{if @authenticated "active"}}
             @route="messages"
             @query={{hash authenticated=true page=1}}
-            data-test-custom-messages-tab="After user logs in"
+            data-test-tab="After user logs in"
           >
             After user logs in
           </LinkTo>
@@ -36,7 +36,7 @@
             class={{unless @authenticated "active"}}
             @route="messages"
             @query={{hash authenticated=false page=1}}
-            data-test-custom-messages-tab="On login page"
+            data-test-tab="On login page"
           >
             On login page
           </LinkTo>

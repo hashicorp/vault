@@ -64,9 +64,9 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     this.createMessage = async (messageType = 'banner', endTime = '2023-12-12', authenticated = true) => {
       await click(CUSTOM_MESSAGES.navLink);
       if (authenticated) {
-        await click(CUSTOM_MESSAGES.tab('After user logs in'));
+        await click(GENERAL.tab('After user logs in'));
       } else {
-        await click(CUSTOM_MESSAGES.tab('On login page'));
+        await click(GENERAL.tab('On login page'));
       }
       await click(CUSTOM_MESSAGES.button('create message'));
 
@@ -128,7 +128,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     await click(CUSTOM_MESSAGES.navLink);
     assert.dom('[data-test-component="empty-state"]').exists();
     assert.dom(GENERAL.emptyStateTitle).hasText('No messages yet');
-    await click(CUSTOM_MESSAGES.tab('On login page'));
+    await click(GENERAL.tab('On login page'));
     assert.dom('[data-test-component="empty-state"]').exists();
     assert.dom(GENERAL.emptyStateTitle).hasText('No messages yet');
   });
@@ -204,7 +204,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     test('it should display preview a message when all required fields are filled out', async function (assert) {
       assert.expect(2);
       await click(CUSTOM_MESSAGES.navLink);
-      await click(CUSTOM_MESSAGES.tab('After user logs in'));
+      await click(GENERAL.tab('After user logs in'));
       await click(CUSTOM_MESSAGES.button('create message'));
       await fillIn(CUSTOM_MESSAGES.input('title'), 'Awesome custom message title');
       await click(CUSTOM_MESSAGES.radio('banner'));
@@ -224,7 +224,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     test('it should not display preview a message when all required fields are not filled out', async function (assert) {
       assert.expect(2);
       await click(CUSTOM_MESSAGES.navLink);
-      await click(CUSTOM_MESSAGES.tab('After user logs in'));
+      await click(GENERAL.tab('After user logs in'));
       await click(CUSTOM_MESSAGES.button('create message'));
       await click(CUSTOM_MESSAGES.radio('banner'));
       await fillIn(
@@ -275,7 +275,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     test('it should show info message on create and edit form', async function (assert) {
       assert.expect(1);
       await click(CUSTOM_MESSAGES.navLink);
-      await click(CUSTOM_MESSAGES.tab('On login page'));
+      await click(GENERAL.tab('On login page'));
       await click(CUSTOM_MESSAGES.button('create message'));
       assert
         .dom(CUSTOM_MESSAGES.unauthCreateFormInfo)
@@ -286,7 +286,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     test('it should display preview a message when all required fields are filled out', async function (assert) {
       assert.expect(2);
       await click(CUSTOM_MESSAGES.navLink);
-      await click(CUSTOM_MESSAGES.tab('On login page'));
+      await click(GENERAL.tab('On login page'));
       await click(CUSTOM_MESSAGES.button('create message'));
       await fillIn(CUSTOM_MESSAGES.input('title'), 'Awesome custom message title');
       await click(CUSTOM_MESSAGES.radio('banner'));
@@ -306,7 +306,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     test('it should not display preview a message when all required fields are not filled out', async function (assert) {
       assert.expect(2);
       await click(CUSTOM_MESSAGES.navLink);
-      await click(CUSTOM_MESSAGES.tab('On login page'));
+      await click(GENERAL.tab('On login page'));
       await click(CUSTOM_MESSAGES.button('create message'));
       await click(CUSTOM_MESSAGES.radio('banner'));
       await fillIn(

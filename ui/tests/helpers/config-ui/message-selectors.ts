@@ -12,7 +12,6 @@ export const CUSTOM_MESSAGES = {
   field: (fieldName: string) => `[data-test-field="${fieldName}"]`,
   input: (input: string) => `[data-test-input="${input}"]`,
   button: (buttonName: string) => `[data-test-button="${buttonName}"]`,
-  fieldValidation: (fieldName: string) => `[data-test-field-validation="${fieldName}"]`,
   modal: (name: string) => `[data-test-modal="${name}"]`,
   modalTitle: (title: string) => `[data-test-modal-title="${title}"]`,
   modalBody: (name: string) => `[data-test-modal-body="${name}"]`,
@@ -22,7 +21,6 @@ export const CUSTOM_MESSAGES = {
   alertDescription: (name: string) => `[data-test-custom-alert-description="${name}"]`,
   alertAction: (name: string) => `[data-test-custom-alert-action="${name}"]`,
   badge: (name: string) => `[data-test-badge="${name}"]`,
-  tab: (name: string) => `[data-test-custom-messages-tab="${name}"]`,
   confirmActionButton: (name: string) => `[data-test-confirm-action="${name}"]`,
   listItem: (name: string) => `[data-test-list-item="${name}"]`,
 };
