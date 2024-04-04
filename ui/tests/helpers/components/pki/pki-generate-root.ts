@@ -10,7 +10,7 @@ export const PKI_GENERATE_ROOT = {
   sanGroupToggle: '[data-test-toggle-group="Subject Alternative Name (SAN) Options"]',
   additionalGroupToggle: '[data-test-toggle-group="Additional subject fields"]',
   toggleGroupDescription: '[data-test-toggle-group-description]',
-  groupFields: (group) => `[data-test-group="${group}"] [data-test-field]`,
+  groupFields: (group: string) => `[data-test-group="${group}"] [data-test-field]`,
   formInvalidError: '[data-test-pki-generate-root-validation-error]',
   urlsSection: '[data-test-urls-section]',
   urlField: '[data-test-urls-section] [data-test-input]',

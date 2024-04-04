@@ -12,11 +12,12 @@ import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, fillIn, visit } from '@ember/test-helpers';
 import { runCmd } from 'vault/tests/helpers/commands';
-import { PKI_WORKFLOW } from 'vault/tests/helpers/pki/pki-workflow-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/components/pki/pki-configure-create';
 import { PKI_KEYS } from 'vault/tests/helpers/components/pki/page/pki-keys';
 import { PKI_ISSUER_DETAILS } from 'vault/tests/helpers/components/pki/pki-issuer-details';
+import { PKI_ROLE_DETAILS } from 'vault/tests/helpers/components/pki/page/pki-role-details';
+import { PKI_ISSUER_LIST } from 'vault/tests/helpers/components/pki/page/pki-issuer-list';
 
 const OVERVIEW_BREADCRUMB = '[data-test-breadcrumbs] li:nth-of-type(2) > a';
 /**
@@ -101,7 +102,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await click(GENERAL.secretTab('Roles'));
       roles = this.store.peekAll('pki/role');
       assert.strictEqual(roles.length, 0, 'No roles exist yet');
-      await click(PKI_WORKFLOW.createRoleLink);
+      await click(PKI_ROLE_DETAILS.createRoleLink);
       roles = this.store.peekAll('pki/role');
       const role = roles.at(0);
       assert.strictEqual(roles.length, 1, 'New role exists');
@@ -118,7 +119,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await click(GENERAL.secretTab('Roles'));
       roles = this.store.peekAll('pki/role');
       assert.strictEqual(roles.length, 0, 'No roles exist yet');
-      await click(PKI_WORKFLOW.createRoleLink);
+      await click(PKI_ROLE_DETAILS.createRoleLink);
       roles = this.store.peekAll('pki/role');
       const role = roles.at(0);
       assert.strictEqual(roles.length, 1, 'New role exists');
@@ -136,7 +137,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await click(GENERAL.secretTab('Roles'));
       roles = this.store.peekAll('pki/role');
       assert.strictEqual(roles.length, 0, 'No roles exist yet');
-      await click(PKI_WORKFLOW.createRoleLink);
+      await click(PKI_ROLE_DETAILS.createRoleLink);
       await fillIn(GENERAL.inputByAttr('name'), roleId);
       await click(GENERAL.saveButton);
       assert.dom(GENERAL.infoRowValue('Role name')).hasText(roleId, 'Shows correct role after create');
@@ -146,7 +147,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       assert.false(role.hasDirtyAttributes, 'Role no longer has dirty attributes');
 
       // Edit role
-      await click(PKI_WORKFLOW.editRoleLink);
+      await click(PKI_ROLE_DETAILS.editRoleLink);
       await click(GENERAL.ttl.toggle('issuerRef-toggle'));
       await fillIn(GENERAL.selectByAttr('issuerRef'), 'foobar');
       role = this.store.peekRecord('pki/role', roleId);
@@ -158,7 +159,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       assert.false(role.hasDirtyAttributes, 'Role dirty attrs have been rolled back');
 
       // Edit again
-      await click(PKI_WORKFLOW.editRoleLink);
+      await click(PKI_ROLE_DETAILS.editRoleLink);
       await click(GENERAL.ttl.toggle('issuerRef-toggle'));
       await fillIn(GENERAL.selectByAttr('issuerRef'), 'foobar2');
       role = this.store.peekRecord('pki/role', roleId);
@@ -178,7 +179,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await click(GENERAL.secretTab('Issuers'));
       issuers = this.store.peekAll('pki/issuer');
       assert.strictEqual(issuers.length, 0, 'No issuer models exist yet');
-      await click(PKI_WORKFLOW.importIssuerLink);
+      await click(PKI_ISSUER_LIST.importIssuerLink);
       issuers = this.store.peekAll('pki/action');
       assert.strictEqual(issuers.length, 1, 'Action model created');
       const issuer = issuers.at(0);
@@ -197,7 +198,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await click(GENERAL.secretTab('Issuers'));
       issuers = this.store.peekAll('pki/issuer');
       assert.strictEqual(issuers.length, 0, 'No issuers exist yet');
-      await click(PKI_WORKFLOW.importIssuerLink);
+      await click(PKI_ISSUER_LIST.importIssuerLink);
       issuers = this.store.peekAll('pki/action');
       assert.strictEqual(issuers.length, 1, 'Action model created');
       const issuer = issuers.at(0);
@@ -216,8 +217,8 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await click(GENERAL.secretTab('Issuers'));
       actions = this.store.peekAll('pki/action');
       assert.strictEqual(actions.length, 0, 'No actions exist yet');
-      await click(PKI_WORKFLOW.generateIssuerDropdown);
-      await click(PKI_WORKFLOW.generateIssuerRoot);
+      await click(PKI_ISSUER_LIST.generateIssuerDropdown);
+      await click(PKI_ISSUER_LIST.generateIssuerRoot);
       actions = this.store.peekAll('pki/action');
       assert.strictEqual(actions.length, 1, 'Action model for generate-root created');
       const action = actions.at(0);
@@ -237,8 +238,8 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await click(GENERAL.secretTab('Issuers'));
       actions = this.store.peekAll('pki/action');
       assert.strictEqual(actions.length, 0, 'No actions exist yet');
-      await click(PKI_WORKFLOW.generateIssuerDropdown);
-      await click(PKI_WORKFLOW.generateIssuerRoot);
+      await click(PKI_ISSUER_LIST.generateIssuerDropdown);
+      await click(PKI_ISSUER_LIST.generateIssuerRoot);
       actions = this.store.peekAll('pki/action');
       assert.strictEqual(actions.length, 1, 'Action model for generate-root created');
       const action = actions.at(0);
@@ -258,8 +259,8 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await click(GENERAL.secretTab('Issuers'));
       actions = this.store.peekAll('pki/action');
       assert.strictEqual(actions.length, 0, 'No actions exist yet');
-      await await click(PKI_WORKFLOW.generateIssuerDropdown);
-      await click(PKI_WORKFLOW.generateIssuerIntermediate);
+      await await click(PKI_ISSUER_LIST.generateIssuerDropdown);
+      await click(PKI_ISSUER_LIST.generateIssuerIntermediate);
       actions = this.store.peekAll('pki/action');
       assert.strictEqual(actions.length, 1, 'Action model for generate-csr created');
       const action = actions.at(0);
@@ -279,8 +280,8 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await click(GENERAL.secretTab('Issuers'));
       actions = this.store.peekAll('pki/action');
       assert.strictEqual(actions.length, 0, 'No actions exist yet');
-      await click(PKI_WORKFLOW.generateIssuerDropdown);
-      await click(PKI_WORKFLOW.generateIssuerIntermediate);
+      await click(PKI_ISSUER_LIST.generateIssuerDropdown);
+      await click(PKI_ISSUER_LIST.generateIssuerIntermediate);
       actions = this.store.peekAll('pki/action');
       assert.strictEqual(actions.length, 1, 'Action model for generate-csr created');
       const action = actions.at(0);

@@ -9,4 +9,9 @@ export const PKI_ROLE_DETAILS = {
   keyUsageValue: '[data-test-value-div="Key usage"]',
   extKeyUsageValue: '[data-test-value-div="Ext key usage"]',
   customTtlValue: '[data-test-value-div="Issued certificates expire after"]',
+  deleteRoleButton: '[data-test-pki-role-delete]',
+  generateCertLink: '[data-test-pki-role-generate-cert]',
+  signCertLink: '[data-test-pki-role-sign-cert]',
+  editRoleLink: '[data-test-pki-role-edit-link]',
+  createRoleLink: '[data-test-pki-role-create-link]',
 };

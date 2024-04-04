@@ -7,7 +7,7 @@ export const PKI_CONFIGURE_CREATE = {
   // page::pki-configure-create
   nextStepsBanner: '[data-test-config-next-steps]',
   option: '[data-test-pki-config-option]',
-  optionByKey: (key) => `[data-test-pki-config-option="${key}"]`,
+  optionByKey: (key: string) => `[data-test-pki-config-option="${key}"]`,
   doneButton: '[data-test-done]',
   configureButton: '[data-test-configure-pki-button]',
   // pki-generate-root

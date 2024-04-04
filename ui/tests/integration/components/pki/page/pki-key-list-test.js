@@ -11,6 +11,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { PKI_KEYS } from 'vault/tests/helpers/components/pki/page/pki-keys';
 import { STANDARD_META } from 'vault/tests/helpers/pagination';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | pki key list page', function (hooks) {
   setupRenderingTest(hooks);
@@ -86,7 +87,7 @@ module('Integration | Component | pki key list page', function (hooks) {
       .hasText('724862ff-6438-bad0-b598-77a6c7f4e934', 'linked block renders key name');
     assert.dom(PKI_KEYS.importKey).exists('renders import action');
     assert.dom(PKI_KEYS.generateKey).exists('renders generate action');
-    await click(PKI_KEYS.popupMenuTrigger);
+    await click(GENERAL.menuTrigger);
     assert.dom(PKI_KEYS.popupMenuDetails).exists('details link exists');
     assert.dom(PKI_KEYS.popupMenuEdit).exists('edit link exists');
   });
@@ -108,6 +109,6 @@ module('Integration | Component | pki key list page', function (hooks) {
     );
     assert.dom(PKI_KEYS.importKey).doesNotExist('renders import action');
     assert.dom(PKI_KEYS.generateKey).doesNotExist('renders generate action');
-    assert.dom(PKI_KEYS.popupMenuTrigger).doesNotExist('does not render popup menu when no permission');
+    assert.dom(GENERAL.menuTrigger).doesNotExist('does not render popup menu when no permission');
   });
 });

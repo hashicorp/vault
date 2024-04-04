@@ -14,11 +14,12 @@ import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { runCmd } from 'vault/tests/helpers/commands';
-import { CERTIFICATES, PKI_WORKFLOW } from 'vault/tests/helpers/pki/pki-workflow-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-workflow-helpers';
 import { PKI_GENERATE_ROOT } from 'vault/tests/helpers/components/pki/pki-generate-root';
 import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/components/pki/pki-configure-create';
 import { PKI_DELETE_ALL_ISSUERS } from 'vault/tests/helpers/components/pki/pki-delete-all-issuers';
+import { PKI_ISSUER_LIST } from 'vault/tests/helpers/components/pki/page/pki-issuer-list';
 
 const { issuerPemBundle } = CERTIFICATES;
 module('Acceptance | pki configuration test', function (hooks) {
@@ -231,8 +232,8 @@ module('Acceptance | pki configuration test', function (hooks) {
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Issuers'));
-      await click(PKI_WORKFLOW.generateIssuerDropdown);
-      await click(PKI_WORKFLOW.generateIssuerRoot);
+      await click(PKI_ISSUER_LIST.generateIssuerDropdown);
+      await click(PKI_ISSUER_LIST.generateIssuerRoot);
       await fillIn(GENERAL.inputByAttr('type'), 'internal');
       await fillIn(GENERAL.inputByAttr('commonName'), 'my-certificate');
       await click(PKI_GENERATE_ROOT.keyParamsGroupToggle);
@@ -241,11 +242,11 @@ module('Acceptance | pki configuration test', function (hooks) {
 
       const issuerId = find(PKI_GENERATE_ROOT.saved.issuerLink).innerHTML;
       await visit(`/vault/secrets/${this.mountPath}/pki/issuers`);
-      assert.dom(PKI_WORKFLOW.issuerListItem(issuerId)).exists();
+      assert.dom(PKI_ISSUER_LIST.issuerListItem(issuerId)).exists();
       assert
         .dom('[data-test-common-name="0"]')
         .hasText('my-certificate', 'parses certificate metadata in the list view');
-      await click(PKI_WORKFLOW.issuerListItem(issuerId));
+      await click(PKI_ISSUER_LIST.issuerListItem(issuerId));
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/details`);
       assert.dom(PKI_GENERATE_ROOT.saved.commonName).exists('renders issuer details');
     });
