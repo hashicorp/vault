@@ -6,6 +6,14 @@
 import { allFeatures } from 'vault/helpers/all-features';
 import sinon from 'sinon';
 
+/**
+ * Sets up the necessary shared test context for testing sidebar nav components
+ * @param {TestContext.owner} owner eg this.owner from within a test
+ * @param {boolean} isEnterprise [default false]
+ * @param {boolean} setCluster [default false] if true, will set the current cluster to one with replication & raft
+ * @param {string[]} features if not passed, defaults to all features
+ * @returns {hasNavPermission: sinon.SinonStub, features: string[]}
+ */
 export const stubFeaturesAndPermissions = (owner, isEnterprise = false, setCluster = false, features) => {
   const permissions = owner.lookup('service:permissions');
   const hasNavPermission = sinon.stub(permissions, 'hasNavPermission');
