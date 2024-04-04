@@ -10,7 +10,6 @@ import { resolve } from 'rsvp';
 import { run } from '@ember/runloop';
 import Service from '@ember/service';
 import hbs from 'htmlbars-inline-precompile';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 let capabilities;
 const storeService = Service.extend({
@@ -28,12 +27,6 @@ module('Integration | Component | secret edit', function (hooks) {
     run(() => {
       this.owner.unregister('service:store');
       this.owner.register('service:store', storeService);
-    });
-    setRunOptions({
-      rules: {
-        // TODO: Fix JSONEditor/CodeMirror
-        label: { enabled: false },
-      },
     });
   });
 
