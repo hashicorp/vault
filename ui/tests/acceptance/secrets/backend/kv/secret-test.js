@@ -20,6 +20,7 @@ import { runCmd } from 'vault/tests/helpers/commands';
 import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { KV_SECRET } from 'vault/tests/helpers/components/kv/page/secret/details-selectors';
 
 const deleteEngine = async function (enginePath, assert) {
   await logout.visit();
@@ -105,15 +106,13 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         'vault.cluster.secrets.backend.kv.secret.details.index',
         'redirects to the show page'
       );
-      assert.dom(KV_WORKFLOW.detail.createNewVersion).exists('shows the edit button');
+      assert.dom(KV_SECRET.createNewVersion).exists('shows the edit button');
     });
     test('it navigates to version history and to a specific version', async function (assert) {
       assert.expect(4);
       const secretPath = `specific-version`;
       await writeVersionedSecret(this.backend, secretPath, 'foo', 'bar', 4);
-      assert
-        .dom(KV_WORKFLOW.detail.versionTimestamp)
-        .includesText('Version 4 created', 'shows version created time');
+      assert.dom(KV_SECRET.versionTimestamp).includesText('Version 4 created', 'shows version created time');
 
       await click(GENERAL.tab('Version History'));
       assert.dom(KV_WORKFLOW.versions.linkedBlock()).exists({ count: 4 }, 'Lists 4 versions in history');

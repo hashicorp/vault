@@ -27,6 +27,7 @@ import { FORM, KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { KV_METADATA_DETAILS } from 'vault/tests/helpers/components/kv/page/secret/metadata/details-selectors';
+import { KV_SECRET } from 'vault/tests/helpers/components/kv/page/secret/details-selectors';
 
 /**
  * This test set is for testing edge cases, such as specific bug fixes or reported user workflows
@@ -213,13 +214,13 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       const testSecret = 'data-delete-only';
       await visit(`/vault/secrets/${this.backend}/kv/${testSecret}/details`);
 
-      assert.dom(KV_WORKFLOW.detail.delete).exists('renders delete button');
-      await click(KV_WORKFLOW.detail.delete);
+      assert.dom(KV_SECRET.delete).exists('renders delete button');
+      await click(KV_SECRET.delete);
       assert
-        .dom(KV_WORKFLOW.detail.deleteModal)
+        .dom(KV_SECRET.deleteModal)
         .hasTextContaining('Delete this version This deletes a specific version of the secret');
-      assert.dom(KV_WORKFLOW.detail.deleteOption).isDisabled('disables version specific option');
-      assert.dom(KV_WORKFLOW.detail.deleteOptionLatest).isEnabled('enables version specific option');
+      assert.dom(KV_SECRET.deleteOption).isDisabled('disables version specific option');
+      assert.dom(KV_SECRET.deleteOptionLatest).isEnabled('enables version specific option');
     });
 
     test('it renders the delete action and disables delete latest version option', async function (assert) {
@@ -227,14 +228,14 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       const testSecret = 'delete-version-only';
       await visit(`/vault/secrets/${this.backend}/kv/${testSecret}/details`);
 
-      assert.dom(KV_WORKFLOW.detail.delete).exists('renders delete button');
-      await click(KV_WORKFLOW.detail.delete);
+      assert.dom(KV_SECRET.delete).exists('renders delete button');
+      await click(KV_SECRET.delete);
       assert
-        .dom(KV_WORKFLOW.detail.deleteModal)
+        .dom(KV_SECRET.deleteModal)
         .hasTextContaining('Delete this version This deletes a specific version of the secret');
 
-      assert.dom(KV_WORKFLOW.detail.deleteOption).isEnabled('enables version specific option');
-      assert.dom(KV_WORKFLOW.detail.deleteOptionLatest).isDisabled('disables version specific option');
+      assert.dom(KV_SECRET.deleteOption).isEnabled('enables version specific option');
+      assert.dom(KV_SECRET.deleteOptionLatest).isDisabled('disables version specific option');
     });
 
     test('it hides destroy option without version number', async function (assert) {
@@ -242,7 +243,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       const testSecret = 'destroy-version-only';
       await visit(`/vault/secrets/${this.backend}/kv/${testSecret}/details`);
 
-      assert.dom(KV_WORKFLOW.detail.destroy).doesNotExist();
+      assert.dom(KV_SECRET.destroy).doesNotExist();
     });
 
     test('it renders the destroy metadata action and expected modal copy', async function (assert) {
@@ -253,7 +254,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert.dom(KV_METADATA_DETAILS.deleteMetadata).exists('renders delete metadata button');
       await click(KV_METADATA_DETAILS.deleteMetadata);
       assert
-        .dom(KV_WORKFLOW.detail.deleteModal)
+        .dom(KV_SECRET.deleteModal)
         .hasText(
           'Delete metadata and secret data? This will permanently delete the metadata and versions of the secret. All version history will be removed. This cannot be undone. Confirm Cancel'
         );
@@ -299,7 +300,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     assert.false(codemirror().getValue().includes('*'), 'Value unobscured after toggle');
 
     // New version view
-    await click(KV_WORKFLOW.detail.createNewVersion);
+    await click(KV_SECRET.createNewVersion);
     assert.dom(FORM.toggleJson).isNotDisabled();
     assert.dom(FORM.toggleJson).isChecked();
     assert.false(codemirror().getValue().includes('*'), 'Values are not obscured on edit view');
@@ -326,18 +327,18 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await click(FORM.saveBtn);
 
     // Create another version
-    await click(KV_WORKFLOW.detail.createNewVersion);
+    await click(KV_SECRET.createNewVersion);
     codemirror().setValue('{ "foo2": { "name": "bar2" } }');
     await click(FORM.saveBtn);
 
     // View the first version and make sure the secret data is correct
-    await click(KV_WORKFLOW.detail.versionDropdown);
-    await click(`${KV_WORKFLOW.detail.version(1)} a`);
+    await click(KV_SECRET.versionDropdown);
+    await click(`${KV_SECRET.version(1)} a`);
     assert.strictEqual(codemirror().getValue(), obscuredDataV1, 'Version one data is displayed');
 
     // Navigate back the second version and make sure the secret data is correct
-    await click(KV_WORKFLOW.detail.versionDropdown);
-    await click(`${KV_WORKFLOW.detail.version(2)} a`);
+    await click(KV_SECRET.versionDropdown);
+    await click(`${KV_SECRET.version(2)} a`);
     assert.strictEqual(codemirror().getValue(), obscuredDataV2, 'Version two data is displayed');
   });
 
@@ -348,7 +349,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await fillIn(FORM.keyInput(), 'foo');
     await fillIn(FORM.maskedValueInput(), '{bar}');
     await click(FORM.saveBtn);
-    await click(KV_WORKFLOW.detail.createNewVersion);
+    await click(KV_SECRET.createNewVersion);
     assert.dom(FORM.toggleJson).isNotDisabled();
     assert.dom(FORM.toggleJson).isNotChecked();
   });
@@ -374,14 +375,14 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
   };
 
   const assertVersionDropdown = async (assert, deleted = [], versions = [2, 1]) => {
-    assert.dom(KV_WORKFLOW.detail.versionDropdown).hasText(`Version ${versions[0]}`);
-    await click(KV_WORKFLOW.detail.versionDropdown);
+    assert.dom(KV_SECRET.versionDropdown).hasText(`Version ${versions[0]}`);
+    await click(KV_SECRET.versionDropdown);
     versions.forEach((num) => {
-      assert.dom(KV_WORKFLOW.detail.version(num)).exists(`renders version ${num} link in dropdown`);
+      assert.dom(KV_SECRET.version(num)).exists(`renders version ${num} link in dropdown`);
     });
     // also asserts destroyed icon
     deleted.forEach((num) => {
-      assert.dom(`${KV_WORKFLOW.detail.version(num)} [data-test-icon="x-square"]`);
+      assert.dom(`${KV_SECRET.version(num)} [data-test-icon="x-square"]`);
     });
   };
 
@@ -443,7 +444,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       );
 
       // Create a new version
-      await click(KV_WORKFLOW.detail.createNewVersion);
+      await click(KV_SECRET.createNewVersion);
       assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
       assert.dom(FORM.inputByAttr('path')).hasValue(secret);
       assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');
@@ -461,7 +462,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       );
       await assertVersionDropdown(assert);
       assert
-        .dom(`${KV_WORKFLOW.detail.version(2)} [data-test-icon="check-circle"]`)
+        .dom(`${KV_SECRET.version(2)} [data-test-icon="check-circle"]`)
         .exists('renders current version icon');
       assert.dom(GENERAL.infoRowValue('foo-two')).hasText('***********');
       await click(KV_WORKFLOW.infoRowToggleMasked('foo-two'));
@@ -487,15 +488,15 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       assertDeleteActions(assert);
       await assertVersionDropdown(assert);
       // delete flow
-      await click(KV_WORKFLOW.detail.delete);
-      await click(KV_WORKFLOW.detail.deleteOption);
-      await click(KV_WORKFLOW.detail.deleteConfirm);
+      await click(KV_SECRET.delete);
+      await click(KV_SECRET.deleteOption);
+      await click(KV_SECRET.deleteConfirm);
       // check empty state and toolbar
       assertDeleteActions(assert, ['undelete', 'destroy']);
       assert
         .dom(GENERAL.emptyStateTitle)
         .hasText('Version 2 of this secret has been deleted', 'Shows deleted message');
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 2 deleted');
+      assert.dom(KV_SECRET.versionTimestamp).includesText('Version 2 deleted');
       await assertVersionDropdown(assert, [2]); // important to test dropdown versions are accurate
 
       // navigate to sibling route to make sure empty state remains for details tab
@@ -509,15 +510,15 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       await assertVersionDropdown(assert, [2]);
 
       // undelete flow
-      await click(KV_WORKFLOW.detail.undelete);
+      await click(KV_SECRET.undelete);
       // details update accordingly
       assertDeleteActions(assert, ['delete', 'destroy']);
       assert.dom(KV_WORKFLOW.infoRow).exists('shows secret data');
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 2 created');
+      assert.dom(KV_SECRET.versionTimestamp).includesText('Version 2 created');
 
       // destroy flow
-      await click(KV_WORKFLOW.detail.destroy);
-      await click(KV_WORKFLOW.detail.deleteConfirm);
+      await click(KV_SECRET.destroy);
+      await click(KV_SECRET.deleteConfirm);
       assertDeleteActions(assert, []);
       assert
         .dom(GENERAL.emptyStateTitle)

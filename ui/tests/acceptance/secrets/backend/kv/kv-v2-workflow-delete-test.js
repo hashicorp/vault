@@ -19,6 +19,7 @@ import { click, currentURL, visit } from '@ember/test-helpers';
 import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { KV_METADATA_DETAILS } from 'vault/tests/helpers/components/kv/page/secret/metadata/details-selectors';
+import { KV_SECRET } from 'vault/tests/helpers/components/kv/page/secret/details-selectors';
 
 const ALL_DELETE_ACTIONS = ['delete', 'destroy', 'undelete'];
 const assertDeleteActions = (assert, expected = ['delete', 'destroy']) => {
@@ -78,26 +79,24 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assertDeleteActions(assert);
       assert.dom(KV_WORKFLOW.infoRow).exists('shows secret data');
       // delete flow
-      await click(KV_WORKFLOW.detail.delete);
-      assert
-        .dom(KV_WORKFLOW.detail.deleteModalTitle)
-        .includesText('Delete version?', 'shows correct modal title');
-      assert.dom(KV_WORKFLOW.detail.deleteOption).isNotDisabled('delete option is selectable');
-      assert.dom(KV_WORKFLOW.detail.deleteOptionLatest).isNotDisabled('delete latest option is selectable');
-      await click(KV_WORKFLOW.detail.deleteOptionLatest);
-      await click(KV_WORKFLOW.detail.deleteConfirm);
+      await click(KV_SECRET.delete);
+      assert.dom(KV_SECRET.deleteModalTitle).includesText('Delete version?', 'shows correct modal title');
+      assert.dom(KV_SECRET.deleteOption).isNotDisabled('delete option is selectable');
+      assert.dom(KV_SECRET.deleteOptionLatest).isNotDisabled('delete latest option is selectable');
+      await click(KV_SECRET.deleteOptionLatest);
+      await click(KV_SECRET.deleteConfirm);
       // details update accordingly
       assert
         .dom(GENERAL.emptyStateTitle)
         .hasText('Version 4 of this secret has been deleted', 'Shows deleted message');
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 4 deleted');
+      assert.dom(KV_SECRET.versionTimestamp).includesText('Version 4 deleted');
       // updated toolbar options
       assertDeleteActions(assert, ['undelete', 'destroy']);
       // undelete flow
-      await click(KV_WORKFLOW.detail.undelete);
+      await click(KV_SECRET.undelete);
       // details update accordingly
       assert.dom(KV_WORKFLOW.infoRow).exists('shows secret data');
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 4 created');
+      assert.dom(KV_SECRET.versionTimestamp).includesText('Version 4 created');
       // correct toolbar options
       assertDeleteActions(assert, ['delete', 'destroy']);
     });
@@ -109,26 +108,24 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assertDeleteActions(assert);
       assert.dom(KV_WORKFLOW.infoRow).exists('shows secret data');
       // delete flow
-      await click(KV_WORKFLOW.detail.delete);
-      assert
-        .dom(KV_WORKFLOW.detail.deleteModalTitle)
-        .includesText('Delete version?', 'shows correct modal title');
-      assert.dom(KV_WORKFLOW.detail.deleteOption).isNotDisabled('delete option is selectable');
-      assert.dom(KV_WORKFLOW.detail.deleteOptionLatest).isNotDisabled('delete latest option is selectable');
-      await click(KV_WORKFLOW.detail.deleteOption);
-      await click(KV_WORKFLOW.detail.deleteConfirm);
+      await click(KV_SECRET.delete);
+      assert.dom(KV_SECRET.deleteModalTitle).includesText('Delete version?', 'shows correct modal title');
+      assert.dom(KV_SECRET.deleteOption).isNotDisabled('delete option is selectable');
+      assert.dom(KV_SECRET.deleteOptionLatest).isNotDisabled('delete latest option is selectable');
+      await click(KV_SECRET.deleteOption);
+      await click(KV_SECRET.deleteConfirm);
       // details update accordingly
       assert
         .dom(GENERAL.emptyStateTitle)
         .hasText('Version 2 of this secret has been deleted', 'Shows deleted message');
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 2 deleted');
+      assert.dom(KV_SECRET.versionTimestamp).includesText('Version 2 deleted');
       // updated toolbar options
       assertDeleteActions(assert, ['undelete', 'destroy']);
       // undelete flow
-      await click(KV_WORKFLOW.detail.undelete);
+      await click(KV_SECRET.undelete);
       // details update accordingly
       assert.dom(KV_WORKFLOW.infoRow).exists('shows secret data');
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 2 created');
+      assert.dom(KV_SECRET.versionTimestamp).includesText('Version 2 created');
       // correct toolbar options
       assertDeleteActions(assert, ['delete', 'destroy']);
     });
@@ -139,16 +136,14 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // correct toolbar options show
       assertDeleteActions(assert);
       // delete flow
-      await click(KV_WORKFLOW.detail.destroy);
-      assert
-        .dom(KV_WORKFLOW.detail.deleteModalTitle)
-        .includesText('Destroy version?', 'modal has correct title');
-      await click(KV_WORKFLOW.detail.deleteConfirm);
+      await click(KV_SECRET.destroy);
+      assert.dom(KV_SECRET.deleteModalTitle).includesText('Destroy version?', 'modal has correct title');
+      await click(KV_SECRET.deleteConfirm);
       // details update accordingly
       assert
         .dom(GENERAL.emptyStateTitle)
         .hasText('Version 3 of this secret has been permanently destroyed', 'Shows destroyed message');
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('does not show version timestamp');
+      assert.dom(KV_SECRET.versionTimestamp).doesNotExist('does not show version timestamp');
       // updated toolbar options
       assertDeleteActions(assert, []);
     });
@@ -163,9 +158,9 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // delete flow
       await click(KV_METADATA_DETAILS.deleteMetadata);
       assert
-        .dom(KV_WORKFLOW.detail.deleteModalTitle)
+        .dom(KV_SECRET.deleteModalTitle)
         .includesText('Delete metadata and secret data?', 'modal has correct title');
-      await click(KV_WORKFLOW.detail.deleteConfirm);
+      await click(KV_SECRET.deleteConfirm);
 
       // redirects to list
       assert.strictEqual(currentURL(), `/vault/secrets/${this.backend}/kv/list`, 'redirects to list');
@@ -193,7 +188,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assert
         .dom(GENERAL.emptyStateTitle)
         .hasText('Version 2 of this secret has been deleted', 'Shows deleted message');
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 2 deleted');
+      assert.dom(KV_SECRET.versionTimestamp).includesText('Version 2 deleted');
     });
     test('cannot soft delete and undelete an older secret version (dr)', async function (assert) {
       assert.expect(4);
@@ -234,19 +229,17 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assertDeleteActions(assert, ['delete']);
       assert.dom(KV_WORKFLOW.infoRow).exists('shows secret data');
       // delete flow
-      await click(KV_WORKFLOW.detail.delete);
-      assert
-        .dom(KV_WORKFLOW.detail.deleteModalTitle)
-        .includesText('Delete version?', 'shows correct modal title');
-      assert.dom(KV_WORKFLOW.detail.deleteOption).isDisabled('delete option is disabled');
-      assert.dom(KV_WORKFLOW.detail.deleteOptionLatest).isNotDisabled('delete latest option is selectable');
-      await click(KV_WORKFLOW.detail.deleteOptionLatest);
-      await click(KV_WORKFLOW.detail.deleteConfirm);
+      await click(KV_SECRET.delete);
+      assert.dom(KV_SECRET.deleteModalTitle).includesText('Delete version?', 'shows correct modal title');
+      assert.dom(KV_SECRET.deleteOption).isDisabled('delete option is disabled');
+      assert.dom(KV_SECRET.deleteOptionLatest).isNotDisabled('delete latest option is selectable');
+      await click(KV_SECRET.deleteOptionLatest);
+      await click(KV_SECRET.deleteConfirm);
       // details update accordingly
       assert
         .dom(GENERAL.emptyStateTitle)
         .hasText('Version 4 of this secret has been deleted', 'Shows deleted message');
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 4 deleted');
+      assert.dom(KV_SECRET.versionTimestamp).includesText('Version 4 deleted');
       // updated toolbar options
       assertDeleteActions(assert, []);
       // user can't undelete
@@ -259,11 +252,9 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assertDeleteActions(assert, ['delete']);
       assert.dom(KV_WORKFLOW.infoRow).exists('shows secret data');
       // delete flow
-      await click(KV_WORKFLOW.detail.delete);
-      assert
-        .dom(KV_WORKFLOW.detail.deleteModalTitle)
-        .includesText('Delete version?', 'shows correct modal title');
-      assert.dom(KV_WORKFLOW.detail.deleteOption).isDisabled('delete this version is not available');
+      await click(KV_SECRET.delete);
+      assert.dom(KV_SECRET.deleteModalTitle).includesText('Delete version?', 'shows correct modal title');
+      assert.dom(KV_SECRET.deleteOption).isDisabled('delete this version is not available');
     });
     test('cannot destroy a secret version (dlr)', async function (assert) {
       assert.expect(3);
@@ -296,24 +287,22 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assertDeleteActions(assert);
       assert.dom(GENERAL.emptyStateTitle).hasText('You do not have permission to read this secret');
       // delete flow
-      await click(KV_WORKFLOW.detail.delete);
-      assert
-        .dom(KV_WORKFLOW.detail.deleteModalTitle)
-        .includesText('Delete version?', 'shows correct modal title');
-      assert.dom(KV_WORKFLOW.detail.deleteOption).isNotDisabled('delete option is selectable');
-      assert.dom(KV_WORKFLOW.detail.deleteOptionLatest).isDisabled('delete latest option is disabled');
+      await click(KV_SECRET.delete);
+      assert.dom(KV_SECRET.deleteModalTitle).includesText('Delete version?', 'shows correct modal title');
+      assert.dom(KV_SECRET.deleteOption).isNotDisabled('delete option is selectable');
+      assert.dom(KV_SECRET.deleteOptionLatest).isDisabled('delete latest option is disabled');
 
       // Can't delete latest, try with pre-deleted secret
       await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
       assert.dom(GENERAL.emptyStateTitle).hasText('You do not have permission to read this secret');
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
+      assert.dom(KV_SECRET.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
       // updated toolbar options
       assertDeleteActions(assert, ['undelete', 'destroy']);
       // undelete flow
-      await click(KV_WORKFLOW.detail.undelete);
+      await click(KV_SECRET.undelete);
       // details update accordingly
       assert.dom(GENERAL.emptyStateTitle).hasText('You do not have permission to read this secret');
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
+      assert.dom(KV_SECRET.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
       // correct toolbar options
       assertDeleteActions(assert, ['delete', 'destroy']);
     });
@@ -324,26 +313,24 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // correct toolbar options & details show
       assertDeleteActions(assert);
       assert.dom(GENERAL.emptyStateTitle).hasText('You do not have permission to read this secret');
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
+      assert.dom(KV_SECRET.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
       // delete flow
-      await click(KV_WORKFLOW.detail.delete);
-      assert
-        .dom(KV_WORKFLOW.detail.deleteModalTitle)
-        .includesText('Delete version?', 'shows correct modal title');
-      assert.dom(KV_WORKFLOW.detail.deleteOption).isNotDisabled('delete option is selectable');
-      assert.dom(KV_WORKFLOW.detail.deleteOptionLatest).isDisabled('delete latest option is disabled');
-      await click(KV_WORKFLOW.detail.deleteOption);
-      await click(KV_WORKFLOW.detail.deleteConfirm);
+      await click(KV_SECRET.delete);
+      assert.dom(KV_SECRET.deleteModalTitle).includesText('Delete version?', 'shows correct modal title');
+      assert.dom(KV_SECRET.deleteOption).isNotDisabled('delete option is selectable');
+      assert.dom(KV_SECRET.deleteOptionLatest).isDisabled('delete latest option is disabled');
+      await click(KV_SECRET.deleteOption);
+      await click(KV_SECRET.deleteConfirm);
       // details update accordingly
       assert.dom(GENERAL.emptyStateTitle).hasText('You do not have permission to read this secret');
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
+      assert.dom(KV_SECRET.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
       // updated toolbar options
       assertDeleteActions(assert, ['undelete', 'destroy']);
       // undelete flow
-      await click(KV_WORKFLOW.detail.undelete);
+      await click(KV_SECRET.undelete);
       // details update accordingly
       assert.dom(GENERAL.emptyStateTitle).hasText('You do not have permission to read this secret');
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
+      assert.dom(KV_SECRET.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
       // correct toolbar options
       assertDeleteActions(assert);
     });
@@ -354,16 +341,14 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // correct toolbar options show
       assertDeleteActions(assert);
       // delete flow
-      await click(KV_WORKFLOW.detail.destroy);
-      assert
-        .dom(KV_WORKFLOW.detail.deleteModalTitle)
-        .includesText('Destroy version?', 'modal has correct title');
-      await click(KV_WORKFLOW.detail.deleteConfirm);
+      await click(KV_SECRET.destroy);
+      assert.dom(KV_SECRET.deleteModalTitle).includesText('Destroy version?', 'modal has correct title');
+      await click(KV_SECRET.deleteConfirm);
       // details update accordingly
       assert
         .dom(GENERAL.emptyStateTitle)
         .hasText('You do not have permission to read this secret', 'Shows permissions message');
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('does not show version timestamp');
+      assert.dom(KV_SECRET.versionTimestamp).doesNotExist('does not show version timestamp');
       // updated toolbar options
       assertDeleteActions(assert, []);
     });
@@ -421,7 +406,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // test with already deleted method
       await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
       assert.dom(GENERAL.emptyStateTitle).hasText('You do not have permission to read this secret');
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('version timestamp not rendered');
+      assert.dom(KV_SECRET.versionTimestamp).doesNotExist('version timestamp not rendered');
       // updated toolbar options
       assertDeleteActions(assert, []);
     });
@@ -451,9 +436,9 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // delete flow
       await click(KV_METADATA_DETAILS.deleteMetadata);
       assert
-        .dom(KV_WORKFLOW.detail.deleteModalTitle)
+        .dom(KV_SECRET.deleteModalTitle)
         .includesText('Delete metadata and secret data?', 'modal has correct title');
-      await click(KV_WORKFLOW.detail.deleteConfirm);
+      await click(KV_SECRET.deleteConfirm);
 
       // redirects to list
       assert.strictEqual(currentURL(), `/vault/secrets/${this.backend}/kv/list`, 'redirects to list');

@@ -13,6 +13,7 @@ import { kvMetadataPath, kvDataPath } from 'vault/utils/kv-path';
 import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { KV_SECRET } from 'vault/tests/helpers/components/kv/page/secret/details-selectors';
 
 module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', function (hooks) {
   setupRenderingTest(hooks);
@@ -118,7 +119,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', fun
       { owner: this.engine }
     );
 
-    const [left, right] = findAll(KV_WORKFLOW.detail.versionDropdown);
+    const [left, right] = findAll(KV_SECRET.versionDropdown);
     assert.dom(KV_WORKFLOW.diff.visualDiff).hasText(
       `foo\"bar\"hello\"world\"`, // eslint-disable-line no-useless-escape
       'correctly pull in the data from version 4 and compared to version 1.'
@@ -132,16 +133,16 @@ module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', fun
 
     for (const num in this.metadata.versions) {
       const data = this.metadata.versions[num];
-      assert.dom(KV_WORKFLOW.detail.version(num)).exists('renders the button for each version.');
+      assert.dom(KV_SECRET.version(num)).exists('renders the button for each version.');
 
       if (data.destroyed || data.deletion_time) {
         assert
-          .dom(`${KV_WORKFLOW.detail.version(num)} [data-test-icon="x-square-fill"]`)
+          .dom(`${KV_SECRET.version(num)} [data-test-icon="x-square-fill"]`)
           .hasClass(`${data.destroyed ? 'has-text-danger' : 'has-text-grey'}`);
       }
     }
     assert
-      .dom(`${KV_WORKFLOW.detail.version('1')} button`)
+      .dom(`${KV_SECRET.version('1')} button`)
       .hasClass('is-active', 'correctly shows the selected version 1 as active.');
   });
 });

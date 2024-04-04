@@ -16,6 +16,7 @@ import { FORM, KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import { grantAccessForWrite, setupControlGroup } from 'vault/tests/helpers/control-groups';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { KV_METADATA_DETAILS } from 'vault/tests/helpers/components/kv/page/secret/metadata/details-selectors';
+import { KV_SECRET } from 'vault/tests/helpers/components/kv/page/secret/details-selectors';
 
 /**
  * This test set is for testing the flow for creating new secrets and versions.
@@ -65,11 +66,11 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
       assert.dom(GENERAL.infoRowValue('foo')).exists('key has expected value');
-      await click(KV_WORKFLOW.detail.createNewVersion);
+      await click(KV_SECRET.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
       await click(FORM.cancelBtn);
       assert.dom(GENERAL.infoRowValue('foo')).exists('secret is previous value');
-      await click(KV_WORKFLOW.detail.createNewVersion);
+      await click(KV_SECRET.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
       await click(GENERAL.breadcrumbAtIdx(3));
       assert.dom(GENERAL.infoRowValue('foo')).exists('secret is previous value');
@@ -106,7 +107,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=1`,
         'Goes to details page after save'
       );
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 1 created');
+      assert.dom(KV_SECRET.versionTimestamp).includesText('Version 1 created');
       assert.dom(KV_WORKFLOW.infoRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(GENERAL.infoRowValue('api_key')).hasText('***********');
       await click(KV_WORKFLOW.infoRowToggleMasked('api_key'));
@@ -128,7 +129,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Add new version
       await click(GENERAL.tab('Secret'));
-      await click(KV_WORKFLOW.detail.createNewVersion);
+      await click(KV_SECRET.createNewVersion);
       assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
       assert.dom(FORM.inputByAttr('path')).hasValue(secretPath);
       assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');
@@ -143,7 +144,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         currentURL(),
         `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=2`
       );
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 2 created');
+      assert.dom(KV_SECRET.versionTimestamp).includesText('Version 2 created');
       assert.dom(KV_WORKFLOW.infoRow).exists({ count: 2 }, '2 rows of data shows');
       assert.dom(GENERAL.infoRowValue('api_key')).hasText('***********');
       assert.dom(GENERAL.infoRowValue('api_url')).hasText('***********');
@@ -196,7 +197,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         currentURL(),
         `/vault/secrets/${backend}/kv/${encodeURIComponent('my/secret')}/details?version=1`
       );
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 1 created');
+      assert.dom(KV_SECRET.versionTimestamp).includesText('Version 1 created');
       assert.dom(KV_WORKFLOW.infoRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(GENERAL.infoRowValue('password')).hasText('***********');
       await click(KV_WORKFLOW.infoRowToggleMasked('password'));
@@ -247,15 +248,15 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('create new version of secret from older version (a)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
-      await click(KV_WORKFLOW.detail.versionDropdown);
-      await click(`${KV_WORKFLOW.detail.version(1)} a`);
+      await click(KV_SECRET.versionDropdown);
+      await click(`${KV_SECRET.version(1)} a`);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`,
         'goes to version 1'
       );
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 1 created');
-      await click(KV_WORKFLOW.detail.createNewVersion);
+      assert.dom(KV_SECRET.versionTimestamp).includesText('Version 1 created');
+      await click(KV_SECRET.createNewVersion);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/app%2Ffirst/details/edit?version=1`,
@@ -310,7 +311,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
       assert.dom(GENERAL.infoRowValue('foo')).exists('key has expected value');
-      assert.dom(KV_WORKFLOW.detail.createNewVersion).doesNotExist();
+      assert.dom(KV_SECRET.createNewVersion).doesNotExist();
     });
     test('create & update root secret with default metadata (dr)', async function (assert) {
       const backend = this.backend;
@@ -338,7 +339,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Since this persona can't create a new secret, test update with existing:
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 2 created');
+      assert.dom(KV_SECRET.versionTimestamp).includesText('Version 2 created');
       assert.dom(KV_WORKFLOW.infoRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(GENERAL.infoRowValue('foo')).hasText('***********');
       await click(KV_WORKFLOW.infoRowToggleMasked('foo'));
@@ -355,7 +356,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Add new version
       await click(GENERAL.tab('Secret'));
-      assert.dom(KV_WORKFLOW.detail.createNewVersion).doesNotExist('cannot create new version');
+      assert.dom(KV_SECRET.createNewVersion).doesNotExist('cannot create new version');
     });
     test('create nested secret with metadata (dr)', async function (assert) {
       const backend = this.backend;
@@ -420,9 +421,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('create new version of secret from older version (dr)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`);
-      assert.dom(KV_WORKFLOW.detail.versionDropdown).doesNotExist('version dropdown does not show');
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 1 created');
-      assert.dom(KV_WORKFLOW.detail.createNewVersion).doesNotExist('cannot create new version');
+      assert.dom(KV_SECRET.versionDropdown).doesNotExist('version dropdown does not show');
+      assert.dom(KV_SECRET.versionTimestamp).includesText('Version 1 created');
+      assert.dom(KV_SECRET.createNewVersion).doesNotExist('cannot create new version');
     });
   });
 
@@ -455,7 +456,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
       assert.dom(GENERAL.infoRowValue('foo')).exists('key has expected value');
-      assert.dom(KV_WORKFLOW.detail.createNewVersion).doesNotExist('cannot create new version');
+      assert.dom(KV_SECRET.createNewVersion).doesNotExist('cannot create new version');
     });
     test('create & update root secret with default metadata (dlr)', async function (assert) {
       const backend = this.backend;
@@ -483,7 +484,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Since this persona can't create a new secret, test update with existing:
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 2 created');
+      assert.dom(KV_SECRET.versionTimestamp).includesText('Version 2 created');
       assert.dom(KV_WORKFLOW.infoRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(GENERAL.infoRowValue('foo')).hasText('***********');
       await click(KV_WORKFLOW.infoRowToggleMasked('foo'));
@@ -500,7 +501,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Add new version
       await click(GENERAL.tab('Secret'));
-      assert.dom(KV_WORKFLOW.detail.createNewVersion).doesNotExist('cannot create new version');
+      assert.dom(KV_SECRET.createNewVersion).doesNotExist('cannot create new version');
     });
     test('create nested secret with metadata (dlr)', async function (assert) {
       const backend = this.backend;
@@ -565,9 +566,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('create new version of secret from older version (dlr)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`);
-      assert.dom(KV_WORKFLOW.detail.versionDropdown).doesNotExist('version dropdown does not show');
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 1 created');
-      assert.dom(KV_WORKFLOW.detail.createNewVersion).doesNotExist('cannot create new version');
+      assert.dom(KV_SECRET.versionDropdown).doesNotExist('version dropdown does not show');
+      assert.dom(KV_SECRET.versionTimestamp).includesText('Version 1 created');
+      assert.dom(KV_SECRET.createNewVersion).doesNotExist('cannot create new version');
     });
   });
 
@@ -601,7 +602,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
       assert.dom(GENERAL.emptyStateTitle).hasText('You do not have permission to read this secret');
       assert
-        .dom(KV_WORKFLOW.detail.createNewVersion)
+        .dom(KV_SECRET.createNewVersion)
         .doesNotExist('create new version button now allowed since user cannot read existing');
     });
     test('create & update root secret with default metadata (mm)', async function (assert) {
@@ -630,7 +631,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Since this persona can't create a new secret, test update with existing:
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('Version created tooltip does not show');
+      assert.dom(KV_SECRET.versionTimestamp).doesNotExist('Version created tooltip does not show');
       assert.dom(KV_WORKFLOW.infoRow).doesNotExist('secret data not shown');
       assert.dom(GENERAL.emptyStateTitle).hasText('You do not have permission to read this secret');
 
@@ -650,7 +651,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Add new version
       await click(GENERAL.tab('Secret'));
-      assert.dom(KV_WORKFLOW.detail.createNewVersion).doesNotExist('create new version button not rendered');
+      assert.dom(KV_SECRET.createNewVersion).doesNotExist('create new version button not rendered');
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details/edit?version=1`);
       assert
         .dom(FORM.noReadAlert)
@@ -735,17 +736,17 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('create new version of secret from older version (mm)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
-      assert.dom(KV_WORKFLOW.detail.versionDropdown).hasText('Version 2');
-      await click(KV_WORKFLOW.detail.versionDropdown);
-      await click(`${KV_WORKFLOW.detail.version(1)} a`);
+      assert.dom(KV_SECRET.versionDropdown).hasText('Version 2');
+      await click(KV_SECRET.versionDropdown);
+      await click(`${KV_SECRET.version(1)} a`);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`,
         'goes to version 1'
       );
-      assert.dom(KV_WORKFLOW.detail.versionDropdown).hasText('Version 1');
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('version timestamp not shown');
-      assert.dom(KV_WORKFLOW.detail.createNewVersion).doesNotExist('create new version button not rendered');
+      assert.dom(KV_SECRET.versionDropdown).hasText('Version 1');
+      assert.dom(KV_SECRET.versionTimestamp).doesNotExist('version timestamp not shown');
+      assert.dom(KV_SECRET.createNewVersion).doesNotExist('create new version button not rendered');
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details/edit?version=1`);
       assert
         .dom(FORM.noReadAlert)
@@ -796,7 +797,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert
         .dom(GENERAL.emptyStateTitle)
         .hasText('You do not have permission to read this secret', 'no permissions state shows');
-      await click(KV_WORKFLOW.detail.createNewVersion);
+      await click(KV_SECRET.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
       await click(FORM.cancelBtn);
       assert.strictEqual(
@@ -805,7 +806,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         'cancel goes to correct url'
       );
       assert.dom(KV_WORKFLOW.list.item()).doesNotExist('list view has no items');
-      await click(KV_WORKFLOW.detail.createNewVersion);
+      await click(KV_SECRET.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
       await click(GENERAL.breadcrumbAtIdx(3));
       assert.strictEqual(
@@ -847,7 +848,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details`,
         'Goes to details page after save'
       );
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('Version created not shown');
+      assert.dom(KV_SECRET.versionTimestamp).doesNotExist('Version created not shown');
       assert.dom(KV_WORKFLOW.infoRow).doesNotExist('does not show data contents');
       assert
         .dom(GENERAL.emptyStateTitle)
@@ -867,7 +868,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Add new version
       await click(GENERAL.tab('Secret'));
-      await click(KV_WORKFLOW.detail.createNewVersion);
+      await click(KV_SECRET.createNewVersion);
       assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
       assert.dom(FORM.inputByAttr('path')).hasValue(secretPath);
       assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');
@@ -883,7 +884,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=2`,
         'goes back to details page'
       );
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('Version created does not show');
+      assert.dom(KV_SECRET.versionTimestamp).doesNotExist('Version created does not show');
       assert.dom(KV_WORKFLOW.infoRow).doesNotExist('does not show data contents');
       assert
         .dom(GENERAL.emptyStateTitle)
@@ -934,7 +935,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         `/vault/secrets/${backend}/kv/${encodeURIComponent('my/secret')}/details`,
         'goes back to details page'
       );
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('version created not shown');
+      assert.dom(KV_SECRET.versionTimestamp).doesNotExist('version created not shown');
       assert.dom(KV_WORKFLOW.infoRow).doesNotExist('does not show data contents');
       assert
         .dom(GENERAL.emptyStateTitle)
@@ -978,9 +979,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('create new version of secret from older version (sc)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`);
-      assert.dom(KV_WORKFLOW.detail.versionDropdown).doesNotExist('version dropdown does not show');
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).doesNotExist('Version created not shown');
-      await click(KV_WORKFLOW.detail.createNewVersion);
+      assert.dom(KV_SECRET.versionDropdown).doesNotExist('version dropdown does not show');
+      assert.dom(KV_SECRET.versionTimestamp).doesNotExist('Version created not shown');
+      await click(KV_SECRET.createNewVersion);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/app%2Ffirst/details/edit?version=1`,
@@ -1124,7 +1125,7 @@ path "${this.backend}/metadata/*" {
         `/vault/secrets/${backend}/kv/${secretPath}/details?version=1`,
         'Goes to details page after save'
       );
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 1 created');
+      assert.dom(KV_SECRET.versionTimestamp).includesText('Version 1 created');
       assert.dom(KV_WORKFLOW.infoRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(GENERAL.infoRowValue('api_key')).hasText('***********');
       await click(KV_WORKFLOW.infoRowToggleMasked('api_key'));
@@ -1146,7 +1147,7 @@ path "${this.backend}/metadata/*" {
 
       // Add new version
       await click(GENERAL.tab('Secret'));
-      await click(KV_WORKFLOW.detail.createNewVersion);
+      await click(KV_SECRET.createNewVersion);
       assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
       assert.dom(FORM.inputByAttr('path')).hasValue(secretPath);
       assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');
@@ -1195,7 +1196,7 @@ path "${this.backend}/metadata/*" {
         currentURL(),
         `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=2`
       );
-      assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText('Version 2 created');
+      assert.dom(KV_SECRET.versionTimestamp).includesText('Version 2 created');
       assert.dom(KV_WORKFLOW.infoRow).exists({ count: 2 }, '2 rows of data shows');
       assert.dom(GENERAL.infoRowValue('api_key')).hasText('***********');
       assert.dom(GENERAL.infoRowValue('api_url')).hasText('***********');
