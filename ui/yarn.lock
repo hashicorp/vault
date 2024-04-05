@@ -9576,10 +9576,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-svg-jar@npm:2.4.0":
-  version: 2.4.0
-  resolution: "ember-svg-jar@npm:2.4.0"
+"ember-svg-jar@npm:2.4.4":
+  version: 2.4.4
+  resolution: "ember-svg-jar@npm:2.4.4"
   dependencies:
+    "@embroider/macros": ^1.12.2
     broccoli-caching-writer: ^3.0.3
     broccoli-concat: ^4.2.5
     broccoli-funnel: ^3.0.8
@@ -9594,7 +9595,7 @@ __metadata:
     ember-cli-htmlbars: ^5.7.1
     lodash: ^4.17.15
     safe-stable-stringify: ^2.2.0
-  checksum: d2c7eb54c3aab45fe80775470e52d5db93e4fe60c9ecd95d614897cb2275bce92a0b5389914b40ad84509dcf400e1ec384ea192a25a325f30f6b848d8637d145
+  checksum: e50efb0d503cebd5c85b620fd73866725e1a6804a119318835c07a24b60f9d7684fc86e853c693beb72b1386ea9f1124f2e49c4ae5de9e7505c2d06180c4e980
   languageName: node
   linkType: hard
 
@@ -19474,7 +19475,7 @@ __metadata:
     ember-sinon: ^4.0.0
     ember-source: ~4.12.0
     ember-style-modifier: ^4.1.0
-    ember-svg-jar: 2.4.0
+    ember-svg-jar: 2.4.4
     ember-template-lint: ^6.0.0
     ember-template-lint-plugin-prettier: 4.0.0
     ember-test-selectors: 6.0.0
