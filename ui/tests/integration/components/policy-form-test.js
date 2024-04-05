@@ -9,7 +9,6 @@ import { click, fillIn, render, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import Pretender from 'pretender';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const SELECTORS = {
   nameInput: '[data-test-policy-input="name"]',
@@ -54,13 +53,6 @@ module('Integration | Component | policy-form', function (hooks) {
       this.put('/v1/sys/policies/egp/**', () => {
         return [204, { 'Content-Type': 'application/json' }];
       });
-    });
-    setRunOptions({
-      rules: {
-        // TODO: fix JSONEditor/CodeMirror
-        label: { enabled: false },
-        'label-title-only': { enabled: false },
-      },
     });
   });
   hooks.afterEach(function () {
