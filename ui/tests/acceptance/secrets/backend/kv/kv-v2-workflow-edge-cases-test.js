@@ -373,9 +373,9 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
   const assertDeleteActions = (assert, expected = ['delete', 'destroy']) => {
     ['delete', 'destroy', 'undelete'].forEach((toolbar) => {
       if (expected.includes(toolbar)) {
-        assert.dom(KV_WORKFLOW.detail[toolbar]).exists(`${toolbar} toolbar action exists`);
+        assert.dom(KV_SECRET[toolbar]).exists(`${toolbar} toolbar action exists`);
       } else {
-        assert.dom(KV_WORKFLOW.detail[toolbar]).doesNotExist(`${toolbar} toolbar action not rendered`);
+        assert.dom(KV_SECRET[toolbar]).doesNotExist(`${toolbar} toolbar action not rendered`);
       }
     });
   };

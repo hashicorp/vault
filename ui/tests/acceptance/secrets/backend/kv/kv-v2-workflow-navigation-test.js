@@ -67,9 +67,9 @@ const assertDetailsToolbar = (assert, expected = DETAIL_TOOLBARS) => {
     .exists({ count: expected.length }, 'correct number of toolbar actions render');
   DETAIL_TOOLBARS.forEach((toolbar) => {
     if (expected.includes(toolbar)) {
-      assert.dom(KV_WORKFLOW.detail[toolbar]).exists(`${toolbar} toolbar action exists`);
+      assert.dom(KV_SECRET[toolbar]).exists(`${toolbar} toolbar action exists`);
     } else {
-      assert.dom(KV_WORKFLOW.detail[toolbar]).doesNotExist(`${toolbar} toolbar action not rendered`);
+      assert.dom(KV_SECRET[toolbar]).doesNotExist(`${toolbar} toolbar action not rendered`);
     }
   });
 };

@@ -11,9 +11,11 @@ import { click, find, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { kvDataPath, kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
-import { KV_FORM, KV_WORKFLOW, parseJsonEditor } from 'vault/tests/helpers/kv/kv-selectors';
 import { syncStatusResponse } from 'vault/mirage/handlers/sync';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { KV_FORM, parseJsonEditor } from 'vault/tests/helpers/kv/kv-selectors';
+import { KV_SECRET } from 'vault/tests/helpers/components/kv/page/secret/details-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kv-v2 | Page::Secret::Details', function (hooks) {
   setupRenderingTest(hooks);
@@ -127,18 +129,18 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     );
 
     assert
-      .dom(KV_WORKFLOW.detail.syncAlert())
+      .dom(KV_SECRET.syncAlert())
       .doesNotExist('sync page alert banner does not render when sync status errors');
-    assert.dom(KV_WORKFLOW.title).includesText(this.model.path, 'renders secret path as page title');
-    assert.dom(KV_WORKFLOW.infoRowValue('foo')).exists('renders row for secret data');
-    assert.dom(KV_WORKFLOW.infoRowValue('foo')).hasText('***********');
+    assert.dom(GENERAL.title).includesText(this.model.path, 'renders secret path as page title');
+    assert.dom(GENERAL.infoRowValue('foo')).exists('renders row for secret data');
+    assert.dom(GENERAL.infoRowValue('foo')).hasText('***********');
     await click(KV_FORM.toggleMasked);
-    assert.dom(KV_WORKFLOW.infoRowValue('foo')).hasText('bar', 'renders secret value');
+    assert.dom(GENERAL.infoRowValue('foo')).hasText('bar', 'renders secret value');
     await click(KV_FORM.toggleJson);
     await click(KV_FORM.toggleJsonValues);
     assert.propEqual(parseJsonEditor(find), this.secretData, 'json editor renders secret data');
     assert
-      .dom(KV_WORKFLOW.detail.versionTimestamp)
+      .dom(KV_SECRET.versionTimestamp)
       .includesText(`Version ${this.version} created`, 'renders version and time created');
   });
 
@@ -154,7 +156,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       `,
       { owner: this.engine }
     );
-    assert.dom(KV_WORKFLOW.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
+    assert.dom(GENERAL.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
     assert.dom(KV_FORM.toggleJson).isChecked();
     assert.dom(KV_FORM.toggleJson).isNotDisabled();
     assert.dom('[data-test-component="code-mirror-modifier"]').exists('shows json editor');
@@ -174,14 +176,14 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       `,
       { owner: this.engine }
     );
-    assert.dom(KV_WORKFLOW.emptyStateTitle).hasText('Version 2 of this secret has been deleted');
+    assert.dom(GENERAL.emptyStateTitle).hasText('Version 2 of this secret has been deleted');
     assert
-      .dom(KV_WORKFLOW.emptyStateMessage)
+      .dom(GENERAL.emptyStateMessage)
       .hasText(
         'This version has been deleted but can be undeleted. View other versions of this secret by clicking the Version History tab above.'
       );
     assert
-      .dom(KV_WORKFLOW.detail.versionTimestamp)
+      .dom(KV_SECRET.versionTimestamp)
       .includesText(`Version ${this.version} deleted`, 'renders version and time deleted');
   });
 
@@ -199,11 +201,9 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       `,
       { owner: this.engine }
     );
+    assert.dom(GENERAL.emptyStateTitle).hasText('Version 2 of this secret has been permanently destroyed');
     assert
-      .dom(KV_WORKFLOW.emptyStateTitle)
-      .hasText('Version 2 of this secret has been permanently destroyed');
-    assert
-      .dom(KV_WORKFLOW.emptyStateMessage)
+      .dom(GENERAL.emptyStateMessage)
       .hasText(
         'A version that has been permanently deleted cannot be restored. You can view other versions of this secret in the Version History tab above.'
       );
@@ -224,23 +224,23 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       { owner: this.engine }
     );
 
-    assert.dom(KV_WORKFLOW.detail.versionTimestamp).includesText(this.version, 'renders version');
-    assert.dom(KV_WORKFLOW.detail.versionDropdown).hasText(`Version ${this.secret.version}`);
-    await click(KV_WORKFLOW.detail.versionDropdown);
+    assert.dom(KV_SECRET.versionTimestamp).includesText(this.version, 'renders version');
+    assert.dom(KV_SECRET.versionDropdown).hasText(`Version ${this.secret.version}`);
+    await click(KV_SECRET.versionDropdown);
 
     for (const version in this.metadata.versions) {
       const data = this.metadata.versions[version];
-      assert.dom(KV_WORKFLOW.detail.version(version)).exists(`renders ${version} in dropdown menu`);
+      assert.dom(KV_SECRET.version(version)).exists(`renders ${version} in dropdown menu`);
 
       if (data.destroyed || data.deletion_time) {
         assert
-          .dom(`${KV_WORKFLOW.detail.version(version)} [data-test-icon="x-square-fill"]`)
+          .dom(`${KV_SECRET.version(version)} [data-test-icon="x-square-fill"]`)
           .hasClass(`${data.destroyed ? 'has-text-danger' : 'has-text-grey'}`);
       }
     }
 
     assert
-      .dom(`${KV_WORKFLOW.detail.version(this.metadata.currentVersion)} [data-test-icon="check-circle"]`)
+      .dom(`${KV_SECRET.version(this.metadata.currentVersion)} [data-test-icon="check-circle"]`)
       .exists('renders current version icon');
   });
 
@@ -280,19 +280,19 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     );
 
     assert
-      .dom(KV_WORKFLOW.detail.syncAlert(destinationName))
+      .dom(KV_SECRET.syncAlert(destinationName))
       .hasTextContaining(
         'Synced my-destination - last updated September',
         'renders sync status alert banner'
       );
     assert
-      .dom(KV_WORKFLOW.detail.syncAlert())
+      .dom(KV_SECRET.syncAlert())
       .hasTextContaining(
         'This secret has been synced from Vault to 1 destination. Updates to this secret will automatically sync to its destination.',
         'renders alert header referring to singular destination'
       );
     // sync status refresh button
-    await click(`${KV_WORKFLOW.detail.syncAlert()} button`);
+    await click(`${KV_SECRET.syncAlert()} button`);
   });
 
   test('it renders sync status page alert for multiple destinations', async function (assert) {
@@ -325,13 +325,13 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       { owner: this.engine }
     );
     assert
-      .dom(KV_WORKFLOW.detail.syncAlert('aws-dest'))
+      .dom(KV_SECRET.syncAlert('aws-dest'))
       .hasTextContaining('Synced aws-dest - last updated September', 'renders status for aws destination');
     assert
-      .dom(KV_WORKFLOW.detail.syncAlert('gh-dest'))
+      .dom(KV_SECRET.syncAlert('gh-dest'))
       .hasTextContaining('Syncing gh-dest - last updated September', 'renders status for gh destination');
     assert
-      .dom(KV_WORKFLOW.detail.syncAlert())
+      .dom(KV_SECRET.syncAlert())
       .hasTextContaining(
         'This secret has been synced from Vault to 2 destinations. Updates to this secret will automatically sync to its destinations.',
         'renders alert title referring to plural destinations'

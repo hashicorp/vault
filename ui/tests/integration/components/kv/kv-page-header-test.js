@@ -10,6 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { kvDataPath } from 'vault/utils/kv-path';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kv | kv-page-header', function (hooks) {
   setupRenderingTest(hooks);
@@ -46,12 +47,10 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
     await render(hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @pageTitle="Create new version"/>`, {
       owner: this.engine,
     });
-    assert.dom('[data-test-breadcrumbs] li:nth-child(1) a').hasText('secrets', 'Secrets breadcrumb renders');
-    assert.dom('[data-test-breadcrumbs] li:nth-child(2) a').hasText(this.backend, 'engine name renders');
-    assert.dom('[data-test-breadcrumbs] li:nth-child(3) a').hasText(this.path, 'secret path renders');
-    assert
-      .dom('[data-test-breadcrumbs] li:nth-child(4) .hds-breadcrumb__current')
-      .exists('final breadcrumb renders and it is not a link.');
+    assert.dom(GENERAL.breadcrumbAtIdx(1)).hasText('secrets', 'Secrets breadcrumb renders');
+    assert.dom(GENERAL.breadcrumbAtIdx(2)).hasText(this.backend, 'engine name renders');
+    assert.dom(GENERAL.breadcrumbAtIdx(3)).hasText(this.path, 'secret path renders');
+    assert.dom(GENERAL.breadcrumbAtIdx(4)).hasClass('hds-breadcrumb__current');
   });
 
   test('it renders a custom title for a non engine view', async function (assert) {
@@ -59,8 +58,8 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
     await render(hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @pageTitle="Create new version"/>`, {
       owner: this.engine,
     });
-    assert.dom('[data-test-header-title]').hasText('Create new version', 'displays custom title.');
-    assert.dom('[data-test-header-title] svg').doesNotExist('Does not show icon if not at engine level.');
+    assert.dom(GENERAL.title).hasText('Create new version', 'displays custom title.');
+    assert.dom(`${GENERAL.title} svg`).doesNotExist('Does not show icon if not at engine level.');
   });
 
   test('it renders a title, icon and tag if engine view', async function (assert) {
@@ -69,11 +68,9 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
       owner: this.engine,
     });
     assert
-      .dom('[data-test-header-title]')
+      .dom(GENERAL.title)
       .hasText(`${this.backend} version 2`, 'Mount path and version tag render for title.');
-    assert
-      .dom('[data-test-header-title] [data-test-icon="key-values"]')
-      .exists('An icon renders next to title.');
+    assert.dom(`${GENERAL.title} [data-test-icon="key-values"]`).exists('An icon renders next to title.');
   });
 
   test('it renders tabs', async function (assert) {
@@ -81,8 +78,8 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
     await render(
       hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @mountName="my-engine">
   <:tabLinks>
-    <li><LinkTo @route="list" data-test-secrets-tab="Secrets">Secrets</LinkTo></li>
-    <li><LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo></li>
+    <li><LinkTo @route="list" data-test-tab="Secrets">Secrets</LinkTo></li>
+    <li><LinkTo @route="configuration" data-test-tab="Configuration">Configuration</LinkTo></li>
   </:tabLinks>
   </KvPageHeader>
     `,
@@ -90,10 +87,8 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
         owner: this.engine,
       }
     );
-    assert.dom('[data-test-secrets-tab="Secrets"]').hasText('Secrets', 'Secrets tab renders');
-    assert
-      .dom('[data-test-secrets-tab="Configuration"]')
-      .hasText('Configuration', 'Configuration tab renders');
+    assert.dom(GENERAL.tab('Secrets')).hasText('Secrets', 'Secrets tab renders');
+    assert.dom(GENERAL.tab('Configuration')).hasText('Configuration', 'Configuration tab renders');
   });
 
   test('it should yield block for toolbar actions', async function (assert) {

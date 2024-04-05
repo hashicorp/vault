@@ -26,9 +26,9 @@ const ALL_DELETE_ACTIONS = ['delete', 'destroy', 'undelete'];
 const assertDeleteActions = (assert, expected = ['delete', 'destroy']) => {
   ALL_DELETE_ACTIONS.forEach((toolbar) => {
     if (expected.includes(toolbar)) {
-      assert.dom(KV_WORKFLOW.detail[toolbar]).exists(`${toolbar} toolbar action exists`);
+      assert.dom(KV_SECRET[toolbar]).exists(`${toolbar} toolbar action exists`);
     } else {
-      assert.dom(KV_WORKFLOW.detail[toolbar]).doesNotExist(`${toolbar} toolbar action not rendered`);
+      assert.dom(KV_SECRET[toolbar]).doesNotExist(`${toolbar} toolbar action not rendered`);
     }
   });
 };

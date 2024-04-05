@@ -91,9 +91,9 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
       owner: this.engine,
     });
     assert.dom(KV_WORKFLOW.infoRow).exists({ count: 1 }, '1 row of data shows');
-    assert.dom(KV_WORKFLOW.infoRowValue('foo')).hasText('***********');
+    assert.dom(GENERAL.infoRowValue('foo')).hasText('***********');
     await click(KV_WORKFLOW.infoRowToggleMasked('foo'));
-    assert.dom(KV_WORKFLOW.infoRowValue('foo')).hasText('bar', 'secret value shows after toggle');
+    assert.dom(GENERAL.infoRowValue('foo')).hasText('bar', 'secret value shows after toggle');
   });
 
   test('it shows readonly json editor when viewing secret details of complex secret', async function (assert) {
@@ -108,7 +108,7 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
     await render(hbs`<KvDataFields @showJson={{true}} @secret={{this.secret}} @type="details" />`, {
       owner: this.engine,
     });
-    assert.dom(KV_WORKFLOW.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
+    assert.dom(GENERAL.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
     assert.dom('[data-test-component="code-mirror-modifier"]').hasClass('readonly-codemirror');
     assert
       .dom('[data-test-component="code-mirror-modifier"]')
