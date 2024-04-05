@@ -11,9 +11,9 @@ import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
-import { KV_WORKFLOW } from 'vault/tests/helpers/kv/kv-selectors';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { KV_LIST } from 'vault/tests/helpers/components/kv/page/list-selectors';
 
 const CREATE_RECORDS = (number, store, server) => {
   const mirageList = server.createList('kv-metadatum', number, 'withCustomPath');
@@ -54,7 +54,7 @@ module('Integration | Component | kv | Page::List', function (hooks) {
   });
 
   test('it renders Pagination and allows you to delete a kv/metadata record', async function (assert) {
-    assert.expect(20);
+    assert.expect(19);
     CREATE_RECORDS(15, this.store, this.server);
     this.model = await this.store.peekAll('kv/metadata');
     this.model.meta = META;
@@ -77,22 +77,21 @@ module('Integration | Component | kv | Page::List', function (hooks) {
       }
     );
 
-    assert.dom(KV_WORKFLOW.list.pagination).exists('shows hds pagination component');
-    assert.dom(KV_WORKFLOW.list.paginationInfo).hasText('1–15 of 16', 'shows correct page of pages');
+    assert.dom(GENERAL.pagination.info).hasText('1–15 of 16', 'shows correct page of pages');
     assert.dom(GENERAL.title).includesText(this.backend, 'shows backend as title');
 
     this.model.forEach((record) => {
-      assert.dom(KV_WORKFLOW.list.item(record.path)).exists('lists all records from 0-14 on the first page');
+      assert.dom(KV_LIST.item(record.path)).exists('lists all records from 0-14 on the first page');
     });
 
     this.server.delete(kvMetadataPath('kv-engine', 'my-secret-0'), () => {
       assert.ok(true, 'request made to correct endpoint on delete metadata.');
     });
 
-    const popupSelector = `${KV_WORKFLOW.list.item('my-secret-0')} ${GENERAL.menuTrigger}`;
+    const popupSelector = `${KV_LIST.item('my-secret-0')} ${GENERAL.menuTrigger}`;
     await click(popupSelector);
     await click('[data-test-popup-metadata-delete]');
     await click('[data-test-confirm-button]');
-    assert.dom(KV_WORKFLOW.list.item('my-secret-0')).doesNotExist('deleted the first record from the list');
+    assert.dom(KV_LIST.item('my-secret-0')).doesNotExist('deleted the first record from the list');
   });
 });

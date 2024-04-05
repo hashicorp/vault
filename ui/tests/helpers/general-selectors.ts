@@ -62,6 +62,7 @@ export const GENERAL = {
     actionLink: (label: string) => `[data-test-action-text="${label}"]`,
   },
   pagination: {
+    info: '.hds-pagination-info',
     next: '.hds-pagination-nav__arrow--direction-next',
     prev: '.hds-pagination-nav__arrow--direction-prev',
   },

@@ -20,6 +20,7 @@ import {
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { KV_METADATA_DETAILS } from 'vault/tests/helpers/components/kv/page/secret/metadata/details-selectors';
 import { KV_SECRET } from 'vault/tests/helpers/components/kv/page/secret/details-selectors';
+import { KV_LIST } from 'vault/tests/helpers/components/kv/page/list-selectors';
 
 const ALL_DELETE_ACTIONS = ['delete', 'destroy', 'undelete'];
 const assertDeleteActions = (assert, expected = ['delete', 'destroy']) => {
@@ -375,16 +376,16 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // go to nested secret directory list view
       await visit(`/vault/secrets/${this.backend}/kv/list/app/nested`);
       // correct popup menu items appear on list view
-      const popupSelector = `${KV_WORKFLOW.list.item('bad-secret')} ${GENERAL.menuTrigger}`;
+      const popupSelector = `${KV_LIST.item('bad-secret')} ${GENERAL.menuTrigger}`;
       await click(popupSelector);
-      assert.dom(KV_WORKFLOW.list.listMenuDelete).exists('shows the option to permanently delete');
+      assert.dom(KV_LIST.listMenuDelete).exists('shows the option to permanently delete');
     });
     test('can not delete all secret versions from root list view (snc)', async function (assert) {
       assert.expect(1);
       // go to root secret directory list view
       await visit(`/vault/secrets/${this.backend}/kv/list`);
       // shows overview card and not list view
-      assert.dom(KV_WORKFLOW.list.overviewCard).exists('renders overview card');
+      assert.dom(KV_LIST.overviewCard).exists('renders overview card');
     });
   });
 

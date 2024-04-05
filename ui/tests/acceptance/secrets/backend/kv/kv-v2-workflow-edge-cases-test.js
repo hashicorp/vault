@@ -33,6 +33,7 @@ import codemirror from 'vault/tests/helpers/codemirror';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { KV_METADATA_DETAILS } from 'vault/tests/helpers/components/kv/page/secret/metadata/details-selectors';
 import { KV_SECRET } from 'vault/tests/helpers/components/kv/page/secret/details-selectors';
+import { KV_LIST } from 'vault/tests/helpers/components/kv/page/list-selectors';
 
 /**
  * This test set is for testing edge cases, such as specific bug fixes or reported user workflows
@@ -84,16 +85,16 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       await visit(`/vault/secrets/${backend}/kv/list`);
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list`, 'lands on secrets list page');
 
-      await typeIn(KV_WORKFLOW.list.overviewInput, `${root}/no-access/`);
+      await typeIn(KV_LIST.overviewInput, `${root}/no-access/`);
       assert
-        .dom(KV_WORKFLOW.list.overviewButton)
+        .dom(KV_LIST.overviewButton)
         .hasText('View list', 'shows list and not secret because search is a directory');
-      await click(KV_WORKFLOW.list.overviewButton);
+      await click(KV_LIST.overviewButton);
       assert.dom(GENERAL.emptyStateTitle).hasText(`There are no secrets matching "${root}/no-access/".`);
 
       await visit(`/vault/secrets/${backend}/kv/list`);
-      await typeIn(KV_WORKFLOW.list.overviewInput, `${root}/`); // add slash because this is a directory
-      await click(KV_WORKFLOW.list.overviewButton);
+      await typeIn(KV_LIST.overviewInput, `${root}/`); // add slash because this is a directory
+      await click(KV_LIST.overviewButton);
 
       // URL correct
       assert.strictEqual(
@@ -111,12 +112,12 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert.dom(GENERAL.tab('Configuration')).doesNotHaveClass('active');
       // Toolbar correct
       assert.dom(KV_WORKFLOW.toolbarAction).exists({ count: 1 }, 'toolbar only renders create secret action');
-      assert.dom(KV_WORKFLOW.list.filter).hasValue(`${root}/`);
+      assert.dom(KV_LIST.filter).hasValue(`${root}/`);
       // List content correct
-      assert.dom(KV_WORKFLOW.list.item(`${subdirectory}/`)).exists('renders linked block for subdirectory');
-      await click(KV_WORKFLOW.list.item(`${subdirectory}/`));
-      assert.dom(KV_WORKFLOW.list.item(secret)).exists('renders linked block for child secret');
-      await click(KV_WORKFLOW.list.item(secret));
+      assert.dom(KV_LIST.item(`${subdirectory}/`)).exists('renders linked block for subdirectory');
+      await click(KV_LIST.item(`${subdirectory}/`));
+      assert.dom(KV_LIST.item(secret)).exists('renders linked block for child secret');
+      await click(KV_LIST.item(secret));
       // Secret details visible
       assert.dom(GENERAL.title).hasText(this.fullSecretPath);
       assert.dom(GENERAL.tab('Secret')).hasText('Secret');
@@ -142,8 +143,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
         `/vault/secrets/${backend}/kv/list/${root}/${subdirectory}/`,
         'goes back to subdirectory list'
       );
-      assert.dom(KV_WORKFLOW.list.filter).hasValue(`${root}/${subdirectory}/`);
-      assert.dom(KV_WORKFLOW.list.item(secret)).exists('renders linked block for child secret');
+      assert.dom(KV_LIST.filter).hasValue(`${root}/${subdirectory}/`);
+      assert.dom(KV_LIST.item(secret)).exists('renders linked block for child secret');
 
       // back again
       previousCrumb = findAll('[data-test-breadcrumbs] li').length - 2;
@@ -153,7 +154,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
         `/vault/secrets/${backend}/kv/list/${root}/`,
         'goes back to root directory'
       );
-      assert.dom(KV_WORKFLOW.list.item(`${subdirectory}/`)).exists('renders linked block for subdirectory');
+      assert.dom(KV_LIST.item(`${subdirectory}/`)).exists('renders linked block for subdirectory');
 
       // and back to the engine list view
       previousCrumb = findAll('[data-test-breadcrumbs] li').length - 2;
@@ -172,8 +173,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       setupOnerror((error) => assert.strictEqual(error.httpStatus, 404), '404 error is thrown'); // catches error so qunit test doesn't fail
 
       await visit(`/vault/secrets/${backend}/kv/list`);
-      await typeIn(KV_WORKFLOW.list.overviewInput, `${root}/${subdirectory}`); // intentionally leave out trailing slash
-      await click(KV_WORKFLOW.list.overviewButton);
+      await typeIn(KV_LIST.overviewInput, `${root}/${subdirectory}`); // intentionally leave out trailing slash
+      await click(KV_LIST.overviewButton);
       assert.dom(KV_WORKFLOW.error.title).hasText('404 Not Found');
       assert
         .dom(KV_WORKFLOW.error.message)
@@ -268,15 +269,15 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
   test('no ghost item after editing metadata', async function (assert) {
     await visit(`/vault/secrets/${this.backend}/kv/list/edge/`);
-    assert.dom(KV_WORKFLOW.list.item()).exists({ count: 2 }, 'two secrets are listed');
-    await click(KV_WORKFLOW.list.item('two'));
+    assert.dom(KV_LIST.item()).exists({ count: 2 }, 'two secrets are listed');
+    await click(KV_LIST.item('two'));
     await click(GENERAL.tab('Metadata'));
     await click(KV_METADATA_DETAILS.editBtn);
     await fillIn(KV_FORM.keyInput(), 'foo');
     await fillIn(KV_FORM.valueInput(), 'bar');
     await click(GENERAL.saveButton);
     await click(GENERAL.breadcrumbAtIdx(2));
-    assert.dom(KV_WORKFLOW.list.item()).exists({ count: 2 }, 'two secrets are listed');
+    assert.dom(KV_LIST.item()).exists({ count: 2 }, 'two secrets are listed');
   });
 
   test('advanced secret values default to JSON display', async function (assert) {
@@ -436,7 +437,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
         'navigates to list'
       );
       // Create first version of secret
-      await click(KV_WORKFLOW.list.createSecret);
+      await click(KV_LIST.createSecret);
       await fillIn(GENERAL.inputByAttr('path'), secret);
       assert.dom(KV_FORM.toggleMetadata).exists('Shows metadata toggle when creating new secret');
       await fillIn(KV_FORM.keyInput(), 'foo');
@@ -484,7 +485,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       await writeVersionedSecret(backend, secret, 'foo', 'bar', 2, ns);
       await navToEngine(backend);
 
-      await click(KV_WORKFLOW.list.item(secret));
+      await click(KV_LIST.item(secret));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${secret}/details?namespace=${ns}&version=2`,

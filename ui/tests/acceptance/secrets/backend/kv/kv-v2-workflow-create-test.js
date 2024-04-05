@@ -21,6 +21,7 @@ import { grantAccessForWrite, setupControlGroup } from 'vault/tests/helpers/cont
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { KV_METADATA_DETAILS } from 'vault/tests/helpers/components/kv/page/secret/metadata/details-selectors';
 import { KV_SECRET } from 'vault/tests/helpers/components/kv/page/secret/details-selectors';
+import { KV_LIST } from 'vault/tests/helpers/components/kv/page/list-selectors';
 
 /**
  * This test set is for testing the flow for creating new secrets and versions.
@@ -53,18 +54,18 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('cancel on create clears model (a)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list`);
-      assert.dom(KV_WORKFLOW.list.item()).exists({ count: 1 }, 'single secret exists on list');
-      assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
-      await click(KV_WORKFLOW.list.createSecret);
+      assert.dom(KV_LIST.item()).exists({ count: 1 }, 'single secret exists on list');
+      assert.dom(KV_LIST.item('app/')).hasText('app/', 'expected list item');
+      await click(KV_LIST.createSecret);
       await fillIn(GENERAL.inputByAttr('path'), 'jk');
       await click(GENERAL.cancelButton);
-      assert.dom(KV_WORKFLOW.list.item()).exists({ count: 1 }, 'same amount of secrets');
-      assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
-      await click(KV_WORKFLOW.list.createSecret);
+      assert.dom(KV_LIST.item()).exists({ count: 1 }, 'same amount of secrets');
+      assert.dom(KV_LIST.item('app/')).hasText('app/', 'expected list item');
+      await click(KV_LIST.createSecret);
       await fillIn(GENERAL.inputByAttr('path'), 'psych');
       await click(GENERAL.breadcrumbAtIdx(1));
-      assert.dom(KV_WORKFLOW.list.item()).exists({ count: 1 }, 'same amount of secrets');
-      assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
+      assert.dom(KV_LIST.item()).exists({ count: 1 }, 'same amount of secrets');
+      assert.dom(KV_LIST.item('app/')).hasText('app/', 'expected list item');
     });
     test('cancel on new version rolls back model (a)', async function (assert) {
       const backend = this.backend;
@@ -83,7 +84,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const backend = this.backend;
       const secretPath = 'some secret';
       await visit(`/vault/secrets/${backend}/kv/list`);
-      await click(KV_WORKFLOW.list.createSecret);
+      await click(KV_LIST.createSecret);
 
       // Create secret form -- validations
       await click(GENERAL.saveButton);
@@ -162,7 +163,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('create nested secret with metadata (a)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list`);
-      await click(KV_WORKFLOW.list.createSecret);
+      await click(KV_LIST.createSecret);
 
       // Create secret
       await typeIn(GENERAL.inputByAttr('path'), 'my/');
@@ -230,9 +231,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('creates a secret at a sub-directory (a)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list/app/`);
-      assert.dom(KV_WORKFLOW.list.item('first')).exists('Lists first sub-secret');
-      assert.dom(KV_WORKFLOW.list.item('new')).doesNotExist('Does not show new secret');
-      await click(KV_WORKFLOW.list.createSecret);
+      assert.dom(KV_LIST.item('first')).exists('Lists first sub-secret');
+      assert.dom(KV_LIST.item('new')).doesNotExist('Does not show new secret');
+      await click(KV_LIST.createSecret);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/create?initialKey=app%2F`,
@@ -249,7 +250,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       );
       await click(GENERAL.breadcrumbAtIdx(2));
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`, 'sub-dir page');
-      assert.dom(KV_WORKFLOW.list.item('new')).exists('Lists new secret in sub-dir');
+      assert.dom(KV_LIST.item('new')).exists('Lists new secret in sub-dir');
     });
     test('create new version of secret from older version (a)', async function (assert) {
       const backend = this.backend;
@@ -303,15 +304,15 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('cancel on create clears model (dr)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list`);
-      assert.dom(KV_WORKFLOW.list.item()).doesNotExist('list view has no items');
-      await click(KV_WORKFLOW.list.createSecret);
+      assert.dom(KV_LIST.item()).doesNotExist('list view has no items');
+      await click(KV_LIST.createSecret);
       await fillIn(GENERAL.inputByAttr('path'), 'jk');
       await click(GENERAL.cancelButton);
-      assert.dom(KV_WORKFLOW.list.item()).doesNotExist('list view still has no items');
-      await click(KV_WORKFLOW.list.createSecret);
+      assert.dom(KV_LIST.item()).doesNotExist('list view still has no items');
+      await click(KV_LIST.createSecret);
       await fillIn(GENERAL.inputByAttr('path'), 'psych');
       await click(GENERAL.breadcrumbAtIdx(1));
-      assert.dom(KV_WORKFLOW.list.item()).doesNotExist('list view still has no items');
+      assert.dom(KV_LIST.item()).doesNotExist('list view still has no items');
     });
     test('cancel on new version rolls back model (dr)', async function (assert) {
       const backend = this.backend;
@@ -323,7 +324,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const backend = this.backend;
       const secretPath = 'some secret';
       await visit(`/vault/secrets/${backend}/kv/list`);
-      await click(KV_WORKFLOW.list.createSecret);
+      await click(KV_LIST.createSecret);
 
       // Create secret form -- validations
       await click(GENERAL.saveButton);
@@ -367,7 +368,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('create nested secret with metadata (dr)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list`);
-      await click(KV_WORKFLOW.list.createSecret);
+      await click(KV_LIST.createSecret);
 
       // Create secret
       await typeIn(GENERAL.inputByAttr('path'), 'my/');
@@ -409,8 +410,8 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('creates a secret at a sub-directory (dr)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list/app/`);
-      assert.dom(KV_WORKFLOW.list.item()).doesNotExist('Does not list any secrets');
-      await click(KV_WORKFLOW.list.createSecret);
+      assert.dom(KV_LIST.item()).doesNotExist('Does not list any secrets');
+      await click(KV_LIST.createSecret);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/create?initialKey=app%2F`,
@@ -445,18 +446,18 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('cancel on create clears model (dlr)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list`);
-      assert.dom(KV_WORKFLOW.list.item()).exists({ count: 1 }, 'single secret exists on list');
-      assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
-      await click(KV_WORKFLOW.list.createSecret);
+      assert.dom(KV_LIST.item()).exists({ count: 1 }, 'single secret exists on list');
+      assert.dom(KV_LIST.item('app/')).hasText('app/', 'expected list item');
+      await click(KV_LIST.createSecret);
       await fillIn(GENERAL.inputByAttr('path'), 'jk');
       await click(GENERAL.cancelButton);
-      assert.dom(KV_WORKFLOW.list.item()).exists({ count: 1 }, 'same amount of secrets');
-      assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
-      await click(KV_WORKFLOW.list.createSecret);
+      assert.dom(KV_LIST.item()).exists({ count: 1 }, 'same amount of secrets');
+      assert.dom(KV_LIST.item('app/')).hasText('app/', 'expected list item');
+      await click(KV_LIST.createSecret);
       await fillIn(GENERAL.inputByAttr('path'), 'psych');
       await click(GENERAL.breadcrumbAtIdx(1));
-      assert.dom(KV_WORKFLOW.list.item()).exists({ count: 1 }, 'same amount of secrets');
-      assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
+      assert.dom(KV_LIST.item()).exists({ count: 1 }, 'same amount of secrets');
+      assert.dom(KV_LIST.item('app/')).hasText('app/', 'expected list item');
     });
     test('cancel on new version rolls back model (dlr)', async function (assert) {
       const backend = this.backend;
@@ -468,7 +469,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const backend = this.backend;
       const secretPath = 'some secret';
       await visit(`/vault/secrets/${backend}/kv/list`);
-      await click(KV_WORKFLOW.list.createSecret);
+      await click(KV_LIST.createSecret);
 
       // Create secret form -- validations
       await click(GENERAL.saveButton);
@@ -512,7 +513,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('create nested secret with metadata (dlr)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list`);
-      await click(KV_WORKFLOW.list.createSecret);
+      await click(KV_LIST.createSecret);
 
       // Create secret
       await typeIn(GENERAL.inputByAttr('path'), 'my/');
@@ -554,8 +555,8 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('creates a secret at a sub-directory (dlr)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list/app/`);
-      assert.dom(KV_WORKFLOW.list.item()).doesNotExist('Does not list any secrets');
-      await click(KV_WORKFLOW.list.createSecret);
+      assert.dom(KV_LIST.item()).doesNotExist('Does not list any secrets');
+      await click(KV_LIST.createSecret);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/create?initialKey=app%2F`,
@@ -590,18 +591,18 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('cancel on create clears model (mm)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list`);
-      assert.dom(KV_WORKFLOW.list.item()).exists({ count: 1 }, 'single secret exists on list');
-      assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
-      await click(KV_WORKFLOW.list.createSecret);
+      assert.dom(KV_LIST.item()).exists({ count: 1 }, 'single secret exists on list');
+      assert.dom(KV_LIST.item('app/')).hasText('app/', 'expected list item');
+      await click(KV_LIST.createSecret);
       await fillIn(GENERAL.inputByAttr('path'), 'jk');
       await click(GENERAL.cancelButton);
-      assert.dom(KV_WORKFLOW.list.item()).exists({ count: 1 }, 'same amount of secrets');
-      assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
-      await click(KV_WORKFLOW.list.createSecret);
+      assert.dom(KV_LIST.item()).exists({ count: 1 }, 'same amount of secrets');
+      assert.dom(KV_LIST.item('app/')).hasText('app/', 'expected list item');
+      await click(KV_LIST.createSecret);
       await fillIn(GENERAL.inputByAttr('path'), 'psych');
       await click(GENERAL.breadcrumbAtIdx(1));
-      assert.dom(KV_WORKFLOW.list.item()).exists({ count: 1 }, 'same amount of secrets');
-      assert.dom(KV_WORKFLOW.list.item('app/')).hasText('app/', 'expected list item');
+      assert.dom(KV_LIST.item()).exists({ count: 1 }, 'same amount of secrets');
+      assert.dom(KV_LIST.item('app/')).hasText('app/', 'expected list item');
     });
     test('cancel on new version rolls back model (mm)', async function (assert) {
       const backend = this.backend;
@@ -615,7 +616,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const backend = this.backend;
       const secretPath = 'some secret';
       await visit(`/vault/secrets/${backend}/kv/list`);
-      await click(KV_WORKFLOW.list.createSecret);
+      await click(KV_LIST.createSecret);
 
       // Create secret form -- validations
       await click(GENERAL.saveButton);
@@ -683,7 +684,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('create nested secret with metadata (mm)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list`);
-      await click(KV_WORKFLOW.list.createSecret);
+      await click(KV_LIST.createSecret);
 
       // Create secret
       await typeIn(GENERAL.inputByAttr('path'), 'my/');
@@ -725,9 +726,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('creates a secret at a sub-directory (mm)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list/app/`);
-      assert.dom(KV_WORKFLOW.list.item('first')).exists('Lists first sub-secret');
-      assert.dom(KV_WORKFLOW.list.item('new')).doesNotExist('Does not show new secret');
-      await click(KV_WORKFLOW.list.createSecret);
+      assert.dom(KV_LIST.item('first')).exists('Lists first sub-secret');
+      assert.dom(KV_LIST.item('new')).doesNotExist('Does not show new secret');
+      await click(KV_LIST.createSecret);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/create?initialKey=app%2F`,
@@ -791,15 +792,15 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('cancel on create clears model (sc)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list`);
-      assert.dom(KV_WORKFLOW.list.item()).doesNotExist('list view has no items');
-      await click(KV_WORKFLOW.list.createSecret);
+      assert.dom(KV_LIST.item()).doesNotExist('list view has no items');
+      await click(KV_LIST.createSecret);
       await fillIn(GENERAL.inputByAttr('path'), 'jk');
       await click(GENERAL.cancelButton);
-      assert.dom(KV_WORKFLOW.list.item()).doesNotExist('list view still has no items');
-      await click(KV_WORKFLOW.list.createSecret);
+      assert.dom(KV_LIST.item()).doesNotExist('list view still has no items');
+      await click(KV_LIST.createSecret);
       await fillIn(GENERAL.inputByAttr('path'), 'psych');
       await click(GENERAL.breadcrumbAtIdx(1));
-      assert.dom(KV_WORKFLOW.list.item()).doesNotExist('list view still has no items');
+      assert.dom(KV_LIST.item()).doesNotExist('list view still has no items');
     });
     test('cancel on new version rolls back model (sc)', async function (assert) {
       const backend = this.backend;
@@ -815,7 +816,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`,
         'cancel goes to correct url'
       );
-      assert.dom(KV_WORKFLOW.list.item()).doesNotExist('list view has no items');
+      assert.dom(KV_LIST.item()).doesNotExist('list view has no items');
       await click(KV_SECRET.createNewVersion);
       await fillIn(KV_FORM.keyInput(), 'bar');
       await click(GENERAL.breadcrumbAtIdx(3));
@@ -824,13 +825,13 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`,
         'breadcrumb goes to correct url'
       );
-      assert.dom(KV_WORKFLOW.list.item()).doesNotExist('list view has no items');
+      assert.dom(KV_LIST.item()).doesNotExist('list view has no items');
     });
     test('create & update root secret with default metadata (sc)', async function (assert) {
       const backend = this.backend;
       const secretPath = 'some secret';
       await visit(`/vault/secrets/${backend}/kv/list`);
-      await click(KV_WORKFLOW.list.createSecret);
+      await click(KV_LIST.createSecret);
 
       // Create secret form -- validations
       await click(GENERAL.saveButton);
@@ -905,7 +906,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('create nested secret with metadata (sc)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list`);
-      await click(KV_WORKFLOW.list.createSecret);
+      await click(KV_LIST.createSecret);
 
       // Create secret
       await typeIn(GENERAL.inputByAttr('path'), 'my/');
@@ -968,8 +969,8 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('creates a secret at a sub-directory (sc)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list/app/`);
-      assert.dom(KV_WORKFLOW.list.item()).doesNotExist('Does not list any secrets');
-      await click(KV_WORKFLOW.list.createSecret);
+      assert.dom(KV_LIST.item()).doesNotExist('Does not list any secrets');
+      await click(KV_LIST.createSecret);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/create?initialKey=app%2F`,
@@ -986,7 +987,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       );
       await click(GENERAL.breadcrumbAtIdx(2));
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`, 'sub-dir page');
-      assert.dom(KV_WORKFLOW.list.item()).doesNotExist('Does not list any secrets');
+      assert.dom(KV_LIST.item()).doesNotExist('Does not list any secrets');
     });
     test('create new version of secret from older version (sc)', async function (assert) {
       const backend = this.backend;
@@ -1041,9 +1042,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // go to nested secret directory list view
       await visit(`/vault/secrets/${this.backend}/kv/list/app/`);
       // correct popup menu items appear on list view
-      const popupSelector = `${KV_WORKFLOW.list.item('first')} ${GENERAL.menuTrigger}`;
+      const popupSelector = `${KV_LIST.item('first')} ${GENERAL.menuTrigger}`;
       await click(popupSelector);
-      assert.dom(KV_WORKFLOW.list.listMenuCreate).exists('shows the option to create new version');
+      assert.dom(KV_LIST.listMenuCreate).exists('shows the option to create new version');
     });
   });
 
@@ -1087,7 +1088,7 @@ path "${this.backend}/metadata/*" {
       // Known issue: control groups do not work correctly in UI when encodable characters in path
       const secretPath = 'some-secret';
       await visit(`/vault/secrets/${backend}/kv/list`);
-      await click(KV_WORKFLOW.list.createSecret);
+      await click(KV_LIST.createSecret);
 
       // Create secret form -- validations
       await click(GENERAL.saveButton);

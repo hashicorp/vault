@@ -29,6 +29,7 @@ import { setupControlGroup, grantAccess } from 'vault/tests/helpers/control-grou
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { KV_METADATA_DETAILS } from 'vault/tests/helpers/components/kv/page/secret/metadata/details-selectors';
 import { KV_SECRET } from 'vault/tests/helpers/components/kv/page/secret/details-selectors';
+import { KV_LIST } from 'vault/tests/helpers/components/kv/page/list-selectors';
 
 const secretPath = `my-#:$=?-secret`;
 // This doesn't encode in a normal way, so hardcoding it here until we sort that out
@@ -129,15 +130,13 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(GENERAL.tab('Configuration')).doesNotHaveClass('active');
       // Toolbar correct
       assert.dom(KV_WORKFLOW.toolbar).exists({ count: 1 }, 'toolbar renders');
-      assert
-        .dom(KV_WORKFLOW.list.filter)
-        .doesNotExist('List filter does not show because no secrets exists.');
+      assert.dom(KV_LIST.filter).doesNotExist('List filter does not show because no secrets exists.');
       // Page content correct
       assert.dom(GENERAL.emptyStateTitle).hasText('No secrets yet');
-      assert.dom(KV_WORKFLOW.list.createSecret).hasText('Create secret');
+      assert.dom(KV_LIST.createSecret).hasText('Create secret');
 
       // click toolbar CTA
-      await click(KV_WORKFLOW.list.createSecret);
+      await click(KV_LIST.createSecret);
       assert.ok(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/create`),
         `url includes /vault/secrets/${backend}/kv/create`
@@ -157,24 +156,24 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(GENERAL.title).hasText(`${backend} version 2`, 'title text correct');
       assert.dom(GENERAL.emptyStateTitle).doesNotExist('No empty state');
       assertCorrectBreadcrumbs(assert, ['secret', backend]);
-      assert.dom(KV_WORKFLOW.list.filter).hasNoValue('List filter input is empty');
+      assert.dom(KV_LIST.filter).hasNoValue('List filter input is empty');
 
       // Navigate through list items
-      await click(KV_WORKFLOW.list.item('app/'));
+      await click(KV_LIST.item('app/'));
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`);
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app']);
       assert.dom(GENERAL.title).hasText(`${backend} version 2`);
-      assert.dom(KV_WORKFLOW.list.filter).hasValue('app/', 'List filter input is prefilled');
-      assert.dom(KV_WORKFLOW.list.item('nested/')).exists('Shows nested secret');
+      assert.dom(KV_LIST.filter).hasValue('app/', 'List filter input is prefilled');
+      assert.dom(KV_LIST.item('nested/')).exists('Shows nested secret');
 
-      await click(KV_WORKFLOW.list.item('nested/'));
+      await click(KV_LIST.item('nested/'));
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/nested/`);
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested']);
       assert.dom(GENERAL.title).hasText(`${backend} version 2`);
-      assert.dom(KV_WORKFLOW.list.filter).hasValue('app/nested/', 'List filter input is prefilled');
-      assert.dom(KV_WORKFLOW.list.item('secret')).exists('Shows deeply nested secret');
+      assert.dom(KV_LIST.filter).hasValue('app/nested/', 'List filter input is prefilled');
+      assert.dom(KV_LIST.item('secret')).exists('Shows deeply nested secret');
 
-      await click(KV_WORKFLOW.list.item('secret'));
+      await click(KV_LIST.item('secret'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details?version=1`
@@ -225,7 +224,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.expect(45);
       const backend = this.backend;
       await navToBackend(backend);
-      await click(KV_WORKFLOW.list.item(secretPath));
+      await click(KV_LIST.item(secretPath));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details?version=3`,
@@ -321,7 +320,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['secrets', backend]);
       assert.dom(GENERAL.title).hasText(`${backend} version 2`, 'correct page title for secret list');
 
-      await click(KV_WORKFLOW.list.item(secretPath));
+      await click(KV_LIST.item(secretPath));
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath]);
       assert.dom(GENERAL.title).hasText(secretPath, 'correct page title for secret detail');
 
@@ -381,23 +380,23 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       // Toolbar correct
       assert.dom(KV_WORKFLOW.toolbar).exists({ count: 1 }, 'toolbar renders');
       assert
-        .dom(KV_WORKFLOW.list.filter)
+        .dom(KV_LIST.filter)
         .doesNotExist('list filter input does not render because no list capabilities');
       // Page content correct
       assert
         .dom(GENERAL.emptyStateTitle)
         .doesNotExist('empty state does not render because no metadata access to list');
-      assert.dom(KV_WORKFLOW.list.overviewCard).exists('renders overview card');
+      assert.dom(KV_LIST.overviewCard).exists('renders overview card');
 
-      await typeIn(KV_WORKFLOW.list.overviewInput, 'directory/');
-      await click(KV_WORKFLOW.list.overviewButton);
+      await typeIn(KV_LIST.overviewInput, 'directory/');
+      await click(KV_LIST.overviewButton);
       assert
         .dom('[data-test-inline-error-message]')
         .hasText('You do not have the required permissions or the directory does not exist.');
 
       // click toolbar CTA
       await visit(`/vault/secrets/${backend}/kv/list`);
-      await click(KV_WORKFLOW.list.createSecret);
+      await click(KV_LIST.createSecret);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/create`,
@@ -420,11 +419,11 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(GENERAL.emptyStateTitle).doesNotExist('No empty state');
       assertCorrectBreadcrumbs(assert, ['secret', backend]);
       assert
-        .dom(KV_WORKFLOW.list.filter)
+        .dom(KV_LIST.filter)
         .doesNotExist('List filter input does not render because no list capabilities');
 
-      await typeIn(KV_WORKFLOW.list.overviewInput, 'app/nested/secret');
-      await click(KV_WORKFLOW.list.overviewButton);
+      await typeIn(KV_LIST.overviewInput, 'app/nested/secret');
+      await click(KV_LIST.overviewButton);
 
       // Goes to correct detail view
       assert.strictEqual(
@@ -456,8 +455,8 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await navToBackend(backend);
 
       // Navigate to secret
-      await typeIn(KV_WORKFLOW.list.overviewInput, secretPath);
-      await click(KV_WORKFLOW.list.overviewButton);
+      await typeIn(KV_LIST.overviewInput, secretPath);
+      await click(KV_LIST.overviewButton);
 
       assert.strictEqual(
         currentURL(),
@@ -508,8 +507,8 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['secrets', backend]);
       assert.dom(GENERAL.title).hasText(`${backend} version 2`, 'title correct on secrets list');
 
-      await typeIn(KV_WORKFLOW.list.overviewInput, 'app/nested/secret');
-      await click(KV_WORKFLOW.list.overviewButton);
+      await typeIn(KV_LIST.overviewInput, 'app/nested/secret');
+      await click(KV_LIST.overviewButton);
       assertCorrectBreadcrumbs(assert, ['secrets', backend, 'app', 'nested', 'secret']);
       assert.dom(GENERAL.title).hasText('app/nested/secret', 'title correct on secret detail');
 
@@ -561,15 +560,13 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(GENERAL.tab('Configuration')).doesNotHaveClass('active');
       // Toolbar correct
       assert.dom(KV_WORKFLOW.toolbar).exists({ count: 1 }, 'toolbar renders');
-      assert
-        .dom(KV_WORKFLOW.list.filter)
-        .doesNotExist('List filter does not show because no secrets exists.');
+      assert.dom(KV_LIST.filter).doesNotExist('List filter does not show because no secrets exists.');
       // Page content correct
       assert.dom(GENERAL.emptyStateTitle).hasText('No secrets yet');
-      assert.dom(KV_WORKFLOW.list.createSecret).hasText('Create secret');
+      assert.dom(KV_LIST.createSecret).hasText('Create secret');
 
       // click toolbar CTA
-      await click(KV_WORKFLOW.list.createSecret);
+      await click(KV_LIST.createSecret);
       assert.ok(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/create`),
         `url includes /vault/secrets/${backend}/kv/create`
@@ -589,20 +586,18 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(GENERAL.title).hasText(`${backend} version 2`, 'title text correct');
       assert.dom(GENERAL.emptyStateTitle).doesNotExist('No empty state');
       assertCorrectBreadcrumbs(assert, ['secret', backend]);
-      assert.dom(KV_WORKFLOW.list.filter).hasNoValue('List filter input is empty');
+      assert.dom(KV_LIST.filter).hasNoValue('List filter input is empty');
 
       // Navigate through list items
-      await click(KV_WORKFLOW.list.item('app/'));
+      await click(KV_LIST.item('app/'));
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`);
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app']);
       assert.dom(GENERAL.title).hasText(`${backend} version 2`);
-      assert.dom(KV_WORKFLOW.list.filter).doesNotExist('List filter hidden since no nested list access');
+      assert.dom(KV_LIST.filter).doesNotExist('List filter hidden since no nested list access');
 
-      assert
-        .dom(KV_WORKFLOW.list.overviewInput)
-        .hasValue('app/', 'overview card is pre-filled with directory param');
-      await typeIn(KV_WORKFLOW.list.overviewInput, 'nested/secret');
-      await click(KV_WORKFLOW.list.overviewButton);
+      assert.dom(KV_LIST.overviewInput).hasValue('app/', 'overview card is pre-filled with directory param');
+      await typeIn(KV_LIST.overviewInput, 'nested/secret');
+      await click(KV_LIST.overviewButton);
 
       assert.strictEqual(
         currentURL(),
@@ -631,7 +626,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.expect(28);
       const backend = this.backend;
       await navToBackend(backend);
-      await click(KV_WORKFLOW.list.item(secretPath));
+      await click(KV_LIST.item(secretPath));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details?version=3`,
@@ -683,7 +678,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['secrets', backend]);
       assert.dom(GENERAL.title).hasText(`${backend} version 2`, 'correct page title for secret list');
 
-      await click(KV_WORKFLOW.list.item(secretPath));
+      await click(KV_LIST.item(secretPath));
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath]);
       assert.dom(GENERAL.title).hasText(secretPath, 'correct page title for secret detail');
 
@@ -734,15 +729,13 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(GENERAL.tab('Configuration')).doesNotHaveClass('active');
       // Toolbar correct
       assert.dom(KV_WORKFLOW.toolbar).exists({ count: 1 }, 'toolbar only renders create secret action');
-      assert
-        .dom(KV_WORKFLOW.list.filter)
-        .doesNotExist('List filter does not show because no secrets exists.');
+      assert.dom(KV_LIST.filter).doesNotExist('List filter does not show because no secrets exists.');
       // Page content correct
       assert.dom(GENERAL.emptyStateTitle).hasText('No secrets yet');
-      assert.dom(KV_WORKFLOW.list.createSecret).hasText('Create secret');
+      assert.dom(KV_LIST.createSecret).hasText('Create secret');
 
       // click toolbar CTA
-      await click(KV_WORKFLOW.list.createSecret);
+      await click(KV_LIST.createSecret);
       assert.ok(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/create`),
         `url includes /vault/secrets/${backend}/kv/create`
@@ -762,24 +755,24 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(GENERAL.title).hasText(`${backend} version 2`, 'title text correct');
       assert.dom(GENERAL.emptyStateTitle).doesNotExist('No empty state');
       assertCorrectBreadcrumbs(assert, ['secret', backend]);
-      assert.dom(KV_WORKFLOW.list.filter).hasNoValue('List filter input is empty');
+      assert.dom(KV_LIST.filter).hasNoValue('List filter input is empty');
 
       // Navigate through list items
-      await click(KV_WORKFLOW.list.item('app/'));
+      await click(KV_LIST.item('app/'));
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`);
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app']);
       assert.dom(GENERAL.title).hasText(`${backend} version 2`);
-      assert.dom(KV_WORKFLOW.list.filter).hasValue('app/', 'List filter input is prefilled');
-      assert.dom(KV_WORKFLOW.list.item('nested/')).exists('Shows nested secret');
+      assert.dom(KV_LIST.filter).hasValue('app/', 'List filter input is prefilled');
+      assert.dom(KV_LIST.item('nested/')).exists('Shows nested secret');
 
-      await click(KV_WORKFLOW.list.item('nested/'));
+      await click(KV_LIST.item('nested/'));
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/nested/`);
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested']);
       assert.dom(GENERAL.title).hasText(`${backend} version 2`);
-      assert.dom(KV_WORKFLOW.list.filter).hasValue('app/nested/', 'List filter input is prefilled');
-      assert.dom(KV_WORKFLOW.list.item('secret')).exists('Shows deeply nested secret');
+      assert.dom(KV_LIST.filter).hasValue('app/nested/', 'List filter input is prefilled');
+      assert.dom(KV_LIST.item('secret')).exists('Shows deeply nested secret');
 
-      await click(KV_WORKFLOW.list.item('secret'));
+      await click(KV_LIST.item('secret'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details`,
@@ -809,7 +802,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.expect(37);
       const backend = this.backend;
       await navToBackend(backend);
-      await click(KV_WORKFLOW.list.item(secretPath));
+      await click(KV_LIST.item(secretPath));
 
       assert.strictEqual(
         currentURL(),
@@ -885,7 +878,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['secrets', backend]);
       assert.dom(GENERAL.title).hasText(`${backend} version 2`, 'correct page title for secret list');
 
-      await click(KV_WORKFLOW.list.item(secretPath));
+      await click(KV_LIST.item(secretPath));
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath]);
       assert.dom(GENERAL.title).hasText(secretPath, 'correct page title for secret detail');
 
@@ -939,13 +932,13 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(GENERAL.tab('Configuration')).doesNotHaveClass('active');
       // Toolbar correct
       assert.dom(KV_WORKFLOW.toolbar).exists({ count: 1 }, 'toolbar only renders create secret action');
-      assert.dom(KV_WORKFLOW.list.filter).doesNotExist('List filter input is not rendered');
+      assert.dom(KV_LIST.filter).doesNotExist('List filter input is not rendered');
       // Page content correct
-      assert.dom(KV_WORKFLOW.list.overviewCard).exists('Overview card renders');
-      assert.dom(KV_WORKFLOW.list.createSecret).hasText('Create secret');
+      assert.dom(KV_LIST.overviewCard).exists('Overview card renders');
+      assert.dom(KV_LIST.createSecret).hasText('Create secret');
 
       // click toolbar CTA
-      await click(KV_WORKFLOW.list.createSecret);
+      await click(KV_LIST.createSecret);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/create`,
@@ -967,11 +960,11 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(GENERAL.title).hasText(`${backend} version 2`, 'title text correct');
       assert.dom(GENERAL.emptyStateTitle).doesNotExist('No empty state');
       assertCorrectBreadcrumbs(assert, ['secret', backend]);
-      assert.dom(KV_WORKFLOW.list.filter).doesNotExist('List filter input is not rendered');
+      assert.dom(KV_LIST.filter).doesNotExist('List filter input is not rendered');
 
       // Navigate to secret
-      await typeIn(KV_WORKFLOW.list.overviewInput, 'app/nested/secret');
-      await click(KV_WORKFLOW.list.overviewButton);
+      await typeIn(KV_LIST.overviewInput, 'app/nested/secret');
+      await click(KV_LIST.overviewButton);
 
       assert.strictEqual(
         currentURL(),
@@ -1002,8 +995,8 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       const backend = this.backend;
       await navToBackend(backend);
 
-      await typeIn(KV_WORKFLOW.list.overviewInput, secretPath);
-      await click(KV_WORKFLOW.list.overviewButton);
+      await typeIn(KV_LIST.overviewInput, secretPath);
+      await click(KV_LIST.overviewButton);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details`,
@@ -1083,8 +1076,8 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['secrets', backend]);
       assert.dom(GENERAL.title).hasText(`${backend} version 2`, 'correct page title for secret list');
 
-      await typeIn(KV_WORKFLOW.list.overviewInput, secretPath);
-      await click(KV_WORKFLOW.list.overviewButton);
+      await typeIn(KV_LIST.overviewInput, secretPath);
+      await click(KV_LIST.overviewButton);
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath]);
       assert.dom(GENERAL.title).hasText(secretPath, 'correct page title for secret detail');
 
@@ -1143,22 +1136,22 @@ path "${this.backend}/*" {
       assert.dom(GENERAL.title).hasText(`${backend} version 2`, 'title text correct');
       assert.dom(GENERAL.emptyStateTitle).doesNotExist('No empty state');
       assertCorrectBreadcrumbs(assert, ['secret', backend]);
-      assert.dom(KV_WORKFLOW.list.filter).hasNoValue('List filter input is empty');
+      assert.dom(KV_LIST.filter).hasNoValue('List filter input is empty');
 
       // Navigate through list items
-      await click(KV_WORKFLOW.list.item('app/'));
+      await click(KV_LIST.item('app/'));
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`);
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app']);
       assert.dom(GENERAL.title).hasText(`${backend} version 2`);
-      assert.dom(KV_WORKFLOW.list.filter).hasValue('app/', 'List filter input is prefilled');
-      assert.dom(KV_WORKFLOW.list.item('nested/')).exists('Shows nested secret');
+      assert.dom(KV_LIST.filter).hasValue('app/', 'List filter input is prefilled');
+      assert.dom(KV_LIST.item('nested/')).exists('Shows nested secret');
 
-      await click(KV_WORKFLOW.list.item('nested/'));
+      await click(KV_LIST.item('nested/'));
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/nested/`);
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested']);
       assert.dom(GENERAL.title).hasText(`${backend} version 2`);
-      assert.dom(KV_WORKFLOW.list.filter).hasValue('app/nested/', 'List filter input is prefilled');
-      assert.dom(KV_WORKFLOW.list.item('secret')).exists('Shows deeply nested secret');
+      assert.dom(KV_LIST.filter).hasValue('app/nested/', 'List filter input is prefilled');
+      assert.dom(KV_LIST.item('secret')).exists('Shows deeply nested secret');
 
       // For some reason when we click on the item in tests it throws a global control group error
       // But not when we visit the page directly
@@ -1178,7 +1171,7 @@ path "${this.backend}/*" {
         `/vault/secrets/${backend}/kv/list/app/nested/`,
         'navigates to list url where secret is'
       );
-      await click(KV_WORKFLOW.list.item('secret'));
+      await click(KV_LIST.item('secret'));
 
       assert.strictEqual(
         currentURL(),
@@ -1234,7 +1227,7 @@ path "${this.backend}/*" {
         `/vault/secrets/${backend}/kv/list`,
         'navigates back to list url after authorized'
       );
-      await click(KV_WORKFLOW.list.item(secretPath));
+      await click(KV_LIST.item(secretPath));
 
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath]);
       assert.dom(GENERAL.title).hasText(secretPath, 'correct page title for secret detail');

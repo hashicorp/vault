@@ -4,7 +4,7 @@
  */
 
 /* eslint-disable ember/no-settled-after-test-helper */
-import { settled } from '@ember/test-helpers';
+import { click, fillIn, settled, visit } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
@@ -19,7 +19,7 @@ export const KV_WORKFLOW = {
   },
   toolbar: 'nav.toolbar',
   toolbarAction: 'nav.toolbar-actions .toolbar-link, nav.toolbar-actions .toolbar-button',
-  secretRow: '[data-test-component="info-table-row"]', // replace with infoRow
+  secretRow: '[data-test-component="info-table-row"]',
   // specific page selectors
   backends: {
     link: (backend) => `[data-test-secrets-backend-link="${backend}"]`,
@@ -27,20 +27,6 @@ export const KV_WORKFLOW = {
   edit: {
     toggleDiff: '[data-test-toggle-input="Show diff"',
     toggleDiffDescription: '[data-test-diff-description]',
-  },
-  list: {
-    createSecret: '[data-test-toolbar-create-secret]',
-    item: (secret) => (!secret ? '[data-test-list-item]' : `[data-test-list-item="${secret}"]`),
-    filter: `[data-test-kv-list-filter]`,
-    listMenuDelete: `[data-test-popup-metadata-delete]`,
-    listMenuCreate: `[data-test-popup-create-new-version]`,
-    overviewCard: '[data-test-overview-card-container="View secret"]',
-    overviewInput: '[data-test-view-secret] input',
-    overviewButton: '[data-test-get-secret-detail]',
-    pagination: '[data-test-pagination]',
-    paginationInfo: '.hds-pagination-info',
-    paginationNext: '.hds-pagination-nav__arrow--direction-next',
-    paginationSelected: '.hds-pagination-nav__number--is-selected',
   },
   versions: {
     icon: (version) => `[data-test-icon-holder="${version}"]`,
