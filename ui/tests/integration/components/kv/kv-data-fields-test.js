@@ -11,7 +11,6 @@ import { hbs } from 'ember-cli-htmlbars';
 import { fillIn, render, click } from '@ember/test-helpers';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { KV_WORKFLOW, KV_FORM } from 'vault/tests/helpers/kv/kv-selectors';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
@@ -24,12 +23,6 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
     this.backend = 'my-kv-engine';
     this.path = 'my-secret';
     this.secret = this.store.createRecord('kv/data', { backend: this.backend });
-    // TODO: Fix JSONEditor/CodeMirror
-    setRunOptions({
-      rules: {
-        label: { enabled: false },
-      },
-    });
   });
 
   test('it updates the secret model', async function (assert) {

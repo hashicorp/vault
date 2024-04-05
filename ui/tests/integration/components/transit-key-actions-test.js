@@ -12,7 +12,6 @@ import { render, click, find, fillIn, blur, triggerEvent } from '@ember/test-hel
 import hbs from 'htmlbars-inline-precompile';
 import { encodeString } from 'vault/utils/b64';
 import waitForError from 'vault/tests/helpers/wait-for-error';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import codemirror from 'vault/tests/helpers/codemirror';
 
 const storeStub = Service.extend({
@@ -46,12 +45,6 @@ module('Integration | Component | transit key actions', function (hooks) {
       this.owner.unregister('service:store');
       this.owner.register('service:store', storeStub);
       this.storeService = this.owner.lookup('service:store');
-    });
-    setRunOptions({
-      rules: {
-        // TODO: fix JSONEditor/CodeMirror
-        label: { enabled: false },
-      },
     });
   });
 

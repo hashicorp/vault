@@ -12,7 +12,6 @@ import { hbs } from 'ember-cli-htmlbars';
 import { kvDataPath, kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { syncStatusResponse } from 'vault/mirage/handlers/sync';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { KV_FORM, parseJsonEditor } from 'vault/tests/helpers/kv/kv-selectors';
 import { KV_SECRET } from 'vault/tests/helpers/components/kv/page/secret/details-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -92,12 +91,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       secret: this.secretComplex,
       metadata: this.metadata,
     };
-    setRunOptions({
-      rules: {
-        // TODO: Fix JSONEditor component
-        label: { enabled: false },
-      },
-    });
   });
 
   test('it renders secret details and toggles json view', async function (assert) {
