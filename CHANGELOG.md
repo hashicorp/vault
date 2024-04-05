@@ -2,15 +2,29 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
-## 1.16.0-rc3
-### March 13, 2024
+## 1.16.1 
+### April 04, 2024
+
+**Please note that Vault 1.16.1 is the first Enterprise release of the Vault Enterprise 1.16 series.**
+
+BUG FIXES:
+
+* auth/ldap: Fix login error for group search anonymous bind. [[GH-26200](https://github.com/hashicorp/vault/pull/26200)]
+* auth/ldap: Fix login error missing entity alias attribute value. [[GH-26200](https://github.com/hashicorp/vault/pull/26200)]
+* cli: fixed a bug where the Vault CLI would error out if HOME was not set. [[GH-26243](https://github.com/hashicorp/vault/pull/26243)]
+* core: Only reload seal configuration when enable_multiseal is set to true. [[GH-26166](https://github.com/hashicorp/vault/pull/26166)]
+* secret/database: Fixed race condition where database mounts may leak connections [[GH-26147](https://github.com/hashicorp/vault/pull/26147)]
+
+## 1.16.0
+### March 26, 2024
 
 SECURITY:
 
 * auth/cert: compare public keys of trusted non-CA certificates with incoming
 client certificates to prevent trusting certs with the same serial number
-but not the same public/private key. [[GH-25649](https://github.com/hashicorp/vault/pull/25649)]
-* secrets/transit: fix a regression that was honoring nonces provided in non-convergent modes during encryption. [[GH-22852](https://github.com/hashicorp/vault/pull/22852)]
+but not the same public/private key (CVE-2024-2048). [[GH-25649](https://github.com/hashicorp/vault/pull/25649), [HSEC-2024-05](https://discuss.hashicorp.com/t/hcsec-2024-05-vault-cert-auth-method-did-not-correctly-validate-non-ca-certificates/63382)]
+* auth/cert: validate OCSP response was signed by the expected issuer and serial number matched request (CVE-2024-2660) [[GH-26091](https://github.com/hashicorp/vault/pull/26091), [HSEC-2024-07](https://discuss.hashicorp.com/t/hcsec-2024-07-vault-tls-cert-auth-method-did-not-correctly-validate-ocsp-responses/64573)]
+* secrets/transit: fix a regression that was honoring nonces provided in non-convergent modes during encryption (CVE-2023-4680) [[GH-22852](https://github.com/hashicorp/vault/pull/22852), [HSEC-2023-28](https://discuss.hashicorp.com/t/hcsec-2023-28-vault-s-transit-secrets-engine-allowed-nonce-specified-without-convergent-encryption/58249)]
 
 CHANGES:
 
@@ -26,6 +40,7 @@ CHANGES:
 * auth/gcp: Update plugin to v0.16.2 [[GH-25233](https://github.com/hashicorp/vault/pull/25233)]
 * auth/jwt: Update plugin to v0.19.0 [[GH-24972](https://github.com/hashicorp/vault/pull/24972)]
 * auth/jwt: Update plugin to v0.20.0 [[GH-25326](https://github.com/hashicorp/vault/pull/25326)]
+* auth/jwt: Update plugin to v0.20.1 [[GH-25937](https://github.com/hashicorp/vault/pull/25937)]
 * auth/kerberos: Update plugin to v0.10.1 [[GH-22797](https://github.com/hashicorp/vault/pull/22797)]
 * auth/kerberos: Update plugin to v0.11.0 [[GH-25232](https://github.com/hashicorp/vault/pull/25232)]
 * auth/kubernetes: Update plugin to v0.18.0 [[GH-25207](https://github.com/hashicorp/vault/pull/25207)]
@@ -33,6 +48,7 @@ CHANGES:
 * auth/oci: Update plugin to v0.15.1 [[GH-25245](https://github.com/hashicorp/vault/pull/25245)]
 * cli: Using `vault plugin reload` with `-plugin` in the root namespace will now reload the plugin across all namespaces instead of just the root namespace. [[GH-24878](https://github.com/hashicorp/vault/pull/24878)]
 * cli: `vault plugin info` and `vault plugin deregister` now require 2 positional arguments instead of accepting either 1 or 2. [[GH-24250](https://github.com/hashicorp/vault/pull/24250)]
+* core (enterprise): Seal High Availability (HA) must be enabled by `enable_multiseal` in configuration.
 * core: Bump Go version to 1.21.8.
 * database/couchbase: Update plugin to v0.10.1 [[GH-25275](https://github.com/hashicorp/vault/pull/25275)]
 * database/elasticsearch: Update plugin to v0.14.0 [[GH-25263](https://github.com/hashicorp/vault/pull/25263)]
@@ -101,6 +117,8 @@ overloading the Vault server. [[GH-25093](https://github.com/hashicorp/vault/pul
 * **Secrets Sync UI (enterprise)**: Adds secret syncing for KV v2 secrets to external destinations using the UI. [[GH-23667](https://github.com/hashicorp/vault/pull/23667)]
 * **Vault PKI EST Server (Enterprise/Beta)**: Beta support for the PKI Enrollment over Secure Transport (EST) certificate management protocol has been added to the Vault PKI Plugin. This allows standard EST clients to request certificates from a Vault server with no knowledge of Vault APIs.
 * **Vault Proxy Static Secret Caching (enterprise)**: Adds support for static secret (KVv1 and KVv2) caching to Vault Proxy. [[GH-23621](https://github.com/hashicorp/vault/pull/23621)]
+* **secrets-import (enterprise)**: Support importing secrets from external sources into KVv2
+* **secrets/aws**: Support issuing an STS Session Token directly from the root credential. [[GH-23690](https://github.com/hashicorp/vault/pull/23690)]
 
 IMPROVEMENTS:
 
@@ -111,16 +129,20 @@ IMPROVEMENTS:
 * api (enterprise): Enable the sys/license/features from any namespace
 * api/plugins: add `tls-server-name` arg for plugin registration [[GH-23549](https://github.com/hashicorp/vault/pull/23549)]
 * api: Add wrapper functions for GET /sys/mounts/:path and GET /sys/auth/:path [[GH-25499](https://github.com/hashicorp/vault/pull/25499)]
+* api: Do not require sudo for API wrapper functions GetAuth and GetAuthWithContext [[GH-25968](https://github.com/hashicorp/vault/pull/25968)]
 * api: added new API field to Vault responses, `mount_type`, returning mount information (e.g. `kv` for KVV1/KVV2) for mount when appropriate. [[GH-23047](https://github.com/hashicorp/vault/pull/23047)]
 * api: sys/health and sys/ha-status now expose information about how long
 the last heartbeat took, and the estimated clock skew between standby and
 active node based on that heartbeat duration. [[GH-24343](https://github.com/hashicorp/vault/pull/24343)]
+* auth/cert: Allow validation with OCSP responses with no NextUpdate time [[GH-25912](https://github.com/hashicorp/vault/pull/25912)]
 * auth/cert: Cache trusted certs to reduce memory usage and improve performance of logins. [[GH-25421](https://github.com/hashicorp/vault/pull/25421)]
 * auth/ldap: introduce cap/ldap.Client for LDAP authentication
 auth/ldap: deprecates `connection_timeout` in favor of `request_timeout` for timeouts
 sdk/ldaputil: deprecates Client in favor of cap/ldap.Client [[GH-22185](https://github.com/hashicorp/vault/pull/22185)]
 * auth/saml: Update plugin to v0.2.0
 * auto-auth/azure: Support setting the `authenticate_from_environment` variable to "true" and "false" string literals, too. [[GH-22996](https://github.com/hashicorp/vault/pull/22996)]
+* cli: introduce new command group hcp which groups subcommands for authentication of users or machines to HCP using
+either provided arguments or retrieved HCP token through browser login. [[GH-23897](https://github.com/hashicorp/vault/pull/23897)]
 * cli: Improved error messages for `vault plugin` sub-commands. [[GH-24250](https://github.com/hashicorp/vault/pull/24250)]
 * cli: adds plugin identity token to enable and tune commands for secret engines and auth methods [[GH-24980](https://github.com/hashicorp/vault/pull/24980)]
 * cli: include secret syncs counts in the `vault operator usage` command output [[GH-25751](https://github.com/hashicorp/vault/pull/25751)]
@@ -129,6 +151,7 @@ sdk/ldaputil: deprecates Client in favor of cap/ldap.Client [[GH-22185](https://
 * core (enterprise): Avoid seal rewrapping in some specific unnecessary cases.
 * core (enterprise): Improve seal unwrap performance when in degraded mode with one or more unhealthy seals. [[GH-25171](https://github.com/hashicorp/vault/pull/25171)]
 * core (enterprise): Speed up unseal when using namespaces
+* core (enterprise): persist seal rewrap status, so rewrap status API is consistent on secondary nodes.
 * core/activity: Include secret_syncs in activity log responses [[GH-24710](https://github.com/hashicorp/vault/pull/24710)]
 * core/cli: Warning related to VAULT_ADDR & -address not set with CLI requests. [[GH-17076](https://github.com/hashicorp/vault/pull/17076)]
 * core/metrics: add metrics for secret sync client count [[GH-25713](https://github.com/hashicorp/vault/pull/25713)]
@@ -179,6 +202,7 @@ entries rather than being limited to 62 like Consul is. Performance testing
 shows improvements in throughput and latency under some write-heavy workloads.
 * storage/raft: Add support for larger transactions when using raft storage. [[GH-24991](https://github.com/hashicorp/vault/pull/24991)]
 * storage/raft: Upgrade to bbolt 1.3.8, along with an extra patch to reduce time scanning large freelist maps. [[GH-24010](https://github.com/hashicorp/vault/pull/24010)]
+* sys (enterprise): Enable sys/config/group-application-policy in privileged namespace
 * sys (enterprise): Adds the chroot_namespace field to this sys/internal/ui/resultant-acl endpoint, which exposes the value of the chroot namespace from the
 listener config.
 * sys: adds configuration of the key used to sign plugin identity tokens during mount enable and tune [[GH-24962](https://github.com/hashicorp/vault/pull/24962)]
@@ -210,6 +234,7 @@ listener config.
 * ui: latest version of chrome does not automatically redirect back to the app after authentication unless triggered by the user, hence added a link to redirect back to the app. [[GH-18513](https://github.com/hashicorp/vault/pull/18513)]
 * ui: obscure JSON values when KV v2 secret has nested objects [[GH-24530](https://github.com/hashicorp/vault/pull/24530)]
 * ui: redirect back to current route after reauthentication when token expires [[GH-25335](https://github.com/hashicorp/vault/pull/25335)]
+* ui: remove leading slash from KV version 2 secret paths [[GH-25874](https://github.com/hashicorp/vault/pull/25874)]
 * ui: remove unnecessary OpenAPI calls for unmanaged auth methods [[GH-25364](https://github.com/hashicorp/vault/pull/25364)]
 * ui: replace popup menu on list items (namespaces, auth items, KMIP, K8S, LDAP) [[GH-25588](https://github.com/hashicorp/vault/pull/25588)]
 * ui: show banner when resultant-acl check fails due to permissions or wrong namespace. [[GH-23503](https://github.com/hashicorp/vault/pull/23503)]
@@ -234,8 +259,13 @@ on the request. [[GH-24256](https://github.com/hashicorp/vault/pull/24256)]
 * audit: Fix bug reopening 'file' audit devices on SIGHUP. [[GH-23598](https://github.com/hashicorp/vault/pull/23598)]
 * audit: Fix bug where use of 'log_raw' option could result in other devices logging raw audit data [[GH-24968](https://github.com/hashicorp/vault/pull/24968)]
 * audit: Handle a potential panic while formatting audit entries for an audit log [[GH-25605](https://github.com/hashicorp/vault/pull/25605)]
+* audit: Operator changes to configured audit headers (via `/sys/config/auditing`)
+will now force invalidation and be reloaded from storage when data is replicated
+to other nodes.
 * audit: Resolve potential race condition when auditing entries which use SSCT. [[GH-25443](https://github.com/hashicorp/vault/pull/25443)]
 * auth/aws: Fixes a panic that can occur in IAM-based login when a [client config](https://developer.hashicorp.com/vault/api-docs/auth/aws#configure-client) does not exist. [[GH-23555](https://github.com/hashicorp/vault/pull/23555)]
+* auth/cert: Address an issue in which OCSP query responses were not cached [[GH-25986](https://github.com/hashicorp/vault/pull/25986)]
+* auth/cert: Allow cert auth login attempts if ocsp_fail_open is true and OCSP servers are unreachable [[GH-25982](https://github.com/hashicorp/vault/pull/25982)]
 * auth/cert: Handle errors related to expired OCSP server responses [[GH-24193](https://github.com/hashicorp/vault/pull/24193)]
 * auth/saml (enterprise): Fixes support for Microsoft Entra ID enterprise applications
 * cap/ldap: Downgrade go-ldap client from v3.4.5 to v3.4.4 due to race condition found [[GH-23103](https://github.com/hashicorp/vault/pull/23103)]
@@ -261,11 +291,11 @@ on the request. [[GH-24256](https://github.com/hashicorp/vault/pull/24256)]
 * core: Fix an error that resulted in the wrong seal type being returned by sys/seal-status while
 Vault is in seal migration mode. [[GH-24165](https://github.com/hashicorp/vault/pull/24165)]
 * core: Skip unnecessary deriving of policies during Login MFA Check. [[GH-23894](https://github.com/hashicorp/vault/pull/23894)]
-* core: fix bug where deadlock detection was always on for expiration and quotas. 
+* core: fix bug where deadlock detection was always on for expiration and quotas.
 These can now be configured individually with `detect_deadlocks`. [[GH-23902](https://github.com/hashicorp/vault/pull/23902)]
 * core: fix policies with wildcards not matching list operations due to the policy path not having a trailing slash [[GH-23874](https://github.com/hashicorp/vault/pull/23874)]
 * core: fix rare panic due to a race condition with metrics collection during seal [[GH-23906](https://github.com/hashicorp/vault/pull/23906)]
-* core: upgrade github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 to 
+* core: upgrade github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 to
 support azure workload identities. [[GH-24954](https://github.com/hashicorp/vault/pull/24954)]
 * eventlogger: Update library to v0.2.7 to address race condition [[GH-24305](https://github.com/hashicorp/vault/pull/24305)]
 * events: Ignore sending context to give more time for events to send [[GH-23500](https://github.com/hashicorp/vault/pull/23500)]
@@ -326,6 +356,7 @@ leading to failure to complete merkle sync without a full re-index. [[GH-23013](
 * ui: Fix copy button not working on masked input when value is not a string [[GH-25269](https://github.com/hashicorp/vault/pull/25269)]
 * ui: Fix error when tuning token auth configuration within namespace [[GH-24147](https://github.com/hashicorp/vault/pull/24147)]
 * ui: Fix inconsistent empty state action link styles [[GH-25209](https://github.com/hashicorp/vault/pull/25209)]
+* ui: Fix kubernetes auth method roles tab [[GH-25999](https://github.com/hashicorp/vault/pull/25999)]
 * ui: Fix payload sent when disabling replication [[GH-24292](https://github.com/hashicorp/vault/pull/24292)]
 * ui: Fix regression that broke the oktaNumberChallenge on the ui. [[GH-23565](https://github.com/hashicorp/vault/pull/23565)]
 * ui: Fix the copy token button in the sidebar navigation window when in a collapsed state. [[GH-23331](https://github.com/hashicorp/vault/pull/23331)]
@@ -347,6 +378,7 @@ leading to failure to complete merkle sync without a full re-index. [[GH-23013](
 * ui: fix incorrectly calculated capabilities on PKI issuer endpoints [[GH-24686](https://github.com/hashicorp/vault/pull/24686)]
 * ui: fix issue where kv v2 capabilities checks were not passing in the full secret path if secret was inside a directory. [[GH-24404](https://github.com/hashicorp/vault/pull/24404)]
 * ui: fix navigation items shown to user when chroot_namespace configured [[GH-24492](https://github.com/hashicorp/vault/pull/24492)]
+* ui: remove user_lockout_config settings for unsupported methods [[GH-25867](https://github.com/hashicorp/vault/pull/25867)]
 * ui: show error from API when seal fails [[GH-23921](https://github.com/hashicorp/vault/pull/23921)]
 
 ## 1.15.7 Enterprise
@@ -354,7 +386,7 @@ leading to failure to complete merkle sync without a full re-index. [[GH-23013](
 
 SECURITY:
 
-* auth/cert: validate OCSP response was signed by the expected issuer and serial number matched request [[GH-26091](https://github.com/hashicorp/vault/pull/26091)]
+* auth/cert: validate OCSP response was signed by the expected issuer and serial number matched request (CVE-2024-2660) [[GH-26091](https://github.com/hashicorp/vault/pull/26091), [HSEC-2024-07](https://discuss.hashicorp.com/t/hcsec-2024-07-vault-tls-cert-auth-method-did-not-correctly-validate-ocsp-responses/64573)]
 
 IMPROVEMENTS:
 
@@ -861,7 +893,7 @@ sdk/ldaputil: use EscapeLDAPValue implementation from cap/ldap [[GH-22249](https
 
 SECURITY:
 
-* auth/cert: validate OCSP response was signed by the expected issuer and serial number matched request [[GH-26091](https://github.com/hashicorp/vault/pull/26091)]
+* auth/cert: validate OCSP response was signed by the expected issuer and serial number matched request (CVE-2024-2660) [[GH-26091](https://github.com/hashicorp/vault/pull/26091), [HSEC-2024-07](https://discuss.hashicorp.com/t/hcsec-2024-07-vault-tls-cert-auth-method-did-not-correctly-validate-ocsp-responses/64573)]
 
 CHANGES:
 
