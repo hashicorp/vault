@@ -2,6 +2,19 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.16.1 
+### April 04, 2024
+
+**Please note that Vault 1.16.1 is the first Enterprise release of the Vault Enterprise 1.16 series.**
+
+BUG FIXES:
+
+* auth/ldap: Fix login error for group search anonymous bind. [[GH-26200](https://github.com/hashicorp/vault/pull/26200)]
+* auth/ldap: Fix login error missing entity alias attribute value. [[GH-26200](https://github.com/hashicorp/vault/pull/26200)]
+* cli: fixed a bug where the Vault CLI would error out if HOME was not set. [[GH-26243](https://github.com/hashicorp/vault/pull/26243)]
+* core: Only reload seal configuration when enable_multiseal is set to true. [[GH-26166](https://github.com/hashicorp/vault/pull/26166)]
+* secret/database: Fixed race condition where database mounts may leak connections [[GH-26147](https://github.com/hashicorp/vault/pull/26147)]
+
 ## 1.16.0
 ### March 26, 2024
 
@@ -9,9 +22,9 @@ SECURITY:
 
 * auth/cert: compare public keys of trusted non-CA certificates with incoming
 client certificates to prevent trusting certs with the same serial number
-but not the same public/private key. [[GH-25649](https://github.com/hashicorp/vault/pull/25649)]
-* auth/cert: validate OCSP response was signed by the expected issuer and serial number matched request [[GH-26091](https://github.com/hashicorp/vault/pull/26091)]
-* secrets/transit: fix a regression that was honoring nonces provided in non-convergent modes during encryption. [[GH-22852](https://github.com/hashicorp/vault/pull/22852)]
+but not the same public/private key (CVE-2024-2048). [[GH-25649](https://github.com/hashicorp/vault/pull/25649), [HSEC-2024-05](https://discuss.hashicorp.com/t/hcsec-2024-05-vault-cert-auth-method-did-not-correctly-validate-non-ca-certificates/63382)]
+* auth/cert: validate OCSP response was signed by the expected issuer and serial number matched request (CVE-2024-2660) [[GH-26091](https://github.com/hashicorp/vault/pull/26091), [HSEC-2024-07](https://discuss.hashicorp.com/t/hcsec-2024-07-vault-tls-cert-auth-method-did-not-correctly-validate-ocsp-responses/64573)]
+* secrets/transit: fix a regression that was honoring nonces provided in non-convergent modes during encryption (CVE-2023-4680) [[GH-22852](https://github.com/hashicorp/vault/pull/22852), [HSEC-2023-28](https://discuss.hashicorp.com/t/hcsec-2023-28-vault-s-transit-secrets-engine-allowed-nonce-specified-without-convergent-encryption/58249)]
 
 CHANGES:
 
@@ -373,7 +386,7 @@ leading to failure to complete merkle sync without a full re-index. [[GH-23013](
 
 SECURITY:
 
-* auth/cert: validate OCSP response was signed by the expected issuer and serial number matched request [[GH-26091](https://github.com/hashicorp/vault/pull/26091)]
+* auth/cert: validate OCSP response was signed by the expected issuer and serial number matched request (CVE-2024-2660) [[GH-26091](https://github.com/hashicorp/vault/pull/26091), [HSEC-2024-07](https://discuss.hashicorp.com/t/hcsec-2024-07-vault-tls-cert-auth-method-did-not-correctly-validate-ocsp-responses/64573)]
 
 IMPROVEMENTS:
 
@@ -880,7 +893,7 @@ sdk/ldaputil: use EscapeLDAPValue implementation from cap/ldap [[GH-22249](https
 
 SECURITY:
 
-* auth/cert: validate OCSP response was signed by the expected issuer and serial number matched request [[GH-26091](https://github.com/hashicorp/vault/pull/26091)]
+* auth/cert: validate OCSP response was signed by the expected issuer and serial number matched request (CVE-2024-2660) [[GH-26091](https://github.com/hashicorp/vault/pull/26091), [HSEC-2024-07](https://discuss.hashicorp.com/t/hcsec-2024-07-vault-tls-cert-auth-method-did-not-correctly-validate-ocsp-responses/64573)]
 
 CHANGES:
 

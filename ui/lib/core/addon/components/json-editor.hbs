@@ -51,6 +51,7 @@
   {{/if}}
   <div
     {{code-mirror
+      screenReaderLabel="JSON editor"
       content=(if this.showObfuscatedData this.obfuscatedData (or @value @example))
       extraKeys=@extraKeys
       gutters=@gutters
