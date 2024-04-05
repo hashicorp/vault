@@ -166,8 +166,8 @@ func TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput(t *testing.T) {
 		errCh <- server.Run(ctx, ah.TemplateTokenCh, templatesToRender, ah.AuthInProgress, ah.InvalidToken)
 	}()
 
-	// Trigger template render
-	preTriggerTime := time.Now()
+	// Trigger template render (mark the time as being earlier, based on the render interval)
+	preTriggerTime := time.Now().Add(-secretRenderInterval)
 	ah.TemplateTokenCh <- token
 	fileInfo, err := waitForFiles(t, pathTokenFile, preTriggerTime)
 	require.NoError(t, err)
@@ -442,7 +442,7 @@ func waitForFiles(t *testing.T, filePath string, prevModTime time.Time) (os.File
 	for {
 		select {
 		case <-timeout:
-			return nil, fmt.Errorf("timed out waiting for templates to render, last error: %v", err)
+			return nil, fmt.Errorf("timed out waiting for templates to render, last error: %w", err)
 		case <-tick:
 		}
 
