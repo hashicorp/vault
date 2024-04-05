@@ -190,6 +190,7 @@
     "qunit-dom": "^2.0.0",
     "sass": "^1.66.3",
     "shell-quote": "^1.8.1",
+    "sinon": "^17.0.1",
     "string.prototype.endswith": "^0.2.0",
     "string.prototype.startswith": "^0.2.0",
     "stylelint": "^15.4.0",
