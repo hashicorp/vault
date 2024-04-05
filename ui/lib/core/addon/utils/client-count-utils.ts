@@ -5,15 +5,17 @@
 
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { compareAsc, getUnixTime, isWithinInterval } from 'date-fns';
-import {
+
+import type ClientsVersionHistoryModel from 'vault/vault/models/clients/version-history';
+import type {
   MonthlyClients,
   MountClients,
   MountsByKey,
   NamespaceClients,
+  NamespacesByKey,
   TotalClients,
 } from 'vault/vault/models/clients/activity';
 
-import ClientsVersionHistoryModel from 'vault/vault/models/clients/version-history';
 export interface ActivityResponse {
   start_time: string;
   end_time: string;
@@ -176,7 +178,7 @@ export const destructureClientCounts = (verboseObject: Counts): TotalClients | v
   }, {} as Record<ClientTypes, Counts[ClientTypes]>);
 };
 
-export const sortMonthsByTimestamp = (monthsArray: MonthlyClients[]) => {
+export const sortMonthsByTimestamp = (monthsArray: ActivityMonthBlock[]) => {
   const sortedPayload = [...monthsArray];
   return sortedPayload.sort((a, b) =>
     compareAsc(parseAPITimestamp(a.timestamp) as Date, parseAPITimestamp(b.timestamp) as Date)
@@ -194,29 +196,38 @@ export const namespaceArrayToObject = (
   // namespaces_by_key is used to filter monthly activity data by namespace
   // it's an object in each month data block where the keys are namespace paths
   // and values include new and total client counts for that namespace in that month
-  const namespaces_by_key = totalClientsByNamespace.reduce((nsObject, ns) => {
-    const newNsClients: NamespaceClients | undefined = newClientsByNamespace?.find(
-      (n) => n.label === ns.label
-    );
+  const namespaces_by_key = totalClientsByNamespace.reduce(
+    (nsObject: { [key: string]: NamespacesByKey }, ns) => {
+      const newNsClients: NamespaceClients | undefined = newClientsByNamespace?.find(
+        (n) => n.label === ns.label
+      );
 
-    // mounts_by_key is is used to filter further in a namespace and get monthly activity by mount
-    // it's an object inside the namespace block where the keys are mount paths
-    // and the values include new and total client counts for that mount in that month
-    const mounts_by_key = ns.mounts.reduce((mountObj: { [key: string]: MountsByKey }, mount) => {
-      const newMountClients = newNsClients
-        ? newNsClients.mounts.find((m) => m.label === mount.label)
-        : { month };
+      // mounts_by_key is is used to filter further in a namespace and get monthly activity by mount
+      // it's an object inside the namespace block where the keys are mount paths
+      // and the values include new and total client counts for that mount in that month
+      const mounts_by_key = ns.mounts.reduce((mountObj: { [key: string]: MountsByKey }, mount) => {
+        const newMountClients = newNsClients
+          ? newNsClients.mounts.find((m) => m.label === mount.label)
+          : { month };
 
-      mountObj[mount.label] = { ...mount, timestamp, month, new_clients: { month, ...newMountClients } };
-      return mountObj;
-    }, {});
+        mountObj[mount.label] = { ...mount, timestamp, month, new_clients: { month, ...newMountClients } };
+        return mountObj;
+      }, {});
 
-    nsObject[ns.label] = { ...ns, timestamp, month, new_clients: { month, ...newNsClients }, mounts_by_key };
-    // remove unnecessary data
-    delete nsObject[ns.label].mounts;
-    delete nsObject[ns.label].label;
-    return nsObject;
-  }, {});
+      nsObject[ns.label] = {
+        ...ns,
+        timestamp,
+        month,
+        new_clients: { month, ...newNsClients },
+        mounts_by_key,
+      };
+      // remove unnecessary data
+      // delete nsObject[ns.label].mounts;
+      // delete nsObject[ns.label].label;
+      return nsObject;
+    },
+    {}
+  );
 
   return namespaces_by_key;
 };
