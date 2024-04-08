@@ -123,14 +123,14 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     test('it should make a POST to activate the feature', async function (assert) {
       assert.expect(1);
 
-      await this.renderComponent(false);
+      await this.renderComponent();
 
       this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
         assert.true(true, 'POST to secrets-sync/activate is called');
         return {};
       });
 
-      await this.renderComponent();
+      await this.renderComponent(false);
 
       await click(overview.optInBannerEnable);
       await click(overview.optInCheck);
