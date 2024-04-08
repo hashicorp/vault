@@ -3405,9 +3405,9 @@ func RestoreDeadlockOpts() func() {
 
 func InduceDeadlock(t *testing.T, vaultcore *Core, expected uint32) {
 	defer RestoreDeadlockOpts()()
-	var deadlocks uint32
+	var testDeadlock uint32
 	deadlock.Opts.OnPotentialDeadlock = func() {
-		atomic.AddUint32(&deadlocks, 1)
+		atomic.AddUint32(&testDeadlock, 1)
 	}
 	var mtx deadlock.Mutex
 	var wg sync.WaitGroup
@@ -3429,8 +3429,8 @@ func InduceDeadlock(t *testing.T, vaultcore *Core, expected uint32) {
 		mtx.Unlock()
 	}()
 	wg.Wait()
-	if atomic.LoadUint32(&deadlocks) != expected {
-		t.Fatalf("expected 1 deadlock, detected %d", deadlocks)
+	if atomic.LoadUint32(&testDeadlock) != expected {
+		t.Fatalf("expected 1 deadlock, detected %d", testDeadlock)
 	}
 }
 
