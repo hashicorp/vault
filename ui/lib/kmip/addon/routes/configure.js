@@ -11,7 +11,7 @@ export default Route.extend({
   secretMountPath: service(),
   pathHelp: service(),
   beforeModel() {
-    return this.pathHelp.getNewModel('kmip/config', this.secretMountPath.currentPath);
+    return this.pathHelp.hydrateModel('kmip/config', this.secretMountPath.currentPath);
   },
   model() {
     return this.store.findRecord('kmip/config', this.secretMountPath.currentPath).catch((err) => {

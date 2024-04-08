@@ -106,16 +106,6 @@ export const combineAttributes = function (oldAttrs, newProps) {
   return { attrs: newAttrs, newFields };
 };
 
-export const combineFields = function (currentFields, newFields, excludedFields) {
-  const otherFields = newFields.filter((field) => {
-    return !currentFields.includes(field) && !excludedFields.includes(field);
-  });
-  if (otherFields.length) {
-    currentFields = currentFields.concat(otherFields);
-  }
-  return currentFields;
-};
-
 export const combineFieldGroups = function (currentGroups, newFields, excludedFields) {
   let allFields = [];
   for (const group of currentGroups) {
@@ -131,3 +121,23 @@ export const combineFieldGroups = function (currentGroups, newFields, excludedFi
 
   return currentGroups;
 };
+
+export function helpUrlForModel(modelType, backend) {
+  const helpUrlByType = {
+    'auth-config': (backend) => `/v1/auth/${backend}/config?help=1`,
+    'role-ssh': (backend) => `/v1/${backend}/roles/example?help=1`,
+    'kmip/config': (backend) => `/v1/${backend}/config?help=1`,
+    'kmip/role': (backend) => `/v1/${backend}/scope/example/role/example?help=1`,
+    'pki/role': (backend) => `/v1/${backend}/roles/example?help=1`,
+    'pki/sign-intermediate': (backend) => `/v1/${backend}/issuer/example/sign-intermediate?help=1`,
+    'pki/tidy': (backend) => `/v1/${backend}/config/auto-tidy?help=1`,
+    'pki/certificate/generate': (backend) => `/v1/${backend}/issue/example?help=1`,
+    'pki/certificate/sign': (backend) => `/v1/${backend}/sign/example?help=1`,
+    'pki/config/acme': (backend) => `/v1/${backend}/config/acme?help=1`,
+    'pki/config/cluster': (backend) => `/v1/${backend}/config/cluster?help=1`,
+    'pki/config/urls': (backend) => `/v1/${backend}/config/urls?help=1`,
+  };
+  const helpUrl = helpUrlByType[modelType];
+  if (!helpUrl) return null;
+  return helpUrl(backend);
+}

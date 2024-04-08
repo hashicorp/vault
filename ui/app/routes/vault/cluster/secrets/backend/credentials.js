@@ -22,7 +22,7 @@ export default Route.extend({
       return;
     }
     const modelType = 'ssh-otp-credential';
-    return this.pathHelp.getNewModel(modelType, backend);
+    return this.pathHelp.hydrateModel(modelType, backend);
   },
 
   getDatabaseCredential(backend, secret, roleType = '') {

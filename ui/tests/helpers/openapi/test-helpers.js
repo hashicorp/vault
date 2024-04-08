@@ -42,8 +42,8 @@ export const authEngineHelper = (test, authBackend) => {
     } else {
       test.skip(`generated-${itemName}-${authBackend} model`, async function (assert) {
         const modelName = `generated-${itemName}-${authBackend}`;
-        // Generated items need to instantiate the model first via getNewModel
-        await this.pathHelp.getNewModel(modelName, this.mount, `auth/${this.mount}/`, itemName);
+        // Generated items need to instantiate the model first via hydrateModel
+        await this.pathHelp.hydrateModel(modelName, this.mount, `auth/${this.mount}/`, itemName);
         const model = this.store.createRecord(modelName, {});
         // Generated items don't have this method -- helpUrl is calculated in path-help.js line 101
         const helpUrl = model.getHelpUrl(this.mount);

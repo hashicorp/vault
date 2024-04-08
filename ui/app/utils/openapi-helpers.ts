@@ -132,3 +132,107 @@ export function filterPathsByItemType(pathInfo: PathsInfo, itemType: string): Pa
     return itemType === path.itemType;
   });
 }
+
+// These are the shape of the objects that we get from Model.class.attributes
+interface ExistingAttrs {
+  [key: string]: ExistingModelAttr;
+}
+interface ExistingModelAttr {
+  key: string;
+  value: {
+    isAttribute: boolean;
+    name: string;
+    options: object;
+    type: string;
+  };
+}
+
+// This is the shape of the data returned from expandOpenApiProps
+interface NewProps {
+  [key: string]: OpenApiOptions;
+}
+interface OpenApiOptions {
+  editType: string;
+  fieldGroup: string;
+  type: string;
+  helpText: string;
+  label?: string;
+  possibleValues?: string[];
+}
+// This is the shape of the combined existing & new attributes
+interface AttrOptions {
+  [key: string]: {
+    type: string;
+    options: {
+      editType: string;
+      fieldGroup: string;
+      helpText: string;
+      label?: string;
+      possibleValues?: string[];
+    };
+  };
+}
+interface NewAttrs {
+  [key: string]: {
+    type: string;
+    options: any;
+  };
+}
+
+/**
+ *
+ * @param existingAttrs Klass.attributes from the existing model
+ * @param newProps formatted props from OpenAPI to add
+ * @returns array of attribute options (not the attribute itself) and array of new field names added to the model
+ */
+export function combineAttrOptions(
+  existingAttrs: ExistingAttrs,
+  newProps: NewProps
+): { attrs: AttrOptions; newFields: string[] } {
+  const newAttrs: NewAttrs = {};
+  const newFields: string[] = [];
+  if (existingAttrs) {
+    Object.values(existingAttrs).forEach(function ({ key, value }) {
+      // for each existing attribute, check if it exists in the new props
+      if (newProps[key]) {
+        // if it does, combine the options
+        const type = newProps[key]?.type || value.type || 'string';
+        newAttrs[key] = { type, options: { ...newProps[key], ...value.options } };
+      } else {
+        // if it doesn't, add the existing attribute
+        newAttrs[key] = { type: value.type, options: value.options };
+      }
+    });
+  }
+  for (const key in newProps) {
+    if (key in newAttrs) {
+      continue;
+    } else {
+      const type = newProps[key]?.type || 'string';
+      newAttrs[key] = { type, options: newProps[key] };
+      // add key of new field to newFields
+      newFields.push(key);
+    }
+  }
+  return { attrs: newAttrs, newFields };
+}
+
+export function helpUrlForModel(modelType: string, backend: string): string | null {
+  const helpUrlByType = {
+    'auth-config': (backend: string) => `/v1/auth/${backend}/config?help=1`,
+    'role-ssh': (backend: string) => `/v1/${backend}/roles/example?help=1`,
+    'kmip/config': (backend: string) => `/v1/${backend}/config?help=1`,
+    'kmip/role': (backend: string) => `/v1/${backend}/scope/example/role/example?help=1`,
+    'pki/role': (backend: string) => `/v1/${backend}/roles/example?help=1`,
+    'pki/sign-intermediate': (backend: string) => `/v1/${backend}/issuer/example/sign-intermediate?help=1`,
+    'pki/tidy': (backend: string) => `/v1/${backend}/config/auto-tidy?help=1`,
+    'pki/certificate/generate': (backend: string) => `/v1/${backend}/issue/example?help=1`,
+    'pki/certificate/sign': (backend: string) => `/v1/${backend}/sign/example?help=1`,
+    'pki/config/acme': (backend: string) => `/v1/${backend}/config/acme?help=1`,
+    'pki/config/cluster': (backend: string) => `/v1/${backend}/config/cluster?help=1`,
+    'pki/config/urls': (backend: string) => `/v1/${backend}/config/urls?help=1`,
+  };
+  const helpUrl = helpUrlByType[modelType as keyof typeof helpUrlByType];
+  if (!helpUrl) return null;
+  return helpUrl(backend);
+}

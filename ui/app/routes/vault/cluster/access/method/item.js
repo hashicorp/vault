@@ -13,7 +13,7 @@ export default Route.extend({
   beforeModel() {
     const { apiPath, type, authMethodPath, itemType } = this.getMethodAndModelInfo();
     const modelType = `generated-${singularize(itemType)}-${type}`;
-    return this.pathHelp.getNewModel(modelType, authMethodPath, apiPath, itemType);
+    return this.pathHelp.newModelFromOpenApi(modelType, authMethodPath, apiPath, itemType);
   },
 
   getMethodAndModelInfo() {

@@ -51,6 +51,10 @@ module('Unit | Util | OpenAPI Data Utilities', function () {
       },
       description: 'A really secret thing',
     },
+    'is-read-only': {
+      type: 'string',
+      isId: true,
+    },
   };
   const EXPANDED_PROPS = {
     ttl: {
@@ -87,6 +91,13 @@ module('Unit | Util | OpenAPI Data Utilities', function () {
       editType: 'string',
       sensitive: true,
       helpText: 'A really secret thing',
+      fieldGroup: 'default',
+    },
+    isReadOnly: {
+      type: 'string',
+      editType: 'string',
+      fieldValue: 'mutableId',
+      readOnly: true,
       fieldGroup: 'default',
     },
   };
@@ -197,10 +208,10 @@ module('Unit | Util | OpenAPI Data Utilities', function () {
   };
 
   test('it creates objects from OpenAPI schema props', function (assert) {
-    assert.expect(6);
+    assert.expect(7);
     const generatedProps = expandOpenApiProps(OPENAPI_RESPONSE_PROPS);
     for (const propName in EXPANDED_PROPS) {
-      assert.deepEqual(EXPANDED_PROPS[propName], generatedProps[propName], `correctly expands ${propName}`);
+      assert.deepEqual(generatedProps[propName], EXPANDED_PROPS[propName], `correctly expands ${propName}`);
     }
   });
 
@@ -208,7 +219,7 @@ module('Unit | Util | OpenAPI Data Utilities', function () {
     assert.expect(3);
     const combined = combineAttributes(EXISTING_MODEL_ATTRS, EXPANDED_PROPS);
     for (const propName in EXISTING_MODEL_ATTRS) {
-      assert.deepEqual(COMBINED_ATTRS[propName], combined[propName]);
+      assert.deepEqual(combined[propName], COMBINED_ATTRS[propName]);
     }
   });
 

@@ -8,7 +8,7 @@
   shape of data at a specific path to hydrate a model with attrs it
   has less (or no) information about.
 */
-import Model from '@ember-data/model';
+import Model, { attr } from '@ember-data/model';
 import Service, { service } from '@ember/service';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { getOwner } from '@ember/application';
@@ -23,7 +23,9 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 import GeneratedItemAdapter from 'vault/adapters/generated-item-list';
 import { sanitizePath } from 'core/utils/sanitize-path';
 import {
+  combineAttrOptions,
   filterPathsByItemType,
+  helpUrlForModel,
   pathToHelpUrlSegment,
   reducePathsByPathName,
 } from 'vault/utils/openapi-helpers';
@@ -39,8 +41,168 @@ export default class PathHelpService extends Service {
     });
   }
 
+  upgradeModelSchema(owner, type, newAttrs) {
+    const store = owner.lookup('service:store');
+    const Klass = store.modelFor(type);
+    // extending the class will ensure that static schema lookups
+    // regenerate
+    const NewKlass = class extends Klass {
+      merged = true;
+    };
+
+    for (const { key, type, options } of newAttrs) {
+      console.log('upgrading', type, options);
+      const decorator = attr(type, options);
+      const descriptor = decorator(NewKlass.prototype, key, {});
+      Object.defineProperty(NewKlass.prototype, key, descriptor);
+    }
+    // ORIGINAL
+    // for (const [key, schema] of Object.entries(newAttrs)) {
+    //   console.log('upgrading', key, schema);
+    //   const decorator = attr(schema.type, schema.options);
+    //   const descriptor = decorator(NewKlass.prototype, key, {});
+    //   Object.defineProperty(NewKlass.prototype, key, descriptor);
+    // }
+
+    // bust cache in ember's registry
+    owner.unregister('model:' + type);
+    owner.register('model:' + type, NewKlass);
+
+    // bust cache in EmberData's model lookup
+    delete store._modelFactoryCache[type];
+
+    // bust cache in schema service
+    const schemas = store.getSchemaDefinitionService?.();
+    if (schemas) {
+      delete schemas._relationshipsDefCache[type];
+      delete schemas._attributesDefCache[type];
+    }
+  }
+
   /**
-   * getNewModel instantiates models which use OpenAPI fully or partially
+   * hydrateModel is used to hydrate an existing model with OpenAPI data
+   * @param {string} modelType
+   * @param {string} backend
+   * @returns void - as side effect, registers model in store
+   */
+  async hydrateModel(modelType, backend) {
+    // get the existing model for type
+    const owner = getOwner(this);
+    const helpUrl = helpUrlForModel(modelType, backend);
+    const store = owner.lookup('service:store');
+    const Klass = store.modelFor(modelType);
+    if (Klass.merged || !helpUrl) {
+      // if the model is already merged, we don't need to do anything
+      return resolve();
+    }
+    debug(`Hydrating model ${modelType} at path ${backend}`);
+
+    // fetch props from openAPI
+    const props = await this.getProps(helpUrl);
+    // combine existing attributes with openAPI data
+    const { attrs, newFields } = combineAttrOptions(Klass.attributes, props);
+    console.log(modelType, newFields);
+    this.upgradeModelSchema(owner, modelType, attrs);
+    // class MyModel extends Model {
+    //   // @computed('id', '_id', {
+    // }
+    // Object.keys(attrs).forEach((key) => {
+    //   const attribute = attrs[key](MyModel.prototype, key, { type: 'string' });
+    //   // console.log('registering', key);
+    //   // Might need to forward the meta
+    //   Object.defineProperty(MyModel.prototype, key, attribute);
+    // });
+    // console.log({ MyModel });
+    // newModel = newModel.extend(attrs, {
+    //   newFields,
+    //   mutableId: computed('id', '_id', {
+    //     get() {
+    //       return this._id || this.id;
+    //     },
+    //     // set(key, value) {
+    //     // return (this._id = value);
+    //     // },
+    //   }),
+    // });
+    // TODO: not creating fieldgroups -- check if irrelevant for extended models
+    // hydrate model with extra attributes
+
+    // newModel.reopen({
+    //   mutableId: computed('id', '_id', {
+    //     get() {
+    //       return this._id || this.id;
+    //     },
+    //     set(key, value) {
+    //       return (this._id = value);
+    //     },
+    //   }),
+    // });
+    // MyModel.merged = true;
+    // owner.unregister(`model:${modelType}`);
+    // owner.register(`model:${modelType}`, MyModel);
+    // const expandedFields = [];
+    // MyModel.eachAttribute((name, meta) => {
+    //   console.log('attribute on final model', name, meta);
+    // });
+  }
+
+  /**
+   * newModelFromOpenAPI is used to create a new model from an OpenAPI document
+   * without any existing models or adapters
+   * @param {string} modelType
+   * @param {string} backend
+   * @param {string} apiPath
+   * @param {string | null} itemType
+   * @returns void - as side effect, registers model in store
+   */
+  async newModelFromOpenApi(modelType, backend, apiPath, itemType) {
+    const owner = getOwner(this);
+    const modelFactory = owner.factoryFor(`model:${modelType}`);
+    if (modelFactory?.class.merged) {
+      // if the model is already merged, we don't need to do anything
+      return resolve();
+    }
+    debug(`NEW OPENAPI MODEL ${modelType} ${backend}`);
+    // dynamically create help url
+    const pathInfo = await this.getPaths(apiPath, backend, itemType);
+    // if we have an item we want the create info for that itemType
+    const paths = itemType ? filterPathsByItemType(pathInfo, itemType) : pathInfo.paths;
+    const createPath = paths.find((path) => path.operations.includes('post') && path.action !== 'Delete');
+    const path = pathToHelpUrlSegment(createPath.path);
+    const helpUrl = `/v1/${apiPath}${path.slice(1)}?help=true` || newModel.proto().getHelpUrl(backend);
+    // create & register adapter for modelType if it doesn't already exist
+    const adapterFactory = owner.factoryFor(`adapter:${modelType}`);
+    if (!adapterFactory) {
+      debug(`Creating new adapter for ${modelType}`);
+      const adapter = this.getNewAdapter(pathInfo, itemType);
+      owner.register(`adapter:${modelType}`, adapter);
+    }
+    // fetch props from openAPI
+    const props = await this.getProps(helpUrl, backend);
+    // format props for model
+    const { attrs, newFields } = combineAttributes(null, props);
+    let newModel = Model.extend(attrs, { newFields });
+    // create fieldGroups
+    const fieldGroups = this.getFieldGroups(newModel);
+    newModel = newModel.extend({ fieldGroups });
+    // hydrate model with extra attributes
+    newModel.reopen({
+      mutableId: computed('id', '_id', {
+        get() {
+          return this._id || this.id;
+        },
+        set(key, value) {
+          return (this._id = value);
+        },
+      }),
+    });
+    newModel.reopenClass({ merged: true });
+    owner.unregister(`model:${modelType}`);
+    owner.register(`model:${modelType}`, newModel);
+  }
+
+  /**
+   * getNewModel [DEPRECATED] instantiates models which use OpenAPI fully or partially
    * @param {string} modelType
    * @param {string} backend
    * @param {string} apiPath (optional) if passed, this method will call getPaths and build submodels for item types
@@ -125,24 +287,25 @@ export default class PathHelpService extends Service {
       const pathInfo = help.openapi.paths;
       const paths = Object.entries(pathInfo);
 
-      return paths.reduce(reducePathsByPathName, {
+      const outcome = paths.reduce(reducePathsByPathName, {
         apiPath,
         itemType,
         itemTypes: [],
         paths: [],
         itemID,
       });
+      return outcome;
     });
   }
 
   // Makes a call to grab the OpenAPI document.
   // Returns relevant information from OpenAPI
   // as determined by the expandOpenApiProps util
-  getProps(helpUrl, backend) {
+  getProps(helpUrl) {
     // add name of thing you want
-    debug(`Fetching schema properties for ${backend} from ${helpUrl}`);
+    debug(`Fetching schema properties from ${helpUrl}`);
 
-    return this.ajax(helpUrl, backend).then((help) => {
+    return this.ajax(helpUrl).then((help) => {
       // paths is an array but it will have a single entry
       // for the scope we're in
       const path = Object.keys(help.openapi.paths)[0]; // do this or look at name
