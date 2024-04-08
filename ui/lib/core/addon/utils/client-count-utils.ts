@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -8,59 +10,16 @@ import { compareAsc, getUnixTime, isWithinInterval } from 'date-fns';
 
 import type ClientsVersionHistoryModel from 'vault/vault/models/clients/version-history';
 import type {
+  ActivityMonthBlock,
+  Counts,
+  EmptyActivityMonthBlock,
   MonthlyClients,
   MountClients,
   MountsByKey,
   NamespaceClients,
+  NamespaceObject,
   NamespacesByKey,
-  TotalClients,
-} from 'vault/vault/models/clients/activity';
-
-export interface ActivityResponse {
-  start_time: string;
-  end_time: string;
-  total: Counts;
-  by_namespace: NamespaceObject[];
-  months: ActivityMonthBlock[];
-}
-
-export interface NamespaceObject {
-  namespace_id: string;
-  namespace_path: string;
-  counts: Counts;
-  mounts: MountBlock[];
-}
-
-export interface MountBlock {
-  mount_path: string;
-  counts: Counts;
-}
-export interface ActivityMonthBlock {
-  timestamp: string; // YYYY-MM-01T00:00:00Z (always the first day of the month)
-  counts: Counts;
-  namespaces: NamespaceObject[];
-  new_clients: {
-    counts: Counts;
-    namespaces: NamespaceObject[];
-    timestamp: string;
-  };
-}
-export interface EmptyActivityMonthBlock {
-  timestamp: string; // YYYY-MM-01T00:00:00Z (always the first day of the month)
-  counts: null;
-  namespaces: null;
-  new_clients: null;
-}
-
-export interface Counts {
-  acme_clients: number;
-  clients: number;
-  distinct_entities: number;
-  entity_clients: number;
-  non_entity_clients: number;
-  non_entity_tokens: number;
-  secret_syncs: number;
-}
+} from 'vault/vault/utils/client-count-utils';
 
 // add new types here
 export const CLIENT_TYPES = [
@@ -114,47 +73,55 @@ export const formatDateObject = (dateObj: { monthIdx: number; year: number }, is
   return getUnixTime(utc);
 };
 
-export const formatByMonths = (monthsArray: ActivityMonthBlock[]) => {
-  // the monthsArray will always include a timestamp of the month and either new/total client data or counts = null
-  if (!Array.isArray(monthsArray)) return monthsArray;
-
+export const formatByMonths = (monthsArray: ActivityMonthBlock[] | EmptyActivityMonthBlock[]) => {
   const sortedPayload = sortMonthsByTimestamp(monthsArray);
   return sortedPayload?.map((m) => {
-    const month = parseAPITimestamp(m.timestamp, 'M/yy');
-    const totalClientsByNamespace = formatByNamespace(m.namespaces);
-    const newClientsByNamespace = formatByNamespace(m.new_clients?.namespaces);
+    const month = parseAPITimestamp(m.timestamp, 'M/yy') as string;
+    const { timestamp } = m;
+    // counts are only null if there is no monthly data
+    if (m.counts) {
+      const totalClientsByNamespace = formatByNamespace(m.namespaces);
+      const newClientsByNamespace = formatByNamespace(m.new_clients?.namespaces);
+      return {
+        month,
+        timestamp,
+        ...destructureClientCounts(m.counts),
+        namespaces: formatByNamespace(m.namespaces) || [],
+        namespaces_by_key: namespaceArrayToObject(
+          totalClientsByNamespace,
+          newClientsByNamespace,
+          month,
+          m.timestamp
+        ),
+        new_clients: {
+          month,
+          timestamp,
+          ...destructureClientCounts(m?.new_clients?.counts),
+          namespaces: formatByNamespace(m.new_clients?.namespaces) || [],
+        },
+      };
+    }
+    // empty month
     return {
       month,
-      timestamp: m.timestamp,
-      ...destructureClientCounts(m?.counts),
-      namespaces: formatByNamespace(m.namespaces) || [],
-      namespaces_by_key: namespaceArrayToObject(
-        totalClientsByNamespace,
-        newClientsByNamespace,
-        month,
-        m.timestamp
-      ),
-      new_clients: {
-        month,
-        timestamp: m.timestamp,
-        ...destructureClientCounts(m?.new_clients?.counts),
-        namespaces: formatByNamespace(m.new_clients?.namespaces) || [],
-      },
+      timestamp,
+      namespaces: [],
+      namespaces_by_key: {},
+      new_clients: { month, timestamp, namespaces: [] },
     };
   });
 };
 
 export const formatByNamespace = (namespaceArray: NamespaceObject[]) => {
-  if (!Array.isArray(namespaceArray)) return namespaceArray;
-  return namespaceArray?.map((ns) => {
+  return namespaceArray.map((ns) => {
     // i.e. 'namespace_path' is an empty string for 'root', so use namespace_id
     const label = ns.namespace_path === '' ? ns.namespace_id : ns.namespace_path;
     // data prior to adding mount granularity will still have a mounts key,
     // but with the value: "no mount accessor (pre-1.10 upgrade?)" (ref: vault/activity_log_util_common.go)
     // transform to an empty array for type consistency
-    let mounts: MountClients[] | { label: string }[] = [];
+    let mounts: MountClients[] | [] = [];
     if (Array.isArray(ns.mounts)) {
-      mounts = ns.mounts.map((m) => ({ label: m.mount_path, ...destructureClientCounts(m?.counts) }));
+      mounts = ns.mounts.map((m) => ({ label: m.mount_path, ...destructureClientCounts(m.counts) }));
     }
     return {
       label,
@@ -168,17 +135,14 @@ export const formatByNamespace = (namespaceArray: NamespaceObject[]) => {
 // these deprecated keys still exist on the response, so only return relevant keys here
 // when querying historical data the response will always contain the latest client type keys because the activity log is
 // constructed based on the version of Vault the user is on (key values will be 0)
-//
-
-export const destructureClientCounts = (verboseObject: Counts): TotalClients | void => {
-  if (!verboseObject) return; // if I remove this, update on 151
+export const destructureClientCounts = (verboseObject: Counts) => {
   return CLIENT_TYPES.reduce((newObj: Record<ClientTypes, Counts[ClientTypes]>, clientType: ClientTypes) => {
     newObj[clientType] = verboseObject[clientType];
     return newObj;
   }, {} as Record<ClientTypes, Counts[ClientTypes]>);
 };
 
-export const sortMonthsByTimestamp = (monthsArray: ActivityMonthBlock[]) => {
+export const sortMonthsByTimestamp = (monthsArray: ActivityMonthBlock[] | EmptyActivityMonthBlock[]) => {
   const sortedPayload = [...monthsArray];
   return sortedPayload.sort((a, b) =>
     compareAsc(parseAPITimestamp(a.timestamp) as Date, parseAPITimestamp(b.timestamp) as Date)
@@ -191,8 +155,6 @@ export const namespaceArrayToObject = (
   month: string,
   timestamp: string
 ) => {
-  if (!totalClientsByNamespace) return {}; // return if no data for that month
-
   // namespaces_by_key is used to filter monthly activity data by namespace
   // it's an object in each month data block where the keys are namespace paths
   // and values include new and total client counts for that namespace in that month
@@ -205,6 +167,7 @@ export const namespaceArrayToObject = (
       // mounts_by_key is is used to filter further in a namespace and get monthly activity by mount
       // it's an object inside the namespace block where the keys are mount paths
       // and the values include new and total client counts for that mount in that month
+      // @ts-ignore
       const mounts_by_key = ns.mounts.reduce((mountObj: { [key: string]: MountsByKey }, mount) => {
         const newMountClients = newNsClients
           ? newNsClients.mounts.find((m) => m.label === mount.label)
