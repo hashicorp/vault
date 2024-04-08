@@ -58,8 +58,8 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'community';
       this.version.features = [];
-      this.isActivated = false;
       this.destinations = [];
+      this.isActivated = false;
     });
 
     test('it should show an upsell CTA', async function (assert) {
