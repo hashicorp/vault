@@ -32,15 +32,16 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     const store = this.owner.lookup('service:store');
     this.destinations = await store.query('sync/destination', {});
-    this.activatedFeatures = ['secrets-sync'];
 
-    this.renderComponent = () =>
-      render(
-        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @activatedFeatures={{this.activatedFeatures}} @adapterError={{null}} />`,
+    this.renderComponent = (isActivated = true) => {
+      this.isActivated = isActivated;
+      return render(
+        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @isActivated={{this.isActivated}} @adapterError={{null}} />`,
         {
           owner: this.engine,
         }
       );
+    };
   });
 
   test('it should render header, tabs and toolbar for overview state', async function (assert) {
@@ -58,11 +59,10 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       this.version.type = 'community';
       this.version.features = [];
       this.destinations = [];
-      this.activatedFeatures = [];
     });
 
     test('it should show an upsell CTA', async function (assert) {
-      await this.renderComponent();
+      await this.renderComponent(false);
 
       assert
         .dom(title)
@@ -103,13 +103,13 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
 
     test('it should show the opt-in banner', async function (assert) {
-      await this.renderComponent();
+      await this.renderComponent(false);
 
       assert.dom(overview.optInBanner).exists('Opt-in banner is shown');
     });
 
     test('it should navigate to the opt-in modal', async function (assert) {
-      await this.renderComponent();
+      await this.renderComponent(false);
 
       await click(overview.optInBannerEnable);
 
@@ -123,7 +123,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     test('it should make a POST to activate the feature', async function (assert) {
       assert.expect(1);
 
-      await this.renderComponent();
+      await this.renderComponent(false);
 
       this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
         assert.true(true, 'POST to secrets-sync/activate is called');
@@ -138,7 +138,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
 
     test('it shows an error if activation fails', async function (assert) {
-      await this.renderComponent();
+      await this.renderComponent(false);
 
       this.server.post('/sys/activation-flags/secrets-sync/activate', () => new Response(403));
 
@@ -151,7 +151,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
   });
 
-  module('secrets sync activated', function () {
+  module('secrets sync is activated', function () {
     test('it should hide the opt-in banner', async function (assert) {
       await this.renderComponent();
 
