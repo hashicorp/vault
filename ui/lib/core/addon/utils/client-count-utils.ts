@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -160,14 +158,11 @@ export const namespaceArrayToObject = (
   // and values include new and total client counts for that namespace in that month
   const namespaces_by_key = totalClientsByNamespace.reduce(
     (nsObject: { [key: string]: NamespacesByKey }, ns) => {
-      const newNsClients: NamespaceClients | undefined = newClientsByNamespace?.find(
-        (n) => n.label === ns.label
-      );
+      const newNsClients = newClientsByNamespace?.find((n) => n.label === ns.label);
 
       // mounts_by_key is is used to filter further in a namespace and get monthly activity by mount
       // it's an object inside the namespace block where the keys are mount paths
       // and the values include new and total client counts for that mount in that month
-      // @ts-ignore
       const mounts_by_key = ns.mounts.reduce((mountObj: { [key: string]: MountsByKey }, mount) => {
         const newMountClients = newNsClients
           ? newNsClients.mounts.find((m) => m.label === mount.label)
@@ -175,7 +170,7 @@ export const namespaceArrayToObject = (
 
         mountObj[mount.label] = { ...mount, timestamp, month, new_clients: { month, ...newMountClients } };
         return mountObj;
-      }, {});
+      }, {} as { [key: string]: MountsByKey });
 
       nsObject[ns.label] = {
         ...ns,
