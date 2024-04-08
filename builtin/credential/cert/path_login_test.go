@@ -159,6 +159,46 @@ func TestCert_RoleResolveWithoutProvidingCertName(t *testing.T) {
 	})
 }
 
+// TestCert_LoginWithNoCommonName verifies that we can login through certauth
+// with a certificate that doesn't have a Subject common name. This failed in the
+// past as we would blindly put the CommonName within an alias and generate an empty
+// value.
+func TestCert_LoginWithNoCommonName(t *testing.T) {
+	certTemplate := &x509.Certificate{
+		DNSNames:    []string{"example.com"},
+		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+		ExtKeyUsage: []x509.ExtKeyUsage{
+			x509.ExtKeyUsageServerAuth,
+			x509.ExtKeyUsageClientAuth,
+		},
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement,
+		SerialNumber: big.NewInt(mathrand.Int63()),
+		NotBefore:    time.Now().Add(-30 * time.Second),
+		NotAfter:     time.Now().Add(262980 * time.Hour),
+	}
+
+	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate)
+	if tempDir != "" {
+		defer os.RemoveAll(tempDir)
+	}
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
+	ca, err := ioutil.ReadFile(filepath.Join(tempDir, "ca_cert.pem"))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: testFactory(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepCert(t, "web", ca, "foo", allowed{dns: "example.com"}, false),
+			testAccStepLoginWithName(t, connState, "web"),
+			testAccStepResolveRoleWithEmptyDataMap(t, connState, "web"),
+		},
+	})
+}
+
 func testAccStepSetRoleCacheSize(t *testing.T, size int) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,

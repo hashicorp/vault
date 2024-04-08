@@ -93,10 +93,16 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 		return nil, fmt.Errorf("no client certificate found")
 	}
 
+	aliasName, ok := lookupAliasName(clientCerts[0])
+
+	if !ok {
+		return nil, fmt.Errorf("no alias name found in client certificate")
+	}
+
 	return &logical.Response{
 		Auth: &logical.Auth{
 			Alias: &logical.Alias{
-				Name: clientCerts[0].Subject.CommonName,
+				Name: aliasName,
 			},
 		},
 	}, nil
@@ -155,6 +161,11 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 		metadata[k] = v
 	}
 
+	aliasName, ok := lookupAliasName(clientCerts[0])
+	if !ok {
+		return nil, fmt.Errorf("failed to build an alias name from certificate")
+	}
+
 	auth := &logical.Auth{
 		InternalData: map[string]interface{}{
 			"subject_key_id":   skid,
@@ -162,9 +173,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 		},
 		DisplayName: matched.Entry.DisplayName,
 		Metadata:    metadata,
-		Alias: &logical.Alias{
-			Name: clientCerts[0].Subject.CommonName,
-		},
+		Alias:       &logical.Alias{Name: aliasName},
 	}
 
 	if config.EnableIdentityAliasMetadata {
@@ -176,6 +185,33 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 	return &logical.Response{
 		Auth: auth,
 	}, nil
+}
+
+func lookupAliasName(certificate *x509.Certificate) (string, bool) {
+	cn := strings.TrimSpace(certificate.Subject.CommonName)
+	if cn != "" {
+		return cn, true
+	}
+
+	if len(certificate.DNSNames) > 0 {
+		for _, name := range certificate.DNSNames {
+			trimmedName := strings.TrimSpace(name)
+			if trimmedName != "" {
+				return trimmedName, true
+			}
+		}
+	}
+
+	if len(certificate.EmailAddresses) > 0 {
+		for _, email := range certificate.EmailAddresses {
+			trimmedEmail := strings.TrimSpace(email)
+			if trimmedEmail != "" {
+				return trimmedEmail, true
+			}
+		}
+	}
+
+	return "", false
 }
 
 func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
