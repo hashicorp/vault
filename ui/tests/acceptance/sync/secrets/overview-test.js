@@ -76,12 +76,18 @@ module('Acceptance | sync | overview', function (hooks) {
         wasActivatePOSTCalled = true;
         return {};
       });
-
-      // override mirage to simulate no pre-existing destinations
-      this.server.get('/sys/sync/destinations', () => {});
     });
 
     test('the activation workflow works', async function (assert) {
+      assert.expect(8);
+
+      this.server.get('/sys/sync/destinations', () => {
+        assert.true(false, 'destinations is not called');
+      });
+      this.server.get('/sys/sync/associations', () => {
+        assert.true(false, 'associations is not called');
+      });
+
       await visit('/vault/sync/secrets/overview');
 
       assert
@@ -90,6 +96,13 @@ module('Acceptance | sync | overview', function (hooks) {
 
       assert.dom(ts.overview.optInBanner).exists();
       await click(ts.overview.optInBannerEnable);
+
+      this.server.get('/sys/sync/destinations', () => {
+        assert.true(true, 'destinations is called');
+      });
+      this.server.get('/sys/sync/associations', () => {
+        assert.true(true, 'associations is called');
+      });
 
       assert.dom(ts.overview.optInModal).exists('modal to opt-in and activate feature is shown');
       await click(ts.overview.optInCheck);
