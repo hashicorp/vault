@@ -27,6 +27,7 @@ const (
 	exportTypeHMACKey          = "hmac-key"
 	exportTypePublicKey        = "public-key"
 	exportTypeCertificateChain = "certificate-chain"
+	exportTypeCMACKey          = "cmac-key"
 )
 
 func (b *backend) pathExportKeys() *framework.Path {
@@ -42,7 +43,7 @@ func (b *backend) pathExportKeys() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"type": {
 				Type:        framework.TypeString,
-				Description: "Type of key to export (encryption-key, signing-key, hmac-key, public-key)",
+				Description: "Type of key to export (encryption-key, signing-key, hmac-key, public-key, cmac-key)",
 			},
 			"name": {
 				Type:        framework.TypeString,
@@ -74,6 +75,7 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 	case exportTypeHMACKey:
 	case exportTypePublicKey:
 	case exportTypeCertificateChain:
+	case exportTypeCMACKey:
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("invalid export type: %s", exportType)), logical.ErrInvalidRequest
 	}
