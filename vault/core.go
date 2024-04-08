@@ -2654,7 +2654,7 @@ func (c *Core) runUnsealSetupForPrimary(ctx context.Context, logger log.Logger) 
 		}
 
 		sealGenerationInfo := c.seal.GetAccess().GetSealGenerationInfo()
-
+		shouldRewrap := !sealGenerationInfo.IsRewrapped()
 		switch {
 		case existingGenerationInfo == nil:
 			// This is the first time we store seal generation information
@@ -2666,7 +2666,7 @@ func (c *Core) runUnsealSetupForPrimary(ctx context.Context, logger log.Logger) 
 				logger.Error("failed to store seal generation info", "error", err)
 				return err
 			}
-
+			shouldRewrap = true
 		case existingGenerationInfo.Generation == sealGenerationInfo.Generation:
 			// Same generation, update the rewrapped flag in case the previous active node
 			// changed its value. In other words, a rewrap may have happened, or a rewrap may have been
@@ -2679,14 +2679,13 @@ func (c *Core) runUnsealSetupForPrimary(ctx context.Context, logger log.Logger) 
 					return err
 				}
 			}
+			shouldRewrap = !existingGenerationInfo.IsRewrapped()
 		case existingGenerationInfo.Generation > sealGenerationInfo.Generation:
 			// Our seal information is out of date. The previous active node used a newer generation.
 			logger.Error("A newer seal generation was found in storage. The seal configuration in this node should be updated to match that of the previous active node, and this node should be restarted.")
 			return errors.New("newer seal generation found in storage, in memory seal configuration is out of date")
 		}
-
-		if !sealGenerationInfo.IsRewrapped() {
-
+		if shouldRewrap {
 			// Set the migration done flag so that a seal-rewrap gets triggered later.
 			// Note that in the case where multi seal is not supported, Core.migrateSeal() takes care of
 			// triggering the rewrap when necessary.
