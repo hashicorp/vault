@@ -74,7 +74,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 			},
 			want:           audit.FormatterConfig{},
 			wantErr:        true,
-			expectedErrMsg: "unable to parse 'hmac_accessor': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedErrMsg: "unable to parse 'hmac_accessor': invalid configuration: strconv.ParseBool: parsing \"maybe\": invalid syntax",
 		},
 		"invalid-log-raw": {
 			config: map[string]string{
@@ -84,7 +84,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 			},
 			want:           audit.FormatterConfig{},
 			wantErr:        true,
-			expectedErrMsg: "unable to parse 'log_raw': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedErrMsg: "unable to parse 'log_raw: invalid configuration: strconv.ParseBool: parsing \"maybe\": invalid syntax",
 		},
 		"invalid-elide-bool": {
 			config: map[string]string{
@@ -95,7 +95,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 			},
 			want:           audit.FormatterConfig{},
 			wantErr:        true,
-			expectedErrMsg: "unable to parse 'elide_list_responses': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedErrMsg: "unable to parse 'elide_list_responses': invalid configuration: strconv.ParseBool: parsing \"maybe\": invalid syntax",
 		},
 		"prefix": {
 			config: map[string]string{
@@ -265,14 +265,14 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				SaltConfig: nil,
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "nil salt config: internal configuration error",
+			expectedErrorMessage: "nil salt config: invalid parameter",
 		},
 		"nil-salt-view": {
 			backendConfig: &audit.BackendConfig{
 				SaltConfig: &salt.Config{},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "nil salt view: internal configuration error",
+			expectedErrorMessage: "nil salt view: invalid parameter",
 		},
 		"nil-logger": {
 			backendConfig: &audit.BackendConfig{
@@ -282,7 +282,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				Logger:     nil,
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "nil logger: internal configuration error",
+			expectedErrorMessage: "nil logger: invalid parameter",
 		},
 		"no-address": {
 			backendConfig: &audit.BackendConfig{
@@ -293,7 +293,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				Config:     map[string]string{},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "address is required: internal configuration error",
+			expectedErrorMessage: "address is required: invalid parameter",
 		},
 		"empty-address": {
 			backendConfig: &audit.BackendConfig{
@@ -346,7 +346,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "error configuring sink node: error creating socket sink node: error applying options: unable to parse max duration: time: invalid duration \"qwerty\"",
+			expectedErrorMessage: "error configuring sink node: error creating socket sink node: error applying options: unable to parse max duration: invalid parameter: time: invalid duration \"qwerty\"",
 		},
 		"non-fallback-device-with-filter": {
 			backendConfig: &audit.BackendConfig{
