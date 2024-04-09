@@ -146,7 +146,7 @@ func TestCoreWithDeadlockDetection(t testing.T, testSeal Seal, enableRaw bool) *
 		AuditBackends: map[string]audit.Factory{
 			"file": auditFile.Factory,
 		},
-		DetectDeadlocks: "expiration,quotas,statelock",
+		DetectDeadlocks: "expiration,quotas,statelock,barrier",
 	}
 	return TestCoreWithSealAndUI(t, conf)
 }
