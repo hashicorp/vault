@@ -110,8 +110,8 @@ export const formatByNamespace = (namespaceArray: NamespaceObject[]) => {
   return namespaceArray.map((ns) => {
     // i.e. 'namespace_path' is an empty string for 'root', so use namespace_id
     const label = ns.namespace_path === '' ? ns.namespace_id : ns.namespace_path;
-    // data prior to adding mount granularity will still have a mounts key,
-    // but with the value: "no mount accessor (pre-1.10 upgrade?)" (ref: vault/activity_log_util_common.go)
+    // data prior to adding mount granularity will still have a mounts array,
+    // but the mount_path value will be "no mount accessor (pre-1.10 upgrade?)" (ref: vault/activity_log_util_common.go)
     // transform to an empty array for type consistency
     let mounts: MountClients[] | [] = [];
     if (Array.isArray(ns.mounts)) {
