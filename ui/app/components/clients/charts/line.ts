@@ -11,7 +11,7 @@ import { debug } from '@ember/debug';
 
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
 import type { MonthlyChartData, Timestamp } from 'vault/vault/charts/client-counts';
-import type { TotalClients } from 'vault/vault/utils/client-count-utils';
+import type { TotalClients } from 'core/utils/client-count-utils';
 
 interface Args {
   dataset: MonthlyChartData[];

@@ -10,7 +10,7 @@ import { formatNumber } from 'core/helpers/format-number';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
 import type { MonthlyChartData } from 'vault/vault/charts/client-counts';
-import type { TotalClients } from 'vault/vault/utils/client-count-utils';
+import type { TotalClients } from 'core/utils/client-count-utils';
 
 interface Args {
   data: MonthlyChartData[];

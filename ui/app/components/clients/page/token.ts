@@ -10,7 +10,7 @@ import type {
   MountNewClients,
   NamespaceByKey,
   NamespaceNewClients,
-} from 'vault/vault/utils/client-count-utils';
+} from 'core/utils/client-count-utils';
 
 export default class ClientsTokenPageComponent extends ActivityComponent {
   legend = [

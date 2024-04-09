@@ -19,7 +19,7 @@ import type {
   MountNewClients,
   NamespaceByKey,
   NamespaceNewClients,
-} from 'vault/vault/utils/client-count-utils';
+} from 'core/utils/client-count-utils';
 
 interface Args {
   isSecretsSyncActivated?: boolean;
@@ -64,18 +64,18 @@ export default class ClientsActivityComponent extends Component<Args> {
       return activity.byMonth;
     }
     const namespaceData = activity.byMonth
-      .map((m) => m.namespaces_by_key[namespace])
+      ?.map((m) => m.namespaces_by_key[namespace])
       .filter((d) => d !== undefined);
 
     if (!mountPath) {
-      return !namespaceData ? [] : namespaceData;
+      return namespaceData || [];
     }
 
     const mountData = namespaceData
       .map((namespace) => namespace?.mounts_by_key[mountPath])
       .filter((d) => d !== undefined);
 
-    return !mountData ? [] : mountData;
+    return mountData || [];
   }
 
   get filteredActivityByNamespace() {

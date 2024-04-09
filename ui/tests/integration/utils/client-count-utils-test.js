@@ -57,7 +57,7 @@ module('Integration | Util | client count utils', function (hooks) {
   });
 
   test('formatByMonths: formats the months array', async function (assert) {
-    assert.expect(4);
+    assert.expect(5);
     const original = [...RESPONSE.months];
 
     const [formattedNoData, formattedWithActivity] = formatByMonths(RESPONSE.months);
@@ -79,6 +79,7 @@ module('Integration | Util | client count utils', function (hooks) {
       'it formats new_clients block for months with data'
     );
     assert.propEqual(RESPONSE.months, original, 'it does not modify original months array');
+    assert.propEqual(formatByMonths([]), [], 'it returns an empty array if the months key is empty');
   });
 
   test('formatByNamespace: formats namespace array with mounts', async function (assert) {
