@@ -267,7 +267,7 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 		}
 	}
 
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
 	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -313,7 +313,7 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
 	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -418,9 +418,79 @@ func factory(t *testing.T) logical.Backend {
 	return b
 }
 
+// TestBackend_LoginRegression_AnonBind is a test for the regression reported in
+// https://github.com/hashicorp/vault/issues/26183.
+func TestBackend_LoginRegression_AnonBind(t *testing.T) {
+	b := factory(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cfg.UserAttr = "givenName"
+	cfg.AnonymousGroupSearch = true
+	defer cleanup()
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t, cfg),
+			// Map Admin_staff group (from LDAP server) with foo policy
+			testAccStepGroup(t, "admin_staff", "foo"),
+
+			// Map engineers group (local) with bar policy
+			testAccStepGroup(t, "engineers", "bar"),
+
+			// Map hermes conrad user with local engineers group
+			testAccStepUser(t, "hermes", "engineers"),
+
+			// Authenticate
+			testAccStepLogin(t, "hermes", "hermes"),
+
+			// Verify both groups mappings can be listed back
+			testAccStepGroupList(t, []string{"engineers", "admin_staff"}),
+
+			// Verify user mapping can be listed back
+			testAccStepUserList(t, []string{"hermes"}),
+		},
+	})
+}
+
+// TestBackend_LoginRegression_UserAttr is a test for the regression reported in
+// https://github.com/hashicorp/vault/issues/26171.
+// Vault relies on case insensitive user attribute keys for mapping user
+// attributes to entity alias metadata.
+func TestBackend_LoginRegression_UserAttr(t *testing.T) {
+	b := factory(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cfg.UserAttr = "givenName"
+	cfg.AnonymousGroupSearch = true
+	defer cleanup()
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t, cfg),
+			// Map Admin_staff group (from LDAP server) with foo policy
+			testAccStepGroup(t, "admin_staff", "foo"),
+
+			// Map engineers group (local) with bar policy
+			testAccStepGroup(t, "engineers", "bar"),
+
+			// Map hermes conrad user with local engineers group
+			testAccStepUser(t, "hermes", "engineers"),
+
+			// Authenticate
+			testAccStepLogin(t, "hermes", "hermes"),
+
+			// Verify both groups mappings can be listed back
+			testAccStepGroupList(t, []string{"engineers", "admin_staff"}),
+
+			// Verify user mapping can be listed back
+			testAccStepUserList(t, []string{"hermes"}),
+		},
+	})
+}
+
 func TestBackend_basic(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -450,7 +520,7 @@ func TestBackend_basic(t *testing.T) {
 
 func TestBackend_basic_noPolicies(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -468,7 +538,7 @@ func TestBackend_basic_noPolicies(t *testing.T) {
 
 func TestBackend_basic_group_noPolicies(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -489,7 +559,7 @@ func TestBackend_basic_group_noPolicies(t *testing.T) {
 
 func TestBackend_basic_authbind(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -506,7 +576,7 @@ func TestBackend_basic_authbind(t *testing.T) {
 
 func TestBackend_basic_authbind_userfilter(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
 	defer cleanup()
 
 	// userattr not used in the userfilter should result in a warning in the response
@@ -649,7 +719,7 @@ func TestBackend_basic_authbind_userfilter(t *testing.T) {
 
 func TestBackend_basic_authbind_metadata_name(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
 	defer cleanup()
 
 	cfg.UserAttr = "cn"
@@ -714,7 +784,7 @@ func addUPNAttributeToLDAPSchemaAndUser(t *testing.T, cfg *ldaputil.ConfigEntry,
 
 func TestBackend_basic_discover(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -731,7 +801,7 @@ func TestBackend_basic_discover(t *testing.T) {
 
 func TestBackend_basic_nogroupdn(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -821,19 +891,20 @@ func testAccStepConfigUrl(t *testing.T, cfg *ldaputil.ConfigEntry) logicaltest.T
 		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
-			"url":                  cfg.Url,
-			"userattr":             cfg.UserAttr,
-			"userdn":               cfg.UserDN,
-			"userfilter":           cfg.UserFilter,
-			"groupdn":              cfg.GroupDN,
-			"groupattr":            cfg.GroupAttr,
-			"binddn":               cfg.BindDN,
-			"bindpass":             cfg.BindPassword,
-			"case_sensitive_names": true,
-			"token_policies":       "abc,xyz",
-			"request_timeout":      cfg.RequestTimeout,
-			"connection_timeout":   cfg.ConnectionTimeout,
-			"username_as_alias":    cfg.UsernameAsAlias,
+			"url":                    cfg.Url,
+			"userattr":               cfg.UserAttr,
+			"userdn":                 cfg.UserDN,
+			"userfilter":             cfg.UserFilter,
+			"groupdn":                cfg.GroupDN,
+			"groupattr":              cfg.GroupAttr,
+			"binddn":                 cfg.BindDN,
+			"bindpass":               cfg.BindPassword,
+			"anonymous_group_search": cfg.AnonymousGroupSearch,
+			"case_sensitive_names":   true,
+			"token_policies":         "abc,xyz",
+			"request_timeout":        cfg.RequestTimeout,
+			"connection_timeout":     cfg.ConnectionTimeout,
+			"username_as_alias":      cfg.UsernameAsAlias,
 		},
 	}
 }
@@ -1180,7 +1251,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 
 	ctx := context.Background()
 
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
 	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,
