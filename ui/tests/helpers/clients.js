@@ -193,7 +193,7 @@ export const ACTIVITY_RESPONSE_STUB = {
     },
     {
       namespace_id: '81ry61',
-      namespace_path: 'ns/1',
+      namespace_path: 'ns1',
       counts: {
         distinct_entities: 783,
         entity_clients: 783,
@@ -315,7 +315,7 @@ export const ACTIVITY_RESPONSE_STUB = {
         },
         {
           namespace_id: '81ry61',
-          namespace_path: 'ns/1',
+          namespace_path: 'ns1',
           counts: {
             distinct_entities: 50,
             entity_clients: 50,
@@ -378,7 +378,7 @@ export const ACTIVITY_RESPONSE_STUB = {
         namespaces: [
           {
             namespace_id: '81ry61',
-            namespace_path: 'ns/1',
+            namespace_path: 'ns1',
             counts: {
               distinct_entities: 30,
               entity_clients: 30,
@@ -493,6 +493,174 @@ export const ACTIVITY_RESPONSE_STUB = {
   },
 };
 
+// combined activity data before and after 1.10 upgrade when Vault added mount attribution
+export const MIXED_ACTIVITY_RESPONSE_STUB = {
+  start_time: '2024-03-01T00:00:00Z',
+  end_time: '2024-04-30T23:59:59Z',
+  total: {
+    acme_clients: 0,
+    clients: 3,
+    distinct_entities: 3,
+    entity_clients: 3,
+    non_entity_clients: 0,
+    non_entity_tokens: 0,
+    secret_syncs: 0,
+  },
+  by_namespace: [
+    {
+      counts: {
+        acme_clients: 0,
+        clients: 3,
+        distinct_entities: 3,
+        entity_clients: 3,
+        non_entity_clients: 0,
+        non_entity_tokens: 0,
+        secret_syncs: 0,
+      },
+      mounts: [
+        {
+          counts: {
+            acme_clients: 0,
+            clients: 2,
+            distinct_entities: 2,
+            entity_clients: 2,
+            non_entity_clients: 0,
+            non_entity_tokens: 0,
+            secret_syncs: 0,
+          },
+          mount_path: 'no mount accessor (pre-1.10 upgrade?)',
+        },
+        {
+          counts: {
+            acme_clients: 0,
+            clients: 1,
+            distinct_entities: 1,
+            entity_clients: 1,
+            non_entity_clients: 0,
+            non_entity_tokens: 0,
+            secret_syncs: 0,
+          },
+          mount_path: 'auth/u/',
+        },
+      ],
+      namespace_id: 'root',
+      namespace_path: '',
+    },
+  ],
+  months: [
+    {
+      counts: null,
+      namespaces: null,
+      new_clients: null,
+      timestamp: '2024-03-01T00:00:00Z',
+    },
+    {
+      counts: {
+        acme_clients: 0,
+        clients: 3,
+        distinct_entities: 0,
+        entity_clients: 3,
+        non_entity_clients: 0,
+        non_entity_tokens: 0,
+        secret_syncs: 0,
+      },
+      namespaces: [
+        {
+          counts: {
+            acme_clients: 0,
+            clients: 3,
+            distinct_entities: 0,
+            entity_clients: 3,
+            non_entity_clients: 0,
+            non_entity_tokens: 0,
+            secret_syncs: 0,
+          },
+          mounts: [
+            {
+              counts: {
+                acme_clients: 0,
+                clients: 2,
+                distinct_entities: 0,
+                entity_clients: 2,
+                non_entity_clients: 0,
+                non_entity_tokens: 0,
+                secret_syncs: 0,
+              },
+              mount_path: 'no mount accessor (pre-1.10 upgrade?)',
+            },
+            {
+              counts: {
+                acme_clients: 0,
+                clients: 1,
+                distinct_entities: 0,
+                entity_clients: 1,
+                non_entity_clients: 0,
+                non_entity_tokens: 0,
+                secret_syncs: 0,
+              },
+              mount_path: 'auth/u/',
+            },
+          ],
+          namespace_id: 'root',
+          namespace_path: '',
+        },
+      ],
+      new_clients: {
+        counts: {
+          acme_clients: 0,
+          clients: 3,
+          distinct_entities: 0,
+          entity_clients: 3,
+          non_entity_clients: 0,
+          non_entity_tokens: 0,
+          secret_syncs: 0,
+        },
+        namespaces: [
+          {
+            counts: {
+              acme_clients: 0,
+              clients: 3,
+              distinct_entities: 0,
+              entity_clients: 3,
+              non_entity_clients: 0,
+              non_entity_tokens: 0,
+              secret_syncs: 0,
+            },
+            mounts: [
+              {
+                counts: {
+                  acme_clients: 0,
+                  clients: 2,
+                  distinct_entities: 0,
+                  entity_clients: 2,
+                  non_entity_clients: 0,
+                  non_entity_tokens: 0,
+                  secret_syncs: 0,
+                },
+                mount_path: 'no mount accessor (pre-1.10 upgrade?)',
+              },
+              {
+                counts: {
+                  acme_clients: 0,
+                  clients: 1,
+                  distinct_entities: 0,
+                  entity_clients: 1,
+                  non_entity_clients: 0,
+                  non_entity_tokens: 0,
+                  secret_syncs: 0,
+                },
+                mount_path: 'auth/u/',
+              },
+            ],
+            namespace_id: 'root',
+            namespace_path: '',
+          },
+        ],
+      },
+      timestamp: '2024-04-01T00:00:00Z',
+    },
+  ],
+};
 // format returned by model hook in routes/vault/cluster/clients.ts
 export const VERSION_HISTORY = [
   {
@@ -560,7 +728,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
       ],
     },
     {
-      label: 'ns/1',
+      label: 'ns1',
       clients: 2376,
       entity_clients: 783,
       non_entity_clients: 1193,
@@ -649,7 +817,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
           ],
         },
         {
-          label: 'ns/1',
+          label: 'ns1',
           clients: 3085,
           entity_clients: 50,
           non_entity_clients: 140,
@@ -787,7 +955,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
             },
           },
         },
-        'ns/1': {
+        ns1: {
           month: '9/23',
           timestamp: '2023-09-01T00:00:00Z',
           clients: 3085,
@@ -797,7 +965,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
           acme_clients: 125,
           new_clients: {
             month: '9/23',
-            label: 'ns/1',
+            label: 'ns1',
             clients: 222,
             entity_clients: 30,
             non_entity_clients: 62,
@@ -901,7 +1069,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
         acme_clients: 50,
         namespaces: [
           {
-            label: 'ns/1',
+            label: 'ns1',
             clients: 222,
             entity_clients: 30,
             non_entity_clients: 62,

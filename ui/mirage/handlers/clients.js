@@ -110,8 +110,10 @@ function generateMonths(startDate, endDate, namespaces) {
   const numberOfMonths = differenceInCalendarMonths(endDateObject, startDateObject) + 1;
   const months = [];
 
-  // only generate monthly block if queried dates span an upgrade
-  if (isWithinInterval(UPGRADE_DATE, { start: startDateObject, end: endDateObject })) {
+  // only generate monthly block if queried dates span or follow upgrade to 1.10
+  const upgradeWithin = isWithinInterval(UPGRADE_DATE, { start: startDateObject, end: endDateObject });
+  const upgradeAfter = isAfter(startDateObject, UPGRADE_DATE);
+  if (upgradeWithin || upgradeAfter) {
     for (let i = 0; i < numberOfMonths; i++) {
       const month = addMonths(startOfMonth(startDateObject), i);
       const hasNoData = isBefore(month, UPGRADE_DATE) && !isSameMonth(month, UPGRADE_DATE);
