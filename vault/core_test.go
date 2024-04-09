@@ -3605,3 +3605,21 @@ func TestBuildUnsealSetupFunctionSlice(t *testing.T) {
 		assert.Equal(t, testcase.expectedLength, len(funcs), testcase.name)
 	}
 }
+
+// TestBarrier_DeadlockDetection verifies that the
+// DeadlockDetection is correctly enabled and disabled when the core is unsealed
+func TestBarrier_DeadlockDetection(t *testing.T) {
+	testCore := TestCore(t)
+	testCoreUnsealed(t, testCore)
+
+	if testCore.barrier.DetectDeadlocks() {
+		t.Fatal("barrierLock has deadlock detection enabled, it shouldn't")
+	}
+
+	testCore = TestCoreWithDeadlockDetection(t, nil, false)
+	testCoreUnsealed(t, testCore)
+
+	if !testCore.barrier.DetectDeadlocks() {
+		t.Fatal("barrierLock doesn't have deadlock detection enabled, it should")
+	}
+}
