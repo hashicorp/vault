@@ -378,3 +378,69 @@ func TestAuditEvent_formattedTime(t *testing.T) {
 	require.NotNil(t, a)
 	require.Equal(t, "2024-03-22T10:00:05.00000001Z", a.formattedTime())
 }
+
+// TestEvent_IsValidFormat ensures that we can correctly determine valid and
+// invalid formats.
+func TestEvent_IsValidFormat(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		input    string
+		expected bool
+	}{
+		"empty": {
+			input:    "",
+			expected: false,
+		},
+		"whitespace": {
+			input:    "     ",
+			expected: false,
+		},
+		"invalid-test": {
+			input:    "test",
+			expected: false,
+		},
+		"valid-json": {
+			input:    "json",
+			expected: true,
+		},
+		"upper-json": {
+			input:    "JSON",
+			expected: true,
+		},
+		"mixed-json": {
+			input:    "Json",
+			expected: true,
+		},
+		"spacey-json": {
+			input:    "  json  ",
+			expected: true,
+		},
+		"valid-jsonx": {
+			input:    "jsonx",
+			expected: true,
+		},
+		"upper-jsonx": {
+			input:    "JSONX",
+			expected: true,
+		},
+		"mixed-jsonx": {
+			input:    "JsonX",
+			expected: true,
+		},
+		"spacey-jsonx": {
+			input:    "  jsonx  ",
+			expected: true,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			res := IsValidFormat(tc.input)
+			require.Equal(t, tc.expected, res)
+		})
+	}
+}

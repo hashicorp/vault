@@ -5,6 +5,7 @@ package audit
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/internal/observability/event"
@@ -156,4 +157,11 @@ func (t subtype) String() string {
 // format (which removes trailing zeros from the seconds field).
 func (a *AuditEvent) formattedTime() string {
 	return a.Timestamp.UTC().Format(time.RFC3339Nano)
+}
+
+// IsValidFormat provides a means to validate whether the supplied format is valid.
+// Examples of valid formats are JSON and JSONx.
+func IsValidFormat(v string) bool {
+	err := format(strings.TrimSpace(strings.ToLower(v))).validate()
+	return err == nil
 }

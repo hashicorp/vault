@@ -159,6 +159,10 @@ func newFormatterConfig(headerFormatter audit.HeaderFormatter, config map[string
 	var opts []audit.Option
 
 	if format, ok := config["format"]; ok {
+		if !audit.IsValidFormat(format) {
+			return audit.FormatterConfig{}, fmt.Errorf("unsupported 'format': %w", audit.ErrExternalOptions)
+		}
+
 		opts = append(opts, audit.WithFormat(format))
 	}
 

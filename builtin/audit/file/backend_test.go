@@ -193,7 +193,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 			},
 			want:            audit.FormatterConfig{},
 			wantErr:         true,
-			expectedMessage: "error applying options: invalid format \"squiggly\": invalid parameter",
+			expectedMessage: "unsupported 'format': invalid configuration",
 		},
 		"invalid-hmac-accessor": {
 			config: map[string]string{
