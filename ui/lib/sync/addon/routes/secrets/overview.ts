@@ -26,13 +26,16 @@ export default class SyncSecretsOverviewRoute extends Route {
     const { activatedFeatures } = this.modelFor('secrets') as {
       activatedFeatures: Array<string>;
     };
+    const isActivated = activatedFeatures.includes('secrets-sync');
     return hash({
-      destinations: this.store.query('sync/destination', {}).catch(() => []),
-      associations: this.store
-        .adapterFor('sync/association')
-        .queryAll()
-        .catch(() => []),
-      activatedFeatures,
+      isActivated,
+      destinations: isActivated ? this.store.query('sync/destination', {}).catch(() => []) : [],
+      associations: isActivated
+        ? this.store
+            .adapterFor('sync/association')
+            .queryAll()
+            .catch(() => [])
+        : [],
     });
   }
 }
