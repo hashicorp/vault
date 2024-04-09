@@ -224,7 +224,8 @@
     "xmlhttprequest-ssl": "^1.6.2",
     "@embroider/macros": "^1.15.0",
     "socket.io": "^4.6.2",
-    "json5": "^1.0.2"
+    "json5": "^1.0.2",
+    "@xmldom/xmldom": "^0.8.10"
   },
   "engines": {
     "node": "18"
