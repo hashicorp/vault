@@ -19705,10 +19705,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mout@npm:^1.0.0":
-  version: 1.2.2
-  resolution: "mout@npm:1.2.2"
-  checksum: e6c4249e9a5e603af8b4ae7172572e266f7cbd2edbf27824e2e06dd288adc66e67170f4a061ecc388429046aa93a7e3946e35139fd0767f76dd10d075fbca74f
+"mout@npm:^1.2.4":
+  version: 1.2.4
+  resolution: "mout@npm:1.2.4"
+  checksum: 761801ab6616cea1a7f3c2082d1e2fb0b984898cc92117c70f34aab104723285eadf03545b5e092d44a17d6cfbd367a005064d7b23a8517ee4f6b77a8d345561
   languageName: node
   linkType: hard
 
