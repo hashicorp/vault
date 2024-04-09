@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -6,10 +7,11 @@
 import ActivityComponent from '../activity';
 
 import type {
-  ClientActivityNewClients,
-  ClientActivityMonthly,
-  ClientActivityResourceByKey,
-} from 'vault/vault/models/clients/activity';
+  ByMonthNewClients,
+  MountNewClients,
+  NamespaceByKey,
+  NamespaceNewClients,
+} from 'vault/vault/utils/client-count-utils';
 
 export default class ClientsTokenPageComponent extends ActivityComponent {
   legend = [
@@ -19,10 +21,8 @@ export default class ClientsTokenPageComponent extends ActivityComponent {
 
   calculateClientAverages(
     dataset:
-      | ClientActivityMonthly[]
-      | (ClientActivityResourceByKey | undefined)[]
-      | (ClientActivityNewClients | undefined)[]
-      | undefined
+      | (NamespaceByKey | undefined)[]
+      | (ByMonthNewClients | NamespaceNewClients | MountNewClients | undefined)[]
   ) {
     return ['entity_clients', 'non_entity_clients'].reduce((count, key) => {
       const average = this.average(dataset, key);

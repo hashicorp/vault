@@ -9,14 +9,17 @@ import { compareAsc, getUnixTime, isWithinInterval } from 'date-fns';
 import type ClientsVersionHistoryModel from 'vault/vault/models/clients/version-history';
 import type {
   ActivityMonthBlock,
+  ByMonthClients,
+  ByMonthNewClients,
+  ByNamespaceClients,
   Counts,
   EmptyActivityMonthBlock,
-  MonthlyClients,
+  MountByKey,
   MountClients,
-  MountsByKey,
-  NamespaceClients,
+  MountNewClients,
+  NamespaceByKey,
+  NamespaceNewClients,
   NamespaceObject,
-  NamespacesByKey,
 } from 'vault/vault/utils/client-count-utils';
 
 // add new types here
@@ -133,7 +136,7 @@ export const formatByNamespace = (namespaceArray: NamespaceObject[]) => {
 // these deprecated keys still exist on the response, so only return relevant keys here
 // when querying historical data the response will always contain the latest client type keys because the activity log is
 // constructed based on the version of Vault the user is on (key values will be 0)
-export const destructureClientCounts = (verboseObject: Counts) => {
+export const destructureClientCounts = (verboseObject: Counts | ByNamespaceClients) => {
   return CLIENT_TYPES.reduce((newObj: Record<ClientTypes, Counts[ClientTypes]>, clientType: ClientTypes) => {
     newObj[clientType] = verboseObject[clientType];
     return newObj;
@@ -148,8 +151,8 @@ export const sortMonthsByTimestamp = (monthsArray: ActivityMonthBlock[] | EmptyA
 };
 
 export const namespaceArrayToObject = (
-  totalClientsByNamespace: NamespaceClients[],
-  newClientsByNamespace: MonthlyClients['new_clients']['namespaces'],
+  totalClientsByNamespace: ByNamespaceClients[],
+  newClientsByNamespace: ByMonthClients['new_clients']['namespaces'],
   month: string,
   timestamp: string
 ) => {
@@ -157,31 +160,36 @@ export const namespaceArrayToObject = (
   // it's an object in each month data block where the keys are namespace paths
   // and values include new and total client counts for that namespace in that month
   const namespaces_by_key = totalClientsByNamespace.reduce(
-    (nsObject: { [key: string]: NamespacesByKey }, ns) => {
+    (nsObject: { [key: string]: NamespaceByKey }, ns) => {
       const newNsClients = newClientsByNamespace?.find((n) => n.label === ns.label);
 
       // mounts_by_key is is used to filter further in a namespace and get monthly activity by mount
       // it's an object inside the namespace block where the keys are mount paths
       // and the values include new and total client counts for that mount in that month
-      const mounts_by_key = ns.mounts.reduce((mountObj: { [key: string]: MountsByKey }, mount) => {
-        const newMountClients = newNsClients
-          ? newNsClients.mounts.find((m) => m.label === mount.label)
-          : { month };
 
-        mountObj[mount.label] = { ...mount, timestamp, month, new_clients: { month, ...newMountClients } };
-        return mountObj;
-      }, {} as { [key: string]: MountsByKey });
+      if (newNsClients) {
+        const mounts_by_key = ns.mounts.reduce((mountObj: { [key: string]: MountByKey }, mount) => {
+          const newMountClients = newNsClients.mounts.find((m) => m.label === mount.label);
 
-      nsObject[ns.label] = {
-        ...ns,
-        timestamp,
-        month,
-        new_clients: { month, ...newNsClients },
-        mounts_by_key,
-      };
-      // remove unnecessary data
-      // delete nsObject[ns.label].mounts;
-      // delete nsObject[ns.label].label;
+          if (newMountClients) {
+            mountObj[mount.label] = {
+              ...mount,
+              timestamp,
+              month,
+              new_clients: { month, ...newMountClients },
+            };
+          }
+          return mountObj;
+        }, {} as { [key: string]: MountByKey });
+
+        nsObject[ns.label] = {
+          ...destructureClientCounts(ns),
+          timestamp,
+          month,
+          new_clients: { month, ...newNsClients },
+          mounts_by_key,
+        };
+      }
       return nsObject;
     },
     {}
@@ -189,3 +197,16 @@ export const namespaceArrayToObject = (
 
   return namespaces_by_key;
 };
+
+// type guards for conditionals
+export function hasMountsKey(
+  obj: ByMonthNewClients | NamespaceNewClients | MountNewClients
+): obj is NamespaceNewClients {
+  return 'mounts' in obj;
+}
+
+export function hasNamespacesKey(
+  obj: ByMonthNewClients | NamespaceNewClients | MountNewClients
+): obj is ByMonthNewClients {
+  return 'namespaces' in obj;
+}
