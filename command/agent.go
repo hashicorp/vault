@@ -656,23 +656,20 @@ func (c *AgentCommand) Run(args []string) int {
 		listeners = append(listeners, ln)
 
 		proxyVaultToken := true
-		var inmemSink sink.Sink
+		apiProxyLogger.Debug("auto-auth token is allowed to be used; configuring inmem sink")
+		inmemSink, err := inmem.New(&sink.SinkConfig{
+			Logger: apiProxyLogger,
+		}, leaseCache)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error creating inmem sink for cache: %v", err))
+			c.tlsReloadFuncsLock.Unlock()
+			return 1
+		}
+		sinks = append(sinks, &sink.SinkConfig{
+			Logger: apiProxyLogger,
+			Sink:   inmemSink,
+		})
 		if config.APIProxy != nil {
-			if config.APIProxy.UseAutoAuthToken {
-				apiProxyLogger.Debug("auto-auth token is allowed to be used; configuring inmem sink")
-				inmemSink, err = inmem.New(&sink.SinkConfig{
-					Logger: apiProxyLogger,
-				}, leaseCache)
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error creating inmem sink for cache: %v", err))
-					c.tlsReloadFuncsLock.Unlock()
-					return 1
-				}
-				sinks = append(sinks, &sink.SinkConfig{
-					Logger: apiProxyLogger,
-					Sink:   inmemSink,
-				})
-			}
 			proxyVaultToken = !config.APIProxy.ForceAutoAuthToken
 		}
 

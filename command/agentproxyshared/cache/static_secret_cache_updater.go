@@ -41,7 +41,7 @@ import (
 //        "current_version": "1",
 //        "data_path": "secret/data/foo",
 //        "modified": "true",
-//        "oldest_version": "0",ttempting to read error
+//        "oldest_version": "0",
 //        "operation": "data-write",
 //        "path": "secret/data/foo"
 //      }

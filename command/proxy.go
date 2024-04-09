@@ -614,9 +614,8 @@ func (c *ProxyCommand) Run(args []string) int {
 
 		listeners = append(listeners, ln)
 
-		var inmemSink sink.Sink
 		apiProxyLogger.Debug("configuring inmem auto-auth sink")
-		inmemSink, err = inmem.New(&sink.SinkConfig{
+		inmemSink, err := inmem.New(&sink.SinkConfig{
 			Logger: apiProxyLogger,
 		}, leaseCache)
 		if err != nil {
