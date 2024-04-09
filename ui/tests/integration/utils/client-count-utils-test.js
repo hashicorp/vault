@@ -154,8 +154,10 @@ module('Integration | Util | client count utils', function (hooks) {
     // month at 0-index has no data so use second month in array, empty month format covered by formatByMonths test above
     const original = { ...RESPONSE.months[1] };
     const expectedObject = SERIALIZED_ACTIVITY_RESPONSE.by_month[1].namespaces_by_key;
+    const formattedTotal = formatByNamespace(RESPONSE.months[1].namespaces);
+
     const testObject = namespaceArrayToObject(
-      formatByNamespace(RESPONSE.months[1].namespaces),
+      formattedTotal,
       formatByNamespace(RESPONSE.months[1].new_clients.namespaces),
       '9/23',
       '2023-09-01T00:00:00Z'
@@ -166,10 +168,11 @@ module('Integration | Util | client count utils', function (hooks) {
     assert.propEqual(root.new_clients, expectedRoot.new_clients, 'it formats namespaces new_clients');
     assert.propEqual(root.mounts_by_key, expectedRoot.mounts_by_key, 'it formats namespaces mounts_by_key');
     assert.propContains(root, expectedRoot, 'namespace has correct keys');
+
     assert.propEqual(
-      namespaceArrayToObject(null, null, '10/21', 'timestamp-here'),
+      namespaceArrayToObject(formattedTotal, formatByNamespace([]), '9/23', '2023-09-01T00:00:00Z'),
       {},
-      'returns an empty object when monthByNamespace = null'
+      'returns an empty object when there are no new clients '
     );
     assert.propEqual(RESPONSE.months[1], original, 'it does not modify original month data');
   });

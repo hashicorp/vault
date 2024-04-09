@@ -79,7 +79,7 @@ export const formatByMonths = (monthsArray: ActivityMonthBlock[] | EmptyActivity
   return sortedPayload?.map((m) => {
     const month = parseAPITimestamp(m.timestamp, 'M/yy') as string;
     const { timestamp } = m;
-    // counts are only null if there is no monthly data
+    // counts are null if there is no monthly data
     if (m.counts) {
       const totalClientsByNamespace = formatByNamespace(m.namespaces);
       const newClientsByNamespace = formatByNamespace(m.new_clients?.namespaces);
@@ -151,49 +151,45 @@ export const sortMonthsByTimestamp = (monthsArray: ActivityMonthBlock[] | EmptyA
 };
 
 export const namespaceArrayToObject = (
-  totalClientsByNamespace: ByNamespaceClients[],
-  newClientsByNamespace: ByMonthClients['new_clients']['namespaces'],
+  monthTotals: ByNamespaceClients[],
+  // technically this arg is the same type as above, just nested
+  monthNew: ByMonthClients['new_clients']['namespaces'],
   month: string,
   timestamp: string
 ) => {
   // namespaces_by_key is used to filter monthly activity data by namespace
   // it's an object in each month data block where the keys are namespace paths
   // and values include new and total client counts for that namespace in that month
-  const namespaces_by_key = totalClientsByNamespace.reduce(
-    (nsObject: { [key: string]: NamespaceByKey }, ns) => {
-      const newNsClients = newClientsByNamespace?.find((n) => n.label === ns.label);
-
+  const namespaces_by_key = monthTotals.reduce((nsObject: { [key: string]: NamespaceByKey }, ns) => {
+    const newNsClients = monthNew?.find((n) => n.label === ns.label);
+    if (newNsClients) {
       // mounts_by_key is is used to filter further in a namespace and get monthly activity by mount
       // it's an object inside the namespace block where the keys are mount paths
       // and the values include new and total client counts for that mount in that month
+      const mounts_by_key = ns.mounts.reduce((mountObj: { [key: string]: MountByKey }, mount) => {
+        const newMountClients = newNsClients.mounts.find((m) => m.label === mount.label);
 
-      if (newNsClients) {
-        const mounts_by_key = ns.mounts.reduce((mountObj: { [key: string]: MountByKey }, mount) => {
-          const newMountClients = newNsClients.mounts.find((m) => m.label === mount.label);
+        if (newMountClients) {
+          mountObj[mount.label] = {
+            ...mount,
+            timestamp,
+            month,
+            new_clients: { month, ...newMountClients },
+          };
+        }
+        return mountObj;
+      }, {} as { [key: string]: MountByKey });
 
-          if (newMountClients) {
-            mountObj[mount.label] = {
-              ...mount,
-              timestamp,
-              month,
-              new_clients: { month, ...newMountClients },
-            };
-          }
-          return mountObj;
-        }, {} as { [key: string]: MountByKey });
-
-        nsObject[ns.label] = {
-          ...destructureClientCounts(ns),
-          timestamp,
-          month,
-          new_clients: { month, ...newNsClients },
-          mounts_by_key,
-        };
-      }
-      return nsObject;
-    },
-    {}
-  );
+      nsObject[ns.label] = {
+        ...destructureClientCounts(ns),
+        timestamp,
+        month,
+        new_clients: { month, ...newNsClients },
+        mounts_by_key,
+      };
+    }
+    return nsObject;
+  }, {});
 
   return namespaces_by_key;
 };
