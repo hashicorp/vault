@@ -162,7 +162,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   }
 
   @action
-  onDateChange(dateObject: { dateType: string; monthIdx: string; year: string }) {
+  onDateChange(dateObject: { dateType: string; monthIdx: number; year: number }) {
     const { dateType, monthIdx, year } = dateObject;
     const { config } = this.args;
     const currentTimestamp = getUnixTime(timestamp.now());
