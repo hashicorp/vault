@@ -94,7 +94,7 @@ module('Integration | Util | client count utils', function (hooks) {
   });
 
   test('formatByNamespace: formats namespace array with no mounts (activity log data < 1.10)', async function (assert) {
-    assert.expect(1);
+    assert.expect(2);
     const noMounts = [
       {
         namespace_id: 'root',
@@ -123,6 +123,7 @@ module('Integration | Util | client count utils', function (hooks) {
       },
     ];
     assert.propEqual(formatByNamespace(noMounts), expected, 'it formats namespace without mounts');
+    assert.propEqual(formatByNamespace([]), [], 'it returns an empty array if the by_namespace key is empty');
   });
 
   test('destructureClientCounts: homogenizes key names when both old and new keys exist, or just old key names', async function (assert) {

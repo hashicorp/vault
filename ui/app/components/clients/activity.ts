@@ -72,7 +72,7 @@ export default class ClientsActivityComponent extends Component<Args> {
     }
 
     const mountData = namespaceData
-      .map((namespace) => namespace?.mounts_by_key[mountPath])
+      ?.map((namespace) => namespace?.mounts_by_key[mountPath])
       .filter((d) => d !== undefined);
 
     return mountData || [];
