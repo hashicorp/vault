@@ -65,7 +65,8 @@ func (c *Core) generateAuditTestProbe() (*logical.LogInput, error) {
 
 // enableAudit is used to enable a new audit backend
 func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage bool) error {
-	if !audit.IsAllowedAuditType(entry.Type) {
+	// Check ahead of time if the type of audit device we're trying to enable is configured in Vault.
+	if _, ok := c.auditBackends[entry.Type]; !ok {
 		return fmt.Errorf("unknown backend type: %q: %w", entry.Type, audit.ErrExternalOptions)
 	}
 
