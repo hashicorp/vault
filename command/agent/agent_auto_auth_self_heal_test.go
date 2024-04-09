@@ -172,6 +172,9 @@ func TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput(t *testing.T) {
 	fileInfo, err := waitForFiles(t, pathTokenFile, preTriggerTime)
 	require.NoError(t, err)
 
+	templateFileInfo, err := waitForFiles(t, pathLookupSelf, preTriggerTime)
+	require.NoError(t, err)
+
 	tokenInSink, err := os.ReadFile(pathTokenFile)
 	require.NoError(t, err)
 	require.Equal(t, token, string(tokenInSink))
@@ -201,6 +204,10 @@ func TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput(t *testing.T) {
 	tokenInSink, err = os.ReadFile(pathTokenFile)
 	require.NoError(t, err)
 	require.Equal(t, newToken, string(tokenInSink))
+
+	// Wait for the template file to have re-rendered
+	_, err = waitForFiles(t, pathLookupSelf, templateFileInfo.ModTime())
+	require.NoError(t, err)
 
 	// Verify the template has now been correctly rendered with the new token
 	templateContents, err := os.ReadFile(pathLookupSelf)
