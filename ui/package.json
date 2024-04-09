@@ -209,6 +209,7 @@
     "xstate": "^3.3.3"
   },
   "resolutions": {
+    "async": "^2.6.4",
     "eslint-utils": "^1.4.1",
     "ember-basic-dropdown": "6.0.1",
     "highlight.js": "^10.4.1",
