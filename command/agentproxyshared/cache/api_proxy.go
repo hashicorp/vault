@@ -9,7 +9,7 @@ import (
 	gohttp "net/http"
 	"sync"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
