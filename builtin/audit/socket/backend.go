@@ -52,7 +52,7 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 
 	address, ok := conf.Config["address"]
 	if !ok {
-		return nil, fmt.Errorf("address is required: %w", audit.ErrInvalidParameter)
+		return nil, fmt.Errorf("address is required: %w", audit.ErrExternalOptions)
 	}
 
 	socketType, ok := conf.Config["socket_type"]
@@ -225,17 +225,17 @@ func (b *Backend) configureFormatterNode(name string, formatConfig audit.Formatt
 func (b *Backend) configureSinkNode(name string, address string, format string, opts ...event.Option) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return fmt.Errorf("name is required: %w", event.ErrInvalidParameter)
+		return fmt.Errorf("name is required: %w", audit.ErrInvalidParameter)
 	}
 
 	address = strings.TrimSpace(address)
 	if address == "" {
-		return fmt.Errorf("address is required: %w", event.ErrInvalidParameter)
+		return fmt.Errorf("address is required: %w", audit.ErrInvalidParameter)
 	}
 
 	format = strings.TrimSpace(format)
 	if format == "" {
-		return fmt.Errorf("format is required: %w", event.ErrInvalidParameter)
+		return fmt.Errorf("format is required: %w", audit.ErrInvalidParameter)
 	}
 
 	sinkNodeID, err := event.GenerateNodeID()

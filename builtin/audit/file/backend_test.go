@@ -360,14 +360,14 @@ func TestBackend_configureSinkNode(t *testing.T) {
 			filePath:       "/tmp/",
 			format:         "",
 			wantErr:        true,
-			expectedErrMsg: "format is required: invalid parameter",
+			expectedErrMsg: "format is required: invalid internal parameter",
 		},
 		"format-whitespace": {
 			name:           "foo",
 			filePath:       "/tmp/",
 			format:         "   ",
 			wantErr:        true,
-			expectedErrMsg: "format is required: invalid parameter",
+			expectedErrMsg: "format is required: invalid internal parameter",
 		},
 		"filePath-weird-with-mode-zero": {
 			name:           "foo",
@@ -437,14 +437,14 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				SaltConfig: nil,
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "nil salt config: invalid parameter",
+			expectedErrorMessage: "nil salt config: invalid internal parameter",
 		},
 		"nil-salt-view": {
 			backendConfig: &audit.BackendConfig{
 				SaltConfig: &salt.Config{},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "nil salt view: invalid parameter",
+			expectedErrorMessage: "nil salt view: invalid internal parameter",
 		},
 		"nil-logger": {
 			backendConfig: &audit.BackendConfig{
@@ -454,7 +454,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				Logger:     nil,
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "nil logger: invalid parameter",
+			expectedErrorMessage: "nil logger: invalid internal parameter",
 		},
 		"fallback-device-with-filter": {
 			backendConfig: &audit.BackendConfig{

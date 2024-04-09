@@ -172,39 +172,39 @@ func TestBackend_configureSinkNode(t *testing.T) {
 			name:           "",
 			address:        "wss://foo",
 			wantErr:        true,
-			expectedErrMsg: "name is required: invalid parameter",
+			expectedErrMsg: "name is required: invalid internal parameter",
 		},
 		"name-whitespace": {
 			name:           "   ",
 			address:        "wss://foo",
 			wantErr:        true,
-			expectedErrMsg: "name is required: invalid parameter",
+			expectedErrMsg: "name is required: invalid internal parameter",
 		},
 		"address-empty": {
 			name:           "foo",
 			address:        "",
 			wantErr:        true,
-			expectedErrMsg: "address is required: invalid parameter",
+			expectedErrMsg: "address is required: invalid internal parameter",
 		},
 		"address-whitespace": {
 			name:           "foo",
 			address:        "   ",
 			wantErr:        true,
-			expectedErrMsg: "address is required: invalid parameter",
+			expectedErrMsg: "address is required: invalid internal parameter",
 		},
 		"format-empty": {
 			name:           "foo",
 			address:        "wss://foo",
 			format:         "",
 			wantErr:        true,
-			expectedErrMsg: "format is required: invalid parameter",
+			expectedErrMsg: "format is required: invalid internal parameter",
 		},
 		"format-whitespace": {
 			name:           "foo",
 			address:        "wss://foo",
 			format:         "   ",
 			wantErr:        true,
-			expectedErrMsg: "format is required: invalid parameter",
+			expectedErrMsg: "format is required: invalid internal parameter",
 		},
 		"happy": {
 			name:         "foo",
@@ -265,14 +265,14 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				SaltConfig: nil,
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "nil salt config: invalid parameter",
+			expectedErrorMessage: "nil salt config: invalid internal parameter",
 		},
 		"nil-salt-view": {
 			backendConfig: &audit.BackendConfig{
 				SaltConfig: &salt.Config{},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "nil salt view: invalid parameter",
+			expectedErrorMessage: "nil salt view: invalid internal parameter",
 		},
 		"nil-logger": {
 			backendConfig: &audit.BackendConfig{
@@ -282,7 +282,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				Logger:     nil,
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "nil logger: invalid parameter",
+			expectedErrorMessage: "nil logger: invalid internal parameter",
 		},
 		"no-address": {
 			backendConfig: &audit.BackendConfig{
@@ -293,7 +293,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				Config:     map[string]string{},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "address is required: invalid parameter",
+			expectedErrorMessage: "address is required: invalid configuration",
 		},
 		"empty-address": {
 			backendConfig: &audit.BackendConfig{
@@ -306,7 +306,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "error configuring sink node: address is required: invalid parameter",
+			expectedErrorMessage: "error configuring sink node: address is required: invalid internal parameter",
 		},
 		"whitespace-address": {
 			backendConfig: &audit.BackendConfig{
@@ -319,7 +319,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "error configuring sink node: address is required: invalid parameter",
+			expectedErrorMessage: "error configuring sink node: address is required: invalid internal parameter",
 		},
 		"write-duration-valid": {
 			backendConfig: &audit.BackendConfig{

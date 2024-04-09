@@ -13,7 +13,7 @@ var (
 	// ErrInvalidParameter should be used to represent an error in which the
 	// internal audit system is receiving invalid parameters from other parts of
 	// Vault which should have already been validated.
-	ErrInvalidParameter = errors.New("invalid parameter")
+	ErrInvalidParameter = errors.New("invalid internal parameter")
 
 	// ErrExternalOptions should be used to represent an error related to
 	// invalid configuration provided to Vault (i.e. by the Vault Operator).

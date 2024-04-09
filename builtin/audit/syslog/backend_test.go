@@ -170,24 +170,24 @@ func TestBackend_configureSinkNode(t *testing.T) {
 		"name-empty": {
 			name:           "",
 			wantErr:        true,
-			expectedErrMsg: "name is required: invalid parameter",
+			expectedErrMsg: "name is required: invalid internal parameter",
 		},
 		"name-whitespace": {
 			name:           "   ",
 			wantErr:        true,
-			expectedErrMsg: "name is required: invalid parameter",
+			expectedErrMsg: "name is required: invalid internal parameter",
 		},
 		"format-empty": {
 			name:           "foo",
 			format:         "",
 			wantErr:        true,
-			expectedErrMsg: "format is required: invalid parameter",
+			expectedErrMsg: "format is required: invalid internal parameter",
 		},
 		"format-whitespace": {
 			name:           "foo",
 			format:         "   ",
 			wantErr:        true,
-			expectedErrMsg: "format is required: invalid parameter",
+			expectedErrMsg: "format is required: invalid internal parameter",
 		},
 		"happy": {
 			name:         "foo",
@@ -247,14 +247,14 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				SaltConfig: nil,
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "nil salt config: invalid parameter",
+			expectedErrorMessage: "nil salt config: invalid internal parameter",
 		},
 		"nil-salt-view": {
 			backendConfig: &audit.BackendConfig{
 				SaltConfig: &salt.Config{},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "nil salt view: invalid parameter",
+			expectedErrorMessage: "nil salt view: invalid internal parameter",
 		},
 		"non-fallback-device-with-filter": {
 			backendConfig: &audit.BackendConfig{
@@ -281,7 +281,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "cannot configure a fallback device with a filter: invalid parameter",
+			expectedErrorMessage: "cannot configure a fallback device with a filter: invalid configuration",
 		},
 	}
 

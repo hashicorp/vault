@@ -70,12 +70,12 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 	if fallbackRaw, ok := conf.Config["fallback"]; ok {
 		fallback, err = parseutil.ParseBool(fallbackRaw)
 		if err != nil {
-			return nil, fmt.Errorf("unable to parse 'fallback': %w", err)
+			return nil, fmt.Errorf("unable to parse 'fallback': %w: %w", audit.ErrExternalOptions, err)
 		}
 	}
 
 	if _, ok := conf.Config["filter"]; ok && fallback {
-		return nil, fmt.Errorf("cannot configure a fallback device with a filter: %w", event.ErrInvalidParameter)
+		return nil, fmt.Errorf("cannot configure a fallback device with a filter: %w", audit.ErrExternalOptions)
 	}
 
 	b := &Backend{
