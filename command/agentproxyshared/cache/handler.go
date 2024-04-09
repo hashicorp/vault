@@ -36,10 +36,12 @@ func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inm
 		token := r.Header.Get(consts.AuthHeaderName)
 
 		var autoAuthToken string
-		autoAuthToken = inmemSink.(sink.SinkReader).Token()
-		if token == "" {
-			logger.Debug("using auto auth token", "method", r.Method, "path", r.URL.Path)
-			token = autoAuthToken
+		if inmemSink != nil {
+			autoAuthToken = inmemSink.(sink.SinkReader).Token()
+			if token == "" {
+				logger.Debug("using auto auth token", "method", r.Method, "path", r.URL.Path)
+				token = autoAuthToken
+			}
 		}
 
 		// Parse and reset body.
