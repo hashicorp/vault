@@ -10,8 +10,7 @@ import type ClientsVersionHistoryModel from 'vault/vault/models/clients/version-
 
 /*
 The client count utils are responsible for serializing the sys/internal/counters/activity API response
-The initial API response shape and serialized types are defined below and used to
-defines the activity model in models/clients/activity.d.ts
+The initial API response shape and serialized types are defined below.
 
 To help visualize there are sample responses in ui/tests/helpers/clients.js
 */
