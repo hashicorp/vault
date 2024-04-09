@@ -193,7 +193,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 			},
 			want:            audit.FormatterConfig{},
 			wantErr:         true,
-			expectedMessage: "audit.NewFormatterConfig: error applying options: audit.(format).validate: 'squiggly' is not a valid format: invalid parameter",
+			expectedMessage: "error applying options: invalid format \"squiggly\": invalid parameter",
 		},
 		"invalid-hmac-accessor": {
 			config: map[string]string{
@@ -202,7 +202,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 			},
 			want:            audit.FormatterConfig{},
 			wantErr:         true,
-			expectedMessage: "file.newFormatterConfig: unable to parse 'hmac_accessor': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedMessage: "unable to parse 'hmac_accessor': strconv.ParseBool: parsing \"maybe\": invalid syntax",
 		},
 		"invalid-log-raw": {
 			config: map[string]string{
@@ -212,7 +212,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 			},
 			want:            audit.FormatterConfig{},
 			wantErr:         true,
-			expectedMessage: "file.newFormatterConfig: unable to parse 'log_raw': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedMessage: "unable to parse 'log_raw': strconv.ParseBool: parsing \"maybe\": invalid syntax",
 		},
 		"invalid-elide-bool": {
 			config: map[string]string{
@@ -223,7 +223,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 			},
 			want:            audit.FormatterConfig{},
 			wantErr:         true,
-			expectedMessage: "file.newFormatterConfig: unable to parse 'elide_list_responses': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedMessage: "unable to parse 'elide_list_responses': strconv.ParseBool: parsing \"maybe\": invalid syntax",
 		},
 		"prefix": {
 			config: map[string]string{
@@ -300,24 +300,24 @@ func TestBackend_configureSinkNode(t *testing.T) {
 		"name-empty": {
 			name:           "",
 			wantErr:        true,
-			expectedErrMsg: "file.(Backend).configureSinkNode: name is required: invalid parameter",
+			expectedErrMsg: "name is required: invalid configuration",
 		},
 		"name-whitespace": {
 			name:           "   ",
 			wantErr:        true,
-			expectedErrMsg: "file.(Backend).configureSinkNode: name is required: invalid parameter",
+			expectedErrMsg: "name is required: invalid configuration",
 		},
 		"filePath-empty": {
 			name:           "foo",
 			filePath:       "",
 			wantErr:        true,
-			expectedErrMsg: "file.(Backend).configureSinkNode: file path is required: invalid parameter",
+			expectedErrMsg: "file path is required: invalid configuration",
 		},
 		"filePath-whitespace": {
 			name:           "foo",
 			filePath:       "   ",
 			wantErr:        true,
-			expectedErrMsg: "file.(Backend).configureSinkNode: file path is required: invalid parameter",
+			expectedErrMsg: "file path is required: invalid configuration",
 		},
 		"filePath-stdout-lower": {
 			name:         "foo",
@@ -360,14 +360,14 @@ func TestBackend_configureSinkNode(t *testing.T) {
 			filePath:       "/tmp/",
 			format:         "",
 			wantErr:        true,
-			expectedErrMsg: "file.(Backend).configureSinkNode: format is required: invalid parameter",
+			expectedErrMsg: "format is required: invalid parameter",
 		},
 		"format-whitespace": {
 			name:           "foo",
 			filePath:       "/tmp/",
 			format:         "   ",
 			wantErr:        true,
-			expectedErrMsg: "file.(Backend).configureSinkNode: format is required: invalid parameter",
+			expectedErrMsg: "format is required: invalid parameter",
 		},
 		"filePath-weird-with-mode-zero": {
 			name:           "foo",
@@ -375,7 +375,7 @@ func TestBackend_configureSinkNode(t *testing.T) {
 			format:         "json",
 			mode:           "0",
 			wantErr:        true,
-			expectedErrMsg: "file.(Backend).configureSinkNode: file sink creation failed for path \"/tmp/qwerty\": event.NewFileSink: unable to determine existing file mode: stat /tmp/qwerty: no such file or directory",
+			expectedErrMsg: "file sink creation failed for path \"/tmp/qwerty\": unable to determine existing file mode: stat /tmp/qwerty: no such file or directory",
 		},
 		"happy": {
 			name:         "foo",
@@ -437,14 +437,14 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				SaltConfig: nil,
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "file.Factory: nil salt config",
+			expectedErrorMessage: "nil salt config: internal configuration error",
 		},
 		"nil-salt-view": {
 			backendConfig: &audit.BackendConfig{
 				SaltConfig: &salt.Config{},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "file.Factory: nil salt view",
+			expectedErrorMessage: "nil salt view: internal configuration error",
 		},
 		"nil-logger": {
 			backendConfig: &audit.BackendConfig{
@@ -454,7 +454,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				Logger:     nil,
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "file.Factory: nil logger",
+			expectedErrorMessage: "nil logger: internal configuration error",
 		},
 		"fallback-device-with-filter": {
 			backendConfig: &audit.BackendConfig{
@@ -469,7 +469,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "file.Factory: cannot configure a fallback device with a filter: invalid parameter",
+			expectedErrorMessage: "cannot configure a fallback device with a filter: invalid configuration",
 		},
 		"non-fallback-device-with-filter": {
 			backendConfig: &audit.BackendConfig{

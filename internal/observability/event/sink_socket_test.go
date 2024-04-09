@@ -26,31 +26,31 @@ func TestNewSocketSink(t *testing.T) {
 		"address-empty": {
 			address:        "",
 			wantErr:        true,
-			expectedErrMsg: "event.NewSocketSink: address is required: invalid parameter",
+			expectedErrMsg: "address is required: invalid parameter",
 		},
 		"address-whitespace": {
 			address:        "    ",
 			wantErr:        true,
-			expectedErrMsg: "event.NewSocketSink: address is required: invalid parameter",
+			expectedErrMsg: "address is required: invalid parameter",
 		},
 		"format-empty": {
 			address:        "addr",
 			format:         "",
 			wantErr:        true,
-			expectedErrMsg: "event.NewSocketSink: format is required: invalid parameter",
+			expectedErrMsg: "format is required: invalid parameter",
 		},
 		"format-whitespace": {
 			address:        "addr",
 			format:         "   ",
 			wantErr:        true,
-			expectedErrMsg: "event.NewSocketSink: format is required: invalid parameter",
+			expectedErrMsg: "format is required: invalid parameter",
 		},
 		"bad-max-duration": {
 			address:        "addr",
 			format:         "json",
 			opts:           []Option{WithMaxDuration("bar")},
 			wantErr:        true,
-			expectedErrMsg: "event.NewSocketSink: error applying options: unable to parse max duration: time: invalid duration \"bar\"",
+			expectedErrMsg: "error applying options: unable to parse max duration: invalid parameter: time: invalid duration \"bar\"",
 		},
 		"happy": {
 			address: "wss://foo",

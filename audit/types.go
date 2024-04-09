@@ -5,6 +5,7 @@ package audit
 
 import (
 	"context"
+	"strings"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/internal/observability/event"
@@ -64,47 +65,6 @@ type HeaderFormatter interface {
 	// intersection of the provided set of header values with a configured
 	// set of headers and will hash headers that have been configured as such.
 	ApplyConfig(context.Context, map[string][]string, Salter) (map[string][]string, error)
-}
-
-// FormatterConfig is used to provide basic configuration to a formatter.
-// Use NewFormatterConfig to initialize the FormatterConfig struct.
-type FormatterConfig struct {
-	Raw          bool
-	HMACAccessor bool
-
-	// Vault lacks pagination in its APIs. As a result, certain list operations can return **very** large responses.
-	// The user's chosen audit sinks may experience difficulty consuming audit records that swell to tens of megabytes
-	// of JSON. The responses of list operations are typically not very interesting, as they are mostly lists of keys,
-	// or, even when they include a "key_info" field, are not returning confidential information. They become even less
-	// interesting once HMAC-ed by the audit system.
-	//
-	// Some example Vault "list" operations that are prone to becoming very large in an active Vault installation are:
-	//   auth/token/accessors/
-	//   identity/entity/id/
-	//   identity/entity-alias/id/
-	//   pki/certs/
-	//
-	// This option exists to provide such users with the option to have response data elided from audit logs, only when
-	// the operation type is "list". For added safety, the elision only applies to the "keys" and "key_info" fields
-	// within the response data - these are conventionally the only fields present in a list response - see
-	// logical.ListResponse, and logical.ListResponseWithInfo. However, other fields are technically possible if a
-	// plugin author writes unusual code, and these will be preserved in the audit log even with this option enabled.
-	// The elision replaces the values of the "keys" and "key_info" fields with an integer count of the number of
-	// entries. This allows even the elided audit logs to still be useful for answering questions like
-	// "Was any data returned?" or "How many records were listed?".
-	ElideListResponses bool
-
-	// This should only ever be used in a testing context
-	OmitTime bool
-
-	// The required/target format for the event (supported: JSONFormat and JSONxFormat).
-	RequiredFormat format
-
-	// headerFormatter specifies the formatter used for headers that existing in any incoming audit request.
-	headerFormatter HeaderFormatter
-
-	// Prefix specifies a Prefix that should be prepended to any formatted request or response before serialization.
-	Prefix string
 }
 
 // RequestEntry is the structure of a request audit log entry.
@@ -245,3 +205,17 @@ type BackendConfig struct {
 
 // Factory is the factory function to create an audit backend.
 type Factory func(context.Context, *BackendConfig, HeaderFormatter) (Backend, error)
+
+// IsAllowedAuditType can be used to determine if a value is an allowed type of audit device.
+func IsAllowedAuditType(t string) bool {
+	// NOTE: Remove this comment when we're happy about related refactoring:
+	// The way we actually determine 'valid' audit device types is based on a field
+	// that is set on the Core but is actually passed all the way though from command.
+	device := strings.ToLower(t)
+	switch {
+	case device == "file", device == "socket", device == "syslog":
+		return true
+	default:
+		return false
+	}
+}

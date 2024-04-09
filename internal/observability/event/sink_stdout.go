@@ -23,11 +23,9 @@ type StdoutSink struct {
 // NewStdoutSinkNode creates a new StdoutSink that will persist the events
 // it processes using the specified expected format.
 func NewStdoutSinkNode(format string) (*StdoutSink, error) {
-	const op = "event.NewStdoutSinkNode"
-
 	format = strings.TrimSpace(format)
 	if format == "" {
-		return nil, fmt.Errorf("%s: format is required: %w", op, ErrInvalidParameter)
+		return nil, fmt.Errorf("format is required: %w", ErrInvalidParameter)
 	}
 
 	return &StdoutSink{
@@ -37,8 +35,6 @@ func NewStdoutSinkNode(format string) (*StdoutSink, error) {
 
 // Process persists the provided eventlogger.Event to the standard output stream.
 func (s *StdoutSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
-	const op = "event.(StdoutSink).Process"
-
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -46,17 +42,17 @@ func (s *StdoutSink) Process(ctx context.Context, e *eventlogger.Event) (*eventl
 	}
 
 	if e == nil {
-		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
+		return nil, fmt.Errorf("event is nil: %w", ErrInvalidParameter)
 	}
 
-	formattedBytes, found := e.Format(s.requiredFormat)
+	formatted, found := e.Format(s.requiredFormat)
 	if !found {
-		return nil, fmt.Errorf("%s: unable to retrieve event formatted as %q", op, s.requiredFormat)
+		return nil, fmt.Errorf("unable to retrieve event formatted as %q: %w", s.requiredFormat, ErrInvalidParameter)
 	}
 
-	_, err := os.Stdout.Write(formattedBytes)
+	_, err := os.Stdout.Write(formatted)
 	if err != nil {
-		return nil, fmt.Errorf("%s: error writing to stdout: %w", op, err)
+		return nil, fmt.Errorf("error writing to stdout: %w", err)
 	}
 
 	// Return nil, nil to indicate the pipeline is complete.

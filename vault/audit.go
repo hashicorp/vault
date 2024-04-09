@@ -65,6 +65,15 @@ func (c *Core) generateAuditTestProbe() (*logical.LogInput, error) {
 
 // enableAudit is used to enable a new audit backend
 func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage bool) error {
+	if !audit.IsAllowedAuditType(entry.Type) {
+		return fmt.Errorf("unknown backend type: %q: %w", entry.Type, audit.ErrExternalOptions)
+	}
+
+	// We can check early to ensure that non-Enterprise versions aren't trying to supply Enterprise only options.
+	if hasInvalidAuditOptions(entry.Options) {
+		return fmt.Errorf("enterprise-only options supplied: %w", audit.ErrExternalOptions)
+	}
+
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(entry.Path, "/") {
 		entry.Path += "/"
@@ -72,23 +81,29 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 
 	// Ensure there is a name
 	if entry.Path == "/" {
-		return fmt.Errorf("backend path must be specified")
-	}
-
-	// We can check early to ensure that non-Enterprise versions aren't trying to supply Enterprise only options.
-	if hasInvalidAuditOptions(entry.Options) {
-		return fmt.Errorf("enterprise-only options supplied")
+		return fmt.Errorf("backend path must be specified: %w", audit.ErrExternalOptions)
 	}
 
 	if fallbackRaw, ok := entry.Options["fallback"]; ok {
 		fallback, err := parseutil.ParseBool(fallbackRaw)
 		if err != nil {
-			return fmt.Errorf("unable to enable audit device '%s', cannot parse supplied 'fallback' setting: %w", entry.Path, err)
+			return fmt.Errorf("cannot parse supplied 'fallback' setting: %w: %w", audit.ErrExternalOptions, err)
 		}
 
 		// Reassigning the fallback value means we can ensure that the formatting
 		// of it as a string is consistent for future comparisons.
 		entry.Options["fallback"] = strconv.FormatBool(fallback)
+	}
+
+	if skipTestRaw, ok := entry.Options["skip_test"]; ok {
+		skipTest, err := parseutil.ParseBool(skipTestRaw)
+		if err != nil {
+			return fmt.Errorf("cannot parse supplied 'skip_test' setting: %w: %w", audit.ErrExternalOptions, err)
+		}
+
+		// Reassigning the value means we can ensure that the formatting
+		// of it as a string is consistent for future comparisons.
+		entry.Options["skip_test"] = strconv.FormatBool(skipTest)
 	}
 
 	// Update the audit table
@@ -99,13 +114,13 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	for _, ent := range c.audit.Entries {
 		switch {
 		case entry.Options["fallback"] == "true" && ent.Options["fallback"] == "true":
-			return fmt.Errorf("unable to enable audit device '%s', a fallback device already exists '%s'", entry.Path, ent.Path)
+			return fmt.Errorf("unable to enable audit device '%s', a fallback device already exists '%s': %w", entry.Path, ent.Path, audit.ErrExternalOptions)
 		// Existing is sql/mysql/ new is sql/ or
 		// existing is sql/ and new is sql/mysql/
 		case strings.HasPrefix(ent.Path, entry.Path):
 			fallthrough
 		case strings.HasPrefix(entry.Path, ent.Path):
-			return fmt.Errorf("path already in use")
+			return fmt.Errorf("path already in use: %w", audit.ErrExternalOptions)
 		}
 	}
 
@@ -113,14 +128,14 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	if entry.UUID == "" {
 		entryUUID, err := uuid.GenerateUUID()
 		if err != nil {
-			return err
+			return fmt.Errorf("%w: %w", audit.ErrInternal, err)
 		}
 		entry.UUID = entryUUID
 	}
 	if entry.Accessor == "" {
 		accessor, err := c.generateMountAccessor("audit_" + entry.Type)
 		if err != nil {
-			return err
+			return fmt.Errorf("%w: %w", audit.ErrInternal, err)
 		}
 		entry.Accessor = accessor
 	}
@@ -141,14 +156,14 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 		return err
 	}
 	if backend == nil {
-		return fmt.Errorf("nil audit backend of type %q returned from factory", entry.Type)
+		return fmt.Errorf("nil audit backend of type %q returned from factory: %w", entry.Type, audit.ErrInternal)
 	}
 
 	if entry.Options["skip_test"] != "true" {
 		// Test the new audit device and report failure if it doesn't work.
 		testProbe, err := c.generateAuditTestProbe()
 		if err != nil {
-			return err
+			return fmt.Errorf("error generating test probe: %w: %w", audit.ErrInternal, err)
 		}
 		err = backend.LogTestMessage(ctx, testProbe)
 		if err != nil {
@@ -163,14 +178,14 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %w", audit.ErrInternal, err)
 	}
 	entry.NamespaceID = ns.ID
 	entry.namespace = ns
 
 	if updateStorage {
 		if err := c.persistAudit(ctx, newTable, entry.Local); err != nil {
-			return errors.New("failed to update audit table")
+			return fmt.Errorf("failed to update audit table: %w: %w", audit.ErrInternal, err)
 		}
 	}
 
@@ -515,12 +530,12 @@ func (c *Core) removeAuditReloadFunc(entry *MountEntry) {
 func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logical.Storage, conf map[string]string) (audit.Backend, error) {
 	// Ensure that non-Enterprise versions aren't trying to supply Enterprise only options.
 	if hasInvalidAuditOptions(entry.Options) {
-		return nil, fmt.Errorf("enterprise-only options supplied")
+		return nil, fmt.Errorf("enterprise-only options supplied: %w", audit.ErrInvalidParameter)
 	}
 
 	f, ok := c.auditBackends[entry.Type]
 	if !ok {
-		return nil, fmt.Errorf("unknown backend type: %q", entry.Type)
+		return nil, fmt.Errorf("unknown backend type: %q: %w", entry.Type, audit.ErrInvalidParameter)
 	}
 	saltConfig := &salt.Config{
 		HMAC:     sha256.New,
@@ -542,7 +557,7 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		return nil, fmt.Errorf("unable to create new audit backend: %w", err)
 	}
 	if be == nil {
-		return nil, fmt.Errorf("nil backend returned from %q factory function", entry.Type)
+		return nil, fmt.Errorf("nil backend returned from %q factory function: %w", entry.Type, audit.ErrInternal)
 	}
 
 	switch entry.Type {
