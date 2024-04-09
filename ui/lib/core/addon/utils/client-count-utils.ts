@@ -227,18 +227,6 @@ export interface ByMonthClients extends TotalClients {
   namespaces_by_key: { [key: string]: NamespaceByKey };
   new_clients: ByMonthNewClients;
 }
-
-// interface EmptyByMonthClients {
-//   month: string;
-//   timestamp: string;
-//   namespaces: [];
-//   namespaces_by_key: Record<string, never>;
-//   new_clients: {
-//     month: string;
-//     timestamp: string;
-//     namespaces: [];
-//   };
-// }
 export interface ByMonthNewClients extends TotalClients {
   month: string;
   timestamp: string;
@@ -271,14 +259,6 @@ export interface MountNewClients extends TotalClients {
 }
 
 // API RESPONSE SHAPE (prior to serialization)
-
-interface SysInternalCountersActivityResponse {
-  start_time: string;
-  end_time: string;
-  total: Counts;
-  by_namespace: NamespaceObject[];
-  months: ActivityMonthBlock[];
-}
 
 export interface NamespaceObject {
   namespace_id: string;
