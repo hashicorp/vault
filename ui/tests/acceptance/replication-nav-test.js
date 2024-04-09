@@ -44,7 +44,6 @@ module('Acceptance | Enterprise | replication navigation', function (hooks) {
     assert.dom(SELECTORS.title).hasText('Disaster Recovery primary');
     assert.dom(SELECTORS.primaryCluster).hasText('dr-foobar');
     assert.dom(SELECTORS.replicationSet).hasText('dr-cluster-id');
-    // TODO: bug -- known secondaries not updating
-    // assert.dom(SELECTORS.knownSecondariesTitle).hasText('1 Known secondaries');
+    assert.dom(SELECTORS.knownSecondariesTitle).hasText('1 Known secondaries');
   });
 });
