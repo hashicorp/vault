@@ -69,8 +69,7 @@ export interface MountNewClients extends TotalClients {
   label: string;
 }
 
-// remove?
-export interface EmptyByMonthClients {
+interface EmptyByMonthClients {
   month: string;
   timestamp: string;
   namespaces: [];

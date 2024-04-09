@@ -5,45 +5,11 @@
 
 import type { Model } from 'vault/app-types';
 
-interface ClientActivityTotals {
-  clients: number;
-  entity_clients: number;
-  non_entity_clients: number;
-  secret_syncs: number;
-}
-
-interface ClientActivityNestedCount extends ClientActivityTotals {
-  label: string;
-}
-
-interface ClientActivityNewClients extends ClientActivityTotals {
-  month: string;
-  mounts?: ClientActivityNestedCount[];
-  namespaces?: ClientActivityNestedCount[];
-}
-
-interface ClientActivityNamespace extends ClientActivityNestedCount {
-  mounts: ClientActivityNestedCount[];
-}
-
-interface ClientActivityResourceByKey extends ClientActivityTotals {
-  month: 'string';
-  mounts_by_key: { [key: string]: ClientActivityResourceByKey };
-  new_clients: ClientActivityNewClients;
-}
-
-interface ClientActivityMonthly extends ClientActivityTotals {
-  month: string;
-  timestamp: string;
-  namespaces: ClientActivityNamespace[];
-  namespaces_by_key: { [key: string]: ClientActivityResourceByKey };
-  new_clients: ClientActivityNewClients;
-}
-
+import type { ByMonthClients, ByNamespaceClients, TotalClients } from 'vault/vault/utils/client-count-utils';
 export default interface ClientsActivityModel extends Model {
-  byMonth: ClientActivityMonthly[];
-  byNamespace: ClientActivityNamespace[];
-  total: ClientActivityTotals;
+  byMonth: ByMonthClients[];
+  byNamespace: ByNamespaceClients[];
+  total: TotalClients;
   startTime: string;
   endTime: string;
   responseTimestamp: string;
