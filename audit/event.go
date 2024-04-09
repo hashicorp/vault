@@ -79,19 +79,19 @@ func NewEvent(s subtype, opt ...Option) (*AuditEvent, error) {
 // validate attempts to ensure the audit event in its present state is valid.
 func (a *AuditEvent) validate() error {
 	if a == nil {
-		return fmt.Errorf("event is nil: %w", event.ErrInvalidParameter)
+		return fmt.Errorf("event is nil: %w", ErrInvalidParameter)
 	}
 
 	if a.ID == "" {
-		return fmt.Errorf("missing ID: %w", event.ErrInvalidParameter)
+		return fmt.Errorf("missing ID: %w", ErrInvalidParameter)
 	}
 
 	if a.Version != version {
-		return fmt.Errorf("event version unsupported: %w", event.ErrInvalidParameter)
+		return fmt.Errorf("event version unsupported: %w", ErrInvalidParameter)
 	}
 
 	if a.Timestamp.IsZero() {
-		return fmt.Errorf("event timestamp cannot be the zero time instant: %w", event.ErrInvalidParameter)
+		return fmt.Errorf("event timestamp cannot be the zero time instant: %w", ErrInvalidParameter)
 	}
 
 	err := a.Subtype.validate()
@@ -108,7 +108,7 @@ func (t subtype) validate() error {
 	case RequestType, ResponseType:
 		return nil
 	default:
-		return fmt.Errorf("invalid event subtype %q: %w", t, event.ErrInvalidParameter)
+		return fmt.Errorf("invalid event subtype %q: %w", t, ErrInvalidParameter)
 	}
 }
 
@@ -118,7 +118,7 @@ func (f format) validate() error {
 	case JSONFormat, JSONxFormat:
 		return nil
 	default:
-		return fmt.Errorf("invalid format %q: %w", f, event.ErrInvalidParameter)
+		return fmt.Errorf("invalid format %q: %w", f, ErrInvalidParameter)
 	}
 }
 

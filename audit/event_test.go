@@ -31,14 +31,14 @@ func TestAuditEvent_new(t *testing.T) {
 			Subtype:              subtype(""),
 			Format:               format(""),
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "invalid event subtype \"\": invalid parameter",
+			ExpectedErrorMessage: "invalid event subtype \"\": invalid internal parameter",
 		},
 		"empty-Option": {
 			Options:              []Option{},
 			Subtype:              subtype(""),
 			Format:               format(""),
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "invalid event subtype \"\": invalid parameter",
+			ExpectedErrorMessage: "invalid event subtype \"\": invalid internal parameter",
 		},
 		"bad-id": {
 			Options:              []Option{WithID("")},
@@ -119,12 +119,12 @@ func TestAuditEvent_Validate(t *testing.T) {
 		"nil": {
 			Value:                nil,
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event is nil: invalid parameter",
+			ExpectedErrorMessage: "event is nil: invalid internal parameter",
 		},
 		"default": {
 			Value:                &AuditEvent{},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "missing ID: invalid parameter",
+			ExpectedErrorMessage: "missing ID: invalid internal parameter",
 		},
 		"id-empty": {
 			Value: &AuditEvent{
@@ -135,7 +135,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 				Data:      nil,
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "missing ID: invalid parameter",
+			ExpectedErrorMessage: "missing ID: invalid internal parameter",
 		},
 		"version-fiddled": {
 			Value: &AuditEvent{
@@ -146,7 +146,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 				Data:      nil,
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event version unsupported: invalid parameter",
+			ExpectedErrorMessage: "event version unsupported: invalid internal parameter",
 		},
 		"subtype-fiddled": {
 			Value: &AuditEvent{
@@ -157,7 +157,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 				Data:      nil,
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "invalid event subtype \"moon\": invalid parameter",
+			ExpectedErrorMessage: "invalid event subtype \"moon\": invalid internal parameter",
 		},
 		"default-time": {
 			Value: &AuditEvent{
@@ -168,7 +168,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 				Data:      nil,
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event timestamp cannot be the zero time instant: invalid parameter",
+			ExpectedErrorMessage: "event timestamp cannot be the zero time instant: invalid internal parameter",
 		},
 		"valid": {
 			Value: &AuditEvent{
@@ -212,12 +212,12 @@ func TestAuditEvent_Validate_Subtype(t *testing.T) {
 		"empty": {
 			Value:                "",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "invalid event subtype \"\": invalid parameter",
+			ExpectedErrorMessage: "invalid event subtype \"\": invalid internal parameter",
 		},
 		"unsupported": {
 			Value:                "foo",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "invalid event subtype \"foo\": invalid parameter",
+			ExpectedErrorMessage: "invalid event subtype \"foo\": invalid internal parameter",
 		},
 		"request": {
 			Value:           "AuditRequest",
@@ -259,12 +259,12 @@ func TestAuditEvent_Validate_Format(t *testing.T) {
 		"empty": {
 			Value:                "",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "invalid format \"\": invalid parameter",
+			ExpectedErrorMessage: "invalid format \"\": invalid internal parameter",
 		},
 		"unsupported": {
 			Value:                "foo",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "invalid format \"foo\": invalid parameter",
+			ExpectedErrorMessage: "invalid format \"foo\": invalid internal parameter",
 		},
 		"json": {
 			Value:           "json",

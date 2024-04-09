@@ -146,7 +146,7 @@ func TestEntryFilter_Process_NilEvent(t *testing.T) {
 	require.NoError(t, err)
 	e, err := l.Process(context.Background(), nil)
 	require.Error(t, err)
-	require.EqualError(t, err, "event is nil: invalid parameter")
+	require.EqualError(t, err, "event is nil: invalid internal parameter")
 
 	// Ensure that the pipeline won't continue.
 	require.Nil(t, e)
@@ -170,7 +170,7 @@ func TestEntryFilter_Process_BadPayload(t *testing.T) {
 
 	e2, err := l.Process(context.Background(), e)
 	require.Error(t, err)
-	require.EqualError(t, err, "cannot parse event payload: invalid parameter")
+	require.EqualError(t, err, "cannot parse event payload: invalid internal parameter")
 
 	// Ensure that the pipeline won't continue.
 	require.Nil(t, e2)

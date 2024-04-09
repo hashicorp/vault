@@ -33,7 +33,7 @@ func TestOptions_WithFormat(t *testing.T) {
 		"invalid-test": {
 			Value:                "test",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "invalid format \"test\": invalid parameter",
+			ExpectedErrorMessage: "invalid format \"test\": invalid internal parameter",
 		},
 		"valid-json": {
 			Value:           "json",

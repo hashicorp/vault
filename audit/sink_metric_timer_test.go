@@ -30,19 +30,19 @@ func TestNewSinkMetricTimer(t *testing.T) {
 		"no-name": {
 			name:                 "",
 			isErrorExpected:      true,
-			expectedErrorMessage: "name is required: invalid parameter",
+			expectedErrorMessage: "name is required: invalid internal parameter",
 		},
 		"no-node": {
 			name:                 "foo",
 			node:                 nil,
 			isErrorExpected:      true,
-			expectedErrorMessage: "sink node is required: invalid parameter",
+			expectedErrorMessage: "sink node is required: invalid internal parameter",
 		},
 		"bad-node": {
 			name:                 "foo",
 			node:                 &EntryFormatter{},
 			isErrorExpected:      true,
-			expectedErrorMessage: "sink node must be of type 'sink': invalid parameter",
+			expectedErrorMessage: "sink node must be of type 'sink': invalid internal parameter",
 		},
 	}
 

@@ -103,25 +103,25 @@ func TestNewEntryFormatter(t *testing.T) {
 		"empty-name": {
 			Name:                 "",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "name is required: internal configuration error",
+			ExpectedErrorMessage: "name is required: invalid internal parameter",
 		},
 		"spacey-name": {
 			Name:                 "   ",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "name is required: internal configuration error",
+			ExpectedErrorMessage: "name is required: invalid internal parameter",
 		},
 		"nil-salter": {
 			Name:                 "juan",
 			UseStaticSalt:        false,
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "cannot create a new audit formatter with nil salter: internal configuration error",
+			ExpectedErrorMessage: "cannot create a new audit formatter with nil salter: invalid internal parameter",
 		},
 		"nil-logger": {
 			Name:                 "juan",
 			UseStaticSalt:        true,
 			Logger:               nil,
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "cannot create a new audit formatter with nil logger: internal configuration error",
+			ExpectedErrorMessage: "cannot create a new audit formatter with nil logger: invalid internal parameter",
 		},
 		"static-salter": {
 			Name:            "juan",
@@ -258,14 +258,14 @@ func TestEntryFormatter_Process(t *testing.T) {
 	}{
 		"json-request-no-data": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "cannot audit event (request) with no data: invalid parameter",
+			ExpectedErrorMessage: "cannot audit event (request) with no data: invalid internal parameter",
 			Subtype:              RequestType,
 			RequiredFormat:       JSONFormat,
 			Data:                 nil,
 		},
 		"json-response-no-data": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "cannot audit event (response) with no data: invalid parameter",
+			ExpectedErrorMessage: "cannot audit event (response) with no data: invalid internal parameter",
 			Subtype:              ResponseType,
 			RequiredFormat:       JSONFormat,
 			Data:                 nil,
@@ -314,14 +314,14 @@ func TestEntryFormatter_Process(t *testing.T) {
 		},
 		"jsonx-request-no-data": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "cannot audit event (request) with no data: invalid parameter",
+			ExpectedErrorMessage: "cannot audit event (request) with no data: invalid internal parameter",
 			Subtype:              RequestType,
 			RequiredFormat:       JSONxFormat,
 			Data:                 nil,
 		},
 		"jsonx-response-no-data": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "cannot audit event (response) with no data: invalid parameter",
+			ExpectedErrorMessage: "cannot audit event (response) with no data: invalid internal parameter",
 			Subtype:              ResponseType,
 			RequiredFormat:       JSONxFormat,
 			Data:                 nil,
