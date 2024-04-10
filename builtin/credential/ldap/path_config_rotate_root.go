@@ -52,7 +52,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 
 	b.mu.RUnlock()
 
-	err = b.RotatePassword(ctx, req)
+	err = b.RotateCredential(ctx, req)
 	if err != nil {
 		return nil, err
 	}

@@ -62,7 +62,7 @@ func Backend() *backend {
 
 		AuthRenew:   b.pathLoginRenew,
 		BackendType: logical.TypeCredential,
-		RotatePassword: func(ctx context.Context, req *logical.Request) error {
+		RotateCredential: func(ctx context.Context, req *logical.Request) error {
 			// lock the backend's state - really just the config state - for mutating
 			b.mu.Lock()
 			defer b.mu.Unlock()

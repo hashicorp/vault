@@ -66,7 +66,7 @@ func Backend(_ *logical.BackendConfig) *backend {
 
 		// placeholder
 		RotateCredential: func(ctx context.Context, request *logical.Request) error {
-			fmt.Print("aws.RotatePassword called\n")
+			fmt.Print("aws.RotateCredential called\n")
 			return nil
 		},
 

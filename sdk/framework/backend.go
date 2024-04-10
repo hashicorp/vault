@@ -669,7 +669,7 @@ func (b *Backend) handleRollback(ctx context.Context, req *logical.Request) (*lo
 	return resp, merr.ErrorOrNil()
 }
 
-// handleRotation invokes the RotatePassword func set on the backend.
+// handleRotation invokes the RotateCredential func set on the backend.
 func (b *Backend) handleRotation(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	if b.RotateCredential == nil {
 		return nil, logical.ErrUnsupportedOperation
