@@ -76,7 +76,7 @@ function secretEngineHelper(test, secretEngine) {
   });
 }
 
-const authEngineHelper = (test, authBackend) => {
+function authEngineHelper(test, authBackend) {
   const authData = expectedAuthAttrs[authBackend];
   if (!authData) throw new Error(`No auth attributes found in auth-model-attributes for ${authBackend}`);
 
@@ -105,4 +105,4 @@ const authEngineHelper = (test, authBackend) => {
       });
     }
   });
-};
+}
