@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
-import { personas } from 'vault/tests/helpers/policy-generator/kv';
+import { personas } from 'vault/tests/helpers/kv/policy-generator';
 import {
   clearRecords,
   deleteVersionCmd,
