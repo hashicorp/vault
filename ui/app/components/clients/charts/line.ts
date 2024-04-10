@@ -9,8 +9,9 @@ import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { format, isValid } from 'date-fns';
 import { debug } from '@ember/debug';
 
-import type { Count, MonthlyChartData, Timestamp } from 'vault/vault/charts/client-counts';
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
+import type { MonthlyChartData, Timestamp } from 'vault/vault/charts/client-counts';
+import type { TotalClients } from 'core/utils/client-count-utils';
 
 interface Args {
   dataset: MonthlyChartData[];
@@ -67,7 +68,7 @@ export default class LineChart extends Component<Args> {
         const upgradeMessage = this.getUpgradeMessage(datum);
         return {
           x: timestamp,
-          y: (datum[this.yKey as keyof Count] as number) ?? null,
+          y: (datum[this.yKey as keyof TotalClients] as number) ?? null,
           new: this.getNewClients(datum),
           tooltipUpgrade: upgradeMessage,
           month: datum.month,
@@ -123,7 +124,7 @@ export default class LineChart extends Component<Args> {
   }
   getNewClients(datum: MonthlyChartData) {
     if (!datum?.new_clients) return 0;
-    return (datum?.new_clients[this.yKey as keyof Count] as number) || 0;
+    return (datum?.new_clients[this.yKey as keyof TotalClients] as number) || 0;
   }
 
   hasValue = (count: number | null) => {
