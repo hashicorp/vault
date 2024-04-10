@@ -90,6 +90,7 @@ jobs:
         with:
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
           terraform_wrapper: false
+          terraform_version: "1.7.5" # Pin until 1.8.x crash has been resolved
       - name: Prepare scenario dependencies
         run: |
           mkdir -p ./enos/support/terraform-plugin-cache

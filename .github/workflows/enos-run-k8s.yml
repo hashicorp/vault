@@ -38,6 +38,7 @@ jobs:
           # the Terraform wrapper will break Terraform execution in Enos because
           # it changes the output to text when we expect it to be JSON.
           terraform_wrapper: false
+          terraform_version: "1.7.5" # Pin until 1.8.x crash has been resolved
       - name: Set up Enos
         uses: hashicorp/action-setup-enos@v1
         with:
