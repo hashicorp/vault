@@ -115,7 +115,7 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	for _, ent := range c.audit.Entries {
 		switch {
 		case entry.Options["fallback"] == "true" && ent.Options["fallback"] == "true":
-			return fmt.Errorf("unable to enable audit device '%s', a fallback device already exists '%s': %w", entry.Path, ent.Path, audit.ErrExternalOptions)
+			return fmt.Errorf("fallback device already exists '%s': %w", ent.Path, audit.ErrExternalOptions)
 		// Existing is sql/mysql/ new is sql/ or
 		// existing is sql/ and new is sql/mysql/
 		case strings.HasPrefix(ent.Path, entry.Path):
