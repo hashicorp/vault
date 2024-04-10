@@ -5,7 +5,6 @@ package audit
 
 import (
 	"context"
-	"strings"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/internal/observability/event"
@@ -205,17 +204,3 @@ type BackendConfig struct {
 
 // Factory is the factory function to create an audit backend.
 type Factory func(context.Context, *BackendConfig, HeaderFormatter) (Backend, error)
-
-// IsAllowedAuditType can be used to determine if a value is an allowed type of audit device.
-func IsAllowedAuditType(t string) bool {
-	// NOTE: Remove this comment when we're happy about related refactoring:
-	// The way we actually determine 'valid' audit device types is based on a field
-	// that is set on the Core but is actually passed all the way though from command.
-	device := strings.ToLower(t)
-	switch {
-	case device == "file", device == "socket", device == "syslog":
-		return true
-	default:
-		return false
-	}
-}
