@@ -13,7 +13,7 @@ import sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
 import authPage from 'vault/tests/pages/auth';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-helpers';
+import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 
 module('Acceptance | clients | sync | activated', function (hooks) {
   setupApplicationTest(hooks);

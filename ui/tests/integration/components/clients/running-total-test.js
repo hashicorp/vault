@@ -15,7 +15,7 @@ import { findAll } from '@ember/test-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import timestamp from 'core/utils/timestamp';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
-import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-helpers';
+import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 
 const START_TIME = getUnixTime(LICENSE_START);
 

@@ -12,7 +12,7 @@ import { visit, click, findAll, settled } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-helpers';
+import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { formatNumber } from 'core/helpers/format-number';
