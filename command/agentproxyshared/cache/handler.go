@@ -38,7 +38,7 @@ func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inm
 		var autoAuthToken string
 		if inmemSink != nil {
 			autoAuthToken = inmemSink.(sink.SinkReader).Token()
-			if token == "" {
+			if token == "" && !proxyVaultToken {
 				logger.Debug("using auto auth token", "method", r.Method, "path", r.URL.Path)
 				token = autoAuthToken
 			}
