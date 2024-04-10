@@ -9,10 +9,10 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
 import { typeInSearch, clickTrigger, selectChoose } from 'ember-power-select/test-support/helpers';
-import { KUBERNETES_OVERVIEW } from 'vault/tests/helpers/components/kubernetes/page/overview-selectors';
 import hbs from 'htmlbars-inline-precompile';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { KUBERNETES_OVERVIEW } from 'vault/tests/helpers/kubernetes/kubernetes-selectors';
 
 module('Integration | Component | kubernetes | Page::Overview', function (hooks) {
   setupRenderingTest(hooks);

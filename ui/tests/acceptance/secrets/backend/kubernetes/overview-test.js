@@ -11,8 +11,8 @@ import kubernetesHandlers from 'vault/mirage/handlers/kubernetes';
 import authPage from 'vault/tests/pages/auth';
 import { visit, click, currentRouteName } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
-import { KUBERNETES_OVERVIEW } from 'vault/tests/helpers/components/kubernetes/page/overview-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { KUBERNETES_OVERVIEW } from 'vault/tests/helpers/kubernetes/kubernetes-selectors';
 
 module('Acceptance | kubernetes | overview', function (hooks) {
   setupApplicationTest(hooks);
