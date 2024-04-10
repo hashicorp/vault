@@ -10,14 +10,15 @@ import { render, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { getUnixTime } from 'date-fns';
-import { SELECTORS } from 'vault/tests/helpers/clients';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 import { dateFormat } from 'core/helpers/date-format';
 
 const START_TIME = getUnixTime(LICENSE_START);
 const END_TIME = getUnixTime(STATIC_NOW);
-const { syncTab, charts, usageStats } = SELECTORS;
+const { syncTab, charts, usageStats } = CLIENT_COUNT;
 
 module('Integration | Component | clients | Clients::Page::Sync', function (hooks) {
   setupRenderingTest(hooks);
@@ -98,7 +99,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     await this.renderComponent();
 
     assert.dom(charts.chart('Secrets sync usage')).doesNotExist('vertical bar chart does not render');
-    assert.dom(SELECTORS.emptyStateTitle).hasText('No monthly secrets sync clients');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No monthly secrets sync clients');
     const formattedTimestamp = dateFormat([this.activity.responseTimestamp, 'MMM d yyyy, h:mm:ss aaa'], {
       withTimeZone: true,
     });
@@ -130,11 +131,11 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
 
     await this.renderComponent();
 
-    assert.dom(SELECTORS.emptyStateTitle).hasText('No Secrets Sync clients');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No Secrets Sync clients');
     assert
-      .dom(SELECTORS.emptyStateMessage)
+      .dom(GENERAL.emptyStateMessage)
       .hasText('No data is available because Secrets Sync has not been activated.');
-    assert.dom(SELECTORS.emptyStateActions).hasText('Activate Secrets Sync');
+    assert.dom(GENERAL.emptyStateActions).hasText('Activate Secrets Sync');
 
     assert.dom(charts.chart('Secrets sync usage')).doesNotExist();
     assert.dom(syncTab.total).doesNotExist();

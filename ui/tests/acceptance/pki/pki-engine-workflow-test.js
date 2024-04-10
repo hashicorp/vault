@@ -12,7 +12,7 @@ import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, fillIn, find, isSettled, visit } from '@ember/test-helpers';
 import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
-import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/policy-generator/pki';
+import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/pki/policy-generator';
 import { clearRecords } from 'vault/tests/helpers/pki/pki-run-commands';
 import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { unsupportedPem } from 'vault/tests/helpers/pki/values';

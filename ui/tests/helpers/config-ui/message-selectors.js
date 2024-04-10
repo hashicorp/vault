@@ -3,11 +3,8 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import { SELECTORS as GENERAL } from 'vault/tests/helpers/general-selectors';
-
-export const PAGE = {
+export const CUSTOM_MESSAGES = {
   // General selectors that are common between pages
-  ...GENERAL,
   inlineErrorMessage: `[data-test-inline-error-message]`,
   unauthCreateFormInfo: '[data-test-unauth-info]',
   navLink: '[data-test-sidebar-nav-link="Custom Messages"]',
