@@ -12,7 +12,7 @@ import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, currentRouteName, visit } from '@ember/test-helpers';
 import { PKI_OVERVIEW } from 'vault/tests/helpers/components/pki/overview-selectors';
-import { clearRecords } from 'vault/tests/helpers/pki/pki-workflow-helpers';
+import { clearRecords } from 'vault/tests/helpers/pki/pki-helpers';
 import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 
 module('Acceptance | pki overview', function (hooks) {

@@ -13,7 +13,7 @@ import { addHours, fromUnixTime, isSameDay } from 'date-fns';
 import errorMessage from 'vault/utils/error-message';
 import { OTHER_OIDs, SAN_TYPES } from 'vault/utils/parse-pki-cert-oids';
 import { verifyCertificates, jsonToCertObject, verifySignature } from 'vault/utils/parse-pki-cert';
-import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-workflow-helpers';
+import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
 
 const {
   certWithoutCN,

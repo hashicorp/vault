@@ -15,7 +15,7 @@ import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-workflow-helpers';
+import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
 import { PKI_GENERATE_ROOT } from 'vault/tests/helpers/components/pki/pki-generate-root-selectors';
 import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/components/pki/pki-configure-create-selectors';
 import { PKI_DELETE_ALL_ISSUERS } from 'vault/tests/helpers/components/pki/pki-delete-all-issuers-selectors';

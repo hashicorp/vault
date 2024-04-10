@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-workflow-helpers';
+import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
 
 const SELECTORS = {
   label: '[data-test-certificate-label]',

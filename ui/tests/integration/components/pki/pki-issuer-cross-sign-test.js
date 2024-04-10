@@ -12,7 +12,7 @@ import { Response } from 'miragejs';
 import { hbs } from 'ember-cli-htmlbars';
 import { PKI_CROSS_SIGN } from 'vault/tests/helpers/components/pki/pki-issuer-cross-sign-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-workflow-helpers';
+import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
 
 const FIELDS = [
   {

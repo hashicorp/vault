@@ -16,7 +16,7 @@ import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { create } from 'ember-cli-page-object';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { CERTIFICATES, clearRecords } from 'vault/tests/helpers/pki/pki-workflow-helpers';
+import { CERTIFICATES, clearRecords } from 'vault/tests/helpers/pki/pki-helpers';
 import { PKI_KEYS } from 'vault/tests/helpers/components/pki/page/pki-keys-selectors';
 import { PKI_ISSUER_DETAILS } from 'vault/tests/helpers/components/pki/pki-issuer-details-selectors';
 import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/components/pki/pki-configure-create-selectors';
