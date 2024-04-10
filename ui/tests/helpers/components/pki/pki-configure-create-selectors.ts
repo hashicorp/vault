@@ -3,20 +3,14 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { SELECTORS as GENERATE_ROOT } from './pki-generate-root';
-
-export const SELECTORS = {
+export const PKI_CONFIGURE_CREATE = {
   // page::pki-configure-create
-  breadcrumbContainer: '[data-test-breadcrumbs]',
-  title: '[data-test-pki-engine-page-title]',
+  nextStepsBanner: '[data-test-config-next-steps]',
   option: '[data-test-pki-config-option]',
-  optionByKey: (key) => `[data-test-pki-config-option="${key}"]`,
-  cancelButton: '[data-test-pki-config-cancel]',
-  saveButton: '[data-test-pki-config-save]',
+  optionByKey: (key: string) => `[data-test-pki-config-option="${key}"]`,
   doneButton: '[data-test-done]',
   configureButton: '[data-test-configure-pki-button]',
   // pki-generate-root
-  ...GENERATE_ROOT,
   generateRootOption: '[data-test-pki-config-option="generate-root"]',
   // pki-ca-cert-import
   importForm: '[data-test-pki-import-pem-bundle-form]',
