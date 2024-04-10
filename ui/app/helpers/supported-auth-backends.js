@@ -90,7 +90,7 @@ const ENTERPRISE_AUTH_METHODS = [
 ];
 
 export function supportedAuthBackends() {
-  return SUPPORTED_AUTH_BACKENDS;
+  return [...SUPPORTED_AUTH_BACKENDS];
 }
 
 export function allSupportedAuthBackends() {

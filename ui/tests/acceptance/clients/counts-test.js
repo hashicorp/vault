@@ -10,7 +10,8 @@ import clientsHandler, { STATIC_NOW } from 'vault/mirage/handlers/clients';
 import sinon from 'sinon';
 import { visit, click, currentURL } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
-import { SELECTORS as ts } from 'vault/tests/helpers/clients';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-helpers';
 import timestamp from 'core/utils/timestamp';
 
 module('Acceptance | clients | counts', function (hooks) {
@@ -36,8 +37,8 @@ module('Acceptance | clients | counts', function (hooks) {
     this.owner.lookup('service:version').type = 'community';
     await visit('/vault/clients/counts/overview');
 
-    assert.dom(ts.emptyStateTitle).hasText('No data received');
-    assert.dom(ts.emptyStateMessage).hasText('Select a start date above to query client count data.');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No data received');
+    assert.dom(GENERAL.emptyStateMessage).hasText('Select a start date above to query client count data.');
   });
 
   test('it should redirect to counts overview route for transitions to parent', async function (assert) {
@@ -47,19 +48,19 @@ module('Acceptance | clients | counts', function (hooks) {
 
   test('it should persist filter query params between child routes', async function (assert) {
     await visit('/vault/clients/counts/overview');
-    await click(ts.rangeDropdown);
-    await click(ts.currentBillingPeriod);
+    await click(CLIENT_COUNT.rangeDropdown);
+    await click(CLIENT_COUNT.currentBillingPeriod);
     const timeQueryRegex = /end_time=\d+&start_time=\d+/g;
     assert.ok(currentURL().match(timeQueryRegex).length, 'Start and end times added as query params');
 
-    await click(ts.tab('token'));
+    await click(GENERAL.tab('token'));
     assert.ok(
       currentURL().match(timeQueryRegex).length,
       'Start and end times persist through child route change'
     );
 
-    await click(ts.navLink('Dashboard'));
-    await click(ts.navLink('Client Count'));
+    await click(GENERAL.navLink('Dashboard'));
+    await click(GENERAL.navLink('Client Count'));
     assert.strictEqual(
       currentURL(),
       '/vault/clients/counts/overview',

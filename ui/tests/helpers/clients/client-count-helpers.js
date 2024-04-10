@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { Response } from 'miragejs';
-import { SELECTORS as GENERAL } from 'vault/tests/helpers/general-selectors';
 import { click } from '@ember/test-helpers';
 
 import { LICENSE_START } from 'vault/mirage/handlers/clients';
@@ -26,8 +24,7 @@ import { addMonths } from 'date-fns';
   queries unavailable
   License start date this month
 */
-export const SELECTORS = {
-  ...GENERAL,
+export const CLIENT_COUNT = {
   counts: {
     startLabel: '[data-test-counts-start-label]',
     description: '[data-test-counts-description]',
@@ -77,7 +74,22 @@ export const SELECTORS = {
   monthDropdown: '[data-test-toggle-month]',
   yearDropdown: '[data-test-toggle-year]',
   currentBillingPeriod: '[data-test-current-billing-period]',
-  dateDropdownSubmit: '[data-test-date-dropdown-submit]',
+  dateDropdown: {
+    toggleMonth: '[data-test-toggle-month]',
+    toggleYear: '[data-test-toggle-year]',
+    selectMonth: (month) => `[data-test-dropdown-month="${month}"]`,
+    selectYear: (year) => `[data-test-dropdown-year="${year}"]`,
+    submit: '[data-test-date-dropdown-submit]',
+  },
+  calendarWidget: {
+    trigger: '[data-test-calendar-widget-trigger]',
+    currentMonth: '[data-test-current-month]',
+    currentBillingPeriod: '[data-test-current-billing-period]',
+    customEndMonth: '[data-test-show-calendar]',
+    previousYear: '[data-test-previous-year]',
+    nextYear: '[data-test-next-year]',
+    calendarMonth: (month) => `[data-test-calendar-month="${month}"]`,
+  },
   runningTotalMonthStats: '[data-test-running-total="single-month-stats"]',
   runningTotalMonthlyCharts: '[data-test-running-total="monthly-charts"]',
   selectedAuthMount: 'div#auth-method-search-select [data-test-selected-option] div',
@@ -94,40 +106,8 @@ export const CHART_ELEMENTS = {
   totalValues: '[data-test-group="total-values"]',
 };
 
-export function sendResponse(data, httpStatus = 200) {
-  if (httpStatus === 403) {
-    return [
-      httpStatus,
-      { 'Content-Type': 'application/json' },
-      JSON.stringify({ errors: ['permission denied'] }),
-    ];
-  }
-  if (httpStatus === 204) {
-    // /activity endpoint returns 204 when no data, while
-    // /activity/monthly returns 200 with zero values on data
-    return [httpStatus, { 'Content-Type': 'application/json' }];
-  }
-  return [httpStatus, { 'Content-Type': 'application/json' }, JSON.stringify(data)];
-}
-
-export function overrideResponse(httpStatus, data) {
-  if (httpStatus === 403) {
-    return new Response(
-      403,
-      { 'Content-Type': 'application/json' },
-      JSON.stringify({ errors: ['permission denied'] })
-    );
-  }
-  // /activity endpoint returns 204 when no data, while
-  // /activity/monthly returns 200 with zero values on data
-  if (httpStatus === 204) {
-    return new Response(204, { 'Content-Type': 'application/json' });
-  }
-  return new Response(200, { 'Content-Type': 'application/json' }, JSON.stringify(data));
-}
-
 export async function dateDropdownSelect(month, year) {
-  const { dateDropdown, counts } = SELECTORS;
+  const { dateDropdown, counts } = CLIENT_COUNT;
   await click(counts.startEdit);
   await click(dateDropdown.toggleMonth);
   await click(dateDropdown.selectMonth(month));
