@@ -11,7 +11,7 @@ import sinon from 'sinon';
 import { visit, click, currentURL } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { CLIENT_COUNT as ts } from 'vault/tests/helpers/clients/client-count-helpers';
+import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-helpers';
 import timestamp from 'core/utils/timestamp';
 
 module('Acceptance | clients | counts', function (hooks) {
@@ -48,8 +48,8 @@ module('Acceptance | clients | counts', function (hooks) {
 
   test('it should persist filter query params between child routes', async function (assert) {
     await visit('/vault/clients/counts/overview');
-    await click(ts.rangeDropdown);
-    await click(ts.currentBillingPeriod);
+    await click(CLIENT_COUNT.rangeDropdown);
+    await click(CLIENT_COUNT.currentBillingPeriod);
     const timeQueryRegex = /end_time=\d+&start_time=\d+/g;
     assert.ok(currentURL().match(timeQueryRegex).length, 'Start and end times added as query params');
 
