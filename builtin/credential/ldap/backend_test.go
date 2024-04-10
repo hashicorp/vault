@@ -423,7 +423,6 @@ func factory(t *testing.T) logical.Backend {
 func TestBackend_LoginRegression_AnonBind(t *testing.T) {
 	b := factory(t)
 	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
-	cfg.UserAttr = "givenName"
 	cfg.AnonymousGroupSearch = true
 	defer cleanup()
 
@@ -460,7 +459,6 @@ func TestBackend_LoginRegression_UserAttr(t *testing.T) {
 	b := factory(t)
 	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
 	cfg.UserAttr = "givenName"
-	cfg.AnonymousGroupSearch = true
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
