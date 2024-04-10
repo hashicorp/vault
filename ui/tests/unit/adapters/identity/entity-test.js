@@ -21,7 +21,10 @@ module('Unit | Adapter | identity/entity', function (hooks) {
       const url = testCase.url.replace('/v1', '').split('?')[0];
       const queryParams = testCase.url.includes('?list=true') ? { list: 'true' } : {};
       this.server[method](url, (schema, req) => {
-        assert.ok(true, `${testCase.adapterMethod} calls the correct url with: ${testCase.url}`);
+        assert.true(
+          testCase.url.includes(url),
+          `${testCase.adapterMethod} calls the correct url: ${testCase.url}`
+        );
         assert.strictEqual(req.method, testCase.method, `uses the correct http verb: ${testCase.method}`);
         assert.deepEqual(req.queryParams, queryParams, 'calls with correct query params');
         return {};
