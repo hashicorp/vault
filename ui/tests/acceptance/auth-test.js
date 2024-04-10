@@ -107,7 +107,7 @@ module('Acceptance | auth', function (hooks) {
         this.assertReq = (req) => {
           const body = type === 'token' ? req.requestHeaders : JSON.parse(req.requestBody);
           const { included, url } = this.expected[type];
-          assert.ok(Object.keys(body).includes(included), `${type} includes ${included}`);
+          assert.true(Object.keys(body).includes(included), `${type} includes ${included}`);
           assert.strictEqual(req.url, url, `${type} calls the correct URL`);
         };
         await visit('/vault/auth');
