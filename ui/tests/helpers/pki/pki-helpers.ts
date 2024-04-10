@@ -5,6 +5,8 @@
 
 import type StoreService from 'vault/services/store';
 
+export const PKI_BASE_URL = `/vault/cluster/secrets/backend/pki/roles`;
+
 // Clears pki-related data and capabilities so that admin
 // capabilities from setup don't rollover
 export function clearRecords(store: StoreService) {

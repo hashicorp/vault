@@ -11,8 +11,8 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import Sinon from 'sinon';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
-import { PKI_GENERATE_ROOT } from 'vault/tests/helpers/components/pki/pki-generate-root-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { PKI_GENERATE_ROOT } from 'vault/tests/helpers/pki/pki-selectors';
 
 module('Integration | Component | pki-generate-root', function (hooks) {
   setupRenderingTest(hooks);
