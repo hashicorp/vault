@@ -109,7 +109,7 @@ module('Acceptance | auth backend list', function (hooks) {
             assert.dom('[data-test-doc-link] .doc-link').exists(`includes doc link for ${type} auth method`);
           } else {
             let expectedTabs = 2;
-            if (type == 'ldap' || type === 'okta') {
+            if (type === 'ldap' || type === 'okta') {
               expectedTabs = 3;
             }
             assert

@@ -15,7 +15,7 @@ import { findAll } from '@ember/test-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import timestamp from 'core/utils/timestamp';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
-import { CLIENT_COUNT as ts } from 'vault/tests/helpers/clients/client-count-helpers';
+import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-helpers';
 
 const START_TIME = getUnixTime(LICENSE_START);
 
@@ -77,23 +77,23 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom(ts.charts.chart('running total')).exists('running total component renders');
-    assert.dom(ts.charts.lineChart).exists('line chart renders');
+    assert.dom(CLIENT_COUNT.charts.chart('running total')).exists('running total component renders');
+    assert.dom(CLIENT_COUNT.charts.lineChart).exists('line chart renders');
     assert
-      .dom(ts.charts.statTextValue('Entity clients'))
+      .dom(CLIENT_COUNT.charts.statTextValue('Entity clients'))
       .hasText(`${expectedTotalEntity}`, `renders correct total entity average ${expectedTotalEntity}`);
     assert
-      .dom(ts.charts.statTextValue('Non-entity clients'))
+      .dom(CLIENT_COUNT.charts.statTextValue('Non-entity clients'))
       .hasText(
         `${expectedTotalNonEntity}`,
         `renders correct total nonentity average ${expectedTotalNonEntity}`
       );
     assert
-      .dom(ts.charts.statTextValue('Secrets sync clients'))
+      .dom(CLIENT_COUNT.charts.statTextValue('Secrets sync clients'))
       .hasText(`${expectedTotalSync}`, `renders correct total sync ${expectedTotalSync}`);
 
     // assert line chart is correct
-    findAll(ts.charts.line.xAxisLabel).forEach((e, i) => {
+    findAll(CLIENT_COUNT.charts.line.xAxisLabel).forEach((e, i) => {
       assert
         .dom(e)
         .hasText(
@@ -102,7 +102,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
         );
     });
     assert
-      .dom(ts.charts.line.plotPoint)
+      .dom(CLIENT_COUNT.charts.line.plotPoint)
       .exists(
         { count: this.byMonthActivity.filter((m) => m.clients).length },
         'renders correct number of plot points'
@@ -121,20 +121,20 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom(ts.charts.chart('running total')).exists('running total component renders');
-    assert.dom(ts.charts.lineChart).exists('line chart renders');
+    assert.dom(CLIENT_COUNT.charts.chart('running total')).exists('running total component renders');
+    assert.dom(CLIENT_COUNT.charts.lineChart).exists('line chart renders');
 
     assert
-      .dom(ts.charts.statTextValue('Entity clients'))
+      .dom(CLIENT_COUNT.charts.statTextValue('Entity clients'))
       .hasText(`${expectedTotalEntity}`, `renders correct total entity average ${expectedTotalEntity}`);
     assert
-      .dom(ts.charts.statTextValue('Non-entity clients'))
+      .dom(CLIENT_COUNT.charts.statTextValue('Non-entity clients'))
       .hasText(
         `${expectedTotalNonEntity}`,
         `renders correct total nonentity average ${expectedTotalNonEntity}`
       );
     assert
-      .dom(ts.charts.statTextValue('Secrets sync clients'))
+      .dom(CLIENT_COUNT.charts.statTextValue('Secrets sync clients'))
       .hasText(`${expectedTotalSync}`, `renders correct total sync ${expectedTotalSync}`);
   });
 
@@ -150,14 +150,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
     const expectedNewEntity = formatNumber([singleMonthNew.entity_clients]);
     const expectedNewNonEntity = formatNumber([singleMonthNew.non_entity_clients]);
     const expectedNewSyncs = formatNumber([singleMonthNew.secret_syncs]);
-    const { statTextValue } = ts.charts;
+    const { statTextValue } = CLIENT_COUNT.charts;
 
     this.byMonthActivity = [singleMonth];
     this.isHistoricalMonth = true;
 
     await this.renderComponent();
 
-    assert.dom(ts.charts.lineChart).doesNotExist('line chart does not render');
+    assert.dom(CLIENT_COUNT.charts.lineChart).doesNotExist('line chart does not render');
     assert.dom(statTextValue()).exists({ count: 8 }, 'renders 6 stat text containers');
     assert
       .dom(`[data-test-new] ${statTextValue('New clients')}`)
@@ -190,10 +190,12 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom(ts.charts.chart('running total')).exists('running total component renders');
-    assert.dom(ts.charts.lineChart).exists('line chart renders');
-    assert.dom(ts.charts.statTextValue('Entity clients')).exists();
-    assert.dom(ts.charts.statTextValue('Non-entity clients')).exists();
-    assert.dom(ts.charts.statTextValue('Secrets sync clients')).doesNotExist('does not render secret syncs');
+    assert.dom(CLIENT_COUNT.charts.chart('running total')).exists('running total component renders');
+    assert.dom(CLIENT_COUNT.charts.lineChart).exists('line chart renders');
+    assert.dom(CLIENT_COUNT.charts.statTextValue('Entity clients')).exists();
+    assert.dom(CLIENT_COUNT.charts.statTextValue('Non-entity clients')).exists();
+    assert
+      .dom(CLIENT_COUNT.charts.statTextValue('Secrets sync clients'))
+      .doesNotExist('does not render secret syncs');
   });
 });
