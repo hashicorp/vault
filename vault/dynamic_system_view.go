@@ -473,7 +473,7 @@ func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, reqPath stri
 		path = ns.Path + "/" + reqPath
 	}
 
-	id, err := d.core.rotationManager.Register(namespace.ContextWithNamespace(ctx, job.Namespace), path, job)
+	id, err := d.core.RegisterRotationJob(namespace.ContextWithNamespace(ctx, job.Namespace), path, job)
 	if err != nil {
 		return "", fmt.Errorf("error registering rotation job: %s", err)
 	}

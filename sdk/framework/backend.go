@@ -109,8 +109,9 @@ type Backend struct {
 	// RunningVersion is the optional version that will be self-reported
 	RunningVersion string
 
-	// Functions for rotating the root password of a backend if it exists
-	RotatePassword func(context.Context, *logical.Request) error // specific backend developer responsible for handling basically everything
+	// RotateCredential is the callback function used by the RotationManager
+	// to communicate with a plugin on when to rotate a credential
+	RotateCredential func(context.Context, *logical.Request) error
 
 	logger  log.Logger
 	system  logical.SystemView
@@ -670,11 +671,11 @@ func (b *Backend) handleRollback(ctx context.Context, req *logical.Request) (*lo
 
 // handleRotation invokes the RotatePassword func set on the backend.
 func (b *Backend) handleRotation(ctx context.Context, req *logical.Request) (*logical.Response, error) {
-	if b.RotatePassword == nil {
+	if b.RotateCredential == nil {
 		return nil, logical.ErrUnsupportedOperation
 	}
 
-	err := b.RotatePassword(ctx, req)
+	err := b.RotateCredential(ctx, req)
 	if err != nil {
 		return nil, err
 	}

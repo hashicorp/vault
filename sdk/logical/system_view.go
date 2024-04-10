@@ -101,6 +101,7 @@ type SystemView interface {
 	// GenerateIdentityToken returns an identity token for the requesting plugin.
 	GenerateIdentityToken(ctx context.Context, req *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error)
 
+	// RegisterRotationJob returns a rotation ID for a requested plugin credential.
 	RegisterRotationJob(ctx context.Context, reqPath string, job *RotationJob) (rotationID string, err error)
 }
 
@@ -288,7 +289,6 @@ func (d StaticSystemView) APILockShouldBlockRequest() (bool, error) {
 	return d.APILockShouldBlockRequestVal, nil
 }
 
-func (d StaticSystemView) RegisterRotationJob(ctx context.Context, reqPath string, job *RotationJob) (rotationID string, err error) {
-	return "", nil
-	// return "", errors.New("RegisterRotationJob is not implemented in StaticSystemView")
+func (d StaticSystemView) RegisterRotationJob(_ context.Context, _ string, _ *RotationJob) (rotationID string, err error) {
+	return "", errors.New("RegisterRotationJob is not implemented in StaticSystemView")
 }

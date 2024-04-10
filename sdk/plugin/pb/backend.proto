@@ -625,13 +625,6 @@ message RotationJobInput {
   string name = 4;
 }
 
-//message RotationScheduleInput {
-//  google.protobuf.Struct schedule = 1;
-//  google.protobuf.Duration rotation_window = 2;
-//  string rotation_schedule = 3;
-//  google.protobuf.Struct next_vault_rotation = 4;
-//}
-
 // SystemView exposes system configuration information in a safe way for plugins
 // to consume. Plugins should implement the client for this service.
 service SystemView {
