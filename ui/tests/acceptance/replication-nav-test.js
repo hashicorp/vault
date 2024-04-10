@@ -17,7 +17,7 @@ const SELECTORS = {
   title: '[data-test-replication-title]',
   primaryCluster: '[data-test-value-div="primary_cluster_addr"]',
   replicationSet: '[data-test-row-value="Replication set"]',
-  knownSecondariesTitle: '.known-secondaries-card h3',
+  knownSecondariesTitle: '.secondaries h3',
 };
 module('Acceptance | Enterprise | replication navigation', function (hooks) {
   setupApplicationTest(hooks);
@@ -36,7 +36,7 @@ module('Acceptance | Enterprise | replication navigation', function (hooks) {
 
   test('navigate between replication types updates page', async function (assert) {
     await click(SELECTORS.navReplication);
-    assert.dom(SELECTORS.title).hasText('Disaster Recovery & Performance primary');
+    assert.dom('[data-test-replication-header] h1').hasText('Disaster Recovery & Performance primary');
     await click(SELECTORS.navPerformance);
 
     // Ensure data is expected for performance

@@ -32,14 +32,18 @@ export default Component.extend({
   layout,
   store: service(),
   router: service(),
+  rm: service('replication-mode'),
   reindexingDetails: null,
   didReceiveAttrs() {
     this._super(arguments);
     this.getReplicationModeStatus.perform();
   },
+  replicationMode: computed('rm.mode', function () {
+    return this.rm.getMode();
+  }),
   getReplicationModeStatus: task(function* () {
     let resp;
-    const { replicationMode } = this.model;
+    const { replicationMode } = this;
 
     if (this.isSummaryDashboard) {
       // the summary dashboard is not mode specific and will error
@@ -66,13 +70,13 @@ export default Component.extend({
     }
     return '';
   }),
-  formattedReplicationMode: computed('model.replicationMode', 'isSummaryDashboard', function () {
+  formattedReplicationMode: computed('replicationMode', 'isSummaryDashboard', function () {
     // dr or performance 🤯
     const { isSummaryDashboard } = this;
     if (isSummaryDashboard) {
       return 'Disaster Recovery & Performance';
     }
-    const mode = this.model.replicationMode;
+    const mode = this.replicationMode;
     return MODE[mode];
   }),
   clusterMode: computed('model.replicationAttrs', 'isSummaryDashboard', function () {
@@ -119,14 +123,14 @@ export default Component.extend({
     }
     return {};
   }),
-  replicationDetails: computed('model.replicationMode', 'isSummaryDashboard', function () {
+  replicationDetails: computed('replicationMode', 'isSummaryDashboard', function () {
     const { model } = this;
     const { isSummaryDashboard } = this;
     if (isSummaryDashboard) {
       // Cannot return null
       return {};
     }
-    const replicationMode = model.replicationMode;
+    const { replicationMode } = this;
     return model[replicationMode];
   }),
   isDisabled: computed('replicationDetails.mode', function () {
