@@ -318,7 +318,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
-	// Setting proxyVaultToken to false will tell the handler to use the auto auth token
+	// Setting useAutoAuthToken to true to ensure that the auto-auth token is used
 	mux.Handle("/", cache.ProxyHandler(ctx, cacheLogger, leaseCache, inmemSink, true, true, nil, nil))
 	server := &http.Server{
 		Handler:           mux,
