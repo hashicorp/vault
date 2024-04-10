@@ -25,7 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, proxyVaultToken bool, authInProgress *atomic.Bool, invalidTokenErrCh chan error) http.Handler {
+func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, proxyVaultToken bool, useAutoAuthToken bool, authInProgress *atomic.Bool, invalidTokenErrCh chan error) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("received request", "method", r.Method, "path", r.URL.Path)
 
@@ -38,7 +38,7 @@ func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inm
 		var autoAuthToken string
 		if inmemSink != nil {
 			autoAuthToken = inmemSink.(sink.SinkReader).Token()
-			if token == "" && !proxyVaultToken {
+			if token == "" && useAutoAuthToken {
 				logger.Debug("using auto auth token", "method", r.Method, "path", r.URL.Path)
 				token = autoAuthToken
 			}
