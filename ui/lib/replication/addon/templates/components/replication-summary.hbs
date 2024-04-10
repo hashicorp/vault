@@ -334,7 +334,7 @@
     {{/if}}
   {{/if}}
 {{else}}
-  {{#if (eq this.replicationAttrs.mode "initializing")}}
+  {{#if (eq this.attrsForCurrentMode.mode "initializing")}}
     The cluster is initializing replication. This may take some time.
   {{else}}
     <p>{{this.cluster.replicationModeStatus.cluster_id}}</p>
@@ -343,28 +343,28 @@
         <Page.dashboard
           @data={{this.cluster}}
           @componentToRender={{if
-            (eq this.replicationAttrs.mode "secondary")
+            (eq this.attrsForCurrentMode.mode "secondary")
             "replication-secondary-card"
             "replication-primary-card"
           }}
           as |Dashboard|
         >
-          {{#if (eq this.replicationAttrs.mode "secondary")}}
+          {{#if (eq this.attrsForCurrentMode.mode "secondary")}}
             <Dashboard.card @title="Status" />
             <Dashboard.card @title="Primary cluster" />
           {{else}}
             <Dashboard.card
               @title="State"
               @description="The cluster’s current operating state."
-              @glyph={{get (cluster-states this.replicationAttrs.state) "glyph"}}
-              @metric={{this.replicationAttrs.state}}
+              @glyph={{get (cluster-states this.attrsForCurrentMode.state) "glyph"}}
+              @metric={{this.attrsForCurrentMode.state}}
             />
             <Dashboard.card
               @title="Last WAL entry"
               @description="Index of last Write Ahead Logs entry written on local storage. Updates every ten seconds."
-              @metric={{format-number this.replicationAttrs.lastWAL}}
+              @metric={{format-number this.attrsForCurrentMode.lastWAL}}
             />
-            <Dashboard.secondaryCard @cluster={{this.cluster}} @replicationAttrs={{this.replicationAttrs}} />
+            <Dashboard.secondaryCard @cluster={{this.cluster}} @replicationAttrs={{this.attrsForCurrentMode}} />
           {{/if}}
         </Page.dashboard>
       </ReplicationPage>
