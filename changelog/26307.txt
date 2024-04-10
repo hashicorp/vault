@@ -1,0 +1,4 @@
+```release-note:improvement
+proxy: Proxy will re-trigger auto auth if the token used for requests has been revoked, has exceeded the number of uses,
+or is an otherwise invalid value.
+```
