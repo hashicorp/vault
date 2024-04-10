@@ -33,9 +33,9 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
       const body = JSON.parse(request.requestBody);
       const keys = Object.keys(body);
       assert.strictEqual(body.token_type, 'batch', 'passes new token type');
-      assert.ok(keys.includes('default_lease_ttl'), 'passes default_lease_ttl on tune');
-      assert.ok(keys.includes('max_lease_ttl'), 'passes max_lease_ttl on tune');
-      assert.ok(keys.includes('description'), 'passes updated description on tune');
+      assert.true(keys.includes('default_lease_ttl'), 'passes default_lease_ttl on tune');
+      assert.true(keys.includes('max_lease_ttl'), 'passes max_lease_ttl on tune');
+      assert.true(keys.includes('description'), 'passes updated description on tune');
       request.passthrough();
     });
     const path = `approle-save-${this.uid}`;
