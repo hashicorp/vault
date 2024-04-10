@@ -2,8 +2,6 @@ module github.com/hashicorp/vault/sdk
 
 go 1.21
 
-toolchain go1.22.2
-
 require (
 	cloud.google.com/go/cloudsqlconn v1.4.3
 	github.com/armon/go-metrics v0.4.1
