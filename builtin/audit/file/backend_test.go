@@ -202,7 +202,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 			},
 			want:            audit.FormatterConfig{},
 			wantErr:         true,
-			expectedMessage: "unable to parse 'hmac_accessor': invalid configuration: strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedMessage: "unable to parse 'hmac_accessor': invalid configuration",
 		},
 		"invalid-log-raw": {
 			config: map[string]string{
@@ -212,7 +212,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 			},
 			want:            audit.FormatterConfig{},
 			wantErr:         true,
-			expectedMessage: "unable to parse 'log_raw: invalid configuration: strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedMessage: "unable to parse 'log_raw: invalid configuration",
 		},
 		"invalid-elide-bool": {
 			config: map[string]string{
@@ -223,7 +223,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 			},
 			want:            audit.FormatterConfig{},
 			wantErr:         true,
-			expectedMessage: "unable to parse 'elide_list_responses': invalid configuration: strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedMessage: "unable to parse 'elide_list_responses': invalid configuration",
 		},
 		"prefix": {
 			config: map[string]string{
