@@ -24,8 +24,6 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 	}
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		// TODO(JMF): use the mirror once https://github.com/hashicorp/docker-registry-mirror/pull/64 is merged
-		// ImageRepo:     "docker.mirror.hashicorp.services/rroemhild/docker-test-openldap",
 		ImageRepo:     "ghcr.io/rroemhild/docker-test-openldap",
 		ImageTag:      version,
 		ContainerName: "ldap",
