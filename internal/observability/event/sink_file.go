@@ -44,7 +44,7 @@ func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 
 	opts, err := getOpts(opt...)
 	if err != nil {
-		return nil, fmt.Errorf("error applying options: %w", err)
+		return nil, err
 	}
 
 	mode := os.FileMode(defaultFileMode)

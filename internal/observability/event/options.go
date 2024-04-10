@@ -58,6 +58,13 @@ func getOpts(opt ...Option) (options, error) {
 	return opts, nil
 }
 
+// ValidateOptions can be used to validate options before they are required.
+func ValidateOptions(opt ...Option) error {
+	_, err := getOpts(opt...)
+
+	return err
+}
+
 // NewID is a bit of a modified NewID has been done to stop a circular
 // dependency with the errors package that is caused by importing
 // boundary/internal/db

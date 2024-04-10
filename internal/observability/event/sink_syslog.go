@@ -30,7 +30,7 @@ func NewSyslogSink(format string, opt ...Option) (*SyslogSink, error) {
 
 	opts, err := getOpts(opt...)
 	if err != nil {
-		return nil, fmt.Errorf("error applying options: %w", err)
+		return nil, err
 	}
 
 	logger, err := gsyslog.NewLogger(gsyslog.LOG_INFO, opts.withFacility, opts.withTag)

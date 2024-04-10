@@ -95,6 +95,11 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 		filePath = discard
 	}
 
+	cfg, err := newFormatterConfig(headersConfig, conf.Config)
+	if err != nil {
+		return nil, err
+	}
+
 	b := &Backend{
 		fallback:   fallback,
 		name:       conf.MountPath,
@@ -110,11 +115,6 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 	b.salt.Store((*salt.Salt)(nil))
 
 	err = b.configureFilterNode(conf.Config["filter"])
-	if err != nil {
-		return nil, err
-	}
-
-	cfg, err := newFormatterConfig(headersConfig, conf.Config)
 	if err != nil {
 		return nil, err
 	}

@@ -94,7 +94,7 @@ func NewFormatterConfig(headerFormatter HeaderFormatter, opt ...Option) (Formatt
 
 	opts, err := getOpts(opt...)
 	if err != nil {
-		return FormatterConfig{}, fmt.Errorf("error applying options: %w", err)
+		return FormatterConfig{}, err
 	}
 
 	return FormatterConfig{

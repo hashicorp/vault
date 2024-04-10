@@ -45,7 +45,7 @@ func TestAuditEvent_new(t *testing.T) {
 			Subtype:              ResponseType,
 			Format:               JSONFormat,
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "error applying options: id cannot be empty",
+			ExpectedErrorMessage: "id cannot be empty",
 		},
 		"good": {
 			Options: []Option{

@@ -306,7 +306,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "error configuring sink node: address is required: invalid internal parameter",
+			expectedErrorMessage: "address is required: invalid internal parameter",
 		},
 		"whitespace-address": {
 			backendConfig: &audit.BackendConfig{
@@ -319,7 +319,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "error configuring sink node: address is required: invalid internal parameter",
+			expectedErrorMessage: "address is required: invalid internal parameter",
 		},
 		"write-duration-valid": {
 			backendConfig: &audit.BackendConfig{
@@ -346,7 +346,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "error configuring sink node: error creating socket sink node: error applying options: unable to parse max duration: invalid parameter: time: invalid duration \"qwerty\"",
+			expectedErrorMessage: "unable to parse max duration: invalid parameter: time: invalid duration \"qwerty\"",
 		},
 		"non-fallback-device-with-filter": {
 			backendConfig: &audit.BackendConfig{

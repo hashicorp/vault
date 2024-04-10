@@ -63,10 +63,19 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 		tag = "vault"
 	}
 
+	sinkOpts := []event.Option{
+		event.WithFacility(facility),
+		event.WithTag(tag),
+	}
+
+	err := event.ValidateOptions(sinkOpts...)
+	if err != nil {
+		return nil, err
+	}
+
 	// The config options 'fallback' and 'filter' are mutually exclusive, a fallback
 	// device catches everything, so it cannot be allowed to filter.
 	var fallback bool
-	var err error
 	if fallbackRaw, ok := conf.Config["fallback"]; ok {
 		fallback, err = parseutil.ParseBool(fallbackRaw)
 		if err != nil {
@@ -76,6 +85,11 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 
 	if _, ok := conf.Config["filter"]; ok && fallback {
 		return nil, fmt.Errorf("cannot configure a fallback device with a filter: %w", audit.ErrExternalOptions)
+	}
+
+	cfg, err := newFormatterConfig(headersConfig, conf.Config)
+	if err != nil {
+		return nil, err
 	}
 
 	b := &Backend{
@@ -92,24 +106,14 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 		return nil, err
 	}
 
-	cfg, err := newFormatterConfig(headersConfig, conf.Config)
-	if err != nil {
-		return nil, err
-	}
-
 	err = b.configureFormatterNode(conf.MountPath, cfg, conf.Logger)
 	if err != nil {
 		return nil, err
 	}
 
-	sinkOpts := []event.Option{
-		event.WithFacility(facility),
-		event.WithTag(tag),
-	}
-
 	err = b.configureSinkNode(conf.MountPath, cfg.RequiredFormat.String(), sinkOpts...)
 	if err != nil {
-		return nil, fmt.Errorf("error configuring sink node: %w", err)
+		return nil, err
 	}
 
 	return b, nil

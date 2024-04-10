@@ -65,10 +65,19 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 		writeDeadline = "2s"
 	}
 
+	sinkOpts := []event.Option{
+		event.WithSocketType(socketType),
+		event.WithMaxDuration(writeDeadline),
+	}
+
+	err := event.ValidateOptions(sinkOpts...)
+	if err != nil {
+		return nil, err
+	}
+
 	// The config options 'fallback' and 'filter' are mutually exclusive, a fallback
 	// device catches everything, so it cannot be allowed to filter.
 	var fallback bool
-	var err error
 	if fallbackRaw, ok := conf.Config["fallback"]; ok {
 		fallback, err = parseutil.ParseBool(fallbackRaw)
 		if err != nil {
@@ -78,6 +87,11 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 
 	if _, ok := conf.Config["filter"]; ok && fallback {
 		return nil, fmt.Errorf("cannot configure a fallback device with a filter: %w", audit.ErrExternalOptions)
+	}
+
+	cfg, err := newFormatterConfig(headersConfig, conf.Config)
+	if err != nil {
+		return nil, err
 	}
 
 	b := &Backend{
@@ -94,24 +108,14 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 		return nil, err
 	}
 
-	cfg, err := newFormatterConfig(headersConfig, conf.Config)
-	if err != nil {
-		return nil, err
-	}
-
 	err = b.configureFormatterNode(conf.MountPath, cfg, conf.Logger)
 	if err != nil {
 		return nil, err
 	}
 
-	sinkOpts := []event.Option{
-		event.WithSocketType(socketType),
-		event.WithMaxDuration(writeDeadline),
-	}
-
 	err = b.configureSinkNode(conf.MountPath, address, cfg.RequiredFormat.String(), sinkOpts...)
 	if err != nil {
-		return nil, fmt.Errorf("error configuring sink node: %w", err)
+		return nil, err
 	}
 
 	return b, nil
@@ -249,7 +253,7 @@ func (b *Backend) configureSinkNode(name string, address string, format string, 
 
 	n, err := event.NewSocketSink(address, format, opts...)
 	if err != nil {
-		return fmt.Errorf("error creating socket sink node: %w", err)
+		return err
 	}
 
 	// Wrap the sink node with metrics middleware

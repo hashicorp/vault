@@ -52,7 +52,7 @@ func NewEvent(s subtype, opt ...Option) (*AuditEvent, error) {
 	// Get the default options
 	opts, err := getOpts(opt...)
 	if err != nil {
-		return nil, fmt.Errorf("error applying options: %w", err)
+		return nil, err
 	}
 
 	if opts.withID == "" {
