@@ -9,7 +9,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap';
+import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 

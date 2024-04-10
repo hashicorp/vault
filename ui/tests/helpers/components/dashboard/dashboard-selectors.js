@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export const SELECTORS = {
+export const DASHBOARD = {
   cardName: (name) => `[data-test-card="${name}"]`,
   emptyState: (name) => `[data-test-empty-state="${name}"]`,
   emptyStateTitle: (name) => `[data-test-empty-state="${name}"] [data-test-empty-state-title]`,

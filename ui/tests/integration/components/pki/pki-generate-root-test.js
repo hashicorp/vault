@@ -11,7 +11,8 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import Sinon from 'sinon';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
-import { SELECTORS } from 'vault/tests/helpers/pki/pki-generate-root';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { PKI_GENERATE_ROOT } from 'vault/tests/helpers/pki/pki-selectors';
 
 module('Integration | Component | pki-generate-root', function (hooks) {
   setupRenderingTest(hooks);
@@ -38,7 +39,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     );
 
     assert.dom('h2').exists({ count: 1 }, 'One H2 title without @urls');
-    assert.dom(SELECTORS.mainSectionTitle).hasText('Root parameters');
+    assert.dom(PKI_GENERATE_ROOT.mainSectionTitle).hasText('Root parameters');
     assert.dom('[data-test-toggle-group]').exists({ count: 3 }, '3 toggle groups shown');
   });
 
@@ -50,33 +51,33 @@ module('Integration | Component | pki-generate-root', function (hooks) {
       }
     );
 
-    await click(SELECTORS.additionalGroupToggle);
+    await click(PKI_GENERATE_ROOT.additionalGroupToggle);
     assert
-      .dom(SELECTORS.toggleGroupDescription)
+      .dom(PKI_GENERATE_ROOT.toggleGroupDescription)
       .hasText('These fields provide more information about the client to which the certificate belongs.');
     assert
-      .dom(`[data-test-group="Additional subject fields"] ${SELECTORS.formField}`)
+      .dom(PKI_GENERATE_ROOT.groupFields('Additional subject fields'))
       .exists({ count: 7 }, '7 form fields under Additional Fields toggle');
 
-    await click(SELECTORS.sanGroupToggle);
+    await click(PKI_GENERATE_ROOT.sanGroupToggle);
     assert
-      .dom(SELECTORS.toggleGroupDescription)
+      .dom(PKI_GENERATE_ROOT.toggleGroupDescription)
       .hasText(
         'SAN fields are an extension that allow you specify additional host names (sites, IP addresses, common names, etc.) to be protected by a single certificate.'
       );
     assert
-      .dom(`[data-test-group="Subject Alternative Name (SAN) Options"] ${SELECTORS.formField}`)
+      .dom(PKI_GENERATE_ROOT.groupFields('Subject Alternative Name (SAN) Options'))
       .exists({ count: 6 }, '7 form fields under SANs toggle');
 
-    await click(SELECTORS.keyParamsGroupToggle);
+    await click(PKI_GENERATE_ROOT.keyParamsGroupToggle);
     assert
-      .dom(SELECTORS.toggleGroupDescription)
+      .dom(PKI_GENERATE_ROOT.toggleGroupDescription)
       .hasText(
         'Please choose a type to see key parameter options.',
         'Shows empty state description before type is selected'
       );
     assert
-      .dom(`[data-test-group="Key parameters"] ${SELECTORS.formField}`)
+      .dom(PKI_GENERATE_ROOT.groupFields('Key parameters'))
       .exists({ count: 0 }, '0 form fields under keyParams toggle');
   });
 
@@ -88,75 +89,75 @@ module('Integration | Component | pki-generate-root', function (hooks) {
         owner: this.engine,
       }
     );
-    await click(SELECTORS.keyParamsGroupToggle);
+    await click(PKI_GENERATE_ROOT.keyParamsGroupToggle);
     assert
-      .dom(`[data-test-group="Key parameters"] ${SELECTORS.formField}`)
+      .dom(PKI_GENERATE_ROOT.groupFields('Key parameters'))
       .exists({ count: 0 }, '0 form fields under keyParams toggle');
 
     this.set('type', 'exported');
-    await fillIn(SELECTORS.typeField, this.type);
+    await fillIn(GENERAL.inputByAttr('type'), this.type);
     assert
-      .dom(SELECTORS.toggleGroupDescription)
+      .dom(PKI_GENERATE_ROOT.toggleGroupDescription)
       .hasText(
         'This certificate type is exported. This means the private key will be returned in the response. Below, you will name the key and define its type and key bits.',
         `has correct description for type=${this.type}`
       );
     assert.strictEqual(this.model.type, this.type);
     assert
-      .dom(`[data-test-group="Key parameters"] ${SELECTORS.formField}`)
+      .dom(PKI_GENERATE_ROOT.groupFields('Key parameters'))
       .exists({ count: 4 }, '4 form fields under keyParams toggle');
-    assert.dom(SELECTORS.fieldByName('keyName')).exists(`Key name field shown when type=${this.type}`);
-    assert.dom(SELECTORS.fieldByName('keyType')).exists(`Key type field shown when type=${this.type}`);
-    assert.dom(SELECTORS.fieldByName('keyBits')).exists(`Key bits field shown when type=${this.type}`);
+    assert.dom(GENERAL.fieldByAttr('keyName')).exists(`Key name field shown when type=${this.type}`);
+    assert.dom(GENERAL.fieldByAttr('keyType')).exists(`Key type field shown when type=${this.type}`);
+    assert.dom(GENERAL.fieldByAttr('keyBits')).exists(`Key bits field shown when type=${this.type}`);
 
     this.set('type', 'internal');
-    await fillIn(SELECTORS.typeField, this.type);
+    await fillIn(GENERAL.inputByAttr('type'), this.type);
     assert
-      .dom(SELECTORS.toggleGroupDescription)
+      .dom(PKI_GENERATE_ROOT.toggleGroupDescription)
       .hasText(
         'This certificate type is internal. This means that the private key will not be returned and cannot be retrieved later. Below, you will name the key and define its type and key bits.',
         `has correct description for type=${this.type}`
       );
     assert.strictEqual(this.model.type, this.type);
     assert
-      .dom(`[data-test-group="Key parameters"] ${SELECTORS.formField}`)
+      .dom(PKI_GENERATE_ROOT.groupFields('Key parameters'))
       .exists({ count: 3 }, '3 form fields under keyParams toggle');
-    assert.dom(SELECTORS.fieldByName('keyName')).exists(`Key name field shown when type=${this.type}`);
-    assert.dom(SELECTORS.fieldByName('keyType')).exists(`Key type field shown when type=${this.type}`);
-    assert.dom(SELECTORS.fieldByName('keyBits')).exists(`Key bits field shown when type=${this.type}`);
+    assert.dom(GENERAL.fieldByAttr('keyName')).exists(`Key name field shown when type=${this.type}`);
+    assert.dom(GENERAL.fieldByAttr('keyType')).exists(`Key type field shown when type=${this.type}`);
+    assert.dom(GENERAL.fieldByAttr('keyBits')).exists(`Key bits field shown when type=${this.type}`);
 
     this.set('type', 'existing');
-    await fillIn(SELECTORS.typeField, this.type);
+    await fillIn(GENERAL.inputByAttr('type'), this.type);
     assert
-      .dom(SELECTORS.toggleGroupDescription)
+      .dom(PKI_GENERATE_ROOT.toggleGroupDescription)
       .hasText(
         'You chose to use an existing key. This means that we’ll use the key reference to create the CSR or root. Please provide the reference to the key.',
         `has correct description for type=${this.type}`
       );
     assert.strictEqual(this.model.type, this.type);
     assert
-      .dom(`[data-test-group="Key parameters"] ${SELECTORS.formField}`)
+      .dom(PKI_GENERATE_ROOT.groupFields('Key parameters'))
       .exists({ count: 1 }, '1 form field under keyParams toggle');
-    assert.dom(SELECTORS.fieldByName('keyRef')).exists(`Key reference field shown when type=${this.type}`);
+    assert.dom(GENERAL.fieldByAttr('keyRef')).exists(`Key reference field shown when type=${this.type}`);
 
     this.set('type', 'kms');
-    await fillIn(SELECTORS.typeField, this.type);
+    await fillIn(GENERAL.inputByAttr('type'), this.type);
     assert
-      .dom(SELECTORS.toggleGroupDescription)
+      .dom(PKI_GENERATE_ROOT.toggleGroupDescription)
       .hasText(
         'This certificate type is kms, meaning managed keys will be used. Below, you will name the key and tell Vault where to find it in your KMS or HSM. Learn more about managed keys.',
         `has correct description for type=${this.type}`
       );
     assert.strictEqual(this.model.type, this.type);
     assert
-      .dom(`[data-test-group="Key parameters"] ${SELECTORS.formField}`)
+      .dom(PKI_GENERATE_ROOT.groupFields('Key parameters'))
       .exists({ count: 3 }, '3 form fields under keyParams toggle');
-    assert.dom(SELECTORS.fieldByName('keyName')).exists(`Key name field shown when type=${this.type}`);
+    assert.dom(GENERAL.fieldByAttr('keyName')).exists(`Key name field shown when type=${this.type}`);
     assert
-      .dom(SELECTORS.fieldByName('managedKeyName'))
+      .dom(GENERAL.fieldByAttr('managedKeyName'))
       .exists(`Managed key name field shown when type=${this.type}`);
     assert
-      .dom(SELECTORS.fieldByName('managedKeyId'))
+      .dom(GENERAL.fieldByAttr('managedKeyId'))
       .exists(`Managed key id field shown when type=${this.type}`);
   });
 
@@ -170,8 +171,8 @@ module('Integration | Component | pki-generate-root', function (hooks) {
       }
     );
 
-    await click(SELECTORS.generateRootSave);
-    assert.dom(SELECTORS.formInvalidError).exists('Shows overall error form');
+    await click(GENERAL.saveButton);
+    assert.dom(PKI_GENERATE_ROOT.formInvalidError).exists('Shows overall error form');
     assert.ok(saveSpy.notCalled);
   });
 
@@ -184,7 +185,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
         }
       );
 
-      assert.dom(SELECTORS.urlsSection).doesNotExist();
+      assert.dom(PKI_GENERATE_ROOT.urlsSection).doesNotExist();
     });
 
     test('it renders when urls model passed', async function (assert) {
@@ -194,9 +195,9 @@ module('Integration | Component | pki-generate-root', function (hooks) {
           owner: this.engine,
         }
       );
-      assert.dom(SELECTORS.urlsSection).exists();
+      assert.dom(PKI_GENERATE_ROOT.urlsSection).exists();
       assert.dom('h2').exists({ count: 2 }, 'two H2 titles are visible on page load');
-      assert.dom(SELECTORS.urlSectionTitle).hasText('Issuer URLs');
+      assert.dom(PKI_GENERATE_ROOT.urlSectionTitle).hasText('Issuer URLs');
     });
   });
 });

@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn } from '@ember/test-helpers';
 import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
-import selectors from 'vault/tests/helpers/components/ttl-picker';
+import { TTL_PICKER } from 'vault/tests/helpers/components/ttl-picker-selectors';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | ttl-picker', function (hooks) {
@@ -29,9 +29,9 @@ module('Integration | Component | ttl-picker', function (hooks) {
         @label={{this.label}}
         @hideToggle={{this.hideToggle}}
         @onChange={{this.onChange}} />`);
-      assert.dom(selectors.ttlFormGroup).exists('TTL Form fields exist');
-      assert.dom(selectors.ttlValue).hasValue('');
-      assert.dom(selectors.ttlUnit).hasValue('s');
+      assert.dom(TTL_PICKER.ttlFormGroup).exists('TTL Form fields exist');
+      assert.dom(TTL_PICKER.ttlValue).hasValue('');
+      assert.dom(TTL_PICKER.ttlUnit).hasValue('s');
     });
 
     test('it calls the change fn with the correct values', async function (assert) {
@@ -44,8 +44,8 @@ module('Integration | Component | ttl-picker', function (hooks) {
         @onChange={{this.onChange}}
         @initialValue="30m" />
       `);
-      assert.dom(selectors.ttlUnit).hasValue('m', 'unit value shows m (minutes)');
-      await fillIn(selectors.ttlValue, '10');
+      assert.dom(TTL_PICKER.ttlUnit).hasValue('m', 'unit value shows m (minutes)');
+      await fillIn(TTL_PICKER.ttlValue, '10');
       await assert.ok(changeSpy.calledOnce, 'it calls the passed onChange');
       assert.ok(
         changeSpy.calledWithExactly({
@@ -68,8 +68,8 @@ module('Integration | Component | ttl-picker', function (hooks) {
         />
       `);
 
-      assert.dom(selectors.ttlUnit).hasValue('h', 'unit value initially shows as h (hours)');
-      assert.dom(selectors.ttlValue).hasValue('3', 'time value initially shows as 3');
+      assert.dom(TTL_PICKER.ttlUnit).hasValue('h', 'unit value initially shows as h (hours)');
+      assert.dom(TTL_PICKER.ttlValue).hasValue('3', 'time value initially shows as 3');
     });
 
     test('it fails gracefully when initialValue is not parseable', async function (assert) {
@@ -85,8 +85,8 @@ module('Integration | Component | ttl-picker', function (hooks) {
         />
       `);
 
-      assert.dom(selectors.ttlValue).hasValue('', 'time value initially shows as empty');
-      assert.dom(selectors.ttlUnit).hasValue('s', 'unit value initially shows as s (seconds)');
+      assert.dom(TTL_PICKER.ttlValue).hasValue('', 'time value initially shows as empty');
+      assert.dom(TTL_PICKER.ttlUnit).hasValue('s', 'unit value initially shows as s (seconds)');
       assert.ok(changeSpy.notCalled, 'onChange is not called on init');
     });
 
@@ -102,11 +102,11 @@ module('Integration | Component | ttl-picker', function (hooks) {
         />
       `);
 
-      assert.dom(selectors.ttlUnit).hasValue('h', 'unit value initially shows as h (hours)');
-      assert.dom(selectors.ttlValue).hasValue('1', 'time value initially shows as 1');
-      await fillIn(selectors.ttlUnit, 'm');
-      assert.dom(selectors.ttlUnit).hasValue('m', 'unit value changed to m (minutes)');
-      assert.dom(selectors.ttlValue).hasValue('60', 'time value recalculates to fit unit');
+      assert.dom(TTL_PICKER.ttlUnit).hasValue('h', 'unit value initially shows as h (hours)');
+      assert.dom(TTL_PICKER.ttlValue).hasValue('1', 'time value initially shows as 1');
+      await fillIn(TTL_PICKER.ttlUnit, 'm');
+      assert.dom(TTL_PICKER.ttlUnit).hasValue('m', 'unit value changed to m (minutes)');
+      assert.dom(TTL_PICKER.ttlValue).hasValue('60', 'time value recalculates to fit unit');
       assert.ok(
         changeSpy.calledWithExactly({
           enabled: true,
@@ -130,11 +130,11 @@ module('Integration | Component | ttl-picker', function (hooks) {
         />
       `);
 
-      assert.dom(selectors.ttlUnit).hasValue('s', 'unit value starts as s (seconds)');
-      assert.dom(selectors.ttlValue).hasValue('30', 'time value starts as 30');
-      await fillIn(selectors.ttlUnit, 'm');
-      assert.dom(selectors.ttlUnit).hasValue('m', 'unit value changed to m (minutes)');
-      assert.dom(selectors.ttlValue).hasValue('30', 'time value is still 30');
+      assert.dom(TTL_PICKER.ttlUnit).hasValue('s', 'unit value starts as s (seconds)');
+      assert.dom(TTL_PICKER.ttlValue).hasValue('30', 'time value starts as 30');
+      await fillIn(TTL_PICKER.ttlUnit, 'm');
+      assert.dom(TTL_PICKER.ttlUnit).hasValue('m', 'unit value changed to m (minutes)');
+      assert.dom(TTL_PICKER.ttlValue).hasValue('30', 'time value is still 30');
       assert.ok(
         changeSpy.calledWithExactly({
           enabled: true,
@@ -238,8 +238,8 @@ module('Integration | Component | ttl-picker', function (hooks) {
           @onChange={{this.onChange}}
         />
       `);
-      assert.dom(selectors.toggle).isNotChecked('Toggle is unchecked by default');
-      assert.dom(selectors.ttlFormGroup).doesNotExist('TTL Form is not rendered');
+      assert.dom(TTL_PICKER.toggle).isNotChecked('Toggle is unchecked by default');
+      assert.dom(TTL_PICKER.ttlFormGroup).doesNotExist('TTL Form is not rendered');
     });
 
     test('it shows time and unit inputs when initialEnabled', async function (assert) {
@@ -253,8 +253,8 @@ module('Integration | Component | ttl-picker', function (hooks) {
           @changeOnInit={{true}}
         />
       `);
-      assert.dom(selectors.toggle).isChecked('Toggle is checked when initialEnabled is true');
-      assert.dom(selectors.ttlFormGroup).exists('TTL Form is rendered');
+      assert.dom(TTL_PICKER.toggle).isChecked('Toggle is checked when initialEnabled is true');
+      assert.dom(TTL_PICKER.ttlFormGroup).exists('TTL Form is rendered');
       assert.ok(changeSpy.notCalled, 'onChange not called because initialValue not parsed');
     });
 
@@ -267,8 +267,8 @@ module('Integration | Component | ttl-picker', function (hooks) {
           @initialEnabled={{true}}
         />
       `);
-      assert.dom(selectors.ttlValue).hasValue('2', 'time value is 2');
-      assert.dom(selectors.ttlUnit).hasValue('h', 'unit is hours');
+      assert.dom(TTL_PICKER.ttlValue).hasValue('2', 'time value is 2');
+      assert.dom(TTL_PICKER.ttlUnit).hasValue('h', 'unit is hours');
       assert.ok(
         this.onChange.notCalled,
         'it does not call onChange after render when changeOnInit is not set'
@@ -284,7 +284,7 @@ module('Integration | Component | ttl-picker', function (hooks) {
           @onChange={{this.onChange}}
         />
       `);
-      await click(selectors.toggle);
+      await click(TTL_PICKER.toggle);
       assert.ok(changeSpy.calledOnce, 'it calls the passed onChange');
       assert.ok(
         changeSpy.calledWith({
@@ -304,11 +304,11 @@ module('Integration | Component | ttl-picker', function (hooks) {
           @initialValue="100m"
         />
       `);
-      assert.dom(selectors.toggle).isNotChecked('Toggle is off');
-      assert.dom(selectors.ttlFormGroup).doesNotExist('TTL Form not shown on mount');
-      await click(selectors.toggle);
-      assert.dom(selectors.ttlValue).hasValue('100', 'time after toggle is 100');
-      assert.dom(selectors.ttlUnit).hasValue('m', 'Unit is minutes after toggle');
+      assert.dom(TTL_PICKER.toggle).isNotChecked('Toggle is off');
+      assert.dom(TTL_PICKER.ttlFormGroup).doesNotExist('TTL Form not shown on mount');
+      await click(TTL_PICKER.toggle);
+      assert.dom(TTL_PICKER.ttlValue).hasValue('100', 'time after toggle is 100');
+      assert.dom(TTL_PICKER.ttlUnit).hasValue('m', 'Unit is minutes after toggle');
     });
 
     test('it is enabled on init if initialEnabled is true', async function (assert) {
@@ -319,13 +319,13 @@ module('Integration | Component | ttl-picker', function (hooks) {
           @initialEnabled={{true}}
         />
       `);
-      assert.dom(selectors.toggle).isChecked('Toggle is on');
-      assert.dom(selectors.ttlFormGroup).exists();
-      assert.dom(selectors.ttlValue).hasValue('100', 'time is shown on mount');
-      assert.dom(selectors.ttlUnit).hasValue('m', 'Unit is shown on mount');
-      await click(selectors.toggle);
-      assert.dom(selectors.toggle).isNotChecked('Toggle is off');
-      assert.dom(selectors.ttlFormGroup).doesNotExist('TTL Form no longer shows after toggle');
+      assert.dom(TTL_PICKER.toggle).isChecked('Toggle is on');
+      assert.dom(TTL_PICKER.ttlFormGroup).exists();
+      assert.dom(TTL_PICKER.ttlValue).hasValue('100', 'time is shown on mount');
+      assert.dom(TTL_PICKER.ttlUnit).hasValue('m', 'Unit is shown on mount');
+      await click(TTL_PICKER.toggle);
+      assert.dom(TTL_PICKER.toggle).isNotChecked('Toggle is off');
+      assert.dom(TTL_PICKER.ttlFormGroup).doesNotExist('TTL Form no longer shows after toggle');
     });
 
     test('it is enabled on init if initialEnabled evals to truthy', async function (assert) {
@@ -336,9 +336,9 @@ module('Integration | Component | ttl-picker', function (hooks) {
           @initialEnabled="100m"
         />
       `);
-      assert.dom(selectors.toggle).isChecked('Toggle is enabled');
-      assert.dom(selectors.ttlValue).hasValue('100', 'time value is shown on mount');
-      assert.dom(selectors.ttlUnit).hasValue('m', 'Unit matches what is passed in');
+      assert.dom(TTL_PICKER.toggle).isChecked('Toggle is enabled');
+      assert.dom(TTL_PICKER.ttlValue).hasValue('100', 'time value is shown on mount');
+      assert.dom(TTL_PICKER.ttlUnit).hasValue('m', 'Unit matches what is passed in');
     });
 
     test('it converts days to go safe time', async function (assert) {
@@ -348,7 +348,7 @@ module('Integration | Component | ttl-picker', function (hooks) {
           @onChange={{this.onChange}}
         />
       `);
-      await click(selectors.toggle);
+      await click(TTL_PICKER.toggle);
       assert.ok(this.onChange.calledOnce, 'it calls the passed onChange');
       assert.ok(
         this.onChange.calledWith({
@@ -369,8 +369,8 @@ module('Integration | Component | ttl-picker', function (hooks) {
           @initialEnabled="true"
         />
       `);
-      assert.dom(selectors.ttlValue).hasValue('1000', 'time value is converted');
-      assert.dom(selectors.ttlUnit).hasValue('m', 'unit value is m (minutes)');
+      assert.dom(TTL_PICKER.ttlValue).hasValue('1000', 'time value is converted');
+      assert.dom(TTL_PICKER.ttlUnit).hasValue('m', 'unit value is m (minutes)');
     });
 
     test('it converts to the largest round unit on init when no unit provided', async function (assert) {
@@ -381,8 +381,8 @@ module('Integration | Component | ttl-picker', function (hooks) {
           @initialEnabled="true"
         />
       `);
-      assert.dom(selectors.ttlValue).hasValue('1', 'time value is converted');
-      assert.dom(selectors.ttlUnit).hasValue('d', 'unit value is d (days)');
+      assert.dom(TTL_PICKER.ttlValue).hasValue('1', 'time value is converted');
+      assert.dom(TTL_PICKER.ttlUnit).hasValue('d', 'unit value is d (days)');
     });
   });
 });

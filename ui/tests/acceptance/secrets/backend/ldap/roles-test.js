@@ -10,7 +10,7 @@ import ldapMirageScenario from 'vault/mirage/scenarios/ldap';
 import ldapHandlers from 'vault/mirage/handlers/ldap';
 import authPage from 'vault/tests/pages/auth';
 import { click, fillIn } from '@ember/test-helpers';
-import { isURL, visitURL } from 'vault/tests/helpers/ldap';
+import { isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
 
 module('Acceptance | ldap | roles', function (hooks) {
   setupApplicationTest(hooks);

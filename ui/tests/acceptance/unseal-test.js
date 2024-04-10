@@ -11,7 +11,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import authPage from 'vault/tests/pages/auth';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
-import { overrideResponse } from 'vault/tests/helpers/clients';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
 
 const { unsealKeys } = VAULT_KEYS;
 
