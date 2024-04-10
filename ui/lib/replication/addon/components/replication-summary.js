@@ -4,7 +4,6 @@
  */
 
 import { service } from '@ember/service';
-import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
 import Component from '@ember/component';
 import decodeConfigFromJWT from 'replication/utils/decode-config-from-jwt';
@@ -27,6 +26,7 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
   replicationMode: 'dr',
   mode: 'primary',
   version: service(),
+  rm: service('replication-mode'),
   didReceiveAttrs() {
     this._super(...arguments);
     const initialReplicationMode = this.initialReplicationMode;
@@ -38,7 +38,9 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
   initialReplicationMode: null,
   cluster: null,
 
-  replicationAttrs: alias('cluster.replicationAttrs'),
+  attrsForCurrentMode: computed('cluster', 'rm.mode', function () {
+    return this.cluster[this.rm.mode];
+  }),
 
   tokenIncludesAPIAddr: computed('token', function () {
     const config = decodeConfigFromJWT(this.token);
