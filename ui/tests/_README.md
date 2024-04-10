@@ -1,6 +1,6 @@
 # Test Helpers Organization
 
-Our test are constantly evolving, but here's a general overview of how the tests and selectors organization
+Our test are constantly evolving, but here's a general overview of how we set up and organize tests.
 
 ## Folder organization
 
