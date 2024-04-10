@@ -18,7 +18,7 @@ Shared helpers such as selectors, common interactions, WebREPL commands, and API
 Often we will need a set of selectors for "workflow" tests, or acceptance tests that navigate through an area of the app. For these, the helpers should be organized as such:
 
 - `/helpers/<area>/<area>-selectors.ts` - exports selector consts (never default) for each page -- eg. for PKI we would have PKI_OVERVIEW, PKI_ROLE, etc.
-- `/helpers/<area>/<area>-interactions.js` - exports methods and consts which are otherwise helpful in the tests -- eg. example API responses, common interactions (eg. writeVersionedSecret for KV v2)
+- `/helpers/<area>/<area>-helpers.js` - exports methods and consts which are otherwise helpful in the tests -- eg. example API responses, common interactions (eg. writeVersionedSecret for KV v2)
 
 Whenever possible we should try to use the general selectors exported from `/helpers/general-selectors.ts`.
 

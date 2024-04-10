@@ -11,7 +11,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import sinon from 'sinon';
 import { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import timestamp from 'core/utils/timestamp';
-import { ACTIVITY_RESPONSE_STUB } from 'vault/tests/helpers/clients';
+import { ACTIVITY_RESPONSE_STUB } from 'vault/tests/helpers/clients/client-count-helpers';
 
 module('Integration | Component | dashboard/client-count-card', function (hooks) {
   setupRenderingTest(hooks);
