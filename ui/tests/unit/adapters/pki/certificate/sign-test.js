@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-workflow-helpers';
+import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
 
 const { csr2 } = CERTIFICATES;
 module('Unit | Adapter | pki/certificate/sign', function (hooks) {

@@ -3,15 +3,15 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import sinon from 'sinon';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { PKI_KEY_FORM } from 'vault/tests/helpers/components/pki/pki-key-form-selectors';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import sinon from 'sinon';
+import { PKI_KEY_FORM } from 'vault/tests/helpers/pki/pki-selectors';
 
 module('Integration | Component | pki key form', function (hooks) {
   setupRenderingTest(hooks);

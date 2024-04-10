@@ -10,9 +10,9 @@ import { setupEngine } from 'ember-engines/test-support';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
-import { PKI_CONFIG_EDIT } from 'vault/tests/helpers/components/pki/page/pki-configuration-edit-selectors';
 import sinon from 'sinon';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { PKI_CONFIG_EDIT } from 'vault/tests/helpers/pki/pki-selectors';
 
 module('Integration | Component | page/pki-configuration-edit', function (hooks) {
   setupRenderingTest(hooks);

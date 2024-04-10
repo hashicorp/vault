@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { PKI_ROLE_DETAILS } from 'vault/tests/helpers/components/pki/page/pki-role-details-selectors';
+import { PKI_ROLE_DETAILS } from 'vault/tests/helpers/pki/pki-selectors';
 
 module('Integration | Component | pki role details page', function (hooks) {
   setupRenderingTest(hooks);

@@ -9,7 +9,7 @@ import { click, fillIn, render, triggerEvent } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
-import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-workflow-helpers';
+import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
 
 const SELECTORS = {
   label: '[data-test-text-file-label]',

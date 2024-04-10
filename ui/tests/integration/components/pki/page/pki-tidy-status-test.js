@@ -9,7 +9,7 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { PKI_TIDY } from 'vault/tests/helpers/components/pki/page/pki-tidy-selectors';
+import { PKI_TIDY } from 'vault/tests/helpers/pki/pki-selectors';
 
 module('Integration | Component | Page::PkiTidyStatus', function (hooks) {
   setupRenderingTest(hooks);
