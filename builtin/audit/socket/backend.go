@@ -72,7 +72,7 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 	if fallbackRaw, ok := conf.Config["fallback"]; ok {
 		fallback, err = parseutil.ParseBool(fallbackRaw)
 		if err != nil {
-			return nil, fmt.Errorf("unable to parse 'fallback': %w: %w", audit.ErrExternalOptions, err)
+			return nil, fmt.Errorf("unable to parse 'fallback': %w", audit.ErrExternalOptions)
 		}
 	}
 
@@ -178,7 +178,7 @@ func newFormatterConfig(headerFormatter audit.HeaderFormatter, config map[string
 	if hmacAccessorRaw, ok := config["hmac_accessor"]; ok {
 		v, err := strconv.ParseBool(hmacAccessorRaw)
 		if err != nil {
-			return audit.FormatterConfig{}, fmt.Errorf("unable to parse 'hmac_accessor': %w: %w", audit.ErrExternalOptions, err)
+			return audit.FormatterConfig{}, fmt.Errorf("unable to parse 'hmac_accessor': %w", audit.ErrExternalOptions)
 		}
 		opts = append(opts, audit.WithHMACAccessor(v))
 	}
@@ -187,7 +187,7 @@ func newFormatterConfig(headerFormatter audit.HeaderFormatter, config map[string
 	if raw, ok := config["log_raw"]; ok {
 		v, err := strconv.ParseBool(raw)
 		if err != nil {
-			return audit.FormatterConfig{}, fmt.Errorf("unable to parse 'log_raw: %w: %w", audit.ErrExternalOptions, err)
+			return audit.FormatterConfig{}, fmt.Errorf("unable to parse 'log_raw: %w", audit.ErrExternalOptions)
 		}
 		opts = append(opts, audit.WithRaw(v))
 	}
@@ -195,7 +195,7 @@ func newFormatterConfig(headerFormatter audit.HeaderFormatter, config map[string
 	if elideListResponsesRaw, ok := config["elide_list_responses"]; ok {
 		v, err := strconv.ParseBool(elideListResponsesRaw)
 		if err != nil {
-			return audit.FormatterConfig{}, fmt.Errorf("unable to parse 'elide_list_responses': %w: %w", audit.ErrExternalOptions, err)
+			return audit.FormatterConfig{}, fmt.Errorf("unable to parse 'elide_list_responses': %w", audit.ErrExternalOptions)
 		}
 		opts = append(opts, audit.WithElision(v))
 	}

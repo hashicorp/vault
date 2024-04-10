@@ -88,7 +88,7 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	if fallbackRaw, ok := entry.Options["fallback"]; ok {
 		fallback, err := parseutil.ParseBool(fallbackRaw)
 		if err != nil {
-			return fmt.Errorf("cannot parse supplied 'fallback' setting: %w: %w", audit.ErrExternalOptions, err)
+			return fmt.Errorf("cannot parse supplied 'fallback' setting: %w", audit.ErrExternalOptions)
 		}
 
 		// Reassigning the fallback value means we can ensure that the formatting
@@ -99,7 +99,7 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	if skipTestRaw, ok := entry.Options["skip_test"]; ok {
 		skipTest, err := parseutil.ParseBool(skipTestRaw)
 		if err != nil {
-			return fmt.Errorf("cannot parse supplied 'skip_test' setting: %w: %w", audit.ErrExternalOptions, err)
+			return fmt.Errorf("cannot parse supplied 'skip_test' setting: %w", audit.ErrExternalOptions)
 		}
 
 		// Reassigning the value means we can ensure that the formatting
