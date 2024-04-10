@@ -437,16 +437,16 @@ func TestBackend_LoginRegression_AnonBind(t *testing.T) {
 			testAccStepGroup(t, "engineers", "bar"),
 
 			// Map hermes conrad user with local engineers group
-			testAccStepUser(t, "hermes", "engineers"),
+			testAccStepUser(t, "hermes conrad", "engineers"),
 
 			// Authenticate
-			testAccStepLogin(t, "hermes", "hermes"),
+			testAccStepLogin(t, "hermes conrad", "hermes"),
 
 			// Verify both groups mappings can be listed back
 			testAccStepGroupList(t, []string{"engineers", "admin_staff"}),
 
 			// Verify user mapping can be listed back
-			testAccStepUserList(t, []string{"hermes"}),
+			testAccStepUserList(t, []string{"hermes conrad"}),
 		},
 	})
 }
