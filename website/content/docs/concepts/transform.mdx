@@ -8,7 +8,7 @@ description: >-
 
 # Transform secrets engine
 
-A common challenge is utilizing Vault to secure application secrets stored outside of Vault. In many cases, highly sensitive information such as credit card numbers, social security numbers, and other Personal Identifiable Information (PII) are stored in databases rather than within Vault. Applications need to securely access and store PII in a way that aligns with the organization's stringent security standards. Security requirements necessitate balancing accessibility and adherence to security protocols for handling sensitive information.
+A common challenge is utilizing Vault to secure application secrets stored outside Vault. Users often store highly sensitive information such as credit card numbers, social security numbers, and other Personal Identifiable Information (PII) in databases rather than within Vault. Applications need to securely access and store PII in a way that aligns with the organization's stringent security standards while balancing accessibility and adherence to security protocols for handling sensitive information.
 
 Transform consists of three modes, called _transformations_. Format Preserving
 Encryption (**FPE**) for encrypting and decrypting values while retaining their
@@ -20,7 +20,7 @@ This article explores common solutions and challenges around protecting applicat
 
 ## Common solutions and their challenges
 
-The following sections describe common solutions and processes for protecting sensitive data and the challenges around using these solutions. You'll learn the information you need to decide on the appropriate solution for protecting secrets stored outside of Vault, and why the Vault Transform secrets engine is a recommended solution.
+The following sections describe common solutions and processes for protecting sensitive data and the challenges around using these solutions. You'll learn the information you need to decide on the appropriate solution for protecting secrets stored outside Vault, and why the Vault Transform secrets engine is a recommended solution.
 
 ### Data encryption with Vault Transit
 
@@ -40,7 +40,7 @@ However, there is a tradeoff associated with this approach. The ciphertext is of
 
 ### Traditional tokenization solution
 
-Tokenization is another commonly employed method by companies to safeguard sensitive information. It involves substituting sensitive data with a randomly generated token through a one-way cryptographic hash function. The token is stored in an external database, while a secret management system maintains a mapping between the original data and the token.
+Tokenization is another commonly employed method by companies to safeguard sensitive information. It involves substituting sensitive data with a randomly generated token through a one-way cryptographic hash function. A secret management system stores the token in an external database, while  maintaining a mapping between the original data and the token.
 
 <ImageConfig hideBorder>
 
