@@ -511,7 +511,7 @@ func parseSegmentNumberFromPath(path string) (int, bool) {
 
 // availableLogs returns the start_time(s) (in UTC) associated with months for which logs exist,
 // sorted last to first
-func (a *ActivityLog) availableLogs(ctx context.Context) ([]time.Time, error) {
+func (a *ActivityLog) availableLogs(ctx context.Context, upTo time.Time) ([]time.Time, error) {
 	paths := make([]string, 0)
 	for _, basePath := range []string{activityEntityBasePath, activityTokenBasePath} {
 		p, err := a.view.List(ctx, basePath)
@@ -530,6 +530,9 @@ func (a *ActivityLog) availableLogs(ctx context.Context) ([]time.Time, error) {
 		if err != nil {
 			return nil, err
 		}
+		if time.After(upTo) {
+			continue
+		}
 
 		if _, present := pathSet[time]; !present {
 			pathSet[time] = struct{}{}
@@ -542,15 +545,15 @@ func (a *ActivityLog) availableLogs(ctx context.Context) ([]time.Time, error) {
 		return out[i].After(out[j])
 	})
 
-	a.logger.Trace("scanned existing logs", "out", out)
+	a.logger.Trace("scanned existing logs", "out", out, "up to", upTo)
 
 	return out, nil
 }
 
 // getMostRecentActivityLogSegment gets the times (in UTC) associated with the most recent
 // contiguous set of activity logs, sorted in decreasing order (latest to earliest)
-func (a *ActivityLog) getMostRecentActivityLogSegment(ctx context.Context) ([]time.Time, error) {
-	logTimes, err := a.availableLogs(ctx)
+func (a *ActivityLog) getMostRecentActivityLogSegment(ctx context.Context, now time.Time) ([]time.Time, error) {
+	logTimes, err := a.availableLogs(ctx, now)
 	if err != nil {
 		return nil, err
 	}
@@ -892,7 +895,7 @@ func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGro
 	a.fragmentLock.Lock()
 	defer a.fragmentLock.Unlock()
 
-	decreasingLogTimes, err := a.getMostRecentActivityLogSegment(ctx)
+	decreasingLogTimes, err := a.getMostRecentActivityLogSegment(ctx, now)
 	if err != nil {
 		return err
 	}
@@ -2428,6 +2431,85 @@ func (a *ActivityLog) reportPrecomputedQueryMetrics(ctx context.Context, segment
 	}
 }
 
+var previousMonthNotFoundErr = errors.New("previous month not found")
+
+// doPrecomputedQueryCreation will generate precomputed queries for the dates
+// in the given intent log. If strictEnforcement is true, then the intent log's
+// NextMonth value has to match the current segment. This should be true when
+// this function is called at the start of a new month.
+// The function returns the end timestamp of the month that the precomputed
+// queries cover.
+func (a *ActivityLog) doPrecomputedQueryCreation(ctx context.Context, intent ActivityIntentLog, strictEnforcement bool) (*time.Time, error) {
+	// currentMonth could change (from another month end) after we release the lock.
+	// But, it's not critical to correct operation; this is a check for intent logs that are
+	// too old, and startTimestamp should only go forward (unless it is zero.)
+	// If there's an intent log, finish it even if the feature is currently disabled.
+	a.l.RLock()
+	currentMonth := a.currentSegment.startTimestamp
+	// Base retention period on the month we are generating (even in the past)--- a.clock.Now()
+	// would work but this will be easier to control in tests.
+	retentionWindow := timeutil.MonthsPreviousTo(a.retentionMonths, time.Unix(intent.NextMonth, 0).UTC())
+	a.l.RUnlock()
+	if strictEnforcement && currentMonth != 0 && intent.NextMonth != currentMonth {
+		a.logger.Warn("intent log does not match current segment",
+			"intent", intent.NextMonth, "current", currentMonth)
+		return nil, errors.New("intent log is too far in the past")
+	}
+
+	lastMonth := intent.PreviousMonth
+	lastMonthTime := time.Unix(lastMonth, 0).UTC()
+	a.logger.Info("computing queries", "month", lastMonthTime)
+
+	times, err := a.availableLogs(ctx, lastMonthTime)
+	if err != nil {
+		a.logger.Warn("could not list available logs", "error", err)
+		return nil, err
+	}
+	if len(times) == 0 {
+		a.logger.Warn("no months in storage")
+		return nil, previousMonthNotFoundErr
+	}
+	if times[0].Unix() != lastMonth {
+		a.logger.Warn("last month not in storage", "latest", times[0].Unix())
+		return nil, previousMonthNotFoundErr
+	}
+
+	byNamespace := make(map[string]*processByNamespace)
+	byMonth := make(map[int64]*processMonth)
+
+	endTime := timeutil.EndOfMonth(time.Unix(lastMonth, 0).UTC())
+	activePeriodStart := timeutil.MonthsPreviousTo(a.defaultReportMonths, endTime)
+	// If not enough data, report as much as we have in the window
+	if activePeriodStart.Before(times[len(times)-1]) {
+		activePeriodStart = times[len(times)-1]
+	}
+	opts := pqOptions{
+		byNamespace:       byNamespace,
+		byMonth:           byMonth,
+		endTime:           endTime,
+		activePeriodStart: activePeriodStart,
+		activePeriodEnd:   times[0],
+	}
+	// "times" is already in reverse order, start building the per-namespace maps
+	// from the last month backward
+	for _, startTime := range times {
+		// Do not work back further than the current retention window,
+		// which will just get deleted anyway.
+		if startTime.Before(retentionWindow) {
+			break
+		}
+		reader, err := a.NewSegmentFileReader(ctx, startTime)
+		if err != nil {
+			return nil, err
+		}
+		err = a.segmentToPrecomputedQuery(ctx, startTime, reader, opts)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &endTime, nil
+}
+
 // goroutine to process the request in the intent log, creating precomputed queries.
 // We expect the return value won't be checked, so log errors as they occur
 // (but for unit testing having the error return should help.)
@@ -2469,77 +2551,18 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 		return err
 	}
 
-	// currentMonth could change (from another month end) after we release the lock.
-	// But, it's not critical to correct operation; this is a check for intent logs that are
-	// too old, and startTimestamp should only go forward (unless it is zero.)
-	// If there's an intent log, finish it even if the feature is currently disabled.
-	a.l.RLock()
-	currentMonth := a.currentSegment.startTimestamp
-	// Base retention period on the month we are generating (even in the past)--- a.clock.Now()
-	// would work but this will be easier to control in tests.
-	retentionWindow := timeutil.MonthsPreviousTo(a.retentionMonths, time.Unix(intent.NextMonth, 0).UTC())
-	a.l.RUnlock()
-	if currentMonth != 0 && intent.NextMonth != currentMonth {
-		a.logger.Warn("intent log does not match current segment",
-			"intent", intent.NextMonth, "current", currentMonth)
-		return errors.New("intent log is too far in the past")
+	endTime, err := a.doPrecomputedQueryCreation(ctx, intent, true)
+	if err == nil || errors.Is(err, previousMonthNotFoundErr) {
+		// delete the intent log
+		// this should happen if the precomputed queries were generated
+		// successfully (i.e. err is nil) or if there's no data for the previous
+		// month.
+		// It should not happen in the general error case
+		a.view.Delete(ctx, activityIntentLogKey)
 	}
-
-	lastMonth := intent.PreviousMonth
-	a.logger.Info("computing queries", "month", time.Unix(lastMonth, 0).UTC())
-
-	times, err := a.availableLogs(ctx)
 	if err != nil {
-		a.logger.Warn("could not list available logs", "error", err)
 		return err
 	}
-	if len(times) == 0 {
-		a.logger.Warn("no months in storage")
-		a.view.Delete(ctx, activityIntentLogKey)
-		return errors.New("previous month not found")
-	}
-	if times[0].Unix() != lastMonth {
-		a.logger.Warn("last month not in storage", "latest", times[0].Unix())
-		a.view.Delete(ctx, activityIntentLogKey)
-		return errors.New("previous month not found")
-	}
-
-	byNamespace := make(map[string]*processByNamespace)
-	byMonth := make(map[int64]*processMonth)
-
-	endTime := timeutil.EndOfMonth(time.Unix(lastMonth, 0).UTC())
-	activePeriodStart := timeutil.MonthsPreviousTo(a.defaultReportMonths, endTime)
-	// If not enough data, report as much as we have in the window
-	if activePeriodStart.Before(times[len(times)-1]) {
-		activePeriodStart = times[len(times)-1]
-	}
-	opts := pqOptions{
-		byNamespace:       byNamespace,
-		byMonth:           byMonth,
-		endTime:           endTime,
-		activePeriodStart: activePeriodStart,
-		activePeriodEnd:   times[0],
-	}
-	// "times" is already in reverse order, start building the per-namespace maps
-	// from the last month backward
-	for _, startTime := range times {
-		// Do not work back further than the current retention window,
-		// which will just get deleted anyway.
-		if startTime.Before(retentionWindow) {
-			break
-		}
-		reader, err := a.NewSegmentFileReader(ctx, startTime)
-		if err != nil {
-			return err
-		}
-		err = a.segmentToPrecomputedQuery(ctx, startTime, reader, opts)
-		if err != nil {
-			return err
-		}
-	}
-
-	// delete the intent log
-	a.view.Delete(ctx, activityIntentLogKey)
 
 	a.logger.Info("finished computing queries", "month", endTime)
 
@@ -2579,7 +2602,7 @@ func (a *ActivityLog) retentionWorker(ctx context.Context, currentTime time.Time
 	// everything >= the threshold is OK
 	retentionThreshold := timeutil.MonthsPreviousTo(retentionMonths, currentTime)
 
-	available, err := a.availableLogs(ctx)
+	available, err := a.availableLogs(ctx, retentionThreshold)
 	if err != nil {
 		a.logger.Warn("could not list segments", "error", err)
 		return err
@@ -2892,7 +2915,7 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 	// Find the months with activity log data that are between the start and end
 	// months. We want to walk this in cronological order so the oldest instance of a
 	// client usage is recorded, not the most recent.
-	times, err := a.availableLogs(ctx)
+	times, err := a.availableLogs(ctx, endTime)
 	if err != nil {
 		a.logger.Warn("failed to list available log segments", "error", err)
 		return fmt.Errorf("failed to list available log segments: %w", err)
