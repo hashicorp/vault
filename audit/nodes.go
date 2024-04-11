@@ -44,7 +44,7 @@ func ProcessManual(ctx context.Context, data *logical.LogInput, ids []eventlogge
 
 	// Create an eventlogger event with the audit event as the payload.
 	e := &eventlogger.Event{
-		Type:      eventlogger.EventType(event.AuditType.String()),
+		Type:      event.AuditType.AsEventType(),
 		CreatedAt: time.Now(),
 		Formatted: make(map[string][]byte),
 		Payload:   a,

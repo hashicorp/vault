@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, fillIn, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { SELECTORS } from 'vault/tests/helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { methods } from 'vault/helpers/mountable-auth-methods';
 
 const userLockoutSupported = ['approle', 'ldap', 'userpass'];
@@ -66,24 +66,24 @@ module('Integration | Component | auth-config-form options', function (hooks) {
 
       assert.dom('[data-test-user-lockout-section]').hasText('User lockout configuration');
 
-      await click(SELECTORS.inputByAttr('config.listingVisibility'));
-      await fillIn(SELECTORS.inputByAttr('config.tokenType'), 'default-batch');
+      await click(GENERAL.inputByAttr('config.listingVisibility'));
+      await fillIn(GENERAL.inputByAttr('config.tokenType'), 'default-batch');
 
-      await click(SELECTORS.ttl.toggle('Default Lease TTL'));
-      await fillIn(SELECTORS.ttl.input('Default Lease TTL'), '30');
+      await click(GENERAL.ttl.toggle('Default Lease TTL'));
+      await fillIn(GENERAL.ttl.input('Default Lease TTL'), '30');
 
-      await fillIn(SELECTORS.inputByAttr('config.lockoutThreshold'), '7');
+      await fillIn(GENERAL.inputByAttr('config.lockoutThreshold'), '7');
 
-      await click(SELECTORS.ttl.toggle('Lockout duration'));
-      await fillIn(SELECTORS.ttl.input('Lockout duration'), '10');
+      await click(GENERAL.ttl.toggle('Lockout duration'));
+      await fillIn(GENERAL.ttl.input('Lockout duration'), '10');
       await fillIn(
-        `${SELECTORS.inputByAttr('config.lockoutDuration')} ${SELECTORS.selectByAttr('ttl-unit')}`,
+        `${GENERAL.inputByAttr('config.lockoutDuration')} ${GENERAL.selectByAttr('ttl-unit')}`,
         'm'
       );
-      await click(SELECTORS.ttl.toggle('Lockout counter reset'));
-      await fillIn(SELECTORS.ttl.input('Lockout counter reset'), '5');
+      await click(GENERAL.ttl.toggle('Lockout counter reset'));
+      await fillIn(GENERAL.ttl.input('Lockout counter reset'), '5');
 
-      await click(SELECTORS.inputByAttr('config.lockoutDisable'));
+      await click(GENERAL.inputByAttr('config.lockoutDisable'));
 
       await click('[data-test-save-config]');
     });
@@ -124,23 +124,23 @@ module('Integration | Component | auth-config-form options', function (hooks) {
         .dom('[data-test-user-lockout-section]')
         .doesNotExist(`${type} method does not render user lockout section`);
 
-      await click(SELECTORS.inputByAttr('config.listingVisibility'));
-      await fillIn(SELECTORS.inputByAttr('config.tokenType'), 'default-batch');
+      await click(GENERAL.inputByAttr('config.listingVisibility'));
+      await fillIn(GENERAL.inputByAttr('config.tokenType'), 'default-batch');
 
-      await click(SELECTORS.ttl.toggle('Default Lease TTL'));
-      await fillIn(SELECTORS.ttl.input('Default Lease TTL'), '30');
+      await click(GENERAL.ttl.toggle('Default Lease TTL'));
+      await fillIn(GENERAL.ttl.input('Default Lease TTL'), '30');
 
       assert
-        .dom(SELECTORS.inputByAttr('config.lockoutThreshold'))
+        .dom(GENERAL.inputByAttr('config.lockoutThreshold'))
         .doesNotExist(`${type} method does not render lockout threshold`);
       assert
-        .dom(SELECTORS.ttl.toggle('Lockout duration'))
+        .dom(GENERAL.ttl.toggle('Lockout duration'))
         .doesNotExist(`${type} method does not render lockout duration `);
       assert
-        .dom(SELECTORS.ttl.toggle('Lockout counter reset'))
+        .dom(GENERAL.ttl.toggle('Lockout counter reset'))
         .doesNotExist(`${type} method does not render lockout counter reset`);
       assert
-        .dom(SELECTORS.inputByAttr('config.lockoutDisable'))
+        .dom(GENERAL.inputByAttr('config.lockoutDisable'))
         .doesNotExist(`${type} method does not render lockout disable`);
 
       await click('[data-test-save-config]');
@@ -175,25 +175,25 @@ module('Integration | Component | auth-config-form options', function (hooks) {
     await render(hbs`<AuthConfigForm::Options @model={{this.model}} />`);
 
     assert
-      .dom(SELECTORS.inputByAttr('config.tokenType'))
+      .dom(GENERAL.inputByAttr('config.tokenType'))
       .doesNotExist('does not render tokenType for token auth method');
 
-    await click(SELECTORS.inputByAttr('config.listingVisibility'));
-    await click(SELECTORS.ttl.toggle('Default Lease TTL'));
-    await fillIn(SELECTORS.ttl.input('Default Lease TTL'), '30');
+    await click(GENERAL.inputByAttr('config.listingVisibility'));
+    await click(GENERAL.ttl.toggle('Default Lease TTL'));
+    await fillIn(GENERAL.ttl.input('Default Lease TTL'), '30');
 
     assert.dom('[data-test-user-lockout-section]').doesNotExist('token does not render user lockout section');
     assert
-      .dom(SELECTORS.inputByAttr('config.lockoutThreshold'))
+      .dom(GENERAL.inputByAttr('config.lockoutThreshold'))
       .doesNotExist('token method does not render lockout threshold');
     assert
-      .dom(SELECTORS.ttl.toggle('Lockout duration'))
+      .dom(GENERAL.ttl.toggle('Lockout duration'))
       .doesNotExist('token method does not render lockout duration ');
     assert
-      .dom(SELECTORS.ttl.toggle('Lockout counter reset'))
+      .dom(GENERAL.ttl.toggle('Lockout counter reset'))
       .doesNotExist('token method does not render lockout counter reset');
     assert
-      .dom(SELECTORS.inputByAttr('config.lockoutDisable'))
+      .dom(GENERAL.inputByAttr('config.lockoutDisable'))
       .doesNotExist('token method does not render lockout disable');
 
     await click('[data-test-save-config]');
