@@ -19,12 +19,11 @@ const (
 
 // Validate ensures that EventType is one of the set of allowed event types.
 func (t EventType) Validate() error {
-	const op = "event.(EventType).Validate"
 	switch t {
 	case AuditType:
 		return nil
 	default:
-		return fmt.Errorf("%s: '%s' is not a valid event type: %w", op, t, ErrInvalidParameter)
+		return fmt.Errorf("invalid event type %q: %w", t, ErrInvalidParameter)
 	}
 }
 
@@ -39,4 +38,9 @@ func GenerateNodeID() (eventlogger.NodeID, error) {
 // String returns the string version of an EventType.
 func (t EventType) String() string {
 	return string(t)
+}
+
+// AsEventType returns the EventType in a format for eventlogger.
+func (t EventType) AsEventType() eventlogger.EventType {
+	return eventlogger.EventType(t.String())
 }

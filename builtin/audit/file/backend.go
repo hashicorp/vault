@@ -45,18 +45,20 @@ type Backend struct {
 }
 
 func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.HeaderFormatter) (audit.Backend, error) {
-	const op = "file.Factory"
-
 	if conf.SaltConfig == nil {
-		return nil, fmt.Errorf("%s: nil salt config", op)
+		return nil, fmt.Errorf("nil salt config: %w", audit.ErrInvalidParameter)
 	}
 
 	if conf.SaltView == nil {
-		return nil, fmt.Errorf("%s: nil salt view", op)
+		return nil, fmt.Errorf("nil salt view: %w", audit.ErrInvalidParameter)
 	}
 
 	if conf.Logger == nil || reflect.ValueOf(conf.Logger).IsNil() {
-		return nil, fmt.Errorf("%s: nil logger", op)
+		return nil, fmt.Errorf("nil logger: %w", audit.ErrInvalidParameter)
+	}
+
+	if conf.MountPath == "" {
+		return nil, fmt.Errorf("mount path cannot be empty: %w", audit.ErrInvalidParameter)
 	}
 
 	// The config options 'fallback' and 'filter' are mutually exclusive, a fallback
@@ -66,12 +68,12 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 	if fallbackRaw, ok := conf.Config["fallback"]; ok {
 		fallback, err = parseutil.ParseBool(fallbackRaw)
 		if err != nil {
-			return nil, fmt.Errorf("%s: unable to parse 'fallback': %w", op, err)
+			return nil, fmt.Errorf("unable to parse 'fallback': %w", audit.ErrExternalOptions)
 		}
 	}
 
 	if _, ok := conf.Config["filter"]; ok && fallback {
-		return nil, fmt.Errorf("%s: cannot configure a fallback device with a filter: %w", op, event.ErrInvalidParameter)
+		return nil, fmt.Errorf("cannot configure a fallback device with a filter: %w", audit.ErrExternalOptions)
 	}
 
 	// Get file path from config or fall back to the old option name ('path') for compatibility
@@ -82,7 +84,7 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 	} else if p, ok = conf.Config["path"]; ok {
 		filePath = p
 	} else {
-		return nil, fmt.Errorf("%s: file_path is required", op)
+		return nil, fmt.Errorf("file_path is required: %w", audit.ErrExternalOptions)
 	}
 
 	// normalize file path if configured for stdout
@@ -91,6 +93,11 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 	}
 	if strings.EqualFold(filePath, discard) {
 		filePath = discard
+	}
+
+	cfg, err := newFormatterConfig(headersConfig, conf.Config)
+	if err != nil {
+		return nil, err
 	}
 
 	b := &Backend{
@@ -109,22 +116,17 @@ func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.H
 
 	err = b.configureFilterNode(conf.Config["filter"])
 	if err != nil {
-		return nil, fmt.Errorf("%s: error configuring filter node: %w", op, err)
-	}
-
-	cfg, err := newFormatterConfig(headersConfig, conf.Config)
-	if err != nil {
-		return nil, fmt.Errorf("%s: failed to create formatter config: %w", op, err)
+		return nil, err
 	}
 
 	err = b.configureFormatterNode(conf.MountPath, cfg, conf.Logger)
 	if err != nil {
-		return nil, fmt.Errorf("%s: error configuring formatter node: %w", op, err)
+		return nil, err
 	}
 
 	err = b.configureSinkNode(conf.MountPath, filePath, conf.Config["mode"], cfg.RequiredFormat.String())
 	if err != nil {
-		return nil, fmt.Errorf("%s: error configuring sink node: %w", op, err)
+		return nil, fmt.Errorf("error configuring sink node: %w", err)
 	}
 
 	return b, nil
@@ -181,11 +183,13 @@ func (b *Backend) Invalidate(_ context.Context) {
 // newFormatterConfig creates the configuration required by a formatter node using
 // the config map supplied to the factory.
 func newFormatterConfig(headerFormatter audit.HeaderFormatter, config map[string]string) (audit.FormatterConfig, error) {
-	const op = "file.newFormatterConfig"
-
 	var opts []audit.Option
 
 	if format, ok := config["format"]; ok {
+		if !audit.IsValidFormat(format) {
+			return audit.FormatterConfig{}, fmt.Errorf("unsupported 'format': %w", audit.ErrExternalOptions)
+		}
+
 		opts = append(opts, audit.WithFormat(format))
 	}
 
@@ -193,7 +197,7 @@ func newFormatterConfig(headerFormatter audit.HeaderFormatter, config map[string
 	if hmacAccessorRaw, ok := config["hmac_accessor"]; ok {
 		v, err := strconv.ParseBool(hmacAccessorRaw)
 		if err != nil {
-			return audit.FormatterConfig{}, fmt.Errorf("%s: unable to parse 'hmac_accessor': %w", op, err)
+			return audit.FormatterConfig{}, fmt.Errorf("unable to parse 'hmac_accessor': %w", audit.ErrExternalOptions)
 		}
 		opts = append(opts, audit.WithHMACAccessor(v))
 	}
@@ -202,7 +206,7 @@ func newFormatterConfig(headerFormatter audit.HeaderFormatter, config map[string
 	if raw, ok := config["log_raw"]; ok {
 		v, err := strconv.ParseBool(raw)
 		if err != nil {
-			return audit.FormatterConfig{}, fmt.Errorf("%s: unable to parse 'log_raw': %w", op, err)
+			return audit.FormatterConfig{}, fmt.Errorf("unable to parse 'log_raw: %w", audit.ErrExternalOptions)
 		}
 		opts = append(opts, audit.WithRaw(v))
 	}
@@ -210,7 +214,7 @@ func newFormatterConfig(headerFormatter audit.HeaderFormatter, config map[string
 	if elideListResponsesRaw, ok := config["elide_list_responses"]; ok {
 		v, err := strconv.ParseBool(elideListResponsesRaw)
 		if err != nil {
-			return audit.FormatterConfig{}, fmt.Errorf("%s: unable to parse 'elide_list_responses': %w", op, err)
+			return audit.FormatterConfig{}, fmt.Errorf("unable to parse 'elide_list_responses': %w", audit.ErrExternalOptions)
 		}
 		opts = append(opts, audit.WithElision(v))
 	}
@@ -224,16 +228,14 @@ func newFormatterConfig(headerFormatter audit.HeaderFormatter, config map[string
 
 // configureFormatterNode is used to configure a formatter node and associated ID on the Backend.
 func (b *Backend) configureFormatterNode(name string, formatConfig audit.FormatterConfig, logger hclog.Logger) error {
-	const op = "file.(Backend).configureFormatterNode"
-
 	formatterNodeID, err := event.GenerateNodeID()
 	if err != nil {
-		return fmt.Errorf("%s: error generating random NodeID for formatter node: %w", op, err)
+		return fmt.Errorf("error generating random NodeID for formatter node: %w: %w", audit.ErrInternal, err)
 	}
 
 	formatterNode, err := audit.NewEntryFormatter(name, formatConfig, b, logger)
 	if err != nil {
-		return fmt.Errorf("%s: error creating formatter: %w", op, err)
+		return fmt.Errorf("error creating formatter: %w", err)
 	}
 
 	b.nodeIDList = append(b.nodeIDList, formatterNodeID)
@@ -244,26 +246,24 @@ func (b *Backend) configureFormatterNode(name string, formatConfig audit.Formatt
 
 // configureSinkNode is used to configure a sink node and associated ID on the Backend.
 func (b *Backend) configureSinkNode(name string, filePath string, mode string, format string) error {
-	const op = "file.(Backend).configureSinkNode"
-
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return fmt.Errorf("%s: name is required: %w", op, event.ErrInvalidParameter)
+		return fmt.Errorf("name is required: %w", audit.ErrExternalOptions)
 	}
 
 	filePath = strings.TrimSpace(filePath)
 	if filePath == "" {
-		return fmt.Errorf("%s: file path is required: %w", op, event.ErrInvalidParameter)
+		return fmt.Errorf("file path is required: %w", audit.ErrExternalOptions)
 	}
 
 	format = strings.TrimSpace(format)
 	if format == "" {
-		return fmt.Errorf("%s: format is required: %w", op, event.ErrInvalidParameter)
+		return fmt.Errorf("format is required: %w", audit.ErrInvalidParameter)
 	}
 
 	sinkNodeID, err := event.GenerateNodeID()
 	if err != nil {
-		return fmt.Errorf("%s: error generating random NodeID for sink node: %w", op, err)
+		return fmt.Errorf("error generating random NodeID for sink node: %w: %w", audit.ErrInternal, err)
 	}
 
 	// normalize file path if configured for stdout or discard
@@ -290,13 +290,13 @@ func (b *Backend) configureSinkNode(name string, filePath string, mode string, f
 	}
 
 	if err != nil {
-		return fmt.Errorf("%s: file sink creation failed for path %q: %w", op, filePath, err)
+		return fmt.Errorf("file sink creation failed for path %q: %w", filePath, err)
 	}
 
 	// Wrap the sink node with metrics middleware
 	sinkMetricTimer, err := audit.NewSinkMetricTimer(sinkName, sinkNode)
 	if err != nil {
-		return fmt.Errorf("%s: unable to add timing metrics to sink for path %q: %w", op, filePath, err)
+		return fmt.Errorf("unable to add timing metrics to sink for path %q: %w", filePath, err)
 	}
 
 	// Decide what kind of labels we want and wrap the sink node inside a metrics counter.
@@ -310,7 +310,7 @@ func (b *Backend) configureSinkNode(name string, filePath string, mode string, f
 
 	sinkMetricCounter, err := event.NewMetricsCounter(sinkName, sinkMetricTimer, metricLabeler)
 	if err != nil {
-		return fmt.Errorf("%s: unable to add counting metrics to sink for path %q: %w", op, filePath, err)
+		return fmt.Errorf("unable to add counting metrics to sink for path %q: %w", filePath, err)
 	}
 
 	b.nodeIDList = append(b.nodeIDList, sinkNodeID)
@@ -336,7 +336,7 @@ func (b *Backend) NodeIDs() []eventlogger.NodeID {
 
 // EventType returns the event type for the backend.
 func (b *Backend) EventType() eventlogger.EventType {
-	return eventlogger.EventType(event.AuditType.String())
+	return event.AuditType.AsEventType()
 }
 
 // HasFiltering determines if the first node for the pipeline is an eventlogger.NodeTypeFilter.

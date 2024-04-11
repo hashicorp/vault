@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -50,17 +51,15 @@ type AuditBroker struct {
 
 // NewAuditBroker creates a new audit broker
 func NewAuditBroker(log hclog.Logger) (*AuditBroker, error) {
-	const op = "vault.NewAuditBroker"
-
 	eventBroker, err := eventlogger.NewBroker()
 	if err != nil {
-		return nil, fmt.Errorf("%s: error creating event broker for audit events: %w", op, err)
+		return nil, fmt.Errorf("error creating event broker for audit events: %w", err)
 	}
 
 	// Set up the broker that will support a single fallback device.
 	fallbackEventBroker, err := eventlogger.NewBroker()
 	if err != nil {
-		return nil, fmt.Errorf("%s: error creating event fallback broker for audit event: %w", op, err)
+		return nil, fmt.Errorf("error creating event fallback broker for audit event: %w", err)
 	}
 
 	broker := &AuditBroker{
@@ -75,45 +74,54 @@ func NewAuditBroker(log hclog.Logger) (*AuditBroker, error) {
 
 // Register is used to add new audit backend to the broker
 func (a *AuditBroker) Register(name string, backend audit.Backend, local bool) error {
-	const op = "vault.(AuditBroker).Register"
-
 	a.Lock()
 	defer a.Unlock()
 
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return fmt.Errorf("%s: name is required: %w", op, event.ErrInvalidParameter)
+		return fmt.Errorf("name is required: %w", audit.ErrInvalidParameter)
+	}
+
+	if backend == nil || reflect.ValueOf(backend).IsNil() {
+		return fmt.Errorf("backend cannot be nil: %w", audit.ErrInvalidParameter)
 	}
 
 	// If the backend is already registered, we cannot re-register it.
 	if a.isRegistered(name) {
-		return fmt.Errorf("%s: backend already registered '%s'", op, name)
+		return fmt.Errorf("backend already registered '%s': %w", name, audit.ErrExternalOptions)
 	}
 
 	// Fallback devices are singleton instances, we cannot register more than one or overwrite the existing one.
-	if backend.IsFallback() && a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
-		existing, err := a.existingFallbackName()
-		if err != nil {
-			return fmt.Errorf("%s: existing fallback device already registered: %w", op, err)
+	if backend.IsFallback() && hasAuditPipelines(a.fallbackBroker) {
+		// Get the name of the fallback device which is registered with the broker.
+		var existing string
+		for _, be := range a.backends {
+			if be.backend.IsFallback() {
+				existing = be.backend.Name()
+			}
+		}
+		if existing == "" {
+			// We expected an existing fallback device but didn't find it.
+			return fmt.Errorf("cannot determine name of existing registered fallback device: %w", audit.ErrInternal)
 		}
 
-		return fmt.Errorf("%s: existing fallback device already registered: %q", op, existing)
+		return fmt.Errorf("existing fallback device already registered %q: %w", existing, audit.ErrInvalidParameter)
 	}
 
 	if name != backend.Name() {
-		return fmt.Errorf("%s: audit registration failed due to device name mismatch: %q, %q", op, name, backend.Name())
+		return fmt.Errorf("audit registration failed due to device name mismatch: %q, %q: %w", name, backend.Name(), audit.ErrInternal)
 	}
 
 	switch {
 	case backend.IsFallback():
 		err := a.registerFallback(name, backend)
 		if err != nil {
-			return fmt.Errorf("%s: unable to register fallback device for %q: %w", op, name, err)
+			return fmt.Errorf("unable to register fallback device for %q: %w: %w", name, err, audit.ErrInternal)
 		}
 	default:
 		err := a.register(name, backend)
 		if err != nil {
-			return fmt.Errorf("%s: unable to register device for %q: %w", op, name, err)
+			return fmt.Errorf("unable to register device for %q: %w", name, err)
 		}
 	}
 
@@ -127,14 +135,12 @@ func (a *AuditBroker) Register(name string, backend audit.Backend, local bool) e
 
 // Deregister is used to remove an audit backend from the broker
 func (a *AuditBroker) Deregister(ctx context.Context, name string) error {
-	const op = "vault.(AuditBroker).Deregister"
-
 	a.Lock()
 	defer a.Unlock()
 
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return fmt.Errorf("%s: name is required: %w", op, event.ErrInvalidParameter)
+		return fmt.Errorf("name is required: %w", audit.ErrInvalidParameter)
 	}
 
 	// If the backend isn't actually registered, then there's nothing to do.
@@ -148,17 +154,16 @@ func (a *AuditBroker) Deregister(ctx context.Context, name string) error {
 	// the error.
 	delete(a.backends, name)
 
+	var err error
 	switch {
 	case name == a.fallbackName:
-		err := a.deregisterFallback(ctx, name)
-		if err != nil {
-			return fmt.Errorf("%s: deregistration failed for fallback audit device %q: %w", op, name, err)
-		}
+		err = a.deregisterFallback(ctx, name)
 	default:
-		err := a.deregister(ctx, name)
-		if err != nil {
-			return fmt.Errorf("%s: deregistration failed for audit device %q: %w", op, name, err)
-		}
+		err = a.deregister(ctx, name)
+	}
+
+	if err != nil {
+		return fmt.Errorf("deregistration failed for audit device %q: %w: %w", name, err, audit.ErrInternal)
 	}
 
 	return nil
@@ -239,8 +244,8 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput) (ret
 	// normal audit devices, so check if the broker had an audit based pipeline
 	// registered before trying to send to it.
 	var status eventlogger.Status
-	if a.broker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
-		status, err = a.broker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
+	if hasAuditPipelines(a.broker) {
+		status, err = a.broker.Send(ctx, event.AuditType.AsEventType(), e)
 		if err != nil {
 			retErr = multierror.Append(retErr, multierror.Append(err, status.Warnings...))
 			return retErr.ErrorOrNil()
@@ -260,8 +265,8 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput) (ret
 
 	// If a fallback device is registered we can rely on that to 'catch all'
 	// and also the broker level guarantee for completed sinks.
-	if a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
-		status, err = a.fallbackBroker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
+	if a.fallbackBroker.IsAnyPipelineRegistered(event.AuditType.AsEventType()) {
+		status, err = a.fallbackBroker.Send(ctx, event.AuditType.AsEventType(), e)
 		if err != nil {
 			retErr = multierror.Append(retErr, multierror.Append(fmt.Errorf("auditing request to fallback device failed: %w", err), status.Warnings...))
 		}
@@ -323,8 +328,8 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput) (re
 	// normal audit devices, so check if the broker had an audit based pipeline
 	// registered before trying to send to it.
 	var status eventlogger.Status
-	if a.broker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
-		status, err = a.broker.Send(auditContext, eventlogger.EventType(event.AuditType.String()), e)
+	if a.broker.IsAnyPipelineRegistered(event.AuditType.AsEventType()) {
+		status, err = a.broker.Send(auditContext, event.AuditType.AsEventType(), e)
 		if err != nil {
 			retErr = multierror.Append(retErr, multierror.Append(err, status.Warnings...))
 			return retErr.ErrorOrNil()
@@ -344,8 +349,8 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput) (re
 
 	// If a fallback device is registered we can rely on that to 'catch all'
 	// and also the broker level guarantee for completed sinks.
-	if a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
-		status, err = a.fallbackBroker.Send(auditContext, eventlogger.EventType(event.AuditType.String()), e)
+	if a.fallbackBroker.IsAnyPipelineRegistered(event.AuditType.AsEventType()) {
+		status, err = a.fallbackBroker.Send(auditContext, event.AuditType.AsEventType(), e)
 		if err != nil {
 			retErr = multierror.Append(retErr, multierror.Append(fmt.Errorf("auditing response to fallback device failed: %w", err), status.Warnings...))
 		}
@@ -400,12 +405,10 @@ func (a *AuditBroker) requiredSuccessThresholdSinks() int {
 // backend's name, on the specified eventlogger.Broker using the audit.Backend
 // to supply them.
 func registerNodesAndPipeline(broker *eventlogger.Broker, b audit.Backend) error {
-	const op = "vault.registerNodesAndPipeline"
-
 	for id, node := range b.Nodes() {
 		err := broker.RegisterNode(id, node)
 		if err != nil {
-			return fmt.Errorf("%s: unable to register nodes for %q: %w", op, b.Name(), err)
+			return fmt.Errorf("unable to register nodes for %q: %w", b.Name(), err)
 		}
 	}
 
@@ -417,44 +420,27 @@ func registerNodesAndPipeline(broker *eventlogger.Broker, b audit.Backend) error
 
 	err := broker.RegisterPipeline(pipeline)
 	if err != nil {
-		return fmt.Errorf("%s: unable to register pipeline for %q: %w", op, b.Name(), err)
+		return fmt.Errorf("unable to register pipeline for %q: %w", b.Name(), err)
 	}
 	return nil
-}
-
-// existingFallbackName returns the name of the fallback device which is registered
-// with the AuditBroker.
-func (a *AuditBroker) existingFallbackName() (string, error) {
-	const op = "vault.(AuditBroker).existingFallbackName"
-
-	for _, be := range a.backends {
-		if be.backend.IsFallback() {
-			return be.backend.Name(), nil
-		}
-	}
-
-	return "", fmt.Errorf("%s: existing fallback device name is missing", op)
 }
 
 // registerFallback can be used to register a fallback device, it will also
 // configure the success threshold required for sinks.
 func (a *AuditBroker) registerFallback(name string, backend audit.Backend) error {
-	const op = "vault.(AuditBroker).registerFallback"
-
 	err := registerNodesAndPipeline(a.fallbackBroker, backend)
 	if err != nil {
-		return fmt.Errorf("%s: fallback device pipeline registration error: %w", op, err)
+		return fmt.Errorf("pipeline registration error for fallback device: %w", err)
 	}
 
 	// Store the name of the fallback audit device so that we can check when
 	// deregistering if the device is the single fallback one.
 	a.fallbackName = backend.Name()
 
-	// We need to turn on the threshold for the fallback broker, so we can
-	// guarantee it ends up somewhere
-	err = a.fallbackBroker.SetSuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()), 1)
+	// We need to turn on the threshold for the fallback broker, so we can guarantee it ends up somewhere
+	err = a.fallbackBroker.SetSuccessThresholdSinks(event.AuditType.AsEventType(), 1)
 	if err != nil {
-		return fmt.Errorf("%s: unable to configure fallback sink success threshold (1) for %q: %w", op, name, err)
+		return fmt.Errorf("unable to configure fallback sink success threshold (1): %w", err)
 	}
 
 	return nil
@@ -463,16 +449,14 @@ func (a *AuditBroker) registerFallback(name string, backend audit.Backend) error
 // deregisterFallback can be used to deregister a fallback audit device, it will
 // also configure the success threshold required for sinks.
 func (a *AuditBroker) deregisterFallback(ctx context.Context, name string) error {
-	const op = "vault.(AuditBroker).deregisterFallback"
-
-	err := a.fallbackBroker.SetSuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()), 0)
+	err := a.fallbackBroker.SetSuccessThresholdSinks(event.AuditType.AsEventType(), 0)
 	if err != nil {
-		return fmt.Errorf("%s: unable to configure fallback sink success threshold (0) for %q: %w", op, name, err)
+		return fmt.Errorf("unable to reconfigure fallback sink success threshold (0): %w", err)
 	}
 
-	_, err = a.fallbackBroker.RemovePipelineAndNodes(ctx, eventlogger.EventType(event.AuditType.String()), eventlogger.PipelineID(name))
+	_, err = a.fallbackBroker.RemovePipelineAndNodes(ctx, event.AuditType.AsEventType(), eventlogger.PipelineID(name))
 	if err != nil {
-		return fmt.Errorf("%s: unable to deregister fallback device %q: %w", op, name, err)
+		return fmt.Errorf("unable to deregister fallback device: %w", err)
 	}
 
 	// Clear the fallback device name now we've deregistered.
@@ -484,11 +468,9 @@ func (a *AuditBroker) deregisterFallback(ctx context.Context, name string) error
 // register can be used to register a normal audit device, it will also calculate
 // and configure the success threshold required for sinks.
 func (a *AuditBroker) register(name string, backend audit.Backend) error {
-	const op = "vault.(AuditBroker).register"
-
 	err := registerNodesAndPipeline(a.broker, backend)
 	if err != nil {
-		return fmt.Errorf("%s: audit pipeline registration error: %w", op, err)
+		return fmt.Errorf("audit pipeline registration error: %w", err)
 	}
 
 	// Establish if we ONLY have pipelines that include filter nodes.
@@ -503,9 +485,9 @@ func (a *AuditBroker) register(name string, backend audit.Backend) error {
 	}
 
 	// Update the success threshold now that the pipeline is registered.
-	err = a.broker.SetSuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()), threshold)
+	err = a.broker.SetSuccessThresholdSinks(event.AuditType.AsEventType(), threshold)
 	if err != nil {
-		return fmt.Errorf("%s: unable to configure sink success threshold (%d) for %q: %w", op, threshold, name, err)
+		return fmt.Errorf("unable to configure sink success threshold (%d): %w", threshold, err)
 	}
 
 	return nil
@@ -514,25 +496,29 @@ func (a *AuditBroker) register(name string, backend audit.Backend) error {
 // deregister can be used to deregister a normal audit device, it will also
 // calculate and configure the success threshold required for sinks.
 func (a *AuditBroker) deregister(ctx context.Context, name string) error {
-	const op = "vault.(AuditBroker).deregister"
-
 	// Establish if we ONLY have pipelines that include filter nodes.
 	// Otherwise, we can rely on the eventlogger broker guarantee.
 	threshold := a.requiredSuccessThresholdSinks()
 
-	err := a.broker.SetSuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()), threshold)
+	err := a.broker.SetSuccessThresholdSinks(event.AuditType.AsEventType(), threshold)
 	if err != nil {
-		return fmt.Errorf("%s: unable to configure sink success threshold (%d) for %q: %w", op, threshold, name, err)
+		return fmt.Errorf("unable to reconfigure sink success threshold (%d): %w", threshold, err)
 	}
 
 	// The first return value, a bool, indicates whether
 	// RemovePipelineAndNodes encountered the error while evaluating
 	// pre-conditions (false) or once it started removing the pipeline and
 	// the nodes (true). This code doesn't care either way.
-	_, err = a.broker.RemovePipelineAndNodes(ctx, eventlogger.EventType(event.AuditType.String()), eventlogger.PipelineID(name))
+	_, err = a.broker.RemovePipelineAndNodes(ctx, event.AuditType.AsEventType(), eventlogger.PipelineID(name))
 	if err != nil {
-		return fmt.Errorf("%s: unable to remove pipeline and nodes for %q: %w", op, name, err)
+		return fmt.Errorf("unable to remove pipeline and nodes: %w", err)
 	}
 
 	return nil
+}
+
+// hasAuditPipelines can be used as a shorthand to check if a broker has any
+// registered pipelines that are for the audit event type.
+func hasAuditPipelines(broker *eventlogger.Broker) bool {
+	return broker.IsAnyPipelineRegistered(event.AuditType.AsEventType())
 }

@@ -11,7 +11,6 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/eventlogger"
-	"github.com/hashicorp/vault/internal/observability/event"
 )
 
 var _ eventlogger.Node = (*SinkMetricTimer)(nil)
@@ -29,19 +28,17 @@ type SinkMetricTimer struct {
 // NewSinkMetricTimer should be used to create the SinkMetricTimer.
 // It expects that an eventlogger.NodeTypeSink should be supplied as the sink.
 func NewSinkMetricTimer(name string, sink eventlogger.Node) (*SinkMetricTimer, error) {
-	const op = "audit.NewSinkMetricTimer"
-
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return nil, fmt.Errorf("%s: name is required: %w", op, event.ErrInvalidParameter)
+		return nil, fmt.Errorf("name is required: %w", ErrInvalidParameter)
 	}
 
 	if sink == nil || reflect.ValueOf(sink).IsNil() {
-		return nil, fmt.Errorf("%s: sink node is required: %w", op, event.ErrInvalidParameter)
+		return nil, fmt.Errorf("sink node is required: %w", ErrInvalidParameter)
 	}
 
 	if sink.Type() != eventlogger.NodeTypeSink {
-		return nil, fmt.Errorf("%s: sink node must be of type 'sink': %w", op, event.ErrInvalidParameter)
+		return nil, fmt.Errorf("sink node must be of type 'sink': %w", ErrInvalidParameter)
 	}
 
 	return &SinkMetricTimer{

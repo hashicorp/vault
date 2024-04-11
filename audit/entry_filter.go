@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-bexpr"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -27,16 +26,14 @@ type EntryFilter struct {
 // NewEntryFilter should be used to create an EntryFilter node.
 // The filter supplied should be in bexpr format and reference fields from logical.LogInputBexpr.
 func NewEntryFilter(filter string) (*EntryFilter, error) {
-	const op = "audit.NewEntryFilter"
-
 	filter = strings.TrimSpace(filter)
 	if filter == "" {
-		return nil, fmt.Errorf("%s: cannot create new audit filter with empty filter expression: %w", op, event.ErrInvalidParameter)
+		return nil, fmt.Errorf("cannot create new audit filter with empty filter expression: %w", ErrExternalOptions)
 	}
 
 	eval, err := bexpr.CreateEvaluator(filter)
 	if err != nil {
-		return nil, fmt.Errorf("%s: cannot create new audit filter: %w", op, err)
+		return nil, fmt.Errorf("cannot create new audit filter: %w: %w", ErrExternalOptions, err)
 	}
 
 	// Validate the filter by attempting to evaluate it with an empty input.
@@ -45,7 +42,7 @@ func NewEntryFilter(filter string) (*EntryFilter, error) {
 	li := logical.LogInputBexpr{}
 	_, err = eval.Evaluate(li)
 	if err != nil {
-		return nil, fmt.Errorf("%s: filter references an unsupported field: %s", op, filter)
+		return nil, fmt.Errorf("filter references an unsupported field: %s: %w: %w", filter, ErrExternalOptions, err)
 	}
 
 	return &EntryFilter{evaluator: eval}, nil
@@ -64,8 +61,6 @@ func (*EntryFilter) Type() eventlogger.NodeType {
 // Process will attempt to parse the incoming event data and decide whether it
 // should be filtered or remain in the pipeline and passed to the next node.
 func (f *EntryFilter) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
-	const op = "audit.(EntryFilter).Process"
-
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -73,12 +68,12 @@ func (f *EntryFilter) Process(ctx context.Context, e *eventlogger.Event) (*event
 	}
 
 	if e == nil {
-		return nil, fmt.Errorf("%s: event is nil: %w", op, event.ErrInvalidParameter)
+		return nil, fmt.Errorf("event is nil: %w", ErrInvalidParameter)
 	}
 
 	a, ok := e.Payload.(*AuditEvent)
 	if !ok {
-		return nil, fmt.Errorf("%s: cannot parse event payload: %w", op, event.ErrInvalidParameter)
+		return nil, fmt.Errorf("cannot parse event payload: %w", ErrInvalidParameter)
 	}
 
 	// If we don't have data to process, then we're done.
@@ -88,14 +83,14 @@ func (f *EntryFilter) Process(ctx context.Context, e *eventlogger.Event) (*event
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("%s: cannot obtain namespace: %w", op, err)
+		return nil, fmt.Errorf("cannot obtain namespace: %w", err)
 	}
 
 	datum := a.Data.BexprDatum(ns.Path)
 
 	result, err := f.evaluator.Evaluate(datum)
 	if err != nil {
-		return nil, fmt.Errorf("%s: unable to evaluate filter: %w", op, err)
+		return nil, fmt.Errorf("unable to evaluate filter: %w", err)
 	}
 
 	if result {

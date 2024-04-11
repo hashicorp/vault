@@ -23,21 +23,19 @@ type SyslogSink struct {
 // NewSyslogSink should be used to create a new SyslogSink.
 // Accepted options: WithFacility and WithTag.
 func NewSyslogSink(format string, opt ...Option) (*SyslogSink, error) {
-	const op = "event.NewSyslogSink"
-
 	format = strings.TrimSpace(format)
 	if format == "" {
-		return nil, fmt.Errorf("%s: format is required: %w", op, ErrInvalidParameter)
+		return nil, fmt.Errorf("format is required: %w", ErrInvalidParameter)
 	}
 
 	opts, err := getOpts(opt...)
 	if err != nil {
-		return nil, fmt.Errorf("%s: error applying options: %w", op, err)
+		return nil, err
 	}
 
 	logger, err := gsyslog.NewLogger(gsyslog.LOG_INFO, opts.withFacility, opts.withTag)
 	if err != nil {
-		return nil, fmt.Errorf("%s: error creating syslogger: %w", op, err)
+		return nil, fmt.Errorf("error creating syslogger: %w", err)
 	}
 
 	return &SyslogSink{requiredFormat: format, logger: logger}, nil
@@ -45,8 +43,6 @@ func NewSyslogSink(format string, opt ...Option) (*SyslogSink, error) {
 
 // Process handles writing the event to the syslog.
 func (s *SyslogSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
-	const op = "event.(SyslogSink).Process"
-
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -54,17 +50,17 @@ func (s *SyslogSink) Process(ctx context.Context, e *eventlogger.Event) (*eventl
 	}
 
 	if e == nil {
-		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
+		return nil, fmt.Errorf("event is nil: %w", ErrInvalidParameter)
 	}
 
 	formatted, found := e.Format(s.requiredFormat)
 	if !found {
-		return nil, fmt.Errorf("%s: unable to retrieve event formatted as %q", op, s.requiredFormat)
+		return nil, fmt.Errorf("unable to retrieve event formatted as %q: %w", s.requiredFormat, ErrInvalidParameter)
 	}
 
 	_, err := s.logger.Write(formatted)
 	if err != nil {
-		return nil, fmt.Errorf("%s: error writing to syslog: %w", op, err)
+		return nil, fmt.Errorf("error writing to syslog: %w", err)
 	}
 
 	// return nil for the event to indicate the pipeline is complete.

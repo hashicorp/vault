@@ -65,7 +65,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 			},
 			want:           audit.FormatterConfig{},
 			wantErr:        true,
-			expectedErrMsg: "audit.NewFormatterConfig: error applying options: audit.(format).validate: 'squiggly' is not a valid format: invalid parameter",
+			expectedErrMsg: "unsupported 'format': invalid configuration",
 		},
 		"invalid-hmac-accessor": {
 			config: map[string]string{
@@ -74,7 +74,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 			},
 			want:           audit.FormatterConfig{},
 			wantErr:        true,
-			expectedErrMsg: "socket.newFormatterConfig: unable to parse 'hmac_accessor': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedErrMsg: "unable to parse 'hmac_accessor': invalid configuration",
 		},
 		"invalid-log-raw": {
 			config: map[string]string{
@@ -84,7 +84,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 			},
 			want:           audit.FormatterConfig{},
 			wantErr:        true,
-			expectedErrMsg: "socket.newFormatterConfig: unable to parse 'log_raw': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedErrMsg: "unable to parse 'log_raw: invalid configuration",
 		},
 		"invalid-elide-bool": {
 			config: map[string]string{
@@ -95,7 +95,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 			},
 			want:           audit.FormatterConfig{},
 			wantErr:        true,
-			expectedErrMsg: "socket.newFormatterConfig: unable to parse 'elide_list_responses': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedErrMsg: "unable to parse 'elide_list_responses': invalid configuration",
 		},
 		"prefix": {
 			config: map[string]string{
@@ -172,39 +172,39 @@ func TestBackend_configureSinkNode(t *testing.T) {
 			name:           "",
 			address:        "wss://foo",
 			wantErr:        true,
-			expectedErrMsg: "socket.(Backend).configureSinkNode: name is required: invalid parameter",
+			expectedErrMsg: "name is required: invalid internal parameter",
 		},
 		"name-whitespace": {
 			name:           "   ",
 			address:        "wss://foo",
 			wantErr:        true,
-			expectedErrMsg: "socket.(Backend).configureSinkNode: name is required: invalid parameter",
+			expectedErrMsg: "name is required: invalid internal parameter",
 		},
 		"address-empty": {
 			name:           "foo",
 			address:        "",
 			wantErr:        true,
-			expectedErrMsg: "socket.(Backend).configureSinkNode: address is required: invalid parameter",
+			expectedErrMsg: "address is required: invalid internal parameter",
 		},
 		"address-whitespace": {
 			name:           "foo",
 			address:        "   ",
 			wantErr:        true,
-			expectedErrMsg: "socket.(Backend).configureSinkNode: address is required: invalid parameter",
+			expectedErrMsg: "address is required: invalid internal parameter",
 		},
 		"format-empty": {
 			name:           "foo",
 			address:        "wss://foo",
 			format:         "",
 			wantErr:        true,
-			expectedErrMsg: "socket.(Backend).configureSinkNode: format is required: invalid parameter",
+			expectedErrMsg: "format is required: invalid internal parameter",
 		},
 		"format-whitespace": {
 			name:           "foo",
 			address:        "wss://foo",
 			format:         "   ",
 			wantErr:        true,
-			expectedErrMsg: "socket.(Backend).configureSinkNode: format is required: invalid parameter",
+			expectedErrMsg: "format is required: invalid internal parameter",
 		},
 		"happy": {
 			name:         "foo",
@@ -265,14 +265,14 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				SaltConfig: nil,
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "socket.Factory: nil salt config",
+			expectedErrorMessage: "nil salt config: invalid internal parameter",
 		},
 		"nil-salt-view": {
 			backendConfig: &audit.BackendConfig{
 				SaltConfig: &salt.Config{},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "socket.Factory: nil salt view",
+			expectedErrorMessage: "nil salt view: invalid internal parameter",
 		},
 		"nil-logger": {
 			backendConfig: &audit.BackendConfig{
@@ -282,7 +282,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				Logger:     nil,
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "socket.Factory: nil logger",
+			expectedErrorMessage: "nil logger: invalid internal parameter",
 		},
 		"no-address": {
 			backendConfig: &audit.BackendConfig{
@@ -293,7 +293,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				Config:     map[string]string{},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "socket.Factory: address is required",
+			expectedErrorMessage: "address is required: invalid configuration",
 		},
 		"empty-address": {
 			backendConfig: &audit.BackendConfig{
@@ -306,7 +306,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "socket.Factory: error configuring sink node: socket.(Backend).configureSinkNode: address is required: invalid parameter",
+			expectedErrorMessage: "address is required: invalid internal parameter",
 		},
 		"whitespace-address": {
 			backendConfig: &audit.BackendConfig{
@@ -319,7 +319,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "socket.Factory: error configuring sink node: socket.(Backend).configureSinkNode: address is required: invalid parameter",
+			expectedErrorMessage: "address is required: invalid internal parameter",
 		},
 		"write-duration-valid": {
 			backendConfig: &audit.BackendConfig{
@@ -346,7 +346,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "socket.Factory: error configuring sink node: socket.(Backend).configureSinkNode: error creating socket sink node: event.NewSocketSink: error applying options: unable to parse max duration: time: invalid duration \"qwerty\"",
+			expectedErrorMessage: "unable to parse max duration: invalid parameter: time: invalid duration \"qwerty\"",
 		},
 		"non-fallback-device-with-filter": {
 			backendConfig: &audit.BackendConfig{
@@ -377,7 +377,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "socket.Factory: cannot configure a fallback device with a filter: invalid parameter",
+			expectedErrorMessage: "cannot configure a fallback device with a filter: invalid configuration",
 		},
 	}
 

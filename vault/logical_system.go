@@ -32,6 +32,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	semver "github.com/hashicorp/go-version"
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
@@ -3865,7 +3866,7 @@ func (b *SystemBackend) handleAuditHash(ctx context.Context, req *logical.Reques
 }
 
 // handleEnableAudit is used to enable a new audit backend
-func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleEnableAudit(ctx context.Context, _ *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
 
 	local := data.Get("local").(bool)
@@ -3895,13 +3896,14 @@ func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Requ
 	// Attempt enabling
 	if err := b.Core.enableAudit(ctx, me, true); err != nil {
 		b.Backend.Logger().Error("enable audit mount failed", "path", me.Path, "error", err)
-		return handleError(err)
+
+		return handleError(audit.ConvertToExternalError(err))
 	}
 	return nil, nil
 }
 
 // handleDisableAudit is used to disable an audit backend
-func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleDisableAudit(ctx context.Context, _ *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 
 	if !strings.HasSuffix(path, "/") {
@@ -3936,7 +3938,8 @@ func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Req
 	// Attempt disable
 	if existed, err := b.Core.disableAudit(ctx, path, true); existed && err != nil {
 		b.Backend.Logger().Error("disable audit mount failed", "path", path, "error", err)
-		return handleError(err)
+
+		return handleError(audit.ConvertToExternalError(err))
 	}
 	return nil, nil
 }
