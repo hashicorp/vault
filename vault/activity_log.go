@@ -41,6 +41,7 @@ const (
 	activityConfigKey      = "config"
 	activityIntentLogKey   = "endofmonth"
 
+	activityACMERegenerationKey = "acme-regeneration"
 	// sketch for each month that stores hash of client ids
 	distinctClientsBasePath = "log/distinctclients/"
 
@@ -200,6 +201,7 @@ type ActivityLog struct {
 	// precomputedQueryWritten receives an element whenever a precomputed query
 	// is written. It's used for unit testing
 	precomputedQueryWritten chan struct{}
+	acmeRegenerationDone    chan struct{}
 }
 
 // These non-persistent configuration options allow us to disable
@@ -1108,15 +1110,15 @@ func (a *ActivityLog) queriesAvailable(ctx context.Context) (bool, error) {
 }
 
 // setupActivityLog hooks up the singleton ActivityLog into Core.
-func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
+func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup, reload bool) error {
 	c.activityLogLock.Lock()
 	defer c.activityLogLock.Unlock()
-	return c.setupActivityLogLocked(ctx, wg)
+	return c.setupActivityLogLocked(ctx, wg, reload)
 }
 
 // setupActivityLogLocked hooks up the singleton ActivityLog into Core.
 // this function should be called with activityLogLock.
-func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) error {
+func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup, reload bool) error {
 	logger := c.baseLogger.Named("activity")
 	c.AddLogger(logger)
 
@@ -1156,6 +1158,17 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) e
 			go manager.activeFragmentWorker(ctx)
 		}
 
+		manager.acmeRegenerationDone = make(chan struct{})
+		if !reload && !manager.hasRegeneratedACME(ctx) {
+			go func() {
+				defer close(manager.acmeRegenerationDone)
+				err := manager.regeneratePrecomputedQueries(ctx)
+				if err != nil {
+					manager.logger.Warn("unable to regenerate ACME data", "error", err)
+				}
+			}()
+		}
+
 		// Check for any intent log, in the background
 		manager.computationWorkerDone = make(chan struct{})
 		go func() {
@@ -1173,6 +1186,55 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) e
 	}
 
 	return nil
+}
+
+func (a *ActivityLog) hasRegeneratedACME(ctx context.Context) bool {
+	regenerated, err := a.view.Get(ctx, activityACMERegenerationKey)
+	if err != nil {
+		a.logger.Warn("unable to access ACME regeneration key")
+		return false
+	}
+	return regenerated != nil
+}
+
+func (a *ActivityLog) regeneratePrecomputedQueries(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	a.l.RLock()
+	doneCh := a.doneCh
+	a.l.RUnlock()
+	go func() {
+		select {
+		case <-doneCh:
+			cancel()
+		case <-ctx.Done():
+			break
+		}
+	}()
+
+	intentLogEntry, err := a.view.Get(ctx, activityIntentLogKey)
+	if err != nil {
+		return err
+	}
+	if intentLogEntry != nil {
+		err = a.precomputedQueryWorker(ctx)
+	} else {
+		intentLog, err := a.createRegenerationIntentLog(ctx, a.clock.Now())
+		if err != nil {
+			return err
+		}
+		_, err = a.doPrecomputedQueryCreation(ctx, *intentLog, false)
+	}
+	if err != nil && !errors.Is(err, previousMonthNotFoundErr) {
+		return err
+	}
+
+	regeneratedEntry, err := logical.StorageEntryJSON(activityACMERegenerationKey, true)
+	if err != nil {
+		return err
+	}
+	return a.view.Put(ctx, regeneratedEntry)
 }
 
 func (a *ActivityLog) createRegenerationIntentLog(ctx context.Context, now time.Time) (*ActivityIntentLog, error) {
