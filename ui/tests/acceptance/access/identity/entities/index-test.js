@@ -9,7 +9,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/access/identity/index';
 import authPage from 'vault/tests/pages/auth';
 import { runCmd } from 'vault/tests/helpers/commands';
-import { SELECTORS as GENERAL } from 'vault/tests/helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { v4 as uuidv4 } from 'uuid';
 
 const SELECTORS = {
