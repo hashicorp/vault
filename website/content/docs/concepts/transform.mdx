@@ -113,7 +113,7 @@ By default, Vault stores the cryptographic mapping of tokens within its internal
 
 Similar to Transit encryption and FPE, tokenization requires keys and their management. Vault creates a new key for each tokenization transformation. This allows you to ensure a strong cryptographic distinction between different tokenization use cases. For example, a credit card processor might have different merchants for which it would like to tokenize credit card numbers, such that there is a strong cryptographic distinction between even the same credit card number used by different merchants. 
 
-Tokenization transform supports automatic key rotation based on a user-defined time interval. Each configured tokenization transformation keeps a set of versioned keys, such that when a key rotates, older key versions are still available for decoding tokens generated in the past. You can also specify the minimum key version Vault can use to decode value. Tokens that were generated below the minimum key version cannot be decoded.
+Tokenization transform supports automatic key rotation based on a user-defined time interval. Each configured tokenization transformation keeps a set of versioned keys, such that when a key rotates, older key versions are still available for decoding tokens generated in the past. You can also specify the minimum key version Vault can use to decode value. Vault cannot decode generated tokens with keys below the minimum key version.
 
 <Note>
 
