@@ -524,7 +524,7 @@ func (n *NoopAudit) RegisterNodesAndPipeline(broker *eventlogger.Broker, name st
 
 	pipeline := eventlogger.Pipeline{
 		PipelineID: eventlogger.PipelineID(name),
-		EventType:  eventlogger.EventType(event.AuditType.String()),
+		EventType:  event.AuditType.AsEventType(),
 		NodeIDs:    n.nodeIDList,
 	}
 
@@ -600,7 +600,7 @@ func (tl *TestLogger) StopLogging() {
 }
 
 func (n *NoopAudit) EventType() eventlogger.EventType {
-	return eventlogger.EventType(event.AuditType.String())
+	return event.AuditType.AsEventType()
 }
 
 func (n *NoopAudit) HasFiltering() bool {

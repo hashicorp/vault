@@ -9,7 +9,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
 import authPage from 'vault/tests/pages/auth';
-import { click, waitFor } from '@ember/test-helpers';
+import { click, waitFor, visit, currentURL } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 import { runCmd } from 'vault/tests/helpers/commands';
 
@@ -19,50 +19,123 @@ module('Acceptance | sync | overview', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    syncHandlers(this.server);
     this.version = this.owner.lookup('service:version');
     this.version.features = ['Secrets Sync'];
-    syncScenario(this.server);
-    syncHandlers(this.server);
-    return authPage.login();
+
+    await authPage.login();
   });
 
-  test('it should transition to correct routes when performing actions', async function (assert) {
-    await click(ts.navLink('Secrets Sync'));
-    await click(ts.destinations.list.create);
-    await click(ts.createCancel);
-    await click(ts.overviewCard.actionLink('Create new'));
-    await click(ts.createCancel);
-    await waitFor(ts.overview.table.actionToggle(0));
-    await click(ts.overview.table.actionToggle(0));
-    await click(ts.overview.table.action('sync'));
-    await click(ts.destinations.sync.cancel);
-    await click(ts.breadcrumbLink('Secrets Sync'));
-    await waitFor(ts.overview.table.actionToggle(0));
-    await click(ts.overview.table.actionToggle(0));
-    await click(ts.overview.table.action('details'));
-    assert.dom(ts.tab('Secrets')).hasClass('active', 'Navigates to secrets view for destination');
+  module('when feature is activated', function (hooks) {
+    hooks.beforeEach(async function () {
+      syncScenario(this.server);
+    });
+
+    test('it fetches destinations and associations', async function (assert) {
+      assert.expect(2);
+
+      this.server.get('/sys/sync/destinations', () => {
+        assert.true(true, 'destinations is called');
+      });
+      this.server.get('/sys/sync/associations', () => {
+        assert.true(true, 'associations is called');
+      });
+
+      await visit('/vault/sync/secrets/overview');
+    });
+
+    module('when there are pre-existing destinations', function (hooks) {
+      hooks.beforeEach(async function () {
+        syncScenario(this.server);
+      });
+
+      test('it should transition to correct routes when performing actions', async function (assert) {
+        await click(ts.navLink('Secrets Sync'));
+        await click(ts.destinations.list.create);
+        await click(ts.createCancel);
+        await click(ts.overviewCard.actionLink('Create new'));
+        await click(ts.createCancel);
+        await waitFor(ts.overview.table.actionToggle(0));
+        await click(ts.overview.table.actionToggle(0));
+        await click(ts.overview.table.action('sync'));
+        await click(ts.destinations.sync.cancel);
+        await click(ts.breadcrumbLink('Secrets Sync'));
+        await waitFor(ts.overview.table.actionToggle(0));
+        await click(ts.overview.table.actionToggle(0));
+        await click(ts.overview.table.action('details'));
+        assert.dom(ts.tab('Secrets')).hasClass('active', 'Navigates to secrets view for destination');
+      });
+    });
   });
 
-  test('it should show opt-in banner and modal if secrets-sync is not activated', async function (assert) {
-    assert.expect(3);
-    this.server.get('/sys/activation-flags', () => {
-      return {
-        data: {
-          activated: [''],
-          unactivated: ['secrets-sync'],
-        },
-      };
+  module('when feature is not activated', function (hooks) {
+    hooks.beforeEach(async function () {
+      let wasActivatePOSTCalled = false;
+
+      // simulate the feature being activated once /secrets-sync/activate has been called
+      this.server.get('/sys/activation-flags', () => {
+        if (wasActivatePOSTCalled) {
+          return {
+            data: {
+              activated: ['secrets-sync'],
+              unactivated: [''],
+            },
+          };
+        } else {
+          return {
+            data: {
+              activated: [''],
+              unactivated: ['secrets-sync'],
+            },
+          };
+        }
+      });
+
+      this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
+        wasActivatePOSTCalled = true;
+        return {};
+      });
     });
-    this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
-      return {};
+
+    test('it does not fetch destinations and associations', async function (assert) {
+      assert.expect(0);
+
+      this.server.get('/sys/sync/destinations', () => {
+        assert.true(false, 'destinations is not called');
+      });
+      this.server.get('/sys/sync/associations', () => {
+        assert.true(false, 'associations is not called');
+      });
+
+      await visit('/vault/sync/secrets/overview');
     });
-    await click(ts.navLink('Secrets Sync'));
-    assert.dom(ts.overview.optInBanner).exists('Opt-in banner is shown');
-    await click(ts.overview.optInBannerEnable);
-    assert.dom(ts.overview.optInModal).exists('Opt-in modal is shown');
-    assert.dom(ts.overview.optInConfirm).isDisabled('Confirm button is disabled when checkbox is unchecked');
-    await click(ts.overview.optInCheck);
-    await click(ts.overview.optInConfirm);
+
+    test('the activation workflow works', async function (assert) {
+      await visit('/vault/sync/secrets/overview');
+
+      assert
+        .dom(ts.cta.button)
+        .doesNotExist('create first destination is not available until feature has been activated');
+
+      assert.dom(ts.overview.optInBanner).exists();
+      await click(ts.overview.optInBannerEnable);
+
+      assert.dom(ts.overview.optInModal).exists('modal to opt-in and activate feature is shown');
+      await click(ts.overview.optInCheck);
+      await click(ts.overview.optInConfirm);
+
+      assert.dom(ts.overview.optInModal).doesNotExist('modal is gone once activation has been submitted');
+      assert
+        .dom(ts.overview.optInBanner)
+        .doesNotExist('opt-in banner is gone once activation has been submitted');
+
+      await click(ts.cta.button);
+      assert.strictEqual(
+        currentURL(),
+        '/vault/sync/secrets/destinations/create',
+        'create new destination is available once feature is activated'
+      );
+    });
   });
 
   module('enterprise with namespaces', function (hooks) {
@@ -75,7 +148,8 @@ module('Acceptance | sync | overview', function (hooks) {
     });
 
     test('it should make activation-flag requests to correct namespace', async function (assert) {
-      assert.expect(6);
+      assert.expect(3);
+
       this.server.get('/sys/activation-flags', (_, req) => {
         assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
         return {
@@ -94,22 +168,20 @@ module('Acceptance | sync | overview', function (hooks) {
         return {};
       });
 
-      assert.dom('[data-test-badge-namespace]').hasText('foo'); // confirm we're in admin/foo
+      // confirm we're in admin/foo
+      assert.dom('[data-test-badge-namespace]').hasText('foo');
+
       await click(ts.navLink('Secrets Sync'));
-      assert.dom(ts.overview.optInBanner).exists('Opt-in banner is shown');
       await click(ts.overview.optInBannerEnable);
-      assert.dom(ts.overview.optInModal).exists('Opt-in modal is shown');
-      assert
-        .dom(ts.overview.optInConfirm)
-        .isDisabled('Confirm button is disabled when checkbox is unchecked');
       await click(ts.overview.optInCheck);
       await click(ts.overview.optInConfirm);
     });
 
     test.skip('it should make activation-flag requests to correct namespace when managed', async function (assert) {
       // TODO: unskip for 1.16.1 when managed is supported
-      assert.expect(6);
+      assert.expect(3);
       this.owner.lookup('service:feature-flag').setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
+
       this.server.get('/sys/activation-flags', (_, req) => {
         assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
         return {
@@ -128,14 +200,11 @@ module('Acceptance | sync | overview', function (hooks) {
         return {};
       });
 
-      assert.dom('[data-test-badge-namespace]').hasText('foo'); // confirm we're in admin/foo
+      // confirm we're in admin/foo
+      assert.dom('[data-test-badge-namespace]').hasText('foo');
+
       await click(ts.navLink('Secrets Sync'));
-      assert.dom(ts.overview.optInBanner).exists('Opt-in banner is shown');
       await click(ts.overview.optInBannerEnable);
-      assert.dom(ts.overview.optInModal).exists('Opt-in modal is shown');
-      assert
-        .dom(ts.overview.optInConfirm)
-        .isDisabled('Confirm button is disabled when checkbox is unchecked');
       await click(ts.overview.optInCheck);
       await click(ts.overview.optInConfirm);
     });
