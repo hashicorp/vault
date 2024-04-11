@@ -50,13 +50,13 @@ Tokenization is another commonly employed method by companies to safeguard sensi
 
 Effective tokenization, combined with a robust random number generator, ensures protected data security regardless of location. However, tokenization may retain the length of the data but not necessarily its exact format. Consequently, format checkers might reject the tokenized value as "invalid data," preventing its acceptance by the system for use in transactions.
 
-Another challenge arises as the number of tokenized values to be stored increases, leading to the expansion of the hash table. This scalability issue can be problematic. Moreover, performance becomes a critical concern, as it is necessary to balance the speed of hash searches while maintaining cryptographic data security.
+Another challenge arises as the number of tokenized values stored increases, leading to the expansion of the hash table. This scalability issue can be problematic. Moreover, performance becomes a critical concern, as it is necessary to balance the speed of hash searches while maintaining cryptographic data security.
 
 Considering these challenges, implementing a scalable tokenization solution on your own is a complex task. Proper protection of the hash table is crucial for ensuring its integrity and security.
 
 ## Vault Transform secrets engine
 
-Vault's Transform secrets engine is our recommended solution for protecting secrets outside of Vault. The Transform Secrets Engine offers three types of transformations: format preserving encryption, data masking, and tokenization.
+Vault's Transform secrets engine is our recommended solution for protecting secrets outside Vault. The Transform Secrets Engine offers three types of transformations: format preserving encryption, data masking, and tokenization.
 
 <Note>
 
@@ -78,7 +78,7 @@ Maintaining a similar data structure for encoded sensitive data allows for flexi
 
 FPE, in contrast to conventional tokenization methods, produces encrypted text that preserves the original data's structure and format while ensuring the security of the encoded values. By utilizing FPE in Vault, users can create custom transformation templates using regular expressions. FPE enables users to specify the values they wish to transform and enforces a schema on the encoded value. In addition, there are pre-existing templates, such as those for credit card numbers and US social security numbers, readily available to help you get started quickly.
 
-To ensure the security of the encoded ciphertexts, Vault utilizes the [FF3-1](https://csrc.nist.gov/publications/detail/sp/800-38g/rev-1/draft) encryption algorithm, which has been vetted by the National Institute of Standards and Technology (NIST). This algorithm has been updated and tested to protect against specific types of attacks and potential future threats from future supercomputers.
+To ensure the security of the encoded ciphertexts, Vault utilizes the [FF3-1](https://csrc.nist.gov/publications/detail/sp/800-38g/rev-1/draft) encryption algorithm vetted by the National Institute of Standards and Technology (NIST). This algorithm has been updated and tested to protect against specific types of attacks and potential future threats from future supercomputers.
 
 FPE transformation is stateless, meaning that Vault does not store the protected secret; rather it protects only the encryption key material necessary to decrypt the secret's ciphertext. Storing only the necessary material to decrypt ensures maximum performance for encoding and decoding operations while also minimizing the possibility of exposure of that secret.
 
