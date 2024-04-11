@@ -20,6 +20,7 @@ module.exports = {
     'no-at-ember-render-modifiers': 'off',
     'no-unnecessary-curly-strings': 'off',
     'no-unnecessary-curly-parens': 'off',
+    'no-action-on-submit-button': 'off',
   },
   overrides: [
     {
