@@ -285,9 +285,9 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 
 		mux.Handle("/agent/v1/cache-clear", leaseCache.HandleCacheClear(ctx))
 
-		mux.Handle("/", ProxyHandler(ctx, cacheLogger, leaseCache, nil, true, nil, nil))
+		mux.Handle("/", ProxyHandler(ctx, cacheLogger, leaseCache, nil, true, false, nil, nil))
 	} else {
-		mux.Handle("/", ProxyHandler(ctx, apiProxyLogger, apiProxy, nil, true, nil, nil))
+		mux.Handle("/", ProxyHandler(ctx, apiProxyLogger, apiProxy, nil, true, false, nil, nil))
 	}
 
 	server := &http.Server{
