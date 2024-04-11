@@ -6,7 +6,6 @@
 package vault
 
 import (
-	"context"
 	"time"
 )
 
@@ -23,5 +22,3 @@ func (c *Core) StartManualCensusSnapshots()                      {}
 func (c *Core) ManualLicenseReportingEnabled() bool              { return false }
 func (c *Core) ManualCensusSnapshotInterval() time.Duration      { return time.Duration(0) }
 func (c *Core) ManualCensusSnapshotRetentionTime() time.Duration { return time.Duration(0) }
-func (c *Core) StartCensusReports(ctx context.Context)           {}
-func (c *Core) ReloadCensusAgent() error                         { return nil }
