@@ -77,7 +77,7 @@ Maintaining a similar data structure for encoded sensitive data allows for flexi
 
 FPE, in contrast to conventional tokenization methods, produces encrypted text that preserves the original data's structure and format while ensuring the security of the encoded values. By utilizing FPE in Vault, users can create custom transformation templates using regular expressions. FPE enables users to specify the values they wish to transform and enforces a schema on the encoded value. In addition, there are pre-existing templates, such as those for credit card numbers and US social security numbers, readily available to help you get started quickly.
 
-To ensure the security of the encoded ciphertexts, Vault utilizes the [FF3-1](https://csrc.nist.gov/publications/detail/sp/800-38g/rev-1/draft) encryption algorithm vetted by the National Institute of Standards and Technology (NIST). This algorithm has been updated and tested to protect against specific types of attacks and potential future threats from future supercomputers.
+To ensure the security of the encoded ciphertexts, Vault utilizes the [FF3-1](https://csrc.nist.gov/publications/detail/sp/800-38g/rev-1/draft) encryption algorithm vetted by the National Institute of Standards and Technology (NIST). This algorithm updated and tested to protect against specific types of attacks and potential future threats from future supercomputers.
 
 FPE transformation is stateless, meaning that Vault does not store the protected secret; rather it protects only the encryption key material necessary to decrypt the secret's ciphertext. Storing only the necessary material to decrypt ensures maximum performance for encoding and decoding operations while also minimizing the possibility of exposure of that secret.
 
