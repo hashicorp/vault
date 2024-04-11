@@ -1565,7 +1565,7 @@ func TestActivityLog_StopAndRestart(t *testing.T) {
 	// Simulate seal/unseal cycle
 	core.stopActivityLog()
 	var wg sync.WaitGroup
-	core.setupActivityLog(ctx, &wg)
+	core.setupActivityLog(ctx, &wg, false)
 	wg.Wait()
 
 	a = core.activityLog
