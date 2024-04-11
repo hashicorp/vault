@@ -73,7 +73,7 @@ export default class ClientsCountsRoute extends Route {
 
   async isSecretsSyncActivated(activity: ClientsActivityModel | undefined) {
     // if there are secrets, the feature is activated
-    if (activity && this._hasActivity(activity) && activity.total?.secret_syncs > 0) return true;
+    if (activity && activity.total?.secret_syncs > 0) return true;
 
     // if feature is not in license, it's definitely not activated
     if (!this.version.hasSecretsSync) return false;
@@ -121,8 +121,5 @@ export default class ClientsCountsRoute extends Route {
 
   _hasConfig(model: ClientsConfigModel | object): model is ClientsConfigModel {
     return 'billingStartTimestamp' in model;
-  }
-  _hasActivity(model: ClientsActivityModel | undefined): model is ClientsActivityModel {
-    return !!model && 'total' in model;
   }
 }
