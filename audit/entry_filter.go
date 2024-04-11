@@ -42,7 +42,7 @@ func NewEntryFilter(filter string) (*EntryFilter, error) {
 	li := logical.LogInputBexpr{}
 	_, err = eval.Evaluate(li)
 	if err != nil {
-		return nil, fmt.Errorf("filter references an unsupported field: %s: %w: %w", filter, ErrExternalOptions, err)
+		return nil, fmt.Errorf("filter references an unsupported field: %s: %w", filter, ErrExternalOptions)
 	}
 
 	return &EntryFilter{evaluator: eval}, nil
