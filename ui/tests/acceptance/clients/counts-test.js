@@ -13,6 +13,7 @@ import authPage from 'vault/tests/pages/auth';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 import timestamp from 'core/utils/timestamp';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
 
 module('Acceptance | clients | counts', function (hooks) {
   setupApplicationTest(hooks);
@@ -66,5 +67,19 @@ module('Acceptance | clients | counts', function (hooks) {
       '/vault/clients/counts/overview',
       'Query params are reset when exiting route'
     );
+  });
+
+  test('it should render empty state if no permission to query activity data', async function (assert) {
+    assert.expect(2);
+    server.get('/sys/internal/counters/activity', () => {
+      return overrideResponse(403);
+    });
+    await visit('/vault/clients/counts/overview');
+    assert.dom(GENERAL.emptyStateTitle).hasText('You are not authorized');
+    assert
+      .dom(GENERAL.emptyStateActions)
+      .hasText(
+        'You must be granted permissions to view this page. Ask your administrator if you think you should have access to the /v1/sys/internal/counters/activity endpoint.'
+      );
   });
 });
