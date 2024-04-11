@@ -78,7 +78,7 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
   },
 
   serialize(snapshot) {
-    const type = snapshot.record.get('engineType');
+    const type = snapshot.record.engineType;
     const data = this._super(...arguments);
     // move version back to options
     data.options = data.version ? { version: data.version } : {};

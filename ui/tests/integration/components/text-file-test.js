@@ -8,8 +8,8 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render, triggerEvent } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
-import { componentPemBundle } from 'vault/tests/helpers/pki/values';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
 
 const SELECTORS = {
   label: '[data-test-text-file-label]',
@@ -17,6 +17,7 @@ const SELECTORS = {
   textarea: '[data-test-text-file-textarea]',
   fileUpload: '[data-test-text-file-input]',
 };
+const { componentPemBundle } = CERTIFICATES;
 module('Integration | Component | text-file', function (hooks) {
   setupRenderingTest(hooks);
 

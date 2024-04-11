@@ -97,8 +97,8 @@
 
     <hr class="has-background-gray-100" />
     <Hds::ButtonSet>
-      <Hds::Button @text="Done" type="submit" data-test-pki-generate-root-save />
-      <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-pki-generate-root-cancel />
+      <Hds::Button @text="Done" type="submit" data-test-save />
+      <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-cancel />
     </Hds::ButtonSet>
     {{#if this.invalidFormAlert}}
       <div class="control">

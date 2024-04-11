@@ -73,109 +73,95 @@ module('Acceptance | auth backend list', function (hooks) {
     assert.dom(SELECTORS.listItem).hasText(this.user1, 'user1 exists in the list');
   });
 
-  test('auth methods are linkable and link to correct view', async function (assert) {
-    assert.expect(45);
-    const uid = uuidv4();
-    await visit('/vault/access');
+  module('auth methods are linkable and link to correct view', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.uid = uuidv4();
+      await visit('/vault/access');
+    });
 
-    const supportManaged = supportedManagedAuthBackends();
     // Test all auth methods, not just those you can log in with
-    const backends = methods().map((backend) => backend.type);
-    assert.deepEqual(
-      backends,
-      [
-        'alicloud',
-        'approle',
-        'aws',
-        'azure',
-        'gcp',
-        'github',
-        'jwt',
-        'oidc',
-        'kubernetes',
-        'ldap',
-        'okta',
-        'radius',
-        'cert',
-        'userpass',
-      ],
-      'non-enterprise auth methods are available'
-    );
-    for (const type of backends) {
-      const path = type === 'token' ? 'token' : `auth-list-${type}-${uid}`;
-      if (type !== 'token') {
-        await enablePage.enable(type, path);
-      }
+    methods()
+      .map((backend) => backend.type)
+      .forEach((type) => {
+        test(`${type} auth method`, async function (assert) {
+          const supportManaged = supportedManagedAuthBackends();
+          const path = type === 'token' ? 'token' : `auth-list-${type}-${this.uid}`;
+          if (type !== 'token') {
+            await enablePage.enable(type, path);
+          }
+          await settled();
+          await visit('/vault/access');
+
+          // check popup menu
+          const itemCount = type === 'token' ? 2 : 3;
+          await click(`[data-test-auth-backend-link="${path}"] [data-test-popup-menu-trigger]`);
+          assert
+            .dom('.hds-dropdown-list-item')
+            .exists({ count: itemCount }, `shows ${itemCount} dropdown items for ${type}`);
+
+          // all auth methods should be linkable
+          await click(`[data-test-auth-backend-link="${path}"]`);
+          if (!supportManaged.includes(type)) {
+            assert.dom('[data-test-auth-section-tab]').exists({ count: 1 });
+            assert
+              .dom('[data-test-auth-section-tab]')
+              .hasText('Configuration', `only shows configuration tab for ${type} auth method`);
+            assert.dom('[data-test-doc-link] .doc-link').exists(`includes doc link for ${type} auth method`);
+          } else {
+            let expectedTabs = 2;
+            if (type === 'ldap' || type === 'okta') {
+              expectedTabs = 3;
+            }
+            assert
+              .dom('[data-test-auth-section-tab]')
+              .exists({ count: expectedTabs }, `has management tabs for ${type} auth method`);
+          }
+          if (type !== 'token') {
+            // cleanup method
+            await runCmd(deleteAuthCmd(path));
+          }
+        });
+      });
+  });
+
+  module('enterprise', function () {
+    test('ent-only auth methods are linkable and link to correct view', async function (assert) {
+      assert.expect(3);
+      const uid = uuidv4();
+      await visit('/vault/access');
+
+      // Only SAML is enterprise-only for now
+      const type = 'saml';
+      const path = `auth-list-${type}-${uid}`;
+      await enablePage.enable(type, path);
       await settled();
       await visit('/vault/access');
 
-      // check popup menu
-      const itemCount = type === 'token' ? 2 : 3;
-      await click(`[data-test-auth-backend-link="${path}"] [data-test-popup-menu-trigger]`);
-      assert
-        .dom('.hds-dropdown-list-item')
-        .exists({ count: itemCount }, `shows ${itemCount} dropdown items for ${type}`);
-
       // all auth methods should be linkable
       await click(`[data-test-auth-backend-link="${path}"]`);
-      if (!supportManaged.includes(type)) {
-        assert.dom('[data-test-auth-section-tab]').exists({ count: 1 });
-        assert
-          .dom('[data-test-auth-section-tab]')
-          .hasText('Configuration', `only shows configuration tab for ${type} auth method`);
-        assert.dom('[data-test-doc-link] .doc-link').exists(`includes doc link for ${type} auth method`);
-      } else {
-        let expectedTabs = 2;
-        if (type == 'ldap' || type === 'okta') {
-          expectedTabs = 3;
-        }
-        assert
-          .dom('[data-test-auth-section-tab]')
-          .exists({ count: expectedTabs }, `has management tabs for ${type} auth method`);
-      }
-      if (type !== 'token') {
-        // cleanup method
-        await runCmd(deleteAuthCmd(path));
-      }
-    }
-  });
+      assert.dom('[data-test-auth-section-tab]').exists({ count: 1 });
+      assert
+        .dom('[data-test-auth-section-tab]')
+        .hasText('Configuration', `only shows configuration tab for ${type} auth method`);
+      assert.dom('[data-test-doc-link] .doc-link').exists(`includes doc link for ${type} auth method`);
+      await runCmd(deleteAuthCmd(path));
+    });
 
-  test('enterprise: auth methods are linkable and link to correct view', async function (assert) {
-    assert.expect(3);
-    const uid = uuidv4();
-    await visit('/vault/access');
-
-    // Only SAML is enterprise-only for now
-    const type = 'saml';
-    const path = `auth-list-${type}-${uid}`;
-    await enablePage.enable(type, path);
-    await settled();
-    await visit('/vault/access');
-
-    // all auth methods should be linkable
-    await click(`[data-test-auth-backend-link="${path}"]`);
-    assert.dom('[data-test-auth-section-tab]').exists({ count: 1 });
-    assert
-      .dom('[data-test-auth-section-tab]')
-      .hasText('Configuration', `only shows configuration tab for ${type} auth method`);
-    assert.dom('[data-test-doc-link] .doc-link').exists(`includes doc link for ${type} auth method`);
-    await runCmd(deleteAuthCmd(path));
-  });
-
-  test('enterprise: token config within namespace', async function (assert) {
-    const ns = 'ns-wxyz';
-    await runCmd(createNS(ns), false);
-    await settled();
-    await authPage.loginNs(ns);
-    // go directly to token configure route
-    await visit('/vault/settings/auth/configure/token/options');
-    await fillIn('[data-test-input="description"]', 'My custom description');
-    await click('[data-test-save-config="true"]');
-    assert.strictEqual(currentURL(), '/vault/access', 'successfully saves and navigates away');
-    await click('[data-test-auth-backend-link="token"]');
-    assert
-      .dom('[data-test-row-value="Description"]')
-      .hasText('My custom description', 'description was saved');
-    await runCmd(`delete sys/namespaces/${ns}`);
+    test('token config within namespace', async function (assert) {
+      const ns = 'ns-wxyz';
+      await runCmd(createNS(ns), false);
+      await settled();
+      await authPage.loginNs(ns);
+      // go directly to token configure route
+      await visit('/vault/settings/auth/configure/token/options');
+      await fillIn('[data-test-input="description"]', 'My custom description');
+      await click('[data-test-save-config="true"]');
+      assert.strictEqual(currentURL(), '/vault/access', 'successfully saves and navigates away');
+      await click('[data-test-auth-backend-link="token"]');
+      assert
+        .dom('[data-test-row-value="Description"]')
+        .hasText('My custom description', 'description was saved');
+      await runCmd(`delete sys/namespaces/${ns}`);
+    });
   });
 });

@@ -222,6 +222,10 @@
         "path": "concepts/storage"
       },
       {
+        "title": "Cloud access management",
+        "path": "concepts/cloud-access-management"
+      },
+      {
         "title": "Integrated Storage",
         "routes": [
           {
@@ -365,7 +369,7 @@
           {
             "title": "High Availability",
             "badge": {
-              "text": "ENTERPRISE",
+              "text": "ENTERPRISE | BETA",
               "type": "outlined",
               "color": "highlight"
             },
@@ -783,6 +787,10 @@
           {
             "title": "<code>generate-root</code>",
             "path": "commands/operator/generate-root"
+          },
+          {
+            "title": "<code>import</code>",
+            "path": "commands/operator/import"
           },
           {
             "title": "<code>init</code>",
@@ -1664,6 +1672,33 @@
     ]
   },
   {
+    "title": "Secrets Import",
+    "badge": {
+      "text": "ENTERPRISE",
+      "type": "outlined",
+      "color": "neutral"
+    },
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "import",
+        "badge": {
+          "text": "ALPHA",
+          "type": "outlined",
+          "color": "highlight"
+        }
+      },
+      {
+        "title": "GCP Secret Manager",
+        "path": "import/gcpsm"
+      },
+      {
+        "title": "Mappings",
+        "path": "import/mappings"
+      }
+    ]
+  },
+  {
     "title": "Auth Methods",
     "routes": [
       {
@@ -1877,21 +1912,11 @@
         "routes": [
           {
             "title": "Overview",
-            "path": "plugins/containerized-plugins",
-            "badge": {
-              "text": "BETA",
-              "type": "outlined",
-              "color": "highlight"
-            }
+            "path": "plugins/containerized-plugins"
           },
           {
             "title": "Add a containerized plugin",
-            "path": "plugins/containerized-plugins/add-a-containerized-plugin",
-            "badge": {
-              "text": "BETA",
-              "type": "outlined",
-              "color": "highlight"
-            }
+            "path": "plugins/containerized-plugins/add-a-containerized-plugin"
           }
         ]
       },
@@ -2134,6 +2159,10 @@
                             "path": "platform/k8s/vso/sources/vault/auth/gcp"
                           }
                         ]
+                      },
+                      {
+                        "title": "Encrypted client cache",
+                        "path": "platform/k8s/vso/sources/vault/client-cache"
                       }
                     ]
                   },
@@ -2185,6 +2214,10 @@
           {
             "title": "Configuration",
             "path": "platform/mssql/configuration"
+          },
+          {
+            "title": "Key Rotation",
+            "path": "platform/mssql/rotation"
           },
           {
             "title": "Upgrading",
@@ -2502,8 +2535,8 @@
         "path": "release-notes"
       },
       {
-        "title": "1.16.0",
-        "path": "release-notes/1.16.0"
+        "title": "1.16.1",
+        "path": "release-notes/1.16.1"
       },
       {
         "title": "1.15.0",
@@ -2640,6 +2673,10 @@
             "path": "enterprise/license/faq"
           }
         ]
+      },
+      {
+        "title": "Long-term support (LTS)",
+        "path": "enterprise/lts"
       },
       {
         "title": "Replication",

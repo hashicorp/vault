@@ -12,7 +12,7 @@ import { createTokenCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import reducedDisclosureHandlers from 'vault/mirage/handlers/reduced-disclosure';
-import { overrideResponse } from 'vault/tests/helpers/clients';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
 
 const { unsealKeys } = VAULT_KEYS;
 const SELECTORS = {

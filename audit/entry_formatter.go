@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -36,51 +35,99 @@ type timeProvider interface {
 	formattedTime() string
 }
 
-// EntryFormatter should be used to format audit requests and responses.
-type EntryFormatter struct {
-	config          FormatterConfig
-	salter          Salter
-	logger          hclog.Logger
+// FormatterConfig is used to provide basic configuration to a formatter.
+// Use NewFormatterConfig to initialize the FormatterConfig struct.
+type FormatterConfig struct {
+	Raw          bool
+	HMACAccessor bool
+
+	// Vault lacks pagination in its APIs. As a result, certain list operations can return **very** large responses.
+	// The user's chosen audit sinks may experience difficulty consuming audit records that swell to tens of megabytes
+	// of JSON. The responses of list operations are typically not very interesting, as they are mostly lists of keys,
+	// or, even when they include a "key_info" field, are not returning confidential information. They become even less
+	// interesting once HMAC-ed by the audit system.
+	//
+	// Some example Vault "list" operations that are prone to becoming very large in an active Vault installation are:
+	//   auth/token/accessors/
+	//   identity/entity/id/
+	//   identity/entity-alias/id/
+	//   pki/certs/
+	//
+	// This option exists to provide such users with the option to have response data elided from audit logs, only when
+	// the operation type is "list". For added safety, the elision only applies to the "keys" and "key_info" fields
+	// within the response data - these are conventionally the only fields present in a list response - see
+	// logical.ListResponse, and logical.ListResponseWithInfo. However, other fields are technically possible if a
+	// plugin author writes unusual code, and these will be preserved in the audit log even with this option enabled.
+	// The elision replaces the values of the "keys" and "key_info" fields with an integer count of the number of
+	// entries. This allows even the elided audit logs to still be useful for answering questions like
+	// "Was any data returned?" or "How many records were listed?".
+	ElideListResponses bool
+
+	// This should only ever be used in a testing context
+	OmitTime bool
+
+	// The required/target format for the event (supported: JSONFormat and JSONxFormat).
+	RequiredFormat format
+
+	// headerFormatter specifies the formatter used for headers that existing in any incoming audit request.
 	headerFormatter HeaderFormatter
-	name            string
-	prefix          string
+
+	// Prefix specifies a Prefix that should be prepended to any formatted request or response before serialization.
+	Prefix string
 }
 
-// NewEntryFormatter should be used to create an EntryFormatter.
-// Accepted options: WithHeaderFormatter, WithPrefix.
-func NewEntryFormatter(name string, config FormatterConfig, salter Salter, logger hclog.Logger, opt ...Option) (*EntryFormatter, error) {
-	const op = "audit.NewEntryFormatter"
+// EntryFormatter should be used to format audit requests and responses.
+// NOTE: Use NewEntryFormatter to initialize the EntryFormatter struct.
+type EntryFormatter struct {
+	config FormatterConfig
+	salter Salter
+	logger hclog.Logger
+	name   string
+}
 
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return nil, fmt.Errorf("%s: name is required: %w", op, event.ErrInvalidParameter)
-	}
-
-	if salter == nil {
-		return nil, fmt.Errorf("%s: cannot create a new audit formatter with nil salter: %w", op, event.ErrInvalidParameter)
-	}
-
-	if logger == nil || reflect.ValueOf(logger).IsNil() {
-		return nil, fmt.Errorf("%s: cannot create a new audit formatter with nil logger: %w", op, event.ErrInvalidParameter)
-	}
-
-	// We need to ensure that the format isn't just some default empty string.
-	if err := config.RequiredFormat.validate(); err != nil {
-		return nil, fmt.Errorf("%s: format not valid: %w", op, err)
+// NewFormatterConfig should be used to create a FormatterConfig.
+// Accepted options: WithElision, WithFormat, WithHMACAccessor, WithOmitTime, WithPrefix, WithRaw.
+func NewFormatterConfig(headerFormatter HeaderFormatter, opt ...Option) (FormatterConfig, error) {
+	if headerFormatter == nil || reflect.ValueOf(headerFormatter).IsNil() {
+		return FormatterConfig{}, fmt.Errorf("header formatter is required: %w", ErrInvalidParameter)
 	}
 
 	opts, err := getOpts(opt...)
 	if err != nil {
-		return nil, fmt.Errorf("%s: error applying options: %w", op, err)
+		return FormatterConfig{}, err
+	}
+
+	return FormatterConfig{
+		headerFormatter:    headerFormatter,
+		ElideListResponses: opts.withElision,
+		HMACAccessor:       opts.withHMACAccessor,
+		OmitTime:           opts.withOmitTime,
+		Prefix:             opts.withPrefix,
+		Raw:                opts.withRaw,
+		RequiredFormat:     opts.withFormat,
+	}, nil
+}
+
+// NewEntryFormatter should be used to create an EntryFormatter.
+func NewEntryFormatter(name string, config FormatterConfig, salter Salter, logger hclog.Logger) (*EntryFormatter, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, fmt.Errorf("name is required: %w", ErrInvalidParameter)
+	}
+
+	if salter == nil {
+		return nil, fmt.Errorf("cannot create a new audit formatter with nil salter: %w", ErrInvalidParameter)
+	}
+
+	if logger == nil || reflect.ValueOf(logger).IsNil() {
+		return nil, fmt.Errorf("cannot create a new audit formatter with nil logger: %w", ErrInvalidParameter)
 	}
 
 	return &EntryFormatter{
-		config:          config,
-		salter:          salter,
-		logger:          logger,
-		headerFormatter: opts.withHeaderFormatter,
-		name:            name,
-		prefix:          opts.withPrefix,
+		config: config,
+		salter: salter,
+		logger: logger,
+		name:   name,
 	}, nil
 }
 
@@ -97,8 +144,6 @@ func (*EntryFormatter) Type() eventlogger.NodeType {
 // Process will attempt to parse the incoming event data into a corresponding
 // audit Request/Response which is serialized to JSON/JSONx and stored within the event.
 func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *eventlogger.Event, retErr error) {
-	const op = "audit.(EntryFormatter).Process"
-
 	// Return early if the context was cancelled, eventlogger will not carry on
 	// asking nodes to process, so any sink node in the pipeline won't be called.
 	select {
@@ -110,16 +155,16 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 	// Perform validation on the event, then retrieve the underlying AuditEvent
 	// and LogInput (from the AuditEvent Data).
 	if e == nil {
-		return nil, fmt.Errorf("%s: event is nil: %w", op, event.ErrInvalidParameter)
+		return nil, fmt.Errorf("event is nil: %w", ErrInvalidParameter)
 	}
 
 	a, ok := e.Payload.(*AuditEvent)
 	if !ok {
-		return nil, fmt.Errorf("%s: cannot parse event payload: %w", op, event.ErrInvalidParameter)
+		return nil, fmt.Errorf("cannot parse event payload: %w", ErrInvalidParameter)
 	}
 
 	if a.Data == nil {
-		return nil, fmt.Errorf("%s: cannot audit event (%s) with no data: %w", op, a.Subtype, event.ErrInvalidParameter)
+		return nil, fmt.Errorf("cannot audit event (%s) with no data: %w", a.Subtype, ErrInvalidParameter)
 	}
 
 	// Handle panics
@@ -136,22 +181,25 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 			"stacktrace", string(debug.Stack()))
 
 		// Ensure that we add this error onto any pre-existing error that was being returned.
-		retErr = multierror.Append(retErr, fmt.Errorf("%s: panic generating audit log: %q", op, f.name)).ErrorOrNil()
+		retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log: %q", f.name)).ErrorOrNil()
 	}()
 
 	// Take a copy of the event data before we modify anything.
 	data, err := a.Data.Clone()
 	if err != nil {
-		return nil, fmt.Errorf("%s: unable to copy audit event data: %w", op, err)
+		return nil, fmt.Errorf("unable to clone audit event data: %w", err)
 	}
 
-	// Ensure that any headers in the request, are formatted as required, and are
-	// only present if they have been configured to appear in the audit log.
-	// e.g. via: /sys/config/auditing/request-headers/:name
-	if f.headerFormatter != nil && data.Request != nil && data.Request.Headers != nil {
-		data.Request.Headers, err = f.headerFormatter.ApplyConfig(ctx, data.Request.Headers, f.salter)
+	// If the request is present in the input data, apply header configuration
+	// regardless. We shouldn't be in a situation where the header formatter isn't
+	// present as it's required.
+	if data.Request != nil {
+		// Ensure that any headers in the request, are formatted as required, and are
+		// only present if they have been configured to appear in the audit log.
+		// e.g. via: /sys/config/auditing/request-headers/:name
+		data.Request.Headers, err = f.config.headerFormatter.ApplyConfig(ctx, data.Request.Headers, f.salter)
 		if err != nil {
-			return nil, fmt.Errorf("%s: unable to transform headers for auditing: %w", op, err)
+			return nil, fmt.Errorf("unable to transform headers for auditing: %w", err)
 		}
 	}
 
@@ -172,25 +220,25 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 	case ResponseType:
 		entry, err = f.FormatResponse(ctx, data, a)
 	default:
-		return nil, fmt.Errorf("%s: unknown audit event subtype: %q", op, a.Subtype)
+		return nil, fmt.Errorf("unknown audit event subtype: %q", a.Subtype)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("%s: unable to parse %s from audit event: %w", op, a.Subtype.String(), err)
+		return nil, fmt.Errorf("unable to parse %s from audit event: %w", a.Subtype, err)
 	}
 
 	result, err := jsonutil.EncodeJSON(entry)
 	if err != nil {
-		return nil, fmt.Errorf("%s: unable to format %s: %w", op, a.Subtype.String(), err)
+		return nil, fmt.Errorf("unable to format %s: %w", a.Subtype, err)
 	}
 
 	if f.config.RequiredFormat == JSONxFormat {
 		var err error
 		result, err = jsonx.EncodeJSONBytes(result)
 		if err != nil {
-			return nil, fmt.Errorf("%s: unable to encode JSONx using JSON data: %w", op, err)
+			return nil, fmt.Errorf("unable to encode JSONx using JSON data: %w", err)
 		}
 		if result == nil {
-			return nil, fmt.Errorf("%s: encoded JSONx was nil: %w", op, err)
+			return nil, fmt.Errorf("encoded JSONx was nil: %w", err)
 		}
 	}
 
@@ -198,8 +246,8 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 	// don't support a prefix just sitting there.
 	// However, this would be a breaking change to how Vault currently works to
 	// include the prefix as part of the JSON object or XML document.
-	if f.prefix != "" {
-		result = append([]byte(f.prefix), result...)
+	if f.config.Prefix != "" {
+		result = append([]byte(f.config.Prefix), result...)
 	}
 
 	// Copy some properties from the event (and audit event) and store the
@@ -576,25 +624,6 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 	return respEntry, nil
 }
 
-// NewFormatterConfig should be used to create a FormatterConfig.
-// Accepted options: WithElision, WithHMACAccessor, WithOmitTime, WithRaw, WithFormat.
-func NewFormatterConfig(opt ...Option) (FormatterConfig, error) {
-	const op = "audit.NewFormatterConfig"
-
-	opts, err := getOpts(opt...)
-	if err != nil {
-		return FormatterConfig{}, fmt.Errorf("%s: error applying options: %w", op, err)
-	}
-
-	return FormatterConfig{
-		ElideListResponses: opts.withElision,
-		HMACAccessor:       opts.withHMACAccessor,
-		OmitTime:           opts.withOmitTime,
-		Raw:                opts.withRaw,
-		RequiredFormat:     opts.withFormat,
-	}, nil
-}
-
 // getRemoteAddr safely gets the remote address avoiding a nil pointer
 func getRemoteAddr(req *logical.Request) string {
 	if req != nil && req.Connection != nil {
@@ -663,10 +692,8 @@ func doElideListResponseData(data map[string]interface{}) {
 // newTemporaryEntryFormatter creates a cloned EntryFormatter instance with a non-persistent Salter.
 func newTemporaryEntryFormatter(n *EntryFormatter) *EntryFormatter {
 	return &EntryFormatter{
-		salter:          &nonPersistentSalt{},
-		headerFormatter: n.headerFormatter,
-		config:          n.config,
-		prefix:          n.prefix,
+		salter: &nonPersistentSalt{},
+		config: n.config,
 	}
 }
 
