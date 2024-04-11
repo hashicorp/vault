@@ -32,6 +32,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	semver "github.com/hashicorp/go-version"
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
@@ -1139,8 +1140,7 @@ func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, req *logi
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	headerConfig := b.Core.AuditedHeadersConfig()
-	err := headerConfig.add(ctx, header, hmac)
+	err := b.Core.AuditedHeadersConfig().add(ctx, header, hmac)
 	if err != nil {
 		return nil, err
 	}
@@ -1155,8 +1155,7 @@ func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, req *logi
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	headerConfig := b.Core.AuditedHeadersConfig()
-	err := headerConfig.remove(ctx, header)
+	err := b.Core.AuditedHeadersConfig().remove(ctx, header)
 	if err != nil {
 		return nil, err
 	}
@@ -1165,14 +1164,13 @@ func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, req *logi
 }
 
 // handleAuditedHeaderRead returns the header configuration for the given header name
-func (b *SystemBackend) handleAuditedHeaderRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditedHeaderRead(_ context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
 	if header == "" {
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	headerConfig := b.Core.AuditedHeadersConfig()
-	settings, ok := headerConfig.Headers[strings.ToLower(header)]
+	settings, ok := b.Core.AuditedHeadersConfig().header(header)
 	if !ok {
 		return logical.ErrorResponse("Could not find header in config"), nil
 	}
@@ -1185,12 +1183,12 @@ func (b *SystemBackend) handleAuditedHeaderRead(ctx context.Context, req *logica
 }
 
 // handleAuditedHeadersRead returns the whole audited headers config
-func (b *SystemBackend) handleAuditedHeadersRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	headerConfig := b.Core.AuditedHeadersConfig()
+func (b *SystemBackend) handleAuditedHeadersRead(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	headerSettings := b.Core.AuditedHeadersConfig().headers()
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"headers": headerConfig.Headers,
+			"headers": headerSettings,
 		},
 	}, nil
 }
@@ -3868,7 +3866,7 @@ func (b *SystemBackend) handleAuditHash(ctx context.Context, req *logical.Reques
 }
 
 // handleEnableAudit is used to enable a new audit backend
-func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleEnableAudit(ctx context.Context, _ *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
 
 	local := data.Get("local").(bool)
@@ -3898,13 +3896,14 @@ func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Requ
 	// Attempt enabling
 	if err := b.Core.enableAudit(ctx, me, true); err != nil {
 		b.Backend.Logger().Error("enable audit mount failed", "path", me.Path, "error", err)
-		return handleError(err)
+
+		return handleError(audit.ConvertToExternalError(err))
 	}
 	return nil, nil
 }
 
 // handleDisableAudit is used to disable an audit backend
-func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleDisableAudit(ctx context.Context, _ *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 
 	if !strings.HasSuffix(path, "/") {
@@ -3939,7 +3938,8 @@ func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Req
 	// Attempt disable
 	if existed, err := b.Core.disableAudit(ctx, path, true); existed && err != nil {
 		b.Backend.Logger().Error("disable audit mount failed", "path", path, "error", err)
-		return handleError(err)
+
+		return handleError(audit.ConvertToExternalError(err))
 	}
 	return nil, nil
 }

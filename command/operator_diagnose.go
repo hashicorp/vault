@@ -19,7 +19,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	cserver "github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"

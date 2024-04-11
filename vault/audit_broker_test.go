@@ -27,8 +27,8 @@ func testAuditBackend(t *testing.T, path string, config map[string]string) audit
 	t.Helper()
 
 	headersCfg := &AuditedHeadersConfig{
-		Headers: make(map[string]*auditedHeaderSettings),
-		view:    nil,
+		headerSettings: make(map[string]*auditedHeaderSettings),
+		view:           nil,
 	}
 
 	view := &logical.InmemStorage{}
@@ -89,7 +89,7 @@ func TestAuditBroker_Register_MultipleFails(t *testing.T) {
 
 	err = a.Register(path, noFilterBackend, false)
 	require.Error(t, err)
-	require.EqualError(t, err, "vault.(AuditBroker).Register: backend already registered 'b2-no-filter'")
+	require.EqualError(t, err, "backend already registered 'b2-no-filter': invalid configuration")
 }
 
 // BenchmarkAuditBroker_File_Request_DevNull Attempts to register a single `file`
