@@ -12,12 +12,12 @@ module('Integration | Component | clients/usage-stats', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.isSecretsSyncActivated = false;
+    this.showSecretSyncs = false;
     this.counts = {};
 
     this.renderComponent = async () =>
       await render(
-        hbs`<Clients::UsageStats @totalUsageCounts={{this.counts}} @isSecretsSyncActivated={{this.isSecretsSyncActivated}} />`
+        hbs`<Clients::UsageStats @totalUsageCounts={{this.counts}} @showSecretSyncs={{this.showSecretSyncs}} />`
       );
   });
 
@@ -72,7 +72,7 @@ module('Integration | Component | clients/usage-stats', function (hooks) {
     });
 
     test('with secrets sync activated', async function (assert) {
-      this.isSecretsSyncActivated = true;
+      this.showSecretSyncs = true;
 
       await this.renderComponent();
 
@@ -83,7 +83,7 @@ module('Integration | Component | clients/usage-stats', function (hooks) {
     });
 
     test('with secrets sync NOT activated', async function (assert) {
-      this.isSecretsSyncActivated = false;
+      this.showSecretSyncs = false;
 
       await this.renderComponent();
 

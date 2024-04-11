@@ -1,0 +1,14 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="chart-wrapper" data-test-usage-stats>
+  <div class="chart-header has-bottom-margin-m">
+    <h2 class="chart-title">ACME usage</h2>
+    <p class="chart-description has-bottom-padding-m">This data can be used to understand how many ACME clients have been
+      used for the queried
+      {{if this.isDateRange "date range" "month"}}. Each ACME request is counted as one client.</p>
+  </div>
+  <StatText @label="Total ACME clients" @value={{this.totalUsageCounts.acme_clients}} @size="l" />
+</div>

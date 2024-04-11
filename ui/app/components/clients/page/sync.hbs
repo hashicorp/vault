@@ -63,7 +63,11 @@
     </div>
   {{/if}}
 {{else}}
-  <EmptyState @title="No Secrets Sync clients" @message="No data is available because Secrets Sync has not been activated.">
+  <EmptyState
+    @title="No Secrets Sync clients"
+    @message="No data is available because Secrets Sync has not been activated."
+    class="is-shadowless"
+  >
     <Hds::Link::Standalone
       @icon="chevron-right"
       @iconPosition="trailing"
