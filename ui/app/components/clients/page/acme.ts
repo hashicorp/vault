@@ -5,4 +5,4 @@
 
 import ActivityComponent from '../activity';
 
-export default class AcmeComponent extends ActivityComponent {}
+export default class ClientsAcmePageComponent extends ActivityComponent {}

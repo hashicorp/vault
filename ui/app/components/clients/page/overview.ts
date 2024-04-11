@@ -5,4 +5,4 @@
 
 import ActivityComponent from '../activity';
 
-export default class OverviewComponent extends ActivityComponent {}
+export default class ClientsOverviewPageComponent extends ActivityComponent {}
