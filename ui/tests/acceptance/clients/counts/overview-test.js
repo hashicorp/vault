@@ -43,7 +43,7 @@ module('Acceptance | clients | overview', function (hooks) {
   test('it should render the correct tabs', async function (assert) {
     assert.dom(GENERAL.tab('overview')).exists();
     assert.dom(GENERAL.tab('token')).exists();
-    assert.dom(GENERAL.tab('config')).exists();
+    assert.dom(GENERAL.tab('acme')).exists();
   });
 
   test('it should render charts', async function (assert) {
