@@ -201,6 +201,7 @@
     "xstate": "^3.3.3"
   },
   "resolutions": {
+    "ansi-html": "^0.0.8",
     "async": "^2.6.4",
     "cryptiles": "^4.1.2",
     "eslint-utils": "^1.4.1",
