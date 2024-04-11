@@ -81,9 +81,8 @@ To ensure the security of the encoded ciphertexts, Vault utilizes the [FF3-1](ht
 
 FPE transformation is stateless, meaning that Vault does not store the protected secret; rather it protects only the encryption key material necessary to decrypt the secret's ciphertext. Storing only the necessary material to decrypt ensures maximum performance for encoding and decoding operations while also minimizing the possibility of exposure of that secret.
 
-#### Resources
+#### Learn more about transform
 
-- [Developer documentation](/vault/docs/secrets/transform)
 - [Transform secrets engine tutorial](/vault/tutorials/adp/transform)
 - [Encrypting data with Transform secrets engine](/vault/tutorials/adp/transform-code-example)
 - [Transform secrets engine API](/vault/api-docs/secret/transform)
@@ -114,20 +113,14 @@ Similar to Transit encryption and FPE, tokenization requires keys and their mana
 
 Tokenization transform supports automatic key rotation based on a user-defined time interval. Each configured tokenization transformation keeps a set of versioned keys, such that when a key rotates, older key versions are still available for decoding tokens generated in the past. You can also specify the minimum key version Vault can use to decode value. Vault cannot decode generated tokens with keys below the minimum key version.
 
-<Note>
-
-Automatic key rotation requires Vault Enterprise 1.12.0 or later.
-
-</Note>
-
 #### Convergent tokenization
 
 By default, tokenization transformation produces a unique token for every encode operation. The Vault tokenization solution also supports convergent tokenization, which allows you to have the same encoded value for a given input so that you can query your database to count the number of entries for a given token.
 
 Convergent tokenization is useful when you want to do statistical analysis of the tokens as they relate to some other field in a database (without decoding the token), or if you need to tokenize in two different systems but be able to relate the results.
 
-#### Resources
+#### Learn more about tokenization
 
-- [Developer documentation](/vault/docs/secrets/transform/tokenization)
+- [Transform tokenization overview](/vault/docs/secrets/transform/tokenization)
 - [Tokenize data with Transform secrets engine](/vault/tutorials/adp/tokenization)
 - [Transform secrets engine API](/vault/api-docs/secret/transform)
