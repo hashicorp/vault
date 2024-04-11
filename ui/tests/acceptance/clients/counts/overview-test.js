@@ -42,7 +42,7 @@ module('Acceptance | clients | overview', function (hooks) {
   test('it should render the correct tabs', async function (assert) {
     assert.dom(SELECTORS.tab('overview')).exists();
     assert.dom(SELECTORS.tab('token')).exists();
-    assert.dom(SELECTORS.tab('config')).exists();
+    assert.dom(SELECTORS.tab('acme')).exists();
   });
 
   test('it should render charts', async function (assert) {
