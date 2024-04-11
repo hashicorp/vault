@@ -5,9 +5,7 @@
 
 package vault
 
-import (
-	"time"
-)
+import "time"
 
 // CensusAgent is a stub for OSS
 type CensusReporter interface{}
