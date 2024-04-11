@@ -2,8 +2,7 @@
 layout: docs
 page_title: Transform
 description: >-
-  Part of Vault's Advanced Data Protection solution, protecting sensitive information
-  stored outside of Vault.
+  Solve common encryption problems with Vault transform.
 ---
 
 # Transform secrets engine
@@ -16,6 +15,8 @@ formats. **Masking** for replacing sensitive information with masking
 characters. And **Tokenization** which replaces sensitive information with
 mathematically unrelated tokens.
 
+![Transit vs Transform](/img/transit-or-transform.png)
+
 This article explores common solutions and challenges around protecting application secrets, then details how you can use the Vault Transform Secrets Engine to address these challenges.
 
 ## Common solutions and their challenges
@@ -25,8 +26,6 @@ The following sections describe common solutions and processes for protecting se
 ### Data encryption with Vault Transit
 
 Typically, data encryption is the initial solution for protecting secrets. While data encryption is a good starting point, it can be a complex and expensive solution to implement on your own.
-
-![Transit vs Transform](/img/transit-or-transform.png)
 
 That's where Vault's transit secrets engine can be helpful. Vault can encrypt your sensitive data and provide you with the resulting ciphertext. You can then store this ciphertext, and rely on Vault to manage the encryption keys. The following diagram illustrates a credit card number going into the transit system, and returning as encrypted data.
 
