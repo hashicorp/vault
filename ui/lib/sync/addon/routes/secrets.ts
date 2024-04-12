@@ -8,44 +8,36 @@ import { service } from '@ember/service';
 
 import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
-import { DEBUG } from '@glimmer/env';
+import type VersionService from 'vault/services/version';
+import type SecretsSyncPersonaService from 'vault/services/secrets-sync-persona';
 
-interface ActivationFlagsResponse {
-  data: {
-    activated: Array<string>;
-    unactivated: Array<string>;
-  };
-}
+// interface ActivationFlagsResponse {
+//   data: {
+//     activated: Array<string>;
+//     unactivated: Array<string>;
+//   };
+// }
 
 export default class SyncSecretsRoute extends Route {
   @service declare readonly router: RouterService;
   @service declare readonly store: StoreService;
+  @service declare readonly version: VersionService;
+  @service declare readonly secretsSyncPersona: SecretsSyncPersonaService;
 
-  async fetchActivatedFeatures() {
-    // The read request to the activation-flags endpoint is unauthenticated and root namespace
-    // but the POST is not which is why it's not in the NAMESPACE_ROOT_URLS list
-    return await this.store
-      .adapterFor('application')
-      .ajax('/v1/sys/activation-flags', 'GET', { unauthenticated: true, namespace: null })
-      .then((resp: ActivationFlagsResponse) => {
-        return resp.data?.activated;
-      })
-      .catch((error: unknown) => {
-        if (DEBUG) console.error(error); // eslint-disable-line no-console
-        return [];
-      });
+  beforeModel() {
+    return this.version.fetchActivatedFeatures();
   }
 
-  async model() {
-    const activatedFeatures = await this.fetchActivatedFeatures();
+  model() {
     return {
-      activatedFeatures,
+      persona: this.secretsSyncPersona.persona,
     };
   }
 
-  afterModel(model: { activatedFeatures: Array<string> }) {
-    if (!model.activatedFeatures) {
-      this.router.transitionTo('vault.cluster.sync.secrets.overview');
-    }
-  }
+  // ARG TODO return, what was this doing?
+  // afterModel(model: { activatedFeatures: Array<string> }) {
+  //   if (!model.activatedFeatures) {
+  //     this.router.transitionTo('vault.cluster.sync.secrets.overview');
+  //   }
+  // }
 }

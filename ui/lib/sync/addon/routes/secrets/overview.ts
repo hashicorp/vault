@@ -8,29 +8,32 @@ import { service } from '@ember/service';
 import { hash } from 'rsvp';
 
 import type RouterService from '@ember/routing/router-service';
-import type FeatureFlagService from 'vault/services/feature-flag';
+import type VersionService from 'vault/services/version';
 import type StoreService from 'vault/services/store';
 
 export default class SyncSecretsOverviewRoute extends Route {
   @service declare readonly router: RouterService;
   @service declare readonly store: StoreService;
-  @service declare readonly featureFlag: FeatureFlagService;
+  @service declare readonly version: VersionService;
 
-  beforeModel(): void | Promise<unknown> {
-    if (this.featureFlag.managedNamespaceRoot !== null) {
-      this.router.transitionTo('vault.cluster.dashboard');
-    }
-  }
+  // ARG TODO return to
+  // beforeModel(): void | Promise<unknown> {
+  //   if (this.featureFlag.managedNamespaceRoot !== null) {
+  //     this.router.transitionTo('vault.cluster.dashboard');
+  //   }
+  // }
 
   async model() {
-    const { activatedFeatures } = this.modelFor('secrets') as {
-      activatedFeatures: Array<string>;
+    const { persona } = this.modelFor('secrets') as {
+      persona: string;
     };
-    const isActivated = activatedFeatures.includes('secrets-sync');
+
     return hash({
-      isActivated,
-      destinations: isActivated ? this.store.query('sync/destination', {}).catch(() => []) : [],
-      associations: isActivated
+      persona,
+      destinations: this.version.secretsSyncIsActivated
+        ? this.store.query('sync/destination', {}).catch(() => [])
+        : [],
+      associations: this.version.secretsSyncIsActivated
         ? this.store
             .adapterFor('sync/association')
             .queryAll()

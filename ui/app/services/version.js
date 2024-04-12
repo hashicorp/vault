@@ -58,7 +58,7 @@ export default class VersionService extends Service {
 
   /* Activated Features */
   get secretsSyncIsActivated() {
-    return this.activatedFeaturesFeatures.includes('secrets-sync');
+    return this.activatedFeatures.includes('secrets-sync');
   }
 
   @task({ drop: true })
