@@ -259,7 +259,6 @@ capabilities = ["deny"]
 
 	// Create token file
 	tokenFileName := makeTempFile(t, "token-file", firstToken)
-	defer os.Remove(tokenFileName)
 
 	sinkFileName := makeTempFile(t, "sink-file", "")
 
@@ -298,7 +297,6 @@ auto_auth {
 	%s
 	`, serverClient.Address(), listenConfig, autoAuthConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Unset the environment variable so that proxy picks up the right test
 	// cluster address
@@ -402,7 +400,6 @@ func TestProxy_NoTriggerAutoAuth_ProxyTokenNotAutoAuth(t *testing.T) {
 
 	// Create token file
 	tokenFileName := makeTempFile(t, "token-file", firstToken)
-	defer os.Remove(tokenFileName)
 
 	sinkFileName := makeTempFile(t, "sink-file", "")
 
@@ -442,7 +439,6 @@ auto_auth {
 	%s
 	`, serverClient.Address(), listenConfig, autoAuthConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Unset the environment variable so that proxy picks up the right test
 	// cluster address
@@ -556,7 +552,6 @@ func TestProxy_ReTriggerAutoAuth_ForceAutoAuthToken(t *testing.T) {
 
 	// Create token file
 	tokenFileName := makeTempFile(t, "token-file", firstToken)
-	defer os.Remove(tokenFileName)
 
 	sinkFileName := makeTempFile(t, "sink-file", "")
 
@@ -596,7 +591,6 @@ auto_auth {
 	%s
 	`, serverClient.Address(), listenConfig, autoAuthConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Unset the environment variable so that proxy picks up the right test
 	// cluster address
@@ -744,8 +738,6 @@ func TestProxy_ReTriggerAutoAuth_ProxyIsAutoAuthToken(t *testing.T) {
 	// Write the RoleID and SecretID to temp files
 	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
 	secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
-	defer os.Remove(roleIDPath)
-	defer os.Remove(secretIDPath)
 
 	sinkFileName := makeTempFile(t, "sink-file", "")
 
@@ -786,7 +778,6 @@ api_proxy {
 %s
 `, serverClient.Address(), listenConfig, autoAuthConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Unset the environment variable so that proxy picks up the right test
 	// cluster address
@@ -937,8 +928,6 @@ func TestProxy_ReTriggerAutoAuth_RevokedToken(t *testing.T) {
 	// Write the RoleID and SecretID to temp files
 	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
 	secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
-	defer os.Remove(roleIDPath)
-	defer os.Remove(secretIDPath)
 
 	sinkFileName := makeTempFile(t, "sink-file", "")
 	autoAuthConfig := fmt.Sprintf(`
@@ -978,7 +967,6 @@ api_proxy {
 %s
 `, serverClient.Address(), listenConfig, autoAuthConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Unset the environment variable so that proxy picks up the right test
 	// cluster address
@@ -1134,8 +1122,6 @@ func TestProxy_AutoAuth_UserAgent(t *testing.T) {
 	// Write the RoleID and SecretID to temp files
 	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
 	secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
-	defer os.Remove(roleIDPath)
-	defer os.Remove(secretIDPath)
 
 	sinkFileName := makeTempFile(t, "sink-file", "")
 	autoAuthConfig := fmt.Sprintf(`
@@ -1175,7 +1161,6 @@ api_proxy {
 %s
 `, serverClient.Address(), listenConfig, autoAuthConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Unset the environment variable so that proxy picks up the right test
 	// cluster address
@@ -1271,7 +1256,6 @@ vault {
 %s
 `, serverClient.Address(), listenConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the proxy
 	_, cmd := testProxyCommand(t, logger)
@@ -1363,7 +1347,6 @@ vault {
 %s
 `, serverClient.Address(), listenConfig, cacheConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the proxy
 	_, cmd := testProxyCommand(t, logger)
@@ -1441,7 +1424,6 @@ vault {
 %s
 `, serverClient.Address(), cacheConfig, listenConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start proxy
 	_, cmd := testProxyCommand(t, logger)
@@ -1529,7 +1511,6 @@ func TestProxy_NoAutoAuthTokenIfNotConfigured(t *testing.T) {
 
 	// Create token file
 	tokenFileName := makeTempFile(t, "token-file", serverClient.Token())
-	defer os.Remove(tokenFileName)
 
 	sinkFileName := makeTempFile(t, "sink-file", "")
 
@@ -1572,7 +1553,6 @@ vault {
 %s
 `, serverClient.Address(), apiProxyConfig, listenConfig, autoAuthConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start proxy
 	ui, cmd := testProxyCommand(t, logger)
@@ -1726,7 +1706,6 @@ vault {
 %s
 `, serverClient.Address(), retryConf, cacheConfig, listenConfig)
 			configPath := makeTempFile(t, "config.hcl", config)
-			defer os.Remove(configPath)
 
 			_, cmd := testProxyCommand(t, logger)
 			cmd.startedCh = make(chan struct{})
@@ -1799,7 +1778,6 @@ listener "tcp" {
 }
 `, listenAddr)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	ui, cmd := testProxyCommand(t, logger)
 	cmd.client = serverClient
@@ -1889,7 +1867,6 @@ cache {}
 `, serverClient.Address(), listenAddr, listenAddr2)
 
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	_, cmd := testProxyCommand(t, nil)
 	cmd.startedCh = make(chan struct{})
