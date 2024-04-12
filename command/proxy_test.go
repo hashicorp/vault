@@ -120,23 +120,8 @@ func testProxyExitAfterAuth(t *testing.T, viaFlag bool) {
 	os.Remove(in)
 	t.Logf("input: %s", in)
 
-	sink1f, err := os.CreateTemp(dir, "sink1.jwt.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink1 := sink1f.Name()
-	sink1f.Close()
-	os.Remove(sink1)
-	t.Logf("sink1: %s", sink1)
-
-	sink2f, err := os.CreateTemp(dir, "sink2.jwt.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink2 := sink2f.Name()
-	sink2f.Close()
-	os.Remove(sink2)
-	t.Logf("sink2: %s", sink2)
+	sinkFileName1 := makeTempFile(t, "sink-file", "")
+	sinkFileName2 := makeTempFile(t, "sink-file", "")
 
 	conff, err := os.CreateTemp(dir, "conf.jwt.test.")
 	if err != nil {
@@ -186,7 +171,7 @@ auto_auth {
 }
 `
 
-	config = fmt.Sprintf(config, exitAfterAuthTemplText, in, sink1, sink2)
+	config = fmt.Sprintf(config, exitAfterAuthTemplText, in, sinkFileName1, sinkFileName2)
 	if err := os.WriteFile(conf, []byte(config), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
@@ -219,7 +204,7 @@ auto_auth {
 		t.Fatal("timeout reached while waiting for proxy to exit")
 	}
 
-	sink1Bytes, err := os.ReadFile(sink1)
+	sink1Bytes, err := os.ReadFile(sinkFileName1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +212,7 @@ auto_auth {
 		t.Fatal("got no output from sink 1")
 	}
 
-	sink2Bytes, err := os.ReadFile(sink2)
+	sink2Bytes, err := os.ReadFile(sinkFileName2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -276,13 +261,7 @@ capabilities = ["deny"]
 	tokenFileName := makeTempFile(t, "token-file", firstToken)
 	defer os.Remove(tokenFileName)
 
-	sinkf, err := os.CreateTemp("", "sink.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink := sinkf.Name()
-	sinkf.Close()
-	os.Remove(sink)
+	sinkFileName := makeTempFile(t, "sink-file", "")
 
 	autoAuthConfig := fmt.Sprintf(`
 auto_auth {
@@ -297,7 +276,7 @@ auto_auth {
 			path = "%s"
 		}
 	}
-}`, tokenFileName, sink)
+}`, tokenFileName, sinkFileName)
 
 	listenAddr := generateListenerAddress(t)
 	listenConfig := fmt.Sprintf(`
@@ -367,7 +346,7 @@ auto_auth {
 			case <-timeout:
 				return prevModTime
 			}
-			modTime, err := os.Stat(sink)
+			modTime, err := os.Stat(sinkFileName)
 			require.NoError(t, err)
 			if modTime.ModTime().After(prevModTime) {
 				return modTime.ModTime()
@@ -401,7 +380,7 @@ auto_auth {
 	}
 
 	// Read from the sink file and verify that the token has not changed
-	newToken, err := os.ReadFile(sink)
+	newToken, err := os.ReadFile(sinkFileName)
 	require.Equal(t, firstToken, string(newToken))
 
 	close(cmd.ShutdownCh)
@@ -412,14 +391,7 @@ auto_auth {
 // if Proxy uses a token that is not equal to the auto auth token
 func TestProxy_NoTriggerAutoAuth_ProxyTokenNotAutoAuth(t *testing.T) {
 	proxyLogger := logging.NewVaultLogger(hclog.Info)
-	vaultLogger := logging.NewVaultLogger(hclog.Info)
-	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
-		NumCores:    1,
-		HandlerFunc: vaulthttp.Handler,
-		Logger:      vaultLogger,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 
 	serverClient := cluster.Cores[0].Client
 
@@ -432,13 +404,7 @@ func TestProxy_NoTriggerAutoAuth_ProxyTokenNotAutoAuth(t *testing.T) {
 	tokenFileName := makeTempFile(t, "token-file", firstToken)
 	defer os.Remove(tokenFileName)
 
-	sinkf, err := os.CreateTemp("", "sink.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink := sinkf.Name()
-	sinkf.Close()
-	os.Remove(sink)
+	sinkFileName := makeTempFile(t, "sink-file", "")
 
 	autoAuthConfig := fmt.Sprintf(`
 auto_auth {
@@ -453,7 +419,7 @@ auto_auth {
 			path = "%s"
 		}
 	}
-}`, tokenFileName, sink)
+}`, tokenFileName, sinkFileName)
 
 	listenAddr := generateListenerAddress(t)
 	listenConfig := fmt.Sprintf(`
@@ -524,7 +490,7 @@ auto_auth {
 			case <-timeout:
 				return prevModTime
 			}
-			modTime, err := os.Stat(sink)
+			modTime, err := os.Stat(sinkFileName)
 			require.NoError(t, err)
 			if modTime.ModTime().After(prevModTime) {
 				return modTime.ModTime()
@@ -561,7 +527,7 @@ auto_auth {
 	}
 
 	// Read from the sink and verify that the token has not changed
-	newToken, err := os.ReadFile(sink)
+	newToken, err := os.ReadFile(sinkFileName)
 	require.Equal(t, firstToken, string(newToken))
 
 	close(cmd.ShutdownCh)
@@ -592,13 +558,7 @@ func TestProxy_ReTriggerAutoAuth_ForceAutoAuthToken(t *testing.T) {
 	tokenFileName := makeTempFile(t, "token-file", firstToken)
 	defer os.Remove(tokenFileName)
 
-	sinkf, err := os.CreateTemp("", "sink.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink := sinkf.Name()
-	sinkf.Close()
-	os.Remove(sink)
+	sinkFileName := makeTempFile(t, "sink-file", "")
 
 	autoAuthConfig := fmt.Sprintf(`
 auto_auth {
@@ -613,7 +573,7 @@ auto_auth {
 			path = "%s"
 		}
 	}
-}`, tokenFileName, sink)
+}`, tokenFileName, sinkFileName)
 
 	listenAddr := generateListenerAddress(t)
 	listenConfig := fmt.Sprintf(`
@@ -684,7 +644,7 @@ auto_auth {
 			case <-timeout:
 				return prevModTime
 			}
-			modTime, err := os.Stat(sink)
+			modTime, err := os.Stat(sinkFileName)
 			require.NoError(t, err)
 			if modTime.ModTime().After(prevModTime) {
 				return modTime.ModTime()
@@ -724,7 +684,7 @@ auto_auth {
 	waitForFile(createTime)
 
 	// Read from the sink and verify that the sink contains the new token
-	newToken, err := os.ReadFile(sink)
+	newToken, err := os.ReadFile(sinkFileName)
 	require.Equal(t, secondToken, string(newToken))
 
 	close(cmd.ShutdownCh)
@@ -787,13 +747,7 @@ func TestProxy_ReTriggerAutoAuth_ProxyIsAutoAuthToken(t *testing.T) {
 	defer os.Remove(roleIDPath)
 	defer os.Remove(secretIDPath)
 
-	sinkf, err := os.CreateTemp("", "sink.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink := sinkf.Name()
-	sinkf.Close()
-	os.Remove(sink)
+	sinkFileName := makeTempFile(t, "sink-file", "")
 
 	autoAuthConfig := fmt.Sprintf(`
 auto_auth {
@@ -810,7 +764,7 @@ auto_auth {
 			path = "%s"
 		}
 	}
-}`, roleIDPath, secretIDPath, sink)
+}`, roleIDPath, secretIDPath, sinkFileName)
 
 	listenAddr := generateListenerAddress(t)
 	listenConfig := fmt.Sprintf(`
@@ -879,7 +833,7 @@ api_proxy {
 			case <-timeout:
 				t.Fatal("timed out waiting for re-triggered auto auth to complete")
 			}
-			modTime, err := os.Stat(sink)
+			modTime, err := os.Stat(sinkFileName)
 			require.NoError(t, err)
 			if modTime.ModTime().After(prevModTime) {
 				return
@@ -889,9 +843,9 @@ api_proxy {
 
 	// Wait for the token to be sent to syncs and be available to be used
 	waitForFile(time.Time{})
-	oldToken, err := os.ReadFile(sink)
+	oldToken, err := os.ReadFile(sinkFileName)
 	require.NoError(t, err)
-	prevModTime, err := os.Stat(sink)
+	prevModTime, err := os.Stat(sinkFileName)
 	require.NoError(t, err)
 
 	// Set proxy token
@@ -917,7 +871,7 @@ api_proxy {
 	waitForFile(prevModTime.ModTime())
 
 	// Verify new token is not equal to the old token
-	newToken, err := os.ReadFile(sink)
+	newToken, err := os.ReadFile(sinkFileName)
 	require.NoError(t, err)
 	require.NotEqual(t, string(newToken), string(oldToken))
 
@@ -986,14 +940,7 @@ func TestProxy_ReTriggerAutoAuth_RevokedToken(t *testing.T) {
 	defer os.Remove(roleIDPath)
 	defer os.Remove(secretIDPath)
 
-	sinkf, err := os.CreateTemp("", "sink.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink := sinkf.Name()
-	sinkf.Close()
-	os.Remove(sink)
-
+	sinkFileName := makeTempFile(t, "sink-file", "")
 	autoAuthConfig := fmt.Sprintf(`
 auto_auth {
     method "approle" {
@@ -1009,7 +956,7 @@ auto_auth {
 			path = "%s"
 		}
 	}
-}`, roleIDPath, secretIDPath, sink)
+}`, roleIDPath, secretIDPath, sinkFileName)
 
 	listenAddr := generateListenerAddress(t)
 	listenConfig := fmt.Sprintf(`
@@ -1079,7 +1026,7 @@ api_proxy {
 			case <-timeout:
 				t.Fatal("timed out waiting for re-triggered auto auth to complete")
 			}
-			modTime, err := os.Stat(sink)
+			modTime, err := os.Stat(sinkFileName)
 			require.NoError(t, err)
 			if modTime.ModTime().After(prevModTime) {
 				return
@@ -1092,9 +1039,9 @@ api_proxy {
 	req = proxyClient.NewRequest("GET", "/v1/auth/token/lookup-self")
 	body = request(t, proxyClient, req, 200)
 
-	oldToken, err := os.ReadFile(sink)
+	oldToken, err := os.ReadFile(sinkFileName)
 	require.NoError(t, err)
-	prevModTime, err := os.Stat(sink)
+	prevModTime, err := os.Stat(sinkFileName)
 	require.NoError(t, err)
 
 	// Revoke token
@@ -1113,7 +1060,7 @@ api_proxy {
 	waitForFile(prevModTime.ModTime())
 
 	// Verify new token is not equal to the old token
-	newToken, err := os.ReadFile(sink)
+	newToken, err := os.ReadFile(sinkFileName)
 	require.NoError(t, err)
 	require.NotEqual(t, string(newToken), string(oldToken))
 
@@ -1190,14 +1137,7 @@ func TestProxy_AutoAuth_UserAgent(t *testing.T) {
 	defer os.Remove(roleIDPath)
 	defer os.Remove(secretIDPath)
 
-	sinkf, err := os.CreateTemp("", "sink.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink := sinkf.Name()
-	sinkf.Close()
-	os.Remove(sink)
-
+	sinkFileName := makeTempFile(t, "sink-file", "")
 	autoAuthConfig := fmt.Sprintf(`
 auto_auth {
     method "approle" {
@@ -1213,7 +1153,7 @@ auto_auth {
 			path = "%s"
 		}
 	}
-}`, roleIDPath, secretIDPath, sink)
+}`, roleIDPath, secretIDPath, sinkFileName)
 
 	listenAddr := generateListenerAddress(t)
 	listenConfig := fmt.Sprintf(`
@@ -1591,13 +1531,7 @@ func TestProxy_NoAutoAuthTokenIfNotConfigured(t *testing.T) {
 	tokenFileName := makeTempFile(t, "token-file", serverClient.Token())
 	defer os.Remove(tokenFileName)
 
-	sinkf, err := os.CreateTemp("", "sink.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink := sinkf.Name()
-	sinkf.Close()
-	os.Remove(sink)
+	sinkFileName := makeTempFile(t, "sink-file", "")
 
 	autoAuthConfig := fmt.Sprintf(`
 auto_auth {
@@ -1613,7 +1547,7 @@ auto_auth {
 			path = "%s"
 		}
 	}
-}`, tokenFileName, sink)
+}`, tokenFileName, sinkFileName)
 
 	apiProxyConfig := `
 api_proxy {

@@ -162,23 +162,9 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 	os.Remove(in)
 	t.Logf("input: %s", in)
 
-	sink1f, err := os.CreateTemp("", "sink1.jwt.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink1 := sink1f.Name()
-	sink1f.Close()
-	os.Remove(sink1)
-	t.Logf("sink1: %s", sink1)
+	sinkFileName1 := makeTempFile(t, "sink-file", "")
 
-	sink2f, err := os.CreateTemp("", "sink2.jwt.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink2 := sink2f.Name()
-	sink2f.Close()
-	os.Remove(sink2)
-	t.Logf("sink2: %s", sink2)
+	sinkFileName2 := makeTempFile(t, "sink-file", "")
 
 	conff, err := os.CreateTemp("", "conf.jwt.test.")
 	if err != nil {
@@ -228,7 +214,7 @@ auto_auth {
 }
 `
 
-	config = fmt.Sprintf(config, exitAfterAuthTemplText, in, sink1, sink2)
+	config = fmt.Sprintf(config, exitAfterAuthTemplText, in, sinkFileName1, sinkFileName2)
 	if err := os.WriteFile(conf, []byte(config), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
@@ -261,7 +247,7 @@ auto_auth {
 		t.Fatal("timeout reached while waiting for agent to exit")
 	}
 
-	sink1Bytes, err := os.ReadFile(sink1)
+	sink1Bytes, err := os.ReadFile(sinkFileName1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -269,7 +255,7 @@ auto_auth {
 		t.Fatal("got no output from sink 1")
 	}
 
-	sink2Bytes, err := os.ReadFile(sink2)
+	sink2Bytes, err := os.ReadFile(sinkFileName2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -493,11 +479,7 @@ listener "tcp" {
 // unless configured to.
 func TestAgent_NoAutoAuthTokenIfNotConfigured(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 
 	serverClient := cluster.Cores[0].Client
 
@@ -510,13 +492,7 @@ func TestAgent_NoAutoAuthTokenIfNotConfigured(t *testing.T) {
 	tokenFileName := makeTempFile(t, "token-file", serverClient.Token())
 	defer os.Remove(tokenFileName)
 
-	sinkf, err := os.CreateTemp("", "sink.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink := sinkf.Name()
-	sinkf.Close()
-	os.Remove(sink)
+	sinkFileName := makeTempFile(t, "sink-file", "")
 
 	autoAuthConfig := fmt.Sprintf(`
 auto_auth {
@@ -532,7 +508,7 @@ auto_auth {
 			path = "%s"
 		}
 	}
-}`, tokenFileName, sink)
+}`, tokenFileName, sinkFileName)
 
 	apiProxyConfig := `
 api_proxy {
@@ -1872,13 +1848,7 @@ func TestAgent_AutoAuth_UserAgent(t *testing.T) {
 	// Enable the approle auth method
 	roleIDPath, secretIDPath := setupAppRole(t, serverClient)
 
-	sinkf, err := os.CreateTemp("", "sink.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink := sinkf.Name()
-	sinkf.Close()
-	os.Remove(sink)
+	sinkFileName := makeTempFile(t, "sink-file", "")
 
 	autoAuthConfig := fmt.Sprintf(`
 auto_auth {
@@ -1895,7 +1865,7 @@ auto_auth {
 			path = "%s"
 		}
 	}
-}`, roleIDPath, secretIDPath, sink)
+}`, roleIDPath, secretIDPath, sinkFileName)
 
 	listenAddr := generateListenerAddress(t)
 	listenConfig := fmt.Sprintf(`
