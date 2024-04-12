@@ -334,6 +334,10 @@
         "path": "configuration"
       },
       {
+        "title": "Programmatic best practices",
+        "path": "configuration/programmatic-best-practices"
+      },
+      {
         "title": "<code>listener</code>",
         "routes": [
           {

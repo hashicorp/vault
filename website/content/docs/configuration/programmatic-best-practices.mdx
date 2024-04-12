@@ -1,0 +1,63 @@
+---
+layout: docs
+page_title: Programmatic best practices
+description: >-
+  Best practices for managing Vault programmatically.
+---
+
+# Best practices for programmatic Vault management
+
+The best way to manage Vault at scale is to [codify management](/vault/tutorials/operations/codify-mgmt-vault-terraform)
+with [Terraform](/terraform) and the [Terraform Vault provider](https://registry.terraform.io/providers/hashicorp/vault/latest).
+
+## Terraform recommendations
+
+- **Avoid reading or writing long-lived static secrets to Vault from Terraform**.
+  Data read to, or written from, Terraform persists in the Terraform state file
+  and any generated plan files.
+- **Encrypt the Terraform state file**. Protect the state file with a secure,
+  encrypted backend.
+- **Follow the principle of least privilege**. Limit who has read/write access
+  to your Terraform state file.
+- **Keep Vault resources under Terraform management**. Use Terraform to apply
+  policy and governance at scale using infrastructure as code (IaC). We
+  recommend using Terraform to manage administration resources such as
+  authentication methods, plugins, namespaces, and policies.
+  
+For example, your security team might have specific ACL or Sentinel policies
+that apply to every Vault namespace. If you add a new Vault namespace to the
+Terraform configuration, you can rely on Terraform to apply the correct
+governance policies for that namespace. However, suppose a Vault namespace
+administrator creates a child namespace directly from the Vault CLI or API. In
+that case, this new namespace will not be under Terraform management and likely
+will not have the required governance policies that would have been applied with
+the Terraform workflow.
+
+One way to prevent this is to restrict certain capabilities that would otherwise
+allow Vault operators to create or modify resources that Terraform should manage.
+For example, you can 
+[block namespace manipulation with Sentinel policies](https://go.hashi.co/support-block-ns-manipulation-with-sentinel).
+
+
+## Terraform Vault provider recommendations
+
+TBD
+
+## Namespace management
+
+TBD
+
+## Resource management
+
+TBD
+
+## Authenticating to Vault
+
+- **Use dynamic secrets with short-lived credentials When interacting with Vault using Terraform whenever possible.
+Short-lived credentials that persist in a state file greatly reduce the risk of an attack, as the credentials will likely have expired in the event of a compromised state file.
+
+
+## Learn more
+
+- [Migrate unmanaged Vault resources to Terraform](#)
+- TBD
