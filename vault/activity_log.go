@@ -1224,6 +1224,7 @@ func (a *ActivityLog) regeneratePrecomputedQueries(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		a.logger.Debug("regenerating precomputed queries", "previous month", intentLog.PreviousMonth, "next month", intentLog.NextMonth)
 		_, err = a.doPrecomputedQueryCreation(ctx, *intentLog, false)
 	}
 	if err != nil && !errors.Is(err, previousMonthNotFoundErr) {
@@ -1252,11 +1253,11 @@ func (a *ActivityLog) createRegenerationIntentLog(ctx context.Context, now time.
 		intentLog.PreviousMonth = segment.Unix()
 		if i > 0 {
 			intentLog.NextMonth = segments[i-1].Unix()
-			break
 		}
+		break
 	}
 
-	if intentLog.NextMonth == 0 || intentLog.PreviousMonth == 0 {
+	if intentLog.PreviousMonth == 0 {
 		return nil, fmt.Errorf("insufficient data to create a regeneration intent log")
 	}
 
