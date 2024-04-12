@@ -183,8 +183,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     // in the app the component is rerender on query param change
     assertion = null;
     await click(`${CLIENT_COUNT.counts.mountPaths} button`);
-
-    assertion = (params) => assert.true(params.ns.includes('ns/'), 'Namespace value sent on change');
+    assertion = (params) => assert.true(params.ns.includes('ns'), 'Namespace value sent on change');
     await selectChoose(CLIENT_COUNT.counts.namespaces, '.ember-power-select-option', 0);
 
     assertion = (params) =>
