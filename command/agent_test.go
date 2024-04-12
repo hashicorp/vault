@@ -489,6 +489,124 @@ listener "tcp" {
 	}
 }
 
+// TestAgent_NoAutoAuthTokenIfNotConfigured tests that API proxy will not use the auto-auth token
+// unless configured to.
+func TestAgent_NoAutoAuthTokenIfNotConfigured(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	serverClient := cluster.Cores[0].Client
+
+	// Unset the environment variable so that proxy picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	// Create token file
+	tokenFileName := makeTempFile(t, "token-file", serverClient.Token())
+	defer os.Remove(tokenFileName)
+
+	sinkf, err := os.CreateTemp("", "sink.test.")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sink := sinkf.Name()
+	sinkf.Close()
+	os.Remove(sink)
+
+	autoAuthConfig := fmt.Sprintf(`
+auto_auth {
+    method {
+		type = "token_file"
+        config = {
+            token_file_path = "%s"
+        }
+    }
+
+	sink "file" {
+		config = {
+			path = "%s"
+		}
+	}
+}`, tokenFileName, sink)
+
+	apiProxyConfig := `
+api_proxy {
+	use_auto_auth_token = false
+}
+`
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+%s
+%s
+%s
+`, serverClient.Address(), apiProxyConfig, listenConfig, autoAuthConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start proxy
+	ui, cmd := testAgentCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		code := cmd.Run([]string{"-config", configPath})
+		if code != 0 {
+			t.Errorf("non-zero return code when running agent: %d", code)
+			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+		}
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	proxyClient, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	proxyClient.SetToken("")
+	err = proxyClient.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait for the sink to be populated.
+	// Realistically won't be this long, but keeping it long just in case, for CI.
+	time.Sleep(10 * time.Second)
+
+	secret, err := proxyClient.Auth().Token().CreateOrphan(&api.TokenCreateRequest{
+		Policies: []string{"default"},
+		TTL:      "30m",
+	})
+	if secret != nil || err == nil {
+		t.Fatal("expected this to fail, since without a token you should not be able to make a token")
+	}
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
+}
+
 // TestAgent_Template_UserAgent Validates that the User-Agent sent to Vault
 // as part of Templating requests is correct. Uses the custom handler
 // userAgentHandler struct defined in this test package, so that Vault validates the
