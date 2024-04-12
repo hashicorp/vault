@@ -1358,16 +1358,28 @@ func request(t *testing.T, client *api.Client, req *api.Request, expectedStatusC
 	return body
 }
 
-// makeTempFile creates a temp file and populates it.
+// makeTempFile creates a temp file with the specified name, populates it with the
+// supplied contents and closes it. The path to the file is returned, also the file
+// will be automatically removed when the test which created it, finishes.
 func makeTempFile(t *testing.T, name, contents string) string {
 	t.Helper()
-	f, err := os.CreateTemp("", name)
+
+	f, err := os.Create(filepath.Join(t.TempDir(), name))
 	if err != nil {
 		t.Fatal(err)
 	}
 	path := f.Name()
-	f.WriteString(contents)
-	f.Close()
+
+	_, err = f.WriteString(contents)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = f.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	return path
 }
 
