@@ -72,15 +72,17 @@ function generateMounts(pathPrefix, counts) {
   });
 }
 
-function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
+function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns, skipCounts = false) {
   const min = isLowerCounts ? 10 : 50;
-  const max = isLowerCounts ? 100 : 5000;
+  const max = isLowerCounts ? 100 : 1000;
   const nsBlock = {
     namespace_id: ns?.namespace_id || (idx === 0 ? 'root' : Math.random().toString(36).slice(2, 7) + idx),
-    namespace_path: ns?.namespace_path || (idx === 0 ? '' : `ns/${idx}`),
+    namespace_path: ns?.namespace_path || (idx === 0 ? '' : `ns${idx}`),
     counts: {},
     mounts: {},
   };
+
+  if (skipCounts) return nsBlock; // skip counts to generate empty ns block with namespace ids and paths
 
   // * ADD NEW CLIENT TYPES HERE and pass to a new generateMounts() function below
   const [acme_clients, entity_clients, non_entity_clients, secret_syncs] = CLIENT_TYPES.map(() =>
@@ -144,12 +146,34 @@ function generateMonths(startDate, endDate, namespaces) {
   return months;
 }
 
-function generateActivityResponse(namespaces, startDate, endDate) {
+function generateActivityResponse(startDate, endDate) {
+  let namespaces = Array.from(Array(12)).map((v, idx) => generateNamespaceBlock(idx, null, null, true));
+  const months = generateMonths(startDate, endDate, namespaces);
+  if (months.length) {
+    const monthlyCounts = months.filter((m) => m.counts);
+    // sum namespace counts from monthly data
+    namespaces.forEach((ns) => {
+      const nsData = monthlyCounts.map((d) =>
+        d.namespaces.find((n) => n.namespace_path === ns.namespace_path)
+      );
+      const mountCounts = nsData.flatMap((d) => d.mounts);
+      const paths = nsData[0].mounts.map(({ mount_path }) => mount_path);
+      ns.mounts = paths.map((path) => {
+        const counts = getTotalCounts(mountCounts.filter((m) => m.mount_path === path));
+        return { mount_path: path, counts };
+      });
+      ns.counts = getTotalCounts(nsData);
+    });
+  } else {
+    // if no monthly data due to upgrade stuff, generate counts
+    namespaces = Array.from(Array(12)).map((v, idx) => generateNamespaceBlock(idx));
+  }
+  namespaces.sort((a, b) => b.counts.clients - a.counts.clients);
   return {
     start_time: isAfter(new Date(startDate), COUNTS_START) ? startDate : formatRFC3339(COUNTS_START),
     end_time: endDate,
-    by_namespace: namespaces.sort((a, b) => b.counts.clients - a.counts.clients),
-    months: generateMonths(startDate, endDate, namespaces),
+    by_namespace: namespaces,
+    months,
     total: getTotalCounts(namespaces),
   };
 }
@@ -186,13 +210,12 @@ export default function (server) {
     // backend returns a timestamp if given unix time, so first convert to timestamp string here
     if (!start_time.includes('T')) start_time = fromUnixTime(start_time).toISOString();
     if (!end_time.includes('T')) end_time = fromUnixTime(end_time).toISOString();
-    const namespaces = Array.from(Array(12)).map((v, idx) => generateNamespaceBlock(idx));
     return {
       request_id: 'some-activity-id',
       lease_id: '',
       renewable: false,
       lease_duration: 0,
-      data: generateActivityResponse(namespaces, start_time, end_time),
+      data: generateActivityResponse(start_time, end_time),
       wrap_info: null,
       warnings: null,
       auth: null,
