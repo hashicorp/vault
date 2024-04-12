@@ -388,11 +388,9 @@ spec:
 
 ## Cross namespace secret sharing ((#cross-namespace))
 
-1. Configure Vault for secret sharing across namespaces as described in the
-   [How-to configure cross namespace access in Vault Enterprise][cross-namespace]
-   Knowledge base article.
+1. [Configure Vault for secret sharing across namespaces][cross-namespace].
 1. Use the following Pod annotations to authenticate to the Kubernetes method in
-   the `us-west-org` namespace, and render secrets from the `us-east-org`
+   the `us-west-org` namespace and render secrets from the `us-east-org`
    namespace into the file `/vault/secrets/marketing`
 
 ```yaml
