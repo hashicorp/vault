@@ -6,11 +6,13 @@
 import Service, { inject as service } from '@ember/service';
 import { keepLatestTask, task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
+import { DEBUG } from '@glimmer/env';
 
 export default class VersionService extends Service {
   @service store;
   @service featureFlag;
-  @tracked features = [];
+  @tracked licenseFeatures = [];
+  @tracked activatedFeatures = [];
   @tracked version = null;
   @tracked type = null;
 
@@ -22,37 +24,41 @@ export default class VersionService extends Service {
     return !this.isEnterprise;
   }
 
-  /* Features */
-  get hasPerfReplication() {
-    return this.features.includes('Performance Replication');
-  }
-
-  get hasDRReplication() {
-    return this.features.includes('DR Replication');
-  }
-
-  get hasSentinel() {
-    return this.features.includes('Sentinel');
-  }
-
-  get hasNamespaces() {
-    return this.features.includes('Namespaces');
-  }
-
-  get hasControlGroups() {
-    return this.features.includes('Control Groups');
-  }
-
-  get hasSecretsSync() {
-    if (this.featureFlag.managedNamespaceRoot !== null) return false;
-    return this.features.includes('Secrets Sync');
-  }
-
   get versionDisplay() {
     if (!this.version) {
       return '';
     }
     return this.isEnterprise ? `v${this.version.slice(0, this.version.indexOf('+'))}` : `v${this.version}`;
+  }
+
+  /* License Features */
+  get hasPerfReplication() {
+    return this.licenseFeatures.includes('Performance Replication');
+  }
+
+  get hasDRReplication() {
+    return this.licenseFeatures.includes('DR Replication');
+  }
+
+  get hasSentinel() {
+    return this.licenseFeatures.includes('Sentinel');
+  }
+
+  get hasNamespaces() {
+    return this.licenseFeatures.includes('Namespaces');
+  }
+
+  get hasControlGroups() {
+    return this.licenseFeatures.includes('Control Groups');
+  }
+
+  get hasSecretsSync() {
+    return this.licenseFeatures.includes('Secrets Sync');
+  }
+
+  /* Activated Features */
+  get secretsSyncIsActivated() {
+    return this.activatedFeaturesFeatures.includes('secrets-sync');
   }
 
   @task({ drop: true })
@@ -76,16 +82,31 @@ export default class VersionService extends Service {
   }
 
   @keepLatestTask
-  *getFeatures() {
-    if (this.features?.length || this.isCommunity) {
+  *getLicenseFeatures() {
+    if (this.licenseFeatures?.length || this.isCommunity) {
       return;
     }
     try {
       const response = yield this.store.adapterFor('cluster').features();
-      this.features = response.features;
+      this.licenseFeatures = response.features;
       return;
     } catch (err) {
       // if we fail here, we're likely in DR Secondary mode and don't need to worry about it
+    }
+  }
+
+  @keepLatestTask
+  *getActivatedFeatures() {
+    // Response could change between user sessions so fire off endpoint without checking if activated features are already set.
+    try {
+      const response = yield this.store
+        .adapterFor('application')
+        .ajax('/v1/sys/activation-flags', 'GET', { unauthenticated: true, namespace: null });
+      this.activatedFeatures = response.data?.activated;
+      return;
+    } catch (error) {
+      if (DEBUG) console.error(error); // eslint-disable-line no-console
+      return [];
     }
   }
 
@@ -97,7 +118,11 @@ export default class VersionService extends Service {
     return this.getType.perform();
   }
 
-  fetchFeatures() {
-    return this.getFeatures.perform();
+  fetchLicenseFeatures() {
+    return this.getLicenseFeatures.perform();
+  }
+
+  fetchActivatedFeatures() {
+    return this.getActivatedFeatures.perform();
   }
 }

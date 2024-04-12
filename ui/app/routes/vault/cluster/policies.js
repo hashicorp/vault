@@ -13,7 +13,7 @@ export default Route.extend(ClusterRoute, {
   version: service(),
 
   beforeModel() {
-    return this.version.fetchFeatures().then(() => {
+    return this.version.fetchLicenseFeatures().then(() => {
       return this._super(...arguments);
     });
   },
