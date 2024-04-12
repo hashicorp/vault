@@ -25,9 +25,14 @@ The following sections describe common solutions and processes for protecting se
 
 ### Data encryption with Vault Transit
 
-Typically, data encryption is the initial solution for protecting secrets. While data encryption is a good starting point, it can be a complex and expensive solution to implement on your own.
+Encrypting sensitive data is an obvious solution for protecting sensitive data.
+But independently implementing robust data encryption can be complex and
+expensive. The Vault transit plugin encrypts data, returns the resulting
+ciphertext, and manages the associated encryption keys. Your application only
+ever persists the ciphertext and never deals directly with the encryption key.
 
-That's where Vault's transit secrets engine can be helpful. Vault can encrypt your sensitive data and provide you with the resulting ciphertext. You can then store this ciphertext, and rely on Vault to manage the encryption keys. The following diagram illustrates a credit card number going into the transit system, and returning as encrypted data.
+For example, the following diagram shows a credit card number going into the
+transit system and returning to persistent storage as encrypted data.
 
 <ImageConfig hideBorder>
 
@@ -35,11 +40,18 @@ That's where Vault's transit secrets engine can be helpful. Vault can encrypt yo
 
 </ImageConfig>
 
-However, there is a tradeoff associated with this approach. The ciphertext is often much longer than the original data. Additionally, it may contain characters not allowed in the original data, which can cause your system to reject the encrypted data. As a result, you may need to modify your system to accept the ciphertext. These modifications could involve changing the database schema or adjusting the data validation system, among other possible changes.
+The tradeoff with encryption is that the ciphertext is often much longer than
+the original data. Additionally, the ciphertext can contain characters that
+are not allowed in the original data, which may cause your system to reject the
+encrypted data. As a result, you may modify your database schema or adjust your
+data validation system to avoid rejecting the encrypted data.
 
-### Traditional tokenization solution
+## Tokenize sensitive data
 
-Tokenization is another commonly employed method by companies to safeguard sensitive information. It involves substituting sensitive data with a randomly generated token through a one-way cryptographic hash function. A secret management system stores the token in an external database, while  maintaining a mapping between the original data and the token.
+Tokenization safeguards sensitive information by randomly generating a token
+with a one-way cryptographic hash function. Rather than storing the data
+directly, the system saves the token to persistent storage and maintains a
+mapping between the original data and the token.
 
 <ImageConfig hideBorder>
 
@@ -47,25 +59,45 @@ Tokenization is another commonly employed method by companies to safeguard sensi
 
 </ImageConfig>
 
-Effective tokenization, combined with a robust random number generator, ensures protected data security regardless of location. However, tokenization may retain the length of the data but not necessarily its exact format. Consequently, format checkers might reject the tokenized value as "invalid data," preventing its acceptance by the system for use in transactions.
+Combining effective tokenization and a robust random number generator ensures
+protected data security regardless of where the data lives. However, even if
+tokenization hides the format of the data, it can be a leaky abstraction if the
+final token ends up the same length of the original data. Additionally, when the
+token length matches the original length, format checkers may not realize the
+data is tokenized and could reject the tokenized value as "invalid data".
 
-Another challenge arises as the number of tokenized values stored increases, leading to the expansion of the hash table. This scalability issue can be problematic. Moreover, performance becomes a critical concern, as it is necessary to balance the speed of hash searches while maintaining cryptographic data security.
+Tokenization also presents scalability challenges because the hash table expands
+any time the system stores a new tokenized value. A rapidly expanding hash table
+affects storage and performance as the speed of hash searches declines.
 
-Considering these challenges, implementing a scalable tokenization solution on your own is a complex task. Proper protection of the hash table is crucial for ensuring its integrity and security.
+Maintaining cryptographic data security with tokenization is a complex task that
+requires protection of the tokenized data **and** the hash table to ensure data
+integrity and security.
 
-## Vault Transform secrets engine
+## Obscure sensitive data with Vault transform
 
-Vault's Transform secrets engine is our recommended solution for protecting secrets outside Vault. The Transform Secrets Engine offers three types of transformations: format preserving encryption, data masking, and tokenization.
+<EnterpriseAlert>
 
-<Note>
+  The Vault transform plugin requires a Vault Enterprise license with Advanced
+  Data Protection (ADP).
 
-Vault Transform secret engine is available with Vault Enterprise and the Advanced Data Protection (ADP) module license.
+</EnterpriseAlert>
 
-</Note>
+We recommend using the Vault transform plugin for securing external, sensitive
+data with Vault. The transform plugin supports three transformations:
+
+- format preserving encryption
+- data masking
+- tokenization
+
+In addition to providing the option of data masking, Vault transform simplifies
+some of the complexities with stand-alone encryption and tokenization.
 
 ### Format preserving encryption
 
-Format Preserving Encryption (FPE) is a two-way transformation that allows you to encrypt external application secrets while maintaining the input's original data format and length. The following example shows that Vault transforms the credit card number into an encoded ciphertext that follows a similar structure.
+Format preserving encryption (FPE) is a two-way transformation that encrypts
+external data while maintaining the original format and length. For example,
+transforming a credit card number to an encoded ciphertext made of 16 numbers.
 
 <ImageConfig hideBorder>
 
@@ -73,29 +105,62 @@ Format Preserving Encryption (FPE) is a two-way transformation that allows you t
 
 </ImageConfig>
 
-Maintaining a similar data structure for encoded sensitive data allows for flexible storage without requiring extensive database changes. For instance, consider a scenario with a substantial customer database containing billing information that requires protection. By ensuring that the encoded ciphertext maintains a similar format, you can store the ciphertext back into your original systems with minimal changes to the database. 
+Unlike stand-alone encryption, FPE maintains the original length and data
+structure for encoded data so the transformed data works with your existing
+database schema and validation systems. And, unlike tokenization, FPE preserves
+the original structure without the risk of leaky abstraction.
 
-FPE, in contrast to conventional tokenization methods, produces encrypted text that preserves the original data's structure and format while ensuring the security of the encoded values. By utilizing FPE in Vault, users can create custom transformation templates using regular expressions. FPE enables users to specify the values they wish to transform and enforces a schema on the encoded value. In addition, there are pre-existing templates, such as those for credit card numbers and US social security numbers, readily available to help you get started quickly.
+<Note title="FPE is secure">
 
-To ensure the security of the encoded ciphertexts, Vault utilizes the [FF3-1](https://csrc.nist.gov/publications/detail/sp/800-38g/rev-1/draft) encryption algorithm vetted by the National Institute of Standards and Technology (NIST). The FF3-1 algorithm is updated and tested to protect against specific types of attacks and potential future threats from future supercomputers.
+  Vault uses
+  the [FF3-1](https://csrc.nist.gov/publications/detail/sp/800-38g/rev-1/draft) algorithm
+  to ensure the security of the encoded ciphertexts. The National Institute of
+  Standards and Technology (NIST) vets, updates, and tests the FF3-1 algorithm
+  to protect against specific types of attacks and potential future threats from
+  supercomputers.
 
-FPE transformation is stateless, meaning that Vault does not store the protected secret; rather it protects only the encryption key material necessary to decrypt the secret's ciphertext. Storing only the necessary material to decrypt ensures maximum performance for encoding and decoding operations while also minimizing the possibility of exposure of that secret.
+</Note>
 
-#### Learn more about transform
+In addition to providing built-in transformation templates for common data like
+credit card numbers and US social security numbers, format preserving encryptions
+support custom transformation templates. You can use regular expressions to
+specify the values you want to transform and enforce a schema on the encoded
+value.
 
-- [Transform secrets engine tutorial](/vault/tutorials/adp/transform)
-- [Encrypting data with Transform secrets engine](/vault/tutorials/adp/transform-code-example)
-- [Transform secrets engine API](/vault/api-docs/secret/transform)
+FPE transformation is also stateless, which means that Vault does not store the
+protected secret. Instead, Vault protects the encryption key needed to decrypt
+the ciphertext. By only storing the information needed to decrypt the
+ciphertext, Vault provides maximum performance for encoding and decoding
+operations while also minimizing exposure risk for the data.
+
 
 ### Data masking
 
-Data masking is a one-way transformation that performs the replacement of matched characters on the input value with a desired character. This form of transformation is non-reversible and thus does not support retrieving the original value back using the decode operation.
+Data masking is a one-way transformation that replaces characters on the input
+value with a predefined translation character.
 
-Utilize data masking when showing or printing sensitive data without full readability. For instance, online banking systems commonly mask users' account numbers to prevent potential security breaches by bad actors who might be observing the screen, unbeknownst to the account owner.
+<Warning title="Use with caution">
+
+  Masking is non-reversible. We do not recommend masking for situations where
+  you need to retrieve and decode the original value.
+
+</Warning>
+
+Data masking is a good solution when you need to show or print sensitive data
+without full readability. For example, masking a a bank account number in an
+online banking portal to prevent potential security breaches from bad actors who
+might be observing the screen.
 
 ### Tokenization
 
-Similar to Format Preserving Encryption, the tokenization transformation is a two-way transformation that allows you to encode secrets as random tokens and decode tokens back to their original plaintext. In the following example, Vault transforms the credit card number into a token with no algorithmic relationship to the original value. Unlike Format Preserving Encryption, the token does not retain the format of the original input. Because the token is entirely random, it satisfies the PCI-DSS requirement for data irreversibility.
+Unlike standalone tokenization, tokenization with Vault transform is a two-way,
+random encoding that satisfies the PCI-DSS requirement for data irreversibility
+while still allowing you to decode tokens back to their original plaintext.
+
+To support token decoding, Vault secures a cryptographic mapping of tokens and
+plaintext values in internal storage. Even if an attacker steals the underlying
+transformation key and mapping values from Vault, tokenization of the data
+prevents the attacker from recovering the original plaintext.
 
 <ImageConfig hideBorder>
 
@@ -103,24 +168,64 @@ Similar to Format Preserving Encryption, the tokenization transformation is a tw
 
 </ImageConfig>
 
-Vault protects a cryptographic mapping of tokens and plaintext values in its internal storage. The tokenization transform prevents attackers from recovering the plaintext, even if they steal the underlying transformation key and mapping values from Vault.
 
-Since tokenization is stateful, the encode operation must perform writes to storage on the primary node. As a result, the primary node's storage performance limits the scalability of the encode operation. This differs from Transit encryption and FPE where the encode operation does not require write to storage and can be horizontally scaled using performance standby nodes.
 
-By default, Vault stores the cryptographic mapping of tokens within its internal storage. For high-performance use cases, we recommend that you configure Vault to store this mapping in an external database. Users often prefer external stores because they can achieve a much higher performance scale and reduce the load on Vault's internal storage. Vault currently supports the following databases: PostgreSQL, MySQL, and MSSQL. For more information on external storage, visit the [Tokenization transform storage](/vault/docs/secrets/transform/tokenization#storage) documentation. 
+Vault transform creates a new key for each tokenization transformation, which
+helps ensure a strong cryptographic distinction between different tokenization
+use cases. For example, a credit card processor may want to distinguish between
+the same credit card number used by different merchants without having to decode
+the token.
 
-Similar to Transit encryption and FPE, tokenization requires keys and their management. Vault creates a new key for each tokenization transformation. This allows you to ensure a strong cryptographic distinction between different tokenization use cases. For example, a credit card processor might have different merchants for which it would like to tokenize credit card numbers, such that there is a strong cryptographic distinction between even the same credit card number used by different merchants. 
+Tokenization transform also supports automatic key rotation based on a
+configurable time interval and minimum key version. Each configured tokenization
+transformation keeps a set of versioned keys. When a key rotates, older key
+versions, within the configured age limit, are still available for decoding
+tokens generated in the past. Vault cannot decode generated tokens with keys
+below the minimum key version.
 
-Tokenization transform supports automatic key rotation based on a user-defined time interval. Each configured tokenization transformation keeps a set of versioned keys, such that when a key rotates, older key versions are still available for decoding tokens generated in the past. You can also specify the minimum key version Vault can use to decode value. Vault cannot decode generated tokens with keys below the minimum key version.
+<Highlight title="Convergent tokenization">
 
-#### Convergent tokenization
+  By default, tokenization produces a unique token for every encode operation.
+  Vault transform supports **convergent tokenization**, which lets you use the
+  same encoded value for a given input.
 
-By default, tokenization transformation produces a unique token for every encode operation. The Vault tokenization solution also supports convergent tokenization, which allows you to have the same encoded value for a given input so that you can query your database to count the number of entries for a given token.
+  Convergent tokenization lets you perform statistical analysis of the tokens
+  in your system **without decoding the token**. For example, counting the
+  entries for a given token, querying relationships between a token and other
+  fields in your database, and relating information that is tokenized across
+  multiple systems.
 
-Convergent tokenization is useful when you want to do statistical analysis of the tokens as they relate to some other field in a database (without decoding the token), or if you need to tokenize in two different systems but be able to relate the results.
+</Highlight>
 
-#### Learn more about tokenization
+### Performance considerations with Vault transform
 
+Tokenization transformation is stateful, which means the encode operation must
+perform writes to storage on the primary node of your Vault cluster. As a
+result, any storage performance limits on the primary node also limits
+scalability of the encode operation.
+  
+In comparison, neither Vault transit encryption nor FPE transformation write to
+storage, and both can be horizontally scaled using performance standby nodes.
+
+For high-performance use cases, we recommend that you configure Vault to store
+the token mapping in an external database. External stores can achieve a much
+higher performance scale and reduce the load on the internal storage for your
+Vault installation.
+
+Vault currently supports the following external storage systems:
+
+- PostgreSQL
+- MySQL
+- MSSQL.
+
+For more information on external storage, review the
+[Tokenization transform storage](/vault/docs/secrets/transform/tokenization#storage)
+documentation.
+
+### Learn more about Vault transform
+
+- [Transform secrets engine tutorial](/vault/tutorials/adp/transform)
 - [Transform tokenization overview](/vault/docs/secrets/transform/tokenization)
-- [Tokenize data with Transform secrets engine](/vault/tutorials/adp/tokenization)
+- [Encrypt data with Transform tutorial](/vault/tutorials/adp/transform-code-example)
+- [Tokenize data with Transform tutorial](/vault/tutorials/adp/tokenization)
 - [Transform secrets engine API](/vault/api-docs/secret/transform)
