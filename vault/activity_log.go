@@ -1172,6 +1172,32 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) e
 	return nil
 }
 
+func (a *ActivityLog) createRegenerationIntentLog(ctx context.Context, now time.Time) (*ActivityIntentLog, error) {
+	intentLog := &ActivityIntentLog{}
+	segments, err := a.availableLogs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching available logs: %w", err)
+	}
+
+	for i, segment := range segments {
+		if timeutil.IsCurrentMonth(segment, now) {
+			continue
+		}
+
+		intentLog.PreviousMonth = segment.Unix()
+		if i > 0 {
+			intentLog.NextMonth = segments[i-1].Unix()
+			break
+		}
+	}
+
+	if intentLog.NextMonth == 0 || intentLog.PreviousMonth == 0 {
+		return nil, fmt.Errorf("insufficient data to create a regeneration intent log")
+	}
+
+	return intentLog, nil
+}
+
 // stopActivityLogLocked removes the ActivityLog from Core
 // and frees any resources.
 // this function should be called with activityLogLock

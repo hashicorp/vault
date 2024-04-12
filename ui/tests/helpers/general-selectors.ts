@@ -15,6 +15,8 @@ export const GENERAL = {
   icon: (name: string) => `[data-test-icon="${name}"]`,
   tab: (name: string) => `[data-test-tab="${name}"]`,
   secretTab: (name: string) => `[data-test-secret-list-tab="${name}"]`,
+  flashMessage: '[data-test-flash-message]',
+  latestFlashContent: '[data-test-flash-message]:last-of-type [data-test-flash-message-body]',
 
   filter: (name: string) => `[data-test-filter="${name}"]`,
   filterInput: '[data-test-filter-input]',
