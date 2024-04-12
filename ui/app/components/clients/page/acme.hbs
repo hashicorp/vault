@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-{{#if this.isDateRange}}
+{{#if (and this.isDateRange this.hasMonthlyData)}}
   <Clients::ChartContainer
     @title={{this.title}}
     @description={{this.description}}
@@ -17,7 +17,6 @@
         @subText="The total number of ACME requests made to Vault during this time period."
         @value={{this.totalUsageCounts.acme_clients}}
         @size="l"
-        data-test-total-acme-clients
       />
     </:subTitle>
 
@@ -30,7 +29,6 @@
             @value={{avg}}
             @size="m"
             class="data-details-top has-top-padding-l"
-            data-test-average-acme-clients
           />
         {{/if}}
       {{/let}}
@@ -80,19 +78,6 @@
         @chartHeight={{200}}
       />
     </:chart>
-
-    <:emptyState>
-      <EmptyState
-        @title="No new clients"
-        @subTitle="There is no new client data available for this {{if
-          this.countsController.mountPath
-          'auth method'
-          'namespace'
-        }} in this date range."
-        @bottomBorder={{true}}
-        class="is-shadowless"
-      />
-    </:emptyState>
   </Clients::ChartContainer>
 {{else}}
   <div class="chart-wrapper" data-test-usage-stats>

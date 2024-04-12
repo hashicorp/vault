@@ -16,6 +16,7 @@ export const CLIENT_COUNT = {
     mountPaths: '[data-test-counts-auth-mounts]',
     startDiscrepancy: '[data-test-counts-start-discrepancy]',
   },
+  statText: (label: string) => `[data-test-stat-text="${label}"]`,
   tokenTab: {
     entity: '[data-test-monthly-new-entity]',
     nonentity: '[data-test-monthly-new-nonentity]',
@@ -28,7 +29,7 @@ export const CLIENT_COUNT = {
   charts: {
     chart: (title: string) => `[data-test-chart="${title}"]`, // newer lineal charts
     statTextValue: (label: string) =>
-      label ? `[data-test-stat-text-container="${label}"] .stat-value` : '[data-test-stat-text-container]',
+      label ? `[data-test-stat-text="${label}"] .stat-value` : '[data-test-stat-text]',
     legend: '[data-test-chart-container-legend]',
     legendLabel: (nth: number) => `.legend-label:nth-child(${nth * 2})`, // nth * 2 accounts for dots in legend
     timestamp: '[data-test-chart-container-timestamp]',
