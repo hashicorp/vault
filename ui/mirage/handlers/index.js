@@ -16,6 +16,7 @@ import oidcConfig from './oidc-config';
 import hcpLink from './hcp-link';
 import kubernetes from './kubernetes';
 import ldap from './ldap';
+import replication from './replication';
 
 export {
   base,
@@ -29,4 +30,5 @@ export {
   mfaConfig,
   mfaLogin,
   oidcConfig,
+  replication,
 };
