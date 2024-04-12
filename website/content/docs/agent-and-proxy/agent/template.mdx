@@ -271,7 +271,8 @@ is reached, plus or minus some jitter to ensure that many clients don't hit Vaul
 include (but are not limited to) dynamic secrets such as [database credentials](/vault/docs/secrets/databases). The 90% value
 is configurable using the `template_config` stanza value
 [lease_renewal_threshold](/vault/docs/agent-and-proxy/agent/template#lease_renewal_threshold). While KVv1 secrets are not leased,
-this also controls the fraction at which Agent will re-fetch [KV Version 1](/vault/docs/secrets/kv/kv-v1) with a defined `lease_duration`.
+this also controls the fraction at which Agent will re-fetch [KV Version 1](/vault/docs/secrets/kv/kv-v1) secrets that
+have a defined `lease_duration`.
 
 
 ### Static roles
