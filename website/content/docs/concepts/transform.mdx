@@ -1,13 +1,20 @@
 ---
 layout: docs
-page_title: Transform
+page_title: Secure external data with Vault
 description: >-
-  Solve common encryption problems with Vault transform.
+  Secure external data with Vault transit, tokenization, and transforms.
 ---
 
-# Transform secrets engine
+# Secure external data with Vault
 
-A common challenge is utilizing Vault to secure application secrets stored outside Vault. Users often store highly sensitive information such as credit card numbers, social security numbers, and other Personal Identifiable Information (PII) in databases rather than within Vault. Applications need to securely access and store PII in a way that aligns with the organization's stringent security standards while balancing accessibility and adherence to security protocols for handling sensitive information.
+Not all personally identifiable information (PII) lives in Vault. For example,
+you may need to store credit card numbers, patient IDs, or social security
+numbers in an external databases.
+
+It can be difficult to secure sensitive data outside Vault and balance the
+need for applications to access the data efficiently while adhering to
+stringent security standards and protocols. Vault helps you secure external data
+with **transit encryption**, **tokenization**, and **transforms**.
 
 Transform consists of three modes, called _transformations_. Format Preserving
 Encryption (**FPE**) for encrypting and decrypting values while retaining their
@@ -17,13 +24,10 @@ mathematically unrelated tokens.
 
 ![Transit vs Transform](/img/transit-or-transform.png)
 
-This article explores common solutions and challenges around protecting application secrets, then details how you can use the Vault Transform Secrets Engine to address these challenges.
 
-## Common solutions and their challenges
 
-The following sections describe common solutions and processes for protecting sensitive data and the challenges around using these solutions. You'll learn the information you need to decide on the appropriate solution for protecting secrets stored outside Vault, and why the Vault Transform secrets engine is a recommended solution.
 
-### Data encryption with Vault Transit
+## Encrypt sensitive data with Vault transit
 
 Encrypting sensitive data is an obvious solution for protecting sensitive data.
 But independently implementing robust data encryption can be complex and
