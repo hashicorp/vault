@@ -3,12 +3,103 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div class="chart-wrapper" data-test-usage-stats>
-  <div class="chart-header has-bottom-margin-m">
-    <h2 class="chart-title">ACME usage</h2>
-    <p class="chart-description has-bottom-padding-m">This data can be used to understand how many ACME clients have been
-      used for the queried
-      {{if this.isDateRange "date range" "month"}}. Each ACME request is counted as one client.</p>
+{{#if this.isDateRange}}
+  <Clients::ChartContainer
+    @title={{this.title}}
+    @description={{this.description}}
+    @timestamp={{@activity.responseTimestamp}}
+    @hasChartData={{this.byMonthActivityData}}
+    class="no-legend"
+  >
+    <:subTitle>
+      <StatText
+        @label="Total ACME clients"
+        @subText="The total number of ACME requests made to Vault during this time period."
+        @value={{this.totalUsageCounts.acme_clients}}
+        @size="l"
+        data-test-total-acme-clients
+      />
+    </:subTitle>
+
+    <:stats>
+      {{#let (this.average this.byMonthActivityData "acme_clients") as |avg|}}
+        {{! intentionally hides a 0 average (0 is falsy) }}
+        {{#if avg}}
+          <StatText
+            @label="Average ACME clients per month"
+            @value={{avg}}
+            @size="m"
+            class="data-details-top has-top-padding-l"
+            data-test-average-acme-clients
+          />
+        {{/if}}
+      {{/let}}
+    </:stats>
+
+    <:chart>
+      <Clients::Charts::VerticalBarBasic
+        @chartTitle={{this.title}}
+        @data={{this.byMonthActivityData}}
+        @dataKey="acme_clients"
+        @chartHeight={{200}}
+      />
+    </:chart>
+
+    <:emptyState>
+      <EmptyState
+        @title="No monthly ACME clients"
+        @subTitle="There is no ACME client data available for this date range."
+        @bottomBorder={{true}}
+      />
+    </:emptyState>
+  </Clients::ChartContainer>
+
+  <Clients::ChartContainer
+    @title="Monthly new"
+    @description="ACME clients which interacted with Vault for the first time each month. Each bar represents the total new ACME clients for that month."
+    @timestamp={{@activity.responseTimestamp}}
+    @hasChartData={{this.byMonthNewClients}}
+    class="no-legend"
+    data-test-chart="monthly new"
+  >
+    <:stats>
+      <StatText
+        @label="Average new ACME clients per month"
+        @value={{this.average this.byMonthNewClients "acme_clients"}}
+        @size="m"
+        class="chart-subTitle has-top-padding-l"
+        data-test-chart-stat="acme"
+      />
+    </:stats>
+
+    <:chart>
+      <Clients::Charts::VerticalBarBasic
+        @chartTitle="Monthly new ACME clients"
+        @data={{this.byMonthNewClients}}
+        @dataKey="acme_clients"
+        @chartHeight={{200}}
+      />
+    </:chart>
+
+    <:emptyState>
+      <EmptyState
+        @title="No new clients"
+        @subTitle="There is no new client data available for this {{if
+          this.countsController.mountPath
+          'auth method'
+          'namespace'
+        }} in this date range."
+        @bottomBorder={{true}}
+        class="is-shadowless"
+      />
+    </:emptyState>
+  </Clients::ChartContainer>
+{{else}}
+  <div class="chart-wrapper" data-test-usage-stats>
+    <div class="chart-header has-bottom-margin-m">
+      <h2 class="chart-title">{{this.title}}</h2>
+      <p class="chart-description has-bottom-padding-m">{{this.description}}</p>
+    </div>
+    <StatText @label="Total ACME clients" @value={{this.totalUsageCounts.acme_clients}} @size="l" />
   </div>
-  <StatText @label="Total ACME clients" @value={{this.totalUsageCounts.acme_clients}} @size="l" />
-</div>
+{{/if}}
