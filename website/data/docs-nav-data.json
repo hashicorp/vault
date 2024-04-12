@@ -222,6 +222,10 @@
         "path": "concepts/storage"
       },
       {
+        "title": "Cloud access management",
+        "path": "concepts/cloud-access-management"
+      },
+      {
         "title": "Integrated Storage",
         "routes": [
           {
@@ -2210,6 +2214,10 @@
           {
             "title": "Configuration",
             "path": "platform/mssql/configuration"
+          },
+          {
+            "title": "Key Rotation",
+            "path": "platform/mssql/rotation"
           },
           {
             "title": "Upgrading",

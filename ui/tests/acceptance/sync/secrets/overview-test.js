@@ -9,7 +9,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
 import authPage from 'vault/tests/pages/auth';
-import { click, visit, currentURL } from '@ember/test-helpers';
+import { click, visit, currentURL, waitFor } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 import { runCmd } from 'vault/tests/helpers/commands';
 
@@ -26,24 +26,45 @@ module('Acceptance | enterprise | sync | overview', function (hooks) {
     await authPage.login();
   });
 
-  module('when feature is activated and has pre-existing destinations', function (hooks) {
+  module('when feature is activated', function (hooks) {
     hooks.beforeEach(async function () {
       syncScenario(this.server);
     });
 
-    test('it should transition to correct routes when performing actions', async function (assert) {
-      await click(ts.navLink('Secrets Sync'));
-      await click(ts.destinations.list.create);
-      await click(ts.createCancel);
-      await click(ts.overviewCard.actionLink('Create new'));
-      await click(ts.createCancel);
-      await click(ts.overview.table.actionToggle(0));
-      await click(ts.overview.table.action('sync'));
-      await click(ts.destinations.sync.cancel);
-      await click(ts.breadcrumbLink('Secrets Sync'));
-      await click(ts.overview.table.actionToggle(0));
-      await click(ts.overview.table.action('details'));
-      assert.dom(ts.tab('Secrets')).hasClass('active', 'Navigates to secrets view for destination');
+    test('it fetches destinations and associations', async function (assert) {
+      assert.expect(2);
+
+      this.server.get('/sys/sync/destinations', () => {
+        assert.true(true, 'destinations is called');
+      });
+      this.server.get('/sys/sync/associations', () => {
+        assert.true(true, 'associations is called');
+      });
+
+      await visit('/vault/sync/secrets/overview');
+    });
+
+    module('when there are pre-existing destinations', function (hooks) {
+      hooks.beforeEach(async function () {
+        syncScenario(this.server);
+      });
+
+      test('it should transition to correct routes when performing actions', async function (assert) {
+        await click(ts.navLink('Secrets Sync'));
+        await click(ts.destinations.list.create);
+        await click(ts.createCancel);
+        await click(ts.overviewCard.actionLink('Create new'));
+        await click(ts.createCancel);
+        await waitFor(ts.overview.table.actionToggle(0));
+        await click(ts.overview.table.actionToggle(0));
+        await click(ts.overview.table.action('sync'));
+        await click(ts.destinations.sync.cancel);
+        await click(ts.breadcrumbLink('Secrets Sync'));
+        await waitFor(ts.overview.table.actionToggle(0));
+        await click(ts.overview.table.actionToggle(0));
+        await click(ts.overview.table.action('details'));
+        assert.dom(ts.tab('Secrets')).hasClass('active', 'Navigates to secrets view for destination');
+      });
     });
   });
 
@@ -74,9 +95,19 @@ module('Acceptance | enterprise | sync | overview', function (hooks) {
         wasActivatePOSTCalled = true;
         return {};
       });
+    });
 
-      // override mirage to simulate no pre-existing destinations
-      this.server.get('/sys/sync/destinations', () => {});
+    test('it does not fetch destinations and associations', async function (assert) {
+      assert.expect(0);
+
+      this.server.get('/sys/sync/destinations', () => {
+        assert.true(false, 'destinations is not called');
+      });
+      this.server.get('/sys/sync/associations', () => {
+        assert.true(false, 'associations is not called');
+      });
+
+      await visit('/vault/sync/secrets/overview');
     });
 
     test('the activation workflow works', async function (assert) {

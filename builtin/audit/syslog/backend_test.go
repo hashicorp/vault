@@ -65,7 +65,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 			},
 			want:           audit.FormatterConfig{},
 			wantErr:        true,
-			expectedErrMsg: "audit.NewFormatterConfig: error applying options: audit.(format).validate: 'squiggly' is not a valid format: invalid parameter",
+			expectedErrMsg: "unsupported 'format': invalid configuration",
 		},
 		"invalid-hmac-accessor": {
 			config: map[string]string{
@@ -74,7 +74,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 			},
 			want:           audit.FormatterConfig{},
 			wantErr:        true,
-			expectedErrMsg: "syslog.newFormatterConfig: unable to parse 'hmac_accessor': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedErrMsg: "unable to parse 'hmac_accessor': invalid configuration",
 		},
 		"invalid-log-raw": {
 			config: map[string]string{
@@ -84,7 +84,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 			},
 			want:           audit.FormatterConfig{},
 			wantErr:        true,
-			expectedErrMsg: "syslog.newFormatterConfig: unable to parse 'log_raw': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedErrMsg: "unable to parse 'log_raw: invalid configuration",
 		},
 		"invalid-elide-bool": {
 			config: map[string]string{
@@ -95,7 +95,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 			},
 			want:           audit.FormatterConfig{},
 			wantErr:        true,
-			expectedErrMsg: "syslog.newFormatterConfig: unable to parse 'elide_list_responses': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			expectedErrMsg: "unable to parse 'elide_list_responses': invalid configuration",
 		},
 		"prefix": {
 			config: map[string]string{
@@ -170,24 +170,24 @@ func TestBackend_configureSinkNode(t *testing.T) {
 		"name-empty": {
 			name:           "",
 			wantErr:        true,
-			expectedErrMsg: "syslog.(Backend).configureSinkNode: name is required: invalid parameter",
+			expectedErrMsg: "name is required: invalid internal parameter",
 		},
 		"name-whitespace": {
 			name:           "   ",
 			wantErr:        true,
-			expectedErrMsg: "syslog.(Backend).configureSinkNode: name is required: invalid parameter",
+			expectedErrMsg: "name is required: invalid internal parameter",
 		},
 		"format-empty": {
 			name:           "foo",
 			format:         "",
 			wantErr:        true,
-			expectedErrMsg: "syslog.(Backend).configureSinkNode: format is required: invalid parameter",
+			expectedErrMsg: "format is required: invalid internal parameter",
 		},
 		"format-whitespace": {
 			name:           "foo",
 			format:         "   ",
 			wantErr:        true,
-			expectedErrMsg: "syslog.(Backend).configureSinkNode: format is required: invalid parameter",
+			expectedErrMsg: "format is required: invalid internal parameter",
 		},
 		"happy": {
 			name:         "foo",
@@ -247,14 +247,14 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				SaltConfig: nil,
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "syslog.Factory: nil salt config",
+			expectedErrorMessage: "nil salt config: invalid internal parameter",
 		},
 		"nil-salt-view": {
 			backendConfig: &audit.BackendConfig{
 				SaltConfig: &salt.Config{},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "syslog.Factory: nil salt view",
+			expectedErrorMessage: "nil salt view: invalid internal parameter",
 		},
 		"non-fallback-device-with-filter": {
 			backendConfig: &audit.BackendConfig{
@@ -281,7 +281,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 				},
 			},
 			isErrorExpected:      true,
-			expectedErrorMessage: "syslog.Factory: cannot configure a fallback device with a filter: invalid parameter",
+			expectedErrorMessage: "cannot configure a fallback device with a filter: invalid configuration",
 		},
 	}
 
