@@ -5,6 +5,7 @@
     "ember-engine"
   ],
   "dependencies": {
+    "date-fns": "*",
     "ember-cli-babel": "*",
     "ember-cli-htmlbars": "*",
     "ember-cli-typescript": "*",
