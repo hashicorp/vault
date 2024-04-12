@@ -16,6 +16,7 @@ import { dateDropdownSelect } from 'vault/tests/helpers/clients/client-count-hel
 import { selectChoose } from 'ember-power-select/test-support/helpers';
 import timestamp from 'core/utils/timestamp';
 import sinon from 'sinon';
+import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 const START_TIME = getUnixTime(LICENSE_START);
 const END_TIME = getUnixTime(STATIC_NOW);
@@ -30,6 +31,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
   hooks.beforeEach(async function () {
     clientsHandler(this.server);
+    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.store = this.owner.lookup('service:store');
     const activityQuery = {
       start_time: { timestamp: START_TIME },

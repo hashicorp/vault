@@ -29,8 +29,9 @@ Router.map(function () {
       this.route('clients', function () {
         this.route('counts', function () {
           this.route('overview');
-          this.route('sync');
           this.route('token');
+          this.route('sync');
+          this.route('acme');
         });
         this.route('config');
         this.route('edit');
