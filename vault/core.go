@@ -4460,12 +4460,22 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 	return raftBackend.GetAutopilotServerState(ctx)
 }
 
-// Events returns a reference to the common event bus for sending and subscribint to events.
+// Events returns a reference to the common event bus for sending and subscribing to events.
 func (c *Core) Events() *eventbus.EventBus {
 	return c.events
 }
 
 func (c *Core) SetSeals(ctx context.Context, grabLock bool, barrierSeal Seal, secureRandomReader io.Reader, shouldRewrap bool) error {
+	return c.setSeals(ctx, grabLock, barrierSeal, secureRandomReader, shouldRewrap, true)
+}
+
+// SetSealsOnPerfStandby sets the seal state within the core object without attempting to persist it to disk,
+// normally SetSeals is what you should be calling.
+func (c *Core) SetSealsOnPerfStandby(ctx context.Context, grabLock bool, barrierSeal Seal, secureRandomReader io.Reader) error {
+	return c.setSeals(ctx, grabLock, barrierSeal, secureRandomReader, false, false)
+}
+
+func (c *Core) setSeals(ctx context.Context, grabLock bool, barrierSeal Seal, secureRandomReader io.Reader, shouldRewrap bool, performWrite bool) error {
 	if grabLock {
 		ctx, _ = c.GetContext()
 
@@ -4493,14 +4503,16 @@ func (c *Core) SetSeals(ctx context.Context, grabLock bool, barrierSeal Seal, se
 	}
 
 	barrierConfigCopy.Type = barrierSeal.BarrierSealConfigType().String()
-	err = barrierSeal.SetBarrierConfig(ctx, barrierConfigCopy)
-	if err != nil {
-		return fmt.Errorf("error setting barrier config for new seal: %s", err)
-	}
+	if performWrite {
+		err = barrierSeal.SetBarrierConfig(ctx, barrierConfigCopy)
+		if err != nil {
+			return fmt.Errorf("error setting barrier config for new seal: %s", err)
+		}
 
-	err = barrierSeal.SetStoredKeys(ctx, rootKey)
-	if err != nil {
-		return fmt.Errorf("error setting root key in new seal: %s", err)
+		err = barrierSeal.SetStoredKeys(ctx, rootKey)
+		if err != nil {
+			return fmt.Errorf("error setting root key in new seal: %s", err)
+		}
 	}
 
 	c.seal = barrierSeal
