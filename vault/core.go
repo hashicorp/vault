@@ -2460,6 +2460,12 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	}
 
 	if !c.IsDRSecondary() {
+		if !c.perfStandby {
+			if err := c.setupCensusManager(); err != nil {
+				logger.Error("failed to instantiate the license reporting agent", "error", err)
+			}
+		}
+
 		// not waiting on wg to avoid changing existing behavior
 		var wg sync.WaitGroup
 		if err := c.setupActivityLog(ctx, &wg); err != nil {
@@ -2467,12 +2473,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		}
 
 		if !c.perfStandby {
-			if err := c.setupCensusManager(); err != nil {
-				logger.Error("failed to instantiate the license reporting agent", "error", err)
-			}
-
-			c.StartCensusReports(ctx)
-
 			c.StartManualCensusSnapshots()
 		}
 
