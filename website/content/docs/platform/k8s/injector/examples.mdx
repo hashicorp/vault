@@ -385,3 +385,36 @@ spec:
 
 [pkiCert]: https://github.com/hashicorp/consul-template/blob/main/docs/templating-language.md#pkicert
 [writeToFile]: https://github.com/hashicorp/consul-template/blob/main/docs/templating-language.md#writeToFile
+
+## Cross namespace secret sharing ((#cross-namespace))
+
+1. Configure Vault for secret sharing across namespaces as described in the
+   [How-to configure cross namespace access in Vault Enterprise][cross-namespace]
+   Knowledge base article.
+1. Use the following Pod annotations to authenticate to the Kubernetes method in
+   the `us-west-org` namespace, and render secrets from the `us-east-org`
+   namespace into the file `/vault/secrets/marketing`
+
+```yaml
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cross-namespace
+  namespace: client-nicecorp
+  annotations:
+    vault.hashicorp.com/agent-inject: "true"
+    vault.hashicorp.com/role: "cross-namespace-demo"
+    vault.hashicorp.com/auth-path: "us-west-org/auth/kubernetes"
+    vault.hashicorp.com/agent-inject-template-marketing: |
+      {{- with secret "us-east-org/kv-marketing/campaign" -}}
+      {{ range $k, $v := .Data.data }}{{ $k }}: {{ $v }}
+      {{ end }}{{- end -}}
+spec:
+  serviceAccountName: mega-app
+  containers:
+    - name: campaign
+      image: nginx
+```
+
+[cross-namespace]: https://support.hashicorp.com/hc/en-us/articles/27093291534995-How-to-configure-cross-namespace-access-in-Vault-Enterprise
