@@ -373,7 +373,6 @@ listener "tcp" {
 		listenAddr3,
 	)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	ui, cmd := testAgentCommand(t, logger)
@@ -475,7 +474,6 @@ listener "tcp" {
 `, generateListenerAddress(t))
 
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	ui, cmd := testAgentCommand(t, logger)
@@ -588,7 +586,6 @@ auto_auth {
 
 	config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, templateConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	ui, cmd := testAgentCommand(t, logger)
@@ -793,7 +790,6 @@ auto_auth {
 
 			config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, templateConfig, exitAfterAuth)
 			configPath := makeTempFile(t, "config.hcl", config)
-			defer os.Remove(configPath)
 
 			// Start the agent
 			ui, cmd := testAgentCommand(t, logger)
@@ -919,10 +915,6 @@ func setupAppRole(t *testing.T, serverClient *api.Client) (string, string) {
 	// Write the RoleID and SecretID to temp files
 	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
 	secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
-	t.Cleanup(func() {
-		os.Remove(roleIDPath)
-		os.Remove(secretIDPath)
-	})
 
 	return roleIDPath, secretIDPath
 }
@@ -1071,7 +1063,6 @@ auto_auth {
 
 			config = fmt.Sprintf(config, roleIDPath, secretIDPath, templateConfig)
 			configPath := makeTempFile(t, "config.hcl", config)
-			defer os.Remove(configPath)
 
 			// Start the agent
 			ui, cmd := testAgentCommand(t, logger)
@@ -1248,7 +1239,6 @@ exit_after_auth = true
 
 	config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, tmpDir, tmpDir, tmpDir)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	ui, cmd := testAgentCommand(t, logger)
@@ -1483,8 +1473,7 @@ func TestAgent_Template_Retry(t *testing.T) {
 	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
 	os.Unsetenv(api.EnvVaultAddress)
 
-	methodConf, cleanup := prepAgentApproleKV(t, serverClient)
-	defer cleanup()
+	methodConf := prepAgentApproleKV(t, serverClient)
 
 	err := serverClient.Sys().TuneMount("secret", api.MountConfigInput{
 		Options: map[string]string{
@@ -1587,7 +1576,6 @@ template_config {
 `, methodConf, serverClient.Address(), retryConf, templateConfig)
 
 			configPath := makeTempFile(t, "config.hcl", config)
-			defer os.Remove(configPath)
 
 			// Start the agent
 			_, cmd := testAgentCommand(t, logger)
@@ -1667,7 +1655,7 @@ template_config {
 // such that the resulting token will have global permissions across /kv
 // and /secret mounts.  Returns the auto_auth config stanza to setup an Agent
 // to connect using approle.
-func prepAgentApproleKV(t *testing.T, client *api.Client) (string, func()) {
+func prepAgentApproleKV(t *testing.T, client *api.Client) string {
 	t.Helper()
 
 	policyAutoAuthAppRole := `
@@ -1728,11 +1716,7 @@ auto_auth {
 }
 `, roleIDFile, secretIDFile)
 
-	cleanup := func() {
-		_ = os.Remove(roleIDFile)
-		_ = os.Remove(secretIDFile)
-	}
-	return config, cleanup
+	return config
 }
 
 // TestAgent_AutoAuth_UserAgent tests that the User-Agent sent
@@ -1811,7 +1795,6 @@ api_proxy {
 %s
 `, serverClient.Address(), listenConfig, autoAuthConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Unset the environment variable so that agent picks up the right test
 	// cluster address
@@ -1907,7 +1890,6 @@ vault {
 %s
 `, serverClient.Address(), listenConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	_, cmd := testAgentCommand(t, logger)
@@ -1999,7 +1981,6 @@ vault {
 %s
 `, serverClient.Address(), listenConfig, cacheConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	_, cmd := testAgentCommand(t, logger)
@@ -2075,7 +2056,6 @@ vault {
 %s
 `, serverClient.Address(), cacheConfig, listenConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	_, cmd := testAgentCommand(t, logger)
@@ -2246,7 +2226,6 @@ vault {
 %s
 `, serverClient.Address(), retryConf, cacheConfig, listenConfig)
 			configPath := makeTempFile(t, "config.hcl", config)
-			defer os.Remove(configPath)
 
 			// Start the agent
 			_, cmd := testAgentCommand(t, logger)
@@ -2325,8 +2304,7 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
 	os.Unsetenv(api.EnvVaultAddress)
 
-	autoAuthConfig, cleanup := prepAgentApproleKV(t, serverClient)
-	defer cleanup()
+	autoAuthConfig := prepAgentApproleKV(t, serverClient)
 
 	err := serverClient.Sys().TuneMount("secret", api.MountConfigInput{
 		Options: map[string]string{
@@ -2510,7 +2488,6 @@ vault {
 `, autoAuthConfig, serverClient.Address(), listenConfig, templateConfig, template)
 
 			configPath := makeTempFile(t, "config.hcl", config)
-			defer os.Remove(configPath)
 
 			// Start the agent
 			ui, cmd := testAgentCommand(t, logger)
@@ -2625,7 +2602,6 @@ listener "tcp" {
 }
 `, listenAddr)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	ui, cmd := testAgentCommand(t, logging.NewVaultLogger(hclog.Trace))
@@ -2721,7 +2697,6 @@ cache {}
 `, serverClient.Address(), listenAddr, listenAddr2)
 
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	_, cmd := testAgentCommand(t, nil)
@@ -3077,7 +3052,6 @@ vault {
 %s
 `, serverClient.Address(), listenConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	ui, cmd := testAgentCommand(t, logger)
@@ -3270,7 +3244,6 @@ func TestAgent_DeleteAfterVersion_Rendering(t *testing.T) {
 	require.NoError(t, err)
 
 	tokenFileName := makeTempFile(t, "token-file", serverClient.Token())
-	defer os.Remove(tokenFileName)
 
 	autoAuthConfig := fmt.Sprintf(`
 auto_auth {
@@ -3304,7 +3277,6 @@ template {
 
 	config = fmt.Sprintf(config, serverClient.Address(), autoAuthConfig, templateConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	ui, cmd := testAgentCommand(t, logger)
