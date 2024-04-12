@@ -1511,7 +1511,6 @@ func TestProxy_NoAutoAuthTokenIfNotConfigured(t *testing.T) {
 
 	// Create token file
 	tokenFileName := makeTempFile(t, "token-file", serverClient.Token())
-	defer os.Remove(tokenFileName)
 
 	sinkFileName := makeTempFile(t, "sink-file", "")
 
@@ -1554,7 +1553,6 @@ vault {
 %s
 `, serverClient.Address(), apiProxyConfig, listenConfig, autoAuthConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start proxy
 	ui, cmd := testProxyCommand(t, logger)
