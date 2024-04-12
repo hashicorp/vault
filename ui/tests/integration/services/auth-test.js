@@ -304,9 +304,9 @@ module('Integration | Service | auth', function (hooks) {
     const tokenResp = TOKEN_NON_ROOT_RESPONSE();
     this.server.get('/auth/token/lookup-self', function (_, request) {
       const resp = { ...tokenResp };
-      resp.id = request.requestHeaders['x-vault-token'];
-      resp.data.id = request.requestHeaders['x-vault-token'];
-      return [200, {}, resp];
+      resp.id = request.requestHeaders['X-Vault-Token'];
+      resp.data.id = request.requestHeaders['X-Vault-Token'];
+      return resp;
     });
 
     const done = assert.async();
