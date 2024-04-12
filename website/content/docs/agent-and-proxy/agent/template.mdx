@@ -266,10 +266,13 @@ Non-renewable secrets include (but not limited to) [KV Version 2](/vault/docs/se
 
 ### Non-Renewable leased secrets
 
-If a secret or token is non-renewable but leased, Vault Agent will fetch the secret when roughly
-90% of the secrets time-to-live (TTL) is reached. Leased, non-renewable secrets include (but not limited
-to) dynamic secrets such as [database credentials](/vault/docs/secrets/databases) and [KV Version 1](/vault/docs/secrets/kv/kv-v1).
-The 90% value is configurable using the `template_config` stanza value [lease_renewal_threshold](/vault/docs/agent-and-proxy/agent/template#lease_renewal_threshold).
+If a secret or token is non-renewable but leased, Vault Agent will fetch the secret when 90% of the secrets time-to-live (TTL)
+is reached, plus or minus some jitter to ensure that many clients don't hit Vault simultaneously. Leased, non-renewable secrets
+include (but are not limited to) dynamic secrets such as [database credentials](/vault/docs/secrets/databases). The 90% value
+is configurable using the `template_config` stanza value
+[lease_renewal_threshold](/vault/docs/agent-and-proxy/agent/template#lease_renewal_threshold). While KVv1 secrets are not leased,
+this also controls the fraction at which Agent will re-fetch [KV Version 1](/vault/docs/secrets/kv/kv-v1) with a defined `lease_duration`.
+
 
 ### Static roles
 
