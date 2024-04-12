@@ -1159,7 +1159,7 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) e
 		// Check for any intent log, in the background
 		manager.computationWorkerDone = make(chan struct{})
 		go func() {
-			manager.precomputedQueryWorker(ctx)
+			manager.precomputedQueryWorker(ctx, nil)
 			close(manager.computationWorkerDone)
 		}()
 
@@ -1442,7 +1442,7 @@ func (a *ActivityLog) HandleEndOfMonth(ctx context.Context, currentTime time.Tim
 	a.fragmentLock.Unlock()
 
 	// Work on precomputed queries in background
-	go a.precomputedQueryWorker(ctx)
+	go a.precomputedQueryWorker(ctx, nil)
 
 	return nil
 }
@@ -2431,15 +2431,66 @@ func (a *ActivityLog) reportPrecomputedQueryMetrics(ctx context.Context, segment
 	}
 }
 
-var previousMonthNotFoundErr = errors.New("previous month not found")
+// goroutine to process the request in the intent log, creating precomputed queries.
+// We expect the return value won't be checked, so log errors as they occur
+// (but for unit testing having the error return should help.)
+// If the intent log that's passed into the function is non-nil, we use that
+// intent log. Otherwise, we read the intent log from storage
+func (a *ActivityLog) precomputedQueryWorker(ctx context.Context, intent *ActivityIntentLog) (err error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-// doPrecomputedQueryCreation will generate precomputed queries for the dates
-// in the given intent log. If strictEnforcement is true, then the intent log's
-// NextMonth value has to match the current segment. This should be true when
-// this function is called at the start of a new month.
-// The function returns the end timestamp of the month that the precomputed
-// queries cover.
-func (a *ActivityLog) doPrecomputedQueryCreation(ctx context.Context, intent ActivityIntentLog, strictEnforcement bool) (*time.Time, error) {
+	// Cancel the context if activity log is shut down.
+	// This will cause the next storage operation to fail.
+	a.l.RLock()
+	// doneCh is modified in some tests, so we don't want to access that member
+	// without a lock, but we don't want to hold the lock for the entire lifetime
+	// of this goroutine.  Passing the channel to the goroutine works here because
+	// no tests depend on us accessing the new doneCh after modifying the field.
+	go func(done chan struct{}) {
+		select {
+		case <-done:
+			cancel()
+		case <-ctx.Done():
+			break
+		}
+	}(a.doneCh)
+	a.l.RUnlock()
+
+	strictEnforcement := intent == nil
+	shouldCleanupIntentLog := false
+	if intent == nil {
+
+		// Load the intent log
+		rawIntentLog, err := a.view.Get(ctx, activityIntentLogKey)
+		if err != nil {
+			a.logger.Warn("could not load intent log", "error", err)
+			return err
+		}
+		if rawIntentLog == nil {
+			a.logger.Trace("no intent log found")
+			return err
+		}
+		err = json.Unmarshal(rawIntentLog.Value, intent)
+		if err != nil {
+			a.logger.Warn("could not parse intent log", "error", err)
+			return err
+		}
+		shouldCleanupIntentLog = true
+	}
+
+	cleanupIntentLog := func() {
+		if !shouldCleanupIntentLog {
+			return
+		}
+		// delete the intent log
+		// this should happen if the precomputed queries were generated
+		// successfully (i.e. err is nil) or if there's no data for the previous
+		// month.
+		// It should not happen in the general error case
+		a.view.Delete(ctx, activityIntentLogKey)
+	}
+
 	// currentMonth could change (from another month end) after we release the lock.
 	// But, it's not critical to correct operation; this is a check for intent logs that are
 	// too old, and startTimestamp should only go forward (unless it is zero.)
@@ -2453,25 +2504,27 @@ func (a *ActivityLog) doPrecomputedQueryCreation(ctx context.Context, intent Act
 	if strictEnforcement && currentMonth != 0 && intent.NextMonth != currentMonth {
 		a.logger.Warn("intent log does not match current segment",
 			"intent", intent.NextMonth, "current", currentMonth)
-		return nil, errors.New("intent log is too far in the past")
+		return errors.New("intent log is too far in the past")
 	}
 
 	lastMonth := intent.PreviousMonth
-	lastMonthTime := time.Unix(lastMonth, 0).UTC()
-	a.logger.Info("computing queries", "month", lastMonthTime)
+	lastMonthTime := time.Unix(lastMonth, 0)
+	a.logger.Info("computing queries", "month", lastMonthTime.UTC())
 
 	times, err := a.availableLogs(ctx, lastMonthTime)
 	if err != nil {
 		a.logger.Warn("could not list available logs", "error", err)
-		return nil, err
+		return err
 	}
 	if len(times) == 0 {
 		a.logger.Warn("no months in storage")
-		return nil, previousMonthNotFoundErr
+		cleanupIntentLog()
+		return errors.New("previous month not found")
 	}
 	if times[0].Unix() != lastMonth {
 		a.logger.Warn("last month not in storage", "latest", times[0].Unix())
-		return nil, previousMonthNotFoundErr
+		cleanupIntentLog()
+		return errors.New("previous month not found")
 	}
 
 	byNamespace := make(map[string]*processByNamespace)
@@ -2500,69 +2553,14 @@ func (a *ActivityLog) doPrecomputedQueryCreation(ctx context.Context, intent Act
 		}
 		reader, err := a.NewSegmentFileReader(ctx, startTime)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		err = a.segmentToPrecomputedQuery(ctx, startTime, reader, opts)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
-	return &endTime, nil
-}
-
-// goroutine to process the request in the intent log, creating precomputed queries.
-// We expect the return value won't be checked, so log errors as they occur
-// (but for unit testing having the error return should help.)
-func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	// Cancel the context if activity log is shut down.
-	// This will cause the next storage operation to fail.
-	a.l.RLock()
-	// doneCh is modified in some tests, so we don't want to access that member
-	// without a lock, but we don't want to hold the lock for the entire lifetime
-	// of this goroutine.  Passing the channel to the goroutine works here because
-	// no tests depend on us accessing the new doneCh after modifying the field.
-	go func(done chan struct{}) {
-		select {
-		case <-done:
-			cancel()
-		case <-ctx.Done():
-			break
-		}
-	}(a.doneCh)
-	a.l.RUnlock()
-
-	// Load the intent log
-	rawIntentLog, err := a.view.Get(ctx, activityIntentLogKey)
-	if err != nil {
-		a.logger.Warn("could not load intent log", "error", err)
-		return err
-	}
-	if rawIntentLog == nil {
-		a.logger.Trace("no intent log found")
-		return err
-	}
-	var intent ActivityIntentLog
-	err = json.Unmarshal(rawIntentLog.Value, &intent)
-	if err != nil {
-		a.logger.Warn("could not parse intent log", "error", err)
-		return err
-	}
-
-	endTime, err := a.doPrecomputedQueryCreation(ctx, intent, true)
-	if err == nil || errors.Is(err, previousMonthNotFoundErr) {
-		// delete the intent log
-		// this should happen if the precomputed queries were generated
-		// successfully (i.e. err is nil) or if there's no data for the previous
-		// month.
-		// It should not happen in the general error case
-		a.view.Delete(ctx, activityIntentLogKey)
-	}
-	if err != nil {
-		return err
-	}
+	cleanupIntentLog()
 
 	a.logger.Info("finished computing queries", "month", endTime)
 

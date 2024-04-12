@@ -71,17 +71,10 @@ func TestActivityLog_doPrecomputedQueryCreation(t *testing.T) {
 
 	testCases := []struct {
 		name              string
-		wantErr           bool
 		generateUpToMonth int
 		strictEnforcement bool
 		wantClients       int
 	}{
-		{
-			name:              "strict enforcement fails",
-			wantErr:           true,
-			generateUpToMonth: 4,
-			strictEnforcement: true,
-		},
 		{
 			name:              "only 4 months ago",
 			generateUpToMonth: 4,
@@ -112,11 +105,7 @@ func TestActivityLog_doPrecomputedQueryCreation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			generateUpTo := times[tc.generateUpToMonth]
 			nextMonth := timeutil.StartOfNextMonth(generateUpTo)
-			_, err = a.doPrecomputedQueryCreation(context.Background(), ActivityIntentLog{PreviousMonth: generateUpTo.Unix(), NextMonth: nextMonth.Unix()}, tc.strictEnforcement)
-			if tc.wantErr {
-				require.Error(t, err)
-				return
-			}
+			err = a.precomputedQueryWorker(context.Background(), &ActivityIntentLog{PreviousMonth: generateUpTo.Unix(), NextMonth: nextMonth.Unix()})
 			require.NoError(t, err)
 
 			// get precomputed queries spanning the whole time period
