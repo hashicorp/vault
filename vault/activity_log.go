@@ -1217,16 +1217,15 @@ func (a *ActivityLog) regeneratePrecomputedQueries(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if intentLogEntry != nil {
-		err = a.precomputedQueryWorker(ctx)
-	} else {
+	var intentLog *ActivityIntentLog
+	if intentLogEntry == nil {
 		intentLog, err := a.createRegenerationIntentLog(ctx, a.clock.Now())
 		if err != nil {
 			return err
 		}
 		a.logger.Debug("regenerating precomputed queries", "previous month", intentLog.PreviousMonth, "next month", intentLog.NextMonth)
-		_, err = a.doPrecomputedQueryCreation(ctx, *intentLog, false)
 	}
+	a.precomputedQueryWorker(ctx, intentLog)
 	if err != nil && !errors.Is(err, previousMonthNotFoundErr) {
 		return err
 	}
@@ -2494,6 +2493,8 @@ func (a *ActivityLog) reportPrecomputedQueryMetrics(ctx context.Context, segment
 	}
 }
 
+var previousMonthNotFoundErr = errors.New("previous month not found")
+
 // goroutine to process the request in the intent log, creating precomputed queries.
 // We expect the return value won't be checked, so log errors as they occur
 // (but for unit testing having the error return should help.)
@@ -2583,12 +2584,12 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context, intent *Activi
 	if len(times) == 0 {
 		a.logger.Warn("no months in storage")
 		cleanupIntentLog()
-		return errors.New("previous month not found")
+		return previousMonthNotFoundErr
 	}
 	if times[0].Unix() != lastMonth {
 		a.logger.Warn("last month not in storage", "latest", times[0].Unix())
 		cleanupIntentLog()
-		return errors.New("previous month not found")
+		return previousMonthNotFoundErr
 	}
 
 	byNamespace := make(map[string]*processByNamespace)
