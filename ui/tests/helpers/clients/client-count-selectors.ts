@@ -17,15 +17,6 @@ export const CLIENT_COUNT = {
     startDiscrepancy: '[data-test-counts-start-discrepancy]',
   },
   statText: (label: string) => `[data-test-stat-text="${label}"]`,
-  tokenTab: {
-    entity: '[data-test-monthly-new-entity]',
-    nonentity: '[data-test-monthly-new-nonentity]',
-    legend: '[data-test-monthly-new-legend]',
-  },
-  syncTab: {
-    total: '[data-test-total-sync-clients]',
-    average: '[data-test-average-sync-clients]',
-  },
   charts: {
     chart: (title: string) => `[data-test-chart="${title}"]`, // newer lineal charts
     statTextValue: (label: string) =>
