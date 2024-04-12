@@ -82,7 +82,12 @@
     />
   {{/if}}
   {{#if (and (has-permission "clients" routeParams="activity") (not this.cluster.dr.isSecondary))}}
-    <Nav.Link @route="vault.cluster.clients" @text="Client Count" data-test-sidebar-nav-link="Client Count" />
+    <Nav.Link
+      @route="vault.cluster.clients"
+      @text="Client Count"
+      @hasSubItems={{true}}
+      data-test-sidebar-nav-link="Client Count"
+    />
   {{/if}}
   {{#if
     (and
