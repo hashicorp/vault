@@ -1180,6 +1180,10 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					Type:        framework.TypeBool,
 					Description: "Specifies if previously-provided unseal keys are discarded and the unseal process is reset.",
 				},
+				"migrate": {
+					Type:        framework.TypeBool,
+					Description: "Used to migrate the seal from shamir to autoseal or autoseal to shamir. Must be provided on all unseal key calls.",
+				},
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
