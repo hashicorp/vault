@@ -99,7 +99,7 @@
         @doTransition={{true}}
       />
     {{else}}
-      <ReplicationSummary @cluster={{this.model}} @showModeSummary={{true}} @onDisable={{action "onDisable"}} />
+      <ReplicationSummary @cluster={{this.model}} @showModeSummary={{true}} @onDisable={{this.onDisable}} />
     {{/if}}
   </div>
 </section>

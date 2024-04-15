@@ -12,17 +12,9 @@
     </label>
     <div class="field is-expanded">
       <div class="control select is-fullwidth">
-        <select
-          onchange={{action (mut this.data.mode) value="target.value"}}
-          id="replication-mode"
-          name="replication-mode"
-          data-test-replication-cluster-mode-select
-        >
+        <select {{on "change" this.inputChange}} id="replication-mode" name="mode" data-test-replication-cluster-mode-select>
           {{#each (array "primary" "secondary") as |modeOption|}}
-            <option
-              selected={{if this.data.mode (eq this.data.mode modeOption) (eq modeOption "primary")}}
-              value={{modeOption}}
-            >
+            <option selected={{eq this.data.mode modeOption}} value={{modeOption}}>
               {{modeOption}}
             </option>
           {{/each}}
