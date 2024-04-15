@@ -26,6 +26,7 @@ import { waitFor } from '@ember/test-waiters';
  *    @param {boolean} canEnableSecondary - if the capabilities allow the user to enable a secondary cluster
  *    @param {boolean} performanceMode - should be "primary", "secondary", or "disabled". If enabled, form will show a warning when attempting to enable DR secondary
  *    @param {Promise} onSuccess - (optional) callback called after successful replication enablement. Must be a promise.
+ *    @param {boolean} doTransition - (optional) if provided, passed to onSuccess callback to determine if a transition should be done
  *  />
  * ```
  */
@@ -62,7 +63,7 @@ export default class EnableReplicationFormComponent extends Component {
     this.data.reset();
     // call callback
     if (this.args.onSuccess) {
-      await this.args.onSuccess(resp, this.args.replicationMode, clusterMode);
+      await this.args.onSuccess(resp, this.args.replicationMode, clusterMode, this.args.doTransition);
     }
   }
 

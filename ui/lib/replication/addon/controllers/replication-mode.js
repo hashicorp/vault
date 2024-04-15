@@ -33,22 +33,12 @@ export default class ReplicationModeBaseController extends Controller {
   }
 
   @action
-  onEnable(replicationMode, mode) {
-    if (replicationMode == 'dr' && mode === 'secondary') {
-      this.router.transitionTo('vault.cluster');
-    } else if (replicationMode === 'dr') {
-      this.router.transitionTo('vault.cluster.replication.mode', replicationMode);
-    } else {
-      this.waitForNewClusterToInit.perform(replicationMode);
-    }
-  }
-  @action
   onDisable() {
     this.router.transitionTo('vault.cluster.replication.index');
   }
 
   @action
-  async onEnableSuccess(resp, replicationMode, clusterMode) {
+  async onEnableSuccess(resp, replicationMode, clusterMode, doTransition = false) {
     // this is extrapolated from the replication-actions mixin "submitSuccess"
     const cluster = this.model;
     if (!cluster) {
@@ -72,8 +62,15 @@ export default class ReplicationModeBaseController extends Controller {
       // no error handling here
     }
     cluster.rollbackAttributes();
-    // onEnable is a method available only to route vault.cluster.replication.index
-    // if action 'enable' is called from vault.cluster.replication.mode.index this method is not called
-    await this.onEnable(replicationMode, clusterMode);
+    // we should only do the transitions if called from vault.cluster.replication.index
+    if (doTransition) {
+      if (replicationMode == 'dr' && clusterMode === 'secondary') {
+        this.router.transitionTo('vault.cluster');
+      } else if (replicationMode === 'dr') {
+        this.router.transitionTo('vault.cluster.replication.mode', replicationMode);
+      } else {
+        this.waitForNewClusterToInit.perform(replicationMode);
+      }
+    }
   }
 }

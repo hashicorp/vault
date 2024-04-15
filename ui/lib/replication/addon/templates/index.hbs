@@ -99,14 +99,10 @@
         @performanceReplicationDisabled={{this.model.performance.replicationDisabled}}
         @performanceMode={{if this.model.performance.replicationDisabled "disabled" this.model.performance.modeForUrl}}
         @onSuccess={{this.onEnableSuccess}}
+        @doTransition={{true}}
       />
     {{else}}
-      <ReplicationSummary
-        @cluster={{this.model}}
-        @showModeSummary={{true}}
-        @onEnable={{action "onEnable"}}
-        @onDisable={{action "onDisable"}}
-      />
+      <ReplicationSummary @cluster={{this.model}} @showModeSummary={{true}} @onDisable={{action "onDisable"}} />
     {{/if}}
   </div>
 </section>
