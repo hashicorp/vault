@@ -28,7 +28,7 @@ export default class SyncSecretsRoute extends Route {
   }
 
   afterModel() {
-    if (!this.version.activatedFeatures.length) {
+    if (!this.version.secretsSyncIsActivated) {
       this.router.transitionTo('vault.cluster.sync.secrets.overview');
     }
   }
