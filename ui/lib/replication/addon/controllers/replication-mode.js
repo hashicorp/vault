@@ -10,11 +10,17 @@ import { waitFor } from '@ember/test-waiters';
 import { action } from '@ember/object';
 
 export default class ReplicationModeBaseController extends Controller {
-  @service() router;
   @service('replication-mode') rm;
+  @service() router;
+  @service store;
 
   get replicationMode() {
     return this.rm.mode;
+  }
+
+  get replicationForMode() {
+    if (!this.replicationMode || !this.model) return null;
+    return this.model[this.replicationMode];
   }
 
   @task
@@ -39,5 +45,35 @@ export default class ReplicationModeBaseController extends Controller {
   @action
   onDisable() {
     this.router.transitionTo('vault.cluster.replication.index');
+  }
+
+  @action
+  async onEnableSuccess(resp, replicationMode, clusterMode) {
+    // this is extrapolated from the replication-actions mixin "submitSuccess"
+    const cluster = this.model;
+    if (!cluster) {
+      return;
+    }
+    // do something to show model is pending
+    cluster.set(
+      replicationMode,
+      this.store.createRecord('replication-attributes', {
+        mode: 'bootstrapping',
+      })
+    );
+    if (clusterMode === 'secondary' && replicationMode === 'performance') {
+      // if we're enabing a secondary, there could be mount filtering,
+      // so we should unload all of the backends
+      this.store.unloadAll('secret-engine');
+    }
+    try {
+      await cluster.reload();
+    } catch (e) {
+      // no error handling here
+    }
+    cluster.rollbackAttributes();
+    // onEnable is a method available only to route vault.cluster.replication.index
+    // if action 'enable' is called from vault.cluster.replication.mode.index this method is not called
+    await this.onEnable(replicationMode, clusterMode);
   }
 }
