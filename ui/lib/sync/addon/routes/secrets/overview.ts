@@ -24,12 +24,12 @@ export default class SyncSecretsOverviewRoute extends Route {
   // }
 
   async model() {
-    const { persona } = this.modelFor('secrets') as {
-      persona: string;
+    const { secretsSyncPersona } = this.modelFor('secrets') as {
+      secretsSyncPersona: string;
     };
 
     return hash({
-      persona,
+      secretsSyncPersona,
       destinations: this.version.secretsSyncIsActivated
         ? this.store.query('sync/destination', {}).catch(() => [])
         : [],

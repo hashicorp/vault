@@ -9,7 +9,7 @@ import { service } from '@ember/service';
 import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
-import type SecretsSyncPersonaService from 'vault/services/secrets-sync-persona';
+import type PersonaService from 'vault/services/persona';
 
 // interface ActivationFlagsResponse {
 //   data: {
@@ -22,7 +22,7 @@ export default class SyncSecretsRoute extends Route {
   @service declare readonly router: RouterService;
   @service declare readonly store: StoreService;
   @service declare readonly version: VersionService;
-  @service declare readonly secretsSyncPersona: SecretsSyncPersonaService;
+  @service declare readonly persona: PersonaService;
 
   beforeModel() {
     return this.version.fetchActivatedFeatures();
@@ -30,7 +30,7 @@ export default class SyncSecretsRoute extends Route {
 
   model() {
     return {
-      persona: this.secretsSyncPersona.persona,
+      secretsSyncPersona: this.persona.secretsSyncPersona,
     };
   }
 

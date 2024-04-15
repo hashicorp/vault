@@ -114,7 +114,7 @@ export default class App extends Application {
     },
     sync: {
       dependencies: {
-        services: ['flash-messages', 'feature-flag', 'router', 'store', 'version', 'secrets-sync-persona'],
+        services: ['flash-messages', 'feature-flag', 'router', 'store', 'version', 'persona'],
         externalRoutes: {
           kvSecretDetails: 'vault.cluster.secrets.backend.kv.secret.details',
           clientCountOverview: 'vault.cluster.clients',
