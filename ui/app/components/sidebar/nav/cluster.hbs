@@ -91,7 +91,7 @@
   {{/if}}
   {{#if
     (and
-      this.version.licenseFeatures
+      this.version.features
       this.isRootNamespace
       (has-permission "status" routeParams="license")
       (not this.cluster.dr.isSecondary)

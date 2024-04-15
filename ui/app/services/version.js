@@ -11,7 +11,7 @@ import { DEBUG } from '@glimmer/env';
 export default class VersionService extends Service {
   @service store;
   @service featureFlag;
-  @tracked licenseFeatures = [];
+  @tracked features = [];
   @tracked activatedFeatures = [];
   @tracked version = null;
   @tracked type = null;
@@ -33,27 +33,27 @@ export default class VersionService extends Service {
 
   /* License Features */
   get hasPerfReplication() {
-    return this.licenseFeatures.includes('Performance Replication');
+    return this.features.includes('Performance Replication');
   }
 
   get hasDRReplication() {
-    return this.licenseFeatures.includes('DR Replication');
+    return this.features.includes('DR Replication');
   }
 
   get hasSentinel() {
-    return this.licenseFeatures.includes('Sentinel');
+    return this.features.includes('Sentinel');
   }
 
   get hasNamespaces() {
-    return this.licenseFeatures.includes('Namespaces');
+    return this.features.includes('Namespaces');
   }
 
   get hasControlGroups() {
-    return this.licenseFeatures.includes('Control Groups');
+    return this.features.includes('Control Groups');
   }
 
   get hasSecretsSync() {
-    return this.licenseFeatures.includes('Secrets Sync');
+    return this.features.includes('Secrets Sync');
   }
 
   /* Activated Features */
@@ -82,13 +82,13 @@ export default class VersionService extends Service {
   }
 
   @keepLatestTask
-  *getLicenseFeatures() {
-    if (this.licenseFeatures?.length || this.isCommunity) {
+  *getfeatures() {
+    if (this.features?.length || this.isCommunity) {
       return;
     }
     try {
       const response = yield this.store.adapterFor('cluster').features();
-      this.licenseFeatures = response.features;
+      this.features = response.features;
       return;
     } catch (err) {
       // if we fail here, we're likely in DR Secondary mode and don't need to worry about it
@@ -118,8 +118,8 @@ export default class VersionService extends Service {
     return this.getType.perform();
   }
 
-  fetchLicenseFeatures() {
-    return this.getLicenseFeatures.perform();
+  fetchfeatures() {
+    return this.getfeatures.perform();
   }
 
   fetchActivatedFeatures() {

@@ -23,7 +23,7 @@ module('Integration | Component | sync | Secrets::LandingCta', function (hooks) 
     this.version = this.owner.lookup('service:version');
     this.persona = this.owner.lookup('service:persona');
     this.version.type = 'enterprise';
-    this.version.licenseFeatures = [];
+    this.version.features = [];
     this.version.activatedFeatures = [];
 
     this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
@@ -62,7 +62,7 @@ module('Integration | Component | sync | Secrets::LandingCta', function (hooks) 
   });
 
   test('it should render CTA copy but not action when feature exists on enterprise license and is not activated', async function (assert) {
-    this.version.licenseFeatures = ['Secrets Sync'];
+    this.version.features = ['Secrets Sync'];
     this.secretsSyncPersona = this.persona.secretsSyncPersona;
     await render(hbs`<Secrets::LandingCta @secretsSyncPersona={{this.secretsSyncPersona}} /> `, {
       owner: this.engine,
@@ -77,7 +77,7 @@ module('Integration | Component | sync | Secrets::LandingCta', function (hooks) 
   });
 
   test('it should render CTA copy and action when feature exists on enterprise license and is activated', async function (assert) {
-    this.version.licenseFeatures = ['Secrets Sync'];
+    this.version.features = ['Secrets Sync'];
     this.version.activatedFeatures = ['secrets-sync'];
     this.secretsSyncPersona = this.persona.secretsSyncPersona;
     await render(hbs`<Secrets::LandingCta @secretsSyncPersona={{this.secretsSyncPersona}} /> `, {

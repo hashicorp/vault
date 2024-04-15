@@ -21,7 +21,7 @@ module('Acceptance | sync | overview', function (hooks) {
   hooks.beforeEach(async function () {
     syncHandlers(this.server);
     this.version = this.owner.lookup('service:version');
-    this.version.licenseFeatures = ['Secrets Sync'];
+    this.version.features = ['Secrets Sync'];
 
     await authPage.login();
   });
@@ -140,7 +140,7 @@ module('Acceptance | sync | overview', function (hooks) {
 
   module('enterprise with namespaces', function (hooks) {
     hooks.beforeEach(async function () {
-      this.version.licenseFeatures = ['Secrets Sync', 'Namespaces'];
+      this.version.features = ['Secrets Sync', 'Namespaces'];
       await runCmd(`write sys/namespaces/admin -f`, false);
       await authPage.loginNs('admin');
       await runCmd(`write sys/namespaces/foo -f`, false);

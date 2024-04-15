@@ -17,7 +17,7 @@ export default ClusterRouteBase.extend({
   version: service(),
   beforeModel() {
     return this._super().then(() => {
-      return this.version.fetchLicenseFeatures();
+      return this.version.fetchfeatures();
     });
   },
   model() {

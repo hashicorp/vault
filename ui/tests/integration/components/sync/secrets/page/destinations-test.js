@@ -24,7 +24,7 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
   hooks.beforeEach(function () {
     this.version = this.owner.lookup('service:version');
     this.version.type = 'enterprise';
-    this.version.licenseFeatures = ['Secrets Sync'];
+    this.version.features = ['Secrets Sync'];
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
 
     const store = this.owner.lookup('service:store');

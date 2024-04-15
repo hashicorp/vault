@@ -37,6 +37,6 @@ export default Helper.extend({
     this.recompute();
   }),
   compute([featureName]) {
-    return hasFeature(featureName, this.version.licenseFeatures);
+    return hasFeature(featureName, this.version.features);
   },
 });
