@@ -33,6 +33,7 @@ message EchoRequest {
   google.protobuf.Duration last_roundtrip_time = 13;
   // clock_skew_millis is the server time minus the local time
   int64 clock_skew_millis = 14;
+  int64 replication_primary_canary_age_millis = 15;
 }
 
 message EchoReply {

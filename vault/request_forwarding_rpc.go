@@ -74,26 +74,28 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 }
 
 type nodeHAConnectionInfo struct {
-	nodeInfo        *NodeInformation
-	lastHeartbeat   time.Time
-	version         string
-	upgradeVersion  string
-	redundancyZone  string
-	localTime       time.Time
-	echoDuration    time.Duration
-	clockSkewMillis int64
+	nodeInfo             *NodeInformation
+	lastHeartbeat        time.Time
+	version              string
+	upgradeVersion       string
+	redundancyZone       string
+	localTime            time.Time
+	echoDuration         time.Duration
+	clockSkewMillis      int64
+	replicationLagMillis int64
 }
 
 func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (*EchoReply, error) {
 	incomingNodeConnectionInfo := nodeHAConnectionInfo{
-		nodeInfo:        in.NodeInfo,
-		lastHeartbeat:   time.Now(),
-		version:         in.SdkVersion,
-		upgradeVersion:  in.RaftUpgradeVersion,
-		redundancyZone:  in.RaftRedundancyZone,
-		localTime:       in.Now.AsTime(),
-		echoDuration:    in.LastRoundtripTime.AsDuration(),
-		clockSkewMillis: in.ClockSkewMillis,
+		nodeInfo:             in.NodeInfo,
+		lastHeartbeat:        time.Now(),
+		version:              in.SdkVersion,
+		upgradeVersion:       in.RaftUpgradeVersion,
+		redundancyZone:       in.RaftRedundancyZone,
+		localTime:            in.Now.AsTime(),
+		echoDuration:         in.LastRoundtripTime.AsDuration(),
+		clockSkewMillis:      in.ClockSkewMillis,
+		replicationLagMillis: in.ReplicationPrimaryCanaryAgeMillis,
 	}
 	if in.ClusterAddr != "" {
 		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, incomingNodeConnectionInfo, 0)
@@ -150,12 +152,13 @@ func (c *forwardingClient) startHeartbeat() {
 			defer metrics.MeasureSinceWithLabels([]string{"ha", "rpc", "client", "echo"}, time.Now(), labels)
 
 			req := &EchoRequest{
-				Message:           "ping",
-				ClusterAddr:       clusterAddr,
-				NodeInfo:          &ni,
-				SdkVersion:        c.core.effectiveSDKVersion,
-				LastRoundtripTime: durationpb.New(echoDuration),
-				ClockSkewMillis:   serverTimeDelta,
+				Message:                           "ping",
+				ClusterAddr:                       clusterAddr,
+				NodeInfo:                          &ni,
+				SdkVersion:                        c.core.effectiveSDKVersion,
+				LastRoundtripTime:                 durationpb.New(echoDuration),
+				ClockSkewMillis:                   serverTimeDelta,
+				ReplicationPrimaryCanaryAgeMillis: c.core.GetReplicationLagMillisIgnoreErrs(),
 			}
 
 			if raftBackend := c.core.getRaftBackend(); raftBackend != nil {
