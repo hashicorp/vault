@@ -1682,10 +1682,16 @@ func (c *ServerCommand) Run(args []string) int {
 				level, err := loghelper.ParseLogLevel(config.LogLevel)
 				if err != nil {
 					c.logger.Error("unknown log level found on reload", "level", config.LogLevel)
-					goto RUNRELOADFUNCS
+				} else {
+					core.SetLogLevel(level)
 				}
-				core.SetLogLevel(level)
 			}
+
+			if err := core.ReloadCensus(); err != nil {
+				c.UI.Error(err.Error())
+			}
+
+			core.ReloadReplicationCanaryWriteInterval()
 
 		RUNRELOADFUNCS:
 			if err := c.Reload(c.reloadFuncsLock, c.reloadFuncs, c.flagConfigs, core); err != nil {
@@ -1697,9 +1703,6 @@ func (c *ServerCommand) Run(args []string) int {
 				c.UI.Error(err.Error())
 			}
 
-			if err := core.ReloadCensus(); err != nil {
-				c.UI.Error(err.Error())
-			}
 			select {
 			case c.licenseReloadedCh <- err:
 			default:
