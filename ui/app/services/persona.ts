@@ -6,21 +6,23 @@
 import Service from '@ember/service';
 import { service } from '@ember/service';
 
-import type FeatureFlagService from 'vault/services/feature-flag';
+// import type FeatureFlagService from 'vault/services/feature-flag';
 import type VersionService from 'vault/services/version';
 import type StoreService from 'vault/services/store';
 
 /**
- * This service returns a persona which can be used to hide or show various states. Currently being used for Secrets Sync, but designed so that other persona's can be added.
+ * This service returns a persona which can be used to hide or show various states. Currently being used for Secrets Sync, but designed so that other personas can be added.
  */
 
 export default class PersonaService extends Service {
-  @service declare readonly featureFlag: FeatureFlagService;
+  // @service declare readonly featureFlag: FeatureFlagService;
   @service declare readonly store: StoreService;
   @service declare readonly version: VersionService;
 
   get isManagedNamespaceRoot() {
-    return this.featureFlag.managedNamespaceRoot ? true : false;
+    // TODO when we get the all clear to allow HVD to use Secrets Sync we can uncomment this.
+    return false;
+    // return this.featureFlag.managedNamespaceRoot ? true : false;
   }
 
   /**
