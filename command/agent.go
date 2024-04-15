@@ -328,6 +328,9 @@ func (c *AgentCommand) Run(args []string) int {
 			client.SetNamespace(config.AutoAuth.Method.Namespace)
 		}
 		templateNamespace = client.Namespace()
+		if !namespaceSetByEnvironmentVariable && config.Vault != nil && config.Vault.Namespace != "" {
+			templateNamespace = config.Vault.Namespace
+		}
 
 		sinkClient, err := client.CloneWithHeaders()
 		if err != nil {
