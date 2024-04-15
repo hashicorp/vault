@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-{{#if (and this.isDateRange this.hasMonthlyData)}}
+{{#if this.isDateRange}}
   <Clients::ChartContainer
     @title={{this.title}}
     @description={{this.description}}
@@ -44,46 +44,54 @@
     </:chart>
 
     <:emptyState>
-      <EmptyState
-        @title="No monthly ACME clients"
-        @subTitle="There is no ACME client data available for this date range."
-        @bottomBorder={{true}}
-      />
+      <EmptyState @title="No monthly ACME clients" @message="There is no ACME client data available for this date range." />
     </:emptyState>
   </Clients::ChartContainer>
 
-  <Clients::ChartContainer
-    @title="Monthly new"
-    @description="ACME clients which interacted with Vault for the first time each month. Each bar represents the total new ACME clients for that month."
-    @timestamp={{@activity.responseTimestamp}}
-    @hasChartData={{this.byMonthNewClients}}
-    class="no-legend"
-    data-test-chart="monthly new"
-  >
-    <:stats>
-      <StatText
-        @label="Average new ACME clients per month"
-        @value={{this.average this.byMonthNewClients "acme_clients"}}
-        @size="m"
-        class="chart-subTitle has-top-padding-l"
-      />
-    </:stats>
+  {{#if this.byMonthActivityData}}
+    <Clients::ChartContainer
+      @title="Monthly new"
+      @description="ACME clients which interacted with Vault for the first time each month. Each bar represents the total new ACME clients for that month."
+      @timestamp={{@activity.responseTimestamp}}
+      @hasChartData={{this.byMonthNewClients}}
+      class="no-legend"
+      data-test-chart="monthly new"
+    >
+      <:stats>
+        <StatText
+          @label="Average new ACME clients per month"
+          @value={{this.average this.byMonthNewClients "acme_clients"}}
+          @size="m"
+          class="chart-subTitle has-top-padding-l"
+        />
+      </:stats>
 
-    <:chart>
-      <Clients::Charts::VerticalBarBasic
-        @chartTitle="Monthly new ACME clients"
-        @data={{this.byMonthNewClients}}
-        @dataKey="acme_clients"
-        @chartHeight={{200}}
-      />
-    </:chart>
-  </Clients::ChartContainer>
+      <:chart>
+        <Clients::Charts::VerticalBarBasic
+          @chartTitle="Monthly new ACME clients"
+          @data={{this.byMonthNewClients}}
+          @dataKey="acme_clients"
+          @chartHeight={{200}}
+        />
+      </:chart>
+    </Clients::ChartContainer>
+  {{/if}}
 {{else}}
-  <div class="chart-wrapper" data-test-usage-stats>
-    <div class="chart-header has-bottom-margin-m">
-      <h2 class="chart-title">{{this.title}}</h2>
-      <p class="chart-description has-bottom-padding-m">{{this.description}}</p>
+  {{! if there is monthly activity, then "O ACME clients" is meaningful so render StatText }}
+  {{#if this.byMonthActivityData}}
+    <div class="chart-wrapper" data-test-usage-stats>
+      <div class="chart-header has-bottom-margin-m">
+        <h2 class="chart-title">{{this.title}}</h2>
+        <p class="chart-description has-bottom-padding-m">{{this.description}}</p>
+      </div>
+      <StatText @label="Total ACME clients" @value={{this.totalUsageCounts.acme_clients}} @size="l" />
     </div>
-    <StatText @label="Total ACME clients" @value={{this.totalUsageCounts.acme_clients}} @size="l" />
-  </div>
+  {{else}}
+    {{! otherwise user has queried dates prior to monthly data and so ACME clients do not exist }}
+    <EmptyState
+      @title="No ACME clients"
+      @message="There is no ACME client data available for this month."
+      class="is-shadowless"
+    />
+  {{/if}}
 {{/if}}

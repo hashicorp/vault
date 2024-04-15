@@ -10,6 +10,7 @@ import { render, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { addMonths, getUnixTime } from 'date-fns';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 import { formatNumber } from 'core/helpers/format-number';
 import { calculateAverage } from 'vault/utils/chart-helpers';
@@ -103,28 +104,6 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
     );
   });
 
-  test('it should render usage stats for no monthly data', async function (assert) {
-    assert.expect(5);
-    const activityQuery = {
-      start_time: { timestamp: START_TIME },
-      end_time: { timestamp: getUnixTime(addMonths(LICENSE_START, 1)) },
-    };
-    this.activity = await this.store.queryRecord('clients/activity', activityQuery);
-    const expectedTotal = formatNumber([this.activity.total.acme_clients]);
-    await this.renderComponent();
-
-    assert.dom(charts.chart('ACME usage')).doesNotExist('vertical bar chart does not render');
-    assert.dom(charts.chart('Monthly new ACME clients')).doesNotExist('monthly new chart does not render');
-    assert.dom(statText('Average ACME clients per month')).doesNotExist();
-    assert.dom(statText('Average new ACME clients per month')).doesNotExist();
-    assert
-      .dom(usageStats)
-      .hasText(
-        `ACME usage This data can be used to understand how many ACME clients have been used for the queried date range. Each ACME request is counted as one client. Total ACME clients ${expectedTotal}`,
-        'it renders usage stats with date range copy'
-      );
-  });
-
   test('it should render stats without chart for a single month', async function (assert) {
     assert.expect(5);
     const activityQuery = { start_time: { timestamp: END_TIME }, end_time: { timestamp: END_TIME } };
@@ -142,5 +121,96 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
         `ACME usage This data can be used to understand how many ACME clients have been used for the queried month. Each ACME request is counted as one client. Total ACME clients ${expectedTotal}`,
         'it renders usage stats with single month copy'
       );
+  });
+
+  // EMPTY STATES
+  test('it should render chart container empty state when data does not exist for a date range', async function (assert) {
+    assert.expect(7);
+    // this happens when a user queries historical data that predates the monthly breakdown (added in 1.11)
+    // only entity + non-entity clients existed then, so we show an empty state for ACME clients
+    // because showing "O ACME clients" is not very clear.
+    this.activity.byMonth = [];
+
+    await this.renderComponent();
+
+    assert.dom(GENERAL.emptyStateTitle).hasText('No monthly ACME clients');
+    assert
+      .dom(GENERAL.emptyStateMessage)
+      .hasText('There is no ACME client data available for this date range.');
+
+    assert.dom(charts.chart('ACME usage')).doesNotExist('vertical bar chart does not render');
+    assert.dom(charts.chart('Monthly new ACME clients')).doesNotExist('monthly new chart does not render');
+    assert.dom(statText('Average ACME clients per month')).doesNotExist();
+    assert.dom(statText('Average new ACME clients per month')).doesNotExist();
+    assert.dom(usageStats).doesNotExist();
+  });
+
+  test('it should render empty state when data does not exist for a single month', async function (assert) {
+    assert.expect(7);
+    const activityQuery = { start_time: { timestamp: START_TIME }, end_time: { timestamp: START_TIME } };
+    this.activity = await this.store.queryRecord('clients/activity', activityQuery);
+    // only entity + non-entity clients existed before 1.11, so we show an empty state for ACME clients
+    // because showing "O ACME clients" is not very clear.
+    this.activity.byMonth = [];
+    await this.renderComponent();
+
+    assert.dom(GENERAL.emptyStateTitle).hasText('No ACME clients');
+    assert.dom(GENERAL.emptyStateMessage).hasText('There is no ACME client data available for this month.');
+
+    assert.dom(charts.chart('ACME usage')).doesNotExist('total usage chart does not render');
+    assert.dom(charts.chart('Monthly new ACME clients')).doesNotExist('monthly new chart does not render');
+    assert.dom(statText('Average ACME clients per month')).doesNotExist();
+    assert.dom(statText('Average new ACME clients per month')).doesNotExist();
+    assert.dom(usageStats).doesNotExist();
+  });
+
+  test('it should render empty chart when monthly counts are null', async function (assert) {
+    assert.expect(5);
+    const activityQuery = {
+      start_time: { timestamp: START_TIME },
+      end_time: { timestamp: getUnixTime(addMonths(LICENSE_START, 1)) },
+    };
+    this.activity = await this.store.queryRecord('clients/activity', activityQuery);
+    // manually stub because mirage isn't setup to handle mixed data yet
+    this.activity.byMonth = [
+      {
+        month: '3/24',
+        timestamp: '2024-03-01T00:00:00Z',
+        namespaces: [],
+        namespaces_by_key: {},
+        new_clients: {
+          month: '3/24',
+          timestamp: '2024-03-01T00:00:00Z',
+          namespaces: [],
+        },
+      },
+      {
+        month: '4/24',
+        timestamp: '2024-04-01T00:00:00Z',
+        acme_clients: 0,
+        clients: 19,
+        entity_clients: 0,
+        non_entity_clients: 19,
+        secret_syncs: 0,
+        namespaces: [],
+        namespaces_by_key: {},
+        new_clients: {
+          month: '4/24',
+          timestamp: '2024-04-01T00:00:00Z',
+          namespaces: [],
+        },
+      },
+    ];
+
+    await this.renderComponent();
+
+    assert.dom(charts.chart('ACME usage')).exists('renders empty chart');
+    assert
+      .dom(statText('Total ACME clients'))
+      .hasText('The total number of ACME requests made to Vault during this time period. 0');
+
+    assert.dom(charts.chart('Monthly new ACME clients')).doesNotExist('monthly new chart does not render');
+    assert.dom(statText('Average ACME clients per month')).doesNotExist();
+    assert.dom(statText('Average new ACME clients per month')).doesNotExist();
   });
 });

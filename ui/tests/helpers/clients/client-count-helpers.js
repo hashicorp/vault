@@ -664,6 +664,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
       entity_clients: 1329,
       non_entity_clients: 1738,
       secret_syncs: 5525,
+      acme_clients: 200,
       namespaces: [
         {
           label: 'root',
