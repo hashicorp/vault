@@ -86,7 +86,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
         this.version.fetchVersion();
         await this.permissions.getPaths.perform();
       }
-      return this.version.fetchfeatures();
+      return this.version.fetchFeatures();
     } else {
       return reject({ httpStatus: 404, message: 'not found', path: params.cluster_name });
     }

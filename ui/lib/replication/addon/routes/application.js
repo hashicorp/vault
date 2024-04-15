@@ -20,7 +20,7 @@ export default Route.extend(ClusterRoute, {
       // disallow replication access if endpoints are redacted
       return this.router.transitionTo('vault.cluster');
     }
-    return this.version.fetchfeatures().then(() => {
+    return this.version.fetchFeatures().then(() => {
       return this._super(...arguments);
     });
   },

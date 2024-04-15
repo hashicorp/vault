@@ -82,7 +82,7 @@ export default class VersionService extends Service {
   }
 
   @keepLatestTask
-  *getfeatures() {
+  *getFeatures() {
     if (this.features?.length || this.isCommunity) {
       return;
     }
@@ -118,8 +118,8 @@ export default class VersionService extends Service {
     return this.getType.perform();
   }
 
-  fetchfeatures() {
-    return this.getfeatures.perform();
+  fetchFeatures() {
+    return this.getFeatures.perform();
   }
 
   fetchActivatedFeatures() {

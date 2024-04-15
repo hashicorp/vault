@@ -20,7 +20,7 @@ export default Route.extend(UnloadModel, {
 
   beforeModel() {
     this.store.unloadAll('namespace');
-    return this.version.fetchfeatures().then(() => {
+    return this.version.fetchFeatures().then(() => {
       return this._super(...arguments);
     });
   },
