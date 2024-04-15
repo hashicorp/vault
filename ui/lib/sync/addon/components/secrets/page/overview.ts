@@ -15,7 +15,6 @@ import Ember from 'ember';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type StoreService from 'vault/services/store';
 import type RouterService from '@ember/routing/router-service';
-import type PersonaService from 'vault/services/persona';
 import type { SyncDestinationAssociationMetrics } from 'vault/vault/adapters/sync/association';
 import type SyncDestinationModel from 'vault/vault/models/sync/destination';
 
@@ -29,11 +28,10 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly store: StoreService;
   @service declare readonly router: RouterService;
-  @service declare readonly persona: PersonaService;
 
   @tracked destinationMetrics: SyncDestinationAssociationMetrics[] = [];
   @tracked page = 1;
-  @tracked showActivateSecretsSyncModal = false;
+  @tracked showActivateModal = false;
   @tracked hasConfirmedDocs = false;
   @tracked error = null;
   // eventually remove when we deal with permissions on activation-features
@@ -64,7 +62,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
 
   @action
   resetOptInModal() {
-    this.showActivateSecretsSyncModal = false;
+    this.showActivateModal = false;
     this.hasConfirmedDocs = false;
   }
 

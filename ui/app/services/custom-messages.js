@@ -7,7 +7,6 @@ import { action } from '@ember/object';
 import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { TrackedObject } from 'tracked-built-ins';
-
 export default class CustomMessagesService extends Service {
   @service store;
   @service namespace;
