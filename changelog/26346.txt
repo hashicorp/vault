@@ -1,0 +1,3 @@
+```release-note:change
+ui: Update dependencies including D3 libraries
+```
