@@ -53,6 +53,7 @@ export default Mixin.create({
   }).drop(),
 
   submitSuccess: task(function* (resp, action) {
+    // enable action is handled separately in EnableReplicationForm component
     const cluster = this.cluster;
     if (!cluster) {
       return;

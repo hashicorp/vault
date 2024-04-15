@@ -182,6 +182,7 @@ module('Integration | Component | enable-replication-form', function (hooks) {
             @canEnableSecondary={{true}}
             @performanceMode="disabled"
             @onSuccess={{this.onSuccess}}
+            @doTransition={{false}}
           />`,
           this.context
         );
@@ -192,7 +193,7 @@ module('Integration | Component | enable-replication-form', function (hooks) {
         assert.true(this.successSpy.calledOnce, 'called once');
         assert.deepEqual(
           this.successSpy.getCall(0).args,
-          [{ returned: 'value' }, replicationMode, 'primary'],
+          [{ returned: 'value' }, replicationMode, 'primary', false],
           'called with correct args'
         );
       });
@@ -220,6 +221,7 @@ module('Integration | Component | enable-replication-form', function (hooks) {
             @canEnableSecondary={{true}}
             @performanceMode="disabled"
             @onSuccess={{this.onSuccess}}
+            @doTransition={{true}}
           />`,
           this.context
         );
@@ -236,7 +238,7 @@ module('Integration | Component | enable-replication-form', function (hooks) {
         assert.true(this.successSpy.calledOnce, 'called once');
         assert.deepEqual(
           this.successSpy.getCall(0).args,
-          [{ returned: 'value' }, replicationMode, 'secondary'],
+          [{ returned: 'value' }, replicationMode, 'secondary', true],
           'called with correct args'
         );
       });

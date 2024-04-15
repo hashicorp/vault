@@ -46,7 +46,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
   });
 
   test('replication', async function (assert) {
-    assert.expect(17);
+    assert.expect(18);
     const secondaryName = 'firstSecondary';
     const mode = 'deny';
 
@@ -315,11 +315,16 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     // enable DR primary replication
     await click('[data-test-replication-details-link="dr"]');
+    // eslint-disable-next-line ember/no-settled-after-test-helper
+    await settled(); // let the controller set replicationMode in afterModel
+    assert.dom('[data-test-replication-title]').hasText('Enable Disaster Recovery Replication');
     await click('[data-test-replication-enable]');
 
     await pollCluster(this.owner);
     await settled();
 
+    // Breadcrumbs only load once we're in the summary mode after enabling
+    await waitFor('[data-test-replication-breadcrumb]');
     // navigate using breadcrumbs back to replication.index
     assert.dom('[data-test-replication-breadcrumb]').exists('shows the replication breadcrumb (flaky)');
     await click('[data-test-replication-breadcrumb] a');

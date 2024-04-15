@@ -7,5 +7,5 @@ import ReplicationModeBaseController from './replication-mode';
 import { tracked } from '@glimmer/tracking';
 
 export default class ReplicationIndexController extends ReplicationModeBaseController {
-  @tracked replicationMode = 'dr';
+  @tracked modeSelection = 'dr';
 }

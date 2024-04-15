@@ -49,18 +49,15 @@
                   id="dr"
                   name="replication-mode"
                   @value="dr"
-                  @groupValue={{this.replicationMode}}
-                  @onChange={{fn (mut this.replicationMode)}}
+                  @groupValue={{this.modeSelection}}
+                  @onChange={{fn (mut this.modeSelection)}}
                 />
                 <label for="dr" data-test-replication-type-select="dr"></label>
               </div>
             </label>
           </div>
           <div class="column is-flex">
-            <label
-              for="performance"
-              class="box-label is-column {{if (eq this.replicationMode 'performance') 'is-selected'}}"
-            >
+            <label for="performance" class="box-label is-column {{if (eq this.modeSelection 'performance') 'is-selected'}}">
               <div>
                 <h3 class="box-label-header title is-6">
                   <Icon @size="24" @name="replication-perf" />
@@ -82,8 +79,8 @@
                     id="performance"
                     name="replication-mode"
                     @value="performance"
-                    @groupValue={{this.replicationMode}}
-                    @onChange={{fn (mut this.replicationMode)}}
+                    @groupValue={{this.modeSelection}}
+                    @onChange={{fn (mut this.modeSelection)}}
                   />
                   <label for="performance" data-test-replication-type-select="performance"></label>
                 {{/if}}
@@ -93,7 +90,7 @@
         </div>
       </div>
       <EnableReplicationForm
-        @replicationMode={{this.replicationMode}}
+        @replicationMode={{this.modeSelection}}
         @canEnablePrimary={{this.model.canEnablePrimary}}
         @canEnableSecondary={{this.model.canEnableSecondary}}
         @performanceReplicationDisabled={{this.model.performance.replicationDisabled}}
