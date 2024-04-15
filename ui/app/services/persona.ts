@@ -25,15 +25,15 @@ export default class PersonaService extends Service {
 
   /**
  * Secret Sync persona options are: ['SHOW_ENTERPRISE_CTA, SHOW_PREMIUM_CTA, SHOW_ACTIVATION_CTA and SHOW_SECRETS_SYNC]. The persona return is based on the following criteria:
-  * OSS versions of on-prem Vault cluster:
-    1. - Secrets Sync is not available, return SHOW_ENTERPRISE_CTA.   
+  * Community/OSS cluster:
+    1. - Secrets Sync is not available, return SHOW_ENTERPRISE_CTA. This will never show for managed clusters because they are always Enterprise.
   * Managed cluster:
     2. - Secrets Sync is activated, return SHOW_SECRETS_SYNC.
     3. - Secrets Sync is not activated, return SHOW_ACTIVATION_CTA.
-  * Enterprise versions of on-prem Vault cluster:
-    2. - Secrets Sync is not on the license, return SHOW_PREMIUM_CTA.
-    3. - Secrets Sync is on the license and not activated, return SHOW_ACTIVATION_CTA.
-    4. - Secrets Sync is on the license and activated, return SHOW_SECRETS_SYNC.
+  * On-prem Enterprise cluster:
+    4. - Secrets Sync is on the license and not activated, return SHOW_ACTIVATION_CTA.
+    5. - Secrets Sync is on the license and activated, return SHOW_SECRETS_SYNC.
+    6. - Secrets Sync is not on the license, return SHOW_PREMIUM_CTA.
 */
 
   get secretsSyncPersona() {
@@ -44,9 +44,9 @@ export default class PersonaService extends Service {
         ? 'SHOW_SECRETS_SYNC'
         : 'SHOW_ACTIVATION_CTA'
       : this.version.hasSecretsSync
-      ? 'SHOW_PREMIUM_CTA'
-      : this.version.secretsSyncIsActivated
-      ? 'SHOW_ENTERPRISE_CTA'
-      : 'SHOW_ACTIVATION_CTA';
+      ? this.version.secretsSyncIsActivated
+        ? 'SHOW_SECRETS_SYNC'
+        : 'SHOW_ACTIVATION_CTA'
+      : 'SHOW_PREMIUM_CTA';
   }
 }
