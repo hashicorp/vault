@@ -13,7 +13,7 @@ import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
 import showPage from 'vault/tests/pages/secrets/backend/kv/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
 import authPage from 'vault/tests/pages/auth';
-import assertSecretWrap from 'vault/tests/helpers/secret-edit-toolbar';
+import { assertSecretWrap } from 'vault/tests/helpers/components/secret-edit-toolbar';
 
 module('Acceptance | secrets/cubbyhole/create', function (hooks) {
   setupApplicationTest(hooks);

@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	syncatomic "sync/atomic"
 	"testing"
 	"time"
 
@@ -153,6 +154,136 @@ func TestOpenWebSocketConnection(t *testing.T) {
 	} else {
 		require.Nil(t, conn)
 		require.Errorf(t, err, "ensure Vault is Enterprise version 1.16 or above")
+	}
+}
+
+// TestOpenWebSocketConnection_BadPolicyToken tests attempting to open a websocket
+// connection to the events system using a token that has incorrect policy access
+// will not trigger auto auth
+func TestOpenWebSocketConnection_BadPolicyToken(t *testing.T) {
+	// We need a valid cluster for the connection to succeed.
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	updater := testNewStaticSecretCacheUpdater(t, client)
+
+	eventPolicy := `path "sys/events/subscribe/*" {
+		capabilities = ["deny"]
+	}`
+	client.Sys().PutPolicy("no_events_access", eventPolicy)
+
+	// Create a new token with a bad policy
+	token, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"no_events_access"},
+	})
+	require.NoError(t, err)
+
+	// Set the client token to one with an invalid policy
+	updater.tokenSink.WriteToken(token.Auth.ClientToken)
+	client.SetToken(token.Auth.ClientToken)
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	authInProgress := &syncatomic.Bool{}
+	renewalChannel := make(chan error)
+	errCh := make(chan error)
+	go func() {
+		errCh <- updater.Run(ctx, authInProgress, renewalChannel)
+	}()
+	defer func() {
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}()
+
+	defer cancelFunc()
+
+	// Verify that the token has been written to the sink before checking auto auth
+	// is not re-triggered
+	err = updater.streamStaticSecretEvents(ctx)
+	require.ErrorContains(t, err, logical.ErrPermissionDenied.Error())
+
+	// Auto auth should not be retriggered
+	timeout := time.After(2 * time.Second)
+	select {
+	case <-renewalChannel:
+		t.Fatal("incorrectly triggered auto auth")
+	case <-ctx.Done():
+		t.Fatal("context was closed before auto auth could be re-triggered")
+	case <-timeout:
+	}
+}
+
+// TestOpenWebSocketConnection_AutoAuthSelfHeal tests attempting to open a websocket
+// connection to the events system using an invalid token will re-trigger
+// auto auth.
+func TestOpenWebSocketConnection_AutoAuthSelfHeal(t *testing.T) {
+	// We need a valid cluster for the connection to succeed.
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	updater := testNewStaticSecretCacheUpdater(t, client)
+
+	// Revoke the token before it can be used to open a connection to the events system
+	client.Auth().Token().RevokeOrphan(client.Token())
+	updater.tokenSink.WriteToken(client.Token())
+	time.Sleep(100 * time.Millisecond)
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	authInProgress := &syncatomic.Bool{}
+	renewalChannel := make(chan error)
+	errCh := make(chan error)
+	go func() {
+		errCh <- updater.Run(ctx, authInProgress, renewalChannel)
+	}()
+	defer func() {
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}()
+
+	defer cancelFunc()
+
+	// Wait for static secret updater to begin
+	timeout := time.After(10 * time.Second)
+
+	select {
+	case <-renewalChannel:
+	case <-ctx.Done():
+		t.Fatal("context was closed before auto auth could be re-triggered")
+	case <-timeout:
+		t.Fatal("timed out before auto auth could be re-triggered")
+	}
+	authInProgress.Store(false)
+
+	// Verify that auto auth is re-triggered again because another auth is "not in progress"
+	timeout = time.After(15 * time.Second)
+	select {
+	case <-renewalChannel:
+	case <-ctx.Done():
+		t.Fatal("context was closed before auto auth could be re-triggered")
+	case <-timeout:
+		t.Fatal("timed out before auto auth could be re-triggered")
+	}
+	authInProgress.Store(true)
+
+	// Verify that auto auth is NOT re-triggered again because another auth is in progress
+	timeout = time.After(2 * time.Second)
+	select {
+	case <-renewalChannel:
+		t.Fatal("auto auth was incorrectly re-triggered")
+	case <-ctx.Done():
+		t.Fatal("context was closed before auto auth could be re-triggered")
+	case <-timeout:
 	}
 }
 

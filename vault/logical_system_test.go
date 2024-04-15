@@ -2792,7 +2792,7 @@ func TestSystemBackend_enableAudit_invalid(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `unknown backend type: "nope"` {
+	if resp.Data["error"] != "unknown backend type: \"nope\": invalid configuration" {
 		t.Fatalf("bad: %v", resp)
 	}
 }

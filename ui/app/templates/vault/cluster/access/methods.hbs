@@ -46,7 +46,7 @@
   </ToolbarActions>
 </Toolbar>
 
-{{#each (sort-by "path" this.authMethodList) as |method|}}
+{{#each (this.sortMethods this.authMethodList) as |method|}}
   <LinkedBlock
     @params={{array "vault.cluster.access.method" method.id}}
     class="list-item-row"

@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	systemd "github.com/coreos/go-systemd/daemon"
@@ -540,6 +541,83 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}
 
+	// Create the AuthHandler, SinkServer, TemplateServer, and ExecServer now so that we can pass AuthHandler struct
+	// values into the Proxy http.Handler. We will wait to actually start these servers
+	// once we have configured the handlers for each listener below
+	authInProgress := &atomic.Bool{}
+	invalidTokenErrCh := make(chan error)
+	var ah *auth.AuthHandler
+	var ss *sink.SinkServer
+	var ts *template.Server
+	var es *exec.Server
+	if method != nil {
+		enableTemplateTokenCh := len(config.Templates) > 0
+		enableEnvTemplateTokenCh := len(config.EnvTemplates) > 0
+
+		// Auth Handler is going to set its own retry values, so we want to
+		// work on a copy of the client to not affect other subsystems.
+		ahClient, err := c.client.CloneWithHeaders()
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error cloning client for auth handler: %v", err))
+			return 1
+		}
+
+		// Override the set namespace with the auto-auth specific namespace
+		if !namespaceSetByEnvironmentVariable && config.AutoAuth.Method.Namespace != "" {
+			ahClient.SetNamespace(config.AutoAuth.Method.Namespace)
+		}
+
+		if config.DisableIdleConnsAutoAuth {
+			ahClient.SetMaxIdleConnections(-1)
+		}
+
+		if config.DisableKeepAlivesAutoAuth {
+			ahClient.SetDisableKeepAlives(true)
+		}
+
+		ah = auth.NewAuthHandler(&auth.AuthHandlerConfig{
+			Logger:                       c.logger.Named("auth.handler"),
+			Client:                       ahClient,
+			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
+			MinBackoff:                   config.AutoAuth.Method.MinBackoff,
+			MaxBackoff:                   config.AutoAuth.Method.MaxBackoff,
+			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
+			EnableTemplateTokenCh:        enableTemplateTokenCh,
+			EnableExecTokenCh:            enableEnvTemplateTokenCh,
+			Token:                        previousToken,
+			ExitOnError:                  config.AutoAuth.Method.ExitOnError,
+			UserAgent:                    useragent.AgentAutoAuthString(),
+			MetricsSignifier:             "agent",
+		})
+
+		ss = sink.NewSinkServer(&sink.SinkServerConfig{
+			Logger:        c.logger.Named("sink.server"),
+			Client:        ahClient,
+			ExitAfterAuth: config.ExitAfterAuth,
+		})
+
+		ts = template.NewServer(&template.ServerConfig{
+			Logger:        c.logger.Named("template.server"),
+			LogLevel:      c.logger.GetLevel(),
+			LogWriter:     c.logWriter,
+			AgentConfig:   c.config,
+			Namespace:     templateNamespace,
+			ExitAfterAuth: config.ExitAfterAuth,
+		})
+
+		es, err = exec.NewServer(&exec.ServerConfig{
+			AgentConfig: c.config,
+			Namespace:   templateNamespace,
+			Logger:      c.logger.Named("exec.server"),
+			LogLevel:    c.logger.GetLevel(),
+			LogWriter:   c.logWriter,
+		})
+		if err != nil {
+			c.logger.Error("could not create exec server", "error", err)
+			return 1
+		}
+	}
+
 	var listeners []net.Listener
 
 	// If there are templates, add an in-process listener
@@ -577,32 +655,31 @@ func (c *AgentCommand) Run(args []string) int {
 
 		listeners = append(listeners, ln)
 
-		proxyVaultToken := true
-		var inmemSink sink.Sink
+		apiProxyLogger.Debug("auto-auth token is allowed to be used; configuring inmem sink")
+		inmemSink, err := inmem.New(&sink.SinkConfig{
+			Logger: apiProxyLogger,
+		}, leaseCache)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error creating inmem sink for cache: %v", err))
+			c.tlsReloadFuncsLock.Unlock()
+			return 1
+		}
+		sinks = append(sinks, &sink.SinkConfig{
+			Logger: apiProxyLogger,
+			Sink:   inmemSink,
+		})
+		useAutoAuthToken := false
+		forceAutoAuthToken := false
 		if config.APIProxy != nil {
-			if config.APIProxy.UseAutoAuthToken {
-				apiProxyLogger.Debug("auto-auth token is allowed to be used; configuring inmem sink")
-				inmemSink, err = inmem.New(&sink.SinkConfig{
-					Logger: apiProxyLogger,
-				}, leaseCache)
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error creating inmem sink for cache: %v", err))
-					c.tlsReloadFuncsLock.Unlock()
-					return 1
-				}
-				sinks = append(sinks, &sink.SinkConfig{
-					Logger: apiProxyLogger,
-					Sink:   inmemSink,
-				})
-			}
-			proxyVaultToken = !config.APIProxy.ForceAutoAuthToken
+			useAutoAuthToken = config.APIProxy.UseAutoAuthToken
+			forceAutoAuthToken = config.APIProxy.ForceAutoAuthToken
 		}
 
 		var muxHandler http.Handler
 		if leaseCache != nil {
-			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, leaseCache, inmemSink, proxyVaultToken)
+			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, leaseCache, inmemSink, forceAutoAuthToken, useAutoAuthToken, authInProgress, invalidTokenErrCh)
 		} else {
-			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, proxyVaultToken)
+			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, forceAutoAuthToken, useAutoAuthToken, authInProgress, invalidTokenErrCh)
 		}
 
 		// Parse 'require_request_header' listener config option, and wrap
@@ -708,71 +785,6 @@ func (c *AgentCommand) Run(args []string) int {
 
 	// Start auto-auth and sink servers
 	if method != nil {
-		enableTemplateTokenCh := len(config.Templates) > 0
-		enableEnvTemplateTokenCh := len(config.EnvTemplates) > 0
-
-		// Auth Handler is going to set its own retry values, so we want to
-		// work on a copy of the client to not affect other subsystems.
-		ahClient, err := c.client.CloneWithHeaders()
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error cloning client for auth handler: %v", err))
-			return 1
-		}
-
-		// Override the set namespace with the auto-auth specific namespace
-		if !namespaceSetByEnvironmentVariable && config.AutoAuth.Method.Namespace != "" {
-			ahClient.SetNamespace(config.AutoAuth.Method.Namespace)
-		}
-
-		if config.DisableIdleConnsAutoAuth {
-			ahClient.SetMaxIdleConnections(-1)
-		}
-
-		if config.DisableKeepAlivesAutoAuth {
-			ahClient.SetDisableKeepAlives(true)
-		}
-
-		ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
-			Logger:                       c.logger.Named("auth.handler"),
-			Client:                       ahClient,
-			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
-			MinBackoff:                   config.AutoAuth.Method.MinBackoff,
-			MaxBackoff:                   config.AutoAuth.Method.MaxBackoff,
-			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
-			EnableTemplateTokenCh:        enableTemplateTokenCh,
-			EnableExecTokenCh:            enableEnvTemplateTokenCh,
-			Token:                        previousToken,
-			ExitOnError:                  config.AutoAuth.Method.ExitOnError,
-			UserAgent:                    useragent.AgentAutoAuthString(),
-			MetricsSignifier:             "agent",
-		})
-
-		ss := sink.NewSinkServer(&sink.SinkServerConfig{
-			Logger:        c.logger.Named("sink.server"),
-			Client:        ahClient,
-			ExitAfterAuth: config.ExitAfterAuth,
-		})
-
-		ts := template.NewServer(&template.ServerConfig{
-			Logger:        c.logger.Named("template.server"),
-			LogLevel:      c.logger.GetLevel(),
-			LogWriter:     c.logWriter,
-			AgentConfig:   c.config,
-			Namespace:     templateNamespace,
-			ExitAfterAuth: config.ExitAfterAuth,
-		})
-
-		es, err := exec.NewServer(&exec.ServerConfig{
-			AgentConfig: c.config,
-			Namespace:   templateNamespace,
-			Logger:      c.logger.Named("exec.server"),
-			LogLevel:    c.logger.GetLevel(),
-			LogWriter:   c.logWriter,
-		})
-		if err != nil {
-			c.logger.Error("could not create exec server", "error", err)
-			return 1
-		}
 
 		g.Add(func() error {
 			return ah.Run(ctx, method)

@@ -12,33 +12,58 @@ The Vault 1.16.x upgrade guide contains information on deprecations, important
 or breaking changes, and remediation recommendations for anyone upgrading from
 Vault 1.15. **Please read carefully**.
 
-## Plugin environment variables
+## Important changes
 
-Starting in 1.16.0, plugin-specific environment variables take precedence when
-they conflict with the main Vault process' environment.
+### External plugin variables take precedence over system variables ((#external-plugin-variables))
 
-For example, if an external plugin is registered with `SOURCE=child` in the
-[env](/vault/api-docs/system/plugins-catalog#env) parameter, but the main Vault
-process has `SOURCE=parent` in its environment, versions prior to 1.16.0 will
-start the plugin process with `SOURCE=parent`. 1.16.0+ will start the plugin
-process with `SOURCE=child`.
+Vault gives precedence to plugin environment variables over system environment
+variables when loading external plugins. The behavior for builtin plugins and
+plugins that do not specify additional environment variables is unaffected.
 
-For any users relying on the old behavior, you can opt out of this change by setting
-`VAULT_PLUGIN_USE_LEGACY_ENV_LAYERING=true` for the main Vault process. If this
-flag is detected, Vault will continue to prioritize Vault process environment
-variables when there is a conflict. Additionally, during unseal Vault will enumerate
-all plugins in the catalog and print a warning for any plugins whose environment
-conflicts with the main process. If the flag is set and you see an informational
-log that there are no conflicts, the flag can safely be removed.
+For example, if you register an external plugin with `SOURCE=child` in the
+[env](/vault/api-docs/system/plugins-catalog#env) parameter but the main Vault
+process already has `SOURCE=parent` defined, the plugin process starts
+with `SOURCE=child`.
 
-Note that containerized plugins do not inherit any environment variables from
-the main Vault process, so are unaffected. Builtin plugins and external plugins
-that do not specify additional environment variables are also unaffected.
+Refer to the [plugin management](/vault/docs/plugins/plugin-management) page for
+more details on plugin environment variables.
 
-See [plugin management](/vault/docs/plugins/plugin-management) for more details
-on plugin environment variables.
+<Highlight title="Avoid conflicts with containerized plugins">
+
+  Containerized plugins do not inherit system-defined environment variables. As
+  a result, containerized plugins cannot have conflicts with Vault environment
+  variables.
+
+</Highlight>
+
+#### How to opt out
+
+To opt out of the precedence change, set the
+`VAULT_PLUGIN_USE_LEGACY_ENV_LAYERING` environment variable to `true` for the
+main Vault process:
+
+```shell-session
+$ export VAULT_PLUGIN_USE_LEGACY_ENV_LAYERING=true
+```
+
+Setting `VAULT_PLUGIN_USE_LEGACY_ENV_LAYERING` to `true` tells Vault to:
+
+1. prioritize environment variables from the Vault server environment whenever
+   the system detects a variable conflict.
+1. report on plugin variable conflicts during the unseal process by printing
+   warnings for plugins with conflicting environment variables or logging an
+   informational entry when there are no conflicts.
+
+For example, assume you set `VAULT_PLUGIN_USE_LEGACY_ENV_LAYERING` to `true`
+and have an environment variable `SOURCE=parent`.
+
+If you register an external plugin called `myplugin` with `SOURCE=child`, the
+plugin process starts with `SOURCE=parent` and Vault reports a conflict for
+`myplugin`.
 
 ## Known issues and workarounds
+
+@include 'known-issues/1_16-jwt_auth_config.mdx'
 
 @include 'known-issues/1_16-ldap_auth_login_anonymous_group_search.mdx'
 
