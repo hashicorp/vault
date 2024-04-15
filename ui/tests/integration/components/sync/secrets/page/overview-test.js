@@ -26,7 +26,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
   hooks.beforeEach(async function () {
     this.version = this.owner.lookup('service:version');
     this.version.type = 'enterprise';
-    this.version.features = ['Secrets Sync'];
+    this.version.licenseFeatures = ['Secrets Sync'];
     syncScenario(this.server);
     syncHandlers(this.server);
 
@@ -57,7 +57,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
   module('community', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'community';
-      this.version.features = [];
+      this.version.licenseFeatures = [];
       this.destinations = [];
       this.isActivated = false;
     });
@@ -78,7 +78,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
 
     test('it should show an upsell CTA if license does NOT have the secrets sync feature', async function (assert) {
-      this.version.features = [];
+      this.version.licenseFeatures = [];
       await this.renderComponent();
 
       assert
@@ -89,7 +89,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
 
     test('it should show create CTA if license has the secrets sync feature', async function (assert) {
-      this.version.features = ['Secrets Sync'];
+      this.version.licenseFeatures = ['Secrets Sync'];
       await this.renderComponent();
 
       assert.dom(title).hasText('Secrets Sync');

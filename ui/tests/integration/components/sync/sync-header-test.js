@@ -38,14 +38,14 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
     });
 
     test('it should render title if license has secrets sync feature', async function (assert) {
-      this.version.features = ['Secrets Sync'];
+      this.version.licenseFeatures = ['Secrets Sync'];
       await this.renderComponent();
 
       assert.dom(title).hasText('Secrets Sync');
     });
 
     test('it should render title and premium badge if license does not have secrets sync feature', async function (assert) {
-      this.version.features = [];
+      this.version.licenseFeatures = [];
       await this.renderComponent();
 
       assert.dom(title).hasText('Secrets Sync Premium feature');

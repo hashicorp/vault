@@ -221,7 +221,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       this.version = this.owner.lookup('service:version');
       this.version.version = '1.13.1+ent';
       this.version.type = 'enterprise';
-      this.version.features = [
+      this.version.licenseFeatures = [
         'Performance Replication',
         'DR Replication',
         'Namespaces',

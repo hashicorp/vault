@@ -22,7 +22,7 @@ module('Acceptance | sync | destinations', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.version = this.owner.lookup('service:version');
-    this.version.features = ['Secrets Sync'];
+    this.version.licenseFeatures = ['Secrets Sync'];
     syncScenario(this.server);
     syncHandlers(this.server);
     return authPage.login();
