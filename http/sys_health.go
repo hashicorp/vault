@@ -224,6 +224,9 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		ClockSkewMillis:            core.ActiveNodeClockSkewMillis(),
 		EchoDurationMillis:         core.EchoDuration().Milliseconds(),
 	}
+	if standby {
+		body.ReplicationPrimaryCanaryAgeMillis = core.GetReplicationLagMillisIgnoreErrs()
+	}
 
 	licenseState, err := core.EntGetLicenseState()
 	if err != nil {
@@ -254,19 +257,20 @@ type HealthResponseLicense struct {
 }
 
 type HealthResponse struct {
-	Initialized                bool                   `json:"initialized"`
-	Sealed                     bool                   `json:"sealed"`
-	Standby                    bool                   `json:"standby"`
-	PerformanceStandby         bool                   `json:"performance_standby"`
-	ReplicationPerformanceMode string                 `json:"replication_performance_mode"`
-	ReplicationDRMode          string                 `json:"replication_dr_mode"`
-	ServerTimeUTC              int64                  `json:"server_time_utc"`
-	Version                    string                 `json:"version"`
-	Enterprise                 bool                   `json:"enterprise"`
-	ClusterName                string                 `json:"cluster_name,omitempty"`
-	ClusterID                  string                 `json:"cluster_id,omitempty"`
-	LastWAL                    uint64                 `json:"last_wal,omitempty"`
-	License                    *HealthResponseLicense `json:"license,omitempty"`
-	EchoDurationMillis         int64                  `json:"echo_duration_ms"`
-	ClockSkewMillis            int64                  `json:"clock_skew_ms"`
+	Initialized                       bool                   `json:"initialized"`
+	Sealed                            bool                   `json:"sealed"`
+	Standby                           bool                   `json:"standby"`
+	PerformanceStandby                bool                   `json:"performance_standby"`
+	ReplicationPerformanceMode        string                 `json:"replication_performance_mode"`
+	ReplicationDRMode                 string                 `json:"replication_dr_mode"`
+	ServerTimeUTC                     int64                  `json:"server_time_utc"`
+	Version                           string                 `json:"version"`
+	Enterprise                        bool                   `json:"enterprise"`
+	ClusterName                       string                 `json:"cluster_name,omitempty"`
+	ClusterID                         string                 `json:"cluster_id,omitempty"`
+	LastWAL                           uint64                 `json:"last_wal,omitempty"`
+	License                           *HealthResponseLicense `json:"license,omitempty"`
+	EchoDurationMillis                int64                  `json:"echo_duration_ms"`
+	ClockSkewMillis                   int64                  `json:"clock_skew_ms"`
+	ReplicationPrimaryCanaryAgeMillis int64                  `json:"replication_primary_canary_age_ms"`
 }
