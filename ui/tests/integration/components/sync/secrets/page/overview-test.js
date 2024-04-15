@@ -25,18 +25,20 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.version = this.owner.lookup('service:version');
+    this.persona = this.owner.lookup('service:persona');
     this.version.type = 'enterprise';
     this.version.licenseFeatures = ['Secrets Sync'];
+    this.version.activatedFeatures = ['secrets-sync'];
     syncScenario(this.server);
     syncHandlers(this.server);
 
     const store = this.owner.lookup('service:store');
     this.destinations = await store.query('sync/destination', {});
-    this.isActivated = true;
 
-    this.renderComponent = () => {
+    this.renderComponent = (persona) => {
+      this.persona = persona || this.persona.secretsSyncPersona;
       return render(
-        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @isActivated={{this.isActivated}} />`,
+        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @secretsSyncPersona={{this.persona}} />`,
         {
           owner: this.engine,
         }
@@ -58,12 +60,12 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'community';
       this.version.licenseFeatures = [];
+      this.version.activatedFeatures = [];
       this.destinations = [];
-      this.isActivated = false;
     });
 
     test('it should show an upsell CTA', async function (assert) {
-      await this.renderComponent();
+      await this.renderComponent(this.persona.secretsSyncPersona);
 
       assert
         .dom(title)
@@ -90,7 +92,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     test('it should show create CTA if license has the secrets sync feature', async function (assert) {
       this.version.licenseFeatures = ['Secrets Sync'];
-      await this.renderComponent();
+      await this.renderComponent(this.persona.secretsSyncPersona);
 
       assert.dom(title).hasText('Secrets Sync');
       assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
@@ -100,7 +102,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
   module('secrets sync not activated', function (hooks) {
     hooks.beforeEach(async function () {
-      this.isActivated = false;
+      this.version.activatedFeatures = [];
     });
 
     test('it should show the opt-in banner', async function (assert) {
@@ -123,8 +125,6 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     test('it should make a POST to activate the feature', async function (assert) {
       assert.expect(1);
-
-      await this.renderComponent();
 
       this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
         assert.true(true, 'POST to secrets-sync/activate is called');

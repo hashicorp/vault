@@ -20,11 +20,35 @@ module('Integration | Component | sync | Secrets::LandingCta', function (hooks) 
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    this.version = this.owner.lookup('service:version');
+    this.persona = this.owner.lookup('service:persona');
+    this.version.type = 'enterprise';
+    this.version.licenseFeatures = [];
+    this.version.activatedFeatures = [];
+
     this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
   });
 
-  test('it should render promotional copy for community or enterprise version without feature', async function (assert) {
-    await render(hbs`<Secrets::LandingCta @isActivated={{false}} @hasSecretsSync={{false}} /> `, {
+  test('it should render promotional copy for community', async function (assert) {
+    this.version.type = 'community';
+    this.secretsSyncPersona = this.persona.secretsSyncPersona;
+    await render(hbs`<Secrets::LandingCta @secretsSyncPersona={{this.secretsSyncPersona}} /> `, {
+      owner: this.engine,
+    });
+
+    assert
+      .dom(cta.summary)
+      .hasText(
+        'This premium enterprise feature allows you to sync secrets to platforms and tools across your stack to get secrets when and where you need them. Learn more about Secrets Sync'
+      );
+    assert.dom(cta.link).hasText('Learn more about Secrets Sync');
+    assert.dom(cta.button).doesNotExist('does not render create destination button');
+  });
+
+  test('it should render promotional copy for enterprise version without feature', async function (assert) {
+    this.secretsSyncPersona = this.persona.secretsSyncPersona;
+
+    await render(hbs`<Secrets::LandingCta @secretsSyncPersona={{this.secretsSyncPersona}} /> `, {
       owner: this.engine,
     });
 
@@ -38,7 +62,9 @@ module('Integration | Component | sync | Secrets::LandingCta', function (hooks) 
   });
 
   test('it should render CTA copy but not action when feature exists on enterprise license and is not activated', async function (assert) {
-    await render(hbs`<Secrets::LandingCta @isActivated={{false}} @hasSecretsSync={{true}} /> `, {
+    this.version.licenseFeatures = ['Secrets Sync'];
+    this.secretsSyncPersona = this.persona.secretsSyncPersona;
+    await render(hbs`<Secrets::LandingCta @secretsSyncPersona={{this.secretsSyncPersona}} /> `, {
       owner: this.engine,
     });
     assert
@@ -51,7 +77,10 @@ module('Integration | Component | sync | Secrets::LandingCta', function (hooks) 
   });
 
   test('it should render CTA copy and action when feature exists on enterprise license and is activated', async function (assert) {
-    await render(hbs`<Secrets::LandingCta @isActivated={{true}} @hasSecretsSync={{true}} /> `, {
+    this.version.licenseFeatures = ['Secrets Sync'];
+    this.version.activatedFeatures = ['secrets-sync'];
+    this.secretsSyncPersona = this.persona.secretsSyncPersona;
+    await render(hbs`<Secrets::LandingCta @secretsSyncPersona={{this.secretsSyncPersona}} /> `, {
       owner: this.engine,
     });
 
