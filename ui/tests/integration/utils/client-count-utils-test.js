@@ -302,6 +302,7 @@ module('Integration | Util | client count utils', function (hooks) {
                 entity_clients: 1,
                 label: 'auth/u/',
                 month: '4/24',
+                timestamp: '2024-04-01T00:00:00Z',
                 non_entity_clients: 0,
                 secret_syncs: 0,
               },
@@ -321,6 +322,7 @@ module('Integration | Util | client count utils', function (hooks) {
                 entity_clients: 2,
                 label: 'no mount accessor (pre-1.10 upgrade?)',
                 month: '4/24',
+                timestamp: '2024-04-01T00:00:00Z',
                 non_entity_clients: 0,
                 secret_syncs: 0,
               },
@@ -335,6 +337,7 @@ module('Integration | Util | client count utils', function (hooks) {
             entity_clients: 3,
             label: 'root',
             month: '4/24',
+            timestamp: '2024-04-01T00:00:00Z',
             mounts: [
               {
                 acme_clients: 0,

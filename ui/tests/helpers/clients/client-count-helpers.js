@@ -106,8 +106,8 @@ export const ACTIVITY_RESPONSE_STUB = {
         non_entity_tokens: 1193,
         non_entity_clients: 1193,
         secret_syncs: 275,
-        acme_clients: 125,
-        clients: 2376,
+        acme_clients: 200,
+        clients: 2451,
       },
       mounts: [
         {
@@ -137,13 +137,13 @@ export const ACTIVITY_RESPONSE_STUB = {
         {
           mount_path: 'pki-engine-0',
           counts: {
-            clients: 125,
+            clients: 200,
             entity_clients: 0,
             non_entity_clients: 0,
             distinct_entities: 0,
             non_entity_tokens: 0,
             secret_syncs: 0,
-            acme_clients: 125,
+            acme_clients: 200,
           },
         },
       ],
@@ -769,6 +769,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
           acme_clients: 75,
           new_clients: {
             month: '9/23',
+            timestamp: '2023-09-01T00:00:00Z',
             label: 'root',
             clients: 114,
             entity_clients: 9,
@@ -814,6 +815,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               acme_clients: 0,
               new_clients: {
                 month: '9/23',
+                timestamp: '2023-09-01T00:00:00Z',
                 label: 'auth/authid0',
                 clients: 28,
                 entity_clients: 9,
@@ -833,6 +835,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               acme_clients: 0,
               new_clients: {
                 month: '9/23',
+                timestamp: '2023-09-01T00:00:00Z',
                 label: 'kvv2-engine-0',
                 clients: 66,
                 entity_clients: 0,
@@ -852,6 +855,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               acme_clients: 75,
               new_clients: {
                 month: '9/23',
+                timestamp: '2023-09-01T00:00:00Z',
                 label: 'pki-engine-0',
                 acme_clients: 20,
                 clients: 20,
@@ -872,6 +876,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
           acme_clients: 125,
           new_clients: {
             month: '9/23',
+            timestamp: '2023-09-01T00:00:00Z',
             label: 'ns1',
             clients: 222,
             entity_clients: 30,
@@ -917,6 +922,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               acme_clients: 0,
               new_clients: {
                 month: '9/23',
+                timestamp: '2023-09-01T00:00:00Z',
                 label: 'kvv2-engine-0',
                 clients: 100,
                 entity_clients: 0,
@@ -936,6 +942,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               acme_clients: 0,
               new_clients: {
                 month: '9/23',
+                timestamp: '2023-09-01T00:00:00Z',
                 label: 'auth/authid0',
                 clients: 92,
                 entity_clients: 30,
@@ -959,6 +966,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
                 entity_clients: 0,
                 label: 'pki-engine-0',
                 month: '9/23',
+                timestamp: '2023-09-01T00:00:00Z',
                 non_entity_clients: 0,
                 secret_syncs: 0,
               },
