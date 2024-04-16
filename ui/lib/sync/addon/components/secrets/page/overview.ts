@@ -18,10 +18,17 @@ import type RouterService from '@ember/routing/router-service';
 import type { SyncDestinationAssociationMetrics } from 'vault/vault/adapters/sync/association';
 import type SyncDestinationModel from 'vault/vault/models/sync/destination';
 
+enum secretsSyncPersona {
+  SHOW_ENTERPRISE_CTA = 'SHOW_ENTERPRISE_CTA',
+  SHOW_PREMIUM_CTA = 'SHOW_PREMIUM_CTA',
+  SHOW_ACTIVATION_CTA = 'SHOW_ACTIVATION_CTA',
+  SHOW_SECRETS_SYNC = 'SHOW_SECRETS_SYNC',
+}
+
 interface Args {
   destinations: Array<SyncDestinationModel>;
   totalVaultSecrets: number;
-  secretsSyncPersona: string;
+  secretsSyncPersona: secretsSyncPersona;
 }
 
 export default class SyncSecretsDestinationsPageComponent extends Component<Args> {

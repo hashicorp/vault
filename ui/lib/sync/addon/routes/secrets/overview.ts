@@ -12,6 +12,13 @@ import type FeatureFlagService from 'vault/services/feature-flag';
 import type VersionService from 'vault/services/version';
 import type StoreService from 'vault/services/store';
 
+enum secretsSyncPersona {
+  SHOW_ENTERPRISE_CTA = 'SHOW_ENTERPRISE_CTA',
+  SHOW_PREMIUM_CTA = 'SHOW_PREMIUM_CTA',
+  SHOW_ACTIVATION_CTA = 'SHOW_ACTIVATION_CTA',
+  SHOW_SECRETS_SYNC = 'SHOW_SECRETS_SYNC',
+}
+
 export default class SyncSecretsOverviewRoute extends Route {
   @service declare readonly router: RouterService;
   @service declare readonly store: StoreService;
@@ -26,7 +33,7 @@ export default class SyncSecretsOverviewRoute extends Route {
 
   async model() {
     const { secretsSyncPersona } = this.modelFor('secrets') as {
-      secretsSyncPersona: string;
+      secretsSyncPersona: secretsSyncPersona;
     };
 
     return hash({
