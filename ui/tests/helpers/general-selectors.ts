@@ -46,6 +46,7 @@ export const GENERAL = {
     deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   },
   searchSelect: {
+    trigger: (id: string) => `[data-test-component="search-select"]#${id} .ember-basic-dropdown-trigger`,
     options: '.ember-power-select-option',
     optionIndex: (text: string) =>
       findAll('.ember-power-select-options li').findIndex((e) => e.textContent?.trim() === text),

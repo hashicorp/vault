@@ -61,7 +61,7 @@
       @title="Monthly new"
       @description="ACME clients which interacted with Vault for the first time each month. Each bar represents the total new ACME clients for that month."
       @timestamp={{@activity.responseTimestamp}}
-      @hasChartData={{this.byMonthNewClients}}
+      @hasChartData={{true}}
       class="no-legend"
       data-test-chart="monthly new"
     >
@@ -80,7 +80,7 @@
 
       <:chart>
         <Clients::Charts::VerticalBarBasic
-          @chartTitle="Monthly new ACME clients"
+          @chartTitle="Monthly new"
           @data={{this.byMonthNewClients}}
           @dataKey="acme_clients"
           @chartHeight={{200}}

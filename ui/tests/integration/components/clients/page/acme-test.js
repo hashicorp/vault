@@ -15,6 +15,7 @@ import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors
 import { formatNumber } from 'core/helpers/format-number';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 import { dateFormat } from 'core/helpers/date-format';
+import { assertChart } from 'vault/tests/helpers/clients/client-count-helpers';
 
 const START_TIME = getUnixTime(LICENSE_START);
 const END_TIME = getUnixTime(STATIC_NOW);
@@ -51,7 +52,8 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
   });
 
   test('it should render with full month activity data charts', async function (assert) {
-    assert.expect(6 + this.activity.byMonth.length);
+    const monthCount = this.activity.byMonth.length;
+    assert.expect(8 + monthCount * 2);
     const expectedTotal = formatNumber([this.activity.total.acme_clients]);
     const expectedAvg = formatNumber([calculateAverage(this.activity.byMonth, 'acme_clients')]);
     const expectedNewAvg = formatNumber([
@@ -75,33 +77,8 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
     });
     assert.dom(charts.timestamp).hasText(`Updated ${formattedTimestamp}`, 'renders response timestamp');
 
-    // assert bar chart is correct
-    findAll(`${charts.chart('ACME usage')} ${charts.xAxisLabel}`).forEach((e, i) => {
-      assert
-        .dom(e)
-        .hasText(
-          `${this.activity.byMonth[i].month}`,
-          `renders x-axis labels for bar chart: ${this.activity.byMonth[i].month}`
-        );
-    });
-
-    const totalUsageBars = findAll(`${charts.chart('ACME usage')} ${charts.dataBar}`).filter((b) =>
-      b.hasAttribute('height')
-    );
-    assert.strictEqual(
-      totalUsageBars.length,
-      this.activity.byMonth.filter((m) => m.clients).length,
-      'it renders a bar for each non-zero month in total acme usage chart'
-    );
-
-    const monthlyNewBars = findAll(`${charts.chart('Monthly new ACME clients')} ${charts.dataBar}`).filter(
-      (b) => b.hasAttribute('height')
-    );
-    assert.strictEqual(
-      monthlyNewBars.length,
-      this.activity.byMonth.filter((m) => m.clients).length,
-      'it renders a bar for each non-zero month in monthly new acme chart'
-    );
+    assertChart(assert, 'ACME usage', this.activity.byMonth);
+    assertChart(assert, 'Monthly new', this.activity.byMonth);
   });
 
   test('it should render stats without chart for a single month', async function (assert) {
@@ -112,7 +89,7 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
     await this.renderComponent();
 
     assert.dom(charts.chart('ACME usage')).doesNotExist('total usage chart does not render');
-    assert.dom(charts.chart('Monthly new ACME clients')).doesNotExist('monthly new chart does not render');
+    assert.dom(charts.chart('Monthly new')).doesNotExist('monthly new chart does not render');
     assert.dom(statText('Average ACME clients per month')).doesNotExist();
     assert.dom(statText('Average new ACME clients per month')).doesNotExist();
     assert
@@ -139,7 +116,7 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
       .hasText('There is no ACME client data available for this date range.');
 
     assert.dom(charts.chart('ACME usage')).doesNotExist('vertical bar chart does not render');
-    assert.dom(charts.chart('Monthly new ACME clients')).doesNotExist('monthly new chart does not render');
+    assert.dom(charts.chart('Monthly new')).doesNotExist('monthly new chart does not render');
     assert.dom(statText('Total ACME clients')).doesNotExist();
     assert.dom(statText('Average ACME clients per month')).doesNotExist();
     assert.dom(statText('Average new ACME clients per month')).doesNotExist();
@@ -212,9 +189,7 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
       assert.dom(e).isNotVisible(`does not render data bar for: ${this.activity.byMonth[i].month}`);
     });
 
-    assert
-      .dom(charts.chart('Monthly new ACME clients'))
-      .doesNotExist('empty monthly new chart does not render at all');
+    assert.dom(charts.chart('Monthly new')).doesNotExist('empty monthly new chart does not render at all');
     assert.dom(statText('Average ACME clients per month')).doesNotExist();
     assert.dom(statText('Average new ACME clients per month')).doesNotExist();
   });

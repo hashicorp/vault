@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click } from '@ember/test-helpers';
+import { click, findAll } from '@ember/test-helpers';
 
 import { LICENSE_START } from 'vault/mirage/handlers/clients';
 import { addMonths } from 'date-fns';
@@ -17,6 +17,29 @@ export async function dateDropdownSelect(month, year) {
   await click(dateDropdown.toggleYear);
   await click(dateDropdown.selectYear(year));
   await click(dateDropdown.submit);
+}
+
+export function assertChart(assert, chartName, byMonthData) {
+  // assertion count is byMonthData.length + 2
+  const chart = CLIENT_COUNT.charts.chart(chartName);
+  const dataBars = findAll(`${chart} ${CLIENT_COUNT.charts.dataBar}`).filter((b) => b.hasAttribute('height'));
+  const xAxisLabels = findAll(`${chart} ${CLIENT_COUNT.charts.xAxisLabel}`);
+
+  assert.strictEqual(
+    dataBars.length,
+    byMonthData.filter((m) => m.clients).length,
+    `${chartName}: it renders bars for each non-zero month`
+  );
+
+  assert.strictEqual(
+    xAxisLabels.length,
+    byMonthData.length,
+    `${chartName}: it renders a label for each month`
+  );
+
+  xAxisLabels.forEach((e, i) => {
+    assert.dom(e).hasText(`${byMonthData[i].month}`, `renders x-axis label: ${byMonthData[i].month}`);
+  });
 }
 
 export const ACTIVITY_RESPONSE_STUB = {
@@ -612,11 +635,11 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
     },
     {
       label: 'ns1',
-      clients: 2376,
+      clients: 2451,
       entity_clients: 783,
       non_entity_clients: 1193,
       secret_syncs: 275,
-      acme_clients: 125,
+      acme_clients: 200,
       mounts: [
         {
           label: 'auth/authid0',
@@ -636,8 +659,8 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
         },
         {
           label: 'pki-engine-0',
-          acme_clients: 125,
-          clients: 125,
+          acme_clients: 200,
+          clients: 200,
           entity_clients: 0,
           non_entity_clients: 0,
           secret_syncs: 0,
