@@ -408,7 +408,8 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		}
 
 		// If version isn't found in the state, fake it using the version from the leader so that autopilot
-		// doesn't demote the node to a non-voter, just because of a missed heartbeat.
+		// doesn't demote the node to a non-voter, just because of a missed heartbeat. Note that this should
+		// be the SDK version, not the upgrade version.
 		currentServerID := raft.ServerID(id)
 		followerVersion := state.Version
 		leaderVersion := d.effectiveSDKVersion
@@ -465,7 +466,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		NodeStatus:  autopilot.NodeAlive,
 		NodeType:    autopilot.NodeVoter, // The leader must be a voter
 		Meta: d.meta(&FollowerState{
-			UpgradeVersion: d.EffectiveVersion(),
+			UpgradeVersion: d.UpgradeVersion(),
 			RedundancyZone: d.RedundancyZone(),
 		}),
 		Version:  d.effectiveSDKVersion,
