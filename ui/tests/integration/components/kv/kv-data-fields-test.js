@@ -93,7 +93,7 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
   });
 
   test('it shows readonly json editor when viewing secret details of complex secret', async function (assert) {
-    assert.expect(3);
+    assert.expect(4);
     this.secret.secretData = {
       foo: {
         bar: 'baz',
@@ -106,6 +106,10 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
     });
     assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
     assert.dom('[data-test-component="code-mirror-modifier"]').hasClass('readonly-codemirror');
+    assert
+      .dom('[data-test-component="code-mirror-modifier"]')
+      .includesText(`{ "foo": { "bar": "********" }}`);
+    await click(FORM.toggleJsonValues);
     assert.dom('[data-test-component="code-mirror-modifier"]').includesText(`{ "foo": { "bar": "baz" }}`);
   });
 });

@@ -270,7 +270,7 @@ type Core struct {
 	// HABackend may be available depending on the physical backend
 	ha physical.HABackend
 
-	// storageType is the the storage type set in the storage configuration
+	// storageType is the storage type set in the storage configuration
 	storageType string
 
 	// redirectAddr is the address we advertise as leader if held
@@ -649,8 +649,6 @@ type Core struct {
 	// it is protected by activityLogLock
 	activityLogConfig ActivityLogCoreConfig
 
-	censusConfig atomic.Value
-
 	// activeTime is set on active nodes indicating the time at which this node
 	// became active.
 	activeTime time.Time
@@ -830,9 +828,6 @@ type CoreConfig struct {
 	License         string
 	LicensePath     string
 	LicensingConfig *LicensingConfig
-
-	// Configured Census Agent
-	CensusAgent CensusReporter
 
 	DisablePerformanceStandby bool
 	DisableIndexing           bool
@@ -2466,15 +2461,22 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 
-		if err := c.setupCensusAgent(); err != nil {
-			c.logger.Error("skipping reporting for nil agent", "error", err)
-		}
-
 		// not waiting on wg to avoid changing existing behavior
 		var wg sync.WaitGroup
 		if err := c.setupActivityLog(ctx, &wg); err != nil {
 			return err
 		}
+
+		if !c.perfStandby {
+			if err := c.setupCensusManager(); err != nil {
+				logger.Error("failed to instantiate the license reporting agent", "error", err)
+			}
+
+			c.StartCensusReports(ctx)
+
+			c.StartManualCensusSnapshots()
+		}
+
 	} else {
 		var err error
 		disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
@@ -2725,8 +2727,8 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
 	c.stopActivityLog()
-	// Clean up the censusAgent on seal
-	if err := c.teardownCensusAgent(); err != nil {
+	// Clean up census on seal
+	if err := c.teardownCensusManager(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down reporting agent: %w", err))
 	}
 
@@ -3624,6 +3626,8 @@ func (c *Core) checkBarrierAutoRotate(ctx context.Context) {
 			lf := c.logger.Error
 			if strings.HasSuffix(err.Error(), "context canceled") {
 				lf = c.logger.Debug
+			} else if strings.HasSuffix(err.Error(), "context deadline exceeded") {
+				lf = c.logger.Warn
 			}
 			lf("error in barrier auto rotation", "error", err)
 			return

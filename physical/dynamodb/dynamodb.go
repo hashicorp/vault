@@ -529,7 +529,6 @@ func (d *DynamoDBBackend) batchWriteRequests(requests []*dynamodb.WriteRequest) 
 			output, err = d.client.BatchWriteItem(&dynamodb.BatchWriteItemInput{
 				RequestItems: batch,
 			})
-
 			if err != nil {
 				break
 			}
@@ -859,7 +858,7 @@ func ensureTableExists(client *dynamodb.DynamoDB, table string, readCapacity, wr
 
 // recordPathForVaultKey transforms a vault key into
 // a value suitable for the `DynamoDBRecord`'s `Path`
-// property. This path equals the the vault key without
+// property. This path equals the vault key without
 // its last component.
 func recordPathForVaultKey(key string) string {
 	if strings.Contains(key, "/") {
@@ -870,7 +869,7 @@ func recordPathForVaultKey(key string) string {
 
 // recordKeyForVaultKey transforms a vault key into
 // a value suitable for the `DynamoDBRecord`'s `Key`
-// property. This path equals the the vault key's
+// property. This path equals the vault key's
 // last component.
 func recordKeyForVaultKey(key string) string {
 	return pkgPath.Base(key)

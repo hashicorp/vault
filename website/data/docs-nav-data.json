@@ -214,6 +214,10 @@
         "path": "concepts/storage"
       },
       {
+        "title": "Cloud access management",
+        "path": "concepts/cloud-access-management"
+      },
+      {
         "title": "Integrated Storage",
         "routes": [
           {
@@ -308,6 +312,11 @@
       },
       {
         "title": "<code>replication</code>",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "configuration/replication"
       },
       {
@@ -2015,6 +2024,10 @@
                             "path": "platform/k8s/vso/sources/vault/auth/gcp"
                           }
                         ]
+                      },
+                      {
+                        "title": "Encrypted client cache",
+                        "path": "platform/k8s/vso/sources/vault/client-cache"
                       }
                     ]
                   },
@@ -2025,12 +2038,16 @@
                 ]
               },
               {
-                "title": "Examples",
-                "path": "platform/k8s/vso/examples"
+                "title": "Secret Data Transformation",
+                "path": "platform/k8s/vso/secret-transformation"
               },
               {
                 "title": "Helm Chart",
                 "path": "platform/k8s/vso/helm"
+              },
+              {
+                "title": "Examples",
+                "path": "platform/k8s/vso/examples"
               },
               {
                 "title": "Telemetry",
@@ -2502,12 +2519,19 @@
           }
         ]
       },
-
       {
         "title": "Replication",
-        "path": "enterprise/replication"
+        "routes": [
+            {
+                "title": "Overview",
+                "path": "enterprise/replication"
+            },
+            {
+                "title": "Check for Merkle tree corruption",
+                "path": "enterprise/replication/check-merkle-tree-corruption"
+            }
+        ]
       },
-
       {
         "title": "HSM Support",
         "routes": [

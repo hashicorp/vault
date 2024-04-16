@@ -11,10 +11,30 @@
  */
 export function isAdvancedSecret(value) {
   try {
-    const json = JSON.parse(value);
-    if (Array.isArray(json)) return false;
-    return Object.values(json).some((value) => typeof value !== 'string');
+    const obj = typeof value === 'string' ? JSON.parse(value) : value;
+    if (Array.isArray(obj)) return false;
+    return Object.values(obj).any((value) => typeof value !== 'string');
   } catch (e) {
     return false;
   }
+}
+
+/**
+ * Method to obfuscate all values in a map, including nested values and arrays
+ * @param obj object
+ * @returns object
+ */
+export function obfuscateData(obj) {
+  if (typeof obj !== 'object' || Array.isArray(obj)) return obj;
+  const newObj = {};
+  for (const key of Object.keys(obj)) {
+    if (Array.isArray(obj[key])) {
+      newObj[key] = obj[key].map(() => '********');
+    } else if (typeof obj[key] === 'object') {
+      newObj[key] = obfuscateData(obj[key]);
+    } else {
+      newObj[key] = '********';
+    }
+  }
+  return newObj;
 }

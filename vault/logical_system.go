@@ -599,7 +599,9 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		Sha256:   sha256Bytes,
 	})
 	if err != nil {
-		if errors.Is(err, ErrPluginNotFound) || strings.HasPrefix(err.Error(), "plugin version mismatch") {
+		if errors.Is(err, ErrPluginNotFound) ||
+			errors.Is(err, ErrPluginVersionMismatch) ||
+			errors.Is(err, ErrPluginUnableToRun) {
 			return logical.ErrorResponse(err.Error()), nil
 		}
 		return nil, err
@@ -6399,6 +6401,15 @@ This path responds to the following HTTP methods.
 This path responds to the following HTTP methods.
 		GET /
 			Returns the available and enabled experiments.
+		`,
+	},
+	"utilization": {
+		"This internal api will return manual license reporting report data.",
+		`
+This path responds to the following HTTP methods.
+
+	POST /
+		returns the manual license reporting data.
 		`,
 	},
 }

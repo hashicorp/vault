@@ -7,6 +7,10 @@ import Service, { inject as service } from '@ember/service';
 import { sanitizePath, sanitizeStart } from 'core/utils/sanitize-path';
 import { task } from 'ember-concurrency';
 
+export const PERMISSIONS_BANNER_STATES = {
+  readFailed: 'read-failed',
+  noAccess: 'no-ns-access',
+};
 const API_PATHS = {
   access: {
     methods: 'sys/auth',
@@ -59,17 +63,44 @@ const API_PATHS_TO_ROUTE_PARAMS = {
   It fetches a users' policy from the resultant-acl endpoint and stores their
   allowed exact and glob paths as state. It also has methods for checking whether
   a user has permission for a given path.
+  The data from the resultant-acl endpoint has the following shape:
+  {
+    exact_paths: {
+      [key: string]: {
+        capabilities: string[];
+      };
+    };
+    glob_paths: {
+      [key: string]: {
+        capabilities: string[];
+      };
+    };
+    root: boolean;
+    chroot_namespace?: string;
+  };
+  There are a couple nuances to be aware of about this response. When a
+  chroot_namespace is set, all of the paths in the response will be prefixed
+  with that namespace. Additionally, this endpoint is only added to the default
+  policy in the user's root namespace, so we make the call to the user's root
+  namespace (the namespace where the user's auth method is mounted) no matter
+  what the current namespace is.
 */
 
 export default Service.extend({
   exactPaths: null,
   globPaths: null,
   canViewAll: null,
-  readFailed: false,
+  permissionsBanner: null,
   chrootNamespace: null,
   store: service(),
-  auth: service(),
   namespace: service(),
+
+  get baseNs() {
+    const currentNs = this.namespace.path;
+    return this.chrootNamespace
+      ? `${sanitizePath(this.chrootNamespace)}/${sanitizePath(currentNs)}`
+      : sanitizePath(currentNs);
+  },
 
   getPaths: task(function* () {
     if (this.paths) {
@@ -83,24 +114,61 @@ export default Service.extend({
     } catch (err) {
       // If no policy can be found, default to showing all nav items.
       this.set('canViewAll', true);
-      this.set('readFailed', true);
+      this.set('permissionsBanner', PERMISSIONS_BANNER_STATES.readFailed);
     }
   }),
+
+  get wildcardPath() {
+    const ns = [sanitizePath(this.chrootNamespace), sanitizePath(this.namespace.userRootNamespace)].join('/');
+    // wildcard path comes back from root namespace as empty string,
+    // but within a namespace it's the namespace itself ending with a slash
+    return ns === '/' ? '' : `${sanitizePath(ns)}/`;
+  },
+
+  /**
+   * hasWildcardAccess checks if the user has a wildcard policy
+   * @param {object} globPaths key is path, value is object with capabilities
+   * @returns {boolean} whether the user's policy includes wildcard access to NS
+   */
+  hasWildcardAccess(globPaths = {}) {
+    // First check if the wildcard path is in the globPaths object
+    if (!Object.keys(globPaths).includes(this.wildcardPath)) return false;
+
+    // if so, make sure the current namespace is a child of the wildcard path
+    return this.namespace.path.startsWith(this.wildcardPath);
+  },
+
+  // This method is called to recalculate whether to show the permissionsBanner when the namespace changes
+  calcNsAccess() {
+    if (this.canViewAll) {
+      this.set('permissionsBanner', null);
+      return;
+    }
+    const namespace = this.baseNs;
+    const allowed =
+      // check if the user has wildcard access to the relative root namespace
+      this.hasWildcardAccess(this.globPaths) ||
+      // or if any of their glob paths start with the namespace
+      Object.keys(this.globPaths).any((k) => k.startsWith(namespace)) ||
+      // or if any of their exact paths start with the namespace
+      Object.keys(this.exactPaths).any((k) => k.startsWith(namespace));
+    this.set('permissionsBanner', allowed ? null : PERMISSIONS_BANNER_STATES.noAccess);
+  },
 
   setPaths(resp) {
     this.set('exactPaths', resp.data.exact_paths);
     this.set('globPaths', resp.data.glob_paths);
     this.set('canViewAll', resp.data.root);
     this.set('chrootNamespace', resp.data.chroot_namespace);
-    this.set('readFailed', false);
+    this.calcNsAccess();
   },
 
   reset() {
     this.set('exactPaths', null);
     this.set('globPaths', null);
     this.set('canViewAll', null);
-    this.set('readFailed', false);
     this.set('chrootNamespace', null);
+    this.set('permissionsBanner', null);
   },
 
   hasNavPermission(navItem, routeParams, requireAll) {
@@ -128,9 +196,7 @@ export default Service.extend({
   },
 
   pathNameWithNamespace(pathName) {
-    const namespace = this.chrootNamespace
-      ? `${sanitizePath(this.chrootNamespace)}/${sanitizePath(this.namespace.path)}`
-      : sanitizePath(this.namespace.path);
+    const namespace = this.baseNs;
     if (namespace) {
       return `${sanitizePath(namespace)}/${sanitizeStart(pathName)}`;
     } else {

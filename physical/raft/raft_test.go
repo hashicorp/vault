@@ -143,7 +143,6 @@ func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB, dataOnly bool) error {
 
 		return nil
 	})
-
 	if err != nil {
 		t.Fatal(err)
 	}
