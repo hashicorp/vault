@@ -8,59 +8,37 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import sinon from 'sinon';
+import { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import timestamp from 'core/utils/timestamp';
-import { parseAPITimestamp } from 'core/utils/date-formatters';
+import { ACTIVITY_RESPONSE_STUB } from 'vault/tests/helpers/clients/client-count-helpers';
 
 module('Integration | Component | dashboard/client-count-card', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
+  });
+
   hooks.beforeEach(function () {
     this.license = {
-      startTime: '2018-04-03T14:15:30',
+      startTime: LICENSE_START.toISOString(),
     };
   });
 
+  hooks.after(function () {
+    timestamp.now.restore();
+  });
+
   test('it should display client count information', async function (assert) {
+    assert.expect(9);
     this.server.get('sys/internal/counters/activity', () => {
+      // this assertion should be hit twice, once initially and then again clicking 'refresh'
+      assert.true(true, 'makes request to sys/internal/counters/activity');
       return {
         request_id: 'some-activity-id',
-        data: {
-          months: [
-            {
-              timestamp: '2023-08-01T00:00:00-07:00',
-              counts: {},
-              namespaces: [
-                {
-                  namespace_id: 'root',
-                  namespace_path: '',
-                  counts: {},
-                  mounts: [{ mount_path: 'auth/up2/', counts: {} }],
-                },
-              ],
-              new_clients: {
-                counts: {
-                  clients: 12,
-                },
-                namespaces: [
-                  {
-                    namespace_id: 'root',
-                    namespace_path: '',
-                    counts: {
-                      clients: 12,
-                    },
-                    mounts: [{ mount_path: 'auth/up2/', counts: {} }],
-                  },
-                ],
-              },
-            },
-          ],
-          total: {
-            clients: 300417,
-            entity_clients: 73150,
-            non_entity_clients: 227267,
-          },
-        },
+        data: ACTIVITY_RESPONSE_STUB,
       };
     });
 
@@ -69,74 +47,15 @@ module('Integration | Component | dashboard/client-count-card', function (hooks)
     assert.dom('[data-test-stat-text="total-clients"] .stat-label').hasText('Total');
     assert
       .dom('[data-test-stat-text="total-clients"] .stat-text')
-      .hasText(
-        `The number of clients in this billing period (Apr 2018 - ${parseAPITimestamp(
-          timestamp.now().toISOString(),
-          'MMM yyyy'
-        )}).`
-      );
-    assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('300,417');
+      .hasText('The number of clients in this billing period (Jul 2023 - Jan 2024).');
+    assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('7,805');
     assert.dom('[data-test-stat-text="new-clients"] .stat-label').hasText('New');
     assert
       .dom('[data-test-stat-text="new-clients"] .stat-text')
       .hasText('The number of clients new to Vault in the current month.');
-    assert.dom('[data-test-stat-text="new-clients"] .stat-value').hasText('12');
-    this.server.get('sys/internal/counters/activity', () => {
-      return {
-        request_id: 'some-activity-id',
-        data: {
-          months: [
-            {
-              timestamp: '2023-09-01T00:00:00-07:00',
-              counts: {},
-              namespaces: [
-                {
-                  namespace_id: 'root',
-                  namespace_path: '',
-                  counts: {},
-                  mounts: [{ mount_path: 'auth/up2/', counts: {} }],
-                },
-              ],
-              new_clients: {
-                counts: {
-                  clients: 5,
-                },
-                namespaces: [
-                  {
-                    namespace_id: 'root',
-                    namespace_path: '',
-                    counts: {
-                      clients: 12,
-                    },
-                    mounts: [{ mount_path: 'auth/up2/', counts: {} }],
-                  },
-                ],
-              },
-            },
-          ],
-          total: {
-            clients: 120,
-            entity_clients: 100,
-            non_entity_clients: 100,
-          },
-        },
-      };
-    });
+    assert.dom('[data-test-stat-text="new-clients"] .stat-value').hasText('336');
+
+    // fires second request to /activity
     await click('[data-test-refresh]');
-    assert.dom('[data-test-stat-text="total-clients"] .stat-label').hasText('Total');
-    assert
-      .dom('[data-test-stat-text="total-clients"] .stat-text')
-      .hasText(
-        `The number of clients in this billing period (Apr 2018 - ${parseAPITimestamp(
-          timestamp.now().toISOString(),
-          'MMM yyyy'
-        )}).`
-      );
-    assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('120');
-    assert.dom('[data-test-stat-text="new-clients"] .stat-label').hasText('New');
-    assert
-      .dom('[data-test-stat-text="new-clients"] .stat-text')
-      .hasText('The number of clients new to Vault in the current month.');
-    assert.dom('[data-test-stat-text="new-clients"] .stat-value').hasText('5');
   });
 });

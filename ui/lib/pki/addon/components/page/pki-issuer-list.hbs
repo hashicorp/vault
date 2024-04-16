@@ -20,12 +20,12 @@
       <D.Content @defaultClass="popup-menu-content">
         <nav class="box menu" aria-label="generate options">
           <ul class="menu-list">
-            <li class="action">
+            <li>
               <LinkTo @route="issuers.generate-root" {{on "click" (fn this.onLinkClick D)}} data-test-generate-issuer="root">
                 Root
               </LinkTo>
             </li>
-            <li class="action">
+            <li>
               <LinkTo
                 @route="issuers.generate-intermediate"
                 {{on "click" (fn this.onLinkClick D)}}
@@ -95,7 +95,7 @@
                   @text="Details"
                   @route="issuers.issuer.details"
                   @model={{pkiIssuer.id}}
-                  data-test-popup-menu-details
+                  data-test-pki-issuer-details
                 />
                 <dd.Interactive @text="Edit" @route="issuers.issuer.edit" @model={{pkiIssuer.id}} />
               </Hds::Dropdown>

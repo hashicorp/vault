@@ -9,7 +9,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { STANDARD_META } from 'vault/tests/helpers/pki';
+import { STANDARD_META } from 'vault/tests/helpers/pagination';
 
 /**
  * this test is for the page component only. A separate test is written for the form rendered

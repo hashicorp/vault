@@ -1180,6 +1180,10 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					Type:        framework.TypeBool,
 					Description: "Specifies if previously-provided unseal keys are discarded and the unseal process is reset.",
 				},
+				"migrate": {
+					Type:        framework.TypeBool,
+					Description: "Used to migrate the seal from shamir to autoseal or autoseal to shamir. Must be provided on all unseal key calls.",
+				},
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -2887,31 +2891,6 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 								},
 								"key_info": {
 									Type:     framework.TypeMap,
-									Required: true,
-								},
-							},
-						}},
-					},
-				},
-			},
-		},
-		{
-			Pattern: "internal/ui/version",
-			DisplayAttrs: &framework.DisplayAttributes{
-				OperationPrefix: "internal-ui",
-				OperationVerb:   "read",
-				OperationSuffix: "version",
-			},
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.pathInternalUIVersion,
-					Summary:  "Backwards compatibility is not guaranteed for this API",
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"version": {
-									Type:     framework.TypeString,
 									Required: true,
 								},
 							},
