@@ -167,7 +167,7 @@ func (c *forwardingClient) startHeartbeat() {
 				req.RaftTerm = raftBackend.Term()
 				req.RaftDesiredSuffrage = raftBackend.DesiredSuffrage()
 				req.RaftRedundancyZone = raftBackend.RedundancyZone()
-				req.RaftUpgradeVersion = raftBackend.EffectiveVersion()
+				req.RaftUpgradeVersion = raftBackend.UpgradeVersion()
 				labels = append(labels, metrics.Label{Name: "peer_id", Value: raftBackend.NodeID()})
 			}
 

@@ -109,7 +109,7 @@ func (c *Core) getHAMembers() ([]HAStatusNode, error) {
 	}
 
 	if rb := c.getRaftBackend(); rb != nil {
-		leader.UpgradeVersion = rb.EffectiveVersion()
+		leader.UpgradeVersion = rb.UpgradeVersion()
 		leader.RedundancyZone = rb.RedundancyZone()
 	}
 
