@@ -3,10 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Service from '@ember/service';
-import { service } from '@ember/service';
+import Service, { service } from '@ember/service';
 
-// import type FeatureFlagService from 'vault/services/feature-flag';
+import type FeatureFlagService from 'vault/services/feature-flag';
 import type VersionService from 'vault/services/version';
 import type StoreService from 'vault/services/store';
 
@@ -15,7 +14,7 @@ import type StoreService from 'vault/services/store';
  */
 
 export default class PersonaService extends Service {
-  // @service declare readonly featureFlag: FeatureFlagService;
+  @service declare readonly featureFlag: FeatureFlagService;
   @service declare readonly store: StoreService;
   @service declare readonly version: VersionService;
 
@@ -40,15 +39,14 @@ export default class PersonaService extends Service {
 
   get secretsSyncPersona() {
     if (!this.version.isEnterprise) return 'SHOW_ENTERPRISE_CTA';
-    // Everything else is enterprise
-    return this.isManagedNamespaceRoot
-      ? this.version.secretsSyncIsActivated
-        ? 'SHOW_SECRETS_SYNC'
-        : 'SHOW_ACTIVATION_CTA'
-      : this.version.hasSecretsSync
-      ? this.version.secretsSyncIsActivated
-        ? 'SHOW_SECRETS_SYNC'
-        : 'SHOW_ACTIVATION_CTA'
-      : 'SHOW_PREMIUM_CTA';
+
+    if (this.isManagedNamespaceRoot) {
+      return this.version.secretsSyncIsActivated ? `SHOW_SECRETS_SYNC` : `SHOW_ACTIVATION_CTA`;
+    }
+    if (this.version.hasSecretsSync) {
+      return this.version.secretsSyncIsActivated ? `SHOW_SECRETS_SYNC` : `SHOW_ACTIVATION_CTA`;
+    }
+    // only option left is enterprise without it on their license so show premium CTA
+    return 'SHOW_PREMIUM_CTA';
   }
 }
