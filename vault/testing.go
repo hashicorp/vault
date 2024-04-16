@@ -273,7 +273,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Logger) *CoreConfig {
 	t.Helper()
 	noopAudits := map[string]audit.Factory{
-		"noop": corehelpers.NoopAuditFactory(nil),
+		"noop": audit.NoopAuditFactory(nil),
 	}
 
 	noopBackends := make(map[string]logical.Factory)
@@ -1539,7 +1539,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	addAuditBackend := len(coreConfig.AuditBackends) == 0
 	if addAuditBackend {
-		coreConfig.AuditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
+		coreConfig.AuditBackends["noop"] = audit.NoopAuditFactory(nil)
 	}
 
 	if coreConfig.Physical == nil && (opts == nil || opts.PhysicalFactory == nil) {

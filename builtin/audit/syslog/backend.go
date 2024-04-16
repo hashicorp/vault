@@ -34,7 +34,7 @@ type Backend struct {
 	saltView   logical.Storage
 }
 
-func Factory(_ context.Context, conf *audit.BackendConfig, headersConfig audit.HeaderFormatter) (audit.Backend, error) {
+func Factory(conf *audit.BackendConfig, headersConfig audit.HeaderFormatter) (audit.Backend, error) {
 	if conf.SaltConfig == nil {
 		return nil, fmt.Errorf("nil salt config: %w", audit.ErrInvalidParameter)
 	}
@@ -127,7 +127,7 @@ func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput) erro
 	return nil
 }
 
-func (b *Backend) Reload(_ context.Context) error {
+func (b *Backend) Reload() error {
 	return nil
 }
 

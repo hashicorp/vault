@@ -1543,11 +1543,11 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 
 func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 	// Create a noop audit backend
-	var noop *corehelpers.NoopAudit
+	var noop *audit.NoopAudit
 	c, _, root := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(_ context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 		var err error
-		noop, err = corehelpers.NewNoopAudit(config)
+		noop, err = audit.NewNoopAudit(config)
 		return noop, err
 	}
 
@@ -1606,11 +1606,11 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 
 func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 	// Create a noop audit backend
-	var noop *corehelpers.NoopAudit
+	var noop *audit.NoopAudit
 	c, _, root := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(_ context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 		var err error
-		noop, err = corehelpers.NewNoopAudit(config)
+		noop, err = audit.NewNoopAudit(config)
 		return noop, err
 	}
 
@@ -1709,7 +1709,7 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 
 func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	// Create a badass credential backend that always logs in as armon
-	var noop *corehelpers.NoopAudit
+	var noop *audit.NoopAudit
 	noopBack := &NoopBackend{
 		Login: []string{"login"},
 		Response: &logical.Response{
@@ -1729,9 +1729,9 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noopBack, nil
 	}
-	c.auditBackends["noop"] = func(_ context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 		var err error
-		noop, err = corehelpers.NewNoopAudit(config)
+		noop, err = audit.NewNoopAudit(config)
 		return noop, err
 	}
 

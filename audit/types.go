@@ -36,7 +36,7 @@ type Backend interface {
 	LogTestMessage(context.Context, *logical.LogInput) error
 
 	// Reload is called on SIGHUP for supporting backends.
-	Reload(context.Context) error
+	Reload() error
 
 	// Invalidate is called for path invalidation
 	Invalidate(context.Context)
@@ -203,4 +203,4 @@ type BackendConfig struct {
 }
 
 // Factory is the factory function to create an audit backend.
-type Factory func(context.Context, *BackendConfig, HeaderFormatter) (Backend, error)
+type Factory func(*BackendConfig, HeaderFormatter) (Backend, error)

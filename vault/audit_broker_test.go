@@ -47,7 +47,7 @@ func testAuditBackend(t *testing.T, path string, config map[string]string) audit
 		MountPath: path,
 	}
 
-	be, err := syslog.Factory(context.Background(), cfg, headersCfg)
+	be, err := syslog.Factory(cfg, headersCfg)
 	require.NoError(t, err)
 	require.NotNil(t, be)
 
@@ -118,7 +118,7 @@ func BenchmarkAuditBroker_File_Request_DevNull(b *testing.B) {
 		Logger:     hclog.NewNullLogger(),
 	}
 
-	sink, err := file.Factory(context.Background(), backendConfig, nil)
+	sink, err := file.Factory(backendConfig, nil)
 	require.NoError(b, err)
 
 	broker, err := NewAuditBroker(nil)

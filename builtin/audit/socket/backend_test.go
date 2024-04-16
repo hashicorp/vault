@@ -4,13 +4,11 @@
 package socket
 
 import (
-	"context"
 	"testing"
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -115,7 +113,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := newFormatterConfig(&corehelpers.NoopHeaderFormatter{}, tc.config)
+			got, err := newFormatterConfig(&audit.NoopHeaderFormatter{}, tc.config)
 			if tc.wantErr {
 				require.Error(t, err)
 				require.EqualError(t, err, tc.expectedErrMsg)
@@ -142,7 +140,7 @@ func TestBackend_configureFormatterNode(t *testing.T) {
 		nodeMap:    map[eventlogger.NodeID]eventlogger.Node{},
 	}
 
-	formatConfig, err := audit.NewFormatterConfig(&corehelpers.NoopHeaderFormatter{})
+	formatConfig, err := audit.NewFormatterConfig(&audit.NoopHeaderFormatter{})
 	require.NoError(t, err)
 
 	err = b.configureFormatterNode("juan", formatConfig, hclog.NewNullLogger())
@@ -252,8 +250,6 @@ func TestBackend_configureSinkNode(t *testing.T) {
 // supplied, is validated and tested.
 func TestBackend_Factory_Conf(t *testing.T) {
 	t.Parallel()
-
-	ctx := context.Background()
 
 	tests := map[string]struct {
 		backendConfig        *audit.BackendConfig
@@ -387,7 +383,7 @@ func TestBackend_Factory_Conf(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			be, err := Factory(ctx, tc.backendConfig, &corehelpers.NoopHeaderFormatter{})
+			be, err := Factory(tc.backendConfig, &audit.NoopHeaderFormatter{})
 
 			switch {
 			case tc.isErrorExpected:
@@ -405,8 +401,6 @@ func TestBackend_Factory_Conf(t *testing.T) {
 // and set correctly, then exposed via the interface method IsFallback().
 func TestBackend_IsFallback(t *testing.T) {
 	t.Parallel()
-
-	ctx := context.Background()
 
 	tests := map[string]struct {
 		backendConfig      *audit.BackendConfig
@@ -448,7 +442,7 @@ func TestBackend_IsFallback(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			be, err := Factory(ctx, tc.backendConfig, &corehelpers.NoopHeaderFormatter{})
+			be, err := Factory(tc.backendConfig, &audit.NoopHeaderFormatter{})
 			require.NoError(t, err)
 			require.NotNil(t, be)
 			require.Equal(t, tc.isFallbackExpected, be.IsFallback())
