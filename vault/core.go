@@ -257,7 +257,7 @@ type Core struct {
 	// HABackend may be available depending on the physical backend
 	ha physical.HABackend
 
-	// storageType is the the storage type set in the storage configuration
+	// storageType is the storage type set in the storage configuration
 	storageType string
 
 	// redirectAddr is the address we advertise as leader if held
@@ -281,6 +281,9 @@ type Core struct {
 
 	// seal is our seal, for seal configuration information
 	seal Seal
+
+	// sealReloadFunc is a function that can be used to trigger seal configuration reloading
+	sealReloadFunc func(context.Context) error
 
 	// raftJoinDoneCh is used by the raft retry join routine to inform unseal process
 	// that the join is complete
@@ -1197,7 +1200,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	// Construct a new AES-GCM barrier
-	c.barrier, err = NewAESGCMBarrier(c.physical)
+	detectDeadlocks := slices.Contains(c.detectDeadlocks, "barrier")
+	if detectDeadlocks {
+		c.Logger().Debug("enabling deadlock detection for the barrier")
+	}
+	c.barrier, err = NewAESGCMBarrier(c.physical, detectDeadlocks)
 	if err != nil {
 		return nil, fmt.Errorf("barrier setup failed: %w", err)
 	}
@@ -1296,8 +1303,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	quotasLogger := conf.Logger.Named("quotas")
 	c.allLoggers = append(c.allLoggers, quotasLogger)
 
-	detectDeadlocks := slices.Contains(c.detectDeadlocks, "quotas")
-	c.quotaManager, err = quotas.NewManager(quotasLogger, c.quotaLeaseWalker, c.metricSink, detectDeadlocks)
+	detectDeadlocksQuotas := slices.Contains(c.detectDeadlocks, "quotas")
+	c.quotaManager, err = quotas.NewManager(quotasLogger, c.quotaLeaseWalker, c.metricSink, detectDeadlocksQuotas)
 	if err != nil {
 		return nil, err
 	}
@@ -2453,12 +2460,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	}
 
 	if !c.IsDRSecondary() {
-		if !c.perfStandby {
-			if err := c.setupCensusManager(); err != nil {
-				logger.Error("failed to instantiate the license reporting agent", "error", err)
-			}
-		}
-
 		// not waiting on wg to avoid changing existing behavior
 		var wg sync.WaitGroup
 		if err := c.setupActivityLog(ctx, &wg); err != nil {
@@ -2466,6 +2467,12 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		}
 
 		if !c.perfStandby {
+			if err := c.setupCensusManager(); err != nil {
+				logger.Error("failed to instantiate the license reporting agent", "error", err)
+			}
+
+			c.StartCensusReports(ctx)
+
 			c.StartManualCensusSnapshots()
 		}
 
@@ -2638,47 +2645,55 @@ func (c *Core) runUnsealSetupForPrimary(ctx context.Context, logger log.Logger) 
 		return err
 	}
 
-	// Retrieve the seal generation information from storage
-	existingGenerationInfo, err := PhysicalSealGenInfo(ctx, c.physical)
-	if err != nil {
-		logger.Error("cannot read existing seal generation info from storage", "error", err)
-		return err
-	}
-
-	sealGenerationInfo := c.seal.GetAccess().GetSealGenerationInfo()
-
-	switch {
-	case existingGenerationInfo == nil:
-		// This is the first time we store seal generation information
-		fallthrough
-	case existingGenerationInfo.Generation < sealGenerationInfo.Generation:
-		// We have incremented the seal generation
-		if err := c.SetPhysicalSealGenInfo(ctx, sealGenerationInfo); err != nil {
-			logger.Error("failed to store seal generation info", "error", err)
+	if c.IsMultisealEnabled() {
+		// Retrieve the seal generation information from storage
+		existingGenerationInfo, err := PhysicalSealGenInfo(ctx, c.physical)
+		if err != nil {
+			logger.Error("cannot read existing seal generation info from storage", "error", err)
 			return err
 		}
 
-	case existingGenerationInfo.Generation == sealGenerationInfo.Generation:
-		// Same generation, update the rewrapped flag in case the previous active node
-		// changed its value. In other words, a rewrap may have happened, or a rewrap may have been
-		// started but not completed.
-		c.seal.GetAccess().GetSealGenerationInfo().SetRewrapped(existingGenerationInfo.IsRewrapped())
-
-	case existingGenerationInfo.Generation > sealGenerationInfo.Generation:
-		// Our seal information is out of date. The previous active node used a newer generation.
-		logger.Error("A newer seal generation was found in storage. The seal configuration in this node should be updated to match that of the previous active node, and this node should be restarted.")
-		return errors.New("newer seal generation found in storage, in memory seal configuration is out of date")
+		sealGenerationInfo := c.seal.GetAccess().GetSealGenerationInfo()
+		shouldRewrap := !sealGenerationInfo.IsRewrapped()
+		switch {
+		case existingGenerationInfo == nil:
+			// This is the first time we store seal generation information
+			fallthrough
+		case existingGenerationInfo.Generation < sealGenerationInfo.Generation || !existingGenerationInfo.Enabled:
+			// We have incremented the seal generation or we've just become enabled again after previously being disabled,
+			// trust the operator in the latter case
+			if err := c.SetPhysicalSealGenInfo(ctx, sealGenerationInfo); err != nil {
+				logger.Error("failed to store seal generation info", "error", err)
+				return err
+			}
+			shouldRewrap = true
+		case existingGenerationInfo.Generation == sealGenerationInfo.Generation:
+			// Same generation, update the rewrapped flag in case the previous active node
+			// changed its value. In other words, a rewrap may have happened, or a rewrap may have been
+			// started but not completed.
+			c.seal.GetAccess().GetSealGenerationInfo().SetRewrapped(existingGenerationInfo.IsRewrapped())
+			if !existingGenerationInfo.Enabled {
+				// Weren't enabled but are now, persist the flag
+				if err := c.SetPhysicalSealGenInfo(ctx, sealGenerationInfo); err != nil {
+					logger.Error("failed to store seal generation info", "error", err)
+					return err
+				}
+			}
+			shouldRewrap = !existingGenerationInfo.IsRewrapped()
+		case existingGenerationInfo.Generation > sealGenerationInfo.Generation:
+			// Our seal information is out of date. The previous active node used a newer generation.
+			logger.Error("A newer seal generation was found in storage. The seal configuration in this node should be updated to match that of the previous active node, and this node should be restarted.")
+			return errors.New("newer seal generation found in storage, in memory seal configuration is out of date")
+		}
+		if shouldRewrap {
+			// Set the migration done flag so that a seal-rewrap gets triggered later.
+			// Note that in the case where multi seal is not supported, Core.migrateSeal() takes care of
+			// triggering the rewrap when necessary.
+			logger.Trace("seal generation information indicates that a seal-rewrap is needed", "generation", sealGenerationInfo.Generation)
+			atomic.StoreUint32(c.sealMigrationDone, 1)
+		}
+		startPartialSealRewrapping(c)
 	}
-
-	if server.IsMultisealSupported() && !sealGenerationInfo.IsRewrapped() {
-		// Set the migration done flag so that a seal-rewrap gets triggered later.
-		// Note that in the case where multi seal is not supported, Core.migrateSeal() takes care of
-		// triggering the rewrap when necessary.
-		logger.Trace("seal generation information indicates that a seal-rewrap is needed", "generation", sealGenerationInfo.Generation)
-		atomic.StoreUint32(c.sealMigrationDone, 1)
-	}
-
-	startPartialSealRewrapping(c)
 
 	return nil
 }
@@ -2824,6 +2839,7 @@ func (c *Core) preSeal() error {
 		close(c.metricsCh)
 		c.metricsCh = nil
 	}
+
 	var result error
 
 	c.stopForwarding()
@@ -3054,7 +3070,7 @@ func (c *Core) checkForSealMigration(ctx context.Context, unwrapSeal Seal) (seal
 			// This is a migration away from Shamir.
 
 			return sealMigrationCheckAdjust, nil
-		case configuredType == SealConfigTypeMultiseal && server.IsMultisealSupported():
+		case configuredType == SealConfigTypeMultiseal && c.IsMultisealEnabled():
 			// We are going from a single non-shamir seal to multiseal, and multi seal is supported.
 			// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
 			// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).
@@ -3390,6 +3406,20 @@ func (c *Core) IsSealMigrated(lock bool) bool {
 	}
 	done, _ := c.sealMigrated(context.Background())
 	return done
+}
+
+func (c *Core) SetSealReloadFunc(f func(context.Context) error) {
+	c.sealReloadFunc = f
+}
+
+// TriggerSealReload triggers reloading of the seal configuration and resetting of the seal.
+// The caller should hold the write statelock.
+func (c *Core) TriggerSealReload(ctx context.Context) error {
+	if c.sealReloadFunc == nil {
+		return nil
+	}
+
+	return c.sealReloadFunc(ctx)
 }
 
 func (c *Core) BarrierEncryptorAccess() *BarrierEncryptorAccess {
@@ -4099,15 +4129,16 @@ func (c *Core) ReloadIntrospectionEndpointEnabled() {
 }
 
 type PeerNode struct {
-	Hostname        string        `json:"hostname"`
-	APIAddress      string        `json:"api_address"`
-	ClusterAddress  string        `json:"cluster_address"`
-	Version         string        `json:"version"`
-	LastEcho        time.Time     `json:"last_echo"`
-	UpgradeVersion  string        `json:"upgrade_version,omitempty"`
-	RedundancyZone  string        `json:"redundancy_zone,omitempty"`
-	EchoDuration    time.Duration `json:"echo_duration"`
-	ClockSkewMillis int64         `json:"clock_skew_millis"`
+	Hostname                    string        `json:"hostname"`
+	APIAddress                  string        `json:"api_address"`
+	ClusterAddress              string        `json:"cluster_address"`
+	Version                     string        `json:"version"`
+	LastEcho                    time.Time     `json:"last_echo"`
+	UpgradeVersion              string        `json:"upgrade_version,omitempty"`
+	RedundancyZone              string        `json:"redundancy_zone,omitempty"`
+	EchoDuration                time.Duration `json:"echo_duration"`
+	ClockSkewMillis             int64         `json:"clock_skew_millis"`
+	ReplicationPrimaryCanaryAge int64         `json:"replication_primary_canary_age_ms"`
 }
 
 // GetHAPeerNodesCached returns the nodes that've sent us Echo requests recently.
@@ -4124,15 +4155,16 @@ func (c *Core) GetHAPeerNodesCached() []PeerNode {
 			apiAddr = info.nodeInfo.ApiAddr
 		}
 		nodes = append(nodes, PeerNode{
-			Hostname:        hostname,
-			APIAddress:      apiAddr,
-			ClusterAddress:  itemClusterAddr,
-			LastEcho:        info.lastHeartbeat,
-			Version:         info.version,
-			UpgradeVersion:  info.upgradeVersion,
-			RedundancyZone:  info.redundancyZone,
-			EchoDuration:    info.echoDuration,
-			ClockSkewMillis: info.clockSkewMillis,
+			Hostname:                    hostname,
+			APIAddress:                  apiAddr,
+			ClusterAddress:              itemClusterAddr,
+			LastEcho:                    info.lastHeartbeat,
+			Version:                     info.version,
+			UpgradeVersion:              info.upgradeVersion,
+			RedundancyZone:              info.redundancyZone,
+			EchoDuration:                info.echoDuration,
+			ClockSkewMillis:             info.clockSkewMillis,
+			ReplicationPrimaryCanaryAge: info.replicationLagMillis,
 		})
 	}
 	return nodes
@@ -4435,16 +4467,28 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 	return raftBackend.GetAutopilotServerState(ctx)
 }
 
-// Events returns a reference to the common event bus for sending and subscribint to events.
+// Events returns a reference to the common event bus for sending and subscribing to events.
 func (c *Core) Events() *eventbus.EventBus {
 	return c.events
 }
 
-func (c *Core) SetSeals(barrierSeal Seal, secureRandomReader io.Reader, shouldRewrap bool) error {
-	ctx, _ := c.GetContext()
+func (c *Core) SetSeals(ctx context.Context, grabLock bool, barrierSeal Seal, secureRandomReader io.Reader, shouldRewrap bool) error {
+	return c.setSeals(ctx, grabLock, barrierSeal, secureRandomReader, shouldRewrap, true)
+}
 
-	c.stateLock.Lock()
-	defer c.stateLock.Unlock()
+// SetSealsOnPerfStandby sets the seal state within the core object without attempting to persist it to disk,
+// normally SetSeals is what you should be calling.
+func (c *Core) SetSealsOnPerfStandby(ctx context.Context, grabLock bool, barrierSeal Seal, secureRandomReader io.Reader) error {
+	return c.setSeals(ctx, grabLock, barrierSeal, secureRandomReader, false, false)
+}
+
+func (c *Core) setSeals(ctx context.Context, grabLock bool, barrierSeal Seal, secureRandomReader io.Reader, shouldRewrap bool, performWrite bool) error {
+	if grabLock {
+		ctx, _ = c.GetContext()
+
+		c.stateLock.Lock()
+		defer c.stateLock.Unlock()
+	}
 
 	currentSealBarrierConfig, err := c.SealAccess().BarrierConfig(ctx)
 	if err != nil {
@@ -4466,21 +4510,21 @@ func (c *Core) SetSeals(barrierSeal Seal, secureRandomReader io.Reader, shouldRe
 	}
 
 	barrierConfigCopy.Type = barrierSeal.BarrierSealConfigType().String()
-	err = barrierSeal.SetBarrierConfig(ctx, barrierConfigCopy)
-	if err != nil {
-		return fmt.Errorf("error setting barrier config for new seal: %s", err)
-	}
+	if performWrite {
+		err = barrierSeal.SetBarrierConfig(ctx, barrierConfigCopy)
+		if err != nil {
+			return fmt.Errorf("error setting barrier config for new seal: %s", err)
+		}
 
-	err = barrierSeal.SetStoredKeys(ctx, rootKey)
-	if err != nil {
-		return fmt.Errorf("error setting root key in new seal: %s", err)
+		err = barrierSeal.SetStoredKeys(ctx, rootKey)
+		if err != nil {
+			return fmt.Errorf("error setting root key in new seal: %s", err)
+		}
 	}
 
 	c.seal = barrierSeal
 
-	c.reloadSealsEnt(secureRandomReader, barrierSeal, c.logger, shouldRewrap)
-
-	return nil
+	return c.reloadSealsEnt(secureRandomReader, barrierSeal, c.logger, shouldRewrap)
 }
 
 func (c *Core) GetWellKnownRedirect(ctx context.Context, path string) (string, error) {

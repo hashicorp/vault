@@ -129,4 +129,11 @@ module('Acceptance | sync | destination', function (hooks) {
       'Does no redirect when navigating to destination route other than edit or sync'
     );
   });
+
+  test('it should render correct number of associations in list for sub keys', async function (assert) {
+    this.server.db.syncDestinations.update({ granularity: 'secret-key' });
+
+    await visit('vault/sync/secrets/destinations/vercel-project/destination-vercel/secrets');
+    assert.dom('[data-test-list-item]').exists({ count: 3 }, 'Sub key associations render in list');
+  });
 });

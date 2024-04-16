@@ -18,6 +18,9 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// defaultToRetentionMonthsMaxWarning is a warning message for setting the max retention_months value when retention_months value is more than activityLogMaximumRetentionMonths
+var defaultToRetentionMonthsMaxWarning = fmt.Sprintf("retention_months cannot be greater than %d; capped to %d.", activityLogMaximumRetentionMonths, activityLogMaximumRetentionMonths)
+
 // activityQueryPath is available in every namespace
 func (b *SystemBackend) activityQueryPath() *framework.Path {
 	return &framework.Path{
@@ -109,7 +112,7 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 				},
 				"retention_months": {
 					Type:        framework.TypeInt,
-					Default:     24,
+					Default:     ActivityLogMinimumRetentionMonths,
 					Description: "Number of months of client data to retain. Setting to 0 will clear all existing data.",
 				},
 				"enabled": {
@@ -308,7 +311,7 @@ func (b *SystemBackend) handleActivityConfigRead(ctx context.Context, req *logic
 		return logical.ErrorResponse("no activity log present"), nil
 	}
 
-	config, err := a.loadConfigOrDefault(ctx)
+	config, err := a.loadConfigOrDefault(ctx, b.Core.ManualLicenseReportingEnabled())
 	if err != nil {
 		return nil, err
 	}
@@ -345,10 +348,12 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 
 	warnings := make([]string, 0)
 
-	config, err := a.loadConfigOrDefault(ctx)
+	config, err := a.loadConfigOrDefault(ctx, b.Core.ManualLicenseReportingEnabled())
 	if err != nil {
 		return nil, err
 	}
+
+	prevRetentionMonths := config.RetentionMonths
 
 	{
 		// Parse the default report months
@@ -363,6 +368,8 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 
 	{
 		// Parse the retention months
+		// For CE, this value can be between 0 and 60
+		// When reporting is enabled, this value can be between 48 and 60
 		if retentionMonthsRaw, ok := d.GetOk("retention_months"); ok {
 			config.RetentionMonths = retentionMonthsRaw.(int)
 		}
@@ -371,9 +378,9 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 			return logical.ErrorResponse("retention_months must be greater than or equal to 0"), logical.ErrInvalidRequest
 		}
 
-		if config.RetentionMonths > 36 {
-			config.RetentionMonths = 36
-			warnings = append(warnings, "retention_months cannot be greater than 36; capped to 36.")
+		if config.RetentionMonths > activityLogMaximumRetentionMonths {
+			config.RetentionMonths = activityLogMaximumRetentionMonths
+			warnings = append(warnings, defaultToRetentionMonthsMaxWarning)
 		}
 	}
 
@@ -416,7 +423,7 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 		return logical.ErrorResponse("retention_months cannot be 0 while enabled"), logical.ErrInvalidRequest
 	}
 
-	// if manual license reporting is enabled, retention months must at least be 24 months
+	// if manual license reporting is enabled, retention months must at least be 48 months
 	if a.core.ManualLicenseReportingEnabled() && config.RetentionMonths < minimumRetentionMonths {
 		return logical.ErrorResponse("retention_months must be at least %d while Reporting is enabled", minimumRetentionMonths), logical.ErrInvalidRequest
 	}
@@ -432,6 +439,11 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 
 	// Set the new config on the activity log
 	a.SetConfig(ctx, config)
+
+	// reload census agent if retention months change during update when reporting is enabled
+	if prevRetentionMonths != config.RetentionMonths {
+		a.core.ReloadCensus()
+	}
 
 	if len(warnings) > 0 {
 		return &logical.Response{

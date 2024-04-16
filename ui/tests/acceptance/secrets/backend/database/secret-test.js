@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { currentURL, settled, click, visit, fillIn, typeIn } from '@ember/test-helpers';
+import { currentURL, settled, click, visit, fillIn, typeIn, waitFor } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { selectChoose, clickTrigger } from 'ember-power-select/test-support/helpers';
 
@@ -289,6 +289,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
         .hasText('Rotate your root credentials?', 'Modal appears asking to rotate root credentials');
       assert.dom('[data-test-enable-connection]').exists('Enable button exists');
       await click('[data-test-enable-connection]');
+      await waitFor('[data-test-component="info-table-row"]');
       assert.ok(
         currentURL().startsWith(`/vault/secrets/${backend}/show/${testCase.name}`),
         `Saves connection and takes you to show page for ${testCase.name}`

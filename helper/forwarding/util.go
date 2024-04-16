@@ -26,8 +26,8 @@ func (b bufCloser) Close() error {
 	return nil
 }
 
-// GenerateForwardedRequest generates a new http.Request that contains the
-// original requests's information in the new request's body.
+// GenerateForwardedHTTPRequest generates a new http.Request that contains the
+// original request's information in the new request's body.
 func GenerateForwardedHTTPRequest(req *http.Request, addr string) (*http.Request, error) {
 	fq, err := GenerateForwardedRequest(req)
 	if err != nil {
@@ -101,7 +101,7 @@ func GenerateForwardedRequest(req *http.Request) (*Request, error) {
 	return &fq, nil
 }
 
-// ParseForwardedRequest generates a new http.Request that is comprised of the
+// ParseForwardedHTTPRequest generates a new http.Request that is comprised of the
 // values in the given request's body, assuming it correctly parses into a
 // ForwardedRequest.
 func ParseForwardedHTTPRequest(req *http.Request) (*http.Request, error) {

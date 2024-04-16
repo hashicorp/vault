@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
@@ -340,10 +339,6 @@ func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor sea
 }
 
 func (c *Core) SetPhysicalSealGenInfo(ctx context.Context, sealGenInfo *seal.SealGenerationInfo) error {
-	if !server.IsMultisealSupported() {
-		return nil
-	}
-
 	if sealGenInfo == nil {
 		return errors.New("invalid seal generation information: generation is unknown")
 	}
@@ -368,10 +363,6 @@ func (c *Core) SetPhysicalSealGenInfo(ctx context.Context, sealGenInfo *seal.Sea
 }
 
 func PhysicalSealGenInfo(ctx context.Context, storage physical.Backend) (*seal.SealGenerationInfo, error) {
-	if !server.IsMultisealSupported() {
-		return nil, nil
-	}
-
 	pe, err := storage.Get(ctx, SealGenInfoPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch seal generation info: %w", err)

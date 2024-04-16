@@ -12,6 +12,8 @@ import { Response } from 'miragejs';
 import { v4 as uuidv4 } from 'uuid';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/pki/pki-selectors';
 
 /**
  * this test is for the page component only. A separate test is written for the form rendered
@@ -45,28 +47,25 @@ module('Integration | Component | page/pki-issuer-import', function (hooks) {
     await render(hbs`<Page::PkiIssuerImport @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
       owner: this.engine,
     });
-    assert.dom('[data-test-pki-page-title]').hasText('Import a CA');
+    assert.dom(GENERAL.title).hasText('Import a CA');
     await click('[data-test-text-toggle]');
     await fillIn('[data-test-text-file-textarea]', 'dummy-pem-bundle');
-    await click('[data-test-pki-import-pem-bundle]');
-    assert.dom('[data-test-pki-page-title]').hasText('View imported items');
+    await click(PKI_CONFIGURE_CREATE.importSubmit);
+    assert.dom(GENERAL.title).hasText('View imported items');
   });
 
   test('it does not update title if API response is an error', async function (assert) {
     assert.expect(2);
-    // this.server.post('/pki-component/issuers/import/bundle', () => new Response(404, {}, { errors: ['Some error occurred'] }));
     this.server.post(`/pki-component/issuers/import/bundle`, () => new Response(404, {}, { errors: [] }));
 
     await render(hbs`<Page::PkiIssuerImport @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
       owner: this.engine,
     });
-    assert.dom('[data-test-pki-page-title]').hasText('Import a CA');
+    assert.dom(GENERAL.title).hasText('Import a CA');
     // Fill in
     await click('[data-test-text-toggle]');
     await fillIn('[data-test-text-file-textarea]', 'dummy-pem-bundle');
-    await click('[data-test-pki-import-pem-bundle]');
-    assert
-      .dom('[data-test-pki-page-title]')
-      .hasText('Import a CA', 'title does not change if response is unsuccessful');
+    await click(PKI_CONFIGURE_CREATE.importSubmit);
+    assert.dom(GENERAL.title).hasText('Import a CA', 'title does not change if response is unsuccessful');
   });
 });

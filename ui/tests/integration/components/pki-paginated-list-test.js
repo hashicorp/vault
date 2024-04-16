@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { STANDARD_META } from 'vault/tests/helpers/pki';
+import { STANDARD_META } from 'vault/tests/helpers/pagination';
 
 module('Integration | Component | pki-paginated-list', function (hooks) {
   setupRenderingTest(hooks);
@@ -34,8 +34,8 @@ module('Integration | Component | pki-paginated-list', function (hooks) {
         key_name: 'another-key',
       },
     });
-    // toArray to mimic what happens in lazyPaginatedQuery
-    const keyModels = this.store.peekAll('pki/key').toArray();
+    // mimic what happens in lazyPaginatedQuery
+    const keyModels = this.store.peekAll('pki/key');
     keyModels.meta = STANDARD_META;
     this.list = keyModels;
     const emptyList = this.store.peekAll('pki/foo');

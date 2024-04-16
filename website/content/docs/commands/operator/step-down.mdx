@@ -31,3 +31,14 @@ Success! Stepped down: http://127.0.0.1:8200
 
 There are no flags beyond the [standard set of flags](/vault/docs/commands)
 included on all commands.
+
+## Policy requirements
+
+You must belong to a policy with `update` and `sudo` permissions to use the
+`vault operator step-down` command:
+ 
+```hcl
+path "sys/step-down" {
+  capabilities = ["update", "sudo"]
+}
+```

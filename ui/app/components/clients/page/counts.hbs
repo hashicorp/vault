@@ -3,6 +3,14 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Vault Usage Metrics
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
 <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
   <p class="has-bottom-margin-xl">
     This dashboard surfaces Vault client usage over time.
@@ -102,15 +110,70 @@
     {{/if}}
 
     {{#if this.filteredActivity}}
+      {{#if this.upgradeExplanations}}
+        <Hds::Alert data-test-clients-upgrade-warning @type="inline" @color="warning" class="has-bottom-margin-m" as |A|>
+          <A.Title>
+            Client count data contains
+            {{pluralize this.upgradeExplanations.length "upgrade"}}
+          </A.Title>
+          <A.Description>
+            Vault was upgraded during this time period. Keep this in mind while looking at the data. Visit our
+            <Hds::Link::Inline
+              @isHrefExternal={{true}}
+              @href={{doc-link
+                "/vault/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
+              }}
+            >
+              Client count FAQ
+            </Hds::Link::Inline>
+            for more information.
+          </A.Description>
+          <A.Description>
+            <ul class="bullet">
+              {{#each this.upgradeExplanations as |info|}}
+                <li>{{info}}</li>
+              {{/each}}
+            </ul>
+          </A.Description>
+        </Hds::Alert>
+      {{/if}}
+
       {{#if this.startTimeDiscrepancy}}
-        <Hds::Alert data-test-counts-start-discrepancy @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
-          <A.Title>Warning</A.Title>
+        <Hds::Alert data-test-counts-start-discrepancy @type="inline" @color="neutral" class="has-bottom-margin-s" as |A|>
           <A.Description data-test-counts-start-discrepancy>
             {{this.startTimeDiscrepancy}}
           </A.Description>
         </Hds::Alert>
       {{/if}}
 
+      <nav class="tabs has-bottom-margin-s" aria-label="navigation for managing client counts">
+        <ul>
+          <li>
+            <LinkTo @route="vault.cluster.clients.counts.overview" data-test-tab="overview">
+              Overview
+            </LinkTo>
+          </li>
+          <li>
+            <LinkTo @route="vault.cluster.clients.counts.token" data-test-tab="token">
+              Entity/Non-entity clients
+            </LinkTo>
+          </li>
+          {{#if this.version.hasSecretsSync}}
+            <li>
+              <LinkTo @route="vault.cluster.clients.counts.sync" data-test-tab="sync">
+                Secrets sync clients
+              </LinkTo>
+            </li>
+          {{/if}}
+          <li>
+            <LinkTo @route="vault.cluster.clients.counts.acme" data-test-tab="acme">
+              ACME clients
+            </LinkTo>
+          </li>
+        </ul>
+      </nav>
+
+      {{! CLIENT COUNT PAGE COMPONENTS RENDER HERE }}
       {{yield}}
 
     {{else if (and (not @config.billingStartTimestamp) (not @startTimestamp))}}
@@ -119,7 +182,11 @@
     {{else}}
       <EmptyState
         @title="No data received {{if this.dateRangeMessage this.dateRangeMessage}}"
-        @message="Update the filter values or click the button to reset them."
+        @message={{if
+          this.version.isCommunity
+          "Select a start date above to query client count data."
+          "Update the filter values or click the button to reset them."
+        }}
       >
         <Hds::Button @text="Reset filters" @color="tertiary" @icon="reload" {{on "click" this.resetFilters}} />
       </EmptyState>

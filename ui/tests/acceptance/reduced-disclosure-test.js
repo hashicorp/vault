@@ -12,7 +12,7 @@ import { createTokenCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import reducedDisclosureHandlers from 'vault/mirage/handlers/reduced-disclosure';
-import { overrideResponse } from 'vault/tests/helpers/clients';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
 
 const { unsealKeys } = VAULT_KEYS;
 const SELECTORS = {
@@ -62,6 +62,7 @@ module('Acceptance | reduced disclosure test', function (hooks) {
         type: 'shamir',
         initialized: true,
         sealed: this.sealed,
+        version: '1.21.3',
       };
     });
     this.server.put(`/sys/seal`, () => {
@@ -84,11 +85,9 @@ module('Acceptance | reduced disclosure test', function (hooks) {
     });
     await authPage.login();
 
-    const versionSvc = this.owner.lookup('service:version');
     await visit('/vault/settings/seal');
-    assert
-      .dom('[data-test-footer-version]')
-      .hasText(`Vault ${versionSvc.version}`, 'shows version on seal page');
+
+    assert.dom('[data-test-footer-version]').hasText(`Vault 1.21.3`, 'shows version on seal page');
     assert.strictEqual(currentURL(), '/vault/settings/seal');
 
     // seal
@@ -115,9 +114,7 @@ module('Acceptance | reduced disclosure test', function (hooks) {
     assert.strictEqual(currentRouteName(), 'vault.cluster.auth', 'vault is ready to authenticate');
     assert.dom('[data-test-footer-version]').hasText(`Vault`, 'Version is still not shown before auth');
     await authPage.login();
-    assert
-      .dom('[data-test-footer-version]')
-      .hasText(`Vault ${versionSvc.version}`, 'Version is shown after login');
+    assert.dom('[data-test-footer-version]').hasText(`Vault 1.21.3`, 'Version is shown after login');
   });
 
   module('enterprise', function () {

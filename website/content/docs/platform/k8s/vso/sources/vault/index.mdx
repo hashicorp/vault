@@ -28,6 +28,7 @@ Vault Secrets Operator supports the following Vault features:
 - Support for all VSO features, including performing a rollout-restart upon secret rotation or
 during drift remediation.
 - Cross Vault namespace authentication for Vault Enterprise 1.13+.
+- [Encrypted Vault client cache storage](/vault/docs/platform/k8s/vso/sources/vault#vault-client-cache) for improved performance and security.
 
 ### Supported Vault authentication methods
 
@@ -297,6 +298,12 @@ spec:
 ```
 
 @include 'vso/blurb-api-reference.mdx'
+
+## Vault client cache
+
+The Vault Secrets Operator can optionally cache Vault client information such as Vault tokens and leases in Kubernetes Secrets within its own namespace. The client cache enables seamless upgrades because Vault tokens and dynamic secret leases can continue to be tracked and renewed through leadership changes. Client cache persistence and encryption is not enabled by default because it requires extra configuration and Vault Server setup. VSO supports encrypting the client cache using Vault Server's [transit secrets engine](/vault/docs/secrets/transit).
+
+The [Encrypted client cache](/vault/docs/platform/k8s/vso/sources/vault/client-cache) guide will walk you through the steps to enable and configure client cache encryption.
 
 ## Tutorial
 

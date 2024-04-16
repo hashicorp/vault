@@ -222,6 +222,10 @@
         "path": "concepts/storage"
       },
       {
+        "title": "Cloud access management",
+        "path": "concepts/cloud-access-management"
+      },
+      {
         "title": "Integrated Storage",
         "routes": [
           {
@@ -285,21 +289,17 @@
         "badge": {
           "text": "ENTERPRISE",
           "type": "outlined",
-          "color": "highlight"
+          "color": "neutral"
         }
       },
       {
         "title": "Filtering",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "concepts/filtering"
-          },
-          {
-            "title": "Audit Filtering",
-            "path": "concepts/filtering/audit"
-          }
-        ]
+        "path": "concepts/filtering",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
       },
       {
         "title": "Request Limiter",
@@ -369,7 +369,7 @@
           {
             "title": "High Availability",
             "badge": {
-              "text": "ENTERPRISE",
+              "text": "ENTERPRISE | BETA",
               "type": "outlined",
               "color": "highlight"
             },
@@ -787,6 +787,10 @@
           {
             "title": "<code>generate-root</code>",
             "path": "commands/operator/generate-root"
+          },
+          {
+            "title": "<code>import</code>",
+            "path": "commands/operator/import"
           },
           {
             "title": "<code>init</code>",
@@ -1546,6 +1550,15 @@
               "color": "neutral"
             },
             "path": "secrets/pki/cieps"
+          },
+          {
+            "title": "Enrollment over Secure Transport (EST)",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            },
+            "path": "secrets/pki/est"
           }
         ]
       },
@@ -1634,12 +1647,7 @@
     "routes": [
       {
         "title": "Overview",
-        "path": "sync",
-        "badge": {
-          "text": "BETA",
-          "type": "outlined",
-          "color": "highlight"
-        }
+        "path": "sync"
       },
       {
         "title": "AWS Secrets Manager",
@@ -1660,6 +1668,33 @@
       {
         "title": "Vercel Project",
         "path": "sync/vercelproject"
+      }
+    ]
+  },
+  {
+    "title": "Secrets Import",
+    "badge": {
+      "text": "ENTERPRISE",
+      "type": "outlined",
+      "color": "neutral"
+    },
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "import",
+        "badge": {
+          "text": "ALPHA",
+          "type": "outlined",
+          "color": "highlight"
+        }
+      },
+      {
+        "title": "GCP Secret Manager",
+        "path": "import/gcpsm"
+      },
+      {
+        "title": "Mappings",
+        "path": "import/mappings"
       }
     ]
   },
@@ -1860,6 +1895,15 @@
         "path": "plugins/plugin-development"
       },
       {
+        "title": "Plugin Development — Event Notifications",
+        "path": "plugins/plugin-development-event-notifications",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "Plugin Management",
         "path": "plugins/plugin-management"
       },
@@ -1868,21 +1912,11 @@
         "routes": [
           {
             "title": "Overview",
-            "path": "plugins/containerized-plugins",
-            "badge": {
-              "text": "BETA",
-              "type": "outlined",
-              "color": "highlight"
-            }
+            "path": "plugins/containerized-plugins"
           },
           {
             "title": "Add a containerized plugin",
-            "path": "plugins/containerized-plugins/add-a-containerized-plugin",
-            "badge": {
-              "text": "BETA",
-              "type": "outlined",
-              "color": "highlight"
-            }
+            "path": "plugins/containerized-plugins/add-a-containerized-plugin"
           }
         ]
       },
@@ -2125,6 +2159,10 @@
                             "path": "platform/k8s/vso/sources/vault/auth/gcp"
                           }
                         ]
+                      },
+                      {
+                        "title": "Encrypted client cache",
+                        "path": "platform/k8s/vso/sources/vault/client-cache"
                       }
                     ]
                   },
@@ -2176,6 +2214,10 @@
           {
             "title": "Configuration",
             "path": "platform/mssql/configuration"
+          },
+          {
+            "title": "Key Rotation",
+            "path": "platform/mssql/rotation"
           },
           {
             "title": "Upgrading",
@@ -2231,6 +2273,10 @@
       {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
+      },
+      {
+        "title": "Upgrade to Raft WAL",
+        "path": "upgrading/raft-wal"
       },
       {
         "title": "Upgrade to 1.16.x",
@@ -2489,8 +2535,8 @@
         "path": "release-notes"
       },
       {
-        "title": "1.16.0",
-        "path": "release-notes/1.16.0"
+        "title": "1.16.1",
+        "path": "release-notes/1.16.1"
       },
       {
         "title": "1.15.0",
@@ -2628,12 +2674,23 @@
           }
         ]
       },
-
+      {
+        "title": "Long-term support (LTS)",
+        "path": "enterprise/lts"
+      },
       {
         "title": "Replication",
-        "path": "enterprise/replication"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/replication"
+          },
+          {
+            "title": "Check for Merkle tree corruption",
+            "path": "enterprise/replication/check-merkle-tree-corruption"
+          }
+        ]
       },
-
       {
         "title": "HSM Support",
         "routes": [
@@ -2738,6 +2795,15 @@
       {
         "title": "Eventual Consistency",
         "path": "enterprise/consistency"
+      },
+      {
+        "title": "Audit",
+        "routes": [
+          {
+            "title": "Audit Filtering",
+            "path": "enterprise/audit/filtering"
+          }
+        ]
       },
       {
         "title": "Control Groups",

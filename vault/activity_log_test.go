@@ -662,6 +662,102 @@ func TestActivityLog_availableLogs(t *testing.T) {
 	}
 }
 
+// TestActivityLog_createRegenerationIntentLog tests that we can correctly create a regeneration intent log given the segments in storage
+func TestActivityLog_createRegenerationIntentLog(t *testing.T) {
+	testCases := []struct {
+		name          string
+		times         []time.Time
+		expectedLog   *ActivityIntentLog
+		expectedError bool
+	}{
+		{
+			"no segments",
+			[]time.Time{},
+			nil,
+			true,
+		},
+		{
+			"one segment",
+			[]time.Time{
+				time.Date(2024, 4, 4, 10, 54, 12, 0, time.UTC),
+			},
+			nil,
+			true,
+		},
+		{
+			"most recent segment is 3 months ago",
+			[]time.Time{
+				time.Date(2024, 1, 4, 10, 54, 12, 0, time.UTC),
+				time.Date(2024, 1, 3, 10, 54, 12, 0, time.UTC),
+			},
+			&ActivityIntentLog{NextMonth: 1704365652, PreviousMonth: 1704279252},
+			false,
+		},
+		{
+			"lots of segments",
+			[]time.Time{
+				// two this month
+				time.Date(2024, 4, 4, 10, 54, 12, 0, time.UTC),
+				time.Date(2024, 4, 6, 10, 54, 12, 0, time.UTC),
+				// three last month
+				time.Date(2024, 3, 3, 10, 54, 12, 0, time.UTC),
+				time.Date(2024, 3, 6, 10, 54, 12, 0, time.UTC),
+				time.Date(2024, 3, 14, 10, 54, 12, 0, time.UTC),
+				// two the month before that
+				time.Date(2024, 2, 10, 10, 54, 12, 0, time.UTC),
+				time.Date(2024, 2, 17, 10, 54, 12, 0, time.UTC),
+			},
+			&ActivityIntentLog{NextMonth: 1712228052, PreviousMonth: 1710413652},
+			false,
+		},
+	}
+
+	core, _, _ := TestCoreUnsealed(t)
+	a := core.activityLog
+	now := time.Date(2024, 4, 10, 10, 54, 12, 0, time.UTC)
+	ctx := context.Background()
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			deletePaths := make([]string, 0)
+
+			// insert the times we're given
+			paths := make([]string, 0, len(tc.times))
+			for _, tm := range tc.times {
+				paths = append(paths, fmt.Sprintf("entity/%d/1", tm.Unix()))
+			}
+
+			for _, subPath := range paths {
+				fullPath := ActivityLogPrefix + subPath
+				WriteToStorage(t, core, fullPath, []byte("test"))
+				deletePaths = append(deletePaths, fullPath)
+			}
+
+			// regenerate the log
+			intentLog, err := a.createRegenerationIntentLog(context.Background(), now)
+			if tc.expectedError && err == nil {
+				t.Fatal("expected an error and got none")
+			}
+			if !tc.expectedError && err != nil {
+				t.Fatal(err)
+			}
+
+			// verify it's what we expect
+			if diff := deep.Equal(intentLog, tc.expectedLog); len(diff) != 0 {
+				t.Errorf("got=%v, expected=%v, diff=%v", intentLog, tc.expectedLog, diff)
+			}
+
+			// delete everything we wrote so the next test starts fresh
+			for _, p := range deletePaths {
+				err := core.barrier.Delete(ctx, p)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+		})
+	}
+}
+
 // TestActivityLog_MultipleFragmentsAndSegments adds 4000 clients to a fragment
 // and saves it and reads it. The test then adds 4000 more clients and calls
 // receivedFragment with 200 more entities. The current segment is saved to
@@ -861,7 +957,7 @@ func TestActivityLog_API_ConfigCRUD_Census(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error")
 		}
-		if resp.Data["error"] != `retention_months must be at least 24 while Reporting is enabled` {
+		if resp.Data["error"] != `retention_months must be at least 48 while Reporting is enabled` {
 			t.Fatalf("bad: %v", resp)
 		}
 	} else {
@@ -872,7 +968,7 @@ func TestActivityLog_API_ConfigCRUD_Census(t *testing.T) {
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
 	req.Storage = view
-	req.Data["retention_months"] = 26
+	req.Data["retention_months"] = 56
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -918,9 +1014,10 @@ func TestActivityLog_API_ConfigCRUD_Census(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
 	expected := map[string]interface{}{
 		"default_report_months":    12,
-		"retention_months":         26,
+		"retention_months":         56,
 		"enabled":                  "enable",
 		"queries_available":        false,
 		"reporting_enabled":        core.AutomatedLicenseReportingEnabled(),
@@ -4219,14 +4316,14 @@ func TestActivityLog_partialMonthClientCountWithMultipleMountPaths(t *testing.T)
 // TestActivityLog_processNewClients_delete ensures that the correct clients are deleted from a processNewClients struct
 func TestActivityLog_processNewClients_delete(t *testing.T) {
 	mount := "mount"
-	namespace := "namespace"
+	ns := "namespace"
 	clientID := "client-id"
 	run := func(t *testing.T, clientType string) {
 		t.Helper()
 		isNonEntity := clientType == nonEntityTokenActivityType || clientType == ACMEActivityType
 		record := &activity.EntityRecord{
 			MountAccessor: mount,
-			NamespaceID:   namespace,
+			NamespaceID:   ns,
 			ClientID:      clientID,
 			NonEntity:     isNonEntity,
 			ClientType:    clientType,
@@ -4235,8 +4332,8 @@ func TestActivityLog_processNewClients_delete(t *testing.T) {
 		newClients.add(record)
 
 		require.True(t, newClients.Counts.contains(record))
-		require.True(t, newClients.Namespaces[namespace].Counts.contains(record))
-		require.True(t, newClients.Namespaces[namespace].Mounts[mount].Counts.contains(record))
+		require.True(t, newClients.Namespaces[ns].Counts.contains(record))
+		require.True(t, newClients.Namespaces[ns].Mounts[mount].Counts.contains(record))
 
 		newClients.delete(record)
 
@@ -4244,8 +4341,8 @@ func TestActivityLog_processNewClients_delete(t *testing.T) {
 		counts := newClients.Counts
 		for _, typ := range []string{nonEntityTokenActivityType, secretSyncActivityType, entityActivityType, ACMEActivityType} {
 			require.NotContains(t, counts.clientsByType(typ), clientID)
-			require.NotContains(t, byNS[namespace].Mounts[mount].Counts.clientsByType(typ), clientID)
-			require.NotContains(t, byNS[namespace].Counts.clientsByType(typ), clientID)
+			require.NotContains(t, byNS[ns].Mounts[mount].Counts.clientsByType(typ), clientID)
+			require.NotContains(t, byNS[ns].Counts.clientsByType(typ), clientID)
 		}
 	}
 	t.Run("entity", func(t *testing.T) {
@@ -4267,14 +4364,15 @@ func TestActivityLog_processNewClients_delete(t *testing.T) {
 func TestActivityLog_processClientRecord(t *testing.T) {
 	startTime := time.Now()
 	mount := "mount"
-	namespace := "namespace"
+	ns := "namespace"
 	clientID := "client-id"
+
 	run := func(t *testing.T, clientType string) {
 		t.Helper()
 		isNonEntity := clientType == nonEntityTokenActivityType || clientType == ACMEActivityType
 		record := &activity.EntityRecord{
 			MountAccessor: mount,
-			NamespaceID:   namespace,
+			NamespaceID:   ns,
 			ClientID:      clientID,
 			NonEntity:     isNonEntity,
 			ClientType:    clientType,
@@ -4282,28 +4380,28 @@ func TestActivityLog_processClientRecord(t *testing.T) {
 		byNS := make(summaryByNamespace)
 		byMonth := make(summaryByMonth)
 		processClientRecord(record, byNS, byMonth, startTime)
-		require.Contains(t, byNS, namespace)
-		require.Contains(t, byNS[namespace].Mounts, mount)
+		require.Contains(t, byNS, ns)
+		require.Contains(t, byNS[ns].Mounts, mount)
 		monthIndex := timeutil.StartOfMonth(startTime).UTC().Unix()
 		require.Contains(t, byMonth, monthIndex)
 		require.Equal(t, byMonth[monthIndex].Namespaces, byNS)
 		require.Equal(t, byMonth[monthIndex].NewClients.Namespaces, byNS)
 
-		for _, typ := range []string{nonEntityTokenActivityType, secretSyncActivityType, entityActivityType} {
-			if clientType == typ || (clientType == ACMEActivityType && typ == nonEntityTokenActivityType) {
+		for _, typ := range ActivityClientTypes {
+			if clientType == typ {
 				require.Contains(t, byMonth[monthIndex].Counts.clientsByType(typ), clientID)
 				require.Contains(t, byMonth[monthIndex].NewClients.Counts.clientsByType(typ), clientID)
-				require.Contains(t, byNS[namespace].Mounts[mount].Counts.clientsByType(typ), clientID)
-				require.Contains(t, byNS[namespace].Counts.clientsByType(typ), clientID)
+				require.Contains(t, byNS[ns].Mounts[mount].Counts.clientsByType(typ), clientID)
+				require.Contains(t, byNS[ns].Counts.clientsByType(typ), clientID)
 			} else {
 				require.NotContains(t, byMonth[monthIndex].Counts.clientsByType(typ), clientID)
 				require.NotContains(t, byMonth[monthIndex].NewClients.Counts.clientsByType(typ), clientID)
-				require.NotContains(t, byNS[namespace].Mounts[mount].Counts.clientsByType(typ), clientID)
-				require.NotContains(t, byNS[namespace].Counts.clientsByType(typ), clientID)
-
+				require.NotContains(t, byNS[ns].Mounts[mount].Counts.clientsByType(typ), clientID)
+				require.NotContains(t, byNS[ns].Counts.clientsByType(typ), clientID)
 			}
 		}
 	}
+
 	t.Run("non entity", func(t *testing.T) {
 		run(t, nonEntityTokenActivityType)
 	})
@@ -4600,6 +4698,12 @@ func TestActivityLog_writePrecomputedQuery(t *testing.T) {
 		MountAccessor: "mnt-3",
 		ClientType:    secretSyncActivityType,
 	}
+	acmeClient := &activity.EntityRecord{
+		ClientID:      "id-4",
+		NamespaceID:   "ns-4",
+		MountAccessor: "mnt-4",
+		ClientType:    ACMEActivityType,
+	}
 
 	now := time.Now()
 
@@ -4607,6 +4711,7 @@ func TestActivityLog_writePrecomputedQuery(t *testing.T) {
 	processClientRecord(clientEntity, byNS, byMonth, now)
 	processClientRecord(clientNonEntity, byNS, byMonth, now)
 	processClientRecord(secretSync, byNS, byMonth, now)
+	processClientRecord(acmeClient, byNS, byMonth, now)
 
 	endTime := timeutil.EndOfMonth(now)
 	opts := pqOptions{
@@ -4624,8 +4729,8 @@ func TestActivityLog_writePrecomputedQuery(t *testing.T) {
 	require.Equal(t, now.UTC().Unix(), val.StartTime.UTC().Unix())
 	require.Equal(t, endTime.UTC().Unix(), val.EndTime.UTC().Unix())
 
-	// ns-1, ns-2, and ns-3 should both be present in the results
-	require.Len(t, val.Namespaces, 3)
+	// ns-1, ns-2, ns-3, ns-4 should all be present in the results
+	require.Len(t, val.Namespaces, 4)
 	require.Len(t, val.Months, 1)
 	resultByNS := make(map[string]*activity.NamespaceRecord)
 	for _, ns := range val.Namespaces {
@@ -4634,41 +4739,62 @@ func TestActivityLog_writePrecomputedQuery(t *testing.T) {
 	ns1 := resultByNS["ns-1"]
 	ns2 := resultByNS["ns-2"]
 	ns3 := resultByNS["ns-3"]
+	ns4 := resultByNS["ns-4"]
 
 	require.Equal(t, ns1.Entities, uint64(1))
 	require.Equal(t, ns1.NonEntityTokens, uint64(0))
 	require.Equal(t, ns1.SecretSyncs, uint64(0))
+	require.Equal(t, ns1.ACMEClients, uint64(0))
 	require.Equal(t, ns2.Entities, uint64(0))
 	require.Equal(t, ns2.NonEntityTokens, uint64(1))
 	require.Equal(t, ns2.SecretSyncs, uint64(0))
+	require.Equal(t, ns2.ACMEClients, uint64(0))
 	require.Equal(t, ns3.Entities, uint64(0))
 	require.Equal(t, ns3.NonEntityTokens, uint64(0))
 	require.Equal(t, ns3.SecretSyncs, uint64(1))
+	require.Equal(t, ns3.ACMEClients, uint64(0))
+	require.Equal(t, ns4.Entities, uint64(0))
+	require.Equal(t, ns4.NonEntityTokens, uint64(0))
+	require.Equal(t, ns4.SecretSyncs, uint64(0))
+	require.Equal(t, ns4.ACMEClients, uint64(1))
 
 	require.Len(t, ns1.Mounts, 1)
 	require.Len(t, ns2.Mounts, 1)
 	require.Len(t, ns3.Mounts, 1)
+	require.Len(t, ns4.Mounts, 1)
+
 	// ns-1 needs to have mnt-1
 	require.Contains(t, ns1.Mounts[0].MountPath, "mnt-1")
 	// ns-2 needs to have mnt-2
 	require.Contains(t, ns2.Mounts[0].MountPath, "mnt-2")
 	// ns-3 needs to have mnt-3
 	require.Contains(t, ns3.Mounts[0].MountPath, "mnt-3")
+	// ns-4 needs to have mnt-4
+	require.Contains(t, ns4.Mounts[0].MountPath, "mnt-4")
 
 	// ns1 only has an entity client
 	require.Equal(t, 1, ns1.Mounts[0].Counts.EntityClients)
 	require.Equal(t, 0, ns1.Mounts[0].Counts.NonEntityClients)
 	require.Equal(t, 0, ns1.Mounts[0].Counts.SecretSyncs)
+	require.Equal(t, 0, ns1.Mounts[0].Counts.ACMEClients)
 
 	// ns2 only has a non entity client
 	require.Equal(t, 0, ns2.Mounts[0].Counts.EntityClients)
 	require.Equal(t, 1, ns2.Mounts[0].Counts.NonEntityClients)
 	require.Equal(t, 0, ns2.Mounts[0].Counts.SecretSyncs)
+	require.Equal(t, 0, ns2.Mounts[0].Counts.ACMEClients)
 
 	// ns3 only has a secret sync association
 	require.Equal(t, 0, ns3.Mounts[0].Counts.EntityClients)
 	require.Equal(t, 0, ns3.Mounts[0].Counts.NonEntityClients)
 	require.Equal(t, 1, ns3.Mounts[0].Counts.SecretSyncs)
+	require.Equal(t, 0, ns3.Mounts[0].Counts.ACMEClients)
+
+	// ns4 only has an ACME client
+	require.Equal(t, 0, ns4.Mounts[0].Counts.EntityClients)
+	require.Equal(t, 0, ns4.Mounts[0].Counts.NonEntityClients)
+	require.Equal(t, 0, ns4.Mounts[0].Counts.SecretSyncs)
+	require.Equal(t, 1, ns4.Mounts[0].Counts.ACMEClients)
 
 	monthRecord := val.Months[0]
 	// there should only be one month present, since the clients were added with the same timestamp
@@ -4676,11 +4802,13 @@ func TestActivityLog_writePrecomputedQuery(t *testing.T) {
 	require.Equal(t, 1, monthRecord.Counts.NonEntityClients)
 	require.Equal(t, 1, monthRecord.Counts.EntityClients)
 	require.Equal(t, 1, monthRecord.Counts.SecretSyncs)
-	require.Len(t, monthRecord.Namespaces, 3)
-	require.Len(t, monthRecord.NewClients.Namespaces, 3)
+	require.Equal(t, 1, monthRecord.Counts.ACMEClients)
+	require.Len(t, monthRecord.Namespaces, 4)
+	require.Len(t, monthRecord.NewClients.Namespaces, 4)
 	require.Equal(t, 1, monthRecord.NewClients.Counts.EntityClients)
 	require.Equal(t, 1, monthRecord.NewClients.Counts.NonEntityClients)
 	require.Equal(t, 1, monthRecord.NewClients.Counts.SecretSyncs)
+	require.Equal(t, 1, monthRecord.NewClients.Counts.ACMEClients)
 }
 
 type mockTimeNowClock struct {
@@ -4759,9 +4887,9 @@ func TestAddActivityToFragment(t *testing.T) {
 	a.SetEnable(true)
 
 	mount := "mount"
-	namespace := "root"
+	ns := "root"
 	id := "id1"
-	a.AddActivityToFragment(id, namespace, 0, entityActivityType, mount)
+	a.AddActivityToFragment(id, ns, 0, entityActivityType, mount)
 
 	testCases := []struct {
 		name         string
@@ -4810,16 +4938,14 @@ func TestAddActivityToFragment(t *testing.T) {
 			isNonEntity:  true,
 		},
 	}
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.activityType == secretSyncActivityType && !core.HasFeature(FeatureSecretSyncBilling) {
-				t.Skip()
-			}
 			a.fragmentLock.RLock()
 			numClientsBefore := len(a.fragment.Clients)
 			a.fragmentLock.RUnlock()
 
-			a.AddActivityToFragment(tc.id, namespace, 0, tc.activityType, mount)
+			a.AddActivityToFragment(tc.id, ns, 0, tc.activityType, mount)
 			a.fragmentLock.RLock()
 			defer a.fragmentLock.RUnlock()
 			numClientsAfter := len(a.fragment.Clients)
@@ -4833,7 +4959,7 @@ func TestAddActivityToFragment(t *testing.T) {
 			require.Contains(t, a.partialMonthClientTracker, tc.expectedID)
 			require.True(t, proto.Equal(&activity.EntityRecord{
 				ClientID:      tc.expectedID,
-				NamespaceID:   namespace,
+				NamespaceID:   ns,
 				Timestamp:     0,
 				NonEntity:     tc.isNonEntity,
 				MountAccessor: mount,

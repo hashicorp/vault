@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -25,7 +26,6 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
-	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 	"go.uber.org/atomic"
@@ -87,9 +87,18 @@ const (
 	entityActivityType         = "entity"
 	secretSyncActivityType     = "secret-sync"
 
-	// FeatureSecretSyncBilling will always be false
-	FeatureSecretSyncBilling = license.FeatureNone
+	// ActivityLogMinimumRetentionMonths sets the default minimum retention_months
+	// to enforce when reporting is enabled. Note that this value is also statically
+	// defined in the UI. Any updates here should also be made to
+	// ui/app/models/clients/config.js.
+	ActivityLogMinimumRetentionMonths = 48
+
+	// activityLogMaximumRetentionMonths sets the default maximum retention_months
+	// to enforce when reporting is enabled.
+	activityLogMaximumRetentionMonths = 60
 )
+
+var ActivityClientTypes = []string{nonEntityTokenActivityType, entityActivityType, secretSyncActivityType, ACMEActivityType}
 
 type segmentInfo struct {
 	startTimestamp       int64
@@ -260,7 +269,7 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 		precomputedQueryWritten:  make(chan struct{}),
 	}
 
-	config, err := a.loadConfigOrDefault(core.activeContext)
+	config, err := a.loadConfigOrDefault(core.activeContext, core.ManualLicenseReportingEnabled())
 	if err != nil {
 		return nil, err
 	}
@@ -1158,12 +1167,35 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) e
 			manager.retentionWorker(ctx, manager.clock.Now(), months)
 			close(manager.retentionDone)
 		}(manager.retentionMonths)
-
-		manager.CensusReportDone = make(chan bool, 1)
-		go c.activityLog.CensusReport(ctx, c.CensusAgent(), c.BillingStart())
 	}
 
 	return nil
+}
+
+func (a *ActivityLog) createRegenerationIntentLog(ctx context.Context, now time.Time) (*ActivityIntentLog, error) {
+	intentLog := &ActivityIntentLog{}
+	segments, err := a.availableLogs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching available logs: %w", err)
+	}
+
+	for i, segment := range segments {
+		if timeutil.IsCurrentMonth(segment, now) {
+			continue
+		}
+
+		intentLog.PreviousMonth = segment.Unix()
+		if i > 0 {
+			intentLog.NextMonth = segments[i-1].Unix()
+			break
+		}
+	}
+
+	if intentLog.NextMonth == 0 || intentLog.PreviousMonth == 0 {
+		return nil, fmt.Errorf("insufficient data to create a regeneration intent log")
+	}
+
+	return intentLog, nil
 }
 
 // stopActivityLogLocked removes the ActivityLog from Core
@@ -1483,9 +1515,6 @@ func (a *ActivityLog) AddClientToFragment(clientID string, namespaceID string, t
 // fragment. The timestamp is a Unix timestamp *without* nanoseconds,
 // as that is what token.CreationTime uses.
 func (a *ActivityLog) AddActivityToFragment(clientID string, namespaceID string, timestamp int64, activityType string, mountAccessor string) {
-	if activityType == secretSyncActivityType && !a.core.HasFeature(FeatureSecretSyncBilling) {
-		return
-	}
 	// Check whether entity ID already recorded
 	var present bool
 
@@ -1580,6 +1609,7 @@ type ResponseCounts struct {
 	NonEntityClients int `json:"non_entity_clients" mapstructure:"non_entity_clients"`
 	Clients          int `json:"clients"`
 	SecretSyncs      int `json:"secret_syncs" mapstructure:"secret_syncs"`
+	ACMEClients      int `json:"acme_clients" mapstructure:"acme_clients"`
 }
 
 // Add adds the new record's counts to the existing record
@@ -1592,6 +1622,7 @@ func (r *ResponseCounts) Add(newRecord *ResponseCounts) {
 	r.DistinctEntities += newRecord.DistinctEntities
 	r.NonEntityClients += newRecord.NonEntityClients
 	r.NonEntityTokens += newRecord.NonEntityTokens
+	r.ACMEClients += newRecord.ACMEClients
 	r.SecretSyncs += newRecord.SecretSyncs
 }
 
@@ -1896,12 +1927,12 @@ type activityConfig struct {
 func defaultActivityConfig() activityConfig {
 	return activityConfig{
 		DefaultReportMonths: 12,
-		RetentionMonths:     24,
+		RetentionMonths:     ActivityLogMinimumRetentionMonths,
 		Enabled:             "default",
 	}
 }
 
-func (a *ActivityLog) loadConfigOrDefault(ctx context.Context) (activityConfig, error) {
+func (a *ActivityLog) loadConfigOrDefault(ctx context.Context, isReportingEnabled bool) (activityConfig, error) {
 	// Load from storage
 	var config activityConfig
 	configRaw, err := a.view.Get(ctx, activityConfigKey)
@@ -1916,7 +1947,34 @@ func (a *ActivityLog) loadConfigOrDefault(ctx context.Context) (activityConfig, 
 		return config, err
 	}
 
+	// check if the retention time is lesser than the default when reporting is enabled
+	if (config.RetentionMonths < ActivityLogMinimumRetentionMonths) && isReportingEnabled {
+		updatedConfig, err := a.setDefaultRetentionMonthsInConfig(ctx, config)
+		if err != nil {
+			return config, err
+		}
+		return updatedConfig, nil
+	}
 	return config, nil
+}
+
+// setDefaultRetentionMonthsInConfig sets the retention months in activity config with default value.
+// This supports upgrades from versions prior to set the new default ActivityLogMinimumRetentionMonths.
+func (a *ActivityLog) setDefaultRetentionMonthsInConfig(ctx context.Context, inputConfig activityConfig) (activityConfig, error) {
+	inputConfig.RetentionMonths = ActivityLogMinimumRetentionMonths
+
+	// Store the config
+	entry, err := logical.StorageEntryJSON(path.Join(activitySubPath, activityConfigKey), inputConfig)
+	if err != nil {
+		return inputConfig, err
+	}
+	if err := a.view.Put(ctx, entry); err != nil {
+		return inputConfig, err
+	}
+
+	// Set the new config on the activity log
+	a.SetConfig(ctx, inputConfig)
+	return inputConfig, nil
 }
 
 // HandleTokenUsage adds the TokenEntry to the current fragment of the activity log
@@ -2042,6 +2100,7 @@ func (p *processCounts) toCountsRecord() *activity.CountsRecord {
 	return &activity.CountsRecord{
 		EntityClients:    p.countByType(entityActivityType),
 		NonEntityClients: p.countByType(nonEntityTokenActivityType),
+		ACMEClients:      p.countByType(ACMEActivityType),
 		SecretSyncs:      p.countByType(secretSyncActivityType),
 	}
 }
@@ -2052,7 +2111,7 @@ func (p *processCounts) toCountsRecord() *activity.CountsRecord {
 func (p *processCounts) countByType(typ string) int {
 	switch typ {
 	case nonEntityTokenActivityType:
-		return len(p.ClientsByType[nonEntityTokenActivityType]) + int(p.Tokens) + len(p.ClientsByType[ACMEActivityType])
+		return len(p.ClientsByType[nonEntityTokenActivityType]) + int(p.Tokens)
 	}
 	return len(p.ClientsByType[typ])
 }
@@ -2060,17 +2119,6 @@ func (p *processCounts) countByType(typ string) int {
 // clientsByType returns the set of client IDs with the given type.
 // ACME clients are included in the non entity results
 func (p *processCounts) clientsByType(typ string) clientIDSet {
-	switch typ {
-	case nonEntityTokenActivityType:
-		clients := make(clientIDSet)
-		for c := range p.ClientsByType[nonEntityTokenActivityType] {
-			clients[c] = struct{}{}
-		}
-		for c := range p.ClientsByType[ACMEActivityType] {
-			clients[c] = struct{}{}
-		}
-		return clients
-	}
 	return p.ClientsByType[typ]
 }
 
@@ -2799,6 +2847,7 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]i
 	responseData["non_entity_clients"] = totalCounts.NonEntityClients
 	responseData["clients"] = totalCounts.Clients
 	responseData["secret_syncs"] = totalCounts.SecretSyncs
+	responseData["acme_clients"] = totalCounts.ACMEClients
 
 	// The partialMonthClientCount should not have more than one month worth of data.
 	// If it does, something has gone wrong and we should warn that the activity log data
