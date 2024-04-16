@@ -97,6 +97,7 @@ export default class VersionService extends Service {
 
   @keepLatestTask
   *getActivatedFeatures() {
+    if (this.isCommunity) return;
     // Response could change between user sessions so fire off endpoint without checking if activated features are already set.
     try {
       const response = yield this.store
@@ -106,7 +107,6 @@ export default class VersionService extends Service {
       return;
     } catch (error) {
       if (DEBUG) console.error(error); // eslint-disable-line no-console
-      return [];
     }
   }
 
