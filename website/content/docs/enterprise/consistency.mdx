@@ -69,6 +69,42 @@ using a shared mount, Vault tries to generate an entity and alias if they don't
 already exist, and these must be stored on the primary using an RPC. Something
 similar happens with groups.
 
+## Clock skew and replication lag
+
+As seen above, both performance standbys and replication secondaries can lag
+behind the active node or the primary.  As of Vault 1.17, it's possible to get
+some insight into that lag using sys/health, sys/ha-status, and the replication
+status endpoints.
+
+Secondaries and standbys regularly issue an "echo" heartbeat RPC to their upstream
+source.  This heartbeat serves many purposes, one of them being to get a rough
+idea of whether the clocks of the client and server are in sync.  The server
+response to the heartbeat RPC includes the server's local clock time, and the
+client takes the delta in milliseconds between that time and the client's local
+clock time to compute the clock_skew_ms field.  No effort is made to factor into
+that field the time it took to actually perform the RPC, though that information
+is made available as the last_heartbeat_duration_ms field.  In other words, the
+reported clock skew has an uncertainty of up to last_heartbeat_duration_ms.
+
+Vault assumes that clocks are synced across all nodes in a cluster, and if they
+aren't, problems may arise, e.g. one node may think that a lease has expired and
+another node won't yet.  Some community-supported storage backends may have further
+problems relating to HA mode.
+
+There are fewer problems expected when clock skew exists between a replication primary
+and secondary.  However, one known issue is that the replication lag canary discussed
+next will produce surprising values if clocks aren't synced between the clusters.
+
+Non-secondary active nodes periodically write a small record to storage containing the
+local clock time for that node.  Replication secondaries read that record and compare
+it to their local clock time, calling the delta the replication_primary_canary_age_ms,
+which is exposed in the replication status endpoints.  Performance standbys do the same
+computation, exposing replication_primary_canary_age_ms in the sys/health and
+sys/ha-status endpoints.  Performance standbys and replication secondaries include
+their current replication_primary_canary_age_ms as part of their payload for the
+aforementioned "echo" heartbeat RPCs they issue, allowing the active node or primary
+cluster to report on the lag seen by their downstream clients.
+
 ## Mitigations
 
 There has long been a partial mitigation for the above problems. When writing
