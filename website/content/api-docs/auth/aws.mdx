@@ -204,7 +204,7 @@ This configures the way that Vault interacts with the
 
 - `iam_alias` `(string: "role_id")` - How to generate the identity alias when
   using the `iam` auth method. Valid choices are `role_id`, `unique_id`, and
-  `full_arn` When `role_id` is selected, the randomly generated ID of the role
+  `full_arn` When `role_id` is selected, the randomly generated ID of the Vault role
   is used. When `unique_id` is selected, the [IAM Unique
   ID](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers#identifiers-unique-ids)
   of the IAM principal (either the user or role) is used as the identity alias
@@ -229,7 +229,7 @@ This configures the way that Vault interacts with the
 - `ec2_alias` `(string: "role_id")` - Configures how to generate the identity
   alias when using the `ec2` auth method. Valid choices are `role_id`,
   `instance_id`, and `image_id`. When `role_id` is selected, the randomly
-  generated ID of the role is used. When `instance_id` is selected, the
+  generated ID of the Vault role is used. When `instance_id` is selected, the
   instance identifier is used as the identity alias name. When `image_id` is
   selected, AMI ID of the instance is used as the identity alias name.
 
