@@ -20,7 +20,6 @@ import (
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/physical/raft"
@@ -324,7 +323,7 @@ func ClusterSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions, setup 
 			"file":   auditFile.Factory,
 			"socket": auditSocket.Factory,
 			"syslog": auditSyslog.Factory,
-			"noop":   corehelpers.NoopAuditFactory(nil),
+			"noop":   audit.NoopAuditFactory(nil),
 		}
 	}
 

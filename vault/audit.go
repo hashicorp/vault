@@ -545,15 +545,13 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 	}
 	auditLogger := c.baseLogger.Named("audit")
 
-	be, err := f(
-		ctx, &audit.BackendConfig{
-			SaltView:   view,
-			SaltConfig: saltConfig,
-			Config:     conf,
-			MountPath:  entry.Path,
-			Logger:     auditLogger,
-		},
-		c.auditedHeaders)
+	be, err := f(&audit.BackendConfig{
+		SaltView:   view,
+		SaltConfig: saltConfig,
+		Config:     conf,
+		MountPath:  entry.Path,
+		Logger:     auditLogger,
+	}, c.auditedHeaders)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create new audit backend: %w", err)
 	}
@@ -576,7 +574,7 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 
 		c.reloadFuncs[key] = append(c.reloadFuncs[key], func() error {
 			auditLogger.Info("reloading file audit backend", "path", entry.Path)
-			return be.Reload(ctx)
+			return be.Reload()
 		})
 
 		c.reloadFuncsLock.Unlock()
