@@ -15,50 +15,49 @@ const FLAGS = {
 };
 
 /**
- * This service is for managing feature flags relevant to the Vault Cluster.
- * For now, the only available feature flag is VAULT_CLOUD_ADMIN_NAMESPACE
- * indicates that the Vault cluster is managed rather than self-managed.
- * Flags are fetched in the application route once from sys/internal/ui/feature-flags
- * and then stored here for use throughout the application.
+ * This service returns information about cluster flags. For now, the two available flags are from the sys/internal/ui/feature-flags and sys/activation-flags.
+ * The feature-flags endpoint returns VAULT_CLOUD_ADMIN_NAMESPACE which indicates that the Vault cluster is managed rather than self-managed.
+ * The activation-flags endpoint indicates that the secrets sync feature is enabled.
  */
+
 export default class flagsService extends Service {
   @service declare readonly version: VersionService;
   @service declare readonly store: StoreService;
 
-  @tracked flagss: string[] = [];
-  @tracked activatedFeatures: string[] = [];
+  @tracked flags: string[] = [];
+  @tracked activatedFlags: string[] = [];
 
   setFeatureFlags(flags: string[]) {
-    this.flagss = flags;
+    this.flags = flags;
   }
 
   get managedNamespaceRoot() {
-    if (this.flagss && this.flagss.includes(FLAGS.vaultCloudNamespace)) {
+    if (this.flags && this.flags.includes(FLAGS.vaultCloudNamespace)) {
       return 'admin';
     }
     return null;
   }
 
-  /* Activated Features */
-  getActivatedFeatures = keepLatestTask(async () => {
+  getActivatedFlags = keepLatestTask(async () => {
     if (this.version.isCommunity) return;
     // Response could change between user sessions so fire off endpoint without checking if activated features are already set.
     try {
       const response = await this.store
         .adapterFor('application')
         .ajax('/v1/sys/activation-flags', 'GET', { unauthenticated: true, namespace: null });
-      this.activatedFeatures = response.data?.activated;
+      this.activatedFlags = response.data?.activated;
       return;
     } catch (error) {
       if (DEBUG) console.error(error); // eslint-disable-line no-console
     }
   });
 
+  // TODO getter will be used in the upcoming persona service
   get secretsSyncIsActivated() {
-    return this.activatedFeatures.includes('secrets-sync');
+    return this.activatedFlags.includes('secrets-sync');
   }
 
   fetchActivatedFeatures() {
-    return this.getActivatedFeatures.perform();
+    return this.getActivatedFlags.perform();
   }
 }
