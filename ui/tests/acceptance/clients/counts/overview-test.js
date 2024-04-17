@@ -180,66 +180,62 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom(CLIENT_COUNT.selectedNs).hasText(topNamespace.label, 'selects top namespace');
     assert.dom('[data-test-top-attribution]').includesText('Top auth method');
     assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Entity clients'))
-      .includesText(`${formatNumber([topNamespace.entity_clients])}`, 'total entity clients is accurate');
-    assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Non-entity clients'))
-      .includesText(
-        `${formatNumber([topNamespace.non_entity_clients])}`,
-        'total non-entity clients is accurate'
-      );
-    assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Secrets sync clients'))
-      .includesText(`${formatNumber([topNamespace.secret_syncs])}`, 'total sync clients is accurate');
-    assert
       .dom('[data-test-attribution-clients] p')
       .includesText(`${formatNumber([topMount.clients])}`, 'top attribution clients accurate');
+
+    let expectedStats = {
+      'Entity clients': formatNumber([topNamespace.entity_clients]),
+      'Non-entity clients': formatNumber([topNamespace.non_entity_clients]),
+      'ACME clients': formatNumber([topNamespace.acme_clients]),
+      'Secrets sync clients': formatNumber([topNamespace.secret_syncs]),
+    };
+    for (const label in expectedStats) {
+      assert
+        .dom(CLIENT_COUNT.charts.statTextValue(label))
+        .includesText(`${expectedStats[label]}`, `label: ${label} renders accurate namespace client counts`);
+    }
 
     // FILTER BY AUTH METHOD
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
     await settled();
-
     assert.ok(true, 'Filter by first auth method');
     assert.dom(CLIENT_COUNT.selectedAuthMount).hasText(topMount.label, 'selects top mount');
-    assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Entity clients'))
-      .includesText(`${formatNumber([topMount.entity_clients])}`, 'total entity clients is accurate');
-    assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Non-entity clients'))
-      .includesText(`${formatNumber([topMount.non_entity_clients])}`, 'total non-entity clients is accurate');
-    assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Secrets sync clients'))
-      .includesText(`${formatNumber([topMount.secret_syncs])}`, 'total sync clients is accurate');
     assert.dom(CLIENT_COUNT.attributionBlock).doesNotExist('Does not show attribution block');
 
-    await click('#namespace-search-select [data-test-selected-list-button="delete"]');
+    expectedStats = {
+      'Entity clients': formatNumber([topMount.entity_clients]),
+      'Non-entity clients': formatNumber([topMount.non_entity_clients]),
+      'ACME clients': formatNumber([topMount.acme_clients]),
+      'Secrets sync clients': formatNumber([topMount.secret_syncs]),
+    };
+    for (const label in expectedStats) {
+      assert
+        .dom(CLIENT_COUNT.charts.statTextValue(label))
+        .includesText(`${expectedStats[label]}`, `label: "${label} "renders accurate mount client counts`);
+    }
+
+    await click(GENERAL.searchSelect.removeSelected);
     assert.ok(true, 'Remove namespace filter without first removing auth method filter');
     assert.dom('[data-test-top-attribution]').includesText('Top namespace');
-    assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Entity clients'))
-      .hasTextContaining(
-        `${formatNumber([response.total.entity_clients])}`,
-        'total entity clients is back to unfiltered value'
-      );
-    assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Non-entity clients'))
-      .hasTextContaining(
-        `${formatNumber([formatNumber([response.total.non_entity_clients])])}`,
-        'total non-entity clients is back to unfiltered value'
-      );
-    assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Secrets sync clients'))
-      .hasTextContaining(
-        `${formatNumber([formatNumber([response.total.secret_syncs])])}`,
-        'total sync clients is back to unfiltered value'
-      );
     assert
       .dom('[data-test-attribution-clients]')
       .hasTextContaining(
         `${formatNumber([topNamespace.clients])}`,
         'top attribution clients back to unfiltered value'
       );
+
+    expectedStats = {
+      'Entity clients': formatNumber([response.total.entity_clients]),
+      'Non-entity clients': formatNumber([response.total.non_entity_clients]),
+      'ACME clients': formatNumber([response.total.acme_clients]),
+      'Secrets sync clients': formatNumber([response.total.secret_syncs]),
+    };
+    for (const label in expectedStats) {
+      assert
+        .dom(CLIENT_COUNT.charts.statTextValue(label))
+        .includesText(`${expectedStats[label]}`, `label: ${label} is back to unfiltered value`);
+    }
   });
 });
 

@@ -69,14 +69,17 @@
               @size="l"
             />
           </div>
-          <div class="single-month-breakdown-entity">
+          <div class="column-start-1">
             <StatText @label="Entity clients" @value={{singleMonthData.new_clients.entity_clients}} @size="m" />
           </div>
-          <div class="single-month-breakdown-nonentity">
+          <div class="column-start-2">
             <StatText @label="Non-entity clients" @value={{singleMonthData.new_clients.non_entity_clients}} @size="m" />
           </div>
+          <div class="column-start-3">
+            <StatText @label="ACME clients" @value={{singleMonthData.new_clients.acme_clients}} @size="m" />
+          </div>
           {{#if @isSecretsSyncActivated}}
-            <div class="single-month-breakdown-sync">
+            <div class="column-start-4">
               <StatText @label="Secrets sync clients" @value={{singleMonthData.new_clients.secret_syncs}} @size="m" />
             </div>
           {{/if}}
@@ -90,14 +93,17 @@
               @size="l"
             />
           </div>
-          <div class="single-month-breakdown-entity">
+          <div class="column-start-1">
             <StatText @label="Entity clients" @value={{singleMonthData.entity_clients}} @size="m" />
           </div>
-          <div class="single-month-breakdown-nonentity">
+          <div class="column-start-2">
             <StatText @label="Non-entity clients" @value={{singleMonthData.non_entity_clients}} @size="m" />
           </div>
+          <div class="column-start-3">
+            <StatText @label="ACME clients" @value={{singleMonthData.acme_clients}} @size="m" />
+          </div>
           {{#if @isSecretsSyncActivated}}
-            <div class="single-month-breakdown-sync">
+            <div class="column-start-4">
               <StatText @label="Secrets sync clients" @value={{singleMonthData.secret_syncs}} @size="m" />
             </div>
           {{/if}}
