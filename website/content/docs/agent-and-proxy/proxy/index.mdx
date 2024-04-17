@@ -31,7 +31,7 @@ for information.
 
 Auto-Auth functionality takes place within an `auto_auth` configuration stanza.
 
-## API Proxy
+## API proxy
 
 Vault Proxy's primary purpose is to act as an API proxy for Vault, allowing you to talk to Vault's
 API via a listener. It can be configured to optionally allow or force the automatic use of
@@ -52,7 +52,7 @@ Please see the [Caching docs][caching] for information.
 ### Quit
 
 This endpoint triggers shutdown of the proxy. By default, it is disabled, and can
-be enabled per listener using the [`agent_api`][agent-api] stanza. It is recommended
+be enabled per listener using the [`proxy_api`][proxy-api] stanza. It is recommended
 to only enable this on trusted interfaces, as it does not require any authorization to use.
 
 | Method | Path             |
@@ -65,7 +65,7 @@ See the [caching](/vault/docs/agent-and-proxy/proxy/caching#api) page for detail
 
 ## Configuration
 
-### Command Options
+### Command options
 
 - `-log-level` ((#\_log_level)) `(string: "info")` - Log verbosity level. Supported values (in
 order of descending detail) are `trace`, `debug`, `info`, `warn`, and `error`. This can
@@ -75,14 +75,17 @@ also be specified via the `VAULT_LOG_LEVEL` environment variable.
 are `standard` and `json`. This can also be specified via the
 `VAULT_LOG_FORMAT` environment variable.
 
-- `-log-file` ((#\_log_file)) - writes all the Vault proxy log messages
-to a file. This value is used as a prefix for the log file name. The current timestamp
-is appended to the file name. If the value ends in a path separator, `vault-proxy`
-will be appended to the value. If the file name is missing an extension, `.log`
-is appended. For example, setting `log-file` to `/var/log/` would result in a log
-file path of `/var/log/vault-proxy-{timestamp}.log`. `log-file` can be combined with
-[`-log-rotate-bytes`](#_log_rotate_bytes) and [`-log-rotate-duration`](#_log_rotate_duration)
-for a fine-grained log rotation experience.
+- `-log-file` ((#\_log_file)) - the absolute path where Vault Proxy should save
+  log messages. Paths that end with a path separator use the default file name,
+  `proxy.log`. Paths that do not end with a file extension use the default
+  `.log` extension. If the log file rotates, Vault Proxy appends the current
+  timestamp to the file name at the time of rotation. For example:
+
+  `log-file` | Full log file | Rotated log file
+  ---------- | ------------- | ----------------
+  `/var/log` | `/var/log/proxy.log` | `/var/log/proxy-{timestamp}.log`
+  `/var/log/my-diary` | `/var/log/my-diary.log` | `/var/log/my-diary-{timestamp}.log`
+  `/var/log/my-diary.txt` | `/var/log/my-diary.txt` | `/var/log/my-diary-{timestamp}.txt`
 
 - `-log-rotate-bytes` ((#\_log_rotate_bytes)) - to specify the number of
 bytes that should be written to a log before it needs to be rotated. Unless specified,
@@ -96,7 +99,7 @@ value such as 30s. Defaults to 24h.
 number of older log file archives to keep. Defaults to `0` (no files are ever deleted).
 Set to `-1` to discard old log files when a new one is created.
 
-### Configuration File Options
+### Configuration file options
 
 These are the currently-available general configuration options:
 
@@ -128,10 +131,6 @@ environment variable as a comma separated string. This environment variable will
 Valid values include: `auto-auth`, and `proxying`. Can also be configured by setting the `VAULT_PROXY_DISABLE_KEEP_ALIVES`
 environment variable as a comma separated string. This environment variable will override any values found in a configuration file.
 
-- `template` <code>([template][template]: <optional\>)</code> - Specifies options used for templating Vault secrets to files.
-
-- `template_config` <code>([template_config][template-config]: <optional\>)</code> - Specifies templating engine behavior.
-
 - `telemetry` <code>([telemetry][telemetry]: <optional\>)</code> – Specifies the telemetry
 reporting system. See the [telemetry Stanza](/vault/docs/agent-and-proxy/proxy#telemetry-stanza) section below
 for a list of metrics specific to Proxy.
@@ -151,7 +150,7 @@ specified by configuration file (including overriding values set using CLI or en
 
 - `log_rotate_max_files` - Equivalent to the [`-log-rotate-max-files` command-line flag](#_log_rotate_max_files).
 
-### vault Stanza
+### vault stanza
 
 There can at most be one top level `vault` block, and it has the following
 configuration entries:
@@ -189,7 +188,13 @@ be overridden by setting the `VAULT_SKIP_VERIFY` environment variable.
 connecting via TLS. This value can be overridden by setting the
 `VAULT_TLS_SERVER_NAME` environment variable.
 
-#### retry Stanza
+- `namespace` `(string: <optional>)` - Namespace to use for all of Vault Proxy's
+requests to Vault. This can also be specified by command line or environment variable.
+The order of precedence is: this setting lowest, followed by the environment variable
+`VAULT_NAMESPACE`, and then the highest precedence command-line option `-namespace`.
+If none of these are specified, defaults to the root namespace.
+
+#### retry stanza
 
 The `vault` stanza may contain a `retry` stanza that controls how failing Vault
 requests are handled. Auto-auth, however, has its own notion of retrying and is not
@@ -209,7 +214,7 @@ result codes: any 50x code except 501 ("not implemented"), as well as 412
 stale read due to eventual consistency. Requests coming from the template
 subsystem are retried regardless of the failure.
 
-### listener Stanza
+### listener stanza
 
 Vault Proxy supports one or more [listener][listener_main] stanzas. Listeners
 can be configured with or without [caching][caching], but will use the cache if it
@@ -229,11 +234,11 @@ to `metrics_only` listeners.
 
 - `proxy_api` <code>([proxy_api][proxy-api]: <optional\>)</code> - Manages optional Proxy API endpoints.
 
-#### proxy_api Stanza
+#### proxy_api stanza
 
 - `enable_quit` `(bool: false)` - If set to `true`, the Proxy will enable the [quit](/vault/docs/agent-and-proxy/proxy#quit) API.
 
-### telemetry Stanza
+### telemetry stanza
 
 Vault Proxy supports the [telemetry][telemetry] stanza and collects various
 runtime metrics about its performance, the auto-auth and the cache status:
@@ -248,7 +253,7 @@ runtime metrics about its performance, the auto-auth and the cache status:
 | `vault.proxy.cache.hit`          | Number of cache hits                                 | counter |
 | `vault.proxy.cache.miss`         | Number of cache misses                               | counter |
 
-## Start Vault Proxy
+## Start Vault proxy
 
 To run Vault Proxy:
 
@@ -278,7 +283,7 @@ As with Vault, the `-config` flag can be used in three different ways:
 - Use the flag multiple times to name multiple configuration files, which will be composed at runtime.
 - Use the flag to name a directory of configuration files, the contents of which will be composed at runtime.
 
-## Example Configuration
+## Example configuration
 
 An example configuration, with very contrived values, follows:
 
@@ -342,12 +347,10 @@ listener "tcp" {
 ```
 
 [vault]: /vault/docs/agent-and-proxy/proxy#vault-stanza
-[autoauth]: /vault/docs/agent-and-proxy/proxy/autoauth
+[autoauth]: /vault/docs/agent-and-proxy/autoauth
 [caching]: /vault/docs/agent-and-proxy/proxy/caching
 [apiproxy]: /vault/docs/agent-and-proxy/proxy/apiproxy
 [persistent-cache]: /vault/docs/agent-and-proxy/proxy/caching/persistent-caches
-[template]: /vault/docs/agent-and-proxy/proxy/template
-[template-config]: /vault/docs/agent-and-proxy/proxy/template#template-configurations
 [proxy-api]: /vault/docs/agent-and-proxy/proxy/#proxy_api-stanza
 [listener]: /vault/docs/agent-and-proxy/proxy#listener-stanza
 [listener_main]: /vault/docs/configuration/listener/tcp

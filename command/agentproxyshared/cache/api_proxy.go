@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package cache
 
@@ -9,9 +9,10 @@ import (
 	gohttp "net/http"
 	"sync"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/http"
 )
 
@@ -41,6 +42,10 @@ type APIProxy struct {
 	lastIndexStates         []string
 	userAgentString         string
 	userAgentStringFunction func(string) string
+	// clientNamespace is a one-time set representation of the namespace of the client
+	// (i.e. client.Namespace()) to avoid repeated calls and lock usage.
+	clientNamespace            string
+	prependConfiguredNamespace bool
 }
 
 var _ Proxier = &APIProxy{}
@@ -56,6 +61,9 @@ type APIProxyConfig struct {
 	// UserAgentStringFunction is the function to transform the proxied client's
 	// user agent into one that includes Vault-specific information.
 	UserAgentStringFunction func(string) string
+	// PrependConfiguredNamespace configures whether the client's namespace
+	// should be prepended to proxied requests
+	PrependConfiguredNamespace bool
 }
 
 func NewAPIProxy(config *APIProxyConfig) (Proxier, error) {
@@ -63,12 +71,14 @@ func NewAPIProxy(config *APIProxyConfig) (Proxier, error) {
 		return nil, fmt.Errorf("nil API client")
 	}
 	return &APIProxy{
-		client:                  config.Client,
-		logger:                  config.Logger,
-		enforceConsistency:      config.EnforceConsistency,
-		whenInconsistentAction:  config.WhenInconsistentAction,
-		userAgentString:         config.UserAgentString,
-		userAgentStringFunction: config.UserAgentStringFunction,
+		client:                     config.Client,
+		logger:                     config.Logger,
+		enforceConsistency:         config.EnforceConsistency,
+		whenInconsistentAction:     config.WhenInconsistentAction,
+		userAgentString:            config.UserAgentString,
+		userAgentStringFunction:    config.UserAgentStringFunction,
+		prependConfiguredNamespace: config.PrependConfiguredNamespace,
+		clientNamespace:            namespace.Canonicalize(config.Client.Namespace()),
 	}, nil
 }
 
@@ -102,6 +112,11 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 	}
 
 	client.SetHeaders(req.Request.Header)
+	if ap.prependConfiguredNamespace && ap.clientNamespace != "" {
+		currentNamespace := namespace.Canonicalize(client.Namespace())
+		newNamespace := namespace.Canonicalize(ap.clientNamespace + currentNamespace)
+		client.SetNamespace(newNamespace)
+	}
 
 	fwReq := client.NewRequest(req.Request.Method, req.Request.URL.Path)
 	fwReq.BodyBytes = req.RequestBody

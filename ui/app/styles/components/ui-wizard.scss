@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 // This file is not being used. https://github.com/hashicorp/vault/pull/19220
@@ -32,7 +32,7 @@
 
 .ui-wizard {
   z-index: 300;
-  padding: $size-5;
+  padding: $spacing-18;
   width: $drawer-width;
   background: $white;
   box-shadow: $box-shadow, $box-shadow-highest;
@@ -46,14 +46,6 @@
     line-height: 1.33;
   }
 
-  .dismiss-collapsed {
-    position: absolute;
-    top: $size-8;
-    right: $size-8;
-    color: $grey;
-    z-index: 30;
-  }
-
   @include until($mobile) {
     box-shadow: $box-shadow, 0 0 20px rgba($black, 0.24);
     bottom: 0;
@@ -64,20 +56,20 @@
   }
 
   .doc-link {
-    margin-top: $size-5;
+    margin-top: $spacing-18;
     display: block;
   }
 
   pre code {
     background: $ui-gray-050;
-    margin: $size-8 0;
+    margin: $spacing-12 0;
   }
 }
 
 .wizard-header {
   border-bottom: $light-border;
-  padding: 0 $size-4 $size-8 0;
-  margin: $size-4 0;
+  padding: 0 $spacing-20 $spacing-12 0;
+  margin: $spacing-20 0;
   position: relative;
 
   @include until($mobile) {
@@ -101,7 +93,7 @@
   box-shadow: $box-shadow-middle;
   height: auto;
   min-height: 0;
-  padding-bottom: $size-11;
+  padding-bottom: $spacing-4;
   position: fixed;
   right: $size-8;
   top: calc(#{4rem} + #{$size-8});
@@ -121,7 +113,7 @@
 
   .wizard-header {
     border-bottom: 0;
-    margin: 0 0 $size-10;
+    margin: 0 0 $spacing-8;
     padding-top: 0;
   }
 
@@ -139,8 +131,8 @@
 .wizard-divider-box {
   background: none;
   box-shadow: none;
-  margin: $size-8 0 0;
-  padding: 0 $size-8;
+  margin: $spacing-12 0 0;
+  padding: 0 $spacing-12;
   border-top: solid 1px $white;
   border-image: linear-gradient(to right, $grey-dark, $grey) 1;
   border-width: 1px 0 0;
@@ -151,21 +143,21 @@
 }
 
 .wizard-section:last-of-type {
-  margin-bottom: $size-5;
+  margin-bottom: $spacing-18;
 }
 
 .wizard-section button:not(:last-of-type) {
-  margin-bottom: $size-10;
+  margin-bottom: $spacing-8;
 }
 
 .wizard-details {
-  padding-top: $size-4;
-  margin-top: $size-4;
+  padding-top: $spacing-20;
+  margin-top: $spacing-20;
   border-top: 1px solid $grey-light;
 }
 
 .wizard-instructions {
-  margin: $size-4 0;
+  margin: $spacing-20 0;
 }
 
 .selection-summary {

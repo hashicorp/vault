@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
@@ -35,6 +35,8 @@ type SecretsTuneCommand struct {
 	flagVersion                   int
 	flagPluginVersion             string
 	flagAllowedManagedKeys        []string
+	flagDelegatedAuthAccessors    []string
+	flagIdentityTokenKey          string
 }
 
 func (c *SecretsTuneCommand) Synopsis() string {
@@ -158,6 +160,21 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 			"the plugin catalog, and will not start running until the plugin is reloaded.",
 	})
 
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameDelegatedAuthAccessors,
+		Target: &c.flagDelegatedAuthAccessors,
+		Usage: "A list of permitted authentication accessors this backend can delegate authentication to. " +
+			"Note that multiple values may be specified by providing this option multiple times, " +
+			"each time with 1 accessor.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    flagNameIdentityTokenKey,
+		Target:  &c.flagIdentityTokenKey,
+		Default: "default",
+		Usage:   "Select the key used to sign plugin identity tokens.",
+	})
+
 	return set
 }
 
@@ -241,6 +258,14 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNamePluginVersion {
 			mountConfigInput.PluginVersion = c.flagPluginVersion
+		}
+
+		if fl.Name == flagNameDelegatedAuthAccessors {
+			mountConfigInput.DelegatedAuthAccessors = c.flagDelegatedAuthAccessors
+		}
+
+		if fl.Name == flagNameIdentityTokenKey {
+			mountConfigInput.IdentityTokenKey = c.flagIdentityTokenKey
 		}
 	})
 

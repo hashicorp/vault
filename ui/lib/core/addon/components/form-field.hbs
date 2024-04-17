@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{! template-lint-configure simple-unless "warn" }}
 <div class="field" data-test-field={{or @attr.name true}}>
   {{#unless this.hideLabel}}
@@ -11,9 +16,13 @@
   {{/unless}}
   {{#if @attr.options.possibleValues}}
     {{#if (eq @attr.options.editType "radio")}}
-      <div class="control columns" data-test-radio-input>
+      <div class="control {{unless this.hasRadioSubText 'columns'}}" data-test-radio-input>
         {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
-          <div class="column is-narrow is-flex-center has-text-grey has-right-margin-s" data-test-input={{@attr.name}}>
+          <div
+            class="is-flex-center
+              {{if this.hasRadioSubText 'has-top-padding-xs has-bottom-padding-s' 'column is-narrow has-right-margin-s'}}"
+            data-test-input={{@attr.name}}
+          >
             <RadioButton
               class="radio"
               name={{@attr.name}}
@@ -21,15 +30,47 @@
               value={{or val.value val}}
               @value={{or val.value val}}
               @onChange={{this.setAndBroadcast}}
-              @groupValue={{(get @model this.valuePath)}}
+              @groupValue={{get @model this.valuePath}}
               @disabled={{and @attr.options.editDisabled (not @model.isNew)}}
+              data-test-radio={{or val.value val}}
             />
-            <label for={{or val.value val}} class="has-left-margin-xs">
-              {{or val.value val}}
-            </label>
+            <div class="has-left-margin-xs">
+              <label
+                for="{{or val.value val}}"
+                class="has-left-margin-xs is-size-7"
+                data-test-radio-label={{or val.label val.value val}}
+              >
+                {{or val.label val.value val}}
+                {{#if val.helpText}}
+                  <Hds::TooltipButton @text={{val.helpText}} aria-label="More information">
+                    <FlightIcon @name="info" />
+                  </Hds::TooltipButton>
+                {{/if}}
+                {{#if this.hasRadioSubText}}
+                  <p class="has-left-margin-xs has-text-grey is-size-8" data-test-radio-subText={{val.subText}}>
+                    {{val.subText}}
+                  </p>
+                {{/if}}
+              </label>
+            </div>
           </div>
         {{/each}}
       </div>
+    {{else if (eq @attr.options.editType "checkboxList")}}
+      <Hds::Form::Checkbox::Group @name={{@attr.name}} data-test-input={{@attr.name}} as |G|>
+        {{#each @attr.options.possibleValues as |option|}}
+          <G.CheckboxField
+            class={{if this.validationError "has-error-border"}}
+            checked={{includes option (get @model this.valuePath)}}
+            @value={{option}}
+            @id={{option}}
+            {{on "change" this.handleChecklist}}
+            as |F|
+          >
+            <F.Label>{{option}}</F.Label>
+          </G.CheckboxField>
+        {{/each}}
+      </Hds::Form::Checkbox::Group>
     {{else}}
       <div class="control is-expanded">
         <div class="select is-fullwidth">
@@ -46,40 +87,25 @@
               </option>
             {{/if}}
             {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
-              <option selected={{eq (get @model this.valuePath) (or val.value val)}} value={{or val.value val}}>
+              <option selected={{loose-equal (get @model this.valuePath) (or val.value val)}} value={{or val.value val}}>
                 {{or val.displayName val}}
               </option>
             {{/each}}
           </select>
         </div>
-        {{#if this.validationError}}
-          <AlertInline
-            @type="danger"
-            @message={{this.validationError}}
-            @paddingTop={{true}}
-            data-test-field-validation={{@attr.name}}
-          />
-        {{/if}}
       </div>
     {{/if}}
-  {{else if (and (eq @attr.type "string") (eq @attr.options.editType "boolean"))}}
-    <div class="b-checkbox">
-      <input
-        type="checkbox"
-        id={{@attr.name}}
-        class="styled"
-        checked={{eq (get @model this.valuePath) @attr.options.trueValue}}
-        onchange={{fn this.setAndBroadcastBool @attr.options.trueValue @attr.options.falseValue}}
-        data-test-input={{@attr.name}}
-      />
-
-      <label for={{@attr.name}} class="is-label">
-        {{this.labelString}}
-        {{#if (and this.showHelpText @attr.options.helpText)}}
-          <InfoTooltip>{{@attr.options.helpText}}</InfoTooltip>
-        {{/if}}
-      </label>
-    </div>
+  {{else if (eq @attr.options.editType "dateTimeLocal")}}
+    <Input
+      @type="datetime-local"
+      @value={{date-format (get @model this.valuePath) "yyyy-MM-dd'T'HH:mm"}}
+      name={{@attr.name}}
+      id={{@attr.name}}
+      data-test-input={{@attr.name}}
+      class="input has-top-margin-xs has-bottom-margin-xs is-auto-width is-block
+        {{if this.validationError 'has-error-border'}}"
+      {{on "focusout" this.onChangeWithEvent}}
+    />
   {{else if (eq @attr.options.editType "searchSelect")}}
     <div class="form-section">
       <SearchSelect
@@ -99,9 +125,6 @@
         class={{if this.validationError "dropdown-has-error-border"}}
       />
     </div>
-    {{#if this.validationError}}
-      <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
-    {{/if}}
   {{else if (eq @attr.options.editType "mountAccessor")}}
     <MountAccessorSelect
       @name={{@attr.name}}
@@ -116,19 +139,24 @@
       @value={{get @model this.valuePath}}
       @onChange={{this.setAndBroadcast}}
       @label={{this.labelString}}
-      @labelClass="title {{if (eq @mode 'create') 'is-5' 'is-4'}}"
+      @labelClass={{if @attr.options.isSectionHeader "title is-4" "is-label"}}
       @helpText={{@attr.options.helpText}}
       @subText={{@attr.options.subText}}
       @onKeyUp={{this.handleKeyUp}}
-      @validationError={{this.validationError}}
-      class={{if (not-eq @mode "customMetadata") "form-section"}}
+      @keyPlaceholder={{@attr.options.keyPlaceholder}}
+      @valuePlaceholder={{@attr.options.valuePlaceholder}}
+      @isSingleRow={{@attr.options.isSingleRow}}
+      @allowWhiteSpace={{@attr.options.allowWhiteSpace}}
+      class="{{if this.validationError 'error-border-child-inputs'}} {{if @attr.options.isSectionHeader 'form-section'}}"
     />
   {{else if (eq @attr.options.editType "file")}}
     {{! File Input }}
-    <div class="has-bottom-margin-m">
+    <div class="has-bottom-margin-m" data-test-input={{@attr.name}}>
       <TextFile
         @label={{this.labelString}}
+        @subText={{@attr.options.subText}}
         @helpText={{@attr.options.helpText}}
+        @docLink={{@attr.options.docLink}}
         @onChange={{this.setFile}}
         @validationError={{this.validationError}}
       />
@@ -139,6 +167,7 @@
       {{#let (or (get @model this.valuePath) @attr.options.setDefault) as |initialValue|}}
         <TtlPicker
           data-test-input={{@attr.name}}
+          class={{if this.validationError "ttl-picker-form-field-error"}}
           @onChange={{this.setAndBroadcastTtl}}
           @label={{this.labelString}}
           @helperTextDisabled={{or @attr.options.helperTextDisabled "Vault will use the default lease duration."}}
@@ -162,8 +191,6 @@
     {{! Togglable Text Input }}
     <Toggle
       @name="show-{{@attr.name}}"
-      @status="success"
-      @size="small"
       @onChange={{this.toggleShow}}
       @checked={{this.showInput}}
       data-test-toggle={{@attr.name}}
@@ -207,6 +234,7 @@
     </Toggle>
   {{else if (eq @attr.options.editType "stringArray")}}
     <StringList
+      class={{if this.validationError "string-list-form-field-error"}}
       data-test-input={{@attr.name}}
       @label={{this.labelString}}
       @helpText={{if this.showHelpText @attr.options.helpText}}
@@ -223,9 +251,6 @@
       @onChange={{this.setAndBroadcast}}
       @onKeyUp={{@onKeyUp}}
     />
-    {{#if this.validationError}}
-      <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
-    {{/if}}
   {{else if (or (eq @attr.type "number") (eq @attr.type "string"))}}
     <div class="control">
       {{#if (eq @attr.options.editType "textarea")}}
@@ -237,9 +262,6 @@
           oninput={{this.onChangeWithEvent}}
           class="textarea {{if this.validationError 'has-error-border'}}"
         ></textarea>
-        {{#if this.validationError}}
-          <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
-        {{/if}}
       {{else if (eq @attr.options.editType "password")}}
         <Input
           data-test-input={{@attr.name}}
@@ -266,18 +288,17 @@
             @theme={{or @attr.options.theme "hashi"}}
             @helpText={{@attr.options.helpText}}
             @mode={{@attr.options.mode}}
+            @example={{@attr.options.example}}
           >
             {{#if @attr.options.allowReset}}
-              <button
-                type="button"
-                class="toolbar-link"
+              <Hds::Button
+                @text="Clear"
+                @icon="reload"
+                class="toolbar-button"
                 disabled={{not value}}
-                onClick={{this.setAndBroadcast}}
+                {{on "click" this.setAndBroadcast}}
                 data-test-json-clear-button
-              >
-                Clear
-                <Icon @name="reload" />
-              </button>
+              />
             {{/if}}
           </JsonEditor>
         {{/let}}
@@ -301,32 +322,16 @@
           disabled={{and @attr.options.editDisabled (not @model.isNew)}}
           autocomplete="off"
           spellcheck="false"
-          value={{or (get @model this.valuePath) @attr.options.defaultValue}}
-          {{on "input" this.onChangeWithEvent}}
+          value={{get @model this.valuePath}}
           {{on "change" this.onChangeWithEvent}}
+          {{on "input" this.onChangeWithEvent}}
           {{on "keyup" this.handleKeyUp}}
           class="input {{if this.validationError 'has-error-border'}}"
           maxLength={{@attr.options.characterLimit}}
         />
-        {{#if @attr.options.validationAttr}}
-          {{#if (and (get @model this.valuePath) (not (get @model @attr.options.validationAttr)))}}
-            <AlertInline @type="danger" @message={{@attr.options.invalidMessage}} />
-          {{/if}}
-        {{/if}}
-        {{#if this.validationError}}
-          <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
-        {{/if}}
-        {{#if this.validationWarning}}
-          <AlertInline
-            @type="warning"
-            @message={{this.validationWarning}}
-            @paddingTop={{true}}
-            data-test-validation-warning
-          />
-        {{/if}}
       {{/if}}
     </div>
-  {{else if (eq @attr.type "boolean")}}
+  {{else if (or (eq @attr.type "boolean") (eq @attr.options.editType "boolean"))}}
     <div class="b-checkbox">
       <input
         disabled={{this.disabled}}
@@ -337,7 +342,7 @@
         onchange={{this.onChangeWithEvent}}
         data-test-input={{@attr.name}}
       />
-      <label for={{@attr.name}} class="is-label">
+      <label for={{@attr.name}} class="is-label" data-test-form-field-label>
         {{this.labelString}}
         {{#if (and this.showHelpText @attr.options.helpText)}}
           <InfoTooltip>{{@attr.options.helpText}}</InfoTooltip>
@@ -360,8 +365,27 @@
       @value={{if (get @model this.valuePath) (stringify (get @model this.valuePath)) this.emptyData}}
       @valueUpdated={{fn this.codemirrorUpdated false}}
       @helpText={{@attr.options.helpText}}
+      @example={{@attr.options.example}}
     />
   {{else if (eq @attr.options.editType "yield")}}
     {{yield}}
+  {{/if}}
+  {{#if this.validationError}}
+    <AlertInline
+      @type="danger"
+      @message={{this.validationError}}
+      @paddingTop={{not-eq @attr.options.editType "ttl"}}
+      data-test-field-validation={{this.valuePath}}
+      class={{if (eq @attr.options.editType "stringArray") "has-top-margin-negative-xxl"}}
+    />
+  {{/if}}
+  {{#if this.validationWarning}}
+    <AlertInline
+      @type="warning"
+      @message={{this.validationWarning}}
+      @paddingTop={{if (and (not this.validationError) (eq @attr.options.editType "ttl")) false true}}
+      data-test-validation-warning={{this.valuePath}}
+      class={{if (and (not this.validationError) (eq @attr.options.editType "stringArray")) "has-top-margin-negative-xxl"}}
+    />
   {{/if}}
 </div>

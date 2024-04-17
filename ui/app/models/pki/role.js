@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
@@ -55,6 +55,7 @@ const fieldGroups = [
   },
   {
     'Additional subject fields': [
+      'allowedUserIds',
       'allowedSerialNumbers',
       'requireCn',
       'useCsrCommonName',
@@ -132,7 +133,6 @@ export default class PkiRoleModel extends Model {
     label: 'Generate lease with certificate',
     subText:
       'Specifies if certificates issued/signed against this role will have Vault leases attached to them.',
-    editType: 'boolean',
     docLink: '/vault/api-docs/secret/pki#create-update-role',
   })
   generateLease;
@@ -142,7 +142,6 @@ export default class PkiRoleModel extends Model {
     detailsLabel: 'Store in storage backend', // template reverses value
     subText:
       'This can improve performance when issuing large numbers of certificates. However, certificates issued in this way cannot be enumerated or revoked.',
-    editType: 'boolean',
     docLink: '/vault/api-docs/secret/pki#create-update-role',
   })
   noStore;
@@ -151,7 +150,6 @@ export default class PkiRoleModel extends Model {
     label: 'Basic constraints valid for non-CA',
     detailsLabel: 'Add basic constraints',
     subText: 'Mark Basic Constraints valid when issuing non-CA certificates.',
-    editType: 'boolean',
   })
   addBasicConstraints;
   /* End of overriding default options */
@@ -184,7 +182,7 @@ export default class PkiRoleModel extends Model {
   })
   keyBits; // no possibleValues because options are dependent on selected key type
 
-  @attr('number', {
+  @attr('string', {
     label: 'Signature bits',
     subText: `Only applicable for key_type 'RSA'. Ignore for other key types.`,
     defaultValue: '0',
@@ -206,7 +204,6 @@ export default class PkiRoleModel extends Model {
   @attr('boolean', {
     label: 'Allow IP SANs',
     subText: 'Specifies if clients can request IP Subject Alternative Names.',
-    editType: 'boolean',
     defaultValue: true,
   })
   allowIpSans;
@@ -222,7 +219,6 @@ export default class PkiRoleModel extends Model {
   @attr('boolean', {
     label: 'Allow URI SANs template',
     subText: 'If true, the URI SANs above may contain templates, as with ACL Path Templating.',
-    editType: 'boolean',
     docLink: '/vault/docs/concepts/policies',
   })
   allowUriSansTemplate;
@@ -293,6 +289,7 @@ export default class PkiRoleModel extends Model {
   })
   extKeyUsageOids;
 
+  @attr({ editType: 'stringArray' }) allowedUserIds;
   @attr({ editType: 'stringArray' }) organization;
   @attr({ editType: 'stringArray' }) country;
   @attr({ editType: 'stringArray' }) locality;

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -9,25 +9,28 @@ import { setupTest } from 'ember-qunit';
 module('Unit | Service | version', function (hooks) {
   setupTest(hooks);
 
-  test('setting version computes isOSS properly', function (assert) {
+  test('setting type computes isCommunity properly', function (assert) {
     const service = this.owner.lookup('service:version');
-    service.version = '0.9.5';
-    assert.true(service.isOSS);
+    service.type = 'community';
+    assert.true(service.isCommunity);
     assert.false(service.isEnterprise);
   });
 
-  test('setting version computes isEnterprise properly', function (assert) {
+  test('setting type computes isEnterprise properly', function (assert) {
     const service = this.owner.lookup('service:version');
-    service.version = '0.9.5+ent';
-    assert.false(service.isOSS);
+    service.type = 'enterprise';
+    assert.false(service.isCommunity);
     assert.true(service.isEnterprise);
   });
 
-  test('setting version with hsm ending computes isEnterprise properly', function (assert) {
+  test('calculates versionDisplay correctly', function (assert) {
     const service = this.owner.lookup('service:version');
-    service.version = '0.9.5+ent.hsm';
-    assert.false(service.isOSS);
-    assert.true(service.isEnterprise);
+    service.type = 'community';
+    service.version = '1.2.3';
+    assert.strictEqual(service.versionDisplay, 'v1.2.3');
+    service.type = 'enterprise';
+    service.version = '1.4.7+ent';
+    assert.strictEqual(service.versionDisplay, 'v1.4.7');
   });
 
   test('hasPerfReplication', function (assert) {

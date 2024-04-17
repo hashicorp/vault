@@ -1,0 +1,3 @@
+```release-note:feature
+**Dashboard UI**: Dashboard is now available in the UI as the new landing page.
+```

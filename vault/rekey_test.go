@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
@@ -126,7 +125,7 @@ func testCore_Rekey_Init_Common(t *testing.T, c *Core, recovery bool) {
 	// If recovery key is supported, set newConf
 	// to be a recovery seal config
 	if c.seal.RecoveryKeySupported() {
-		newConf.Type = c.seal.RecoveryType()
+		newConf.Type = c.seal.RecoverySealConfigType().String()
 	}
 
 	err = c.RekeyInit(newConf, recovery)
@@ -151,13 +150,17 @@ func TestCore_Rekey_Update(t *testing.T) {
 }
 
 func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root string, recovery bool) {
+	testCore_Rekey_Update_Common_Error(t, c, keys, root, recovery, false)
+}
+
+func testCore_Rekey_Update_Common_Error(t *testing.T, c *Core, keys [][]byte, root string, recovery bool, wantRekeyUpdateError bool) {
 	var err error
 	// Start a rekey
 	var expType string
 	if recovery {
-		expType = c.seal.RecoveryType()
+		expType = c.seal.RecoverySealConfigType().String()
 	} else {
-		expType = c.seal.BarrierType().String()
+		expType = c.seal.BarrierSealConfigType().String()
 	}
 
 	newConf := &SealConfig{
@@ -184,11 +187,18 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 	for _, key := range keys {
 		result, err = c.RekeyUpdate(context.Background(), key, rkconf.Nonce, recovery)
 		if err != nil {
-			t.Fatalf("err: %v", err)
+			if !wantRekeyUpdateError {
+				t.Fatalf("err: %v", err)
+			} else {
+				return
+			}
 		}
 		if result != nil {
 			break
 		}
+	}
+	if wantRekeyUpdateError {
+		t.Fatal("expected and error during RekeyUpdate")
 	}
 	if result == nil {
 		t.Fatal("nil result after update")

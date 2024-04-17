@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { hash, resolve } from 'rsvp';
@@ -29,9 +29,9 @@ export default Base.extend({
     if (
       !this.version.hasPerfReplication ||
       replicationMode !== 'performance' ||
-      !cluster.get(`${replicationMode}.isPrimary`)
+      !cluster[replicationMode].isPrimary
     ) {
-      return this.transitionTo('mode', cluster.get('name'), replicationMode);
+      return this.transitionTo('mode', cluster.name, replicationMode);
     }
   },
 });

@@ -1,0 +1,3 @@
+```release-note:bug
+docs: fix wrong api path for ldap secrets cli-commands
+```

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package forwarding
 
@@ -7,9 +7,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -28,8 +26,8 @@ func (b bufCloser) Close() error {
 	return nil
 }
 
-// GenerateForwardedRequest generates a new http.Request that contains the
-// original requests's information in the new request's body.
+// GenerateForwardedHTTPRequest generates a new http.Request that contains the
+// original request's information in the new request's body.
 func GenerateForwardedHTTPRequest(req *http.Request, addr string) (*http.Request, error) {
 	fq, err := GenerateForwardedRequest(req)
 	if err != nil {
@@ -63,19 +61,7 @@ func GenerateForwardedHTTPRequest(req *http.Request, addr string) (*http.Request
 
 func GenerateForwardedRequest(req *http.Request) (*Request, error) {
 	var reader io.Reader = req.Body
-	ctx := req.Context()
-	maxRequestSize := ctx.Value("max_request_size")
-	if maxRequestSize != nil {
-		max, ok := maxRequestSize.(int64)
-		if !ok {
-			return nil, errors.New("could not parse max_request_size from request context")
-		}
-		if max > 0 {
-			reader = io.LimitReader(req.Body, max)
-		}
-	}
-
-	body, err := ioutil.ReadAll(reader)
+	body, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +101,7 @@ func GenerateForwardedRequest(req *http.Request) (*Request, error) {
 	return &fq, nil
 }
 
-// ParseForwardedRequest generates a new http.Request that is comprised of the
+// ParseForwardedHTTPRequest generates a new http.Request that is comprised of the
 // values in the given request's body, assuming it correctly parses into a
 // ForwardedRequest.
 func ParseForwardedHTTPRequest(req *http.Request) (*http.Request, error) {

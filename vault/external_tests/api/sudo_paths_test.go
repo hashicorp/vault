@@ -1,21 +1,17 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package api
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/audit"
-	auditFile "github.com/hashicorp/vault/builtin/audit/file"
-	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
-	"github.com/hashicorp/vault/builtin/logical/database"
 	"github.com/hashicorp/vault/builtin/logical/pki"
-	"github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/builtinplugins"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -28,38 +24,23 @@ func TestSudoPaths(t *testing.T) {
 	t.Parallel()
 
 	coreConfig := &vault.CoreConfig{
-		DisableMlock:        true,
-		DisableCache:        true,
 		EnableRaw:           true,
 		EnableIntrospection: true,
-		Logger:              log.NewNullLogger(),
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": credUserpass.Factory,
-		},
-		AuditBackends: map[string]audit.Factory{
-			"file": auditFile.Factory,
-		},
+		BuiltinRegistry:     builtinplugins.Registry,
 		LogicalBackends: map[string]logical.Factory{
-			"database":       database.Factory,
-			"generic-leased": vault.LeasedPassthroughBackendFactory,
-			"pki":            pki.Factory,
-			"transit":        transit.Factory,
+			"pki": pki.Factory,
 		},
-		BuiltinRegistry: builtinplugins.Registry,
-	}
-	client, _, closer := testVaultServerCoreConfig(t, coreConfig)
-	defer closer()
-
-	for credBackendName := range coreConfig.CredentialBackends {
-		err := client.Sys().EnableAuthWithOptions(credBackendName, &api.EnableAuthOptions{
-			Type: credBackendName,
-		})
-		if err != nil {
-			t.Fatalf("error enabling auth backend for test: %v", err)
-		}
 	}
 
-	for logicalBackendName := range coreConfig.LogicalBackends {
+	cluster := minimal.NewTestSoloCluster(t, coreConfig)
+	client := cluster.Cores[0].Client
+
+	// NOTE: At present there are no auth methods with sudo paths, except for the
+	// automatically mounted token backend. If this changes this test should be
+	// updated to iterate over the auth methods and test them as we are doing below.
+
+	// Each secrets engine that contains sudo paths (other than automatically mounted ones) must be mounted here
+	for _, logicalBackendName := range []string{"pki"} {
 		err := client.Sys().Mount(logicalBackendName, &api.MountInput{
 			Type: logicalBackendName,
 		})
@@ -77,18 +58,30 @@ func TestSudoPaths(t *testing.T) {
 
 	// check for missing paths
 	for path := range sudoPathsFromSpec {
-		if _, ok := sudoPathsInCode[path]; !ok {
+		pathTrimmed := strings.TrimRight(path, "/")
+		if _, ok := sudoPathsInCode[pathTrimmed]; !ok {
 			t.Fatalf(
 				"A path in the OpenAPI spec is missing from the static list of "+
 					"sudo paths in the api module (%s). Please reconcile the two "+
-					"accordingly.", path)
+					"accordingly.", pathTrimmed)
+		}
+	}
+
+	// check for extra paths
+	for path := range sudoPathsInCode {
+		if _, ok := sudoPathsFromSpec[path]; !ok {
+			if _, ok := sudoPathsFromSpec[path+"/"]; !ok {
+				t.Fatalf(
+					"A path in the static list of sudo paths in the api module "+
+						"is not marked as a sudo path in the OpenAPI spec (%s). Please reconcile the two "+
+						"accordingly.", path)
+			}
 		}
 	}
 }
 
 func getSudoPathsFromSpec(client *api.Client) (map[string]struct{}, error) {
-	r := client.NewRequest("GET", "/v1/sys/internal/specs/openapi")
-	resp, err := client.RawRequest(r)
+	resp, err := client.Logical().ReadRaw("sys/internal/specs/openapi")
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve sudo endpoints: %v", err)
 	}

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package cert
 
@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const maxCacheSize = 100000
+const maxOcspCacheSize = 100000
 
 func pathConfig(b *backend) *framework.Path {
 	return &framework.Path{
@@ -36,6 +36,11 @@ func pathConfig(b *backend) *framework.Path {
 				Type:        framework.TypeInt,
 				Default:     100,
 				Description: `The size of the in memory OCSP response cache, shared by all configured certs`,
+			},
+			"role_cache_size": {
+				Type:        framework.TypeInt,
+				Default:     defaultRoleCacheSize,
+				Description: `The size of the in memory role cache`,
 			},
 		},
 
@@ -70,10 +75,17 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 	}
 	if cacheSizeRaw, ok := data.GetOk("ocsp_cache_size"); ok {
 		cacheSize := cacheSizeRaw.(int)
-		if cacheSize < 2 || cacheSize > maxCacheSize {
-			return logical.ErrorResponse("invalid cache size, must be >= 2 and <= %d", maxCacheSize), nil
+		if cacheSize < 2 || cacheSize > maxOcspCacheSize {
+			return logical.ErrorResponse("invalid ocsp cache size, must be >= 2 and <= %d", maxOcspCacheSize), nil
 		}
 		config.OcspCacheSize = cacheSize
+	}
+	if cacheSizeRaw, ok := data.GetOk("role_cache_size"); ok {
+		cacheSize := cacheSizeRaw.(int)
+		if (cacheSize < 0 && cacheSize != -1) || cacheSize > maxRoleCacheSize {
+			return logical.ErrorResponse("invalid role cache size, must be <= %d or -1 to disable role caching", maxRoleCacheSize), nil
+		}
+		config.RoleCacheSize = cacheSize
 	}
 	if err := b.storeConfig(ctx, req.Storage, config); err != nil {
 		return nil, err
@@ -91,6 +103,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 		"disable_binding":                cfg.DisableBinding,
 		"enable_identity_alias_metadata": cfg.EnableIdentityAliasMetadata,
 		"ocsp_cache_size":                cfg.OcspCacheSize,
+		"role_cache_size":                cfg.RoleCacheSize,
 	}
 
 	return &logical.Response{
@@ -119,4 +132,5 @@ type config struct {
 	DisableBinding              bool `json:"disable_binding"`
 	EnableIdentityAliasMetadata bool `json:"enable_identity_alias_metadata"`
 	OcspCacheSize               int  `json:"ocsp_cache_size"`
+	RoleCacheSize               int  `json:"role_cache_size"`
 }

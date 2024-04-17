@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -26,6 +26,7 @@ const generateHealthResponse = (now, state) => {
       break;
   }
   return {
+    enterprise: true,
     initialized: true,
     sealed: false,
     standby: false,
@@ -72,7 +73,8 @@ module('Acceptance | Enterprise | License banner warnings', function (hooks) {
       this.get('/v1/sys/license/features', this.passthrough);
     });
     await visit('/vault/auth');
-    assert.dom('[data-test-license-banner]').doesNotExist('license banner does not show');
+    assert.dom('[data-test-license-banner-expired]').doesNotExist('expired banner does not show');
+    assert.dom('[data-test-license-banner-warning]').doesNotExist('warning banner does not show');
     this.server.shutdown();
   });
   test('it shows license banner warning if license expires within 30 days', async function (assert) {

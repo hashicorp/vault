@@ -1,18 +1,21 @@
-<nav class="breadcrumb" aria-label="breadcrumbs" data-test-breadcrumbs>
-  <ul>
-    {{#each @breadcrumbs as |breadcrumb|}}
-      <li>
-        <span class="sep">/</span>
-        {{#if breadcrumb.linkExternal}}
-          <LinkToExternal @route={{breadcrumb.route}}>{{breadcrumb.label}}</LinkToExternal>
-        {{else if breadcrumb.route}}
-          <LinkTo @route={{breadcrumb.route}}>
-            {{breadcrumb.label}}
-          </LinkTo>
-        {{else}}
-          {{breadcrumb.label}}
-        {{/if}}
-      </li>
-    {{/each}}
-  </ul>
-</nav>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::Breadcrumb data-test-breadcrumbs>
+  {{#each @breadcrumbs as |breadcrumb|}}
+    <Hds::Breadcrumb::Item
+      data-test-breadcrumb={{breadcrumb.label}}
+      @text={{breadcrumb.label}}
+      @icon={{breadcrumb.icon}}
+      @route={{breadcrumb.route}}
+      @model={{breadcrumb.model}}
+      @models={{breadcrumb.models}}
+      @query={{breadcrumb.query}}
+      @isRouteExternal={{breadcrumb.linkExternal}}
+      {{! only generate a link for crumbs with a route, otherwise assume it's the current view }}
+      @current={{not breadcrumb.route}}
+    />
+  {{/each}}
+</Hds::Breadcrumb>

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -21,9 +21,9 @@ module('Integration | Component | transform-edit-base', function (hooks) {
 
     // Template block usage:
     await render(hbs`
-      {{#transform-edit-base}}
+      <TransformEditBase>
         template block text
-      {{/transform-edit-base}}
+      </TransformEditBase>
     `);
 
     assert.dom(this.element).hasText('template block text');

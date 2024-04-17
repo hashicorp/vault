@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <HeaderScope />
 <Toolbar>
   {{#if this.model.meta.total}}
@@ -45,42 +50,48 @@
       @title="KMIP Secrets Engine"
       @message="First, let's create a scope that our roles and credentials will belong to. A client can only access objects within their role's scope."
     >
-      <LinkTo @route="scopes.create">
-        Create a scope
-      </LinkTo>
+      <Hds::Link::Standalone @icon="plus" @text="Create a scope" @route="scopes.create" />
     </list.empty>
   {{else if list.item}}
     <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "scope.roles" list.item.id}} as |Item|>
       <Item.content>
         <Icon @name="folder" class="has-text-grey-light" />{{list.item.id}}
       </Item.content>
-      <Item.menu as |m|>
-        <li class="action">
-          <LinkTo @route="scope" @model={{list.item.id}} class="is-block">
-            View scope
-          </LinkTo>
-        </li>
-        {{#if list.item.updatePath.canDelete}}
-          <MenuLoader @loadingParam={{list.item.updatePath.isPending}}>
-            <m.Message
-              @id={{list.item.id}}
-              @triggerText="Delete scope"
-              @title={{concat "Delete scope " list.item.id "?"}}
-              @message="This will permanently delete this scope and all roles and credentials contained within"
-              @cancelButtonText="Cancel"
-              @onConfirm={{action
-                (perform
-                  Item.callMethod
-                  "destroyRecord"
-                  list.item
-                  (concat "Successfully deleted scope " list.item.id)
-                  (concat "There was an error deleting the scope " list.item.id)
-                  (action "refresh")
-                )
-              }}
-              data-test-scope-delete="true"
+      <Item.menu>
+        <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+          <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
+          <dd.Interactive @text="View scope" @route="scope" @model={{list.item.id}} />
+          {{#if list.item.updatePath.isPending}}
+            <dd.Generic>
+              <LoadingDropdownOption />
+            </dd.Generic>
+          {{else if list.item.updatePath.canDelete}}
+            <dd.Interactive
+              @text="Delete scope"
+              @color="critical"
+              {{on "click" (fn (mut this.scopeToDelete) list.item)}}
+              data-test-confirm-action-trigger
             />
-          </MenuLoader>
+          {{/if}}
+        </Hds::Dropdown>
+        {{#if (eq this.scopeToDelete list.item)}}
+          <ConfirmModal
+            @color="critical"
+            @confirmTitle="Delete scope {{this.scopeToDelete.id}}?"
+            @confirmMessage="This will permanently delete this scope and all roles and credentials contained within"
+            @onClose={{fn (mut this.scopeToDelete) null}}
+            @onConfirm={{action
+              (perform
+                Item.callMethod
+                "destroyRecord"
+                this.scopeToDelete
+                (concat "Successfully deleted scope " this.scopeToDelete.id)
+                (concat "There was an error deleting the scope " this.scopeToDelete.id)
+                (action "refresh")
+              )
+            }}
+            data-test-scope-delete
+          />
         {{/if}}
       </Item.menu>
     </ListItem>

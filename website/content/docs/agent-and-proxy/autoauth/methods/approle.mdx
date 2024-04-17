@@ -4,7 +4,7 @@ page_title: Vault Auto-Auth AppRole Method
 description: AppRole Method for Vault Auto-Auth
 ---
 
-# Vault Auto-Auth AppRole Method
+# Vault Auto-Auth AppRole method
 
 The `approle` method reads in a role ID and a secret ID from files and sends
 the values to the [AppRole Auth
@@ -37,7 +37,7 @@ cached.
   `auth/approle/role/webservers/secret-id`) and the creation path for the
   response-wrapping token must match the value set here.
 
-## Example Configuration
+## Example configuration
 
 An example configuration, using approle to enable [auto-auth](/vault/docs/agent-and-proxy/autoauth)
 and creating both a plaintext token sink and a [response-wrapped token sink file](/vault/docs/agent-and-proxy/autoauth#wrap_ttl), follows:

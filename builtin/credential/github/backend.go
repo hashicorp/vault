@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package github
 
@@ -8,7 +8,7 @@ import (
 	"net/url"
 
 	"github.com/google/go-github/github"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/oauth2"
@@ -43,6 +43,21 @@ func Backend() *backend {
 		OperationPrefix: operationPrefixGithub,
 		OperationSuffix: "team-mapping",
 	}
+	teamMapPaths[0].Operations = map[logical.Operation]framework.OperationHandler{
+		logical.ListOperation: &framework.PathOperation{
+			Callback: teamMapPaths[0].Callbacks[logical.ListOperation],
+			Summary:  teamMapPaths[0].HelpSynopsis,
+		},
+		logical.ReadOperation: &framework.PathOperation{
+			Callback: teamMapPaths[0].Callbacks[logical.ReadOperation],
+			Summary:  teamMapPaths[0].HelpSynopsis,
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "list",
+				OperationSuffix: "teams2", // The ReadOperation is redundant with the ListOperation
+			},
+		},
+	}
+	teamMapPaths[0].Callbacks = nil
 
 	b.UserMap = &framework.PolicyMap{
 		PathMap: framework.PathMap{
@@ -61,6 +76,21 @@ func Backend() *backend {
 		OperationPrefix: operationPrefixGithub,
 		OperationSuffix: "user-mapping",
 	}
+	userMapPaths[0].Operations = map[logical.Operation]framework.OperationHandler{
+		logical.ListOperation: &framework.PathOperation{
+			Callback: userMapPaths[0].Callbacks[logical.ListOperation],
+			Summary:  userMapPaths[0].HelpSynopsis,
+		},
+		logical.ReadOperation: &framework.PathOperation{
+			Callback: userMapPaths[0].Callbacks[logical.ReadOperation],
+			Summary:  userMapPaths[0].HelpSynopsis,
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "list",
+				OperationSuffix: "users2", // The ReadOperation is redundant with the ListOperation
+			},
+		},
+	}
+	userMapPaths[0].Callbacks = nil
 
 	allPaths := append(teamMapPaths, userMapPaths...)
 	b.Backend = &framework.Backend{

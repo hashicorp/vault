@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package testhelpers
 
@@ -11,10 +11,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
-	"net/url"
 	"os"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -435,68 +433,6 @@ func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]by
 	return newKeys
 }
 
-// TestRaftServerAddressProvider is a ServerAddressProvider that uses the
-// ClusterAddr() of each node to provide raft addresses.
-//
-// Note that TestRaftServerAddressProvider should only be used in cases where
-// cores that are part of a raft configuration have already had
-// startClusterListener() called (via either unsealing or raft joining).
-type TestRaftServerAddressProvider struct {
-	Cluster *vault.TestCluster
-}
-
-func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib.ServerAddress, error) {
-	for _, core := range p.Cluster.Cores {
-		if core.NodeID == string(id) {
-			parsed, err := url.Parse(core.ClusterAddr())
-			if err != nil {
-				return "", err
-			}
-
-			return raftlib.ServerAddress(parsed.Host), nil
-		}
-	}
-
-	return "", errors.New("could not find cluster addr")
-}
-
-func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
-	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
-
-	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
-
-	leader := cluster.Cores[0]
-
-	// Seal the leader so we can install an address provider
-	{
-		EnsureCoreSealed(t, leader)
-		leader.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		cluster.UnsealCore(t, leader)
-		vault.TestWaitActive(t, leader.Core)
-	}
-
-	leaderInfos := []*raft.LeaderJoinInfo{
-		{
-			LeaderAPIAddr: leader.Client.Address(),
-			TLSConfig:     leader.TLSConfig(),
-		},
-	}
-
-	// Join followers
-	for i := 1; i < len(cluster.Cores); i++ {
-		core := cluster.Cores[i]
-		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		cluster.UnsealCore(t, core)
-	}
-
-	WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
-}
-
 // HardcodedServerAddressProvider is a ServerAddressProvider that uses
 // a hardcoded map of raft node addresses.
 //
@@ -811,9 +747,15 @@ func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
 	t.Fatalf("did not complete before deadline, err: %v", err)
 }
 
-// CreateEntityAndAlias clones an existing client and creates an entity/alias.
+// CreateEntityAndAlias clones an existing client and creates an entity/alias, uses userpass mount path
 // It returns the cloned client, entityID, and aliasID.
 func CreateEntityAndAlias(t testing.T, client *api.Client, mountAccessor, entityName, aliasName string) (*api.Client, string, string) {
+	return CreateEntityAndAliasWithinMount(t, client, mountAccessor, "userpass", entityName, aliasName)
+}
+
+// CreateEntityAndAliasWithinMount clones an existing client and creates an entity/alias, within the specified mountPath
+// It returns the cloned client, entityID, and aliasID.
+func CreateEntityAndAliasWithinMount(t testing.T, client *api.Client, mountAccessor, mountPath, entityName, aliasName string) (*api.Client, string, string) {
 	t.Helper()
 	userClient, err := client.Clone()
 	if err != nil {
@@ -841,7 +783,8 @@ func CreateEntityAndAlias(t testing.T, client *api.Client, mountAccessor, entity
 	if aliasID == "" {
 		t.Fatal("Alias ID not present in response")
 	}
-	_, err = client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("auth/userpass/users/%s", aliasName), map[string]interface{}{
+	path := fmt.Sprintf("auth/%s/users/%s", mountPath, aliasName)
+	_, err = client.Logical().WriteWithContext(context.Background(), path, map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -1046,4 +989,10 @@ func WaitForNodesExcludingSelectedStandbys(t testing.T, cluster *vault.TestClust
 			WaitForStandbyNode(t, core)
 		}
 	}
+}
+
+// IsLocalOrRegressionTests returns true when the tests are running locally (not in CI), or when
+// the regression test env var (VAULT_REGRESSION_TESTS) is provided.
+func IsLocalOrRegressionTests() bool {
+	return os.Getenv("CI") == "" || os.Getenv("VAULT_REGRESSION_TESTS") == "true"
 }

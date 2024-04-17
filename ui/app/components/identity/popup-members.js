@@ -1,39 +1,46 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { alias } from '@ember/object/computed';
-import { computed } from '@ember/object';
-import Base from './_popup-base';
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
+import { service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
+import errorMessage from 'vault/utils/error-message';
 
-export default Base.extend({
-  model: alias('params.firstObject'),
+export default class IdentityPopupMembers extends Component {
+  @service flashMessages;
+  @tracked showConfirmModal = false;
 
-  groupArray: computed('params', function () {
-    return this.params.objectAt(1);
-  }),
+  onSuccess(memberId) {
+    if (this.args.onSuccess) {
+      this.args.onSuccess();
+    }
+    this.flashMessages.success(`Successfully removed '${memberId}' from the group`);
+  }
+  onError(err, memberId) {
+    if (this.args.onError) {
+      this.args.onError();
+    }
+    const error = errorMessage(err);
+    this.flashMessages.danger(`There was a problem removing '${memberId}' from the group - ${error}`);
+  }
 
-  memberId: computed('params', function () {
-    return this.params.objectAt(2);
-  }),
+  transaction() {
+    const members = this.args.model[this.args.groupArray];
+    this.args.model[this.args.groupArray] = members.without(this.args.memberId);
+    return this.args.model.save();
+  }
 
-  messageArgs(/*model, groupArray, memberId*/) {
-    return [...arguments];
-  },
-
-  successMessage(model, groupArray, memberId) {
-    return `Successfully removed '${memberId}' from the group`;
-  },
-
-  errorMessage(e, model, groupArray, memberId) {
-    const error = e.errors ? e.errors.join(' ') : e.message;
-    return `There was a problem removing '${memberId}' from the group - ${error}`;
-  },
-
-  transaction(model, groupArray, memberId) {
-    const members = model.get(groupArray);
-    model.set(groupArray, members.without(memberId));
-    return model.save();
-  },
-});
+  @action
+  async removeGroup() {
+    const memberId = this.args.memberId;
+    try {
+      await this.transaction();
+      this.onSuccess(memberId);
+    } catch (e) {
+      this.onError(e, memberId);
+    }
+  }
+}

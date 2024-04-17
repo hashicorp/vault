@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* This helper includes styles relating to: display, width, height, float, visibility, position, alignment. */
@@ -23,6 +23,13 @@
 }
 
 // position
+.top-right-absolute {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+}
+
 .is-in-bottom-right {
   position: absolute;
   bottom: 1rem;
@@ -34,14 +41,31 @@
   position: relative;
 }
 
+.top-xxs {
+  top: $spacing-4;
+}
+
 // visibility
 .is-invisible {
   visibility: hidden;
 }
 
+// overflow
+.is-overflow-hidden {
+  overflow: hidden;
+}
+
 // width and height
 .is-fullwidth {
   width: 100%;
+}
+
+.is-three-fourths-width {
+  width: 75%;
+}
+
+.is-two-thirds-width {
+  width: 66%;
 }
 
 .is-auto-width {
@@ -52,8 +76,16 @@
   min-width: 0;
 }
 
+.is-medium-width {
+  width: calc($desktop / 2.5);
+}
+
 .is-medium-height {
   height: 125px;
+}
+
+.is-calc-large-height {
+  height: calc($desktop * 0.66);
 }
 
 // float
@@ -66,6 +98,10 @@
 }
 
 // alignment
+.align-self-baseline {
+  align-self: baseline;
+}
+
 .is-v-centered {
   vertical-align: middle;
 }
@@ -87,4 +123,8 @@
   .is-widescreen:not(.is-max-desktop) {
     max-width: 1152px;
   }
+}
+
+.has-margin-top-auto {
+  margin-top: auto;
 }

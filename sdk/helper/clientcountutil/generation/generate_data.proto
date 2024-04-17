@@ -1,0 +1,56 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+syntax = "proto3";
+
+package generation;
+
+option go_package = "github.com/hashicorp/vault/sdk/clientcountutil/generation";
+enum WriteOptions {
+  WRITE_UNKNOWN = 0;
+  WRITE_PRECOMPUTED_QUERIES = 1;
+  WRITE_DISTINCT_CLIENTS = 2;
+  WRITE_ENTITIES = 3;
+  WRITE_DIRECT_TOKENS = 4;
+  WRITE_INTENT_LOGS = 5;
+}
+message ActivityLogMockInput {
+  repeated WriteOptions write = 1;
+  repeated Data data = 2;
+}
+message Data {
+  oneof month {
+    bool current_month = 1;
+    int32 months_ago = 2;
+  }
+  oneof clients {
+    Clients all = 3; // you can’t have repeated fields in a oneof, which is why these are separate message types
+    Segments segments = 4;
+  }
+  repeated int32 empty_segment_indexes = 5;
+  repeated int32 skip_segment_indexes = 6;
+  int32 num_segments = 7;
+}
+
+message Segments {
+  repeated Segment segments = 1;
+}
+
+message Segment {
+  optional int32 segment_index = 1;
+  Clients clients = 2;
+}
+
+message Clients {
+  repeated Client clients = 1;
+}
+
+message Client {
+  string id = 1;
+  int32 count = 2;
+  bool repeated = 3;
+  int32 repeated_from_month = 4;
+  string namespace = 5;
+  string mount = 6;
+  string client_type = 7;
+}

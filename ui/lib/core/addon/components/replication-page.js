@@ -1,13 +1,14 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Component from '@ember/component';
-import { computed } from '@ember/object';
-import layout from '../templates/components/replication-page';
-import { inject as service } from '@ember/service';
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
+import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
 
 /**
  * @module ReplicationPage
@@ -20,7 +21,7 @@ import { task } from 'ember-concurrency';
     @model={{cluster}}
     />
  * ```
- * @param {Object} cluster=null - An Ember data object that is pulled from the Ember Cluster Model.
+ * @param {Object} model=null - An Ember data object that is pulled from the Ember Cluster Model.
  */
 
 const MODE = {
@@ -28,19 +29,20 @@ const MODE = {
   performance: 'Performance',
 };
 
-export default Component.extend({
-  layout,
-  store: service(),
-  router: service(),
-  reindexingDetails: null,
-  didReceiveAttrs() {
-    this._super(arguments);
-    this.getReplicationModeStatus.perform();
-  },
-  getReplicationModeStatus: task(function* () {
-    let resp;
-    const { replicationMode } = this.model;
+export default class ReplicationPage extends Component {
+  @service store;
+  @service router;
+  @tracked reindexingDetails = null;
 
+  @action onModeUpdate(evt, replicationMode) {
+    // Called on did-insert and did-update
+    this.getReplicationModeStatus.perform(replicationMode);
+  }
+
+  @task
+  @waitFor
+  *getReplicationModeStatus(replicationMode) {
+    let resp;
     if (this.isSummaryDashboard) {
       // the summary dashboard is not mode specific and will error
       // while running replication/null/status in the replication-mode adapter
@@ -51,97 +53,82 @@ export default Component.extend({
       resp = yield this.store.adapterFor('replication-mode').fetchStatus(replicationMode);
     } catch (e) {
       // do not handle error
+    } finally {
+      this.reindexingDetails = resp;
     }
-    this.set('reindexingDetails', resp);
-  }),
-  isSummaryDashboard: computed('model.{performance.mode,dr.mode}', function () {
-    const router = this.router;
-    const currentRoute = router.get('currentRouteName');
+  }
+  get isSummaryDashboard() {
+    const currentRoute = this.router.currentRouteName;
 
     // we only show the summary dashboard in the replication index route
     if (currentRoute === 'vault.cluster.replication.index') {
-      const drMode = this.model.dr.mode;
-      const performanceMode = this.model.performance.mode;
+      const drMode = this.args.model.dr.mode;
+      const performanceMode = this.args.model.performance.mode;
       return drMode === 'primary' && performanceMode === 'primary';
     }
     return '';
-  }),
-  formattedReplicationMode: computed('model.replicationMode', 'isSummaryDashboard', function () {
+  }
+  get formattedReplicationMode() {
     // dr or performance 🤯
-    const { isSummaryDashboard } = this;
-    if (isSummaryDashboard) {
+    if (this.isSummaryDashboard) {
       return 'Disaster Recovery & Performance';
     }
-    const mode = this.model.replicationMode;
+    const mode = this.args.model.replicationMode;
     return MODE[mode];
-  }),
-  clusterMode: computed('model.replicationAttrs', 'isSummaryDashboard', function () {
+  }
+  get clusterMode() {
     // primary or secondary
-    const { model } = this;
-    const { isSummaryDashboard } = this;
-    if (isSummaryDashboard) {
+    if (this.isSummaryDashboard) {
       // replicationAttrs does not exist when summaryDashboard
       return 'primary';
     }
-    return model.replicationAttrs.mode;
-  }),
-  isLoadingData: computed('clusterMode', 'model.replicationAttrs', function () {
-    const { clusterMode } = this;
-    const { model } = this;
-    const { isSummaryDashboard } = this;
-    if (isSummaryDashboard) {
+    return this.args.model.replicationAttrs.mode;
+  }
+  get isLoadingData() {
+    if (this.isSummaryDashboard) {
       return false;
     }
-    const clusterId = model.replicationAttrs.clusterId;
-    const replicationDisabled = model.replicationAttrs.replicationDisabled;
-    if (clusterMode === 'bootstrapping' || (!clusterId && !replicationDisabled)) {
+    const { clusterId, replicationDisabled } = this.args.model.replicationAttrs;
+    if (this.clusterMode === 'bootstrapping' || (!clusterId && !replicationDisabled)) {
       // if clusterMode is bootstrapping
       // if no clusterId, the data hasn't loaded yet, wait for another status endpoint to be called
       return true;
     }
     return false;
-  }),
-  isSecondary: computed('clusterMode', function () {
-    const { clusterMode } = this;
-    return clusterMode === 'secondary';
-  }),
-  replicationDetailsSummary: computed('isSummaryDashboard', function () {
-    const { model } = this;
-    const { isSummaryDashboard } = this;
-    if (!isSummaryDashboard) {
-      return;
-    }
-    if (isSummaryDashboard) {
+  }
+  get isSecondary() {
+    return this.clusterMode === 'secondary';
+  }
+  get replicationDetailsSummary() {
+    if (this.isSummaryDashboard) {
       const combinedObject = {};
-      combinedObject.dr = model['dr'];
-      combinedObject.performance = model['performance'];
+      combinedObject.dr = this.args.model['dr'];
+      combinedObject.performance = this.args.model['performance'];
       return combinedObject;
     }
     return {};
-  }),
-  replicationDetails: computed('model.replicationMode', 'isSummaryDashboard', function () {
-    const { model } = this;
-    const { isSummaryDashboard } = this;
-    if (isSummaryDashboard) {
+  }
+  get replicationDetails() {
+    if (this.isSummaryDashboard) {
       // Cannot return null
       return {};
     }
-    const replicationMode = model.replicationMode;
-    return model[replicationMode];
-  }),
-  isDisabled: computed('replicationDetails.mode', function () {
+    const { replicationMode } = this.args.model;
+    return this.args.model[replicationMode];
+  }
+  get isDisabled() {
     if (this.replicationDetails.mode === 'disabled' || this.replicationDetails.mode === 'primary') {
       return true;
     }
     return false;
-  }),
-  message: computed('model.anyReplicationEnabled', 'formattedReplicationMode', function () {
+  }
+  get message() {
     let msg;
-    if (this.model.anyReplicationEnabled) {
+    if (this.args.model.anyReplicationEnabled) {
       msg = `This ${this.formattedReplicationMode} secondary has not been enabled.  You can do so from the ${this.formattedReplicationMode} Primary.`;
     } else {
       msg = `This cluster has not been enabled as a ${this.formattedReplicationMode} Secondary. You can do so by enabling replication and adding a secondary from the ${this.formattedReplicationMode} Primary.`;
     }
     return msg;
-  }),
-});
+  }
+}

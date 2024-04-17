@@ -1,5 +1,11 @@
-<div
-  class="selectable-card is-rounded card-container {{if this.hasErrorClass 'has-error-border'}}"
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::Card::Container
+  @hasBorder={{true}}
+  class="has-padding-m card-container {{if this.hasErrorClass 'has-error-border'}}"
   data-test-replication-secondary-card
 >
   {{! Check if Status or Primary Cluster Card }}
@@ -9,40 +15,40 @@
     </h3>
     <div class="grid-item-left">
       {{#if (get (cluster-states this.state) "isOk")}}
-        <h6 class="title is-6">
+        <h4 class="title is-6">
           state
-        </h6>
+        </h4>
         <p class="has-text-grey is-size-8">
           How this cluster is communicating with others at this moment.
         </p>
       {{else}}
-        <h6 class="has-text-danger" data-test-error>
+        <h4 class="has-text-danger" data-test-error>
           state
-        </h6>
+        </h4>
         <AlertInline @type="danger" @message="Please check your server logs." />
       {{/if}}
     </div>
     <div class="grid-item-right">
       {{#if (eq this.connection "transient_failure")}}
-        <h6 class="title is-6 has-text-danger" data-test-error>
+        <h4 class="title is-6 has-text-danger" data-test-error>
           connection_state
-        </h6>
+        </h4>
         <AlertInline
           @type="danger"
           @message="There has been some transient failure. Your cluster will eventually switch back to connection and try to establish a connection again."
         />
       {{else if (eq this.connection "shutdown")}}
-        <h6 class="title is-6 has-text-danger" data-test-error>
+        <h4 class="title is-6 has-text-danger" data-test-error>
           connection_state
-        </h6>
+        </h4>
         <AlertInline
           @type="danger"
           @message="Your connection has shut down. This may be because the application explicitly requested a shutdown or a non-recoverable error has happened during attempts to communicate."
         />
       {{else}}
-        <h6 class="title is-6">
+        <h4 class="title is-6">
           connection_state
-        </h6>
+        </h4>
         <p class="has-text-grey is-size-8">
           The health of the connection between this cluster and others.
         </p>
@@ -63,19 +69,19 @@
         </ToolTip>
       {{/if}}
     </h2>
-    <h2 class="title is-3 grid-item-bottom-right" data-test-connection>
+    <p class="title is-3 grid-item-bottom-right" data-test-connection>
       {{this.connection}}
-    </h2>
+    </p>
     <div class="grid-item-bottom-row">
-      <h6 class="title is-6">
+      <p class="title is-6">
         last_remote_wal
-      </h6>
+      </p>
       <p class="has-text-grey is-size-8">
         The last WAL index that the secondary received from the primary. Updates every 10 seconds.
       </p>
-      <h2 class="title is-3">
+      <p class="title is-3">
         {{format-number this.lastRemoteWAL}}
-      </h2>
+      </p>
     </div>
   {{else}}
     <div class="grid-item-top-left">
@@ -92,26 +98,44 @@
       </div>
     {{/if}}
     <div class="grid-item-second-row">
-      <h6 class="title is-6">
+      <h4 class="title is-6">
         known_primary_cluster_addrs
-      </h6>
+      </h4>
       <p class="has-text-grey">
         A list of all the nodes in the primary's cluster. This value is updated every ten seconds.
       </p>
     </div>
     <div class="grid-item-third-row">
       {{#if (is-empty this.knownPrimaryClusterAddrs)}}
-        <EmptyState
-          @title="No known_primary_cluster_addrs"
-          @message="These addresses are used by the secondary to communicate with the primary cluster. Should always be non-zero in a functioning replication setup."
-        >
-          <DocLink @path="/vault/tutorials/monitoring/monitor-replication">
-            Learn more
-          </DocLink>
-        </EmptyState>
+        <Hds::ApplicationState data-test-empty-state as |A|>
+          <A.Header @title="No known_primary_cluster_addrs" />
+          <A.Body
+            @text="These addresses are used by the secondary to communicate with the primary cluster. Should always be non-zero in a functioning replication setup."
+          />
+          <A.Footer @hasDivider={{true}} as |F|>
+            <F.LinkStandalone
+              @icon="help"
+              @text="Learn more about replication"
+              @href={{doc-link "/vault/tutorials/monitoring/monitor-replication"}}
+            />
+          </A.Footer>
+        </Hds::ApplicationState>
       {{else}}
-        <InfoTable @title="Known Primary Cluster Addrs" @header="cluster_addr" @items={{this.knownPrimaryClusterAddrs}} />
+        <Hds::Table @caption="Known Primary Cluster Addrs" data-test-info-table>
+          <:head as |H|>
+            <H.Tr>
+              <H.Th>cluster_addr</H.Th>
+            </H.Tr>
+          </:head>
+          <:body as |B|>
+            {{#each this.knownPrimaryClusterAddrs as |item|}}
+              <B.Tr>
+                <B.Td>{{item}}</B.Td>
+              </B.Tr>
+            {{/each}}
+          </:body>
+        </Hds::Table>
       {{/if}}
     </div>
   {{/if}}
-</div>
+</Hds::Card::Container>

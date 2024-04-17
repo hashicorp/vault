@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -8,30 +8,29 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import ENV from 'vault/config/environment';
-import {
-  OIDC_BASE_URL,
-  CLIENT_LIST_RESPONSE,
-  SELECTORS,
-  overrideMirageResponse,
-  overrideCapabilities,
-} from 'vault/tests/helpers/oidc-config';
+import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
+import { OIDC_BASE_URL, CLIENT_LIST_RESPONSE, SELECTORS } from 'vault/tests/helpers/oidc-config';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | oidc/key-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'oidcConfig';
-  });
-
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
-  });
-
   hooks.beforeEach(function () {
+    oidcConfigHandlers(this.server);
     this.store = this.owner.lookup('service:store');
-    this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
+    this.server.get('/identity/oidc/client', () => overrideResponse(null, { data: CLIENT_LIST_RESPONSE }));
+    setRunOptions({
+      rules: {
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+      },
+    });
   });
 
   test('it should save new key', async function (assert) {
@@ -50,7 +49,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
     />
     `);
 
-    assert.dom('[data-test-oidc-key-title]').hasText('Create key', 'Form title renders correct text');
+    assert.dom('[data-test-oidc-key-title]').hasText('Create Key', 'Form title renders correct text');
     assert.dom(SELECTORS.keySaveButton).hasText('Create', 'Save button has correct text');
     assert.dom('[data-test-input="algorithm"]').hasValue('RS256', 'default algorithm is correct');
     assert.strictEqual(findAll('[data-test-field]').length, 4, 'renders all input fields');
@@ -95,7 +94,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
       />
     `);
 
-    assert.dom('[data-test-oidc-key-title]').hasText('Edit key', 'Title renders correct text');
+    assert.dom('[data-test-oidc-key-title]').hasText('Edit Key', 'Title renders correct text');
     assert.dom(SELECTORS.keySaveButton).hasText('Update', 'Save button has correct text');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert.dom('[data-test-input="name"]').hasValue('test-key', 'Name input is populated with model value');
@@ -173,7 +172,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
 
     this.model = this.store.peekRecord('oidc/key', 'test-key');
 
-    this.server.get('/identity/oidc/client', () => overrideMirageResponse(403));
+    this.server.get('/identity/oidc/client', () => overrideResponse(403));
     await render(hbs`
       <Oidc::KeyForm
         @model={{this.model}}
@@ -191,7 +190,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
   test('it should render error alerts when API returns an error', async function (assert) {
     assert.expect(2);
     this.model = this.store.createRecord('oidc/key');
-    this.server.post('/sys/capabilities-self', () => overrideCapabilities(OIDC_BASE_URL + '/keys'));
+    this.server.post('/sys/capabilities-self', () => capabilitiesStub(OIDC_BASE_URL + '/keys'));
     await render(hbs`
       <Oidc::KeyForm
         @model={{this.model}}
@@ -204,6 +203,6 @@ module('Integration | Component | oidc/key-form', function (hooks) {
     assert
       .dom(SELECTORS.inlineAlert)
       .hasText('There was an error submitting this form.', 'form error alert renders ');
-    assert.dom('[data-test-alert-banner="alert"]').exists('alert banner renders');
+    assert.dom('[data-test-message-error]').exists('alert banner renders');
   });
 });

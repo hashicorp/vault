@@ -1,34 +1,49 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { alias } from '@ember/object/computed';
-import { computed } from '@ember/object';
-import Base from './_popup-base';
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
+import { service } from '@ember/service';
+import errorMessage from 'vault/utils/error-message';
+import { tracked } from '@glimmer/tracking';
 
-export default Base.extend({
-  model: alias('params.firstObject'),
-  policyName: computed('params', function () {
-    return this.params.objectAt(1);
-  }),
+export default class IdentityPopupPolicy extends Component {
+  @service flashMessages;
+  @tracked showConfirmModal = false;
 
-  messageArgs(model, policyName) {
-    return [model, policyName];
-  },
+  onSuccess(policyName, modelId) {
+    if (this.args.onSuccess) {
+      this.args.onSuccess();
+    }
+    this.flashMessages.success(`Successfully removed '${policyName}' policy from ${modelId}`);
+  }
+  onError(err, policyName) {
+    if (this.args.onError) {
+      this.args.onError();
+    }
+    const error = errorMessage(err);
+    this.flashMessages.danger(`There was a problem removing '${policyName}' policy - ${error}`);
+  }
 
-  successMessage(model, policyName) {
-    return `Successfully removed '${policyName}' policy from ${model.id} `;
-  },
+  transaction() {
+    const policies = this.args.model.policies;
+    this.args.model.policies = policies.without(this.args.policyName);
+    return this.args.model.save();
+  }
 
-  errorMessage(e, model, policyName) {
-    const error = e.errors ? e.errors.join(' ') : e.message;
-    return `There was a problem removing '${policyName}' policy - ${error}`;
-  },
-
-  transaction(model, policyName) {
-    const policies = model.get('policies');
-    model.set('policies', policies.without(policyName));
-    return model.save();
-  },
-});
+  @action
+  async removePolicy() {
+    const {
+      policyName,
+      model: { id },
+    } = this.args;
+    try {
+      await this.transaction();
+      this.onSuccess(policyName, id);
+    } catch (e) {
+      this.onError(e, policyName);
+    }
+  }
+}

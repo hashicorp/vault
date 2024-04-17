@@ -10,7 +10,7 @@ description: |-
 
 The `operator generate-root` command generates a new root token by combining a
 quorum of share holders. With the `-dr-token` or `-recovery-token` options,
-it can generate a DR operational token or a recovery token in the same way.
+it can generate a DR operation token or a recovery token in the same way.
 
 One of the following must be provided to start the root token generation:
 
@@ -41,13 +41,13 @@ $ vault operator generate-root -generate-otp
 Start a root token generation:
 
 ```shell-session
-$ vault operator generate-root -init -otp="..."
+$ vault operator generate-root -init
 ```
 
 Enter an unseal key to progress root token generation:
 
 ```shell-session
-$ vault operator generate-root -otp="..."
+$ vault operator generate-root
 ```
 
 ## Usage
@@ -55,13 +55,13 @@ $ vault operator generate-root -otp="..."
 The following flags are available in addition to the [standard set of
 flags](/vault/docs/commands) included on all commands.
 
-### Output Options
+### Output options
 
 - `-format` `(string: "table")` - Print the output in the given format. Valid
   formats are "table", "json", or "yaml". This can also be specified via the
   `VAULT_FORMAT` environment variable.
 
-### Command Options
+### Command options
 
 - `-cancel` `(bool: false)` - Reset the root token generation progress. This
   will discard any submitted unseal keys or configuration.
@@ -89,6 +89,6 @@ flags](/vault/docs/commands) included on all commands.
 - `-status` `(bool: false)` - Print the status of the current attempt without
   providing an unseal key. The default is false.
 
-- `-dr-token` `(bool: false)` - Generate DR operational token
+- `-dr-token` `(bool: false)` - Generate DR operation token
 
-- `-recovery-token` `(bool: false)` - Generate recovery operational token
+- `-recovery-token` `(bool: false)` - Generate recovery token

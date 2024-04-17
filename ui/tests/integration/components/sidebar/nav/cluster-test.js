@@ -1,8 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { stubFeaturesAndPermissions } from 'vault/tests/helpers/components/sidebar-nav';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const renderComponent = () => {
   return render(hbs`
@@ -15,8 +21,19 @@ const renderComponent = () => {
 module('Integration | Component | sidebar-nav-cluster', function (hooks) {
   setupRenderingTest(hooks);
 
+  hooks.beforeEach(function () {
+    setRunOptions({
+      rules: {
+        // This is an issue with Hds::SideNav::Header::HomeLink
+        'aria-prohibited-attr': { enabled: false },
+        // TODO: fix use Dropdown on user-menu
+        'nested-interactive': { enabled: false },
+      },
+    });
+  });
+
   test('it should render nav headings', async function (assert) {
-    const headings = ['Vault', 'Replication', 'Monitoring'];
+    const headings = ['Vault', 'Monitoring', 'Settings'];
     stubFeaturesAndPermissions(this.owner, true, true);
     await renderComponent();
 
@@ -34,7 +51,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     await renderComponent();
     assert
       .dom('[data-test-sidebar-nav-link]')
-      .exists({ count: 1 }, 'Nav links are hidden other than secrets');
+      .exists({ count: 3 }, 'Nav links are hidden other than secrets, secrets sync and dashboard');
     assert
       .dom('[data-test-sidebar-nav-heading]')
       .exists({ count: 1 }, 'Headings are hidden other than Vault');
@@ -42,17 +59,18 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
 
   test('it should render nav links', async function (assert) {
     const links = [
-      'Secrets engines',
+      'Dashboard',
+      'Secrets Engines',
+      'Secrets Sync',
       'Access',
       'Policies',
       'Tools',
-      'DR Primary',
-      'Performance Secondary',
       'Replication',
       'Raft Storage',
-      'Client count',
+      'Client Count',
       'License',
       'Seal Vault',
+      'Custom Messages',
     ];
     stubFeaturesAndPermissions(this.owner, true, true);
     await renderComponent();
@@ -63,5 +81,67 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     links.forEach((link) => {
       assert.dom(`[data-test-sidebar-nav-link="${link}"]`).hasText(link, `${link} link renders`);
     });
+  });
+
+  test('it should render badge for promotional links on community version', async function (assert) {
+    const promotionalLinks = ['Secrets Sync'];
+    stubFeaturesAndPermissions(this.owner, false, true);
+    await renderComponent();
+
+    promotionalLinks.forEach((link) => {
+      assert
+        .dom(`[data-test-sidebar-nav-link="${link}"]`)
+        .hasText(`${link} Enterprise`, `${link} link renders Enterprise badge`);
+    });
+  });
+
+  test('it should render badge for promotional links on enterprise version', async function (assert) {
+    const promotionalLinks = ['Secrets Sync'];
+    stubFeaturesAndPermissions(this.owner, true, true, ['Namespaces']);
+    await renderComponent();
+
+    promotionalLinks.forEach((link) => {
+      assert
+        .dom(`[data-test-sidebar-nav-link="${link}"]`)
+        .hasText(`${link} Premium`, `${link} link renders Premium badge`);
+    });
+  });
+
+  test('it should hide enterprise related links in child namespace', async function (assert) {
+    const links = [
+      'Disaster Recovery',
+      'Performance',
+      'Replication',
+      'Raft Storage',
+      'License',
+      'Seal Vault',
+    ];
+    this.owner.lookup('service:namespace').set('path', 'foo');
+    const stubs = stubFeaturesAndPermissions(this.owner, true, true);
+    stubs.hasNavPermission.callsFake((route) => route !== 'clients');
+
+    await renderComponent();
+
+    assert
+      .dom('[data-test-sidebar-nav-heading="Monitoring"]')
+      .doesNotExist(
+        'Monitoring heading is hidden in child namespace when user does not have access to Client Count'
+      );
+
+    links.forEach((link) => {
+      assert
+        .dom(`[data-test-sidebar-nav-link="${link}"]`)
+        .doesNotExist(`${link} is hidden in child namespace`);
+    });
+  });
+
+  test('it should not show sync links for managed cluster', async function (assert) {
+    this.owner.lookup('service:feature-flag').setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
+    stubFeaturesAndPermissions(this.owner, true, true, ['Secrets Sync']);
+    await renderComponent();
+
+    assert
+      .dom(`[data-test-sidebar-nav-link="Secrets Sync"]`)
+      .doesNotExist(`Secret Sync is hidden in managed vault`);
   });
 });

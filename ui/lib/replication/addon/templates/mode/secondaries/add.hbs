@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form {{action "onSubmit" "secondary-token" "primary" (hash ttl=this.ttl id=this.id) on="submit"}}>
   <div class="box is-fullwidth is-shadowless is-marginless">
     <h4 class="title is-5">
@@ -20,7 +25,7 @@
         name="activation-token-id"
         id="activation-token-id"
         @value={{this.id}}
-        data-test-replication-secondary-id={{true}}
+        data-test-replication-secondary-id
       />
     </div>
     <p class="help has-text-grey">
@@ -40,23 +45,24 @@
   {{#if (eq this.replicationMode "performance")}}
     <PathFilterConfigList @paths={{this.paths}} @config={{this.filterConfig}} @id={{this.id}} />
   {{/if}}
-  <div class="field is-grouped box is-fullwidth is-bottomless">
-    <div class="control">
-      <button type="submit" class="button is-primary" data-test-secondary-add={{true}}>
-        Generate token
-      </button>
-    </div>
-    <div class="control">
-      <LinkTo @route="mode.secondaries" @model={{this.replicationMode}} class="button">
-        Cancel
-      </LinkTo>
-    </div>
-  </div>
+  <hr class="has-background-gray-100" />
+  <Hds::ButtonSet>
+    <Hds::Button @text="Generate token" type="submit" data-test-secondary-add />
+    <Hds::Button @text="Cancel" @color="secondary" @route="mode.secondaries" @model={{this.model.replicationMode}} />
+  </Hds::ButtonSet>
 </form>
 
 {{#if this.isModalActive}}
-  <Modal @title="Copy your token" @onClose={{action "toggleModal" "Token copied!"}} @isActive={{this.isModalActive}}>
-    <section class="modal-card-body">
+  <Hds::Modal
+    id="replication-copy-token-modal"
+    @onClose={{action "closeTokenModal"}}
+    @isDismissDisabled={{not this.isTokenCopied}}
+    as |M|
+  >
+    <M.Header>
+      Copy your token
+    </M.Header>
+    <M.Body>
       <p>
         This token can be used to enable
         {{this.model.replicationModeForDisplay}}
@@ -74,18 +80,31 @@
           <InfoTableRow @label="Expires" @value={{date-format this.expirationDate "MMM dd, yyyy hh:mm:ss a"}} />
         </div>
       </div>
-    </section>
-    <footer class="modal-card-foot">
-      <CopyButton
-        class="button is-primary copy-close"
-        data-test-button="modal-copy-close"
-        @clipboardText={{this.token}}
-        @buttonType="button"
-        @type="copy"
-        @success={{action "copyClose" "Token copied!"}}
-      >
-        Copy &amp; Close
-      </CopyButton>
-    </footer>
-  </Modal>
+    </M.Body>
+    <M.Footer>
+      <Hds::ButtonSet>
+        <Hds::Copy::Button
+          data-test-modal-copy
+          @text="Copy token"
+          @textToCopy={{this.token}}
+          class="primary"
+          @container=".hds-modal"
+          @onError={{(fn
+            (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+          )}}
+          {{on "click" (action "onCopy")}}
+        />
+        <Hds::Button
+          data-test-modal-close
+          disabled={{not this.isTokenCopied}}
+          @text="Close"
+          @color="secondary"
+          {{on "click" (action "closeTokenModal")}}
+        />
+        {{#unless this.isTokenCopied}}
+          <AlertInline @type="warning" @message="Copy token to dismiss modal" />
+        {{/unless}}
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
 {{/if}}

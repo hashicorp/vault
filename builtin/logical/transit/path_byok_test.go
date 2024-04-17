@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
@@ -28,7 +28,8 @@ func TestTransit_BYOKExportImport(t *testing.T) {
 	testBYOKExportImport(t, "rsa-3072", "sign-verify")
 	testBYOKExportImport(t, "rsa-4096", "sign-verify")
 
-	// Unlike backup, we don't support importing HMAC keys here.
+	// Test HMAC sign/verify after a restore for supported keys.
+	testBYOKExportImport(t, "hmac", "hmac-verify")
 }
 
 func testBYOKExportImport(t *testing.T, keyType, feature string) {
@@ -46,6 +47,9 @@ func testBYOKExportImport(t *testing.T, keyType, feature string) {
 			"type":       keyType,
 			"exportable": true,
 		},
+	}
+	if keyType == "hmac" {
+		keyReq.Data["key_size"] = 32
 	}
 	resp, err = b.HandleRequest(context.Background(), keyReq)
 	if err != nil || (resp != nil && resp.IsError()) {

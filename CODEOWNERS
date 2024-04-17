@@ -22,6 +22,9 @@
 /builtin/logical/postgresql/  @hashicorp/vault-ecosystem
 /builtin/logical/rabbitmq/    @hashicorp/vault-ecosystem
 
+# Identity Integrations (OIDC, tokens)
+/vault/identity_store_oidc*   @hashicorp/vault-ecosystem
+
 /plugins/                     @hashicorp/vault-ecosystem
 /vault/plugin_catalog.go      @hashicorp/vault-ecosystem
 
@@ -29,18 +32,18 @@
 /website/content/docs/plugin-portal.mdx   @acahn @hashicorp/vault-education-approvers
 
 # Plugin docs
-/website/content/docs/plugins/              @fairclothjm @hashicorp/vault-education-approvers
-/website/content/docs/upgrading/plugins.mdx @fairclothjm @hashicorp/vault-education-approvers
+/website/content/docs/plugins/              @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
+/website/content/docs/upgrading/plugins.mdx @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
 
 # UI code related to Vault's JWT/OIDC auth method and OIDC provider.
 # Changes to these files often require coordination with backend code,
 # so stewards of the backend code are added below for notification.
-/ui/app/components/auth-jwt.js         @austingebauer
-/ui/app/routes/vault/cluster/oidc-*.js @austingebauer
+/ui/app/components/auth-jwt.js         @hashicorp/vault-ecosystem
+/ui/app/routes/vault/cluster/oidc-*.js @hashicorp/vault-ecosystem
 
 # Release config; service account is required for automation tooling.
-/.release/                    @hashicorp/release-engineering @hashicorp/github-secure-vault-core @hashicorp/quality-team
-/.github/workflows/build.yml  @hashicorp/release-engineering @hashicorp/github-secure-vault-core @hashicorp/quality-team
+/.release/                     @hashicorp/github-secure-vault-core @hashicorp/quality-team
+/.github/workflows/build.yml   @hashicorp/github-secure-vault-core @hashicorp/quality-team
 
 # Quality engineering
 /.github/  @hashicorp/quality-team
@@ -82,3 +85,4 @@
 /website/content/docs/secrets/kmip.mdx               @hashicorp/vault-crypto
 /website/content/api-docs/secret/kmip.mdx            @hashicorp/vault-crypto
 /website/content/docs/enterprise/fips/               @hashicorp/vault-crypto
+/website/content/docs/platform/k8s                   @hashicorp/vault-ecosystem

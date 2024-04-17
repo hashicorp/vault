@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -104,13 +104,13 @@ module('Integration | Component | kubernetes | Page::Role::Details', function (h
       return;
     });
 
-    assert.dom('[data-test-delete] button').hasText('Delete role', 'Delete action renders');
+    assert.dom('[data-test-delete]').hasText('Delete role', 'Delete action renders');
     assert
       .dom('[data-test-generate-credentials]')
       .hasText('Generate credentials', 'Generate credentials action renders');
     assert.dom('[data-test-edit]').hasText('Edit role', 'Edit action renders');
 
-    await click('[data-test-delete] button');
+    await click('[data-test-delete]');
     await click('[data-test-confirm-button]');
     assert.ok(
       transitionStub.calledWith('vault.cluster.secrets.backend.kubernetes.roles'),

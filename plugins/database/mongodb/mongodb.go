@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package mongodb
 
@@ -176,7 +176,7 @@ func (m *MongoDB) changeUserPassword(ctx context.Context, username, password str
 	}
 
 	database := cs.Database
-	if username == m.Username || database == "" {
+	if database == "" {
 		database = "admin"
 	}
 

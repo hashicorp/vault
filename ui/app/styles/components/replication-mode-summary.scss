@@ -1,16 +1,16 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .replication-description {
   flex-shrink: 1;
 
   .title {
-    margin-bottom: $spacing-xs;
+    margin-bottom: $spacing-8;
   }
 
   .detail-tags {
-    margin-bottom: $spacing-m;
+    margin-bottom: $spacing-16;
   }
 }

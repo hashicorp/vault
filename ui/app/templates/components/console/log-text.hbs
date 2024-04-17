@@ -1,4 +1,17 @@
-<div class="console-ui-output has-copy-button">
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="console-ui-output">
   <pre>{{@content}}</pre>
-  <HoverCopyButton @copyValue={{this.content}} @alwaysShow={{true}} />
+  <Hds::Copy::Button
+    @text="Copy"
+    @isIconOnly={{true}}
+    @textToCopy={{@content}}
+    @onError={{(fn
+      (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+    )}}
+    class="transparent icon-grey-500 top-right-absolute"
+  />
 </div>

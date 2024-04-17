@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package testcluster
 
 import (
@@ -39,12 +42,12 @@ func EnablePerfPrimary(ctx context.Context, pri VaultCluster) error {
 	client := pri.Nodes()[0].APIClient()
 	_, err := client.Logical().WriteWithContext(ctx, "sys/replication/performance/primary/enable", nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("error enabling perf primary: %w", err)
 	}
 
 	err = WaitForPerfReplicationState(ctx, pri, consts.ReplicationPerformancePrimary)
 	if err != nil {
-		return err
+		return fmt.Errorf("error waiting for perf primary to have the correct state: %w", err)
 	}
 	return WaitForActiveNodeAndPerfStandbys(ctx, pri)
 }
@@ -69,7 +72,7 @@ func WaitForPerfReplicationState(ctx context.Context, cluster VaultCluster, stat
 func EnablePerformanceSecondaryNoWait(ctx context.Context, perfToken string, pri, sec VaultCluster, updatePrimary bool) error {
 	postData := map[string]interface{}{
 		"token":   perfToken,
-		"ca_file": DefaultCAFile,
+		"ca_file": pri.GetCACertPEMFile(),
 	}
 	path := "sys/replication/performance/secondary/enable"
 	if updatePrimary {
@@ -105,6 +108,10 @@ func EnablePerformanceSecondary(ctx context.Context, perfToken string, pri, sec 
 }
 
 func WaitForMatchingMerkleRoots(ctx context.Context, endpoint string, pri, sec VaultCluster) error {
+	return WaitForMatchingMerkleRootsClients(ctx, endpoint, pri.Nodes()[0].APIClient(), sec.Nodes()[0].APIClient())
+}
+
+func WaitForMatchingMerkleRootsClients(ctx context.Context, endpoint string, pri, sec *api.Client) error {
 	getRoot := func(mode string, cli *api.Client) (string, error) {
 		status, err := cli.Logical().Read(endpoint + "status")
 		if err != nil {
@@ -119,16 +126,19 @@ func WaitForMatchingMerkleRoots(ctx context.Context, endpoint string, pri, sec V
 		return status.Data["merkle_root"].(string), nil
 	}
 
-	secClient := sec.Nodes()[0].APIClient()
-	priClient := pri.Nodes()[0].APIClient()
-	for i := 0; i < 30; i++ {
-		secRoot, err := getRoot("secondary", secClient)
+	var priRoot, secRoot string
+	var err error
+	genRet := func() error {
+		return fmt.Errorf("unequal merkle roots, pri=%s sec=%s, err=%w", priRoot, secRoot, err)
+	}
+	for ctx.Err() == nil {
+		secRoot, err = getRoot("secondary", sec)
 		if err != nil {
-			return err
+			return genRet()
 		}
-		priRoot, err := getRoot("primary", priClient)
+		priRoot, err = getRoot("primary", pri)
 		if err != nil {
-			return err
+			return genRet()
 		}
 
 		if reflect.DeepEqual(priRoot, secRoot) {
@@ -255,7 +265,7 @@ func WaitForPerfReplicationWorking(ctx context.Context, pri, sec VaultCluster) e
 		"bar": 1,
 	})
 	if err != nil {
-		return fmt.Errorf("unable to write KV on primary", "path", path)
+		return fmt.Errorf("unable to write KV on primary, path=%s", path)
 	}
 
 	for ctx.Err() == nil {
@@ -278,15 +288,18 @@ func WaitForPerfReplicationWorking(ctx context.Context, pri, sec VaultCluster) e
 
 func SetupTwoClusterPerfReplication(ctx context.Context, pri, sec VaultCluster) error {
 	if err := EnablePerfPrimary(ctx, pri); err != nil {
-		return err
+		return fmt.Errorf("failed to enable perf primary: %w", err)
 	}
 	perfToken, err := GetPerformanceToken(pri, sec.ClusterID(), "")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get performance token from perf primary: %w", err)
 	}
 
 	_, err = EnablePerformanceSecondary(ctx, perfToken, pri, sec, false, false)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to enable perf secondary: %w", err)
+	}
+	return nil
 }
 
 // PassiveWaitForActiveNodeAndPerfStandbys should be used instead of
@@ -453,7 +466,7 @@ func WaitForDRSecondary(ctx context.Context, pri, sec VaultCluster, skipPoisonPi
 func EnableDRSecondaryNoWait(ctx context.Context, sec VaultCluster, drToken string) error {
 	postData := map[string]interface{}{
 		"token":   drToken,
-		"ca_file": DefaultCAFile,
+		"ca_file": sec.GetCACertPEMFile(),
 	}
 
 	_, err := sec.Nodes()[0].APIClient().Logical().Write("sys/replication/dr/secondary/enable", postData)
@@ -464,7 +477,7 @@ func EnableDRSecondaryNoWait(ctx context.Context, sec VaultCluster, drToken stri
 	return WaitForDRReplicationState(ctx, sec, consts.ReplicationDRSecondary)
 }
 
-func WaitForReplicationStatus(ctx context.Context, client *api.Client, dr bool, accept func(map[string]interface{}) bool) error {
+func WaitForReplicationStatus(ctx context.Context, client *api.Client, dr bool, accept func(map[string]interface{}) error) error {
 	url := "sys/replication/performance/status"
 	if dr {
 		url = "sys/replication/dr/status"
@@ -475,7 +488,7 @@ func WaitForReplicationStatus(ctx context.Context, client *api.Client, dr bool, 
 	for ctx.Err() == nil {
 		secret, err = client.Logical().Read(url)
 		if err == nil && secret != nil && secret.Data != nil {
-			if accept(secret.Data) {
+			if err = accept(secret.Data); err == nil {
 				return nil
 			}
 		}
@@ -493,8 +506,12 @@ func WaitForDRReplicationWorking(ctx context.Context, pri, sec VaultCluster) err
 	secClient := sec.Nodes()[0].APIClient()
 
 	// Make sure we've entered stream-wals mode
-	err := WaitForReplicationStatus(ctx, secClient, true, func(secret map[string]interface{}) bool {
-		return secret["state"] == string("stream-wals")
+	err := WaitForReplicationStatus(ctx, secClient, true, func(secret map[string]interface{}) error {
+		state := secret["state"]
+		if state == string("stream-wals") {
+			return nil
+		}
+		return fmt.Errorf("expected stream-wals replication state, got %v", state)
 	})
 	if err != nil {
 		return err
@@ -513,16 +530,21 @@ func WaitForDRReplicationWorking(ctx context.Context, pri, sec VaultCluster) err
 		return err
 	}
 
-	err = WaitForReplicationStatus(ctx, secClient, true, func(secret map[string]interface{}) bool {
-		if secret["state"] != string("stream-wals") {
-			return false
-		}
-		if secret["last_remote_wal"] != nil {
-			lastRemoteWal, _ := secret["last_remote_wal"].(json.Number).Int64()
-			return lastRemoteWal > 0
+	err = WaitForReplicationStatus(ctx, secClient, true, func(secret map[string]interface{}) error {
+		state := secret["state"]
+		if state != string("stream-wals") {
+			return fmt.Errorf("expected stream-wals replication state, got %v", state)
 		}
 
-		return false
+		if secret["last_remote_wal"] != nil {
+			lastRemoteWal, _ := secret["last_remote_wal"].(json.Number).Int64()
+			if lastRemoteWal <= 0 {
+				return fmt.Errorf("expected last_remote_wal to be greater than zero")
+			}
+			return nil
+		}
+
+		return fmt.Errorf("replication seems to be still catching up, maybe need to wait more")
 	})
 	if err != nil {
 		return err
@@ -712,7 +734,7 @@ func UpdatePrimary(ctx context.Context, pri, sec VaultCluster) error {
 	resp, err := secClient.Logical().Write("sys/replication/dr/secondary/update-primary", map[string]interface{}{
 		"dr_operation_token": rootToken,
 		"token":              drToken,
-		"ca_file":            DefaultCAFile,
+		"ca_file":            sec.GetCACertPEMFile(),
 	})
 	if err != nil {
 		return err

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -19,16 +20,16 @@ import (
 // and we need to perform it again...
 const (
 	latestMigrationVersion = 2
-	legacyBundleShimID     = issuerID("legacy-entry-shim-id")
-	legacyBundleShimKeyID  = keyID("legacy-entry-shim-key-id")
+	legacyBundleShimID     = issuing.LegacyBundleShimID
+	legacyBundleShimKeyID  = issuing.LegacyBundleShimKeyID
 )
 
 type legacyBundleMigrationLog struct {
-	Hash             string    `json:"hash"`
-	Created          time.Time `json:"created"`
-	CreatedIssuer    issuerID  `json:"issuer_id"`
-	CreatedKey       keyID     `json:"key_id"`
-	MigrationVersion int       `json:"migrationVersion"`
+	Hash             string           `json:"hash"`
+	Created          time.Time        `json:"created"`
+	CreatedIssuer    issuing.IssuerID `json:"issuer_id"`
+	CreatedKey       issuing.KeyID    `json:"key_id"`
+	MigrationVersion int              `json:"migrationVersion"`
 }
 
 type migrationInfo struct {
@@ -84,27 +85,44 @@ func migrateStorage(ctx context.Context, b *backend, s logical.Storage) error {
 		return nil
 	}
 
-	var issuerIdentifier issuerID
-	var keyIdentifier keyID
+	var issuerIdentifier issuing.IssuerID
+	var keyIdentifier issuing.KeyID
 	sc := b.makeStorageContext(ctx, s)
 	if migrationInfo.legacyBundle != nil {
-		// Generate a unique name for the migrated items in case things were to be re-migrated again
-		// for some weird reason in the future...
-		migrationName := fmt.Sprintf("current-%d", time.Now().Unix())
+		// When the legacy bundle still exists, there's three scenarios we
+		// need to worry about:
+		//
+		// 1. When we have no migration log, we definitely want to migrate.
+		haveNoLog := migrationInfo.migrationLog == nil
+		// 2. When we have an (empty) log and the version is zero, we want to
+		//    migrate.
+		haveOldVersion := !haveNoLog && migrationInfo.migrationLog.MigrationVersion == 0
+		// 3. When we have a log and the version is at least 1 (where this
+		//    migration was introduced), we want to run the migration again
+		//    only if the legacy bundle hash has changed.
+		isCurrentOrBetterVersion := !haveNoLog && migrationInfo.migrationLog.MigrationVersion >= 1
+		haveChange := !haveNoLog && migrationInfo.migrationLog.Hash != migrationInfo.legacyBundleHash
+		haveVersionWithChange := isCurrentOrBetterVersion && haveChange
 
-		b.Logger().Info("performing PKI migration to new keys/issuers layout")
-		anIssuer, aKey, err := sc.writeCaBundle(migrationInfo.legacyBundle, migrationName, migrationName)
-		if err != nil {
-			return err
+		if haveNoLog || haveOldVersion || haveVersionWithChange {
+			// Generate a unique name for the migrated items in case things were to be re-migrated again
+			// for some weird reason in the future...
+			migrationName := fmt.Sprintf("current-%d", time.Now().Unix())
+
+			b.Logger().Info("performing PKI migration to new keys/issuers layout")
+			anIssuer, aKey, err := sc.writeCaBundle(migrationInfo.legacyBundle, migrationName, migrationName)
+			if err != nil {
+				return err
+			}
+			b.Logger().Info("Migration generated the following ids and set them as defaults",
+				"issuer id", anIssuer.ID, "key id", aKey.ID)
+			issuerIdentifier = anIssuer.ID
+			keyIdentifier = aKey.ID
+
+			// Since we do not have all the mount information available we must schedule
+			// the CRL to be rebuilt at a later time.
+			b.CrlBuilder().requestRebuildIfActiveNode(b)
 		}
-		b.Logger().Info("Migration generated the following ids and set them as defaults",
-			"issuer id", anIssuer.ID, "key id", aKey.ID)
-		issuerIdentifier = anIssuer.ID
-		keyIdentifier = aKey.ID
-
-		// Since we do not have all the mount information available we must schedule
-		// the CRL to be rebuilt at a later time.
-		b.crlBuilder.requestRebuildIfActiveNode(b)
 	}
 
 	if migrationInfo.migrationLog != nil && migrationInfo.migrationLog.MigrationVersion == 1 {
@@ -185,33 +203,6 @@ func setLegacyBundleMigrationLog(ctx context.Context, s logical.Storage, lbm *le
 	return s.Put(ctx, json)
 }
 
-func getLegacyCertBundle(ctx context.Context, s logical.Storage) (*issuerEntry, *certutil.CertBundle, error) {
-	entry, err := s.Get(ctx, legacyCertBundlePath)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if entry == nil {
-		return nil, nil, nil
-	}
-
-	cb := &certutil.CertBundle{}
-	err = entry.DecodeJSON(cb)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Fake a storage entry with backwards compatibility in mind.
-	issuer := &issuerEntry{
-		ID:                   legacyBundleShimID,
-		KeyID:                legacyBundleShimKeyID,
-		Name:                 "legacy-entry-shim",
-		Certificate:          cb.Certificate,
-		CAChain:              cb.CAChain,
-		SerialNumber:         cb.SerialNumber,
-		LeafNotAfterBehavior: certutil.ErrNotAfterBehavior,
-	}
-	issuer.Usage.ToggleUsage(AllIssuerUsages)
-
-	return issuer, cb, nil
+func getLegacyCertBundle(ctx context.Context, s logical.Storage) (*issuing.IssuerEntry, *certutil.CertBundle, error) {
+	return issuing.GetLegacyCertBundle(ctx, s)
 }

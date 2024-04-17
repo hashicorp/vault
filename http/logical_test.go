@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package http
 
@@ -18,23 +18,22 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
+	log "github.com/hashicorp/go-hclog"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/audit"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
-
-	"github.com/go-test/deep"
-	log "github.com/hashicorp/go-hclog"
-
-	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -64,9 +63,10 @@ func TestLogical(t *testing.T) {
 		"data": map[string]interface{}{
 			"data": "bar",
 		},
-		"auth":      nil,
-		"wrap_info": nil,
-		"warnings":  nilWarnings,
+		"auth":       nil,
+		"wrap_info":  nil,
+		"warnings":   nilWarnings,
+		"mount_type": "kv",
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -181,9 +181,10 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 			"entity_id":        "",
 			"type":             "service",
 		},
-		"warnings":  nilWarnings,
-		"wrap_info": nil,
-		"auth":      nil,
+		"warnings":   nilWarnings,
+		"wrap_info":  nil,
+		"auth":       nil,
+		"mount_type": "token",
 	}
 
 	testResponseStatus(t, resp, 200)
@@ -222,6 +223,7 @@ func TestLogical_CreateToken(t *testing.T) {
 		"renewable":      false,
 		"lease_duration": json.Number("0"),
 		"data":           nil,
+		"mount_type":     "token",
 		"wrap_info":      nil,
 		"auth": map[string]interface{}{
 			"policies":        []interface{}{"root"},
@@ -320,7 +322,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
 
-	lreq, _, status, err := buildLogicalRequest(core, nil, req)
+	lreq, _, status, err := buildLogicalRequest(core, nil, req, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -335,7 +337,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
 
-	lreq, _, status, err = buildLogicalRequest(core, nil, req)
+	lreq, _, status, err = buildLogicalRequest(core, nil, req, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -350,12 +352,12 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
 
-	_, _, status, err = buildLogicalRequestNoAuth(core.PerfStandby(), nil, req)
+	_, _, status, err = buildLogicalRequestNoAuth(core.PerfStandby(), core.RouterAccess(), nil, req)
 	if err != nil || status != 0 {
 		t.Fatal(err)
 	}
 
-	lreq, _, status, err = buildLogicalRequest(core, nil, req)
+	lreq, _, status, err = buildLogicalRequest(core, nil, req, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -364,6 +366,94 @@ func TestLogical_ListSuffix(t *testing.T) {
 	}
 	if !strings.HasSuffix(lreq.Path, "/") {
 		t.Fatal("trailing slash not found on path")
+	}
+}
+
+// TestLogical_BinaryPath tests the legacy behavior passing in binary data to a
+// path that isn't explicitly marked by a plugin as a binary path to fail, along
+// with making sure we pass through when marked as a binary path
+func TestLogical_BinaryPath(t *testing.T) {
+	t.Parallel()
+
+	testHandler := func(ctx context.Context, l *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		return nil, nil
+	}
+	operations := map[logical.Operation]framework.OperationHandler{
+		logical.PatchOperation:  &framework.PathOperation{Callback: testHandler},
+		logical.UpdateOperation: &framework.PathOperation{Callback: testHandler},
+	}
+
+	conf := &vault.CoreConfig{
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		LogicalBackends: map[string]logical.Factory{
+			"bintest": func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+				b := new(framework.Backend)
+				b.BackendType = logical.TypeLogical
+				b.Paths = []*framework.Path{
+					{Pattern: "binary", Operations: operations},
+					{Pattern: "binary/" + framework.MatchAllRegex("test"), Operations: operations},
+				}
+				b.PathsSpecial = &logical.Paths{Binary: []string{"binary", "binary/*"}}
+				err := b.Setup(ctx, config)
+				return b, err
+			},
+		},
+	}
+
+	core, _, token := vault.TestCoreUnsealedWithConfig(t, conf)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	mountReq := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: token,
+		Path:        "sys/mounts/bintest",
+		Data: map[string]interface{}{
+			"type": "bintest",
+		},
+	}
+	mountResp, err := core.HandleRequest(namespace.RootContext(nil), mountReq)
+	if err != nil {
+		t.Fatalf("failed mounting bin-test engine: %v", err)
+	}
+	if mountResp.IsError() {
+		t.Fatalf("failed mounting bin-test error in response: %v", mountResp.Error())
+	}
+
+	tests := []struct {
+		name           string
+		op             string
+		url            string
+		expectedReturn int
+	}{
+		{name: "PUT non-binary", op: "PUT", url: addr + "/v1/bintest/non-binary", expectedReturn: http.StatusBadRequest},
+		{name: "POST non-binary", op: "POST", url: addr + "/v1/bintest/non-binary", expectedReturn: http.StatusBadRequest},
+		{name: "PUT binary", op: "PUT", url: addr + "/v1/bintest/binary", expectedReturn: http.StatusNoContent},
+		{name: "POST binary", op: "POST", url: addr + "/v1/bintest/binary/sub-path", expectedReturn: http.StatusNoContent},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(st *testing.T) {
+			var resp *http.Response
+			switch test.op {
+			case "PUT":
+				resp = testHttpPutBinaryData(st, token, test.url, make([]byte, 100))
+			case "POST":
+				resp = testHttpPostBinaryData(st, token, test.url, make([]byte, 100))
+			default:
+				t.Fatalf("unsupported operation: %s", test.op)
+			}
+			testResponseStatus(st, resp, test.expectedReturn)
+			if test.expectedReturn != http.StatusNoContent {
+				all, err := io.ReadAll(resp.Body)
+				if err != nil {
+					st.Fatalf("failed reading error response body: %v", err)
+				}
+				if !strings.Contains(string(all), "error parsing JSON") {
+					st.Fatalf("error response body did not contain expected error: %v", all)
+				}
+			}
+		})
 	}
 }
 
@@ -426,7 +516,7 @@ func TestLogical_ListWithQueryParameters(t *testing.T) {
 			req = req.WithContext(namespace.RootContext(nil))
 			req.Header.Add(consts.AuthHeaderName, rootToken)
 
-			lreq, _, status, err := buildLogicalRequest(core, nil, req)
+			lreq, _, status, err := buildLogicalRequest(core, nil, req, "")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -465,12 +555,12 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 		t.Fatalf("Bad Status code: %d", w.Code)
 	}
 
-	bodyRaw, err := ioutil.ReadAll(w.Body)
+	bodyRaw, err := io.ReadAll(w.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	expected := `{"request_id":"id","lease_id":"","renewable":false,"lease_duration":0,"data":{"test-data":"foo"},"wrap_info":null,"warnings":null,"auth":null}`
+	expected := `{"request_id":"id","lease_id":"","renewable":false,"lease_duration":0,"data":{"test-data":"foo"},"wrap_info":null,"warnings":null,"auth":null,"mount_type":""}`
 
 	if string(bodyRaw[:]) != strings.Trim(expected, "\n") {
 		t.Fatalf("bad response: %s", string(bodyRaw[:]))
@@ -479,10 +569,10 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 
 func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
 	// Create a noop audit backend
-	noop := corehelpers.TestNoopAudit(t, nil)
+	noop := audit.TestNoopAudit(t, "noop/", nil)
 	c, _, root := vault.TestCoreUnsealedWithConfig(t, &vault.CoreConfig{
 		AuditBackends: map[string]audit.Factory{
-			"noop": func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+			"noop": func(config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 				return noop, nil
 			},
 		},
@@ -491,7 +581,6 @@ func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
 	defer ln.Close()
 
 	// Enable the audit backend
-
 	resp := testHttpPost(t, root, addr+"/v1/sys/audit/noop", map[string]interface{}{
 		"type": "noop",
 	})

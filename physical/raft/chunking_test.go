@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package raft
 
@@ -15,7 +15,7 @@ import (
 	raftchunkingtypes "github.com/hashicorp/go-raftchunking/types"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
-	"github.com/hashicorp/raft-boltdb/v2"
+	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -186,8 +186,6 @@ func TestFSM_Chunking_TermChange(t *testing.T) {
 }
 
 func TestRaft_Chunking_AppliedIndex(t *testing.T) {
-	t.Parallel()
-
 	raft, dir := GetRaft(t, true, false)
 	defer os.RemoveAll(dir)
 

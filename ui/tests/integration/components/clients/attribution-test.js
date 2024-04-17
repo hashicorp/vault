@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -46,8 +46,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
 
   test('it renders empty state with no data', async function (assert) {
     await render(hbs`
-      <div id="modal-wormhole"></div>
-      <Clients::Attribution @chartLegend={{this.chartLegend}} />
+      <Clients::Attribution />
     `);
 
     assert.dom('[data-test-component="empty-state"]').exists();
@@ -59,9 +58,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
 
   test('it renders with data for namespaces', async function (assert) {
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <Clients::Attribution
-        @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.totalClientAttribution}}
         @totalUsageCounts={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
@@ -93,9 +90,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
     this.start = formatRFC3339(subMonths(this.mockNow, 1));
     this.end = formatRFC3339(subMonths(endOfMonth(this.mockNow), 1));
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <Clients::Attribution
-        @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.totalClientAttribution}}
         @totalUsageCounts={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
@@ -147,9 +142,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
 
   test('it renders single chart for current month', async function (assert) {
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <Clients::Attribution
-        @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.totalClientAttribution}}
         @totalUsageCounts={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
@@ -169,9 +162,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
 
   test('it renders single chart and correct text for for date range', async function (assert) {
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <Clients::Attribution
-        @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.totalClientAttribution}}
         @totalUsageCounts={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
@@ -193,9 +184,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
   test('it renders with data for selected namespace auth methods for a date range', async function (assert) {
     this.set('selectedNamespace', 'second');
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <Clients::Attribution
-        @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.namespaceMountsData}}
         @totalUsageCounts={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
@@ -225,9 +214,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
 
   test('it renders modal', async function (assert) {
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <Clients::Attribution
-        @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.namespaceMountsData}}
         @responseTimestamp={{this.timestamp}}
         @startTimestamp="2022-06-01T23:00:11.050Z"
@@ -235,7 +222,9 @@ module('Integration | Component | clients/attribution', function (hooks) {
         />
     `);
     await click('[data-test-attribution-export-button]');
-    assert.dom('.modal.is-active .title').hasText('Export attribution data', 'modal appears to export csv');
-    assert.dom('.modal.is-active').includesText('June 2022 - December 2022');
+    assert
+      .dom('[data-test-export-modal-title]')
+      .hasText('Export attribution data', 'modal appears to export csv');
+    assert.dom('[ data-test-export-date-range]').includesText('June 2022 - December 2022');
   });
 });

@@ -1,11 +1,16 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div data-test-component="empty-state" class="empty-state" ...attributes>
   <div class="empty-state-content">
     {{#if @icon}}
       <div class="empty-state-icon">
         <Icon @name={{@icon}} @size="24" />
-        <h3 class="empty-state-title" data-test-empty-state-title>
+        <p class="empty-state-title" data-test-empty-state-title>
           {{@title}}
-        </h3>
+        </p>
       </div>
       {{#if @subTitle}}
         <p class="empty-state-subTitle" data-test-empty-state-subText>
@@ -13,9 +18,9 @@
         </p>
       {{/if}}
     {{else}}
-      <h3 class={{concat "empty-state-title" (if @subTitle " has-bottom-margin-m")}} data-test-empty-state-title>
+      <p class={{concat "empty-state-title" (if @subTitle " has-bottom-margin-m")}} data-test-empty-state-title>
         {{@title}}
-      </h3>
+      </p>
       {{#if @subTitle}}
         <p class="empty-state-subTitle" data-test-empty-state-subText>
           {{@subTitle}}

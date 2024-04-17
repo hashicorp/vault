@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -8,17 +8,15 @@ import (
 	"context"
 	"errors"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/hashicorp/vault/helper/metricsutil"
-
-	proto "github.com/golang/protobuf/proto"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
+	"github.com/stretchr/testify/require"
 )
 
 // phy implements physical.Backend. It maps keys to a slice of entries.
@@ -69,22 +67,18 @@ func (p *phy) Len() int {
 
 func TestAutoSeal_UpgradeKeys(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
-	testSeal, toggleableWrapper := seal.NewTestSeal(nil)
+	testSeal, toggleableWrappers := seal.NewTestSeal(nil)
 
 	var encKeys []string
 	changeKey := func(key string) {
 		encKeys = append(encKeys, key)
-		toggleableWrapper.Wrapper.(*wrapping.TestWrapper).SetKeyId(key)
+		toggleableWrappers[0].Wrapper.(*wrapping.TestWrapper).SetKeyId(key)
 	}
 
 	// Set initial encryption key.
 	changeKey("kaz")
 
-	autoSeal, err := NewAutoSeal(testSeal)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	autoSeal := NewAutoSeal(testSeal)
 	autoSeal.SetCore(core)
 	pBackend := newTestBackend(t)
 	core.physical = pBackend
@@ -137,10 +131,11 @@ func TestAutoSeal_UpgradeKeys(t *testing.T) {
 			// in encKeys. Iterate over each phyEntry and verify it was
 			// encrypted with its corresponding key in encKeys.
 			for i, phyEntry := range phyEntries {
-				blobInfo := &wrapping.BlobInfo{}
-				if err := proto.Unmarshal(phyEntry.Value, blobInfo); err != nil {
-					t.Errorf("phyKey = %s: failed to proto decode stored keys: %s", phyKey, err)
+				wrappedEntryValue, err := UnmarshalSealWrappedValue(phyEntry.Value)
+				if err != nil {
+					t.Errorf("phyKey = %s: failed to unmarshal stored keys: %s", phyKey, err)
 				}
+				blobInfo := wrappedEntryValue.GetSlots()[0]
 				if blobInfo.KeyInfo == nil {
 					t.Errorf("phyKey = %s: KeyInfo missing: %+v", phyKey, blobInfo)
 				}
@@ -185,54 +180,45 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 	metrics.NewGlobal(metricsConf, inmemSink)
 
 	pBackend := newTestBackend(t)
-	testSealAccess, setErr := seal.NewToggleableTestSeal(nil)
+	testSealAccess, wrappers := seal.NewTestSeal(&seal.TestSealOpts{Name: "health-test"})
 	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
 		MetricSink: metricsutil.NewClusterMetricSink("", inmemSink),
 		Physical:   pBackend,
 	})
-	sealHealthTestIntervalNominal = 10 * time.Millisecond
-	sealHealthTestIntervalUnhealthy = 10 * time.Millisecond
-	autoSeal, err := NewAutoSeal(testSealAccess)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	seal.HealthTestIntervalNominal = 10 * time.Millisecond
+	seal.HealthTestIntervalUnhealthy = 10 * time.Millisecond
+	autoSeal := NewAutoSeal(testSealAccess)
 	autoSeal.SetCore(core)
 	core.seal = autoSeal
 	autoSeal.StartHealthCheck()
 	defer autoSeal.StopHealthCheck()
-	setErr(errors.New("disconnected"))
+	wrappers[0].SetError(errors.New("disconnected"))
 
-	asu := strings.Join(autoSealUnavailableDuration, ".") + ";cluster=" + core.clusterName
 	tries := 10
 	for tries = 10; tries > 0; tries-- {
-		intervals := inmemSink.Data()
-		if len(intervals) == 1 {
-			interval := inmemSink.Data()[0]
-
-			if _, ok := interval.Gauges[asu]; ok {
-				if interval.Gauges[asu].Value > 0 {
-					break
-				}
-			}
+		if !autoSeal.Healthy() {
+			break
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
 	if tries == 0 {
-		t.Fatalf("Expected value metric %s to be non-zero", asu)
+		t.Fatalf("Expected to detect unhealthy seals")
 	}
 
-	setErr(nil)
+	wrappers[0].SetError(nil)
 	time.Sleep(50 * time.Millisecond)
-	intervals := inmemSink.Data()
-	if len(intervals) == 1 {
-		interval := inmemSink.Data()[0]
-
-		if _, ok := interval.Gauges[asu]; !ok {
-			t.Fatalf("Expected metrics to include a value for gauge %s", asu)
-		}
-		if interval.Gauges[asu].Value != 0 {
-			t.Fatalf("Expected value metric %s to be zero", asu)
-		}
+	if !autoSeal.Healthy() {
+		t.Fatal("Expected seals to be healthy")
 	}
+}
+
+func TestAutoSeal_BarrierSealConfigType(t *testing.T) {
+	singleWrapperAccess, _ := seal.NewTestSeal(&seal.TestSealOpts{WrapperCount: 1})
+	multipleWrapperAccess, _ := seal.NewTestSeal(&seal.TestSealOpts{WrapperCount: 2})
+
+	require.Equalf(t, singleWrapperAccess.GetAllSealWrappersByPriority()[0].SealConfigType, NewAutoSeal(singleWrapperAccess).BarrierSealConfigType().String(),
+		"autoseals that have a single seal wrapper report that wrapper's as the barrier seal type")
+
+	require.Equalf(t, SealConfigTypeMultiseal, NewAutoSeal(multipleWrapperAccess).BarrierSealConfigType(),
+		"autoseals that have a multiple seal wrappers report the barrier seal type as Multiseal")
 }

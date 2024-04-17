@@ -1,17 +1,20 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
 import (
 	"io/ioutil"
+	"sort"
 	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
 func testAuthEnableCommand(tb testing.TB) (*cli.MockUi, *AuthEnableCommand) {
@@ -96,6 +99,7 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			"-passthrough-request-headers", "www-authentication",
 			"-allowed-response-headers", "authorization",
 			"-listing-visibility", "unauth",
+			"-identity-token-key", "default",
 			"userpass",
 		})
 		if exp := 0; code != exp {
@@ -134,6 +138,9 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		}
 		if diff := deep.Equal([]string{"foo,bar"}, authInfo.Config.AuditNonHMACResponseKeys); len(diff) > 0 {
 			t.Errorf("Failed to find expected values in AuditNonHMACResponseKeys. Difference is: %v", diff)
+		}
+		if diff := deep.Equal("default", authInfo.Config.IdentityTokenKey); len(diff) > 0 {
+			t.Errorf("Failed to find expected values in IdentityTokenKey. Difference is: %v", diff)
 		}
 	})
 
@@ -180,7 +187,7 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 
 		var backends []string
 		for _, f := range files {
-			if f.IsDir() {
+			if f.IsDir() && f.Name() != "token" {
 				backends = append(backends, f.Name())
 			}
 		}
@@ -205,12 +212,11 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		// of credential backends.
 		backends = append(backends, "pcf")
 
-		// Add 1 to account for the "token" backend, which is visible when you walk the filesystem but
-		// is treated as special and excluded from the registry.
-		// Subtract 1 to account for "oidc" which is an alias of "jwt" and not a separate plugin.
-		expected := len(builtinplugins.Registry.Keys(consts.PluginTypeCredential))
-		if len(backends) != expected {
-			t.Fatalf("expected %d credential backends, got %d", expected, len(backends))
+		regkeys := strutil.StrListDelete(builtinplugins.Registry.Keys(consts.PluginTypeCredential), "oidc")
+		sort.Strings(regkeys)
+		sort.Strings(backends)
+		if d := cmp.Diff(regkeys, backends); len(d) > 0 {
+			t.Fatalf("found credential registry mismatch: %v", d)
 		}
 
 		for _, b := range backends {

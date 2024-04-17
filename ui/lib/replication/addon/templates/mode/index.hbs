@@ -1,1 +1,56 @@
-<ReplicationSummary @cluster={{this.model}} @initialReplicationMode={{this.replicationMode}} />
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if this.replicationForMode.replicationDisabled}}
+  <PageHeader as |p|>
+    <p.levelLeft>
+      <h1 class="title is-3" data-test-replication-title>
+        {{#if (eq this.replicationMode "dr")}}
+          Enable Disaster Recovery Replication
+        {{else if (eq this.replicationMode "performance")}}
+          Enable Performance Replication
+        {{else}}
+          {{! should never get here, but have safe fallback just in case }}
+          Enable Replication
+        {{/if}}
+      </h1>
+    </p.levelLeft>
+  </PageHeader>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    {{#if (eq this.replicationMode "dr")}}
+      <h2 class="title is-flex-center is-5 is-marginless">
+        <Icon @size="24" @name="replication-direct" />
+        Disaster Recovery (DR) Replication
+      </h2>
+      <p class="help has-text-grey-dark">
+        {{replication-mode-description "dr"}}
+      </p>
+    {{else if (eq this.replicationMode "performance")}}
+      <h2 class="title is-flex-center is-5 is-marginless">
+        <Icon @size="24" @name="replication-perf" />
+        Performance Replication
+      </h2>
+      {{#if (has-feature "Performance Replication")}}
+        <p class="help has-text-grey-dark">
+          {{replication-mode-description "performance"}}
+        </p>
+      {{else}}
+        <p class="help has-text-grey-dark">
+          Performance Replication is a feature of Vault Enterprise Premium
+        </p>
+      {{/if}}
+    {{/if}}
+  </div>
+  <EnableReplicationForm
+    @replicationMode={{this.replicationMode}}
+    @canEnablePrimary={{this.model.canEnablePrimary}}
+    @canEnableSecondary={{this.model.canEnableSecondary}}
+    @performanceReplicationDisabled={{this.model.performance.replicationDisabled}}
+    @performanceMode={{if this.model.performance.replicationDisabled "disabled" this.model.performance.modeForUrl}}
+    @onSuccess={{this.onEnableSuccess}}
+  />
+{{else}}
+  <ReplicationSummary @cluster={{this.model}} @initialReplicationMode={{this.replicationMode}} />
+{{/if}}

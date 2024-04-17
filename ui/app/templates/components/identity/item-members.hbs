@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if @model.hasMembers}}
   {{#each @model.memberGroupIds as |gid|}}
     <LinkedBlock @params={{array "vault.cluster.access.identity.show" "groups" gid this.details}} class="list-item-row">
@@ -13,7 +18,7 @@
         </div>
         <div class="column has-text-right">
           {{#if @model.canEdit}}
-            <Identity::PopupMembers @params={{array @model "memberGroupIds" gid}} />
+            <Identity::PopupMembers @model={{@model}} @groupArray="memberGroupIds" @memberId={{gid}} />
           {{/if}}
         </div>
       </div>
@@ -33,7 +38,7 @@
         </div>
         <div class="column has-text-right">
           {{#if @model.canEdit}}
-            <Identity::PopupMembers @params={{array @model "memberEntityIds" gid}} />
+            <Identity::PopupMembers @model={{@model}} @groupArray="memberEntityIds" @memberId={{gid}} />
           {{/if}}
         </div>
       </div>

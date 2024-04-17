@@ -1,10 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { next } from '@ember/runloop';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { computed } from '@ember/object';
 import Controller, { inject as controller } from '@ember/controller';
 
@@ -21,11 +21,12 @@ export default Controller.extend({
   }),
 
   flashMessages: service(),
+  router: service(),
 
   actions: {
     revokeLease(model) {
       return model.destroyRecord().then(() => {
-        return this.transitionToRoute('vault.cluster.access.leases.list-root');
+        return this.router.transitionTo('vault.cluster.access.leases.list-root');
       });
     },
 

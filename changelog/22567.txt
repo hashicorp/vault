@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Use a worker pool for the rollback manager. Add new metrics for the rollback manager to track the queued tasks. 
+```

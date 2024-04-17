@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package config
 
@@ -21,13 +21,12 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/mitchellh/mapstructure"
-	"k8s.io/utils/strings/slices"
-
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
+	"github.com/mitchellh/mapstructure"
+	"k8s.io/utils/strings/slices"
 )
 
 // Config is the configuration for Vault Agent.
@@ -56,6 +55,8 @@ type Config struct {
 const (
 	DisableIdleConnsEnv  = "VAULT_AGENT_DISABLE_IDLE_CONNECTIONS"
 	DisableKeepAlivesEnv = "VAULT_AGENT_DISABLE_KEEP_ALIVES"
+
+	DefaultTemplateConfigMaxConnsPerHost = 10
 )
 
 func (c *Config) Prune() {
@@ -89,6 +90,7 @@ type Vault struct {
 	ClientCert       string      `hcl:"client_cert"`
 	ClientKey        string      `hcl:"client_key"`
 	TLSServerName    string      `hcl:"tls_server_name"`
+	Namespace        string      `hcl:"namespace"`
 	Retry            *Retry      `hcl:"retry"`
 }
 
@@ -165,12 +167,17 @@ type TemplateConfig struct {
 	ExitOnRetryFailure       bool          `hcl:"exit_on_retry_failure"`
 	StaticSecretRenderIntRaw interface{}   `hcl:"static_secret_render_interval"`
 	StaticSecretRenderInt    time.Duration `hcl:"-"`
+	MaxConnectionsPerHostRaw interface{}   `hcl:"max_connections_per_host"`
+	MaxConnectionsPerHost    int           `hcl:"-"`
+	LeaseRenewalThreshold    *float64      `hcl:"lease_renewal_threshold"`
 }
 
 type ExecConfig struct {
 	Command                []string  `hcl:"command,attr" mapstructure:"command"`
 	RestartOnSecretChanges string    `hcl:"restart_on_secret_changes,optional" mapstructure:"restart_on_secret_changes"`
 	RestartStopSignal      os.Signal `hcl:"-" mapstructure:"restart_stop_signal"`
+	ChildProcessStdout     string    `mapstructure:"child_process_stdout"`
+	ChildProcessStderr     string    `mapstructure:"child_process_stderr"`
 }
 
 func NewConfig() *Config {
@@ -311,7 +318,7 @@ func (c *Config) ValidateConfig() error {
 	}
 
 	if c.Cache != nil {
-		if len(c.Listeners) < 1 && len(c.Templates) < 1 {
+		if len(c.Listeners) < 1 && len(c.Templates) < 1 && len(c.EnvTemplates) < 1 {
 			return fmt.Errorf("enabling the cache requires at least 1 template or 1 listener to be defined")
 		}
 
@@ -646,7 +653,7 @@ func LoadConfigFile(path string) (*Config, error) {
 		return nil, fmt.Errorf("error parsing 'env_template': %w", err)
 	}
 
-	if result.Cache != nil && result.APIProxy == nil {
+	if result.Cache != nil && result.APIProxy == nil && (result.Cache.UseAutoAuthToken || result.Cache.ForceAutoAuthToken) {
 		result.APIProxy = &APIProxy{
 			UseAutoAuthToken:   result.Cache.UseAutoAuthToken,
 			ForceAutoAuthToken: result.Cache.ForceAutoAuthToken,
@@ -1099,6 +1106,9 @@ func parseTemplateConfig(result *Config, list *ast.ObjectList) error {
 
 	templateConfigList := list.Filter(name)
 	if len(templateConfigList.Items) == 0 {
+		result.TemplateConfig = &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		}
 		return nil
 	}
 
@@ -1122,6 +1132,17 @@ func parseTemplateConfig(result *Config, list *ast.ObjectList) error {
 			return err
 		}
 		result.TemplateConfig.StaticSecretRenderIntRaw = nil
+	}
+
+	if result.TemplateConfig.MaxConnectionsPerHostRaw != nil {
+		var err error
+		if result.TemplateConfig.MaxConnectionsPerHost, err = parseutil.SafeParseInt(result.TemplateConfig.MaxConnectionsPerHostRaw); err != nil {
+			return err
+		}
+
+		result.TemplateConfig.MaxConnectionsPerHostRaw = nil
+	} else {
+		result.TemplateConfig.MaxConnectionsPerHost = DefaultTemplateConfigMaxConnsPerHost
 	}
 
 	return nil

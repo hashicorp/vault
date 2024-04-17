@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import ApplicationAdapter from './application';
@@ -14,7 +14,7 @@ export default ApplicationAdapter.extend({
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot, requestType);
     const name = snapshot.attr('name');
-    let url = this.urlForSecret(snapshot.record.get('backend'), name);
+    let url = this.urlForSecret(snapshot.record.backend, name);
     if (requestType === 'update') {
       url = url + '/config';
     }
@@ -36,7 +36,7 @@ export default ApplicationAdapter.extend({
 
   deleteRecord(store, type, snapshot) {
     const { id } = snapshot;
-    return this.ajax(this.urlForSecret(snapshot.record.get('backend'), id), 'DELETE');
+    return this.ajax(this.urlForSecret(snapshot.record.backend, id), 'DELETE');
   },
 
   pathForType(type) {

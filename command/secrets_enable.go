@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
@@ -41,6 +41,7 @@ type SecretsEnableCommand struct {
 	flagExternalEntropyAccess     bool
 	flagVersion                   int
 	flagAllowedManagedKeys        []string
+	flagIdentityTokenKey          string
 }
 
 func (c *SecretsEnableCommand) Synopsis() string {
@@ -228,6 +229,13 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 			"each time with 1 key.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:    flagNameIdentityTokenKey,
+		Target:  &c.flagIdentityTokenKey,
+		Default: "default",
+		Usage:   "Select the key used to sign plugin identity tokens.",
+	})
+
 	return set
 }
 
@@ -333,6 +341,10 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNamePluginVersion {
 			mountInput.Config.PluginVersion = c.flagPluginVersion
+		}
+
+		if fl.Name == flagNameIdentityTokenKey {
+			mountInput.Config.IdentityTokenKey = c.flagIdentityTokenKey
 		}
 	})
 

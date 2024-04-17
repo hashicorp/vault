@@ -1,0 +1,3 @@
+```release-note:improvement
+Bump github.com/hashicorp/go-plugin version v1.4.9 -> v1.4.10
+```

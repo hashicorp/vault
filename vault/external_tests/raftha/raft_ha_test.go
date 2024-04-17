@@ -1,10 +1,9 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package raftha
 
 import (
-	"sync/atomic"
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
@@ -13,7 +12,6 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	consulstorage "github.com/hashicorp/vault/helper/testhelpers/teststorage/consul"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault"
 )
@@ -62,24 +60,7 @@ func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundl
 
 	teststorage.RaftHASetup(&conf, &opts, bundler)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
-	cluster.Start()
 	defer cluster.Cleanup()
-
-	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
-
-	leaderCore := cluster.Cores[0]
-	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
-
-	// Seal the leader so we can install an address provider
-	{
-		testhelpers.EnsureCoreSealed(t, leaderCore)
-		leaderCore.UnderlyingHAStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		cluster.UnsealCore(t, leaderCore)
-		vault.TestWaitActive(t, leaderCore.Core)
-	}
-
-	// Now unseal core for join commands to work
-	testhelpers.EnsureCoresUnsealed(t, cluster)
 
 	joinFunc := func(client *api.Client, addClientCerts bool) {
 		req := &api.RaftJoinRequest{
@@ -164,7 +145,6 @@ func TestRaft_HA_ExistingCluster(t *testing.T) {
 		storage.Setup(&conf, &opts)
 
 		cluster := vault.NewTestCluster(t, &conf, &opts)
-		cluster.Start()
 		defer func() {
 			cluster.Cleanup()
 			storage.Cleanup(t, cluster)
@@ -186,7 +166,6 @@ func TestRaft_HA_ExistingCluster(t *testing.T) {
 		haStorage.Setup(&conf, &opts)
 
 		cluster := vault.NewTestCluster(t, &conf, &opts)
-		cluster.Start()
 		defer func() {
 			cluster.Cleanup()
 			haStorage.Cleanup(t, cluster)
@@ -196,16 +175,8 @@ func TestRaft_HA_ExistingCluster(t *testing.T) {
 		cluster.BarrierKeys = clusterBarrierKeys
 		cluster.RootToken = clusterRootToken
 
-		addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
-		atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
-
-		// Seal the leader so we can install an address provider
 		leaderCore := cluster.Cores[0]
-		{
-			testhelpers.EnsureCoreSealed(t, leaderCore)
-			leaderCore.UnderlyingHAStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-			testhelpers.EnsureCoreUnsealed(t, cluster, leaderCore)
-		}
+		testhelpers.EnsureCoreUnsealed(t, cluster, leaderCore)
 
 		// Call the bootstrap on the leader and then ensure that it becomes active
 		leaderClient := cluster.Cores[0].Client
@@ -217,10 +188,6 @@ func TestRaft_HA_ExistingCluster(t *testing.T) {
 			}
 			vault.TestWaitActive(t, leaderCore.Core)
 		}
-
-		// Set address provider
-		cluster.Cores[1].UnderlyingHAStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		cluster.Cores[2].UnderlyingHAStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
 
 		// Now unseal core for join commands to work
 		testhelpers.EnsureCoresUnsealed(t, cluster)

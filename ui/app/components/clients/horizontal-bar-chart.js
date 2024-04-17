@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -11,7 +11,7 @@ import { select, event, selectAll } from 'd3-selection';
 import { scaleLinear, scaleBand } from 'd3-scale';
 import { axisLeft } from 'd3-axis';
 import { max, maxIndex } from 'd3-array';
-import { BAR_COLOR_HOVER, GREY, LIGHT_AND_DARK_BLUE, formatTooltipNumber } from 'vault/utils/chart-helpers';
+import { GREY, BLUE_PALETTE } from 'vault/utils/chart-helpers';
 import { tracked } from '@glimmer/tracking';
 import { formatNumber } from 'core/helpers/format-number';
 
@@ -27,7 +27,6 @@ import { formatNumber } from 'core/helpers/format-number';
  * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  * @param {string} labelKey - string of key name for label value in chart data
  * @param {string} xKey - string of key name for x value in chart data
- * @param {object} totalCounts - object to calculate percentage for tooltip
  * @param {string} [noDataMessage] - custom empty state message that displays when no dataset is passed to the chart
  */
 
@@ -39,7 +38,7 @@ const LINE_HEIGHT = 24; // each bar w/ padding is 24 pixels thick
 
 export default class HorizontalBarChart extends Component {
   @tracked tooltipTarget = '';
-  @tracked tooltipText = '';
+  @tracked tooltipText = [];
   @tracked isLabel = null;
 
   get labelKey() {
@@ -50,16 +49,8 @@ export default class HorizontalBarChart extends Component {
     return this.args.xKey || 'clients';
   }
 
-  get chartLegend() {
-    return this.args.chartLegend;
-  }
-
   get topNamespace() {
     return this.args.dataset[maxIndex(this.args.dataset, (d) => d[this.xKey])];
-  }
-
-  get total() {
-    return this.args.totalCounts[this.xKey] || null;
   }
 
   @action removeTooltip() {
@@ -71,7 +62,7 @@ export default class HorizontalBarChart extends Component {
     // chart legend tells stackFunction how to stack/organize data
     // creates an array of data for each key name
     // each array contains coordinates for each data bar
-    const stackFunction = stack().keys(this.chartLegend.map((l) => l.key));
+    const stackFunction = stack().keys(this.args.chartLegend.map((l) => l.key));
     const dataset = chartData;
     const stackedData = stackFunction(dataset);
     const labelKey = this.labelKey;
@@ -98,7 +89,7 @@ export default class HorizontalBarChart extends Component {
       .attr('data-test-group', (d) => `${d.key}`)
       // shifts chart to accommodate y-axis legend
       .attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`)
-      .style('fill', (d, i) => LIGHT_AND_DARK_BLUE[i]);
+      .style('fill', (d, i) => BLUE_PALETTE[i]);
 
     const yAxis = axisLeft(yScale).tickSize(0);
 
@@ -171,7 +162,6 @@ export default class HorizontalBarChart extends Component {
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
-    const dataBars = chartSvg.selectAll('rect.data-bar');
     const actionBarSelection = chartSvg.selectAll('rect.action-bar');
 
     const compareAttributes = (elementA, elementB, attr) =>
@@ -183,28 +173,17 @@ export default class HorizontalBarChart extends Component {
         const hoveredElement = actionBars.filter((bar) => bar[labelKey] === data[labelKey]).node();
         this.tooltipTarget = hoveredElement;
         this.isLabel = false;
-        this.tooltipText = this.total
-          ? `${Math.round((data[xKey] * 100) / this.total)}% 
-        of total client counts:
-        ${formatTooltipNumber(data.entity_clients)} entity clients, 
-        ${formatTooltipNumber(data.non_entity_clients)} non-entity clients.`
-          : '';
+        this.tooltipText = []; // clear stats
+        this.args.chartLegend.forEach(({ key, label }) => {
+          // since we're relying on D3 not ember reactivity,
+          // pushing directly to this.tooltipText updates the DOM
+          this.tooltipText.push(`${formatNumber([data[key]])} ${label}`);
+        });
 
         select(hoveredElement).style('opacity', 1);
-
-        dataBars
-          .filter(function () {
-            return compareAttributes(this, hoveredElement, 'y');
-          })
-          .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
       })
       .on('mouseout', function () {
         select(this).style('opacity', 0);
-        dataBars
-          .filter(function () {
-            return compareAttributes(this, event.target, 'y');
-          })
-          .style('fill', (b, i) => `${LIGHT_AND_DARK_BLUE[i]}`);
       });
 
     // MOUSE EVENTS FOR Y-AXIS LABELS
@@ -214,15 +193,10 @@ export default class HorizontalBarChart extends Component {
           const hoveredElement = labelActionBar.filter((bar) => bar[labelKey] === data[labelKey]).node();
           this.tooltipTarget = hoveredElement;
           this.isLabel = true;
-          this.tooltipText = data[labelKey];
+          this.tooltipText = [data[labelKey]];
         } else {
           this.tooltipTarget = null;
         }
-        dataBars
-          .filter(function () {
-            return compareAttributes(this, event.target, 'y');
-          })
-          .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
         actionBarSelection
           .filter(function () {
             return compareAttributes(this, event.target, 'y');
@@ -231,11 +205,6 @@ export default class HorizontalBarChart extends Component {
       })
       .on('mouseout', function () {
         this.tooltipTarget = null;
-        dataBars
-          .filter(function () {
-            return compareAttributes(this, event.target, 'y');
-          })
-          .style('fill', (b, i) => `${LIGHT_AND_DARK_BLUE[i]}`);
         actionBarSelection
           .filter(function () {
             return compareAttributes(this, event.target, 'y');

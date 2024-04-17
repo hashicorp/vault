@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package azure
 
@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -56,12 +57,19 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		}
 	}
 
+	if err := validateContainerName(name); err != nil {
+		return nil, fmt.Errorf("invalid container name %s: %w", name, err)
+	}
+
 	accountName := os.Getenv("AZURE_ACCOUNT_NAME")
 	if accountName == "" {
 		accountName = conf["accountName"]
 		if accountName == "" {
 			return nil, fmt.Errorf("'accountName' must be set")
 		}
+	}
+	if err := validateAccountName(name); err != nil {
+		return nil, fmt.Errorf("invalid account name %s: %w", name, err)
 	}
 
 	accountKey := os.Getenv("AZURE_ACCOUNT_KEY")
@@ -186,6 +194,35 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		permitPool: physical.NewPermitPool(maxParInt),
 	}
 	return a, nil
+}
+
+// validation rules for containers are defined here:
+// https://learn.microsoft.com/en-us/rest/api/storageservices/Naming-and-Referencing-Containers--Blobs--and-Metadata#container-names
+var containerNameRegex = regexp.MustCompile("^[a-z0-9]+(-[a-z0-9]+)*$")
+
+func validateContainerName(name string) error {
+	if len(name) < 3 || len(name) > 63 {
+		return errors.New("name must be between 3 and 63 characters long")
+	}
+
+	if !containerNameRegex.MatchString(name) {
+		return errors.New("name is invalid")
+	}
+	return nil
+}
+
+// validation rules are defined here:
+// https://learn.microsoft.com/en-us/azure/azure-resource-manager/troubleshooting/error-storage-account-name?tabs=bicep#cause
+var accountNameRegex = regexp.MustCompile("^[a-z0-9]+$")
+
+func validateAccountName(name string) error {
+	if len(name) < 3 || len(name) > 24 {
+		return errors.New("name must be between 3 and 24 characters long")
+	}
+	if !accountNameRegex.MatchString(name) {
+		return errors.New("name is invalid")
+	}
+	return nil
 }
 
 // Put is used to insert or update an entry

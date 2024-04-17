@@ -59,6 +59,9 @@ func NewLatencyInjector(b Backend, latency time.Duration, jitter int, logger log
 }
 
 // NewTransactionalLatencyInjector creates a new transactional LatencyInjector
+// jitter is the random percent that latency will vary between.
+// For example, if you specify latency = 50ms and jitter = 20, then for any
+// given operation, the latency will be 50ms +- 10ms (20% of 50), or between 40 and 60ms.
 func NewTransactionalLatencyInjector(b Backend, latency time.Duration, jitter int, logger log.Logger) *TransactionalLatencyInjector {
 	return &TransactionalLatencyInjector{
 		LatencyInjector: NewLatencyInjector(b, latency, jitter, logger),
@@ -113,4 +116,15 @@ func (l *LatencyInjector) List(ctx context.Context, prefix string) ([]string, er
 func (l *TransactionalLatencyInjector) Transaction(ctx context.Context, txns []*TxnEntry) error {
 	l.addLatency()
 	return l.Transactional.Transaction(ctx, txns)
+}
+
+// TransactionLimits implements physical.TransactionalLimits
+func (l *TransactionalLatencyInjector) TransactionLimits() (int, int) {
+	if tl, ok := l.Transactional.(TransactionalLimits); ok {
+		return tl.TransactionLimits()
+	}
+	// We don't have any specific limits of our own so return zeros to signal that
+	// the caller should use whatever reasonable defaults it would if it used a
+	// non-TransactionalLimits backend.
+	return 0, 0
 }

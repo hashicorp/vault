@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
@@ -53,12 +53,12 @@ export default class OidcProviderModel extends Model {
 
   @lazyCapabilities(apiPath`identity/oidc/provider/${'name'}`, 'name') providerPath;
   get canRead() {
-    return this.providerPath.get('canRead');
+    return this.providerPath.get('canRead') !== false;
   }
   get canEdit() {
-    return this.providerPath.get('canUpdate');
+    return this.providerPath.get('canUpdate') !== false;
   }
   get canDelete() {
-    return this.providerPath.get('canDelete');
+    return this.providerPath.get('canDelete') !== false;
   }
 }

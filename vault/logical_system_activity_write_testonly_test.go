@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 //go:build testonly
 
@@ -7,13 +7,16 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/sdk/helper/clientcountutil/generation"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
-	"github.com/hashicorp/vault/vault/activity/generation"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -36,47 +39,47 @@ func TestSystemBackend_handleActivityWriteData(t *testing.T) {
 		},
 		{
 			name:      "empty write fails",
-			operation: logical.CreateOperation,
+			operation: logical.UpdateOperation,
 			wantError: logical.ErrInvalidRequest,
 		},
 		{
 			name:      "wrong key fails",
-			operation: logical.CreateOperation,
+			operation: logical.UpdateOperation,
 			input:     map[string]interface{}{"other": "data"},
 			wantError: logical.ErrInvalidRequest,
 		},
 		{
 			name:      "incorrectly formatted data fails",
-			operation: logical.CreateOperation,
+			operation: logical.UpdateOperation,
 			input:     map[string]interface{}{"input": "data"},
 			wantError: logical.ErrInvalidRequest,
 		},
 		{
 			name:      "incorrect json data fails",
-			operation: logical.CreateOperation,
+			operation: logical.UpdateOperation,
 			input:     map[string]interface{}{"input": `{"other":"json"}`},
 			wantError: logical.ErrInvalidRequest,
 		},
 		{
 			name:      "empty write value fails",
-			operation: logical.CreateOperation,
+			operation: logical.UpdateOperation,
 			input:     map[string]interface{}{"input": `{"write":[],"data":[]}`},
 			wantError: logical.ErrInvalidRequest,
 		},
 		{
 			name:      "empty data value fails",
-			operation: logical.CreateOperation,
+			operation: logical.UpdateOperation,
 			input:     map[string]interface{}{"input": `{"write":["WRITE_PRECOMPUTED_QUERIES"],"data":[]}`},
 			wantError: logical.ErrInvalidRequest,
 		},
 		{
 			name:      "correctly formatted data succeeds",
-			operation: logical.CreateOperation,
+			operation: logical.UpdateOperation,
 			input:     map[string]interface{}{"input": `{"write":["WRITE_PRECOMPUTED_QUERIES"],"data":[{"current_month":true,"all":{"clients":[{"count":5}]}}]}`},
 		},
 		{
 			name:      "entities with multiple segments",
-			operation: logical.CreateOperation,
+			operation: logical.UpdateOperation,
 			input:     map[string]interface{}{"input": `{"write":["WRITE_ENTITIES"],"data":[{"current_month":true,"num_segments":3,"all":{"clients":[{"count":5}]}}]}`},
 			wantPaths: 3,
 		},
@@ -146,7 +149,13 @@ func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 		{
 			name: "non entity client",
 			clients: &generation.Client{
-				NonEntity: true,
+				ClientType: "non-entity",
+			},
+		},
+		{
+			name: "acme client",
+			clients: &generation.Client{
+				ClientType: "acme",
 			},
 		},
 		{
@@ -171,7 +180,7 @@ func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 				require.NotNil(t, rec)
 				require.Equal(t, tt.wantNamespace, rec.NamespaceID)
 				require.Equal(t, tt.wantMount, rec.MountAccessor)
-				require.Equal(t, tt.clients.NonEntity, rec.NonEntity)
+				require.Equal(t, tt.clients.ClientType, rec.ClientType)
 				if tt.wantID != "" {
 					require.Equal(t, tt.wantID, rec.ClientID)
 				} else {
@@ -202,6 +211,16 @@ func Test_multipleMonthsActivityClients_processMonth(t *testing.T) {
 				Clients: &generation.Data_All{All: &generation.Clients{Clients: []*generation.Client{{
 					Namespace: namespace.RootNamespaceID,
 					Mount:     "identity/",
+				}}}},
+			},
+			numMonths: 1,
+		},
+		{
+			name: "mount missing slash",
+			clients: &generation.Data{
+				Clients: &generation.Data_All{All: &generation.Clients{Clients: []*generation.Client{{
+					Namespace: namespace.RootNamespaceID,
+					Mount:     "identity",
 				}}}},
 			},
 			numMonths: 1,
@@ -325,7 +344,7 @@ func Test_multipleMonthsActivityClients_addRepeatedClients(t *testing.T) {
 	require.NoError(t, m.addClientToMonth(2, &generation.Client{Count: 2}, "identity", nil))
 	require.NoError(t, m.addClientToMonth(2, &generation.Client{Count: 2, Namespace: "other_ns"}, defaultMount, nil))
 	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2}, defaultMount, nil))
-	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2, NonEntity: true}, defaultMount, nil))
+	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2, ClientType: "non-entity"}, defaultMount, nil))
 
 	month2Clients := m.months[2].clients
 	month1Clients := m.months[1].clients
@@ -336,7 +355,7 @@ func Test_multipleMonthsActivityClients_addRepeatedClients(t *testing.T) {
 	require.Contains(t, month1Clients, thisMonth.clients[0])
 
 	// this will match the 3rd client in month 1
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true, NonEntity: true}, defaultMount, nil))
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true, ClientType: "non-entity"}, defaultMount, nil))
 	require.Equal(t, month1Clients[2], thisMonth.clients[1])
 
 	// this will match the first two clients in month 1
@@ -441,136 +460,193 @@ func Test_singleMonthActivityClients_populateSegments(t *testing.T) {
 	}
 }
 
-// Test_multipleMonthsActivityClients_write_entities writes 4 months of data
-// splitting some months across segments and using empty segments and skipped
-// segments. Entities are written and then storage is queried. The test verifies
-// that the correct timestamps are present in the activity log and that the correct
-// segment numbers for each month contain the correct number of clients
-func Test_multipleMonthsActivityClients_write_entities(t *testing.T) {
+// Test_handleActivityWriteData writes 4 months of data splitting some months
+// across segments and using empty segments and skipped segments. Entities and
+// precomputed queries are written. written and then storage is queried. The
+// test verifies that the correct timestamps are present in the activity log and
+// that the correct segment numbers for each month contain the correct number of
+// clients
+func Test_handleActivityWriteData(t *testing.T) {
 	index5 := int32(5)
 	index4 := int32(4)
-	data := &generation.ActivityLogMockInput{
-		Write: []generation.WriteOptions{
-			generation.WriteOptions_WRITE_ENTITIES,
+	data := []*generation.Data{
+		{
+			// segments: 0:[x,y], 1:[z]
+			Month:       &generation.Data_MonthsAgo{MonthsAgo: 3},
+			Clients:     &generation.Data_All{All: &generation.Clients{Clients: []*generation.Client{{Count: 3}}}},
+			NumSegments: 2,
 		},
-		Data: []*generation.Data{
-			{
-				// segments: 0:[x,y], 1:[z]
-				Month:       &generation.Data_MonthsAgo{MonthsAgo: 3},
-				Clients:     &generation.Data_All{All: &generation.Clients{Clients: []*generation.Client{{Count: 3}}}},
-				NumSegments: 2,
+		{
+			// segments: 1:[a,b,c], 2:[d,e]
+			Month:              &generation.Data_MonthsAgo{MonthsAgo: 2},
+			Clients:            &generation.Data_All{All: &generation.Clients{Clients: []*generation.Client{{Count: 5}}}},
+			NumSegments:        3,
+			SkipSegmentIndexes: []int32{0},
+		},
+		{
+			// segments: 5:[f,g]
+			Month: &generation.Data_MonthsAgo{MonthsAgo: 1},
+			Clients: &generation.Data_Segments{
+				Segments: &generation.Segments{Segments: []*generation.Segment{{
+					SegmentIndex: &index5,
+					Clients:      &generation.Clients{Clients: []*generation.Client{{Count: 2}}},
+				}}},
 			},
-			{
-				// segments: 1:[a,b,c], 2:[d,e]
-				Month:              &generation.Data_MonthsAgo{MonthsAgo: 2},
-				Clients:            &generation.Data_All{All: &generation.Clients{Clients: []*generation.Client{{Count: 5}}}},
-				NumSegments:        3,
-				SkipSegmentIndexes: []int32{0},
-			},
-			{
-				// segments: 5:[f,g]
-				Month: &generation.Data_MonthsAgo{MonthsAgo: 1},
-				Clients: &generation.Data_Segments{
-					Segments: &generation.Segments{Segments: []*generation.Segment{{
+		},
+		{
+			// segments: 1:[], 2:[], 4:[n], 5:[o]
+			Month:               &generation.Data_CurrentMonth{},
+			EmptySegmentIndexes: []int32{1, 2},
+			Clients: &generation.Data_Segments{
+				Segments: &generation.Segments{Segments: []*generation.Segment{
+					{
 						SegmentIndex: &index5,
-						Clients:      &generation.Clients{Clients: []*generation.Client{{Count: 2}}},
-					}}},
-				},
-			},
-			{
-				// segments: 1:[], 2:[], 4:[n], 5:[o]
-				Month:               &generation.Data_CurrentMonth{},
-				EmptySegmentIndexes: []int32{1, 2},
-				Clients: &generation.Data_Segments{
-					Segments: &generation.Segments{Segments: []*generation.Segment{
-						{
-							SegmentIndex: &index5,
-							Clients:      &generation.Clients{Clients: []*generation.Client{{Count: 1}}},
-						},
-						{
-							SegmentIndex: &index4,
-							Clients:      &generation.Clients{Clients: []*generation.Client{{Count: 1}}},
-						},
-					}},
-				},
+						Clients:      &generation.Clients{Clients: []*generation.Client{{Count: 1}}},
+					},
+					{
+						SegmentIndex: &index4,
+						Clients:      &generation.Clients{Clients: []*generation.Client{{Count: 1}}},
+					},
+				}},
 			},
 		},
 	}
 
-	core, _, _ := TestCoreUnsealed(t)
-	marshaled, err := protojson.Marshal(data)
-	require.NoError(t, err)
-	req := logical.TestRequest(t, logical.CreateOperation, "internal/counters/activity/write")
-	req.Data = map[string]interface{}{"input": string(marshaled)}
-	resp, err := core.systemBackend.HandleRequest(namespace.RootContext(nil), req)
-	require.NoError(t, err)
-	paths := resp.Data["paths"].([]string)
-	require.Len(t, paths, 9)
-
-	times, err := core.activityLog.availableLogs(context.Background())
-	require.NoError(t, err)
-	require.Len(t, times, 4)
-
-	sortPaths := func(monthPaths []string) {
-		sort.Slice(monthPaths, func(i, j int) bool {
-			iVal, _ := parseSegmentNumberFromPath(monthPaths[i])
-			jVal, _ := parseSegmentNumberFromPath(monthPaths[j])
-			return iVal < jVal
+	t.Run("write entities", func(t *testing.T) {
+		core, _, _ := TestCoreUnsealed(t)
+		marshaled, err := protojson.Marshal(&generation.ActivityLogMockInput{
+			Data:  data,
+			Write: []generation.WriteOptions{generation.WriteOptions_WRITE_ENTITIES},
 		})
-	}
+		require.NoError(t, err)
+		req := logical.TestRequest(t, logical.UpdateOperation, "internal/counters/activity/write")
+		req.Data = map[string]interface{}{"input": string(marshaled)}
+		resp, err := core.systemBackend.HandleRequest(namespace.RootContext(nil), req)
+		require.NoError(t, err)
+		paths := resp.Data["paths"].([]string)
+		require.Len(t, paths, 9)
 
-	month0Paths := paths[0:4]
-	month1Paths := paths[4:5]
-	month2Paths := paths[5:7]
-	month3Paths := paths[7:9]
-	sortPaths(month0Paths)
-	sortPaths(month1Paths)
-	sortPaths(month2Paths)
-	sortPaths(month3Paths)
-	entities := func(paths []string) map[int][]*activity.EntityRecord {
-		segments := make(map[int][]*activity.EntityRecord)
-		for _, path := range paths {
-			segmentNum, _ := parseSegmentNumberFromPath(path)
-			entry, err := core.activityLog.view.Get(context.Background(), path)
-			require.NoError(t, err)
-			if entry == nil {
-				segments[segmentNum] = []*activity.EntityRecord{}
-				continue
-			}
-			activities := &activity.EntityActivityLog{}
-			err = proto.Unmarshal(entry.Value, activities)
-			require.NoError(t, err)
-			segments[segmentNum] = activities.Clients
+		times, err := core.activityLog.availableLogs(context.Background())
+		require.NoError(t, err)
+		require.Len(t, times, 4)
+
+		sortPaths := func(monthPaths []string) {
+			sort.Slice(monthPaths, func(i, j int) bool {
+				iVal, _ := parseSegmentNumberFromPath(monthPaths[i])
+				jVal, _ := parseSegmentNumberFromPath(monthPaths[j])
+				return iVal < jVal
+			})
 		}
-		return segments
-	}
-	month0Entities := entities(month0Paths)
-	require.Len(t, month0Entities, 4)
-	require.Contains(t, month0Entities, 1)
-	require.Contains(t, month0Entities, 2)
-	require.Contains(t, month0Entities, 4)
-	require.Contains(t, month0Entities, 5)
-	require.Len(t, month0Entities[1], 0)
-	require.Len(t, month0Entities[2], 0)
-	require.Len(t, month0Entities[4], 1)
-	require.Len(t, month0Entities[5], 1)
 
-	month1Entities := entities(month1Paths)
-	require.Len(t, month1Entities, 1)
-	require.Contains(t, month1Entities, 5)
-	require.Len(t, month1Entities[5], 2)
+		month0Paths := paths[0:4]
+		month1Paths := paths[4:5]
+		month2Paths := paths[5:7]
+		month3Paths := paths[7:9]
+		sortPaths(month0Paths)
+		sortPaths(month1Paths)
+		sortPaths(month2Paths)
+		sortPaths(month3Paths)
+		entities := func(paths []string) map[int][]*activity.EntityRecord {
+			segments := make(map[int][]*activity.EntityRecord)
+			for _, path := range paths {
+				segmentNum, _ := parseSegmentNumberFromPath(path)
+				entry, err := core.activityLog.view.Get(context.Background(), path)
+				require.NoError(t, err)
+				if entry == nil {
+					segments[segmentNum] = []*activity.EntityRecord{}
+					continue
+				}
+				activities := &activity.EntityActivityLog{}
+				err = proto.Unmarshal(entry.Value, activities)
+				require.NoError(t, err)
+				segments[segmentNum] = activities.Clients
+			}
+			return segments
+		}
+		month0Entities := entities(month0Paths)
+		require.Len(t, month0Entities, 4)
+		require.Contains(t, month0Entities, 1)
+		require.Contains(t, month0Entities, 2)
+		require.Contains(t, month0Entities, 4)
+		require.Contains(t, month0Entities, 5)
+		require.Len(t, month0Entities[1], 0)
+		require.Len(t, month0Entities[2], 0)
+		require.Len(t, month0Entities[4], 1)
+		require.Len(t, month0Entities[5], 1)
 
-	month2Entities := entities(month2Paths)
-	require.Len(t, month2Entities, 2)
-	require.Contains(t, month2Entities, 1)
-	require.Contains(t, month2Entities, 2)
-	require.Len(t, month2Entities[1], 3)
-	require.Len(t, month2Entities[2], 2)
+		month1Entities := entities(month1Paths)
+		require.Len(t, month1Entities, 1)
+		require.Contains(t, month1Entities, 5)
+		require.Len(t, month1Entities[5], 2)
 
-	month3Entities := entities(month3Paths)
-	require.Len(t, month3Entities, 2)
-	require.Contains(t, month3Entities, 0)
-	require.Contains(t, month3Entities, 1)
-	require.Len(t, month3Entities[0], 2)
-	require.Len(t, month3Entities[1], 1)
+		month2Entities := entities(month2Paths)
+		require.Len(t, month2Entities, 2)
+		require.Contains(t, month2Entities, 1)
+		require.Contains(t, month2Entities, 2)
+		require.Len(t, month2Entities[1], 3)
+		require.Len(t, month2Entities[2], 2)
+
+		month3Entities := entities(month3Paths)
+		require.Len(t, month3Entities, 2)
+		require.Contains(t, month3Entities, 0)
+		require.Contains(t, month3Entities, 1)
+		require.Len(t, month3Entities[0], 2)
+		require.Len(t, month3Entities[1], 1)
+	})
+	t.Run("write precomputed queries", func(t *testing.T) {
+		core, _, _ := TestCoreUnsealed(t)
+		marshaled, err := protojson.Marshal(&generation.ActivityLogMockInput{
+			Data:  data,
+			Write: []generation.WriteOptions{generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES},
+		})
+		require.NoError(t, err)
+		req := logical.TestRequest(t, logical.UpdateOperation, "internal/counters/activity/write")
+		req.Data = map[string]interface{}{"input": string(marshaled)}
+		_, err = core.systemBackend.HandleRequest(namespace.RootContext(nil), req)
+		require.NoError(t, err)
+
+		queries, err := core.activityLog.queryStore.QueriesAvailable(context.Background())
+		require.NoError(t, err)
+		require.True(t, queries)
+
+		now := time.Now().UTC()
+		start := timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, now))
+		end := timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now))
+		pq, err := core.activityLog.queryStore.Get(context.Background(), start, end)
+		require.NoError(t, err)
+		require.NotNil(t, pq)
+		require.Equal(t, end, pq.EndTime)
+		require.Equal(t, start, pq.StartTime)
+		require.Len(t, pq.Namespaces, 1)
+		require.Equal(t, uint64(10), pq.Namespaces[0].Entities)
+		require.Len(t, pq.Months, 3)
+	})
+	t.Run("write intent logs", func(t *testing.T) {
+		core, _, _ := TestCoreUnsealed(t)
+		marshaled, err := protojson.Marshal(&generation.ActivityLogMockInput{
+			Data:  data,
+			Write: []generation.WriteOptions{generation.WriteOptions_WRITE_INTENT_LOGS},
+		})
+		require.NoError(t, err)
+		now := time.Now().UTC()
+		req := logical.TestRequest(t, logical.UpdateOperation, "internal/counters/activity/write")
+		req.Data = map[string]interface{}{"input": string(marshaled)}
+		_, err = core.systemBackend.HandleRequest(namespace.RootContext(nil), req)
+		require.NoError(t, err)
+
+		entry, err := core.activityLog.view.Get(context.Background(), activityIntentLogKey)
+		require.NoError(t, err)
+		var intent ActivityIntentLog
+		err = json.Unmarshal(entry.Value, &intent)
+		require.NoError(t, err)
+		prev := time.Unix(intent.PreviousMonth, 0)
+		next := time.Unix(intent.NextMonth, 0)
+
+		require.Equal(t, timeutil.StartOfMonth(now), next.UTC())
+		require.Equal(t, timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, now)), prev.UTC())
+
+		times, err := core.activityLog.availableLogs(context.Background())
+		require.NoError(t, err)
+		require.Len(t, times, 4)
+	})
 }

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div
   {{did-insert (perform this.fetchOptions)}}
   {{did-update (perform this.fetchOptions) (or @options @models)}}
@@ -33,11 +38,12 @@
       <PowerSelect
         @eventType="click"
         @placeholder={{@placeholder}}
-        @searchEnabled={{true}}
+        @searchEnabled={{this.searchEnabled}}
         @search={{this.searchAndSuggest}}
         @options={{this.dropdownOptions}}
         @onChange={{this.selectOrCreate}}
         @placeholderComponent={{component "search-select-placeholder"}}
+        @renderInPlace={{@renderInPlace}}
         @verticalPosition="below"
         @disabled={{@disabled}}
         as |option|
@@ -54,7 +60,7 @@
     {{/unless}}
     <ul class="search-select-list">
       {{#each this.selectedOptions as |selected index|}}
-        <li class="search-select-list-item" data-test-selected-option={{index}}>
+        <li class="search-select-list-item has-text-grey-light" data-test-selected-option={{index}}>
           {{#if (and this.shouldRenderName (get selected this.nameKey))}}
             {{get selected this.nameKey}}
             <small class="search-select-list-key" data-test-smaller-id={{index}}>
@@ -82,14 +88,14 @@
                 {{selected.addTooltip}}
               </InfoTooltip>
             {{/if}}
-            <button
-              type="button"
-              class="button is-ghost"
+            <Hds::Button
+              @icon="trash"
+              @text="delete selection"
+              @isIconOnly={{true}}
+              @color="tertiary"
               data-test-selected-list-button="delete"
               {{on "click" (fn this.discardSelection selected)}}
-            >
-              <Icon @name="trash" class="has-text-grey" />
-            </button>
+            />
           </div>
         </li>
       {{/each}}

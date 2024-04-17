@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
@@ -35,6 +35,6 @@ export default class PkiConfigClusterModel extends Model {
   @lazyCapabilities(apiPath`${'id'}/config/cluster`, 'id') clusterPath;
 
   get canSet() {
-    return this.clusterPath.get('canCreate') !== false;
+    return this.clusterPath.get('canUpdate') !== false;
   }
 }

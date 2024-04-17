@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader
@@ -11,9 +16,9 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
       {{#if (eq this.mode "create")}}
-        Create transformation
+        Create Transformation
       {{else if (eq this.mode "edit")}}
-        Edit transformation
+        Edit Transformation
       {{else}}
         Transformation
         <code>{{this.model.id}}</code>
@@ -29,9 +34,13 @@
         {{#if (gt this.model.allowed_roles.length 0)}}
           <ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
             <T.Trigger @tabindex="-1">
-              <button class="toolbar-link" aria-disabled="true" type="button" disabled>
-                Delete transformation
-              </button>
+              <Hds::Button
+                @text="Delete transformation"
+                @color="secondary"
+                class="toolbar-button"
+                aria-disabled="true"
+                disabled
+              />
             </T.Trigger>
             <T.Content @defaultClass="tool-tip">
               <div class="box">
@@ -40,22 +49,24 @@
             </T.Content>
           </ToolTip>
         {{else}}
-          <button class="toolbar-link" onclick={{action (mut this.isDeleteModalActive) true}} type="button">
-            Delete transformation
-          </button>
+          <Hds::Button
+            @text="Delete transformation"
+            @color="secondary"
+            class="toolbar-button"
+            {{on "click" (action (mut this.isDeleteModalActive) true)}}
+          />
         {{/if}}
         <div class="toolbar-separator"></div>
       {{/if}}
       {{#if this.capabilities.canUpdate}}
         {{#if (gt this.model.allowed_roles.length 0)}}
-          <button
-            class="toolbar-link"
-            onclick={{action (mut this.isEditModalActive) true}}
-            type="button"
+          <Hds::Button
+            @text="Edit transformation"
+            @color="secondary"
+            class="toolbar-button"
+            {{on "click" (fn (mut this.isEditModalActive) true)}}
             data-test-edit-link
-          >
-            Edit transformation
-          </button>
+          />
         {{else}}
           <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" data-test-edit-link={{true}} @replace={{true}}>
             Edit transformation
@@ -91,30 +102,27 @@
   <MessageError @model={{this.model}} @errorMessage={{this.error}} />
 </ConfirmationModal>
 
-<Modal
-  @title="Edit transformation"
-  @onClose={{action (mut this.isEditModalActive) false}}
-  @isActive={{this.isEditModalActive}}
-  @type="warning"
-  @showCloseButton={{true}}
->
-  <section class="modal-card-body">
-    <p>
-      You’re editing a transformation that is in use by at least one role. Editing it may mean that encode and decode
-      operations stop working. Are you sure?
-    </p>
-  </section>
-  <footer class="modal-card-foot modal-card-foot-outlined">
-    <LinkTo
-      @route="vault.cluster.secrets.backend.edit"
-      @model={{this.model.id}}
-      class="button is-primary"
-      data-test-edit-confirm-button={{true}}
-    >
-      Confirm
-    </LinkTo>
-    <button type="button" class="button is-secondary" onclick={{action (mut this.isEditModalActive) false}}>
-      Cancel
-    </button>
-  </footer>
-</Modal>
+{{#if this.isEditModalActive}}
+  <Hds::Modal id="transformation-edit-modal" @color="warning" @onClose={{fn (mut this.isEditModalActive) false}} as |M|>
+    <M.Header @icon="alert-triangle">
+      Edit transformation
+    </M.Header>
+    <M.Body>
+      <p>
+        You’re editing a transformation that is in use by at least one role. Editing it may mean that encode and decode
+        operations stop working. Are you sure?
+      </p>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button
+          @text="Confirm"
+          @route="vault.cluster.secrets.backend.edit"
+          @model={{this.model.id}}
+          data-test-edit-confirm-button
+        />
+        <Hds::Button @color="secondary" @text="Cancel" {{on "click" F.close}} />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

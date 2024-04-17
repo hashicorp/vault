@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -8,24 +8,25 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import ENV from 'vault/config/environment';
-import { overrideMirageResponse } from 'vault/tests/helpers/oidc-config';
+import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | oidc/assignment-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'oidcConfig';
-  });
-
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
-  });
-
   hooks.beforeEach(function () {
+    oidcConfigHandlers(this.server);
     this.store = this.owner.lookup('service:store');
     this.server.post('/sys/capabilities-self', () => {});
+    setRunOptions({
+      rules: {
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+      },
+    });
   });
 
   test('it should save new assignment', async function (assert) {
@@ -94,8 +95,8 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
   test('it should use fallback component on create if no permissions for entities or groups', async function (assert) {
     assert.expect(2);
     this.model = this.store.createRecord('oidc/assignment');
-    this.server.get('/identity/entity/id', () => overrideMirageResponse(403));
-    this.server.get('/identity/group/id', () => overrideMirageResponse(403));
+    this.server.get('/identity/entity/id', () => overrideResponse(403));
+    this.server.get('/identity/group/id', () => overrideResponse(403));
 
     await render(hbs`
       <Oidc::AssignmentForm
@@ -122,8 +123,8 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
       group_ids: ['abcdef-123'],
     });
     this.model = this.store.peekRecord('oidc/assignment', 'test');
-    this.server.get('/identity/entity/id', () => overrideMirageResponse(403));
-    this.server.get('/identity/group/id', () => overrideMirageResponse(403));
+    this.server.get('/identity/entity/id', () => overrideResponse(403));
+    this.server.get('/identity/group/id', () => overrideResponse(403));
 
     await render(hbs`
     <Oidc::AssignmentForm

@@ -1,5 +1,10 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if this.showLicenseError}}
-  <div class="section is-flex-v-centered-tablet is-flex-1 is-fullwidth">
+  <div class="section is-flex-v-centered-tablet is-flex-grow-1 is-fullwidth">
     <div class="columns is-centered is-gapless is-fullwidth">
       <EmptyState
         class="empty-state-transparent"
@@ -9,52 +14,67 @@
         @bottomBorder={{true}}
         @message="Your Vault license has terminated and Vault is sealed. To unseal, add a current license to your configuration and restart Vault."
       >
-        <p class="align-right">
-          <DocLink @path="/vault/tutorials/enterprise/hashicorp-enterprise-license">
-            License documentation
-          </DocLink>
-        </p>
+        <Hds::Link::Standalone
+          @icon="learn-link"
+          @iconPosition="trailing"
+          @text="Install an enterprise license tutorial"
+          @href={{doc-link "/vault/tutorials/enterprise/hashicorp-enterprise-license"}}
+        />
       </EmptyState>
     </div>
   </div>
 {{else}}
-  <SplashPage as |Page|>
-    <Page.header>
+  <SplashPage>
+    <:header>
       <h1 class="title is-3">
         Unseal Vault
       </h1>
-    </Page.header>
-    <Page.content>
+    </:header>
+
+    <:content>
       <div class="box is-borderless is-shadowless is-marginless">
         <p class="title is-5">
           {{capitalize this.model.name}}
           is
           {{if this.model.unsealed "unsealed" "sealed"}}
         </p>
-        <p>
-          Unseal Vault by entering portions of the unseal key. This can be done via multiple mechanisms on multiple
-          computers. Once all portions are entered, the root key will be decrypted and Vault will unseal.
-        </p>
+        {{#if this.model.unsealed}}
+          <p>Please wait while we redirect you.</p>
+          <Hds::Link::Standalone
+            @route="vault.cluster.auth"
+            @model={{this.model.id}}
+            @text="Continue to log in"
+            @icon="sign-in"
+          />
+        {{else}}
+          <p>
+            Unseal Vault by entering portions of the unseal key. This can be done via multiple mechanisms on multiple
+            computers. Once all portions are entered, the root key will be decrypted and Vault will unseal.
+          </p>
+          <Shamir::Flow
+            @action="unseal"
+            @threshold={{this.model.sealThreshold}}
+            @progress={{this.model.sealProgress}}
+            @updateProgress={{action "reloadCluster"}}
+            @inputLabel="Unseal Key Portion"
+            @buttonText="Unseal"
+            @onLicenseError={{action "handleLicenseError"}}
+            @checkComplete={{action "isUnsealed"}}
+            @onShamirSuccess={{transition-to "vault.cluster" this.model.name}}
+            class="has-top-margin-m"
+          />
+        {{/if}}
       </div>
-      <ShamirFlow
-        @action="unseal"
-        @onLicenseError={{action "handleLicenseError"}}
-        @onShamirSuccess={{action "transitionToCluster"}}
-        @buttonText="Unseal"
-        @thresholdPath="t"
-        @isComplete={{action "isUnsealed"}}
-        @threshold={{this.model.sealThreshold}}
-        @progress={{this.model.sealProgress}}
-      />
-    </Page.content>
-    <Page.footer>
+    </:content>
+
+    <:footer>
       <div class="box is-borderless is-shadowless">
         <p>
-          <ExternalLink @href="https://www.vaultproject.io/docs/concepts/seal">
+          <ExternalLink @href="https://developer.hashicorp.com/vault/docs/concepts/seal">
             Seal/unseal documentation
           </ExternalLink>
         </p>
       </div>
-    </Page.footer>
+    </:footer>
   </SplashPage>
 {{/if}}

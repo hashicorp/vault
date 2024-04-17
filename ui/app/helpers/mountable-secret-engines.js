@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { helper as buildHelper } from '@ember/component/helper';
@@ -9,7 +9,8 @@ const ENTERPRISE_SECRET_ENGINES = [
   {
     displayName: 'KMIP',
     type: 'kmip',
-    engineRoute: 'kmip.scopes',
+    glyph: 'lock',
+    engineRoute: 'kmip.scopes.index',
     category: 'generic',
     requiredFeature: 'KMIP',
   },
@@ -18,6 +19,7 @@ const ENTERPRISE_SECRET_ENGINES = [
     type: 'transform',
     category: 'generic',
     requiredFeature: 'Transform Secrets Engine',
+    glyph: 'transform-data',
   },
   {
     displayName: 'Key Management',
@@ -31,13 +33,9 @@ const ENTERPRISE_SECRET_ENGINES = [
 
 const MOUNTABLE_SECRET_ENGINES = [
   {
-    displayName: 'Active Directory',
-    type: 'ad',
-    category: 'cloud',
-  },
-  {
     displayName: 'AliCloud',
     type: 'alicloud',
+    glyph: 'alibaba-color',
     category: 'cloud',
   },
   {
@@ -55,12 +53,14 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'Consul',
     type: 'consul',
+    glyph: 'consul-color',
     category: 'infra',
   },
   {
     displayName: 'Databases',
     type: 'database',
     category: 'infra',
+    glyph: 'database',
   },
   {
     displayName: 'Google Cloud',
@@ -77,42 +77,56 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'KV',
     type: 'kv',
+    glyph: 'key-values',
+    engineRoute: 'kv.list',
     category: 'generic',
   },
   {
     displayName: 'Nomad',
     type: 'nomad',
+    glyph: 'nomad-color',
     category: 'infra',
   },
   {
     displayName: 'PKI Certificates',
     type: 'pki',
+    glyph: 'certificate',
     engineRoute: 'pki.overview',
     category: 'generic',
   },
   {
     displayName: 'RabbitMQ',
     type: 'rabbitmq',
+    glyph: 'rabbitmq-color',
     category: 'infra',
   },
   {
     displayName: 'SSH',
     type: 'ssh',
+    glyph: 'terminal-screen',
     category: 'generic',
   },
   {
     displayName: 'Transit',
     type: 'transit',
+    glyph: 'swap-horizontal',
     category: 'generic',
   },
   {
     displayName: 'TOTP',
     type: 'totp',
+    glyph: 'history',
     category: 'generic',
   },
   {
+    displayName: 'LDAP',
+    type: 'ldap',
+    engineRoute: 'ldap.overview',
+    category: 'generic',
+    glyph: 'folder-users',
+  },
+  {
     displayName: 'Kubernetes',
-    value: 'kubernetes',
     type: 'kubernetes',
     engineRoute: 'kubernetes.overview',
     category: 'generic',
@@ -126,6 +140,12 @@ export function mountableEngines() {
 
 export function allEngines() {
   return [...MOUNTABLE_SECRET_ENGINES, ...ENTERPRISE_SECRET_ENGINES];
+}
+
+export function isAddonEngine(type, version) {
+  if (type === 'kv' && version === 1) return false;
+  const engineRoute = allEngines().find((engine) => engine.type === type)?.engineRoute;
+  return !!engineRoute;
 }
 
 export default buildHelper(mountableEngines);

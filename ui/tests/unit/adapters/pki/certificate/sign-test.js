@@ -1,13 +1,14 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
 import { setupTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { csr2 } from 'vault/tests/helpers/pki/values';
+import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
 
+const { csr2 } = CERTIFICATES;
 module('Unit | Adapter | pki/certificate/sign', function (hooks) {
   setupTest(hooks);
   setupMirage(hooks);

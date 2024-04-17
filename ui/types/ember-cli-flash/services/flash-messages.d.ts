@@ -1,12 +1,11 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 declare module 'ember-cli-flash/services/flash-messages' {
   import Service from '@ember/service';
   import FlashObject from 'ember-cli-flash/flash/object';
-  import { A } from '@ember/array';
 
   type Partial<T> = { [K in keyof T]?: T[K] };
 
@@ -31,7 +30,7 @@ declare module 'ember-cli-flash/services/flash-messages' {
   }
 
   class FlashMessageService extends Service {
-    queue: A<FlashObject>;
+    queue: FlashObject[];
     success: FlashFunction;
     warning: FlashFunction;
     info: FlashFunction;

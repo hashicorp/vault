@@ -1,17 +1,15 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import { apiPath } from 'vault/macros/lazy-capabilities';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import attachCapabilities from 'vault/lib/attach-capabilities';
 
-// these arrays define the order in which the fields will be displayed
-// see
-//https://www.vaultproject.io/api-docs/secret/transform#create-update-transformation
+// these arrays define the order in which the fields will be displayed, see:
+// https://developer.hashicorp.com/vault/api-docs/secret/transform#create-update-transformation-deprecated-1-6
 const TYPES = [
   {
     value: 'fpe',
@@ -20,6 +18,10 @@ const TYPES = [
   {
     value: 'masking',
     displayName: 'Masking',
+  },
+  {
+    value: 'tokenization',
+    displayName: 'Tokenization',
   },
 ];
 
@@ -38,7 +40,7 @@ const TWEAK_SOURCE = [
   },
 ];
 
-const ModelExport = Model.extend({
+export default Model.extend({
   name: attr('string', {
     // CBS TODO: make this required for making a transformation
     label: 'Name',
@@ -84,12 +86,49 @@ const ModelExport = Model.extend({
     subText: 'Search for an existing role, type a new role to create it, or use a wildcard (*).',
     wildcardLabel: 'role',
   }),
-  transformAttrs: computed('type', function () {
-    if (this.type === 'masking') {
-      return ['name', 'type', 'masking_character', 'template', 'allowed_roles'];
-    }
-    return ['name', 'type', 'tweak_source', 'template', 'allowed_roles'];
+  deletion_allowed: attr('boolean', {
+    label: 'Allow deletion',
+    subText:
+      'If checked, this transform can be deleted otherwise deletion is blocked. Note that deleting the transform deletes the underlying key which makes decoding of tokenized values impossible without restoring from a backup.',
   }),
+  convergent: attr('boolean', {
+    label: 'Use convergent tokenization',
+    subText:
+      "This cannot be edited later. If checked, tokenization of the same plaintext more than once results in the same token. Defaults to false as unique tokens are more desirable from a security standpoint if there isn't a use-case need for convergence.",
+  }),
+  stores: attr('array', {
+    label: 'Stores',
+    editType: 'stringArray',
+    subText:
+      "The list of tokenization stores to use for tokenization state. Vault's internal storage is used by default.",
+  }),
+  mapping_mode: attr('string', {
+    defaultValue: 'default',
+    subText:
+      'Specifies the mapping mode for stored tokenization values. "default" is strongly recommended for highest security, "exportable" allows for all plaintexts to be decoded via the export-decoded endpoint in an emergency.',
+  }),
+  max_ttl: attr({
+    editType: 'ttl',
+    defaultValue: '0',
+    label: 'Maximum TTL (time-to-live) of a token',
+    helperTextDisabled: 'If "0" or unspecified, tokens may have no expiration.',
+  }),
+
+  transformAttrs: computed('type', function () {
+    // allowed_roles not included so it displays at the bottom of the form
+    const baseAttrs = ['name', 'type', 'deletion_allowed'];
+    switch (this.type) {
+      case 'fpe':
+        return [...baseAttrs, 'tweak_source', 'template', 'allowed_roles'];
+      case 'masking':
+        return [...baseAttrs, 'masking_character', 'template', 'allowed_roles'];
+      case 'tokenization':
+        return [...baseAttrs, 'mapping_mode', 'convergent', 'max_ttl', 'stores', 'allowed_roles'];
+      default:
+        return [...baseAttrs];
+    }
+  }),
+
   transformFieldAttrs: computed('transformAttrs', function () {
     return expandAttributeMeta(this, this.transformAttrs);
   }),
@@ -97,8 +136,5 @@ const ModelExport = Model.extend({
   backend: attr('string', {
     readOnly: true,
   }),
-});
-
-export default attachCapabilities(ModelExport, {
-  updatePath: apiPath`${'backend'}/transformation/${'id'}`,
+  updatePath: lazyCapabilities(apiPath`${'backend'}/transformation/${'id'}`, 'backend', 'id'),
 });

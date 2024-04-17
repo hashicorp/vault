@@ -6,7 +6,7 @@ description: >-
   against outages.
 ---
 
-# High Availability Mode (HA)
+# High availability mode (HA)
 
 Vault supports a multi-server mode for high availability. This mode protects
 against outages by running multiple Vault servers. High availability mode
@@ -44,7 +44,7 @@ The sections below explain the server communication patterns and each type of
 request handling in more detail. At a minimum, the requirements for redirection
 mode must be met for an HA cluster to work successfully.
 
-## Server-to-Server Communication
+## Server-to-Server communication
 
 Both methods of request handling rely on the active node advertising
 information about itself to the other nodes. Rather than over the network, this
@@ -66,7 +66,7 @@ sent over this TLS-protected communication channel, and acted upon by the
 active node. The active node then returns a response to the standby, which
 sends the response back to the requesting client.
 
-## Request Forwarding
+## Request forwarding
 
 If request forwarding is enabled (turned on by default in 0.6.2), clients can
 still force the older/fallback redirection behavior (see below) if desired by
@@ -75,7 +75,7 @@ setting the `X-Vault-No-Request-Forwarding` header to any non-empty value.
 Successful cluster setup requires a few configuration parameters, although some
 can be automatically determined.
 
-## Client Redirection
+## Client redirection
 
 If `X-Vault-No-Request-Forwarding` header in the request is set to a non-empty
 value, the standby nodes will redirect the client using a `307` status code to
@@ -98,7 +98,7 @@ accessed directly by clients, and Vault servers accessed via a load balancer.
 In both cases, the [`api_addr`](/vault/docs/configuration#api_addr) should be a full
 URL including scheme (`http`/`https`), not simply an IP address and port.
 
-### Direct Access
+### Direct access
 
 When clients are able to access Vault directly, the
 [`api_addr`](/vault/docs/configuration#api_addr) for each node should be that node's
@@ -118,7 +118,7 @@ cause it to redirect the client to node `A`'s
 [`api_addr`](/vault/docs/configuration#api_addr) at `https://a.vault.mycompany.com`,
 and vice-versa.
 
-### Behind Load Balancers
+### Behind load balancers
 
 Sometimes clients use load balancers as an initial method to access one of the
 Vault servers, but actually have direct access to each Vault node. In this
@@ -133,7 +133,7 @@ balancer's configuration will have been updated to know the address of the
 current leader. This can cause a redirect loop and as such is not a recommended
 setup when it can be avoided.
 
-### Per-Node Cluster Listener Addresses
+### Per-Node cluster listener addresses
 
 Each [`listener`](/vault/docs/configuration/listener) block in Vault's configuration
 file contains an [`address`](/vault/docs/configuration/listener/tcp#address) value on
@@ -150,7 +150,7 @@ default, port `8201`).
 Note that _only_ active nodes have active listeners. When a node becomes active
 it will start cluster listeners, and when it becomes standby it will stop them.
 
-### Per-Node Cluster Address
+### Per-Node cluster address
 
 Similar to the [`api_addr`](/vault/docs/configuration#api_addr),
 [`cluster_addr`](/vault/docs/configuration#cluster_addr) is the value that each node,
@@ -166,7 +166,7 @@ between servers.)
 This value can also be specified by the `VAULT_CLUSTER_ADDR` environment
 variable, which takes precedence.
 
-## Storage Support
+## Storage support
 
 Currently there are several storage backends that support high availability
 mode, including [Consul](/vault/docs/configuration/storage/consul),

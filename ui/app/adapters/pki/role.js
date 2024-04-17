@@ -1,10 +1,9 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import ApplicationAdapter from '../application';
-import { assign } from '@ember/polyfills';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default class PkiRoleAdapter extends ApplicationAdapter {
@@ -56,7 +55,7 @@ export default class PkiRoleAdapter extends ApplicationAdapter {
         backend,
       };
 
-      return assign({}, resp, data);
+      return { ...resp, ...data };
     });
   }
 

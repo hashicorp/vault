@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/helper/constants"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -28,7 +28,7 @@ var pathFetchReadSchema = map[int][]framework.Response{
 				Required:    false,
 			},
 			"revocation_time": {
-				Type:        framework.TypeString,
+				Type:        framework.TypeInt64,
 				Description: `Revocation time`,
 				Required:    false,
 			},
@@ -43,7 +43,7 @@ var pathFetchReadSchema = map[int][]framework.Response{
 				Required:    false,
 			},
 			"ca_chain": {
-				Type:        framework.TypeStringSlice,
+				Type:        framework.TypeString,
 				Description: `Issuing CA Chain`,
 				Required:    false,
 			},
@@ -239,18 +239,6 @@ func pathFetchListCerts(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathFetchCertList,
-				Responses: map[int][]framework.Response{
-					http.StatusOK: {{
-						Description: "OK",
-						Fields: map[string]*framework.FieldSchema{
-							"keys": {
-								Type:        framework.TypeStringSlice,
-								Description: `A list of keys`,
-								Required:    true,
-							},
-						},
-					}},
-				},
 			},
 		},
 
@@ -318,7 +306,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 			contentType = "application/pkix-cert"
 		}
 	case req.Path == "crl" || req.Path == "crl/pem" || req.Path == "crl/delta" || req.Path == "crl/delta/pem" || req.Path == "cert/crl" || req.Path == "cert/crl/raw" || req.Path == "cert/crl/raw/pem" || req.Path == "cert/delta-crl" || req.Path == "cert/delta-crl/raw" || req.Path == "cert/delta-crl/raw/pem" || req.Path == "unified-crl" || req.Path == "unified-crl/pem" || req.Path == "unified-crl/delta" || req.Path == "unified-crl/delta/pem" || req.Path == "cert/unified-crl" || req.Path == "cert/unified-crl/raw" || req.Path == "cert/unified-crl/raw/pem" || req.Path == "cert/unified-delta-crl" || req.Path == "cert/unified-delta-crl/raw" || req.Path == "cert/unified-delta-crl/raw/pem":
-		config, err := b.crlBuilder.getConfigWithUpdate(sc)
+		config, err := b.CrlBuilder().getConfigWithUpdate(sc)
 		if err != nil {
 			retErr = err
 			goto reply
@@ -382,7 +370,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 
 	// Prefer fetchCAInfo to fetchCertBySerial for CA certificates.
 	if serial == "ca_chain" || serial == "ca" {
-		caInfo, err := sc.fetchCAInfo(defaultRef, ReadOnlyUsage)
+		caInfo, err := sc.fetchCAInfo(defaultRef, issuing.ReadOnlyUsage)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:

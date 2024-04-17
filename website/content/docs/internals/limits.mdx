@@ -4,7 +4,7 @@ page_title: Limits and Maximums
 description: Learn about the maximum number of objects within Vault.
 ---
 
-# Vault Limits and Maximums
+# Vault limits and maximums
 
 Vault imposes fixed upper limits on the size of certain fields and
 objects, and configurable limits on others. Vault also has upper
@@ -19,25 +19,13 @@ the absolute limits being reached.
 
 ### Storage entry size
 
-The maximum size of an object written to a storage backend is determined
-by that backend.
-
-For the Consul storage backend, the default limit imposed by Consul is
-512 KiB. This may be configured via Consul’s
-[`kv_max_value_size`](/consul/docs/agent/config/config-files#kv_max_value_size) parameter, introduced in version 1.5.3.
-
-For the integrated storage backend, the default limit (introduced in
-Vault 1.5.0) is 1 MiB. This may be configured via `max_entry_size` in
-the [storage stanza](/vault/docs/configuration/storage/raft#max_entry_size).
+@include 'storage-entry-size.mdx'
 
 Many of the other limits within Vault derive from the maximum size of
 a storage entry, as described in the next sections. It is possible to
 recover from an error where a storage entry has reached its maximum
 size by reconfiguring Vault or Consul to a larger maximum storage
-entry. However, using large storage entries also negatively affects
-performance, as even a small change may become a large
-read-modify-write cycle on the entire entry. Larger writes may also delay
-Raft heartbeats, leading to leadership instability.
+entry.
 
 ### Mount point limits
 
@@ -63,30 +51,15 @@ The number of mount points can be monitored by reading the
 similar sub-paths for namespaces respectively, like: `namespace1/sys/auth`,
 `namespace1/sys/mounts`, etc.
 
+Alternatively, use the
+[`vault.core.mount_table.num_entries`](/vault/docs/internals/telemetry/metrics/core-system#vault-core-mount_table-num_entries)
+and
+[`vault.core.mount_table.size`](/vault/docs/internals/telemetry/metrics/core-system#vault-core-mount_table-size)
+telemetry metrics to monitor the number of mount points and size of each mount table.
+
 ### Namespace limits
 
-The entire list of namespaces must fit in a single storage
-entry. However, the effective limit is generally much smaller because each
-namespace must have at least two secret engine mounts (for `sys` and `identity`),
-one local secret engine (`cubbyhole`) and one auth engine mount (`token`).
-
-|                                                                              | Consul default (512 KiB) | Integrated storage default (1 MiB) |
-| ---------------------------------------------------------------------------- | ------------------------ | ---------------------------------- |
-| Maximum number of namespaces                                                 | ~3500                    | ~7000                              |
-| Maximum number of namespaces with one additional secret engine per namespace | ~2300                    | ~4600                              |
-| Maximum nesting depth for namespaces                                         | ~160                     | ~220                               |
-
-The maximum nesting depth calculation assumes a cost of 40 bytes per namespace
-path element. 160 nested paths = 160 namespaces ranging from 40 bytes to
-6400 bytes.
-
-The number of namespaces can be monitored by querying
-[`sys/namespaces`](/vault/api-docs/system/namespaces).
-
-To estimate the number of namespaces that can be created, divide the mount
-point limit by the larger of the number of auth mounts per namespace
-(including `ns_token`) and the number of secret mounts per namespace
-(including `identity` and `sys`.)
+@include 'namespace-limits.mdx'
 
 ### Entity and group limits
 

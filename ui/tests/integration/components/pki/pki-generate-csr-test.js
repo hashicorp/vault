@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -9,6 +9,7 @@ import { click, fillIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | pki-generate-csr', function (hooks) {
   setupRenderingTest(hooks);
@@ -29,6 +30,12 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
         'pki-test/issuers/generate/intermediate/exported': ['root'],
       },
     }));
+    setRunOptions({
+      rules: {
+        // something strange happening here
+        'link-name': { enabled: false },
+      },
+    });
   });
 
   test('it should render fields and save', async function (assert) {
@@ -65,7 +72,7 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
     await fillIn('[data-test-input="commonName"]', 'foo');
     await click('[data-test-save]');
 
-    const savedRecord = this.store.peekAll('pki/action').firstObject;
+    const savedRecord = this.store.peekAll('pki/action')[0];
     assert.false(savedRecord.isNew, 'record is saved');
   });
 
@@ -107,20 +114,21 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
       owner: this.engine,
     });
     assert
-      .dom('[data-test-alert-banner="alert"]')
+      .dom('[data-test-next-steps-csr]')
       .hasText(
         'Next steps Copy the CSR below for a parent issuer to sign and then import the signed certificate back into this mount. The private_key is only available once. Make sure you copy and save it now.',
         'renders Next steps alert banner'
       );
+
     assert
-      .dom('[data-test-value-div="CSR"] [data-test-masked-input] button')
-      .hasAttribute('data-clipboard-text', this.model.csr, 'it renders copyable csr');
+      .dom('[data-test-value-div="CSR"] [data-test-certificate-card] button')
+      .hasAttribute('data-test-copy-button', this.model.csr, 'it renders copyable csr');
     assert
       .dom('[data-test-value-div="Key ID"] button')
-      .hasAttribute('data-clipboard-text', this.model.keyId, 'it renders copyable key_id');
+      .hasAttribute('data-test-copy-button', this.model.keyId, 'it renders copyable key_id');
     assert
-      .dom('[data-test-value-div="Private key"] [data-test-masked-input] button')
-      .hasAttribute('data-clipboard-text', this.model.privateKey, 'it renders copyable private_key');
+      .dom('[data-test-value-div="Private key"] [data-test-certificate-card] button')
+      .hasAttribute('data-test-copy-button', this.model.privateKey, 'it renders copyable private_key');
     assert
       .dom('[data-test-value-div="Private key type"]')
       .hasText(this.model.privateKeyType, 'renders private_key_type');
@@ -138,17 +146,17 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
       owner: this.engine,
     });
     assert
-      .dom('[data-test-alert-banner="alert"]')
+      .dom('[data-test-next-steps-csr]')
       .hasText(
         'Next steps Copy the CSR below for a parent issuer to sign and then import the signed certificate back into this mount.',
         'renders Next steps alert banner'
       );
     assert
-      .dom('[data-test-value-div="CSR"] [data-test-masked-input] button')
-      .hasAttribute('data-clipboard-text', this.model.csr, 'it renders copyable csr');
+      .dom('[data-test-value-div="CSR"] [data-test-certificate-card] button')
+      .hasAttribute('data-test-copy-button', this.model.csr, 'it renders copyable csr');
     assert
       .dom('[data-test-value-div="Key ID"] button')
-      .hasAttribute('data-clipboard-text', this.model.keyId, 'it renders copyable key_id');
+      .hasAttribute('data-test-copy-button', this.model.keyId, 'it renders copyable key_id');
     assert.dom('[data-test-value-div="Private key"]').hasText('internal', 'does not render private key');
     assert
       .dom('[data-test-value-div="Private key type"]')

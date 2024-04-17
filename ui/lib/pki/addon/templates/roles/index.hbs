@@ -1,25 +1,20 @@
-<SecretListHeader
-  @model={{this.model.parentModel}}
-  @backendCrumb={{hash
-    label=this.model.parentModel.id
-    text=this.model.parentModel.id
-    path="vault.cluster.secrets.backend.list-root"
-    model=this.model.parentModel.id
-  }}
-  @isEngine={{true}}
-/>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
 
-{{#if this.model.hasConfig}}
-  <Toolbar>
-    <ToolbarActions>
+<PkiPageHeader @backend={{this.model.parentModel}} />
+
+<PkiPaginatedList @listRoute="roles.index" @list={{this.model.roles}} @hasConfig={{this.model.hasConfig}}>
+  <:actions>
+    {{#if this.model.hasConfig}}
       <ToolbarLink @type="add" @route="roles.create" data-test-pki-role-create-link>
         Create role
       </ToolbarLink>
-    </ToolbarActions>
-  </Toolbar>
-
-  {{#if this.model.roles.length}}
-    {{#each this.model.roles as |pkiRole|}}
+    {{/if}}
+  </:actions>
+  <:list as |roles|>
+    {{#each roles as |pkiRole|}}
       <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiRole.id}} @linkPrefix={{this.mountPoint}}>
         <div class="level is-mobile">
           <div class="level-left">
@@ -32,44 +27,36 @@
           </div>
           <div class="level-right is-flex is-paddingless is-marginless">
             <div class="level-item">
-              <PopupMenu>
-                <nav class="menu">
-                  <ul class="menu-list">
-                    <li>
-                      <LinkTo @route="roles.role.details" @model={{pkiRole.id}}>
-                        Details
-                      </LinkTo>
-                    </li>
-                    <li>
-                      <LinkTo @route="roles.role.edit" @model={{pkiRole.id}}>
-                        Edit
-                      </LinkTo>
-                    </li>
-                  </ul>
-                </nav>
-              </PopupMenu>
+              <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+                <dd.ToggleIcon
+                  @icon="more-horizontal"
+                  @text="Manage role"
+                  @hasChevron={{false}}
+                  data-test-popup-menu-trigger
+                />
+                <dd.Interactive @text="Details" @route="roles.role.details" @model={{pkiRole.id}} />
+                <dd.Interactive @text="Edit" @route="roles.role.edit" @model={{pkiRole.id}} />
+              </Hds::Dropdown>
             </div>
           </div>
         </div>
       </LinkedBlock>
     {{/each}}
-  {{else}}
-    <EmptyState @title="No roles yet">
-      <div>
-        <p>When created, roles will be listed here. Create a role to start generating certificates.</p>
-        <div class="has-top-margin-m">
-          <LinkTo @route="roles.create">
-            Create role
-          </LinkTo>
-        </div>
-      </div>
+  </:list>
+  <:empty>
+    <EmptyState
+      @title="No roles yet"
+      @message="When created, roles will be listed here. Create a role to start generating certificates."
+    />
+  </:empty>
+  <:configure>
+    <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
+      <Hds::Link::Standalone
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        @text="Configure PKI"
+        @route="configuration.create"
+      />
     </EmptyState>
-  {{/if}}
-{{else}}
-  <Toolbar />
-  <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
-    <LinkTo @route="configuration.create">
-      Configure PKI
-    </LinkTo>
-  </EmptyState>
-{{/if}}
+  </:configure>
+</PkiPaginatedList>

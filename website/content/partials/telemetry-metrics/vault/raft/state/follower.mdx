@@ -1,0 +1,10 @@
+### vault.raft.state.follower ((#vault-raft-state-follower))
+
+Metric type | Value   | Description
+----------- | ------- | -----------
+summary     | number  | Number of times in the configured interval that the raft server became a follower
+
+Nodes transition to `follower` state under the following conditions:
+
+- when the node joins the cluster
+- when a leader is elected, but the node was not elected leader

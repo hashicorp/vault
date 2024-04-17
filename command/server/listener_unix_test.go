@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package server
 
@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/mitchellh/cli"
 )
 
 func TestUnixListener(t *testing.T) {

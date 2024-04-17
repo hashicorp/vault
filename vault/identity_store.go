@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -21,8 +21,11 @@ import (
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/patrickmn/go-cache"
+	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -64,7 +67,9 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		groupUpdater:  core,
 		tokenStorer:   core,
 		entityCreator: core,
+		mountLister:   core,
 		mfaBackend:    core.loginMFABackend,
+		aliasLocks:    locksutil.CreateLocks(),
 	}
 
 	// Create a memdb instance, which by default, operates on lower cased
@@ -104,6 +109,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"oidc/.well-known/*",
+				"oidc/+/.well-known/*",
 				"oidc/provider/+/.well-known/*",
 				"oidc/provider/+/token",
 			},
@@ -140,18 +146,23 @@ func (i *IdentityStore) paths() []*framework.Path {
 		upgradePaths(i),
 		oidcPaths(i),
 		oidcProviderPaths(i),
-		mfaPaths(i),
+		mfaCommonPaths(i),
+		mfaTOTPPaths(i),
+		mfaTOTPExtraPaths(i),
+		mfaOktaPaths(i),
+		mfaDuoPaths(i),
+		mfaPingIDPaths(i),
+		mfaLoginEnforcementPaths(i),
 	)
 }
 
-func mfaPaths(i *IdentityStore) []*framework.Path {
+func mfaCommonPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: "mfa/method" + genericOptionalUUIDRegex("method_id"),
+			Pattern: "mfa/method/" + uuidRegex("method_id"),
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "mfa",
-				OperationVerb:   "read",
-				OperationSuffix: "method-configuration|method-configuration",
+				OperationSuffix: "method",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"method_id": {
@@ -180,100 +191,144 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 		},
+	}
+}
+
+func makeMFAMethodPaths(
+	methodType string,
+	methodTypeForOpenAPIOperationID string,
+	methodFields map[string]*framework.FieldSchema,
+	i *IdentityStore,
+) []*framework.Path {
+	methodFieldsIncludingMethodID := make(map[string]*framework.FieldSchema)
+	for k, v := range methodFields {
+		methodFieldsIncludingMethodID[k] = v
+	}
+	methodFieldsIncludingMethodID["method_id"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: `The unique identifier for this MFA method.`,
+	}
+
+	return []*framework.Path{
 		{
-			Pattern: "mfa/method/totp" + genericOptionalUUIDRegex("method_id"),
+			Pattern: "mfa/method/" + methodType + "/" + uuidRegex("method_id"),
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "mfa",
+				OperationSuffix: methodTypeForOpenAPIOperationID + "-method",
 			},
-			Fields: map[string]*framework.FieldSchema{
-				"method_name": {
-					Type:        framework.TypeString,
-					Description: `The unique name identifier for this MFA method.`,
-				},
-				"method_id": {
-					Type:        framework.TypeString,
-					Description: `The unique identifier for this MFA method.`,
-				},
-				"max_validation_attempts": {
-					Type:        framework.TypeInt,
-					Description: `Max number of allowed validation attempts.`,
-				},
-				"issuer": {
-					Type:        framework.TypeString,
-					Description: `The name of the key's issuing organization.`,
-				},
-				"period": {
-					Type:        framework.TypeDurationSecond,
-					Default:     30,
-					Description: `The length of time used to generate a counter for the TOTP token calculation.`,
-				},
-				"key_size": {
-					Type:        framework.TypeInt,
-					Default:     20,
-					Description: "Determines the size in bytes of the generated key.",
-				},
-				"qr_size": {
-					Type:        framework.TypeInt,
-					Default:     200,
-					Description: `The pixel size of the generated square QR code.`,
-				},
-				"algorithm": {
-					Type:        framework.TypeString,
-					Default:     "SHA1",
-					Description: `The hashing algorithm used to generate the TOTP token. Options include SHA1, SHA256 and SHA512.`,
-				},
-				"digits": {
-					Type:        framework.TypeInt,
-					Default:     6,
-					Description: `The number of digits in the generated TOTP token. This value can either be 6 or 8.`,
-				},
-				"skew": {
-					Type:        framework.TypeInt,
-					Default:     1,
-					Description: `The number of delay periods that are allowed when validating a TOTP token. This value can either be 0 or 1.`,
-				},
-			},
+			Fields: methodFieldsIncludingMethodID,
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodTOTPRead,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb:   "read",
-						OperationSuffix: "totp-method-configuration|totp-method-configuration",
+					Callback: func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+						return i.handleMFAMethodReadCommon(ctx, req, d, methodType)
 					},
 					Summary: "Read the current configuration for the given MFA method",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodTOTPUpdate,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb:   "configure",
-						OperationSuffix: "totp-method|totp-method",
+					Callback: func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+						return i.handleMFAMethodWriteCommon(ctx, req, d, methodType)
 					},
-					Summary: "Update or create a configuration for the given MFA method",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "update",
+					},
+					Summary: "Update the configuration for the given MFA method",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodTOTPDelete,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb:   "delete",
-						OperationSuffix: "totp-method|totp-method",
+					Callback: func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+						return i.handleMFAMethodDeleteCommon(ctx, req, d, methodType)
 					},
-					Summary: "Delete a configuration for the given MFA method",
+					Summary: "Delete the given MFA method",
 				},
 			},
 		},
 		{
-			Pattern: "mfa/method/totp/?$",
+			Pattern: "mfa/method/" + methodType + "/?$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "mfa",
-				OperationVerb:   "list",
-				OperationSuffix: "totp-methods",
 			},
+			Fields: methodFields,
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodListTOTP,
-					Summary:  "List MFA method configurations for the given MFA method",
+					Callback: func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+						return i.handleMFAMethodListCommon(ctx, req, d, methodType)
+					},
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: methodTypeForOpenAPIOperationID + "-methods",
+					},
+					Summary: "List MFA method configurations for the given MFA method",
+				},
+				// Conceptually, it would make more sense to treat this as a CreateOperation, but we have to leave it
+				// as an UpdateOperation, because the API was originally released that way, and we don't want to change
+				// the meaning of ACL policies that users have written.
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+						return i.handleMFAMethodWriteCommon(ctx, req, d, methodType)
+					},
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "create",
+						OperationSuffix: methodTypeForOpenAPIOperationID + "-method",
+					},
+					Summary: "Create the given MFA method",
 				},
 			},
 		},
+	}
+}
+
+func mfaTOTPPaths(i *IdentityStore) []*framework.Path {
+	return makeMFAMethodPaths(
+		mfaMethodTypeTOTP,
+		mfaMethodTypeTOTP,
+		map[string]*framework.FieldSchema{
+			"method_name": {
+				Type:        framework.TypeString,
+				Description: `The unique name identifier for this MFA method.`,
+			},
+			"max_validation_attempts": {
+				Type:        framework.TypeInt,
+				Description: `Max number of allowed validation attempts.`,
+			},
+			"issuer": {
+				Type:        framework.TypeString,
+				Description: `The name of the key's issuing organization.`,
+			},
+			"period": {
+				Type:        framework.TypeDurationSecond,
+				Default:     30,
+				Description: `The length of time used to generate a counter for the TOTP token calculation.`,
+			},
+			"key_size": {
+				Type:        framework.TypeInt,
+				Default:     20,
+				Description: "Determines the size in bytes of the generated key.",
+			},
+			"qr_size": {
+				Type:        framework.TypeInt,
+				Default:     200,
+				Description: `The pixel size of the generated square QR code.`,
+			},
+			"algorithm": {
+				Type:        framework.TypeString,
+				Default:     "SHA1",
+				Description: `The hashing algorithm used to generate the TOTP token. Options include SHA1, SHA256 and SHA512.`,
+			},
+			"digits": {
+				Type:        framework.TypeInt,
+				Default:     6,
+				Description: `The number of digits in the generated TOTP token. This value can either be 6 or 8.`,
+			},
+			"skew": {
+				Type:        framework.TypeInt,
+				Default:     1,
+				Description: `The number of delay periods that are allowed when validating a TOTP token. This value can either be 0 or 1.`,
+			},
+		},
+		i,
+	)
+}
+
+func mfaTOTPExtraPaths(i *IdentityStore) []*framework.Path {
+	return []*framework.Path{
 		{
 			Pattern: "mfa/method/totp/generate$",
 			DisplayAttrs: &framework.DisplayAttributes{
@@ -347,230 +402,111 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 		},
-		{
-			Pattern: "mfa/method/okta" + genericOptionalUUIDRegex("method_id"),
-			DisplayAttrs: &framework.DisplayAttributes{
-				OperationPrefix: "mfa",
+	}
+}
+
+func mfaOktaPaths(i *IdentityStore) []*framework.Path {
+	return makeMFAMethodPaths(
+		mfaMethodTypeOkta,
+		mfaMethodTypeOkta,
+		map[string]*framework.FieldSchema{
+			"method_name": {
+				Type:        framework.TypeString,
+				Description: `The unique name identifier for this MFA method.`,
 			},
-			Fields: map[string]*framework.FieldSchema{
-				"method_name": {
-					Type:        framework.TypeString,
-					Description: `The unique name identifier for this MFA method.`,
-				},
-				"method_id": {
-					Type:        framework.TypeString,
-					Description: `The unique identifier for this MFA method.`,
-				},
-				"username_format": {
-					Type:        framework.TypeString,
-					Description: `A template string for mapping Identity names to MFA method names. Values to substitute should be placed in {{}}. For example, "{{entity.name}}@example.com". If blank, the Entity's name field will be used as-is.`,
-				},
-				"org_name": {
-					Type:        framework.TypeString,
-					Description: "Name of the organization to be used in the Okta API.",
-				},
-				"api_token": {
-					Type:        framework.TypeString,
-					Description: "Okta API key.",
-				},
-				"base_url": {
-					Type:        framework.TypeString,
-					Description: `The base domain to use for the Okta API. When not specified in the configuration, "okta.com" is used.`,
-				},
-				"primary_email": {
-					Type:        framework.TypeBool,
-					Description: `If true, the username will only match the primary email for the account. Defaults to false.`,
-				},
-				"production": {
-					Type:        framework.TypeBool,
-					Description: "(DEPRECATED) Use base_url instead.",
-				},
+			"username_format": {
+				Type:        framework.TypeString,
+				Description: `A template string for mapping Identity names to MFA method names. Values to substitute should be placed in {{}}. For example, "{{entity.name}}@example.com". If blank, the Entity's name field will be used as-is.`,
 			},
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodOKTARead,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb:   "read",
-						OperationSuffix: "okta-method-configuration|okta-method-configuration",
-					},
-					Summary: "Read the current configuration for the given MFA method",
-				},
-				logical.UpdateOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodOKTAUpdate,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb:   "configure",
-						OperationSuffix: "okta-method|okta-method",
-					},
-					Summary: "Update or create a configuration for the given MFA method",
-				},
-				logical.DeleteOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodOKTADelete,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb:   "delete",
-						OperationSuffix: "okta-method|okta-method",
-					},
-					Summary: "Delete a configuration for the given MFA method",
-				},
+			"org_name": {
+				Type:        framework.TypeString,
+				Description: "Name of the organization to be used in the Okta API.",
+			},
+			"api_token": {
+				Type:        framework.TypeString,
+				Description: "Okta API key.",
+			},
+			"base_url": {
+				Type:        framework.TypeString,
+				Description: `The base domain to use for the Okta API. When not specified in the configuration, "okta.com" is used.`,
+			},
+			"primary_email": {
+				Type:        framework.TypeBool,
+				Description: `If true, the username will only match the primary email for the account. Defaults to false.`,
+			},
+			"production": {
+				Type:        framework.TypeBool,
+				Description: "(DEPRECATED) Use base_url instead.",
 			},
 		},
-		{
-			Pattern: "mfa/method/okta/?$",
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ListOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodListOkta,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationPrefix: "mfa",
-						OperationVerb:   "list",
-						OperationSuffix: "okta-methods",
-					},
-					Summary: "List MFA method configurations for the given MFA method",
-				},
+		i,
+	)
+}
+
+func mfaDuoPaths(i *IdentityStore) []*framework.Path {
+	return makeMFAMethodPaths(
+		mfaMethodTypeDuo,
+		mfaMethodTypeDuo,
+		map[string]*framework.FieldSchema{
+			"method_name": {
+				Type:        framework.TypeString,
+				Description: `The unique name identifier for this MFA method.`,
+			},
+			"username_format": {
+				Type:        framework.TypeString,
+				Description: `A template string for mapping Identity names to MFA method names. Values to subtitute should be placed in {{}}. For example, "{{alias.name}}@example.com". Currently-supported mappings: alias.name: The name returned by the mount configured via the mount_accessor parameter If blank, the Alias's name field will be used as-is. `,
+			},
+			"secret_key": {
+				Type:        framework.TypeString,
+				Description: "Secret key for Duo.",
+			},
+			"integration_key": {
+				Type:        framework.TypeString,
+				Description: "Integration key for Duo.",
+			},
+			"api_hostname": {
+				Type:        framework.TypeString,
+				Description: "API host name for Duo.",
+			},
+			"push_info": {
+				Type:        framework.TypeString,
+				Description: "Push information for Duo.",
+			},
+			"use_passcode": {
+				Type:        framework.TypeBool,
+				Description: `If true, the user is reminded to use the passcode upon MFA validation. This option does not enforce using the passcode. Defaults to false.`,
 			},
 		},
-		{
-			Pattern: "mfa/method/duo" + genericOptionalUUIDRegex("method_id"),
-			DisplayAttrs: &framework.DisplayAttributes{
-				OperationPrefix: "mfa",
+		i,
+	)
+}
+
+func mfaPingIDPaths(i *IdentityStore) []*framework.Path {
+	return makeMFAMethodPaths(
+		mfaMethodTypePingID,
+		// This overridden name helps code generation using the OpenAPI spec choose better method names, that avoid
+		// treating "Pingid" as a single word:
+		"ping-id",
+		map[string]*framework.FieldSchema{
+			"method_name": {
+				Type:        framework.TypeString,
+				Description: `The unique name identifier for this MFA method.`,
 			},
-			Fields: map[string]*framework.FieldSchema{
-				"method_name": {
-					Type:        framework.TypeString,
-					Description: `The unique name identifier for this MFA method.`,
-				},
-				"method_id": {
-					Type:        framework.TypeString,
-					Description: `The unique identifier for this MFA method.`,
-				},
-				"username_format": {
-					Type:        framework.TypeString,
-					Description: `A template string for mapping Identity names to MFA method names. Values to subtitute should be placed in {{}}. For example, "{{alias.name}}@example.com". Currently-supported mappings: alias.name: The name returned by the mount configured via the mount_accessor parameter If blank, the Alias's name field will be used as-is. `,
-				},
-				"secret_key": {
-					Type:        framework.TypeString,
-					Description: "Secret key for Duo.",
-				},
-				"integration_key": {
-					Type:        framework.TypeString,
-					Description: "Integration key for Duo.",
-				},
-				"api_hostname": {
-					Type:        framework.TypeString,
-					Description: "API host name for Duo.",
-				},
-				"push_info": {
-					Type:        framework.TypeString,
-					Description: "Push information for Duo.",
-				},
-				"use_passcode": {
-					Type:        framework.TypeBool,
-					Description: `If true, the user is reminded to use the passcode upon MFA validation. This option does not enforce using the passcode. Defaults to false.`,
-				},
+			"username_format": {
+				Type:        framework.TypeString,
+				Description: `A template string for mapping Identity names to MFA method names. Values to subtitute should be placed in {{}}. For example, "{{alias.name}}@example.com". Currently-supported mappings: alias.name: The name returned by the mount configured via the mount_accessor parameter If blank, the Alias's name field will be used as-is. `,
 			},
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodDuoRead,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb:   "read",
-						OperationSuffix: "duo-method-configuration|duo-method-configuration",
-					},
-					Summary: "Read the current configuration for the given MFA method",
-				},
-				logical.UpdateOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodDuoUpdate,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb:   "configure",
-						OperationSuffix: "duo-method|duo-method",
-					},
-					Summary: "Update or create a configuration for the given MFA method",
-				},
-				logical.DeleteOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodDUODelete,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb:   "delete",
-						OperationSuffix: "duo-method|duo-method",
-					},
-					Summary: "Delete a configuration for the given MFA method",
-				},
+			"settings_file_base64": {
+				Type:        framework.TypeString,
+				Description: "The settings file provided by Ping, Base64-encoded. This must be a settings file suitable for third-party clients, not the PingID SDK or PingFederate.",
 			},
 		},
-		{
-			Pattern: "mfa/method/duo/?$",
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ListOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodListDuo,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationPrefix: "mfa",
-						OperationVerb:   "list",
-						OperationSuffix: "duo-methods",
-					},
-					Summary: "List MFA method configurations for the given MFA method",
-				},
-			},
-		},
-		{
-			Pattern: "mfa/method/pingid" + genericOptionalUUIDRegex("method_id"),
-			DisplayAttrs: &framework.DisplayAttributes{
-				OperationPrefix: "mfa",
-			},
-			Fields: map[string]*framework.FieldSchema{
-				"method_name": {
-					Type:        framework.TypeString,
-					Description: `The unique name identifier for this MFA method.`,
-				},
-				"method_id": {
-					Type:        framework.TypeString,
-					Description: `The unique identifier for this MFA method.`,
-				},
-				"username_format": {
-					Type:        framework.TypeString,
-					Description: `A template string for mapping Identity names to MFA method names. Values to subtitute should be placed in {{}}. For example, "{{alias.name}}@example.com". Currently-supported mappings: alias.name: The name returned by the mount configured via the mount_accessor parameter If blank, the Alias's name field will be used as-is. `,
-				},
-				"settings_file_base64": {
-					Type:        framework.TypeString,
-					Description: "The settings file provided by Ping, Base64-encoded. This must be a settings file suitable for third-party clients, not the PingID SDK or PingFederate.",
-				},
-			},
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodPingIDRead,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb:   "read",
-						OperationSuffix: "ping-id-method-configuration|ping-id-method-configuration",
-					},
-					Summary: "Read the current configuration for the given MFA method",
-				},
-				logical.UpdateOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodPingIDUpdate,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb:   "configure",
-						OperationSuffix: "ping-id-method|ping-id-method",
-					},
-					Summary: "Update or create a configuration for the given MFA method",
-				},
-				logical.DeleteOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodPingIDDelete,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb:   "delete",
-						OperationSuffix: "ping-id-method|ping-id-method",
-					},
-					Summary: "Delete a configuration for the given MFA method",
-				},
-			},
-		},
-		{
-			Pattern: "mfa/method/pingid/?$",
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ListOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodListPingID,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationPrefix: "mfa",
-						OperationVerb:   "list",
-						OperationSuffix: "ping-id-methods",
-					},
-					Summary: "List MFA method configurations for the given MFA method",
-				},
-			},
-		},
+		i,
+	)
+}
+
+func mfaLoginEnforcementPaths(i *IdentityStore) []*framework.Path {
+	return []*framework.Path{
 		{
 			Pattern: "mfa/login-enforcement/" + framework.GenericNameRegex("name"),
 			DisplayAttrs: &framework.DisplayAttributes{
@@ -643,17 +579,35 @@ func (i *IdentityStore) initialize(ctx context.Context, req *logical.Initializat
 	}
 
 	if err := i.storeOIDCDefaultResources(ctx, req.Storage); err != nil {
+		i.logger.Error("failed to write OIDC default resources to storage", "error", err)
 		return err
 	}
 
-	entry, err := logical.StorageEntryJSON(caseSensitivityKey, &casesensitivity{
-		DisableLowerCasedNames: i.disableLowerCasedNames,
-	})
+	// if the storage entry for caseSensitivityKey exists, remove it
+	storageEntry, err := i.view.Get(ctx, caseSensitivityKey)
 	if err != nil {
-		return err
+		i.logger.Error("could not get storage entry for case sensitivity key", "error", err)
+		return nil
 	}
 
-	return i.view.Put(ctx, entry)
+	if storageEntry != nil {
+		var setting casesensitivity
+		err := storageEntry.DecodeJSON(&setting)
+		switch err {
+		case nil:
+			i.logger.Debug("removing storage entry for case sensitivity key", "value", setting.DisableLowerCasedNames)
+		default:
+			i.logger.Error("failed to decode case sensitivity key, removing its storage entry anyway", "error", err)
+		}
+
+		err = i.view.Delete(ctx, caseSensitivityKey)
+		if err != nil {
+			i.logger.Error("could not delete storage entry for case sensitivity key", "error", err)
+			return nil
+		}
+	}
+
+	return nil
 }
 
 // Invalidate is a callback wherein the backend is informed that the value at
@@ -667,355 +621,351 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	defer i.lock.Unlock()
 
 	switch {
-	case key == caseSensitivityKey:
-		entry, err := i.view.Get(ctx, caseSensitivityKey)
-		if err != nil {
-			i.logger.Error("failed to read case sensitivity setting during invalidation", "error", err)
-			return
-		}
-		if entry == nil {
-			return
-		}
-
-		var setting casesensitivity
-		if err := entry.DecodeJSON(&setting); err != nil {
-			i.logger.Error("failed to decode case sensitivity setting during invalidation", "error", err)
-			return
-		}
-
-		// Fast return if the setting is the same
-		if i.disableLowerCasedNames == setting.DisableLowerCasedNames {
-			return
-		}
-
-		// If the setting is different, reset memdb and reload all the artifacts
-		i.disableLowerCasedNames = setting.DisableLowerCasedNames
-		if err := i.resetDB(ctx); err != nil {
-			i.logger.Error("failed to reset memdb during invalidation", "error", err)
-			return
-		}
-		if err := i.loadEntities(ctx); err != nil {
-			i.logger.Error("failed to load entities during invalidation", "error", err)
-			return
-		}
-		if err := i.loadGroups(ctx); err != nil {
-			i.logger.Error("failed to load groups during invalidation", "error", err)
-			return
-		}
-		if err := i.loadOIDCClients(ctx); err != nil {
-			i.logger.Error("failed to load OIDC clients during invalidation", "error", err)
-			return
-		}
 	// Check if the key is a storage entry key for an entity bucket
 	case strings.HasPrefix(key, storagepacker.StoragePackerBucketsPrefix):
-		// Create a MemDB transaction
-		txn := i.db.Txn(true)
-		defer txn.Abort()
-
-		// Each entity object in MemDB holds the MD5 hash of the storage
-		// entry key of the entity bucket. Fetch all the entities that
-		// belong to this bucket using the hash value. Remove these entities
-		// from MemDB along with all the aliases of each entity.
-		entitiesFetched, err := i.MemDBEntitiesByBucketKeyInTxn(txn, key)
-		if err != nil {
-			i.logger.Error("failed to fetch entities using the bucket key", "key", key)
-			return
-		}
-
-		for _, entity := range entitiesFetched {
-			// Delete all the aliases in the entity. This function will also remove
-			// the corresponding alias indexes too.
-			err = i.deleteAliasesInEntityInTxn(txn, entity, entity.Aliases)
-			if err != nil {
-				i.logger.Error("failed to delete aliases in entity", "entity_id", entity.ID, "error", err)
-				return
-			}
-
-			// Delete the entity using the same transaction
-			err = i.MemDBDeleteEntityByIDInTxn(txn, entity.ID)
-			if err != nil {
-				i.logger.Error("failed to delete entity from MemDB", "entity_id", entity.ID, "error", err)
-				return
-			}
-		}
-
-		// Get the storage bucket entry
-		bucket, err := i.entityPacker.GetBucket(ctx, key)
-		if err != nil {
-			i.logger.Error("failed to refresh entities", "key", key, "error", err)
-			return
-		}
-
-		// If the underlying entry is nil, it means that this invalidation
-		// notification is for the deletion of the underlying storage entry. At
-		// this point, since all the entities belonging to this bucket are
-		// already removed, there is nothing else to be done. But, if the
-		// storage entry is non-nil, its an indication of an update. In this
-		// case, entities in the updated bucket needs to be reinserted into
-		// MemDB.
-		var entityIDs []string
-		if bucket != nil {
-			entityIDs = make([]string, 0, len(bucket.Items))
-			for _, item := range bucket.Items {
-				entity, err := i.parseEntityFromBucketItem(ctx, item)
-				if err != nil {
-					i.logger.Error("failed to parse entity from bucket entry item", "error", err)
-					return
-				}
-
-				localAliases, err := i.parseLocalAliases(entity.ID)
-				if err != nil {
-					i.logger.Error("failed to load local aliases from storage", "error", err)
-					return
-				}
-				if localAliases != nil {
-					for _, alias := range localAliases.Aliases {
-						entity.UpsertAlias(alias)
-					}
-				}
-
-				// Only update MemDB and don't touch the storage
-				err = i.upsertEntityInTxn(ctx, txn, entity, nil, false)
-				if err != nil {
-					i.logger.Error("failed to update entity in MemDB", "error", err)
-					return
-				}
-
-				// If we are a secondary, the entity created by the secondary
-				// via the CreateEntity RPC would have been cached. Now that the
-				// invalidation of the same has hit, there is no need of the
-				// cache. Clearing the cache. Writing to storage can't be
-				// performed by perf standbys. So only doing this in the active
-				// node of the secondary.
-				if i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && i.localNode.HAState() != consts.PerfStandby {
-					if err := i.localAliasPacker.DeleteItem(ctx, entity.ID+tmpSuffix); err != nil {
-						i.logger.Error("failed to clear local alias entity cache", "error", err, "entity_id", entity.ID)
-						return
-					}
-				}
-
-				entityIDs = append(entityIDs, entity.ID)
-			}
-		}
-
-		// entitiesFetched are the entities before invalidation. entityIDs
-		// represent entities that are valid after invalidation. Clear the
-		// storage entries of local aliases for those entities that are
-		// indicated deleted by this invalidation.
-		if i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && i.localNode.HAState() != consts.PerfStandby {
-			for _, entity := range entitiesFetched {
-				if !strutil.StrListContains(entityIDs, entity.ID) {
-					if err := i.localAliasPacker.DeleteItem(ctx, entity.ID); err != nil {
-						i.logger.Error("failed to clear local alias for entity", "error", err, "entity_id", entity.ID)
-						return
-					}
-				}
-			}
-		}
-
-		txn.Commit()
+		i.invalidateEntityBucket(ctx, key)
 		return
 
 	// Check if the key is a storage entry key for an group bucket
 	// For those entities that are deleted, clear up the local alias entries
 	case strings.HasPrefix(key, groupBucketsPrefix):
-		// Create a MemDB transaction
-		txn := i.db.Txn(true)
-		defer txn.Abort()
-
-		groupsFetched, err := i.MemDBGroupsByBucketKeyInTxn(txn, key)
-		if err != nil {
-			i.logger.Error("failed to fetch groups using the bucket key", "key", key)
-			return
-		}
-
-		for _, group := range groupsFetched {
-			// Delete the group using the same transaction
-			err = i.MemDBDeleteGroupByIDInTxn(txn, group.ID)
-			if err != nil {
-				i.logger.Error("failed to delete group from MemDB", "group_id", group.ID, "error", err)
-				return
-			}
-
-			if group.Alias != nil {
-				err := i.MemDBDeleteAliasByIDInTxn(txn, group.Alias.ID, true)
-				if err != nil {
-					i.logger.Error("failed to delete group alias from MemDB", "error", err)
-					return
-				}
-			}
-		}
-
-		// Get the storage bucket entry
-		bucket, err := i.groupPacker.GetBucket(ctx, key)
-		if err != nil {
-			i.logger.Error("failed to refresh group", "key", key, "error", err)
-			return
-		}
-
-		if bucket != nil {
-			for _, item := range bucket.Items {
-				group, err := i.parseGroupFromBucketItem(item)
-				if err != nil {
-					i.logger.Error("failed to parse group from bucket entry item", "error", err)
-					return
-				}
-
-				// Before updating the group, check if the group exists. If it
-				// does, then delete the group alias from memdb, for the
-				// invalidation would have sent an update.
-				groupFetched, err := i.MemDBGroupByIDInTxn(txn, group.ID, true)
-				if err != nil {
-					i.logger.Error("failed to fetch group from MemDB", "error", err)
-					return
-				}
-
-				// If the group has an alias remove it from memdb
-				if groupFetched != nil && groupFetched.Alias != nil {
-					err := i.MemDBDeleteAliasByIDInTxn(txn, groupFetched.Alias.ID, true)
-					if err != nil {
-						i.logger.Error("failed to delete old group alias from MemDB", "error", err)
-						return
-					}
-				}
-
-				// Only update MemDB and don't touch the storage
-				err = i.UpsertGroupInTxn(ctx, txn, group, false)
-				if err != nil {
-					i.logger.Error("failed to update group in MemDB", "error", err)
-					return
-				}
-			}
-		}
-
-		txn.Commit()
+		i.invalidateGroupBucket(ctx, key)
 		return
 
 	case strings.HasPrefix(key, oidcTokensPrefix):
-		ns, err := namespace.FromContext(ctx)
-		if err != nil {
-			i.logger.Error("error retrieving namespace", "error", err)
-			return
-		}
+		i.invalidateOIDCToken(ctx)
+		return
 
-		// Wipe the cache for the requested namespace. This will also clear
-		// the shared namespace as well.
-		if err := i.oidcCache.Flush(ns); err != nil {
-			i.logger.Error("error flushing oidc cache", "error", err)
-		}
 	case strings.HasPrefix(key, clientPath):
-		name := strings.TrimPrefix(key, clientPath)
+		i.invalidateClientPath(ctx, key)
+		return
 
-		// Invalidate the cached client in memdb
-		if err := i.memDBDeleteClientByName(ctx, name); err != nil {
-			i.logger.Error("error invalidating client", "error", err, "key", key)
-			return
-		}
 	case strings.HasPrefix(key, localAliasesBucketsPrefix):
-		//
-		// This invalidation only happens on perf standbys
-		//
+		i.invalidateLocalAliasBucket(ctx, key)
+		return
 
-		txn := i.db.Txn(true)
-		defer txn.Abort()
+	}
+}
 
-		// Find all the local aliases belonging to this bucket and remove it
-		// both from aliases table and entities table. We will add the local
-		// aliases back by parsing the storage key. This way the deletion
-		// invalidation gets handled.
-		aliases, err := i.MemDBLocalAliasesByBucketKeyInTxn(txn, key)
+// invalidateEntityBucket is called by the Invalidate function to handle the
+// invalidation of an Entity bucket storage entry.
+func (i *IdentityStore) invalidateEntityBucket(ctx context.Context, key string) {
+	// Create a MemDB transaction
+	txn := i.db.Txn(true)
+	defer txn.Abort()
+
+	// Each entity object in MemDB holds the MD5 hash of the storage
+	// entry key of the entity bucket. Fetch all the entities that
+	// belong to this bucket using the hash value. Remove these entities
+	// from MemDB along with all the aliases of each entity.
+	entitiesFetched, err := i.MemDBEntitiesByBucketKeyInTxn(txn, key)
+	if err != nil {
+		i.logger.Error("failed to fetch entities using the bucket key", "key", key)
+		return
+	}
+
+	for _, entity := range entitiesFetched {
+		// Delete all the aliases in the entity. This function will also remove
+		// the corresponding alias indexes too.
+		err = i.deleteAliasesInEntityInTxn(txn, entity, entity.Aliases)
 		if err != nil {
-			i.logger.Error("failed to fetch entities using the bucket key", "key", key)
+			i.logger.Error("failed to delete aliases in entity", "entity_id", entity.ID, "error", err)
 			return
 		}
 
-		for _, alias := range aliases {
-			entity, err := i.MemDBEntityByIDInTxn(txn, alias.CanonicalID, true)
+		// Delete the entity using the same transaction
+		err = i.MemDBDeleteEntityByIDInTxn(txn, entity.ID)
+		if err != nil {
+			i.logger.Error("failed to delete entity from MemDB", "entity_id", entity.ID, "error", err)
+			return
+		}
+	}
+
+	// Get the storage bucket entry
+	bucket, err := i.entityPacker.GetBucket(ctx, key)
+	if err != nil {
+		i.logger.Error("failed to refresh entities", "key", key, "error", err)
+		return
+	}
+
+	// If the underlying entry is nil, it means that this invalidation
+	// notification is for the deletion of the underlying storage entry. At
+	// this point, since all the entities belonging to this bucket are
+	// already removed, there is nothing else to be done. But, if the
+	// storage entry is non-nil, its an indication of an update. In this
+	// case, entities in the updated bucket needs to be reinserted into
+	// MemDB.
+	var entityIDs []string
+	if bucket != nil {
+		entityIDs = make([]string, 0, len(bucket.Items))
+		for _, item := range bucket.Items {
+			entity, err := i.parseEntityFromBucketItem(ctx, item)
 			if err != nil {
-				i.logger.Error("failed to fetch entity during local alias invalidation", "entity_id", alias.CanonicalID, "error", err)
+				i.logger.Error("failed to parse entity from bucket entry item", "error", err)
 				return
 			}
-			if entity == nil {
-				i.logger.Error("failed to fetch entity during local alias invalidation, missing entity", "entity_id", alias.CanonicalID, "error", err)
+
+			localAliases, err := i.parseLocalAliases(entity.ID)
+			if err != nil {
+				i.logger.Error("failed to load local aliases from storage", "error", err)
+				return
+			}
+			if localAliases != nil {
+				for _, alias := range localAliases.Aliases {
+					entity.UpsertAlias(alias)
+				}
+			}
+
+			// Only update MemDB and don't touch the storage
+			err = i.upsertEntityInTxn(ctx, txn, entity, nil, false)
+			if err != nil {
+				i.logger.Error("failed to update entity in MemDB", "error", err)
+				return
+			}
+
+			// If we are a secondary, the entity created by the secondary
+			// via the CreateEntity RPC would have been cached. Now that the
+			// invalidation of the same has hit, there is no need of the
+			// cache. Clearing the cache. Writing to storage can't be
+			// performed by perf standbys. So only doing this in the active
+			// node of the secondary.
+			if i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && i.localNode.HAState() == consts.Active {
+				if err := i.localAliasPacker.DeleteItem(ctx, entity.ID+tmpSuffix); err != nil {
+					i.logger.Error("failed to clear local alias entity cache", "error", err, "entity_id", entity.ID)
+					return
+				}
+			}
+
+			entityIDs = append(entityIDs, entity.ID)
+		}
+	}
+
+	// entitiesFetched are the entities before invalidation. entityIDs
+	// represent entities that are valid after invalidation. Clear the
+	// storage entries of local aliases for those entities that are
+	// indicated deleted by this invalidation.
+	if i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && i.localNode.HAState() == consts.Active {
+		for _, entity := range entitiesFetched {
+			if !strutil.StrListContains(entityIDs, entity.ID) {
+				if err := i.localAliasPacker.DeleteItem(ctx, entity.ID); err != nil {
+					i.logger.Error("failed to clear local alias for entity", "error", err, "entity_id", entity.ID)
+					return
+				}
+			}
+		}
+	}
+
+	txn.Commit()
+}
+
+// invalidateGroupBucket is called by the Invalidate function to handle the
+// invalidation of a Group bucket storage entry.
+func (i *IdentityStore) invalidateGroupBucket(ctx context.Context, key string) {
+	// Create a MemDB transaction
+	txn := i.db.Txn(true)
+	defer txn.Abort()
+
+	groupsFetched, err := i.MemDBGroupsByBucketKeyInTxn(txn, key)
+	if err != nil {
+		i.logger.Error("failed to fetch groups using the bucket key", "key", key)
+		return
+	}
+
+	for _, group := range groupsFetched {
+		// Delete the group using the same transaction
+		err = i.MemDBDeleteGroupByIDInTxn(txn, group.ID)
+		if err != nil {
+			i.logger.Error("failed to delete group from MemDB", "group_id", group.ID, "error", err)
+			return
+		}
+
+		if group.Alias != nil {
+			err := i.MemDBDeleteAliasByIDInTxn(txn, group.Alias.ID, true)
+			if err != nil {
+				i.logger.Error("failed to delete group alias from MemDB", "error", err)
+				return
+			}
+		}
+	}
+
+	// Get the storage bucket entry
+	bucket, err := i.groupPacker.GetBucket(ctx, key)
+	if err != nil {
+		i.logger.Error("failed to refresh group", "key", key, "error", err)
+		return
+	}
+
+	if bucket != nil {
+		for _, item := range bucket.Items {
+			group, err := i.parseGroupFromBucketItem(item)
+			if err != nil {
+				i.logger.Error("failed to parse group from bucket entry item", "error", err)
+				return
+			}
+
+			// Before updating the group, check if the group exists. If it
+			// does, then delete the group alias from memdb, for the
+			// invalidation would have sent an update.
+			groupFetched, err := i.MemDBGroupByIDInTxn(txn, group.ID, true)
+			if err != nil {
+				i.logger.Error("failed to fetch group from MemDB", "error", err)
+				return
+			}
+
+			// If the group has an alias remove it from memdb
+			if groupFetched != nil && groupFetched.Alias != nil {
+				err := i.MemDBDeleteAliasByIDInTxn(txn, groupFetched.Alias.ID, true)
+				if err != nil {
+					i.logger.Error("failed to delete old group alias from MemDB", "error", err)
+					return
+				}
+			}
+
+			// Only update MemDB and don't touch the storage
+			err = i.UpsertGroupInTxn(ctx, txn, group, false)
+			if err != nil {
+				i.logger.Error("failed to update group in MemDB", "error", err)
+				return
+			}
+		}
+	}
+
+	txn.Commit()
+}
+
+// invalidateOIDCToken is called by the Invalidate function to handle the
+// invalidation of an OIDC token storage entry.
+func (i *IdentityStore) invalidateOIDCToken(ctx context.Context) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		i.logger.Error("error retrieving namespace", "error", err)
+		return
+	}
+
+	// Wipe the cache for the requested namespace. This will also clear
+	// the shared namespace as well.
+	if err := i.oidcCache.Flush(ns); err != nil {
+		i.logger.Error("error flushing oidc cache", "error", err)
+	}
+}
+
+// invalidateClientPath is called by the Invalidate function to handle the
+// invalidation of a client path storage entry.
+func (i *IdentityStore) invalidateClientPath(ctx context.Context, key string) {
+	name := strings.TrimPrefix(key, clientPath)
+
+	// Invalidate the cached client in memdb
+	if err := i.memDBDeleteClientByName(ctx, name); err != nil {
+		i.logger.Error("error invalidating client", "error", err, "key", key)
+		return
+	}
+}
+
+// invalidateLocalAliasBucket is called by the Invalidate function to handle the
+// invalidation of a local alias bucket storage entry.
+func (i *IdentityStore) invalidateLocalAliasBucket(ctx context.Context, key string) {
+	//
+	// This invalidation only happens on perf standbys
+	//
+
+	txn := i.db.Txn(true)
+	defer txn.Abort()
+
+	// Find all the local aliases belonging to this bucket and remove it
+	// both from aliases table and entities table. We will add the local
+	// aliases back by parsing the storage key. This way the deletion
+	// invalidation gets handled.
+	aliases, err := i.MemDBLocalAliasesByBucketKeyInTxn(txn, key)
+	if err != nil {
+		i.logger.Error("failed to fetch entities using the bucket key", "key", key)
+		return
+	}
+
+	for _, alias := range aliases {
+		entity, err := i.MemDBEntityByIDInTxn(txn, alias.CanonicalID, true)
+		if err != nil {
+			i.logger.Error("failed to fetch entity during local alias invalidation", "entity_id", alias.CanonicalID, "error", err)
+			return
+		}
+		if entity == nil {
+			i.logger.Error("failed to fetch entity during local alias invalidation, missing entity", "entity_id", alias.CanonicalID, "error", err)
+			continue
+		}
+
+		// Delete local aliases from the entity.
+		err = i.deleteAliasesInEntityInTxn(txn, entity, []*identity.Alias{alias})
+		if err != nil {
+			i.logger.Error("failed to delete aliases in entity", "entity_id", entity.ID, "error", err)
+			return
+		}
+
+		// Update the entity with removed alias.
+		if err := i.MemDBUpsertEntityInTxn(txn, entity); err != nil {
+			i.logger.Error("failed to delete entity from MemDB", "entity_id", entity.ID, "error", err)
+			return
+		}
+	}
+
+	// Now read the invalidated storage key
+	bucket, err := i.localAliasPacker.GetBucket(ctx, key)
+	if err != nil {
+		i.logger.Error("failed to refresh local aliases", "key", key, "error", err)
+		return
+	}
+	if bucket != nil {
+		for _, item := range bucket.Items {
+			if strings.HasSuffix(item.ID, tmpSuffix) {
 				continue
 			}
 
-			// Delete local aliases from the entity.
-			err = i.deleteAliasesInEntityInTxn(txn, entity, []*identity.Alias{alias})
+			var localAliases identity.LocalAliases
+			err = ptypes.UnmarshalAny(item.Message, &localAliases)
 			if err != nil {
-				i.logger.Error("failed to delete aliases in entity", "entity_id", entity.ID, "error", err)
+				i.logger.Error("failed to parse local aliases during invalidation", "error", err)
 				return
 			}
-
-			// Update the entity with removed alias.
-			if err := i.MemDBUpsertEntityInTxn(txn, entity); err != nil {
-				i.logger.Error("failed to delete entity from MemDB", "entity_id", entity.ID, "error", err)
-				return
-			}
-		}
-
-		// Now read the invalidated storage key
-		bucket, err := i.localAliasPacker.GetBucket(ctx, key)
-		if err != nil {
-			i.logger.Error("failed to refresh local aliases", "key", key, "error", err)
-			return
-		}
-		if bucket != nil {
-			for _, item := range bucket.Items {
-				if strings.HasSuffix(item.ID, tmpSuffix) {
-					continue
-				}
-
-				var localAliases identity.LocalAliases
-				err = ptypes.UnmarshalAny(item.Message, &localAliases)
-				if err != nil {
-					i.logger.Error("failed to parse local aliases during invalidation", "error", err)
+			for _, alias := range localAliases.Aliases {
+				// Add to the aliases table
+				if err := i.MemDBUpsertAliasInTxn(txn, alias, false); err != nil {
+					i.logger.Error("failed to insert local alias to memdb during invalidation", "error", err)
 					return
 				}
-				for _, alias := range localAliases.Aliases {
-					// Add to the aliases table
-					if err := i.MemDBUpsertAliasInTxn(txn, alias, false); err != nil {
-						i.logger.Error("failed to insert local alias to memdb during invalidation", "error", err)
-						return
-					}
 
-					// Fetch the associated entity and add the alias to that too.
-					entity, err := i.MemDBEntityByIDInTxn(txn, alias.CanonicalID, false)
+				// Fetch the associated entity and add the alias to that too.
+				entity, err := i.MemDBEntityByIDInTxn(txn, alias.CanonicalID, false)
+				if err != nil {
+					i.logger.Error("failed to fetch entity during local alias invalidation", "error", err)
+					return
+				}
+				if entity == nil {
+					cachedEntityItem, err := i.localAliasPacker.GetItem(alias.CanonicalID + tmpSuffix)
 					if err != nil {
-						i.logger.Error("failed to fetch entity during local alias invalidation", "error", err)
+						i.logger.Error("failed to fetch cached entity", "key", key, "error", err)
 						return
 					}
-					if entity == nil {
-						cachedEntityItem, err := i.localAliasPacker.GetItem(alias.CanonicalID + tmpSuffix)
+					if cachedEntityItem != nil {
+						entity, err = i.parseCachedEntity(cachedEntityItem)
 						if err != nil {
-							i.logger.Error("failed to fetch cached entity", "key", key, "error", err)
+							i.logger.Error("failed to parse cached entity", "key", key, "error", err)
 							return
 						}
-						if cachedEntityItem != nil {
-							entity, err = i.parseCachedEntity(cachedEntityItem)
-							if err != nil {
-								i.logger.Error("failed to parse cached entity", "key", key, "error", err)
-								return
-							}
-						}
 					}
-					if entity == nil {
-						i.logger.Error("received local alias invalidation for an invalid entity", "item.ID", item.ID)
-						return
-					}
-					entity.UpsertAlias(alias)
+				}
+				if entity == nil {
+					i.logger.Error("received local alias invalidation for an invalid entity", "item.ID", item.ID)
+					return
+				}
+				entity.UpsertAlias(alias)
 
-					// Update the entities table
-					if err := i.MemDBUpsertEntityInTxn(txn, entity); err != nil {
-						i.logger.Error("failed to upsert entity during local alias invalidation", "error", err)
-						return
-					}
+				// Update the entities table
+				if err := i.MemDBUpsertEntityInTxn(txn, entity); err != nil {
+					i.logger.Error("failed to upsert entity during local alias invalidation", "error", err)
+					return
 				}
 			}
 		}
-		txn.Commit()
-		return
 	}
+	txn.Commit()
 }
 
 func (i *IdentityStore) parseLocalAliases(entityID string) (*identity.LocalAliases, error) {
@@ -1097,7 +1047,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 	}
 
 	if persistNeeded && !i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
-		entityAsAny, err := ptypes.MarshalAny(&entity)
+		entityAsAny, err := anypb.New(&entity)
 		if err != nil {
 			return nil, err
 		}
@@ -1286,7 +1236,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		}
 		a := entity.Aliases[idx]
 		a.Metadata = alias.Metadata
-		a.LastUpdateTime = ptypes.TimestampNow()
+		a.LastUpdateTime = timestamppb.Now()
 
 		update = true
 	}

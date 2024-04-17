@@ -4,7 +4,7 @@ page_title: Key Rotation
 description: Learn about the details of key rotation within Vault.
 ---
 
-# Key Rotation
+# Key rotation
 
 Vault has multiple encryption keys that are used for various purposes. These keys support
 rotation so that they can be periodically changed or in response to a potential leak or
@@ -57,7 +57,7 @@ without requiring operators to perform another unseal.
 The `rotate/config` endpoint is used to configure the number of operations or time interval
 between automatic rotations of the backend encryption key.
 
-## NIST Rotation Guidance
+## NIST rotation guidance
 
 Periodic rotation of the encryption keys is recommended, even in the absence of
 compromise. Due to the nature of the AES-256-GCM encryption used, keys should be
@@ -73,3 +73,11 @@ Operators can estimate the number of encryptions by summing the following:
 - The `vault.token.creation` metric where the `token_type` label is `batch`.
 - The `merkle.flushDirty.num_pages` metric.
 - The WAL index.
+
+Vault periodically persists the number of encryptions to support rotation. 
+This save operation has a 1 second timeout to prevent impact to performance
+if Vault is under heavy load.  Because persisting encryptions involves the
+seal backend (if seal wrap is enabled), some seals (such as HSMs) may take
+regularly longer than 1 second to respond.  If this is the case, operators
+may override that timeout by setting the environment variable 
+`VAULT_ENCRYPTION_COUNT_PERSIST_TIMEOUT` to a larger value, such as "5s".

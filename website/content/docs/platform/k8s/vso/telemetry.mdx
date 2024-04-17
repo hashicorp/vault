@@ -5,10 +5,10 @@ description: >-
   The Vault Secrets Operator allows Pods to consume Vault secrets natively from Kubernetes Secrets.
 ---
 
-@include 'vso-beta-note.mdx'
-
 # Telemetry
 
-The Vault Secrets Operator is instrumented with Prometheus metrics.
-
-*More to come*
+The Vault Secrets Operator is instrumented with Prometheus metrics in the following ways:
+* The operator will emit the default controller-runtime metrics as outlined in the [monitoring](https://book-v1.book.kubebuilder.io/beyond_basics/controller_metrics.html)
+* Custom metrics related to the operator internals which are defined in [`internal/metrics/metrics.go`](https://github.com/hashicorp/vault-secrets-operator/blob/main/internal/metrics/metrics.go)
+* Ability to deploy a Prometheus Service Monitor, configured via the Helm Chart [`telemetry`](/vault/docs/platform/k8s/vso/helm#h-telemetry) stanza.
+* Ability to deploy a Metrics Service, configured via the Helm Chart [`metricsService`](/vault/docs/platform/k8s/vso/helm#h-metricsservice) stanza.

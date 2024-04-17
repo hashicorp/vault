@@ -9,8 +9,6 @@ description: >-
 
 The `/sys/internal/counters` endpoints are used to return data about the number of Tokens and Entities in Vault. They return information for the entire cluster.
 
-~> **NOTE**: These endpoints are only available in Vault version 1.3+. Backwards compatibility is not guaranteed. These endpoints are subject to change or may disappear without notice.
-
 ## Entities
 
 This endpoint returns the total number of Entities.
@@ -19,7 +17,7 @@ This endpoint returns the total number of Entities.
 | :----- | :-------------------------------- |
 | `GET`  | `/sys/internal/counters/entities` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -28,7 +26,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/counters/entities
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -57,7 +55,7 @@ This endpoint returns the total number of Tokens.
 | :----- | :------------------------------ |
 | `GET`  | `/sys/internal/counters/tokens` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -66,7 +64,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/counters/tokens
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -87,26 +85,26 @@ $ curl \
 }
 ```
 
-## Client Count
+## Client count
 
 This endpoint returns client activity information for a given billing
 period, which is represented by the `start_time` and `end_time` parameters.
 
 There are a few things to keep in mind while using this API.
 
-- For Vault versions before 1.11, the activity information only accounts for 
-the activity of the latest contiguous months in the billing period. 
+- For Vault versions before 1.11, the activity information only accounts for
+the activity of the latest contiguous months in the billing period.
 For example, if the billing period is from Jan 2022 to June 2022, and the
 activity subsystem in Vault was not capturing data for the months Jan to March,
-the response will only include information for May and June. Note that if no 
-`start_time` and `end_time` parameters are specified, the billing period defaults 
-to 12 months, so the endpoint will return activity information from the end of the 
-previous month to the start of 12 months prior to that date. 
+the response will only include information for May and June. Note that if no
+`start_time` and `end_time` parameters are specified, the billing period defaults
+to 12 months, so the endpoint will return activity information from the end of the
+previous month to the start of 12 months prior to that date.
 
-- As of 1.11, this behavior has been modified to return all available data within 
+- As of 1.11, this behavior has been modified to return all available data within
 the specified billing period.
 
-- As of 1.12, the `end_time` can be the current month. 
+- As of 1.12, the `end_time` can be the current month.
 
 - The response contains the total activity for the billing period and the
 attributions of the total activity against specific components in Vault. This
@@ -259,10 +257,10 @@ information, it will not be added to the API response.
 match the query parameters due to the month granularity of data or missing
 months in the requested time range.
 
-- Note that if the `end_date` specified is the current month, 
+- Note that if the `end_date` specified is the current month,
 the last element in the `months` response stanza, signifying the current month, will
-not have namespace attribution for the `new_clients` stanza. Furthermore, the 
-`new_clients` counts returned for the current month will be an approximation. 
+not have namespace attribution for the `new_clients` stanza. Furthermore, the
+`new_clients` counts returned for the current month will be an approximation.
 That is to say, the response will appear as follows.
 
 ```json
@@ -270,32 +268,35 @@ That is to say, the response will appear as follows.
    "months":[
       {
          "timestamp":"current_month_timestamp",
-         "counts":{ 
+         "counts":{
             "distinct_entities":"exact int value",
             "entity_clients":"exact int value",
             "non_entity_tokens":"exact int value",
             "non_entity_clients":"exact int value",
+            "secret_syncs":"exact int value",
             "clients":"exact int value"
          },
          "namespaces": [
                {
                   "namespace_id":"root",
                   "namespace_path":"path",
-                  "counts":{ 
+                  "counts":{
                      "distinct_entities":"exact int value",
                      "entity_clients":"exact int value",
                      "non_entity_tokens":"exact int value",
                      "non_entity_clients":"exact int value",
+                     "secret_syncs":"exact int value",
                      "clients":"exact int value"
                   },
                   "mounts":[
                      {
                         "path":"auth/up2/",
-                        "counts":{ 
+                        "counts":{
                            "distinct_entities":"exact int value",
                            "entity_clients":"exact int value",
                            "non_entity_tokens":"exact int value",
                            "non_entity_clients":"exact int value",
+                           "secret_syncs":"exact int value",
                            "clients":"exact int value"
                         },
                      },
@@ -308,6 +309,7 @@ That is to say, the response will appear as follows.
                "entity_clients":"approx int value",
                "non_entity_tokens":"approx int value",
                "non_entity_clients":"approx int value",
+               "secret_syncs":"exact int value",
                "clients":"approx int value"
             },
             "namespaces":[]
@@ -320,7 +322,7 @@ That is to say, the response will appear as follows.
 
 Please visit the [client count](/vault/docs/concepts/client-count) concepts page for
 more information on how clients map to these client IDs and how they are
-counted, or for more information about how the new clients for the current month 
+counted, or for more information about how the new clients for the current month
 are estimated in a billing period.
 
 The response will include all child namespaces of the namespace in which the
@@ -330,6 +332,8 @@ queries in the root namespace because the information about the namespace path
 is unknown.
 
 This endpoint was added in Vault 1.6.
+
+@include 'alerts/restricted-root.mdx'
 
 | Method | Path                              |
 | :----- | :-------------------------------- |
@@ -344,7 +348,7 @@ This endpoint was added in Vault 1.6.
   for which client counts will be reported. If no end time is specified, the end of the previous calendar
   month will be used.
 - `limit_namespaces` `(int, optional)` - Controls the total number of by_namespace data returned. This can
-   be used to return the client counts for the specified number of namespaces having highest activity. 
+   be used to return the client counts for the specified number of namespaces having highest activity.
    If no `limit_namespaces` parameter is specified, client counts for all namespaces in specified usage period is returned.
 - `current_billing_period` `(bool, optional)` - Uses the builtin billing start
   timestamp as `start_time` and the current time as the `end_time`, returning a
@@ -352,7 +356,7 @@ This endpoint was added in Vault 1.6.
   explicitly provide a start and end time.
 
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -361,7 +365,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/counters/activity
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -379,7 +383,8 @@ $ curl \
                "entity_clients":20,
                "non_entity_tokens":10,
                "non_entity_clients":10,
-               "clients":30
+               "secret_syncs": 5,
+               "clients":35
             },
             "mounts":[
                {
@@ -389,6 +394,7 @@ $ curl \
                      "entity_clients":10,
                      "non_entity_tokens":10,
                      "non_entity_clients":10,
+                     "secret_syncs": 0,
                      "clients":20
                   }
                },
@@ -399,7 +405,30 @@ $ curl \
                      "entity_clients":5,
                      "non_entity_tokens":5,
                      "non_entity_clients":5,
+                     "secret_syncs": 0,
                      "clients":10
+                  }
+               },
+               {
+                  "path":"secrets/kv1/",
+                  "counts":{
+                     "distinct_entities":0,
+                     "entity_clients":0,
+                     "non_entity_tokens":0,
+                     "non_entity_clients":0,
+                     "secret_syncs":3,
+                     "clients":3
+                  }
+               },
+               {
+                  "path":"secrets/kv2/",
+                  "counts":{
+                     "distinct_entities":0,
+                     "entity_clients":0,
+                     "non_entity_tokens":0,
+                     "non_entity_clients":0,
+                     "secret_syncs":0,
+                     "clients":2
                   }
                }
             ]
@@ -412,6 +441,7 @@ $ curl \
                "entity_clients":5,
                "non_entity_tokens":5,
                "non_entity_clients":5,
+               "secret_syncs":0,
                "clients":10
             },
             "mounts":[
@@ -422,6 +452,7 @@ $ curl \
                      "entity_clients":0,
                      "non_entity_tokens":5,
                      "non_entity_clients":5,
+                     "secret_syncs":0,
                      "clients":5
                   }
                },
@@ -432,6 +463,7 @@ $ curl \
                      "entity_clients":5,
                      "non_entity_tokens":0,
                      "non_entity_clients":0,
+                     "secret_syncs":0,
                      "clients":5
                   }
                }
@@ -447,7 +479,8 @@ $ curl \
                "entity_clients":20,
                "non_entity_tokens":10,
                "non_entity_clients":10,
-               "clients":30
+               "secret_syncs":5,
+               "clients":35
             },
             "namespaces":[
                {
@@ -458,6 +491,7 @@ $ curl \
                      "entity_clients":15,
                      "non_entity_tokens":5,
                      "non_entity_clients":5,
+                     "secret_syncs":5,
                      "clients":20
                   },
                   "mounts":[
@@ -468,6 +502,7 @@ $ curl \
                            "entity_clients":10,
                            "non_entity_tokens":5,
                            "non_entity_clients":5,
+                           "secret_syncs":0,
                            "clients":15
                         }
                      },
@@ -478,7 +513,30 @@ $ curl \
                            "entity_clients":3,
                            "non_entity_tokens":2,
                            "non_entity_clients":2,
+                           "secret_syncs":0,
                            "clients":5
+                        }
+                     },
+                     {
+                        "path":"secrets/kv1/",
+                        "counts":{
+                           "distinct_entities":0,
+                           "entity_clients":0,
+                           "non_entity_tokens":0,
+                           "non_entity_clients":0,
+                           "secret_syncs":3,
+                           "clients":3
+                        }
+                     },
+                     {
+                        "path":"secrets/kv2/",
+                        "counts":{
+                           "distinct_entities":0,
+                           "entity_clients":0,
+                           "non_entity_tokens":0,
+                           "non_entity_clients":0,
+                           "secret_syncs":2,
+                           "clients":2
                         }
                      }
                   ]
@@ -491,6 +549,7 @@ $ curl \
                      "entity_clients":5,
                      "non_entity_tokens":5,
                      "non_entity_clients":5,
+                     "secret_syncs":0,
                      "clients":10
                   },
                   "mounts":[
@@ -501,6 +560,7 @@ $ curl \
                            "entity_clients":0,
                            "non_entity_tokens":5,
                            "non_entity_clients":5,
+                           "secret_syncs":0,
                            "clients":5
                         }
                      },
@@ -511,6 +571,7 @@ $ curl \
                            "entity_clients":5,
                            "non_entity_tokens":0,
                            "non_entity_clients":0,
+                           "secret_syncs":0,
                            "clients":5
                         }
                      }
@@ -523,7 +584,8 @@ $ curl \
                   "entity_clients":10,
                   "non_entity_tokens":10,
                   "non_entity_clients":10,
-                  "clients":20
+                  "secret_syncs":2,
+                  "clients":22
                },
                "namespaces":[
                   {
@@ -534,7 +596,8 @@ $ curl \
                         "entity_clients":5,
                         "non_entity_tokens":5,
                         "non_entity_clients":5,
-                        "clients":10
+                        "secret_syncs":2,
+                        "clients":12
                      },
                      "mounts":[
                         {
@@ -555,6 +618,28 @@ $ curl \
                               "non_entity_tokens":0,
                               "non_entity_clients":0,
                               "clients":5
+                           }
+                        },
+                        {
+                           "path":"secrets/kv1/",
+                           "counts":{
+                              "distinct_entities":0,
+                              "entity_clients":0,
+                              "non_entity_tokens":0,
+                              "non_entity_clients":0,
+                              "secret_syncs":1,
+                              "clients":1
+                           }
+                        },
+                        {
+                           "path":"secrets/kv2/",
+                           "counts":{
+                              "distinct_entities":0,
+                              "entity_clients":0,
+                              "non_entity_tokens":0,
+                              "non_entity_clients":0,
+                              "secret_syncs":1,
+                              "clients":1
                            }
                         }
                      ]
@@ -567,6 +652,7 @@ $ curl \
                         "entity_clients":5,
                         "non_entity_tokens":5,
                         "non_entity_clients":5,
+                        "secret_syncs":0,
                         "clients":10
                      },
                      "mounts":[
@@ -577,6 +663,7 @@ $ curl \
                               "entity_clients":0,
                               "non_entity_tokens":5,
                               "non_entity_clients":5,
+                              "secret_syncs":0,
                               "clients":5
                            }
                         },
@@ -587,6 +674,7 @@ $ curl \
                               "entity_clients":5,
                               "non_entity_tokens":0,
                               "non_entity_clients":0,
+                              "secret_syncs":0,
                               "clients":5
                            }
                         }
@@ -602,6 +690,7 @@ $ curl \
                "entity_clients":5,
                "non_entity_tokens":5,
                "non_entity_clients":5,
+               "secret_syncs":0,
                "clients":10
             },
             "namespaces":[
@@ -613,6 +702,7 @@ $ curl \
                      "entity_clients":5,
                      "non_entity_tokens":5,
                      "non_entity_clients":5,
+                     "secret_syncs":0,
                      "clients":10
                   },
                   "mounts":[
@@ -623,6 +713,7 @@ $ curl \
                            "entity_clients":0,
                            "non_entity_tokens":5,
                            "non_entity_clients":5,
+                           "secret_syncs":0,
                            "clients":5
                         }
                      },
@@ -633,6 +724,7 @@ $ curl \
                            "entity_clients":5,
                            "non_entity_tokens":0,
                            "non_entity_clients":0,
+                           "secret_syncs":0,
                            "clients":5
                         }
                      }
@@ -645,6 +737,7 @@ $ curl \
                   "entity_clients":5,
                   "non_entity_tokens":5,
                   "non_entity_clients":5,
+                  "secret_syncs":3,
                   "clients":10
                },
                "namespaces":[
@@ -656,6 +749,7 @@ $ curl \
                         "entity_clients":5,
                         "non_entity_tokens":5,
                         "non_entity_clients":5,
+                        "secret_syncs":3,
                         "clients":10
                      },
                      "mounts":[
@@ -666,6 +760,7 @@ $ curl \
                               "entity_clients":0,
                               "non_entity_tokens":5,
                               "non_entity_clients":5,
+                              "secret_syncs":0,
                               "clients":5
                            }
                         },
@@ -676,7 +771,30 @@ $ curl \
                               "entity_clients":5,
                               "non_entity_tokens":0,
                               "non_entity_clients":0,
+                              "secret_syncs":0,
                               "clients":5
+                           }
+                        },
+                        {
+                           "path":"secrets/kv1/",
+                           "counts":{
+                              "distinct_entities":0,
+                              "entity_clients":0,
+                              "non_entity_tokens":0,
+                              "non_entity_clients":0,
+                              "secret_syncs":2,
+                              "clients":2
+                           }
+                        },
+                        {
+                           "path":"secrets/kv2/",
+                           "counts":{
+                              "distinct_entities":0,
+                              "entity_clients":0,
+                              "non_entity_tokens":0,
+                              "non_entity_clients":0,
+                              "secret_syncs":1,
+                              "clients":1
                            }
                         }
                      ]
@@ -691,7 +809,8 @@ $ curl \
          "entity_clients":20,
          "non_entity_tokens":20,
          "non_entity_clients":20,
-         "clients":40
+         "secret_syncs":5,
+         "clients":45
       }
    },
    "wrap_info":null,
@@ -718,7 +837,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/counters/activity?end_time=2020-06-30T00%3A00%3A00Z&start_time=2020-06-01T00%3A00%3A00Z&limit_namespaces=2
 ```
 
-## Partial Month Client Count
+## Partial month client count
 
 This endpoint returns the client activity in the current month. The response
 will have activity attributions per namespace, per mount within each namespaces,
@@ -733,11 +852,13 @@ loading of client data has completed.
 
 This endpoint was added in Vault 1.7.
 
+@include 'alerts/restricted-root.mdx'
+
 | Method | Path                                      |
 | :----- | :---------------------------------------- |
 | `GET`  | `/sys/internal/counters/activity/monthly` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -746,7 +867,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/counters/activity/monthly
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -762,7 +883,8 @@ $ curl \
           "distinct_entities": 0,
           "entity_clients": 0,
           "non_entity_clients": 1,
-          "non_entity_tokens": 1
+          "non_entity_tokens": 1,
+          "secret_syncs": 0
         },
         "mounts": [
           {
@@ -771,7 +893,8 @@ $ curl \
               "distinct_entities": 0,
               "entity_clients": 0,
               "non_entity_clients": 1,
-              "non_entity_tokens": 0
+              "non_entity_tokens": 0,
+              "secret_syncs": 0
             },
             "mount_path": "auth_token_0747d59c"
           }
@@ -790,7 +913,8 @@ $ curl \
           "distinct_entities": 0,
           "entity_clients": 0,
           "non_entity_clients": 1,
-          "non_entity_tokens": 0
+          "non_entity_tokens": 0,
+          "secret_syncs": 0
         },
         "namespaces": [
           {
@@ -800,6 +924,7 @@ $ curl \
               "entity_clients": 0,
               "non_entity_clients": 1,
               "non_entity_tokens": 0
+              "secret_syncs": 0
             },
             "mounts": [
               {
@@ -809,6 +934,7 @@ $ curl \
                   "entity_clients": 0,
                   "non_entity_clients": 1,
                   "non_entity_tokens": 0
+                  "secret_syncs": 0
                 },
                 "mount_path": "auth_token_0747d59c"
               }
@@ -824,6 +950,7 @@ $ curl \
             "entity_clients": 0,
             "non_entity_clients": 1,
             "non_entity_tokens": 0
+            "secret_syncs": 0
           },
           "namespaces": [
             {
@@ -833,6 +960,7 @@ $ curl \
                 "entity_clients": 0,
                 "non_entity_clients": 1,
                 "non_entity_tokens": 0
+                "secret_syncs": 0
               },
               "mounts": [
                 {
@@ -842,6 +970,7 @@ $ curl \
                     "entity_clients": 0,
                     "non_entity_clients": 1,
                     "non_entity_tokens": 0
+                    "secret_syncs": 0
                   },
                   "mount_path": "auth_token_0747d59c"
                 }
@@ -855,13 +984,16 @@ $ curl \
       }
     ],
     "non_entity_clients": 1,
-    "non_entity_tokens": 1
+    "non_entity_tokens": 1,
+    "secret_syncs": 0
   },
   "warnings": null
 }
 ```
 
-## Update the Client Count Configuration
+## Update the client count configuration
+
+@include 'alerts/restricted-root.mdx'
 
 The `/sys/internal/counters/config` endpoint is used to configure logging of active clients.
 
@@ -873,13 +1005,13 @@ The `/sys/internal/counters/config` endpoint is used to configure logging of act
 
 - `default_report_months` `(integer: 12)` - The number of months to report if no `start_time` is specified in a query.
 - `enabled` `(string: enable, disable, default)` - Enable or disable counting of client activity. When set to `default`, the client
-  counts are enabled on Enterprise builds and disabled on OSS builds. Disabling the feature during the middle of a month will
+  counts are enabled on Enterprise builds and disabled on community builds. Disabling the feature during the middle of a month will
   discard any data recorded for that month, but does not delete previous months.
 - `retention_months` `(integer: 24)` - The number of months of history to retain.
 
 Any missing parameters are left at their existing value.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -889,7 +1021,7 @@ Any missing parameters are left at their existing value.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -899,15 +1031,19 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/counters/config
 ```
 
-## Read the Client Count Configuration
+## Read the client count configuration
 
 Reading the configuration shows the current settings, as well as a flag as to whether any data can be queried.
+
+| Method | Path                            |
+| :----- | :------------------------------ |
+| `GET` | `/sys/internal/counters/config` |
 
 - `enabled` `(string)` - returns `default-enabled` or `default-disabled` if the configuration is `default`.
 - `queries_available` `(bool)` - indicates whether any usage report is available. This will initially be
   false until the end of the first calendar month after the feature is enabled.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -916,7 +1052,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/counters/config
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -936,7 +1072,7 @@ $ curl \
 }
 ```
 
-## Activity Export
+## Activity export
 
 This endpoint returns an export of the clients that had activity within the
 provided start and end times. The returned set of client information will be
@@ -957,6 +1093,8 @@ it may be up to 20 minutes delayed.
 
 This endpoint was added in Vault 1.11.
 
+@include 'alerts/restricted-root.mdx'
+
 | Method | Path                                      |
 | :----- | :---------------------------------------- |
 | `GET`  | `/sys/internal/counters/activity/export` |
@@ -973,7 +1111,7 @@ This endpoint was added in Vault 1.11.
     values are `csv` and `json`. If no format is provided a default of `json`
     will be used.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -982,7 +1120,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/counters/activity/export
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {"client_id":"3f210722-7210-98e8-1f0d-e6a39ffb29c6","namespace_id":"root","timestamp":1653350457,"mount_accessor":"auth_userpass_bb52979d"}

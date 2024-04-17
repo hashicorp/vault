@@ -1,12 +1,12 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@ember/component';
 import { getOwner } from '@ember/application';
 import config from '../config/environment';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default Component.extend({
   flashMessages: service(),

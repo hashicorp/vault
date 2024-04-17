@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Move access to  KV V2 version diff view to toolbar in Version History 
+```

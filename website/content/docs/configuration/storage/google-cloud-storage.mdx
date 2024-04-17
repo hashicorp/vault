@@ -6,7 +6,7 @@ description: |-
   Google Cloud Storage.
 ---
 
-# Google Cloud Storage Storage Backend
+# Google Cloud storage storage backend
 
 The Google Cloud Storage storage backend is used to persist Vault's data in
 [Google Cloud Storage][gcs-docs].
@@ -30,7 +30,7 @@ storage "gcs" {
 For more information on schemas or Google Cloud Storage, please see the [Google
 Cloud Storage documentation][gcs-docs].
 
-## `gcs` Setup
+## `gcs` setup
 
 To use the Google Cloud Storage Vault storage backend, you must have a Google
 Cloud Platform account with permissions to create Google Cloud Storage buckets.
@@ -69,7 +69,7 @@ Then give Vault the service account's credential file as a configuration option.
 For more information on schemas or Google Cloud Storage, please see the [Google
 Cloud Storage documentation][gcs-docs].
 
-## `gcs` Authentication
+## `gcs` authentication
 
 The Google Cloud Storage Vault storage backend uses the official Google Cloud
 Golang SDK. This means it supports the common ways of [providing credentials to
@@ -93,7 +93,7 @@ minimum scope(s):
 https://www.googleapis.com/auth/devstorage.read_write
 ```
 
-## `gcs` Parameters
+## `gcs` parameters
 
 - `bucket` `(string: <required>)` – Specifies the name of the bucket to use for
   storage. Alternatively, this parameter can be omitted and the `GOOGLE_STORAGE_BUCKET` 
@@ -113,7 +113,7 @@ https://www.googleapis.com/auth/devstorage.read_write
 - `max_parallel` `(int: 128)` - Specifies the maximum number of parallel
   operations to take place.
 
-### High Availability Parameters
+### High availability parameters
 
 - `ha_enabled` `(string: "false")` - Specifies if high availability mode is
   enabled. This is a boolean value, but it is specified as a string like "true"
@@ -123,9 +123,9 @@ https://www.googleapis.com/auth/devstorage.read_write
   the parameter in the stanza are set, the value of the environment variable will 
   take precedence.
   
-## `gcs` Examples
+## `gcs` examples
 
-### High Availability
+### High availability
 
 This example shows configuring Google Cloud Storage with high availability
 enabled.
@@ -139,7 +139,7 @@ storage "gcs" {
 }
 ```
 
-### Custom Chunk Size
+### Custom chunk size
 
 This example shows setting a custom chunk size for uploads. When uploading large
 data to Vault, setting a lower number can reduce Vault's memory consumption, but

@@ -1,0 +1,109 @@
+---
+layout: docs
+page_title: Enable Vault telemetry
+description: >-
+  Step-by-step guide to enabling telemetry gathering with Vault
+---
+
+# Enable Vault telemetry gathering
+
+Collect telemetry data from your Vault installation.
+
+## Before you start
+
+- **You must have Vault 1.14 or later installed and running**.
+- **You must have access to your [Vault configuration](/vault/docs/configuration) file**.
+
+
+## Step 1: Choose an aggregation agent
+
+@include 'telemetry/supported-aggregation-agents.mdx'
+
+## Step 2: Enable at least one audit device
+
+To include audit-related metrics, you must enable auditing on at least one device
+with the `vault audit enable` command. For example, to enable auditing for the
+`file` device and save the logs to `/var/log/vault_audit.log`:
+
+```shell-session
+$ vault audit enable file file_path=/var/log/vault_audit.log
+```
+
+By default, Enterprise installations replicate audit devices to the secondary
+performance nodes in a cluster. To limit performance replication for an audit
+device, use the `local` flag to mark the device as local to the current node:
+
+```shell-session
+$ vault audit enable file -local file_path=/var/log/vault_audit.log
+```
+
+
+## Step 3: Configure telemetry collection
+
+To configure telemetry collection, update the telemetry stanza in your Vault
+configuration with your collection preferences and aggregation agent details.
+
+For example, the following `telemetry` stanza configures Vault with the standard
+telemetry defaults and connects it to a Statsite agent running on the default
+port within a company intranet at `mycompany.statsite`:
+
+```hcl
+telemetry {
+  usage_gauge_period = "10m"
+  maximum_gauge_cardinality = 500
+  disable_hostname = false
+  enable_hostname_label = false
+  lease_metrics_epsilon = "1h"
+  num_lease_metrics_buckets = 168
+  add_lease_metrics_namespace_labels = false
+  filter_default = true
+
+  statsite_address = "mycompany.statsite:8125"
+}
+```
+
+Many metrics solutions charge by the metric. You can set `filter_default` to
+false and use the `prefix_filter` parameter to include and exclude specific
+values based on metric name to avoid paying for irrelevant information.
+
+For example, to limit your telemetry to the core token metrics plus the number
+of leases set to expire:
+
+```hcl
+telemetry {
+  filter_default = false
+  prefix_filter = ["+vault.token", "-vault.expire", "+vault.expire.num_leases"]
+}
+```
+
+## Step 4: Choose a reporting solution
+
+You need to save or forward your telemetry data to a separate storage solution
+for reporting, analysis, and alerting. Which solution you need depends on the
+feature set provided by your aggregation agent and the protocol support of your
+reporting platform.
+
+Popular reporting solutions compatible with Vault:
+
+- [Grafana](https://grafana.com/grafana)
+- [Graphite](https://www.hostedgraphite.com)
+- [InfluxData: Telegraf](https://www.influxdata.com/time-series-platform/telegraf)
+- [InfluxData: InfluxDB](https://www.influxdata.com/products/influxdb-overview)
+- [InfluxData: Chronograf](https://www.influxdata.com/time-series-platform/telegraf)
+- [InfluxData: Kapacitor](https://www.influxdata.com/time-series-platform/kapacitor)
+- [Splunk](https://www.splunk.com)
+
+
+## Next steps
+
+- Review the
+  [Key metrics for common health checks](/well-architected-framework/reliability/reliability-vault-monitoring-key-metrics)
+  guide to identify metrics you may want to start monitoring immediately.
+- Review the full list of available
+  [telemetry parameters](/vault/docs/configuration/telemetry#telemetry-parameters).
+- Review the [Monitor telemetry and audit device log data](/vault/tutorials/monitoring/monitor-telemetry-audit-splunk)
+  tutorial for general monitoring guidance and steps to configure your
+  Vault telemetry for Splunk using Telegraf and Fluentd.
+- Review the
+  [Monitor telemetry with Prometheus and Grafana](/vault/tutorials/monitoring/monitor-telemetry-grafana-prometheus)
+  tutorial to configure your Vault telemetry for Prometheus and Grafana.

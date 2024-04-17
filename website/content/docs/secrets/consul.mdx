@@ -4,7 +4,7 @@ page_title: Consul - Secrets Engines
 description: The Consul secrets engine for Vault generates tokens for Consul dynamically.
 ---
 
-# Consul Secrets Engine
+# Consul secrets engine
 
 @include 'x509-sha1-deprecation.mdx'
 

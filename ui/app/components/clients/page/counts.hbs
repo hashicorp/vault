@@ -1,0 +1,213 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Vault Usage Metrics
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<div class="box is-sideless is-fullwidth is-marginless is-bottomless">
+  <p class="has-bottom-margin-xl">
+    This dashboard surfaces Vault client usage over time.
+    <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}}>Documentation is available here</Hds::Link::Inline>.
+    Date queries are sent in UTC.
+  </p>
+
+  <h2 class="title is-6 has-bottom-margin-xs" data-test-counts-start-label>
+    {{this.versionText.label}}
+  </h2>
+
+  <div class="is-flex-align-baseline">
+    {{#if this.formattedStartDate}}
+      <p class="is-size-6" data-test-counts-start-month>{{this.formattedStartDate}}</p>
+      <Hds::Button
+        class="has-left-margin-xs"
+        @text="Edit"
+        @color="tertiary"
+        @icon="edit"
+        @iconPosition="trailing"
+        data-test-counts-start-edit
+        {{on "click" (fn (mut this.showBillingStartModal) true)}}
+      />
+    {{else}}
+      <DateDropdown
+        @handleSubmit={{this.onDateChange}}
+        @dateType="startDate"
+        @submitText="Save"
+        data-test-counts-start-dropdown
+      />
+    {{/if}}
+  </div>
+
+  <p class="is-8 has-text-grey has-bottom-margin-l" data-test-counts-description>
+    {{this.versionText.description}}
+  </p>
+
+  {{#if (eq @activity.id "no-data")}}
+    <Clients::NoData @config={{@config}} @dateRangeMessage={{this.dateRangeMessage}} />
+  {{else if @activityError}}
+    <Clients::Error @error={{@activityError}} />
+  {{else}}
+    {{#if (eq @config.enabled "Off")}}
+      <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+        <A.Title data-test-counts-disabled>Tracking is disabled</A.Title>
+        <A.Description>
+          Tracking is currently disabled and data is not being collected. Historical data can be searched, but you will need
+          to
+          <Hds::Link::Inline @route="vault.cluster.clients.edit">edit the configuration</Hds::Link::Inline>
+          to enable tracking again.
+        </A.Description>
+      </Hds::Alert>
+    {{/if}}
+
+    {{#if @startTimestamp}}
+      <div class="is-subtitle-gray has-bottom-margin-m">
+        FILTERS
+        <Toolbar data-test-clients-filter-bar>
+          <ToolbarFilters>
+            <CalendarWidget
+              @startTimestamp={{this.startTimestampISO}}
+              @endTimestamp={{this.endTimestampISO}}
+              @selectMonth={{this.onDateChange}}
+            />
+            {{#if (or @namespace this.namespaces)}}
+              <SearchSelect
+                @id="namespace-search-select"
+                @options={{this.namespaces}}
+                @inputValue={{if @namespace (array @namespace)}}
+                @selectLimit="1"
+                @disallowNewItems={{true}}
+                @fallbackComponent="input-search"
+                @onChange={{fn this.setFilterValue "ns"}}
+                @placeholder="Filter by namespace"
+                @displayInherit={{true}}
+                class="is-marginless"
+                data-test-counts-namespaces
+              />
+            {{/if}}
+            {{#if (or @mountPath this.mountPaths)}}
+              <SearchSelect
+                @id="auth-method-search-select"
+                @options={{this.mountPaths}}
+                @inputValue={{if @mountPath (array @mountPath)}}
+                @selectLimit="1"
+                @disallowNewItems={{true}}
+                @fallbackComponent="input-search"
+                @onChange={{fn this.setFilterValue "mountPath"}}
+                @placeholder="Filter by mount path"
+                @displayInherit={{true}}
+                data-test-counts-auth-mounts
+              />
+            {{/if}}
+          </ToolbarFilters>
+        </Toolbar>
+      </div>
+    {{/if}}
+
+    {{#if this.filteredActivity}}
+      {{#if this.upgradeExplanations}}
+        <Hds::Alert data-test-clients-upgrade-warning @type="inline" @color="warning" class="has-bottom-margin-m" as |A|>
+          <A.Title>
+            Client count data contains
+            {{pluralize this.upgradeExplanations.length "upgrade"}}
+          </A.Title>
+          <A.Description>
+            Vault was upgraded during this time period. Keep this in mind while looking at the data. Visit our
+            <Hds::Link::Inline
+              @isHrefExternal={{true}}
+              @href={{doc-link
+                "/vault/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
+              }}
+            >
+              Client count FAQ
+            </Hds::Link::Inline>
+            for more information.
+          </A.Description>
+          <A.Description>
+            <ul class="bullet">
+              {{#each this.upgradeExplanations as |info|}}
+                <li>{{info}}</li>
+              {{/each}}
+            </ul>
+          </A.Description>
+        </Hds::Alert>
+      {{/if}}
+
+      {{#if this.startTimeDiscrepancy}}
+        <Hds::Alert data-test-counts-start-discrepancy @type="inline" @color="neutral" class="has-bottom-margin-s" as |A|>
+          <A.Description data-test-counts-start-discrepancy>
+            {{this.startTimeDiscrepancy}}
+          </A.Description>
+        </Hds::Alert>
+      {{/if}}
+
+      <nav class="tabs has-bottom-margin-s" aria-label="navigation for managing client counts">
+        <ul>
+          <li>
+            <LinkTo @route="vault.cluster.clients.counts.overview" data-test-tab="overview">
+              Overview
+            </LinkTo>
+          </li>
+          <li>
+            <LinkTo @route="vault.cluster.clients.counts.token" data-test-tab="token">
+              Entity/Non-entity clients
+            </LinkTo>
+          </li>
+          {{#if this.version.hasSecretsSync}}
+            <li>
+              <LinkTo @route="vault.cluster.clients.counts.sync" data-test-tab="sync">
+                Secrets sync clients
+              </LinkTo>
+            </li>
+          {{/if}}
+          <li>
+            <LinkTo @route="vault.cluster.clients.counts.acme" data-test-tab="acme">
+              ACME clients
+            </LinkTo>
+          </li>
+        </ul>
+      </nav>
+
+      {{! CLIENT COUNT PAGE COMPONENTS RENDER HERE }}
+      {{yield}}
+
+    {{else if (and (not @config.billingStartTimestamp) (not @startTimestamp))}}
+      {{! Empty state for no billing/license start date }}
+      <EmptyState @title={{this.versionText.title}} @message={{this.versionText.message}} />
+    {{else}}
+      <EmptyState
+        @title="No data received {{if this.dateRangeMessage this.dateRangeMessage}}"
+        @message={{if
+          this.version.isCommunity
+          "Select a start date above to query client count data."
+          "Update the filter values or click the button to reset them."
+        }}
+      >
+        <Hds::Button @text="Reset filters" @color="tertiary" @icon="reload" {{on "click" this.resetFilters}} />
+      </EmptyState>
+    {{/if}}
+  {{/if}}
+</div>
+
+{{#if this.showBillingStartModal}}
+  <Hds::Modal id="clients-edit-date-modal" @onClose={{fn (mut this.showBillingStartModal) false}} as |M|>
+    <M.Header>
+      Edit start month
+    </M.Header>
+    <M.Body>
+      <p class="has-bottom-margin-s">
+        {{this.versionText.description}}
+      </p>
+      <p><strong>{{this.versionText.label}}</strong></p>
+      <DateDropdown class="has-top-padding-s" @handleSubmit={{this.onDateChange}} @dateType="startDate" @submitText="Save" />
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button data-test-date-dropdown-cancel @text="Cancel" @color="secondary" {{on "click" F.close}} />
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

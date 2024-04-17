@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /*
@@ -9,41 +9,47 @@
   has less (or no) information about.
 */
 import Model from '@ember-data/model';
-import Service from '@ember/service';
+import Service, { service } from '@ember/service';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { getOwner } from '@ember/application';
-import { assign } from '@ember/polyfills';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve, reject } from 'rsvp';
-import { debug } from '@ember/debug';
-import { dasherize, capitalize } from '@ember/string';
+import { assert, debug } from '@ember/debug';
+import { capitalize } from '@ember/string';
 import { computed } from '@ember/object'; // eslint-disable-line
-import { singularize } from 'ember-inflector';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
-import generatedItemAdapter from 'vault/adapters/generated-item-list';
-export function sanitizePath(path) {
-  // remove whitespace + remove trailing and leading slashes
-  return path.trim().replace(/^\/+|\/+$/g, '');
-}
+import GeneratedItemAdapter from 'vault/adapters/generated-item-list';
+import { sanitizePath } from 'core/utils/sanitize-path';
+import {
+  filterPathsByItemType,
+  pathToHelpUrlSegment,
+  reducePathsByPathName,
+} from 'vault/utils/openapi-helpers';
 
-export default Service.extend({
-  attrs: null,
-  dynamicApiPath: '',
+export default class PathHelpService extends Service {
+  @service store;
+
   ajax(url, options = {}) {
     const appAdapter = getOwner(this).lookup(`adapter:application`);
     const { data } = options;
     return appAdapter.ajax(url, 'GET', {
       data,
     });
-  },
+  }
 
+  /**
+   * getNewModel instantiates models which use OpenAPI fully or partially
+   * @param {string} modelType
+   * @param {string} backend
+   * @param {string} apiPath (optional) if passed, this method will call getPaths and build submodels for item types
+   * @param {*} itemType (optional) used in getPaths for additional models
+   * @returns void - as side effect, registers model via registerNewModelWithProps
+   */
   getNewModel(modelType, backend, apiPath, itemType) {
     const owner = getOwner(this);
-    const modelName = `model:${modelType}`;
-
-    const modelFactory = owner.factoryFor(modelName);
+    const modelFactory = owner.factoryFor(`model:${modelType}`);
     let newModel, helpUrl;
     // if we have a factory, we need to take the existing model into account
     if (modelFactory) {
@@ -55,7 +61,7 @@ export default Service.extend({
       }
 
       helpUrl = modelProto.getHelpUrl(backend);
-      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
+      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelType);
     } else {
       debug(`Creating new Model for ${modelType}`);
       newModel = Model.extend({});
@@ -65,7 +71,7 @@ export default Service.extend({
     // and we don't need paths for them yet
     if (!apiPath) {
       helpUrl = newModel.proto().getHelpUrl(backend);
-      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
+      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelType);
     }
 
     // use paths to dynamically create our openapi help url
@@ -79,12 +85,10 @@ export default Service.extend({
           const adapter = this.getNewAdapter(pathInfo, itemType);
           owner.register(`adapter:${modelType}`, adapter);
         }
-        let path;
         // if we have an item we want the create info for that itemType
-        const paths = itemType ? this.filterPathsByItemType(pathInfo, itemType) : pathInfo.paths;
+        const paths = itemType ? filterPathsByItemType(pathInfo, itemType) : pathInfo.paths;
         const createPath = paths.find((path) => path.operations.includes('post') && path.action !== 'Delete');
-        path = createPath.path;
-        path = path.includes('{') ? path.slice(0, path.indexOf('{') - 1) + '/example' : path;
+        const path = pathToHelpUrlSegment(createPath.path);
         if (!path) {
           // TODO: we don't know if path will ever be falsey
           // if it is never falsey we can remove this.
@@ -94,72 +98,23 @@ export default Service.extend({
         helpUrl = `/v1/${apiPath}${path.slice(1)}?help=true` || newModel.proto().getHelpUrl(backend);
         pathInfo.paths = paths;
         newModel = newModel.extend({ paths: pathInfo });
-        return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
+        return this.registerNewModelWithProps(helpUrl, backend, newModel, modelType);
       })
       .catch((err) => {
         // TODO: we should handle the error better here
         console.error(err); // eslint-disable-line
       });
-  },
+  }
 
-  reducePathsByPathName(pathInfo, currentPath) {
-    const pathName = currentPath[0];
-    const pathDetails = currentPath[1];
-    const displayAttrs = pathDetails['x-vault-displayAttrs'];
-
-    if (!displayAttrs) {
-      return pathInfo;
-    }
-
-    let itemType, itemName;
-    if (displayAttrs.itemType) {
-      itemType = displayAttrs.itemType;
-      let items = itemType.split(':');
-      itemName = items[items.length - 1];
-      items = items.map((item) => dasherize(singularize(item.toLowerCase())));
-      itemType = items.join('~*');
-    }
-
-    if (itemType && !pathInfo.itemTypes.includes(itemType)) {
-      pathInfo.itemTypes.push(itemType);
-    }
-
-    const operations = [];
-    if (pathDetails.get) {
-      operations.push('get');
-    }
-    if (pathDetails.post) {
-      operations.push('post');
-    }
-    if (pathDetails.delete) {
-      operations.push('delete');
-    }
-    if (pathDetails.get && pathDetails.get.parameters && pathDetails.get.parameters[0].name === 'list') {
-      operations.push('list');
-    }
-
-    pathInfo.paths.push({
-      path: pathName,
-      itemType: itemType || displayAttrs.itemType,
-      itemName: itemName || pathInfo.itemType || displayAttrs.itemType,
-      operations,
-      action: displayAttrs.action,
-      navigation: displayAttrs.navigation === true,
-      param: pathName.includes('{') ? pathName.split('{')[1].split('}')[0] : false,
-    });
-
-    return pathInfo;
-  },
-
-  filterPathsByItemType(pathInfo, itemType) {
-    if (!itemType) {
-      return pathInfo.paths;
-    }
-    return pathInfo.paths.filter((path) => {
-      return itemType === path.itemType;
-    });
-  },
-
+  /**
+   * getPaths is used to fetch all the openAPI paths available for an auth method,
+   * to populate the tab navigation in each specific method page
+   * @param {string} apiPath path of openApi
+   * @param {string} backend backend name, mostly for debug purposes
+   * @param {string} itemType optional
+   * @param {string} itemID optional - ID of specific item being fetched
+   * @returns PathsInfo
+   */
   getPaths(apiPath, backend, itemType, itemID) {
     const debugString =
       itemID && itemType
@@ -170,7 +125,7 @@ export default Service.extend({
       const pathInfo = help.openapi.paths;
       const paths = Object.entries(pathInfo);
 
-      return paths.reduce(this.reducePathsByPathName, {
+      return paths.reduce(reducePathsByPathName, {
         apiPath,
         itemType,
         itemTypes: [],
@@ -178,7 +133,7 @@ export default Service.extend({
         itemID,
       });
     });
-  },
+  }
 
   // Makes a call to grab the OpenAPI document.
   // Returns relevant information from OpenAPI
@@ -225,14 +180,14 @@ export default Service.extend({
       }
       // put url params (e.g. {name}, {role})
       // at the front of the props list
-      const newProps = assign({}, paramProp, props);
+      const newProps = { ...paramProp, ...props };
       return expandOpenApiProps(newProps);
     });
-  },
+  }
 
   getNewAdapter(pathInfo, itemType) {
     // we need list and create paths to set the correct urls for actions
-    const paths = this.filterPathsByItemType(pathInfo, itemType);
+    const paths = filterPathsByItemType(pathInfo, itemType);
     let { apiPath } = pathInfo;
     const getPath = paths.find((path) => path.operations.includes('get'));
 
@@ -242,9 +197,9 @@ export default Service.extend({
     const createPath = paths.find((path) => path.action === 'Create' || path.operations.includes('post'));
     const deletePath = paths.find((path) => path.operations.includes('delete'));
 
-    return generatedItemAdapter.extend({
+    return class NewAdapter extends GeneratedItemAdapter {
       urlForItem(id, isList, dynamicApiPath) {
-        const itemType = getPath.path.slice(1);
+        const itemType = sanitizePath(getPath.path);
         let url;
         id = encodePath(id);
         // the apiPath changes when you switch between routes but the apiPath variable does not unless the model is reloaded
@@ -264,30 +219,30 @@ export default Service.extend({
         }
 
         return url;
-      },
+      }
 
       urlForQueryRecord(id, modelName) {
         return this.urlForItem(id, modelName);
-      },
+      }
 
       urlForUpdateRecord(id) {
         const itemType = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${itemType}/${id}`;
-      },
+      }
 
       urlForCreateRecord(modelType, snapshot) {
         const id = snapshot.record.mutableId; // computed property that returns either id or private settable _id value
         const path = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
-      },
+      }
 
       urlForDeleteRecord(id) {
         const path = deletePath.path.slice(1, deletePath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
-      },
+      }
 
       createRecord(store, type, snapshot) {
-        return this._super(...arguments).then((response) => {
+        return super.createRecord(...arguments).then((response) => {
           // if the server does not return an id and one has not been set on the model we need to set it manually from the mutableId value
           if (!response?.id && !snapshot.record.id) {
             snapshot.record.id = snapshot.record.mutableId;
@@ -295,11 +250,12 @@ export default Service.extend({
           }
           return response;
         });
-      },
-    });
-  },
+      }
+    };
+  }
 
   registerNewModelWithProps(helpUrl, backend, newModel, modelName) {
+    assert('modelName should not include the type prefix', modelName.includes(':') === false);
     return this.getProps(helpUrl, backend).then((props) => {
       const { attrs, newFields } = combineAttributes(newModel.attributes, props);
       const owner = getOwner(this);
@@ -325,9 +281,8 @@ export default Service.extend({
               }
               return obj;
             }, {});
-            @withModelValidations(validations)
-            class GeneratedItemModel extends newModel {}
-            newModel = GeneratedItemModel;
+
+            newModel = withModelValidations(validations)(class GeneratedItemModel extends newModel {});
           }
         }
       } catch (err) {
@@ -346,10 +301,10 @@ export default Service.extend({
         }),
       });
       newModel.reopenClass({ merged: true });
-      owner.unregister(modelName);
-      owner.register(modelName, newModel);
+      owner.unregister(`model:${modelName}`);
+      owner.register(`model:${modelName}`, newModel);
     });
-  },
+  }
   getFieldGroups(newModel) {
     const groups = {
       default: [],
@@ -373,5 +328,5 @@ export default Service.extend({
       fieldGroups.push({ [group]: groups[group] });
     }
     return fieldToAttrs(newModel, fieldGroups);
-  },
-});
+  }
+}

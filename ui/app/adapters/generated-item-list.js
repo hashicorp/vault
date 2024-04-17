@@ -1,27 +1,27 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { assign } from '@ember/polyfills';
 import ApplicationAdapter from './application';
 import { task } from 'ember-concurrency';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
 
-export default ApplicationAdapter.extend({
-  store: service(),
-  namespace: 'v1',
-  urlForItem() {},
-  dynamicApiPath: '',
+export default class GeneratedItemAdapter extends ApplicationAdapter {
+  @service store;
+  namespace = 'v1';
+  @tracked dynamicApiPath = '';
 
-  getDynamicApiPath: task(function* (id) {
-    // TODO: remove yield at some point.
+  @task
+  *getDynamicApiPath(id) {
     const result = yield this.store.peekRecord('auth-method', id);
     this.dynamicApiPath = result.apiPath;
     return;
-  }),
+  }
 
-  fetchByQuery: task(function* (store, query, isList) {
+  @task
+  *fetchByQuery(store, query, isList) {
     const { id } = query;
     const data = {};
     if (isList) {
@@ -34,15 +34,15 @@ export default ApplicationAdapter.extend({
         id,
         method: id,
       };
-      return assign({}, resp, data);
+      return { ...resp, ...data };
     });
-  }),
+  }
 
   query(store, type, query) {
     return this.fetchByQuery.perform(store, query, true);
-  },
+  }
 
   queryRecord(store, type, query) {
     return this.fetchByQuery.perform(store, query);
-  },
-});
+  }
+}

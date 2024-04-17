@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /**
@@ -30,15 +30,18 @@ export default Component.extend({
     if (model.operationNone) {
       return falseString;
     }
-    return model.get(field.name) ? trueString : falseString;
+    return model[field.name] ? trueString : falseString;
   },
 
   actions: {
     iconClass(model, field) {
-      return this.trueOrFalseString(model, field, 'icon-true', 'icon-false');
+      return this.trueOrFalseString(model, field, 'hds-foreground-success', 'hds-foreground-faint');
     },
     iconGlyph(model, field) {
-      return this.trueOrFalseString(model, field, 'check-circle-outline', 'cancel-square-outline');
+      return this.trueOrFalseString(model, field, 'check-circle', 'x-square');
+    },
+    operationEnabled(model, field) {
+      return this.trueOrFalseString(model, field, 'Enabled', 'Disabled');
     },
   },
 });

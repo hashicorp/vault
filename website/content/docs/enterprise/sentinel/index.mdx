@@ -4,9 +4,9 @@ page_title: Vault Enterprise Sentinel Integration
 description: An overview of how Sentinel interacts with Vault Enterprise.
 ---
 
-# Overview
+# Vault Enterprise and Sentinel integration
 
--> **Note**: This feature requires [Vault Enterprise Plus](https://www.hashicorp.com/products/vault/).
+@include 'alerts/enterprise-and-hcp.mdx'
 
 Vault Enterprise integrates HashiCorp Sentinel to provide a rich set of access
 control functionality. Because Vault is a security-focused product trusted with
@@ -14,7 +14,7 @@ high-risk secrets and assets, and because of its default-deny stance,
 integration with Vault is implemented in a defense-in-depth fashion. This takes
 the form of multiple types of policies and a fixed evaluation order.
 
-## Policy Types
+## Policy types
 
 Vault's policy system has been expanded to support three types of policies:
 
@@ -42,23 +42,112 @@ Sentinel execution should be considered to be significantly slower than normal
 ACL policy checking. If high performance is needed, testing should be performed
 appropriately when introducing Sentinel policies.
 
-## Policy Evaluation
+### Policy enforcement levels
 
-During evaluation, all policy types, if they exist, must grant access.
-Evaluation uses the following logic:
+Sentinel policies have three enforcement levels to choose from.
 
-1. If the request is unauthenticated, skip to step 3. Otherwise, evaluate the
-   token's ACL policies. These must grant access; as always, a failure to be
-   granted capabilities on a path via ACL policies denies the request.
-2. RGPs attached to the token are evaluated. All policies must pass according
+| Level          | Description                                                                 |
+| -------------- | --------------------------------------------------------------------------- |
+| advisory       | The policy is allowed to fail. Can be used as a tool to educate new users.  |
+| soft-mandatory | The policy must pass unless an [override](#policy-overriding) is specified. |
+| hard-mandatory | The policy must pass.                                                       |
+
+## Policy evaluation
+
+Vault evaluates incoming requests against policies of all types that are
+applicable.
+
+![Policy evaluation](/img/diagram-policy-evaluation-workflow_light.png#light-theme-only)
+![Policy evaluation](/img/diagram-policy-evaluation-workflow_dark.png#dark-theme-only)
+
+1. If the request is unauthenticated, skip to evaluating the EGPs. Otherwise,
+   evaluate the token's ACL policies. These must grant access; as always, a
+   failure to be granted capabilities on a path via ACL policies denies the
+   request.
+2. Evaluate RGPs attached to the client token. All policies must pass according
    to their enforcement level.
-3. EGPs set on the requested path, and any prefix-matching EGPs set on
-   less-specific paths, are evaluated. All policies must pass according to
-   their enforcement level.
+3. Evaluate EGPs set on the requested path, and any prefix-matching EGPs set on
+   less-specific paths, are evaluated. All policies must pass according to their
+   enforcement level.
 
 Any failure at any of these steps results in a denied request.
 
-## Policy Overriding
+### RGPs and namespaces
+
+Policies, auth methods, secrets engines, and tokens are locked into the
+[namespace](/vault/docs/enterprise/namespaces) they are created in. However,
+identity groups can pull in entities and groups from other namespaces.
+
+<Tip>
+
+Refer to the [Set up entities and groups section of the Secure Multi-Tenancy
+with Namespaces
+tutorial](/vault/tutorials/enterprise/namespaces#set-up-entities-and-groups) for
+a step-by-step instruction.
+
+</Tip>
+
+<Warning>
+
+  As of the following versions, Vault only applies RPGs derived from identity
+  group membership to entities in child namespaces:
+
+  - `1.15.0+`
+  - `1.14.4+`
+  - `1.13.8+`
+
+</Warning>
+
+The scenarios below describe the relevant changes in more detail.
+
+#### Versions 1.15.0, 1.14.4, 1.13.8, and later
+
+The training namespace is a child namespace of the education namespace. The "Sun
+Shine" entity created in the training namespace is a member of the "Tester"
+group which is defined in the education namespace. The group members inherit the
+group-level policy.
+
+![Relationship](/img/diagram-rgp-namespace-post-115_light.png#light-theme-only)
+![Relationship](/img/diagram-rgp-namespace-post-115_dark.png#dark-theme-only)
+
+#### Versions 1.15.0-rc1, 1.14.3, 1.13.7, and earlier
+
+The training namespace is a child namespace of the education namespace. The "Sun
+Shine" entity created in the education namespace is a member of the "Tester"
+group which is defined in the training namespace. The group members inherit the
+group-level policy.
+
+![Relationship](/img/diagram-rgp-namespace-pre-115_light.png#light-theme-only)
+![Relationship](/img/diagram-rgp-namespace-pre-115_dark.png#dark-theme-only)
+
+While ACL policies and EGPs set rules on a specific path, an RGP does not
+specify a target path. RGPs are tied to tokens, identity entities, or identity
+groups that you can write rules without specifying a path.
+
+What if the deny-all RGP in the training namespace looked like:
+
+<CodeBlockConfig filename="deny-all.sentinel">
+
+```hcl
+precond = rule {
+   identity.entity.metadata.org_id is "A012345X"
+}
+
+main = rule when precond {
+   false
+}
+```
+
+</CodeBlockConfig>
+
+Vault checks the requesting token's entity metadata. If the `org_id` metadata
+exists and the value is `A012345X`, the request gets denied because the
+enforcement level is hard-mandatory. It does not matter if the request invokes a
+path starts with `/education` or `/education/training`, or even `/foo` because
+there is no path associated with the deny-all RGP.
+
+
+## Policy overriding
 
 Vault supports normal Sentinel overriding behavior. Requests to override can be
 specified on the command line via the `policy-override` flag or in HTTP
@@ -103,7 +192,7 @@ subject to an EGPs exactly matching the requested path and any glob EGPs
 sitting further up the request path, an EGP with a path of `*` will thus take
 effect on all requests.
 
-## Properties and Examples
+## Properties and examples
 
 See the [Examples](/vault/docs/enterprise/sentinel/examples) page for examples
 of Sentinel in action, and the

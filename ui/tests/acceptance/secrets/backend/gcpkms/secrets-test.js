@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { currentRouteName, settled } from '@ember/test-helpers';
@@ -26,7 +26,7 @@ module('Acceptance | gcpkms/enable', function (hooks) {
     await mountSecrets.visit();
     await settled();
     await mountSecrets.selectType('gcpkms');
-    await mountSecrets.next().path(enginePath).submit();
+    await mountSecrets.path(enginePath).submit();
     await settled();
     assert.strictEqual(
       currentRouteName(),

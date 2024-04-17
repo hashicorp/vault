@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package internal
 
@@ -16,7 +16,7 @@ import (
 
 type WrappedCoreNodeStatus interface {
 	ActiveTime() time.Time
-	GetSealStatus(ctx context.Context) (*vault.SealStatusResponse, error)
+	GetSealStatus(ctx context.Context, lock bool) (*vault.SealStatusResponse, error)
 	IsRaftVoter() bool
 	ListenerAddresses() ([]string, error)
 	LogLevel() string

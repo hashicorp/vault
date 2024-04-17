@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -20,7 +20,7 @@ interface Args {
   };
 }
 
-export default class RadioSelectTtlOrString extends Component<Args> {
+export default class PkiNotValidAfterForm extends Component<Args> {
   @tracked groupValue = 'ttl';
   @tracked cachedNotAfter: string;
   @tracked cachedTtl: string | number;

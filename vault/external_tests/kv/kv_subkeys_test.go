@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package kv
 
@@ -9,34 +9,16 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
-	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 )
 
 // TestKV_Subkeys_NotFound issues a read to the subkeys endpoint for a path
 // that does not exist. A 400 status should be returned.
 func TestKV_Subkeys_NotFound(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": logicalKv.VersionedKVFactory,
-		},
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-
-	core := cores[0].Core
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	c := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
 
 	// Mount a KVv2 backend
 	err := c.Sys().Mount("kv", &api.MountInput{
@@ -70,24 +52,9 @@ func TestKV_Subkeys_NotFound(t *testing.T) {
 // endpoint should return a 400 status with a nil "subkeys" value and the
 // "deletion_time" key in the "metadata" key should be not be empty.
 func TestKV_Subkeys_Deleted(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": logicalKv.VersionedKVFactory,
-		},
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-
-	core := cores[0].Core
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	c := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
 
 	// Mount a KVv2 backend
 	err := c.Sys().Mount("kv", &api.MountInput{
@@ -169,24 +136,9 @@ func TestKV_Subkeys_Deleted(t *testing.T) {
 // endpoint should return a 400 status with a nil "subkeys" value and the
 // "destroyed" key in the "metadata" key should be set to true.
 func TestKV_Subkeys_Destroyed(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": logicalKv.VersionedKVFactory,
-		},
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-
-	core := cores[0].Core
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	c := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
 
 	// Mount a KVv2 backend
 	err := c.Sys().Mount("kv", &api.MountInput{
@@ -276,24 +228,9 @@ func TestKV_Subkeys_Destroyed(t *testing.T) {
 // KVv2 secret engine. It ensures that the subkeys endpoint returns a 200 status
 // and current version of the secret.
 func TestKV_Subkeys_CurrentVersion(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": logicalKv.VersionedKVFactory,
-		},
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-
-	core := cores[0].Core
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	c := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
 
 	// Mount a KVv2 backend
 	err := c.Sys().Mount("kv", &api.MountInput{

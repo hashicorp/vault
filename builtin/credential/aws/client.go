@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package awsauth
 
@@ -219,7 +219,6 @@ func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, acco
 	// Create an AWS config object using a chain of providers
 	var awsConfig *aws.Config
 	awsConfig, err = b.getClientConfig(ctx, s, region, stsRole, accountID, "ec2")
-
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +278,6 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, acco
 	// Create an AWS config object using a chain of providers
 	var awsConfig *aws.Config
 	awsConfig, err = b.getClientConfig(ctx, s, region, stsRole, accountID, "iam")
-
 	if err != nil {
 		return nil, err
 	}
