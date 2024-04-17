@@ -15,9 +15,9 @@ const FLAGS = {
 };
 
 /**
- * This service returns information about cluster flags. For now, the two available flags are from the sys/internal/ui/feature-flags and sys/activation-flags.
+ * This service returns information about cluster flags. For now, the two available flags are from sys/internal/ui/feature-flags and sys/activation-flags.
  * The feature-flags endpoint returns VAULT_CLOUD_ADMIN_NAMESPACE which indicates that the Vault cluster is managed rather than self-managed.
- * The activation-flags endpoint indicates that the secrets sync feature is enabled.
+ * The activation-flags endpoint returns which features are enabled.
  */
 
 export default class flagsService extends Service {
@@ -40,7 +40,8 @@ export default class flagsService extends Service {
 
   getActivatedFlags = keepLatestTask(async () => {
     if (this.version.isCommunity) return;
-    // Response could change between user sessions so fire off endpoint without checking if activated features are already set.
+    // Response could change between user sessions.
+    // Fire off endpoint without checking if activated features are already set.
     try {
       const response = await this.store
         .adapterFor('application')

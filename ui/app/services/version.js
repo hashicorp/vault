@@ -8,7 +8,7 @@ import { keepLatestTask, task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 
 /**
- * This service returns information about a clusters license and version which comes from the health and seal-status.
+ * This service returns information about a cluster's license/features, version and type (community vs enterprise).
  */
 
 export default class VersionService extends Service {
@@ -48,6 +48,7 @@ export default class VersionService extends Service {
   }
 
   get hasSecretsSync() {
+    // TODO remove this conditional when we allow secrets sync in managed clusters
     if (this.flags.managedNamespaceRoot !== null) return false;
     return this.features.includes('Secrets Sync');
   }
