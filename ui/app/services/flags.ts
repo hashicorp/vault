@@ -58,7 +58,7 @@ export default class flagsService extends Service {
     return this.activatedFlags.includes('secrets-sync');
   }
 
-  fetchActivatedFeatures() {
+  fetchActivatedFlags() {
     return this.getActivatedFlags.perform();
   }
 }

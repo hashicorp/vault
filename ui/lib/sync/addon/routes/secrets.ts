@@ -14,7 +14,7 @@ export default class SyncSecretsRoute extends Route {
   @service declare readonly flags: FlagService;
 
   beforeModel() {
-    return this.flags.fetchActivatedFeatures();
+    return this.flags.fetchActivatedFlags();
   }
 
   model() {
