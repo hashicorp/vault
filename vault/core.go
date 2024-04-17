@@ -4517,9 +4517,7 @@ func (c *Core) setSeals(ctx context.Context, grabLock bool, barrierSeal Seal, se
 
 	c.seal = barrierSeal
 
-	c.reloadSealsEnt(secureRandomReader, barrierSeal, c.logger, shouldRewrap)
-
-	return nil
+	return c.reloadSealsEnt(secureRandomReader, barrierSeal, c.logger, shouldRewrap)
 }
 
 func (c *Core) GetWellKnownRedirect(ctx context.Context, path string) (string, error) {
