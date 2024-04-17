@@ -56,6 +56,8 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
 
   async beforeModel() {
     const params = this.paramsFor(this.routeName);
+    console.log('cluster params: ', params);
+    // debugger;
     let namespace = params.namespaceQueryParam;
     const currentTokenName = this.auth.currentTokenName;
     const managedRoot = this.featureFlagService.managedNamespaceRoot;
