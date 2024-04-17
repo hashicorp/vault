@@ -98,11 +98,11 @@ module('Integration | Util | client count utils', function (hooks) {
     assert.expect(2);
     const original = { ...RESPONSE.total };
     const expected = {
-      entity_clients: 1816,
-      non_entity_clients: 3117,
-      secret_syncs: 2672,
-      acme_clients: 200,
-      clients: 7805,
+      acme_clients: 9702,
+      clients: 35287,
+      entity_clients: 8258,
+      non_entity_clients: 8227,
+      secret_syncs: 9100,
     };
     assert.propEqual(destructureClientCounts(RESPONSE.total), expected);
     assert.propEqual(RESPONSE.total, original, 'it does not modify original object');
@@ -302,6 +302,7 @@ module('Integration | Util | client count utils', function (hooks) {
                 entity_clients: 1,
                 label: 'auth/u/',
                 month: '4/24',
+                timestamp: '2024-04-01T00:00:00Z',
                 non_entity_clients: 0,
                 secret_syncs: 0,
               },
@@ -321,6 +322,7 @@ module('Integration | Util | client count utils', function (hooks) {
                 entity_clients: 2,
                 label: 'no mount accessor (pre-1.10 upgrade?)',
                 month: '4/24',
+                timestamp: '2024-04-01T00:00:00Z',
                 non_entity_clients: 0,
                 secret_syncs: 0,
               },
@@ -335,6 +337,7 @@ module('Integration | Util | client count utils', function (hooks) {
             entity_clients: 3,
             label: 'root',
             month: '4/24',
+            timestamp: '2024-04-01T00:00:00Z',
             mounts: [
               {
                 acme_clients: 0,

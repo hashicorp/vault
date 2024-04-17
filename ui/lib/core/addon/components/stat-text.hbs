@@ -5,7 +5,7 @@
 
 <div
   class={{concat "stat-text-container " @size (unless @subText "-no-subText")}}
-  data-test-stat-text-container={{(or @label "true")}}
+  data-test-stat-text={{or @label "true"}}
   ...attributes
 >
   <div class="stat-label has-bottom-margin-xs">{{@label}}</div>

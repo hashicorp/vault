@@ -16,19 +16,11 @@ export const CLIENT_COUNT = {
     mountPaths: '[data-test-counts-auth-mounts]',
     startDiscrepancy: '[data-test-counts-start-discrepancy]',
   },
-  tokenTab: {
-    entity: '[data-test-monthly-new-entity]',
-    nonentity: '[data-test-monthly-new-nonentity]',
-    legend: '[data-test-monthly-new-legend]',
-  },
-  syncTab: {
-    total: '[data-test-total-sync-clients]',
-    average: '[data-test-average-sync-clients]',
-  },
+  statText: (label: string) => `[data-test-stat-text="${label}"]`,
   charts: {
     chart: (title: string) => `[data-test-chart="${title}"]`, // newer lineal charts
     statTextValue: (label: string) =>
-      label ? `[data-test-stat-text-container="${label}"] .stat-value` : '[data-test-stat-text-container]',
+      label ? `[data-test-stat-text="${label}"] .stat-value` : '[data-test-stat-text]',
     legend: '[data-test-chart-container-legend]',
     legendLabel: (nth: number) => `.legend-label:nth-child(${nth * 2})`, // nth * 2 accounts for dots in legend
     timestamp: '[data-test-chart-container-timestamp]',
@@ -72,7 +64,7 @@ export const CLIENT_COUNT = {
   },
   runningTotalMonthStats: '[data-test-running-total="single-month-stats"]',
   runningTotalMonthlyCharts: '[data-test-running-total="monthly-charts"]',
-  selectedAuthMount: 'div#auth-method-search-select [data-test-selected-option] div',
+  selectedAuthMount: 'div#mounts-search-select [data-test-selected-option] div',
   selectedNs: 'div#namespace-search-select [data-test-selected-option] div',
   upgradeWarning: '[data-test-clients-upgrade-warning]',
 };

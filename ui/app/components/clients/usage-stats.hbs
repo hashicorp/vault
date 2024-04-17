@@ -24,7 +24,6 @@
         @value={{@totalUsageCounts.clients}}
         @size="l"
         @subText="The number of clients which interacted with Vault during this month. This is Vault’s primary billing metric."
-        data-test-stat-text="total-clients"
       />
     </div>
     <div class="column">
@@ -34,7 +33,6 @@
         @value={{@totalUsageCounts.entity_clients}}
         @size="l"
         @subText="Representations of a particular user, client, or application that created a token via login."
-        data-test-stat-text="entity-clients"
       />
     </div>
     <div class="column">
@@ -44,7 +42,6 @@
         @value={{@totalUsageCounts.non_entity_clients}}
         @size="l"
         @subText="Clients created with a shared set of permissions, but not associated with an entity."
-        data-test-stat-text="non-entity-clients"
       />
     </div>
     {{#if @showSecretSyncs}}
@@ -55,7 +52,6 @@
           @value={{@totalUsageCounts.secret_syncs}}
           @size="l"
           @subText="A secret with a configured sync destination qualifies as a unique and active client."
-          data-test-stat-text="secret-syncs"
         />
       </div>
     {{/if}}
