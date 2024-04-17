@@ -22,6 +22,7 @@ export default Component.extend({
 
   normalizedNamespace: computed('targetNamespace', 'unparsed', function () {
     const ns = this.targetNamespace || '';
+    console.log('normalized namespace: ', ns);
     return this.unparsed ? ns : ns.replace(/\.+/g, '/').replace(/☃/g, '.');
   }),
 
@@ -46,6 +47,6 @@ export default Component.extend({
 
     if (!this.normalizedNamespace) return `${origin}/ui/vault/dashboard`;
     // The full URL/origin is required so that the page is reloaded.
-    return `${origin}/ui/vault/dashboard?namespace=${encodeURIComponent(this.normalizedNamespace)}`;
+    return `${origin}/ui/vault/dashboard?namespace=${this.normalizedNamespace}`;
   },
 });
