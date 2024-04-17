@@ -12,7 +12,7 @@ module github.com/hashicorp/vault
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
 go 1.21
 
-toolchain go1.21.8
+toolchain go1.22.2
 
 replace github.com/hashicorp/vault/api => ./api
 
