@@ -442,7 +442,9 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 
 	// reload census agent if retention months change during update when reporting is enabled
 	if prevRetentionMonths != config.RetentionMonths {
-		a.core.ReloadCensus()
+		if err := a.core.ReloadCensusActivityLog(); err != nil {
+			return nil, err
+		}
 	}
 
 	if len(warnings) > 0 {
