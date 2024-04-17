@@ -232,10 +232,13 @@ p.data-details {
     background-color: var(--token-color-palette-blue-100);
   }
   &.dot-1 {
-    background-color: var(--token-color-palette-blue-300);
+    background-color: var(--token-color-palette-blue-200);
   }
   &.dot-2 {
-    background-color: var(--token-color-palette-blue-500);
+    background-color: var(--token-color-palette-neutral-300);
+  }
+  &.dot-3 {
+    background-color: var(--token-color-palette-neutral-500);
   }
 }
 
