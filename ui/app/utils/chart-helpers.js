@@ -7,7 +7,7 @@ import { format } from 'd3-format';
 import { mean } from 'd3-array';
 
 // COLOR THEME:
-export const BLUE_PALETTE = ['#cce3fe', '#0c56e9', '#1c345f']; // blues from https://helios.hashicorp.design/foundations/colors?tab=palette#core-palette
+export const BAR_PALETTE = ['#CCE3FE', '#1060FF', '#C2C5CB', '#656A76'];
 export const UPGRADE_WARNING = '#FDEEBA';
 export const GREY = '#EBEEF2';
 
