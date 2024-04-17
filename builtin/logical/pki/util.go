@@ -254,15 +254,16 @@ func parseIfNotModifiedSince(req *logical.Request) (time.Time, error) {
 	return headerTimeValue, nil
 }
 
+//go:generate enumer -type=ifModifiedReqType -trimprefix=ifModified
 type ifModifiedReqType int
 
 const (
-	ifModifiedUnknown         ifModifiedReqType = iota
-	ifModifiedCA                                = iota
-	ifModifiedCRL                               = iota
-	ifModifiedDeltaCRL                          = iota
-	ifModifiedUnifiedCRL                        = iota
-	ifModifiedUnifiedDeltaCRL                   = iota
+	ifModifiedUnknown ifModifiedReqType = iota
+	ifModifiedCA
+	ifModifiedCRL
+	ifModifiedDeltaCRL
+	ifModifiedUnifiedCRL
+	ifModifiedUnifiedDeltaCRL
 )
 
 type IfModifiedSinceHelper struct {

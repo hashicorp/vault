@@ -3021,6 +3021,8 @@ func setPhysicalSealConfig(ctx context.Context, c *Core, label, configPath strin
 	return nil
 }
 
+//go:generate enumer -type=sealMigrationCheckResult -trimprefix=sealMigrationCheck -transform=snake
+
 type sealMigrationCheckResult int
 
 const (
