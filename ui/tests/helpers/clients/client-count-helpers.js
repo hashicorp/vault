@@ -19,7 +19,7 @@ export async function dateDropdownSelect(month, year) {
   await click(dateDropdown.submit);
 }
 
-export function assertChart(assert, chartName, byMonthData) {
+export function assertBarChart(assert, chartName, byMonthData) {
   // assertion count is byMonthData.length + 2
   const chart = CLIENT_COUNT.charts.chart(chartName);
   const dataBars = findAll(`${chart} ${CLIENT_COUNT.charts.dataBar}`).filter((b) => b.hasAttribute('height'));

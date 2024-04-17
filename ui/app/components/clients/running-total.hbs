@@ -9,7 +9,6 @@
     @description={{this.chartContainerText}}
     @timestamp={{@responseTimestamp}}
     @hasChartData={{true}}
-    data-test-chart="running total"
   >
     <:subTitle>
       <StatText
@@ -23,30 +22,27 @@
     <:stats>
       <div class="data-details-top has-top-padding-l">
         <div class="is-flex-row">
+          <StatText @label="Entity clients" @value={{@runningTotals.entity_clients}} @size="m" />
           <StatText
-            @label="Entity clients"
-            @value={{@runningTotals.entity_clients}}
+            @label="Non-entity clients"
+            @value={{@runningTotals.non_entity_clients}}
             @size="m"
-            data-test-chart-stat="running total entity"
+            class="has-left-margin-l"
           />
-          {{#if @isSecretsSyncActivated}}
-            <StatText
-              @label="Secrets sync clients"
-              @value={{@runningTotals.secret_syncs}}
-              @size="m"
-              class="has-left-margin-l"
-              data-test-chart-stat="running total sync"
-            />
-          {{/if}}
+
         </div>
       </div>
-      <StatText
-        @label="Non-entity clients"
-        @value={{@runningTotals.non_entity_clients}}
-        @size="m"
-        class="data-details-bottom"
-        data-test-chart-stat="running total sync"
-      />
+      <div class="data-details-bottom is-flex-row">
+        <StatText @label="ACME clients" @value={{@runningTotals.acme_clients}} @size="m" />
+        {{#if @isSecretsSyncActivated}}
+          <StatText
+            @label="Secrets sync clients"
+            @value={{@runningTotals.secret_syncs}}
+            @size="m"
+            class="has-left-margin-l"
+          />
+        {{/if}}
+      </div>
     </:stats>
 
     <:chart>
