@@ -219,8 +219,8 @@ func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *
 	}
 
 	for i, e := range entries.CRLDistributionPoints {
-		if strings.Contains(e, "%2C") || strings.Contains(e, "%2c") {
-			// May be URL encoded to avoid problems with commas
+		if strings.HasPrefix(e, "ldap") && strings.Contains(e, "%2C") || strings.Contains(e, "%2c") {
+			// May be an LDAP(S) URL encoded to avoid problems with commas
 			entries.CRLDistributionPoints[i] = strings.ReplaceAll(strings.ReplaceAll(e, "%2c", ","), "%2C", ",")
 		}
 	}
