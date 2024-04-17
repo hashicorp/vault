@@ -18,9 +18,9 @@
     Date queries are sent in UTC.
   </p>
 
-  <h2 class="title is-6 has-bottom-margin-xs" data-test-counts-start-label>
+  <Hds::Text::Display @tag="h2" class="has-bottom-margin-xs" data-test-counts-start-label>
     {{this.versionText.label}}
-  </h2>
+  </Hds::Text::Display>
 
   <div class="is-flex-align-baseline">
     {{#if this.formattedStartDate}}
@@ -44,9 +44,9 @@
     {{/if}}
   </div>
 
-  <p class="is-8 has-text-grey has-bottom-margin-l" data-test-counts-description>
+  <Hds::Text::Body @tag="p" @color="faint" @size="300" class="has-bottom-margin-l" data-test-counts-description>
     {{this.versionText.description}}
-  </p>
+  </Hds::Text::Body>
 
   {{#if (eq @activity.id "no-data")}}
     <Clients::NoData @config={{@config}} @dateRangeMessage={{this.dateRangeMessage}} />
@@ -66,47 +66,52 @@
     {{/if}}
 
     {{#if @startTimestamp}}
-      <div class="is-subtitle-gray has-bottom-margin-m">
-        FILTERS
-        <Toolbar data-test-clients-filter-bar>
-          <ToolbarFilters>
-            <CalendarWidget
-              @startTimestamp={{this.startTimestampISO}}
-              @endTimestamp={{this.endTimestampISO}}
-              @selectMonth={{this.onDateChange}}
+      <Hds::Text::Display @tag="h3">
+        Filters
+      </Hds::Text::Display>
+      <Hds::Text::Body @tag="p" @color="faint">
+        Apply a filter to look at data from a specific namespace and drill down by mount. The mount filter includes auth
+        methods, KV engines, and PKI engines. Each mount type generates a different type of client and will not be applicable
+        to every tab.
+      </Hds::Text::Body>
+      <Toolbar class="has-bottom-margin-m" data-test-clients-filter-bar>
+        <ToolbarFilters>
+          <CalendarWidget
+            @startTimestamp={{this.startTimestampISO}}
+            @endTimestamp={{this.endTimestampISO}}
+            @selectMonth={{this.onDateChange}}
+          />
+          {{#if (or @namespace this.namespaces)}}
+            <SearchSelect
+              @id="namespace-search-select"
+              @options={{this.namespaces}}
+              @inputValue={{if @namespace (array @namespace)}}
+              @selectLimit="1"
+              @disallowNewItems={{true}}
+              @fallbackComponent="input-search"
+              @onChange={{fn this.setFilterValue "ns"}}
+              @placeholder="Filter by namespace"
+              @displayInherit={{true}}
+              class="is-marginless"
+              data-test-counts-namespaces
             />
-            {{#if (or @namespace this.namespaces)}}
-              <SearchSelect
-                @id="namespace-search-select"
-                @options={{this.namespaces}}
-                @inputValue={{if @namespace (array @namespace)}}
-                @selectLimit="1"
-                @disallowNewItems={{true}}
-                @fallbackComponent="input-search"
-                @onChange={{fn this.setFilterValue "ns"}}
-                @placeholder="Filter by namespace"
-                @displayInherit={{true}}
-                class="is-marginless"
-                data-test-counts-namespaces
-              />
-            {{/if}}
-            {{#if (or @mountPath this.mountPaths)}}
-              <SearchSelect
-                @id="mounts-search-select"
-                @options={{this.mountPaths}}
-                @inputValue={{if @mountPath (array @mountPath)}}
-                @selectLimit="1"
-                @disallowNewItems={{true}}
-                @fallbackComponent="input-search"
-                @onChange={{fn this.setFilterValue "mountPath"}}
-                @placeholder="Filter by mount path"
-                @displayInherit={{true}}
-                data-test-counts-auth-mounts
-              />
-            {{/if}}
-          </ToolbarFilters>
-        </Toolbar>
-      </div>
+          {{/if}}
+          {{#if (or @mountPath this.mountPaths)}}
+            <SearchSelect
+              @id="mounts-search-select"
+              @options={{this.mountPaths}}
+              @inputValue={{if @mountPath (array @mountPath)}}
+              @selectLimit="1"
+              @disallowNewItems={{true}}
+              @fallbackComponent="input-search"
+              @onChange={{fn this.setFilterValue "mountPath"}}
+              @placeholder="Filter by mount path"
+              @displayInherit={{true}}
+              data-test-counts-auth-mounts
+            />
+          {{/if}}
+        </ToolbarFilters>
+      </Toolbar>
     {{/if}}
 
     {{#if this.filteredActivity}}
