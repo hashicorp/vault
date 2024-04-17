@@ -2745,7 +2745,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		// autoSeal.
 		barrierSeal = vault.NewDefaultSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealWrappers))
 		if len(disabledSealWrappers) > 0 {
-			a, err = vaultseal.NewAccess(sealLogger, sealGenerationInfo, disabledSealWrappers)
+			a, err = :vaultseal.NewAccess(sealLogger, sealGenerationInfo, disabledSealWrappers)
 			if err != nil {
 				return nil, err
 			}
