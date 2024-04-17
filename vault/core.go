@@ -389,11 +389,11 @@ type Core struct {
 
 	// auditBroker is used to ingest the audit events and fan
 	// out into the configured audit backends
-	auditBroker *AuditBroker
+	auditBroker *audit.Broker
 
 	// auditedHeaders is used to configure which http headers
 	// can be output in the audit logs
-	auditedHeaders *AuditedHeadersConfig
+	auditedHeaders *audit.HeadersConfig
 
 	// systemBackend is the backend which is used to manage internal operations
 	systemBackend   *SystemBackend
@@ -2477,7 +2477,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		}
 
 	} else {
-		broker, err := NewAuditBroker(logger)
+		broker, err := audit.NewBroker(logger)
 		if err != nil {
 			return err
 		}
@@ -2935,7 +2935,7 @@ func (c *Core) BarrierKeyLength() (min, max int) {
 	return
 }
 
-func (c *Core) AuditedHeadersConfig() *AuditedHeadersConfig {
+func (c *Core) AuditedHeadersConfig() *audit.HeadersConfig {
 	return c.auditedHeaders
 }
 
@@ -4548,4 +4548,27 @@ func (c *Core) DetectStateLockDeadlocks() bool {
 		return true
 	}
 	return false
+}
+
+// setupAuditedHeadersConfig will initialize new audited headers configuration on
+// the Core by loading data from the barrier view.
+func (c *Core) setupAuditedHeadersConfig(ctx context.Context) error {
+	// Create a sub-view, e.g. sys/audited-headers-config/
+	view := c.systemBarrierView.SubView(audit.AuditedHeadersSubPath)
+
+	headers, err := audit.NewHeadersConfig(view)
+	if err != nil {
+		return err
+	}
+
+	// Invalidate the headers now in order to load them for the first time.
+	err = headers.Invalidate(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Update the Core.
+	c.auditedHeaders = headers
+
+	return nil
 }
