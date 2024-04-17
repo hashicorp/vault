@@ -19,7 +19,7 @@ export default class SyncSecretsRoute extends Route {
 
   model() {
     return {
-      // TODO this is a half way solution until persona service is implemented. Additionally, we should move away from calling the response of this endpoint features, and instead use flags which the noun used in the endpoint.
+      // TODO will modify when we use the persona service.
       activatedFeatures: this.flags.activatedFlags,
     };
   }
