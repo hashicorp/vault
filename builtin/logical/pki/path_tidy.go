@@ -23,15 +23,16 @@ import (
 
 var tidyCancelledError = errors.New("tidy operation cancelled")
 
+//go:generate enumer -type=tidyStatusState -trimprefix=tidyStatus
 type tidyStatusState int
 
 const (
-	tidyStatusInactive   tidyStatusState = iota
-	tidyStatusStarted                    = iota
-	tidyStatusFinished                   = iota
-	tidyStatusError                      = iota
-	tidyStatusCancelling                 = iota
-	tidyStatusCancelled                  = iota
+	tidyStatusInactive tidyStatusState = iota
+	tidyStatusStarted
+	tidyStatusFinished
+	tidyStatusError
+	tidyStatusCancelling
+	tidyStatusCancelled
 )
 
 type tidyStatus struct {

@@ -51,6 +51,7 @@ func (r *RequestWrapInfo) SentinelKeys() []string {
 	}
 }
 
+//go:generate enumer -type=ClientTokenSource -trimprefix=ClientTokenFrom -transform=snake
 type ClientTokenSource uint32
 
 const (

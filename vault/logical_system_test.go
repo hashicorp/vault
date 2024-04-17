@@ -1074,7 +1074,7 @@ func TestSystemBackend_remount_auth(t *testing.T) {
 		)
 
 		migrationInfo := resp.Data["migration_info"].(*MountMigrationInfo)
-		if migrationInfo.MigrationStatus != MigrationSuccessStatus.String() {
+		if migrationInfo.MigrationStatus != MigrationStatusSuccess.String() {
 			return fmt.Errorf("Expected migration status to be successful, got %q", migrationInfo.MigrationStatus)
 		}
 		return nil
@@ -1226,7 +1226,7 @@ func TestSystemBackend_remount(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 		migrationInfo := resp.Data["migration_info"].(*MountMigrationInfo)
-		if migrationInfo.MigrationStatus != MigrationSuccessStatus.String() {
+		if migrationInfo.MigrationStatus != MigrationStatusSuccess.String() {
 			return fmt.Errorf("Expected migration status to be successful, got %q", migrationInfo.MigrationStatus)
 		}
 		return nil
