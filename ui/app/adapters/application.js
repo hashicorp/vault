@@ -50,6 +50,9 @@ export default RESTAdapter.extend({
     const namespace =
       typeof options.namespace === 'undefined' ? this.namespaceService.path : options.namespace;
     if (namespace && !NAMESPACE_ROOT_URLS.some((str) => url.includes(str))) {
+      // debugger;
+      // headers['X-Vault-Namespace'] = encodeURIComponent(namespace);
+
       headers['X-Vault-Namespace'] = namespace;
     }
     options.headers = Object.assign(options.headers || {}, headers);
@@ -86,6 +89,10 @@ export default RESTAdapter.extend({
       };
     }
     const opts = this._preRequest(url, options, method);
+
+    if (opts.headers) {
+      console.log('options.headers', options.headers);
+    }
 
     return this._super(url, type, opts).then((...args) => {
       if (controlGroupToken) {
