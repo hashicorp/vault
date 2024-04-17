@@ -8,8 +8,7 @@ import { service } from '@ember/service';
 import { hash } from 'rsvp';
 
 import type RouterService from '@ember/routing/router-service';
-import type FeatureFlagService from 'vault/services/feature-flag';
-import type VersionService from 'vault/services/version';
+import type Flags from 'vault/services/flags';
 import type StoreService from 'vault/services/store';
 
 enum secretsSyncPersona {
@@ -22,11 +21,10 @@ enum secretsSyncPersona {
 export default class SyncSecretsOverviewRoute extends Route {
   @service declare readonly router: RouterService;
   @service declare readonly store: StoreService;
-  @service declare readonly featureFlag: FeatureFlagService;
-  @service declare readonly version: VersionService;
+  @service declare readonly flags: Flags;
 
   beforeModel(): void | Promise<unknown> {
-    if (this.featureFlag.managedNamespaceRoot !== null) {
+    if (this.flags.managedNamespaceRoot !== null) {
       this.router.transitionTo('vault.cluster.dashboard');
     }
   }
@@ -38,10 +36,10 @@ export default class SyncSecretsOverviewRoute extends Route {
 
     return hash({
       secretsSyncPersona,
-      destinations: this.version.secretsSyncIsActivated
+      destinations: this.flags.secretsSyncIsActivated
         ? this.store.query('sync/destination', {}).catch(() => [])
         : [],
-      associations: this.version.secretsSyncIsActivated
+      associations: this.flags.secretsSyncIsActivated
         ? this.store
             .adapterFor('sync/association')
             .queryAll()

@@ -7,18 +7,16 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 
 import type RouterService from '@ember/routing/router-service';
-import type StoreService from 'vault/services/store';
-import type VersionService from 'vault/services/version';
+import type FlagsService from 'vault/services/flags';
 import type PersonaService from 'vault/services/persona';
 
 export default class SyncSecretsRoute extends Route {
   @service declare readonly router: RouterService;
-  @service declare readonly store: StoreService;
-  @service declare readonly version: VersionService;
+  @service declare readonly flags: FlagsService;
   @service declare readonly persona: PersonaService;
 
   beforeModel() {
-    return this.version.fetchActivatedFeatures();
+    return this.flags.fetchActivatedFeatures();
   }
 
   model() {
@@ -28,7 +26,7 @@ export default class SyncSecretsRoute extends Route {
   }
 
   afterModel() {
-    if (!this.version.secretsSyncIsActivated) {
+    if (!this.flags.secretsSyncIsActivated) {
       this.router.transitionTo('vault.cluster.sync.secrets.overview');
     }
   }

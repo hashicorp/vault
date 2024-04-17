@@ -5,24 +5,16 @@
 
 import Service, { service } from '@ember/service';
 
-import type FeatureFlagService from 'vault/services/feature-flag';
+import type FlagService from 'vault/services/flags';
 import type VersionService from 'vault/services/version';
-import type StoreService from 'vault/services/store';
 
 /**
  * This service returns a persona which can be used to hide or show various states. Currently being used for Secrets Sync, but designed so that other personas can be added.
  */
 
 export default class PersonaService extends Service {
-  @service declare readonly featureFlag: FeatureFlagService;
-  @service declare readonly store: StoreService;
+  @service declare readonly flags: FlagService;
   @service declare readonly version: VersionService;
-
-  get isManagedNamespaceRoot() {
-    // TODO when we get the all clear to allow HVD to use Secrets Sync we can uncomment this.
-    return false;
-    // return this.featureFlag.managedNamespaceRoot ? true : false;
-  }
 
   /**
  * Secret Sync persona options are: ['SHOW_ENTERPRISE_CTA, SHOW_PREMIUM_CTA, SHOW_ACTIVATION_CTA and SHOW_SECRETS_SYNC]. The persona return is based on the following criteria:
@@ -39,12 +31,12 @@ export default class PersonaService extends Service {
 
   get secretsSyncPersona() {
     if (!this.version.isEnterprise) return 'SHOW_ENTERPRISE_CTA';
-
-    if (this.isManagedNamespaceRoot) {
-      return this.version.secretsSyncIsActivated ? `SHOW_SECRETS_SYNC` : `SHOW_ACTIVATION_CTA`;
-    }
+    // TODO - until HVD backend changes are made, we can't show secrets sync for managed clusters
+    // if (this.flags.managedNamespaceRoot) {
+    //   return this.flags.secretsSyncIsActivated ? `SHOW_SECRETS_SYNC` : `SHOW_ACTIVATION_CTA`;
+    // }
     if (this.version.hasSecretsSync) {
-      return this.version.secretsSyncIsActivated ? `SHOW_SECRETS_SYNC` : `SHOW_ACTIVATION_CTA`;
+      return this.flags.secretsSyncIsActivated ? `SHOW_SECRETS_SYNC` : `SHOW_ACTIVATION_CTA`;
     }
     // only option left is enterprise without it on their license so show premium CTA
     return 'SHOW_PREMIUM_CTA';

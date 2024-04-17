@@ -4,15 +4,17 @@
  */
 
 import Service, { inject as service } from '@ember/service';
-import { keepLatestTask, task } from 'ember-concurrency';
+import { task, keepLatestTask } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
-import { DEBUG } from '@glimmer/env';
+
+/**
+ * This service returns information about a clusters license and version which comes from the health and seal-status.
+ */
 
 export default class VersionService extends Service {
   @service store;
-  @service featureFlag;
+  @service flags;
   @tracked features = [];
-  @tracked activatedFeatures = [];
   @tracked version = null;
   @tracked type = null;
 
@@ -56,11 +58,6 @@ export default class VersionService extends Service {
     return this.features.includes('Secrets Sync');
   }
 
-  /* Activated Features */
-  get secretsSyncIsActivated() {
-    return this.activatedFeatures.includes('secrets-sync');
-  }
-
   @task({ drop: true })
   *getVersion() {
     if (this.version) return;
@@ -95,21 +92,6 @@ export default class VersionService extends Service {
     }
   }
 
-  @keepLatestTask
-  *getActivatedFeatures() {
-    if (this.isCommunity) return;
-    // Response could change between user sessions so fire off endpoint without checking if activated features are already set.
-    try {
-      const response = yield this.store
-        .adapterFor('application')
-        .ajax('/v1/sys/activation-flags', 'GET', { unauthenticated: true, namespace: null });
-      this.activatedFeatures = response.data?.activated;
-      return;
-    } catch (error) {
-      if (DEBUG) console.error(error); // eslint-disable-line no-console
-    }
-  }
-
   fetchVersion() {
     return this.getVersion.perform();
   }
@@ -120,9 +102,5 @@ export default class VersionService extends Service {
 
   fetchFeatures() {
     return this.getFeatures.perform();
-  }
-
-  fetchActivatedFeatures() {
-    return this.getActivatedFeatures.perform();
   }
 }
