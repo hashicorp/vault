@@ -92,7 +92,7 @@
             {{/if}}
             {{#if (or @mountPath this.mountPaths)}}
               <SearchSelect
-                @id="auth-method-search-select"
+                @id="mounts-search-select"
                 @options={{this.mountPaths}}
                 @inputValue={{if @mountPath (array @mountPath)}}
                 @selectLimit="1"
