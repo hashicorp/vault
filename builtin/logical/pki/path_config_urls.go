@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -217,6 +218,12 @@ func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *
 		entries.OCSPServers = urlsInt.([]string)
 	}
 
+	for i, e := range entries.CRLDistributionPoints {
+		if strings.Contains(e, "%2C") || strings.Contains(e, "%2c") {
+			// May be URL encoded to avoid problems with commas
+			entries.CRLDistributionPoints[i] = strings.ReplaceAll(strings.ReplaceAll(e, "%2c", ","), "%2C", ",")
+		}
+	}
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"issuing_certificates":    entries.IssuingCertificates,
