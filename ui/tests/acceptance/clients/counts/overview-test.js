@@ -55,7 +55,7 @@ module('Acceptance | clients | overview', function (hooks) {
       .hasText('Jul 2023 - Jan 2024', 'Date range shows dates correctly parsed activity response');
     assert.dom(CLIENT_COUNT.attributionBlock).exists('Shows attribution area');
     assert
-      .dom(CLIENT_COUNT.charts.chart('running total'))
+      .dom(CLIENT_COUNT.chartContainer('Vault client counts'))
       .exists('Shows running totals with monthly breakdown charts');
     assert
       .dom(CLIENT_COUNT.charts.line.xAxisLabel)
@@ -77,7 +77,7 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(CLIENT_COUNT.runningTotalMonthStats)
       .doesNotExist('running total single month stat boxes do not show');
     assert
-      .dom(CLIENT_COUNT.charts.chart('running total'))
+      .dom(CLIENT_COUNT.chartContainer('Vault client counts'))
       .doesNotExist('running total month over month charts do not show');
     assert.dom(CLIENT_COUNT.attributionBlock).exists('attribution area shows');
     assert
@@ -101,7 +101,7 @@ module('Acceptance | clients | overview', function (hooks) {
     await click('[data-test-date-dropdown-submit]');
     assert.dom(CLIENT_COUNT.attributionBlock).exists('Shows attribution area');
     assert
-      .dom(CLIENT_COUNT.charts.chart('running total'))
+      .dom(CLIENT_COUNT.chartContainer('Vault client counts'))
       .exists('Shows running totals with monthly breakdown charts');
     assert
       .dom(CLIENT_COUNT.charts.line.xAxisLabel)
@@ -120,7 +120,7 @@ module('Acceptance | clients | overview', function (hooks) {
     await click('[data-test-calendar-month="September"]');
     assert.dom(CLIENT_COUNT.runningTotalMonthStats).exists('running total single month stat boxes show');
     assert
-      .dom(CLIENT_COUNT.charts.chart('running total'))
+      .dom(CLIENT_COUNT.chartContainer('Vault client counts'))
       .doesNotExist('running total month over month charts do not show');
     assert.dom(CLIENT_COUNT.attributionBlock).exists('attribution area shows');
     assert.dom('[data-test-chart-container="new-clients"]').exists('new client attribution chart shows');
@@ -133,7 +133,7 @@ module('Acceptance | clients | overview', function (hooks) {
 
     assert.dom(CLIENT_COUNT.attributionBlock).exists('Shows attribution area');
     assert
-      .dom(CLIENT_COUNT.charts.chart('running total'))
+      .dom(CLIENT_COUNT.chartContainer('Vault client counts'))
       .exists('Shows running totals with monthly breakdown charts');
     assert.strictEqual(
       findAll('[data-test-line-chart="plot-point"]').length,
@@ -165,7 +165,7 @@ module('Acceptance | clients | overview', function (hooks) {
 
   test('totals filter correctly with full data', async function (assert) {
     assert
-      .dom(CLIENT_COUNT.charts.chart('running total'))
+      .dom(CLIENT_COUNT.chartContainer('Vault client counts'))
       .exists('Shows running totals with monthly breakdown charts');
     assert.dom(CLIENT_COUNT.attributionBlock).exists('Shows attribution area');
 

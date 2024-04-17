@@ -110,7 +110,7 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
   test('it should render monthly new chart', async function (assert) {
     const expectedNewEntity = formatNumber([calculateAverage(this.newActivity, 'entity_clients')]);
     const expectedNewNonEntity = formatNumber([calculateAverage(this.newActivity, 'non_entity_clients')]);
-    const chart = CLIENT_COUNT.charts.chart('monthly new');
+    const chart = CLIENT_COUNT.chartContainer('Monthly new');
 
     await this.renderComponent();
 

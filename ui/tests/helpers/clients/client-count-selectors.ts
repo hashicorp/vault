@@ -17,6 +17,7 @@ export const CLIENT_COUNT = {
     startDiscrepancy: '[data-test-counts-start-discrepancy]',
   },
   statText: (label: string) => `[data-test-stat-text="${label}"]`,
+  chartContainer: (title: string) => `[data-test-chart-container="${title}"]`,
   charts: {
     chart: (title: string) => `[data-test-chart="${title}"]`, // newer lineal charts
     statTextValue: (label: string) =>

@@ -5,7 +5,7 @@
 
 {{! HBS display template for rendering title, description and stat boxes with a chart on the right }}
 
-<div class="chart-wrapper single-chart-grid" ...attributes>
+<div class="chart-wrapper single-chart-grid" data-test-chart-container={{@title}} ...attributes>
   <div class="chart-header has-bottom-margin-xl">
     <h2 class="chart-title">{{@title}}</h2>
     <p class="chart-description">
