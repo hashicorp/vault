@@ -24,7 +24,7 @@ module('Integration | Component | clients/usage-stats', function (hooks) {
   test('it renders defaults', async function (assert) {
     await this.renderComponent();
 
-    assert.dom('[data-test-stat-text]').exists({ count: 3 }, 'Renders 3 Stat texts even with no data passed');
+    assert.dom('[data-test-stat-text]').exists({ count: 4 }, 'Renders 4 Stat texts even with no data passed');
     assert.dom('[data-test-stat-text="Total clients"]').exists('Total clients exists');
     assert.dom('[data-test-stat-text="Total clients"] .stat-value').hasText('-', 'renders dash when no data');
     assert.dom('[data-test-stat-text="Entity clients"]').exists('Entity clients exists');
@@ -49,7 +49,7 @@ module('Integration | Component | clients/usage-stats', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom('[data-test-stat-text]').exists({ count: 3 }, 'Renders 3 Stat texts');
+    assert.dom('[data-test-stat-text]').exists({ count: 4 }, 'Renders 4 Stat texts');
     assert
       .dom('[data-test-stat-text="Total clients"] .stat-value')
       .hasText('17', 'Total clients shows passed value');
@@ -76,7 +76,7 @@ module('Integration | Component | clients/usage-stats', function (hooks) {
 
       await this.renderComponent();
 
-      assert.dom('[data-test-stat-text]').exists({ count: 4 }, 'Renders 4 Stat texts');
+      assert.dom('[data-test-stat-text]').exists({ count: 5 }, 'Renders 5 Stat texts');
       assert
         .dom('[data-test-stat-text="Secrets sync clients"] .stat-value')
         .hasText('5', 'secrets sync clients shows passed value');
@@ -87,7 +87,7 @@ module('Integration | Component | clients/usage-stats', function (hooks) {
 
       await this.renderComponent();
 
-      assert.dom('[data-test-stat-text]').exists({ count: 3 }, 'Renders 3 Stat texts');
+      assert.dom('[data-test-stat-text]').exists({ count: 4 }, 'Renders 4 Stat texts');
       assert.dom('[data-test-stat-text="Secrets sync clients"] .stat-value').doesNotExist();
     });
   });
