@@ -16,7 +16,7 @@
     - [Running Tests](#running-tests)
     - [Linting](#linting)
     - [Contributing / Best Practices](#contributing--best-practices)
-    - [Further Reading / Useful Links](#further-reading--useful-links)
+  - [Further Reading / Useful Links](#further-reading--useful-links)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -54,7 +54,7 @@ in the `.yarn/releases` folder. To update to a different version of `yarn`, use 
 ## Running a Vault Server
 
 Before running Vault UI locally, a Vault server must be running. First, ensure
-Vault dev is built according the the instructions in `../README.md`.
+Vault dev is built according the instructions in `../README.md`.
 
 - To start a single local Vault server: `yarn vault`
 - To start a local Vault cluster: `yarn vault:cluster`
@@ -88,7 +88,7 @@ _All of the commands below assume you're in the `ui/` directory._
 [Mirage](https://miragejs.com/docs/getting-started/introduction/) can be helpful for mocking backend endpoints.
 Look in [mirage/handlers](mirage/handlers/) for existing mocked backends.
 
-Run yarn with mirage: `yarn start:mirage handlername`
+Run yarn with mirage: `export MIRAGE_DEV_HANDLER=<handler> yarn start`
 
 Where `handlername` is one of the options exported in [mirage/handlers/index](mirage/handlers/index.js)
 
@@ -109,14 +109,15 @@ setting `VAULT_UI` environment variable.
 
 ### Quick commands
 
-| Command                               | Description                                                             |
-| ------------------------------------- | ----------------------------------------------------------------------- |
-| `yarn start`                          | start the app with live reloading                                       |
-| `yarn start:mirage <handler>`         | start the app with the mocked mirage backend, with handler provided     |
-| `make static-dist && make dev-ui`     | build a Vault binary with UI assets (run from root directory not `/ui`) |
-| `ember g component foo -ir core`      | generate a component in the /addon engine                               |
-| `yarn test:quick -f='<test name>'` -s | run tests in the browser, filtering by test name                        |
-| `yarn lint:js`                        | lint javascript files                                                   |
+| Command                                           | Description                                                             |
+| ------------------------------------------------- | ----------------------------------------------------------------------- |
+| `yarn start`                                      | start the app with live reloading (vault must be running on port :8200) |
+| `export MIRAGE_DEV_HANDLER=<handler>; yarn start` | start the app with the mocked mirage backend, with handler provided     |
+| `make static-dist && make dev-ui`                 | build a Vault binary with UI assets (run from root directory not `/ui`) |
+| `ember g component foo -ir core`                  | generate a component in the /addon engine                               |
+| `yarn test:filter`                                | run non-enterprise in the browser                                       |
+| `yarn test:filter -f='<test name>'`               | run tests in the browser, filtering by test name                        |
+| `yarn lint:js`                                    | lint javascript files                                                   |
 
 ### Code Generators
 
@@ -132,13 +133,13 @@ The above command creates a template-only component by default. If you'd like to
 
 ### Running Tests
 
-Running tests will spin up a Vault dev server on port :9200 via a
-pretest script that testem (the test runner) executes. All of the
-acceptance tests then run, which proxy requests back to that server.
+Running tests will spin up a Vault dev server on port :9200 via a pretest script that testem (the test runner) executes. All of the acceptance tests then run, which proxy requests back to that server. The normal test scripts use `ember-exam` which split into parallel runs, which is excellent for speed but makes it harder to debug. So we have a custom yarn script that automatically opens all the tests in a browser, and we can pass the `-f` flag to target the test(s) we're debugging.
 
-- `yarn run test:oss`
-- `yarn run test:oss -s` to keep the test server running after the initial run.
-- `yarn run test -f="policies"` to filter the tests that are run. `-f` gets passed into
+- `yarn run test` lint & run all the tests (CI uses this)
+- `yarn run test:oss` lint & run all the non-enterprise tests (CI uses this)
+- `yarn run test:quick` run all the tests without linting
+- `yarn run test:quick-oss` run all the non-enterprise tests without linting
+- `yarn run test:filter -f="policies"` run the filtered test in the browser with no splitting. `-f` is set to `!enterprise` by default
   [QUnit's `filter` config](https://api.qunitjs.com/config/QUnit.config#qunitconfigfilter-string--default-undefined)
 
 ### Linting

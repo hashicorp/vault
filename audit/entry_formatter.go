@@ -30,19 +30,22 @@ var (
 	_ eventlogger.Node = (*EntryFormatter)(nil)
 )
 
+// timeProvider offers a way to supply a pre-configured time.
+type timeProvider interface {
+	// formatTime provides the pre-configured time in a particular format.
+	formattedTime() string
+}
+
 // EntryFormatter should be used to format audit requests and responses.
 type EntryFormatter struct {
-	config          FormatterConfig
-	salter          Salter
-	logger          hclog.Logger
-	headerFormatter HeaderFormatter
-	name            string
-	prefix          string
+	config FormatterConfig
+	salter Salter
+	logger hclog.Logger
+	name   string
 }
 
 // NewEntryFormatter should be used to create an EntryFormatter.
-// Accepted options: WithHeaderFormatter, WithPrefix.
-func NewEntryFormatter(name string, config FormatterConfig, salter Salter, logger hclog.Logger, opt ...Option) (*EntryFormatter, error) {
+func NewEntryFormatter(name string, config FormatterConfig, salter Salter, logger hclog.Logger) (*EntryFormatter, error) {
 	const op = "audit.NewEntryFormatter"
 
 	name = strings.TrimSpace(name)
@@ -63,18 +66,11 @@ func NewEntryFormatter(name string, config FormatterConfig, salter Salter, logge
 		return nil, fmt.Errorf("%s: format not valid: %w", op, err)
 	}
 
-	opts, err := getOpts(opt...)
-	if err != nil {
-		return nil, fmt.Errorf("%s: error applying options: %w", op, err)
-	}
-
 	return &EntryFormatter{
-		config:          config,
-		salter:          salter,
-		logger:          logger,
-		headerFormatter: opts.withHeaderFormatter,
-		name:            name,
-		prefix:          opts.withPrefix,
+		config: config,
+		salter: salter,
+		logger: logger,
+		name:   name,
 	}, nil
 }
 
@@ -139,11 +135,14 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 		return nil, fmt.Errorf("%s: unable to copy audit event data: %w", op, err)
 	}
 
-	// Ensure that any headers in the request, are formatted as required, and are
-	// only present if they have been configured to appear in the audit log.
-	// e.g. via: /sys/config/auditing/request-headers/:name
-	if f.headerFormatter != nil && data.Request != nil && data.Request.Headers != nil {
-		data.Request.Headers, err = f.headerFormatter.ApplyConfig(ctx, data.Request.Headers, f.salter)
+	// If the request is present in the input data, apply header configuration
+	// regardless. We shouldn't be in a situation where the header formatter isn't
+	// present as it's required.
+	if data.Request != nil {
+		// Ensure that any headers in the request, are formatted as required, and are
+		// only present if they have been configured to appear in the audit log.
+		// e.g. via: /sys/config/auditing/request-headers/:name
+		data.Request.Headers, err = f.config.headerFormatter.ApplyConfig(ctx, data.Request.Headers, f.salter)
 		if err != nil {
 			return nil, fmt.Errorf("%s: unable to transform headers for auditing: %w", op, err)
 		}
@@ -162,9 +161,9 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 
 	switch a.Subtype {
 	case RequestType:
-		entry, err = f.FormatRequest(ctx, data)
+		entry, err = f.FormatRequest(ctx, data, a)
 	case ResponseType:
-		entry, err = f.FormatResponse(ctx, data)
+		entry, err = f.FormatResponse(ctx, data, a)
 	default:
 		return nil, fmt.Errorf("%s: unknown audit event subtype: %q", op, a.Subtype)
 	}
@@ -192,8 +191,8 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 	// don't support a prefix just sitting there.
 	// However, this would be a breaking change to how Vault currently works to
 	// include the prefix as part of the JSON object or XML document.
-	if f.prefix != "" {
-		result = append([]byte(f.prefix), result...)
+	if f.config.Prefix != "" {
+		result = append([]byte(f.config.Prefix), result...)
 	}
 
 	// Copy some properties from the event (and audit event) and store the
@@ -219,7 +218,7 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 }
 
 // FormatRequest attempts to format the specified logical.LogInput into a RequestEntry.
-func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput) (*RequestEntry, error) {
+func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput, provider timeProvider) (*RequestEntry, error) {
 	switch {
 	case in == nil || in.Request == nil:
 		return nil, errors.New("request to request-audit a nil request")
@@ -342,14 +341,15 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 	}
 
 	if !f.config.OmitTime {
-		reqEntry.Time = time.Now().UTC().Format(time.RFC3339Nano)
+		// Use the time provider to supply the time for this entry.
+		reqEntry.Time = provider.formattedTime()
 	}
 
 	return reqEntry, nil
 }
 
 // FormatResponse attempts to format the specified logical.LogInput into a ResponseEntry.
-func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInput) (*ResponseEntry, error) {
+func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInput, provider timeProvider) (*ResponseEntry, error) {
 	switch {
 	case f == nil:
 		return nil, errors.New("formatter is nil")
@@ -562,16 +562,21 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 	}
 
 	if !f.config.OmitTime {
-		respEntry.Time = time.Now().UTC().Format(time.RFC3339Nano)
+		// Use the time provider to supply the time for this entry.
+		respEntry.Time = provider.formattedTime()
 	}
 
 	return respEntry, nil
 }
 
 // NewFormatterConfig should be used to create a FormatterConfig.
-// Accepted options: WithElision, WithHMACAccessor, WithOmitTime, WithRaw, WithFormat.
-func NewFormatterConfig(opt ...Option) (FormatterConfig, error) {
+// Accepted options: WithElision, WithFormat, WithHMACAccessor, WithOmitTime, WithPrefix, WithRaw.
+func NewFormatterConfig(headerFormatter HeaderFormatter, opt ...Option) (FormatterConfig, error) {
 	const op = "audit.NewFormatterConfig"
+
+	if headerFormatter == nil || reflect.ValueOf(headerFormatter).IsNil() {
+		return FormatterConfig{}, fmt.Errorf("%s: header formatter is required: %w", op, event.ErrInvalidParameter)
+	}
 
 	opts, err := getOpts(opt...)
 	if err != nil {
@@ -579,9 +584,11 @@ func NewFormatterConfig(opt ...Option) (FormatterConfig, error) {
 	}
 
 	return FormatterConfig{
+		headerFormatter:    headerFormatter,
 		ElideListResponses: opts.withElision,
 		HMACAccessor:       opts.withHMACAccessor,
 		OmitTime:           opts.withOmitTime,
+		Prefix:             opts.withPrefix,
 		Raw:                opts.withRaw,
 		RequiredFormat:     opts.withFormat,
 	}, nil
@@ -655,10 +662,8 @@ func doElideListResponseData(data map[string]interface{}) {
 // newTemporaryEntryFormatter creates a cloned EntryFormatter instance with a non-persistent Salter.
 func newTemporaryEntryFormatter(n *EntryFormatter) *EntryFormatter {
 	return &EntryFormatter{
-		salter:          &nonPersistentSalt{},
-		headerFormatter: n.headerFormatter,
-		config:          n.config,
-		prefix:          n.prefix,
+		salter: &nonPersistentSalt{},
+		config: n.config,
 	}
 }
 

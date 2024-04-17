@@ -167,7 +167,7 @@ jobs:
         run: echo "ui-hash=$(git ls-tree HEAD ui --object-only)" | tee -a "$GITHUB_OUTPUT"
       - name: Set up UI asset cache
         id: cache-ui-assets
-        uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2 # v4.0.0
+        uses: actions/cache@ab5e6d0c87105b4c9c2047343972218f562e4319 # v4.0.1
         with:
           enableCrossOsArchive: true
           lookup-only: true
@@ -177,7 +177,7 @@ jobs:
           key: ui-${{ steps.ui-hash.outputs.ui-hash }}
       - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
         name: Set up node and yarn
-        uses: actions/setup-node@b39b52d1213e96004bfcb1c61a8a6fa8ab84f3e8 # v4.0.1
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version-file: ui/package.json
           cache: yarn
@@ -322,7 +322,10 @@ jobs:
       - id: slackbot-token
         run:
           echo "slackbot-token=${{ needs.setup.outputs.is-enterprise != 'true' && secrets.SLACK_BOT_TOKEN || steps.secrets.outputs.SLACK_BOT_TOKEN }}" >> "$GITHUB_OUTPUT"
-      - if: needs.setup.outputs.workflow-trigger == 'pull_request'
+      - if: | 
+          needs.setup.outputs.workflow-trigger == 'pull_request' && 
+          github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name && 
+          (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise')
         name: Create or update a build status comment on the pull request
         env:
           ARTIFACTS: ${{ needs.artifacts.result }}

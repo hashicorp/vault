@@ -52,9 +52,9 @@ type Salter interface {
 // It is recommended that you pass data through Hash prior to formatting it.
 type Formatter interface {
 	// FormatRequest formats the logical.LogInput into an RequestEntry.
-	FormatRequest(context.Context, *logical.LogInput) (*RequestEntry, error)
+	FormatRequest(context.Context, *logical.LogInput, timeProvider) (*RequestEntry, error)
 	// FormatResponse formats the logical.LogInput into an ResponseEntry.
-	FormatResponse(context.Context, *logical.LogInput) (*ResponseEntry, error)
+	FormatResponse(context.Context, *logical.LogInput, timeProvider) (*ResponseEntry, error)
 }
 
 // HeaderFormatter is an interface defining the methods of the
@@ -99,6 +99,12 @@ type FormatterConfig struct {
 
 	// The required/target format for the event (supported: JSONFormat and JSONxFormat).
 	RequiredFormat format
+
+	// headerFormatter specifies the formatter used for headers that existing in any incoming audit request.
+	headerFormatter HeaderFormatter
+
+	// Prefix specifies a Prefix that should be prepended to any formatted request or response before serialization.
+	Prefix string
 }
 
 // RequestEntry is the structure of a request audit log entry.
