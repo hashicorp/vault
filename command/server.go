@@ -2745,14 +2745,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		// autoSeal.
 		barrierSeal = vault.NewDefaultSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealWrappers))
 		if len(disabledSealWrappers) > 0 {
-			a, err = :vaultseal.NewAccess(sealLogger, sealGenerationInfo, disabledSealWrappers)
-			if err != nil {
-				return nil, err
-			}
-			unwrapSeal = vault.NewAutoSeal(a)
-		} else if sealGenerationInfo.Generation == 1 {
-			// First generation, and shamir, with no disabled wrapperrs, so there can be no wrapped values
-			sealGenerationInfo.SetRewrapped(true)
+			unwrapSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, disabledSealWrappers))
 		}
 
 	case len(disabledSealWrappers) == 1 && containsShamir(disabledSealWrappers):
