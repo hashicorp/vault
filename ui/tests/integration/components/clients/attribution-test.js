@@ -87,8 +87,8 @@ module('Integration | Component | clients/attribution', function (hooks) {
       .hasText(
         'The total clients in the namespace for this date range. This number is useful for identifying overall usage volume.'
       );
-    assert.dom('[data-test-top-attribution]').includesText('namespace').includesText('second');
-    assert.dom('[data-test-attribution-clients]').includesText('namespace').includesText('10');
+    assert.dom('[data-test-top-attribution]').includesText('namespace').includesText('ns1');
+    assert.dom('[data-test-attribution-clients]').includesText('namespace').includesText('18,903');
   });
 
   test('it renders two charts and correct text for single, historical month', async function (assert) {
@@ -213,8 +213,8 @@ module('Integration | Component | clients/attribution', function (hooks) {
       .hasText(
         'The total clients used by the auth method for this date range. This number is useful for identifying overall usage volume.'
       );
-    assert.dom('[data-test-top-attribution]').includesText('auth method').includesText('auth1/');
-    assert.dom('[data-test-attribution-clients]').includesText('auth method').includesText('3');
+    assert.dom('[data-test-top-attribution]').includesText('auth method').includesText('auth/authid/0');
+    assert.dom('[data-test-attribution-clients]').includesText('auth method').includesText('8,394');
   });
 
   test('it renders modal', async function (assert) {
@@ -319,5 +319,34 @@ module('Integration | Component | clients/attribution', function (hooks) {
     await click(GENERAL.confirmButton);
     const [filename, ,] = this.csvDownloadStub.lastCall.args;
     assert.strictEqual(filename, 'clients_by_namespace');
+  });
+
+  test('csv filename omits sync clients if not activated', async function (assert) {
+    assert.expect(1);
+    this.totalClientAttribution.forEach((ns) => delete ns.secret_syncs);
+    await render(hbs`
+      <Clients::Attribution
+        @isSecretsSyncActivated={{false}}
+        @totalClientAttribution={{this.totalClientAttribution}}
+        @responseTimestamp={{this.timestamp}}
+        />
+    `);
+
+    await click('[data-test-attribution-export-button]');
+    await click(GENERAL.confirmButton);
+    const [, content] = this.csvDownloadStub.lastCall.args;
+    assert.strictEqual(
+      content,
+      `Namespace path,Mount path
+  *namespace totals, inclusive of mount clients,Total clients,Entity clients,Non-entity clients,ACME clients
+ns1,*,18903,4256,4138,5699
+ns1,auth/authid/0,8394,4256,4138,0
+ns1,kvv2-engine-0,4810,0,0,0
+ns1,pki-engine-0,5699,0,0,5699
+root,*,16384,4002,4089,4003
+root,auth/authid/0,8091,4002,4089,0
+root,kvv2-engine-0,4290,0,0,0
+root,pki-engine-0,4003,0,0,4003`
+    );
   });
 });
