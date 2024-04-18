@@ -13,7 +13,8 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/go-jose/go-jose/v3/jwt"
+	jose "github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/hashicorp/errwrap"
 )
 
@@ -102,7 +103,7 @@ func VaultPluginTLSProviderContext(ctx context.Context, apiTLSConfig *TLSConfig)
 	return func() (*tls.Config, error) {
 		unwrapToken := os.Getenv(PluginUnwrapTokenEnv)
 
-		parsedJWT, err := jwt.ParseSigned(unwrapToken)
+		parsedJWT, err := jwt.ParseSigned(unwrapToken, []jose.SignatureAlgorithm{jose.ES256})
 		if err != nil {
 			return nil, errwrap.Wrapf("error parsing wrapping token: {{err}}", err)
 		}
