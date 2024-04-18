@@ -304,4 +304,20 @@ module('Integration | Component | clients/attribution', function (hooks) {
       'csv has expected content for a selected namespace'
     );
   });
+
+  test('csv filename omits date if no start/end timestamp', async function (assert) {
+    assert.expect(1);
+
+    await render(hbs`
+      <Clients::Attribution
+        @totalClientAttribution={{this.totalClientAttribution}}
+        @responseTimestamp={{this.timestamp}}
+        />
+    `);
+
+    await click('[data-test-attribution-export-button]');
+    await click(GENERAL.confirmButton);
+    const [filename, ,] = this.csvDownloadStub.lastCall.args;
+    assert.strictEqual(filename, 'clients_by_namespace');
+  });
 });

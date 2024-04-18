@@ -58,6 +58,7 @@ export default class Attribution extends Component {
   }
 
   get formattedStartDate() {
+    if (!this.args.startTimestamp) return null;
     return parseAPITimestamp(this.args.startTimestamp, 'MMMM yyyy');
   }
 
@@ -213,10 +214,10 @@ export default class Attribution extends Component {
 
   get formattedCsvFileName() {
     const endRange = this.formattedEndDate ? `-${this.formattedEndDate}` : '';
-    const csvDateRange = this.formattedStartDate + endRange;
+    const csvDateRange = this.formattedStartDate ? `_${this.formattedStartDate + endRange}` : '';
     return this.isSingleNamespace
-      ? `clients_by_mount_path_${csvDateRange}`
-      : `clients_by_namespace_${csvDateRange}`;
+      ? `clients_by_mount_path${csvDateRange}`
+      : `clients_by_namespace${csvDateRange}`;
   }
 
   get modalExportText() {
