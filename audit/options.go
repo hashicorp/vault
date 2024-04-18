@@ -50,6 +50,13 @@ func getOpts(opt ...Option) (options, error) {
 	return opts, nil
 }
 
+// ValidateOptions can be used to validate options before they are required.
+func ValidateOptions(opt ...Option) error {
+	_, err := getOpts(opt...)
+
+	return err
+}
+
 // WithID provides an optional ID.
 func WithID(id string) Option {
 	return func(o *options) error {
@@ -104,7 +111,7 @@ func WithSubtype(s string) Option {
 // WithFormat provides an Option to represent event format.
 func WithFormat(f string) Option {
 	return func(o *options) error {
-		f := strings.TrimSpace(f)
+		f := strings.TrimSpace(strings.ToLower(f))
 		if f == "" {
 			// Return early, we won't attempt to apply this option if its empty.
 			return nil

@@ -69,7 +69,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     later(() => {
       window.postMessage(buildMessage().data, window.origin);
       cancelTimers();
-    }, 50);
+    }, 100);
     await click('[data-test-auth-submit]');
   });
 

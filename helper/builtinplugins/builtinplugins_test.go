@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
-	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -48,7 +47,7 @@ func TestBuiltinPluginsWork(t *testing.T) {
 			// Specifying at least one audit backend factory will prevent NewTestCluster
 			// from attempting to enable a noop audit, and audit isn't required for this test.
 			AuditBackends: map[string]audit.Factory{
-				"noop": corehelpers.NoopAuditFactory(nil),
+				"noop": audit.NoopAuditFactory(nil),
 			},
 		},
 		&vault.TestClusterOptions{

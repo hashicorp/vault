@@ -10,7 +10,6 @@ import {
   fillIn,
   visit,
   click,
-  find,
   waitFor,
   waitUntil,
 } from '@ember/test-helpers';
@@ -20,6 +19,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
 import { runCmd } from 'vault/tests/helpers/commands';
+import codemirror from 'vault/tests/helpers/codemirror';
 
 const SELECT = {
   policyByName: (name) => `[data-test-policy-link="${name}"]`,
@@ -86,7 +86,7 @@ module('Acceptance | policies/acl', function (hooks) {
     await click(SELECT.createLink);
 
     await fillIn(SELECT.nameInput, policyName);
-    find('.CodeMirror').CodeMirror.setValue(policyString);
+    codemirror().setValue(policyString);
     await click(SELECT.save);
     assert.strictEqual(
       currentURL(),
@@ -110,7 +110,7 @@ module('Acceptance | policies/acl', function (hooks) {
     assert
       .dom(SELECT.createError)
       .hasText(`Error 'policy' parameter not supplied or empty`, 'renders error message on save');
-    find('.CodeMirror').CodeMirror.setValue(policyString);
+    codemirror().setValue(policyString);
     await click(SELECT.save);
 
     await waitUntil(() => currentURL() === `/vault/policy/acl/${encodeURIComponent(policyLower)}`);

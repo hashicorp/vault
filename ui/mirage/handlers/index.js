@@ -19,6 +19,7 @@ import mfaLogin from './mfa-login';
 import oidcConfig from './oidc-config';
 import reducedDisclosure from './reduced-disclosure';
 import sync from './sync';
+import replication from './replication';
 
 export {
   base,
@@ -35,4 +36,5 @@ export {
   reducedDisclosure,
   customMessages,
   sync,
+  replication,
 };

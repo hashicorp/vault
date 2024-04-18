@@ -10,14 +10,15 @@ import { render, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { getUnixTime } from 'date-fns';
-import { SELECTORS } from 'vault/tests/helpers/clients';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 import { formatNumber } from 'core/helpers/format-number';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 import { dateFormat } from 'core/helpers/date-format';
 
 const START_TIME = getUnixTime(LICENSE_START);
 const END_TIME = getUnixTime(STATIC_NOW);
-const { syncTab, charts, usageStats } = SELECTORS;
+const { statText, charts, usageStats } = CLIENT_COUNT;
 
 module('Integration | Component | clients | Clients::Page::Sync', function (hooks) {
   setupRenderingTest(hooks);
@@ -56,13 +57,13 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     const expectedAvg = formatNumber([calculateAverage(this.activity.byMonth, 'secret_syncs')]);
     await this.renderComponent();
     assert
-      .dom(syncTab.total)
+      .dom(statText('Total sync clients'))
       .hasText(
         `Total sync clients The total number of secrets synced from Vault to other destinations during this date range. ${expectedTotal}`,
         `renders correct total sync stat ${expectedTotal}`
       );
     assert
-      .dom(syncTab.average)
+      .dom(statText('Average sync clients per month'))
       .hasText(
         `Average sync clients per month ${expectedAvg}`,
         `renders correct average sync stat ${expectedAvg}`
@@ -98,13 +99,15 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     await this.renderComponent();
 
     assert.dom(charts.chart('Secrets sync usage')).doesNotExist('vertical bar chart does not render');
-    assert.dom(SELECTORS.emptyStateTitle).hasText('No monthly secrets sync clients');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No monthly secrets sync clients');
     const formattedTimestamp = dateFormat([this.activity.responseTimestamp, 'MMM d yyyy, h:mm:ss aaa'], {
       withTimeZone: true,
     });
     assert.dom(charts.timestamp).hasText(`Updated ${formattedTimestamp}`, 'renders timestamp');
-    assert.dom(syncTab.total).doesNotExist('total sync counts does not exist');
-    assert.dom(syncTab.average).doesNotExist('average sync client counts does not exist');
+    assert.dom(statText('Total sync clients')).doesNotExist('total sync counts does not exist');
+    assert
+      .dom(statText('Average sync clients per month'))
+      .doesNotExist('average sync client counts does not exist');
   });
 
   test('it should render stats without chart for a single month', async function (assert) {
@@ -121,8 +124,10 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
         `Secrets sync usage This data can be used to understand how many secrets sync clients have been used for this date range. Each Vault secret that is synced to at least one destination counts as one Vault client. Total sync clients ${total}`,
         'renders sync stats instead of chart'
       );
-    assert.dom(syncTab.total).doesNotExist('total sync counts does not exist');
-    assert.dom(syncTab.average).doesNotExist('average sync client counts does not exist');
+    assert.dom(statText('Average total clients per month')).doesNotExist('total sync counts does not exist');
+    assert
+      .dom(statText('Average sync clients per month'))
+      .doesNotExist('average sync client counts does not exist');
   });
 
   test('it should render an empty state if secrets sync is not activated', async function (assert) {
@@ -130,15 +135,15 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
 
     await this.renderComponent();
 
-    assert.dom(SELECTORS.emptyStateTitle).hasText('No Secrets Sync clients');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No Secrets Sync clients');
     assert
-      .dom(SELECTORS.emptyStateMessage)
+      .dom(GENERAL.emptyStateMessage)
       .hasText('No data is available because Secrets Sync has not been activated.');
-    assert.dom(SELECTORS.emptyStateActions).hasText('Activate Secrets Sync');
+    assert.dom(GENERAL.emptyStateActions).hasText('Activate Secrets Sync');
 
     assert.dom(charts.chart('Secrets sync usage')).doesNotExist();
-    assert.dom(syncTab.total).doesNotExist();
-    assert.dom(syncTab.average).doesNotExist();
+    assert.dom(statText('Total sync clients')).doesNotExist();
+    assert.dom(statText('Average sync clients per month')).doesNotExist();
   });
 
   test('it should render an empty chart if secrets sync is activated but no secrets synced', async function (assert) {
@@ -179,10 +184,12 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     await this.renderComponent();
 
     assert
-      .dom(syncTab.total)
+      .dom(statText('Total sync clients'))
       .hasText(
         'Total sync clients The total number of secrets synced from Vault to other destinations during this date range. 0'
       );
-    assert.dom(syncTab.average).doesNotExist('Does not render average if the calculation is 0');
+    assert
+      .dom(statText('Average sync clients per month'))
+      .doesNotExist('Does not render average if the calculation is 0');
   });
 });

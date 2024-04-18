@@ -23,6 +23,7 @@ var (
 	_ cli.CommandAutocomplete = (*OperatorGenerateRootCommand)(nil)
 )
 
+//go:generate enumer -type=generateRootKind -trimprefix=generateRoot
 type generateRootKind int
 
 const (

@@ -73,6 +73,10 @@
             "path": "internals/telemetry/enable-telemetry"
           },
           {
+            "title": "Key metrics",
+            "path": "internals/telemetry/key-metrics"
+          },
+          {
             "title": "Metric reference",
             "routes": [
               {
@@ -220,6 +224,10 @@
       {
         "title": "Storage",
         "path": "concepts/storage"
+      },
+      {
+        "title": "Cloud access management",
+        "path": "concepts/cloud-access-management"
       },
       {
         "title": "Integrated Storage",

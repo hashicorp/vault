@@ -12,12 +12,12 @@ module('Integration | Component | clients/usage-stats', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.isSecretsSyncActivated = false;
+    this.showSecretSyncs = false;
     this.counts = {};
 
     this.renderComponent = async () =>
       await render(
-        hbs`<Clients::UsageStats @totalUsageCounts={{this.counts}} @isSecretsSyncActivated={{this.isSecretsSyncActivated}} />`
+        hbs`<Clients::UsageStats @totalUsageCounts={{this.counts}} @showSecretSyncs={{this.showSecretSyncs}} />`
       );
   });
 
@@ -25,15 +25,15 @@ module('Integration | Component | clients/usage-stats', function (hooks) {
     await this.renderComponent();
 
     assert.dom('[data-test-stat-text]').exists({ count: 3 }, 'Renders 3 Stat texts even with no data passed');
-    assert.dom('[data-test-stat-text="total-clients"]').exists('Total clients exists');
-    assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('-', 'renders dash when no data');
-    assert.dom('[data-test-stat-text="entity-clients"]').exists('Entity clients exists');
+    assert.dom('[data-test-stat-text="Total clients"]').exists('Total clients exists');
+    assert.dom('[data-test-stat-text="Total clients"] .stat-value').hasText('-', 'renders dash when no data');
+    assert.dom('[data-test-stat-text="Entity clients"]').exists('Entity clients exists');
     assert
-      .dom('[data-test-stat-text="entity-clients"] .stat-value')
+      .dom('[data-test-stat-text="Entity clients"] .stat-value')
       .hasText('-', 'renders dash when no data');
-    assert.dom('[data-test-stat-text="non-entity-clients"]').exists('Non entity clients exists');
+    assert.dom('[data-test-stat-text="Non-entity clients"]').exists('Non entity clients exists');
     assert
-      .dom('[data-test-stat-text="non-entity-clients"] .stat-value')
+      .dom('[data-test-stat-text="Non-entity clients"] .stat-value')
       .hasText('-', 'renders dash when no data');
     assert
       .dom('a')
@@ -51,13 +51,13 @@ module('Integration | Component | clients/usage-stats', function (hooks) {
 
     assert.dom('[data-test-stat-text]').exists({ count: 3 }, 'Renders 3 Stat texts');
     assert
-      .dom('[data-test-stat-text="total-clients"] .stat-value')
+      .dom('[data-test-stat-text="Total clients"] .stat-value')
       .hasText('17', 'Total clients shows passed value');
     assert
-      .dom('[data-test-stat-text="entity-clients"] .stat-value')
+      .dom('[data-test-stat-text="Entity clients"] .stat-value')
       .hasText('7', 'entity clients shows passed value');
     assert
-      .dom('[data-test-stat-text="non-entity-clients"] .stat-value')
+      .dom('[data-test-stat-text="Non-entity clients"] .stat-value')
       .hasText('10', 'non entity clients shows passed value');
   });
 
@@ -72,23 +72,23 @@ module('Integration | Component | clients/usage-stats', function (hooks) {
     });
 
     test('with secrets sync activated', async function (assert) {
-      this.isSecretsSyncActivated = true;
+      this.showSecretSyncs = true;
 
       await this.renderComponent();
 
       assert.dom('[data-test-stat-text]').exists({ count: 4 }, 'Renders 4 Stat texts');
       assert
-        .dom('[data-test-stat-text="secret-syncs"] .stat-value')
+        .dom('[data-test-stat-text="Secrets sync clients"] .stat-value')
         .hasText('5', 'secrets sync clients shows passed value');
     });
 
     test('with secrets sync NOT activated', async function (assert) {
-      this.isSecretsSyncActivated = false;
+      this.showSecretSyncs = false;
 
       await this.renderComponent();
 
       assert.dom('[data-test-stat-text]').exists({ count: 3 }, 'Renders 3 Stat texts');
-      assert.dom('[data-test-stat-text="secret-syncs"] .stat-value').doesNotExist();
+      assert.dom('[data-test-stat-text="Secrets sync clients"] .stat-value').doesNotExist();
     });
   });
 });

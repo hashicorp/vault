@@ -12,7 +12,8 @@ import { visit, click, currentURL } from '@ember/test-helpers';
 import sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
 import authPage from 'vault/tests/pages/auth';
-import { SELECTORS } from 'vault/tests/helpers/clients';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 
 module('Acceptance | clients | sync | activated', function (hooks) {
   setupApplicationTest(hooks);
@@ -34,10 +35,11 @@ module('Acceptance | clients | sync | activated', function (hooks) {
 
   test('it should render charts when secrets sync is activated', async function (assert) {
     syncHandler(this.server);
-
-    assert.dom(SELECTORS.charts.chart('Secrets sync usage')).exists('Secrets sync usage chart is rendered');
-    assert.dom(SELECTORS.syncTab.total).exists('Total sync clients chart is rendered');
-    assert.dom(SELECTORS.emptyStateTitle).doesNotExist();
+    assert
+      .dom(CLIENT_COUNT.charts.chart('Secrets sync usage'))
+      .exists('Secrets sync usage chart is rendered');
+    assert.dom(CLIENT_COUNT.statText('Total sync clients')).exists('Total sync clients chart is rendered');
+    assert.dom(GENERAL.emptyStateTitle).doesNotExist();
   });
 });
 
@@ -84,9 +86,9 @@ module('Acceptance | clients | sync | not activated', function (hooks) {
       };
     });
 
-    assert.dom(SELECTORS.emptyStateTitle).exists('Shows empty state when secrets-sync is not activated');
+    assert.dom(GENERAL.emptyStateTitle).exists('Shows empty state when secrets-sync is not activated');
 
-    await click(`${SELECTORS.emptyStateActions} .hds-link-standalone`);
+    await click(`${GENERAL.emptyStateActions} .hds-link-standalone`);
     assert.strictEqual(
       currentURL(),
       '/vault/sync/secrets/overview',

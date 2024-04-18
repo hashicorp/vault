@@ -328,6 +328,9 @@ func (c *AgentCommand) Run(args []string) int {
 			client.SetNamespace(config.AutoAuth.Method.Namespace)
 		}
 		templateNamespace = client.Namespace()
+		if !namespaceSetByEnvironmentVariable && config.Vault != nil && config.Vault.Namespace != "" {
+			templateNamespace = config.Vault.Namespace
+		}
 
 		sinkClient, err := client.CloneWithHeaders()
 		if err != nil {
@@ -655,7 +658,6 @@ func (c *AgentCommand) Run(args []string) int {
 
 		listeners = append(listeners, ln)
 
-		proxyVaultToken := true
 		apiProxyLogger.Debug("auto-auth token is allowed to be used; configuring inmem sink")
 		inmemSink, err := inmem.New(&sink.SinkConfig{
 			Logger: apiProxyLogger,
@@ -669,15 +671,18 @@ func (c *AgentCommand) Run(args []string) int {
 			Logger: apiProxyLogger,
 			Sink:   inmemSink,
 		})
+		useAutoAuthToken := false
+		forceAutoAuthToken := false
 		if config.APIProxy != nil {
-			proxyVaultToken = !config.APIProxy.ForceAutoAuthToken
+			useAutoAuthToken = config.APIProxy.UseAutoAuthToken
+			forceAutoAuthToken = config.APIProxy.ForceAutoAuthToken
 		}
 
 		var muxHandler http.Handler
 		if leaseCache != nil {
-			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, leaseCache, inmemSink, proxyVaultToken, authInProgress, invalidTokenErrCh)
+			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, leaseCache, inmemSink, forceAutoAuthToken, useAutoAuthToken, authInProgress, invalidTokenErrCh)
 		} else {
-			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, proxyVaultToken, authInProgress, invalidTokenErrCh)
+			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, forceAutoAuthToken, useAutoAuthToken, authInProgress, invalidTokenErrCh)
 		}
 
 		// Parse 'require_request_header' listener config option, and wrap
