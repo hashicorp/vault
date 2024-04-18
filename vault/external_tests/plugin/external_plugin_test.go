@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/api/auth/approle"
 	"github.com/hashicorp/vault/audit"
-	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/builtin/logical/database"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/consul"
@@ -38,7 +37,7 @@ func getCluster(t *testing.T, numCores int, types ...consts.PluginType) *vault.T
 			"database": database.Factory,
 		},
 		AuditBackends: map[string]audit.Factory{
-			"file": auditFile.Factory,
+			"file": audit.NewFileBackend,
 		},
 	}
 

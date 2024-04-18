@@ -122,7 +122,7 @@ func NewNoopAudit(config *BackendConfig) (*NoopAudit, error) {
 		nodeMap:    make(map[eventlogger.NodeID]eventlogger.Node, 2),
 	}
 
-	cfg, err := NewFormatterConfig(&NoopHeaderFormatter{})
+	cfg, err := newFormatterConfig(&NoopHeaderFormatter{}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func NewNoopAudit(config *BackendConfig) (*NoopAudit, error) {
 		return nil, fmt.Errorf("error generating random NodeID for formatter node: %w", err)
 	}
 
-	formatterNode, err := NewEntryFormatter(config.MountPath, cfg, noopBackend, config.Logger)
+	formatterNode, err := newEntryFormatter(config.MountPath, cfg, noopBackend, config.Logger)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
@@ -268,7 +268,7 @@ func (n *noopWrapper) Type() eventlogger.NodeType {
 // LogTestMessage will manually crank the handle on the nodes associated with this backend.
 func (n *NoopAudit) LogTestMessage(ctx context.Context, in *logical.LogInput) error {
 	if len(n.nodeIDList) > 0 {
-		return ProcessManual(ctx, in, n.nodeIDList, n.nodeMap)
+		return processManual(ctx, in, n.nodeIDList, n.nodeMap)
 	}
 
 	return nil
