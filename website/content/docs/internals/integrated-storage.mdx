@@ -11,7 +11,7 @@ offers pros, cons, advantages, and trade-offs. For example, some backends
 support high availability while others provide a more robust backup and
 restoration process. Integrated storage is a "built-in" storage option that
 supports backup/restore workflows, high availability, and Enterprise replication
-features without relying on third party systems.
+features without relying on third-party systems.
 
 ## Raft protocol overview
 
@@ -110,12 +110,12 @@ the logs used to reach that state, thereby compacting the log data.
 
 Raft consensus is fault-tolerant when a peer set has quorum. However, when a
 quorum of nodes is **not** available, the peer set cannot process log entries,
-elect leaders, or mange peer membership.
+elect leaders, or manage peer membership.
 
 For example, suppose there are only 2 peers: A and B. To have quorum, both nodes
 must participate, so the quorum size is 2. As a result, both nodes must agree
 before they can commit a log entry. If one of the nodes fails, the remaining
-node cannot reach quorum. The peer set can no longer add or remove nodes or
+node cannot reach quorum; the peer set can no longer add or remove nodes or
 commit additional log entries. When the peer set can no longer take action, it
 becomes **unavailable**. Once a peer set becomes unavailable, it can only be
 recovered manually by removing the failing node and restarting the remaining
@@ -127,7 +127,7 @@ When a single Vault server (node)
 [initializes](/vault/docs/commands/operator/init/#operator-init), it establishes
 a cluster (peer set) of size 1 and self-elects itself as leader. Once the
 cluster has a leader, additional servers can join the cluster using an
-encrypted challenge/answer workflow. For the join process to work, all all nodes
+encrypted challenge/answer workflow. For the join process to work, all nodes
 in a single Raft cluster must share the same seal configuration. If the cluster
 is configured to use auto-unseal, the join process automatically decrypts the
 challenge and responds with the answer using the configured seal. For other seal
@@ -189,7 +189,7 @@ truncating and compacting without risking poor performance from spiky writes.
 
 With the [autopilot](/vault/docs/concepts/integrated-storage/autopilot) feature,
 Vault uses a configurable set of parameters to confirm a node is healthy before
-considering the nde an eligible voter in the quorum list.
+considering it an eligible voter in the quorum list.
 
 Autopilot is enabled by default and includes stabilization logic for nodes
 joining the cluster:
@@ -216,7 +216,7 @@ operator intervention.
 
 Without autopilot, when a node joins a Raft cluster, the node tries to catch up
 with the peer set just by replicating data received from the leader. While the
-node in in the initial synchronization state, it cannot vote but is counted for
+node is in the initial synchronization state, it cannot vote, but **is** counted for
 the purposes of quorum. If multiple nodes join the cluster simultaneously (or
 within a small enough window) the cluster may exceed the expected failure
 tolerance, quorum may be lost, and the cluster can fail.
@@ -266,9 +266,9 @@ For example, if you start with a 5-node cluster:
 1. Scale the cluster to 7 nodes.
 1. Confirm the new nodes are joined and in sync with the rest of the peer set.
 1. Stop or destroy 2 of the older nodes.
-1. Repeat 2 more times to cycle out the rest of the preexisting nodes.
+1. Repeat this process 2 more times to cycle out the rest of the pre-existing nodes.
 
-You should always maintain quorum and limit the impact on failure tolerance when
+You should always maintain quorum to limit the impact on failure tolerance when
 changing or scaling your Vault instance.
 
 [consensus protocol]: https://en.wikipedia.org/wiki/Consensus_(computer_science)

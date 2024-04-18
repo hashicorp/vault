@@ -25,7 +25,6 @@
         @value={{this.averageTotalClients}}
         @size="m"
         class="data-details-top has-top-padding-l"
-        data-test-chart-stat="monthly total"
       />
 
       <StatText
@@ -33,7 +32,6 @@
         @value={{this.averageNewClients}}
         @size="m"
         class="data-details-bottom has-top-padding-l"
-        data-test-chart-stat="monthly new"
       />
     </:stats>
 
@@ -57,7 +55,6 @@
         @value={{this.average this.byMonthNewClients "entity_clients"}}
         @size="m"
         class="chart-subTitle has-top-padding-l"
-        data-test-chart-stat="entity"
       />
 
       <StatText
@@ -65,7 +62,6 @@
         @value={{this.average this.byMonthNewClients "non_entity_clients"}}
         @size="m"
         class="data-details-top has-top-padding-l"
-        data-test-chart-stat="nonentity"
       />
     </:stats>
 

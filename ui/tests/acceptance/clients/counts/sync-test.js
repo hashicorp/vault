@@ -35,11 +35,10 @@ module('Acceptance | clients | sync | activated', function (hooks) {
 
   test('it should render charts when secrets sync is activated', async function (assert) {
     syncHandler(this.server);
-
     assert
       .dom(CLIENT_COUNT.charts.chart('Secrets sync usage'))
       .exists('Secrets sync usage chart is rendered');
-    assert.dom(CLIENT_COUNT.syncTab.total).exists('Total sync clients chart is rendered');
+    assert.dom(CLIENT_COUNT.statText('Total sync clients')).exists('Total sync clients chart is rendered');
     assert.dom(GENERAL.emptyStateTitle).doesNotExist();
   });
 });

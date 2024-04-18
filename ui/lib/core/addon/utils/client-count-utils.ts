@@ -167,7 +167,7 @@ export const namespaceArrayToObject = (
             ...mount,
             timestamp,
             month,
-            new_clients: { month, ...newMountClients },
+            new_clients: { month, timestamp, ...newMountClients },
           };
         }
         return mountObj;
@@ -177,7 +177,7 @@ export const namespaceArrayToObject = (
         ...destructureClientCounts(ns),
         timestamp,
         month,
-        new_clients: { month, ...newNsClients },
+        new_clients: { month, timestamp, ...newNsClients },
         mounts_by_key,
       };
     }
@@ -241,6 +241,7 @@ export interface NamespaceByKey extends TotalClients {
 
 export interface NamespaceNewClients extends TotalClients {
   month: string;
+  timestamp: string;
   label: string;
   mounts: MountClients[];
 }
@@ -254,6 +255,7 @@ export interface MountByKey extends TotalClients {
 
 export interface MountNewClients extends TotalClients {
   month: string;
+  timestamp: string;
   label: string;
 }
 
