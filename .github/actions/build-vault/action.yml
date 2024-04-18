@@ -86,6 +86,7 @@ runs:
     - uses: ./.github/actions/set-up-go
       with:
         github-token: ${{ inputs.github-token }}
+    - uses: ./.github/actions/install-external-tools
     - if: inputs.vault-edition != 'ce'
       name: Configure Git
       shell: bash
