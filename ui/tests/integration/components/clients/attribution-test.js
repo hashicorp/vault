@@ -233,7 +233,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
     assert.dom('[ data-test-export-date-range]').includesText('June 2022 - December 2022');
   });
 
-  test('it downloads csv of data for a date range', async function (assert) {
+  test('it downloads csv data for date range', async function (assert) {
     assert.expect(2);
 
     await render(hbs`
@@ -255,7 +255,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
     );
   });
 
-  test('it downloads csv of data for a single month', async function (assert) {
+  test('it downloads csv data for a single month', async function (assert) {
     assert.expect(2);
     await render(hbs`
       <Clients::Attribution
