@@ -21,9 +21,6 @@ import (
 	"github.com/hashicorp/go-uuid"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/builtin/audit/file"
-	"github.com/hashicorp/vault/builtin/audit/socket"
-	"github.com/hashicorp/vault/builtin/audit/syslog"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/command/server"
@@ -59,24 +56,24 @@ func TestNewCore_configureAuditBackends(t *testing.T) {
 		},
 		"file": {
 			backends: map[string]audit.Factory{
-				"file": file.Factory,
+				"file": audit.NewFileBackend,
 			},
 		},
 		"socket": {
 			backends: map[string]audit.Factory{
-				"socket": socket.Factory,
+				"socket": audit.NewSocketBackend,
 			},
 		},
 		"syslog": {
 			backends: map[string]audit.Factory{
-				"syslog": syslog.Factory,
+				"syslog": audit.NewSyslogBackend,
 			},
 		},
 		"all": {
 			backends: map[string]audit.Factory{
-				"file":   file.Factory,
-				"socket": socket.Factory,
-				"syslog": syslog.Factory,
+				"file":   audit.NewFileBackend,
+				"socket": audit.NewSocketBackend,
+				"syslog": audit.NewSyslogBackend,
 			},
 		},
 	}

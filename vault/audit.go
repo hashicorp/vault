@@ -152,7 +152,7 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	defer view.setReadOnlyErr(origViewReadOnlyErr)
 
 	// Lookup the new backend
-	backend, err := c.newAuditBackend(ctx, entry, view, entry.Options)
+	backend, err := c.newAuditBackend(entry, view, entry.Options)
 	if err != nil {
 		return err
 	}
@@ -193,7 +193,7 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	c.audit = newTable
 
 	// Register the backend
-	err = c.auditBroker.Register(entry.Path, backend, entry.Local)
+	err = c.auditBroker.Register(backend, entry.Local)
 	if err != nil {
 		return fmt.Errorf("failed to register %q audit backend %q: %w", entry.Type, entry.Path, err)
 	}
@@ -432,7 +432,7 @@ func (c *Core) setupAudits(ctx context.Context) error {
 
 	brokerLogger := c.baseLogger.Named("audit")
 
-	broker, err := NewAuditBroker(brokerLogger)
+	broker, err := audit.NewBroker(brokerLogger)
 	if err != nil {
 		return err
 	}
@@ -456,7 +456,7 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		})
 
 		// Initialize the backend
-		backend, err := c.newAuditBackend(ctx, entry, view, entry.Options)
+		backend, err := c.newAuditBackend(entry, view, entry.Options)
 		if err != nil {
 			c.logger.Error("failed to create audit entry", "path", entry.Path, "error", err)
 			continue
@@ -467,7 +467,7 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		}
 
 		// Mount the backend
-		err = broker.Register(entry.Path, backend, entry.Local)
+		err = broker.Register(backend, entry.Local)
 		if err != nil {
 			c.logger.Error("failed to setup audit backed", "path", entry.Path, "type", entry.Type, "error", err)
 			continue
@@ -528,7 +528,7 @@ func (c *Core) removeAuditReloadFunc(entry *MountEntry) {
 }
 
 // newAuditBackend is used to create and configure a new audit backend by name
-func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logical.Storage, conf map[string]string) (audit.Backend, error) {
+func (c *Core) newAuditBackend(entry *MountEntry, view logical.Storage, conf map[string]string) (audit.Backend, error) {
 	// Ensure that non-Enterprise versions aren't trying to supply Enterprise only options.
 	if hasInvalidAuditOptions(entry.Options) {
 		return nil, fmt.Errorf("enterprise-only options supplied: %w", audit.ErrInvalidParameter)
