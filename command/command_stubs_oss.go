@@ -35,3 +35,5 @@ func entGetFIPSInfoKey() string {
 func entGetRequestLimiterStatus(coreConfig vault.CoreConfig) string {
 	return ""
 }
+
+func entAdjustServerCommand(serverCommand *ServerCommand) {}
