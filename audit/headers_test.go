@@ -77,13 +77,15 @@ func mockAuditedHeadersConfig(t *testing.T) *HeadersConfig {
 }
 
 func TestAuditedHeadersConfig_CRUD(t *testing.T) {
+	t.Parallel()
+
 	conf := mockAuditedHeadersConfig(t)
 
-	testAuditedHeadersConfig_Add(t, conf)
-	testAuditedHeadersConfig_Remove(t, conf)
+	testAddHeaders(t, conf)
+	testRemoveHeaders(t, conf)
 }
 
-func testAuditedHeadersConfig_Add(t *testing.T, conf *HeadersConfig) {
+func testAddHeaders(t *testing.T, conf *HeadersConfig) {
 	err := conf.Add(context.Background(), "X-Test-Header", false)
 	if err != nil {
 		t.Fatalf("Error when adding header to config: %s", err)
@@ -159,7 +161,7 @@ func testAuditedHeadersConfig_Add(t *testing.T, conf *HeadersConfig) {
 	}
 }
 
-func testAuditedHeadersConfig_Remove(t *testing.T, conf *HeadersConfig) {
+func testRemoveHeaders(t *testing.T, conf *HeadersConfig) {
 	err := conf.Remove(context.Background(), "X-Test-Header")
 	if err != nil {
 		t.Fatalf("Error when adding header to config: %s", err)
@@ -226,6 +228,8 @@ func testAuditedHeadersConfig_Remove(t *testing.T, conf *HeadersConfig) {
 }
 
 func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
+	t.Parallel()
+
 	conf := mockAuditedHeadersConfig(t)
 
 	conf.Add(context.Background(), "X-TesT-Header", false)
@@ -288,6 +292,8 @@ func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
 // TestAuditedHeadersConfig_ApplyConfig_NoHeaders tests the case where there are
 // no headers in the request.
 func TestAuditedHeadersConfig_ApplyConfig_NoRequestHeaders(t *testing.T) {
+	t.Parallel()
+
 	conf := mockAuditedHeadersConfig(t)
 
 	err := conf.Add(context.Background(), "X-TesT-Header", false)
@@ -309,6 +315,8 @@ func TestAuditedHeadersConfig_ApplyConfig_NoRequestHeaders(t *testing.T) {
 }
 
 func TestAuditedHeadersConfig_ApplyConfig_NoConfiguredHeaders(t *testing.T) {
+	t.Parallel()
+
 	conf := mockAuditedHeadersConfig(t)
 
 	reqHeaders := map[string][]string{
@@ -352,6 +360,8 @@ func (s *FailingSalter) Salt(context.Context) (*salt.Salt, error) {
 // TestAuditedHeadersConfig_ApplyConfig_HashStringError tests the case where
 // an error is returned from HashString instead of a map of headers.
 func TestAuditedHeadersConfig_ApplyConfig_HashStringError(t *testing.T) {
+	t.Parallel()
+
 	conf := mockAuditedHeadersConfig(t)
 
 	conf.Add(context.Background(), "X-TesT-Header", false)
@@ -400,12 +410,16 @@ func BenchmarkAuditedHeaderConfig_ApplyConfig(b *testing.B) {
 // TestAuditedHeaders_auditedHeadersKey is used to check the key we use to handle
 // invalidation doesn't change when we weren't expecting it to.
 func TestAuditedHeaders_auditedHeadersKey(t *testing.T) {
+	t.Parallel()
+
 	require.Equal(t, "audited-headers-config/audited-headers", AuditedHeadersKey())
 }
 
 // TestAuditedHeaders_NewAuditedHeadersConfig checks supplying incorrect params to
 // the constructor for HeadersConfig returns an error.
 func TestAuditedHeaders_NewAuditedHeadersConfig(t *testing.T) {
+	t.Parallel()
+
 	ac, err := NewHeadersConfig(nil)
 	require.Error(t, err)
 	require.Nil(t, ac)
@@ -418,6 +432,8 @@ func TestAuditedHeaders_NewAuditedHeadersConfig(t *testing.T) {
 // TestAuditedHeaders_invalidate ensures that we can update the headers on HeadersConfig
 // when we invalidate, and load the updated headers from the view/storage.
 func TestAuditedHeaders_invalidate(t *testing.T) {
+	t.Parallel()
+
 	view := newMockStorage(t)
 	ahc, err := NewHeadersConfig(view)
 	require.NoError(t, err)
@@ -460,6 +476,8 @@ func TestAuditedHeaders_invalidate(t *testing.T) {
 // TestAuditedHeaders_invalidate_nil_view ensures that we invalidate the headers
 // correctly (clear them) when we get nil for the storage entry from the view.
 func TestAuditedHeaders_invalidate_nil_view(t *testing.T) {
+	t.Parallel()
+
 	view := newMockStorage(t)
 	ahc, err := NewHeadersConfig(view)
 	require.NoError(t, err)
@@ -495,6 +513,8 @@ func TestAuditedHeaders_invalidate_nil_view(t *testing.T) {
 // TestAuditedHeaders_invalidate_bad_data ensures that we correctly error if the
 // underlying data cannot be parsed as expected.
 func TestAuditedHeaders_invalidate_bad_data(t *testing.T) {
+	t.Parallel()
+
 	view := newMockStorage(t)
 	ahc, err := NewHeadersConfig(view)
 	require.NoError(t, err)
@@ -515,6 +535,8 @@ func TestAuditedHeaders_invalidate_bad_data(t *testing.T) {
 // TestAuditedHeaders_header checks we can return a copy of settings associated with
 // an existing header, and we also know when a header wasn't found.
 func TestAuditedHeaders_header(t *testing.T) {
+	t.Parallel()
+
 	view := newMockStorage(t)
 	ahc, err := NewHeadersConfig(view)
 	require.NoError(t, err)
@@ -535,6 +557,8 @@ func TestAuditedHeaders_header(t *testing.T) {
 // TestAuditedHeaders_headers checks we are able to return a copy of the existing
 // configured headers.
 func TestAuditedHeaders_headers(t *testing.T) {
+	t.Parallel()
+
 	view := newMockStorage(t)
 	ahc, err := NewHeadersConfig(view)
 	require.NoError(t, err)
