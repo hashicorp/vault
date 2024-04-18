@@ -50,7 +50,6 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/osutil"
 	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/plugins/event"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -322,9 +321,6 @@ type Core struct {
 	// auditBackends is the mapping of backends to use for this core
 	auditBackends map[string]audit.Factory
 
-	// eventBackends is the mapping of event plugins to use for this core
-	eventBackends map[string]event.Factory
-
 	// stateLock protects mutable state
 	stateLock locking.RWMutex
 	sealed    *uint32
@@ -389,11 +385,11 @@ type Core struct {
 
 	// auditBroker is used to ingest the audit events and fan
 	// out into the configured audit backends
-	auditBroker *AuditBroker
+	auditBroker *audit.Broker
 
 	// auditedHeaders is used to configure which http headers
 	// can be output in the audit logs
-	auditedHeaders *AuditedHeadersConfig
+	auditedHeaders *audit.HeadersConfig
 
 	// systemBackend is the backend which is used to manage internal operations
 	systemBackend   *SystemBackend
@@ -763,8 +759,6 @@ type CoreConfig struct {
 	CredentialBackends map[string]logical.Factory
 
 	AuditBackends map[string]audit.Factory
-
-	EventBackends map[string]event.Factory
 
 	Physical physical.Backend
 
@@ -1282,9 +1276,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	// Audit backends
 	c.configureAuditBackends(conf.AuditBackends)
 
-	// Event plugins
-	c.configureEventBackends(conf.EventBackends)
-
 	// UI
 	uiStoragePrefix := systemBarrierPrefix + "ui"
 	c.uiConfig = NewUIConfig(conf.EnableUI, physical.NewView(c.physical, uiStoragePrefix), NewBarrierView(c.barrier, uiStoragePrefix))
@@ -1444,19 +1435,6 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 	c.logicalBackends = logicalBackends
 
 	c.addExtraLogicalBackends(adminNamespacePath)
-}
-
-// configureEventBackends configures the Core with the ability to create
-// event backends for various types.
-func (c *Core) configureEventBackends(backends map[string]event.Factory) {
-	eventBackends := make(map[string]event.Factory, len(backends))
-	for k, f := range backends {
-		eventBackends[k] = f
-	}
-
-	c.eventBackends = eventBackends
-
-	c.addExtraEventBackends()
 }
 
 // handleVersionTimeStamps stores the current version at the current time to
@@ -2477,7 +2455,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		}
 
 	} else {
-		broker, err := NewAuditBroker(logger)
+		broker, err := audit.NewBroker(logger)
 		if err != nil {
 			return err
 		}
@@ -2935,7 +2913,7 @@ func (c *Core) BarrierKeyLength() (min, max int) {
 	return
 }
 
-func (c *Core) AuditedHeadersConfig() *AuditedHeadersConfig {
+func (c *Core) AuditedHeadersConfig() *audit.HeadersConfig {
 	return c.auditedHeaders
 }
 
@@ -4550,4 +4528,27 @@ func (c *Core) DetectStateLockDeadlocks() bool {
 		return true
 	}
 	return false
+}
+
+// setupAuditedHeadersConfig will initialize new audited headers configuration on
+// the Core by loading data from the barrier view.
+func (c *Core) setupAuditedHeadersConfig(ctx context.Context) error {
+	// Create a sub-view, e.g. sys/audited-headers-config/
+	view := c.systemBarrierView.SubView(audit.AuditedHeadersSubPath)
+
+	headers, err := audit.NewHeadersConfig(view)
+	if err != nil {
+		return err
+	}
+
+	// Invalidate the headers now in order to load them for the first time.
+	err = headers.Invalidate(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Update the Core.
+	c.auditedHeaders = headers
+
+	return nil
 }

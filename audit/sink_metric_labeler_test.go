@@ -35,7 +35,7 @@ func TestMetricLabelerAuditSink_Label(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			m := &MetricLabelerAuditSink{}
+			m := &metricLabelerAuditSink{}
 			result := m.Labels(nil, tc.err)
 			assert.Equal(t, tc.expected, result)
 		})
@@ -67,7 +67,7 @@ func TestMetricLabelerAuditFallback_Label(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			m := &MetricLabelerAuditFallback{}
+			m := &metricLabelerAuditFallback{}
 			result := m.Labels(nil, tc.err)
 			assert.Equal(t, tc.expected, result)
 		})
