@@ -6,6 +6,12 @@ package awsauth
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"time"
+
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
@@ -58,6 +64,26 @@ func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, reg
 		credsConfig.AccessKey = config.AccessKey
 		credsConfig.SecretKey = config.SecretKey
 		maxRetries = config.MaxRetries
+
+		if config.IdentityTokenAudience != "" {
+			ns, err := namespace.FromContext(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get namespace from context: %w", err)
+			}
+
+			fetcher := &PluginIdentityTokenFetcher{
+				sys:      b.System(),
+				logger:   b.Logger(),
+				ns:       ns,
+				audience: config.IdentityTokenAudience,
+				ttl:      config.IdentityTokenTTL,
+			}
+
+			sessionSuffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+			credsConfig.RoleSessionName = fmt.Sprintf("vault-aws-auth-%s", sessionSuffix)
+			credsConfig.WebIdentityTokenFetcher = fetcher
+			credsConfig.RoleARN = config.RoleARN
+		}
 	}
 
 	credsConfig.HTTPClient = cleanhttp.DefaultClient()
@@ -301,4 +327,37 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, acco
 		b.IAMClientsMap[region][stsRole] = client
 	}
 	return b.IAMClientsMap[region][stsRole], nil
+}
+
+// PluginIdentityTokenFetcher fetches plugin identity tokens from Vault. It is provided
+// to the AWS SDK client to keep assumed role credentials refreshed through expiration.
+// When the client's STS credentials expire, it will use this interface to fetch a new
+// plugin identity token and exchange it for new STS credentials.
+type PluginIdentityTokenFetcher struct {
+	sys      logical.SystemView
+	logger   hclog.Logger
+	audience string
+	ns       *namespace.Namespace
+	ttl      time.Duration
+}
+
+var _ stscreds.TokenFetcher = (*PluginIdentityTokenFetcher)(nil)
+
+func (f PluginIdentityTokenFetcher) FetchToken(ctx aws.Context) ([]byte, error) {
+	nsCtx := namespace.ContextWithNamespace(ctx, f.ns)
+	resp, err := f.sys.GenerateIdentityToken(nsCtx, &pluginutil.IdentityTokenRequest{
+		Audience: f.audience,
+		TTL:      f.ttl,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate plugin identity token: %w", err)
+	}
+	f.logger.Info("fetched new plugin identity token")
+
+	if resp.TTL < f.ttl {
+		f.logger.Debug("generated plugin identity token has shorter TTL than requested",
+			"requested", f.ttl, "actual", resp.TTL)
+	}
+
+	return []byte(resp.Token.Token()), nil
 }

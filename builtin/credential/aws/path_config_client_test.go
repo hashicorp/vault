@@ -5,6 +5,8 @@ package awsauth
 
 import (
 	"context"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -127,5 +129,119 @@ func TestBackend_pathConfigClient(t *testing.T) {
 	if resp.Data["sts_region"] != data["sts_region"] {
 		t.Fatalf("expected sts_region: '%#v'; returned sts_region: '%#v'",
 			data["sts_region"], resp.Data["sts_region"])
+	}
+}
+
+// TestBackend_PathConfigRoot_PluginIdentityToken tests parsing and validation of
+// configuration used to set the secret engine up for web identity federation using
+// plugin identity tokens.
+func TestBackend_PathConfigRoot_PluginIdentityToken(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	configData := map[string]interface{}{
+		"identity_token_ttl":      int64(10),
+		"identity_token_audience": "test-aud",
+		"role_arn":                "test-role-arn",
+	}
+
+	configReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   config.StorageView,
+		Path:      "config/client",
+		Data:      configData,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), configReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: config writing failed: resp:%#v\n err: %v", resp, err)
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Storage:   config.StorageView,
+		Path:      "config/client",
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: config reading failed: resp:%#v\n err: %v", resp, err)
+	}
+
+	// Grab the subset of fields from the response we care to look at for this case
+	got := map[string]interface{}{
+		"identity_token_ttl":      resp.Data["identity_token_ttl"],
+		"identity_token_audience": resp.Data["identity_token_audience"],
+		"role_arn":                resp.Data["role_arn"],
+	}
+
+	if !reflect.DeepEqual(got, configData) {
+		t.Errorf("bad: expected to read config client as %#v, got %#v instead", configData, resp.Data)
+	}
+}
+
+func TestBackend_PathConfigRoot_PluginIdentityTokenWantErr(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// setting both audience and access key must result in an error due to mutual exclusivity
+	configData := map[string]interface{}{
+		"identity_token_audience": "test-aud",
+		"access_key":              "ASIAIO10230XVB",
+	}
+
+	configReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Storage:   config.StorageView,
+		Path:      "config/client",
+		Data:      configData,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), configReq)
+	if !resp.IsError() {
+		t.Fatalf("expected an error but got nil")
+	}
+	expectedError := "only one of 'access_key' or 'identity_token_audience' can be set"
+	if !strings.Contains(resp.Error().Error(), expectedError) {
+		t.Fatalf("expected err %s, got %s", expectedError, resp.Error())
+	}
+
+	// missing role arn with audience must result in an error
+	configData = map[string]interface{}{
+		"identity_token_audience": "test-aud",
+	}
+
+	configReq = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   config.StorageView,
+		Path:      "config/client",
+		Data:      configData,
+	}
+
+	resp, err = b.HandleRequest(context.Background(), configReq)
+	if !resp.IsError() {
+		t.Fatalf("expected an error but got nil")
+	}
+	expectedError = "role_arn must be set when identity_token_audience is set"
+	if !strings.Contains(resp.Error().Error(), expectedError) {
+		t.Fatalf("expected err %s, got %s", expectedError, resp.Error())
 	}
 }
