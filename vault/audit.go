@@ -139,8 +139,8 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	// Mark the view as read-only until the mounting is complete and
 	// ensure that it is reset after. This ensures that there will be no
 	// writes during the construction of the backend.
-	view.setReadOnlyErr(logical.ErrSetupReadOnly)
 	defer view.setReadOnlyErr(view.getReadOnlyErr())
+	view.setReadOnlyErr(logical.ErrSetupReadOnly)
 
 	// Lookup the new backend
 	backend, err := c.newAuditBackend(entry, view, entry.Options)
