@@ -70,19 +70,31 @@
               @size="l"
             />
           </div>
-          <div class="column-start-1">
-            <StatText @label="Entity clients" @value={{singleMonthData.new_clients.entity_clients}} @size="m" />
-          </div>
-          <div class="column-start-2">
-            <StatText @label="Non-entity clients" @value={{singleMonthData.new_clients.non_entity_clients}} @size="m" />
-          </div>
-          <div class="column-start-3">
-            <StatText @label="ACME clients" @value={{singleMonthData.new_clients.acme_clients}} @size="m" />
-          </div>
+          <StatText
+            @label="Entity clients"
+            @value={{singleMonthData.new_clients.entity_clients}}
+            @size="m"
+            class="column-start-1"
+          />
+          <StatText
+            @label="Non-entity clients"
+            @value={{singleMonthData.new_clients.non_entity_clients}}
+            @size="m"
+            class="column-start-2"
+          />
+          <StatText
+            @label="ACME clients"
+            @value={{singleMonthData.new_clients.acme_clients}}
+            @size="m"
+            class="column-start-3"
+          />
           {{#if @isSecretsSyncActivated}}
-            <div class="column-start-4">
-              <StatText @label="Secrets sync clients" @value={{singleMonthData.new_clients.secret_syncs}} @size="m" />
-            </div>
+            <StatText
+              @label="Secrets sync clients"
+              @value={{singleMonthData.new_clients.secret_syncs}}
+              @size="m"
+              class="column-start-4"
+            />
           {{/if}}
         </div>
         <div class="single-month-stats" data-test-total>
@@ -94,27 +106,26 @@
               @size="l"
             />
           </div>
-          <div class="column-start-1">
-            <StatText @label="Entity clients" @value={{singleMonthData.entity_clients}} @size="m" />
-          </div>
-          <div class="column-start-2">
-            <StatText @label="Non-entity clients" @value={{singleMonthData.non_entity_clients}} @size="m" />
-          </div>
-          <div class="column-start-3">
-            <StatText @label="ACME clients" @value={{singleMonthData.acme_clients}} @size="m" />
-          </div>
+          <StatText @label="Entity clients" @value={{singleMonthData.entity_clients}} @size="m" class="column-start-1" />
+          <StatText
+            @label="Non-entity clients"
+            @value={{singleMonthData.non_entity_clients}}
+            @size="m"
+            class="column-start-2"
+          />
+          <StatText @label="ACME clients" @value={{singleMonthData.acme_clients}} @size="m" class="column-start-3" />
           {{#if @isSecretsSyncActivated}}
-            <div class="column-start-4">
-              <StatText @label="Secrets sync clients" @value={{singleMonthData.secret_syncs}} @size="m" />
-            </div>
+            <StatText
+              @label="Secrets sync clients"
+              @value={{singleMonthData.secret_syncs}}
+              @size="m"
+              class="column-start-4"
+            />
           {{/if}}
         </div>
       </div>
     {{else}}
-      {{! This renders when either:
-    -> viewing the current month and all namespaces (no filters)
-    -> filtering by a namespace with no month over month data
-    if filtering by a mount with no month over month data <UsageStats> in dashboard.hbs renders }}
+      {{! Renders when viewing the current month or for activity log data that predates the monthly breakdown added in 1.11 }}
       <Clients::UsageStats
         @title="Total usage"
         @description="These totals are within this {{or @mountPath 'namespace and all its children'}}. {{if
