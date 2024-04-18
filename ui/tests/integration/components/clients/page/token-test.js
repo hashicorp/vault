@@ -6,6 +6,7 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { render, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
@@ -22,6 +23,15 @@ const END_TIME = getUnixTime(STATIC_NOW);
 module('Integration | Component | clients | Page::Token', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
+
+  hooks.before(function () {
+    // Fails on #ember-testing-container
+    setRunOptions({
+      rules: {
+        'scrollable-region-focusable': { enabled: false },
+      },
+    });
+  });
 
   hooks.beforeEach(async function () {
     clientsHandler(this.server);

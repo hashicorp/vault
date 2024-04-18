@@ -6,6 +6,7 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { render, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
@@ -24,6 +25,15 @@ const { statText, chartContainer, charts, usageStats } = CLIENT_COUNT;
 module('Integration | Component | clients | Clients::Page::Acme', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
+
+  hooks.before(function () {
+    // Fails on #ember-testing-container
+    setRunOptions({
+      rules: {
+        'scrollable-region-focusable': { enabled: false },
+      },
+    });
+  });
 
   hooks.beforeEach(async function () {
     clientsHandler(this.server);
