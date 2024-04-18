@@ -12,7 +12,6 @@ import { endOfMonth, formatRFC3339 } from 'date-fns';
 import { click } from '@ember/test-helpers';
 import subMonths from 'date-fns/subMonths';
 import timestamp from 'core/utils/timestamp';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | clients/attribution', function (hooks) {
   setupRenderingTest(hooks);
@@ -245,7 +244,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
         />
     `);
     await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
+    await click('[data-test-confirm-button]');
     const [filename, content] = this.csvDownloadStub.lastCall.args;
     assert.strictEqual(filename, 'clients_by_namespace_June 2022-December 2022', 'csv has expected filename');
     assert.strictEqual(
@@ -266,7 +265,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
         />
     `);
     await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
+    await click('[data-test-confirm-button]');
     const [filename, content] = this.csvDownloadStub.lastCall.args;
     assert.strictEqual(filename, 'clients_by_namespace_June 2022', 'csv has single month in filename');
     assert.strictEqual(
@@ -291,7 +290,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
     `);
 
     await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
+    await click('[data-test-confirm-button]');
     const [filename, content] = this.csvDownloadStub.lastCall.args;
     assert.strictEqual(
       filename,
@@ -316,7 +315,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
     `);
 
     await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
+    await click('[data-test-confirm-button]');
     const [filename, ,] = this.csvDownloadStub.lastCall.args;
     assert.strictEqual(filename, 'clients_by_namespace');
   });
