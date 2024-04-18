@@ -26,15 +26,6 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    // Fails on #ember-testing-container
-    setRunOptions({
-      rules: {
-        'scrollable-region-focusable': { enabled: false },
-      },
-    });
-  });
-
   hooks.beforeEach(async function () {
     clientsHandler(this.server);
     this.store = this.owner.lookup('service:store');
@@ -59,6 +50,12 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
         @mountPath={{this.countsController.mountPath}}
       />
     `);
+    // Fails on #ember-testing-container
+    setRunOptions({
+      rules: {
+        'scrollable-region-focusable': { enabled: false },
+      },
+    });
   });
 
   test('it should render with full month activity data charts', async function (assert) {

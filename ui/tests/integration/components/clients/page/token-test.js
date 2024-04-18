@@ -24,15 +24,6 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    // Fails on #ember-testing-container
-    setRunOptions({
-      rules: {
-        'scrollable-region-focusable': { enabled: false },
-      },
-    });
-  });
-
   hooks.beforeEach(async function () {
     clientsHandler(this.server);
     const store = this.owner.lookup('service:store');
@@ -67,6 +58,12 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
           @mountPath={{this.mountPath}}
         />
       `);
+    // Fails on #ember-testing-container
+    setRunOptions({
+      rules: {
+        'scrollable-region-focusable': { enabled: false },
+      },
+    });
   });
 
   test('it should render monthly total chart', async function (assert) {
