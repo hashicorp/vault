@@ -117,7 +117,7 @@
     if filtering by a mount with no month over month data <UsageStats> in dashboard.hbs renders }}
       <Clients::UsageStats
         @title="Total usage"
-        @description="These totals are within this namespace and all its children. {{if
+        @description="These totals are within this {{or @mountPath 'namespace and all its children'}}. {{if
           @isCurrentMonth
           "Only totals are available when viewing the current month. To see a breakdown of new and total clients for this month, select the 'Current billing period' filter."
         }}"

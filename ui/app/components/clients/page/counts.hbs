@@ -18,7 +18,7 @@
     Date queries are sent in UTC.
   </p>
 
-  <Hds::Text::Display @tag="h2" class="has-bottom-margin-xs" data-test-counts-start-label>
+  <Hds::Text::Display @tag="p" class="has-bottom-margin-xs" data-test-counts-start-label>
     {{this.versionText.label}}
   </Hds::Text::Display>
 
@@ -66,7 +66,7 @@
     {{/if}}
 
     {{#if @startTimestamp}}
-      <Hds::Text::Display @tag="h3">
+      <Hds::Text::Display @tag="p">
         Filters
       </Hds::Text::Display>
       <Hds::Text::Body @tag="p" @color="faint">
