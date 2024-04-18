@@ -386,6 +386,15 @@ func WaitForActiveNodeAndPerfStandbys(ctx context.Context, cluster VaultCluster)
 	return nil
 }
 
+func Clients(vc VaultCluster) []*api.Client {
+	var ret []*api.Client
+	for _, n := range vc.Nodes() {
+		ret = append(ret, n.APIClient())
+	}
+	return ret
+}
+
+//go:generate enumer -type=GenerateRootKind -trimprefix=GenerateRoot
 type GenerateRootKind int
 
 const (

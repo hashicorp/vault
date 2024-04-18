@@ -30,3 +30,5 @@ runs:
       shell: bash
     - run: go install github.com/golangci/revgrep/cmd/revgrep@latest
       shell: bash
+    - run: go install github.com/loggerhead/enumer@latest
+      shell: bash

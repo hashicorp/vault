@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
+//go:generate enumer -type=childProcessState -trimprefix=childProcessState
 type childProcessState uint8
 
 const (

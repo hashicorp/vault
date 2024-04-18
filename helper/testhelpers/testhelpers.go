@@ -26,6 +26,7 @@ import (
 	"github.com/mitchellh/go-testing-interface"
 )
 
+//go:generate enumer -type=GenerateRootKind -trimprefix=GenerateRoot
 type GenerateRootKind int
 
 const (
