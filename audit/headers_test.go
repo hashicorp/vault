@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: BUSL-1.1
 
-package vault
+package audit
 
 import (
 	"context"
@@ -20,6 +20,7 @@ import (
 // mockStorage is a struct that is used to mock barrier storage.
 type mockStorage struct {
 	mock.Mock
+	v map[string][]byte
 }
 
 // List implements List from BarrierStorage interface.
@@ -30,12 +31,27 @@ func (m *mockStorage) List(_ context.Context, _ string) ([]string, error) {
 
 // Get implements Get from BarrierStorage interface.
 // ignore-nil-nil-function-check.
-func (m *mockStorage) Get(_ context.Context, _ string) (*logical.StorageEntry, error) {
-	return nil, nil
+func (m *mockStorage) Get(_ context.Context, key string) (*logical.StorageEntry, error) {
+	b, ok := m.v[key]
+	if !ok {
+		return nil, nil
+	}
+
+	var entry *logical.StorageEntry
+	err := json.Unmarshal(b, &entry)
+
+	return entry, err
 }
 
 // Put implements Put from BarrierStorage interface.
-func (m *mockStorage) Put(_ context.Context, _ *logical.StorageEntry) error {
+func (m *mockStorage) Put(_ context.Context, entry *logical.StorageEntry) error {
+	b, err := json.Marshal(entry)
+	if err != nil {
+		return err
+	}
+
+	m.v[entry.Key] = b
+
 	return nil
 }
 
@@ -44,24 +60,33 @@ func (m *mockStorage) Delete(_ context.Context, _ string) error {
 	return nil
 }
 
-func mockAuditedHeadersConfig(t *testing.T) *AuditedHeadersConfig {
-	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, "foo/")
-	return &AuditedHeadersConfig{
-		headerSettings: make(map[string]*auditedHeaderSettings),
-		view:           view,
+func newMockStorage(t *testing.T) *mockStorage {
+	t.Helper()
+
+	return &mockStorage{
+		Mock: mock.Mock{},
+		v:    make(map[string][]byte),
+	}
+}
+
+func mockAuditedHeadersConfig(t *testing.T) *HeadersConfig {
+	return &HeadersConfig{
+		headerSettings: make(map[string]*HeaderSettings),
+		view:           newMockStorage(t),
 	}
 }
 
 func TestAuditedHeadersConfig_CRUD(t *testing.T) {
+	t.Parallel()
+
 	conf := mockAuditedHeadersConfig(t)
 
-	testAuditedHeadersConfig_Add(t, conf)
-	testAuditedHeadersConfig_Remove(t, conf)
+	testAddHeaders(t, conf)
+	testRemoveHeaders(t, conf)
 }
 
-func testAuditedHeadersConfig_Add(t *testing.T, conf *AuditedHeadersConfig) {
-	err := conf.add(context.Background(), "X-Test-Header", false)
+func testAddHeaders(t *testing.T, conf *HeadersConfig) {
+	err := conf.Add(context.Background(), "X-Test-Header", false)
 	if err != nil {
 		t.Fatalf("Error when adding header to config: %s", err)
 	}
@@ -83,13 +108,13 @@ func testAuditedHeadersConfig_Add(t *testing.T, conf *AuditedHeadersConfig) {
 		t.Fatal("nil value")
 	}
 
-	headers := make(map[string]*auditedHeaderSettings)
+	headers := make(map[string]*HeaderSettings)
 	err = out.DecodeJSON(&headers)
 	if err != nil {
 		t.Fatalf("Error decoding header view: %s", err)
 	}
 
-	expected := map[string]*auditedHeaderSettings{
+	expected := map[string]*HeaderSettings{
 		"x-test-header": {
 			HMAC: false,
 		},
@@ -99,7 +124,7 @@ func testAuditedHeadersConfig_Add(t *testing.T, conf *AuditedHeadersConfig) {
 		t.Fatalf("Expected config didn't match actual. Expected: %#v, Got: %#v", expected, headers)
 	}
 
-	err = conf.add(context.Background(), "X-Vault-Header", true)
+	err = conf.Add(context.Background(), "X-Vault-Header", true)
 	if err != nil {
 		t.Fatalf("Error when adding header to config: %s", err)
 	}
@@ -121,13 +146,13 @@ func testAuditedHeadersConfig_Add(t *testing.T, conf *AuditedHeadersConfig) {
 		t.Fatal("nil value")
 	}
 
-	headers = make(map[string]*auditedHeaderSettings)
+	headers = make(map[string]*HeaderSettings)
 	err = out.DecodeJSON(&headers)
 	if err != nil {
 		t.Fatalf("Error decoding header view: %s", err)
 	}
 
-	expected["x-vault-header"] = &auditedHeaderSettings{
+	expected["x-vault-header"] = &HeaderSettings{
 		HMAC: true,
 	}
 
@@ -136,8 +161,8 @@ func testAuditedHeadersConfig_Add(t *testing.T, conf *AuditedHeadersConfig) {
 	}
 }
 
-func testAuditedHeadersConfig_Remove(t *testing.T, conf *AuditedHeadersConfig) {
-	err := conf.remove(context.Background(), "X-Test-Header")
+func testRemoveHeaders(t *testing.T, conf *HeadersConfig) {
+	err := conf.Remove(context.Background(), "X-Test-Header")
 	if err != nil {
 		t.Fatalf("Error when adding header to config: %s", err)
 	}
@@ -155,13 +180,13 @@ func testAuditedHeadersConfig_Remove(t *testing.T, conf *AuditedHeadersConfig) {
 		t.Fatal("nil value")
 	}
 
-	headers := make(map[string]*auditedHeaderSettings)
+	headers := make(map[string]*HeaderSettings)
 	err = out.DecodeJSON(&headers)
 	if err != nil {
 		t.Fatalf("Error decoding header view: %s", err)
 	}
 
-	expected := map[string]*auditedHeaderSettings{
+	expected := map[string]*HeaderSettings{
 		"x-vault-header": {
 			HMAC: true,
 		},
@@ -171,7 +196,7 @@ func testAuditedHeadersConfig_Remove(t *testing.T, conf *AuditedHeadersConfig) {
 		t.Fatalf("Expected config didn't match actual. Expected: %#v, Got: %#v", expected, headers)
 	}
 
-	err = conf.remove(context.Background(), "x-VaulT-Header")
+	err = conf.Remove(context.Background(), "x-VaulT-Header")
 	if err != nil {
 		t.Fatalf("Error when adding header to config: %s", err)
 	}
@@ -189,30 +214,26 @@ func testAuditedHeadersConfig_Remove(t *testing.T, conf *AuditedHeadersConfig) {
 		t.Fatal("nil value")
 	}
 
-	headers = make(map[string]*auditedHeaderSettings)
+	headers = make(map[string]*HeaderSettings)
 	err = out.DecodeJSON(&headers)
 	if err != nil {
 		t.Fatalf("Error decoding header view: %s", err)
 	}
 
-	expected = make(map[string]*auditedHeaderSettings)
+	expected = make(map[string]*HeaderSettings)
 
 	if !reflect.DeepEqual(headers, expected) {
 		t.Fatalf("Expected config didn't match actual. Expected: %#v, Got: %#v", expected, headers)
 	}
 }
 
-type TestSalter struct{}
-
-func (*TestSalter) Salt(ctx context.Context) (*salt.Salt, error) {
-	return salt.NewSalt(ctx, nil, nil)
-}
-
 func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
+	t.Parallel()
+
 	conf := mockAuditedHeadersConfig(t)
 
-	conf.add(context.Background(), "X-TesT-Header", false)
-	conf.add(context.Background(), "X-Vault-HeAdEr", true)
+	conf.Add(context.Background(), "X-TesT-Header", false)
+	conf.Add(context.Background(), "X-Vault-HeAdEr", true)
 
 	reqHeaders := map[string][]string{
 		"X-Test-Header":  {"foo"},
@@ -271,11 +292,13 @@ func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
 // TestAuditedHeadersConfig_ApplyConfig_NoHeaders tests the case where there are
 // no headers in the request.
 func TestAuditedHeadersConfig_ApplyConfig_NoRequestHeaders(t *testing.T) {
+	t.Parallel()
+
 	conf := mockAuditedHeadersConfig(t)
 
-	err := conf.add(context.Background(), "X-TesT-Header", false)
+	err := conf.Add(context.Background(), "X-TesT-Header", false)
 	require.NoError(t, err)
-	err = conf.add(context.Background(), "X-Vault-HeAdEr", true)
+	err = conf.Add(context.Background(), "X-Vault-HeAdEr", true)
 	require.NoError(t, err)
 
 	salter := &TestSalter{}
@@ -292,6 +315,8 @@ func TestAuditedHeadersConfig_ApplyConfig_NoRequestHeaders(t *testing.T) {
 }
 
 func TestAuditedHeadersConfig_ApplyConfig_NoConfiguredHeaders(t *testing.T) {
+	t.Parallel()
+
 	conf := mockAuditedHeadersConfig(t)
 
 	reqHeaders := map[string][]string{
@@ -335,10 +360,12 @@ func (s *FailingSalter) Salt(context.Context) (*salt.Salt, error) {
 // TestAuditedHeadersConfig_ApplyConfig_HashStringError tests the case where
 // an error is returned from HashString instead of a map of headers.
 func TestAuditedHeadersConfig_ApplyConfig_HashStringError(t *testing.T) {
+	t.Parallel()
+
 	conf := mockAuditedHeadersConfig(t)
 
-	conf.add(context.Background(), "X-TesT-Header", false)
-	conf.add(context.Background(), "X-Vault-HeAdEr", true)
+	conf.Add(context.Background(), "X-TesT-Header", false)
+	conf.Add(context.Background(), "X-Vault-HeAdEr", true)
 
 	reqHeaders := map[string][]string{
 		"X-Test-Header":  {"foo"},
@@ -355,12 +382,12 @@ func TestAuditedHeadersConfig_ApplyConfig_HashStringError(t *testing.T) {
 }
 
 func BenchmarkAuditedHeaderConfig_ApplyConfig(b *testing.B) {
-	conf := &AuditedHeadersConfig{
-		headerSettings: make(map[string]*auditedHeaderSettings),
+	conf := &HeadersConfig{
+		headerSettings: make(map[string]*HeaderSettings),
 		view:           nil,
 	}
 
-	conf.headerSettings = map[string]*auditedHeaderSettings{
+	conf.headerSettings = map[string]*HeaderSettings{
 		"X-Test-Header":  {false},
 		"X-Vault-Header": {true},
 	}
@@ -383,46 +410,51 @@ func BenchmarkAuditedHeaderConfig_ApplyConfig(b *testing.B) {
 // TestAuditedHeaders_auditedHeadersKey is used to check the key we use to handle
 // invalidation doesn't change when we weren't expecting it to.
 func TestAuditedHeaders_auditedHeadersKey(t *testing.T) {
-	require.Equal(t, "audited-headers-config/audited-headers", auditedHeadersKey())
+	t.Parallel()
+
+	require.Equal(t, "audited-headers-config/audited-headers", AuditedHeadersKey())
 }
 
 // TestAuditedHeaders_NewAuditedHeadersConfig checks supplying incorrect params to
-// the constructor for AuditedHeadersConfig returns an error.
+// the constructor for HeadersConfig returns an error.
 func TestAuditedHeaders_NewAuditedHeadersConfig(t *testing.T) {
-	ac, err := NewAuditedHeadersConfig(nil)
+	t.Parallel()
+
+	ac, err := NewHeadersConfig(nil)
 	require.Error(t, err)
 	require.Nil(t, ac)
 
-	ac, err = NewAuditedHeadersConfig(&BarrierView{})
+	ac, err = NewHeadersConfig(newMockStorage(t))
 	require.NoError(t, err)
 	require.NotNil(t, ac)
 }
 
-// TestAuditedHeaders_invalidate ensures that we can update the headers on AuditedHeadersConfig
+// TestAuditedHeaders_invalidate ensures that we can update the headers on HeadersConfig
 // when we invalidate, and load the updated headers from the view/storage.
 func TestAuditedHeaders_invalidate(t *testing.T) {
-	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, auditedHeadersSubPath)
-	ahc, err := NewAuditedHeadersConfig(view)
+	t.Parallel()
+
+	view := newMockStorage(t)
+	ahc, err := NewHeadersConfig(view)
 	require.NoError(t, err)
 	require.Len(t, ahc.headerSettings, 0)
 
 	// Store some data using the view.
-	fakeHeaders1 := map[string]*auditedHeaderSettings{"x-magic-header": {}}
+	fakeHeaders1 := map[string]*HeaderSettings{"x-magic-header": {}}
 	fakeBytes1, err := json.Marshal(fakeHeaders1)
 	require.NoError(t, err)
 	err = view.Put(context.Background(), &logical.StorageEntry{Key: auditedHeadersEntry, Value: fakeBytes1})
 	require.NoError(t, err)
 
 	// Invalidate and check we now see the header we stored
-	err = ahc.invalidate(context.Background())
+	err = ahc.Invalidate(context.Background())
 	require.NoError(t, err)
 	require.Len(t, ahc.headerSettings, 1)
 	_, ok := ahc.headerSettings["x-magic-header"]
 	require.True(t, ok)
 
 	// Do it again with more headers and random casing.
-	fakeHeaders2 := map[string]*auditedHeaderSettings{
+	fakeHeaders2 := map[string]*HeaderSettings{
 		"x-magic-header":           {},
 		"x-even-MORE-magic-header": {},
 	}
@@ -432,7 +464,7 @@ func TestAuditedHeaders_invalidate(t *testing.T) {
 	require.NoError(t, err)
 
 	// Invalidate and check we now see the header we stored
-	err = ahc.invalidate(context.Background())
+	err = ahc.Invalidate(context.Background())
 	require.NoError(t, err)
 	require.Len(t, ahc.headerSettings, 2)
 	_, ok = ahc.headerSettings["x-magic-header"]
@@ -444,21 +476,22 @@ func TestAuditedHeaders_invalidate(t *testing.T) {
 // TestAuditedHeaders_invalidate_nil_view ensures that we invalidate the headers
 // correctly (clear them) when we get nil for the storage entry from the view.
 func TestAuditedHeaders_invalidate_nil_view(t *testing.T) {
-	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, auditedHeadersSubPath)
-	ahc, err := NewAuditedHeadersConfig(view)
+	t.Parallel()
+
+	view := newMockStorage(t)
+	ahc, err := NewHeadersConfig(view)
 	require.NoError(t, err)
 	require.Len(t, ahc.headerSettings, 0)
 
 	// Store some data using the view.
-	fakeHeaders1 := map[string]*auditedHeaderSettings{"x-magic-header": {}}
+	fakeHeaders1 := map[string]*HeaderSettings{"x-magic-header": {}}
 	fakeBytes1, err := json.Marshal(fakeHeaders1)
 	require.NoError(t, err)
 	err = view.Put(context.Background(), &logical.StorageEntry{Key: auditedHeadersEntry, Value: fakeBytes1})
 	require.NoError(t, err)
 
 	// Invalidate and check we now see the header we stored
-	err = ahc.invalidate(context.Background())
+	err = ahc.Invalidate(context.Background())
 	require.NoError(t, err)
 	require.Len(t, ahc.headerSettings, 1)
 	_, ok := ahc.headerSettings["x-magic-header"]
@@ -466,12 +499,13 @@ func TestAuditedHeaders_invalidate_nil_view(t *testing.T) {
 
 	// Swap out the view with a mock that returns nil when we try to invalidate.
 	// This should mean we end up just clearing the headers (no errors).
-	mockStorageBarrier := new(mockStorage)
+	mockStorageBarrier := newMockStorage(t)
 	mockStorageBarrier.On("Get", mock.Anything, mock.Anything).Return(nil, nil)
-	ahc.view = NewBarrierView(mockStorageBarrier, auditedHeadersSubPath)
+	ahc.view = mockStorageBarrier
+	// ahc.view = NewBarrierView(mockStorageBarrier, AuditedHeadersSubPath)
 
 	// Invalidate should clear out the existing headers without error
-	err = ahc.invalidate(context.Background())
+	err = ahc.Invalidate(context.Background())
 	require.NoError(t, err)
 	require.Len(t, ahc.headerSettings, 0)
 }
@@ -479,9 +513,10 @@ func TestAuditedHeaders_invalidate_nil_view(t *testing.T) {
 // TestAuditedHeaders_invalidate_bad_data ensures that we correctly error if the
 // underlying data cannot be parsed as expected.
 func TestAuditedHeaders_invalidate_bad_data(t *testing.T) {
-	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, auditedHeadersSubPath)
-	ahc, err := NewAuditedHeadersConfig(view)
+	t.Parallel()
+
+	view := newMockStorage(t)
+	ahc, err := NewHeadersConfig(view)
 	require.NoError(t, err)
 	require.Len(t, ahc.headerSettings, 0)
 
@@ -492,7 +527,7 @@ func TestAuditedHeaders_invalidate_bad_data(t *testing.T) {
 	require.NoError(t, err)
 
 	// Invalidate should
-	err = ahc.invalidate(context.Background())
+	err = ahc.Invalidate(context.Background())
 	require.Error(t, err)
 	require.ErrorContains(t, err, "failed to parse config")
 }
@@ -500,40 +535,42 @@ func TestAuditedHeaders_invalidate_bad_data(t *testing.T) {
 // TestAuditedHeaders_header checks we can return a copy of settings associated with
 // an existing header, and we also know when a header wasn't found.
 func TestAuditedHeaders_header(t *testing.T) {
-	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, auditedHeadersSubPath)
-	ahc, err := NewAuditedHeadersConfig(view)
+	t.Parallel()
+
+	view := newMockStorage(t)
+	ahc, err := NewHeadersConfig(view)
 	require.NoError(t, err)
 	require.Len(t, ahc.headerSettings, 0)
 
-	err = ahc.add(context.Background(), "juan", true)
+	err = ahc.Add(context.Background(), "juan", true)
 	require.NoError(t, err)
 	require.Len(t, ahc.headerSettings, 1)
 
-	s, ok := ahc.header("juan")
+	s, ok := ahc.Header("juan")
 	require.True(t, ok)
 	require.Equal(t, true, s.HMAC)
 
-	s, ok = ahc.header("x-magic-token")
+	s, ok = ahc.Header("x-magic-token")
 	require.False(t, ok)
 }
 
 // TestAuditedHeaders_headers checks we are able to return a copy of the existing
 // configured headers.
 func TestAuditedHeaders_headers(t *testing.T) {
-	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, auditedHeadersSubPath)
-	ahc, err := NewAuditedHeadersConfig(view)
+	t.Parallel()
+
+	view := newMockStorage(t)
+	ahc, err := NewHeadersConfig(view)
 	require.NoError(t, err)
 	require.Len(t, ahc.headerSettings, 0)
 
-	err = ahc.add(context.Background(), "juan", true)
+	err = ahc.Add(context.Background(), "juan", true)
 	require.NoError(t, err)
-	err = ahc.add(context.Background(), "john", false)
+	err = ahc.Add(context.Background(), "john", false)
 	require.NoError(t, err)
 	require.Len(t, ahc.headerSettings, 2)
 
-	s := ahc.headers()
+	s := ahc.Headers()
 	require.Len(t, s, 2)
 	require.Equal(t, true, s["juan"].HMAC)
 	require.Equal(t, false, s["john"].HMAC)
