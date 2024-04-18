@@ -598,6 +598,13 @@ export const VERSION_HISTORY = [
 
 // order of this array matters because index 0 is a month without data
 export const SERIALIZED_ACTIVITY_RESPONSE = {
+  total: {
+    acme_clients: 9702,
+    clients: 35287,
+    entity_clients: 8258,
+    non_entity_clients: 8227,
+    secret_syncs: 9100,
+  },
   by_namespace: [
     {
       label: 'ns1',
