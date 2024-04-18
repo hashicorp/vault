@@ -17,7 +17,7 @@ module('Integration | Component | clients/usage-stats', function (hooks) {
 
     this.renderComponent = async () =>
       await render(
-        hbs`<Clients::UsageStats @totalUsageCounts={{this.counts}} @showSecretSyncs={{this.showSecretSyncs}} />`
+        hbs`<Clients::UsageStats @title="My stats" @totalUsageCounts={{this.counts}} @showSecretSyncs={{this.showSecretSyncs}} />`
       );
   });
 
