@@ -182,11 +182,11 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
         .dom(CLIENT_COUNT.charts.statTextValue('Total clients'))
         .hasText(formatNumber([entity_clients + non_entity_clients]), 'Total clients value renders');
       assert
-        .dom(CLIENT_COUNT.charts.statTextValue('Entity clients'))
-        .hasText(formatNumber([entity_clients]), 'Entity clients value renders');
+        .dom(CLIENT_COUNT.charts.statTextValue('Entity'))
+        .hasText(formatNumber([entity_clients]), 'Entity value renders');
       assert
-        .dom(CLIENT_COUNT.charts.statTextValue('Non-entity clients'))
-        .hasText(formatNumber([non_entity_clients]), 'Non-entity clients value renders');
+        .dom(CLIENT_COUNT.charts.statTextValue('Non-entity'))
+        .hasText(formatNumber([non_entity_clients]), 'Non-entity value renders');
     };
 
     // total usage should display for single month query

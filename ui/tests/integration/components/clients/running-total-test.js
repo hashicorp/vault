@@ -78,10 +78,10 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
     const expectedValues = {
       'Running client total': formatNumber([this.totalUsageCounts.clients]),
-      'Entity clients': formatNumber([this.totalUsageCounts.entity_clients]),
-      'Non-entity clients': formatNumber([this.totalUsageCounts.non_entity_clients]),
-      'ACME clients': formatNumber([this.totalUsageCounts.acme_clients]),
-      'Secrets sync clients': formatNumber([this.totalUsageCounts.secret_syncs]),
+      Entity: formatNumber([this.totalUsageCounts.entity_clients]),
+      'Non-entity': formatNumber([this.totalUsageCounts.non_entity_clients]),
+      ACME: formatNumber([this.totalUsageCounts.acme_clients]),
+      'Secret sync': formatNumber([this.totalUsageCounts.secret_syncs]),
     };
     for (const label in expectedValues) {
       assert
@@ -121,10 +121,10 @@ module('Integration | Component | clients/running-total', function (hooks) {
     assert.dom(CLIENT_COUNT.charts.lineChart).exists('line chart renders');
 
     const expectedValues = {
-      'Entity clients': formatNumber([this.totalUsageCounts.entity_clients]),
-      'Non-entity clients': formatNumber([this.totalUsageCounts.non_entity_clients]),
-      'ACME clients': formatNumber([this.totalUsageCounts.acme_clients]),
-      'Secrets sync clients': formatNumber([this.totalUsageCounts.secret_syncs]),
+      Entity: formatNumber([this.totalUsageCounts.entity_clients]),
+      'Non-entity': formatNumber([this.totalUsageCounts.non_entity_clients]),
+      ACME: formatNumber([this.totalUsageCounts.acme_clients]),
+      'Secret sync': formatNumber([this.totalUsageCounts.secret_syncs]),
     };
     for (const label in expectedValues) {
       assert
@@ -146,10 +146,10 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
     let expectedStats = {
       'Total monthly clients': formatNumber([singleMonth.clients]),
-      'Entity clients': formatNumber([singleMonth.entity_clients]),
-      'Non-entity clients': formatNumber([singleMonth.non_entity_clients]),
-      'ACME clients': formatNumber([singleMonth.acme_clients]),
-      'Secrets sync clients': formatNumber([singleMonth.secret_syncs]),
+      Entity: formatNumber([singleMonth.entity_clients]),
+      'Non-entity': formatNumber([singleMonth.non_entity_clients]),
+      ACME: formatNumber([singleMonth.acme_clients]),
+      'Secret sync': formatNumber([singleMonth.secret_syncs]),
     };
     for (const label in expectedStats) {
       assert
@@ -162,10 +162,10 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
     expectedStats = {
       'New clients': formatNumber([singleMonthNew.clients]),
-      'Entity clients': formatNumber([singleMonthNew.entity_clients]),
-      'Non-entity clients': formatNumber([singleMonthNew.non_entity_clients]),
-      'ACME clients': formatNumber([singleMonthNew.acme_clients]),
-      'Secrets sync clients': formatNumber([singleMonthNew.secret_syncs]),
+      Entity: formatNumber([singleMonthNew.entity_clients]),
+      'Non-entity': formatNumber([singleMonthNew.non_entity_clients]),
+      ACME: formatNumber([singleMonthNew.acme_clients]),
+      'Secret sync': formatNumber([singleMonthNew.secret_syncs]),
     };
     for (const label in expectedStats) {
       assert
@@ -186,10 +186,8 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
     assert.dom(CLIENT_COUNT.chartContainer('Vault client counts')).exists('running total component renders');
     assert.dom(CLIENT_COUNT.charts.lineChart).exists('line chart renders');
-    assert.dom(CLIENT_COUNT.charts.statTextValue('Entity clients')).exists();
-    assert.dom(CLIENT_COUNT.charts.statTextValue('Non-entity clients')).exists();
-    assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Secrets sync clients'))
-      .doesNotExist('does not render secret syncs');
+    assert.dom(CLIENT_COUNT.charts.statTextValue('Entity')).exists();
+    assert.dom(CLIENT_COUNT.charts.statTextValue('Non-entity')).exists();
+    assert.dom(CLIENT_COUNT.charts.statTextValue('Secret sync')).doesNotExist('does not render secret syncs');
   });
 });

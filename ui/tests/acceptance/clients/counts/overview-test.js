@@ -184,10 +184,10 @@ module('Acceptance | clients | overview', function (hooks) {
       .includesText(`${formatNumber([topMount.clients])}`, 'top attribution clients accurate');
 
     let expectedStats = {
-      'Entity clients': formatNumber([topNamespace.entity_clients]),
-      'Non-entity clients': formatNumber([topNamespace.non_entity_clients]),
-      'ACME clients': formatNumber([topNamespace.acme_clients]),
-      'Secrets sync clients': formatNumber([topNamespace.secret_syncs]),
+      Entity: formatNumber([topNamespace.entity_clients]),
+      'Non-entity': formatNumber([topNamespace.non_entity_clients]),
+      ACME: formatNumber([topNamespace.acme_clients]),
+      'Secret sync': formatNumber([topNamespace.secret_syncs]),
     };
     for (const label in expectedStats) {
       assert
@@ -204,10 +204,10 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom(CLIENT_COUNT.attributionBlock).doesNotExist('Does not show attribution block');
 
     expectedStats = {
-      'Entity clients': formatNumber([topMount.entity_clients]),
-      'Non-entity clients': formatNumber([topMount.non_entity_clients]),
-      'ACME clients': formatNumber([topMount.acme_clients]),
-      'Secrets sync clients': formatNumber([topMount.secret_syncs]),
+      Entity: formatNumber([topMount.entity_clients]),
+      'Non-entity': formatNumber([topMount.non_entity_clients]),
+      ACME: formatNumber([topMount.acme_clients]),
+      'Secret sync': formatNumber([topMount.secret_syncs]),
     };
     for (const label in expectedStats) {
       assert
@@ -226,10 +226,10 @@ module('Acceptance | clients | overview', function (hooks) {
       );
 
     expectedStats = {
-      'Entity clients': formatNumber([response.total.entity_clients]),
-      'Non-entity clients': formatNumber([response.total.non_entity_clients]),
-      'ACME clients': formatNumber([response.total.acme_clients]),
-      'Secrets sync clients': formatNumber([response.total.secret_syncs]),
+      Entity: formatNumber([response.total.entity_clients]),
+      'Non-entity': formatNumber([response.total.non_entity_clients]),
+      ACME: formatNumber([response.total.acme_clients]),
+      'Secret sync': formatNumber([response.total.secret_syncs]),
     };
     for (const label in expectedStats) {
       assert
@@ -271,9 +271,7 @@ module('Acceptance | clients | overview | sync in license, activated', function 
   });
 
   test('it should show secrets sync data in overview and tab', async function (assert) {
-    assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Secrets sync clients'))
-      .exists('shows secret sync data on overview');
+    assert.dom(CLIENT_COUNT.charts.statTextValue('Secret sync')).exists('shows secret sync data on overview');
     await click(GENERAL.tab('sync'));
 
     assert.dom(GENERAL.tab('sync')).hasClass('active');

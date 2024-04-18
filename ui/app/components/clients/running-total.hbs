@@ -23,25 +23,15 @@
     <:stats>
       <div class="data-details-top has-top-padding-l">
         <div class="is-flex-row">
-          <StatText @label="Entity clients" @value={{@runningTotals.entity_clients}} @size="m" />
-          <StatText
-            @label="Non-entity clients"
-            @value={{@runningTotals.non_entity_clients}}
-            @size="m"
-            class="has-left-margin-l"
-          />
+          <StatText @label="Entity" @value={{@runningTotals.entity_clients}} @size="m" />
+          <StatText @label="Non-entity" @value={{@runningTotals.non_entity_clients}} @size="m" class="has-left-margin-l" />
 
         </div>
       </div>
       <div class="data-details-bottom is-flex-row">
-        <StatText @label="ACME clients" @value={{@runningTotals.acme_clients}} @size="m" />
+        <StatText @label="ACME" @value={{@runningTotals.acme_clients}} @size="m" />
         {{#if @isSecretsSyncActivated}}
-          <StatText
-            @label="Secrets sync clients"
-            @value={{@runningTotals.secret_syncs}}
-            @size="m"
-            class="has-left-margin-l"
-          />
+          <StatText @label="Secret sync" @value={{@runningTotals.secret_syncs}} @size="m" class="has-left-margin-l" />
         {{/if}}
       </div>
     </:stats>
@@ -57,7 +47,7 @@
         <div class="chart-header has-bottom-margin-sm">
           <h2 class="chart-title">Vault client counts</h2>
           <p class="chart-description">
-            The total billable clients in the specified date range. This includes entity, non-entity, and secrets sync
+            The total billable clients in the specified date range. This includes entity, non-entity, and Secret sync
             clients. The total client count number is an important consideration for Vault billing.
           </p>
         </div>
@@ -70,27 +60,17 @@
               @size="l"
             />
           </div>
+          <StatText @label="Entity" @value={{singleMonthData.new_clients.entity_clients}} @size="m" class="column-start-1" />
           <StatText
-            @label="Entity clients"
-            @value={{singleMonthData.new_clients.entity_clients}}
-            @size="m"
-            class="column-start-1"
-          />
-          <StatText
-            @label="Non-entity clients"
+            @label="Non-entity"
             @value={{singleMonthData.new_clients.non_entity_clients}}
             @size="m"
             class="column-start-2"
           />
-          <StatText
-            @label="ACME clients"
-            @value={{singleMonthData.new_clients.acme_clients}}
-            @size="m"
-            class="column-start-3"
-          />
+          <StatText @label="ACME" @value={{singleMonthData.new_clients.acme_clients}} @size="m" class="column-start-3" />
           {{#if @isSecretsSyncActivated}}
             <StatText
-              @label="Secrets sync clients"
+              @label="Secret sync"
               @value={{singleMonthData.new_clients.secret_syncs}}
               @size="m"
               class="column-start-4"
@@ -106,21 +86,11 @@
               @size="l"
             />
           </div>
-          <StatText @label="Entity clients" @value={{singleMonthData.entity_clients}} @size="m" class="column-start-1" />
-          <StatText
-            @label="Non-entity clients"
-            @value={{singleMonthData.non_entity_clients}}
-            @size="m"
-            class="column-start-2"
-          />
-          <StatText @label="ACME clients" @value={{singleMonthData.acme_clients}} @size="m" class="column-start-3" />
+          <StatText @label="Entity" @value={{singleMonthData.entity_clients}} @size="m" class="column-start-1" />
+          <StatText @label="Non-entity" @value={{singleMonthData.non_entity_clients}} @size="m" class="column-start-2" />
+          <StatText @label="ACME" @value={{singleMonthData.acme_clients}} @size="m" class="column-start-3" />
           {{#if @isSecretsSyncActivated}}
-            <StatText
-              @label="Secrets sync clients"
-              @value={{singleMonthData.secret_syncs}}
-              @size="m"
-              class="column-start-4"
-            />
+            <StatText @label="Secret sync" @value={{singleMonthData.secret_syncs}} @size="m" class="column-start-4" />
           {{/if}}
         </div>
       </div>
