@@ -50,7 +50,6 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/osutil"
 	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/plugins/event"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -321,9 +320,6 @@ type Core struct {
 
 	// auditBackends is the mapping of backends to use for this core
 	auditBackends map[string]audit.Factory
-
-	// eventBackends is the mapping of event plugins to use for this core
-	eventBackends map[string]event.Factory
 
 	// stateLock protects mutable state
 	stateLock locking.RWMutex
@@ -763,8 +759,6 @@ type CoreConfig struct {
 	CredentialBackends map[string]logical.Factory
 
 	AuditBackends map[string]audit.Factory
-
-	EventBackends map[string]event.Factory
 
 	Physical physical.Backend
 
@@ -1282,9 +1276,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	// Audit backends
 	c.configureAuditBackends(conf.AuditBackends)
 
-	// Event plugins
-	c.configureEventBackends(conf.EventBackends)
-
 	// UI
 	uiStoragePrefix := systemBarrierPrefix + "ui"
 	c.uiConfig = NewUIConfig(conf.EnableUI, physical.NewView(c.physical, uiStoragePrefix), NewBarrierView(c.barrier, uiStoragePrefix))
@@ -1444,19 +1435,6 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 	c.logicalBackends = logicalBackends
 
 	c.addExtraLogicalBackends(adminNamespacePath)
-}
-
-// configureEventBackends configures the Core with the ability to create
-// event backends for various types.
-func (c *Core) configureEventBackends(backends map[string]event.Factory) {
-	eventBackends := make(map[string]event.Factory, len(backends))
-	for k, f := range backends {
-		eventBackends[k] = f
-	}
-
-	c.eventBackends = eventBackends
-
-	c.addExtraEventBackends()
 }
 
 // handleVersionTimeStamps stores the current version at the current time to
