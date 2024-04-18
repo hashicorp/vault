@@ -270,7 +270,7 @@
         "path": "secret/ssh"
       },
       {
-        "title": "HCP Terraform",
+        "title": "Terraform Cloud",
         "path": "secret/terraform"
       },
       {

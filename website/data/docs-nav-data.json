@@ -1584,7 +1584,7 @@
         ]
       },
       {
-        "title": "HCP Terraform",
+        "title": "Terraform Cloud",
         "path": "secrets/terraform"
       },
       {
