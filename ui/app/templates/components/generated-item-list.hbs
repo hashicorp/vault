@@ -37,7 +37,7 @@
   <ToolbarActions>
     <ToolbarLink
       @route="vault.cluster.access.method.item.create"
-      @model={{@itemType}}
+      @models={{array @methodModel.id @itemType}}
       @type="add"
       data-test-entity-create-link={{@itemType}}
     >
@@ -56,11 +56,11 @@
         @icon="plus"
         @text="Create {{singularize @itemType}}"
         @route="vault.cluster.access.method.item.create"
-        @model={{@itemType}}
+        @models={{array @methodModel.id @itemType}}
       />
     </list.empty>
   {{else if list.item}}
-    <ListItem @linkParams={{array "vault.cluster.access.method.item.show" @itemType list.item.id}} as |Item|>
+    <ListItem @linkParams={{array "vault.cluster.access.method.item.show" @methodModel.id @itemType list.item.id}} as |Item|>
       <Item.content>
         <Icon @name="folder" class="has-text-grey-light" />{{list.item.id}}
       </Item.content>
@@ -75,12 +75,12 @@
           <dd.Interactive
             @text="View {{singularize @itemType}}"
             @route="vault.cluster.access.method.item.show"
-            @model={{list.item.id}}
+            @models={{array @methodModel.id @itemType list.item.id}}
           />
           <dd.Interactive
             @text="Edit {{singularize @itemType}}"
             @route="vault.cluster.access.method.item.edit"
-            @model={{list.item.id}}
+            @models={{array @methodModel.id @itemType list.item.id}}
           />
           <dd.Interactive
             @text="Delete {{singularize @itemType}}"
