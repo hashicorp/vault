@@ -99,7 +99,7 @@
       </p>
       <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if this.formattedEndDate " RANGE"}}</p>
       <p class="has-bottom-margin-s" data-test-export-date-range>
-        {{this.parseAPITimestamp @startTimestamp "MMMM yyyy"}}
+        {{this.formattedStartDate}}
         {{if this.formattedEndDate "-"}}
         {{this.formattedEndDate}}</p>
     </M.Body>

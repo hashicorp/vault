@@ -43,10 +43,7 @@ import { format, isSameMonth } from 'date-fns';
 
 export default class Attribution extends Component {
   @service download;
-
   @tracked showCSVDownloadModal = false;
-
-  parseAPITimestamp = (time, format) => parseAPITimestamp(time, format);
 
   get attributionLegend() {
     const attributionLegend = [
@@ -58,6 +55,10 @@ export default class Attribution extends Component {
       attributionLegend.push({ key: 'secret_syncs', label: 'secrets sync clients' });
     }
     return attributionLegend;
+  }
+
+  get formattedStartDate() {
+    return parseAPITimestamp(this.args.startTimestamp, 'MMMM yyyy');
   }
 
   get formattedEndDate() {
