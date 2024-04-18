@@ -73,6 +73,10 @@
             "path": "internals/telemetry/enable-telemetry"
           },
           {
+            "title": "Key metrics",
+            "path": "internals/telemetry/key-metrics"
+          },
+          {
             "title": "Metric reference",
             "routes": [
               {
