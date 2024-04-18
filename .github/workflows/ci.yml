@@ -192,7 +192,7 @@ jobs:
         run: |
           rm -rf ./pkg
           mkdir ./pkg
-          make prep dev
+          make bootstrap dev
       - name: test-ui
         env:
           VAULT_LICENSE: ${{ steps.secrets.outputs.VAULT_LICENSE }}
