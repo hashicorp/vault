@@ -188,11 +188,12 @@ jobs:
       - if: needs.setup.outputs.is-enterprise == 'true'
         name: Set up Git
         run: git config --global url."https://${{ steps.secrets.outputs.PRIVATE_REPO_GITHUB_TOKEN }}@github.com".insteadOf https://github.com
+      - uses: ./.github/actions/install-external-tools
       - name: build-go-dev
         run: |
           rm -rf ./pkg
           mkdir ./pkg
-          make bootstrap dev
+          make prep dev
       - name: test-ui
         env:
           VAULT_LICENSE: ${{ steps.secrets.outputs.VAULT_LICENSE }}
