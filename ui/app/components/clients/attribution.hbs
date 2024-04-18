@@ -105,7 +105,11 @@
     </M.Body>
     <M.Footer as |F|>
       <Hds::ButtonSet>
-        <Hds::Button @text="Export" {{on "click" (fn this.exportChartData this.formattedCsvFileName)}} />
+        <Hds::Button
+          @text="Export"
+          {{on "click" (fn this.exportChartData this.formattedCsvFileName)}}
+          data-test-confirm-button
+        />
         <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
       </Hds::ButtonSet>
       {{#if @upgradesDuringActivity}}
