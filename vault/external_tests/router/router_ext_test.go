@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/testhelpers"
-	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -95,7 +94,7 @@ func TestWellKnownRedirect_HA(t *testing.T) {
 	var records *[][]byte
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
 		AuditBackends: map[string]audit.Factory{
-			"noop": corehelpers.NoopAuditFactory(&records),
+			"noop": audit.NoopAuditFactory(&records),
 		},
 		DisablePerformanceStandby: true,
 		LogicalBackends: map[string]logical.Factory{

@@ -327,6 +327,8 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	// Run the verifier if we're configured to do so
 	raftBackend.StartRaftWalVerifier(ctx)
 
+	// Starting this here will prepopulate the raft follower states with our current raft configuration, but that
+	// doesn't include information like upgrade versions or redundancy zones.
 	if err := c.startPeriodicRaftTLSRotate(ctx); err != nil {
 		return err
 	}
@@ -494,6 +496,7 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 	if err != nil {
 		return err
 	}
+
 	for _, server := range raftConfig.Servers {
 		if server.NodeID != raftBackend.NodeID() {
 			followerStates.Update(&raft.EchoRequestUpdate{
