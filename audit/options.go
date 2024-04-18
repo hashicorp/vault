@@ -50,6 +50,13 @@ func getOpts(opt ...Option) (options, error) {
 	return opts, nil
 }
 
+// ValidateOptions can be used to validate options before they are required.
+func ValidateOptions(opt ...Option) error {
+	_, err := getOpts(opt...)
+
+	return err
+}
+
 // WithID provides an optional ID.
 func WithID(id string) Option {
 	return func(o *options) error {

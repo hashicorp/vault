@@ -23,7 +23,6 @@ import (
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
-	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
@@ -681,7 +680,7 @@ func TestLogical_AuditPort(t *testing.T) {
 			"kv": kv.VersionedKVFactory,
 		},
 		AuditBackends: map[string]audit.Factory{
-			"file": auditFile.Factory,
+			"file": audit.NewFileBackend,
 		},
 	}
 
@@ -876,7 +875,7 @@ func testBuiltinPluginMetadataAuditLog(t *testing.T, log map[string]interface{},
 func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Auth(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		AuditBackends: map[string]audit.Factory{
-			"file": auditFile.Factory,
+			"file": audit.NewFileBackend,
 		},
 	}
 
@@ -949,7 +948,7 @@ func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T) {
 			"kv": kv.VersionedKVFactory,
 		},
 		AuditBackends: map[string]audit.Factory{
-			"file": auditFile.Factory,
+			"file": audit.NewFileBackend,
 		},
 	}
 

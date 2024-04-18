@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: BUSL-1.1
 
-package vault
+package audit
 
 import (
 	"context"
@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -17,56 +16,71 @@ import (
 // requires all headers to be converted to lower case, so we just do that.
 
 const (
-	// Key used in the BarrierView to store and retrieve the header config
+	// auditedHeadersEntry is the key used in storage to store and retrieve the header config
 	auditedHeadersEntry = "audited-headers"
-	// Path used to create a sub view off of BarrierView
-	auditedHeadersSubPath = "audited-headers-config/"
+
+	// AuditedHeadersSubPath is the path used to create a sub view within storage.
+	AuditedHeadersSubPath = "audited-headers-config/"
 )
 
-// auditedHeadersKey returns the key at which audit header configuration is stored.
-func auditedHeadersKey() string {
-	return auditedHeadersSubPath + auditedHeadersEntry
+type durableStorer interface {
+	Get(ctx context.Context, key string) (*logical.StorageEntry, error)
+	Put(ctx context.Context, entry *logical.StorageEntry) error
 }
 
-type auditedHeaderSettings struct {
+// HeaderFormatter is an interface defining the methods of the
+// vault.HeadersConfig structure needed in this package.
+type HeaderFormatter interface {
+	// ApplyConfig returns a map of header values that consists of the
+	// intersection of the provided set of header values with a configured
+	// set of headers and will hash headers that have been configured as such.
+	ApplyConfig(context.Context, map[string][]string, Salter) (map[string][]string, error)
+}
+
+// AuditedHeadersKey returns the key at which audit header configuration is stored.
+func AuditedHeadersKey() string {
+	return AuditedHeadersSubPath + auditedHeadersEntry
+}
+
+type HeaderSettings struct {
 	// HMAC is used to indicate whether the value of the header should be HMAC'd.
 	HMAC bool `json:"hmac"`
 }
 
-// AuditedHeadersConfig is used by the Audit Broker to write only approved
+// HeadersConfig is used by the Audit Broker to write only approved
 // headers to the audit logs. It uses a BarrierView to persist the settings.
-type AuditedHeadersConfig struct {
+type HeadersConfig struct {
 	// headerSettings stores the current headers that should be audited, and their settings.
-	headerSettings map[string]*auditedHeaderSettings
+	headerSettings map[string]*HeaderSettings
 
 	// view is the barrier view which should be used to access underlying audit header config data.
-	view *BarrierView
+	view durableStorer
 
 	sync.RWMutex
 }
 
-// NewAuditedHeadersConfig should be used to create AuditedHeadersConfig.
-func NewAuditedHeadersConfig(view *BarrierView) (*AuditedHeadersConfig, error) {
+// NewHeadersConfig should be used to create HeadersConfig.
+func NewHeadersConfig(view durableStorer) (*HeadersConfig, error) {
 	if view == nil {
 		return nil, fmt.Errorf("barrier view cannot be nil")
 	}
 
-	// This should be the only place where the AuditedHeadersConfig struct is initialized.
-	// Store the view so that we can reload headers when we 'invalidate'.
-	return &AuditedHeadersConfig{
+	// This should be the only place where the HeadersConfig struct is initialized.
+	// Store the view so that we can reload headers when we 'Invalidate'.
+	return &HeadersConfig{
 		view:           view,
-		headerSettings: make(map[string]*auditedHeaderSettings),
+		headerSettings: make(map[string]*HeaderSettings),
 	}, nil
 }
 
-// header attempts to retrieve a copy of the settings associated with the specified header.
+// Header attempts to retrieve a copy of the settings associated with the specified header.
 // The second boolean return parameter indicates whether the header existed in configuration,
 // it should be checked as when 'false' the returned settings will have the default values.
-func (a *AuditedHeadersConfig) header(name string) (auditedHeaderSettings, bool) {
+func (a *HeadersConfig) Header(name string) (HeaderSettings, bool) {
 	a.RLock()
 	defer a.RUnlock()
 
-	var s auditedHeaderSettings
+	var s HeaderSettings
 	v, ok := a.headerSettings[strings.ToLower(name)]
 
 	if ok {
@@ -76,25 +90,25 @@ func (a *AuditedHeadersConfig) header(name string) (auditedHeaderSettings, bool)
 	return s, ok
 }
 
-// headers returns all existing headers along with a copy of their current settings.
-func (a *AuditedHeadersConfig) headers() map[string]auditedHeaderSettings {
+// Headers returns all existing headers along with a copy of their current settings.
+func (a *HeadersConfig) Headers() map[string]HeaderSettings {
 	a.RLock()
 	defer a.RUnlock()
 
 	// We know how many entries the map should have.
-	headers := make(map[string]auditedHeaderSettings, len(a.headerSettings))
+	headers := make(map[string]HeaderSettings, len(a.headerSettings))
 
 	// Clone the headers
 	for name, setting := range a.headerSettings {
-		headers[name] = auditedHeaderSettings{HMAC: setting.HMAC}
+		headers[name] = HeaderSettings{HMAC: setting.HMAC}
 	}
 
 	return headers
 }
 
-// add adds or overwrites a header in the config and updates the barrier view
-// NOTE: add will acquire a write lock in order to update the underlying headers.
-func (a *AuditedHeadersConfig) add(ctx context.Context, header string, hmac bool) error {
+// Add adds or overwrites a header in the config and updates the barrier view
+// NOTE: Add will acquire a write lock in order to update the underlying headers.
+func (a *HeadersConfig) Add(ctx context.Context, header string, hmac bool) error {
 	if header == "" {
 		return fmt.Errorf("header value cannot be empty")
 	}
@@ -104,10 +118,10 @@ func (a *AuditedHeadersConfig) add(ctx context.Context, header string, hmac bool
 	defer a.Unlock()
 
 	if a.headerSettings == nil {
-		a.headerSettings = make(map[string]*auditedHeaderSettings, 1)
+		a.headerSettings = make(map[string]*HeaderSettings, 1)
 	}
 
-	a.headerSettings[strings.ToLower(header)] = &auditedHeaderSettings{hmac}
+	a.headerSettings[strings.ToLower(header)] = &HeaderSettings{hmac}
 	entry, err := logical.StorageEntryJSON(auditedHeadersEntry, a.headerSettings)
 	if err != nil {
 		return fmt.Errorf("failed to persist audited headers config: %w", err)
@@ -120,9 +134,9 @@ func (a *AuditedHeadersConfig) add(ctx context.Context, header string, hmac bool
 	return nil
 }
 
-// remove deletes a header out of the header config and updates the barrier view
-// NOTE: remove will acquire a write lock in order to update the underlying headers.
-func (a *AuditedHeadersConfig) remove(ctx context.Context, header string) error {
+// Remove deletes a header out of the header config and updates the barrier view
+// NOTE: Remove will acquire a write lock in order to update the underlying headers.
+func (a *HeadersConfig) Remove(ctx context.Context, header string) error {
 	if header == "" {
 		return fmt.Errorf("header value cannot be empty")
 	}
@@ -149,9 +163,9 @@ func (a *AuditedHeadersConfig) remove(ctx context.Context, header string) error 
 	return nil
 }
 
-// invalidate attempts to refresh the allowed audit headers and their settings.
-// NOTE: invalidate will acquire a write lock in order to update the underlying headers.
-func (a *AuditedHeadersConfig) invalidate(ctx context.Context) error {
+// Invalidate attempts to refresh the allowed audit headers and their settings.
+// NOTE: Invalidate will acquire a write lock in order to update the underlying headers.
+func (a *HeadersConfig) Invalidate(ctx context.Context) error {
 	a.Lock()
 	defer a.Unlock()
 
@@ -163,7 +177,7 @@ func (a *AuditedHeadersConfig) invalidate(ctx context.Context) error {
 
 	// If we cannot update the stored 'new' headers, we will clear the existing
 	// ones as part of invalidation.
-	headers := make(map[string]*auditedHeaderSettings)
+	headers := make(map[string]*HeaderSettings)
 	if out != nil {
 		err = out.DecodeJSON(&headers)
 		if err != nil {
@@ -173,7 +187,7 @@ func (a *AuditedHeadersConfig) invalidate(ctx context.Context) error {
 
 	// Ensure that we are able to case-sensitively access the headers;
 	// necessary for the upgrade case
-	lowerHeaders := make(map[string]*auditedHeaderSettings, len(headers))
+	lowerHeaders := make(map[string]*HeaderSettings, len(headers))
 	for k, v := range headers {
 		lowerHeaders[strings.ToLower(k)] = v
 	}
@@ -184,7 +198,7 @@ func (a *AuditedHeadersConfig) invalidate(ctx context.Context) error {
 
 // ApplyConfig returns a map of approved headers and their values, either HMAC'd or plaintext.
 // If the supplied headers are empty or nil, an empty set of headers will be returned.
-func (a *AuditedHeadersConfig) ApplyConfig(ctx context.Context, headers map[string][]string, salter audit.Salter) (result map[string][]string, retErr error) {
+func (a *HeadersConfig) ApplyConfig(ctx context.Context, headers map[string][]string, salter Salter) (result map[string][]string, retErr error) {
 	// Return early if we don't have headers.
 	if len(headers) < 1 {
 		return map[string][]string{}, nil
@@ -211,7 +225,7 @@ func (a *AuditedHeadersConfig) ApplyConfig(ctx context.Context, headers map[stri
 			// Optionally hmac the values
 			if settings.HMAC {
 				for i, el := range hVals {
-					hVal, err := audit.HashString(ctx, salter, el)
+					hVal, err := HashString(ctx, salter, el)
 					if err != nil {
 						return nil, err
 					}
@@ -224,27 +238,4 @@ func (a *AuditedHeadersConfig) ApplyConfig(ctx context.Context, headers map[stri
 	}
 
 	return result, nil
-}
-
-// setupAuditedHeadersConfig will initialize new audited headers configuration on
-// the Core by loading data from the barrier view.
-func (c *Core) setupAuditedHeadersConfig(ctx context.Context) error {
-	// Create a sub-view, e.g. sys/audited-headers-config/
-	view := c.systemBarrierView.SubView(auditedHeadersSubPath)
-
-	headers, err := NewAuditedHeadersConfig(view)
-	if err != nil {
-		return err
-	}
-
-	// Invalidate the headers now in order to load them for the first time.
-	err = headers.invalidate(ctx)
-	if err != nil {
-		return err
-	}
-
-	// Update the Core.
-	c.auditedHeaders = headers
-
-	return nil
 }

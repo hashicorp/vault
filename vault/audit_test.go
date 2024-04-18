@@ -340,16 +340,16 @@ func verifyDefaultAuditTable(t *testing.T, table *MountTable) {
 
 func TestAuditBroker_LogRequest(t *testing.T) {
 	l := logging.NewVaultLogger(log.Trace)
-	b, err := NewAuditBroker(l)
+	b, err := audit.NewBroker(l)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	a1 := audit.TestNoopAudit(t, "foo", nil)
 	a2 := audit.TestNoopAudit(t, "bar", nil)
-	err = b.Register("foo", a1, false)
+	err = b.Register(a1, false)
 	require.NoError(t, err)
-	err = b.Register("bar", a2, false)
+	err = b.Register(a2, false)
 	require.NoError(t, err)
 
 	auth := &logical.Auth{
@@ -429,16 +429,16 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 
 func TestAuditBroker_LogResponse(t *testing.T) {
 	l := logging.NewVaultLogger(log.Trace)
-	b, err := NewAuditBroker(l)
+	b, err := audit.NewBroker(l)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	a1 := audit.TestNoopAudit(t, "foo", nil)
 	a2 := audit.TestNoopAudit(t, "bar", nil)
-	err = b.Register("foo", a1, false)
+	err = b.Register(a1, false)
 	require.NoError(t, err)
-	err = b.Register("bar", a2, false)
+	err = b.Register(a2, false)
 	require.NoError(t, err)
 
 	auth := &logical.Auth{
@@ -534,7 +534,7 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 func TestAuditBroker_AuditHeaders(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Trace)
 
-	b, err := NewAuditBroker(logger)
+	b, err := audit.NewBroker(logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -542,9 +542,9 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	a1 := audit.TestNoopAudit(t, "foo", nil)
 	a2 := audit.TestNoopAudit(t, "bar", nil)
 
-	err = b.Register("foo", a1, false)
+	err = b.Register(a1, false)
 	require.NoError(t, err)
-	err = b.Register("bar", a2, false)
+	err = b.Register(a2, false)
 	require.NoError(t, err)
 
 	auth := &logical.Auth{
@@ -741,10 +741,8 @@ func TestAudit_newAuditBackend(t *testing.T) {
 		Type:    "noop",
 		Options: map[string]string{"fallback": "true"},
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 
-	_, err := c.newAuditBackend(ctx, me, &logical.InmemStorage{}, me.Options)
+	_, err := c.newAuditBackend(me, &logical.InmemStorage{}, me.Options)
 
 	if constants.IsEnterprise {
 		require.NoError(t, err)

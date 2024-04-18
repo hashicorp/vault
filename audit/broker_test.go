@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: BUSL-1.1
 
-package vault
+package audit
 
 import (
 	"context"
@@ -10,9 +10,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/builtin/audit/file"
-	"github.com/hashicorp/vault/builtin/audit/syslog"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -21,13 +18,12 @@ import (
 )
 
 // testAuditBackend will create an audit.Backend (which expects to use the eventlogger).
-// NOTE: this will create the backend, it does not care whether or not Enterprise
-// only options are in place.
-func testAuditBackend(t *testing.T, path string, config map[string]string) audit.Backend {
+// NOTE: this will create the backend, it does not care whether Enterprise only options are in place.
+func testAuditBackend(t *testing.T, path string, config map[string]string) Backend {
 	t.Helper()
 
-	headersCfg := &AuditedHeadersConfig{
-		headerSettings: make(map[string]*auditedHeaderSettings),
+	headersCfg := &HeadersConfig{
+		headerSettings: make(map[string]*HeaderSettings),
 		view:           nil,
 	}
 
@@ -36,7 +32,7 @@ func testAuditBackend(t *testing.T, path string, config map[string]string) audit
 	err := view.Put(context.Background(), se)
 	require.NoError(t, err)
 
-	cfg := &audit.BackendConfig{
+	cfg := &BackendConfig{
 		SaltView: view,
 		SaltConfig: &salt.Config{
 			HMAC:     sha256.New,
@@ -47,7 +43,7 @@ func testAuditBackend(t *testing.T, path string, config map[string]string) audit
 		MountPath: path,
 	}
 
-	be, err := syslog.Factory(cfg, headersCfg)
+	be, err := NewSyslogBackend(cfg, headersCfg)
 	require.NoError(t, err)
 	require.NotNil(t, be)
 
@@ -60,7 +56,7 @@ func TestAuditBroker_Deregister_Multiple(t *testing.T) {
 	t.Parallel()
 
 	l := corehelpers.NewTestLogger(t)
-	a, err := NewAuditBroker(l)
+	a, err := NewBroker(l)
 	require.NoError(t, err)
 	require.NotNil(t, a)
 
@@ -77,17 +73,17 @@ func TestAuditBroker_Register_MultipleFails(t *testing.T) {
 	t.Parallel()
 
 	l := corehelpers.NewTestLogger(t)
-	a, err := NewAuditBroker(l)
+	a, err := NewBroker(l)
 	require.NoError(t, err)
 	require.NotNil(t, a)
 
 	path := "b2-no-filter"
 	noFilterBackend := testAuditBackend(t, path, map[string]string{})
 
-	err = a.Register(path, noFilterBackend, false)
+	err = a.Register(noFilterBackend, false)
 	require.NoError(t, err)
 
-	err = a.Register(path, noFilterBackend, false)
+	err = a.Register(noFilterBackend, false)
 	require.Error(t, err)
 	require.EqualError(t, err, "backend already registered 'b2-no-filter': invalid configuration")
 }
@@ -108,7 +104,7 @@ func TestAuditBroker_Register_MultipleFails(t *testing.T) {
 // formatter nodes format the events (to JSON/JSONX and perform HMACing etc)
 // sink nodes handle sending the formatted data to a file, syslog or socket.
 func BenchmarkAuditBroker_File_Request_DevNull(b *testing.B) {
-	backendConfig := &audit.BackendConfig{
+	backendConfig := &BackendConfig{
 		Config: map[string]string{
 			"path": "/dev/null",
 		},
@@ -118,13 +114,13 @@ func BenchmarkAuditBroker_File_Request_DevNull(b *testing.B) {
 		Logger:     hclog.NewNullLogger(),
 	}
 
-	sink, err := file.Factory(backendConfig, nil)
+	sink, err := NewFileBackend(backendConfig, nil)
 	require.NoError(b, err)
 
-	broker, err := NewAuditBroker(nil)
+	broker, err := NewBroker(nil)
 	require.NoError(b, err)
 
-	err = broker.Register("test", sink, false)
+	err = broker.Register(sink, false)
 	require.NoError(b, err)
 
 	in := &logical.LogInput{

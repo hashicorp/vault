@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestEntryFilter_NewEntryFilter tests that we can create EntryFilter types correctly.
+// TestEntryFilter_NewEntryFilter tests that we can create entryFilter types correctly.
 func TestEntryFilter_NewEntryFilter(t *testing.T) {
 	t.Parallel()
 
@@ -72,7 +72,7 @@ func TestEntryFilter_NewEntryFilter(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			f, err := NewEntryFilter(tc.Filter)
+			f, err := newEntryFilter(tc.Filter)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
@@ -90,7 +90,7 @@ func TestEntryFilter_NewEntryFilter(t *testing.T) {
 func TestEntryFilter_Reopen(t *testing.T) {
 	t.Parallel()
 
-	f := &EntryFilter{}
+	f := &entryFilter{}
 	res := f.Reopen()
 	require.Nil(t, res)
 }
@@ -99,7 +99,7 @@ func TestEntryFilter_Reopen(t *testing.T) {
 func TestEntryFilter_Type(t *testing.T) {
 	t.Parallel()
 
-	f := &EntryFilter{}
+	f := &entryFilter{}
 	require.Equal(t, eventlogger.NodeTypeFilter, f.Type())
 }
 
@@ -113,7 +113,7 @@ func TestEntryFilter_Process_ContextDone(t *testing.T) {
 	// Explicitly cancel the context
 	cancel()
 
-	l, err := NewEntryFilter("operation == foo")
+	l, err := newEntryFilter("operation == foo")
 	require.NoError(t, err)
 
 	// Fake audit event
@@ -142,7 +142,7 @@ func TestEntryFilter_Process_ContextDone(t *testing.T) {
 func TestEntryFilter_Process_NilEvent(t *testing.T) {
 	t.Parallel()
 
-	l, err := NewEntryFilter("operation == foo")
+	l, err := newEntryFilter("operation == foo")
 	require.NoError(t, err)
 	e, err := l.Process(context.Background(), nil)
 	require.Error(t, err)
@@ -158,7 +158,7 @@ func TestEntryFilter_Process_NilEvent(t *testing.T) {
 func TestEntryFilter_Process_BadPayload(t *testing.T) {
 	t.Parallel()
 
-	l, err := NewEntryFilter("operation == foo")
+	l, err := newEntryFilter("operation == foo")
 	require.NoError(t, err)
 
 	e := &eventlogger.Event{
@@ -181,7 +181,7 @@ func TestEntryFilter_Process_BadPayload(t *testing.T) {
 func TestEntryFilter_Process_NoAuditDataInPayload(t *testing.T) {
 	t.Parallel()
 
-	l, err := NewEntryFilter("operation == foo")
+	l, err := newEntryFilter("operation == foo")
 	require.NoError(t, err)
 
 	a, err := NewEvent(RequestType)
@@ -209,7 +209,7 @@ func TestEntryFilter_Process_NoAuditDataInPayload(t *testing.T) {
 func TestEntryFilter_Process_FilterSuccess(t *testing.T) {
 	t.Parallel()
 
-	l, err := NewEntryFilter("mount_type == juan")
+	l, err := newEntryFilter("mount_type == juan")
 	require.NoError(t, err)
 
 	a, err := NewEvent(RequestType)
@@ -242,7 +242,7 @@ func TestEntryFilter_Process_FilterSuccess(t *testing.T) {
 func TestEntryFilter_Process_FilterFail(t *testing.T) {
 	t.Parallel()
 
-	l, err := NewEntryFilter("mount_type == john and operation == create and namespace == root")
+	l, err := newEntryFilter("mount_type == john and operation == create and namespace == root")
 	require.NoError(t, err)
 
 	a, err := NewEvent(RequestType)

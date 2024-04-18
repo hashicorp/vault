@@ -19,9 +19,6 @@ import (
 	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
-	auditFile "github.com/hashicorp/vault/builtin/audit/file"
-	auditSocket "github.com/hashicorp/vault/builtin/audit/socket"
-	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
@@ -166,9 +163,9 @@ const (
 
 var (
 	auditBackends = map[string]audit.Factory{
-		"file":   auditFile.Factory,
-		"socket": auditSocket.Factory,
-		"syslog": auditSyslog.Factory,
+		"file":   audit.NewFileBackend,
+		"socket": audit.NewSocketBackend,
+		"syslog": audit.NewSyslogBackend,
 	}
 
 	credentialBackends = map[string]logical.Factory{

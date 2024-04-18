@@ -1133,14 +1133,14 @@ func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *l
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
-func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
 	hmac := d.Get("hmac").(bool)
 	if header == "" {
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	err := b.Core.AuditedHeadersConfig().add(ctx, header, hmac)
+	err := b.Core.AuditedHeadersConfig().Add(ctx, header, hmac)
 	if err != nil {
 		return nil, err
 	}
@@ -1149,13 +1149,13 @@ func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, req *logi
 }
 
 // handleAuditedHeaderDelete deletes the header with the given name
-func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
 	if header == "" {
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	err := b.Core.AuditedHeadersConfig().remove(ctx, header)
+	err := b.Core.AuditedHeadersConfig().Remove(ctx, header)
 	if err != nil {
 		return nil, err
 	}
@@ -1170,7 +1170,7 @@ func (b *SystemBackend) handleAuditedHeaderRead(_ context.Context, _ *logical.Re
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	settings, ok := b.Core.AuditedHeadersConfig().header(header)
+	settings, ok := b.Core.AuditedHeadersConfig().Header(header)
 	if !ok {
 		return logical.ErrorResponse("Could not find header in config"), nil
 	}
@@ -1184,7 +1184,7 @@ func (b *SystemBackend) handleAuditedHeaderRead(_ context.Context, _ *logical.Re
 
 // handleAuditedHeadersRead returns the whole audited headers config
 func (b *SystemBackend) handleAuditedHeadersRead(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	headerSettings := b.Core.AuditedHeadersConfig().headers()
+	headerSettings := b.Core.AuditedHeadersConfig().Headers()
 
 	return &logical.Response{
 		Data: map[string]interface{}{
