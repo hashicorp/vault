@@ -84,7 +84,7 @@
 {{else}}
   {{! Renders when viewing a single month or activity log data that predates the monthly breakdown added in 1.11 }}
   <Clients::UsageStats
-    @title="Total usage"
+    @title="Entity/Non-entity usage"
     @description="Client counts for this
     {{if @mountPath 'mount' 'namespace and all its children'}}.
     {{if
