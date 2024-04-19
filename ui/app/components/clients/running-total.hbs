@@ -102,9 +102,45 @@
           @isCurrentMonth
           "Only totals are available when viewing the current month. To see a breakdown of new and total clients for this month, select the 'Current billing period' filter."
         }}"
-        @showSecretSyncs={{@isSecretsSyncActivated}}
-        @totalUsageCounts={{@runningTotals}}
-      />
+      >
+        <StatText
+          class="column"
+          @label="Total clients"
+          @value={{@runningTotals.clients}}
+          @size="l"
+          @subText="The number of clients which interacted with Vault during this month. This is Vault’s primary billing metric."
+        />
+        <StatText
+          class="column"
+          @label="Entity"
+          @value={{@runningTotals.entity_clients}}
+          @size="l"
+          @subText="Representations of a particular user, client, or application that created a token via login."
+        />
+        <StatText
+          class="column"
+          @label="Non-entity"
+          @value={{@runningTotals.non_entity_clients}}
+          @size="l"
+          @subText="Clients created with a shared set of permissions, but not associated with an entity."
+        />
+        <StatText
+          class="column"
+          @label="ACME"
+          @value={{@runningTotals.acme_clients}}
+          @size="l"
+          @subText="Each ACME request counts as one client."
+        />
+        {{#if @isSecretsSyncActivated}}
+          <StatText
+            class="column"
+            @label="Secret sync"
+            @value={{@runningTotals.secret_syncs}}
+            @size="l"
+            @subText="A secret with a configured sync destination qualifies as a unique and active client."
+          />
+        {{/if}}
+      </Clients::UsageStats>
     {{/if}}
   {{/let}}
 {{/if}}
