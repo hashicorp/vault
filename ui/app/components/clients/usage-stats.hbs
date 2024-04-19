@@ -29,7 +29,7 @@
     <div class="column">
       <StatText
         class="column"
-        @label="Entity clients"
+        @label="Entity"
         @value={{@totalUsageCounts.entity_clients}}
         @size="l"
         @subText="Representations of a particular user, client, or application that created a token via login."
@@ -38,17 +38,28 @@
     <div class="column">
       <StatText
         class="column"
-        @label="Non-entity clients"
+        @label="Non-entity"
         @value={{@totalUsageCounts.non_entity_clients}}
         @size="l"
         @subText="Clients created with a shared set of permissions, but not associated with an entity."
       />
     </div>
+    {{#unless @hideAcmeClients}}
+      <div class="column">
+        <StatText
+          class="column"
+          @label="ACME"
+          @value={{@totalUsageCounts.acme_clients}}
+          @size="l"
+          @subText="Each ACME request counts as one client."
+        />
+      </div>
+    {{/unless}}
     {{#if @showSecretSyncs}}
       <div class="column">
         <StatText
           class="column"
-          @label="Secrets sync clients"
+          @label="Secret sync"
           @value={{@totalUsageCounts.secret_syncs}}
           @size="l"
           @subText="A secret with a configured sync destination qualifies as a unique and active client."

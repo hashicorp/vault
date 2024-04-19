@@ -47,7 +47,6 @@
     @legend={{this.legend}}
     @hasChartData={{this.averageNewClients}}
     class={{unless this.averageNewClients "no-legend"}}
-    data-test-chart="monthly new"
   >
     <:stats>
       <StatText
@@ -87,13 +86,14 @@
     or viewing the current month filtered down to auth method }}
   <Clients::UsageStats
     @title="Total usage"
-    @description="These totals are within
-    {{or @mountPath 'this namespace and all its children'}}.
+    @description="These totals are within this
+    {{or @mountPath 'namespace and all its children'}}.
     {{if
       this.isCurrentMonth
       "Only totals are available when viewing the current month. To see a breakdown of new and total clients for this month, select the 'Current Billing Period' filter."
     }}"
     @showSecretSyncs={{false}}
+    @hideAcmeClients={{true}}
     @totalUsageCounts={{this.tokenUsageCounts}}
   />
 {{/if}}
