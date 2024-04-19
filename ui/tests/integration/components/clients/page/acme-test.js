@@ -100,9 +100,9 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
     assert.dom(statText('Average ACME clients per month')).doesNotExist();
     assert.dom(statText('Average new ACME clients per month')).doesNotExist();
     assert
-      .dom(usageStats)
+      .dom(usageStats('ACME usage'))
       .hasText(
-        `ACME usage This data can be used to understand how many ACME clients have been used for the queried month. Each ACME request is counted as one client. Total ACME clients ${expectedTotal}`,
+        `ACME usage Usage metrics tutorial This data can be used to understand how many ACME clients have been used for the queried month. Each ACME request is counted as one client. Total ACME clients ${expectedTotal}`,
         'it renders usage stats with single month copy'
       );
   });
@@ -127,7 +127,7 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
     assert.dom(statText('Total ACME clients')).doesNotExist();
     assert.dom(statText('Average ACME clients per month')).doesNotExist();
     assert.dom(statText('Average new ACME clients per month')).doesNotExist();
-    assert.dom(usageStats).doesNotExist();
+    assert.dom(usageStats('ACME usage')).doesNotExist();
   });
 
   test('it should render empty state when ACME data does not exist for a single month', async function (assert) {
