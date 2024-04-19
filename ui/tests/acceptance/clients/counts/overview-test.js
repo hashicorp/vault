@@ -74,7 +74,7 @@ module('Acceptance | clients | overview', function (hooks) {
     await click('[data-test-previous-year]');
     await click(`[data-test-calendar-month=${ARRAY_OF_MONTHS[LICENSE_START.getMonth()]}]`);
     assert
-      .dom(CLIENT_COUNT.runningTotalMonthStats)
+      .dom(CLIENT_COUNT.usageStats('Vault client counts'))
       .doesNotExist('running total single month stat boxes do not show');
     assert
       .dom(CLIENT_COUNT.chartContainer('Vault client counts'))
@@ -118,7 +118,9 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom('[data-test-display-year]').hasText('2024');
     await click('[data-test-previous-year]');
     await click('[data-test-calendar-month="September"]');
-    assert.dom(CLIENT_COUNT.runningTotalMonthStats).exists('running total single month stat boxes show');
+    assert
+      .dom(CLIENT_COUNT.usageStats('Vault client counts'))
+      .exists('running total single month usage stats show');
     assert
       .dom(CLIENT_COUNT.chartContainer('Vault client counts'))
       .doesNotExist('running total month over month charts do not show');
