@@ -2484,6 +2484,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.runUnsealSetupForPrimary(ctx, logger); err != nil {
 			return err
 		}
+	} else if c.IsMultisealEnabled() {
+		sealGenInfo := c.SealAccess().GetAccess().GetSealGenerationInfo()
+		if sealGenInfo != nil && !sealGenInfo.IsRewrapped() {
+			atomic.StoreUint32(c.sealMigrationDone, 1)
+		}
 	}
 
 	if c.getClusterListener() != nil && (c.ha != nil || shouldStartClusterListener(c)) {
