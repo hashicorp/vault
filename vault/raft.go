@@ -958,8 +958,8 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 		return nil, err
 	}
 
-	if sealConfig.Type != c.seal.BarrierSealConfigType().String() {
-		return nil, fmt.Errorf("mismatching seal types between raft leader (%s) and follower (%s)", sealConfig.Type, c.seal.BarrierSealConfigType())
+	if !CompatibleSealTypes(sealConfig.Type, c.seal.BarrierSealConfigType().String()) {
+		return nil, fmt.Errorf("incompatible seal types between raft leader (%s) and follower (%s)", sealConfig.Type, c.seal.BarrierSealConfigType())
 	}
 
 	challengeB64, ok := secret.Data["challenge"]
