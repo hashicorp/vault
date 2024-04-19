@@ -31,7 +31,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
     this.timestamp = formatRFC3339(mockNow);
     this.selectedNamespace = null;
     this.totalUsageCounts = total;
-    this.totalClientAttribution = by_namespace;
+    this.totalClientAttribution = [...by_namespace];
     this.namespaceMountsData = by_namespace.find((ns) => ns.label === 'ns1').mounts;
   });
 
