@@ -11,36 +11,6 @@
 }
 
 // GRID LAYOUT //
-.single-month-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 2em;
-  width: 100%;
-}
-.single-month-stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1em;
-  width: 100%;
-  margin-bottom: 1rem;
-  .column-start-1 {
-    grid-column-start: 1;
-  }
-  .column-start-2 {
-    grid-column-start: 2;
-  }
-  .column-start-3 {
-    grid-column-start: 3;
-  }
-  .column-start-4 {
-    grid-column-start: 4;
-  }
-}
-.single-month-section-title {
-  grid-column-start: 1;
-  grid-column-end: span col3-end;
-}
-
 .single-chart-grid {
   display: grid;
   grid-template-columns: 1fr 0.3fr 3.7fr;

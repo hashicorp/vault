@@ -54,13 +54,9 @@
       </:emptyState>
     </Clients::ChartContainer>
   {{else}}
-    <div class="chart-wrapper" data-test-usage-stats>
-      <div class="chart-header has-bottom-margin-m">
-        <h2 class="chart-title">{{this.title}}</h2>
-        <p class="chart-description has-bottom-padding-m">{{this.description}}</p>
-      </div>
-      <StatText @label="Total sync clients" @value={{this.totalUsageCounts.secret_syncs}} @size="l" />
-    </div>
+    <Clients::UsageStats @title={{this.title}} @description={{this.description}}>
+      <StatText @label="Total sync clients" @value={{this.totalUsageCounts.secret_syncs}} @size="l" class="column" />
+    </Clients::UsageStats>
   {{/if}}
 {{else}}
   <EmptyState
