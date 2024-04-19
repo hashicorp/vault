@@ -15,7 +15,7 @@ import { stack } from 'd3-shape';
 import {
   BAR_WIDTH,
   GREY,
-  BLUE_PALETTE,
+  BAR_PALETTE,
   SVG_DIMENSIONS,
   TRANSLATE,
   calculateSum,
@@ -77,7 +77,7 @@ export default class VerticalBarChart extends Component {
       .data(stackedData)
       .enter()
       .append('g')
-      .style('fill', (d, i) => BLUE_PALETTE[i]);
+      .style('fill', (d, i) => BAR_PALETTE[i]);
 
     dataBars
       .selectAll('rect')

@@ -6,6 +6,7 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { render, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
@@ -15,11 +16,11 @@ import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors
 import { formatNumber } from 'core/helpers/format-number';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 import { dateFormat } from 'core/helpers/date-format';
-import { assertChart } from 'vault/tests/helpers/clients/client-count-helpers';
+import { assertBarChart } from 'vault/tests/helpers/clients/client-count-helpers';
 
 const START_TIME = getUnixTime(LICENSE_START);
 const END_TIME = getUnixTime(STATIC_NOW);
-const { statText, charts, usageStats } = CLIENT_COUNT;
+const { statText, chartContainer, charts, usageStats } = CLIENT_COUNT;
 
 module('Integration | Component | clients | Clients::Page::Acme', function (hooks) {
   setupRenderingTest(hooks);
@@ -49,6 +50,12 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
         @mountPath={{this.countsController.mountPath}}
       />
     `);
+    // Fails on #ember-testing-container
+    setRunOptions({
+      rules: {
+        'scrollable-region-focusable': { enabled: false },
+      },
+    });
   });
 
   test('it should render with full month activity data charts', async function (assert) {
@@ -77,8 +84,8 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
     });
     assert.dom(charts.timestamp).hasText(`Updated ${formattedTimestamp}`, 'renders response timestamp');
 
-    assertChart(assert, 'ACME usage', this.activity.byMonth);
-    assertChart(assert, 'Monthly new', this.activity.byMonth);
+    assertBarChart(assert, 'ACME usage', this.activity.byMonth);
+    assertBarChart(assert, 'Monthly new', this.activity.byMonth);
   });
 
   test('it should render stats without chart for a single month', async function (assert) {
@@ -89,7 +96,7 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
     await this.renderComponent();
 
     assert.dom(charts.chart('ACME usage')).doesNotExist('total usage chart does not render');
-    assert.dom(charts.chart('Monthly new')).doesNotExist('monthly new chart does not render');
+    assert.dom(chartContainer('Monthly new')).doesNotExist('monthly new chart does not render');
     assert.dom(statText('Average ACME clients per month')).doesNotExist();
     assert.dom(statText('Average new ACME clients per month')).doesNotExist();
     assert
@@ -116,7 +123,7 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
       .hasText('There is no ACME client data available for this date range.');
 
     assert.dom(charts.chart('ACME usage')).doesNotExist('vertical bar chart does not render');
-    assert.dom(charts.chart('Monthly new')).doesNotExist('monthly new chart does not render');
+    assert.dom(chartContainer('Monthly new')).doesNotExist('monthly new chart does not render');
     assert.dom(statText('Total ACME clients')).doesNotExist();
     assert.dom(statText('Average ACME clients per month')).doesNotExist();
     assert.dom(statText('Average new ACME clients per month')).doesNotExist();
@@ -189,7 +196,7 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
       assert.dom(e).isNotVisible(`does not render data bar for: ${this.activity.byMonth[i].month}`);
     });
 
-    assert.dom(charts.chart('Monthly new')).doesNotExist('empty monthly new chart does not render at all');
+    assert.dom(chartContainer('Monthly new')).doesNotExist('empty monthly new chart does not render at all');
     assert.dom(statText('Average ACME clients per month')).doesNotExist();
     assert.dom(statText('Average new ACME clients per month')).doesNotExist();
   });
