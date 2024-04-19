@@ -33,7 +33,7 @@ function splitSegments(secretPath) {
  * @returns array of breadcrumbs specific to KV engine
  */
 export function breadcrumbsForSecret(backend, secretPath, lastItemCurrent = false) {
-  if (!secretPath) return [];
+  if (!backend || !secretPath) return [];
   const isDir = pathIsDirectory(secretPath);
   const segments = splitSegments(secretPath);
 
