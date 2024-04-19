@@ -86,6 +86,8 @@ func TestAuditedHeadersConfig_CRUD(t *testing.T) {
 }
 
 func testAddHeaders(t *testing.T, conf *HeadersConfig) {
+	t.Helper()
+
 	err := conf.Add(context.Background(), "X-Test-Header", false)
 	if err != nil {
 		t.Fatalf("Error when adding header to config: %s", err)
@@ -162,6 +164,8 @@ func testAddHeaders(t *testing.T, conf *HeadersConfig) {
 }
 
 func testRemoveHeaders(t *testing.T, conf *HeadersConfig) {
+	t.Helper()
+
 	err := conf.Remove(context.Background(), "X-Test-Header")
 	if err != nil {
 		t.Fatalf("Error when adding header to config: %s", err)
@@ -232,8 +236,10 @@ func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
 
 	conf := mockAuditedHeadersConfig(t)
 
-	conf.Add(context.Background(), "X-TesT-Header", false)
-	conf.Add(context.Background(), "X-Vault-HeAdEr", true)
+	err := conf.Add(context.Background(), "X-TesT-Header", false)
+	require.NoError(t, err)
+	err = conf.Add(context.Background(), "X-Vault-HeAdEr", true)
+	require.NoError(t, err)
 
 	reqHeaders := map[string][]string{
 		"X-Test-Header":  {"foo"},
@@ -364,8 +370,10 @@ func TestAuditedHeadersConfig_ApplyConfig_HashStringError(t *testing.T) {
 
 	conf := mockAuditedHeadersConfig(t)
 
-	conf.Add(context.Background(), "X-TesT-Header", false)
-	conf.Add(context.Background(), "X-Vault-HeAdEr", true)
+	err := conf.Add(context.Background(), "X-TesT-Header", false)
+	require.NoError(t, err)
+	err = conf.Add(context.Background(), "X-Vault-HeAdEr", true)
+	require.NoError(t, err)
 
 	reqHeaders := map[string][]string{
 		"X-Test-Header":  {"foo"},
@@ -375,7 +383,7 @@ func TestAuditedHeadersConfig_ApplyConfig_HashStringError(t *testing.T) {
 
 	salter := &FailingSalter{}
 
-	_, err := conf.ApplyConfig(context.Background(), reqHeaders, salter)
+	_, err = conf.ApplyConfig(context.Background(), reqHeaders, salter)
 	if err == nil {
 		t.Fatal("expected error from ApplyConfig")
 	}
@@ -403,7 +411,8 @@ func BenchmarkAuditedHeaderConfig_ApplyConfig(b *testing.B) {
 	// Reset the timer since we did a lot above
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		conf.ApplyConfig(context.Background(), reqHeaders, salter)
+		_, err := conf.ApplyConfig(context.Background(), reqHeaders, salter)
+		require.NoError(b, err)
 	}
 }
 

@@ -27,6 +27,10 @@ const (
 	optionHMACAccessor       = "hmac_accessor"
 	optionLogRaw             = "log_raw"
 	optionPrefix             = "prefix"
+
+	TypeFile   = "file"
+	TypeSocket = "socket"
+	TypeSyslog = "syslog"
 )
 
 var _ Backend = (*backend)(nil)
@@ -161,11 +165,6 @@ func newFormatterConfig(headerFormatter HeaderFormatter, config map[string]strin
 
 	if prefix, ok := config[optionPrefix]; ok {
 		opt = append(opt, WithPrefix(prefix))
-	}
-
-	err := ValidateOptions()
-	if err != nil {
-		return formatterConfig{}, err
 	}
 
 	opts, err := getOpts(opt...)
