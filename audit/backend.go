@@ -27,6 +27,10 @@ const (
 	optionHMACAccessor       = "hmac_accessor"
 	optionLogRaw             = "log_raw"
 	optionPrefix             = "prefix"
+
+	TypeFile   = "file"
+	TypeSocket = "socket"
+	TypeSyslog = "syslog"
 )
 
 var _ Backend = (*backend)(nil)

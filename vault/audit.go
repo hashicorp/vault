@@ -500,7 +500,7 @@ func (c *Core) teardownAudits() error {
 // audit lock needs to be held before calling this.
 func (c *Core) removeAuditReloadFunc(entry *MountEntry) {
 	switch entry.Type {
-	case "file":
+	case audit.TypeFile:
 		key := "audit_file|" + entry.Path
 		c.reloadFuncsLock.Lock()
 
@@ -547,7 +547,7 @@ func (c *Core) newAuditBackend(entry *MountEntry, view logical.Storage, conf map
 	}
 
 	switch entry.Type {
-	case "file":
+	case audit.TypeFile:
 		key := "audit_file|" + entry.Path
 
 		c.reloadFuncsLock.Lock()
@@ -565,11 +565,11 @@ func (c *Core) newAuditBackend(entry *MountEntry, view logical.Storage, conf map
 		})
 
 		c.reloadFuncsLock.Unlock()
-	case "socket":
+	case audit.TypeSocket:
 		if auditLogger.IsDebug() && entry.Options != nil {
 			auditLogger.Debug("socket backend options", "path", entry.Path, "address", entry.Options["address"], "socket type", entry.Options["socket_type"])
 		}
-	case "syslog":
+	case audit.TypeSyslog:
 		if auditLogger.IsDebug() && entry.Options != nil {
 			auditLogger.Debug("syslog backend options", "path", entry.Path, "facility", entry.Options["facility"], "tag", entry.Options["tag"])
 		}
