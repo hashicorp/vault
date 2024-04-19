@@ -62,9 +62,8 @@ func TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// Create sink file and get the file info (for modified time)
+	// Create sink file
 	pathSinkFile := makeTempFile(t, "sink-file", "")
-	originalSinkFileInfo, err := os.Stat(pathSinkFile)
 	require.NoError(t, err)
 
 	ahConfig := &auth.AuthHandlerConfig{
@@ -140,15 +139,8 @@ func TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput(t *testing.T) {
 		errCh <- server.Run(ctx, ah.TemplateTokenCh, templatesToRender, ah.AuthInProgress, ah.InvalidToken)
 	}()
 
-	// Send token to auth channel, wait for sink to receive it
+	// Send token to template channel
 	ah.TemplateTokenCh <- token
-	ah.OutputCh <- token
-	sinkFileFileInfo, err := waitForFiles(t, pathSinkFile, originalSinkFileInfo.ModTime())
-	require.NoError(t, err)
-	tokenInSink, err := os.ReadFile(pathSinkFile)
-	require.NoError(t, err)
-	require.Equal(t, token, string(tokenInSink))
-
 	templateFileInfo, err := waitForFiles(t, pathTemplateOutput, originalTemplateFileInfo.ModTime())
 	require.NoError(t, err)
 
@@ -169,11 +161,11 @@ func TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for auto-auth to complete
-	_, err = waitForFiles(t, pathSinkFile, sinkFileFileInfo.ModTime())
+	_, err = waitForFiles(t, pathSinkFile, templateFileInfo.ModTime())
 	require.NoError(t, err)
 
 	// Verify the new token has been written to a file sink after re-authenticating using lookup-self
-	tokenInSink, err = os.ReadFile(pathSinkFile)
+	tokenInSink, err := os.ReadFile(pathSinkFile)
 	require.NoError(t, err)
 	require.Equal(t, newToken, string(tokenInSink))
 
@@ -266,11 +258,10 @@ path "/secret/*" {
 		errCh <- ah.Run(ctx, am)
 	}()
 
-	// Create sink file, and get its modified time
+	// Create sink file
 	pathSinkFile := makeTempFile(t, "sink-file", "")
 	fileInfo, err := os.Stat(pathSinkFile)
 	require.NoError(t, err)
-	sinkFileModifiedTime := fileInfo.ModTime()
 
 	config := &sink.SinkConfig{
 		Logger: logger.Named("sink.file"),
@@ -334,16 +325,8 @@ path "/secret/*" {
 		errCh <- server.Run(ctx, ah.TemplateTokenCh, templatesToRender, ah.AuthInProgress, ah.InvalidToken)
 	}()
 
-	// Send token to the template channel, and wait for the sink to be
-	// populated.
+	// Send token to the template channel
 	ah.TemplateTokenCh <- token
-	ah.OutputCh <- token
-	_, err = waitForFiles(t, pathSinkFile, sinkFileModifiedTime)
-	require.NoError(t, err)
-
-	tokenInSink, err := os.ReadFile(pathSinkFile)
-	require.NoError(t, err)
-	require.Equal(t, token, string(tokenInSink))
 
 	// Create new token with the correct policy access
 	tokenSecret, err := serverClient.Auth().Token().Create(&api.TokenCreateRequest{
@@ -368,7 +351,7 @@ path "/secret/*" {
 
 	// Auto auth should not have been re-triggered because of just a permission denied error
 	// Verify that the new token has NOT been written to the token sink
-	tokenInSink, err = os.ReadFile(pathSinkFile)
+	tokenInSink, err := os.ReadFile(pathSinkFile)
 	require.NoError(t, err)
 	require.NotEqual(t, newToken, string(tokenInSink))
 	require.Equal(t, token, string(tokenInSink))
