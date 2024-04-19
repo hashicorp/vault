@@ -62,6 +62,11 @@ func TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	// Create sink file and get the file info (for modified time)
+	pathSinkFile := makeTempFile(t, "sink-file", "")
+	originalSinkFileInfo, err := os.Stat(pathSinkFile)
+	require.NoError(t, err)
+
 	ahConfig := &auth.AuthHandlerConfig{
 		Logger:                       logger.Named("auth.handler"),
 		Client:                       serverClient,
@@ -74,11 +79,6 @@ func TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput(t *testing.T) {
 	go func() {
 		errCh <- ah.Run(ctx, am)
 	}()
-
-	// Create sink file and get the modified time
-	pathSinkFile := makeTempFile(t, "sink-file", "")
-	originalSinkFileInfo, err := os.Stat(pathSinkFile)
-	require.NoError(t, err)
 
 	config := &sink.SinkConfig{
 		Logger: logger.Named("sink.file"),
@@ -140,17 +140,17 @@ func TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput(t *testing.T) {
 		errCh <- server.Run(ctx, ah.TemplateTokenCh, templatesToRender, ah.AuthInProgress, ah.InvalidToken)
 	}()
 
-	// Send token to auth channel
+	// Send token to auth channel, wait for sink to receive it
 	ah.TemplateTokenCh <- token
+	ah.OutputCh <- token
 	sinkFileFileInfo, err := waitForFiles(t, pathSinkFile, originalSinkFileInfo.ModTime())
 	require.NoError(t, err)
-
-	templateFileInfo, err := waitForFiles(t, pathTemplateOutput, originalTemplateFileInfo.ModTime())
-	require.NoError(t, err)
-
 	tokenInSink, err := os.ReadFile(pathSinkFile)
 	require.NoError(t, err)
 	require.Equal(t, token, string(tokenInSink))
+
+	templateFileInfo, err := waitForFiles(t, pathTemplateOutput, originalTemplateFileInfo.ModTime())
+	require.NoError(t, err)
 
 	// Revoke Token
 	err = serverClient.Auth().Token().RevokeOrphan(token)
@@ -337,6 +337,7 @@ path "/secret/*" {
 	// Send token to the template channel, and wait for the sink to be
 	// populated.
 	ah.TemplateTokenCh <- token
+	ah.OutputCh <- token
 	_, err = waitForFiles(t, pathSinkFile, sinkFileModifiedTime)
 	require.NoError(t, err)
 
@@ -401,11 +402,11 @@ func waitForFiles(t *testing.T, filePath string, prevModTime time.Time) (os.File
 	var fileInfo os.FileInfo
 	tick := time.Tick(100 * time.Millisecond)
 	timeout := time.After(5 * time.Second)
-	// We need to wait for the templates to render...
+	// We need to wait for the files to be updated...
 	for {
 		select {
 		case <-timeout:
-			return nil, fmt.Errorf("timed out waiting for templates to render, last error: %w", err)
+			return nil, fmt.Errorf("timed out waiting for files, last error: %w", err)
 		case <-tick:
 		}
 
@@ -418,6 +419,7 @@ func waitForFiles(t *testing.T, filePath string, prevModTime time.Time) (os.File
 		}
 		// Keep waiting until the file has been updated since the previous mod time
 		if !fileInfo.ModTime().After(prevModTime) {
+			err = fmt.Errorf("file not yet updated, prevModTime+%s, currentModTime=%s", prevModTime, fileInfo.ModTime())
 			continue
 		}
 
