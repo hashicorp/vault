@@ -107,14 +107,11 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	defer c.auditLock.Unlock()
 
 	// Look for matching name
-	for _, ent := range c.audit.Entries {
-		switch {
-		// Existing is sql/mysql/ new is sql/ or
-		// existing is sql/ and new is sql/mysql/
-		case strings.HasPrefix(ent.Path, entry.Path):
-			fallthrough
-		case strings.HasPrefix(entry.Path, ent.Path):
-			return fmt.Errorf("path already in use: %w", audit.ErrExternalOptions)
+	for _, existing := range c.audit.Entries {
+		proposed := entry.toAuditEntryMinimal()
+		existing := existing.toAuditEntryMinimal()
+		if ok, err := audit.IsDistinct(proposed, existing); !ok {
+			return err
 		}
 	}
 
@@ -500,7 +497,7 @@ func (c *Core) teardownAudits() error {
 // audit lock needs to be held before calling this.
 func (c *Core) removeAuditReloadFunc(entry *MountEntry) {
 	switch entry.Type {
-	case "file":
+	case audit.TypeFile:
 		key := "audit_file|" + entry.Path
 		c.reloadFuncsLock.Lock()
 
@@ -547,7 +544,7 @@ func (c *Core) newAuditBackend(entry *MountEntry, view logical.Storage, conf map
 	}
 
 	switch entry.Type {
-	case "file":
+	case audit.TypeFile:
 		key := "audit_file|" + entry.Path
 
 		c.reloadFuncsLock.Lock()
@@ -565,11 +562,11 @@ func (c *Core) newAuditBackend(entry *MountEntry, view logical.Storage, conf map
 		})
 
 		c.reloadFuncsLock.Unlock()
-	case "socket":
+	case audit.TypeSocket:
 		if auditLogger.IsDebug() && entry.Options != nil {
 			auditLogger.Debug("socket backend options", "path", entry.Path, "address", entry.Options["address"], "socket type", entry.Options["socket_type"])
 		}
-	case "syslog":
+	case audit.TypeSyslog:
 		if auditLogger.IsDebug() && entry.Options != nil {
 			auditLogger.Debug("syslog backend options", "path", entry.Path, "facility", entry.Options["facility"], "tag", entry.Options["tag"])
 		}
@@ -654,4 +651,37 @@ func hasEnterpriseAuditOptions(options map[string]string) bool {
 	}
 
 	return false
+}
+
+// auditEntryMinimal represents a minimal version of a MountEntry which would be
+// required by the audit system in order to compare two entries and establish if
+// they are distinct.
+type auditEntryMinimal struct {
+	path       string
+	deviceType string
+	options    map[string]string
+}
+
+// Type returns the device type of the entry.
+func (m *auditEntryMinimal) Type() string {
+	return m.deviceType
+}
+
+// Path returns the device mount path of the entry.
+func (m *auditEntryMinimal) Path() string {
+	return m.path
+}
+
+// Options returns the specified option given a key.
+func (m *auditEntryMinimal) Options(key string) string {
+	return m.options[key]
+}
+
+// toAuditEntryMinimal converts a MountEntry to an auditEntryMinimal.
+func (e *MountEntry) toAuditEntryMinimal() *auditEntryMinimal {
+	return &auditEntryMinimal{
+		options:    e.Options,
+		deviceType: e.Type,
+		path:       e.Path,
+	}
 }
