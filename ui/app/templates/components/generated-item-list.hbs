@@ -46,7 +46,13 @@
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
-<ListView @items={{@model}} @itemNoun={{@itemType}} @paginationRouteName="vault.cluster.access.method.item.list" as |list|>
+<ListView
+  @items={{@model}}
+  @itemNoun={{@itemType}}
+  @paginationRouteName="vault.cluster.access.method.item.list"
+  @paginationRouteParams={{array @methodModel.id @itemType}}
+  as |list|
+>
   {{#if list.empty}}
     <list.empty
       @title="No {{pluralize @itemType}} yet"
