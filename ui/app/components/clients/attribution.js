@@ -49,6 +49,7 @@ export default class Attribution extends Component {
     const attributionLegend = [
       { key: 'entity_clients', label: 'entity clients' },
       { key: 'non_entity_clients', label: 'non-entity clients' },
+      { key: 'acme_clients', label: 'ACME clients' },
     ];
 
     if (this.args.isSecretsSyncActivated) {
@@ -129,12 +130,18 @@ export default class Attribution extends Component {
   }
 
   destructureCountsToArray(object) {
-    // destructure the namespace object  {label: 'some-namespace', entity_clients: 171, non_entity_clients: 20, secret_syncs: 10, clients: 201}
+    // destructure the namespace object  {label: 'some-namespace', entity_clients: 171, non_entity_clients: 20, acme_clients: 6, secret_syncs: 10, clients: 207}
     // to get integers for CSV file
-    const { clients, entity_clients, non_entity_clients, secret_syncs } = object;
+    const { clients, entity_clients, non_entity_clients, acme_clients, secret_syncs } = object;
     const { isSecretsSyncActivated } = this.args;
 
-    return [clients, entity_clients, non_entity_clients, ...(isSecretsSyncActivated ? [secret_syncs] : [])];
+    return [
+      clients,
+      entity_clients,
+      non_entity_clients,
+      acme_clients,
+      ...(isSecretsSyncActivated ? [secret_syncs] : []),
+    ];
   }
 
   constructCsvRow(namespaceColumn, mountColumn = null, totalColumns, newColumns = null) {
@@ -161,21 +168,26 @@ export default class Attribution extends Component {
     const descriptionOfBlanks = this.isSingleNamespace
       ? ''
       : `\n  *namespace totals, inclusive of mount clients${upgrade}`;
-    const csvHeader = [
+    // client type order here should match array order returned by destructureCountsToArray
+    let csvHeader = [
       'Namespace path',
       `Mount path${descriptionOfBlanks}`,
       'Total clients',
       'Entity clients',
       'Non-entity clients',
+      'ACME clients',
       ...(isSecretsSyncActivated ? ['Secrets sync clients'] : []),
     ];
 
     if (newAttribution) {
-      csvHeader.push(
-        `Total new clients, New entity clients, New non-entity clients${
-          isSecretsSyncActivated ? ', New secrets sync clients' : ''
-        }`
-      );
+      csvHeader = [
+        ...csvHeader,
+        'Total new clients',
+        'New entity clients',
+        'New non-entity clients',
+        'New ACME clients',
+        ...(isSecretsSyncActivated ? 'New secrets sync clients' : []),
+      ];
     }
 
     totalAttribution.forEach((totalClientsObject) => {
@@ -192,7 +204,7 @@ export default class Attribution extends Component {
 
       csvData.push(this.constructCsvRow(namespace, mount, totalClients, newClients));
       // constructCsvRow returns an array that corresponds to a row in the csv file:
-      // ['ns label', 'mount label', total client #, entity #, non-entity #, ...new client #'s]
+      // ['ns label', 'mount label', total client #, entity #, non-entity #, acme #, secrets sync #, ...new client #'s]
 
       // only iterate through mounts if NOT viewing a single namespace
       if (!this.isSingleNamespace && namespace.mounts) {

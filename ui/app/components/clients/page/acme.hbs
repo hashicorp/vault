@@ -63,7 +63,6 @@
       @timestamp={{@activity.responseTimestamp}}
       @hasChartData={{true}}
       class="no-legend"
-      data-test-chart="monthly new"
     >
       <:stats>
         {{#let (this.average this.byMonthNewClients "acme_clients") as |avg|}}
