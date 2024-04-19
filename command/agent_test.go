@@ -1465,6 +1465,8 @@ func makeTempFile(t *testing.T, name, contents string) string {
 	return path
 }
 
+// populateTempFile creates a temp file with the specified name, populates it with the
+// supplied contents and closes it. The file pointer is returned.
 func populateTempFile(t *testing.T, name, contents string) *os.File {
 	t.Helper()
 
@@ -3436,9 +3438,7 @@ func generateListenerAddress(t *testing.T) string {
 	t.Helper()
 
 	ln1, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	listenAddr := ln1.Addr().String()
 	ln1.Close()
 	return listenAddr
