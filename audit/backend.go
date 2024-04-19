@@ -163,11 +163,6 @@ func newFormatterConfig(headerFormatter HeaderFormatter, config map[string]strin
 		opt = append(opt, WithPrefix(prefix))
 	}
 
-	err := ValidateOptions()
-	if err != nil {
-		return formatterConfig{}, err
-	}
-
 	opts, err := getOpts(opt...)
 	if err != nil {
 		return formatterConfig{}, err
