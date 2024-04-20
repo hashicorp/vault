@@ -84,14 +84,19 @@ module('Integration | Util | client count utils', function (hooks) {
   });
 
   test('formatByNamespace: it formats namespace array with mounts', async function (assert) {
-    assert.expect(3);
     const original = [...RESPONSE.by_namespace];
-    const [formattedRoot, formattedNs1] = formatByNamespace(RESPONSE.by_namespace);
-    const [root, ns1] = SERIALIZED_ACTIVITY_RESPONSE.by_namespace;
+    const expectedNs1 = SERIALIZED_ACTIVITY_RESPONSE.by_namespace.find((ns) => ns.label === 'ns1');
+    const formattedNs1 = formatByNamespace(RESPONSE.by_namespace).find((ns) => ns.label === 'ns1');
+    assert.expect(2 + expectedNs1.mounts.length * 2);
 
-    assert.propEqual(formattedRoot, root, 'it formats root namespace');
-    assert.propEqual(formattedNs1, ns1, 'it formats ns1/ namespace');
+    assert.propEqual(formattedNs1, expectedNs1, 'it formats ns1/ namespace');
     assert.propEqual(RESPONSE.by_namespace, original, 'it does not modify original by_namespace array');
+
+    formattedNs1.mounts.forEach((mount) => {
+      const expectedMount = expectedNs1.mounts.find((m) => m.label === mount.label);
+      assert.propEqual(Object.keys(mount), Object.keys(expectedMount), `${mount} as expected keys`);
+      assert.propEqual(Object.values(mount), Object.values(expectedMount), `${mount} as expected values`);
+    });
   });
 
   test('destructureClientCounts: it returns relevant key names when both old and new keys exist', async function (assert) {

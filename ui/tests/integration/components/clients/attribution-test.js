@@ -31,7 +31,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
     this.timestamp = formatRFC3339(mockNow);
     this.selectedNamespace = null;
     this.totalUsageCounts = total;
-    this.totalClientAttribution = by_namespace;
+    this.totalClientAttribution = [...by_namespace];
     this.namespaceMountsData = by_namespace.find((ns) => ns.label === 'ns1').mounts;
   });
 
@@ -338,7 +338,11 @@ ns1,pki-engine-0,5699,0,0,5699,0`,
 
   test('csv filename omits sync clients if not activated', async function (assert) {
     assert.expect(1);
-    this.totalClientAttribution.forEach((ns) => delete ns.secret_syncs);
+    this.totalClientAttribution = this.totalClientAttribution.map((ns) => {
+      const namespace = { ...ns };
+      delete namespace.secret_syncs;
+      return namespace;
+    });
     await render(hbs`
       <Clients::Attribution
         @isSecretsSyncActivated={{false}}
