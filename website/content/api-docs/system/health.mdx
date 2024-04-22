@@ -25,10 +25,14 @@ The default status codes are:
 
 - `200` if initialized, unsealed, and active
 - `429` if unsealed and standby
-- `472` if disaster recovery mode replication secondary and active
+- `472` if disaster recovery secondary (both active and standby nodes within the DR secondary)
 - `473` if performance standby
 - `501` if not initialized
 - `503` if sealed
+
+<Note>
+In rare occasions such as during cluster instability, a node may return 429 even when it was part of a DR secondary (472) or a perf-standby (473). When configuring a Load Balancer based on health status API, it's important to recognize that a 429 indicates a standby node that doesn't process the request itself, read or write.
+</Note>
 
 ### Parameters
 
