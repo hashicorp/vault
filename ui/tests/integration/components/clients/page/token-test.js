@@ -74,7 +74,7 @@ module('Integration | Component | clients | Clients::Page::Token', function (hoo
       return formatNumber([average]);
     };
     const expectedTotal = getAverage(this.activity.byMonth);
-    const chart = CLIENT_COUNT.charts.chart('monthly total');
+    const chart = CLIENT_COUNT.chartContainer('Entity/Non-entity clients usage');
 
     await this.renderComponent();
 
