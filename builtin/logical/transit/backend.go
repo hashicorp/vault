@@ -5,6 +5,7 @@ package transit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -25,6 +27,8 @@ const (
 	// Minimum cache size for transit backend
 	minCacheSize = 10
 )
+
+var ErrCmacEntOnly = errors.New("CMAC operations are only available in enterprise versions of Vault")
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b, err := Backend(ctx, conf)
@@ -174,6 +178,11 @@ func (b *backend) GetPolicy(ctx context.Context, polReq keysutil.PolicyRequest, 
 	if err != nil {
 		return p, false, err
 	}
+
+	if p != nil && p.Type.CMACSupported() && !constants.IsEnterprise {
+		return nil, false, ErrCmacEntOnly
+	}
+
 	return p, true, nil
 }
 

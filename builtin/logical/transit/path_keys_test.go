@@ -10,10 +10,11 @@ import (
 	"testing"
 	"time"
 
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/logical/transit"
+	"github.com/hashicorp/vault/helper/constants"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -201,54 +202,45 @@ func TestTransit_CreateKey(t *testing.T) {
 	testCases := map[string]struct {
 		creationParams map[string]interface{}
 		shouldError    bool
+		entOnly        bool
 	}{
 		"AES-128": {
 			creationParams: map[string]interface{}{"type": "aes128-gcm96"},
-			shouldError:    false,
 		},
 		"AES-256": {
 			creationParams: map[string]interface{}{"type": "aes256-gcm96"},
-			shouldError:    false,
 		},
 		"CHACHA20": {
 			creationParams: map[string]interface{}{"type": "chacha20-poly1305"},
-			shouldError:    false,
 		},
 		"ECDSA-P256": {
 			creationParams: map[string]interface{}{"type": "ecdsa-p256"},
-			shouldError:    false,
 		},
 		"ECDSA-P384": {
 			creationParams: map[string]interface{}{"type": "ecdsa-p384"},
-			shouldError:    false,
 		},
 		"ECDSA-P521": {
 			creationParams: map[string]interface{}{"type": "ecdsa-p521"},
-			shouldError:    false,
 		},
 		"RSA_2048": {
 			creationParams: map[string]interface{}{"type": "rsa-2048"},
-			shouldError:    false,
 		},
 		"RSA_3072": {
 			creationParams: map[string]interface{}{"type": "rsa-3072"},
-			shouldError:    false,
 		},
 		"RSA_4096": {
 			creationParams: map[string]interface{}{"type": "rsa-4096"},
-			shouldError:    false,
 		},
 		"HMAC": {
 			creationParams: map[string]interface{}{"type": "hmac", "key_size": 128},
-			shouldError:    false,
 		},
 		"AES-128 CMAC": {
 			creationParams: map[string]interface{}{"type": "aes128-cmac"},
-			shouldError:    false,
+			entOnly:        true,
 		},
 		"AES-256 CMAC": {
 			creationParams: map[string]interface{}{"type": "aes256-cmac"},
-			shouldError:    false,
+			entOnly:        true,
 		},
 		"bad key type": {
 			creationParams: map[string]interface{}{"type": "fake-key-type"},
@@ -284,12 +276,25 @@ func TestTransit_CreateKey(t *testing.T) {
 			}
 
 			resp, err := client.Logical().Write(fmt.Sprintf("transit/keys/%s", keyName), tt.creationParams)
-			if err != nil && !tt.shouldError {
-				t.Fatalf("unexpected error creating key: %s", err)
+			if err != nil {
+				if !constants.IsEnterprise && tt.entOnly {
+					// key type is only available on ent and we aren't on ENT
+					return
+				}
+
+				if !tt.shouldError {
+					t.Fatalf("unexpected error creating key: %s", err)
+				}
 			}
 
-			if err == nil && tt.shouldError {
-				t.Fatal("expected error but got nil")
+			if err == nil {
+				if !constants.IsEnterprise && tt.entOnly {
+					t.Fatal("key type should be enterprise only but did not fail creation on CE")
+				}
+
+				if tt.shouldError {
+					t.Fatal("expected error but got nil")
+				}
 			}
 
 			if err == nil {

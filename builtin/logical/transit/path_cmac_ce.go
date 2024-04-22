@@ -13,5 +13,5 @@ import (
 )
 
 func (b *backend) pathCMACVerify(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	return logical.ErrorResponse("CMAC verification is only available in enterprise versions of Vault"), nil
+	return logical.ErrorResponse(ErrCmacEntOnly.Error()), nil
 }
