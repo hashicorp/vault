@@ -1,0 +1,91 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="lineal-chart" data-test-chart={{@chartTitle}}>
+  <Lineal::Fluid as |width|>
+    {{#let
+      (scale-band domain=this.months range=(array 0 width) padding=0.1)
+      (scale-linear range=(array this.chartHeight 0) domain=this.yDomain)
+      (scale-linear range=(array 0 this.chartHeight) domain=this.yDomain)
+      as |xScale yScale hScale|
+    }}
+      <svg width={{width}} height={{this.chartHeight}}>
+        <title>
+          {{@chartTitle}}
+        </title>
+
+        {{#if (and xScale.isValid yScale.isValid)}}
+          <Lineal::Axis
+            @scale={{yScale}}
+            @tickCount="6"
+            @tickPadding={{10}}
+            @tickSizeInner={{concat "-" width}}
+            @tickFormat={{this.formatTicksY}}
+            @orientation="left"
+            @includeDomain={{false}}
+            class="lineal-axis"
+            data-test-y-axis
+          />
+          <Lineal::Axis
+            @scale={{xScale}}
+            @orientation="bottom"
+            transform="translate(0,{{yScale.range.min}})"
+            @includeDomain={{false}}
+            @tickSize="0"
+            @tickPadding={{10}}
+            class="lineal-axis"
+            data-test-x-axis
+          />
+        {{/if}}
+        <Lineal::VBars
+          @data={{this.clientsByMonth}}
+          @x="month"
+          @y="clients"
+          @width={{this.barWidth}}
+          @xScale={{xScale}}
+          @yScale={{yScale}}
+          @color="type"
+          @colorScale="blue-bar"
+          transform="translate({{this.barOffset xScale.bandwidth}},0)"
+        />
+        {{#if (and xScale.isValid yScale.isValid)}}
+          {{#each this.chartData as |d|}}
+            <rect
+              role="button"
+              aria-label="Show exact counts for {{d.legendX}}"
+              x="0"
+              y="0"
+              height={{this.chartHeight}}
+              width={{xScale.bandwidth}}
+              fill="transparent"
+              stroke="transparent"
+              transform="translate({{xScale.compute d.x}})"
+              {{on "mouseover" (fn (mut this.activeDatum) d)}}
+              {{on "mouseout" (fn (mut this.activeDatum) null)}}
+              data-test-interactive-area={{d.x}}
+            />
+
+          {{/each}}
+        {{/if}}
+      </svg>
+      {{#if this.activeDatum}}
+        <div
+          class="lineal-tooltip-position chart-tooltip"
+          role="status"
+          {{style
+            --x=(this.tooltipX (xScale.compute this.activeDatum.x) xScale.bandwidth)
+            --y=(this.tooltipY (hScale.compute this.activeDatum.y))
+          }}
+        >
+          <div data-test-tooltip>
+            <p class="bold" data-test-tooltip-month>{{this.activeDatum.legendX}}</p>
+            <p data-test-tooltip-count>{{this.activeDatum.tooltip}}</p>
+          </div>
+          <div class="chart-tooltip-arrow"></div>
+        </div>
+      {{/if}}
+    {{/let}}
+  </Lineal::Fluid>
+</div>
