@@ -11,9 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// auditEntryMinimal represents a minimal version of a MountEntry which would be
+// testAuditEntryMinimal represents a minimal version of a MountEntry which would be
 // required by the audit system in order to compare two entries and establish if
-// they are distinct.
+// they are distinct. It is declared here in testing, because 'AuditEntryMinimal'
+// and 'MountEntry' exist in the 'vault' package and would cause an import cycle.
 type testAuditEntryMinimal struct {
 	path       string
 	deviceType string
