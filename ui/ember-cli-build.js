@@ -34,9 +34,6 @@ const appConfig = {
       return `${config.rootURL.replace(/\/$/, '')}${filePath}`;
     },
   },
-  babel: {
-    plugins: ['inline-json-import'],
-  },
   'ember-cli-babel': {
     enableTypeScriptTransform: true,
     throwUnlessParallelizable: true,
