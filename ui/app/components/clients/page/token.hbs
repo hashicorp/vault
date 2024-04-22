@@ -5,7 +5,7 @@
 
 {{#if (and this.byMonthActivityData this.isDateRange)}}
   <Clients::ChartContainer
-    @title="Entity/Non-entity clients"
+    @title="Entity/Non-entity clients usage"
     @description="This data can be used to understand how many entity and non-entity clients are using Vault each month for this date range."
     @timestamp={{@activity.responseTimestamp}}
     @legend={{this.legend}}
