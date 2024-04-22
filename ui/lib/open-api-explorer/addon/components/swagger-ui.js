@@ -10,6 +10,7 @@ import { tracked } from '@glimmer/tracking';
 import parseURL from 'core/utils/parse-url';
 import config from 'open-api-explorer/config/environment';
 import { guidFor } from '@ember/object/internals';
+import SwaggerUIBundle from 'swagger-ui-dist/swagger-ui-bundle.js';
 
 const { APP } = config;
 
@@ -84,8 +85,6 @@ export default class SwaggerUiComponent extends Component {
 
   // using an action to bind the correct "this" context
   @action async swaggerInit() {
-    const { default: SwaggerUIBundle } = await import('swagger-ui-dist/swagger-ui-bundle.js');
-    // trim any slashes on the filter value
     const configSettings = this.CONFIG(SwaggerUIBundle, this);
     SwaggerUIBundle(configSettings);
   }
