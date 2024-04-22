@@ -119,9 +119,9 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
 
     assert.dom(charts.chart('Secrets sync usage')).doesNotExist('vertical bar chart does not render');
     assert
-      .dom(usageStats)
+      .dom(usageStats('Secrets sync usage'))
       .hasText(
-        `Secrets sync usage This data can be used to understand how many secrets sync clients have been used for this date range. Each Vault secret that is synced to at least one destination counts as one Vault client. Total sync clients ${total}`,
+        `Secrets sync usage Usage metrics tutorial This data can be used to understand how many secrets sync clients have been used for this date range. Each Vault secret that is synced to at least one destination counts as one Vault client. Total sync clients ${total}`,
         'renders sync stats instead of chart'
       );
     assert.dom(statText('Average total clients per month')).doesNotExist('total sync counts does not exist');

@@ -47,7 +47,6 @@
     @legend={{this.legend}}
     @hasChartData={{this.averageNewClients}}
     class={{unless this.averageNewClients "no-legend"}}
-    data-test-chart="monthly new"
   >
     <:stats>
       <StatText
@@ -83,17 +82,36 @@
     </:emptyState>
   </Clients::ChartContainer>
 {{else}}
-  {{! UsageStats render when viewing a single, historical month AND activity data predates new client breakdown (< v1.10.0)
-    or viewing the current month filtered down to auth method }}
+  {{! Renders when viewing a single month or activity log data that predates the monthly breakdown added in 1.11 }}
   <Clients::UsageStats
-    @title="Total usage"
-    @description="These totals are within
-    {{or @mountPath 'this namespace and all its children'}}.
+    @title="Entity/Non-entity usage"
+    @description="Client counts for this
+    {{if @mountPath 'mount' 'namespace and all its children'}}.
     {{if
       this.isCurrentMonth
       "Only totals are available when viewing the current month. To see a breakdown of new and total clients for this month, select the 'Current Billing Period' filter."
     }}"
-    @showSecretSyncs={{false}}
-    @totalUsageCounts={{this.tokenUsageCounts}}
-  />
+  >
+    <StatText
+      class="column"
+      @label="Total clients"
+      @value={{this.tokenUsageCounts.clients}}
+      @size="l"
+      @subText="The number of clients which interacted with Vault during this month. This is Vault’s primary billing metric."
+    />
+    <StatText
+      class="column"
+      @label="Entity"
+      @value={{this.tokenUsageCounts.entity_clients}}
+      @size="l"
+      @subText="Representations of a particular user, client, or application that created a token via login."
+    />
+    <StatText
+      class="column"
+      @label="Non-entity"
+      @value={{this.tokenUsageCounts.non_entity_clients}}
+      @size="l"
+      @subText="Clients created with a shared set of permissions, but not associated with an entity."
+    />
+  </Clients::UsageStats>
 {{/if}}

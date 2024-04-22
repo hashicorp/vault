@@ -53,23 +53,21 @@ function randomBetween(min, max) {
   return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
-function generateMounts(pathPrefix, counts) {
+function generateMountBlock(path, counts) {
   const baseObject = CLIENT_TYPES.reduce((obj, key) => {
     obj[key] = 0;
     return obj;
   }, {});
-  return Array.from(Array(5)).map((mount, index) => {
-    return {
-      mount_path: `${pathPrefix}${index}`,
-      counts: {
-        ...baseObject,
-        distinct_entities: 0,
-        non_entity_tokens: 0,
-        // object contains keys for which 0-values of base object to overwrite
-        ...counts,
-      },
-    };
-  });
+  return {
+    mount_path: path,
+    counts: {
+      ...baseObject,
+      distinct_entities: 0,
+      non_entity_tokens: 0,
+      // object contains keys for which 0-values of base object to overwrite
+      ...counts,
+    },
+  };
 }
 
 function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns, skipCounts = false) {
@@ -84,21 +82,27 @@ function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns, skipCounts =
 
   if (skipCounts) return nsBlock; // skip counts to generate empty ns block with namespace ids and paths
 
-  // * ADD NEW CLIENT TYPES HERE and pass to a new generateMounts() function below
-  const [acme_clients, entity_clients, non_entity_clients, secret_syncs] = CLIENT_TYPES.map(() =>
-    randomBetween(min, max)
-  );
+  // generates one mount per client type
+  const mountsArray = (idx) => {
+    // * ADD NEW CLIENT TYPES HERE and pass to a new generateMountBlock() function below
+    const [acme_clients, entity_clients, non_entity_clients, secret_syncs] = CLIENT_TYPES.map(() =>
+      randomBetween(min, max)
+    );
 
-  // each mount type generates a different type of client
-  const mounts = [
-    ...generateMounts('auth/authid/', {
-      clients: non_entity_clients + entity_clients,
-      non_entity_clients,
-      entity_clients,
-    }),
-    ...generateMounts('kvv2-engine-', { clients: secret_syncs, secret_syncs }),
-    ...generateMounts('pki-engine-', { clients: acme_clients, acme_clients }),
-  ];
+    // each mount type generates a different type of client
+    return [
+      generateMountBlock(`auth/authid/${idx}`, {
+        clients: non_entity_clients + entity_clients,
+        non_entity_clients,
+        entity_clients,
+      }),
+      generateMountBlock(`kvv2-engine-${idx}`, { clients: secret_syncs, secret_syncs }),
+      generateMountBlock(`pki-engine-${idx}`, { clients: acme_clients, acme_clients }),
+    ];
+  };
+
+  // two mounts per client type for more varied mock data
+  const mounts = [...mountsArray(0), ...mountsArray(1)];
 
   mounts.sort((a, b) => b.counts.clients - a.counts.clients);
   nsBlock.mounts = mounts;
