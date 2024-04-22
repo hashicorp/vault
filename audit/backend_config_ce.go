@@ -10,7 +10,7 @@ import "fmt"
 // validate ensures that this if we're not running Vault Enterprise, we cannot
 // supply Enterprise-only audit configuration options.
 func (c *BackendConfig) validate() error {
-	if HasInvalidAuditOptions(c.Config) {
+	if HasInvalidOptions(c.Config) {
 		return fmt.Errorf("enterprise-only options supplied: %w", ErrExternalOptions)
 	}
 
