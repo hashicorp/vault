@@ -365,14 +365,14 @@ func IsDistinct(proposed backendComparer, existing backendComparer) (bool, error
 		opt = optionFacility
 	default:
 		// Not an audit entry
-		return false, fmt.Errorf("unexpected 'type' for audit: %q", proposed.Type())
+		return false, fmt.Errorf("unexpected 'type' for audit: %q: %w", proposed.Type(), ErrInvalidParameter)
 	}
 
 	opt1 := proposed.Options(opt)
 	opt2 := existing.Options(opt)
 
 	if isMatch := strings.EqualFold(opt1, opt2); isMatch {
-		return false, fmt.Errorf("%q %q already in use on device: %q", opt, opt1, existing.Path())
+		return false, fmt.Errorf("%q %q already in use on device: %q: %w", opt, opt1, existing.Path(), ErrExternalOptions)
 	}
 
 	return true, nil
