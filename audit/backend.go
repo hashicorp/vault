@@ -307,9 +307,9 @@ func (b *backend) Invalidate(_ context.Context) {
 	b.salt.Store((*salt.Salt)(nil))
 }
 
-// HasInvalidAuditOptions is used to determine if a non-Enterprise version of Vault
+// HasInvalidOptions is used to determine if a non-Enterprise version of Vault
 // is being used when supplying options that contain options exclusive to Enterprise.
-func HasInvalidAuditOptions(options map[string]string) bool {
+func HasInvalidOptions(options map[string]string) bool {
 	return !constants.IsEnterprise && hasEnterpriseAuditOptions(options)
 }
 
