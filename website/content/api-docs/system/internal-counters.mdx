@@ -879,7 +879,7 @@ The `/sys/internal/counters/config` endpoint is used to configure logging of act
 - `enabled` `(string: enable, disable, default)` - Enable or disable counting of client activity. When set to `default`, the client
   counts are enabled on Enterprise builds and disabled on community builds. Disabling the feature during the middle of a month will
   discard any data recorded for that month, but does not delete previous months.
-- `retention_months` `(integer: 24)` - The number of months of history to retain.
+- `retention_months` `(integer: 48)` - The number of months of history to retain.
 
 Any missing parameters are left at their existing value.
 
@@ -889,7 +889,7 @@ Any missing parameters are left at their existing value.
 {
   "enabled": "enable",
   "default_report_months": 3,
-  "retention_months": 12
+  "retention_months": 54
 }
 ```
 
@@ -936,7 +936,7 @@ $ curl \
     "default_report_months": 12,
     "enabled": "default-enabled",
     "queries_available": true,
-    "retention_months": 24,
+    "retention_months": 48,
     "reporting_enabled": false,
     "billing_start_timestamp": "2022-03-01T00:00:00Z",
   },
