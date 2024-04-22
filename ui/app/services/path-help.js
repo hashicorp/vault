@@ -27,6 +27,7 @@ import {
   pathToHelpUrlSegment,
   reducePathsByPathName,
 } from 'vault/utils/openapi-helpers';
+import { isPresent } from '@ember/utils';
 
 export default Service.extend({
   attrs: null,
@@ -273,15 +274,19 @@ export default Service.extend({
           // Build and add validations on model
           // NOTE: For initial phase, initialize validations only for user pass auth
           if (backend === 'userpass') {
-            const validations = fieldGroups.reduce((obj, element) => {
-              if (element.default) {
-                element.default.forEach((v) => {
-                  const key = v.options.fieldValue || v.name;
-                  obj[key] = [{ type: 'presence', message: `${v.name} can't be blank` }];
-                });
-              }
-              return obj;
-            }, {});
+            const validations = {
+              password: [
+                {
+                  validator(model) {
+                    return (
+                      !(isPresent(model.password) && isPresent(model.passwordHash)) &&
+                      (isPresent(model.password) || isPresent(model.passwordHash))
+                    );
+                  },
+                  message: 'You must provide either password or password hash, but not both.',
+                },
+              ],
+            };
             @withModelValidations(validations)
             class GeneratedItemModel extends newModel {}
             newModel = GeneratedItemModel;
