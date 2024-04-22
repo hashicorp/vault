@@ -17,6 +17,7 @@ export const CLIENT_COUNT = {
     startDiscrepancy: '[data-test-counts-start-discrepancy]',
   },
   statText: (label: string) => `[data-test-stat-text="${label}"]`,
+  chartContainer: (title: string) => `[data-test-chart-container="${title}"]`,
   charts: {
     chart: (title: string) => `[data-test-chart="${title}"]`, // newer lineal charts
     statTextValue: (label: string) =>
@@ -38,7 +39,7 @@ export const CLIENT_COUNT = {
       plotPoint: '[data-test-line-chart="plot-point"]',
     },
   },
-  usageStats: '[data-test-usage-stats]',
+  usageStats: (title: string) => `[data-test-usage-stats="${title}"]`,
   dateDisplay: '[data-test-date-display]',
   attributionBlock: '[data-test-clients-attribution]',
   filterBar: '[data-test-clients-filter-bar]',
@@ -62,8 +63,6 @@ export const CLIENT_COUNT = {
     nextYear: '[data-test-next-year]',
     calendarMonth: (month: string) => `[data-test-calendar-month="${month}"]`,
   },
-  runningTotalMonthStats: '[data-test-running-total="single-month-stats"]',
-  runningTotalMonthlyCharts: '[data-test-running-total="monthly-charts"]',
   selectedAuthMount: 'div#mounts-search-select [data-test-selected-option] div',
   selectedNs: 'div#namespace-search-select [data-test-selected-option] div',
   upgradeWarning: '[data-test-clients-upgrade-warning]',

@@ -68,6 +68,8 @@ const (
 	KeyType_RSA3072
 	KeyType_MANAGED_KEY
 	KeyType_HMAC
+	KeyType_AES128_CMAC
+	KeyType_AES256_CMAC
 )
 
 const (
@@ -168,6 +170,15 @@ func (kt KeyType) AssociatedDataSupported() bool {
 	return false
 }
 
+func (kt KeyType) CMACSupported() bool {
+	switch kt {
+	case KeyType_AES128_CMAC, KeyType_AES256_CMAC:
+		return true
+	default:
+		return false
+	}
+}
+
 func (kt KeyType) ImportPublicKeySupported() bool {
 	switch kt {
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519:
@@ -202,6 +213,10 @@ func (kt KeyType) String() string {
 		return "hmac"
 	case KeyType_MANAGED_KEY:
 		return "managed_key"
+	case KeyType_AES128_CMAC:
+		return "aes128-cmac"
+	case KeyType_AES256_CMAC:
+		return "aes256-cmac"
 	}
 
 	return "[unknown]"
@@ -1071,6 +1086,25 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 	return keyEntry.HMACKey, nil
 }
 
+func (p *Policy) CMACKey(version int) ([]byte, error) {
+	switch {
+	case version < 0:
+		return nil, fmt.Errorf("key version does not exist (cannot be negative)")
+	case version > p.LatestVersion:
+		return nil, fmt.Errorf("key version does not exist; latest key version is %d", p.LatestVersion)
+	}
+	keyEntry, err := p.safeGetKeyEntry(version)
+	if err != nil {
+		return nil, err
+	}
+
+	if p.Type.CMACSupported() {
+		return keyEntry.Key, nil
+	}
+
+	return nil, fmt.Errorf("key type %s does not support CMAC operations", p.Type)
+}
+
 func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, sigAlgorithm string, marshaling MarshalingType) (*SigningResult, error) {
 	return p.SignWithOptions(ver, context, input, &SigningOptions{
 		HashAlgorithm: hashAlgorithm,
@@ -1611,17 +1645,20 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		DeprecatedCreationTime: now.Unix(),
 	}
 
-	hmacKey, err := uuid.GenerateRandomBytesWithReader(32, randReader)
-	if err != nil {
-		return err
+	if p.Type != KeyType_AES128_CMAC && p.Type != KeyType_AES256_CMAC && p.Type != KeyType_HMAC {
+		hmacKey, err := uuid.GenerateRandomBytesWithReader(32, randReader)
+		if err != nil {
+			return err
+		}
+		entry.HMACKey = hmacKey
 	}
-	entry.HMACKey = hmacKey
 
+	var err error
 	switch p.Type {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_HMAC:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC:
 		// Default to 256 bit key
 		numBytes := 32
-		if p.Type == KeyType_AES128_GCM96 {
+		if p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES128_CMAC {
 			numBytes = 16
 		} else if p.Type == KeyType_HMAC {
 			numBytes = p.KeySize

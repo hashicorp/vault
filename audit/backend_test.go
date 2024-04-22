@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/stretchr/testify/require"
 )
 
@@ -143,4 +144,111 @@ func TestBackend_configureFormatterNode(t *testing.T) {
 	id := b.nodeIDList[0]
 	node := b.nodeMap[id]
 	require.Equal(t, eventlogger.NodeTypeFormatter, node.Type())
+}
+
+// TestBackend_hasEnterpriseAuditOptions checks that the existence of any Enterprise
+// only options in the options which can be supplied to enable an audit device can
+// be flagged.
+func TestBackend_hasEnterpriseAuditOptions(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		input    map[string]string
+		expected bool
+	}{
+		"nil": {
+			expected: false,
+		},
+		"empty": {
+			input:    make(map[string]string),
+			expected: false,
+		},
+		"non-ent-opts": {
+			input: map[string]string{
+				"log_raw": "true",
+			},
+			expected: false,
+		},
+		"ent-opt-filter": {
+			input: map[string]string{
+				"filter": "mount_type == kv",
+			},
+			expected: true,
+		},
+		"ent-opt-fallback": {
+			input: map[string]string{
+				"fallback": "true",
+			},
+			expected: true,
+		},
+		"ent-opt-filter-and-fallback": {
+			input: map[string]string{
+				"filter":   "mount_type == kv",
+				"fallback": "true",
+			},
+			expected: true,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tc.expected, hasEnterpriseAuditOptions(tc.input))
+		})
+	}
+}
+
+// TestBackend_hasInvalidAuditOptions tests that depending on whether we are running
+// an Enterprise or non-Enterprise version of Vault, the options supplied to enable
+// an audit device may or may not be valid.
+// NOTE: In the non-Enterprise version of Vault supplying audit options such as
+// 'filter' or 'fallback' is not allowed.
+func TestBackend_hasInvalidAuditOptions(t *testing.T) {
+	tests := map[string]struct {
+		input    map[string]string
+		expected bool
+	}{
+		"non-ent-opts": {
+			input: map[string]string{
+				"log_raw": "true",
+			},
+			expected: false,
+		},
+		"ent-opt": {
+			input: map[string]string{
+				"filter": "mount_type == kv",
+			},
+			expected: !constants.IsEnterprise,
+		},
+		"ent-opt-filter": {
+			input: map[string]string{
+				"filter": "mount_type == kv",
+			},
+			expected: !constants.IsEnterprise,
+		},
+		"ent-opt-fallback": {
+			input: map[string]string{
+				"fallback": "true",
+			},
+			expected: !constants.IsEnterprise,
+		},
+		"ent-opt-filter-and-fallback": {
+			input: map[string]string{
+				"filter":   "mount_type == kv",
+				"fallback": "true",
+			},
+			expected: !constants.IsEnterprise,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tc.expected, HasInvalidOptions(tc.input))
+		})
+	}
 }

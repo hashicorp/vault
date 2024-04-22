@@ -6,6 +6,7 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { render, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
@@ -57,6 +58,12 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
           @mountPath={{this.mountPath}}
         />
       `);
+    // Fails on #ember-testing-container
+    setRunOptions({
+      rules: {
+        'scrollable-region-focusable': { enabled: false },
+      },
+    });
   });
 
   test('it should render monthly total chart', async function (assert) {
@@ -110,7 +117,7 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
   test('it should render monthly new chart', async function (assert) {
     const expectedNewEntity = formatNumber([calculateAverage(this.newActivity, 'entity_clients')]);
     const expectedNewNonEntity = formatNumber([calculateAverage(this.newActivity, 'non_entity_clients')]);
-    const chart = CLIENT_COUNT.charts.chart('monthly new');
+    const chart = CLIENT_COUNT.chartContainer('Monthly new');
 
     await this.renderComponent();
 
@@ -182,11 +189,11 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
         .dom(CLIENT_COUNT.charts.statTextValue('Total clients'))
         .hasText(formatNumber([entity_clients + non_entity_clients]), 'Total clients value renders');
       assert
-        .dom(CLIENT_COUNT.charts.statTextValue('Entity clients'))
-        .hasText(formatNumber([entity_clients]), 'Entity clients value renders');
+        .dom(CLIENT_COUNT.charts.statTextValue('Entity'))
+        .hasText(formatNumber([entity_clients]), 'Entity value renders');
       assert
-        .dom(CLIENT_COUNT.charts.statTextValue('Non-entity clients'))
-        .hasText(formatNumber([non_entity_clients]), 'Non-entity clients value renders');
+        .dom(CLIENT_COUNT.charts.statTextValue('Non-entity'))
+        .hasText(formatNumber([non_entity_clients]), 'Non-entity value renders');
     };
 
     // total usage should display for single month query

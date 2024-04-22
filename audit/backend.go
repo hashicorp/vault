@@ -6,8 +6,6 @@ package audit
 import (
 	"context"
 	"fmt"
-	"reflect"
-	"strconv"
 	"sync"
 	"sync/atomic"
 
@@ -27,6 +25,10 @@ const (
 	optionHMACAccessor       = "hmac_accessor"
 	optionLogRaw             = "log_raw"
 	optionPrefix             = "prefix"
+
+	TypeFile   = "file"
+	TypeSocket = "socket"
+	TypeSyslog = "syslog"
 )
 
 var _ Backend = (*backend)(nil)
@@ -115,73 +117,6 @@ func newBackend(headersConfig HeaderFormatter, conf *BackendConfig) (*backend, e
 	}
 
 	return b, nil
-}
-
-// newFormatterConfig creates the configuration required by a formatter node using the config map supplied to the factory.
-func newFormatterConfig(headerFormatter HeaderFormatter, config map[string]string) (formatterConfig, error) {
-	if headerFormatter == nil || reflect.ValueOf(headerFormatter).IsNil() {
-		return formatterConfig{}, fmt.Errorf("header formatter is required: %w", ErrInvalidParameter)
-	}
-
-	var opt []Option
-
-	if format, ok := config[optionFormat]; ok {
-		if !IsValidFormat(format) {
-			return formatterConfig{}, fmt.Errorf("unsupported %q: %w", optionFormat, ErrExternalOptions)
-		}
-
-		opt = append(opt, WithFormat(format))
-	}
-
-	// Check if hashing of accessor is disabled
-	if hmacAccessorRaw, ok := config[optionHMACAccessor]; ok {
-		v, err := strconv.ParseBool(hmacAccessorRaw)
-		if err != nil {
-			return formatterConfig{}, fmt.Errorf("unable to parse %q: %w", optionHMACAccessor, ErrExternalOptions)
-		}
-		opt = append(opt, WithHMACAccessor(v))
-	}
-
-	// Check if raw logging is enabled
-	if raw, ok := config[optionLogRaw]; ok {
-		v, err := strconv.ParseBool(raw)
-		if err != nil {
-			return formatterConfig{}, fmt.Errorf("unable to parse %q: %w", optionLogRaw, ErrExternalOptions)
-		}
-		opt = append(opt, WithRaw(v))
-	}
-
-	if elideListResponsesRaw, ok := config[optionElideListResponses]; ok {
-		v, err := strconv.ParseBool(elideListResponsesRaw)
-		if err != nil {
-			return formatterConfig{}, fmt.Errorf("unable to parse %q: %w", optionElideListResponses, ErrExternalOptions)
-		}
-		opt = append(opt, WithElision(v))
-	}
-
-	if prefix, ok := config[optionPrefix]; ok {
-		opt = append(opt, WithPrefix(prefix))
-	}
-
-	err := ValidateOptions()
-	if err != nil {
-		return formatterConfig{}, err
-	}
-
-	opts, err := getOpts(opt...)
-	if err != nil {
-		return formatterConfig{}, err
-	}
-
-	return formatterConfig{
-		headerFormatter:    headerFormatter,
-		elideListResponses: opts.withElision,
-		hmacAccessor:       opts.withHMACAccessor,
-		omitTime:           opts.withOmitTime, // This must be set in code after creation.
-		prefix:             opts.withPrefix,
-		raw:                opts.withRaw,
-		requiredFormat:     opts.withFormat,
-	}, nil
 }
 
 // configureFormatterNode is used to configure a formatter node and associated ID on the Backend.
@@ -308,9 +243,9 @@ func (b *backend) Invalidate(_ context.Context) {
 	b.salt.Store((*salt.Salt)(nil))
 }
 
-// HasInvalidAuditOptions is used to determine if a non-Enterprise version of Vault
+// HasInvalidOptions is used to determine if a non-Enterprise version of Vault
 // is being used when supplying options that contain options exclusive to Enterprise.
-func HasInvalidAuditOptions(options map[string]string) bool {
+func HasInvalidOptions(options map[string]string) bool {
 	return !constants.IsEnterprise && hasEnterpriseAuditOptions(options)
 }
 

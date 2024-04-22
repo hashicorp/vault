@@ -63,7 +63,6 @@
       @timestamp={{@activity.responseTimestamp}}
       @hasChartData={{true}}
       class="no-legend"
-      data-test-chart="monthly new"
     >
       <:stats>
         {{#let (this.average this.byMonthNewClients "acme_clients") as |avg|}}
@@ -89,11 +88,7 @@
     </Clients::ChartContainer>
   {{/if}}
 {{else}}
-  <div class="chart-wrapper" data-test-usage-stats>
-    <div class="chart-header has-bottom-margin-m">
-      <h2 class="chart-title">{{this.title}}</h2>
-      <p class="chart-description has-bottom-padding-m">{{this.description}}</p>
-    </div>
-    <StatText @label="Total ACME clients" @value={{this.totalUsageCounts.acme_clients}} @size="l" />
-  </div>
+  <Clients::UsageStats @title={{this.title}} @description={{this.description}}>
+    <StatText @label="Total ACME clients" @value={{this.totalUsageCounts.acme_clients}} @size="l" class="column" />
+  </Clients::UsageStats>
 {{/if}}
