@@ -20,7 +20,7 @@ import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors
 const START_TIME = getUnixTime(LICENSE_START);
 const END_TIME = getUnixTime(STATIC_NOW);
 
-module('Integration | Component | clients | Page::Token', function (hooks) {
+module('Integration | Component | clients | Clients::Page::Token', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
@@ -74,17 +74,14 @@ module('Integration | Component | clients | Page::Token', function (hooks) {
       return formatNumber([average]);
     };
     const expectedTotal = getAverage(this.activity.byMonth);
-    const expectedNew = getAverage(this.newActivity);
-    const chart = CLIENT_COUNT.charts.chart('monthly total');
+    const chart = CLIENT_COUNT.chartContainer('Entity/Non-entity clients usage');
 
     await this.renderComponent();
 
     assert
       .dom(CLIENT_COUNT.charts.statTextValue('Average total clients per month'))
       .hasText(expectedTotal, 'renders correct total clients');
-    assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Average new clients per month'))
-      .hasText(expectedNew, 'renders correct new clients');
+
     // assert bar chart is correct
     findAll(`${chart} ${CLIENT_COUNT.charts.bar.xAxisLabel}`).forEach((e, i) => {
       assert

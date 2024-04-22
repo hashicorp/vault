@@ -37,7 +37,6 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
     this.activity = await this.store.queryRecord('clients/activity', activityQuery);
     this.startTimestamp = START_TIME;
     this.endTimestamp = END_TIME;
-    this.isSecretsSyncActivated = true;
 
     this.renderComponent = () =>
       render(hbs`
