@@ -3,6 +3,15 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+.blue-bar-1 {
+  color: var(--token-color-palette-blue-100);
+  fill: var(--token-color-palette-blue-100);
+}
+.blue-bar-2 {
+  color: var(--token-color-palette-blue-200);
+  fill: var(--token-color-palette-blue-200);
+}
+
 .chart-wrapper {
   border: $light-border;
   border-radius: $radius-large;
