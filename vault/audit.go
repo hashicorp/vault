@@ -106,9 +106,9 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
 
-	// Look for matching name
+	// Ensure distinctness.
+	proposed := entry.toAuditEntryMinimal()
 	for _, existing := range c.audit.Entries {
-		proposed := entry.toAuditEntryMinimal()
 		existing := existing.toAuditEntryMinimal()
 		if ok, err := audit.IsDistinct(proposed, existing); !ok {
 			return err
