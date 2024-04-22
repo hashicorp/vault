@@ -6,10 +6,9 @@ package audit
 import (
 	"testing"
 
-	"github.com/hashicorp/vault/helper/constants"
-
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/stretchr/testify/require"
 )
 
