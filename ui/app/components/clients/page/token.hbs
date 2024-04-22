@@ -13,10 +13,13 @@
     data-test-chart="monthly total"
   >
     <:subTitle>
-      <h2 class="chart-title">Total monthly clients</h2>
-      <p class="chart-subtext">
-        Each client is counted once per month. This can help with capacity planning.
-      </p>
+      <StatText
+        @label="Total clients"
+        @subText="The total number of entity and non-entity clients for this date range. Each client is counted once per month."
+        @value={{this.totalUsageCounts.clients}}
+        @tooltipText="This number is the total for the queried date range. The chart displays a monthly breakdown of total clients per month."
+        @size="l"
+      />
     </:subTitle>
 
     <:stats>
@@ -25,13 +28,6 @@
         @value={{this.averageTotalClients}}
         @size="m"
         class="data-details-top has-top-padding-l"
-      />
-
-      <StatText
-        @label="Average new clients per month"
-        @value={{this.averageNewClients}}
-        @size="m"
-        class="data-details-bottom has-top-padding-l"
       />
     </:stats>
 
@@ -42,7 +38,7 @@
 
   <Clients::ChartContainer
     @title="Monthly new"
-    @description="Entity or non-entity clients which interacted with Vault for the first time during this date range, displayed per month."
+    @description="Entity or non-entity clients which interacted with Vault for the first time during this date range. Each bar represents the total new clients for that month."
     @timestamp={{@activity.responseTimestamp}}
     @legend={{this.legend}}
     @hasChartData={{this.averageNewClients}}

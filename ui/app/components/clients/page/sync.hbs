@@ -67,7 +67,7 @@
           {{#let (this.average this.byMonthNewClients "secret_syncs") as |avg|}}
             {{#if avg}}
               <StatText
-                @label="Average new secret sync clients per month"
+                @label="Average new sync clients per month"
                 @value={{avg}}
                 @size="m"
                 class="chart-subTitle has-top-padding-l"
