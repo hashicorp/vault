@@ -628,29 +628,3 @@ func (g genericAuditor) AuditResponse(ctx context.Context, input *logical.LogInp
 	logInput.Type = g.mountType + "-response"
 	return g.c.auditBroker.LogResponse(ctx, &logInput)
 }
-
-//// hasInvalidAuditOptions is used to determine if a non-Enterprise version of Vault
-//// is being used when supplying options that contain options exclusive to Enterprise.
-//func hasInvalidAuditOptions(options map[string]string) bool {
-//	return !constants.IsEnterprise && hasEnterpriseAuditOptions(options)
-//}
-//
-//// hasValidEnterpriseAuditOptions is used to check if any of the options supplied
-//// are only for use in the Enterprise version of Vault.
-//func hasEnterpriseAuditOptions(options map[string]string) bool {
-//	const enterpriseAuditOptionFilter = "filter"
-//	const enterpriseAuditOptionFallback = "fallback"
-//
-//	enterpriseAuditOptions := []string{
-//		enterpriseAuditOptionFallback,
-//		enterpriseAuditOptionFilter,
-//	}
-//
-//	for _, o := range enterpriseAuditOptions {
-//		if _, ok := options[o]; ok {
-//			return true
-//		}
-//	}
-//
-//	return false
-//}
