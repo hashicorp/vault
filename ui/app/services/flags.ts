@@ -38,6 +38,11 @@ export default class flagsService extends Service {
     return null;
   }
 
+  // TODO getter will be used in the upcoming persona service
+  get secretsSyncIsActivated() {
+    return this.activatedFlags.includes('secrets-sync');
+  }
+
   getActivatedFlags = keepLatestTask(async () => {
     if (this.version.isCommunity) return;
     // Response could change between user sessions.
@@ -52,11 +57,6 @@ export default class flagsService extends Service {
       if (DEBUG) console.error(error); // eslint-disable-line no-console
     }
   });
-
-  // TODO getter will be used in the upcoming persona service
-  get secretsSyncIsActivated() {
-    return this.activatedFlags.includes('secrets-sync');
-  }
 
   fetchActivatedFlags() {
     return this.getActivatedFlags.perform();
