@@ -7,11 +7,11 @@ scenario "proxy" {
     artifact_source = global.artifact_sources
     artifact_type   = global.artifact_types
     backend         = global.backends
+    config_mode     = global.config_modes
     consul_version  = global.consul_versions
     distro          = global.distros
     edition         = global.editions
     seal            = global.seals
-    seal_ha_beta    = ["true", "false"]
 
     # Our local builder always creates bundles
     exclude {
@@ -195,6 +195,7 @@ scenario "proxy" {
       backend_cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = global.backend_tag_key
       cluster_name            = step.create_vault_cluster_targets.cluster_name
+      config_mode             = matrix.config_mode
       consul_license          = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       consul_release = matrix.backend == "consul" ? {
         edition = var.backend_edition
@@ -206,7 +207,6 @@ scenario "proxy" {
       local_artifact_path  = local.artifact_path
       manage_service       = local.manage_service
       packages             = concat(global.packages, global.distro_packages[matrix.distro])
-      seal_ha_beta         = matrix.seal_ha_beta
       seal_attributes      = step.create_seal_key.attributes
       seal_type            = matrix.seal
       storage_backend      = matrix.backend
