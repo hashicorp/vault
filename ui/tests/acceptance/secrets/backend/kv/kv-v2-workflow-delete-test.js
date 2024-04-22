@@ -9,12 +9,8 @@ import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { personas } from 'vault/tests/helpers/kv/policy-generator';
-import {
-  clearRecords,
-  deleteLatestCmd,
-  setupControlGroup,
-  writeVersionedSecret,
-} from 'vault/tests/helpers/kv/kv-run-commands';
+import { clearRecords, deleteLatestCmd, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import { setupControlGroup } from 'vault/tests/helpers/control-groups';
 import { click, currentURL, visit } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 
