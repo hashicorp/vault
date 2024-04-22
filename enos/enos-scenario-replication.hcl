@@ -9,12 +9,12 @@ scenario "replication" {
     arch              = global.archs
     artifact_source   = global.artifact_sources
     artifact_type     = global.artifact_types
+    config_mode       = global.config_modes
     consul_version    = global.consul_versions
     distro            = global.distros
     edition           = global.editions
     primary_backend   = global.backends
     primary_seal      = global.seals
-    seal_ha_beta      = ["true", "false"]
     secondary_backend = global.backends
     secondary_seal    = global.seals
 
@@ -280,6 +280,7 @@ scenario "replication" {
       artifactory_release     = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
       backend_cluster_name    = step.create_primary_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = global.backend_tag_key
+      config_mode             = matrix.config_mode
       consul_license          = (matrix.primary_backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       cluster_name            = step.create_primary_cluster_targets.cluster_name
       consul_release = matrix.primary_backend == "consul" ? {
@@ -293,7 +294,6 @@ scenario "replication" {
       manage_service       = local.manage_service
       packages             = concat(global.packages, global.distro_packages[matrix.distro])
       seal_attributes      = step.create_primary_seal_key.attributes
-      seal_ha_beta         = matrix.seal_ha_beta
       seal_type            = matrix.primary_seal
       storage_backend      = matrix.primary_backend
       target_hosts         = step.create_primary_cluster_targets.hosts
@@ -338,6 +338,7 @@ scenario "replication" {
       artifactory_release     = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
       backend_cluster_name    = step.create_secondary_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = global.backend_tag_key
+      config_mode             = matrix.config_mode
       consul_license          = (matrix.secondary_backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       cluster_name            = step.create_secondary_cluster_targets.cluster_name
       consul_release = matrix.secondary_backend == "consul" ? {
@@ -351,7 +352,6 @@ scenario "replication" {
       manage_service       = local.manage_service
       packages             = concat(global.packages, global.distro_packages[matrix.distro])
       seal_attributes      = step.create_secondary_seal_key.attributes
-      seal_ha_beta         = matrix.seal_ha_beta
       seal_type            = matrix.secondary_seal
       storage_backend      = matrix.secondary_backend
       target_hosts         = step.create_secondary_cluster_targets.hosts
@@ -632,6 +632,7 @@ scenario "replication" {
       backend_cluster_name    = step.create_primary_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = global.backend_tag_key
       cluster_name            = step.create_primary_cluster_targets.cluster_name
+      config_mode             = matrix.config_mode
       consul_license          = (matrix.primary_backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       consul_release = matrix.primary_backend == "consul" ? {
         edition = var.backend_edition
@@ -646,7 +647,6 @@ scenario "replication" {
       manage_service       = local.manage_service
       packages             = concat(global.packages, global.distro_packages[matrix.distro])
       root_token           = step.create_primary_cluster.root_token
-      seal_ha_beta         = matrix.seal_ha_beta
       seal_attributes      = step.create_primary_seal_key.attributes
       seal_type            = matrix.primary_seal
       shamir_unseal_keys   = matrix.primary_seal == "shamir" ? step.create_primary_cluster.unseal_keys_hex : null

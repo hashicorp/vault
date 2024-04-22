@@ -12,6 +12,16 @@ variable "config_dir" {
   default     = "/etc/vault.d"
 }
 
+variable "config_mode" {
+  description = "The method to use when configuring Vault. When set to 'env' we will configure Vault using VAULT_ style environment variables if possible. When 'file' we'll use the HCL configuration file for all configuration options."
+  default     = "file"
+
+  validation {
+    condition     = contains(["env", "file"], var.config_mode)
+    error_message = "The config_mode must be either 'env' or 'file'. No other configuration modes are supported."
+  }
+}
+
 variable "environment" {
   description = "Optional Vault configuration environment variables to set starting Vault"
   type        = map(string)
@@ -45,11 +55,6 @@ variable "log_level" {
 variable "manage_service" {
   type        = bool
   description = "Manage the Vault service users and systemd unit. Disable this to use configuration in RPM and Debian packages"
-  default     = true
-}
-
-variable "seal_ha_beta" {
-  description = "Enable using Seal HA on clusters that meet minimum version requirements and are enterprise editions"
   default     = true
 }
 
