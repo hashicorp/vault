@@ -180,7 +180,7 @@ module('Acceptance | enterprise | sync | overview', function (hooks) {
     test.skip('it should make activation-flag requests to correct namespace when managed', async function (assert) {
       // TODO: unskip for 1.16.1 when managed is supported
       assert.expect(3);
-      this.owner.lookup('service:feature-flag').setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
+      this.owner.lookup('service:flags').setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
 
       this.server.get('/sys/activation-flags', (_, req) => {
         assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
