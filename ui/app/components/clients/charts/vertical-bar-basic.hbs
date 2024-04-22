@@ -11,7 +11,7 @@
       (scale-linear range=(array 0 this.chartHeight) domain=this.yDomain)
       as |xScale yScale hScale|
     }}
-      <svg width={{width}} height={{this.chartHeight}} data-test-sync-bar-chart>
+      <svg width={{width}} height={{this.chartHeight}}>
         <title>
           {{@chartTitle}}
         </title>
@@ -99,7 +99,7 @@
       <:head as |H|>
         <H.Tr>
           <H.Th>Month</H.Th>
-          <H.Th>Count of secret syncs</H.Th>
+          <H.Th>{{if @dataKey (humanize @dataKey)}} Count</H.Th>
         </H.Tr>
       </:head>
       <:body as |B|>

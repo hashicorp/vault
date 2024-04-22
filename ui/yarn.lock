@@ -2774,6 +2774,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/d3-array@npm:^3.2.1":
+  version: 3.2.1
+  resolution: "@types/d3-array@npm:3.2.1"
+  checksum: 8a41cee0969e53bab3f56cc15c4e6c9d76868d6daecb2b7d8c9ce71e0ececccc5a8239697cc52dadf5c665f287426de5c8ef31a49e7ad0f36e8846889a383df4
+  languageName: node
+  linkType: hard
+
 "@types/ember-data@npm:*, @types/ember-data@npm:^4.4.6":
   version: 4.4.16
   resolution: "@types/ember-data@npm:4.4.16"
@@ -19384,6 +19391,7 @@ __metadata:
     "@icholy/duration": ^5.1.0
     "@lineal-viz/lineal": ^0.5.1
     "@tsconfig/ember": ^2.0.0
+    "@types/d3-array": ^3.2.1
     "@types/ember": ^4.0.2
     "@types/ember-data": ^4.4.6
     "@types/ember-data__adapter": ^4.0.1

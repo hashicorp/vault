@@ -69,6 +69,7 @@
     "@icholy/duration": "^5.1.0",
     "@lineal-viz/lineal": "^0.5.1",
     "@tsconfig/ember": "^2.0.0",
+    "@types/d3-array": "^3.2.1",
     "@types/ember": "^4.0.2",
     "@types/ember-data": "^4.4.6",
     "@types/ember-data__adapter": "^4.0.1",
