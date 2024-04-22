@@ -41,8 +41,8 @@ export default class MessagesList extends Component {
   }
 
   willDestroy() {
-    super.willDestroy();
     this.router.off('routeDidChange', this.focusNameFilter);
+    super.willDestroy();
   }
 
   focusNameFilter(transition) {
