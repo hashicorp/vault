@@ -11,7 +11,7 @@ export default Route.extend({
   controlGroup: service(),
   routing: service('router'),
   namespaceService: service('namespace'),
-  featureFlagService: service('featureFlag'),
+  flagsService: service('flags'),
 
   actions: {
     willTransition() {
@@ -72,7 +72,7 @@ export default Route.extend({
     if (result.status === 200) {
       const body = await result.json();
       const flags = body.feature_flags || [];
-      this.featureFlagService.setFeatureFlags(flags);
+      this.flagsService.setFeatureFlags(flags);
     }
   },
 });

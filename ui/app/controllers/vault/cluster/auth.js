@@ -13,7 +13,7 @@ export default Controller.extend({
   clusterController: controller('vault.cluster'),
   flashMessages: service(),
   namespaceService: service('namespace'),
-  featureFlagService: service('featureFlag'),
+  flagsService: service('flags'),
   version: service(),
   auth: service(),
   router: service(),
@@ -22,7 +22,7 @@ export default Controller.extend({
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
   wrappedToken: alias('vaultController.wrappedToken'),
   redirectTo: alias('vaultController.redirectTo'),
-  managedNamespaceRoot: alias('featureFlagService.managedNamespaceRoot'),
+  managedNamespaceRoot: alias('flagsService.managedNamespaceRoot'),
   authMethod: '',
   oidcProvider: '',
 

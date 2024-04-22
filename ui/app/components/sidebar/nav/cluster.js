@@ -8,7 +8,7 @@ import { service } from '@ember/service';
 
 export default class SidebarNavClusterComponent extends Component {
   @service currentCluster;
-  @service featureFlag;
+  @service flags;
   @service version;
   @service auth;
   @service namespace;
@@ -24,7 +24,7 @@ export default class SidebarNavClusterComponent extends Component {
 
   get showSync() {
     // Only show sync if cluster is not managed
-    return this.featureFlag.managedNamespaceRoot === null;
+    return this.flags.managedNamespaceRoot === null;
   }
 
   get syncBadge() {

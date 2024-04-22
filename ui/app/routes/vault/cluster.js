@@ -31,7 +31,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   auth: service(),
   currentCluster: service(),
   customMessages: service(),
-  featureFlagService: service('featureFlag'),
+  flagsService: service('flags'),
   namespaceService: service('namespace'),
   permissions: service(),
   router: service(),
@@ -58,7 +58,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     const params = this.paramsFor(this.routeName);
     let namespace = params.namespaceQueryParam;
     const currentTokenName = this.auth.currentTokenName;
-    const managedRoot = this.featureFlagService.managedNamespaceRoot;
+    const managedRoot = this.flagsService.managedNamespaceRoot;
     assert(
       'Cannot use VAULT_CLOUD_ADMIN_NAMESPACE flag with non-enterprise Vault version',
       !(managedRoot && this.version.isCommunity)
