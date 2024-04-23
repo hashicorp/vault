@@ -40,7 +40,7 @@ globals {
   // release branch's version. Also beware if adding versions below 1.11.x. Some scenarios
   // that use this global might not work as expected with earlier versions. Below 1.8.x is
   // not supported in any way.
-  upgrade_initial_versions = ["1.11.12", "1.12.11", "1.13.12", "1.14.8"]
+  upgrade_initial_versions = ["1.11.12", "1.12.11", "1.13.11"]
   vault_install_dir_packages = {
     rhel   = "/bin"
     ubuntu = "/usr/bin"
