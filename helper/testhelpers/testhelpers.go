@@ -722,6 +722,16 @@ func SetNonRootToken(client *api.Client) error {
 // If a nil result hasn't been obtained by timeout, calls t.Fatal.
 func RetryUntilAtCadence(t testing.T, timeout, sleepTime time.Duration, f func() error) {
 	t.Helper()
+	fail := func(err error) {
+		t.Fatalf("did not complete before deadline, err: %v", err)
+	}
+	RetryUntilAtCadenceWithHandler(t, timeout, sleepTime, fail, f)
+}
+
+// RetryUntilAtCadence runs f until it returns a nil result or the timeout is reached.
+// If a nil result hasn't been obtained by timeout, calls t.Fatal.
+func RetryUntilAtCadenceWithHandler(t testing.T, timeout, sleepTime time.Duration, onFailure func(error), f func() error) {
+	t.Helper()
 	deadline := time.Now().Add(timeout)
 	var err error
 	for time.Now().Before(deadline) {
@@ -730,22 +740,14 @@ func RetryUntilAtCadence(t testing.T, timeout, sleepTime time.Duration, f func()
 		}
 		time.Sleep(sleepTime)
 	}
-	t.Fatalf("did not complete before deadline, err: %v", err)
+	onFailure(err)
 }
 
 // RetryUntil runs f until it returns a nil result or the timeout is reached.
 // If a nil result hasn't been obtained by timeout, calls t.Fatal.
 func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
 	t.Helper()
-	deadline := time.Now().Add(timeout)
-	var err error
-	for time.Now().Before(deadline) {
-		if err = f(); err == nil {
-			return
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-	t.Fatalf("did not complete before deadline, err: %v", err)
+	RetryUntilAtCadence(t, timeout, 100*time.Millisecond, f)
 }
 
 // CreateEntityAndAlias clones an existing client and creates an entity/alias, uses userpass mount path
