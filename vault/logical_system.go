@@ -32,6 +32,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	semver "github.com/hashicorp/go-version"
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
@@ -190,6 +191,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 			},
 		},
 	}
+	b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, entUnauthenticatedPaths()...)
 
 	b.Backend.Paths = append(b.Backend.Paths, entPaths(b)...)
 	b.Backend.Paths = append(b.Backend.Paths, b.configPaths()...)
@@ -1131,15 +1133,14 @@ func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *l
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
-func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
 	hmac := d.Get("hmac").(bool)
 	if header == "" {
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	headerConfig := b.Core.AuditedHeadersConfig()
-	err := headerConfig.add(ctx, header, hmac)
+	err := b.Core.AuditedHeadersConfig().Add(ctx, header, hmac)
 	if err != nil {
 		return nil, err
 	}
@@ -1148,14 +1149,13 @@ func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, req *logi
 }
 
 // handleAuditedHeaderDelete deletes the header with the given name
-func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
 	if header == "" {
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	headerConfig := b.Core.AuditedHeadersConfig()
-	err := headerConfig.remove(ctx, header)
+	err := b.Core.AuditedHeadersConfig().Remove(ctx, header)
 	if err != nil {
 		return nil, err
 	}
@@ -1164,14 +1164,13 @@ func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, req *logi
 }
 
 // handleAuditedHeaderRead returns the header configuration for the given header name
-func (b *SystemBackend) handleAuditedHeaderRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditedHeaderRead(_ context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
 	if header == "" {
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	headerConfig := b.Core.AuditedHeadersConfig()
-	settings, ok := headerConfig.Headers[strings.ToLower(header)]
+	settings, ok := b.Core.AuditedHeadersConfig().Header(header)
 	if !ok {
 		return logical.ErrorResponse("Could not find header in config"), nil
 	}
@@ -1184,12 +1183,12 @@ func (b *SystemBackend) handleAuditedHeaderRead(ctx context.Context, req *logica
 }
 
 // handleAuditedHeadersRead returns the whole audited headers config
-func (b *SystemBackend) handleAuditedHeadersRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	headerConfig := b.Core.AuditedHeadersConfig()
+func (b *SystemBackend) handleAuditedHeadersRead(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	headerSettings := b.Core.AuditedHeadersConfig().Headers()
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"headers": headerConfig.Headers,
+			"headers": headerSettings,
 		},
 	}, nil
 }
@@ -1950,8 +1949,8 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 		err := b.moveMount(ns, logger, migrationID, entry, fromPathDetails, toPathDetails)
 		if err != nil {
 			logger.Error("remount failed", "error", err)
-			if err := b.Core.setMigrationStatus(migrationID, MigrationFailureStatus); err != nil {
-				logger.Error("Setting migration status failed", "error", err, "target_status", MigrationFailureStatus)
+			if err := b.Core.setMigrationStatus(migrationID, MigrationStatusFailure); err != nil {
+				logger.Error("Setting migration status failed", "error", err, "target_status", MigrationStatusFailure)
 			}
 		}
 	}(migrationID)
@@ -2007,7 +2006,7 @@ func (b *SystemBackend) moveMount(ns *namespace.Namespace, logger log.Logger, mi
 		return err
 	}
 
-	if err := b.Core.setMigrationStatus(migrationID, MigrationSuccessStatus); err != nil {
+	if err := b.Core.setMigrationStatus(migrationID, MigrationStatusSuccess); err != nil {
 		return err
 	}
 	logger.Info("Completed mount move operations")
@@ -3867,7 +3866,7 @@ func (b *SystemBackend) handleAuditHash(ctx context.Context, req *logical.Reques
 }
 
 // handleEnableAudit is used to enable a new audit backend
-func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleEnableAudit(ctx context.Context, _ *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
 
 	local := data.Get("local").(bool)
@@ -3897,13 +3896,14 @@ func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Requ
 	// Attempt enabling
 	if err := b.Core.enableAudit(ctx, me, true); err != nil {
 		b.Backend.Logger().Error("enable audit mount failed", "path", me.Path, "error", err)
-		return handleError(err)
+
+		return handleError(audit.ConvertToExternalError(err))
 	}
 	return nil, nil
 }
 
 // handleDisableAudit is used to disable an audit backend
-func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleDisableAudit(ctx context.Context, _ *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 
 	if !strings.HasSuffix(path, "/") {
@@ -3938,7 +3938,8 @@ func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Req
 	// Attempt disable
 	if existed, err := b.Core.disableAudit(ctx, path, true); existed && err != nil {
 		b.Backend.Logger().Error("disable audit mount failed", "path", path, "error", err)
-		return handleError(err)
+
+		return handleError(audit.ConvertToExternalError(err))
 	}
 	return nil, nil
 }
@@ -5249,18 +5250,6 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 	return resp, nil
 }
 
-// pathInternalUIVersion is the framework.PathOperation callback function for
-// the sys/internal/ui/version path. It simply returns the Vault version.
-func (b *SystemBackend) pathInternalUIVersion(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	resp := &logical.Response{
-		Data: map[string]any{
-			"version": version.GetVersion().VersionNumber(),
-		},
-	}
-
-	return resp, nil
-}
-
 func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Limit output to authorized paths
 	resp, err := b.pathInternalUIMountsRead(ctx, req, d)
@@ -5794,16 +5783,17 @@ func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request
 }
 
 type HAStatusNode struct {
-	Hostname           string     `json:"hostname"`
-	APIAddress         string     `json:"api_address"`
-	ClusterAddress     string     `json:"cluster_address"`
-	ActiveNode         bool       `json:"active_node"`
-	LastEcho           *time.Time `json:"last_echo"`
-	Version            string     `json:"version"`
-	UpgradeVersion     string     `json:"upgrade_version,omitempty"`
-	RedundancyZone     string     `json:"redundancy_zone,omitempty"`
-	EchoDurationMillis int64      `json:"echo_duration_ms"`
-	ClockSkewMillis    int64      `json:"clock_skew_ms"`
+	Hostname                    string     `json:"hostname"`
+	APIAddress                  string     `json:"api_address"`
+	ClusterAddress              string     `json:"cluster_address"`
+	ActiveNode                  bool       `json:"active_node"`
+	LastEcho                    *time.Time `json:"last_echo"`
+	Version                     string     `json:"version"`
+	UpgradeVersion              string     `json:"upgrade_version,omitempty"`
+	RedundancyZone              string     `json:"redundancy_zone,omitempty"`
+	EchoDurationMillis          int64      `json:"echo_duration_ms"`
+	ClockSkewMillis             int64      `json:"clock_skew_ms"`
+	ReplicationPrimaryCanaryAge int64      `json:"replication_primary_canary_age_ms"`
 }
 
 func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

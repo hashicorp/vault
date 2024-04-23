@@ -11,7 +11,7 @@ import ldapHandlers from 'vault/mirage/handlers/ldap';
 import authPage from 'vault/tests/pages/auth';
 import { click, fillIn, visit } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
-import { isURL, visitURL } from 'vault/tests/helpers/ldap';
+import { isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
 
 module('Acceptance | ldap | overview', function (hooks) {
   setupApplicationTest(hooks);

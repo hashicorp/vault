@@ -13,7 +13,6 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/builtin/logical/transit"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -26,7 +25,7 @@ func TestTransit_Issue_2958(t *testing.T) {
 			"transit": transit.Factory,
 		},
 		AuditBackends: map[string]audit.Factory{
-			"file": file.Factory,
+			"file": audit.NewFileBackend,
 		},
 	}
 
@@ -241,6 +240,14 @@ func TestTransit_CreateKey(t *testing.T) {
 		},
 		"HMAC": {
 			creationParams: map[string]interface{}{"type": "hmac", "key_size": 128},
+			shouldError:    false,
+		},
+		"AES-128 CMAC": {
+			creationParams: map[string]interface{}{"type": "aes128-cmac"},
+			shouldError:    false,
+		},
+		"AES-256 CMAC": {
+			creationParams: map[string]interface{}{"type": "aes256-cmac"},
 			shouldError:    false,
 		},
 		"bad key type": {

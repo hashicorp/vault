@@ -120,23 +120,8 @@ func testProxyExitAfterAuth(t *testing.T, viaFlag bool) {
 	os.Remove(in)
 	t.Logf("input: %s", in)
 
-	sink1f, err := os.CreateTemp(dir, "sink1.jwt.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink1 := sink1f.Name()
-	sink1f.Close()
-	os.Remove(sink1)
-	t.Logf("sink1: %s", sink1)
-
-	sink2f, err := os.CreateTemp(dir, "sink2.jwt.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink2 := sink2f.Name()
-	sink2f.Close()
-	os.Remove(sink2)
-	t.Logf("sink2: %s", sink2)
+	sinkFileName1 := makeTempFile(t, "sink-file", "")
+	sinkFileName2 := makeTempFile(t, "sink-file", "")
 
 	conff, err := os.CreateTemp(dir, "conf.jwt.test.")
 	if err != nil {
@@ -186,7 +171,7 @@ auto_auth {
 }
 `
 
-	config = fmt.Sprintf(config, exitAfterAuthTemplText, in, sink1, sink2)
+	config = fmt.Sprintf(config, exitAfterAuthTemplText, in, sinkFileName1, sinkFileName2)
 	if err := os.WriteFile(conf, []byte(config), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
@@ -219,7 +204,7 @@ auto_auth {
 		t.Fatal("timeout reached while waiting for proxy to exit")
 	}
 
-	sink1Bytes, err := os.ReadFile(sink1)
+	sink1Bytes, err := os.ReadFile(sinkFileName1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +212,7 @@ auto_auth {
 		t.Fatal("got no output from sink 1")
 	}
 
-	sink2Bytes, err := os.ReadFile(sink2)
+	sink2Bytes, err := os.ReadFile(sinkFileName2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -238,6 +223,841 @@ auto_auth {
 	if string(sink1Bytes) != string(sink2Bytes) {
 		t.Fatal("sink 1/2 values don't match")
 	}
+}
+
+// TestProxy_NoTriggerAutoAuth_BadPolicy tests that auto auth is not re-triggered
+// if Proxy uses a token with incorrect policy access.
+func TestProxy_NoTriggerAutoAuth_BadPolicy(t *testing.T) {
+	proxyLogger := logging.NewVaultLogger(hclog.Trace)
+	vaultLogger := logging.NewVaultLogger(hclog.Info)
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
+		NumCores:    1,
+		HandlerFunc: vaulthttp.Handler,
+		Logger:      vaultLogger,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	serverClient := cluster.Cores[0].Client
+
+	// Add a secret to the KV engine
+	_, err := serverClient.Logical().Write("secret/foo", map[string]interface{}{"user": "something"})
+	require.NoError(t, err)
+
+	// Create kv read policy
+	noKvAccess := `path "secret/*" {
+capabilities = ["deny"]
+}`
+	err = serverClient.Sys().PutPolicy("noKvAccess", noKvAccess)
+	require.NoError(t, err)
+
+	// Create a token with that policy
+	opts := &api.TokenCreateRequest{Policies: []string{"noKvAccess"}}
+	tokenResp, err := serverClient.Auth().Token().Create(opts)
+	require.NoError(t, err)
+	firstToken := tokenResp.Auth.ClientToken
+
+	// Create token file
+	tokenFileName := makeTempFile(t, "token-file", firstToken)
+
+	sinkFileName := makeTempFile(t, "sink-file", "")
+
+	autoAuthConfig := fmt.Sprintf(`
+auto_auth {
+    method {
+		type = "token_file"
+        config = {
+            token_file_path = "%s"
+        }
+    }
+	sink "file" {
+		config = {
+			path = "%s"
+		}
+	}
+}`, tokenFileName, sinkFileName)
+
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+	listener "tcp" {
+	 address = "%s"
+	 tls_disable = true
+	}
+	`, listenAddr)
+
+	config := fmt.Sprintf(`
+	vault {
+	 address = "%s"
+	 tls_skip_verify = true
+	}
+	api_proxy {
+	 use_auto_auth_token = "force"
+	}
+	%s
+	%s
+	`, serverClient.Address(), listenConfig, autoAuthConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+
+	// Unset the environment variable so that proxy picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	// Start proxy
+	_, cmd := testProxyCommand(t, proxyLogger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timeout")
+	}
+
+	// Validate that the auto-auth token has been correctly attained
+	// and works for LookupSelf
+	conf := api.DefaultConfig()
+	conf.Address = "http://" + listenAddr
+	proxyClient, err := api.NewClient(conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proxyClient.SetToken("")
+	err = proxyClient.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Wait for re-triggered auto auth to write new token to sink
+	waitForFile := func(prevModTime time.Time) time.Time {
+		ticker := time.Tick(100 * time.Millisecond)
+		timeout := time.After(15 * time.Second)
+		for {
+			select {
+			case <-ticker:
+			case <-timeout:
+				return prevModTime
+			}
+			modTime, err := os.Stat(sinkFileName)
+			require.NoError(t, err)
+			if modTime.ModTime().After(prevModTime) {
+				return modTime.ModTime()
+			}
+		}
+	}
+
+	// Wait for the token to be sent to syncs and be available to be used
+	initialModTime := waitForFile(time.Time{})
+	req := proxyClient.NewRequest("GET", "/v1/auth/token/lookup-self")
+	_ = request(t, proxyClient, req, 200)
+
+	// Write a new token to the token file
+	newTokenResp, err := serverClient.Auth().Token().Create(&api.TokenCreateRequest{})
+	require.NoError(t, err)
+	secondToken := newTokenResp.Auth.ClientToken
+	err = os.WriteFile(tokenFileName, []byte(secondToken), 0o600)
+	require.NoError(t, err)
+
+	// Make a request to a path that the token does not have access to
+	req = proxyClient.NewRequest("GET", "/v1/secret/foo")
+	_, err = proxyClient.RawRequest(req)
+	require.Error(t, err)
+	require.ErrorContains(t, err, logical.ErrPermissionDenied.Error())
+	require.NotContains(t, err.Error(), logical.ErrInvalidToken.Error())
+
+	// Sleep for a bit to ensure that auto auth is not re-triggered
+	newModTime := waitForFile(initialModTime)
+	if newModTime.After(initialModTime) {
+		t.Fatal("auto auth was incorrectly re-triggered")
+	}
+
+	// Read from the sink file and verify that the token has not changed
+	newToken, err := os.ReadFile(sinkFileName)
+	require.Equal(t, firstToken, string(newToken))
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
+}
+
+// TestProxy_NoTriggerAutoAuth_ProxyTokenNotAutoAuth tests that auto auth is not re-triggered
+// if Proxy uses a token that is not equal to the auto auth token
+func TestProxy_NoTriggerAutoAuth_ProxyTokenNotAutoAuth(t *testing.T) {
+	proxyLogger := logging.NewVaultLogger(hclog.Info)
+	cluster := minimal.NewTestSoloCluster(t, nil)
+
+	serverClient := cluster.Cores[0].Client
+
+	// Create a token
+	tokenResp, err := serverClient.Auth().Token().Create(&api.TokenCreateRequest{})
+	require.NoError(t, err)
+	firstToken := tokenResp.Auth.ClientToken
+
+	// Create token file
+	tokenFileName := makeTempFile(t, "token-file", firstToken)
+
+	sinkFileName := makeTempFile(t, "sink-file", "")
+
+	autoAuthConfig := fmt.Sprintf(`
+auto_auth {
+    method {
+		type = "token_file"
+        config = {
+            token_file_path = "%s"
+        }
+    }
+	sink "file" {
+		config = {
+			path = "%s"
+		}
+	}
+}`, tokenFileName, sinkFileName)
+
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+	listener "tcp" {
+	 address = "%s"
+	 tls_disable = true
+	}
+	`, listenAddr)
+
+	// Do not use the auto auth token if a token is provided with the proxy client
+	config := fmt.Sprintf(`
+	vault {
+	 address = "%s"
+	 tls_skip_verify = true
+	}
+	api_proxy {
+	 use_auto_auth_token = true
+	}
+	%s
+	%s
+	`, serverClient.Address(), listenConfig, autoAuthConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+
+	// Unset the environment variable so that proxy picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	// Start proxy
+	_, cmd := testProxyCommand(t, proxyLogger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timeout")
+	}
+
+	// Validate that the auto-auth token has been correctly attained
+	// and works for LookupSelf
+	conf := api.DefaultConfig()
+	conf.Address = "http://" + listenAddr
+	proxyClient, err := api.NewClient(conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proxyClient.SetToken(firstToken)
+	err = proxyClient.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Wait for re-triggered auto auth to write new token to sink
+	waitForFile := func(prevModTime time.Time) time.Time {
+		ticker := time.Tick(100 * time.Millisecond)
+		timeout := time.After(15 * time.Second)
+		for {
+			select {
+			case <-ticker:
+			case <-timeout:
+				return prevModTime
+			}
+			modTime, err := os.Stat(sinkFileName)
+			require.NoError(t, err)
+			if modTime.ModTime().After(prevModTime) {
+				return modTime.ModTime()
+			}
+		}
+	}
+
+	// Wait for the token is available to be used
+	createTime := waitForFile(time.Time{})
+	require.NoError(t, err)
+	_, err = serverClient.Auth().Token().LookupSelf()
+	require.NoError(t, err)
+
+	// Revoke token
+	err = serverClient.Auth().Token().RevokeOrphan(firstToken)
+	require.NoError(t, err)
+
+	// Write a new token to the token file
+	newTokenResp, err := serverClient.Auth().Token().Create(&api.TokenCreateRequest{})
+	require.NoError(t, err)
+	secondToken := newTokenResp.Auth.ClientToken
+	err = os.WriteFile(tokenFileName, []byte(secondToken), 0o600)
+	require.NoError(t, err)
+
+	// Proxy uses revoked token to make request and should result in an error
+	proxyClient.SetToken("random token")
+	_, err = proxyClient.Auth().Token().LookupSelf()
+	require.Error(t, err)
+
+	// Wait to see if the sink file is modified
+	newModTime := waitForFile(createTime)
+	if newModTime.After(createTime) {
+		t.Fatal("auto auth was incorrectly re-triggered")
+	}
+
+	// Read from the sink and verify that the token has not changed
+	newToken, err := os.ReadFile(sinkFileName)
+	require.Equal(t, firstToken, string(newToken))
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
+}
+
+// TestProxy_ReTriggerAutoAuth_ForceAutoAuthToken tests that auto auth is re-triggered
+// if Proxy always forcibly uses the auto auth token
+func TestProxy_ReTriggerAutoAuth_ForceAutoAuthToken(t *testing.T) {
+	proxyLogger := logging.NewVaultLogger(hclog.Trace)
+	vaultLogger := logging.NewVaultLogger(hclog.Info)
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
+		NumCores:    1,
+		HandlerFunc: vaulthttp.Handler,
+		Logger:      vaultLogger,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	serverClient := cluster.Cores[0].Client
+
+	// Create a token
+	tokenResp, err := serverClient.Auth().Token().Create(&api.TokenCreateRequest{})
+	require.NoError(t, err)
+	firstToken := tokenResp.Auth.ClientToken
+
+	// Create token file
+	tokenFileName := makeTempFile(t, "token-file", firstToken)
+
+	sinkFileName := makeTempFile(t, "sink-file", "")
+
+	autoAuthConfig := fmt.Sprintf(`
+auto_auth {
+    method {
+		type = "token_file"
+        config = {
+            token_file_path = "%s"
+        }
+    }
+	sink "file" {
+		config = {
+			path = "%s"
+		}
+	}
+}`, tokenFileName, sinkFileName)
+
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+	listener "tcp" {
+	 address = "%s"
+	 tls_disable = true
+	}
+	`, listenAddr)
+
+	// Do not use the auto auth token if a token is provided with the proxy client
+	config := fmt.Sprintf(`
+	vault {
+	 address = "%s"
+	 tls_skip_verify = true
+	}
+	api_proxy {
+	 use_auto_auth_token = "force"
+	}
+	%s
+	%s
+	`, serverClient.Address(), listenConfig, autoAuthConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+
+	// Unset the environment variable so that proxy picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	// Start proxy
+	_, cmd := testProxyCommand(t, proxyLogger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timeout")
+	}
+
+	// Validate that the auto-auth token has been correctly attained
+	// and works for LookupSelf
+	conf := api.DefaultConfig()
+	conf.Address = "http://" + listenAddr
+	proxyClient, err := api.NewClient(conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proxyClient.SetToken(firstToken)
+	err = proxyClient.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Wait for re-triggered auto auth to write new token to sink
+	waitForFile := func(prevModTime time.Time) time.Time {
+		ticker := time.Tick(100 * time.Millisecond)
+		timeout := time.After(15 * time.Second)
+		for {
+			select {
+			case <-ticker:
+			case <-timeout:
+				return prevModTime
+			}
+			modTime, err := os.Stat(sinkFileName)
+			require.NoError(t, err)
+			if modTime.ModTime().After(prevModTime) {
+				return modTime.ModTime()
+			}
+		}
+	}
+
+	// Wait for the token is available to be used
+	createTime := waitForFile(time.Time{})
+	require.NoError(t, err)
+	req := proxyClient.NewRequest("GET", "/v1/auth/token/lookup-self")
+	_, err = proxyClient.RawRequest(req)
+	require.NoError(t, err)
+
+	// Revoke token
+	req = serverClient.NewRequest("PUT", "/v1/auth/token/revoke")
+	req.BodyBytes = []byte(fmt.Sprintf(`{
+	  "token": "%s"
+	}`, firstToken))
+	_ = request(t, serverClient, req, 204)
+
+	// Create new token
+	newTokenResp, err := serverClient.Auth().Token().Create(&api.TokenCreateRequest{})
+	require.NoError(t, err)
+	secondToken := newTokenResp.Auth.ClientToken
+
+	// Proxy uses the same token in the token file to make a request, which should result in error
+	req = proxyClient.NewRequest("GET", "/v1/auth/token/lookup-self")
+	_, err = proxyClient.RawRequest(req)
+	require.Error(t, err)
+
+	// Write a new token to the token file so that auto auth can write new token to sink
+	err = os.WriteFile(tokenFileName, []byte(secondToken), 0o600)
+	require.NoError(t, err)
+
+	// Wait to see if that the sink file is modified
+	waitForFile(createTime)
+
+	// Read from the sink and verify that the sink contains the new token
+	newToken, err := os.ReadFile(sinkFileName)
+	require.Equal(t, secondToken, string(newToken))
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
+}
+
+// TestProxy_ReTriggerAutoAuth_ProxyIsAutoAuthToken tests that auto auth is re-triggered
+// the proxy client uses a token that is equal to the auto auth token
+func TestProxy_ReTriggerAutoAuth_ProxyIsAutoAuthToken(t *testing.T) {
+	proxyLogger := logging.NewVaultLogger(hclog.Trace)
+	vaultLogger := logging.NewVaultLogger(hclog.Info)
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"approle": credAppRole.Factory,
+		},
+	}, &vault.TestClusterOptions{
+		NumCores:    1,
+		HandlerFunc: vaulthttp.Handler,
+		Logger:      vaultLogger,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	serverClient := cluster.Cores[0].Client
+
+	// Enable the approle auth method
+	req := serverClient.NewRequest("POST", "/v1/sys/auth/approle")
+	req.BodyBytes = []byte(`{
+		"type": "approle"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// Create a named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
+	req.BodyBytes = []byte(`{
+	  "secret_id_num_uses": "10",
+	  "secret_id_ttl": "1m",
+	  "token_max_ttl": "4m",
+	  "token_num_uses": "10",
+	  "token_ttl": "4m",
+	  "policies": "default"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// Fetch the RoleID of the named role
+	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
+	body := request(t, serverClient, req, 200)
+	data := body["data"].(map[string]interface{})
+	roleID := data["role_id"].(string)
+
+	// Get a SecretID issued against the named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
+	body = request(t, serverClient, req, 200)
+	data = body["data"].(map[string]interface{})
+	secretID := data["secret_id"].(string)
+
+	// Write the RoleID and SecretID to temp files
+	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
+	secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
+
+	sinkFileName := makeTempFile(t, "sink-file", "")
+
+	autoAuthConfig := fmt.Sprintf(`
+auto_auth {
+    method "approle" {
+        mount_path = "auth/approle"
+        config = {
+            role_id_file_path = "%s"
+            secret_id_file_path = "%s"
+        }
+    }
+
+	sink "file" {
+		config = {
+			path = "%s"
+		}
+	}
+}`, roleIDPath, secretIDPath, sinkFileName)
+
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+api_proxy {
+  use_auto_auth_token = true
+}
+%s
+%s
+`, serverClient.Address(), listenConfig, autoAuthConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+
+	// Unset the environment variable so that proxy picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	// Start proxy
+	_, cmd := testProxyCommand(t, proxyLogger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	// Validate that the auto-auth token has been correctly attained
+	// and works for LookupSelf
+	conf := api.DefaultConfig()
+	conf.Address = "http://" + listenAddr
+	proxyClient, err := api.NewClient(conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = proxyClient.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Wait for re-triggered auto auth to write new token to sink
+	waitForFile := func(prevModTime time.Time) {
+		ticker := time.Tick(100 * time.Millisecond)
+		timeout := time.After(15 * time.Second)
+		for {
+			select {
+			case <-ticker:
+			case <-timeout:
+				t.Fatal("timed out waiting for re-triggered auto auth to complete")
+			}
+			modTime, err := os.Stat(sinkFileName)
+			require.NoError(t, err)
+			if modTime.ModTime().After(prevModTime) {
+				return
+			}
+		}
+	}
+
+	// Wait for the token to be sent to syncs and be available to be used
+	waitForFile(time.Time{})
+	oldToken, err := os.ReadFile(sinkFileName)
+	require.NoError(t, err)
+	prevModTime, err := os.Stat(sinkFileName)
+	require.NoError(t, err)
+
+	// Set proxy token
+	proxyClient.SetToken(string(oldToken))
+
+	// Make request using proxy client to test that token is valid
+	req = proxyClient.NewRequest("GET", "/v1/auth/token/lookup-self")
+	body = request(t, proxyClient, req, 200)
+
+	// Revoke token
+	req = serverClient.NewRequest("PUT", "/v1/auth/token/revoke")
+	req.BodyBytes = []byte(fmt.Sprintf(`{
+	  "token": "%s"
+	}`, oldToken))
+	body = request(t, serverClient, req, 204)
+
+	// Proxy uses revoked token to make request and should result in an error
+	req = proxyClient.NewRequest("GET", "/v1/auth/token/lookup-self")
+	_, err = proxyClient.RawRequest(req)
+	require.Error(t, err)
+
+	// Wait for new token to be written and available to use
+	waitForFile(prevModTime.ModTime())
+
+	// Verify new token is not equal to the old token
+	newToken, err := os.ReadFile(sinkFileName)
+	require.NoError(t, err)
+	require.NotEqual(t, string(newToken), string(oldToken))
+
+	// Verify that proxy no longer fails when making a request with the new token
+	proxyClient.SetToken(string(newToken))
+	req = proxyClient.NewRequest("GET", "/v1/auth/token/lookup-self")
+	body = request(t, proxyClient, req, 200)
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
+}
+
+// TestProxy_ReTriggerAutoAuth_RevokedToken tests that auto auth is re-triggered
+// when Proxy uses a revoked auto auth token to make a request
+func TestProxy_ReTriggerAutoAuth_RevokedToken(t *testing.T) {
+	proxyLogger := logging.NewVaultLogger(hclog.Trace)
+	vaultLogger := logging.NewVaultLogger(hclog.Info)
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"approle": credAppRole.Factory,
+		},
+	}, &vault.TestClusterOptions{
+		NumCores:    1,
+		HandlerFunc: vaulthttp.Handler,
+		Logger:      vaultLogger,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	serverClient := cluster.Cores[0].Client
+
+	// Enable the approle auth method
+	req := serverClient.NewRequest("POST", "/v1/sys/auth/approle")
+	req.BodyBytes = []byte(`{
+		"type": "approle"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// Create a named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
+	req.BodyBytes = []byte(`{
+	  "secret_id_num_uses": "10",
+	  "secret_id_ttl": "1m",
+	  "token_max_ttl": "4m",
+	  "token_num_uses": "10",
+	  "token_ttl": "4m",
+	  "policies": "default"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// Fetch the RoleID of the named role
+	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
+	body := request(t, serverClient, req, 200)
+	data := body["data"].(map[string]interface{})
+	roleID := data["role_id"].(string)
+
+	// Get a SecretID issued against the named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
+	body = request(t, serverClient, req, 200)
+	data = body["data"].(map[string]interface{})
+	secretID := data["secret_id"].(string)
+
+	// Write the RoleID and SecretID to temp files
+	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
+	secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
+
+	sinkFileName := makeTempFile(t, "sink-file", "")
+	autoAuthConfig := fmt.Sprintf(`
+auto_auth {
+    method "approle" {
+        mount_path = "auth/approle"
+        config = {
+            role_id_file_path = "%s"
+            secret_id_file_path = "%s"
+        }
+    }
+
+	sink "file" {
+		config = {
+			path = "%s"
+		}
+	}
+}`, roleIDPath, secretIDPath, sinkFileName)
+
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+api_proxy {
+  use_auto_auth_token = "force"
+}
+%s
+%s
+`, serverClient.Address(), listenConfig, autoAuthConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+
+	// Unset the environment variable so that proxy picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	// Start proxy
+	_, cmd := testProxyCommand(t, proxyLogger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	// Validate that the auto-auth token has been correctly attained
+	// and works for LookupSelf
+	conf := api.DefaultConfig()
+	conf.Address = "http://" + listenAddr
+	proxyClient, err := api.NewClient(conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proxyClient.SetToken("")
+	err = proxyClient.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Wait for re-triggered auto auth to write new token to sink
+	waitForFile := func(prevModTime time.Time) {
+		ticker := time.Tick(100 * time.Millisecond)
+		timeout := time.After(15 * time.Second)
+		for {
+			select {
+			case <-ticker:
+			case <-timeout:
+				t.Fatal("timed out waiting for re-triggered auto auth to complete")
+			}
+			modTime, err := os.Stat(sinkFileName)
+			require.NoError(t, err)
+			if modTime.ModTime().After(prevModTime) {
+				return
+			}
+		}
+	}
+
+	// Wait for the token to be sent to syncs and be available to be used
+	waitForFile(time.Time{})
+	req = proxyClient.NewRequest("GET", "/v1/auth/token/lookup-self")
+	body = request(t, proxyClient, req, 200)
+
+	oldToken, err := os.ReadFile(sinkFileName)
+	require.NoError(t, err)
+	prevModTime, err := os.Stat(sinkFileName)
+	require.NoError(t, err)
+
+	// Revoke token
+	req = serverClient.NewRequest("PUT", "/v1/auth/token/revoke")
+	req.BodyBytes = []byte(fmt.Sprintf(`{
+	  "token": "%s"
+	}`, oldToken))
+	body = request(t, serverClient, req, 204)
+
+	// Proxy uses revoked token to make request and should result in an error
+	req = proxyClient.NewRequest("GET", "/v1/auth/token/lookup-self")
+	_, err = proxyClient.RawRequest(req)
+	require.Error(t, err)
+
+	// Wait for new token to be written and available to use
+	waitForFile(prevModTime.ModTime())
+
+	// Verify new token is not equal to the old token
+	newToken, err := os.ReadFile(sinkFileName)
+	require.NoError(t, err)
+	require.NotEqual(t, string(newToken), string(oldToken))
+
+	// Verify that proxy no longer fails when making a request
+	req = proxyClient.NewRequest("GET", "/v1/auth/token/lookup-self")
+	body = request(t, proxyClient, req, 200)
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
 }
 
 // TestProxy_AutoAuth_UserAgent tests that the User-Agent sent
@@ -302,17 +1122,8 @@ func TestProxy_AutoAuth_UserAgent(t *testing.T) {
 	// Write the RoleID and SecretID to temp files
 	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
 	secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
-	defer os.Remove(roleIDPath)
-	defer os.Remove(secretIDPath)
 
-	sinkf, err := os.CreateTemp("", "sink.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink := sinkf.Name()
-	sinkf.Close()
-	os.Remove(sink)
-
+	sinkFileName := makeTempFile(t, "sink-file", "")
 	autoAuthConfig := fmt.Sprintf(`
 auto_auth {
     method "approle" {
@@ -328,7 +1139,7 @@ auto_auth {
 			path = "%s"
 		}
 	}
-}`, roleIDPath, secretIDPath, sink)
+}`, roleIDPath, secretIDPath, sinkFileName)
 
 	listenAddr := generateListenerAddress(t)
 	listenConfig := fmt.Sprintf(`
@@ -350,7 +1161,6 @@ api_proxy {
 %s
 `, serverClient.Address(), listenConfig, autoAuthConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Unset the environment variable so that proxy picks up the right test
 	// cluster address
@@ -446,7 +1256,6 @@ vault {
 %s
 `, serverClient.Address(), listenConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the proxy
 	_, cmd := testProxyCommand(t, logger)
@@ -538,7 +1347,6 @@ vault {
 %s
 `, serverClient.Address(), listenConfig, cacheConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the proxy
 	_, cmd := testProxyCommand(t, logger)
@@ -616,7 +1424,6 @@ vault {
 %s
 `, serverClient.Address(), cacheConfig, listenConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start proxy
 	_, cmd := testProxyCommand(t, logger)
@@ -685,11 +1492,121 @@ vault {
 	wg.Wait()
 }
 
+// TestProxy_NoAutoAuthTokenIfNotConfigured tests that Proxy will not use the auto-auth token
+// unless configured to.
+func TestProxy_NoAutoAuthTokenIfNotConfigured(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	serverClient := cluster.Cores[0].Client
+
+	// Unset the environment variable so that proxy picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	// Create token file
+	tokenFileName := makeTempFile(t, "token-file", serverClient.Token())
+
+	sinkFileName := makeTempFile(t, "sink-file", "")
+
+	autoAuthConfig := fmt.Sprintf(`
+auto_auth {
+    method {
+		type = "token_file"
+        config = {
+            token_file_path = "%s"
+        }
+    }
+
+	sink "file" {
+		config = {
+			path = "%s"
+		}
+	}
+}`, tokenFileName, sinkFileName)
+
+	apiProxyConfig := `
+api_proxy {
+	use_auto_auth_token = false
+}
+`
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+%s
+%s
+%s
+`, serverClient.Address(), apiProxyConfig, listenConfig, autoAuthConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+
+	// Start proxy
+	ui, cmd := testProxyCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		code := cmd.Run([]string{"-config", configPath})
+		if code != 0 {
+			t.Errorf("non-zero return code when running proxy: %d", code)
+			t.Logf("STDOUT from proxy:\n%s", ui.OutputWriter.String())
+			t.Logf("STDERR from proxy:\n%s", ui.ErrorWriter.String())
+		}
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	proxyClient, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	proxyClient.SetToken("")
+	err = proxyClient.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait for the sink to be populated.
+	// Realistically won't be this long, but keeping it long just in case, for CI.
+	time.Sleep(10 * time.Second)
+
+	secret, err := proxyClient.Auth().Token().CreateOrphan(&api.TokenCreateRequest{
+		Policies: []string{"default"},
+		TTL:      "30m",
+	})
+	if secret != nil || err == nil {
+		t.Fatal("expected this to fail, since without a token you should not be able to make a token")
+	}
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
+}
+
 // TestProxy_ApiProxy_Retry Tests the retry functionalities of Vault Proxy's API Proxy
 func TestProxy_ApiProxy_Retry(t *testing.T) {
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Start the server and proxy
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Trace)
 	var h handler
 	cluster := vault.NewTestCluster(t,
@@ -730,6 +1647,7 @@ func TestProxy_ApiProxy_Retry(t *testing.T) {
 	intRef := func(i int) *int {
 		return &i
 	}
+
 	// start test cases here
 	testCases := map[string]struct {
 		retries     *int
@@ -788,7 +1706,6 @@ vault {
 %s
 `, serverClient.Address(), retryConf, cacheConfig, listenConfig)
 			configPath := makeTempFile(t, "config.hcl", config)
-			defer os.Remove(configPath)
 
 			_, cmd := testProxyCommand(t, logger)
 			cmd.startedCh = make(chan struct{})
@@ -861,7 +1778,6 @@ listener "tcp" {
 }
 `, listenAddr)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	ui, cmd := testProxyCommand(t, logger)
 	cmd.client = serverClient
@@ -951,7 +1867,6 @@ cache {}
 `, serverClient.Address(), listenAddr, listenAddr2)
 
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	_, cmd := testProxyCommand(t, nil)
 	cmd.startedCh = make(chan struct{})
