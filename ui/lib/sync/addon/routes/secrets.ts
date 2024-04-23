@@ -7,39 +7,20 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 
 import type RouterService from '@ember/routing/router-service';
-import type StoreService from 'vault/services/store';
-import { DEBUG } from '@glimmer/env';
-
-interface ActivationFlagsResponse {
-  data: {
-    activated: Array<string>;
-    unactivated: Array<string>;
-  };
-}
+import type FlagService from 'vault/services/flags';
 
 export default class SyncSecretsRoute extends Route {
   @service declare readonly router: RouterService;
-  @service declare readonly store: StoreService;
+  @service declare readonly flags: FlagService;
 
-  async fetchActivatedFeatures() {
-    // The read request to the activation-flags endpoint is unauthenticated and root namespace
-    // but the POST is not which is why it's not in the NAMESPACE_ROOT_URLS list
-    return await this.store
-      .adapterFor('application')
-      .ajax('/v1/sys/activation-flags', 'GET', { unauthenticated: true, namespace: null })
-      .then((resp: ActivationFlagsResponse) => {
-        return resp.data?.activated;
-      })
-      .catch((error: unknown) => {
-        if (DEBUG) console.error(error); // eslint-disable-line no-console
-        return [];
-      });
+  beforeModel() {
+    return this.flags.fetchActivatedFlags();
   }
 
-  async model() {
-    const activatedFeatures = await this.fetchActivatedFeatures();
+  model() {
     return {
-      activatedFeatures,
+      // TODO will modify when we use the persona service.
+      activatedFeatures: this.flags.activatedFlags,
     };
   }
 
