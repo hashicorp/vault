@@ -214,7 +214,7 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_RSA4096
 	case "hmac":
 		polReq.KeyType = keysutil.KeyType_HMAC
-	case "aes-128-cmac":
+	case "aes128-cmac":
 		polReq.KeyType = keysutil.KeyType_AES128_CMAC
 	case "aes256-cmac":
 		polReq.KeyType = keysutil.KeyType_AES256_CMAC
