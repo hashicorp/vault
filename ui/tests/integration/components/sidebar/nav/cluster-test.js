@@ -136,7 +136,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
   });
 
   test('it should not show sync links for managed cluster', async function (assert) {
-    this.owner.lookup('service:feature-flag').setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
+    this.owner.lookup('service:flags').setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
     stubFeaturesAndPermissions(this.owner, true, true, ['Secrets Sync']);
     await renderComponent();
 
