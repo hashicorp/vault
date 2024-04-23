@@ -267,6 +267,11 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 		certChain := strings.Join(pemCerts, "\n")
 
 		return certChain, nil
+	case exportTypeCMACKey:
+		switch policy.Type {
+		case keysutil.KeyType_AES128_CMAC, keysutil.KeyType_AES256_CMAC:
+			return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.Key)), nil
+		}
 	}
 
 	return "", fmt.Errorf("unknown key type %v for export type %v", policy.Type, exportType)
