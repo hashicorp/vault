@@ -6,7 +6,7 @@
 // @ts-nocheck
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { BAR_WIDTH, formatNumbers } from 'vault/utils/chart-helpers';
+import { BAR_WIDTH, numericalAxisLabel } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { flatGroup } from 'd3-array';
@@ -33,18 +33,20 @@ interface ChartData {
  * Renders a vertical bar chart of counts fora single data point (@dataKey) over time.
  *
  * @example
- <Clients::Charts::VerticalBarStacked
-    @chartTitle="Secret Sync client counts"
-    @data={{this.model}}
-    @dataKey="secret_syncs"
-    @showTable={{true}}
-    @chartHeight={{200}}
-  />
+ * <Clients::Charts::VerticalBarStacked
+ * @chartTitle="Total monthly usage"
+ * @data={{this.byMonthActivityData}}
+ * @chartLegend={{this.legend}}
+ * @chartHeight={{250}}
+ * />
  */
-export default class VerticalBarStacked extends Component<Args> {
+export default class VerticalBarStacked extends Component {
   barWidth = BAR_WIDTH;
-
   @tracked activeDatum: ChartData | null = null;
+
+  get chartHeight() {
+    return this.args.chartHeight || 190;
+  }
 
   get dataKeys() {
     return this.args.chartLegend.map((l) => l.key);
@@ -74,7 +76,6 @@ export default class VerticalBarStacked extends Component<Args> {
         ),
       ];
     }
-
     return dataset.map(([month, clientType, counts]) => ({
       month,
       clientType, // key name matches the chart's @color arg
@@ -126,6 +127,6 @@ export default class VerticalBarStacked extends Component<Args> {
   };
 
   formatTicksY = (num: number): string => {
-    return formatNumbers(num) || num.toString();
+    return numericalAxisLabel(num) || num.toString();
   };
 }
