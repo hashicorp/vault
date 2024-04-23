@@ -9,25 +9,15 @@ terraform {
   }
 }
 
-variable "vault_cluster_addr_port" {
-  description = "The Raft cluster address port"
-  type        = string
-  default     = "8201"
-}
-
 variable "vault_install_dir" {
   type        = string
   description = "The directory where the Vault binary will be installed"
 }
 
-variable "primary_leader_public_ip" {
+variable "vault_addr" {
   type        = string
-  description = "Vault primary cluster leader Public IP address"
-}
-
-variable "primary_leader_private_ip" {
-  type        = string
-  description = "Vault primary cluster leader Private IP address"
+  description = "The vault cluster listen address"
+  default     = "http://localhost:8200"
 }
 
 variable "vault_root_token" {
@@ -35,18 +25,27 @@ variable "vault_root_token" {
   description = "The vault root token"
 }
 
-resource "enos_remote_exec" "configure_pr_primary" {
+variable "leader_host" {
+  type = object({
+    private_ip = string
+    public_ip  = string
+  })
+
+  description = "The vault cluster host that can be expected as a leader"
+}
+
+resource "enos_remote_exec" "vault_operator_step_down" {
   environment = {
-    VAULT_ADDR        = "http://127.0.0.1:8200"
     VAULT_TOKEN       = var.vault_root_token
+    VAULT_ADDR        = var.vault_addr
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/scripts/configure-vault-pr-primary.sh")]
+  scripts = [abspath("${path.module}/scripts/operator-step-down.sh")]
 
   transport = {
     ssh = {
-      host = var.primary_leader_public_ip
+      host = var.leader_host.public_ip
     }
   }
 }
