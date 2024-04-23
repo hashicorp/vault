@@ -188,7 +188,7 @@
         <Hds::Button
           @text="Generate new root"
           @route="issuers.issuer.rotate-root"
-          @model={{@backend}}
+          @models={{array @backend @issuer.id}}
           data-test-root-rotate-step-one
         />
         <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
