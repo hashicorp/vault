@@ -12,8 +12,8 @@ export default class KvSecretDetailsIndexRoute extends Route {
 
     const breadcrumbsArray = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backend, route: 'list' },
-      ...breadcrumbsForSecret(resolvedModel.path, true),
+      { label: resolvedModel.backend, route: 'list', model: resolvedModel.backend },
+      ...breadcrumbsForSecret(resolvedModel.backend, resolvedModel.path, true),
     ];
     controller.breadcrumbs = breadcrumbsArray;
   }

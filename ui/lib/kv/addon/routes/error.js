@@ -13,7 +13,7 @@ export default class KvErrorRoute extends Route {
     super.setupController(...arguments);
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'list' },
+      { label: this.secretMountPath.currentPath, route: 'list', model: this.secretMountPath.currentPath },
     ];
     controller.mountName = this.secretMountPath.currentPath;
   }
