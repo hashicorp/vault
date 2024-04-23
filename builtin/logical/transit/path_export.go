@@ -13,6 +13,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/helper/constants"
 	"strconv"
 	"strings"
 
@@ -76,6 +77,9 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 	case exportTypePublicKey:
 	case exportTypeCertificateChain:
 	case exportTypeCMACKey:
+		if !constants.IsEnterprise {
+			return logical.ErrorResponse(ErrCmacEntOnly.Error()), logical.ErrInvalidRequest
+		}
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("invalid export type: %s", exportType)), logical.ErrInvalidRequest
 	}

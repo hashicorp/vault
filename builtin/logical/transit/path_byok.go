@@ -10,6 +10,7 @@ import (
 	"crypto/elliptic"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/helper/constants"
 	"strconv"
 	"strings"
 
@@ -95,6 +96,10 @@ func (b *backend) pathPolicyBYOKExportRead(ctx context.Context, req *logical.Req
 
 	if !srcP.Exportable {
 		return logical.ErrorResponse("key is not exportable"), nil
+	}
+
+	if srcP.Type.CMACSupported() && !constants.IsEnterprise {
+		return logical.ErrorResponse(ErrCmacEntOnly.Error()), logical.ErrInvalidRequest
 	}
 
 	retKeys := map[string]string{}
