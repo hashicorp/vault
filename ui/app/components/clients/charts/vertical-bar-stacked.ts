@@ -15,7 +15,7 @@ import type { TotalClients } from 'core/utils/client-count-utils';
 
 interface Args {
   data: MonthlyChartData[];
-  dataKey: string;
+  dataKeys: string[];
   chartTitle: string;
   chartHeight?: number;
 }
@@ -50,13 +50,46 @@ export default class VerticalBarStacked extends Component<Args> {
     return this.args.chartHeight || 190;
   }
 
-  get chartData() {
+  get monthlyClientsByType() {
+    // each datum needs to be its own object
+    let dataset = [];
+    for (const key of this.args.dataKeys) {
+      const keyData = this.args.data.map((d) => ({
+        month: parseAPITimestamp(d.timestamp, 'M/yy'),
+        clientType: key,
+        [key]: d[key],
+      }));
+      dataset = [
+        ...dataset,
+        ...flatGroup(
+          keyData,
+          // order here must match destructure order in return below
+          (d) => d.month,
+          (d) => d.clientType,
+          (d) => d[key] // client counts for the datakey
+        ),
+      ];
+    }
+
+    return dataset.map(([month, clientType, counts]) => ({
+      month,
+      clientType,
+      counts,
+    }));
+  }
+
+  getSum = (array, key) => {
+    return array.reduce((sum, { counts }) => sum + counts[key], 0);
+  };
+  // for yDomain scale, tooltip target area and tooltip text data
+  get aggregatedData() {
     return this.args.data.map((d): ChartData => {
       const xValue = d.timestamp as string;
       const yValue =
         d?.entity_clients && d?.non_entity_clients ? d.entity_clients + d.non_entity_clients : null;
       const entity = (d['entity_clients'] as number) ?? null;
       const nonEntity = (d['non_entity_clients'] as number) ?? null;
+
       return {
         x: parseAPITimestamp(xValue, 'M/yy') as string,
         y: yValue ?? 0,
@@ -71,16 +104,16 @@ export default class VerticalBarStacked extends Component<Args> {
   }
 
   get yDomain() {
-    const counts: number[] = this.chartData
+    const counts: number[] = this.aggregatedData
       .map((d) => d.y)
       .flatMap((num) => (typeof num === 'number' ? [num] : []));
     const max = Math.max(...counts);
-    // if max is <=4, hardcode 4 which is the y-axis tickCount so y-axes are not decimals
+    // if max is <=6, hardcode 6 which is the y-axis tickCount so y-axes are not decimals
     return [0, max <= 6 ? 6 : max];
   }
 
   get xDomain() {
-    const months = this.chartData.map((d) => d.x);
+    const months = this.monthlyClientsByType.map((d) => d.month);
     return new Set(months);
   }
 
@@ -101,44 +134,4 @@ export default class VerticalBarStacked extends Component<Args> {
   formatTicksY = (num: number): string => {
     return formatNumbers(num) || num.toString();
   };
-
-  get monthlyClientsByType() {
-    // each datum needs to be its own object
-
-    const entity_clients = this.args.data.map(({ month, timestamp, entity_clients }) => ({
-      month,
-      timestamp,
-      entity_clients,
-      type: 'entity',
-    }));
-    const non_entity_clients = this.args.data.map(({ month, timestamp, non_entity_clients }) => ({
-      month,
-      timestamp,
-      non_entity_clients,
-      type: 'non-entity',
-    }));
-
-    const groupedEntity = flatGroup(
-      entity_clients,
-      (d) => d.month,
-      (d) => d.type,
-      (d) => d.entity_clients
-    );
-    const groupedNonEntity = flatGroup(
-      non_entity_clients,
-      (d) => d.month,
-      (d) => d.type,
-      (d) => d.non_entity_clients
-    );
-
-    return [...groupedEntity, ...groupedNonEntity].map(([month, type, clients]) => ({
-      month,
-      type,
-      clients,
-    }));
-  }
-
-  get months() {
-    return Array.from(new Set(this.monthlyClientsByType.map((d) => d.month)));
-  }
 }

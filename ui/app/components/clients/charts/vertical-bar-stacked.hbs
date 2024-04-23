@@ -6,7 +6,7 @@
 <div class="lineal-chart" data-test-chart={{@chartTitle}}>
   <Lineal::Fluid as |width|>
     {{#let
-      (scale-band domain=this.months range=(array 0 width) padding=0.1)
+      (scale-band domain=this.xDomain range=(array 0 width) padding=0.1)
       (scale-linear range=(array this.chartHeight 0) domain=this.yDomain)
       (scale-linear range=(array 0 this.chartHeight) domain=this.yDomain)
       as |xScale yScale hScale|
@@ -42,16 +42,16 @@
         <Lineal::VBars
           @data={{this.monthlyClientsByType}}
           @x="month"
-          @y="clients"
+          @y="counts"
           @width={{this.barWidth}}
           @xScale={{xScale}}
           @yScale={{yScale}}
-          @color="type"
+          @color="clientType"
           @colorScale="blue-bar"
           transform="translate({{this.barOffset xScale.bandwidth}},0)"
         />
         {{#if (and xScale.isValid yScale.isValid)}}
-          {{#each this.chartData as |d|}}
+          {{#each this.aggregatedData as |d|}}
             <rect
               role="button"
               aria-label="Show exact counts for {{d.legendX}}"
