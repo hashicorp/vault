@@ -11,6 +11,7 @@ import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { duration } from 'core/helpers/format-duration';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const allFields = [
   { label: 'Role name', key: 'name' },
@@ -78,6 +79,12 @@ module('Integration | Component | kubernetes | Page::Role::Details', function (h
         }
       });
     };
+    setRunOptions({
+      rules: {
+        // TODO: Fix JSONEditor component
+        label: { enabled: false },
+      },
+    });
   });
 
   test('it should render header with role name and breadcrumbs', async function (assert) {

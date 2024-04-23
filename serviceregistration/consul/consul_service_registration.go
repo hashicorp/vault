@@ -402,9 +402,9 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 						}
 
 						c.serviceLock.Lock()
-						registeredServiceID = serviceID
-						c.serviceLock.Unlock()
+						defer c.serviceLock.Unlock()
 
+						registeredServiceID = serviceID
 						return
 					}
 				}()

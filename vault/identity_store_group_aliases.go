@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func groupAliasPaths(i *IdentityStore) []*framework.Path {
@@ -170,7 +170,7 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(ctx context.Context, req *l
 
 	if groupAlias == nil {
 		groupAlias = &identity.Alias{
-			CreationTime: timestamppb.Now(),
+			CreationTime: ptypes.TimestampNow(),
 			NamespaceID:  ns.ID,
 		}
 		groupAlias.LastUpdateTime = groupAlias.CreationTime
@@ -178,7 +178,7 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(ctx context.Context, req *l
 		if ns.ID != groupAlias.NamespaceID {
 			return logical.ErrorResponse("existing alias not in the same namespace as request"), logical.ErrPermissionDenied
 		}
-		groupAlias.LastUpdateTime = timestamppb.Now()
+		groupAlias.LastUpdateTime = ptypes.TimestampNow()
 		if groupAlias.CreationTime == nil {
 			groupAlias.CreationTime = groupAlias.LastUpdateTime
 		}

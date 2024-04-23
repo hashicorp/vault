@@ -11,7 +11,6 @@ import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
 import { waitFor } from '@ember/test-waiters';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
-import { addToArray } from 'vault/helpers/add-to-array';
 /**
  * @module PkiIssuerCrossSign
  * PkiIssuerCrossSign components render from a parent issuer's details page to cross-sign an intermediate issuer (from a different mount).
@@ -93,7 +92,7 @@ export default class PkiIssuerCrossSign extends Component {
 
       // for cross-signing error handling we want to record the list of issuers before the process starts
       this.intermediateIssuers[intermediateMount] = issuers;
-      this.validationErrors = addToArray(this.validationErrors, {
+      this.validationErrors.addObject({
         newCrossSignedIssuer: this.nameValidation(newCrossSignedIssuer, issuers),
       });
     }
@@ -110,9 +109,9 @@ export default class PkiIssuerCrossSign extends Component {
           intermediateIssuer,
           newCrossSignedIssuer
         );
-        this.signedIssuers = addToArray(this.signedIssuers, { ...data, hasError: false });
+        this.signedIssuers.addObject({ ...data, hasError: false });
       } catch (error) {
-        this.signedIssuers = addToArray(this.signedIssuers, {
+        this.signedIssuers.addObject({
           ...this.formData[row],
           hasError: errorMessage(error),
           hasUnsupportedParams: error.cause ? error.cause.map((e) => e.message).join(', ') : null,

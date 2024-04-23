@@ -12,7 +12,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -86,16 +85,6 @@ const (
 	nonEntityTokenActivityType = "non-entity-token"
 	entityActivityType         = "entity"
 	secretSyncActivityType     = "secret-sync"
-
-	// ActivityLogMinimumRetentionMonths sets the default minimum retention_months
-	// to enforce when reporting is enabled. Note that this value is also statically
-	// defined in the UI. Any updates here should also be made to
-	// ui/app/models/clients/config.js.
-	ActivityLogMinimumRetentionMonths = 48
-
-	// activityLogMaximumRetentionMonths sets the default maximum retention_months
-	// to enforce when reporting is enabled.
-	activityLogMaximumRetentionMonths = 60
 )
 
 var ActivityClientTypes = []string{nonEntityTokenActivityType, entityActivityType, secretSyncActivityType, ACMEActivityType}
@@ -269,7 +258,7 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 		precomputedQueryWritten:  make(chan struct{}),
 	}
 
-	config, err := a.loadConfigOrDefault(core.activeContext, core.ManualLicenseReportingEnabled())
+	config, err := a.loadConfigOrDefault(core.activeContext)
 	if err != nil {
 		return nil, err
 	}
@@ -1167,35 +1156,12 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) e
 			manager.retentionWorker(ctx, manager.clock.Now(), months)
 			close(manager.retentionDone)
 		}(manager.retentionMonths)
+
+		manager.CensusReportDone = make(chan bool, 1)
+		go c.activityLog.CensusReport(ctx, c.CensusAgent(), c.BillingStart())
 	}
 
 	return nil
-}
-
-func (a *ActivityLog) createRegenerationIntentLog(ctx context.Context, now time.Time) (*ActivityIntentLog, error) {
-	intentLog := &ActivityIntentLog{}
-	segments, err := a.availableLogs(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("error fetching available logs: %w", err)
-	}
-
-	for i, segment := range segments {
-		if timeutil.IsCurrentMonth(segment, now) {
-			continue
-		}
-
-		intentLog.PreviousMonth = segment.Unix()
-		if i > 0 {
-			intentLog.NextMonth = segments[i-1].Unix()
-			break
-		}
-	}
-
-	if intentLog.NextMonth == 0 || intentLog.PreviousMonth == 0 {
-		return nil, fmt.Errorf("insufficient data to create a regeneration intent log")
-	}
-
-	return intentLog, nil
 }
 
 // stopActivityLogLocked removes the ActivityLog from Core
@@ -1927,12 +1893,12 @@ type activityConfig struct {
 func defaultActivityConfig() activityConfig {
 	return activityConfig{
 		DefaultReportMonths: 12,
-		RetentionMonths:     ActivityLogMinimumRetentionMonths,
+		RetentionMonths:     24,
 		Enabled:             "default",
 	}
 }
 
-func (a *ActivityLog) loadConfigOrDefault(ctx context.Context, isReportingEnabled bool) (activityConfig, error) {
+func (a *ActivityLog) loadConfigOrDefault(ctx context.Context) (activityConfig, error) {
 	// Load from storage
 	var config activityConfig
 	configRaw, err := a.view.Get(ctx, activityConfigKey)
@@ -1947,34 +1913,7 @@ func (a *ActivityLog) loadConfigOrDefault(ctx context.Context, isReportingEnable
 		return config, err
 	}
 
-	// check if the retention time is lesser than the default when reporting is enabled
-	if (config.RetentionMonths < ActivityLogMinimumRetentionMonths) && isReportingEnabled {
-		updatedConfig, err := a.setDefaultRetentionMonthsInConfig(ctx, config)
-		if err != nil {
-			return config, err
-		}
-		return updatedConfig, nil
-	}
 	return config, nil
-}
-
-// setDefaultRetentionMonthsInConfig sets the retention months in activity config with default value.
-// This supports upgrades from versions prior to set the new default ActivityLogMinimumRetentionMonths.
-func (a *ActivityLog) setDefaultRetentionMonthsInConfig(ctx context.Context, inputConfig activityConfig) (activityConfig, error) {
-	inputConfig.RetentionMonths = ActivityLogMinimumRetentionMonths
-
-	// Store the config
-	entry, err := logical.StorageEntryJSON(path.Join(activitySubPath, activityConfigKey), inputConfig)
-	if err != nil {
-		return inputConfig, err
-	}
-	if err := a.view.Put(ctx, entry); err != nil {
-		return inputConfig, err
-	}
-
-	// Set the new config on the activity log
-	a.SetConfig(ctx, inputConfig)
-	return inputConfig, nil
 }
 
 // HandleTokenUsage adds the TokenEntry to the current fragment of the activity log

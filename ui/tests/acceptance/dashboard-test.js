@@ -27,8 +27,8 @@ import connectionPage from 'vault/tests/pages/secrets/backend/database/connectio
 import { v4 as uuidv4 } from 'uuid';
 import { runCmd, deleteEngineCmd, createNS } from 'vault/tests/helpers/commands';
 
-import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
-import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors';
+import { SELECTORS } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
+import { PAGE } from 'vault/tests/helpers/config-ui/message-selectors';
 
 const authenticatedMessageResponse = {
   request_id: '664fbad0-fcd8-9023-4c5b-81a7962e9f4b',
@@ -83,11 +83,9 @@ module('Acceptance | landing page dashboard', function (hooks) {
     await visit('/vault/dashboard');
     const version = this.owner.lookup('service:version');
     // Since we're using mirage, version is mocked static value
-    const versionText = version.isEnterprise
-      ? `Vault ${version.versionDisplay} root`
-      : `Vault ${version.versionDisplay}`;
+    const versionText = version.isEnterprise ? `Vault v1.9.0 root` : `Vault v1.9.0`;
 
-    assert.dom(DASHBOARD.cardHeader('Vault version')).hasText(versionText);
+    assert.dom(SELECTORS.cardHeader('Vault version')).hasText(versionText);
   });
 
   module('secrets engines card', function (hooks) {
@@ -100,7 +98,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await mountSecrets.enable('pki', 'pki');
       await settled();
       await visit('/vault/dashboard');
-      assert.dom(DASHBOARD.cardHeader('Secrets engines')).hasText('Secrets engines');
+      assert.dom(SELECTORS.cardHeader('Secrets engines')).hasText('Secrets engines');
       // cleanup engine mount
       await runCmd(deleteEngineCmd('pki'));
     });
@@ -221,26 +219,26 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await visit('/vault/dashboard');
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'vault is enterprise');
-      assert.dom(DASHBOARD.cardName('configuration-details')).exists();
+      assert.dom(SELECTORS.cardName('configuration-details')).exists();
       await runCmd(createNS('world'), false);
       await visit('/vault/dashboard?namespace=world');
-      assert.dom(DASHBOARD.cardName('configuration-details')).doesNotExist();
+      assert.dom(SELECTORS.cardName('configuration-details')).doesNotExist();
     });
 
     test('shows the configuration details card', async function (assert) {
       assert.expect(8);
       await authPage.login();
       await visit('/vault/dashboard');
-      assert.dom(DASHBOARD.cardHeader('configuration')).hasText('Configuration details');
+      assert.dom(SELECTORS.cardHeader('configuration')).hasText('Configuration details');
       assert
-        .dom(DASHBOARD.vaultConfigurationCard.configDetailsField('api_addr'))
+        .dom(SELECTORS.vaultConfigurationCard.configDetailsField('api_addr'))
         .hasText('http://127.0.0.1:8200');
-      assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('default_lease_ttl')).hasText('0');
-      assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('max_lease_ttl')).hasText('2 days');
-      assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('tls')).hasText('Disabled'); // tls_disable=true
-      assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('log_format')).hasText('None');
-      assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('log_level')).hasText('debug');
-      assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('type')).hasText('raft');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('default_lease_ttl')).hasText('0');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('max_lease_ttl')).hasText('2 days');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('tls')).hasText('Disabled'); // tls_disable=true
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('log_format')).hasText('None');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('log_level')).hasText('debug');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('type')).hasText('raft');
     });
 
     test('it should show tls as enabled if tls_disable, tls_cert_file and tls_key_file are in the config', async function (assert) {
@@ -251,7 +249,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
       await authPage.login();
       await visit('/vault/dashboard');
-      assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('tls')).hasText('Enabled');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('tls')).hasText('Enabled');
     });
 
     test('it should show tls as enabled if only cert and key exist in config', async function (assert) {
@@ -261,7 +259,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       this.data.listeners[0].config.tls_key_file = './key.pem';
       await authPage.login();
       await visit('/vault/dashboard');
-      assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('tls')).hasText('Enabled');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('tls')).hasText('Enabled');
     });
 
     test('it should show tls as disabled if there is no tls information in the config', async function (assert) {
@@ -269,7 +267,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       this.data.listeners = [];
       await authPage.login();
       await visit('/vault/dashboard');
-      assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('tls')).hasText('Disabled');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('tls')).hasText('Disabled');
     });
   });
 
@@ -280,7 +278,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
     test('shows the default state of the quick actions card', async function (assert) {
       assert.expect(1);
-      assert.dom(DASHBOARD.emptyState('no-mount-selected')).exists();
+      assert.dom(SELECTORS.emptyState('no-mount-selected')).exists();
     });
 
     test('shows the correct actions and links associated with pki', async function (assert) {
@@ -297,25 +295,25 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await runCmd([`write ${backend}/root/generate/internal issuer_name="Hashicorp" common_name="Hello"`]);
       await settled();
       await visit('/vault/dashboard');
-      await selectChoose(DASHBOARD.searchSelect('secrets-engines'), backend);
-      await fillIn(DASHBOARD.selectEl, 'Issue certificate');
-      assert.dom(DASHBOARD.emptyState('quick-actions')).doesNotExist();
-      assert.dom(DASHBOARD.subtitle('param')).hasText('Role to use');
+      await selectChoose(SELECTORS.searchSelect('secrets-engines'), backend);
+      await fillIn(SELECTORS.selectEl, 'Issue certificate');
+      assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
+      assert.dom(SELECTORS.subtitle('param')).hasText('Role to use');
 
-      await selectChoose(DASHBOARD.searchSelect('params'), 'some-role');
-      assert.dom(DASHBOARD.actionButton('Issue leaf certificate')).exists({ count: 1 });
-      await click(DASHBOARD.actionButton('Issue leaf certificate'));
+      await selectChoose(SELECTORS.searchSelect('params'), 'some-role');
+      assert.dom(SELECTORS.actionButton('Issue leaf certificate')).exists({ count: 1 });
+      await click(SELECTORS.actionButton('Issue leaf certificate'));
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.roles.role.generate');
 
       await visit('/vault/dashboard');
 
-      await selectChoose(DASHBOARD.searchSelect('secrets-engines'), backend);
-      await fillIn(DASHBOARD.selectEl, 'View certificate');
-      assert.dom(DASHBOARD.emptyState('quick-actions')).doesNotExist();
-      assert.dom(DASHBOARD.subtitle('param')).hasText('Certificate serial number');
-      assert.dom(DASHBOARD.actionButton('View certificate')).exists({ count: 1 });
-      await selectChoose(DASHBOARD.searchSelect('params'), '.ember-power-select-option', 0);
-      await click(DASHBOARD.actionButton('View certificate'));
+      await selectChoose(SELECTORS.searchSelect('secrets-engines'), backend);
+      await fillIn(SELECTORS.selectEl, 'View certificate');
+      assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
+      assert.dom(SELECTORS.subtitle('param')).hasText('Certificate serial number');
+      assert.dom(SELECTORS.actionButton('View certificate')).exists({ count: 1 });
+      await selectChoose(SELECTORS.searchSelect('params'), '.ember-power-select-option', 0);
+      await click(SELECTORS.actionButton('View certificate'));
       assert.strictEqual(
         currentRouteName(),
         'vault.cluster.secrets.backend.pki.certificates.certificate.details'
@@ -323,13 +321,13 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
       await visit('/vault/dashboard');
 
-      await selectChoose(DASHBOARD.searchSelect('secrets-engines'), backend);
-      await fillIn(DASHBOARD.selectEl, 'View issuer');
-      assert.dom(DASHBOARD.emptyState('quick-actions')).doesNotExist();
-      assert.dom(DASHBOARD.subtitle('param')).hasText('Issuer');
-      assert.dom(DASHBOARD.actionButton('View issuer')).exists({ count: 1 });
-      await selectChoose(DASHBOARD.searchSelect('params'), '.ember-power-select-option', 0);
-      await click(DASHBOARD.actionButton('View issuer'));
+      await selectChoose(SELECTORS.searchSelect('secrets-engines'), backend);
+      await fillIn(SELECTORS.selectEl, 'View issuer');
+      assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
+      assert.dom(SELECTORS.subtitle('param')).hasText('Issuer');
+      assert.dom(SELECTORS.actionButton('View issuer')).exists({ count: 1 });
+      await selectChoose(SELECTORS.searchSelect('params'), '.ember-power-select-option', 0);
+      await click(SELECTORS.actionButton('View issuer'));
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.issuers.issuer.details');
 
       // cleanup engine mount
@@ -362,13 +360,13 @@ module('Acceptance | landing page dashboard', function (hooks) {
       ]);
       await settled();
       await visit('/vault/dashboard');
-      await selectChoose(DASHBOARD.searchSelect('secrets-engines'), databaseBackend);
-      await fillIn(DASHBOARD.selectEl, 'Generate credentials for database');
-      assert.dom(DASHBOARD.emptyState('quick-actions')).doesNotExist();
-      assert.dom(DASHBOARD.subtitle('param')).hasText('Role to use');
-      assert.dom(DASHBOARD.actionButton('Generate credentials')).exists({ count: 1 });
-      await selectChoose(DASHBOARD.searchSelect('params'), '.ember-power-select-option', 0);
-      await click(DASHBOARD.actionButton('Generate credentials'));
+      await selectChoose(SELECTORS.searchSelect('secrets-engines'), databaseBackend);
+      await fillIn(SELECTORS.selectEl, 'Generate credentials for database');
+      assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
+      assert.dom(SELECTORS.subtitle('param')).hasText('Role to use');
+      assert.dom(SELECTORS.actionButton('Generate credentials')).exists({ count: 1 });
+      await selectChoose(SELECTORS.searchSelect('params'), '.ember-power-select-option', 0);
+      await click(SELECTORS.actionButton('Generate credentials'));
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.credentials');
       await runCmd(deleteEngineCmd(databaseBackend));
     });
@@ -401,7 +399,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'version is enterprise');
       assert.strictEqual(currentURL(), '/vault/dashboard');
-      assert.dom(DASHBOARD.cardName('client-count')).exists();
+      assert.dom(SELECTORS.cardName('client-count')).exists();
       const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
       assert.dom('[data-test-client-count-title]').hasText('Client count');
       assert.dom('[data-test-stat-text="total-clients"] .stat-label').hasText('Total');
@@ -433,12 +431,12 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await visit('/vault/dashboard');
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'vault is enterprise');
-      assert.dom(DASHBOARD.emptyState('replication')).exists();
-      assert.dom(DASHBOARD.emptyStateTitle('replication')).hasText('Replication not set up');
+      assert.dom(SELECTORS.emptyState('replication')).exists();
+      assert.dom(SELECTORS.emptyStateTitle('replication')).hasText('Replication not set up');
       assert
-        .dom(DASHBOARD.emptyStateMessage('replication'))
+        .dom(SELECTORS.emptyStateMessage('replication'))
         .hasText('Data will be listed here. Enable a primary replication cluster to get started.');
-      assert.dom(DASHBOARD.emptyStateActions('replication')).hasText('Enable replication');
+      assert.dom(SELECTORS.emptyStateActions('replication')).hasText('Enable replication');
     });
 
     test('hides the replication card on a non-root namespace enterprise version', async function (assert) {
@@ -446,10 +444,10 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await visit('/vault/dashboard');
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'vault is enterprise');
-      assert.dom(DASHBOARD.cardName('replication')).exists();
+      assert.dom(SELECTORS.cardName('replication')).exists();
       await runCmd(createNS('blah'), false);
       await visit('/vault/dashboard?namespace=blah');
-      assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
+      assert.dom(SELECTORS.cardName('replication')).doesNotExist();
     });
 
     test('it should show replication status if both dr and performance replication are enabled as features in enterprise', async function (assert) {
@@ -467,12 +465,12 @@ module('Acceptance | landing page dashboard', function (hooks) {
         'details dashboard is shown'
       );
       await visit('/vault/dashboard');
-      assert.dom(DASHBOARD.title('DR primary')).hasText('DR primary');
-      assert.dom(DASHBOARD.tooltipTitle('DR primary')).hasText('not set up');
-      assert.dom(DASHBOARD.tooltipIcon('dr-perf', 'DR primary', 'x-circle')).exists();
-      assert.dom(DASHBOARD.title('Performance primary')).hasText('Performance primary');
-      assert.dom(DASHBOARD.tooltipTitle('Performance primary')).hasText('running');
-      assert.dom(DASHBOARD.tooltipIcon('dr-perf', 'Performance primary', 'check-circle')).exists();
+      assert.dom(SELECTORS.title('DR primary')).hasText('DR primary');
+      assert.dom(SELECTORS.tooltipTitle('DR primary')).hasText('not set up');
+      assert.dom(SELECTORS.tooltipIcon('dr-perf', 'DR primary', 'x-circle')).exists();
+      assert.dom(SELECTORS.title('Performance primary')).hasText('Performance primary');
+      assert.dom(SELECTORS.tooltipTitle('Performance primary')).hasText('running');
+      assert.dom(SELECTORS.tooltipIcon('dr-perf', 'Performance primary', 'check-circle')).exists();
     });
   });
 
@@ -489,14 +487,14 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await visit('/vault/dashboard');
       const modalId = 'some-awesome-id-1';
       const alertId = 'some-awesome-id-2';
-      assert.dom(CUSTOM_MESSAGES.modal(modalId)).exists();
-      assert.dom(CUSTOM_MESSAGES.modalTitle(modalId)).hasText('Modal title');
-      assert.dom(CUSTOM_MESSAGES.modalBody(modalId)).exists();
-      assert.dom(CUSTOM_MESSAGES.modalBody(modalId)).hasText('here is a cool message');
-      await click(CUSTOM_MESSAGES.modalButton(modalId));
-      assert.dom(CUSTOM_MESSAGES.alertTitle(alertId)).hasText('Banner title');
-      assert.dom(CUSTOM_MESSAGES.alertDescription(alertId)).hasText('hello world hello wolrd');
-      assert.dom(CUSTOM_MESSAGES.alertAction('link')).hasText('some link title');
+      assert.dom(PAGE.modal(modalId)).exists();
+      assert.dom(PAGE.modalTitle(modalId)).hasText('Modal title');
+      assert.dom(PAGE.modalBody(modalId)).exists();
+      assert.dom(PAGE.modalBody(modalId)).hasText('here is a cool message');
+      await click(PAGE.modalButton(modalId));
+      assert.dom(PAGE.alertTitle(alertId)).hasText('Banner title');
+      assert.dom(PAGE.alertDescription(alertId)).hasText('hello world hello wolrd');
+      assert.dom(PAGE.alertAction('link')).hasText('some link title');
     });
     test('it shows the multiple modal messages', async function (assert) {
       assert.expect(8);
@@ -511,16 +509,16 @@ module('Acceptance | landing page dashboard', function (hooks) {
         return authenticatedMessageResponse;
       });
       await visit('/vault/dashboard');
-      assert.dom(CUSTOM_MESSAGES.modal(modalIdOne)).exists();
-      assert.dom(CUSTOM_MESSAGES.modalTitle(modalIdOne)).hasText('Modal title 1');
-      assert.dom(CUSTOM_MESSAGES.modalBody(modalIdOne)).exists();
-      assert.dom(CUSTOM_MESSAGES.modalBody(modalIdOne)).hasText('hello world hello wolrd some link title');
-      await click(CUSTOM_MESSAGES.modalButton(modalIdOne));
-      assert.dom(CUSTOM_MESSAGES.modal(modalIdTwo)).exists();
-      assert.dom(CUSTOM_MESSAGES.modalTitle(modalIdTwo)).hasText('Modal title 2');
-      assert.dom(CUSTOM_MESSAGES.modalBody(modalIdTwo)).exists();
-      assert.dom(CUSTOM_MESSAGES.modalBody(modalIdTwo)).hasText('here is a cool message');
-      await click(CUSTOM_MESSAGES.modalButton(modalIdTwo));
+      assert.dom(PAGE.modal(modalIdOne)).exists();
+      assert.dom(PAGE.modalTitle(modalIdOne)).hasText('Modal title 1');
+      assert.dom(PAGE.modalBody(modalIdOne)).exists();
+      assert.dom(PAGE.modalBody(modalIdOne)).hasText('hello world hello wolrd some link title');
+      await click(PAGE.modalButton(modalIdOne));
+      assert.dom(PAGE.modal(modalIdTwo)).exists();
+      assert.dom(PAGE.modalTitle(modalIdTwo)).hasText('Modal title 2');
+      assert.dom(PAGE.modalBody(modalIdTwo)).exists();
+      assert.dom(PAGE.modalBody(modalIdTwo)).hasText('here is a cool message');
+      await click(PAGE.modalButton(modalIdTwo));
     });
     test('it shows the multiple banner messages', async function (assert) {
       assert.expect(5);
@@ -535,11 +533,11 @@ module('Acceptance | landing page dashboard', function (hooks) {
         return authenticatedMessageResponse;
       });
       await visit('/vault/dashboard');
-      assert.dom(CUSTOM_MESSAGES.alertTitle(bannerIdOne)).hasText('Banner title 1');
-      assert.dom(CUSTOM_MESSAGES.alertDescription(bannerIdOne)).hasText('hello world hello wolrd');
-      assert.dom(CUSTOM_MESSAGES.alertAction('link')).hasText('some link title');
-      assert.dom(CUSTOM_MESSAGES.alertTitle(bannerIdTwo)).hasText('Banner title 2');
-      assert.dom(CUSTOM_MESSAGES.alertDescription(bannerIdTwo)).hasText('here is a cool message');
+      assert.dom(PAGE.alertTitle(bannerIdOne)).hasText('Banner title 1');
+      assert.dom(PAGE.alertDescription(bannerIdOne)).hasText('hello world hello wolrd');
+      assert.dom(PAGE.alertAction('link')).hasText('some link title');
+      assert.dom(PAGE.alertTitle(bannerIdTwo)).hasText('Banner title 2');
+      assert.dom(PAGE.alertDescription(bannerIdTwo)).hasText('here is a cool message');
     });
   });
 });

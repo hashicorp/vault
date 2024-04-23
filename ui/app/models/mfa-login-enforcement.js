@@ -10,7 +10,6 @@ import { methods } from 'vault/helpers/mountable-auth-methods';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { isPresent } from '@ember/utils';
 import { service } from '@ember/service';
-import { addManyToArray, addToArray } from 'vault/helpers/add-to-array';
 
 const validations = {
   name: [{ type: 'presence', message: 'Name is required' }],
@@ -53,7 +52,7 @@ export default class MfaLoginEnforcementModel extends Model {
 
   async prepareTargets() {
     let authMethods;
-    let targets = [];
+    const targets = [];
 
     if (this.auth_method_accessors.length || this.auth_method_types.length) {
       // fetch all auth methods and lookup by accessor to get mount path and type
@@ -69,8 +68,7 @@ export default class MfaLoginEnforcementModel extends Model {
       const selectedAuthMethods = authMethods.filter((model) => {
         return this.auth_method_accessors.includes(model.accessor);
       });
-      targets = addManyToArray(
-        targets,
+      targets.addObjects(
         selectedAuthMethods.map((method) => ({
           icon: this.iconForMount(method.type),
           link: 'vault.cluster.access.method',
@@ -84,7 +82,7 @@ export default class MfaLoginEnforcementModel extends Model {
     this.auth_method_types.forEach((type) => {
       const icon = this.iconForMount(type);
       const mountCount = authMethods.filterBy('type', type).length;
-      targets = addToArray(targets, {
+      targets.addObject({
         key: 'auth_method_types',
         icon,
         title: type,
@@ -94,7 +92,7 @@ export default class MfaLoginEnforcementModel extends Model {
 
     for (const key of ['identity_entities', 'identity_groups']) {
       (await this[key]).forEach((model) => {
-        targets = addToArray(targets, {
+        targets.addObject({
           key,
           icon: 'user',
           link: 'vault.cluster.access.identity.show',

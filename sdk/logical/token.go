@@ -11,10 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-sockaddr"
+	sockaddr "github.com/hashicorp/go-sockaddr"
 )
 
-//go:generate enumer -type=TokenType -trimprefix=TokenType -transform=kebab
 type TokenType uint8
 
 const (
@@ -71,6 +70,23 @@ func (t *TokenType) UnmarshalJSON(b []byte) error {
 		return fmt.Errorf("unknown token type %q", s)
 	}
 	return nil
+}
+
+func (t TokenType) String() string {
+	switch t {
+	case TokenTypeDefault:
+		return "default"
+	case TokenTypeService:
+		return "service"
+	case TokenTypeBatch:
+		return "batch"
+	case TokenTypeDefaultService:
+		return "default-service"
+	case TokenTypeDefaultBatch:
+		return "default-batch"
+	default:
+		panic("unreachable")
+	}
 }
 
 // TokenEntry is used to represent a given token

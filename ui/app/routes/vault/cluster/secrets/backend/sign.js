@@ -29,13 +29,13 @@ export default Route.extend(UnloadModel, {
   model(params) {
     const role = params.secret;
     const backendModel = this.backendModel();
-    const backend = backendModel.id;
+    const backend = backendModel.get('id');
 
-    if (backendModel.type !== 'ssh') {
+    if (backendModel.get('type') !== 'ssh') {
       return this.router.transitionTo('vault.cluster.secrets.backend.list-root', backend);
     }
     return this.store.queryRecord('capabilities', this.pathQuery(role, backend)).then((capabilities) => {
-      if (!capabilities.canUpdate) {
+      if (!capabilities.get('canUpdate')) {
         return this.router.transitionTo('vault.cluster.secrets.backend.list-root', backend);
       }
       return this.store.createRecord('ssh-sign', {

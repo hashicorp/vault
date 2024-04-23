@@ -14,21 +14,17 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"strings"
-	sync "sync/atomic"
 	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/internal/ctmanager"
 	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/sdk/helper/backoff"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
-	"github.com/hashicorp/vault/sdk/logical"
 	"go.uber.org/atomic"
 )
 
@@ -94,7 +90,7 @@ func NewServer(conf *ServerConfig) *Server {
 // Run kicks off the internal Consul Template runner, and listens for changes to
 // the token from the AuthHandler. If Done() is called on the context, shut down
 // the Runner and return
-func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ctconfig.TemplateConfig, tokenRenewalInProgress *sync.Bool, invalidTokenCh chan error) error {
+func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ctconfig.TemplateConfig) error {
 	if incoming == nil {
 		return errors.New("template server: incoming channel is nil")
 	}
@@ -160,6 +156,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 		case <-ctx.Done():
 			ts.runner.Stop()
 			return nil
+
 		case token := <-incoming:
 			if token != *latestToken {
 				ts.logger.Info("template server received new token")
@@ -246,31 +243,6 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				ts.runner.Stop()
 				return nil
 			}
-		default:
-			// We are using default instead of a new case block to prioritize the case where <-incoming has a new value over
-			// receiving an error message from the consul-template server
-			select {
-			case err := <-ts.runner.ServerErrCh:
-				var responseError *api.ResponseError
-				ok := errors.As(err, &responseError)
-				if !ok {
-					ts.logger.Error("template server: could not extract error response")
-					continue
-				}
-				if responseError.StatusCode == 403 && strings.Contains(responseError.Error(), logical.ErrInvalidToken.Error()) && !tokenRenewalInProgress.Load() {
-					ts.logger.Info("template server: received invalid token error")
-
-					// Drain the error channel before sending a new error
-					select {
-					case <-invalidTokenCh:
-					default:
-					}
-					invalidTokenCh <- err
-				}
-			default:
-				continue
-			}
-
 		}
 	}
 }

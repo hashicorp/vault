@@ -1506,7 +1506,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			return nil, nil, err
 		}
 		if isloginUserLocked {
-			c.logger.Error("login attempts exceeded, user is locked out", "request_path", req.Path)
 			return nil, nil, logical.ErrPermissionDenied
 		}
 	}

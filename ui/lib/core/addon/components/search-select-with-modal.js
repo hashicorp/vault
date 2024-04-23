@@ -9,8 +9,6 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-utils';
-import { removeFromArray } from 'vault/helpers/remove-from-array';
-import { addToArray } from 'vault/helpers/add-to-array';
 
 /**
  * @module SearchSelectWithModal
@@ -33,7 +31,7 @@ import { addToArray } from 'vault/helpers/add-to-array';
  * />
  *
  // * component functionality
- * @param {function} onChange - The onchange action for this form field. ** SEE EXAMPLE ** mfa-login-enforcement-form.js (onMethodChange) for example when selecting models from a hasMany relationship
+ * @param {function} onChange - The onchange action for this form field. ** SEE UTIL ** search-select-has-many.js if selecting models from a hasMany relationship
  * @param {array} [inputValue] - Array of strings corresponding to the input's initial value, e.g. an array of model ids that on edit will appear as selected items below the input
  * @param {boolean} [shouldRenderName=false] - By default an item's id renders in the dropdown, `true` displays the name with its id in smaller text beside it *NOTE: the boolean flips automatically with 'identity' models
  * @param {array} [excludeOptions] - array of strings containing model ids to filter from the dropdown (ex: ['allow_all'])
@@ -83,7 +81,7 @@ export default class SearchSelectWithModal extends Component {
     return inputValues.map((option) => {
       const matchingOption = this.dropdownOptions.find((opt) => opt.id === option);
       // remove any matches from dropdown list
-      this.dropdownOptions = removeFromArray(this.dropdownOptions, matchingOption);
+      this.dropdownOptions.removeObject(matchingOption);
       return {
         id: option,
         name: matchingOption ? matchingOption.name : option,
@@ -170,8 +168,8 @@ export default class SearchSelectWithModal extends Component {
   // -----
   @action
   discardSelection(selected) {
-    this.selectedOptions = removeFromArray(this.selectedOptions, selected);
-    this.dropdownOptions = addToArray(this.dropdownOptions, selected);
+    this.selectedOptions.removeObject(selected);
+    this.dropdownOptions.pushObject(selected);
     this.handleChange();
   }
 
@@ -198,8 +196,8 @@ export default class SearchSelectWithModal extends Component {
       this.showModal = true;
     } else {
       // user has selected an existing item, handleChange immediately
-      this.selectedOptions = addToArray(this.selectedOptions, selection);
-      this.dropdownOptions = removeFromArray(this.dropdownOptions, selection);
+      this.selectedOptions.pushObject(selection);
+      this.dropdownOptions.removeObject(selection);
       this.handleChange();
     }
   }
@@ -211,7 +209,7 @@ export default class SearchSelectWithModal extends Component {
     this.showModal = false;
     if (model && model.currentState.isSaved) {
       const { name } = model;
-      this.selectedOptions = addToArray(this.selectedOptions, { name, id: name });
+      this.selectedOptions.pushObject({ name, id: name });
       this.handleChange();
     }
     this.nameInput = null;

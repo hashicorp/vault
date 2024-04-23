@@ -36,6 +36,7 @@ import (
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
+	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -130,7 +131,7 @@ func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 		EnableRaw:       enableRaw,
 		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		AuditBackends: map[string]audit.Factory{
-			"file": audit.NewFileBackend,
+			"file": auditFile.Factory,
 		},
 	}
 	return TestCoreWithSealAndUI(t, conf)
@@ -143,9 +144,9 @@ func TestCoreWithDeadlockDetection(t testing.T, testSeal Seal, enableRaw bool) *
 		EnableRaw:       enableRaw,
 		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		AuditBackends: map[string]audit.Factory{
-			"file": audit.NewFileBackend,
+			"file": auditFile.Factory,
 		},
-		DetectDeadlocks: "expiration,quotas,statelock,barrier",
+		DetectDeadlocks: "expiration,quotas,statelock",
 	}
 	return TestCoreWithSealAndUI(t, conf)
 }
@@ -272,7 +273,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Logger) *CoreConfig {
 	t.Helper()
 	noopAudits := map[string]audit.Factory{
-		"noop": audit.NoopAuditFactory(nil),
+		"noop": corehelpers.NoopAuditFactory(nil),
 	}
 
 	noopBackends := make(map[string]logical.Factory)
@@ -1414,17 +1415,13 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	coreConfig := &CoreConfig{
 		LogicalBackends:    make(map[string]logical.Factory),
 		CredentialBackends: make(map[string]logical.Factory),
-		AuditBackends: map[string]audit.Factory{
-			"file":   audit.NewFileBackend,
-			"socket": audit.NewSocketBackend,
-			"syslog": audit.NewSyslogBackend,
-		},
-		RedirectAddr:    fmt.Sprintf("https://127.0.0.1:%d", listeners[0][0].Address.Port),
-		ClusterAddr:     "https://127.0.0.1:0",
-		DisableMlock:    true,
-		EnableUI:        true,
-		EnableRaw:       true,
-		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		AuditBackends:      make(map[string]audit.Factory),
+		RedirectAddr:       fmt.Sprintf("https://127.0.0.1:%d", listeners[0][0].Address.Port),
+		ClusterAddr:        "https://127.0.0.1:0",
+		DisableMlock:       true,
+		EnableUI:           true,
+		EnableRaw:          true,
+		BuiltinRegistry:    corehelpers.NewMockBuiltinRegistry(),
 	}
 
 	if base != nil {
@@ -1542,7 +1539,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	addAuditBackend := len(coreConfig.AuditBackends) == 0
 	if addAuditBackend {
-		coreConfig.AuditBackends["noop"] = audit.NoopAuditFactory(nil)
+		coreConfig.AuditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 	}
 
 	if coreConfig.Physical == nil && (opts == nil || opts.PhysicalFactory == nil) {

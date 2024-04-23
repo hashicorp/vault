@@ -146,7 +146,7 @@ export default Route.extend({
     const backendModel = this.store.peekRecord('secret-engine', backend);
     const has404 = this.has404;
     // only clear store cache if this is a new model
-    if (secret !== controller?.baseKey?.id) {
+    if (secret !== controller.get('baseKey.id')) {
       this.store.clearAllDatasets();
     }
     controller.set('hasModel', true);
@@ -156,7 +156,7 @@ export default Route.extend({
       backend,
       backendModel,
       baseKey: { id: secret },
-      backendType: backendModel.engineType,
+      backendType: backendModel.get('engineType'),
     });
     if (!has404) {
       const pageFilter = secretParams.pageFilter;
@@ -187,7 +187,7 @@ export default Route.extend({
       const backend = this.enginePathParam();
       const is404 = error.httpStatus === 404;
       /* eslint-disable-next-line ember/no-controller-access-in-routes */
-      const hasModel = this.controllerFor(this.routeName).hasModel;
+      const hasModel = this.controllerFor(this.routeName).get('hasModel');
 
       // this will occur if we've deleted something,
       // and navigate to its parent and the parent doesn't exist -

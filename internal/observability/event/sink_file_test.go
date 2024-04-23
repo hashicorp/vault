@@ -40,14 +40,14 @@ func TestNewFileSink(t *testing.T) {
 		"default-values": {
 			ShouldUseAbsolutePath: true,
 			IsErrorExpected:       true,
-			ExpectedErrorMessage:  "path is required: invalid parameter",
+			ExpectedErrorMessage:  "event.NewFileSink: path is required",
 		},
 		"spacey-path": {
 			ShouldUseAbsolutePath: true,
 			Path:                  "     ",
 			Format:                "json",
 			IsErrorExpected:       true,
-			ExpectedErrorMessage:  "path is required: invalid parameter",
+			ExpectedErrorMessage:  "event.NewFileSink: path is required",
 		},
 		"valid-path-and-format": {
 			Path:             "vault.log",
@@ -226,7 +226,7 @@ func TestFileSink_Process(t *testing.T) {
 			Data:                 "foo",
 			ShouldIgnoreFormat:   true,
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "unable to retrieve event formatted as \"json\": invalid parameter",
+			ExpectedErrorMessage: "event.(FileSink).Process: unable to retrieve event formatted as \"json\"",
 		},
 		"nil": {
 			Path:                 "foo.log",
@@ -234,7 +234,7 @@ func TestFileSink_Process(t *testing.T) {
 			Data:                 "foo",
 			ShouldUseNilEvent:    true,
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event is nil: invalid parameter",
+			ExpectedErrorMessage: "event.(FileSink).Process: event is nil: invalid parameter",
 		},
 	}
 

@@ -25,7 +25,6 @@ import (
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/audit"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/experiments"
@@ -1074,7 +1073,7 @@ func TestSystemBackend_remount_auth(t *testing.T) {
 		)
 
 		migrationInfo := resp.Data["migration_info"].(*MountMigrationInfo)
-		if migrationInfo.MigrationStatus != MigrationStatusSuccess.String() {
+		if migrationInfo.MigrationStatus != MigrationSuccessStatus.String() {
 			return fmt.Errorf("Expected migration status to be successful, got %q", migrationInfo.MigrationStatus)
 		}
 		return nil
@@ -1226,7 +1225,7 @@ func TestSystemBackend_remount(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 		migrationInfo := resp.Data["migration_info"].(*MountMigrationInfo)
-		if migrationInfo.MigrationStatus != MigrationStatusSuccess.String() {
+		if migrationInfo.MigrationStatus != MigrationSuccessStatus.String() {
 			return fmt.Errorf("Expected migration status to be successful, got %q", migrationInfo.MigrationStatus)
 		}
 		return nil
@@ -2668,7 +2667,7 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 
 func TestSystemBackend_enableAudit(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = audit.NoopAuditFactory(nil)
+	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
 	req.Data["type"] = "noop"
@@ -2738,7 +2737,7 @@ func TestSystemBackend_decodeToken(t *testing.T) {
 
 func TestSystemBackend_auditHash(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = audit.NoopAuditFactory(nil)
+	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
 	req.Data["type"] = "noop"
@@ -2793,14 +2792,14 @@ func TestSystemBackend_enableAudit_invalid(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != "unknown backend type: \"nope\": invalid configuration" {
+	if resp.Data["error"] != `unknown backend type: "nope"` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
 
 func TestSystemBackend_auditTable(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = audit.NoopAuditFactory(nil)
+	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
 	req.Data["type"] = "noop"
@@ -2835,7 +2834,7 @@ func TestSystemBackend_auditTable(t *testing.T) {
 
 func TestSystemBackend_disableAudit(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = audit.NoopAuditFactory(nil)
+	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
 	req.Data["type"] = "noop"

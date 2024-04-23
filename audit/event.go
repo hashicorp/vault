@@ -5,7 +5,6 @@ package audit
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/internal/observability/event"
@@ -27,9 +26,6 @@ const (
 	JSONxFormat format = "jsonx"
 )
 
-// Check AuditEvent implements the timeProvider at compile time.
-var _ timeProvider = (*AuditEvent)(nil)
-
 // AuditEvent is the audit event.
 type AuditEvent struct {
 	ID        string            `json:"id"`
@@ -49,10 +45,12 @@ type subtype string
 // for audit events. It will generate an ID if no ID is supplied. Supported
 // options: WithID, WithNow.
 func NewEvent(s subtype, opt ...Option) (*AuditEvent, error) {
+	const op = "audit.NewEvent"
+
 	// Get the default options
 	opts, err := getOpts(opt...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: error applying options: %w", op, err)
 	}
 
 	if opts.withID == "" {
@@ -60,7 +58,7 @@ func NewEvent(s subtype, opt ...Option) (*AuditEvent, error) {
 
 		opts.withID, err = event.NewID(string(event.AuditType))
 		if err != nil {
-			return nil, fmt.Errorf("error creating ID for event: %w", err)
+			return nil, fmt.Errorf("%s: error creating ID for event: %w", op, err)
 		}
 	}
 
@@ -72,32 +70,34 @@ func NewEvent(s subtype, opt ...Option) (*AuditEvent, error) {
 	}
 
 	if err := audit.validate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	return audit, nil
 }
 
 // validate attempts to ensure the audit event in its present state is valid.
 func (a *AuditEvent) validate() error {
+	const op = "audit.(AuditEvent).validate"
+
 	if a == nil {
-		return fmt.Errorf("event is nil: %w", ErrInvalidParameter)
+		return fmt.Errorf("%s: event is nil: %w", op, event.ErrInvalidParameter)
 	}
 
 	if a.ID == "" {
-		return fmt.Errorf("missing ID: %w", ErrInvalidParameter)
+		return fmt.Errorf("%s: missing ID: %w", op, event.ErrInvalidParameter)
 	}
 
 	if a.Version != version {
-		return fmt.Errorf("event version unsupported: %w", ErrInvalidParameter)
+		return fmt.Errorf("%s: event version unsupported: %w", op, event.ErrInvalidParameter)
 	}
 
 	if a.Timestamp.IsZero() {
-		return fmt.Errorf("event timestamp cannot be the zero time instant: %w", ErrInvalidParameter)
+		return fmt.Errorf("%s: event timestamp cannot be the zero time instant: %w", op, event.ErrInvalidParameter)
 	}
 
 	err := a.Subtype.validate()
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %w", op, err)
 	}
 
 	return nil
@@ -105,21 +105,23 @@ func (a *AuditEvent) validate() error {
 
 // validate ensures that subtype is one of the set of allowed event subtypes.
 func (t subtype) validate() error {
+	const op = "audit.(subtype).validate"
 	switch t {
 	case RequestType, ResponseType:
 		return nil
 	default:
-		return fmt.Errorf("invalid event subtype %q: %w", t, ErrInvalidParameter)
+		return fmt.Errorf("%s: '%s' is not a valid event subtype: %w", op, t, event.ErrInvalidParameter)
 	}
 }
 
 // validate ensures that format is one of the set of allowed event formats.
 func (f format) validate() error {
+	const op = "audit.(format).validate"
 	switch f {
 	case JSONFormat, JSONxFormat:
 		return nil
 	default:
-		return fmt.Errorf("invalid format %q: %w", f, ErrInvalidParameter)
+		return fmt.Errorf("%s: '%s' is not a valid format: %w", op, f, event.ErrInvalidParameter)
 	}
 }
 
@@ -151,17 +153,4 @@ func (t subtype) String() string {
 	}
 
 	return string(t)
-}
-
-// formattedTime returns the UTC time the AuditEvent was created in the RFC3339Nano
-// format (which removes trailing zeros from the seconds field).
-func (a *AuditEvent) formattedTime() string {
-	return a.Timestamp.UTC().Format(time.RFC3339Nano)
-}
-
-// IsValidFormat provides a means to validate whether the supplied format is valid.
-// Examples of valid formats are JSON and JSONx.
-func IsValidFormat(v string) bool {
-	err := format(strings.TrimSpace(strings.ToLower(v))).validate()
-	return err == nil
 }

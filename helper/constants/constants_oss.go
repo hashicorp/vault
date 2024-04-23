@@ -5,4 +5,4 @@
 
 package constants
 
-const IsEnterprise = false
+var IsEnterprise = false

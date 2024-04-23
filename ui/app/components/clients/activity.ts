@@ -10,19 +10,17 @@ import Component from '@glimmer/component';
 import { isSameMonth, fromUnixTime } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { calculateAverage } from 'vault/utils/chart-helpers';
-import { filterVersionHistory, hasMountsKey, hasNamespacesKey } from 'core/utils/client-count-utils';
+import { filterVersionHistory } from 'core/utils/client-count-utils';
 
 import type ClientsActivityModel from 'vault/models/clients/activity';
-import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
 import type {
-  ByMonthNewClients,
-  MountNewClients,
-  NamespaceByKey,
-  NamespaceNewClients,
-} from 'core/utils/client-count-utils';
+  ClientActivityNewClients,
+  ClientActivityMonthly,
+  ClientActivityResourceByKey,
+} from 'vault/models/clients/activity';
+import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
 
 interface Args {
-  isSecretsSyncActivated?: boolean;
   activity: ClientsActivityModel;
   versionHistory: ClientsVersionHistoryModel[];
   startTimestamp: number;
@@ -34,8 +32,10 @@ interface Args {
 export default class ClientsActivityComponent extends Component<Args> {
   average = (
     data:
-      | (ByMonthNewClients | NamespaceNewClients | MountNewClients | undefined)[]
-      | (NamespaceByKey | undefined)[],
+      | ClientActivityMonthly[]
+      | (ClientActivityResourceByKey | undefined)[]
+      | (ClientActivityNewClients | undefined)[]
+      | undefined,
     key: string
   ) => {
     return calculateAverage(data, key);
@@ -64,18 +64,18 @@ export default class ClientsActivityComponent extends Component<Args> {
       return activity.byMonth;
     }
     const namespaceData = activity.byMonth
-      ?.map((m) => m.namespaces_by_key[namespace])
+      .map((m) => m.namespaces_by_key[namespace as keyof typeof m.namespaces_by_key])
       .filter((d) => d !== undefined);
 
     if (!mountPath) {
-      return namespaceData || [];
+      return namespaceData.length === 0 ? undefined : namespaceData;
     }
 
-    const mountData = namespaceData
-      ?.map((namespace) => namespace?.mounts_by_key[mountPath])
-      .filter((d) => d !== undefined);
+    const mountData = mountPath
+      ? namespaceData.map((namespace) => namespace?.mounts_by_key[mountPath]).filter((d) => d !== undefined)
+      : namespaceData;
 
-    return mountData || [];
+    return mountData.length === 0 ? undefined : mountData;
   }
 
   get filteredActivityByNamespace() {
@@ -118,13 +118,11 @@ export default class ClientsActivityComponent extends Component<Args> {
     return filterVersionHistory(versionHistory, activity.startTime, activity.endTime);
   }
 
-  // (object) single month new client data with total counts and array of
-  // either namespaces or mounts
+  // (object) single month new client data with total counts + array of namespace breakdown
   get newClientCounts() {
-    if (this.isDateRange || this.byMonthActivityData.length === 0) {
+    if (this.isDateRange || !this.byMonthActivityData) {
       return null;
     }
-
     return this.byMonthActivityData[0]?.new_clients;
   }
 
@@ -141,14 +139,13 @@ export default class ClientsActivityComponent extends Component<Args> {
   // new client data for horizontal bar chart
   get newClientAttribution() {
     // new client attribution only available in a single, historical month (not a date range or current month)
-    if (this.isDateRange || this.isCurrentMonth || !this.newClientCounts) return null;
+    if (this.isDateRange || this.isCurrentMonth) return null;
 
-    const newCounts = this.newClientCounts;
-    if (this.args.namespace && hasMountsKey(newCounts)) return newCounts?.mounts;
-
-    if (hasNamespacesKey(newCounts)) return newCounts?.namespaces;
-
-    return null;
+    if (this.args.namespace) {
+      return this.newClientCounts?.mounts || null;
+    } else {
+      return this.newClientCounts?.namespaces || null;
+    }
   }
 
   get hasAttributionData() {

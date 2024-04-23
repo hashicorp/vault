@@ -11,39 +11,42 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/vault/internal/observability/event"
 )
 
-var _ eventlogger.Node = (*sinkMetricTimer)(nil)
+var _ eventlogger.Node = (*SinkMetricTimer)(nil)
 
-// sinkMetricTimer is a wrapper for any kind of eventlogger.NodeTypeSink node that
+// SinkMetricTimer is a wrapper for any kind of eventlogger.NodeTypeSink node that
 // processes events containing an AuditEvent payload.
 // It decorates the implemented eventlogger.Node Process method in order to emit
 // timing metrics for the duration between the creation time of the event and the
 // time the node completes processing.
-type sinkMetricTimer struct {
-	name string
-	sink eventlogger.Node
+type SinkMetricTimer struct {
+	Name string
+	Sink eventlogger.Node
 }
 
-// newSinkMetricTimer should be used to create the sinkMetricTimer.
+// NewSinkMetricTimer should be used to create the SinkMetricTimer.
 // It expects that an eventlogger.NodeTypeSink should be supplied as the sink.
-func newSinkMetricTimer(name string, sink eventlogger.Node) (*sinkMetricTimer, error) {
+func NewSinkMetricTimer(name string, sink eventlogger.Node) (*SinkMetricTimer, error) {
+	const op = "audit.NewSinkMetricTimer"
+
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return nil, fmt.Errorf("name is required: %w", ErrInvalidParameter)
+		return nil, fmt.Errorf("%s: name is required: %w", op, event.ErrInvalidParameter)
 	}
 
 	if sink == nil || reflect.ValueOf(sink).IsNil() {
-		return nil, fmt.Errorf("sink node is required: %w", ErrInvalidParameter)
+		return nil, fmt.Errorf("%s: sink node is required: %w", op, event.ErrInvalidParameter)
 	}
 
 	if sink.Type() != eventlogger.NodeTypeSink {
-		return nil, fmt.Errorf("sink node must be of type 'sink': %w", ErrInvalidParameter)
+		return nil, fmt.Errorf("%s: sink node must be of type 'sink': %w", op, event.ErrInvalidParameter)
 	}
 
-	return &sinkMetricTimer{
-		name: name,
-		sink: sink,
+	return &SinkMetricTimer{
+		Name: name,
+		Sink: sink,
 	}, nil
 }
 
@@ -54,23 +57,23 @@ func newSinkMetricTimer(name string, sink eventlogger.Node) (*sinkMetricTimer, e
 // Examples:
 // 'vault.audit.{DEVICE}.log_request'
 // 'vault.audit.{DEVICE}.log_response'
-func (s *sinkMetricTimer) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
+func (s *SinkMetricTimer) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	defer func() {
 		auditEvent, ok := e.Payload.(*AuditEvent)
 		if ok {
-			metrics.MeasureSince([]string{"audit", s.name, auditEvent.Subtype.MetricTag()}, e.CreatedAt)
+			metrics.MeasureSince([]string{"audit", s.Name, auditEvent.Subtype.MetricTag()}, e.CreatedAt)
 		}
 	}()
 
-	return s.sink.Process(ctx, e)
+	return s.Sink.Process(ctx, e)
 }
 
 // Reopen wraps the Reopen method of this underlying sink (eventlogger.Node).
-func (s *sinkMetricTimer) Reopen() error {
-	return s.sink.Reopen()
+func (s *SinkMetricTimer) Reopen() error {
+	return s.Sink.Reopen()
 }
 
 // Type wraps the Type method of this underlying sink (eventlogger.Node).
-func (s *sinkMetricTimer) Type() eventlogger.NodeType {
-	return s.sink.Type()
+func (s *SinkMetricTimer) Type() eventlogger.NodeType {
+	return s.Sink.Type()
 }

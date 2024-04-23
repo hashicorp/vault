@@ -128,7 +128,7 @@ func (e *Executor) Execute() (map[string][]*Result, error) {
 
 		for _, result := range results {
 			result.Endpoint = e.templatePath(result.Endpoint)
-			result.StatusDisplay = result.Status.String()
+			result.StatusDisplay = ResultStatusNameMap[result.Status]
 		}
 
 		ret[checker.Name()] = results
@@ -252,7 +252,6 @@ type Check interface {
 	Evaluate(e *Executor) ([]*Result, error)
 }
 
-//go:generate enumer -type=ResultStatus -trimprefix=Result -transform=snake
 type ResultStatus int
 
 const (
@@ -264,6 +263,16 @@ const (
 	ResultInvalidVersion
 	ResultInsufficientPermissions
 )
+
+var ResultStatusNameMap = map[ResultStatus]string{
+	ResultNotApplicable:           "not_applicable",
+	ResultOK:                      "ok",
+	ResultInformational:           "informational",
+	ResultWarning:                 "warning",
+	ResultCritical:                "critical",
+	ResultInvalidVersion:          "invalid_version",
+	ResultInsufficientPermissions: "insufficient_permissions",
+}
 
 var NameResultStatusMap = map[string]ResultStatus{
 	"not_applicable":           ResultNotApplicable,

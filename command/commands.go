@@ -19,6 +19,9 @@ import (
 	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
+	auditFile "github.com/hashicorp/vault/builtin/audit/file"
+	auditSocket "github.com/hashicorp/vault/builtin/audit/socket"
+	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
@@ -50,6 +53,7 @@ import (
 	physSpanner "github.com/hashicorp/vault/physical/spanner"
 	physSwift "github.com/hashicorp/vault/physical/swift"
 	physZooKeeper "github.com/hashicorp/vault/physical/zookeeper"
+	"github.com/hashicorp/vault/plugins/event"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	physFile "github.com/hashicorp/vault/sdk/physical/file"
@@ -162,14 +166,16 @@ const (
 
 var (
 	auditBackends = map[string]audit.Factory{
-		"file":   audit.NewFileBackend,
-		"socket": audit.NewSocketBackend,
-		"syslog": audit.NewSyslogBackend,
+		"file":   auditFile.Factory,
+		"socket": auditSocket.Factory,
+		"syslog": auditSyslog.Factory,
 	}
 
 	credentialBackends = map[string]logical.Factory{
 		"plugin": plugin.Factory,
 	}
+
+	eventBackends = map[string]event.Factory{}
 
 	logicalBackends = map[string]logical.Factory{
 		"plugin":   plugin.Factory,
@@ -728,6 +734,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				},
 				AuditBackends:      auditBackends,
 				CredentialBackends: credentialBackends,
+				EventBackends:      eventBackends,
 				LogicalBackends:    logicalBackends,
 				PhysicalBackends:   physicalBackends,
 

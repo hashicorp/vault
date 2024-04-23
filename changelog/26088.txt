@@ -1,3 +1,0 @@
-```release-note:improvement
-audit: timestamps across multiple audit devices for an audit entry will now match.
-```

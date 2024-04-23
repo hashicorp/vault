@@ -748,7 +748,7 @@ func ParseConfig(d, source string) (*Config, error) {
 		return nil, fmt.Errorf("error validating experiment(s) from config: %w", err)
 	}
 
-	if err := result.parseConfig(list, source); err != nil {
+	if err := result.parseConfig(list); err != nil {
 		return nil, fmt.Errorf("error parsing enterprise config: %w", err)
 	}
 

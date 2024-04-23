@@ -1,3 +1,0 @@
-```release-note:bug
-api: fixed a bug where LifetimeWatcher routines weren't respecting exponential backoff in the presence of unexpected errors
-```

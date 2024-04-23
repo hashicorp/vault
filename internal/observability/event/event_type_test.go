@@ -23,12 +23,12 @@ func TestEventType_Validate(t *testing.T) {
 		"empty": {
 			Value:         "",
 			IsValid:       false,
-			ExpectedError: "invalid event type \"\": invalid parameter",
+			ExpectedError: "event.(EventType).Validate: '' is not a valid event type: invalid parameter",
 		},
 		"random": {
 			Value:         "random",
 			IsValid:       false,
-			ExpectedError: "invalid event type \"random\": invalid parameter",
+			ExpectedError: "event.(EventType).Validate: 'random' is not a valid event type: invalid parameter",
 		},
 	}
 

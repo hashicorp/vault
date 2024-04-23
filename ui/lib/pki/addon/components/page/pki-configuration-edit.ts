@@ -18,7 +18,6 @@ import type PkiConfigClusterModel from 'vault/models/pki/config/cluster';
 import type PkiConfigCrlModel from 'vault/models/pki/config/crl';
 import type PkiConfigUrlsModel from 'vault/models/pki/config/urls';
 import type { FormField, TtlEvent } from 'vault/app-types';
-import { addToArray } from 'vault/helpers/add-to-array';
 
 interface Args {
   acme: PkiConfigAcmeModel;
@@ -77,7 +76,7 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
           message: errorMessage(error),
         };
         this.flashMessages.danger(`Error updating config/${modelName}`, { sticky: true });
-        this.errors = addToArray(this.errors, errorObject);
+        this.errors.pushObject(errorObject);
       }
     }
 

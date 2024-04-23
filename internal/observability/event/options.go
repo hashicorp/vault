@@ -4,6 +4,7 @@
 package event
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -58,24 +59,18 @@ func getOpts(opt ...Option) (options, error) {
 	return opts, nil
 }
 
-// ValidateOptions can be used to validate options before they are required.
-func ValidateOptions(opt ...Option) error {
-	_, err := getOpts(opt...)
-
-	return err
-}
-
 // NewID is a bit of a modified NewID has been done to stop a circular
 // dependency with the errors package that is caused by importing
 // boundary/internal/db
 func NewID(prefix string) (string, error) {
+	const op = "event.NewID"
 	if prefix == "" {
-		return "", fmt.Errorf("missing prefix: %w", ErrInvalidParameter)
+		return "", fmt.Errorf("%s: missing prefix: %w", op, ErrInvalidParameter)
 	}
 
 	id, err := uuid.GenerateUUID()
 	if err != nil {
-		return "", fmt.Errorf("unable to generate ID: %w", err)
+		return "", fmt.Errorf("%s: unable to generate ID: %w", op, err)
 	}
 
 	return fmt.Sprintf("%s_%s", prefix, id), nil
@@ -89,7 +84,7 @@ func WithID(id string) Option {
 		id := strings.TrimSpace(id)
 		switch {
 		case id == "":
-			err = fmt.Errorf("id cannot be empty: %w", ErrInvalidParameter)
+			err = errors.New("id cannot be empty")
 		default:
 			o.withID = id
 		}
@@ -105,7 +100,7 @@ func WithNow(now time.Time) Option {
 
 		switch {
 		case now.IsZero():
-			err = fmt.Errorf("cannot specify 'now' to be the zero time instant: %w", ErrInvalidParameter)
+			err = errors.New("cannot specify 'now' to be the zero time instant")
 		default:
 			o.withNow = now
 		}
@@ -164,7 +159,7 @@ func WithMaxDuration(duration string) Option {
 
 		parsed, err := parseutil.ParseDurationSecond(duration)
 		if err != nil {
-			return fmt.Errorf("unable to parse max duration: %w: %w", ErrInvalidParameter, err)
+			return fmt.Errorf("unable to parse max duration: %w", err)
 		}
 
 		o.withMaxDuration = parsed
@@ -192,7 +187,7 @@ func WithFileMode(mode string) Option {
 
 		switch {
 		case err != nil:
-			return fmt.Errorf("unable to parse file mode: %w: %w", ErrInvalidParameter, err)
+			return fmt.Errorf("unable to parse file mode: %w", err)
 		default:
 			m := os.FileMode(raw)
 			o.withFileMode = &m

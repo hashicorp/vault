@@ -31,21 +31,21 @@ func TestAuditEvent_new(t *testing.T) {
 			Subtype:              subtype(""),
 			Format:               format(""),
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "invalid event subtype \"\": invalid internal parameter",
+			ExpectedErrorMessage: "audit.NewEvent: audit.(AuditEvent).validate: audit.(subtype).validate: '' is not a valid event subtype: invalid parameter",
 		},
 		"empty-Option": {
 			Options:              []Option{},
 			Subtype:              subtype(""),
 			Format:               format(""),
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "invalid event subtype \"\": invalid internal parameter",
+			ExpectedErrorMessage: "audit.NewEvent: audit.(AuditEvent).validate: audit.(subtype).validate: '' is not a valid event subtype: invalid parameter",
 		},
 		"bad-id": {
 			Options:              []Option{WithID("")},
 			Subtype:              ResponseType,
 			Format:               JSONFormat,
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "id cannot be empty",
+			ExpectedErrorMessage: "audit.NewEvent: error applying options: id cannot be empty",
 		},
 		"good": {
 			Options: []Option{
@@ -119,12 +119,12 @@ func TestAuditEvent_Validate(t *testing.T) {
 		"nil": {
 			Value:                nil,
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event is nil: invalid internal parameter",
+			ExpectedErrorMessage: "audit.(AuditEvent).validate: event is nil: invalid parameter",
 		},
 		"default": {
 			Value:                &AuditEvent{},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "missing ID: invalid internal parameter",
+			ExpectedErrorMessage: "audit.(AuditEvent).validate: missing ID: invalid parameter",
 		},
 		"id-empty": {
 			Value: &AuditEvent{
@@ -135,7 +135,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 				Data:      nil,
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "missing ID: invalid internal parameter",
+			ExpectedErrorMessage: "audit.(AuditEvent).validate: missing ID: invalid parameter",
 		},
 		"version-fiddled": {
 			Value: &AuditEvent{
@@ -146,7 +146,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 				Data:      nil,
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event version unsupported: invalid internal parameter",
+			ExpectedErrorMessage: "audit.(AuditEvent).validate: event version unsupported: invalid parameter",
 		},
 		"subtype-fiddled": {
 			Value: &AuditEvent{
@@ -157,7 +157,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 				Data:      nil,
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "invalid event subtype \"moon\": invalid internal parameter",
+			ExpectedErrorMessage: "audit.(AuditEvent).validate: audit.(subtype).validate: 'moon' is not a valid event subtype: invalid parameter",
 		},
 		"default-time": {
 			Value: &AuditEvent{
@@ -168,7 +168,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 				Data:      nil,
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event timestamp cannot be the zero time instant: invalid internal parameter",
+			ExpectedErrorMessage: "audit.(AuditEvent).validate: event timestamp cannot be the zero time instant: invalid parameter",
 		},
 		"valid": {
 			Value: &AuditEvent{
@@ -212,12 +212,12 @@ func TestAuditEvent_Validate_Subtype(t *testing.T) {
 		"empty": {
 			Value:                "",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "invalid event subtype \"\": invalid internal parameter",
+			ExpectedErrorMessage: "audit.(subtype).validate: '' is not a valid event subtype: invalid parameter",
 		},
 		"unsupported": {
 			Value:                "foo",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "invalid event subtype \"foo\": invalid internal parameter",
+			ExpectedErrorMessage: "audit.(subtype).validate: 'foo' is not a valid event subtype: invalid parameter",
 		},
 		"request": {
 			Value:           "AuditRequest",
@@ -259,12 +259,12 @@ func TestAuditEvent_Validate_Format(t *testing.T) {
 		"empty": {
 			Value:                "",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "invalid format \"\": invalid internal parameter",
+			ExpectedErrorMessage: "audit.(format).validate: '' is not a valid format: invalid parameter",
 		},
 		"unsupported": {
 			Value:                "foo",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "invalid format \"foo\": invalid internal parameter",
+			ExpectedErrorMessage: "audit.(format).validate: 'foo' is not a valid format: invalid parameter",
 		},
 		"json": {
 			Value:           "json",
@@ -365,82 +365,6 @@ func TestAuditEvent_Subtype_String(t *testing.T) {
 
 			st := subtype(tc.input)
 			require.Equal(t, tc.expectedOutput, st.String())
-		})
-	}
-}
-
-// TestAuditEvent_formattedTime is used to check the output from the formattedTime
-// method returns the correct format.
-func TestAuditEvent_formattedTime(t *testing.T) {
-	theTime := time.Date(2024, time.March, 22, 10, 0o0, 5, 10, time.UTC)
-	a, err := NewEvent(ResponseType, WithNow(theTime))
-	require.NoError(t, err)
-	require.NotNil(t, a)
-	require.Equal(t, "2024-03-22T10:00:05.00000001Z", a.formattedTime())
-}
-
-// TestEvent_IsValidFormat ensures that we can correctly determine valid and
-// invalid formats.
-func TestEvent_IsValidFormat(t *testing.T) {
-	t.Parallel()
-
-	tests := map[string]struct {
-		input    string
-		expected bool
-	}{
-		"empty": {
-			input:    "",
-			expected: false,
-		},
-		"whitespace": {
-			input:    "     ",
-			expected: false,
-		},
-		"invalid-test": {
-			input:    "test",
-			expected: false,
-		},
-		"valid-json": {
-			input:    "json",
-			expected: true,
-		},
-		"upper-json": {
-			input:    "JSON",
-			expected: true,
-		},
-		"mixed-json": {
-			input:    "Json",
-			expected: true,
-		},
-		"spacey-json": {
-			input:    "  json  ",
-			expected: true,
-		},
-		"valid-jsonx": {
-			input:    "jsonx",
-			expected: true,
-		},
-		"upper-jsonx": {
-			input:    "JSONX",
-			expected: true,
-		},
-		"mixed-jsonx": {
-			input:    "JsonX",
-			expected: true,
-		},
-		"spacey-jsonx": {
-			input:    "  jsonx  ",
-			expected: true,
-		},
-	}
-
-	for name, tc := range tests {
-		name := name
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			res := IsValidFormat(tc.input)
-			require.Equal(t, tc.expected, res)
 		})
 	}
 }

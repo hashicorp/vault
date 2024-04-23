@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
+import { rootPem, rootDer } from 'vault/tests/helpers/pki/values';
 
 const SELECTORS = {
   label: '[data-test-certificate-label]',
@@ -16,7 +16,6 @@ const SELECTORS = {
   copyButton: '[data-test-copy-button]',
   copyIcon: '[data-test-icon="clipboard-copy"]',
 };
-const { rootPem, rootDer } = CERTIFICATES;
 
 module('Integration | Component | certificate-card', function (hooks) {
   setupRenderingTest(hooks);

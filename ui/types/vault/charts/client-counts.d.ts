@@ -3,11 +3,15 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import type { TotalClients } from 'core/utils/client-count-utils';
-
-// TotalClients and EmptyCount are mutually exclusive
+// Count and EmptyCount are mutually exclusive
 // but that's hard to represent in an interface
 // so for now we just have both
+interface Count {
+  clients?: number;
+  entity_clients?: number;
+  non_entity_clients?: number;
+  secret_syncs?: number;
+}
 interface EmptyCount {
   count?: null;
 }
@@ -16,6 +20,6 @@ interface Timestamp {
   timestamp: string; // ISO 8601
 }
 
-export interface MonthlyChartData extends TotalClients, EmptyCount, Timestamp {
-  new_clients?: TotalClients;
+export interface MonthlyChartData extends Count, EmptyCount, Timestamp {
+  new_clients?: Count;
 }

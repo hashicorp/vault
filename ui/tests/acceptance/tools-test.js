@@ -3,24 +3,13 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import {
-  click,
-  fillIn,
-  find,
-  findAll,
-  currentURL,
-  visit,
-  settled,
-  waitUntil,
-  waitFor,
-} from '@ember/test-helpers';
+import { click, fillIn, find, findAll, currentURL, visit, settled, waitUntil } from '@ember/test-helpers';
 import Pretender from 'pretender';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { toolsActions } from 'vault/helpers/tools-actions';
 import authPage from 'vault/tests/pages/auth';
 import { capitalize } from '@ember/string';
-import codemirror from 'vault/tests/helpers/codemirror';
 
 module('Acceptance | tools', function (hooks) {
   setupApplicationTest(hooks);
@@ -59,8 +48,8 @@ module('Acceptance | tools', function (hooks) {
       assert.dom(`[data-test-sidebar-nav-link="${capitalize(action)}"]`).exists(`${action} link renders`);
     });
 
-    await waitFor('.CodeMirror');
-    codemirror().setValue(DATA_TO_WRAP);
+    const { CodeMirror } = await waitUntil(() => find('.CodeMirror'));
+    CodeMirror.setValue(DATA_TO_WRAP);
 
     // wrap
     await click('[data-test-tools-submit]');
@@ -97,20 +86,16 @@ module('Acceptance | tools', function (hooks) {
 
     await fillIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
     await click('[data-test-tools-submit]');
-    await waitFor('.CodeMirror');
     assert.deepEqual(
-      JSON.parse(codemirror().getValue()),
+      JSON.parse(CodeMirror.getValue()),
       JSON.parse(DATA_TO_WRAP),
       'unwrapped data equals input data'
     );
-    await waitUntil(() => find('[data-test-button-details]'));
-    await click('[data-test-button-details]');
+    const buttonDetails = await waitUntil(() => find('[data-test-button-details]'));
+    await click(buttonDetails);
     await click('[data-test-button-data]');
-    assert.deepEqual(
-      JSON.parse(codemirror().getValue()),
-      JSON.parse(DATA_TO_WRAP),
-      'data tab still has unwrapped data'
-    );
+    assert.dom('.CodeMirror').exists();
+
     //random
     await click('[data-test-sidebar-nav-link="Random"]');
 
@@ -174,9 +159,8 @@ module('Acceptance | tools', function (hooks) {
     await fillIn('[data-test-tools-input="wrapping-token"]', 'sometoken');
     await click('[data-test-tools-submit]');
 
-    await waitFor('.CodeMirror');
     assert.deepEqual(
-      JSON.parse(codemirror().getValue()),
+      JSON.parse(findAll('.CodeMirror')[0].CodeMirror.getValue()),
       AUTH_RESPONSE.auth,
       'unwrapped data equals input data'
     );

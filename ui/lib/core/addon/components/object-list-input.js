@@ -7,7 +7,6 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { assert } from '@ember/debug';
-import { removeFromArray } from 'vault/helpers/remove-from-array';
 
 /**
  * @module ObjectListInput
@@ -66,7 +65,7 @@ export default class ObjectListInput extends Component {
 
   @action
   handleInput(idx, { target }) {
-    const inputObj = this.inputList[idx];
+    const inputObj = this.inputList.objectAt(idx);
     inputObj[target.name] = target.value;
     this.handleChange();
   }
@@ -80,8 +79,8 @@ export default class ObjectListInput extends Component {
 
   @action
   removeRow(idx) {
-    const row = this.inputList[idx];
-    this.inputList = removeFromArray(this.inputList, row);
+    const row = this.inputList.objectAt(idx);
+    this.inputList.removeObject(row);
     this.handleChange();
   }
 

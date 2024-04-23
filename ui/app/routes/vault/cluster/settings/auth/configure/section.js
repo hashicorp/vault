@@ -53,7 +53,7 @@ export default Route.extend(UnloadModelRoute, {
         section,
       });
     }
-    const modelType = this.modelType(backend.type, section);
+    const modelType = this.modelType(backend.get('type'), section);
     if (!modelType) {
       const error = new AdapterError();
       set(error, 'httpStatus', 404);

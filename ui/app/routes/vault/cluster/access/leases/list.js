@@ -24,7 +24,7 @@ export default Route.extend({
 
   model(params) {
     const prefix = params.prefix || '';
-    if (this.modelFor('vault.cluster.access.leases').canList) {
+    if (this.modelFor('vault.cluster.access.leases').get('canList')) {
       return hash({
         leases: this.store
           .lazyPaginatedQuery('lease', {
@@ -73,7 +73,7 @@ export default Route.extend({
       }
       controller.setProperties({
         filter: filter || '',
-        page: model.leases?.meta?.currentPage,
+        page: model.leases.get('meta.currentPage'),
       });
     }
   },
@@ -91,7 +91,7 @@ export default Route.extend({
 
       set(error, 'keyId', prefix);
       /* eslint-disable-next-line ember/no-controller-access-in-routes */
-      const hasModel = this.controllerFor(this.routeName).hasModel;
+      const hasModel = this.controllerFor(this.routeName).get('hasModel');
       // only swallow the error if we have a previous model
       if (hasModel && error.httpStatus === 404) {
         this.set('has404', true);

@@ -14,7 +14,7 @@ import (
 // but through an interface.
 type Connection interface {
 	Bind(username, password string) error
-	Close() error
+	Close()
 	Add(addRequest *ldap.AddRequest) error
 	Modify(modifyRequest *ldap.ModifyRequest) error
 	Del(delRequest *ldap.DelRequest) error

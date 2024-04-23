@@ -26,7 +26,6 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-//go:generate enumer -type=childProcessState -trimprefix=childProcessState
 type childProcessState uint8
 
 const (

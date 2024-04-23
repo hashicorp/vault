@@ -4,6 +4,7 @@
 package command
 
 import (
+	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -168,25 +169,45 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 		client, closer := testVaultServerAllBackends(t)
 		defer closer()
 
-		for _, name := range []string{"file", "socket", "syslog"} {
+		files, err := ioutil.ReadDir("../builtin/audit")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var backends []string
+		for _, f := range files {
+			if f.IsDir() {
+				backends = append(backends, f.Name())
+			}
+		}
+
+		for _, b := range backends {
 			ui, cmd := testAuditEnableCommand(t)
 			cmd.client = client
 
-			args := []string{name}
-			switch name {
+			args := []string{
+				b,
+			}
+			switch b {
 			case "file":
 				args = append(args, "file_path=discard")
 			case "socket":
-				args = append(args, "address=127.0.0.1:8888", "skip_test=true")
+				args = append(args, "address=127.0.0.1:8888",
+					"skip_test=true")
 			case "syslog":
 				if _, exists := os.LookupEnv("WSLENV"); exists {
 					t.Log("skipping syslog test on WSL")
 					continue
 				}
+				if os.Getenv("CIRCLECI") == "true" {
+					// TODO install syslog in docker image we run our tests in
+					t.Log("skipping syslog test on CircleCI")
+					continue
+				}
 			}
 			code := cmd.Run(args)
 			if exp := 0; code != exp {
-				t.Errorf("type %s, expected %d to be %d - %s", name, code, exp, ui.OutputWriter.String()+ui.ErrorWriter.String())
+				t.Errorf("type %s, expected %d to be %d - %s", b, code, exp, ui.OutputWriter.String()+ui.ErrorWriter.String())
 			}
 		}
 	})

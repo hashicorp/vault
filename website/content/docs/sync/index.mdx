@@ -9,6 +9,8 @@ description: Secrets sync allows you to safely sync Vault-managed secrets with e
 
 <EnterpriseAlert product="vault" />
 
+@include 'alerts/beta.mdx'
+
 In certain circumstances, fetching secrets directly from Vault is impossible or impractical. To help with this challenge,
 Vault can maintain a one-way sync for KVv2 secrets into various destinations that are easier to access for some clients.
 With this, Vault remains the system of records but can cache a subset of secrets on various external systems acting as
@@ -127,10 +129,6 @@ The secret synced with the old granularity will be deleted and new secrets will 
 
 ## Security
 
-~> Note: Vault does not control the permissions at the destination. It is the responsibility
-of the operator to configure and maintain proper access controls on the external system so synced
-secrets are not accessed unintentionally.
-
 ### Vault access requirements
 
 Vault verifies the client has read access on the secret before syncing it with any destination. This additional check is
@@ -195,21 +193,74 @@ Likewise, if the client tries to sync this secret to any destination they will r
 This read access verification is only done when creating or updating an association. Once the association is created, revoking
 read access to the policy that was used to sync the secret has no effect.
 
+Vault does not control the permissions at the destination. It is the responsibility of the operator to configure proper
+read access on the external system so synced secrets are not accessed unintentionally.
+
 ### Collisions and overwrites
 
 Secrets Sync operates with a last-write-wins strategy. If a secret with the same name already exists at the destination,
 Vault overwrites it when syncing a secret. There are also no automatic mechanisms to prevent a principal with sufficient
 privileges at the destination from overwriting a secret synced by Vault.
 
-To prevent Vault from accidentally overwriting existing secrets, it is recommended to use either a name pattern or
-built-in tags as an extra policy condition on the role used to configure a Vault sync destination. A negative condition on other
-policies may be used to prevent out-of-band overwrites to Vault secrets from non-Vault roles.
+To prevent Vault from accidentally overwriting existing secrets, it is recommended to use either the name pattern or
+built-in tag as an extra policy condition on the role used to configure a Vault sync destination. For example, the
+following AWS IAM policy prevents Vault from being able to modify secrets that were not created by a sync operation:
 
-To see examples of policies that provide this type of restriction, refer to the access management section of the documentation
-for each destination type below:
+  <CodeBlockConfig hideClipboard>
 
-* [AWS Access Management](/vault/docs/sync/awssm#access-management)
-* [GCP Access Management](/vault/docs/sync/gcpsm#access-management)
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "secretsmanager:*",
+          ],
+          "Resource": "*",
+          "Condition": {
+            "StringEquals": {
+              "secretsmanager:ResourceTag/hashicorp:vault": "" # This tag is automatically added by Vault on every synced secrets
+            }
+          }
+        }
+      ]
+    }
+
+  </CodeBlockConfig>
+
+Likewise, is it recommended to add a negative condition on other policies not used by Vault that grant write access to
+secrets to prevent out-of-band overwrites:
+
+  <CodeBlockConfig hideClipboard>
+
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Deny",
+          "Action": [
+            "secretsmanager:*"
+          ],
+          "Resource": "*",
+          "Condition": {
+            "StringNotEquals": {
+              "secretsmanager:ResourceTag/hashicorp:vault": "" # This tag is automatically added by Vault on every synced secrets
+            }
+          }
+        }
+      ]
+    }
+
+  </CodeBlockConfig>
+
+  <Note>
+  Wildcards are used in the example above for brevity, but it is recommended to use the least privilege principle and restrict
+  the actions and resources to the minimum requirements for each use case.
+  </Note>
+
+This policy condition strategy is also applicable to most other destination types. Please refer to the specific destination's
+access management documentation for more details.
+
 
 ## Reconciliation
 
@@ -232,7 +283,7 @@ Note that reconciliation process do not protect from out-of-band updates
 that occur directly in the external service. The secrets sync system is designed to be
 one-way and does not support bidirectional sync at this time.
 
-## Client counts
+## Client Counts
 
 Each secret that is synced with one or more destinations is counted as a
 distinct client in Vault's client counting. See [entity assignments with secret

@@ -18,7 +18,7 @@ module('Acceptance | raft storage', function (hooks) {
     this.server.get('/sys/internal/ui/resultant-acl', () =>
       this.server.create('configuration', { data: { root: true } })
     );
-    this.server.get('/sys/license/features', () => ({ features: [] }));
+    this.server.get('/sys/license/features', () => ({}));
     await authPage.login();
   });
 

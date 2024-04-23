@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-//go:generate enumer -type=CaseOp -transform=snake
 type CaseOp int
 
 const (

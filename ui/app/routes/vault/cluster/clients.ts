@@ -8,6 +8,13 @@ import { hash } from 'rsvp';
 import { service } from '@ember/service';
 
 import type StoreService from 'vault/services/store';
+import type ClientsConfigModel from 'vault/models/clients/config';
+import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
+
+export interface ClientsRouteModel {
+  config: ClientsConfigModel;
+  versionHistory: ClientsVersionHistoryModel;
+}
 
 export default class ClientsRoute extends Route {
   @service declare readonly store: StoreService;

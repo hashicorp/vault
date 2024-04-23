@@ -43,24 +43,16 @@ import { format, isSameMonth } from 'date-fns';
 
 export default class Attribution extends Component {
   @service download;
+
   @tracked showCSVDownloadModal = false;
 
-  get attributionLegend() {
-    const attributionLegend = [
-      { key: 'entity_clients', label: 'entity clients' },
-      { key: 'non_entity_clients', label: 'non-entity clients' },
-    ];
+  parseAPITimestamp = (time, format) => parseAPITimestamp(time, format);
 
-    if (this.args.isSecretsSyncActivated) {
-      attributionLegend.push({ key: 'secret_syncs', label: 'secrets sync clients' });
-    }
-    return attributionLegend;
-  }
-
-  get formattedStartDate() {
-    if (!this.args.startTimestamp) return null;
-    return parseAPITimestamp(this.args.startTimestamp, 'MMMM yyyy');
-  }
+  attributionLegend = [
+    { key: 'entity_clients', label: 'entity clients' },
+    { key: 'non_entity_clients', label: 'non-entity clients' },
+    { key: 'secret_syncs', label: 'secrets sync clients' },
+  ];
 
   get formattedEndDate() {
     if (!this.args.startTimestamp && !this.args.endTimestamp) return null;
@@ -75,6 +67,9 @@ export default class Attribution extends Component {
   }
 
   get isSingleNamespace() {
+    if (!this.args.totalClientAttribution) {
+      return 'no data';
+    }
     // if a namespace is selected, then we're viewing top 10 auth methods (mounts)
     return !!this.args.selectedNamespace;
   }
@@ -99,9 +94,6 @@ export default class Attribution extends Component {
   }
 
   get chartText() {
-    if (!this.args.totalClientAttribution) {
-      return { description: 'There is a problem gathering data' };
-    }
     const dateText = this.formattedEndDate ? 'date range' : 'month';
     switch (this.isSingleNamespace) {
       case true:
@@ -123,6 +115,10 @@ export default class Attribution extends Component {
           }`,
           totalCopy: `The total clients in the namespace for this ${dateText}. This number is useful for identifying overall usage volume.`,
         };
+      case 'no data':
+        return {
+          description: 'There is a problem gathering data',
+        };
       default:
         return '';
     }
@@ -132,9 +128,7 @@ export default class Attribution extends Component {
     // destructure the namespace object  {label: 'some-namespace', entity_clients: 171, non_entity_clients: 20, secret_syncs: 10, clients: 201}
     // to get integers for CSV file
     const { clients, entity_clients, non_entity_clients, secret_syncs } = object;
-    const { isSecretsSyncActivated } = this.args;
-
-    return [clients, entity_clients, non_entity_clients, ...(isSecretsSyncActivated ? [secret_syncs] : [])];
+    return [clients, entity_clients, non_entity_clients, secret_syncs];
   }
 
   constructCsvRow(namespaceColumn, mountColumn = null, totalColumns, newColumns = null) {
@@ -151,30 +145,27 @@ export default class Attribution extends Component {
   generateCsvData() {
     const totalAttribution = this.args.totalClientAttribution;
     const newAttribution = this.barChartNewClients ? this.args.newClientAttribution : null;
-    const { isSecretsSyncActivated } = this.args;
     const csvData = [];
     // added to clarify that the row of namespace totals without an auth method (blank) are not additional clients
     // but indicate the total clients for that ns, including its auth methods
-    const upgrade = this.args.upgradesDuringActivity?.length
+    const upgrade = this.args.upgradesDuringActivity.length
       ? `\n **data contains an upgrade, mount summation may not equal namespace totals`
       : '';
     const descriptionOfBlanks = this.isSingleNamespace
       ? ''
-      : `\n  *namespace totals, inclusive of mount clients${upgrade}`;
+      : `\n  *namespace totals, inclusive of mount clients ${upgrade}`;
     const csvHeader = [
       'Namespace path',
-      `Mount path${descriptionOfBlanks}`,
+      `"Mount path ${descriptionOfBlanks}"`,
       'Total clients',
       'Entity clients',
       'Non-entity clients',
-      ...(isSecretsSyncActivated ? ['Secrets sync clients'] : []),
+      'Secrets sync clients',
     ];
 
     if (newAttribution) {
       csvHeader.push(
-        `Total new clients, New entity clients, New non-entity clients${
-          isSecretsSyncActivated ? ', New secrets sync clients' : ''
-        }`
+        'Total new clients, New entity clients, New non-entity clients, New secrets sync clients'
       );
     }
 
@@ -214,22 +205,10 @@ export default class Attribution extends Component {
 
   get formattedCsvFileName() {
     const endRange = this.formattedEndDate ? `-${this.formattedEndDate}` : '';
-    const csvDateRange = this.formattedStartDate ? `_${this.formattedStartDate + endRange}` : '';
+    const csvDateRange = this.formattedStartDate + endRange;
     return this.isSingleNamespace
-      ? `clients_by_mount_path${csvDateRange}`
-      : `clients_by_namespace${csvDateRange}`;
-  }
-
-  get modalExportText() {
-    const { isSecretsSyncActivated } = this.args;
-
-    const prefix = 'This export will include the namespace path, mount path and associated total, entity';
-    const mid = isSecretsSyncActivated ? ', non-entity and secrets sync clients' : ' and non-entity clients';
-    const suffix = ` for the
-    ${this.formattedEndDate ? 'date range' : 'month'}
-    below.`;
-
-    return `${prefix}${mid}${suffix}`;
+      ? `clients_by_mount_path_${csvDateRange}`
+      : `clients_by_namespace_${csvDateRange}`;
   }
 
   @action

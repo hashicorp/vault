@@ -31,17 +31,19 @@ type Labeler interface {
 
 // NewMetricsCounter should be used to create the MetricsCounter.
 func NewMetricsCounter(name string, node eventlogger.Node, labeler Labeler) (*MetricsCounter, error) {
+	const op = "event.NewMetricsCounter"
+
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return nil, fmt.Errorf("name is required: %w", ErrInvalidParameter)
+		return nil, fmt.Errorf("%s: name is required: %w", op, ErrInvalidParameter)
 	}
 
 	if node == nil || reflect.ValueOf(node).IsNil() {
-		return nil, fmt.Errorf("node is required: %w", ErrInvalidParameter)
+		return nil, fmt.Errorf("%s: node is required: %w", op, ErrInvalidParameter)
 	}
 
 	if labeler == nil || reflect.ValueOf(labeler).IsNil() {
-		return nil, fmt.Errorf("labeler is required: %w", ErrInvalidParameter)
+		return nil, fmt.Errorf("%s: labeler is required: %w", op, ErrInvalidParameter)
 	}
 
 	return &MetricsCounter{

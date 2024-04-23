@@ -9,16 +9,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/constants"
 	"github.com/stretchr/testify/require"
 )
-
-func ceOnlyWarnings(warns ...string) []string {
-	if !constants.IsEnterprise {
-		return warns
-	}
-	return nil
-}
 
 func TestRaft_ParseConfig(t *testing.T) {
 	// Note some of these can be parallel tests but since we need to setEnv in
@@ -58,7 +50,6 @@ func TestRaft_ParseConfig(t *testing.T) {
 				cfg.RaftLogVerifierEnabled = true
 				cfg.RaftLogVerificationInterval = defaultRaftLogVerificationInterval
 			},
-			wantWarns: []string{"raft_log_verification_interval is less than the minimum allowed"},
 		},
 		{
 			name: "WAL verifier interval, one",
@@ -72,7 +63,6 @@ func TestRaft_ParseConfig(t *testing.T) {
 				// Below min so should get default
 				cfg.RaftLogVerificationInterval = defaultRaftLogVerificationInterval
 			},
-			wantWarns: []string{"raft_log_verification_interval is less than the minimum allowed"},
 		},
 		{
 			name: "WAL verifier interval, nothing",
@@ -84,7 +74,6 @@ func TestRaft_ParseConfig(t *testing.T) {
 				cfg.RaftLogVerifierEnabled = true
 				cfg.RaftLogVerificationInterval = defaultRaftLogVerificationInterval
 			},
-			wantWarns: []string{"raft_log_verification_interval is less than the minimum allowed"},
 		},
 		{
 			name: "WAL verifier interval, valid",
@@ -115,18 +104,6 @@ func TestRaft_ParseConfig(t *testing.T) {
 			wantErr: "does not parse",
 		},
 
-		// AUTOPILOT Redundancy Zone ---------------------------------------------
-		{
-			name: "Autopilot redundancy zone, ok",
-			conf: map[string]string{
-				"autopilot_redundancy_zone": "us-east-1a",
-			},
-			wantMutation: func(cfg *RaftBackendConfig) {
-				cfg.AutopilotRedundancyZone = "us-east-1a"
-			},
-			wantWarns: ceOnlyWarnings("configuration for a Vault Enterprise feature has been ignored: field=autopilot_redundancy_zone"),
-		},
-
 		// Non-voter config ------------------------------------------------------
 		{
 			name: "non-voter, no retry-join, valid false",
@@ -136,6 +113,7 @@ func TestRaft_ParseConfig(t *testing.T) {
 			wantMutation: func(cfg *RaftBackendConfig) {
 				// Should be default
 			},
+			wantWarns: []string{"is configuration for a Vault Enterprise feature and has been ignored"},
 		},
 		{
 			name: "non-voter, retry-join, valid false",
@@ -164,7 +142,6 @@ func TestRaft_ParseConfig(t *testing.T) {
 				cfg.RetryJoin = "not-empty"
 				cfg.RaftNonVoter = true
 			},
-			wantWarns: ceOnlyWarnings("configuration for a Vault Enterprise feature has been ignored: field=retry_join_as_non_voter"),
 		},
 		{
 			name: "non-voter, no retry-join, invalid empty",
@@ -232,7 +209,6 @@ func TestRaft_ParseConfig(t *testing.T) {
 				cfg.RetryJoin = "not-empty"
 				cfg.RaftNonVoter = true // Any non-empty value is true
 			},
-			wantWarns: ceOnlyWarnings("configuration for a Vault Enterprise feature has been ignored: field=retry_join_as_non_voter"),
 		},
 		{
 			name: "non-voter, no retry-join, valid env true",
@@ -253,7 +229,6 @@ func TestRaft_ParseConfig(t *testing.T) {
 				cfg.RetryJoin = "not-empty"
 				cfg.RaftNonVoter = true
 			},
-			wantWarns: ceOnlyWarnings("configuration for a Vault Enterprise feature has been ignored: field=retry_join_as_non_voter"),
 		},
 		{
 			name: "non-voter, no retry-join, valid env not-boolean",
@@ -274,7 +249,6 @@ func TestRaft_ParseConfig(t *testing.T) {
 				cfg.RetryJoin = "not-empty"
 				cfg.RaftNonVoter = true
 			},
-			wantWarns: ceOnlyWarnings("configuration for a Vault Enterprise feature has been ignored: field=retry_join_as_non_voter"),
 		},
 		{
 			name: "non-voter, no retry-join, valid env empty",
@@ -320,7 +294,6 @@ func TestRaft_ParseConfig(t *testing.T) {
 				cfg.RetryJoin = "not-empty"
 				cfg.RaftNonVoter = true // Env should win
 			},
-			wantWarns: ceOnlyWarnings("configuration for a Vault Enterprise feature has been ignored: field=retry_join_as_non_voter"),
 		},
 
 		// Entry Size Limits -----------------------------------------------------
@@ -334,7 +307,6 @@ func TestRaft_ParseConfig(t *testing.T) {
 				cfg.MaxEntrySize = 123456
 				cfg.MaxMountAndNamespaceTableEntrySize = 654321
 			},
-			wantWarns: ceOnlyWarnings("configuration for a Vault Enterprise feature has been ignored: field=max_mount_and_namespace_table_entry_size"),
 		},
 		{
 			name: "entry size, junk entry size",
@@ -421,9 +393,6 @@ func TestRaft_ParseConfig(t *testing.T) {
 			allLogs := logs.String()
 			for _, warn := range tc.wantWarns {
 				require.Contains(t, allLogs, warn)
-			}
-			if len(tc.wantWarns) == 0 {
-				require.NotContains(t, allLogs, "[WARN]", "no warnings expected")
 			}
 		})
 	}

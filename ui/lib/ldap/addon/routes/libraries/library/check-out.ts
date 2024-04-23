@@ -35,7 +35,7 @@ export default class LdapLibraryCheckOutRoute extends Route {
     }
   }
   model(_params: object, transition: Transition) {
-    const ttl = transition.to?.queryParams['ttl'];
+    const { ttl } = transition.to.queryParams;
     const library = this.modelFor('libraries.library') as LdapLibraryModel;
     return library.checkOutAccount(ttl);
   }

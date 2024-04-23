@@ -18,7 +18,6 @@ const ALL_FEATURES = [
   'KMIP',
   'Entropy Augmentation',
   'Transform Secrets Engine',
-  'Secrets Sync',
 ];
 
 export function allFeatures() {

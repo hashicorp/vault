@@ -11,7 +11,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { encodeString } from 'vault/utils/b64';
 import authPage from 'vault/tests/pages/auth';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
-import codemirror from 'vault/tests/helpers/codemirror';
 
 const SELECTORS = {
   secretLink: '[data-test-secret-link]',
@@ -151,7 +150,7 @@ const testConvergentEncryption = async function (assert, keyName) {
   for (const testCase of tests) {
     await click('[data-test-transit-action-link="encrypt"]');
 
-    codemirror('#plaintext-control').setValue(testCase.plaintext);
+    find('#plaintext-control .CodeMirror').CodeMirror.setValue(testCase.plaintext);
     await fillIn('[data-test-transit-input="context"]', testCase.context);
 
     if (!testCase.encodePlaintext) {
@@ -161,7 +160,7 @@ const testConvergentEncryption = async function (assert, keyName) {
     if (testCase.encodeContext) {
       await click('[data-test-transit-b64-toggle="context"]');
     }
-    assert.dom('[data-test-encrypt-modal]').doesNotExist(`${keyName}: is not open before encrypt`);
+    assert.dom('[data-test-encrypt-modal]').doesNotExist(`${name}: is not open before encrypt`);
     await click('[data-test-button-encrypt]');
 
     if (testCase.assertAfterEncrypt) {
@@ -172,15 +171,14 @@ const testConvergentEncryption = async function (assert, keyName) {
     const copiedCiphertext = find('[data-test-encrypted-value="ciphertext"]').innerText;
     await click('dialog button');
 
-    assert.dom('dialog.hds-modal').doesNotExist(`${keyName}: Modal closes after background clicked`);
+    assert.dom('dialog.hds-modal').doesNotExist(`${name}: Modal closes after background clicked`);
     await click('[data-test-transit-action-link="decrypt"]');
 
     if (testCase.assertBeforeDecrypt) {
       await settled();
       testCase.assertBeforeDecrypt(keyName);
     }
-
-    codemirror('#ciphertext-control').setValue(copiedCiphertext);
+    find('#ciphertext-control .CodeMirror').CodeMirror.setValue(copiedCiphertext);
     await click('[data-test-button-decrypt]');
 
     if (testCase.assertAfterDecrypt) {
@@ -190,7 +188,7 @@ const testConvergentEncryption = async function (assert, keyName) {
 
     await click('dialog button');
 
-    assert.dom('dialog.hds-modal').doesNotExist(`${keyName}: Modal closes after background clicked`);
+    assert.dom('dialog.hds-modal').doesNotExist(`${name}: Modal closes after background clicked`);
   }
 };
 

@@ -8,7 +8,8 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { allowAllCapabilitiesStub, capabilitiesStub } from 'vault/tests/helpers/stubs';
+import { overrideCapabilities } from 'vault/tests/helpers/oidc-config';
+import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | oidc/provider-list', function (hooks) {
   setupRenderingTest(hooks);
@@ -40,9 +41,9 @@ module('Integration | Component | oidc/provider-list', function (hooks) {
     this.server.post('/sys/capabilities-self', (schema, req) => {
       const { paths } = JSON.parse(req.requestBody);
       if (paths[0] === 'identity/oidc/provider/first-provider') {
-        return capabilitiesStub('identity/oidc/provider/first-provider', ['read']);
+        return overrideCapabilities('identity/oidc/provider/first-provider', ['read']);
       } else {
-        return capabilitiesStub('identity/oidc/provider/second-provider', ['deny']);
+        return overrideCapabilities('identity/oidc/provider/second-provider', ['deny']);
       }
     });
     await render(hbs`<Oidc::ProviderList @model={{this.model}} />`);

@@ -14,14 +14,14 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// processManual will attempt to create an (audit) event with the specified data
+// ProcessManual will attempt to create an (audit) event with the specified data
 // and manually iterate over the supplied nodes calling Process on each until the
 // event is nil (which indicates the pipeline has completed).
 // Order of IDs in the NodeID slice determines the order they are processed.
 // (Audit) Event will be of RequestType (as opposed to ResponseType).
 // The last node must be a filter node (eventlogger.NodeTypeFilter) or
 // sink node (eventlogger.NodeTypeSink).
-func processManual(ctx context.Context, data *logical.LogInput, ids []eventlogger.NodeID, nodes map[eventlogger.NodeID]eventlogger.Node) error {
+func ProcessManual(ctx context.Context, data *logical.LogInput, ids []eventlogger.NodeID, nodes map[eventlogger.NodeID]eventlogger.Node) error {
 	switch {
 	case data == nil:
 		return errors.New("data cannot be nil")
@@ -44,7 +44,7 @@ func processManual(ctx context.Context, data *logical.LogInput, ids []eventlogge
 
 	// Create an eventlogger event with the audit event as the payload.
 	e := &eventlogger.Event{
-		Type:      event.AuditType.AsEventType(),
+		Type:      eventlogger.EventType(event.AuditType.String()),
 		CreatedAt: time.Now(),
 		Formatted: make(map[string][]byte),
 		Payload:   a,
@@ -71,7 +71,7 @@ func processManual(ctx context.Context, data *logical.LogInput, ids []eventlogge
 		switch node.Type() {
 		case eventlogger.NodeTypeFormatter:
 			// Use a temporary formatter node  which doesn't persist its salt anywhere.
-			if formatNode, ok := node.(*entryFormatter); ok && formatNode != nil {
+			if formatNode, ok := node.(*EntryFormatter); ok && formatNode != nil {
 				e, err = newTemporaryEntryFormatter(formatNode).Process(ctx, e)
 			}
 		default:

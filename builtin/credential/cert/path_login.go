@@ -687,10 +687,6 @@ func (b *backend) checkForCertInOCSP(ctx context.Context, clientCert *x509.Certi
 	defer b.ocspClientMutex.RUnlock()
 	err := b.ocspClient.VerifyLeafCertificate(ctx, clientCert, chain[1], conf)
 	if err != nil {
-		if ocsp.IsOcspVerificationError(err) {
-			// We don't want anything to override an OCSP verification error
-			return false, err
-		}
 		if conf.OcspFailureMode == ocsp.FailOpenTrue {
 			onlyNetworkErrors := b.handleOcspErrorInFailOpen(err)
 			if onlyNetworkErrors {

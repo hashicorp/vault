@@ -30,7 +30,7 @@ export default Route.extend({
     let model = this.store.peekRecord(modelType, params.item_id);
 
     // if we don't have creationTime, we only have a partial model so reload
-    if (model && !model?.creationTime) {
+    if (model && !model.get('creationTime')) {
       model = model.reload();
     }
 
@@ -51,14 +51,14 @@ export default Route.extend({
     if (this.currentModel) {
       next(() => {
         /* eslint-disable-next-line ember/no-controller-access-in-routes */
-        this.controller.model.reload();
+        this.controller.get('model').reload();
       });
     }
   },
 
   afterModel(resolvedModel) {
     const { section, model } = resolvedModel;
-    if (model?.identityType === 'group' && model?.type === 'internal' && section === 'aliases') {
+    if (model.get('identityType') === 'group' && model.get('type') === 'internal' && section === 'aliases') {
       return this.router.transitionTo('vault.cluster.access.identity.show', model.id, 'details');
     }
   },

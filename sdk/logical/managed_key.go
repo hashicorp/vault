@@ -11,7 +11,6 @@ import (
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 )
 
-//go:generate enumer -type=KeyUsage -trimprefix=KeyUsage -transform=snake
 type KeyUsage int
 
 const (

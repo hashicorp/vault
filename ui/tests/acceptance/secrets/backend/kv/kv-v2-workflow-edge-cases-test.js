@@ -21,7 +21,7 @@ import {
   destroyVersionsPolicy,
   metadataListPolicy,
   metadataPolicy,
-} from 'vault/tests/helpers/kv/policy-generator';
+} from 'vault/tests/helpers/policy-generator/kv';
 import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';

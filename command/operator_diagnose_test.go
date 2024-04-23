@@ -14,7 +14,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/cli"
-	"github.com/hashicorp/vault/helper/constants"
+	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/vault/diagnose"
 )
 
@@ -41,7 +41,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 		{
 			"diagnose_ok",
 			[]string{
-				"-config", "./server/test-fixtures/config_diagnose_ok_singleseal.hcl",
+				"-config", "./server/test-fixtures/config_diagnose_ok.hcl",
 			},
 			[]*diagnose.Result{
 				{
@@ -611,9 +611,9 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 		for _, tc := range cases {
 			tc := tc
 			t.Run(tc.name, func(t *testing.T) {
-				if tc.name == "diagnose_ok" && constants.IsEnterprise {
+				if tc.name == "diagnose_ok" && server.IsMultisealSupported() {
 					t.Skip("Test not valid in ENT")
-				} else if tc.name == "diagnose_ok_multiseal" && !constants.IsEnterprise {
+				} else if tc.name == "diagnose_ok_multiseal" && !server.IsMultisealSupported() {
 					t.Skip("Test not valid in community edition")
 				} else {
 					t.Parallel()

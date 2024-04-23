@@ -23,16 +23,6 @@ module('Unit | Service | version', function (hooks) {
     assert.true(service.isEnterprise);
   });
 
-  test('calculates versionDisplay correctly', function (assert) {
-    const service = this.owner.lookup('service:version');
-    service.type = 'community';
-    service.version = '1.2.3';
-    assert.strictEqual(service.versionDisplay, 'v1.2.3');
-    service.type = 'enterprise';
-    service.version = '1.4.7+ent';
-    assert.strictEqual(service.versionDisplay, 'v1.4.7');
-  });
-
   test('hasPerfReplication', function (assert) {
     const service = this.owner.lookup('service:version');
     assert.false(service.hasPerfReplication);

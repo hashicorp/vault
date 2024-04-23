@@ -3,35 +3,34 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Service from '@ember/service';
-import { tracked } from '@glimmer/tracking';
-import { task, waitForEvent } from 'ember-concurrency';
-import { addToArray } from 'vault/helpers/add-to-array';
+/*eslint-disable no-constant-condition*/
+import { computed } from '@ember/object';
 
-export default class CspEventService extends Service {
-  @tracked connectionViolations = [];
+import Service from '@ember/service';
+import { task, waitForEvent } from 'ember-concurrency';
+
+export default Service.extend({
+  events: computed(function () {
+    return [];
+  }),
+  connectionViolations: computed('events.@each.violatedDirective', function () {
+    return this.events.some((e) => e.violatedDirective.startsWith('connect-src'));
+  }),
 
   attach() {
     this.monitor.perform();
-  }
+  },
 
   remove() {
     this.monitor.cancelAll();
-  }
+  },
 
-  handleEvent(event) {
-    if (event.violatedDirective.startsWith('connect-src')) {
-      this.connectionViolations = addToArray(this.connectionViolations, event);
-    }
-  }
-
-  @task
-  *monitor() {
-    this.connectionViolations = [];
+  monitor: task(function* () {
+    this.events.clear();
 
     while (true) {
       const event = yield waitForEvent(window.document, 'securitypolicyviolation');
-      this.handleEvent(event);
+      this.events.addObject(event);
     }
-  }
-}
+  }),
+});

@@ -23,7 +23,6 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -72,7 +71,7 @@ var (
 type AESGCMBarrier struct {
 	backend physical.Backend
 
-	l      locking.RWMutex
+	l      sync.RWMutex
 	sealed bool
 
 	// keyring is used to maintain all of the encryption keys, including
@@ -120,7 +119,7 @@ func (b *AESGCMBarrier) SetRotationConfig(ctx context.Context, rotConfig KeyRota
 
 // NewAESGCMBarrier is used to construct a new barrier that uses
 // the provided physical backend for storage.
-func NewAESGCMBarrier(physical physical.Backend, detectDeadlocks bool) (*AESGCMBarrier, error) {
+func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
 	keyringTimeout := defaultKeyringTimeout
 	keyringTimeoutStr := os.Getenv(bestEffortKeyringTimeoutOverride)
 	if keyringTimeoutStr != "" {
@@ -130,10 +129,8 @@ func NewAESGCMBarrier(physical physical.Backend, detectDeadlocks bool) (*AESGCMB
 		}
 		keyringTimeout = t
 	}
-
 	b := &AESGCMBarrier{
 		backend:                  physical,
-		l:                        &locking.SyncRWMutex{},
 		sealed:                   true,
 		cache:                    make(map[uint32]cipher.AEAD),
 		currentAESGCMVersionByte: byte(AESGCMVersion2),
@@ -142,17 +139,7 @@ func NewAESGCMBarrier(physical physical.Backend, detectDeadlocks bool) (*AESGCMB
 		totalLocalEncryptions:    atomic.NewInt64(0),
 		bestEffortKeyringTimeout: keyringTimeout,
 	}
-	if detectDeadlocks {
-		b.l = &locking.DeadlockRWMutex{}
-	}
 	return b, nil
-}
-
-func (b *AESGCMBarrier) DetectDeadlocks() bool {
-	if _, ok := b.l.(*locking.DeadlockRWMutex); ok {
-		return true
-	}
-	return false
 }
 
 // Initialized checks if the barrier has been initialized

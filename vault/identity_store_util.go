@@ -12,6 +12,7 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -22,8 +23,6 @@ import (
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
-	"google.golang.org/protobuf/types/known/anypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var (
@@ -711,7 +710,7 @@ func (i *IdentityStore) processLocalAlias(ctx context.Context, lAlias *logical.A
 		localAliases.Aliases = append(localAliases.Aliases, alias)
 	}
 
-	marshaledAliases, err := anypb.New(localAliases)
+	marshaledAliases, err := ptypes.MarshalAny(localAliases)
 	if err != nil {
 		return nil, err
 	}
@@ -747,8 +746,8 @@ func (i *IdentityStore) processLocalAlias(ctx context.Context, lAlias *logical.A
 // still be aware of the entities. This temporary cache will be cleared when the
 // invalidation hits the secondary nodes.
 func (i *IdentityStore) cacheTemporaryEntity(ctx context.Context, entity *identity.Entity) error {
-	if i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && i.localNode.HAState() == consts.Active {
-		marshaledEntity, err := anypb.New(entity)
+	if i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && i.localNode.HAState() != consts.PerfStandby {
+		marshaledEntity, err := ptypes.MarshalAny(entity)
 		if err != nil {
 			return err
 		}
@@ -787,7 +786,7 @@ func (i *IdentityStore) persistEntity(ctx context.Context, entity *identity.Enti
 
 	// Store the entity with non-local aliases.
 	entity.Aliases = nonLocalAliases
-	marshaledEntity, err := anypb.New(entity)
+	marshaledEntity, err := ptypes.MarshalAny(entity)
 	if err != nil {
 		return err
 	}
@@ -807,7 +806,7 @@ func (i *IdentityStore) persistEntity(ctx context.Context, entity *identity.Enti
 		Aliases: localAliases,
 	}
 
-	marshaledAliases, err := anypb.New(aliases)
+	marshaledAliases, err := ptypes.MarshalAny(aliases)
 	if err != nil {
 		return err
 	}
@@ -1346,10 +1345,10 @@ func (i *IdentityStore) sanitizeAlias(ctx context.Context, alias *identity.Alias
 
 	// Set the creation and last update times
 	if alias.CreationTime == nil {
-		alias.CreationTime = timestamppb.Now()
+		alias.CreationTime = ptypes.TimestampNow()
 		alias.LastUpdateTime = alias.CreationTime
 	} else {
-		alias.LastUpdateTime = timestamppb.Now()
+		alias.LastUpdateTime = ptypes.TimestampNow()
 	}
 
 	return nil
@@ -1400,10 +1399,10 @@ func (i *IdentityStore) sanitizeEntity(ctx context.Context, entity *identity.Ent
 
 	// Set the creation and last update times
 	if entity.CreationTime == nil {
-		entity.CreationTime = timestamppb.Now()
+		entity.CreationTime = ptypes.TimestampNow()
 		entity.LastUpdateTime = entity.CreationTime
 	} else {
-		entity.LastUpdateTime = timestamppb.Now()
+		entity.LastUpdateTime = ptypes.TimestampNow()
 	}
 
 	// Ensure that MFASecrets is non-nil at any time. This is useful when MFA
@@ -1464,10 +1463,10 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 
 	// Set the creation and last update times
 	if group.CreationTime == nil {
-		group.CreationTime = timestamppb.Now()
+		group.CreationTime = ptypes.TimestampNow()
 		group.LastUpdateTime = group.CreationTime
 	} else {
-		group.LastUpdateTime = timestamppb.Now()
+		group.LastUpdateTime = ptypes.TimestampNow()
 	}
 
 	// Remove duplicate entity IDs and check if all IDs are valid
@@ -1808,7 +1807,7 @@ func (i *IdentityStore) UpsertGroupInTxn(ctx context.Context, txn *memdb.Txn, gr
 	}
 
 	if persist {
-		groupAsAny, err := anypb.New(group)
+		groupAsAny, err := ptypes.MarshalAny(group)
 		if err != nil {
 			return err
 		}

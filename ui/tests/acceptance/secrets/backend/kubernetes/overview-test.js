@@ -11,8 +11,7 @@ import kubernetesHandlers from 'vault/mirage/handlers/kubernetes';
 import authPage from 'vault/tests/pages/auth';
 import { visit, click, currentRouteName } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { KUBERNETES_OVERVIEW } from 'vault/tests/helpers/kubernetes/kubernetes-selectors';
+import { SELECTORS } from 'vault/tests/helpers/kubernetes/overview';
 
 module('Acceptance | kubernetes | overview', function (hooks) {
   setupApplicationTest(hooks);
@@ -35,7 +34,7 @@ module('Acceptance | kubernetes | overview', function (hooks) {
   test('it should transition to configuration page during empty state', async function (assert) {
     assert.expect(1);
     await this.visitOverview();
-    await click(`${GENERAL.emptyStateActions} a`);
+    await click('[data-test-component="empty-state"] a');
     this.validateRoute(assert, 'configure', 'Transitions to Configure route on click');
   });
 
@@ -43,7 +42,7 @@ module('Acceptance | kubernetes | overview', function (hooks) {
     assert.expect(1);
     this.createScenario();
     await this.visitOverview();
-    await click(KUBERNETES_OVERVIEW.rolesCardLink);
+    await click(SELECTORS.rolesCardLink);
     this.validateRoute(assert, 'roles.index', 'Transitions to roles route on View Roles click');
   });
 
@@ -51,7 +50,7 @@ module('Acceptance | kubernetes | overview', function (hooks) {
     assert.expect(1);
     this.createScenario(false);
     await this.visitOverview();
-    await click(KUBERNETES_OVERVIEW.rolesCardLink);
+    await click(SELECTORS.rolesCardLink);
     this.validateRoute(assert, 'roles.create', 'Transitions to roles route on Create Roles click');
   });
 
@@ -60,7 +59,7 @@ module('Acceptance | kubernetes | overview', function (hooks) {
     await this.createScenario();
     await this.visitOverview();
     await selectChoose('.search-select', 'role-0');
-    await click(KUBERNETES_OVERVIEW.generateCredentialsCardButton);
+    await click('[data-test-generate-credential-button]');
     this.validateRoute(assert, 'roles.role.credentials', 'Transitions to roles route on Generate click');
   });
 });

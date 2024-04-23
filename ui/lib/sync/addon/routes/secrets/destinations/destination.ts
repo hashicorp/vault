@@ -34,9 +34,10 @@ export default class SyncSecretsDestinationsDestinationRoute extends Route {
     // if transitioning from either of the mentioned routes and a purge has been initiated redirect to the secrets view
     const baseRoute = 'vault.cluster.sync.secrets.destinations.destination';
     const routes = [`${baseRoute}.edit`, `${baseRoute}.sync`];
-    const toRoute = transition.to?.name;
-    if (toRoute && routes.includes(toRoute) && model.purgeInitiatedAt) {
-      const action = transition.to?.localName === 'edit' ? 'Editing a destination' : 'Syncing secrets';
+    if (routes.includes(transition.to.name) && model.purgeInitiatedAt) {
+      // const target = transition.to.name.
+      // this.flashMessages.info('Actions are ')
+      const action = transition.to.localName === 'edit' ? 'Editing a destination' : 'Syncing secrets';
       this.flashMessages.info(`${action} is not permitted once a purge has been initiated.`);
       this.router.replaceWith('vault.cluster.sync.secrets.destinations.destination.secrets');
     }

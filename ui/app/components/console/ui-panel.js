@@ -105,7 +105,7 @@ export default Component.extend({
 
   refreshRoute: task(function* () {
     const owner = getOwner(this);
-    const currentRoute = owner.lookup(`router:main`).currentRouteName;
+    const currentRoute = owner.lookup(`router:main`).get('currentRouteName');
 
     try {
       this.store.clearAllDatasets();

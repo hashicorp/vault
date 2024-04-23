@@ -8,8 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { PKI_ROLE_FORM } from 'vault/tests/helpers/pki/pki-selectors';
+import { SELECTORS } from 'vault/tests/helpers/pki/pki-role-form';
 
 module('Integration | Component | pki-key-usage', function (hooks) {
   setupRenderingTest(hooks);
@@ -34,11 +33,11 @@ module('Integration | Component | pki-key-usage', function (hooks) {
       { owner: this.engine }
     );
     assert.strictEqual(findAll('.b-checkbox').length, 19, 'it render 19 checkboxes');
-    assert.dom(PKI_ROLE_FORM.digitalSignature).isChecked('Digital Signature is true by default');
-    assert.dom(PKI_ROLE_FORM.keyAgreement).isChecked('Key Agreement is true by default');
-    assert.dom(PKI_ROLE_FORM.keyEncipherment).isChecked('Key Encipherment is true by default');
-    assert.dom(PKI_ROLE_FORM.any).isNotChecked('Any is false by default');
-    assert.dom(GENERAL.inputByAttr('extKeyUsageOids')).exists('Extended Key usage oids renders');
+    assert.dom(SELECTORS.digitalSignature).isChecked('Digital Signature is true by default');
+    assert.dom(SELECTORS.keyAgreement).isChecked('Key Agreement is true by default');
+    assert.dom(SELECTORS.keyEncipherment).isChecked('Key Encipherment is true by default');
+    assert.dom(SELECTORS.any).isNotChecked('Any is false by default');
+    assert.dom(SELECTORS.extKeyUsageOids).exists('Extended Key usage oids renders');
   });
 
   test('it should set the model properties of key_usage and ext_key_usage based on the checkbox selections', async function (assert) {
@@ -54,9 +53,9 @@ module('Integration | Component | pki-key-usage', function (hooks) {
       { owner: this.engine }
     );
 
-    await click(PKI_ROLE_FORM.digitalSignature);
-    await click(PKI_ROLE_FORM.any);
-    await click(PKI_ROLE_FORM.serverAuth);
+    await click(SELECTORS.digitalSignature);
+    await click(SELECTORS.any);
+    await click(SELECTORS.serverAuth);
 
     assert.deepEqual(
       this.model.keyUsage,

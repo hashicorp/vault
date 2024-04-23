@@ -21,8 +21,8 @@ export default Helper.extend({
 
   compute([routeName, model], { isExact }) {
     const router = this.router;
-    const currentRoute = router.currentRouteName;
-    let currentURL = router.currentURL;
+    const currentRoute = router.get('currentRouteName');
+    let currentURL = router.get('currentURL');
     // if we have any query params we want to discard them
     currentURL = currentURL?.split('?')[0];
     const comparator = isExact ? exact : startsWith;

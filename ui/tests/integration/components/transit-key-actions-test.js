@@ -8,11 +8,11 @@ import { resolve } from 'rsvp';
 import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, find, fillIn, blur, triggerEvent } from '@ember/test-helpers';
+import { render, click, find, findAll, fillIn, blur, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { encodeString } from 'vault/utils/b64';
 import waitForError from 'vault/tests/helpers/wait-for-error';
-import codemirror from 'vault/tests/helpers/codemirror';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const storeStub = Service.extend({
   callArgs: null,
@@ -45,6 +45,12 @@ module('Integration | Component | transit key actions', function (hooks) {
       this.owner.unregister('service:store');
       this.owner.register('service:store', storeStub);
       this.storeService = this.owner.lookup('service:store');
+    });
+    setRunOptions({
+      rules: {
+        // TODO: fix JSONEditor/CodeMirror
+        label: { enabled: false },
+      },
     });
   });
 
@@ -105,7 +111,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     await render(hbs`
     <TransitKeyActions @selectedAction={{this.selectedAction}} @key={{this.key}} />`);
 
-    codemirror('#plaintext-control').setValue('plaintext');
+    find('#plaintext-control .CodeMirror').CodeMirror.setValue('plaintext');
     await click('button[type="submit"]');
     assert.deepEqual(
       this.storeService.callArgs,
@@ -126,7 +132,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     await click('dialog button');
     // Encrypt again, with pre-encoded value and checkbox selected
     const preEncodedValue = encodeString('plaintext');
-    codemirror('#plaintext-control').setValue(preEncodedValue);
+    find('#plaintext-control .CodeMirror').CodeMirror.setValue(preEncodedValue);
     await click('input[data-test-transit-input="encodedBase64"]');
     await click('button[type="submit"]');
 
@@ -155,7 +161,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     await render(hbs`
     <TransitKeyActions @selectedAction="encrypt" @key={{this.key}} />`);
 
-    codemirror().setValue('plaintext');
+    findAll('.CodeMirror')[0].CodeMirror.setValue('plaintext');
     assert.dom('#key_version').exists({ count: 1 }, 'it renders the key version selector');
 
     await triggerEvent('#key_version', 'change');
@@ -184,7 +190,8 @@ module('Integration | Component | transit key actions', function (hooks) {
     await render(hbs`
     <TransitKeyActions @selectedAction="encrypt" @key={{this.key}} />`);
 
-    codemirror('#plaintext-control').setValue('plaintext');
+    // await fillIn('#plaintext', 'plaintext');
+    find('#plaintext-control .CodeMirror').CodeMirror.setValue('plaintext');
     assert.dom('#key_version').doesNotExist('it does not render the selector when there is only one key');
   });
 
@@ -195,7 +202,11 @@ module('Integration | Component | transit key actions', function (hooks) {
 
     this.set('storeService.keyActionReturnVal', { plaintext });
     this.set('selectedAction', 'decrypt');
-    assert.strictEqual(codemirror('#ciphertext-control').getValue(), '', 'does not prefill ciphertext value');
+    assert.strictEqual(
+      find('#ciphertext-control .CodeMirror').CodeMirror.getValue(),
+      '',
+      'does not prefill ciphertext value'
+    );
   });
 
   const setupExport = async function () {

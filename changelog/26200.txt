@@ -1,6 +1,0 @@
-```release-note:bug
-auth/ldap: Fix login error missing entity alias attribute value.
-```
-```release-note:bug
-auth/ldap: Fix login error for group search anonymous bind.
-```

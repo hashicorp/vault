@@ -4,7 +4,6 @@
 ~}}
 
 <Clients::RunningTotal
-  @isSecretsSyncActivated={{@isSecretsSyncActivated}}
   @byMonthActivityData={{this.byMonthActivityData}}
   @isHistoricalMonth={{and (not this.isCurrentMonth) (not this.isDateRange)}}
   @isCurrentMonth={{this.isCurrentMonth}}
@@ -14,7 +13,6 @@
 />
 {{#if this.hasAttributionData}}
   <Clients::Attribution
-    @isSecretsSyncActivated={{@isSecretsSyncActivated}}
     @totalUsageCounts={{this.totalUsageCounts}}
     @newUsageCounts={{this.newClientCounts}}
     @totalClientAttribution={{this.totalClientAttribution}}

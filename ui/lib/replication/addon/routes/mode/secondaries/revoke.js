@@ -12,7 +12,7 @@ export default Base.extend({
 
   redirect(model) {
     const replicationMode = this.replicationMode;
-    if (!model[replicationMode].isPrimary || !model.canRevokeSecondary) {
+    if (!model.get(`${replicationMode}.isPrimary`) || !model.get('canRevokeSecondary')) {
       return this.transitionTo('index');
     }
   },

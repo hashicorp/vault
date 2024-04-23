@@ -50,10 +50,10 @@ runs:
         ARCH="$(echo "$RUNNER_ARCH" | tr '[:upper:]' '[:lower:]')"
         OS="$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')"
         if [ "$ARCH" = "x64" ]; then
-          export ARCH="amd64"
+          export ARCH="64bit"
         fi
         if [ "$OS" = "macos" ]; then
-          export OS="darwin"
+          export OS="mac"
         fi
 
         mkdir -p tmp

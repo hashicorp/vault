@@ -1,3 +1,0 @@
-```release-note:bug
-ui: fixes undefined start time in filename for downloaded client count attribution csv
-```

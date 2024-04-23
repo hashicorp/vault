@@ -14,7 +14,6 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/sdk/logical"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 func BenchmarkStoragePacker(b *testing.B) {
@@ -155,7 +154,7 @@ func TestStoragePacker_SerializeDeserializeComplexItem(t *testing.T) {
 		Policies:        []string{"policy1", "policy2"},
 	}
 
-	marshaledEntity, err := anypb.New(entity)
+	marshaledEntity, err := ptypes.MarshalAny(entity)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -5,9 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupTest } from 'vault/tests/helpers';
-import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
-
-const { rootPem } = CERTIFICATES;
+import { rootPem } from 'vault/tests/helpers/pki/values';
 
 module('Unit | Serializer | pki/action', function (hooks) {
   setupTest(hooks);

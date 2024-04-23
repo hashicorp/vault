@@ -8,8 +8,8 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { SELECTORS, OIDC_BASE_URL } from 'vault/tests/helpers/oidc-config';
-import { capabilitiesStub } from 'vault/tests/helpers/stubs';
+import { SELECTORS, OIDC_BASE_URL, overrideCapabilities } from 'vault/tests/helpers/oidc-config';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | oidc/scope-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -17,6 +17,12 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
+    setRunOptions({
+      rules: {
+        // TODO: fix JSONEditor/CodeMirror
+        label: { enabled: false },
+      },
+    });
   });
 
   test('it should save new scope', async function (assert) {
@@ -191,7 +197,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
   test('it should render error alerts when API returns an error', async function (assert) {
     assert.expect(2);
     this.model = this.store.createRecord('oidc/scope');
-    this.server.post('/sys/capabilities-self', () => capabilitiesStub(OIDC_BASE_URL + '/scopes'));
+    this.server.post('/sys/capabilities-self', () => overrideCapabilities(OIDC_BASE_URL + '/scopes'));
     await render(hbs`
       <Oidc::ScopeForm
         @model={{this.model}}

@@ -166,7 +166,7 @@ injected service account tokens to a year to help smooth the transition to
 short-lived tokens. If you would like to disable this, set
 [--service-account-extend-token-expiration=false][k8s-extended-tokens] for
 `kube-apiserver` or specify your own `serviceAccountToken` volume mount. See
-[here](/vault/docs/auth/jwt/oidc-providers/kubernetes#specify-ttl-and-audience) for an example.
+[here](/vault/docs/auth/jwt/oidc-providers/kubernetes#specifying-ttl-and-audience) for an example.
 
 [k8s-extended-tokens]: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/#options
 
@@ -188,12 +188,6 @@ $ vault write auth/kubernetes/config \
 token and CA certificate is read once and stored in Vault storage.
 When the service account token expires or is revoked, Vault will no longer be
 able to use the `TokenReview` API and client authentication will fail.
-
-<Tip title="You can use the trust store for CA certificates">
-  If you leave `kubernetes_ca_cert` unset and set `disable_local_ca_jwt` to
-  `true`, Vault uses the system's trust store for TLS certificate
-  verification.
-</Tip>
 
 #### Use the Vault client's JWT as the reviewer JWT
 

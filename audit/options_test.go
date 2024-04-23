@@ -4,6 +4,7 @@
 package audit
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -33,7 +34,7 @@ func TestOptions_WithFormat(t *testing.T) {
 		"invalid-test": {
 			Value:                "test",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "invalid format \"test\": invalid internal parameter",
+			ExpectedErrorMessage: "audit.(format).validate: 'test' is not a valid format: invalid parameter",
 		},
 		"valid-json": {
 			Value:           "json",
@@ -379,6 +380,47 @@ func TestOptions_WithOmitTime(t *testing.T) {
 	}
 }
 
+// TestOptions_WithHeaderFormatter exercises the WithHeaderFormatter Option to
+// ensure it applies the option as expected under various circumstances.
+func TestOptions_WithHeaderFormatter(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		Value                    HeaderFormatter
+		ExpectedValue            HeaderFormatter
+		ShouldLeaveUninitialized bool
+	}{
+		"nil": {
+			Value:         nil,
+			ExpectedValue: nil,
+		},
+		"unassigned-interface": {
+			ShouldLeaveUninitialized: true,
+		},
+		"happy-path": {
+			Value:         &testHeaderFormatter{},
+			ExpectedValue: &testHeaderFormatter{},
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			opts := &options{}
+			var f HeaderFormatter
+			if !tc.ShouldLeaveUninitialized {
+				f = tc.Value
+			}
+			applyOption := WithHeaderFormatter(f)
+			err := applyOption(opts)
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedValue, opts.withHeaderFormatter)
+		})
+	}
+}
+
 // TestOptions_Default exercises getDefaultOptions to assert the default values.
 func TestOptions_Default(t *testing.T) {
 	t.Parallel()
@@ -506,4 +548,13 @@ func TestOptions_Opts(t *testing.T) {
 			}
 		})
 	}
+}
+
+// testHeaderFormatter is a stub to prevent the need to import the vault package
+// to bring in vault.AuditedHeadersConfig for testing.
+type testHeaderFormatter struct{}
+
+// ApplyConfig satisfied the HeaderFormatter interface for testing.
+func (f *testHeaderFormatter) ApplyConfig(ctx context.Context, headers map[string][]string, salter Salter) (result map[string][]string, retErr error) {
+	return nil, nil
 }

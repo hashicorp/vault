@@ -5,45 +5,40 @@
 
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
-import { setupMirage } from 'ember-cli-mirage/test-support';
+import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 
-const storeStub = {
-  pushPayload() {},
-  serializerFor() {
-    return {
-      serializeIntoHash() {},
-    };
-  },
-};
-
-const makeSnapshot = (obj) => {
-  obj.role = {
-    backend: 'aws',
-    name: 'foo',
-  };
-  obj.attr = (attr) => obj[attr];
-  return obj;
-};
-
-const type = {
-  modelName: 'aws-credential',
-};
 module('Unit | Adapter | aws credential', function (hooks) {
   setupTest(hooks);
-  setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.getAssertion = () => {};
-    this.postAssertion = () => {};
-    this.server.get('/aws/creds/foo', (schema, req) => {
-      this.getAssertion(req);
-      return {};
-    });
-    this.server.post('/aws/creds/foo', (schema, req) => {
-      this.postAssertion(req);
-      return {};
-    });
+    this.server = apiStub();
   });
+
+  hooks.afterEach(function () {
+    this.server.shutdown();
+  });
+
+  const storeStub = {
+    pushPayload() {},
+    serializerFor() {
+      return {
+        serializeIntoHash() {},
+      };
+    },
+  };
+
+  const makeSnapshot = (obj) => {
+    obj.role = {
+      backend: 'aws',
+      name: 'foo',
+    };
+    obj.attr = (attr) => obj[attr];
+    return obj;
+  };
+
+  const type = {
+    modelName: 'aws-credential',
+  };
 
   const cases = [
     ['iam_user type', [storeStub, type, makeSnapshot({ credentialType: 'iam_user', ttl: '3h' })], 'GET'],
@@ -87,19 +82,19 @@ module('Unit | Adapter | aws credential', function (hooks) {
       { ttl: '3h', role_arn: 'arn' },
     ],
   ];
-
-  cases.forEach(([description, args, method, expectedRequestBody]) => {
+  cases.forEach(([description, args, expectedMethod, expectedRequestBody]) => {
     test(`aws-credential: ${description}`, function (assert) {
-      assert.expect(2);
-      const assertionName = method === 'GET' ? 'getAssertion' : 'postAssertion';
-      this.set(assertionName, (req) => {
-        assert.strictEqual(req.method, method, `query calls the correct url with method ${method}`);
-        const body = JSON.parse(req.requestBody);
-        const expected = expectedRequestBody ? expectedRequestBody : null;
-        assert.deepEqual(body, expected);
-      });
+      assert.expect(3);
       const adapter = this.owner.lookup('adapter:aws-credential');
       adapter.createRecord(...args);
+      const { method, url, requestBody } = this.server.handledRequests[0];
+      assert.strictEqual(url, '/v1/aws/creds/foo', `calls the correct url`);
+      assert.strictEqual(
+        method,
+        expectedMethod,
+        `${description} uses the correct http verb: ${expectedMethod}`
+      );
+      assert.strictEqual(requestBody, expectedRequestBody ? JSON.stringify(expectedRequestBody) : null);
     });
   });
 });

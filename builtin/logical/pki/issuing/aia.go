@@ -6,10 +6,9 @@ package issuing
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"strings"
-	"unicode/utf8"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -146,39 +145,10 @@ func GetClusterConfig(ctx context.Context, s logical.Storage) (*ClusterConfigEnt
 
 func ValidateURLs(urls []string) string {
 	for _, curr := range urls {
-		if !isURL(curr) || strings.Contains(curr, "{{issuer_id}}") || strings.Contains(curr, "{{cluster_path}}") || strings.Contains(curr, "{{cluster_aia_path}}") {
+		if !govalidator.IsURL(curr) || strings.Contains(curr, "{{issuer_id}}") || strings.Contains(curr, "{{cluster_path}}") || strings.Contains(curr, "{{cluster_aia_path}}") {
 			return curr
 		}
 	}
 
 	return ""
-}
-
-const (
-	maxURLRuneCount = 2083
-	minURLRuneCount = 3
-)
-
-// IsURL checks if the string is an URL.
-func isURL(str string) bool {
-	if str == "" || utf8.RuneCountInString(str) >= maxURLRuneCount || len(str) <= minURLRuneCount || strings.HasPrefix(str, ".") {
-		return false
-	}
-	strTemp := str
-	if strings.Contains(str, ":") && !strings.Contains(str, "://") {
-		// support no indicated urlscheme but with colon for port number
-		// http:// is appended so url.Parse will succeed, strTemp used so it does not impact rxURL.MatchString
-		strTemp = "http://" + str
-	}
-	u, err := url.ParseRequestURI(strTemp)
-	if err != nil {
-		return false
-	}
-	if strings.HasPrefix(u.Host, ".") {
-		return false
-	}
-	if u.Host == "" && (u.Path != "" && !strings.Contains(u.Path, ".")) {
-		return false
-	}
-	return true
 }

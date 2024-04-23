@@ -124,9 +124,14 @@ The credentials given to Vault must have the following permissions to synchroniz
 ```shell-session
 secretmanager.secrets.create
 secretmanager.secrets.delete
+secretmanager.secrets.get
+secretmanager.secrets.list
 secretmanager.secrets.update
+secretmanager.versions.access
 secretmanager.versions.add
-secretmanager.versions.destroy 
+secretmanager.versions.destroy
+secretmanager.versions.get
+secretmanager.versions.list
 ```
 
 ## Provision service account
@@ -154,10 +159,9 @@ to provision a GCP Service Account with the appropriate policies.
       // Environment Variables
       // GOOGLE_REGION (optional)
       // GOOGLE_PROJECT
-      // GOOGLE_CREDENTIALS (The path to a service account key file with the
-      //                    "Service Account Admin", "Service Account Key Admin",
-      //                    "Secret Manager Admin", and "Project IAM Admin" roles
-      //                    attached)
+      // GOOGLE_CREDENTIALS	(The path to a service account key file with the
+      //				        "Service Account Admin", "Service Account Key
+      //					    Admin", and "Security Admin" roles attached)
   }
 
   data "google_client_config" "config" {}
@@ -259,55 +263,6 @@ you can set the `project_id` parameter to the target project to sync secrets wit
 This overrides the project ID derived from the service account JSON credentials or application
 default credentials. The service account must be [authorized](https://cloud.google.com/iam/docs/service-account-overview#locations)
 to perform Secret Manager actions in the target project.
-
-## Access management
-
-You can allow or restrict access to secrets based on
-[IAM conditions](https://cloud.google.com/iam/docs/conditions-resource-attributes#resource-name)
-against the fully-qualified resource name. For secrets in Secret Manager, a fully-qualified resource name must have the following
-format:
-
-  `projects/<project_number>/secrets/<secret_name>`
-
-<Tip title="Use the project number, not the project ID"> 
-
-  The project **number** is not the same as the project **ID**. Project numbers
-  are **numeric** while project IDs are **alphanumeric**. They can be found on
-  the Project info panel in the web dashboard or on the Welcome screen.
-
-</Tip>
-
-For example, the default secret name template prepends the word `vault` to the
-beginning of secret names. To prevent Vault from modifying secrets that were not
-created by a sync operation, you can use a role binding against the resource
-name with the `startsWith` condition:
-
-  <CodeBlockConfig hideClipboard>
-
-    resource.name.startsWith("projects/<project_number>/secrets/vault")
-
-  </CodeBlockConfig>
-
-To prevent out-of-band overwrites, simply add a negative condition with `!` on any
-write-access role bindings not being used by Vault that contain Secret Manager permissions:
-
-  <CodeBlockConfig hideClipboard>
-
-    !(resource.name.startsWith("projects/<project_number>/secrets/vault"))
-
-  </CodeBlockConfig>
-
-To add conditions to IAM principles in GCP, click "+ADD IAM CONDITION" on the **Assign Roles** screen.
-
-![Assign Roles screen in GCP with the "+ADD IAM CONDITION" link circled in red](/img/gcp-add-iam-conditions_light.png#light-theme-only)
-![Assign Roles screen in GCP with the "+ADD IAM CONDITION" link circled in red](/img/gcp-add-iam-conditions_dark.png#dark-theme-only)
-
-<Tip title="Refer to Google's Overview of IAM Conditions documentation"> 
-
-  [Google's documentation](https://cloud.google.com/iam/docs/conditions-overview) on IAM Conditions provides
-  further information on how they work and how they should be used, as well as their limits.
-
-</Tip>
 
 ## API
 

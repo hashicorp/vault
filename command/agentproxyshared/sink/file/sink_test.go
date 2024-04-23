@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-uuid"
+	hclog "github.com/hashicorp/go-hclog"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
@@ -37,10 +37,8 @@ func TestSinkServer(t *testing.T) {
 	in := make(chan string)
 	sinks := []*sink.SinkConfig{fs1, fs2}
 	errCh := make(chan error)
-	tokenRenewalInProgress := &atomic.Bool{}
-	tokenRenewalInProgress.Store(true)
 	go func() {
-		errCh <- ss.Run(ctx, in, sinks, tokenRenewalInProgress)
+		errCh <- ss.Run(ctx, in, sinks)
 	}()
 
 	// Seed a token
@@ -68,10 +66,6 @@ func TestSinkServer(t *testing.T) {
 		if string(fileBytes) != uuidStr {
 			t.Fatalf("expected %s, got %s", uuidStr, string(fileBytes))
 		}
-	}
-
-	if tokenRenewalInProgress.Load() {
-		t.Fatal("should have reset tokenRenewalInProgress to false")
 	}
 }
 
@@ -110,11 +104,8 @@ func TestSinkServerRetry(t *testing.T) {
 	in := make(chan string)
 	sinks := []*sink.SinkConfig{{Sink: b1}, {Sink: b2}}
 	errCh := make(chan error)
-	tokenRenewalInProgress := &atomic.Bool{}
-	tokenRenewalInProgress.Store(true)
-
 	go func() {
-		errCh <- ss.Run(ctx, in, sinks, tokenRenewalInProgress)
+		errCh <- ss.Run(ctx, in, sinks)
 	}()
 
 	// Seed a token
@@ -127,10 +118,6 @@ func TestSinkServerRetry(t *testing.T) {
 	}
 	if atomic.LoadUint32(&b2.tryCount) < 2 {
 		t.Fatal("bad try count")
-	}
-
-	if !tokenRenewalInProgress.Load() {
-		t.Fatal("token renewal should still be in progress, sink server has not exited")
 	}
 
 	in <- "good"
@@ -150,9 +137,5 @@ func TestSinkServerRetry(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-	}
-
-	if tokenRenewalInProgress.Load() {
-		t.Fatal("should have reset tokenRenewalInProgress to false")
 	}
 }

@@ -5,21 +5,11 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { getContext, render } from '@ember/test-helpers';
+import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-
-const mirageToModels = (data) => {
-  const context = getContext();
-  const store = context.owner.lookup('service:store');
-  const modelName = Array.isArray(data) ? data[0].modelName : data.modelName;
-  const json = context.server.serializerOrRegistry.serialize(data);
-  store.push(json);
-  return Array.isArray(data)
-    ? data.map(({ id }) => store.peekRecord(modelName, id))
-    : store.peekRecord(modelName, data.id);
-};
+import mirageToModels from 'vault/tests/helpers/mirage-to-models';
 
 module('Integration | Component | secret-list-header', function (hooks) {
   setupRenderingTest(hooks);

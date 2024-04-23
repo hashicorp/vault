@@ -10,7 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
-import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
+import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap';
 import sinon from 'sinon';
 
 module('Integration | Component | ldap | Page::Roles', function (hooks) {

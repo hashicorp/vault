@@ -33,7 +33,7 @@ export default ApplicationAdapter.extend({
 
   deleteRecord(store, type, snapshot) {
     const { id } = snapshot;
-    return this.ajax(this.urlForTransformations(snapshot.record.backend, id), 'DELETE');
+    return this.ajax(this.urlForTransformations(snapshot.record.get('backend'), id), 'DELETE');
   },
 
   pathForType() {

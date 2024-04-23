@@ -3,9 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import ReplicationModeBaseController from './replication-mode';
-import { tracked } from '@glimmer/tracking';
+import Controller from './replication-mode';
 
-export default class ReplicationIndexController extends ReplicationModeBaseController {
-  @tracked modeSelection = 'dr';
-}
+export default Controller.extend();

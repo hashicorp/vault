@@ -158,7 +158,7 @@ protolint: prep check-tools-external
 # now run as a pre-commit hook (and there's little value in
 # making every build run the formatter), we've removed that
 # dependency.
-prep: check-go-version clean
+prep: check-go-version
 	@echo "==> Running go generate..."
 	@GOARCH= GOOS= $(GO_CMD) generate $(MAIN_PACKAGES)
 	@GOARCH= GOOS= cd api && $(GO_CMD) generate $(API_PACKAGES)
@@ -389,7 +389,3 @@ ci-copywriteheaders:
 .PHONY: all-packages
 all-packages:
 	@echo $(ALL_PACKAGES) | tr ' ' '\n'
-
-.PHONY: clean
-clean:
-	@echo "==> Cleaning..."

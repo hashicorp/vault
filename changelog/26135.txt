@@ -1,3 +1,0 @@
-```release-note:improvement
-storage/azure: Perform validation on Azure account name and container name 
-```

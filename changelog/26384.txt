@@ -1,3 +1,0 @@
-```release-note:bug
-plugin/wif: fix a bug where the namespace was not set for external plugins using workload identity federation
-```

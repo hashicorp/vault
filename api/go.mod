@@ -5,13 +5,11 @@ module github.com/hashicorp/vault/api
 // automatically track the Go version used to build Vault itself.  Many projects import
 // the api module and we don't want to impose a newer version on them any more than we
 // have to.
-go 1.21
-
-toolchain go1.21.8
+go 1.19
 
 require (
 	github.com/cenkalti/backoff/v3 v3.0.0
-	github.com/go-jose/go-jose/v4 v4.0.1
+	github.com/go-jose/go-jose/v3 v3.0.3
 	github.com/go-test/deep v1.0.2
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.2

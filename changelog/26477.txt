@@ -1,3 +1,0 @@
-```release-note:bug
-secrets/pki: fixed validation bug which rejected ldap schemed URLs in crl_distribution_points.
-```

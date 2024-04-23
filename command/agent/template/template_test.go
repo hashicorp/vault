@@ -11,7 +11,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
-	sync "sync/atomic"
 	"testing"
 	"time"
 
@@ -388,9 +387,8 @@ func TestServerRun(t *testing.T) {
 			}
 
 			errCh := make(chan error)
-			serverErrCh := make(chan error, 1)
 			go func() {
-				errCh <- server.Run(ctx, templateTokenCh, templatesToRender, &sync.Bool{}, serverErrCh)
+				errCh <- server.Run(ctx, templateTokenCh, templatesToRender)
 			}()
 
 			// send a dummy value to trigger the internal Runner to query for secret
@@ -494,9 +492,8 @@ func TestNewServerLogLevels(t *testing.T) {
 			defer cancel()
 
 			errCh := make(chan error)
-			serverErrCh := make(chan error, 1)
 			go func() {
-				errCh <- server.Run(ctx, templateTokenCh, templatesToRender, &sync.Bool{}, serverErrCh)
+				errCh <- server.Run(ctx, templateTokenCh, templatesToRender)
 			}()
 
 			// send a dummy value to trigger auth so the server will exit

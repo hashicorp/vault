@@ -2346,98 +2346,6 @@ func TestBackend_CertUpgrade(t *testing.T) {
 	}
 }
 
-// TestOCSPFailOpenWithBadIssuer validates we fail all different types of cert auth
-// login scenarios if we encounter an OCSP verification error
-func TestOCSPFailOpenWithBadIssuer(t *testing.T) {
-	caFile := "test-fixtures/root/rootcacert.pem"
-	pemCa, err := os.ReadFile(caFile)
-	require.NoError(t, err, "failed reading in file %s", caFile)
-	caTLS := loadCerts(t, caFile, "test-fixtures/root/rootcakey.pem")
-	leafTLS := loadCerts(t, "test-fixtures/keys/cert.pem", "test-fixtures/keys/key.pem")
-
-	rootConfig := &rootcerts.Config{
-		CAFile: caFile,
-	}
-	rootCAs, err := rootcerts.LoadCACerts(rootConfig)
-	connState, err := testConnStateWithCert(leafTLS, rootCAs)
-	require.NoError(t, err, "error testing connection state: %v", err)
-
-	badCa, badCaKey := createCa(t)
-
-	// Setup an OCSP handler
-	ocspHandler := func(ca *x509.Certificate, caKey crypto.Signer) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			now := time.Now()
-			ocspRes := ocsp.Response{
-				SerialNumber: leafTLS.Leaf.SerialNumber,
-				ThisUpdate:   now.Add(-1 * time.Hour),
-				NextUpdate:   now.Add(30 * time.Minute),
-				Status:       ocsp.Good,
-			}
-			response, err := ocsp.CreateResponse(ca, ca, ocspRes, caKey)
-			if err != nil {
-				t.Fatalf("failed generating OCSP response: %v", err)
-			}
-			_, _ = w.Write(response)
-		})
-	}
-	goodTs := httptest.NewServer(ocspHandler(caTLS.Leaf, caTLS.PrivateKey.(crypto.Signer)))
-	badTs := httptest.NewServer(ocspHandler(badCa, badCaKey))
-	defer goodTs.Close()
-	defer badTs.Close()
-
-	steps := []logicaltest.TestStep{
-		// step 1/2: This should fail as we get a response from a bad root, even with ocsp_fail_open is set to true
-		testAccStepCertWithExtraParams(t, "web", pemCa, "foo", allowed{names: "cert.example.com"}, false,
-			map[string]interface{}{
-				"ocsp_enabled":           true,
-				"ocsp_servers_override":  []string{badTs.URL},
-				"ocsp_query_all_servers": false,
-				"ocsp_fail_open":         true,
-			}),
-		testAccStepLoginInvalid(t, connState),
-		// step 3/4: This should fail as we query all the servers which will get a response with an invalid signature
-		testAccStepCertWithExtraParams(t, "web", pemCa, "foo", allowed{names: "cert.example.com"}, false,
-			map[string]interface{}{
-				"ocsp_enabled":           true,
-				"ocsp_servers_override":  []string{goodTs.URL, badTs.URL},
-				"ocsp_query_all_servers": true,
-				"ocsp_fail_open":         true,
-			}),
-		testAccStepLoginInvalid(t, connState),
-		// step 5/6: This should fail as we will query the OCSP server with the bad root key first.
-		testAccStepCertWithExtraParams(t, "web", pemCa, "foo", allowed{names: "cert.example.com"}, false,
-			map[string]interface{}{
-				"ocsp_enabled":           true,
-				"ocsp_servers_override":  []string{badTs.URL, goodTs.URL},
-				"ocsp_query_all_servers": false,
-				"ocsp_fail_open":         true,
-			}),
-		testAccStepLoginInvalid(t, connState),
-		// step 7/8: This should pass as we will only query the first server with the valid root signature
-		testAccStepCertWithExtraParams(t, "web", pemCa, "foo", allowed{names: "cert.example.com"}, false,
-			map[string]interface{}{
-				"ocsp_enabled":           true,
-				"ocsp_servers_override":  []string{goodTs.URL, badTs.URL},
-				"ocsp_query_all_servers": false,
-				"ocsp_fail_open":         true,
-			}),
-		testAccStepLogin(t, connState),
-	}
-
-	// Setup a new factory everytime to avoid OCSP caching from influencing the test
-	for i := 0; i < len(steps); i += 2 {
-		setup := i
-		execute := i + 1
-		t.Run(fmt.Sprintf("steps-%d-%d", setup+1, execute+1), func(t *testing.T) {
-			logicaltest.Test(t, logicaltest.TestCase{
-				CredentialBackend: testFactory(t),
-				Steps:             []logicaltest.TestStep{steps[setup], steps[execute]},
-			})
-		})
-	}
-}
-
 // TestOCSPWithMixedValidResponses validates the expected behavior of multiple OCSP servers configured,
 // with and without ocsp_query_all_servers enabled or disabled.
 func TestOCSPWithMixedValidResponses(t *testing.T) {
@@ -2492,14 +2400,6 @@ func TestOCSPWithMixedValidResponses(t *testing.T) {
 				"ocsp_enabled":           true,
 				"ocsp_servers_override":  []string{revokeTs.URL, goodTs.URL},
 				"ocsp_query_all_servers": false,
-			}),
-		testAccStepLoginInvalid(t, connState),
-		// step 5/6: This should fail as we will query all the OCSP servers and prefer the revoke response
-		testAccStepCertWithExtraParams(t, "web", pemCa, "foo",
-			allowed{names: "cert.example.com"}, false, map[string]interface{}{
-				"ocsp_enabled":           true,
-				"ocsp_servers_override":  []string{goodTs.URL, revokeTs.URL},
-				"ocsp_query_all_servers": true,
 			}),
 		testAccStepLoginInvalid(t, connState),
 	}
@@ -2596,28 +2496,6 @@ func TestOCSPFailOpenWithGoodResponse(t *testing.T) {
 				"ocsp_max_retries":       0,
 			}),
 		testAccStepLogin(t, connState),
-		// Step 9/10 With a single positive response, query all servers set to true and fail open true, pass validation
-		// as fail open is true
-		testAccStepCertWithExtraParams(t, "web", pemCa, "foo", allowed{names: "cert.example.com"}, false,
-			map[string]interface{}{
-				"ocsp_enabled":           true,
-				"ocsp_servers_override":  []string{ts.URL, "http://127.0.0.1:30001"},
-				"ocsp_fail_open":         true,
-				"ocsp_query_all_servers": true,
-				"ocsp_max_retries":       0,
-			}),
-		testAccStepLogin(t, connState),
-		// Step 11/12 With a single positive response, query all servers set to true and fail open false, fail validation
-		// as not all servers agree
-		testAccStepCertWithExtraParams(t, "web", pemCa, "foo",
-			allowed{names: "cert.example.com"}, false, map[string]interface{}{
-				"ocsp_enabled":           true,
-				"ocsp_servers_override":  []string{ts.URL, "http://127.0.0.1:30001"},
-				"ocsp_fail_open":         false,
-				"ocsp_query_all_servers": true,
-				"ocsp_max_retries":       0,
-			}),
-		testAccStepLoginInvalid(t, connState),
 	}
 
 	// Setup a new factory everytime to avoid OCSP caching from influencing the test
@@ -2689,26 +2567,6 @@ func TestOCSPFailOpenWithRevokeResponse(t *testing.T) {
 				"ocsp_max_retries":       0,
 			}),
 		testAccStepLoginInvalid(t, connState),
-		// Step 5/6 With a single revoke response, query all servers set to true and fail open false, fail validation
-		testAccStepCertWithExtraParams(t, "web", pemCa, "foo",
-			allowed{names: "cert.example.com"}, false, map[string]interface{}{
-				"ocsp_enabled":           true,
-				"ocsp_servers_override":  []string{ts.URL, "http://127.0.0.1:30001"},
-				"ocsp_fail_open":         false,
-				"ocsp_query_all_servers": true,
-				"ocsp_max_retries":       0,
-			}),
-		testAccStepLoginInvalid(t, connState),
-		// Step 7/8 With a single revoke response, query all servers set to true and fail open true, fail validation
-		testAccStepCertWithExtraParams(t, "web", pemCa, "foo", allowed{names: "cert.example.com"}, false,
-			map[string]interface{}{
-				"ocsp_enabled":           true,
-				"ocsp_servers_override":  []string{ts.URL, "http://127.0.0.1:30001"},
-				"ocsp_fail_open":         true,
-				"ocsp_query_all_servers": true,
-				"ocsp_max_retries":       0,
-			}),
-		testAccStepLoginInvalid(t, connState),
 	}
 
 	// Setup a new factory everytime to avoid OCSP caching from influencing the test
@@ -2777,26 +2635,6 @@ func TestOCSPFailOpenWithUnknownResponse(t *testing.T) {
 				"ocsp_servers_override":  []string{ts.URL, "http://127.0.0.1:30001"},
 				"ocsp_fail_open":         false,
 				"ocsp_query_all_servers": false,
-				"ocsp_max_retries":       0,
-			}),
-		testAccStepLoginInvalid(t, connState),
-		// Step 5/6 With a single unknown response, query all servers set to true and fail open true, fail validation
-		testAccStepCertWithExtraParams(t, "web", pemCa, "foo", allowed{names: "cert.example.com"}, false,
-			map[string]interface{}{
-				"ocsp_enabled":           true,
-				"ocsp_servers_override":  []string{ts.URL, "http://127.0.0.1:30001"},
-				"ocsp_fail_open":         true,
-				"ocsp_query_all_servers": true,
-				"ocsp_max_retries":       0,
-			}),
-		testAccStepLogin(t, connState),
-		// Step 7/8 With a single unknown response, query all servers set to true and fail open false, fail validation
-		testAccStepCertWithExtraParams(t, "web", pemCa, "foo",
-			allowed{names: "cert.example.com"}, false, map[string]interface{}{
-				"ocsp_enabled":           true,
-				"ocsp_servers_override":  []string{ts.URL, "http://127.0.0.1:30001"},
-				"ocsp_fail_open":         false,
-				"ocsp_query_all_servers": true,
 				"ocsp_max_retries":       0,
 			}),
 		testAccStepLoginInvalid(t, connState),
@@ -2912,29 +2750,4 @@ func loadCerts(t *testing.T, certFile, certKey string) tls.Certificate {
 	require.NoError(t, err, "failed parsing certificate from file %s", certFile)
 
 	return caTLS
-}
-
-func createCa(t *testing.T) (*x509.Certificate, *ecdsa.PrivateKey) {
-	rootCaKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err, "failed generated root key for CA")
-
-	// Validate we reject CSRs that contain CN that aren't in the original order
-	cr := &x509.Certificate{
-		Subject:               pkix.Name{CommonName: "Root Cert"},
-		SerialNumber:          big.NewInt(1),
-		IsCA:                  true,
-		BasicConstraintsValid: true,
-		SignatureAlgorithm:    x509.ECDSAWithSHA256,
-		NotBefore:             time.Now().Add(-1 * time.Second),
-		NotAfter:              time.Now().AddDate(1, 0, 0),
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageOCSPSigning},
-	}
-	rootCaBytes, err := x509.CreateCertificate(rand.Reader, cr, cr, &rootCaKey.PublicKey, rootCaKey)
-	require.NoError(t, err, "failed generating root ca")
-
-	rootCa, err := x509.ParseCertificate(rootCaBytes)
-	require.NoError(t, err, "failed parsing root ca")
-
-	return rootCa, rootCaKey
 }

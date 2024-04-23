@@ -109,7 +109,7 @@ func (c *Core) getHAMembers() ([]HAStatusNode, error) {
 	}
 
 	if rb := c.getRaftBackend(); rb != nil {
-		leader.UpgradeVersion = rb.UpgradeVersion()
+		leader.UpgradeVersion = rb.EffectiveVersion()
 		leader.RedundancyZone = rb.RedundancyZone()
 	}
 
@@ -118,16 +118,15 @@ func (c *Core) getHAMembers() ([]HAStatusNode, error) {
 	for _, peerNode := range c.GetHAPeerNodesCached() {
 		lastEcho := peerNode.LastEcho
 		nodes = append(nodes, HAStatusNode{
-			Hostname:                    peerNode.Hostname,
-			APIAddress:                  peerNode.APIAddress,
-			ClusterAddress:              peerNode.ClusterAddress,
-			LastEcho:                    &lastEcho,
-			Version:                     peerNode.Version,
-			UpgradeVersion:              peerNode.UpgradeVersion,
-			RedundancyZone:              peerNode.RedundancyZone,
-			EchoDurationMillis:          peerNode.EchoDuration.Milliseconds(),
-			ClockSkewMillis:             peerNode.ClockSkewMillis,
-			ReplicationPrimaryCanaryAge: peerNode.ReplicationPrimaryCanaryAge,
+			Hostname:           peerNode.Hostname,
+			APIAddress:         peerNode.APIAddress,
+			ClusterAddress:     peerNode.ClusterAddress,
+			LastEcho:           &lastEcho,
+			Version:            peerNode.Version,
+			UpgradeVersion:     peerNode.UpgradeVersion,
+			RedundancyZone:     peerNode.RedundancyZone,
+			EchoDurationMillis: peerNode.EchoDuration.Milliseconds(),
+			ClockSkewMillis:    peerNode.ClockSkewMillis,
 		})
 	}
 
@@ -580,20 +579,6 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		activeCtx, activeCtxCancel := context.WithCancel(namespace.RootContext(nil))
 		c.activeContext = activeCtx
 		c.activeContextCancelFunc.Store(activeCtxCancel)
-
-		// Trigger a seal reload if necessary. A seal reload is necessary when a node
-		// becomes the leader since its seal generation information may be out of
-		// date (as is the case, for example, when a new node joins the cluster).
-		if err := c.TriggerSealReload(c.activeContext); err != nil {
-			c.logger.Error("seal configuration reload error", "error", err)
-			c.barrier.Seal()
-			c.logger.Warn("vault is sealed")
-			c.heldHALock = nil
-			lock.Unlock()
-			close(continueCh)
-			c.stateLock.Unlock()
-			return
-		}
 
 		// Perform seal migration
 		if err := c.migrateSeal(c.activeContext); err != nil {

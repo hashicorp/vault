@@ -111,7 +111,7 @@ func TestTokenFileEndToEnd(t *testing.T) {
 		Client: client,
 	})
 	go func() {
-		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config}, ah.AuthInProgress)
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
 	}()
 	defer func() {
 		select {

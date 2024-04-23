@@ -7,9 +7,7 @@ import { module, test } from 'qunit';
 import { setupTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
-import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
-
-const { rootPem } = CERTIFICATES;
+import { rootPem } from 'vault/tests/helpers/pki/values';
 
 module('Unit | Adapter | pki/action', function (hooks) {
   setupTest(hooks);

@@ -44,11 +44,6 @@ const (
 	credentialTableType = "auth"
 )
 
-func init() {
-	// Register the keys we use for auth "mount" tables
-	registerMountOrNamespaceTablePaths(coreAuthConfigPath, coreLocalAuthConfigPath)
-}
-
 var (
 	// errLoadAuthFailed if loadCredentials encounters an error
 	errLoadAuthFailed = errors.New("failed to setup auth table")

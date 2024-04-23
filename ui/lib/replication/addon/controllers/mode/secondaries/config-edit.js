@@ -14,7 +14,7 @@ export default Controller.extend({
   replicationMode: alias('rm.mode'),
   actions: {
     resetConfig(config) {
-      if (config.isNew) {
+      if (config.get('isNew')) {
         config.setProperties({
           mode: null,
           paths: [],

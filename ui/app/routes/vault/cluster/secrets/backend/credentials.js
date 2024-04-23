@@ -16,6 +16,10 @@ export default Route.extend({
   router: service(),
   store: service(),
 
+  backendModel() {
+    return this.modelFor('vault.cluster.secrets.backend');
+  },
+
   beforeModel() {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     if (backend != 'ssh') {
@@ -53,13 +57,15 @@ export default Route.extend({
 
   async model(params) {
     const role = params.secret;
-    const { id: backendPath, type: backendType } = this.modelFor('vault.cluster.secrets.backend');
+    const backendModel = this.backendModel();
+    const backendPath = backendModel.get('id');
+    const backendType = backendModel.get('type');
     const roleType = params.roleType;
     let dbCred;
     if (backendType === 'database') {
       dbCred = await this.getDatabaseCredential(backendPath, role, roleType);
     }
-    if (!SUPPORTED_DYNAMIC_BACKENDS.includes(backendType)) {
+    if (!SUPPORTED_DYNAMIC_BACKENDS.includes(backendModel.get('type'))) {
       return this.router.transitionTo('vault.cluster.secrets.backend.list-root', backendPath);
     }
     return resolve({

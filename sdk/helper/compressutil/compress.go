@@ -11,6 +11,7 @@ import (
 	"io"
 
 	"github.com/golang/snappy"
+	"github.com/hashicorp/errwrap"
 	"github.com/pierrec/lz4"
 )
 
@@ -33,7 +34,7 @@ const (
 	CompressionCanaryLZ4 byte = '4'
 )
 
-// CompressUtilReadCloser embeds the snappy reader which implements the io.Reader
+// SnappyReadCloser embeds the snappy reader which implements the io.Reader
 // interface. The decompress procedure in this utility expects an
 // io.ReadCloser. This type implements the io.Closer interface to retain the
 // generic way of decompression.
@@ -97,7 +98,7 @@ func Compress(data []byte, config *CompressionConfig) ([]byte, error) {
 			// These are valid compression levels
 		default:
 			// If compression level is set to NoCompression or to
-			// any invalid value, fallback to DefaultCompression
+			// any invalid value, fallback to Defaultcompression
 			config.GzipCompressionLevel = gzip.DefaultCompression
 		}
 		writer, err = gzip.NewWriterLevel(&buf, config.GzipCompressionLevel)
@@ -115,7 +116,7 @@ func Compress(data []byte, config *CompressionConfig) ([]byte, error) {
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to create a compression writer: %w", err)
+		return nil, errwrap.Wrapf("failed to create a compression writer: {{err}}", err)
 	}
 
 	if writer == nil {
@@ -125,7 +126,7 @@ func Compress(data []byte, config *CompressionConfig) ([]byte, error) {
 	// Compress the input and place it in the same buffer containing the
 	// canary byte.
 	if _, err = writer.Write(data); err != nil {
-		return nil, fmt.Errorf("failed to compress input data: err: %w", err)
+		return nil, errwrap.Wrapf("failed to compress input data: err: {{err}}", err)
 	}
 
 	// Close the io.WriteCloser
@@ -205,7 +206,7 @@ func DecompressWithCanary(data []byte) ([]byte, string, bool, error) {
 		return nil, "", true, nil
 	}
 	if err != nil {
-		return nil, "", false, fmt.Errorf("failed to create a compression reader: %w", err)
+		return nil, "", false, errwrap.Wrapf("failed to create a compression reader: {{err}}", err)
 	}
 	if reader == nil {
 		return nil, "", false, fmt.Errorf("failed to create a compression reader")
@@ -216,18 +217,8 @@ func DecompressWithCanary(data []byte) ([]byte, string, bool, error) {
 
 	// Read all the compressed data into a buffer
 	var buf bytes.Buffer
-
-	// Read the compressed data into a buffer, but do so
-	// slowly to prevent reading all the data into memory
-	// at once (protecting against e.g. zip bombs).
-	for {
-		_, err := io.CopyN(&buf, reader, 1024)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, "", false, err
-		}
+	if _, err = io.Copy(&buf, reader); err != nil {
+		return nil, "", false, err
 	}
 
 	return buf.Bytes(), compressionType, false, nil

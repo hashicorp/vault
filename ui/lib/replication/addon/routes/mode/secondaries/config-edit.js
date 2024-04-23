@@ -22,8 +22,8 @@ export default Base.extend({
     if (
       !this.version.hasPerfReplication ||
       replicationMode !== 'performance' ||
-      !cluster[replicationMode].isPrimary ||
-      !cluster.canAddSecondary
+      !cluster.get(`${replicationMode}.isPrimary`) ||
+      !cluster.get('canAddSecondary')
     ) {
       return this.transitionTo('mode', replicationMode);
     }

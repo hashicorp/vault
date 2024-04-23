@@ -40,7 +40,7 @@
           <ul class="menu-list">
             {{#if @pem}}
               {{! should never be null, but if it is we don't want to let users download an empty file }}
-              <li>
+              <li class="action">
                 <DownloadButton
                   class="link"
                   @filename={{@issuer.id}}
@@ -54,7 +54,7 @@
             {{/if}}
             {{#if @der}}
               {{! should never be null, but if it is we don't want to let users download an empty file }}
-              <li>
+              <li class="action">
                 <DownloadButton
                   class="link"
                   @filename={{@issuer.id}}

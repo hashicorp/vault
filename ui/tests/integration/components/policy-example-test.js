@@ -22,6 +22,8 @@ module('Integration | Component | policy-example', function (hooks) {
   hooks.beforeEach(function () {
     setRunOptions({
       rules: {
+        // TODO: Fix JSONEditor/CodeMirror
+        label: { enabled: false },
         // failing on .CodeMirror-scroll
         'scrollable-region-focusable': { enabled: false },
       },

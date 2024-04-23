@@ -36,7 +36,6 @@ import (
 )
 
 const (
-	mockv5                       = "mockv5"
 	dbUser                       = "vaultstatictest"
 	dbUserDefaultPassword        = "password"
 	testMinRotationWindowSeconds = 5
@@ -1447,7 +1446,7 @@ func TestStoredWALsCorrectlyProcessed(t *testing.T) {
 
 	rotationPeriodData := map[string]interface{}{
 		"username":        "hashicorp",
-		"db_name":         mockv5,
+		"db_name":         "mockv5",
 		"rotation_period": "86400s",
 	}
 
@@ -1501,7 +1500,7 @@ func TestStoredWALsCorrectlyProcessed(t *testing.T) {
 			},
 			map[string]interface{}{
 				"username":          "hashicorp",
-				"db_name":           mockv5,
+				"db_name":           "mockv5",
 				"rotation_schedule": "*/10 * * * * *",
 			},
 		},
@@ -1700,9 +1699,9 @@ func setupMockDB(b *databaseBackend) *mockNewDatabase {
 	dbi := &dbPluginInstance{
 		database: dbw,
 		id:       "foo-id",
-		name:     mockv5,
+		name:     "mockV5",
 	}
-	b.connections.Put(mockv5, dbi)
+	b.connections.Put("mockv5", dbi)
 
 	return mockDB
 }
@@ -1711,7 +1710,7 @@ func setupMockDB(b *databaseBackend) *mockNewDatabase {
 // plugin init code paths, allowing us to use a manually populated mock DB object.
 func configureDBMount(t *testing.T, storage logical.Storage) {
 	t.Helper()
-	entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/"+mockv5), &DatabaseConfig{
+	entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/mockv5"), &DatabaseConfig{
 		AllowedRoles: []string{"*"},
 	})
 	if err != nil {

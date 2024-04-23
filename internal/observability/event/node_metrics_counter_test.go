@@ -39,20 +39,20 @@ func TestNewMetricsCounter(t *testing.T) {
 			node:                 nil,
 			labeler:              nil,
 			isErrorExpected:      true,
-			expectedErrorMessage: "name is required: invalid parameter",
+			expectedErrorMessage: "event.NewMetricsCounter: name is required: invalid parameter",
 		},
 		"no-node": {
 			name:                 "foo",
 			node:                 nil,
 			isErrorExpected:      true,
-			expectedErrorMessage: "node is required: invalid parameter",
+			expectedErrorMessage: "event.NewMetricsCounter: node is required: invalid parameter",
 		},
 		"no-labeler": {
 			name:                 "foo",
 			node:                 &testEventLoggerNode{},
 			labeler:              nil,
 			isErrorExpected:      true,
-			expectedErrorMessage: "labeler is required: invalid parameter",
+			expectedErrorMessage: "event.NewMetricsCounter: labeler is required: invalid parameter",
 		},
 	}
 

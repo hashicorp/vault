@@ -16,7 +16,7 @@ export default Route.extend({
     const { backend } = this.paramsFor(this.routeName);
     return this.store.query('secret-engine', { path: backend }).then((modelList) => {
       const model = modelList && modelList[0];
-      if (!model || !CONFIGURABLE_BACKEND_TYPES.includes(model.type)) {
+      if (!model || !CONFIGURABLE_BACKEND_TYPES.includes(model.get('type'))) {
         const error = new AdapterError();
         set(error, 'httpStatus', 404);
         throw error;
@@ -33,7 +33,7 @@ export default Route.extend({
   },
 
   afterModel(model) {
-    const type = model.type;
+    const type = model.get('type');
 
     if (type === 'aws') {
       return this.store
@@ -50,7 +50,7 @@ export default Route.extend({
   },
 
   setupController(controller, model) {
-    if (model.publicKey) {
+    if (model.get('publicKey')) {
       controller.set('configured', true);
     }
     return this._super(...arguments);

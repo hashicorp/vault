@@ -38,7 +38,7 @@ export default function (server) {
     let records = [];
     if (isMethod) {
       methods.forEach((method) => {
-        records = [...records, ...schema.db[dbKeyFromType(method)].where({})];
+        records.addObjects(schema.db[dbKeyFromType(method)].where({}));
       });
     } else {
       records = schema.db.mfaLoginEnforcements.where({});

@@ -10,8 +10,6 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { resolve } from 'rsvp';
 import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-utils';
-import { removeFromArray } from 'vault/helpers/remove-from-array';
-import { addToArray } from 'vault/helpers/add-to-array';
 /**
  * @module SearchSelect
  * The `SearchSelect` is an implementation of the [ember-power-select](https://github.com/cibernox/ember-power-select) used for form elements where options come dynamically from the API.
@@ -30,7 +28,7 @@ import { addToArray } from 'vault/helpers/add-to-array';
  * />
  *
  // * component functionality
- * @param {function} onChange - The onchange action for this form field. ** SEE EXAMPLE ** mfa-login-enforcement-form.js (onMethodChange) for example when selecting models from a hasMany relationship
+ * @param {function} onChange - The onchange action for this form field. ** SEE UTIL ** search-select-has-many.js if selecting models from a hasMany relationship
  * @param {array} [inputValue] - Array of strings corresponding to the input's initial value, e.g. an array of model ids that on edit will appear as selected items below the input
  * @param {boolean} [disallowNewItems=false] - Controls whether or not the user can add a new item if none found
  * @param {boolean} [shouldRenderName=false] - By default an item's id renders in the dropdown, `true` displays the name with its id in smaller text beside it *NOTE: the boolean flips automatically with 'identity' models or if this.idKey !== 'id'
@@ -120,7 +118,7 @@ export default class SearchSelect extends Component {
         : false;
 
       // remove any matches from dropdown list
-      this.dropdownOptions = removeFromArray(this.dropdownOptions, matchingOption);
+      this.dropdownOptions.removeObject(matchingOption);
       return {
         id: option,
         name: matchingOption ? matchingOption[this.nameKey] : option,
@@ -265,9 +263,9 @@ export default class SearchSelect extends Component {
 
   @action
   discardSelection(selected) {
-    this.selectedOptions = removeFromArray(this.selectedOptions, selected);
+    this.selectedOptions.removeObject(selected);
     if (!selected.new) {
-      this.dropdownOptions = addToArray(this.dropdownOptions, selected);
+      this.dropdownOptions.pushObject(selected);
     }
     this.handleChange();
   }
@@ -293,10 +291,10 @@ export default class SearchSelect extends Component {
   selectOrCreate(selection) {
     if (selection && selection.__isSuggestion__) {
       const name = selection.__value__;
-      this.selectedOptions = addToArray(this.selectedOptions, { name, id: name, new: true });
+      this.selectedOptions.pushObject({ name, id: name, new: true });
     } else {
-      this.selectedOptions = addToArray(this.selectedOptions, selection);
-      this.dropdownOptions = removeFromArray(this.dropdownOptions, selection);
+      this.selectedOptions.pushObject(selection);
+      this.dropdownOptions.removeObject(selection);
     }
     this.handleChange();
   }

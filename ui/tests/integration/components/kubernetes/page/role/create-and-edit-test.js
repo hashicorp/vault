@@ -48,6 +48,8 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
         // TODO: fix RadioCard component (replace with HDS)
         'aria-valid-attr-value': { enabled: false },
         'nested-interactive': { enabled: false },
+        // TODO: fix JSONEditor/CodeMirror
+        label: { enabled: false },
       },
     });
   });

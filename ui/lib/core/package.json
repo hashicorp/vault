@@ -18,6 +18,7 @@
     "ember-cli-typescript": "*",
     "ember-composable-helpers": "*",
     "ember-concurrency": "*",
+    "ember-maybe-in-element": "*",
     "ember/render-modifiers": "*",
     "ember-power-select": "*",
     "ember-router-helpers": "*",

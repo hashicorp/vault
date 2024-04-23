@@ -31,8 +31,6 @@ import (
 	"golang.org/x/crypto/ocsp"
 )
 
-//go:generate enumer -type=FailOpenMode -trimprefix=FailOpen
-
 // FailOpenMode is OCSP fail open mode. FailOpenTrue by default and may
 // set to ocspModeFailClosed for fail closed mode
 type FailOpenMode uint32
@@ -77,15 +75,6 @@ const (
 	// cacheExpire specifies cache data expiration time in seconds.
 	cacheExpire = float64(24 * 60 * 60)
 )
-
-// ErrOcspIssuerVerification indicates an error verifying the identity of an OCSP response occurred
-type ErrOcspIssuerVerification struct {
-	Err error
-}
-
-func (e *ErrOcspIssuerVerification) Error() string {
-	return fmt.Sprintf("ocsp response verification error: %v", e.Err)
-}
 
 type ocspCachedResponse struct {
 	time       float64
@@ -319,7 +308,6 @@ func (c *Client) retryOCSP(
 	ocspHost *url.URL,
 	headers map[string]string,
 	reqBody []byte,
-	subject,
 	issuer *x509.Certificate,
 ) (ocspRes *ocsp.Response, ocspResBytes []byte, ocspS *ocspStatus, retErr error) {
 	doRequest := func(request *retryablehttp.Request) (*http.Response, error) {
@@ -391,19 +379,66 @@ func (c *Client) retryOCSP(
 			continue
 		}
 
-		if err := validateOCSPParsedResponse(ocspRes, subject, issuer); err != nil {
-			err = fmt.Errorf("error validating %v OCSP response: %w", method, err)
-
-			if IsOcspVerificationError(err) {
-				// We want to immediately give up on a verification error to a response
-				// and inform the user something isn't correct
-				return nil, nil, nil, err
+		// Above, we use the unsafe issuer=nil parameter to ocsp.ParseResponse
+		// because Go's library does the wrong thing.
+		//
+		// Here, we lack a full chain, but we know we trust the parent issuer,
+		// so if the Go library incorrectly discards useful certificates, we
+		// likely cannot verify this without passing through the full chain
+		// back to the root.
+		//
+		// Instead, take one of two paths: 1. if there is no certificate in
+		// the ocspRes, verify the OCSP response directly with our trusted
+		// issuer certificate, or 2. if there is a certificate, either verify
+		// it directly matches our trusted issuer certificate, or verify it
+		// is signed by our trusted issuer certificate.
+		//
+		// See also: https://github.com/golang/go/issues/59641
+		//
+		// This addresses the !!unsafe!! behavior above.
+		if ocspRes.Certificate == nil {
+			if err := ocspRes.CheckSignatureFrom(issuer); err != nil {
+				err = fmt.Errorf("error directly verifying signature on %v OCSP response: %w", method, err)
+				retErr = multierror.Append(retErr, err)
+				continue
 			}
+		} else {
+			// Because we have at least one certificate here, we know that
+			// Go's ocsp library verified the signature from this certificate
+			// onto the response and it was valid. Now we need to know we trust
+			// this certificate. There's two ways we can do this:
+			//
+			// 1. Via confirming issuer == ocspRes.Certificate, or
+			// 2. Via confirming ocspRes.Certificate.CheckSignatureFrom(issuer).
+			if !bytes.Equal(issuer.Raw, ocspRes.Raw) {
+				// 1 must not hold, so 2 holds; verify the signature.
+				if err := ocspRes.Certificate.CheckSignatureFrom(issuer); err != nil {
+					err = fmt.Errorf("error checking chain of trust on %v OCSP response via %v failed: %w", method, issuer.Subject.String(), err)
+					retErr = multierror.Append(retErr, err)
+					continue
+				}
 
-			retErr = multierror.Append(retErr, err)
-			// Clear the response out as we can't trust it.
-			ocspRes = nil
-			continue
+				// Verify the OCSP responder certificate is still valid and
+				// contains the required EKU since it is a delegated OCSP
+				// responder certificate.
+				if ocspRes.Certificate.NotAfter.Before(time.Now()) {
+					err := fmt.Errorf("error checking delegated OCSP responder on %v OCSP response: certificate has expired", method)
+					retErr = multierror.Append(retErr, err)
+					continue
+				}
+				haveEKU := false
+				for _, ku := range ocspRes.Certificate.ExtKeyUsage {
+					if ku == x509.ExtKeyUsageOCSPSigning {
+						haveEKU = true
+						break
+					}
+				}
+				if !haveEKU {
+					err := fmt.Errorf("error checking delegated OCSP responder on %v OCSP response: certificate lacks the OCSP Signing EKU", method)
+					retErr = multierror.Append(retErr, err)
+					continue
+				}
+			}
 		}
 
 		// While we haven't validated the signature on the OCSP response, we
@@ -436,80 +471,6 @@ func (c *Client) retryOCSP(
 	}
 
 	return
-}
-
-func IsOcspVerificationError(err error) bool {
-	errOcspIssuer := &ErrOcspIssuerVerification{}
-	return errors.As(err, &errOcspIssuer)
-}
-
-func validateOCSPParsedResponse(ocspRes *ocsp.Response, subject, issuer *x509.Certificate) error {
-	// Above, we use the unsafe issuer=nil parameter to ocsp.ParseResponse
-	// because Go's library does the wrong thing.
-	//
-	// Here, we lack a full chain, but we know we trust the parent issuer,
-	// so if the Go library incorrectly discards useful certificates, we
-	// likely cannot verify this without passing through the full chain
-	// back to the root.
-	//
-	// Instead, take one of two paths: 1. if there is no certificate in
-	// the ocspRes, verify the OCSP response directly with our trusted
-	// issuer certificate, or 2. if there is a certificate, either verify
-	// it directly matches our trusted issuer certificate, or verify it
-	// is signed by our trusted issuer certificate.
-	//
-	// See also: https://github.com/golang/go/issues/59641
-	//
-	// This addresses the !!unsafe!! behavior above.
-	if ocspRes.Certificate == nil {
-		if err := ocspRes.CheckSignatureFrom(issuer); err != nil {
-			return &ErrOcspIssuerVerification{fmt.Errorf("error directly verifying signature: %w", err)}
-		}
-	} else {
-		// Because we have at least one certificate here, we know that
-		// Go's ocsp library verified the signature from this certificate
-		// onto the response and it was valid. Now we need to know we trust
-		// this certificate. There's two ways we can do this:
-		//
-		// 1. Via confirming issuer == ocspRes.Certificate, or
-		// 2. Via confirming ocspRes.Certificate.CheckSignatureFrom(issuer).
-		if !bytes.Equal(issuer.Raw, ocspRes.Raw) {
-			// 1 must not hold, so 2 holds; verify the signature.
-			if err := ocspRes.Certificate.CheckSignatureFrom(issuer); err != nil {
-				return &ErrOcspIssuerVerification{fmt.Errorf("error checking chain of trust %v failed: %w", issuer.Subject.String(), err)}
-			}
-
-			// Verify the OCSP responder certificate is still valid and
-			// contains the required EKU since it is a delegated OCSP
-			// responder certificate.
-			if ocspRes.Certificate.NotAfter.Before(time.Now()) {
-				return &ErrOcspIssuerVerification{fmt.Errorf("error checking delegated OCSP responder OCSP response: certificate has expired")}
-			}
-			haveEKU := false
-			for _, ku := range ocspRes.Certificate.ExtKeyUsage {
-				if ku == x509.ExtKeyUsageOCSPSigning {
-					haveEKU = true
-					break
-				}
-			}
-			if !haveEKU {
-				return &ErrOcspIssuerVerification{fmt.Errorf("error checking delegated OCSP responder: certificate lacks the OCSP Signing EKU")}
-			}
-		}
-	}
-
-	// Verify the response was for our original subject
-	if ocspRes.SerialNumber == nil || subject.SerialNumber == nil {
-		return &ErrOcspIssuerVerification{fmt.Errorf("OCSP response or cert did not contain a serial number")}
-	}
-	if ocspRes.SerialNumber.Cmp(subject.SerialNumber) != 0 {
-		return &ErrOcspIssuerVerification{fmt.Errorf(
-			"OCSP response serial number %s did not match the leaf certificate serial number %s",
-			certutil.GetHexFormatted(ocspRes.SerialNumber.Bytes(), ":"),
-			certutil.GetHexFormatted(subject.SerialNumber.Bytes(), ":"))}
-	}
-
-	return nil
 }
 
 // GetRevocationStatus checks the certificate revocation status for subject using issuer certificate.
@@ -559,12 +520,12 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 		ocspClient.HTTPClient.Timeout = timeout
 		ocspClient.HTTPClient.Transport = newInsecureOcspTransport(conf.ExtraCas)
 
-		doRequest := func(i int) error {
+		doRequest := func() error {
 			if conf.QueryAllServers {
 				defer wg.Done()
 			}
 			ocspRes, _, ocspS, err := c.retryOCSP(
-				ctx, ocspClient, retryablehttp.NewRequest, u, headers, ocspReq, subject, issuer)
+				ctx, ocspClient, retryablehttp.NewRequest, u, headers, ocspReq, issuer)
 			ocspResponses[i] = ocspRes
 			if err != nil {
 				errors[i] = err
@@ -592,9 +553,9 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 		}
 		if conf.QueryAllServers {
 			wg.Add(1)
-			go doRequest(i)
+			go doRequest()
 		} else {
-			err = doRequest(i)
+			err = doRequest()
 			if err == nil {
 				break
 			}
@@ -609,9 +570,6 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 	var firstError error
 	for i := range ocspHosts {
 		if errors[i] != nil {
-			if IsOcspVerificationError(errors[i]) {
-				return nil, errors[i]
-			}
 			if firstError == nil {
 				firstError = errors[i]
 			}

@@ -56,7 +56,6 @@ export default class CodeMirrorModifier extends Modifier {
       styleActiveLine: true,
       tabSize: 2,
       // all values we can pass into the JsonEditor
-      screenReaderLabel: namedArgs.screenReaderLabel || '',
       extraKeys: namedArgs.extraKeys || '',
       lineNumbers: namedArgs.lineNumbers,
       mode: namedArgs.mode || 'application/json',

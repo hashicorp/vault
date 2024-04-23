@@ -11,6 +11,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
+	"github.com/golang/protobuf/ptypes"
 	uuid "github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
@@ -19,7 +20,6 @@ import (
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 func TestIdentityStore_DeleteEntityAlias(t *testing.T) {
@@ -142,7 +142,7 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 
 	// Persist the second entity directly without the regular flow. This will skip
 	// merging of these enties.
-	entity2Any, err := anypb.New(entity2)
+	entity2Any, err := ptypes.MarshalAny(entity2)
 	if err != nil {
 		t.Fatal(err)
 	}

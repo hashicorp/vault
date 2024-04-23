@@ -60,8 +60,7 @@ export default Component.extend({
       return;
     }
     const isAdding = leaves.length > lastLeaves.length;
-    const changedLeaves = isAdding ? leaves : lastLeaves;
-    const [changedLeaf] = changedLeaves.slice(-1);
+    const changedLeaf = (isAdding ? leaves : lastLeaves).get('lastObject');
     this.set('isAdding', isAdding);
     this.set('changedLeaf', changedLeaf);
 

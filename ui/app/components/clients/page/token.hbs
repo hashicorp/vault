@@ -25,6 +25,7 @@
         @value={{this.averageTotalClients}}
         @size="m"
         class="data-details-top has-top-padding-l"
+        data-test-chart-stat="monthly total"
       />
 
       <StatText
@@ -32,6 +33,7 @@
         @value={{this.averageNewClients}}
         @size="m"
         class="data-details-bottom has-top-padding-l"
+        data-test-chart-stat="monthly new"
       />
     </:stats>
 
@@ -55,6 +57,7 @@
         @value={{this.average this.byMonthNewClients "entity_clients"}}
         @size="m"
         class="chart-subTitle has-top-padding-l"
+        data-test-chart-stat="entity"
       />
 
       <StatText
@@ -62,6 +65,7 @@
         @value={{this.average this.byMonthNewClients "non_entity_clients"}}
         @size="m"
         class="data-details-top has-top-padding-l"
+        data-test-chart-stat="nonentity"
       />
     </:stats>
 
@@ -78,7 +82,6 @@
           'namespace'
         }} in this date range."
         @bottomBorder={{true}}
-        class="is-shadowless"
       />
     </:emptyState>
   </Clients::ChartContainer>
@@ -93,7 +96,6 @@
       this.isCurrentMonth
       "Only totals are available when viewing the current month. To see a breakdown of new and total clients for this month, select the 'Current Billing Period' filter."
     }}"
-    @showSecretSyncs={{false}}
     @totalUsageCounts={{this.tokenUsageCounts}}
   />
 {{/if}}

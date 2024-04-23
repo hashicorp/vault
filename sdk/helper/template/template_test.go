@@ -5,7 +5,6 @@ package template
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -150,16 +149,6 @@ Some string 6841cf80`,
 
 			require.Regexp(t, `^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$`, actual)
 		}
-	})
-
-	t.Run("too-large-overflow", func(t *testing.T) {
-		data := "{{" + strings.Repeat("(", 1000000)
-		_, err := NewTemplate(
-			Template(data),
-		)
-		// We expect an error due it being too large,
-		// this test should not fail with an overflow
-		require.Error(t, err)
 	})
 }
 

@@ -590,8 +590,6 @@ func ConvertConfig(cfg *ConfigEntry) *capldap.ClientConfig {
 		IncludeUserAttributes:                true,
 		ExcludedUserAttributes:               nil,
 		IncludeUserGroups:                    true,
-		LowerUserAttributeKeys:               true,
-		AllowEmptyAnonymousGroupSearch:       true,
 		MaximumPageSize:                      cfg.MaximumPageSize,
 		DerefAliases:                         cfg.DerefAliases,
 		DeprecatedVaultPre111GroupCNBehavior: cfg.UsePre111GroupCNBehavior,

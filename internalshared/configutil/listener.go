@@ -94,16 +94,14 @@ type Listener struct {
 	ProxyProtocolAuthorizedAddrs    []*sockaddr.SockAddrMarshaler `hcl:"-"`
 	ProxyProtocolAuthorizedAddrsRaw interface{}                   `hcl:"proxy_protocol_authorized_addrs,alias:ProxyProtocolAuthorizedAddrs"`
 
-	XForwardedForAuthorizedAddrs          []*sockaddr.SockAddrMarshaler `hcl:"-"`
-	XForwardedForAuthorizedAddrsRaw       interface{}                   `hcl:"x_forwarded_for_authorized_addrs,alias:XForwardedForAuthorizedAddrs"`
-	XForwardedForHopSkips                 int64                         `hcl:"-"`
-	XForwardedForHopSkipsRaw              interface{}                   `hcl:"x_forwarded_for_hop_skips,alias:XForwardedForHopSkips"`
-	XForwardedForRejectNotPresent         bool                          `hcl:"-"`
-	XForwardedForRejectNotPresentRaw      interface{}                   `hcl:"x_forwarded_for_reject_not_present,alias:XForwardedForRejectNotPresent"`
-	XForwardedForRejectNotAuthorized      bool                          `hcl:"-"`
-	XForwardedForRejectNotAuthorizedRaw   interface{}                   `hcl:"x_forwarded_for_reject_not_authorized,alias:XForwardedForRejectNotAuthorized"`
-	XForwardedForClientCertHeader         string                        `hcl:"x_forwarded_for_client_cert_header,alias:XForwardedForClientCertHeader"`
-	XForwardedForClientCertHeaderDecoders string                        `hcl:"x_forwarded_for_client_cert_header_decoders,alias:XForwardedForClientCertHeaderDecoders"`
+	XForwardedForAuthorizedAddrs        []*sockaddr.SockAddrMarshaler `hcl:"-"`
+	XForwardedForAuthorizedAddrsRaw     interface{}                   `hcl:"x_forwarded_for_authorized_addrs,alias:XForwardedForAuthorizedAddrs"`
+	XForwardedForHopSkips               int64                         `hcl:"-"`
+	XForwardedForHopSkipsRaw            interface{}                   `hcl:"x_forwarded_for_hop_skips,alias:XForwardedForHopSkips"`
+	XForwardedForRejectNotPresent       bool                          `hcl:"-"`
+	XForwardedForRejectNotPresentRaw    interface{}                   `hcl:"x_forwarded_for_reject_not_present,alias:XForwardedForRejectNotPresent"`
+	XForwardedForRejectNotAuthorized    bool                          `hcl:"-"`
+	XForwardedForRejectNotAuthorizedRaw interface{}                   `hcl:"x_forwarded_for_reject_not_authorized,alias:XForwardedForRejectNotAuthorized"`
 
 	SocketMode  string `hcl:"socket_mode"`
 	SocketUser  string `hcl:"socket_user"`

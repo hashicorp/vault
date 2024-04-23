@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
+import { SELECTORS } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 
 module('Integration | Component | dashboard/overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -74,15 +74,15 @@ module('Integration | Component | dashboard/overview', function (hooks) {
           @refreshModel={{this.refreshModel}} />
       `
     );
-    assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
-    assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
-    assert.dom(DASHBOARD.emptyState('secrets-engines')).exists();
-    assert.dom(DASHBOARD.cardName('learn-more')).exists();
-    assert.dom(DASHBOARD.cardName('quick-actions')).exists();
-    assert.dom(DASHBOARD.emptyState('quick-actions')).exists();
-    assert.dom(DASHBOARD.cardName('configuration-details')).doesNotExist();
-    assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
-    assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+    assert.dom(SELECTORS.cardHeader('Vault version')).exists();
+    assert.dom(SELECTORS.cardName('secrets-engines')).exists();
+    assert.dom(SELECTORS.emptyState('secrets-engines')).exists();
+    assert.dom(SELECTORS.cardName('learn-more')).exists();
+    assert.dom(SELECTORS.cardName('quick-actions')).exists();
+    assert.dom(SELECTORS.emptyState('quick-actions')).exists();
+    assert.dom(SELECTORS.cardName('configuration-details')).doesNotExist();
+    assert.dom(SELECTORS.cardName('replication')).doesNotExist();
+    assert.dom(SELECTORS.cardName('client-count')).doesNotExist();
   });
 
   test('it should hide client count and replication card on community', async function (assert) {
@@ -102,13 +102,13 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       `
     );
 
-    assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
-    assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
-    assert.dom(DASHBOARD.cardName('learn-more')).exists();
-    assert.dom(DASHBOARD.cardName('quick-actions')).exists();
-    assert.dom(DASHBOARD.cardName('configuration-details')).exists();
-    assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
-    assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+    assert.dom(SELECTORS.cardHeader('Vault version')).exists();
+    assert.dom(SELECTORS.cardName('secrets-engines')).exists();
+    assert.dom(SELECTORS.cardName('learn-more')).exists();
+    assert.dom(SELECTORS.cardName('quick-actions')).exists();
+    assert.dom(SELECTORS.cardName('configuration-details')).exists();
+    assert.dom(SELECTORS.cardName('replication')).doesNotExist();
+    assert.dom(SELECTORS.cardName('client-count')).doesNotExist();
   });
 
   test('it should show client count on enterprise w/ license', async function (assert) {
@@ -132,12 +132,12 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       @license={{this.license}}
       @refreshModel={{this.refreshModel}} />`
     );
-    assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
-    assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
-    assert.dom(DASHBOARD.cardName('learn-more')).exists();
-    assert.dom(DASHBOARD.cardName('quick-actions')).exists();
-    assert.dom(DASHBOARD.cardName('configuration-details')).exists();
-    assert.dom(DASHBOARD.cardName('client-count')).exists();
+    assert.dom(SELECTORS.cardHeader('Vault version')).exists();
+    assert.dom(SELECTORS.cardName('secrets-engines')).exists();
+    assert.dom(SELECTORS.cardName('learn-more')).exists();
+    assert.dom(SELECTORS.cardName('quick-actions')).exists();
+    assert.dom(SELECTORS.cardName('configuration-details')).exists();
+    assert.dom(SELECTORS.cardName('client-count')).exists();
   });
 
   test('it should hide client count on enterprise w/o license ', async function (assert) {
@@ -158,13 +158,13 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       />`
     );
 
-    assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
+    assert.dom(SELECTORS.cardHeader('Vault version')).exists();
     assert.dom('[data-test-badge-namespace]').exists();
-    assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
-    assert.dom(DASHBOARD.cardName('learn-more')).exists();
-    assert.dom(DASHBOARD.cardName('quick-actions')).exists();
-    assert.dom(DASHBOARD.cardName('configuration-details')).exists();
-    assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+    assert.dom(SELECTORS.cardName('secrets-engines')).exists();
+    assert.dom(SELECTORS.cardName('learn-more')).exists();
+    assert.dom(SELECTORS.cardName('quick-actions')).exists();
+    assert.dom(SELECTORS.cardName('configuration-details')).exists();
+    assert.dom(SELECTORS.cardName('client-count')).doesNotExist();
   });
 
   test('it should hide replication on enterprise not on root namespace', async function (assert) {
@@ -190,14 +190,14 @@ module('Integration | Component | dashboard/overview', function (hooks) {
         @refreshModel={{this.refreshModel}} />`
     );
 
-    assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
+    assert.dom(SELECTORS.cardHeader('Vault version')).exists();
     assert.dom('[data-test-badge-namespace]').exists();
-    assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
-    assert.dom(DASHBOARD.cardName('learn-more')).exists();
-    assert.dom(DASHBOARD.cardName('quick-actions')).exists();
-    assert.dom(DASHBOARD.cardName('configuration-details')).exists();
-    assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
-    assert.dom(DASHBOARD.cardName('client-count')).exists();
+    assert.dom(SELECTORS.cardName('secrets-engines')).exists();
+    assert.dom(SELECTORS.cardName('learn-more')).exists();
+    assert.dom(SELECTORS.cardName('quick-actions')).exists();
+    assert.dom(SELECTORS.cardName('configuration-details')).exists();
+    assert.dom(SELECTORS.cardName('replication')).doesNotExist();
+    assert.dom(SELECTORS.cardName('client-count')).exists();
   });
 
   module('learn more card', function () {

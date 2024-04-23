@@ -394,7 +394,6 @@ func getDefaultDirectoryPolicyType(defaultDirectoryPolicy string) (DefaultDirect
 	}
 }
 
-//go:generate enumer -type=DefaultDirectoryPolicyType
 type DefaultDirectoryPolicyType int
 
 const (

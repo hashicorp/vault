@@ -4,7 +4,6 @@
  */
 
 import { currentRouteName, find, settled, waitUntil } from '@ember/test-helpers';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import page from 'vault/tests/pages/access/identity/aliases/add';
 import aliasIndexPage from 'vault/tests/pages/access/identity/aliases/index';
 import aliasShowPage from 'vault/tests/pages/access/identity/aliases/show';
@@ -62,7 +61,10 @@ export const testAliasCRUD = async function (name, itemType, assert) {
   await settled();
   await aliasIndexPage.confirmDelete();
   await settled();
-  assert.dom(GENERAL.latestFlashContent).includesText(`Successfully deleted`);
+  assert.ok(
+    aliasIndexPage.flashMessage.latestMessage.startsWith('Successfully deleted'),
+    `${itemType}: shows flash message`
+  );
 
   assert.strictEqual(
     aliasIndexPage.items.filterBy('id', aliasID).length,
@@ -107,7 +109,10 @@ export const testAliasDeleteFromForm = async function (name, itemType, assert) {
   await page.editForm.waitForConfirm();
   await page.editForm.confirmDelete();
   await settled();
-  assert.dom(GENERAL.latestFlashContent).includesText(`Successfully deleted`);
+  assert.ok(
+    aliasIndexPage.flashMessage.latestMessage.startsWith('Successfully deleted'),
+    `${itemType}: shows flash message`
+  );
   assert.strictEqual(
     currentRouteName(),
     'vault.cluster.access.identity.aliases.index',

@@ -1,3 +1,0 @@
-```release-note:improvement
-ui: fixes cases where inputs did not have associated labels
-```

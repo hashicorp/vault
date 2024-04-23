@@ -1,3 +1,0 @@
-```release-note:change
-auth/jwt: Update plugin to v0.20.2
-```

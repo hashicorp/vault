@@ -40,7 +40,6 @@ import KVObject from 'vault/lib/kv-object';
  */
 
 export default class KvObjectEditor extends Component {
-  // kvData is type ArrayProxy, so addObject etc are fine here
   @tracked kvData;
 
   get placeholders() {
@@ -50,7 +49,7 @@ export default class KvObjectEditor extends Component {
     };
   }
   get hasDuplicateKeys() {
-    return this.kvData.uniqBy('name').length !== this.kvData.length;
+    return this.kvData.uniqBy('name').length !== this.kvData.get('length');
   }
 
   // fired on did-insert from render modifier

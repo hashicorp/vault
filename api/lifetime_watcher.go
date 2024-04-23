@@ -31,7 +31,6 @@ var (
 	DefaultRenewerRenewBuffer = 5
 )
 
-//go:generate enumer -type=RenewBehavior -trimprefix=RenewBehavior
 type RenewBehavior uint
 
 const (
@@ -350,11 +349,8 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 
 		if errorBackoff == nil {
 			sleepDuration = r.calculateSleepDuration(remainingLeaseDuration, priorDuration)
-		} else {
-			sleepDuration = errorBackoff.NextBackOff()
-			if sleepDuration == backoff.Stop {
-				return err
-			}
+		} else if errorBackoff.NextBackOff() == backoff.Stop {
+			return err
 		}
 
 		// remainingLeaseDuration becomes the priorDuration for the next loop

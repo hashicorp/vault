@@ -22,8 +22,9 @@ import {
   PROVIDER_LIST_RESPONSE,
   PROVIDER_DATA_RESPONSE,
   clearRecord,
+  overrideCapabilities,
+  overrideMirageResponse,
 } from 'vault/tests/helpers/oidc-config';
-import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
 const searchSelect = create(ss);
 const flashMessage = create(fm);
 
@@ -37,14 +38,14 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     oidcConfigHandlers(this.server);
     this.store = this.owner.lookup('service:store');
     // mock client list so OIDC BASE URL does not redirect to landing call-to-action image
-    this.server.get('/identity/oidc/client', () => overrideResponse(null, { data: CLIENT_LIST_RESPONSE }));
+    this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
     return authPage.login();
   });
 
   // LIST SCOPES EMPTY
   test('it navigates to scopes list view and renders empty state when no scopes are configured', async function (assert) {
     assert.expect(4);
-    this.server.get('/identity/oidc/scope', () => overrideResponse(404));
+    this.server.get('/identity/oidc/scope', () => overrideMirageResponse(404));
     await visit(OIDC_BASE_URL);
     await click('[data-test-tab="scopes"]');
     assert.strictEqual(currentURL(), '/vault/access/oidc/scopes');
@@ -63,9 +64,9 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
   // LIST SCOPE EXIST
   test('it renders scope list when scopes exist', async function (assert) {
     assert.expect(11);
-    this.server.get('/identity/oidc/scope', () => overrideResponse(null, { data: SCOPE_LIST_RESPONSE }));
+    this.server.get('/identity/oidc/scope', () => overrideMirageResponse(null, SCOPE_LIST_RESPONSE));
     this.server.get('/identity/oidc/scope/test-scope', () =>
-      overrideResponse(null, { data: SCOPE_DATA_RESPONSE })
+      overrideMirageResponse(null, SCOPE_DATA_RESPONSE)
     );
     await visit(OIDC_BASE_URL + '/scopes');
     assert.strictEqual(
@@ -124,15 +125,13 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
   // ERROR DELETING SCOPE
   test('it throws error when trying to delete when scope is currently being associated with any provider', async function (assert) {
     assert.expect(3);
-    this.server.get('/identity/oidc/scope', () => overrideResponse(null, { data: SCOPE_LIST_RESPONSE }));
+    this.server.get('/identity/oidc/scope', () => overrideMirageResponse(null, SCOPE_LIST_RESPONSE));
     this.server.get('/identity/oidc/scope/test-scope', () =>
-      overrideResponse(null, { data: SCOPE_DATA_RESPONSE })
+      overrideMirageResponse(null, SCOPE_DATA_RESPONSE)
     );
-    this.server.get('/identity/oidc/provider', () =>
-      overrideResponse(null, { data: PROVIDER_LIST_RESPONSE })
-    );
+    this.server.get('/identity/oidc/provider', () => overrideMirageResponse(null, PROVIDER_LIST_RESPONSE));
     this.server.get('/identity/oidc/provider/test-provider', () => {
-      overrideResponse(null, { data: PROVIDER_DATA_RESPONSE });
+      overrideMirageResponse(null, PROVIDER_DATA_RESPONSE);
     });
     // throw error when trying to delete test-scope since it is associated to test-provider
     this.server.delete(
@@ -377,19 +376,17 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
   test('it hides delete and edit for a provider when no permission', async function (assert) {
     assert.expect(3);
     this.server.get('/identity/oidc/providers', () =>
-      overrideResponse(null, { data: { providers: ['test-provider'] } })
+      overrideMirageResponse(null, { providers: ['test-provider'] })
     );
     this.server.get('/identity/oidc/provider/test-provider', () =>
-      overrideResponse(null, {
-        data: {
-          allowed_client_ids: ['*'],
-          issuer: 'http://127.0.0.1:8200/v1/identity/oidc/provider/test-provider',
-          scopes_supported: ['test-scope'],
-        },
+      overrideMirageResponse(null, {
+        allowed_client_ids: ['*'],
+        issuer: 'http://127.0.0.1:8200/v1/identity/oidc/provider/test-provider',
+        scopes_supported: ['test-scope'],
       })
     );
     this.server.post('/sys/capabilities-self', () =>
-      capabilitiesStub(OIDC_BASE_URL + '/provider/test-provider', ['read'])
+      overrideCapabilities(OIDC_BASE_URL + '/provider/test-provider', ['read'])
     );
 
     await visit(OIDC_BASE_URL + '/providers');

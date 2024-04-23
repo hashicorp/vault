@@ -6,11 +6,10 @@
 import ActivityComponent from '../activity';
 
 import type {
-  ByMonthNewClients,
-  MountNewClients,
-  NamespaceByKey,
-  NamespaceNewClients,
-} from 'core/utils/client-count-utils';
+  ClientActivityNewClients,
+  ClientActivityMonthly,
+  ClientActivityResourceByKey,
+} from 'vault/vault/models/clients/activity';
 
 export default class ClientsTokenPageComponent extends ActivityComponent {
   legend = [
@@ -20,8 +19,10 @@ export default class ClientsTokenPageComponent extends ActivityComponent {
 
   calculateClientAverages(
     dataset:
-      | (NamespaceByKey | undefined)[]
-      | (ByMonthNewClients | NamespaceNewClients | MountNewClients | undefined)[]
+      | ClientActivityMonthly[]
+      | (ClientActivityResourceByKey | undefined)[]
+      | (ClientActivityNewClients | undefined)[]
+      | undefined
   ) {
     return ['entity_clients', 'non_entity_clients'].reduce((count, key) => {
       const average = this.average(dataset, key);

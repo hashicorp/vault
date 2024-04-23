@@ -110,8 +110,6 @@ that would be provided with Shamir. The process remains the same.
 For a list of examples and supported providers, please see the
 [seal documentation](/vault/docs/configuration/seal).
 
-When DR replication is enabled in Vault Enterprise, [Performance Standby](/vault/docs/enterprise/performance-standby) nodes on the DR cluster will seal themselves, so they must be restarted to be unsealed.
-
 -> **Warning:** Recovery keys cannot decrypt the root key, and thus are not
 sufficient to unseal Vault if the Auto Unseal mechanism isn't working. They
 are purely an authorization mechanism.  Using Auto Unseal
@@ -212,8 +210,6 @@ different Auto Unseal type (HSM, Azure KMS, etc.) is also supported on older
 versions as well.
 
 ### Migration post Vault 1.16.0 via Seal HA for Auto Seals (Enterprise)
-
-@include 'alerts/beta.mdx'
 
 With Seal HA, migration between auto-unseal types (not including any Shamir
 seals) can be done fully online using Seal High Availability (Seal HA) without
@@ -337,8 +333,6 @@ migration will not happen again on the peer nodes.
 
 ## Seal High Availability (Enterprise)
 
-@include 'alerts/beta.mdx'
-
 Seal High Availability (Seal HA) allows the configuration of more than one auto
 seal mechanism such that Vault can tolerate the temporary loss of a seal service
 or device for a time.  With Seal HA configured with at least two and no more than
@@ -362,11 +356,6 @@ allowed.
 
 In additional to high availability, Seal HA can be used to migrate between two
 auto seals in a [simplified manner.](#migration-post-vault-1-16-0-via-seal-ha-for-auto-seals-enterprise)
-
-Note that Shamir seals are not auto seals and cannot be included in a Seal
-HA setup.  This is because auto seals support seal wrap while Shamir seals
-do not, so the loss of the auto seal does not necessarily leave Vault in a
-fully available state. 
 
 ### Use and Configuration
 

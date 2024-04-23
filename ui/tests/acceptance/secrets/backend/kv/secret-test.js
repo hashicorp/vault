@@ -18,7 +18,6 @@ import logout from 'vault/tests/pages/logout';
 import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
-import codemirror from 'vault/tests/helpers/codemirror';
 
 const deleteEngine = async function (enginePath, assert) {
   await logout.visit();
@@ -330,7 +329,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await listPage.visitRoot({ backend: this.backend });
       await listPage.create();
       await editPage.path(secretPath).toggleJSON();
-      codemirror().setValue(content);
+      const instance = document.querySelector('.CodeMirror').CodeMirror;
+      instance.setValue(content);
       await editPage.save();
 
       assert.strictEqual(
@@ -339,8 +339,9 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         'redirects to the show page'
       );
       assert.ok(showPage.editIsPresent, 'shows the edit button');
+      const savedInstance = document.querySelector('.CodeMirror').CodeMirror;
       assert.strictEqual(
-        codemirror().options.value,
+        savedInstance.options.value,
         JSON.stringify({ bar: 'boo', foo: 'fa' }, null, 2),
         'saves the content'
       );

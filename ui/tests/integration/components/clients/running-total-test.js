@@ -15,7 +15,7 @@ import { findAll } from '@ember/test-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import timestamp from 'core/utils/timestamp';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
-import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
+import { SELECTORS as ts } from 'vault/tests/helpers/clients';
 
 const START_TIME = getUnixTime(LICENSE_START);
 
@@ -34,30 +34,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
       start_time: { timestamp: START_TIME },
       end_time: { timestamp: getUnixTime(timestamp.now()) },
     };
-    const activity = await store.queryRecord('clients/activity', activityQuery);
-    this.byMonthActivity = activity.byMonth;
-    this.newActivity = this.byMonthActivity.map((d) => d.new_clients);
-    this.totalUsageCounts = activity.total;
+    this.activity = await store.queryRecord('clients/activity', activityQuery);
+    this.newActivity = this.activity.byMonth.map((d) => d.new_clients);
+    this.totalUsageCounts = this.activity.total;
     this.set('timestamp', formatRFC3339(timestamp.now()));
     this.set('chartLegend', [
       { label: 'entity clients', key: 'entity_clients' },
       { label: 'non-entity clients', key: 'non_entity_clients' },
     ]);
-    this.isSecretsSyncActivated = true;
-    this.isHistoricalMonth = false;
-
-    this.renderComponent = async () => {
-      await render(hbs`
-      <Clients::RunningTotal
-        @isSecretsSyncActivated={{this.isSecretsSyncActivated}}
-        @byMonthActivityData={{this.byMonthActivity}}
-        @runningTotals={{this.totalUsageCounts}}
-        @upgradeData={{this.upgradesDuringActivity}}
-        @responseTimestamp={{this.timestamp}}
-        @isHistoricalMonth={{this.isHistoricalMonth}}
-      />
-    `);
-    };
     // Fails on #ember-testing-container
     setRunOptions({
       rules: {
@@ -75,73 +59,89 @@ module('Integration | Component | clients/running-total', function (hooks) {
     const expectedTotalNonEntity = formatNumber([this.totalUsageCounts.non_entity_clients]);
     const expectedTotalSync = formatNumber([this.totalUsageCounts.secret_syncs]);
 
-    await this.renderComponent();
+    await render(hbs`
+      <Clients::RunningTotal
+        @byMonthActivityData={{this.activity.byMonth}}
+        @runningTotals={{this.totalUsageCounts}}
+        @upgradeData={{this.upgradesDuringActivity}}
+        @responseTimestamp={{this.timestamp}}
+        @isHistoricalMonth={{false}}
+      />
+    `);
 
-    assert.dom(CLIENT_COUNT.charts.chart('running total')).exists('running total component renders');
-    assert.dom(CLIENT_COUNT.charts.lineChart).exists('line chart renders');
+    assert.dom(ts.charts.chart('running total')).exists('running total component renders');
+    assert.dom(ts.charts.lineChart).exists('line chart renders');
     assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Entity clients'))
+      .dom(ts.charts.statTextValue('Entity clients'))
       .hasText(`${expectedTotalEntity}`, `renders correct total entity average ${expectedTotalEntity}`);
     assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Non-entity clients'))
+      .dom(ts.charts.statTextValue('Non-entity clients'))
       .hasText(
         `${expectedTotalNonEntity}`,
         `renders correct total nonentity average ${expectedTotalNonEntity}`
       );
     assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Secrets sync clients'))
+      .dom(ts.charts.statTextValue('Secrets sync clients'))
       .hasText(`${expectedTotalSync}`, `renders correct total sync ${expectedTotalSync}`);
 
     // assert line chart is correct
-    findAll(CLIENT_COUNT.charts.line.xAxisLabel).forEach((e, i) => {
+    findAll(ts.charts.line.xAxisLabel).forEach((e, i) => {
       assert
         .dom(e)
         .hasText(
-          `${this.byMonthActivity[i].month}`,
-          `renders x-axis labels for line chart: ${this.byMonthActivity[i].month}`
+          `${this.activity.byMonth[i].month}`,
+          `renders x-axis labels for line chart: ${this.activity.byMonth[i].month}`
         );
     });
     assert
-      .dom(CLIENT_COUNT.charts.line.plotPoint)
+      .dom(ts.charts.line.plotPoint)
       .exists(
-        { count: this.byMonthActivity.filter((m) => m.clients).length },
+        { count: this.activity.byMonth.filter((m) => m.counts !== null).length },
         'renders correct number of plot points'
       );
   });
 
   test('it renders with no new monthly data', async function (assert) {
-    this.byMonthActivity = this.byMonthActivity.map((d) => ({
-      ...d,
-      new_clients: { month: d.month },
-    }));
-
+    this.set(
+      'monthlyWithoutNew',
+      this.activity.byMonth.map((d) => ({
+        ...d,
+        new_clients: { month: d.month },
+      }))
+    );
     const expectedTotalEntity = formatNumber([this.totalUsageCounts.entity_clients]);
     const expectedTotalNonEntity = formatNumber([this.totalUsageCounts.non_entity_clients]);
     const expectedTotalSync = formatNumber([this.totalUsageCounts.secret_syncs]);
 
-    await this.renderComponent();
-
-    assert.dom(CLIENT_COUNT.charts.chart('running total')).exists('running total component renders');
-    assert.dom(CLIENT_COUNT.charts.lineChart).exists('line chart renders');
+    await render(hbs`
+      <Clients::RunningTotal
+        @byMonthActivityData={{this.monthlyWithoutNew}}
+        @runningTotals={{this.totalUsageCounts}}
+        @responseTimestamp={{this.timestamp}}
+        @isHistoricalMonth={{false}}
+      />
+    `);
+    assert.dom(ts.charts.chart('running total')).exists('running total component renders');
+    assert.dom(ts.charts.lineChart).exists('line chart renders');
 
     assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Entity clients'))
+      .dom(ts.charts.statTextValue('Entity clients'))
       .hasText(`${expectedTotalEntity}`, `renders correct total entity average ${expectedTotalEntity}`);
     assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Non-entity clients'))
+      .dom(ts.charts.statTextValue('Non-entity clients'))
       .hasText(
         `${expectedTotalNonEntity}`,
         `renders correct total nonentity average ${expectedTotalNonEntity}`
       );
     assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Secrets sync clients'))
+      .dom(ts.charts.statTextValue('Secrets sync clients'))
       .hasText(`${expectedTotalSync}`, `renders correct total sync ${expectedTotalSync}`);
   });
 
   test('it renders with single historical month data', async function (assert) {
-    const singleMonth = this.byMonthActivity[this.byMonthActivity.length - 1];
+    const singleMonth = this.activity.byMonth[this.activity.byMonth.length - 1];
     const singleMonthNew = this.newActivity[this.newActivity.length - 1];
-
+    this.set('singleMonth', [singleMonth]);
     const expectedTotalClients = formatNumber([singleMonth.clients]);
     const expectedTotalEntity = formatNumber([singleMonth.entity_clients]);
     const expectedTotalNonEntity = formatNumber([singleMonth.non_entity_clients]);
@@ -150,14 +150,17 @@ module('Integration | Component | clients/running-total', function (hooks) {
     const expectedNewEntity = formatNumber([singleMonthNew.entity_clients]);
     const expectedNewNonEntity = formatNumber([singleMonthNew.non_entity_clients]);
     const expectedNewSyncs = formatNumber([singleMonthNew.secret_syncs]);
-    const { statTextValue } = CLIENT_COUNT.charts;
+    const { statTextValue } = ts.charts;
 
-    this.byMonthActivity = [singleMonth];
-    this.isHistoricalMonth = true;
-
-    await this.renderComponent();
-
-    assert.dom(CLIENT_COUNT.charts.lineChart).doesNotExist('line chart does not render');
+    await render(hbs`
+      <Clients::RunningTotal
+        @byMonthActivityData={{this.singleMonth}}
+        @runningTotals={{this.totalUsageCounts}}
+        @responseTimestamp={{this.timestamp}}
+        @isHistoricalMonth={{true}}
+      />
+    `);
+    assert.dom(ts.charts.lineChart).doesNotExist('line chart does not render');
     assert.dom(statTextValue()).exists({ count: 8 }, 'renders 6 stat text containers');
     assert
       .dom(`[data-test-new] ${statTextValue('New clients')}`)
@@ -183,19 +186,5 @@ module('Integration | Component | clients/running-total', function (hooks) {
     assert
       .dom(`[data-test-total] ${statTextValue('Secrets sync clients')}`)
       .hasText(`${expectedTotalSync}`, `renders correct total sync: ${expectedTotalSync}`);
-  });
-
-  test('it hides secret sync totals when feature is not activated', async function (assert) {
-    this.isSecretsSyncActivated = false;
-
-    await this.renderComponent();
-
-    assert.dom(CLIENT_COUNT.charts.chart('running total')).exists('running total component renders');
-    assert.dom(CLIENT_COUNT.charts.lineChart).exists('line chart renders');
-    assert.dom(CLIENT_COUNT.charts.statTextValue('Entity clients')).exists();
-    assert.dom(CLIENT_COUNT.charts.statTextValue('Non-entity clients')).exists();
-    assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Secrets sync clients'))
-      .doesNotExist('does not render secret syncs');
   });
 });

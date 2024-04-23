@@ -6,6 +6,9 @@ package minimal
 import (
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
+	auditFile "github.com/hashicorp/vault/builtin/audit/file"
+	auditSocket "github.com/hashicorp/vault/builtin/audit/socket"
+	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/builtinplugins"
@@ -61,9 +64,9 @@ func NewTestSoloCluster(t testing.T, config *vault.CoreConfig) *vault.TestCluste
 	}
 	if mycfg.AuditBackends == nil {
 		mycfg.AuditBackends = map[string]audit.Factory{
-			"file":   audit.NewFileBackend,
-			"socket": audit.NewSocketBackend,
-			"syslog": audit.NewSyslogBackend,
+			"file":   auditFile.Factory,
+			"socket": auditSocket.Factory,
+			"syslog": auditSyslog.Factory,
 		}
 	}
 	if mycfg.BuiltinRegistry == nil {

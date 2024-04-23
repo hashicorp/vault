@@ -16,8 +16,6 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/custommetadata"
 	"github.com/hashicorp/vault/sdk/logical"
-	"google.golang.org/protobuf/types/known/anypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // aliasPaths returns the API endpoints to operate on aliases.
@@ -358,7 +356,7 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, canonicalID, name
 		return nil, nil
 	}
 
-	alias.LastUpdateTime = timestamppb.Now()
+	alias.LastUpdateTime = ptypes.TimestampNow()
 
 	// Get our current entity, which may be the same as the new one if the
 	// canonical ID hasn't changed
@@ -637,7 +635,7 @@ func (i *IdentityStore) pathAliasIDDelete() framework.OperationFunc {
 				}
 			}
 
-			marshaledAliases, err := anypb.New(localAliases)
+			marshaledAliases, err := ptypes.MarshalAny(localAliases)
 			if err != nil {
 				return nil, err
 			}

@@ -58,7 +58,7 @@ export default Route.extend({
       // Assuming we have a URL, push it into browser history and update the
       // location bar for the user
       if (errorURL) {
-        router.location.setURL(errorURL);
+        router.get('location').setURL(errorURL);
       }
 
       return true;

@@ -3,15 +3,14 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import sinon from 'sinon';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SELECTORS } from 'vault/tests/helpers/pki/pki-key-form';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { PKI_KEY_FORM } from 'vault/tests/helpers/pki/pki-selectors';
+import sinon from 'sinon';
 
 module('Integration | Component | pki key form', function (hooks) {
   setupRenderingTest(hooks);
@@ -39,20 +38,20 @@ module('Integration | Component | pki key form', function (hooks) {
       `,
       { owner: this.engine }
     );
-    assert.dom(GENERAL.inputByAttr('keyName')).exists('renders name input');
-    assert.dom(GENERAL.inputByAttr('type')).exists('renders type input');
-    assert.dom(GENERAL.inputByAttr('keyType')).exists('renders key type input');
-    assert.dom(GENERAL.inputByAttr('keyBits')).exists('renders key bits input');
+    assert.dom(SELECTORS.keyNameInput).exists('renders name input');
+    assert.dom(SELECTORS.typeInput).exists('renders type input');
+    assert.dom(SELECTORS.keyTypeInput).exists('renders key type input');
+    assert.dom(SELECTORS.keyBitsInput).exists('renders key bits input');
 
-    await click(GENERAL.saveButton);
+    await click(SELECTORS.keyCreateButton);
     assert
-      .dom(GENERAL.validation('type'))
+      .dom(SELECTORS.fieldErrorByName('type'))
       .hasTextContaining('Type is required.', 'renders presence validation for type of key');
     assert
-      .dom(GENERAL.validation('keyType'))
+      .dom(SELECTORS.fieldErrorByName('keyType'))
       .hasTextContaining('Please select a key type.', 'renders selection prompt for key type');
     assert
-      .dom(PKI_KEY_FORM.validationError)
+      .dom(SELECTORS.validationError)
       .hasTextContaining('There are 2 errors with this form.', 'renders correct form error count');
   });
 
@@ -86,11 +85,11 @@ module('Integration | Component | pki key form', function (hooks) {
       { owner: this.engine }
     );
 
-    await fillIn(GENERAL.inputByAttr('keyName'), 'test-key');
-    await fillIn(GENERAL.inputByAttr('type'), 'exported');
-    assert.dom(GENERAL.inputByAttr('keyBits')).isDisabled('key bits disabled when no key type selected');
-    await fillIn(GENERAL.inputByAttr('keyType'), 'rsa');
-    await click(GENERAL.saveButton);
+    await fillIn(SELECTORS.keyNameInput, 'test-key');
+    await fillIn(SELECTORS.typeInput, 'exported');
+    assert.dom(SELECTORS.keyBitsInput).isDisabled('key bits disabled when no key type selected');
+    await fillIn(SELECTORS.keyTypeInput, 'rsa');
+    await click(SELECTORS.keyCreateButton);
   });
 
   test('it generates a key type=internal', async function (assert) {
@@ -122,10 +121,10 @@ module('Integration | Component | pki key form', function (hooks) {
       { owner: this.engine }
     );
 
-    await fillIn(GENERAL.inputByAttr('keyName'), 'test-key');
-    await fillIn(GENERAL.inputByAttr('type'), 'internal');
-    assert.dom(GENERAL.inputByAttr('keyBits')).isDisabled('key bits disabled when no key type selected');
-    await fillIn(GENERAL.inputByAttr('keyType'), 'rsa');
-    await click(GENERAL.saveButton);
+    await fillIn(SELECTORS.keyNameInput, 'test-key');
+    await fillIn(SELECTORS.typeInput, 'internal');
+    assert.dom(SELECTORS.keyBitsInput).isDisabled('key bits disabled when no key type selected');
+    await fillIn(SELECTORS.keyTypeInput, 'rsa');
+    await click(SELECTORS.keyCreateButton);
   });
 });

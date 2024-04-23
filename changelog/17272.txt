@@ -1,3 +1,0 @@
-```release-note:improvement
-auth/cert: Adds support for TLS certificate authenticaion through a reverse proxy that terminates the SSL connection
-```

@@ -12,7 +12,6 @@ import { endOfMonth, formatRFC3339 } from 'date-fns';
 import { click } from '@ember/test-helpers';
 import subMonths from 'date-fns/subMonths';
 import timestamp from 'core/utils/timestamp';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | clients/attribution', function (hooks) {
   setupRenderingTest(hooks);
@@ -20,9 +19,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
   hooks.before(function () {
     sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
   });
-
   hooks.beforeEach(function () {
-    this.csvDownloadStub = sinon.stub(this.owner.lookup('service:download'), 'csv');
     const mockNow = timestamp.now();
     this.mockNow = mockNow;
     this.set('startTimestamp', formatRFC3339(subMonths(mockNow, 6)));
@@ -43,10 +40,8 @@ module('Integration | Component | clients/attribution', function (hooks) {
       { label: 'auth2/', clients: 2, entity_clients: 1, non_entity_clients: 1 },
     ]);
   });
-
   hooks.after(function () {
     timestamp.now.restore();
-    this.csvDownloadStub.restore();
   });
 
   test('it renders empty state with no data', async function (assert) {
@@ -231,93 +226,5 @@ module('Integration | Component | clients/attribution', function (hooks) {
       .dom('[data-test-export-modal-title]')
       .hasText('Export attribution data', 'modal appears to export csv');
     assert.dom('[ data-test-export-date-range]').includesText('June 2022 - December 2022');
-  });
-
-  test('it downloads csv data for date range', async function (assert) {
-    assert.expect(2);
-
-    await render(hbs`
-      <Clients::Attribution
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        @startTimestamp="2022-06-01T23:00:11.050Z"
-        @endTimestamp="2022-12-01T23:00:11.050Z"
-        />
-    `);
-    await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
-    const [filename, content] = this.csvDownloadStub.lastCall.args;
-    assert.strictEqual(filename, 'clients_by_namespace_June 2022-December 2022', 'csv has expected filename');
-    assert.strictEqual(
-      content,
-      `Namespace path,Mount path\n  *namespace totals, inclusive of mount clients,Total clients,Entity clients,Non-entity clients\nsecond,*,10,7,3\nfirst,*,5,3,2`,
-      'csv has expected content'
-    );
-  });
-
-  test('it downloads csv data for a single month', async function (assert) {
-    assert.expect(2);
-    await render(hbs`
-      <Clients::Attribution
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        @startTimestamp="2022-06-01T23:00:11.050Z"
-        @endTimestamp="2022-06-21T23:00:11.050Z"
-        />
-    `);
-    await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
-    const [filename, content] = this.csvDownloadStub.lastCall.args;
-    assert.strictEqual(filename, 'clients_by_namespace_June 2022', 'csv has single month in filename');
-    assert.strictEqual(
-      content,
-      `Namespace path,Mount path\n  *namespace totals, inclusive of mount clients,Total clients,Entity clients,Non-entity clients\nsecond,*,10,7,3\nfirst,*,5,3,2`,
-      'csv has expected content'
-    );
-  });
-
-  test('it downloads csv data when a namespace is selected', async function (assert) {
-    assert.expect(2);
-    this.selectedNamespace = 'second';
-
-    await render(hbs`
-      <Clients::Attribution
-        @totalClientAttribution={{this.namespaceMountsData}}
-        @selectedNamespace={{this.selectedNamespace}}
-        @responseTimestamp={{this.timestamp}}
-        @startTimestamp="2022-06-01T23:00:11.050Z"
-        @endTimestamp="2022-12-21T23:00:11.050Z"
-        />
-    `);
-
-    await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
-    const [filename, content] = this.csvDownloadStub.lastCall.args;
-    assert.strictEqual(
-      filename,
-      'clients_by_mount_path_June 2022-December 2022',
-      'csv has expected filename for a selected namespace'
-    );
-    assert.strictEqual(
-      content,
-      `Namespace path,Mount path,Total clients,Entity clients,Non-entity clients\nsecond,auth1/,3,2,1\nsecond,auth2/,2,1,1`,
-      'csv has expected content for a selected namespace'
-    );
-  });
-
-  test('csv filename omits date if no start/end timestamp', async function (assert) {
-    assert.expect(1);
-
-    await render(hbs`
-      <Clients::Attribution
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        />
-    `);
-
-    await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
-    const [filename, ,] = this.csvDownloadStub.lastCall.args;
-    assert.strictEqual(filename, 'clients_by_namespace');
   });
 });

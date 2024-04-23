@@ -11,7 +11,6 @@ import { capitalize } from '@ember/string';
 
 import getStorage from 'vault/lib/token-storage';
 import { STORAGE_KEYS, DEFAULTS, MACHINES } from 'vault/helpers/wizard-constants';
-import { addToArray } from 'vault/helpers/add-to-array';
 const {
   TUTORIAL_STATE,
   COMPONENT_STATE,
@@ -102,7 +101,7 @@ export default Service.extend(DEFAULTS, {
     } else {
       if (this.featureMachineHistory) {
         if (!this.featureMachineHistory.includes(state)) {
-          const newHistory = addToArray(this.featureMachineHistory, state);
+          const newHistory = this.featureMachineHistory.addObject(state);
           this.set('featureMachineHistory', newHistory);
         } else {
           //we're repeating steps
@@ -294,7 +293,7 @@ export default Service.extend(DEFAULTS, {
       return;
     }
     this.startFeature();
-    const nextFeature = this.featureList.length > 1 ? capitalize(this.featureList[1]) : 'Finish';
+    const nextFeature = this.featureList.length > 1 ? capitalize(this.featureList.objectAt(1)) : 'Finish';
     this.set('nextFeature', nextFeature);
     let next;
     if (this.currentMachine === 'secrets' && this.featureState === 'display') {
@@ -312,9 +311,9 @@ export default Service.extend(DEFAULTS, {
   },
 
   startFeature() {
-    const FeatureMachineConfig = MACHINES[this.featureList[0]];
+    const FeatureMachineConfig = MACHINES[this.featureList.objectAt(0)];
     FeatureMachine = Machine(FeatureMachineConfig);
-    this.set('currentMachine', this.featureList[0]);
+    this.set('currentMachine', this.featureList.objectAt(0));
     if (this.storageHasKey(FEATURE_STATE)) {
       this.saveState('featureState', this.getExtState(FEATURE_STATE));
     } else {
@@ -338,7 +337,7 @@ export default Service.extend(DEFAULTS, {
       completed.push(done);
       this.saveExtState(COMPLETED_FEATURES, completed);
     } else {
-      this.saveExtState(COMPLETED_FEATURES, addToArray(this.getExtState(COMPLETED_FEATURES), done));
+      this.saveExtState(COMPLETED_FEATURES, this.getExtState(COMPLETED_FEATURES).addObject(done));
     }
 
     this.saveExtState(FEATURE_LIST, features.length ? features : null);

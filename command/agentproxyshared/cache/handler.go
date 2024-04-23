@@ -13,8 +13,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -25,23 +23,19 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, forceAutoAuthToken bool, useAutoAuthToken bool, authInProgress *atomic.Bool, invalidTokenErrCh chan error) http.Handler {
+func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, proxyVaultToken bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("received request", "method", r.Method, "path", r.URL.Path)
 
-		if forceAutoAuthToken {
+		if !proxyVaultToken {
 			r.Header.Del(consts.AuthHeaderName)
 		}
 
 		token := r.Header.Get(consts.AuthHeaderName)
 
-		var autoAuthToken string
-		if inmemSink != nil {
-			autoAuthToken = inmemSink.(sink.SinkReader).Token()
-			if token == "" && useAutoAuthToken {
-				logger.Debug("using auto auth token", "method", r.Method, "path", r.URL.Path)
-				token = autoAuthToken
-			}
+		if token == "" && inmemSink != nil {
+			logger.Debug("using auto auth token", "method", r.Method, "path", r.URL.Path)
+			token = inmemSink.(sink.SinkReader).Token()
 		}
 
 		// Parse and reset body.
@@ -65,22 +59,10 @@ func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inm
 		if err != nil {
 			// If this is an api.Response error, don't wrap the response.
 			if resp != nil && resp.Response.Error() != nil {
-				responseErrMessage := resp.Response.Error()
 				copyHeader(w.Header(), resp.Response.Header)
 				w.WriteHeader(resp.Response.StatusCode)
 				io.Copy(w, resp.Response.Body)
 				metrics.IncrCounter([]string{"agent", "proxy", "client_error"}, 1)
-				// Re-trigger auto auth if the token is the same as the auto auth token
-				if resp.Response.StatusCode == 403 && strings.Contains(responseErrMessage.Error(), logical.ErrInvalidToken.Error()) &&
-					autoAuthToken == token && !authInProgress.Load() {
-					// Drain the error channel first
-					logger.Info("proxy received an invalid token error")
-					select {
-					case <-invalidTokenErrCh:
-					default:
-					}
-					invalidTokenErrCh <- resp.Response.Error()
-				}
 			} else {
 				metrics.IncrCounter([]string{"agent", "proxy", "error"}, 1)
 				logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to get the response: %w", err))

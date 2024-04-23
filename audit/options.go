@@ -5,6 +5,7 @@ package audit
 
 import (
 	"errors"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -14,15 +15,16 @@ type Option func(*options) error
 
 // options are used to represent configuration for a audit related nodes.
 type options struct {
-	withID           string
-	withNow          time.Time
-	withSubtype      subtype
-	withFormat       format
-	withPrefix       string
-	withRaw          bool
-	withElision      bool
-	withOmitTime     bool
-	withHMACAccessor bool
+	withID              string
+	withNow             time.Time
+	withSubtype         subtype
+	withFormat          format
+	withPrefix          string
+	withRaw             bool
+	withElision         bool
+	withOmitTime        bool
+	withHMACAccessor    bool
+	withHeaderFormatter HeaderFormatter
 }
 
 // getDefaultOptions returns options with their default values.
@@ -104,7 +106,7 @@ func WithSubtype(s string) Option {
 // WithFormat provides an Option to represent event format.
 func WithFormat(f string) Option {
 	return func(o *options) error {
-		f := strings.TrimSpace(strings.ToLower(f))
+		f := strings.TrimSpace(f)
 		if f == "" {
 			// Return early, we won't attempt to apply this option if its empty.
 			return nil
@@ -158,6 +160,18 @@ func WithOmitTime(t bool) Option {
 func WithHMACAccessor(h bool) Option {
 	return func(o *options) error {
 		o.withHMACAccessor = h
+		return nil
+	}
+}
+
+// WithHeaderFormatter provides an Option to supply a HeaderFormatter.
+// If the HeaderFormatter interface supplied is nil (type or value), the option will not be applied.
+func WithHeaderFormatter(f HeaderFormatter) Option {
+	return func(o *options) error {
+		if f != nil && !reflect.ValueOf(f).IsNil() {
+			o.withHeaderFormatter = f
+		}
+
 		return nil
 	}
 }
