@@ -7,8 +7,8 @@
   <Lineal::Fluid as |width|>
     {{#let
       (scale-band domain=this.xDomain range=(array 0 width) padding=0.1)
-      (scale-linear range=(array this.chartHeight 0) domain=this.yDomain)
-      (scale-linear range=(array 0 this.chartHeight) domain=this.yDomain)
+      (scale-linear range=(array this.chartHeight 0))
+      (scale-linear range=(array 0 this.chartHeight) domain=this.yRange)
       as |xScale yScale hScale|
     }}
       <svg width={{width}} height={{this.chartHeight}}>
@@ -39,8 +39,9 @@
             data-test-x-axis
           />
         {{/if}}
+
         <Lineal::VBars
-          @data={{this.monthlyClientsByType}}
+          @data={{this.chartData}}
           @x="month"
           @y="counts"
           @width={{this.barWidth}}
@@ -50,6 +51,8 @@
           @colorScale="blue-bar"
           transform="translate({{this.barOffset xScale.bandwidth}},0)"
         />
+
+        {{! TOOLTIP target rectangles }}
         {{#if (and xScale.isValid yScale.isValid)}}
           {{#each this.aggregatedData as |d|}}
             <rect
@@ -66,10 +69,10 @@
               {{on "mouseout" (fn (mut this.activeDatum) null)}}
               data-test-interactive-area={{d.x}}
             />
-
           {{/each}}
         {{/if}}
       </svg>
+
       {{#if this.activeDatum}}
         <div
           class="lineal-tooltip-position chart-tooltip"
@@ -81,11 +84,14 @@
         >
           <div data-test-tooltip>
             <p class="bold" data-test-tooltip-month>{{this.activeDatum.legendX}}</p>
-            <p data-test-tooltip-count>{{this.activeDatum.tooltip}}</p>
+            {{#each this.activeDatum.legendY as |stat|}}
+              <p>{{stat}}</p>
+            {{/each}}
           </div>
           <div class="chart-tooltip-arrow"></div>
         </div>
       {{/if}}
+
     {{/let}}
   </Lineal::Fluid>
 </div>
