@@ -4,9 +4,9 @@
  */
 
 // @ts-nocheck
-import ChartsBase from './base';
+import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { BAR_WIDTH } from 'vault/utils/chart-helpers';
+import { BAR_WIDTH, formatNumbers } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { flatGroup } from 'd3-array';
@@ -33,14 +33,17 @@ interface ChartData {
  * Renders a vertical bar chart of counts fora single data point (@dataKey) over time.
  *
  * @example
- * <Clients::Charts::VerticalBarStacked
- * @chartTitle="Total monthly usage"
- * @data={{this.byMonthActivityData}}
- * @chartLegend={{this.legend}}
- * @chartHeight={{250}}
- * />
+ <Clients::Charts::VerticalBarStacked
+    @chartTitle="Secret Sync client counts"
+    @data={{this.model}}
+    @dataKey="secret_syncs"
+    @showTable={{true}}
+    @chartHeight={{200}}
+  />
  */
-export default class VerticalBarStacked extends ChartsBase<Args> {
+export default class VerticalBarStacked extends Component<Args> {
+  barWidth = BAR_WIDTH;
+
   @tracked activeDatum: ChartData | null = null;
 
   get dataKeys() {
@@ -71,6 +74,7 @@ export default class VerticalBarStacked extends ChartsBase<Args> {
         ),
       ];
     }
+
     return dataset.map(([month, clientType, counts]) => ({
       month,
       clientType, // key name matches the chart's @color arg
@@ -106,4 +110,22 @@ export default class VerticalBarStacked extends ChartsBase<Args> {
     const months = this.chartData.map((d) => d.month);
     return new Set(months);
   }
+
+  // TEMPLATE HELPERS
+  barOffset = (bandwidth: number) => {
+    return (bandwidth - this.barWidth) / 2;
+  };
+
+  tooltipX = (original: number, bandwidth: number) => {
+    return (original + bandwidth / 2).toString();
+  };
+
+  tooltipY = (original: number) => {
+    if (!original) return `0`;
+    return `${original}`;
+  };
+
+  formatTicksY = (num: number): string => {
+    return formatNumbers(num) || num.toString();
+  };
 }
