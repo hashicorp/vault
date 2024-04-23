@@ -23,7 +23,7 @@ This document consists of five metrics sections: core, usage, storage backend, a
 
 #### Background:
 
-![Recommended architecture](/img/vault/vault-integrated-storage-reference-architecture.svg)
+![Recommended architecture](/img/vault-integrated-storage-reference-architecture.svg)
 
 The diagram illustrates a highly available Vault cluster with five nodes distributed between three availability zones. Vault's Integrated Storage uses a consensus protocol to provide consistency across the cluster nodes. The leader (active) node is responsible for ingesting new log entries, replicating them to the follower (standby) nodes, and managing when to commit an entry. Integrated Storage uses consensus protocol to provide consistency; therefore, if the leader is lost, the voting nodes will elect a new leader. Refer to the [Integrated storage](/vault/docs/internals/integrated-storage) documentation for more details.
 
