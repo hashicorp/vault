@@ -5,4 +5,8 @@
 
 <PkiPageHeader @backend={{this.model.parentModel}} />
 
-<Page::PkiIssuerList @issuers={{this.model.issuersModel}} @mountPoint={{this.mountPoint}} />
+<Page::PkiIssuerList
+  @backend={{this.model.parentModel.id}}
+  @issuers={{this.model.issuersModel}}
+  @mountPoint={{this.mountPoint}}
+/>
