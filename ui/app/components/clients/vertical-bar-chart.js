@@ -19,7 +19,7 @@ import {
   SVG_DIMENSIONS,
   TRANSLATE,
   calculateSum,
-  formatNumbers,
+  numericalAxisLabel,
 } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 
@@ -114,7 +114,7 @@ export default class VerticalBarChart extends Component {
       .ticks(4)
       .tickPadding(10)
       .tickSizeInner(-SVG_DIMENSIONS.width)
-      .tickFormat(formatNumbers);
+      .tickFormat(numericalAxisLabel);
 
     const xAxis = axisBottom(xScale).tickSize(0);
 

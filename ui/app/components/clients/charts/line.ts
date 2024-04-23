@@ -4,7 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-import { SVG_DIMENSIONS, formatNumbers } from 'vault/utils/chart-helpers';
+import { SVG_DIMENSIONS, numericalAxisLabel } from 'vault/utils/chart-helpers';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { format, isValid } from 'date-fns';
 import { debug } from '@ember/debug';
@@ -132,7 +132,7 @@ export default class LineChart extends Component<Args> {
   };
   // These functions are used by the tooltip
   formatCount = (count: number) => {
-    return formatNumbers([count]);
+    return numericalAxisLabel([count]);
   };
   formatMonth = (date: Date) => {
     return format(date, 'M/yy');
