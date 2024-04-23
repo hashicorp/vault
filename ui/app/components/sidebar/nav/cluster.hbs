@@ -13,12 +13,14 @@
     @text="Secrets Engines"
     data-test-sidebar-nav-link="Secrets Engines"
   />
-  <Nav.Link
-    @route="vault.cluster.sync"
-    @text="Secrets Sync"
-    @badge={{unless this.version.isEnterprise "Enterprise"}}
-    data-test-sidebar-nav-link="Secrets Sync"
-  />
+  {{#if this.showSync}}
+    <Nav.Link
+      @route="vault.cluster.sync"
+      @text="Secrets Sync"
+      @badge={{this.syncBadge}}
+      data-test-sidebar-nav-link="Secrets Sync"
+    />
+  {{/if}}
   {{#if (has-permission "access")}}
     <Nav.Link
       @route={{get (route-params-for "access") "route"}}
@@ -80,7 +82,12 @@
     />
   {{/if}}
   {{#if (and (has-permission "clients" routeParams="activity") (not this.cluster.dr.isSecondary))}}
-    <Nav.Link @route="vault.cluster.clients" @text="Client Count" data-test-sidebar-nav-link="Client Count" />
+    <Nav.Link
+      @route="vault.cluster.clients"
+      @text="Client Count"
+      @hasSubItems={{true}}
+      data-test-sidebar-nav-link="Client Count"
+    />
   {{/if}}
   {{#if
     (and

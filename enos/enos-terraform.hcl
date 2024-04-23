@@ -11,7 +11,7 @@ terraform_cli "default" {
   /*
   provider_installation {
     dev_overrides = {
-      "app.terraform.io/hashicorp-qti/enos" = abspath("../../enos-provider/dist")
+      "registry.terraform.io/hashicorp-forge/enos" = abspath("../../enos-provider/dist")
     }
     direct {}
   }
@@ -27,7 +27,7 @@ terraform "default" {
     }
 
     enos = {
-      source  = "app.terraform.io/hashicorp-qti/enos"
+      source  = "registry.terraform.io/hashicorp-forge/enos"
       version = ">= 0.4.0"
     }
   }

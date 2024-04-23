@@ -10,6 +10,7 @@ import { tracked } from '@glimmer/tracking';
 import parseURL from 'core/utils/parse-url';
 import config from 'open-api-explorer/config/environment';
 import { guidFor } from '@ember/object/internals';
+import SwaggerUIBundle from 'swagger-ui-dist/swagger-ui-bundle.js';
 
 const { APP } = config;
 
@@ -29,13 +30,13 @@ export default class SwaggerUiComponent extends Component {
           return (
             taggedOps
               .map((tagObj) => {
-                const operations = tagObj.get('operations').filter((operationObj) => {
-                  return operationObj.get('path').includes(phrase);
+                const operations = tagObj.operations.filter((operationObj) => {
+                  return operationObj.path.includes(phrase);
                 });
                 return tagObj.set('operations', operations);
               })
               // then traverse again and remove the top level item if there are no operations left after filtering
-              .filter((tagObj) => !!tagObj.get('operations').size)
+              .filter((tagObj) => !!tagObj.operations.size)
           );
         },
       },
@@ -84,8 +85,6 @@ export default class SwaggerUiComponent extends Component {
 
   // using an action to bind the correct "this" context
   @action async swaggerInit() {
-    const { default: SwaggerUIBundle } = await import('swagger-ui-dist/swagger-ui-bundle.js');
-    // trim any slashes on the filter value
     const configSettings = this.CONFIG(SwaggerUIBundle, this);
     SwaggerUIBundle(configSettings);
   }

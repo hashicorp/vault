@@ -21,9 +21,6 @@ import (
 	"github.com/hashicorp/go-uuid"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/builtin/audit/file"
-	"github.com/hashicorp/vault/builtin/audit/socket"
-	"github.com/hashicorp/vault/builtin/audit/syslog"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/command/server"
@@ -59,24 +56,24 @@ func TestNewCore_configureAuditBackends(t *testing.T) {
 		},
 		"file": {
 			backends: map[string]audit.Factory{
-				"file": file.Factory,
+				"file": audit.NewFileBackend,
 			},
 		},
 		"socket": {
 			backends: map[string]audit.Factory{
-				"socket": socket.Factory,
+				"socket": audit.NewSocketBackend,
 			},
 		},
 		"syslog": {
 			backends: map[string]audit.Factory{
-				"syslog": syslog.Factory,
+				"syslog": audit.NewSyslogBackend,
 			},
 		},
 		"all": {
 			backends: map[string]audit.Factory{
-				"file":   file.Factory,
-				"socket": socket.Factory,
-				"syslog": syslog.Factory,
+				"file":   audit.NewFileBackend,
+				"socket": audit.NewSocketBackend,
+				"syslog": audit.NewSyslogBackend,
 			},
 		},
 	}
@@ -1543,11 +1540,11 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 
 func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 	// Create a noop audit backend
-	var noop *corehelpers.NoopAudit
+	var noop *audit.NoopAudit
 	c, _, root := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 		var err error
-		noop, err = corehelpers.NewNoopAudit(config, audit.WithHeaderFormatter(headerFormatter))
+		noop, err = audit.NewNoopAudit(config)
 		return noop, err
 	}
 
@@ -1606,11 +1603,11 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 
 func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 	// Create a noop audit backend
-	var noop *corehelpers.NoopAudit
+	var noop *audit.NoopAudit
 	c, _, root := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 		var err error
-		noop, err = corehelpers.NewNoopAudit(config, audit.WithHeaderFormatter(headerFormatter))
+		noop, err = audit.NewNoopAudit(config)
 		return noop, err
 	}
 
@@ -1709,7 +1706,7 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 
 func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	// Create a badass credential backend that always logs in as armon
-	var noop *corehelpers.NoopAudit
+	var noop *audit.NoopAudit
 	noopBack := &NoopBackend{
 		Login: []string{"login"},
 		Response: &logical.Response{
@@ -1729,9 +1726,9 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noopBack, nil
 	}
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 		var err error
-		noop, err = corehelpers.NewNoopAudit(config, audit.WithHeaderFormatter(headerFormatter))
+		noop, err = audit.NewNoopAudit(config)
 		return noop, err
 	}
 
@@ -3460,7 +3457,8 @@ func TestSetSeals(t *testing.T) {
 		Generation:   2,
 	})
 
-	err := testCore.SetSeals(newSeal, nil, false)
+	ctx := context.Background()
+	err := testCore.SetSeals(ctx, true, newSeal, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3602,5 +3600,23 @@ func TestBuildUnsealSetupFunctionSlice(t *testing.T) {
 	} {
 		funcs := buildUnsealSetupFunctionSlice(testcase.core)
 		assert.Equal(t, testcase.expectedLength, len(funcs), testcase.name)
+	}
+}
+
+// TestBarrier_DeadlockDetection verifies that the
+// DeadlockDetection is correctly enabled and disabled when the core is unsealed
+func TestBarrier_DeadlockDetection(t *testing.T) {
+	testCore := TestCore(t)
+	testCoreUnsealed(t, testCore)
+
+	if testCore.barrier.DetectDeadlocks() {
+		t.Fatal("barrierLock has deadlock detection enabled, it shouldn't")
+	}
+
+	testCore = TestCoreWithDeadlockDetection(t, nil, false)
+	testCoreUnsealed(t, testCore)
+
+	if !testCore.barrier.DetectDeadlocks() {
+		t.Fatal("barrierLock doesn't have deadlock detection enabled, it should")
 	}
 }

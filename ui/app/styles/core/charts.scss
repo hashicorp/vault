@@ -11,33 +11,6 @@
 }
 
 // GRID LAYOUT //
-.single-month-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 2em;
-  width: 100%;
-}
-.single-month-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2em;
-  width: 100%;
-  margin-bottom: 1rem;
-}
-.single-month-section-title {
-  grid-column-start: 1;
-  grid-column-end: span col3-end;
-}
-.single-month-breakdown-entity {
-  grid-column-start: 1;
-}
-.single-month-breakdown-nonentity {
-  grid-column-start: 2;
-}
-.single-month-breakdown-sync {
-  grid-column-start: 3;
-}
-
 .single-chart-grid {
   display: grid;
   grid-template-columns: 1fr 0.3fr 3.7fr;
@@ -170,7 +143,7 @@
 
 .timestamp {
   grid-column: 1 / span 2;
-  grid-row-start: -2;
+  grid-row-start: -1;
   color: $ui-gray-500;
   font-size: $size-9;
   align-self: end;
@@ -232,10 +205,13 @@ p.data-details {
     background-color: var(--token-color-palette-blue-100);
   }
   &.dot-1 {
-    background-color: var(--token-color-palette-blue-300);
+    background-color: var(--token-color-palette-blue-200);
   }
   &.dot-2 {
-    background-color: var(--token-color-palette-blue-500);
+    background-color: var(--token-color-palette-neutral-300);
+  }
+  &.dot-3 {
+    background-color: var(--token-color-palette-neutral-500);
   }
 }
 

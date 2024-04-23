@@ -89,26 +89,27 @@
     </M.Header>
     <M.Body>
       <p class="has-bottom-margin-s">
-        This export will include the namespace path, mount path and associated total, entity, non-entity and secrets sync
-        clients for the
-        {{if this.formattedEndDate "date range" "month"}}
-        below.
+        {{this.modalExportText}}
       </p>
       <p class="has-bottom-margin-s">
         The
         <code>mount_path</code>
-        for secrets sync clients is the KV v2 engine path and for entity/non-entity clients is the corresponding
-        authentication method path.
+        for entity/non-entity clients is the corresponding authentication method path
+        {{if @isSecretsSyncActivated "and for secrets sync clients is the KV v2 engine path"}}.
       </p>
       <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if this.formattedEndDate " RANGE"}}</p>
       <p class="has-bottom-margin-s" data-test-export-date-range>
-        {{this.parseAPITimestamp @startTimestamp "MMMM yyyy"}}
+        {{this.formattedStartDate}}
         {{if this.formattedEndDate "-"}}
         {{this.formattedEndDate}}</p>
     </M.Body>
     <M.Footer as |F|>
       <Hds::ButtonSet>
-        <Hds::Button @text="Export" {{on "click" (fn this.exportChartData this.formattedCsvFileName)}} />
+        <Hds::Button
+          @text="Export"
+          {{on "click" (fn this.exportChartData this.formattedCsvFileName)}}
+          data-test-confirm-button
+        />
         <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
       </Hds::ButtonSet>
       {{#if @upgradesDuringActivity}}

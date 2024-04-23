@@ -12,6 +12,8 @@ import { endOfMonth, formatRFC3339 } from 'date-fns';
 import { click } from '@ember/test-helpers';
 import subMonths from 'date-fns/subMonths';
 import timestamp from 'core/utils/timestamp';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SERIALIZED_ACTIVITY_RESPONSE } from 'vault/tests/helpers/clients/client-count-helpers';
 
 module('Integration | Component | clients/attribution', function (hooks) {
   setupRenderingTest(hooks);
@@ -19,29 +21,23 @@ module('Integration | Component | clients/attribution', function (hooks) {
   hooks.before(function () {
     sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
   });
+
   hooks.beforeEach(function () {
+    const { total, by_namespace } = SERIALIZED_ACTIVITY_RESPONSE;
+    this.csvDownloadStub = sinon.stub(this.owner.lookup('service:download'), 'csv');
     const mockNow = timestamp.now();
     this.mockNow = mockNow;
-    this.set('startTimestamp', formatRFC3339(subMonths(mockNow, 6)));
-    this.set('timestamp', formatRFC3339(mockNow));
-    this.set('selectedNamespace', null);
-    this.set('chartLegend', [
-      { label: 'entity clients', key: 'entity_clients' },
-      { label: 'non-entity clients', key: 'non_entity_clients' },
-    ]);
-    this.set('totalUsageCounts', { clients: 15, entity_clients: 10, non_entity_clients: 5 });
-    this.set('totalClientAttribution', [
-      { label: 'second', clients: 10, entity_clients: 7, non_entity_clients: 3 },
-      { label: 'first', clients: 5, entity_clients: 3, non_entity_clients: 2 },
-    ]);
-    this.set('totalMountsData', { clients: 5, entity_clients: 3, non_entity_clients: 2 });
-    this.set('namespaceMountsData', [
-      { label: 'auth1/', clients: 3, entity_clients: 2, non_entity_clients: 1 },
-      { label: 'auth2/', clients: 2, entity_clients: 1, non_entity_clients: 1 },
-    ]);
+    this.startTimestamp = formatRFC3339(subMonths(mockNow, 6));
+    this.timestamp = formatRFC3339(mockNow);
+    this.selectedNamespace = null;
+    this.totalUsageCounts = total;
+    this.totalClientAttribution = [...by_namespace];
+    this.namespaceMountsData = by_namespace.find((ns) => ns.label === 'ns1').mounts;
   });
+
   hooks.after(function () {
     timestamp.now.restore();
+    this.csvDownloadStub.restore();
   });
 
   test('it renders empty state with no data', async function (assert) {
@@ -82,8 +78,8 @@ module('Integration | Component | clients/attribution', function (hooks) {
       .hasText(
         'The total clients in the namespace for this date range. This number is useful for identifying overall usage volume.'
       );
-    assert.dom('[data-test-top-attribution]').includesText('namespace').includesText('second');
-    assert.dom('[data-test-attribution-clients]').includesText('namespace').includesText('10');
+    assert.dom('[data-test-top-attribution]').includesText('namespace').includesText('ns1');
+    assert.dom('[data-test-attribution-clients]').includesText('namespace').includesText('18,903');
   });
 
   test('it renders two charts and correct text for single, historical month', async function (assert) {
@@ -118,7 +114,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
         'The new clients in the namespace for this month. This aids in understanding which namespaces create and use new clients.',
         'renders new monthly namespace text'
       );
-    this.set('selectedNamespace', 'second');
+    this.set('selectedNamespace', 'ns1');
 
     assert
       .dom('[data-test-attribution-description]')
@@ -182,7 +178,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
   });
 
   test('it renders with data for selected namespace auth methods for a date range', async function (assert) {
-    this.set('selectedNamespace', 'second');
+    this.set('selectedNamespace', 'ns1');
     await render(hbs`
       <Clients::Attribution
         @totalClientAttribution={{this.namespaceMountsData}}
@@ -208,8 +204,8 @@ module('Integration | Component | clients/attribution', function (hooks) {
       .hasText(
         'The total clients used by the auth method for this date range. This number is useful for identifying overall usage volume.'
       );
-    assert.dom('[data-test-top-attribution]').includesText('auth method').includesText('auth1/');
-    assert.dom('[data-test-attribution-clients]').includesText('auth method').includesText('3');
+    assert.dom('[data-test-top-attribution]').includesText('auth method').includesText('auth/authid/0');
+    assert.dom('[data-test-attribution-clients]').includesText('auth method').includesText('8,394');
   });
 
   test('it renders modal', async function (assert) {
@@ -226,5 +222,150 @@ module('Integration | Component | clients/attribution', function (hooks) {
       .dom('[data-test-export-modal-title]')
       .hasText('Export attribution data', 'modal appears to export csv');
     assert.dom('[ data-test-export-date-range]').includesText('June 2022 - December 2022');
+  });
+
+  test('it downloads csv data for date range', async function (assert) {
+    assert.expect(2);
+
+    await render(hbs`
+      <Clients::Attribution
+        @isSecretsSyncActivated={{true}}
+        @totalClientAttribution={{this.totalClientAttribution}}
+        @responseTimestamp={{this.timestamp}}
+        @startTimestamp="2022-06-01T23:00:11.050Z"
+        @endTimestamp="2022-12-01T23:00:11.050Z"
+        />
+    `);
+    await click('[data-test-attribution-export-button]');
+    await click(GENERAL.confirmButton);
+    const [filename, content] = this.csvDownloadStub.lastCall.args;
+    assert.strictEqual(filename, 'clients_by_namespace_June 2022-December 2022', 'csv has expected filename');
+    assert.strictEqual(
+      content,
+      `Namespace path,Mount path
+  *namespace totals, inclusive of mount clients,Total clients,Entity clients,Non-entity clients,ACME clients,Secrets sync clients
+ns1,*,18903,4256,4138,5699,4810
+ns1,auth/authid/0,8394,4256,4138,0,0
+ns1,kvv2-engine-0,4810,0,0,0,4810
+ns1,pki-engine-0,5699,0,0,5699,0
+root,*,16384,4002,4089,4003,4290
+root,auth/authid/0,8091,4002,4089,0,0
+root,kvv2-engine-0,4290,0,0,0,4290
+root,pki-engine-0,4003,0,0,4003,0`,
+      'csv has expected content'
+    );
+  });
+
+  test('it downloads csv data for a single month', async function (assert) {
+    assert.expect(2);
+    await render(hbs`
+      <Clients::Attribution
+        @isSecretsSyncActivated={{true}}
+        @totalClientAttribution={{this.totalClientAttribution}}
+        @responseTimestamp={{this.timestamp}}
+        @startTimestamp="2022-06-01T23:00:11.050Z"
+        @endTimestamp="2022-06-21T23:00:11.050Z"
+        />
+    `);
+    await click('[data-test-attribution-export-button]');
+    await click(GENERAL.confirmButton);
+    const [filename, content] = this.csvDownloadStub.lastCall.args;
+    assert.strictEqual(filename, 'clients_by_namespace_June 2022', 'csv has single month in filename');
+    assert.strictEqual(
+      content,
+      `Namespace path,Mount path
+  *namespace totals, inclusive of mount clients,Total clients,Entity clients,Non-entity clients,ACME clients,Secrets sync clients
+ns1,*,18903,4256,4138,5699,4810
+ns1,auth/authid/0,8394,4256,4138,0,0
+ns1,kvv2-engine-0,4810,0,0,0,4810
+ns1,pki-engine-0,5699,0,0,5699,0
+root,*,16384,4002,4089,4003,4290
+root,auth/authid/0,8091,4002,4089,0,0
+root,kvv2-engine-0,4290,0,0,0,4290
+root,pki-engine-0,4003,0,0,4003,0`,
+      'csv has expected content'
+    );
+  });
+
+  test('it downloads csv data when a namespace is selected', async function (assert) {
+    assert.expect(2);
+    this.selectedNamespace = 'ns1';
+
+    await render(hbs`
+      <Clients::Attribution
+        @isSecretsSyncActivated={{true}}
+        @totalClientAttribution={{this.namespaceMountsData}}
+        @selectedNamespace={{this.selectedNamespace}}
+        @responseTimestamp={{this.timestamp}}
+        @startTimestamp="2022-06-01T23:00:11.050Z"
+        @endTimestamp="2022-12-21T23:00:11.050Z"
+        />
+    `);
+
+    await click('[data-test-attribution-export-button]');
+    await click(GENERAL.confirmButton);
+    const [filename, content] = this.csvDownloadStub.lastCall.args;
+    assert.strictEqual(
+      filename,
+      'clients_by_mount_path_June 2022-December 2022',
+      'csv has expected filename for a selected namespace'
+    );
+    assert.strictEqual(
+      content,
+      `Namespace path,Mount path,Total clients,Entity clients,Non-entity clients,ACME clients,Secrets sync clients
+ns1,auth/authid/0,8394,4256,4138,0,0
+ns1,kvv2-engine-0,4810,0,0,0,4810
+ns1,pki-engine-0,5699,0,0,5699,0`,
+      'csv has expected content for a selected namespace'
+    );
+  });
+
+  test('csv filename omits date if no start/end timestamp', async function (assert) {
+    assert.expect(1);
+
+    await render(hbs`
+      <Clients::Attribution
+        @totalClientAttribution={{this.totalClientAttribution}}
+        @responseTimestamp={{this.timestamp}}
+        />
+    `);
+
+    await click('[data-test-attribution-export-button]');
+    await click(GENERAL.confirmButton);
+    const [filename, ,] = this.csvDownloadStub.lastCall.args;
+    assert.strictEqual(filename, 'clients_by_namespace');
+  });
+
+  test('csv filename omits sync clients if not activated', async function (assert) {
+    assert.expect(1);
+    this.totalClientAttribution = this.totalClientAttribution.map((ns) => {
+      const namespace = { ...ns };
+      delete namespace.secret_syncs;
+      return namespace;
+    });
+    await render(hbs`
+      <Clients::Attribution
+        @isSecretsSyncActivated={{false}}
+        @totalClientAttribution={{this.totalClientAttribution}}
+        @responseTimestamp={{this.timestamp}}
+        />
+    `);
+
+    await click('[data-test-attribution-export-button]');
+    await click(GENERAL.confirmButton);
+    const [, content] = this.csvDownloadStub.lastCall.args;
+    assert.strictEqual(
+      content,
+      `Namespace path,Mount path
+  *namespace totals, inclusive of mount clients,Total clients,Entity clients,Non-entity clients,ACME clients
+ns1,*,18903,4256,4138,5699
+ns1,auth/authid/0,8394,4256,4138,0
+ns1,kvv2-engine-0,4810,0,0,0
+ns1,pki-engine-0,5699,0,0,5699
+root,*,16384,4002,4089,4003
+root,auth/authid/0,8091,4002,4089,0
+root,kvv2-engine-0,4290,0,0,0
+root,pki-engine-0,4003,0,0,4003`
+    );
   });
 });

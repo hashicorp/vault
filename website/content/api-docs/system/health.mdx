@@ -25,10 +25,14 @@ The default status codes are:
 
 - `200` if initialized, unsealed, and active
 - `429` if unsealed and standby
-- `472` if disaster recovery mode replication secondary and active
+- `472` if disaster recovery secondary (both active and standby nodes within the DR secondary)
 - `473` if performance standby
 - `501` if not initialized
 - `503` if sealed
+
+<Note>
+In rare occasions such as during cluster instability, a node may return 429 even when it was part of a DR secondary (472) or a perf-standby (473). When configuring a Load Balancer based on health status API, it's important to recognize that a 429 indicates a standby node that doesn't process the request itself, read or write.
+</Note>
 
 ### Parameters
 
@@ -67,30 +71,6 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/health
 ```
 
-### Sample response
-
-This response is only returned for a `GET` request.
-
-Note: `replication_performance_mode` and `replication_dr_mode` reflect the state of
-the active node in the cluster; if you are querying it for a standby that has
-just come up, it can take a small time for the active node to inform the
-standby of its status.
-
-```json
-{
-  "initialized": true,
-  "sealed": false,
-  "standby": false,
-  "performance_standby": false,
-  "replication_performance_mode": "disabled",
-  "replication_dr_mode": "disabled",
-  "server_time_utc": 1516639589,
-  "version": "0.9.2",
-  "cluster_name": "vault-cluster-3bd69ca2",
-  "cluster_id": "00af5aa8-c87d-b5fc-e82e-97cd8dfaf731"
-}
-```
-
 ### Sample request to customize the status code being returned
 
 ```shell-session
@@ -104,7 +84,27 @@ content-length: 364
 date: Wed, 26 Jan 2022 09:21:13 GMT
 ```
 
-### Sample response
+### Sample response - CE active node
+
+```json
+{
+  "clock_skew_ms": 0,
+  "cluster_id": "995f749a-9bc3-fbe0-a185-ccba6999fc73",
+  "cluster_name": "vault-cluster-e65c0563",
+  "echo_duration_ms": 0,
+  "enterprise": false,
+  "initialized": true,
+  "performance_standby": false,
+  "replication_dr_mode": "disabled",
+  "replication_performance_mode": "disabled",
+  "sealed": false,
+  "server_time_utc": 1709559327,
+  "standby": false,
+  "version": "1.16.0-rc2"
+}
+```
+
+### Sample response - Enterprise active node
 
 This response is only returned for a `GET` request.
 
@@ -115,17 +115,26 @@ standby of its status.
 
 ```json
 {
+  "clock_skew_ms": 0,
+  "cluster_id": "e278ff10-60da-4248-0b0a-dd174d22172d",
+  "cluster_name": "vault-cluster-88b4e092",
+  "echo_duration_ms": 0,
+  "enterprise": true,
   "initialized": true,
-  "sealed": false,
-  "standby": false,
+  "last_wal": 362,
+  "license": {
+    "expiry_time": "2024-08-03T23:59:59Z",
+    "state": "autoloaded",
+    "terminated": false
+  },
   "performance_standby": false,
+  "replication_dr_mode": "disabled",
   "replication_performance_mode": "disabled",
-  "replication_dr_mode": "secondary",
-  "server_time_utc": 1643188873,
-  "version": "1.9.0+prem",
-  "cluster_name": "SECONDARY",
-  "cluster_id": "d2fbb13b-0830-70a3-4751-57b6b6d95d01",
-  "last_wal":13,
-  "license":{"state":"none","expiry_time":"","terminated":false}
+  "replication_primary_canary_age_ms": 0,
+  "sealed": false,
+  "server_time_utc": 1709558830,
+  "standby": false,
+  "version": "1.17.0-beta1+ent"
+
 }
 ```

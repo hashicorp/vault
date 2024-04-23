@@ -11,7 +11,7 @@ import { select, event, selectAll } from 'd3-selection';
 import { scaleLinear, scaleBand } from 'd3-scale';
 import { axisLeft } from 'd3-axis';
 import { max, maxIndex } from 'd3-array';
-import { GREY, BLUE_PALETTE } from 'vault/utils/chart-helpers';
+import { GREY, BAR_PALETTE } from 'vault/utils/chart-helpers';
 import { tracked } from '@glimmer/tracking';
 import { formatNumber } from 'core/helpers/format-number';
 
@@ -89,7 +89,7 @@ export default class HorizontalBarChart extends Component {
       .attr('data-test-group', (d) => `${d.key}`)
       // shifts chart to accommodate y-axis legend
       .attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`)
-      .style('fill', (d, i) => BLUE_PALETTE[i]);
+      .style('fill', (d, i) => BAR_PALETTE[i]);
 
     const yAxis = axisLeft(yScale).tickSize(0);
 
@@ -175,7 +175,9 @@ export default class HorizontalBarChart extends Component {
         this.isLabel = false;
         this.tooltipText = []; // clear stats
         this.args.chartLegend.forEach(({ key, label }) => {
-          this.tooltipText.pushObject(`${formatNumber([data[key]])} ${label}`);
+          // since we're relying on D3 not ember reactivity,
+          // pushing directly to this.tooltipText updates the DOM
+          this.tooltipText.push(`${formatNumber([data[key]])} ${label}`);
         });
 
         select(hoveredElement).style('opacity', 1);

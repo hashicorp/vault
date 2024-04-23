@@ -17,7 +17,7 @@ for Vault 1.13.x compared to 1.12. Please read it carefully.
 
 ### Undo logs
 
-Vault 1.13 introduced changes to add extra resiliency to log shipping with undo logs. These logs can help prevent several Merkle syncs from occurring due to rapid key changes in the primary Merkle tree as the secondary tries to synchronize. For integrated storage users, Vault needs to be upgraded to 1.13 will enable this feature by default. For Consul storage users, Consul also needs to be upgraded to 1.14 to use this feature.
+Vault 1.13 introduced changes to add extra resiliency to log shipping with undo logs. These logs can help prevent several Merkle syncs from occurring due to rapid key changes in the primary Merkle tree as the secondary tries to synchronize. For integrated storage users, upgrading Vault to 1.13 will enable this feature by default. For Consul storage users, Consul also needs to be upgraded to 1.14 to use this feature.
 
 ### User lockout
 
