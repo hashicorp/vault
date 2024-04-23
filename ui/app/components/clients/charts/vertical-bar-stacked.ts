@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-// @ts-nocheck
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { BAR_WIDTH, numericalAxisLabel } from 'vault/utils/chart-helpers';
@@ -11,21 +10,30 @@ import { formatNumber } from 'core/helpers/format-number';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { flatGroup } from 'd3-array';
 import type { MonthlyChartData } from 'vault/vault/charts/client-counts';
-import type { TotalClients } from 'core/utils/client-count-utils';
+import type { ClientTypes } from 'core/utils/client-count-utils';
 
 interface Args {
-  data: MonthlyChartData[];
-  dataKeys: string[];
-  chartTitle: string;
   chartHeight?: number;
+  chartLegend: Legend[];
+  chartTitle: string;
+  data: MonthlyChartData[];
 }
 
-interface ChartData {
+interface Legend {
+  key: ClientTypes;
+  label: string;
+}
+interface AggregatedDatum {
   x: string;
-  y: number | null;
-  tooltip: string;
+  y: number;
   legendX: string;
-  legendY: string;
+  legendY: string[];
+}
+
+interface KeyData {
+  month: string;
+  clientType: string;
+  [key: string]: number;
 }
 
 /**
@@ -40,42 +48,42 @@ interface ChartData {
  * @chartHeight={{250}}
  * />
  */
-export default class VerticalBarStacked extends Component {
+export default class VerticalBarStacked extends Component<Args> {
   barWidth = BAR_WIDTH;
-  @tracked activeDatum: ChartData | null = null;
+  @tracked activeDatum: AggregatedDatum | null = null;
 
   get chartHeight() {
     return this.args.chartHeight || 190;
   }
 
-  get dataKeys() {
-    return this.args.chartLegend.map((l) => l.key);
+  get dataKeys(): ClientTypes[] {
+    return this.args.chartLegend.map((l: Legend) => l.key);
   }
 
-  label(legendKey) {
-    return this.args.chartLegend.find((l) => l.key === legendKey).label;
+  label(legendKey: string) {
+    return this.args.chartLegend.find((l: Legend) => l.key === legendKey).label;
   }
 
   get chartData() {
-    let dataset = [];
+    let dataset: [string, string, number | undefined, KeyData[]][] = [];
     // each datum needs to be its own object
     for (const key of this.dataKeys) {
-      const keyData = this.args.data.map((d) => ({
+      const keyData: KeyData[] = this.args.data.map((d: MonthlyChartData) => ({
         month: parseAPITimestamp(d.timestamp, 'M/yy'),
         clientType: key,
-        [key]: d[key],
+        [key as ClientTypes]: d[key as ClientTypes],
       }));
-      dataset = [
-        ...dataset,
-        ...flatGroup(
-          keyData,
-          // order here must match destructure order in return below
-          (d) => d.month,
-          (d) => d.clientType,
-          (d) => d[key]
-        ),
-      ];
+
+      const group = flatGroup(
+        keyData,
+        // order here must match destructure order in return below
+        (d) => d.month,
+        (d) => d.clientType,
+        (d) => d[key]
+      );
+      dataset = [...dataset, ...group];
     }
+
     return dataset.map(([month, clientType, counts]) => ({
       month,
       clientType, // key name matches the chart's @color arg
@@ -84,9 +92,11 @@ export default class VerticalBarStacked extends Component {
   }
 
   // for yRange scale, tooltip target area and tooltip text data
-  get aggregatedData() {
-    return this.args.data.map((datum): ChartData => {
-      const values = this.dataKeys.map((k) => datum[k]).filter((v) => Number.isInteger(v));
+  get aggregatedData(): AggregatedDatum[] {
+    return this.args.data.map((datum: MonthlyChartData) => {
+      const values = this.dataKeys
+        .map((k: string) => datum[k as ClientTypes])
+        .filter((count) => Number.isInteger(count));
       const sum = values.length ? values.reduce((sum, currentValue) => sum + currentValue, 0) : null;
       const xValue = datum.timestamp as string;
       return {
@@ -103,8 +113,8 @@ export default class VerticalBarStacked extends Component {
       .map((d) => d.y)
       .flatMap((num) => (typeof num === 'number' ? [num] : []));
     const max = Math.max(...counts);
-    // if max is <=6, hardcode 6 which is the y-axis tickCount so y-axes are not decimals
-    return [0, max <= 6 ? 6 : max];
+    // if max is <=4, hardcode 4 which is the y-axis tickCount so y-axes are not decimals
+    return [0, max <= 4 ? 4 : max];
   }
 
   get xDomain() {
