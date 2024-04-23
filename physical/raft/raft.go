@@ -37,7 +37,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
-	"github.com/hashicorp/vault/version"
 	etcdbolt "go.etcd.io/bbolt"
 )
 
@@ -218,7 +217,7 @@ type LeaderJoinInfo struct {
 	// client authentication during TLS.
 	LeaderClientKey string `json:"leader_client_key"`
 
-	// LeaderCACertFile is the path on disk to the the CA cert file of the
+	// LeaderCACertFile is the path on disk to the CA cert file of the
 	// leader node. This should only be provided via Vault's configuration file.
 	LeaderCACertFile string `json:"leader_ca_cert_file"`
 
@@ -600,7 +599,10 @@ func (b *RaftBackend) NonVoter() bool {
 	return b.nonVoter
 }
 
-func (b *RaftBackend) EffectiveVersion() string {
+// UpgradeVersion returns the string that should be used by autopilot during automated upgrades. We return the
+// specified upgradeVersion if it's present. If it's not, we fall back to effectiveSDKVersion, which is
+// Vault's binary version (though that can be overridden for tests).
+func (b *RaftBackend) UpgradeVersion() string {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -608,7 +610,7 @@ func (b *RaftBackend) EffectiveVersion() string {
 		return b.upgradeVersion
 	}
 
-	return version.GetVersion().Version
+	return b.effectiveSDKVersion
 }
 
 // DisableUpgradeMigration returns the state of the DisableUpgradeMigration config flag and whether it was set or not

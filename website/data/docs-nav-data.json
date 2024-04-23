@@ -73,6 +73,10 @@
             "path": "internals/telemetry/enable-telemetry"
           },
           {
+            "title": "Key metrics",
+            "path": "internals/telemetry/key-metrics"
+          },
+          {
             "title": "Metric reference",
             "routes": [
               {
@@ -212,6 +216,10 @@
       {
         "title": "Storage",
         "path": "concepts/storage"
+      },
+      {
+        "title": "Cloud access management",
+        "path": "concepts/cloud-access-management"
       },
       {
         "title": "Integrated Storage",
@@ -2020,6 +2028,10 @@
                             "path": "platform/k8s/vso/sources/vault/auth/gcp"
                           }
                         ]
+                      },
+                      {
+                        "title": "Encrypted client cache",
+                        "path": "platform/k8s/vso/sources/vault/client-cache"
                       }
                     ]
                   },

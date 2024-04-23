@@ -270,7 +270,7 @@ type Core struct {
 	// HABackend may be available depending on the physical backend
 	ha physical.HABackend
 
-	// storageType is the the storage type set in the storage configuration
+	// storageType is the storage type set in the storage configuration
 	storageType string
 
 	// redirectAddr is the address we advertise as leader if held
@@ -2461,12 +2461,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 
-		if !c.perfStandby {
-			if err := c.setupCensusManager(); err != nil {
-				logger.Error("failed to instantiate the license reporting agent", "error", err)
-			}
-		}
-
 		// not waiting on wg to avoid changing existing behavior
 		var wg sync.WaitGroup
 		if err := c.setupActivityLog(ctx, &wg); err != nil {
@@ -2474,6 +2468,12 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		}
 
 		if !c.perfStandby {
+			if err := c.setupCensusManager(); err != nil {
+				logger.Error("failed to instantiate the license reporting agent", "error", err)
+			}
+
+			c.StartCensusReports(ctx)
+
 			c.StartManualCensusSnapshots()
 		}
 
