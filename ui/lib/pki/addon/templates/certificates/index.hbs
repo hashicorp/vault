@@ -5,7 +5,12 @@
 
 <PkiPageHeader @backend={{this.model.parentModel}} />
 
-<PkiPaginatedList @listRoute="certificates.index" @list={{this.model.certificates}} @hasConfig={{this.model.hasConfig}}>
+<PkiPaginatedList
+  @backend={{this.model.parentModel.id}}
+  @listRoute="certificates.index"
+  @list={{this.model.certificates}}
+  @hasConfig={{this.model.hasConfig}}
+>
   <:list as |certs|>
     {{#each certs as |pkiCertificate|}}
       <LinkedBlock

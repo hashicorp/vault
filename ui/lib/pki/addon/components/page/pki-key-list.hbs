@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<PkiPaginatedList @listRoute="keys.index" @list={{@keyModels}} @hasConfig={{@hasConfig}}>
+<PkiPaginatedList @backend={{@backend}} @listRoute="keys.index" @list={{@keyModels}} @hasConfig={{@hasConfig}}>
   <:actions>
     {{#if @canImportKey}}
       <ToolbarLink @route="keys.import" @model={{@backend}} @type="upload" data-test-pki-key-import>
