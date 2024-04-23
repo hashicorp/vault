@@ -15,7 +15,7 @@
     {{#each certs as |pkiCertificate|}}
       <LinkedBlock
         class="list-item-row"
-        @params={{array "certificates.certificate.details" pkiCertificate.id}}
+        @params={{array "certificates.certificate.details" this.model.parentModel.id pkiCertificate.id}}
         @linkPrefix={{this.mountPoint}}
       >
         <div class="level is-mobile">
@@ -59,6 +59,7 @@
         @iconPosition="trailing"
         @text="Configure PKI"
         @route="configuration.create"
+        @model={{this.model.parentModel.id}}
       />
     </EmptyState>
   </:configure>
