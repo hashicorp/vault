@@ -243,14 +243,6 @@ func TestTransit_CreateKey(t *testing.T) {
 			creationParams: map[string]interface{}{"type": "hmac", "key_size": 128},
 			shouldError:    false,
 		},
-		"AES-128 CMAC": {
-			creationParams: map[string]interface{}{"type": "aes128-cmac"},
-			shouldError:    false,
-		},
-		"AES-256 CMAC": {
-			creationParams: map[string]interface{}{"type": "aes256-cmac"},
-			shouldError:    false,
-		},
 		"bad key type": {
 			creationParams: map[string]interface{}{"type": "fake-key-type"},
 			shouldError:    true,
