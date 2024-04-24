@@ -34,6 +34,7 @@
   transform: translate(calc(1px * var(--x, 0)), calc(-1px * var(--y, 0)));
   transform-origin: bottom left;
   z-index: 100;
+  margin-bottom: $spacing-8;
 }
 
 // @colorScale arg for Lineal::VBars is "blue-bar", indices are added by lineal
