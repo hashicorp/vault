@@ -19,6 +19,14 @@ process. If the secret value is updated in Vault, the secret is updated in the d
 from Vault, it is deleted on the external system as well. This process is asynchronous and event-based. Vault propagates
 modifications into the proper destinations automatically in a handful of seconds.
 
+## Activating the feature
+
+The secrets sync feature requires manual activation through a one-time trigger. If a sync-related endpoint is called prior to
+activation, an error response will be received indicating that the feature has not been enabled yet. Be sure to understand the
+potential [client count impacts](#client-counts) of using secrets sync before proceeding.
+
+Activating the Secrets Sync feature can be done through one of several methods. One option is by activating it through the UI directly. Alternatively, the endpoint `sys/activation-flags/secrets-sync/activate` can be used by either issuing a POST/PUT request to it or via the CLI with the command `vault write -f sys/activation-flags/secrets-sync/activate`.
+
 ## Destinations
 
 Secrets can be synced into various external systems, called destinations. The supported destinations are:
