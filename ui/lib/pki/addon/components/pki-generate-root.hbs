@@ -14,7 +14,10 @@
             @value={{get @model attr.name}}
             @addCopyButton={{or (eq attr.name "issuerId") (eq attr.name "keyId")}}
           >
-            <LinkTo @route={{attr.options.detailLinkTo}} @model={{get @model attr.name}}>{{get @model attr.name}}</LinkTo>
+            <LinkTo @route={{attr.options.detailLinkTo}} @models={{array @model.backend (get @model attr.name)}}>{{get
+                @model
+                attr.name
+              }}</LinkTo>
           </InfoTableRow>
         {{else if attr.options.isCertificate}}
           <InfoTableRow

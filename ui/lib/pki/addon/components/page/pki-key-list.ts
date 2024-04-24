@@ -10,6 +10,7 @@ import type PkiKeyModel from 'vault/models/pki/key';
 interface Args {
   keyModels: PkiKeyModel[];
   mountPoint: string;
+  backend: string;
   canImportKey: boolean;
   canGenerateKey: boolean;
   canRead: boolean;
