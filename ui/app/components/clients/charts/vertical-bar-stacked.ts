@@ -30,19 +30,19 @@ interface AggregatedDatum {
   legendY: string[];
 }
 
-interface Base {
+interface DatumBase {
   timestamp: string;
   clientType: string;
 }
-
-type KeyDataItem = Base & {
+// separated because "A mapped type may not declare properties or methods."
+type ChartDatum = DatumBase & {
   [key in ClientTypes]?: number | undefined;
 };
 
 /**
  * @module VerticalBarStacked
- * Renders a stacked bar chart of counts for different client types over time. The which client types to render
- * is mapped from the "key" values from the @legend arg
+ * Renders a stacked bar chart of counts for different client types over time. Which client types render
+ * is mapped from the "key" values of the @legend arg
  *
  * @example
  * <Clients::Charts::VerticalBarStacked
@@ -69,17 +69,17 @@ export default class VerticalBarStacked extends Component<Args> {
   }
 
   get chartData() {
-    let dataset: [string, number | undefined, string, KeyDataItem[]][] = [];
+    let dataset: [string, number | undefined, string, ChartDatum[]][] = [];
     // each datum needs to be its own object
     for (const key of this.dataKeys) {
-      const keyData: KeyDataItem[] = this.args.data.map((d: MonthlyChartData) => ({
+      const chartData: ChartDatum[] = this.args.data.map((d: MonthlyChartData) => ({
         timestamp: d.timestamp,
         clientType: key,
         [key]: d[key],
       }));
 
       const group = flatGroup(
-        keyData,
+        chartData,
         // order here must match destructure order in return below
         (d) => d.timestamp,
         (d) => d[key],
@@ -95,24 +95,28 @@ export default class VerticalBarStacked extends Component<Args> {
     }));
   }
 
-  // for yRange scale, tooltip target area and tooltip text data
+  // for yBounds scale, tooltip target area and tooltip text data
   get aggregatedData(): AggregatedDatum[] {
     return this.args.data.map((datum: MonthlyChartData) => {
       const values = this.dataKeys
         .map((k: string) => datum[k as ClientTypes])
         .filter((count) => Number.isInteger(count));
-      const sum = values.length ? values.reduce((sum, currentValue) => sum + currentValue, 0) : null;
+      // if the sum is an integer, increase by 2.5% so tooltip renders just above bars
+      const sum = values.length ? values.reduce((sum, currentValue) => sum + currentValue, 0) * 1.025 : null;
       const xValue = datum.timestamp;
       return {
         x: xValue,
-        y: sum ?? 0,
+        y: sum ?? 0, // y-axis point where tooltip renders
         legendX: parseAPITimestamp(xValue, 'MMMM yyyy') as string,
-        legendY: sum ? this.dataKeys.map((k) => `${formatNumber([datum[k]])} ${this.label(k)}`) : ['No data'],
+        legendY:
+          sum === null
+            ? ['No data']
+            : this.dataKeys.map((k) => `${formatNumber([datum[k]])} ${this.label(k)}`),
       };
     });
   }
 
-  get yRange() {
+  get yBounds() {
     const counts: number[] = this.aggregatedData
       .map((d) => d.y)
       .flatMap((num) => (typeof num === 'number' ? [num] : []));
@@ -121,7 +125,7 @@ export default class VerticalBarStacked extends Component<Args> {
     return [0, max <= 4 ? 4 : max];
   }
 
-  get xDomain() {
+  get xBounds() {
     const domain = this.chartData.map((d) => d.timestamp);
     return new Set(domain);
   }

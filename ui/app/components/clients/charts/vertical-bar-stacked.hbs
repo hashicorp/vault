@@ -6,9 +6,9 @@
 <div class="lineal-chart" data-test-chart={{@chartTitle}}>
   <Lineal::Fluid as |width|>
     {{#let
-      (scale-band domain=this.xDomain range=(array 0 width) padding=0.1)
-      (scale-linear range=(array this.chartHeight 0))
-      (scale-linear range=(array 0 this.chartHeight) domain=this.yRange)
+      (scale-band domain=this.xBounds range=(array 0 width) padding=0.1)
+      (scale-linear range=(array this.chartHeight 0) domain=this.yBounds)
+      (scale-linear range=(array 0 this.chartHeight) domain=this.yBounds)
       as |xScale yScale hScale|
     }}
       <svg width={{width}} height={{this.chartHeight}}>
@@ -51,6 +51,7 @@
           @color="clientType"
           @colorScale="blue-bar"
           transform="translate({{this.barOffset xScale.bandwidth}},0)"
+          data-test-vertical-bar
         />
 
         {{! TOOLTIP target rectangles }}
@@ -84,7 +85,7 @@
           }}
         >
           <div data-test-tooltip>
-            <p class="bold" data-test-tooltip-month>{{this.activeDatum.legendX}}</p>
+            <p class="bold">{{this.activeDatum.legendX}}</p>
             {{#each this.activeDatum.legendY as |stat|}}
               <p>{{stat}}</p>
             {{/each}}
@@ -96,3 +97,29 @@
     {{/let}}
   </Lineal::Fluid>
 </div>
+
+{{#if @showTable}}
+  <details data-test-underlying-data>
+    <summary>{{@chartTitle}} data</summary>
+    <Hds::Table @caption="Underlying data">
+      <:head as |H|>
+        <H.Tr>
+          <H.Th>Timestamp</H.Th>
+          {{#each this.dataKeys as |key|}}
+            <H.Th>{{humanize key}}</H.Th>
+          {{/each}}
+        </H.Tr>
+      </:head>
+      <:body as |B|>
+        {{#each @data as |row|}}
+          <B.Tr>
+            <B.Td>{{row.timestamp}}</B.Td>
+            {{#each this.dataKeys as |key|}}
+              <B.Td>{{or (get row key) "-"}}</B.Td>
+            {{/each}}
+          </B.Tr>
+        {{/each}}
+      </:body>
+    </Hds::Table>
+  </details>
+{{/if}}
