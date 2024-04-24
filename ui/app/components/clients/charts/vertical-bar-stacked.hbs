@@ -18,31 +18,32 @@
 
         {{#if (and xScale.isValid yScale.isValid)}}
           <Lineal::Axis
+            @includeDomain={{false}}
+            @orientation="left"
             @scale={{yScale}}
             @tickCount="6"
+            @tickFormat={{this.formatTicksY}}
             @tickPadding={{10}}
             @tickSizeInner={{concat "-" width}}
-            @tickFormat={{this.formatTicksY}}
-            @orientation="left"
-            @includeDomain={{false}}
             class="lineal-axis"
             data-test-y-axis
           />
           <Lineal::Axis
-            @scale={{xScale}}
-            @orientation="bottom"
-            transform="translate(0,{{yScale.range.min}})"
             @includeDomain={{false}}
-            @tickSize="0"
+            @orientation="bottom"
+            @scale={{xScale}}
+            @tickFormat={{this.formatTicksX}}
             @tickPadding={{10}}
+            @tickSize="0"
             class="lineal-axis"
+            transform="translate(0,{{yScale.range.min}})"
             data-test-x-axis
           />
         {{/if}}
 
         <Lineal::VBars
           @data={{this.chartData}}
-          @x="month"
+          @x="timestamp"
           @y="counts"
           @width={{this.barWidth}}
           @xScale={{xScale}}

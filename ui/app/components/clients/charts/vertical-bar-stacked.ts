@@ -31,7 +31,7 @@ interface AggregatedDatum {
 }
 
 interface KeyData {
-  month: string;
+  timestamp: string;
   clientType: string;
   [key: string]: number;
 }
@@ -69,7 +69,7 @@ export default class VerticalBarStacked extends Component<Args> {
     // each datum needs to be its own object
     for (const key of this.dataKeys) {
       const keyData: KeyData[] = this.args.data.map((d: MonthlyChartData) => ({
-        month: parseAPITimestamp(d.timestamp, 'M/yy'),
+        timestamp: d.timestamp,
         clientType: key,
         [key as ClientTypes]: d[key as ClientTypes],
       }));
@@ -77,15 +77,15 @@ export default class VerticalBarStacked extends Component<Args> {
       const group = flatGroup(
         keyData,
         // order here must match destructure order in return below
-        (d) => d.month,
+        (d) => d.timestamp,
         (d) => d.clientType,
         (d) => d[key]
       );
       dataset = [...dataset, ...group];
     }
 
-    return dataset.map(([month, clientType, counts]) => ({
-      month,
+    return dataset.map(([timestamp, clientType, counts]) => ({
+      timestamp,
       clientType, // key name matches the chart's @color arg
       counts,
     }));
@@ -98,9 +98,9 @@ export default class VerticalBarStacked extends Component<Args> {
         .map((k: string) => datum[k as ClientTypes])
         .filter((count) => Number.isInteger(count));
       const sum = values.length ? values.reduce((sum, currentValue) => sum + currentValue, 0) : null;
-      const xValue = datum.timestamp as string;
+      const xValue = datum.timestamp;
       return {
-        x: parseAPITimestamp(xValue, 'M/yy') as string,
+        x: xValue,
         y: sum ?? 0,
         legendX: parseAPITimestamp(xValue, 'MMMM yyyy') as string,
         legendY: sum ? this.dataKeys.map((k) => `${formatNumber([datum[k]])} ${this.label(k)}`) : ['No data'],
@@ -118,25 +118,18 @@ export default class VerticalBarStacked extends Component<Args> {
   }
 
   get xDomain() {
-    const months = this.chartData.map((d) => d.month);
-    return new Set(months);
+    const domain = this.chartData.map((d) => d.timestamp);
+    return new Set(domain);
   }
 
   // TEMPLATE HELPERS
-  barOffset = (bandwidth: number) => {
-    return (bandwidth - this.barWidth) / 2;
-  };
+  barOffset = (bandwidth: number) => (bandwidth - this.barWidth) / 2;
 
-  tooltipX = (original: number, bandwidth: number) => {
-    return (original + bandwidth / 2).toString();
-  };
+  tooltipX = (original: number, bandwidth: number) => (original + bandwidth / 2).toString();
 
-  tooltipY = (original: number) => {
-    if (!original) return `0`;
-    return `${original}`;
-  };
+  tooltipY = (original: number) => (!original ? '0' : `${original}`);
 
-  formatTicksY = (num: number): string => {
-    return numericalAxisLabel(num) || num.toString();
-  };
+  formatTicksX = (timestamp: string) => parseAPITimestamp(timestamp, 'M/yy');
+
+  formatTicksY = (num: number): string => numericalAxisLabel(num) || num.toString();
 }
