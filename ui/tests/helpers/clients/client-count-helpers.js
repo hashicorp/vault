@@ -19,18 +19,18 @@ export async function dateDropdownSelect(month, year) {
   await click(dateDropdown.submit);
 }
 
-export function assertBarChart(assert, chartName, byMonthData) {
-  // assertion count is byMonthData.length + 2
+export function assertBarChart(assert, chartName, byMonthData, isStacked = false) {
+  // assertion count is byMonthData.length, plus 2
   const chart = CLIENT_COUNT.charts.chart(chartName);
-  const dataBars = findAll(`${chart} ${CLIENT_COUNT.charts.dataBar}`).filter((b) => b.hasAttribute('height'));
+  const dataBars = findAll(`${chart} ${CLIENT_COUNT.charts.dataBar}`).filter(
+    (b) => b.hasAttribute('height') && b.getAttribute('height') !== '0'
+  );
   const xAxisLabels = findAll(`${chart} ${CLIENT_COUNT.charts.xAxisLabel}`);
 
-  assert.strictEqual(
-    dataBars.length,
-    byMonthData.filter((m) => m.clients).length,
-    `${chartName}: it renders bars for each non-zero month`
-  );
+  let count = byMonthData.filter((m) => m.clients).length;
+  if (isStacked) count = count * 2;
 
+  assert.strictEqual(dataBars.length, count, `${chartName}: it renders bars for each non-zero month`);
   assert.strictEqual(
     xAxisLabels.length,
     byMonthData.length,

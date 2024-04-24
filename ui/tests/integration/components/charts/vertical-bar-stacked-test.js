@@ -7,6 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { findAll, render, triggerEvent } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import { CHARTS } from 'vault/tests/helpers/clients/client-count-selectors';
 
 const EXAMPLE = [
   {
@@ -31,16 +32,6 @@ const EXAMPLE = [
     red_delicious: 5802,
   },
 ];
-
-const CHARTS = {
-  tooltip: '[data-test-tooltip]',
-  xAxis: '[data-test-x-axis]',
-  yAxis: '[data-test-y-axis]',
-  verticalBar: '[data-test-vertical-bar]',
-  chart: (title) => `[data-test-chart="${title}"]`,
-  hover: (area) => `[data-test-interactive-area="${area}"]`,
-  table: '[data-test-underlying-data]',
-};
 
 module('Integration | Component | clients/charts/vertical-bar-stacked', function (hooks) {
   setupRenderingTest(hooks);

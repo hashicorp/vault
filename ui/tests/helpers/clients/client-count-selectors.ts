@@ -68,11 +68,12 @@ export const CLIENT_COUNT = {
   upgradeWarning: '[data-test-clients-upgrade-warning]',
 };
 
-export const CHART_ELEMENTS = {
-  entityClientDataBars: '[data-test-group="entity_clients"]',
-  nonEntityDataBars: '[data-test-group="non_entity_clients"]',
-  yLabels: '[data-test-group="y-labels"]',
-  actionBars: '[data-test-group="action-bars"]',
-  labelActionBars: '[data-test-group="label-action-bars"]',
-  totalValues: '[data-test-group="total-values"]',
+export const CHARTS = {
+  chart: (title: string) => `[data-test-chart="${title}"]`,
+  hover: (area: string) => `[data-test-interactive-area="${area}"]`,
+  table: '[data-test-underlying-data]',
+  tooltip: '[data-test-tooltip]',
+  verticalBar: '[data-test-vertical-bar]',
+  xAxis: '[data-test-x-axis]',
+  yAxis: '[data-test-y-axis]',
 };

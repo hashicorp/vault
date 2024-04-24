@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
-import { render, findAll } from '@ember/test-helpers';
+import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { getUnixTime } from 'date-fns';
@@ -15,7 +15,8 @@ import { calculateAverage } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import { dateFormat } from 'core/helpers/date-format';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
+import { CHARTS, CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
+import { assertBarChart } from 'vault/tests/helpers/clients/client-count-helpers';
 
 const START_TIME = getUnixTime(LICENSE_START);
 const END_TIME = getUnixTime(STATIC_NOW);
@@ -67,6 +68,8 @@ module('Integration | Component | clients | Clients::Page::Token', function (hoo
   });
 
   test('it should render monthly total chart', async function (assert) {
+    const count = this.activity.byMonth.length;
+    assert.expect(count + 7);
     const getAverage = (data) => {
       const average = ['entity_clients', 'non_entity_clients'].reduce((count, key) => {
         return (count += calculateAverage(data, key) || 0);
@@ -83,20 +86,9 @@ module('Integration | Component | clients | Clients::Page::Token', function (hoo
       .hasText(expectedTotal, 'renders correct total clients');
 
     // assert bar chart is correct
-    findAll(`${chart} ${CLIENT_COUNT.charts.bar.xAxisLabel}`).forEach((e, i) => {
-      assert
-        .dom(e)
-        .hasText(
-          `${this.activity.byMonth[i].month}`,
-          `renders x-axis labels for bar chart: ${this.activity.byMonth[i].month}`
-        );
-    });
-    assert
-      .dom(`${chart} ${CLIENT_COUNT.charts.bar.dataBar}`)
-      .exists(
-        { count: this.activity.byMonth.filter((m) => m.clients).length * 2 },
-        'renders two stacked data bars of entity/non-entity clients for each month'
-      );
+    assert.dom(`${chart} ${CHARTS.xAxis}`).hasText('7/23 8/23 9/23 10/23 11/23 12/23 1/24');
+    assertBarChart(assert, 'Entity/Non-entity clients usage', this.activity.byMonth, true);
+
     const formattedTimestamp = dateFormat([this.activity.responseTimestamp, 'MMM d yyyy, h:mm:ss aaa'], {
       withTimeZone: true,
     });
@@ -112,6 +104,8 @@ module('Integration | Component | clients | Clients::Page::Token', function (hoo
   });
 
   test('it should render monthly new chart', async function (assert) {
+    const count = this.newActivity.length;
+    assert.expect(count + 8);
     const expectedNewEntity = formatNumber([calculateAverage(this.newActivity, 'entity_clients')]);
     const expectedNewNonEntity = formatNumber([calculateAverage(this.newActivity, 'non_entity_clients')]);
     const chart = CLIENT_COUNT.chartContainer('Monthly new');
@@ -124,21 +118,6 @@ module('Integration | Component | clients | Clients::Page::Token', function (hoo
     assert
       .dom(CLIENT_COUNT.charts.statTextValue('Average new non-entity clients per month'))
       .hasText(expectedNewNonEntity, 'renders correct new nonentity clients');
-    // assert bar chart is correct
-    findAll(`${chart} ${CLIENT_COUNT.charts.bar.xAxisLabel}`).forEach((e, i) => {
-      assert
-        .dom(e)
-        .hasText(
-          `${this.activity.byMonth[i].month}`,
-          `renders x-axis labels for bar chart: ${this.activity.byMonth[i].month}`
-        );
-    });
-    assert
-      .dom(`${chart} ${CLIENT_COUNT.charts.bar.dataBar}`)
-      .exists(
-        { count: this.activity.byMonth.filter((m) => m.clients).length * 2 },
-        'renders two stacked bars of new entity/non-entity clients for each month'
-      );
     const formattedTimestamp = dateFormat([this.activity.responseTimestamp, 'MMM d yyyy, h:mm:ss aaa'], {
       withTimeZone: true,
     });
@@ -151,6 +130,10 @@ module('Integration | Component | clients | Clients::Page::Token', function (hoo
     assert
       .dom(`${chart} ${CLIENT_COUNT.charts.legendLabel(2)}`)
       .hasText('Non-entity clients', 'Legend label renders');
+
+    // assert bar chart is correct
+    assert.dom(`${chart} ${CHARTS.xAxis}`).hasText('7/23 8/23 9/23 10/23 11/23 12/23 1/24');
+    assertBarChart(assert, 'Monthly new', this.newActivity, true);
   });
 
   test('it should render empty state for no new monthly data', async function (assert) {
@@ -158,7 +141,7 @@ module('Integration | Component | clients | Clients::Page::Token', function (hoo
       ...d,
       new_clients: { month: d.month },
     }));
-    const chart = CLIENT_COUNT.charts.chart('monthly-new');
+    const chart = CLIENT_COUNT.chartContainer('Monthly new');
 
     await this.renderComponent();
 
