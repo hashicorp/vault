@@ -7,7 +7,7 @@ import { click, findAll } from '@ember/test-helpers';
 
 import { LICENSE_START } from 'vault/mirage/handlers/clients';
 import { addMonths } from 'date-fns';
-import { CLIENT_COUNT } from './client-count-selectors';
+import { CLIENT_COUNT, CHARTS } from './client-count-selectors';
 
 export async function dateDropdownSelect(month, year) {
   const { dateDropdown, counts } = CLIENT_COUNT;
@@ -21,11 +21,11 @@ export async function dateDropdownSelect(month, year) {
 
 export function assertBarChart(assert, chartName, byMonthData, isStacked = false) {
   // assertion count is byMonthData.length, plus 2
-  const chart = CLIENT_COUNT.charts.chart(chartName);
-  const dataBars = findAll(`${chart} ${CLIENT_COUNT.charts.dataBar}`).filter(
+  const chart = CHARTS.chart(chartName);
+  const dataBars = findAll(`${chart} ${CHARTS.verticalBar}`).filter(
     (b) => b.hasAttribute('height') && b.getAttribute('height') !== '0'
   );
-  const xAxisLabels = findAll(`${chart} ${CLIENT_COUNT.charts.xAxisLabel}`);
+  const xAxisLabels = findAll(`${chart} ${CHARTS.xAxisLabel}`);
 
   let count = byMonthData.filter((m) => m.clients).length;
   if (isStacked) count = count * 2;

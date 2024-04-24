@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div class="lineal-chart" data-test-chart={{@chartTitle}}>
+<div class="lineal-chart" data-test-chart={{or @chartTitle "stacked vertical bar chart"}}>
   <Lineal::Fluid as |width|>
     {{#let
       (scale-band domain=this.xBounds range=(array 0 width) padding=0.1)
@@ -12,9 +12,7 @@
       as |xScale yScale hScale|
     }}
       <svg width={{width}} height={{this.chartHeight}}>
-        <title>
-          {{@chartTitle}}
-        </title>
+        <title>{{@chartTitle}}</title>
 
         {{#if (and xScale.isValid yScale.isValid)}}
           <Lineal::Axis

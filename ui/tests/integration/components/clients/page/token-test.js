@@ -77,12 +77,12 @@ module('Integration | Component | clients | Clients::Page::Token', function (hoo
       return formatNumber([average]);
     };
     const expectedTotal = getAverage(this.activity.byMonth);
-    const chart = CLIENT_COUNT.chartContainer('Entity/Non-entity clients usage');
+    const chart = CHARTS.container('Entity/Non-entity clients usage');
 
     await this.renderComponent();
 
     assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Average total clients per month'))
+      .dom(CLIENT_COUNT.statTextValue('Average total clients per month'))
       .hasText(expectedTotal, 'renders correct total clients');
 
     // assert bar chart is correct
@@ -92,15 +92,9 @@ module('Integration | Component | clients | Clients::Page::Token', function (hoo
     const formattedTimestamp = dateFormat([this.activity.responseTimestamp, 'MMM d yyyy, h:mm:ss aaa'], {
       withTimeZone: true,
     });
-    assert
-      .dom(`${chart} ${CLIENT_COUNT.charts.timestamp}`)
-      .hasText(`Updated ${formattedTimestamp}`, 'renders timestamp');
-    assert
-      .dom(`${chart} ${CLIENT_COUNT.charts.legendLabel(1)}`)
-      .hasText('Entity clients', 'Legend label renders');
-    assert
-      .dom(`${chart} ${CLIENT_COUNT.charts.legendLabel(2)}`)
-      .hasText('Non-entity clients', 'Legend label renders');
+    assert.dom(`${chart} ${CHARTS.timestamp}`).hasText(`Updated ${formattedTimestamp}`, 'renders timestamp');
+    assert.dom(`${chart} ${CHARTS.legendLabel(1)}`).hasText('Entity clients', 'Legend label renders');
+    assert.dom(`${chart} ${CHARTS.legendLabel(2)}`).hasText('Non-entity clients', 'Legend label renders');
   });
 
   test('it should render monthly new chart', async function (assert) {
@@ -108,28 +102,22 @@ module('Integration | Component | clients | Clients::Page::Token', function (hoo
     assert.expect(count + 8);
     const expectedNewEntity = formatNumber([calculateAverage(this.newActivity, 'entity_clients')]);
     const expectedNewNonEntity = formatNumber([calculateAverage(this.newActivity, 'non_entity_clients')]);
-    const chart = CLIENT_COUNT.chartContainer('Monthly new');
+    const chart = CHARTS.container('Monthly new');
 
     await this.renderComponent();
 
     assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Average new entity clients per month'))
+      .dom(CLIENT_COUNT.statTextValue('Average new entity clients per month'))
       .hasText(expectedNewEntity, 'renders correct new entity clients');
     assert
-      .dom(CLIENT_COUNT.charts.statTextValue('Average new non-entity clients per month'))
+      .dom(CLIENT_COUNT.statTextValue('Average new non-entity clients per month'))
       .hasText(expectedNewNonEntity, 'renders correct new nonentity clients');
     const formattedTimestamp = dateFormat([this.activity.responseTimestamp, 'MMM d yyyy, h:mm:ss aaa'], {
       withTimeZone: true,
     });
-    assert
-      .dom(`${chart} ${CLIENT_COUNT.charts.timestamp}`)
-      .hasText(`Updated ${formattedTimestamp}`, 'renders timestamp');
-    assert
-      .dom(`${chart} ${CLIENT_COUNT.charts.legendLabel(1)}`)
-      .hasText('Entity clients', 'Legend label renders');
-    assert
-      .dom(`${chart} ${CLIENT_COUNT.charts.legendLabel(2)}`)
-      .hasText('Non-entity clients', 'Legend label renders');
+    assert.dom(`${chart} ${CHARTS.timestamp}`).hasText(`Updated ${formattedTimestamp}`, 'renders timestamp');
+    assert.dom(`${chart} ${CHARTS.legendLabel(1)}`).hasText('Entity clients', 'Legend label renders');
+    assert.dom(`${chart} ${CHARTS.legendLabel(2)}`).hasText('Non-entity clients', 'Legend label renders');
 
     // assert bar chart is correct
     assert.dom(`${chart} ${CHARTS.xAxis}`).hasText('7/23 8/23 9/23 10/23 11/23 12/23 1/24');
@@ -141,12 +129,12 @@ module('Integration | Component | clients | Clients::Page::Token', function (hoo
       ...d,
       new_clients: { month: d.month },
     }));
-    const chart = CLIENT_COUNT.chartContainer('Monthly new');
+    const chart = CHARTS.container('Monthly new');
 
     await this.renderComponent();
 
-    assert.dom(`${chart} ${CLIENT_COUNT.charts.verticalBar}`).doesNotExist('Chart does not render');
-    assert.dom(`${chart} ${CLIENT_COUNT.charts.legend}`).doesNotExist('Legend does not render');
+    assert.dom(`${chart} ${CHARTS.verticalBar}`).doesNotExist('Chart does not render');
+    assert.dom(`${chart} ${CHARTS.legend}`).doesNotExist('Legend does not render');
     assert.dom(GENERAL.emptyStateTitle).hasText('No new clients');
     assert
       .dom(CLIENT_COUNT.statText('Average new entity clients per month'))
@@ -166,13 +154,13 @@ module('Integration | Component | clients | Clients::Page::Token', function (hoo
 
     const checkUsage = () => {
       assert
-        .dom(CLIENT_COUNT.charts.statTextValue('Total clients'))
+        .dom(CLIENT_COUNT.statTextValue('Total clients'))
         .hasText(formatNumber([entity_clients + non_entity_clients]), 'Total clients value renders');
       assert
-        .dom(CLIENT_COUNT.charts.statTextValue('Entity'))
+        .dom(CLIENT_COUNT.statTextValue('Entity'))
         .hasText(formatNumber([entity_clients]), 'Entity value renders');
       assert
-        .dom(CLIENT_COUNT.charts.statTextValue('Non-entity'))
+        .dom(CLIENT_COUNT.statTextValue('Non-entity'))
         .hasText(formatNumber([non_entity_clients]), 'Non-entity value renders');
     };
 

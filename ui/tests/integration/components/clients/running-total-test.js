@@ -15,7 +15,7 @@ import { findAll } from '@ember/test-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import timestamp from 'core/utils/timestamp';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
-import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
+import { CLIENT_COUNT, CHARTS } from 'vault/tests/helpers/clients/client-count-selectors';
 
 const START_TIME = getUnixTime(LICENSE_START);
 
@@ -73,8 +73,8 @@ module('Integration | Component | clients/running-total', function (hooks) {
   test('it renders with full monthly activity data', async function (assert) {
     await this.renderComponent();
 
-    assert.dom(CLIENT_COUNT.chartContainer('Vault client counts')).exists('running total component renders');
-    assert.dom(CLIENT_COUNT.charts.lineChart).exists('line chart renders');
+    assert.dom(CHARTS.container('Vault client counts')).exists('running total component renders');
+    assert.dom(CHARTS.chart('Vault client counts line chart')).exists('line chart renders');
 
     const expectedValues = {
       'Running client total': formatNumber([this.totalUsageCounts.clients]),
@@ -85,7 +85,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     };
     for (const label in expectedValues) {
       assert
-        .dom(CLIENT_COUNT.charts.statTextValue(label))
+        .dom(CLIENT_COUNT.statTextValue(label))
         .hasText(
           `${expectedValues[label]}`,
           `stat label: ${label} renders correct total: ${expectedValues[label]}`
@@ -93,7 +93,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     }
 
     // assert line chart is correct
-    findAll(CLIENT_COUNT.charts.line.xAxisLabel).forEach((e, i) => {
+    findAll(CHARTS.line.xAxisLabel).forEach((e, i) => {
       assert
         .dom(e)
         .hasText(
@@ -102,7 +102,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
         );
     });
     assert
-      .dom(CLIENT_COUNT.charts.line.plotPoint)
+      .dom(CHARTS.plotPoint)
       .exists(
         { count: this.byMonthActivity.filter((m) => m.clients).length },
         'renders correct number of plot points'
@@ -117,8 +117,8 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom(CLIENT_COUNT.chartContainer('Vault client counts')).exists('running total component renders');
-    assert.dom(CLIENT_COUNT.charts.lineChart).exists('line chart renders');
+    assert.dom(CHARTS.container('Vault client counts')).exists('running total component renders');
+    assert.dom(CHARTS.chart('Vault client counts line chart')).exists('line chart renders');
 
     const expectedValues = {
       Entity: formatNumber([this.totalUsageCounts.entity_clients]),
@@ -128,7 +128,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     };
     for (const label in expectedValues) {
       assert
-        .dom(CLIENT_COUNT.charts.statTextValue(label))
+        .dom(CLIENT_COUNT.statTextValue(label))
         .hasText(
           `${expectedValues[label]}`,
           `stat label: ${label} renders correct total: ${expectedValues[label]}`
@@ -153,7 +153,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     };
     for (const label in expectedStats) {
       assert
-        .dom(`[data-test-total] ${CLIENT_COUNT.charts.statTextValue(label)}`)
+        .dom(`[data-test-total] ${CLIENT_COUNT.statTextValue(label)}`)
         .hasText(
           `${expectedStats[label]}`,
           `stat label: ${label} renders single month total: ${expectedStats[label]}`
@@ -169,14 +169,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
     };
     for (const label in expectedStats) {
       assert
-        .dom(`[data-test-new] ${CLIENT_COUNT.charts.statTextValue(label)}`)
+        .dom(`[data-test-new] ${CLIENT_COUNT.statTextValue(label)}`)
         .hasText(
           `${expectedStats[label]}`,
           `stat label: ${label} renders single month new clients: ${expectedStats[label]}`
         );
     }
-    assert.dom(CLIENT_COUNT.charts.lineChart).doesNotExist('line chart does not render');
-    assert.dom(CLIENT_COUNT.charts.statTextValue()).exists({ count: 10 }, 'renders 10 stat text containers');
+    assert.dom(CHARTS.chart('Vault client counts line chart')).doesNotExist('line chart does not render');
+    assert.dom(CLIENT_COUNT.statTextValue()).exists({ count: 10 }, 'renders 10 stat text containers');
   });
 
   test('it hides secret sync totals when feature is not activated', async function (assert) {
@@ -184,10 +184,10 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom(CLIENT_COUNT.chartContainer('Vault client counts')).exists('running total component renders');
-    assert.dom(CLIENT_COUNT.charts.lineChart).exists('line chart renders');
-    assert.dom(CLIENT_COUNT.charts.statTextValue('Entity')).exists();
-    assert.dom(CLIENT_COUNT.charts.statTextValue('Non-entity')).exists();
-    assert.dom(CLIENT_COUNT.charts.statTextValue('Secret sync')).doesNotExist('does not render secret syncs');
+    assert.dom(CHARTS.container('Vault client counts')).exists('running total component renders');
+    assert.dom(CHARTS.chart('Vault client counts line chart')).exists('line chart renders');
+    assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists();
+    assert.dom(CLIENT_COUNT.statTextValue('Non-entity')).exists();
+    assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).doesNotExist('does not render secret syncs');
   });
 });

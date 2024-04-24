@@ -53,9 +53,9 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       </div>
     `);
 
-    assert.dom('[data-test-line-chart]').exists('Chart is rendered');
+    assert.dom('[data-test-chart="line chart"]').exists('Chart is rendered');
     assert
-      .dom('[data-test-line-chart="plot-point"]')
+      .dom('[data-test-plot-point]')
       .exists({ count: this.dataset.length }, `renders ${this.dataset.length} plot points`);
     findAll('[data-test-x-axis] text').forEach((e, i) => {
       // For some reason the first axis label is not rendered
@@ -110,9 +110,9 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       />
     </div>
     `);
-    assert.dom('[data-test-line-chart]').exists('Chart is rendered');
+    assert.dom('[data-test-chart="line chart"]').exists('Chart is rendered');
     assert
-      .dom('[data-test-line-chart="plot-point"]')
+      .dom('[data-test-plot-point]')
       .exists({ count: this.dataset.length }, `renders ${this.dataset.length} plot points`);
     assert
       .dom(find(`[data-test-line-chart="upgrade-${this.dataset[2].month}"]`))
@@ -242,7 +242,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     `);
 
     assert
-      .dom('[data-test-line-chart="plot-point"]')
+      .dom('[data-test-plot-point]')
       .exists({ count: this.dataset.length }, 'chart still renders when upgradeData is not an array');
   });
 
@@ -260,7 +260,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     `);
 
     assert
-      .dom('[data-test-line-chart="plot-point"]')
+      .dom('[data-test-plot-point]')
       .exists({ count: this.dataset.length }, 'chart still renders when upgradeData has incorrect keys');
   });
 
