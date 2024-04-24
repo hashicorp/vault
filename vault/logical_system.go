@@ -5259,8 +5259,14 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 	context := d.Get("context").(string)
 
+	vaultVersion := version.Version
+	redactVersion, _, _, _ := logical.CtxRedactionSettingsValue(ctx)
+	if redactVersion {
+		vaultVersion = ""
+	}
+
 	// Set up target document
-	doc := framework.NewOASDocument(version.Version)
+	doc := framework.NewOASDocument(vaultVersion)
 
 	// Generic mount paths will primarily be used for code generation purposes.
 	// This will result in parameterized mount paths being returned instead of
