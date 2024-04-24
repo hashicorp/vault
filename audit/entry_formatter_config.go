@@ -12,6 +12,8 @@ import (
 // formatterConfig is used to provide basic configuration to a formatter.
 // Use newFormatterConfig to initialize the formatterConfig struct.
 type formatterConfig struct {
+	formatterConfigEnt
+
 	raw          bool
 	hmacAccessor bool
 
@@ -101,7 +103,13 @@ func newFormatterConfig(headerFormatter HeaderFormatter, config map[string]strin
 		return formatterConfig{}, err
 	}
 
+	fmtCfgEnt, err := newFormatterConfigEnt(config)
+	if err != nil {
+		return formatterConfig{}, err
+	}
+
 	return formatterConfig{
+		formatterConfigEnt: fmtCfgEnt,
 		headerFormatter:    headerFormatter,
 		elideListResponses: opts.withElision,
 		hmacAccessor:       opts.withHMACAccessor,

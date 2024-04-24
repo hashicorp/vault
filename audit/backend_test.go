@@ -188,6 +188,15 @@ func TestBackend_hasEnterpriseAuditOptions(t *testing.T) {
 			},
 			expected: true,
 		},
+		"ent-opt-exclude": {
+			input: map[string]string{
+				"exclude": `{
+					"condition": "\"/request/mount_type\" == transit",
+					"fields": [ "/request/data", "/response/data" ]
+				}`,
+			},
+			expected: true,
+		},
 	}
 
 	for name, tc := range tests {
@@ -238,6 +247,15 @@ func TestBackend_hasInvalidAuditOptions(t *testing.T) {
 			input: map[string]string{
 				"filter":   "mount_type == kv",
 				"fallback": "true",
+			},
+			expected: !constants.IsEnterprise,
+		},
+		"ent-opt-exclude": {
+			input: map[string]string{
+				"exclude": `{
+					"condition": "\"/request/mount_type\" == transit",
+					"fields": [ "/request/data", "/response/data" ]
+				}`,
 			},
 			expected: !constants.IsEnterprise,
 		},
