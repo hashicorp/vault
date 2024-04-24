@@ -315,6 +315,7 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 	// to populate and influence the sign-verbatim behavior.
 	if role != nil {
 		opts = append(opts, issuing.WithNoStore(role.NoStore))
+		opts = append(opts, issuing.WithNoStoreMetadata(role.NoStoreMetadata))
 		opts = append(opts, issuing.WithIssuer(role.Issuer))
 
 		if role.TTL > 0 {
@@ -341,8 +342,14 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, data *framework.FieldData, role *issuing.RoleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
 	// If storing the certificate and on a performance standby, forward this request on to the primary
 	// Allow performance secondaries to generate and store certificates locally to them.
-	if !role.NoStore && b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
+	_, metadataInRequest := data.GetOk("metadata")
+	needsStorage := !role.NoStore || (metadataInRequest && !role.NoStoreMetadata)
+	if needsStorage && b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
 		return nil, logical.ErrReadOnly
+	}
+
+	if metadataInRequest && role.NoStoreMetadata {
+		return nil, errutil.UserError{Err: "metadata was supplied, but role has no_store_metadata field set to true"}
 	}
 
 	// We prefer the issuer from the role in two cases:
@@ -429,6 +436,10 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if !role.NoStoreMetadata && metadataInRequest {
+		// TODO: Storage Call to Save Metadata
 	}
 
 	if useCSR {

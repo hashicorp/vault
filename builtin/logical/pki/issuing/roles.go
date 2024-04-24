@@ -349,6 +349,12 @@ func WithNoStore(noStore bool) RoleModifier {
 	}
 }
 
+func WithNoStoreMetadata(noStoreMetadata bool) RoleModifier {
+	return func(r *RoleEntry) {
+		r.NoStoreMetadata = noStoreMetadata
+	}
+}
+
 func WithIssuer(issuer string) RoleModifier {
 	return func(r *RoleEntry) {
 		if issuer == "" {
