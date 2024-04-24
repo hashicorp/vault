@@ -7,10 +7,10 @@
   <ToolbarActions>
     <div class="toolbar-separator"></div>
     {{#if @autoTidyConfig.enabled}}
-      <ToolbarLink @route="tidy.auto" @models={{array @autoTidyConfig.id}} data-test-pki-auto-tidy-config>
+      <ToolbarLink @route="tidy.auto" @model={{@autoTidyConfig.id}} data-test-pki-auto-tidy-config>
         Auto-tidy configuration
       </ToolbarLink>
-      <ToolbarLink @route="tidy.manual" @models={{array @autoTidyConfig.id}} data-test-pki-manual-tidy-config>
+      <ToolbarLink @route="tidy.manual" @model={{@autoTidyConfig.id}} data-test-pki-manual-tidy-config>
         Perform manual tidy
       </ToolbarLink>
     {{else}}
