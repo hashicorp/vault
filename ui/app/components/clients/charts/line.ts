@@ -131,7 +131,7 @@ export default class LineChart extends Component<Args> {
   hasValue = (count: number | null) => {
     return typeof count === 'number' ? true : false;
   };
-  formatTicksY = (num: number): string => {
+  formatCount = (num: number): string => {
     return numericalAxisLabel(num) || num.toString();
   };
   formatMonth = (date: Date) => {
