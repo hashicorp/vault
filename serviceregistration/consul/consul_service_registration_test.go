@@ -150,7 +150,7 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 	})
 
 	if sd.(*serviceRegistration).config.Token == "" {
-		t.Fatal("expected service registration token to not be '' after configuration reload")
+		t.Fatal("expected service registration token to not be '' before configuration reload")
 	}
 
 	srConfig["token"] = ""
