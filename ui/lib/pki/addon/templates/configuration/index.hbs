@@ -18,7 +18,7 @@
 {{else}}
   <Toolbar>
     <ToolbarActions>
-      <ToolbarLink @route="configuration.create" data-test-configure-pki-button>
+      <ToolbarLink @route="configuration.create" @model={{this.model.engine.id}} data-test-configure-pki-button>
         Configure
       </ToolbarLink>
     </ToolbarActions>
@@ -29,6 +29,7 @@
       @iconPosition="trailing"
       @text="Configure PKI"
       @route="configuration.create"
+      @model={{this.model.engine.id}}
     />
   </EmptyState>
 {{/if}}

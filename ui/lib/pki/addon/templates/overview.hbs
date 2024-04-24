@@ -8,7 +8,7 @@
 <Toolbar>
   <ToolbarActions>
     {{#unless this.model.hasConfig}}
-      <ToolbarLink @route="configuration.create">
+      <ToolbarLink @route="configuration.create" @model={{this.model.engine.id}}>
         Configure PKI
       </ToolbarLink>
     {{/unless}}
@@ -24,6 +24,7 @@
       @iconPosition="trailing"
       @text="Configure PKI"
       @route="configuration.create"
+      @model={{this.model.engine.id}}
     />
   </EmptyState>
 {{/if}}

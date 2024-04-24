@@ -20,9 +20,9 @@ export default class PkiTidyManualRoute extends Route {
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'overview' },
-      { label: 'configuration', route: 'configuration.index' },
-      { label: 'tidy', route: 'tidy' },
+      { label: this.secretMountPath.currentPath, route: 'overview', model: resolvedModel.backend },
+      { label: 'configuration', route: 'configuration.index', model: resolvedModel.backend },
+      { label: 'tidy', route: 'tidy', model: resolvedModel.backend },
       { label: 'manual' },
     ];
   }

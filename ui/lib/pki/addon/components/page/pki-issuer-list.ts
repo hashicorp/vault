@@ -17,6 +17,7 @@ interface BasicDropdown {
 interface Args {
   issuers: PkiIssuerModel[];
   mountPoint: string;
+  backend: string;
 }
 
 export default class PkiIssuerList extends Component<Args> {

@@ -22,7 +22,7 @@ module('Integration | Component | page/pki-configure-create', function (hooks) {
     this.cancelSpy = sinon.spy();
     this.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: 'pki', route: 'overview' },
+      { label: 'pki', route: 'overview', model: 'pki' },
       { label: 'configure' },
     ];
     this.config = this.store.createRecord('pki/action');

@@ -18,8 +18,8 @@ export default class PkiCertificateDetailsRoute extends Route {
     super.setupController(controller, model);
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'overview' },
-      { label: 'certificates', route: 'certificates.index' },
+      { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
+      { label: 'certificates', route: 'certificates.index', model: this.secretMountPath.currentPath },
       { label: model.id },
     ];
   }
