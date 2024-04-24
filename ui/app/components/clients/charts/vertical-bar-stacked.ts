@@ -36,12 +36,13 @@ interface Base {
 }
 
 type KeyDataItem = Base & {
-  [key in ClientTypes]: number | undefined;
+  [key in ClientTypes]?: number | undefined;
 };
 
 /**
  * @module VerticalBarStacked
- * Renders a vertical bar chart of counts fora single data point (@dataKey) over time.
+ * Renders a stacked bar chart of counts for different client types over time. The which client types to render
+ * is mapped from the "key" values from the @legend arg
  *
  * @example
  * <Clients::Charts::VerticalBarStacked
@@ -68,7 +69,7 @@ export default class VerticalBarStacked extends Component<Args> {
   }
 
   get chartData() {
-    let dataset: [string, string, number | undefined, KeyDataItem[]][] = [];
+    let dataset: [string, number | undefined, string, KeyDataItem[]][] = [];
     // each datum needs to be its own object
     for (const key of this.dataKeys) {
       const keyData: KeyDataItem[] = this.args.data.map((d: MonthlyChartData) => ({
@@ -81,16 +82,16 @@ export default class VerticalBarStacked extends Component<Args> {
         keyData,
         // order here must match destructure order in return below
         (d) => d.timestamp,
-        (d) => d.clientType,
-        (d) => d[key]
+        (d) => d[key],
+        (d) => d.clientType
       );
       dataset = [...dataset, ...group];
     }
 
-    return dataset.map(([timestamp, clientType, counts]) => ({
-      timestamp,
-      clientType, // key name matches the chart's @color arg
-      counts,
+    return dataset.map(([timestamp, counts, clientType]) => ({
+      timestamp, // x value
+      counts, // y value
+      clientType, // corresponds to chart's @color arg
     }));
   }
 
