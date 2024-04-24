@@ -30,11 +30,14 @@ interface AggregatedDatum {
   legendY: string[];
 }
 
-interface KeyData {
+interface Base {
   timestamp: string;
   clientType: string;
-  [key: string]: number;
 }
+
+type KeyDataItem = Base & {
+  [key in ClientTypes]: number | undefined;
+};
 
 /**
  * @module VerticalBarStacked
@@ -65,13 +68,13 @@ export default class VerticalBarStacked extends Component<Args> {
   }
 
   get chartData() {
-    let dataset: [string, string, number | undefined, KeyData[]][] = [];
+    let dataset: [string, string, number | undefined, KeyDataItem[]][] = [];
     // each datum needs to be its own object
     for (const key of this.dataKeys) {
-      const keyData: KeyData[] = this.args.data.map((d: MonthlyChartData) => ({
+      const keyData: KeyDataItem[] = this.args.data.map((d: MonthlyChartData) => ({
         timestamp: d.timestamp,
         clientType: key,
-        [key as ClientTypes]: d[key as ClientTypes],
+        [key]: d[key],
       }));
 
       const group = flatGroup(
@@ -129,7 +132,7 @@ export default class VerticalBarStacked extends Component<Args> {
 
   tooltipY = (original: number) => (!original ? '0' : `${original}`);
 
-  formatTicksX = (timestamp: string) => parseAPITimestamp(timestamp, 'M/yy');
+  formatTicksX = (timestamp: string): string => parseAPITimestamp(timestamp, 'M/yy');
 
   formatTicksY = (num: number): string => numericalAxisLabel(num) || num.toString();
 }
