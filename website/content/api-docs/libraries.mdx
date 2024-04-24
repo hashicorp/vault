@@ -30,21 +30,17 @@ $ go get github.com/hashicorp/vault/api
 
 ### Ruby
 
+<Highlight title="Deprecation announced">
+
+  We have announced the [deprecation](/vault/docs/deprecation) of this resource.
+
+</Highlight>
+
 - [Vault Ruby Client](https://github.com/hashicorp/vault-ruby)
 
 ```shell-session
 $ gem install vault
 ```
-
-## C#
-
-- [Vault DotNet Client](https://github.com/hashicorp/vault-client-dotnet) - Note that this is currently in early development, and is not yet production-ready. 
-
-```shell-session
-# Install-Package HashiCorp.Vault
-```
-
-[Example application](https://github.com/hashicorp/vault-client-dotnet#getting-started)
 
 ## Community
 
@@ -211,3 +207,19 @@ $ pip install hvac
 ### Scala
 
 - [scala-vault](https://github.com/janstenpickle/scala-vault)
+
+## Experimental
+
+### C#
+
+- [Vault DotNet Client](https://github.com/hashicorp/vault-client-dotnet) - 
+Note that this is an experimental approach to auto-generating libraries from
+OpenAPI content and is not production-ready. We do not have plans to make
+this production-ready at this time.
+
+```shell-session
+# Install-Package HashiCorp.Vault
+```
+
+[Example application](https://github.com/hashicorp/vault-client-dotnet#getting-started)
+
