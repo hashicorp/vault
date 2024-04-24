@@ -31,7 +31,12 @@
     </:stats>
 
     <:chart>
-      <Clients::VerticalBarChart @dataset={{this.byMonthActivityData}} @chartLegend={{this.legend}} />
+      <Clients::Charts::VerticalBarStacked
+        @chartTitle="Total monthly usage"
+        @data={{this.byMonthActivityData}}
+        @chartLegend={{this.legend}}
+        @chartHeight={{250}}
+      />
     </:chart>
   </Clients::ChartContainer>
 
@@ -60,7 +65,12 @@
     </:stats>
 
     <:chart>
-      <Clients::VerticalBarChart @dataset={{this.byMonthNewClients}} @chartLegend={{this.legend}} />
+      <Clients::Charts::VerticalBarStacked
+        @chartTitle="Monthly new"
+        @data={{this.byMonthNewClients}}
+        @chartLegend={{this.legend}}
+        @chartHeight={{250}}
+      />
     </:chart>
 
     <:emptyState>
