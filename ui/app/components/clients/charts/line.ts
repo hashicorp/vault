@@ -127,12 +127,12 @@ export default class LineChart extends Component<Args> {
     return (datum?.new_clients[this.yKey as keyof TotalClients] as number) || 0;
   }
 
+  // TEMPLATE HELPERS
   hasValue = (count: number | null) => {
     return typeof count === 'number' ? true : false;
   };
-  // These functions are used by the tooltip
-  formatCount = (count: number) => {
-    return numericalAxisLabel([count]);
+  formatTicksY = (num: number): string => {
+    return numericalAxisLabel(num) || num.toString();
   };
   formatMonth = (date: Date) => {
     return format(date, 'M/yy');
