@@ -63,8 +63,8 @@ export default class VersionService extends Service {
   @task({ drop: true })
   *getVersion() {
     if (this.version) return;
-    // Fetch seal status with token to get version
-    const response = yield this.store.adapterFor('cluster').sealStatus(false);
+    // Fetch seal status to get version
+    const response = yield this.store.adapterFor('cluster').sealStatus();
     this.version = response?.version;
   }
 
