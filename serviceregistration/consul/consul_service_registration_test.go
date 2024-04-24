@@ -92,10 +92,11 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 
 	// Create a ServiceRegistration that points to our consul instance
 	logger := logging.NewVaultLogger(log.Trace)
-	sd, err := NewServiceRegistration(map[string]string{
+	srConfig := map[string]string{
 		"address": config.Address(),
 		"token":   config.Token,
-	}, logger, sr.State{})
+	}
+	sd, err := NewServiceRegistration(srConfig, logger, sr.State{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,6 +148,17 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 		"consul": {},
 		"vault":  {"active", "initialized"},
 	})
+
+	if sd.(*serviceRegistration).config.Token == "" {
+		t.Fatal("expected service registration token to not be '' after configuration reload")
+	}
+
+	srConfig["token"] = ""
+	sd.NotifyConfigurationReload(srConfig)
+
+	if sd.(*serviceRegistration).config.Token != "" {
+		t.Fatal("expected service registration token to be '' after configuration reload")
+	}
 }
 
 func TestConsul_ServiceAddress(t *testing.T) {

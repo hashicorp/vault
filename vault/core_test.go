@@ -3286,11 +3286,12 @@ func TestCore_HandleRequest_TokenCreate_RegisterAuthFailure(t *testing.T) {
 
 // mockServiceRegistration helps test whether standalone ServiceRegistration works
 type mockServiceRegistration struct {
-	notifyActiveCount int
-	notifySealedCount int
-	notifyPerfCount   int
-	notifyInitCount   int
-	runDiscoveryCount int
+	notifyActiveCount         int
+	notifySealedCount         int
+	notifyPerfCount           int
+	notifyInitCount           int
+	notifyConfigurationReload int
+	runDiscoveryCount         int
 }
 
 func (m *mockServiceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup, redirectAddr string) error {
@@ -3315,6 +3316,11 @@ func (m *mockServiceRegistration) NotifyPerformanceStandbyStateChange(isStandby 
 
 func (m *mockServiceRegistration) NotifyInitializedStateChange(isInitialized bool) error {
 	m.notifyInitCount++
+	return nil
+}
+
+func (m *mockServiceRegistration) NotifyConfigurationReload(config map[string]string) error {
+	m.notifyConfigurationReload++
 	return nil
 }
 
@@ -3374,10 +3380,11 @@ func TestCore_ServiceRegistration(t *testing.T) {
 
 	// Vault should be registered, unsealed, and active
 	if diff := deep.Equal(sr, &mockServiceRegistration{
-		runDiscoveryCount: 1,
-		notifyActiveCount: 1,
-		notifySealedCount: 1,
-		notifyInitCount:   1,
+		runDiscoveryCount:         1,
+		notifyActiveCount:         1,
+		notifySealedCount:         1,
+		notifyInitCount:           1,
+		notifyConfigurationReload: 1,
 	}); diff != nil {
 		t.Fatal(diff)
 	}
