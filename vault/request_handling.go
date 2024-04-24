@@ -2646,7 +2646,6 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 	if !strings.HasPrefix(token, consts.ServiceTokenPrefix) {
 		return token, nil
 	}
-
 	// Check token length to guess if this is an server side consistent token or not.
 	// Note that even when the DisableSSCTokens flag is set, index
 	// bearing tokens that have already been given out may still be used.
@@ -2665,12 +2664,19 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 
 	err = proto.Unmarshal(tokenBytes, signedToken)
 	if err != nil {
-		return "", fmt.Errorf("error occurred when unmarshalling ssc token: %w", err)
+		// Log a warning here, but don't return an error. This is because we want don't
+		// want to forward the request to the active node if the token is invalid.
+		c.logger.Debug("error occurred when unmarshalling ssc token: %w", err)
+		return token, nil
 	}
 	hm, err := c.tokenStore.CalculateSignedTokenHMAC(signedToken.Token)
 	if !hmac.Equal(hm, signedToken.Hmac) {
-		return "", fmt.Errorf("token mac for %+v is incorrect: err %w", signedToken, err)
+		// As above, don't return an error so that the request is handled like normal,
+		// and handled by the node that received it.
+		c.logger.Debug("token mac is incorrect", "token", signedToken.Token)
+		return token, nil
 	}
+
 	plainToken := &tokens.Token{}
 	err = proto.Unmarshal([]byte(signedToken.Token), plainToken)
 	if err != nil {
@@ -2691,11 +2697,13 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 	if c.HasWALState(requiredWalState, isPerfStandby) {
 		return plainToken.Random, nil
 	}
+
 	// Make sure to forward the request instead of checking the token if the flag
 	// is set and we're on a perf standby
 	if c.ForwardToActive() == ForwardSSCTokenToActive && isPerfStandby {
 		return "", logical.ErrPerfStandbyPleaseForward
 	}
+
 	// In this case, the server side consistent token cannot be used on this node. We return the appropriate
 	// status code.
 	return "", logical.ErrMissingRequiredState
