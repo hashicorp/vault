@@ -13,7 +13,7 @@ import sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
 import authPage from 'vault/tests/pages/auth';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
+import { CLIENT_COUNT, CHARTS } from 'vault/tests/helpers/clients/client-count-selectors';
 
 module('Acceptance | clients | sync | activated', function (hooks) {
   setupApplicationTest(hooks);
@@ -35,9 +35,7 @@ module('Acceptance | clients | sync | activated', function (hooks) {
 
   test('it should render charts when secrets sync is activated', async function (assert) {
     syncHandler(this.server);
-    assert
-      .dom(CLIENT_COUNT.charts.chart('Secrets sync usage'))
-      .exists('Secrets sync usage chart is rendered');
+    assert.dom(CHARTS.chart('Secrets sync usage')).exists('Secrets sync usage chart is rendered');
     assert.dom(CLIENT_COUNT.statText('Total sync clients')).exists('Total sync clients chart is rendered');
     assert.dom(GENERAL.emptyStateTitle).doesNotExist();
   });
