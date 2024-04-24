@@ -101,8 +101,7 @@ export default class VerticalBarStacked extends Component<Args> {
       const values = this.dataKeys
         .map((k: string) => datum[k as ClientTypes])
         .filter((count) => Number.isInteger(count));
-      // if the sum is an integer, increase by 2.5% so tooltip renders just above bars
-      const sum = values.length ? values.reduce((sum, currentValue) => sum + currentValue, 0) * 1.025 : null;
+      const sum = values.length ? values.reduce((sum, currentValue) => sum + currentValue, 0) : null;
       const xValue = datum.timestamp;
       return {
         x: xValue,
