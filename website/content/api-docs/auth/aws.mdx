@@ -437,6 +437,9 @@ when validating IAM principals or EC2 instances in the particular AWS account.
 - `sts_role` `(string: <required>)` - AWS ARN for STS role to be assumed when
   interacting with the account specified. The Vault server must have
   permissions to assume this role.
+- `external_id` `(string: "")` - External ID to be used when assuming
+  the STS role. If set, the STS role must be configured to require this
+  external ID.
 
 ### Sample payload
 
