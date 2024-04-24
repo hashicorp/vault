@@ -729,7 +729,7 @@ func RetryUntilAtCadence(t testing.T, timeout, sleepTime time.Duration, f func()
 }
 
 // RetryUntilAtCadence runs f until it returns a nil result or the timeout is reached.
-// If a nil result hasn't been obtained by timeout, calls t.Fatal.
+// If a nil result hasn't been obtained by timeout, onFailure is called.
 func RetryUntilAtCadenceWithHandler(t testing.T, timeout, sleepTime time.Duration, onFailure func(error), f func() error) {
 	t.Helper()
 	deadline := time.Now().Add(timeout)
