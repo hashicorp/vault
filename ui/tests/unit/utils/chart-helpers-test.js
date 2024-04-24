@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { formatNumbers, calculateAverage, calculateSum } from 'vault/utils/chart-helpers';
+import { numericalAxisLabel, calculateAverage, calculateSum } from 'vault/utils/chart-helpers';
 import { module, test } from 'qunit';
 
 const SMALL_NUMBERS = [0, 7, 27, 103, 999];
@@ -17,16 +17,16 @@ const LARGE_NUMBERS = {
 };
 
 module('Unit | Utility | chart-helpers', function () {
-  test('formatNumbers renders number correctly', function (assert) {
+  test('numericalAxisLabel renders number correctly', function (assert) {
     assert.expect(12);
-    const method = formatNumbers();
+    const method = numericalAxisLabel();
     assert.ok(method);
     SMALL_NUMBERS.forEach(function (num) {
-      assert.strictEqual(formatNumbers(num), num, `Does not format small number ${num}`);
+      assert.strictEqual(numericalAxisLabel(num), num, `Does not format small number ${num}`);
     });
     Object.keys(LARGE_NUMBERS).forEach(function (num) {
       const expected = LARGE_NUMBERS[num];
-      assert.strictEqual(formatNumbers(num), expected, `Formats ${num} as ${expected}`);
+      assert.strictEqual(numericalAxisLabel(num), expected, `Formats ${num} as ${expected}`);
     });
   });
 

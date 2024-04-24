@@ -4,7 +4,7 @@
 ~}}
 <div>
   {{#if this.data}}
-    <div class="lineal-chart" data-test-chart={{@chartTitle}}>
+    <div class="lineal-chart" data-test-chart={{or @chartTitle "line chart"}}>
       <Lineal::Fluid as |width|>
         {{#let
           (scale-point domain=this.xDomain range=(array 0 width) padding=0.2)
@@ -12,7 +12,9 @@
           (scale-linear range=(array 0 this.chartHeight))
           as |xScale yScale tooltipScale|
         }}
-          <svg width={{width}} height={{this.chartHeight}} class="chart has-grid" data-test-line-chart>
+          <svg width={{width}} height={{this.chartHeight}} class="chart has-grid">
+            <title>{{@chartTitle}}</title>
+
             {{#if (and xScale.isValid yScale.isValid)}}
               <Lineal::Axis
                 @scale={{yScale}}
@@ -79,7 +81,7 @@
                     fill="#cce3fe"
                     stroke="#0c56e9"
                     stroke-width="1.5"
-                    data-test-line-chart="plot-point"
+                    data-test-plot-point
                   ></circle>
                   <circle
                     role="button"

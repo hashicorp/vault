@@ -37,7 +37,12 @@
     </:stats>
 
     <:chart>
-      <Clients::Charts::Line @dataset={{@byMonthActivityData}} @upgradeData={{@upgradeData}} @chartHeight="250" />
+      <Clients::Charts::Line
+        @dataset={{@byMonthActivityData}}
+        @upgradeData={{@upgradeData}}
+        @chartHeight="250"
+        @chartTitle="Vault client counts line chart"
+      />
     </:chart>
   </Clients::ChartContainer>
 {{else}}

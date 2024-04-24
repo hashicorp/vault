@@ -17,28 +17,8 @@ export const CLIENT_COUNT = {
     startDiscrepancy: '[data-test-counts-start-discrepancy]',
   },
   statText: (label: string) => `[data-test-stat-text="${label}"]`,
-  chartContainer: (title: string) => `[data-test-chart-container="${title}"]`,
-  charts: {
-    chart: (title: string) => `[data-test-chart="${title}"]`, // newer lineal charts
-    statTextValue: (label: string) =>
-      label ? `[data-test-stat-text="${label}"] .stat-value` : '[data-test-stat-text]',
-    legend: '[data-test-chart-container-legend]',
-    legendLabel: (nth: number) => `.legend-label:nth-child(${nth * 2})`, // nth * 2 accounts for dots in legend
-    timestamp: '[data-test-chart-container-timestamp]',
-    dataBar: '[data-test-vertical-bar]',
-    xAxisLabel: '[data-test-x-axis] text',
-    // selectors for old d3 charts
-    verticalBar: '[data-test-vertical-bar-chart]',
-    lineChart: '[data-test-line-chart]',
-    bar: {
-      xAxisLabel: '[data-test-vertical-chart="x-axis-labels"] text',
-      dataBar: '[data-test-vertical-chart="data-bar"]',
-    },
-    line: {
-      xAxisLabel: '[data-test-line-chart] [data-test-x-axis] text',
-      plotPoint: '[data-test-line-chart="plot-point"]',
-    },
-  },
+  statTextValue: (label: string) =>
+    label ? `[data-test-stat-text="${label}"] .stat-value` : '[data-test-stat-text]',
   usageStats: (title: string) => `[data-test-usage-stats="${title}"]`,
   dateDisplay: '[data-test-date-display]',
   attributionBlock: '[data-test-clients-attribution]',
@@ -68,11 +48,21 @@ export const CLIENT_COUNT = {
   upgradeWarning: '[data-test-clients-upgrade-warning]',
 };
 
-export const CHART_ELEMENTS = {
-  entityClientDataBars: '[data-test-group="entity_clients"]',
-  nonEntityDataBars: '[data-test-group="non_entity_clients"]',
-  yLabels: '[data-test-group="y-labels"]',
-  actionBars: '[data-test-group="action-bars"]',
-  labelActionBars: '[data-test-group="label-action-bars"]',
-  totalValues: '[data-test-group="total-values"]',
+export const CHARTS = {
+  // container
+  container: (title: string) => `[data-test-chart-container="${title}"]`,
+  timestamp: '[data-test-chart-container-timestamp]',
+  legend: '[data-test-chart-container-legend]',
+  legendLabel: (nth: number) => `.legend-label:nth-child(${nth * 2})`, // nth * 2 accounts for dots in legend
+
+  // chart elements
+  chart: (title: string) => `[data-test-chart="${title}"]`,
+  hover: (area: string) => `[data-test-interactive-area="${area}"]`,
+  table: '[data-test-underlying-data]',
+  tooltip: '[data-test-tooltip]',
+  verticalBar: '[data-test-vertical-bar]',
+  xAxis: '[data-test-x-axis]',
+  yAxis: '[data-test-y-axis]',
+  xAxisLabel: '[data-test-x-axis] text',
+  plotPoint: '[data-test-plot-point]',
 };

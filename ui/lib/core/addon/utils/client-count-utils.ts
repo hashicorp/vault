@@ -24,7 +24,7 @@ export const CLIENT_TYPES = [
   'secret_syncs',
 ] as const;
 
-type ClientTypes = (typeof CLIENT_TYPES)[number];
+export type ClientTypes = (typeof CLIENT_TYPES)[number];
 
 // returns array of VersionHistoryModels for noteworthy upgrades: 1.9, 1.10
 // that occurred between timestamps (i.e. queried activity data)
