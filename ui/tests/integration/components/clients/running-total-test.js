@@ -93,7 +93,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     }
 
     // assert line chart is correct
-    findAll(CHARTS.line.xAxisLabel).forEach((e, i) => {
+    findAll(CHARTS.xAxisLabel).forEach((e, i) => {
       assert
         .dom(e)
         .hasText(
