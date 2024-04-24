@@ -2592,17 +2592,8 @@
     "divider": true
   },
   {
-    "title": "Deprecation Notices",
-    "routes": [
-      {
-        "title": "Overview",
-        "path": "deprecation"
-      },
-      {
-        "title": "FAQ",
-        "path": "deprecation/faq"
-      }
-    ]
+    "title": "Deprecation notices",
+    "path": "deprecation"
   },
   {
     "divider": true
