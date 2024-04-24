@@ -22,7 +22,7 @@ const (
 {
 	"storage": {
 		"file": {
-			"path": "/tmp",
+			"path": "/tmp"
 		}
 	},
 
