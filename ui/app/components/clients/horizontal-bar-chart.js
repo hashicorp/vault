@@ -162,15 +162,10 @@ export default class HorizontalBarChart extends Component {
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
-    const actionBarSelection = chartSvg.selectAll('rect.action-bar');
-
-    const compareAttributes = (elementA, elementB, attr) =>
-      select(elementA).attr(`${attr}`) === select(elementB).attr(`${attr}`);
-
     // MOUSE EVENTS FOR DATA BARS
     actionBars
-      .on('mouseover', (data) => {
-        const hoveredElement = actionBars.filter((bar) => bar[labelKey] === data[labelKey]).node();
+      .on('mouseover', (event, data) => {
+        const hoveredElement = event.currentTarget;
         this.tooltipTarget = hoveredElement;
         this.isLabel = false;
         this.tooltipText = []; // clear stats
@@ -188,28 +183,18 @@ export default class HorizontalBarChart extends Component {
 
     // MOUSE EVENTS FOR Y-AXIS LABELS
     labelActionBar
-      .on('mouseover', (data) => {
+      .on('mouseover', (event, data) => {
         if (data[labelKey].length >= CHAR_LIMIT) {
-          const hoveredElement = labelActionBar.filter((bar) => bar[labelKey] === data[labelKey]).node();
+          const hoveredElement = event.currentTarget;
           this.tooltipTarget = hoveredElement;
           this.isLabel = true;
           this.tooltipText = [data[labelKey]];
         } else {
           this.tooltipTarget = null;
         }
-        actionBarSelection
-          .filter(function () {
-            return compareAttributes(this, event.target, 'y');
-          })
-          .style('opacity', '1');
       })
       .on('mouseout', function () {
         this.tooltipTarget = null;
-        actionBarSelection
-          .filter(function () {
-            return compareAttributes(this, event.target, 'y');
-          })
-          .style('opacity', '0');
       });
 
     // client count total values to the right
