@@ -72,6 +72,7 @@ type RoleEntry struct {
 	PostalCode                    []string      `json:"postal_code"`
 	GenerateLease                 *bool         `json:"generate_lease,omitempty"`
 	NoStore                       bool          `json:"no_store"`
+	NoStoreMetadata               bool          `json:"no_store_metadata"`
 	RequireCN                     bool          `json:"require_cn"`
 	CNValidations                 []string      `json:"cn_validations"`
 	AllowedOtherSANs              []string      `json:"allowed_other_sans"`
@@ -128,6 +129,7 @@ func (r *RoleEntry) ToResponseData() map[string]interface{} {
 		"street_address":                     r.StreetAddress,
 		"postal_code":                        r.PostalCode,
 		"no_store":                           r.NoStore,
+		"no_store_metadata":                  r.NoStoreMetadata,
 		"allowed_other_sans":                 r.AllowedOtherSANs,
 		"allowed_serial_numbers":             r.AllowedSerialNumbers,
 		"allowed_user_ids":                   r.AllowedUserIDs,

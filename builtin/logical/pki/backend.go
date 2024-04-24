@@ -48,9 +48,9 @@ const (
  * will be forwarded to that cluster's active node and not go all the way up to the performance primary's
  * active node.
  *
- * If a certificate issue request has a role in which no_store is set to true, that node itself
- * will issue the certificate and not forward the request to the active node, as this does not
- * need to write to storage.
+ * If a certificate issue request has a role in which no_store and no_store_metadata is set to true,
+ * that node itself will issue the certificate and not forward the request to the active node, as this
+ * does not need to write to storage.
  *
  * Following the same pattern, if a managed key is involved to sign an issued certificate request
  * and the local node does not have access for some reason to it, the request will be forwarded to

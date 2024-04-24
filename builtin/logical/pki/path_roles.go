@@ -344,6 +344,13 @@ non-sensitive, or extremely short-lived. This option implies a value of "false"
 for "generate_lease".`,
 		},
 
+		"no_store_metadata": {
+			Type: framework.TypeBool,
+			Description: `
+If set, if a client attempts to issue or sign a certificate with attached 
+metadata to store, the issuance / signing instead fails.`,
+		},
+
 		"require_cn": {
 			Type:        framework.TypeBool,
 			Description: `If set to false, makes the 'common_name' field optional while generating a certificate.`,
@@ -749,6 +756,13 @@ non-sensitive, or extremely short-lived. This option implies a value of "false"
 for "generate_lease".`,
 			},
 
+			"no_store_metadata": {
+				Type: framework.TypeBool,
+				Description: `
+If set, if a client attempts to issue or sign a certificate with attached 
+metadata to store, the issuance / signing instead fails.`,
+			},
+
 			"require_cn": {
 				Type:        framework.TypeBool,
 				Default:     true,
@@ -974,6 +988,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		PostalCode:                    data.Get("postal_code").([]string),
 		GenerateLease:                 new(bool),
 		NoStore:                       data.Get("no_store").(bool),
+		NoStoreMetadata:               data.Get("no_store_metadata").(bool),
 		RequireCN:                     data.Get("require_cn").(bool),
 		CNValidations:                 data.Get("cn_validations").([]string),
 		AllowedSerialNumbers:          data.Get("allowed_serial_numbers").([]string),
@@ -1174,6 +1189,7 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		PostalCode:                    getWithExplicitDefault(data, "postal_code", oldEntry.PostalCode).([]string),
 		GenerateLease:                 new(bool),
 		NoStore:                       getWithExplicitDefault(data, "no_store", oldEntry.NoStore).(bool),
+		NoStoreMetadata:               getWithExplicitDefault(data, "no_store_metadata", oldEntry.NoStoreMetadata).(bool),
 		RequireCN:                     getWithExplicitDefault(data, "require_cn", oldEntry.RequireCN).(bool),
 		CNValidations:                 getWithExplicitDefault(data, "cn_validations", oldEntry.CNValidations).([]string),
 		AllowedSerialNumbers:          getWithExplicitDefault(data, "allowed_serial_numbers", oldEntry.AllowedSerialNumbers).([]string),
