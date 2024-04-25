@@ -31,18 +31,15 @@ export default class flagsService extends Service {
     this.flags = flags;
   }
 
-  get managedNamespaceRoot() {
-    if (this.flags && this.flags.includes(FLAGS.vaultCloudNamespace)) {
-      return 'admin';
-    }
-    return null;
+  get isManaged(): boolean {
+    return this.flags && this.flags.includes(FLAGS.vaultCloudNamespace);
   }
 
-  get isManaged() {
-    return this.managedNamespaceRoot !== null;
+  get managedNamespaceRoot(): string | null {
+    return this.isManaged ? 'admin' : null;
   }
 
-  get secretsSyncIsActivated() {
+  get secretsSyncIsActivated(): boolean {
     return this.activatedFlags.includes('secrets-sync');
   }
 
