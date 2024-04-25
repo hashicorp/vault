@@ -104,7 +104,7 @@ We need to configure the Vault PKCS#11 provider.
 
     The default location the PKCS#11 library will look for the configuration file is the current directory (`./vault-pkcs11.hcl`) and `/etc/vault-pkcs11.hcl`, but you can override this by setting the `VAULT_KMIP_CONFIG` environment variable to any file.
 
-1. If you want to view the Vault logs (helpful when trying to find error messages), you can specify the `VAULT_LOG_FILE` (default is stdout) and `VAULT_LOG_LEVEL` (default is `INFO`). We'd recommend setting `VAULT_LOG_FILE` to something like `/tmp/vault.log` or `/var/log/vault.log`. Other useful log levels are `WARN` (quieter) and `TRACE` (very verbose, could possibly contain sensitive information, like raw network packets).
+1. If you want to view the Vault logs (helpful when trying to find error messages), you can specify the `VAULT_LOG_FILE` (default is stdout) and `VAULT_LOG_LEVEL` (default is `INFO`). We'd recommend setting `VAULT_LOG_FILE` to something like `/tmp/vault.log` or `/var/log/vault.log`. Other useful log levels are `WARN` (quieter) and `TRACE` (verbose, could possibly contain sensitive information, like raw network packets).
 
 ## Enable TDE 
 

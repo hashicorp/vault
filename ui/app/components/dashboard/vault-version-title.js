@@ -1,10 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 /**
  * @module DashboardVaultVersionTitle
@@ -12,17 +12,10 @@ import { inject as service } from '@ember/service';
  *
  * @example
  * ```js
- * <Dashboard::VaultVersionTitle />
+ * <Dashboard::VaultVersionTitle @version={{this.versionSvc}} />
  * ```
  */
 
 export default class DashboardVaultVersionTitle extends Component {
-  @service version;
   @service namespace;
-
-  get versionHeader() {
-    return this.version.isEnterprise
-      ? `Vault v${this.version.version.slice(0, this.version.version.indexOf('+'))}`
-      : `Vault v${this.version.version}`;
-  }
 }

@@ -3,9 +3,8 @@
 
 scenario "ui" {
   matrix {
-    edition      = ["ce", "ent"]
-    backend      = ["consul", "raft"]
-    seal_ha_beta = ["true", "false"]
+    backend = global.backends
+    edition = ["ce", "ent"]
   }
 
   terraform_cli = terraform_cli.default
@@ -26,7 +25,7 @@ scenario "ui" {
     }
     bundle_path    = abspath(var.vault_artifact_path)
     distro         = "ubuntu"
-    consul_version = "1.16.1"
+    consul_version = "1.17.0"
     seal           = "awskms"
     tags = merge({
       "Project Name" : var.project_name
@@ -70,7 +69,7 @@ scenario "ui" {
   }
 
   step "create_seal_key" {
-    module = "seal_key_${local.seal}"
+    module = "seal_${local.seal}"
 
     variables {
       cluster_id  = step.create_vpc.cluster_id
@@ -110,7 +109,7 @@ scenario "ui" {
       ami_id          = step.ec2_info.ami_ids[local.arch][local.distro][var.ubuntu_distro_version]
       cluster_tag_key = local.vault_tag_key
       common_tags     = local.tags
-      seal_key_names  = step.create_seal_key.resource_names
+      seal_names      = step.create_seal_key.resource_names
       vpc_id          = step.create_vpc.id
     }
   }
@@ -127,7 +126,7 @@ scenario "ui" {
       ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
       cluster_tag_key = local.backend_tag_key
       common_tags     = local.tags
-      seal_key_names  = step.create_seal_key.resource_names
+      seal_names      = step.create_seal_key.resource_names
       vpc_id          = step.create_vpc.id
     }
   }
@@ -180,8 +179,7 @@ scenario "ui" {
       license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path  = local.bundle_path
       packages             = global.distro_packages["ubuntu"]
-      seal_ha_beta         = matrix.seal_ha_beta
-      seal_key_name        = step.create_seal_key.resource_name
+      seal_name            = step.create_seal_key.resource_name
       seal_type            = local.seal
       storage_backend      = matrix.backend
       target_hosts         = step.create_vault_cluster_targets.hosts
@@ -263,7 +261,7 @@ scenario "ui" {
     value       = step.create_vault_cluster.root_token
   }
 
-  output "seal_key_name" {
+  output "seal_name" {
     description = "The Vault cluster seal key name"
     value       = step.create_seal_key.resource_name
   }

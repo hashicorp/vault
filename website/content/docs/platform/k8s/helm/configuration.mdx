@@ -18,6 +18,8 @@ and consider if they're appropriate for your deployment.
 
   - `enabled` (`boolean: true`) - The master enabled/disabled configuration. If this is true, most components will be installed by default. If this is false, no components will be installed by default and manually opting-in is required, such as by setting `server.enabled` to true.
 
+  - `namespace` (`string: ""`) - The namespace to deploy to. Defaults to the `helm` installation namespace.
+
   - `imagePullSecrets` (`array: []`) - References secrets to be used when pulling images from private registries. See [Pull an Image from a Private Registry](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/) for more details. May be specified as an array of name map entries or just as an array of names:
 
     ```yaml
@@ -77,7 +79,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "hashicorp/vault-k8s"`) - The name of the Docker image for Vault Agent Injector.
 
-    - `tag` (`string: "1.2.1"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+    - `tag` (`string: "1.4.1"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
 
@@ -85,7 +87,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "hashicorp/vault"`) - The name of the Docker image for the Vault Agent sidecar. This should be set to the official Vault Docker image.
 
-    - `tag` (`string: "1.14.0"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar. **Vault 1.3.1+ is required by the admission controller**.
+    - `tag` (`string: "1.16.1"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar. **Vault 1.3.1+ is required by the admission controller**.
 
   - `agentDefaults` - Values that configure the injected Vault Agent containers default values.
 
@@ -349,7 +351,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "hashicorp/vault"`) - The name of the Docker image for the containers running Vault.
 
-    - `tag` (`string: "1.14.0"`) - The tag of the Docker image for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+    - `tag` (`string: "1.16.1"`) - The tag of the Docker image for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
 
@@ -433,6 +435,8 @@ and consider if they're appropriate for your deployment.
         - /vault
       ```
 
+  - `hostAliases` (`array: []`) - A list of aliases to be added to `/etc/hosts`. Specified as a YAML list following the [hostAlias format](https://kubernetes.io/docs/tasks/network/customize-hosts-file-for-pods/)
+
   - `route` - Values that configure Route services for Vault in OpenShift
 
     ~> If [`ha`](#ha) is enabled the Route will point to the active vault server via the `active` Service (requires vault 1.4+ and [service_registration](/vault/docs/configuration/service-registration/kubernetes) to be set in the vault config).
@@ -487,7 +491,16 @@ and consider if they're appropriate for your deployment.
 
     - `enabled` (`boolean: false`) - When set to `true`, a liveness probe will be applied to the Vault pods.
 
-    - `path` (`string: "/v1/sys/health?standbyok=true"`) - When set to a value, enables HTTP/HTTPS probes instead of using the default `exec` probe. The http/https scheme is controlled by the `tlsDisable` value.
+    - `execCommand` (`array: []`) - Used to define a liveness exec command. If provided, exec is preferred to httpGet (path) as the livenessProbe handler.
+
+    ```yaml
+    execCommand:
+      - /bin/sh
+      - -c
+      - /vault/userconfig/mylivenessscript/run.sh
+    ```
+
+    - `path` (`string: "/v1/sys/health?standbyok=true"`) - Path for the livenessProbe to use httpGet as the livenessProbe handler. The http/https scheme is controlled by the `tlsDisable` value.
 
     - `initialDelaySeconds` (`int: 60`) - Sets the initial delay of the liveness probe when the container starts.
 
@@ -499,7 +512,7 @@ and consider if they're appropriate for your deployment.
 
     - `timeoutSeconds` (`int: 3`) - When set to a value, configures the number of seconds after which the probe times out.
 
-    - `port` (`int: 8200`) - When set to a value, overrides the default port used for the server liveness probe.
+    - `port` (`int: 8200`) - Port number on which livenessProbe will be checked if httpGet is used as the livenessProbe handler.
 
     ```yaml
     livenessProbe:
@@ -676,6 +689,19 @@ and consider if they're appropriate for your deployment.
             port: 8200
     ```
 
+    - `ingress` (`array: []`) - This value configures the [ingress](https://kubernetes.io/docs/concepts/services-networking/network-policies/) network policy rules. The default is below:
+
+    ```yaml
+    ingress:
+      - from:
+        - namespaceSelector: {}
+        ports:
+        - port: 8200
+          protocol: TCP
+        - port: 8201
+          protocol: TCP
+    ```
+
   - `priorityClassName` (`string: ""`) - Priority class for server pods
 
   - `extraLabels` (`dictionary: {}`) - This value defines additional labels for server pods.
@@ -698,6 +724,8 @@ and consider if they're appropriate for your deployment.
     "sample/annotation2": "bar"
   ```
 
+  - `configAnnotation` (`boolean: false`) - Add an annotation to the server configmap and the statefulset pods, `vaultproject.io/config-checksum`, that is a hash of the Vault configuration. This can be used together with an OnDelete deployment strategy to help identify which pods still need to be deleted during a deployment to pick up any configuration changes.
+
   - `service` - Values that configure the Kubernetes service created for Vault. These options are also used for the `active` and `standby` services when [`ha`](#ha) is enabled.
 
     - `enabled` (`boolean: true`) - When set to `true`, a Kubernetes service will be created for Vault.
@@ -706,9 +734,13 @@ and consider if they're appropriate for your deployment.
 
       - `enabled` (`boolean: true`) - When set to `true`, the vault-active Kubernetes service will be created for Vault, selecting pods which label themselves as the cluster leader with `vault-active: "true"`.
 
+      - `annotations` (`dictionary: {}`) -  Extra annotations for the active service definition. This can either be YAML or a YAML-formatted multi-line templated string.
+
     - `standby` - Values that apply only to the vault-standby service.
 
       - `enabled` (`boolean: true`) - When set to `true`, the vault-standby Kubernetes service will be created for Vault, selecting pods which label themselves as a cluster follower with `vault-active: "false"`.
+
+      - `annotations` (`dictionary: {}`) -  Extra annotations for the standby service definition. This can either be YAML or a YAML-formatted multi-line templated string.
 
     - `clusterIP` (`string`) - ClusterIP controls whether an IP address (cluster IP) is attached to the Vault service within Kubernetes. By default the Vault service will be given a Cluster IP address, set to `None` to disable. When disabled Kubernetes will create a "headless" service. Headless services can be used to communicate with pods directly through DNS instead of a round robin load balancer.
 
@@ -744,11 +776,17 @@ and consider if they're appropriate for your deployment.
       "sample/annotation2": "bar"
     ```
 
+    - `ipFamilyPolicy` (`string: ""`) - The IP family and IP families options are to set the behaviour in a dual-stack environment. Omitting these values will let the service fall back to whatever the CNI dictates the defaults should be. These are only supported for kubernetes versions >=1.23. The service's [supported IP family policy](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services), can be either: `SingleStack`, `PreferDualStack`, or `RequireDualStack`.
+
+    - `serviceIPFamilies` (`array: []`) - Sets the families that should be supported and the order in which they should be applied to ClusterIP as well. Can be IPv4 and/or IPv6.
+
   - `serviceAccount` - Values that configure the Kubernetes service account created for Vault.
 
     - `create` (`boolean: true`): If set to true, creates a service account used by Vault.
 
     - `name` (`string: ""`): Name of the service account to use. If not set and create is true, a name is generated using the name of the installation (default is "vault").
+
+    - `createSecret` (`boolean: false`): Create a Kubernetes Secret object to store a non-expiring token for the service account. Prior to Kubernetes 1.24.0, Kubernetes used to generate this secret for each service account by default. Kubernetes recommends using short-lived tokens from the TokenRequest API or projected volumes instead if possible. For more details, see https://kubernetes.io/docs/concepts/configuration/secret/#service-account-token-secrets. `server.serviceAccount.create` must be equal to 'true' in order to use this feature.
 
     - `annotations` (`dictionary: {}`) - This value defines additional annotations for the service account. This can either be YAML or a YAML-formatted multi-line templated string.
 
@@ -803,6 +841,18 @@ and consider if they're appropriate for your deployment.
       kubernetes.io/my-pvc: foobar
     ```
 
+    - `labels` (`dictionary: {}`) - This value defines additional labels to add to the
+      data PVCs. This can either be YAML or a YAML-formatted multi-line templated
+      string.
+
+  - `persistentVolumeClaimRetentionPolicy` (`dictionary: {}`) - Specifies the Persistent Volume Claim (PVC) [retention policy](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#persistentvolumeclaim-retention).
+
+  ```yaml
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  ```
+
   - `auditStorage` - This configures the volume used for storing Vault's audit logs. See the [Vault documentation](/vault/docs/audit) for more information.
 
     - `enabled` (`boolean: false`) -
@@ -831,6 +881,10 @@ and consider if they're appropriate for your deployment.
     annotations: |
       kubernetes.io/my-pvc: foobar
     ```
+
+  - `labels` (`dictionary: {}`) - This value defines additional labels to add to the
+      audit PVCs. This can either be YAML or a YAML-formatted multi-line templated
+      string.
 
   - `dev` - This configures `dev` mode for the Vault server.
 
@@ -1000,6 +1054,10 @@ and consider if they're appropriate for your deployment.
 
   - `targetPort` (`int: 8200`) - Sets the target port value of the service.
 
+  - `serviceIPFamilyPolicy` (`string: ""`) - The IP family and IP families options are to set the behaviour in a dual-stack environment. Omitting these values will let the service fall back to whatever the CNI dictates the defaults should be. These are only supported for kubernetes versions >=1.23. The service's [supported IP family policy](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services), can be either: `SingleStack`, `PreferDualStack`, or `RequireDualStack`.
+
+  - `serviceIPFamilies` (`array: []`) - Sets the families that should be supported and the order in which they should be applied to ClusterIP as well. Can be IPv4 and/or IPv6.
+
   - `externalTrafficPolicy` (`string: "Cluster"`) - The [externalTrafficPolicy](https://kubernetes.io/docs/concepts/services-networking/service/#external-traffic-policy) can be set to either Cluster or Local and is only valid for LoadBalancer and NodePort service types.
 
   - `loadBalancerSourceRanges` (`array`) - This value defines additional source CIDRs when using `serviceType: LoadBalancer`.
@@ -1032,7 +1090,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "hashicorp/vault-csi-provider"`) - The name of the Docker image for the Vault CSI Provider.
 
-    - `tag` (`string: "1.4.0"`) - The tag of the Docker image for the Vault CSI Provider.. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your CSI provider.
+    - `tag` (`string: "1.4.2"`) - The tag of the Docker image for the Vault CSI Provider.. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your CSI provider.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists locally.
 
@@ -1181,7 +1239,7 @@ and consider if they're appropriate for your deployment.
 
       - `repository` (`string: "hashicorp/vault"`) - The name of the Docker image for the Vault Agent sidecar. This should be set to the official Vault Docker image.
 
-      - `tag` (`string: "1.14.0"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar.
+      - `tag` (`string: "1.16.1"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar.
 
     - `logFormat` (`string: "standard"`) -
     - `logLevel` (`string: "info"`) -

@@ -1,0 +1,54 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="has-top-padding-xs has-bottom-padding-s is-narrow is-flex-align-baseline">
+  <RadioButton
+    class="radio"
+    name={{@attr.name}}
+    id="never"
+    value="never"
+    @value="never"
+    @onChange={{fn (mut @message.endTime) ""}}
+    @groupValue={{this.groupValue}}
+  />
+  <label for="never" class="has-left-margin-xs has-text-black is-size-7">
+    <span class="has-left-margin-xs">
+      Never
+    </span>
+    <p class="has-left-margin-xs has-text-grey is-size-8">
+      This message will never expire unless manually deleted by an operator.
+    </p>
+  </label>
+</div>
+
+<div class="has-top-padding-xs has-bottom-padding-s is-narrow is-flex-align-baseline">
+  <RadioButton
+    class="radio"
+    name={{@attr.name}}
+    id="specificDate"
+    value="specificDate"
+    @value="specificDate"
+    @onChange={{this.specificDateChange}}
+    @groupValue={{this.groupValue}}
+  />
+  <label for="specificDate" class="has-left-margin-xs has-text-black is-size-7">
+    <span class="has-left-margin-xs">
+      Specific date
+    </span>
+    <p class="has-left-margin-xs has-text-grey is-size-8">
+      This message will expire at the specified time (local timezone) and date.
+    </p>
+    <div class="has-left-margin-xs control">
+      <Input
+        @type="datetime-local"
+        @value={{if this.messageEndTime (date-format this.messageEndTime this.datetimeLocalStringFormat) ""}}
+        class="input has-top-margin-xs is-auto-width {{if this.validationError 'has-error-border'}}"
+        name="endTime"
+        data-test-input="endTime"
+        {{on "focusout" this.onFocusOut}}
+      />
+    </div>
+  </label>
+</div>

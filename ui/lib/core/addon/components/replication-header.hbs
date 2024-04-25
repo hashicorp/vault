@@ -1,0 +1,55 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader data-test-replication-header as |p|>
+  <p.top>
+    {{#if (not (or @isSummaryDashboard @isSecondary))}}
+      <Hds::Breadcrumb>
+        <Hds::Breadcrumb::Item @text="Replication" @route="vault.cluster.replication.index" />
+        <Hds::Breadcrumb::Item @text={{@title}} @current={{true}} />
+      </Hds::Breadcrumb>
+    {{/if}}
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-replication-title>
+      {{@title}}
+      {{#if @data.anyReplicationEnabled}}
+        <span class="tag is-light has-text-grey-dark" data-test-mode>
+          {{if @isSecondary "secondary" "primary"}}
+        </span>
+        <span class="tag is-light has-text-grey-dark" data-test-secondaryId>
+          {{@secondaryId}}
+        </span>
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if @showTabs}}
+  <div class="tabs-container box is-bottomless is-fullwidth is-paddingless has-bottom-margin-l" data-test-tabs>
+    <nav class="tabs">
+      {{#if @isSummaryDashboard}}
+        <ul>
+          <li class="is-active">
+            <LinkToExternal @route="replication">Summary</LinkToExternal>
+          </li>
+        </ul>
+      {{else}}
+        <ul>
+          <li>
+            <LinkTo @route="vault.cluster.replication-dr-promote.details">
+              Details
+            </LinkTo>
+          </li>
+          <li>
+            <LinkTo @route="vault.cluster.replication-dr-promote" @current-when="vault.cluster.replication-dr-promote.index">
+              Manage
+            </LinkTo>
+          </li>
+        </ul>
+      {{/if}}
+    </nav>
+  </div>
+{{/if}}

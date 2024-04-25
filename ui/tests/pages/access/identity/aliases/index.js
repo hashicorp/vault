@@ -13,7 +13,7 @@ export default create({
     menu: clickable('[data-test-popup-menu-trigger]'),
     name: text('[data-test-identity-link]'),
   }),
-  delete: clickable('[data-test-item-delete]', {
+  delete: clickable('[data-test-popup-menu="delete"]', {
     testContainer: '#ember-testing',
   }),
   confirmDelete: clickable('[data-test-confirm-button]'),

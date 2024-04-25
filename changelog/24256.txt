@@ -1,0 +1,4 @@
+```release-note:bug
+api: Fix deadlock on calls to sys/leader with a namespace configured
+on the request.
+```

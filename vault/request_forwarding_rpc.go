@@ -16,6 +16,8 @@ import (
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault/replication"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type forwardedRequestRPCServer struct {
@@ -72,20 +74,28 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 }
 
 type nodeHAConnectionInfo struct {
-	nodeInfo       *NodeInformation
-	lastHeartbeat  time.Time
-	version        string
-	upgradeVersion string
-	redundancyZone string
+	nodeInfo             *NodeInformation
+	lastHeartbeat        time.Time
+	version              string
+	upgradeVersion       string
+	redundancyZone       string
+	localTime            time.Time
+	echoDuration         time.Duration
+	clockSkewMillis      int64
+	replicationLagMillis int64
 }
 
 func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (*EchoReply, error) {
 	incomingNodeConnectionInfo := nodeHAConnectionInfo{
-		nodeInfo:       in.NodeInfo,
-		lastHeartbeat:  time.Now(),
-		version:        in.SdkVersion,
-		upgradeVersion: in.RaftUpgradeVersion,
-		redundancyZone: in.RaftRedundancyZone,
+		nodeInfo:             in.NodeInfo,
+		lastHeartbeat:        time.Now(),
+		version:              in.SdkVersion,
+		upgradeVersion:       in.RaftUpgradeVersion,
+		redundancyZone:       in.RaftRedundancyZone,
+		localTime:            in.Now.AsTime(),
+		echoDuration:         in.LastRoundtripTime.AsDuration(),
+		clockSkewMillis:      in.ClockSkewMillis,
+		replicationLagMillis: in.ReplicationPrimaryCanaryAgeMillis,
 	}
 	if in.ClusterAddr != "" {
 		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, incomingNodeConnectionInfo, 0)
@@ -106,6 +116,7 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 	reply := &EchoReply{
 		Message:          "pong",
 		ReplicationState: uint32(s.core.ReplicationState()),
+		Now:              timestamppb.Now(),
 	}
 
 	if raftBackend := s.core.getRaftBackend(); raftBackend != nil {
@@ -134,15 +145,20 @@ func (c *forwardingClient) startHeartbeat() {
 			Hostname: hostname,
 			Mode:     "standby",
 		}
+		var echoDuration time.Duration
+		var serverTimeDelta int64
 		tick := func() {
 			labels := make([]metrics.Label, 0, 1)
 			defer metrics.MeasureSinceWithLabels([]string{"ha", "rpc", "client", "echo"}, time.Now(), labels)
 
 			req := &EchoRequest{
-				Message:     "ping",
-				ClusterAddr: clusterAddr,
-				NodeInfo:    &ni,
-				SdkVersion:  c.core.effectiveSDKVersion,
+				Message:                           "ping",
+				ClusterAddr:                       clusterAddr,
+				NodeInfo:                          &ni,
+				SdkVersion:                        c.core.effectiveSDKVersion,
+				LastRoundtripTime:                 durationpb.New(echoDuration),
+				ClockSkewMillis:                   serverTimeDelta,
+				ReplicationPrimaryCanaryAgeMillis: c.core.GetReplicationLagMillisIgnoreErrs(),
 			}
 
 			if raftBackend := c.core.getRaftBackend(); raftBackend != nil {
@@ -151,13 +167,26 @@ func (c *forwardingClient) startHeartbeat() {
 				req.RaftTerm = raftBackend.Term()
 				req.RaftDesiredSuffrage = raftBackend.DesiredSuffrage()
 				req.RaftRedundancyZone = raftBackend.RedundancyZone()
-				req.RaftUpgradeVersion = raftBackend.EffectiveVersion()
+				req.RaftUpgradeVersion = raftBackend.UpgradeVersion()
 				labels = append(labels, metrics.Label{Name: "peer_id", Value: raftBackend.NodeID()})
 			}
 
+			start := time.Now()
+			req.Now = timestamppb.New(start)
 			ctx, cancel := context.WithTimeout(c.echoContext, 2*time.Second)
 			resp, err := c.RequestForwardingClient.Echo(ctx, req)
 			cancel()
+
+			now := time.Now()
+			if err == nil {
+				serverTimeDelta = resp.Now.AsTime().UnixMilli() - now.UnixMilli()
+			} else {
+				serverTimeDelta = 0
+			}
+			echoDuration = now.Sub(start)
+			c.core.echoDuration.Store(echoDuration)
+			c.core.activeNodeClockSkewMillis.Store(serverTimeDelta)
+
 			if err != nil {
 				metrics.IncrCounter([]string{"ha", "rpc", "client", "echo", "errors"}, 1)
 				c.core.logger.Debug("forwarding: error sending echo request to active node", "error", err)

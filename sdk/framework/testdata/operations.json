@@ -12,20 +12,7 @@
   "paths": {
     "/foo/{id}": {
       "description": "Synopsis",
-      "x-vault-createSupported": true,
-      "x-vault-sudo": true,
-      "x-vault-displayAttrs": {
-        "navigation": true
-      },
       "parameters": [
-        {
-          "name": "format",
-          "description": "a query param",
-          "in": "query",
-          "schema": {
-            "type": "string"
-          }
-        },
         {
           "name": "id",
           "description": "id path parameter",
@@ -36,13 +23,28 @@
           "required": true
         }
       ],
+      "x-vault-sudo": true,
+      "x-vault-createSupported": true,
+      "x-vault-displayAttrs": {
+        "navigation": true
+      },
       "get": {
+        "summary": "My Summary",
+        "description": "My Description",
         "operationId": "kv-read-foo-id",
         "tags": [
           "secrets"
         ],
-        "summary": "My Summary",
-        "description": "My Description",
+        "parameters": [
+          {
+            "name": "format",
+            "description": "a query param",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -50,12 +52,12 @@
         }
       },
       "post": {
+        "summary": "Update Summary",
+        "description": "Update Description",
         "operationId": "kv-write-foo-id",
         "tags": [
           "secrets"
         ],
-        "summary": "Update Summary",
-        "description": "Update Description",
         "requestBody": {
           "required": true,
           "content": {
@@ -75,19 +77,7 @@
     },
     "/foo/{id}/": {
       "description": "Synopsis",
-      "x-vault-sudo": true,
-      "x-vault-displayAttrs": {
-        "navigation": true
-      },
       "parameters": [
-        {
-          "name": "format",
-          "description": "a query param",
-          "in": "query",
-          "schema": {
-            "type": "string"
-          }
-        },
         {
           "name": "id",
           "description": "id path parameter",
@@ -98,32 +88,51 @@
           "required": true
         }
       ],
+      "x-vault-sudo": true,
+      "x-vault-displayAttrs": {
+        "navigation": true
+      },
       "get": {
+        "summary": "List Summary",
+        "description": "List Description",
         "operationId": "kv-list-foo-id",
         "tags": [
           "secrets"
         ],
-        "summary": "List Summary",
-        "description": "List Description",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        },
         "parameters": [
+          {
+            "name": "format",
+            "description": "a query param",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "list",
             "description": "Must be set to `true`",
-            "required": true,
             "in": "query",
             "schema": {
               "type": "string",
               "enum": [
                 "true"
               ]
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardListResponse"
+                }
+              }
             }
           }
-        ]
+        }
       }
     }
   },
@@ -131,17 +140,7 @@
     "schemas": {
       "KvWriteFooIdRequest": {
         "type": "object",
-        "required": [
-          "age"
-        ],
         "properties": {
-          "flavors": {
-            "type": "array",
-            "description": "the flavors",
-            "items": {
-              "type": "string"
-            }
-          },
           "age": {
             "type": "integer",
             "description": "the age",
@@ -152,16 +151,32 @@
             ],
             "x-vault-displayAttrs": {
               "name": "Age",
+              "value": 7,
               "sensitive": true,
-              "group": "Some Group",
-              "value": 7
+              "group": "Some Group"
             }
+          },
+          "flavors": {
+            "type": "array",
+            "description": "the flavors",
+            "items": {
+              "type": "string"
+            }
+          },
+          "format": {
+            "type": "string",
+            "description": "a query param"
+          },
+          "maximum": {
+            "type": "integer",
+            "description": "a maximum value",
+            "format": "int64"
           },
           "name": {
             "type": "string",
             "description": "the name",
-            "default": "Larry",
-            "pattern": "\\w([\\w-.]*\\w)?"
+            "pattern": "\\w([\\w-.]*\\w)?",
+            "default": "Larry"
           },
           "x-abc-token": {
             "type": "string",
@@ -171,11 +186,20 @@
               "b",
               "c"
             ]
-          },
-          "maximum": {
-            "type": "integer",
-            "description": "a maximum value",
-            "format": "int64"
+          }
+        },
+        "required": [
+          "age"
+        ]
+      },
+      "StandardListResponse": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       }

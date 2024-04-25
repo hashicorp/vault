@@ -18,7 +18,7 @@ $dark-gray: #535f73;
   }
 }
 .calendar-title {
-  padding: $size-10 $size-8;
+  padding: $spacing-10 $spacing-12;
 }
 
 .select-year {
@@ -32,30 +32,6 @@ $dark-gray: #535f73;
 
 .calendar-widget {
   grid-area: calendar-widget;
-
-  > button {
-    &.is-month-list {
-      background-color: $white;
-      color: black;
-      text-align: center;
-      border: $light-border;
-      border-radius: $radius;
-    }
-    &.is-current-month {
-      border: 1px solid $ui-gray-900;
-    }
-    &:hover {
-      background-color: lighten($dark-gray, 30%);
-      color: $white;
-      text-align: center;
-      cursor: pointer;
-    }
-    &.is-readOnly {
-      background-color: $ui-gray-100;
-      color: lighten($dark-gray, 30%);
-      pointer-events: none;
-    }
-  }
 }
 
 .border-col {
@@ -84,15 +60,6 @@ $dark-gray: #535f73;
 }
 
 // for modal-dialog tooltips
-.calendar-tooltip {
-  background-color: $ui-gray-700;
-  color: $white;
-  font-size: $size-8;
-  padding: $size-9;
-  border-radius: $radius-large;
-  width: 141px;
-}
-
 .ember-modal-dialog {
   z-index: 1000;
 }

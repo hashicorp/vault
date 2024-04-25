@@ -16,6 +16,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -25,12 +26,14 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/volume"
 	docker "github.com/docker/docker/client"
 	"github.com/hashicorp/go-cleanhttp"
@@ -130,7 +133,7 @@ func (dc *DockerCluster) SetRecoveryKeys(keys [][]byte) {
 }
 
 func (dc *DockerCluster) GetCACertPEMFile() string {
-	return dc.CACertPEMFile
+	return testcluster.DefaultCAFile
 }
 
 func (dc *DockerCluster) Cleanup() {
@@ -552,7 +555,13 @@ func (n *DockerClusterNode) apiConfig() (*api.Config, error) {
 	if config.Error != nil {
 		return nil, config.Error
 	}
-	config.Address = fmt.Sprintf("https://%s", n.HostPort)
+
+	protocol := "https"
+	if n.tlsConfig == nil {
+		protocol = "http"
+	}
+	config.Address = fmt.Sprintf("%s://%s", protocol, n.HostPort)
+
 	config.HttpClient = client
 	config.MaxRetries = 0
 	return config, nil
@@ -615,6 +624,16 @@ func (n *DockerClusterNode) createDefaultListenerConfig() map[string]interface{}
 	}}
 }
 
+func (n *DockerClusterNode) createTLSDisabledListenerConfig() map[string]interface{} {
+	return map[string]interface{}{"tcp": map[string]interface{}{
+		"address": fmt.Sprintf("%s:%d", "0.0.0.0", 8200),
+		"telemetry": map[string]interface{}{
+			"unauthenticated_metrics_access": true,
+		},
+		"tls_disable": true,
+	}}
+}
+
 func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOptions) error {
 	if n.DataVolumeName == "" {
 		vol, err := n.DockerAPI.VolumeCreate(ctx, volume.CreateOptions{})
@@ -628,7 +647,15 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	}
 	vaultCfg := map[string]interface{}{}
 	var listenerConfig []map[string]interface{}
-	listenerConfig = append(listenerConfig, n.createDefaultListenerConfig())
+
+	var defaultListenerConfig map[string]interface{}
+	if opts.DisableTLS {
+		defaultListenerConfig = n.createTLSDisabledListenerConfig()
+	} else {
+		defaultListenerConfig = n.createDefaultListenerConfig()
+	}
+
+	listenerConfig = append(listenerConfig, defaultListenerConfig)
 	ports := []string{"8200/tcp", "8201/tcp"}
 
 	if opts.VaultNodeConfig != nil && opts.VaultNodeConfig.AdditionalListeners != nil {
@@ -637,6 +664,9 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 			listener := cfg["tcp"].(map[string]interface{})
 			listener["address"] = fmt.Sprintf("%s:%d", "0.0.0.0", config.Port)
 			listener["chroot_namespace"] = config.ChrootNamespace
+			listener["redact_addresses"] = config.RedactAddresses
+			listener["redact_cluster_name"] = config.RedactClusterName
+			listener["redact_version"] = config.RedactVersion
 			listenerConfig = append(listenerConfig, cfg)
 			portStr := fmt.Sprintf("%d/tcp", config.Port)
 			if strutil.StrListContains(ports, portStr) {
@@ -677,7 +707,12 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	//// disable_mlock is required for working in the Docker environment with
 	//// custom plugins
 	vaultCfg["disable_mlock"] = true
-	vaultCfg["api_addr"] = `https://{{- GetAllInterfaces | exclude "flags" "loopback" | attr "address" -}}:8200`
+
+	protocol := "https"
+	if opts.DisableTLS {
+		protocol = "http"
+	}
+	vaultCfg["api_addr"] = fmt.Sprintf(`%s://{{- GetAllInterfaces | exclude "flags" "loopback" | attr "address" -}}:8200`, protocol)
 	vaultCfg["cluster_addr"] = `https://{{- GetAllInterfaces | exclude "flags" "loopback" | attr "address" -}}:8201`
 
 	vaultCfg["administrative_namespace_path"] = opts.AdministrativeNamespacePath
@@ -716,10 +751,12 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		}
 	}
 
-	// Create a temporary cert so vault will start up
-	err = n.setupCert("127.0.0.1")
-	if err != nil {
-		return err
+	if !opts.DisableTLS {
+		// Create a temporary cert so vault will start up
+		err = n.setupCert("127.0.0.1")
+		if err != nil {
+			return err
+		}
 	}
 
 	caDir := filepath.Join(n.Cluster.tmpDir, "ca")
@@ -747,6 +784,27 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		testcluster.JSONLogNoTimestamp(n.Logger, s)
 	}}
 
+	postStartFunc := func(containerID string, realIP string) error {
+		err := n.setupCert(realIP)
+		if err != nil {
+			return err
+		}
+
+		// If we signal Vault before it installs its sighup handler, it'll die.
+		wg.Wait()
+		n.Logger.Trace("running poststart", "containerID", containerID, "IP", realIP)
+		return n.runner.RefreshFiles(ctx, containerID)
+	}
+
+	if opts.DisableTLS {
+		postStartFunc = func(containerID string, realIP string) error {
+			// If we signal Vault before it installs its sighup handler, it'll die.
+			wg.Wait()
+			n.Logger.Trace("running poststart", "containerID", containerID, "IP", realIP)
+			return n.runner.RefreshFiles(ctx, containerID)
+		}
+	}
+
 	r, err := dockhelper.NewServiceRunner(dockhelper.RunOptions{
 		ImageRepo: n.ImageRepo,
 		ImageTag:  n.ImageTag,
@@ -761,26 +819,16 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 			"VAULT_LOG_FORMAT=json",
 			"VAULT_LICENSE=" + opts.VaultLicense,
 		},
-		Ports:           ports,
-		ContainerName:   n.Name(),
-		NetworkName:     opts.NetworkName,
-		CopyFromTo:      copyFromTo,
-		LogConsumer:     logConsumer,
-		LogStdout:       logStdout,
-		LogStderr:       logStderr,
-		PreDelete:       true,
-		DoNotAutoRemove: true,
-		PostStart: func(containerID string, realIP string) error {
-			err := n.setupCert(realIP)
-			if err != nil {
-				return err
-			}
-
-			// If we signal Vault before it installs its sighup handler, it'll die.
-			wg.Wait()
-			n.Logger.Trace("running poststart", "containerID", containerID, "IP", realIP)
-			return n.runner.RefreshFiles(ctx, containerID)
-		},
+		Ports:             ports,
+		ContainerName:     n.Name(),
+		NetworkName:       opts.NetworkName,
+		CopyFromTo:        copyFromTo,
+		LogConsumer:       logConsumer,
+		LogStdout:         logStdout,
+		LogStderr:         logStderr,
+		PreDelete:         true,
+		DoNotAutoRemove:   true,
+		PostStart:         postStartFunc,
 		Capabilities:      []string{"NET_ADMIN"},
 		OmitLogTimestamps: true,
 		VolumeNameToMountPoint: map[string]string{
@@ -804,7 +852,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		if err != nil {
 			return nil, err
 		}
-		config.Address = fmt.Sprintf("https://%s:%d", host, port)
+		config.Address = fmt.Sprintf("%s://%s:%d", protocol, host, port)
 		client, err := api.NewClient(config)
 		if err != nil {
 			return nil, err
@@ -835,7 +883,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	}
 	n.ContainerNetworkName = netName
 	n.ContainerIPAddress = svc.Container.NetworkSettings.Networks[netName].IPAddress
-	n.RealAPIAddr = "https://" + n.ContainerIPAddress + ":8200"
+	n.RealAPIAddr = protocol + "://" + n.ContainerIPAddress + ":8200"
 	n.cleanupContainer = svc.Cleanup
 
 	client, err := n.newAPIClient()
@@ -862,6 +910,52 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 
 func (n *DockerClusterNode) Pause(ctx context.Context) error {
 	return n.DockerAPI.ContainerPause(ctx, n.Container.ID)
+}
+
+func (n *DockerClusterNode) Restart(ctx context.Context) error {
+	timeout := 5
+	err := n.DockerAPI.ContainerRestart(ctx, n.Container.ID, container.StopOptions{Timeout: &timeout})
+	if err != nil {
+		return err
+	}
+
+	resp, err := n.DockerAPI.ContainerInspect(ctx, n.Container.ID)
+	if err != nil {
+		return fmt.Errorf("error inspecting container after restart: %s", err)
+	}
+
+	var port int
+	if len(resp.NetworkSettings.Ports) > 0 {
+		for key, binding := range resp.NetworkSettings.Ports {
+			if len(binding) < 1 {
+				continue
+			}
+
+			if key == "8200/tcp" {
+				port, err = strconv.Atoi(binding[0].HostPort)
+			}
+		}
+	}
+
+	if port == 0 {
+		return fmt.Errorf("failed to find container port after restart")
+	}
+
+	hostPieces := strings.Split(n.HostPort, ":")
+	if len(hostPieces) < 2 {
+		return errors.New("could not parse node hostname")
+	}
+
+	n.HostPort = fmt.Sprintf("%s:%d", hostPieces[0], port)
+
+	client, err := n.newAPIClient()
+	if err != nil {
+		return err
+	}
+	client.SetToken(n.Cluster.rootToken)
+	n.client = client
+
+	return nil
 }
 
 func (n *DockerClusterNode) AddNetworkDelay(ctx context.Context, delay time.Duration, targetIP string) error {
@@ -996,6 +1090,7 @@ type DockerClusterOptions struct {
 	Args        []string
 	StartProbe  func(*api.Client) error
 	Storage     testcluster.ClusterStorage
+	DisableTLS  bool
 }
 
 func ensureLeaderMatches(ctx context.Context, client *api.Client, ready func(response *api.LeaderResponse) error) error {
@@ -1048,13 +1143,15 @@ func (dc *DockerCluster) setupDockerCluster(ctx context.Context, opts *DockerClu
 		numCores = opts.NumCores
 	}
 
-	if dc.CA == nil {
-		if err := dc.setupCA(opts); err != nil {
-			return err
+	if !opts.DisableTLS {
+		if dc.CA == nil {
+			if err := dc.setupCA(opts); err != nil {
+				return err
+			}
 		}
+		dc.RootCAs = x509.NewCertPool()
+		dc.RootCAs.AddCert(dc.CA.CACert)
 	}
-	dc.RootCAs = x509.NewCertPool()
-	dc.RootCAs.AddCert(dc.CA.CACert)
 
 	if dc.storage != nil {
 		if err := dc.storage.Start(ctx, &opts.ClusterOptions); err != nil {
@@ -1071,7 +1168,7 @@ func (dc *DockerCluster) setupDockerCluster(ctx context.Context, opts *DockerClu
 		}
 		if i == 0 {
 			if err := dc.setupNode0(ctx); err != nil {
-				return nil
+				return err
 			}
 		} else {
 			if err := dc.joinNode(ctx, i, 0); err != nil {
@@ -1205,6 +1302,18 @@ COPY vault /bin/vault
 	}
 	dc.builtTags[tag] = struct{}{}
 	return tag, nil
+}
+
+func (dc *DockerCluster) GetActiveClusterNode() *DockerClusterNode {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	node, err := testcluster.WaitForActiveNode(ctx, dc)
+	if err != nil {
+		panic(fmt.Sprintf("no cluster node became active in timeout window: %v", err))
+	}
+
+	return dc.ClusterNodes[node]
 }
 
 /* Notes on testing the non-bridge network case:

@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
@@ -77,22 +77,18 @@ func (c *PluginInfoCommand) Run(args []string) int {
 
 	var pluginNameRaw, pluginTypeRaw string
 	args = f.Args()
+	positionalArgsCount := len(args)
 	switch {
-	case len(args) < 1:
-		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1 or 2, got %d)", len(args)))
+	case positionalArgsCount < 2:
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 2, got %d)", positionalArgsCount))
 		return 1
-	case len(args) > 2:
-		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1 or 2, got %d)", len(args)))
+	case positionalArgsCount > 2:
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 2, got %d)", positionalArgsCount))
 		return 1
-
-	// These cases should come after invalid cases have been checked
-	case len(args) == 1:
-		pluginTypeRaw = "unknown"
-		pluginNameRaw = args[0]
-	case len(args) == 2:
-		pluginTypeRaw = args[0]
-		pluginNameRaw = args[1]
 	}
+
+	pluginTypeRaw = args[0]
+	pluginNameRaw = args[1]
 
 	client, err := c.Client()
 	if err != nil {

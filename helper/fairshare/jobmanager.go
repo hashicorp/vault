@@ -142,7 +142,12 @@ func (j *JobManager) GetPendingJobCount() int {
 func (j *JobManager) GetWorkerCounts() map[string]int {
 	j.l.RLock()
 	defer j.l.RUnlock()
-	return j.workerCount
+	workerCounts := make(map[string]int, len(j.workerCount))
+	for k, v := range j.workerCount {
+		workerCounts[k] = v
+	}
+
+	return workerCounts
 }
 
 // GetWorkQueueLengths() returns a map of queue ID to number of jobs in the queue

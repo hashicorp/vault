@@ -15,11 +15,11 @@
         data-test-input="operationNone"
         id="operationNone"
         type="checkbox"
-        class="switch is-rounded is-success is-small"
+        class="toggle is-success is-small"
         checked={{not this.model.operationNone}}
         onchange={{action "toggleOperationSpecial" value="target.checked"}}
       />
-      <label for="operationNone">
+      <label for="operationNone" class="has-text-weight-bold is-size-8">
         Allow this role to perform KMIP operations
       </label>
     </div>
@@ -37,7 +37,7 @@
         <hr />
         <div class="is-flex">
           <div class="kmip-role-allowed-operations">
-            {{#each-in this.model.operationFormFields.firstObject as |groupName fieldsInGroup|}}
+            {{#each-in (get this.model.operationFormFields 0) as |groupName fieldsInGroup|}}
               <h4 class="title is-7">{{groupName}}</h4>
               {{#each fieldsInGroup as |attr|}}
                 <FormField
@@ -83,29 +83,25 @@
       <FormField data-test-field @attr={{attr}} @model={{this.model}} />
     {{/each}}
   </div>
+
   <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
-    <div class="field is-grouped">
-      <div class="control">
-        <Hds::Button
-          @text={{this.saveButtonText}}
-          @icon={{if this.save.isRunning "loading"}}
-          type="submit"
-          data-test-edit-form-submit
-          disabled={{this.save.isRunning}}
-        />
-      </div>
+    <Hds::ButtonSet>
+      <Hds::Button
+        @text={{this.saveButtonText}}
+        @icon={{if this.save.isRunning "loading"}}
+        type="submit"
+        data-test-edit-form-submit
+        disabled={{this.save.isRunning}}
+      />
       {{#if this.cancelLink}}
-        <div class="control">
-          <LinkTo
-            @route={{this.cancelLink.route}}
-            @models={{this.cancelLink.models}}
-            class="button"
-            data-test-edit-form-cancel={{true}}
-          >
-            Cancel
-          </LinkTo>
-        </div>
+        <Hds::Button
+          @text="Cancel"
+          @color="secondary"
+          @route={{this.cancelLink.route}}
+          @models={{this.cancelLink.models}}
+          data-test-edit-form-cancel
+        />
       {{/if}}
-    </div>
+    </Hds::ButtonSet>
   </div>
 </form>

@@ -18,14 +18,14 @@
 <div class="tabs-container box is-bottomless is-marginless is-paddingless">
   <nav class="tabs" aria-label="kubernetes tabs">
     <ul>
-      <LinkTo @route="overview" data-test-tab="overview">Overview</LinkTo>
-      <LinkTo @route="roles" data-test-tab="roles">Roles</LinkTo>
-      <LinkTo @route="configuration" data-test-tab="config">Configuration</LinkTo>
+      <li><LinkTo @route="overview" data-test-tab="overview">Overview</LinkTo></li>
+      <li><LinkTo @route="roles" data-test-tab="roles">Roles</LinkTo></li>
+      <li><LinkTo @route="configuration" data-test-tab="config">Configuration</LinkTo></li>
     </ul>
   </nav>
 </div>
 
-<Toolbar>
+<Toolbar aria-label="items for managing kubernetes items">
   {{#if @filterRoles}}
     <ToolbarFilters>
       <NavigateInput

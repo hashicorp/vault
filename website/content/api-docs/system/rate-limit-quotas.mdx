@@ -6,7 +6,7 @@ description: The `/sys/quotas/rate-limit` endpoint is used to create, edit and d
 
 # `/sys/quotas/rate-limit`
 
-@include 'alerts/restricted-root.mdx'
+@include 'alerts/restricted-admin.mdx'
 
 The `/sys/quotas/rate-limit` endpoint is used to create, edit and delete rate limit quotas.
 
@@ -28,14 +28,15 @@ the mount to restrict more specific API paths.
   A blank path configures a global rate limit quota. For example `namespace1/`
   adds a quota to a full namespace, `namespace1/auth/userpass` adds a quota to
   `userpass` in `namespace1`, and `namespace1/kv-v2/data/foo/bar` adds a quota to
-  a specific secret on a K/V v2 mount in `namespace1`. A trailing glob (`*`) can also
+  a specific secret on a KV v2 mount in `namespace1`. A trailing glob (`*`) can also
   be added as part of the path after the mount to match paths that share the same prefix
   prior to the glob. `namespace1/kv-v2/data/foo/*` would match both
   `namespace1/kv-v2/data/foo/bar` and `namespace1/kv-v2/data/foo/baz`. Updating this field on
   an existing quota can have "moving" effects. For example, updating `namespace1` to
   `namespace1/auth/userpass` moves this quota from being a namespace quota to a
   namespace specific mount quota. Non-global quotas are not inherited by child
-  namespaces. **Note, namespaces are supported in Enterprise only**.
+  namespaces. Quotas cannot be created or modified in parent or sibling namespaces.
+  **Note, namespaces are supported in Enterprise only**.
 - `rate` `(float: 0.0)` - The maximum number of requests in a given interval to
   be allowed by the quota rule. The `rate` must be positive.
 - `interval` `(string: "")` - The duration to enforce rate limiting for (default `"1s"`).
@@ -75,6 +76,7 @@ $ curl \
 ## Delete a rate limit quota
 
 A rate limit quota can be deleted by `name`.
+Quotas that exist in a parent or a sibling namespace cannot be deleted.
 
 | Method   | Path                           |
 | :------- | :----------------------------- |
@@ -92,6 +94,9 @@ $ curl \
 ## Get a rate limit quota
 
 A rate limit quota can be retrieved by `name`.
+A quota can be read from any namespace. This behavior differs
+from modifying and deleting quotas which is not allowed within parent
+or sibling namespaces.
 
 | Method | Path                           |
 | :----- | :----------------------------- |
@@ -129,7 +134,9 @@ $ curl \
 
 ## List rate limit quotas
 
-This endpoint returns a list of all the rate limit quotas.
+This endpoint returns a list of all the rate limit quotas across all namespaces.
+Note that this level of access differs from creating, updating, and deleting
+quotas which restricts access to parent and sibling namespaces.
 
 | Method | Path                     |
 | :----- | :----------------------- |

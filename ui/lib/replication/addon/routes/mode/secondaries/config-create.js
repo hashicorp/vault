@@ -4,11 +4,12 @@
  */
 
 import { hash } from 'rsvp';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Base from '../../replication-base';
 
 export default Base.extend({
   flashMessages: service(),
+  router: service(),
 
   modelPath: 'model.config',
 
@@ -45,10 +46,10 @@ export default Base.extend({
     if (
       !this.version.hasPerfReplication ||
       replicationMode !== 'performance' ||
-      !cluster.get(`${replicationMode}.isPrimary`) ||
-      !cluster.get('canAddSecondary')
+      !cluster[replicationMode].isPrimary ||
+      !cluster.canAddSecondary
     ) {
-      return this.transitionTo('mode', replicationMode);
+      return this.router.transitionTo('vault.cluster.replication.mode', replicationMode);
     }
   },
 

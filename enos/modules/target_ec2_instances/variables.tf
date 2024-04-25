@@ -50,7 +50,7 @@ variable "project_name" {
 variable "seal_key_names" {
   type        = list(string)
   description = "The key management seal key names"
-  default     = null
+  default     = []
 }
 
 variable "ssh_allow_ips" {

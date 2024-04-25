@@ -61,7 +61,7 @@
 .is-hint {
   color: $grey;
   font-size: $size-8;
-  padding: $size-8 0;
+  padding: $spacing-12 0;
 }
 
 .is-optional {
@@ -75,6 +75,10 @@
   word-wrap: break-word;
   word-break: break-word;
   white-space: pre-wrap;
+}
+
+.overflow-wrap {
+  overflow-wrap: break-word;
 }
 
 .truncate-second-line {

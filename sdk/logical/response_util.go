@@ -138,6 +138,8 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 			statusCode = http.StatusBadRequest
 		case errwrap.Contains(err, ErrInvalidCredentials.Error()):
 			statusCode = http.StatusBadRequest
+		case errors.Is(err, ErrNotFound):
+			statusCode = http.StatusNotFound
 		}
 	}
 
@@ -205,7 +207,7 @@ func RespondErrorAndData(w http.ResponseWriter, status int, data interface{}, er
 
 	type ErrorAndDataResponse struct {
 		Errors []string    `json:"errors"`
-		Data   interface{} `json:"data""`
+		Data   interface{} `json:"data"`
 	}
 	resp := &ErrorAndDataResponse{Errors: make([]string, 0, 1)}
 	if err != nil {

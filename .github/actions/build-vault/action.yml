@@ -1,0 +1,202 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+---
+name: Build Vault
+description: |
+  Build various Vault binaries and package them into Zip bundles, Deb and RPM packages,
+  and various container images. Upload the resulting artifacts to Github Actions artifact storage.
+  This composite action is used across both CE and Ent, thus is should maintain compatibility with
+  both repositories.
+
+inputs:
+  github-token:
+    type: string
+    description: An elevated Github token to access private Go modules if necessary.
+    default: ""
+  cgo-enabled:
+    type: number
+    description: Enable or disable CGO during the build.
+    default: 0
+  create-docker-container:
+    type: boolean
+    description: Package the binary into a Docker/AWS container.
+    default: true
+  create-redhat-container:
+    type: boolean
+    description: Package the binary into a Redhat container.
+    default: false
+  create-packages:
+    type: boolean
+    description: Package the binaries into deb and rpm formats.
+    default: true
+  goos:
+    type: string
+    description: The Go GOOS value environment variable to set during the build.
+  goarch:
+    type: string
+    description: The Go GOARCH value environment variable to set during the build.
+  goarm:
+    type: string
+    description: The Go GOARM value environment variable to set during the build.
+    default: ""
+  goexperiment:
+    type: string
+    description: Which Go experiments to enable.
+    default: ""
+  go-tags:
+    type: string
+    description: A comma separated list of tags to pass to the Go compiler during build.
+    default: ""
+  package-name:
+    type: string
+    description: The name to use for the linux packages.
+    default: ${{ github.event.repository.name }}
+  vault-binary-name:
+    type: string
+    description: The name of the vault binary.
+    default: vault
+  vault-edition:
+    type: string
+    description: The edition of vault to build.
+  vault-version:
+    type: string
+    description: The version metadata to inject into the build via the linker.
+  web-ui-cache-key:
+    type: string
+    description: The cache key for restoring the pre-built web UI artifact.
+
+outputs:
+  vault-binary-path:
+    description: The location of the built binary.
+    value: ${{ steps.containerize.outputs.vault-binary-path != '' && steps.containerize.outputs.vault-binary-path || steps.metadata.outputs.binary-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Ensure zstd is available for actions/cache
+      # actions/cache restores based on cache key and "cache version", the former is unique to the
+      # build job or web UI, the latter is a hash which is based on the runner OS, the paths being
+      # cached, and the program used to compress it. Most of our workflows will use zstd to compress
+      # the cached artifact so we have to have it around for our machines to get both a version match
+      # and to decompress it. Most runners include zstd by default but there are exception like
+      # our Ubuntu 20.04 compatibility runners which do not.
+      shell: bash
+      run: which zstd || (sudo apt update && sudo apt install -y zstd)
+    - uses: ./.github/actions/set-up-go
+      with:
+        github-token: ${{ inputs.github-token }}
+    - uses: ./.github/actions/install-external-tools
+    - if: inputs.vault-edition != 'ce'
+      name: Configure Git
+      shell: bash
+      run: git config --global url."https://${{ inputs.github-token }}:@github.com".insteadOf "https://github.com"
+    - name: Restore UI from cache
+      uses: actions/cache@e12d46a63a90f2fae62d114769bbf2a179198b5c # v3.3.3
+      with:
+        # Restore the UI asset from the UI build workflow. Never use a partial restore key.
+        enableCrossOsArchive: true
+        fail-on-cache-miss: true
+        path: http/web_ui
+        key: ${{ inputs.web-ui-cache-key }}
+    - name: Metadata
+      id: metadata
+      env:
+        # We need these for the artifact basename helper
+        GOARCH: ${{ inputs.goarch }}
+        GOOS: ${{ inputs.goos }}
+        VERSION: ${{ inputs.vault-version }}
+        VERSION_METADATA: ${{ inputs.vault-edition != 'ce' && inputs.vault-edition || '' }}
+      shell: bash
+      run: |
+        if [[ '${{ inputs.vault-edition }}' =~ 'ce' ]]; then
+          build_step_name='Vault ${{ inputs.goos }} ${{ inputs.goarch }} v${{ inputs.vault-version }}'
+          package_version='${{ inputs.vault-version }}'
+        else
+          build_step_name='Vault ${{ inputs.goos }} ${{ inputs.goarch }} v${{ inputs.vault-version }}+${{ inputs.vault-edition }}'
+          package_version='${{ inputs.vault-version }}+ent' # this should always be +ent here regardless of enterprise edition
+        fi
+        {
+          echo "artifact-basename=$(make ci-get-artifact-basename)"
+          echo "binary-path=dist/${{ inputs.vault-binary-name }}"
+          echo "build-step-name=${build_step_name}"
+          echo "package-version=${package_version}"
+        } | tee -a "$GITHUB_OUTPUT"
+    - name: ${{ steps.metadata.outputs.build-step-name }}
+      env:
+        CGO_ENABLED: ${{ inputs.cgo-enabled }}
+        GO_TAGS: ${{ inputs.go-tags }}
+        GOARCH: ${{ inputs.goarch }}
+        GOARM: ${{ inputs.goarm }}
+        GOOS: ${{ inputs.goos }}
+        GOEXPERIMENT: ${{ inputs.goexperiment }}
+        GOPRIVATE: github.com/hashicorp
+        VERSION: ${{ inputs.version }}
+        VERSION_METADATA: ${{ inputs.vault-edition != 'ce' && inputs.vault-edition || '' }}
+      shell: bash
+      run: make ci-build
+    - if: inputs.vault-edition != 'ce'
+      shell: bash
+      run: make ci-prepare-legal
+    - name: Bundle Vault
+      env:
+        BUNDLE_PATH: out/${{ steps.metadata.outputs.artifact-basename }}.zip
+      shell: bash
+      run: make ci-bundle
+    # Use actions/upload-artifact @3.x until https://hashicorp.atlassian.net/browse/HREL-99 is resolved
+    - uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+      with:
+        name: ${{ steps.metadata.outputs.artifact-basename }}.zip
+        path: out/${{ steps.metadata.outputs.artifact-basename }}.zip
+        if-no-files-found: error
+    - if: inputs.create-packages == 'true'
+      uses: hashicorp/actions-packaging-linux@v1
+      with:
+        name: ${{ inputs.package-name }}
+        description: Vault is a tool for secrets management, encryption as a service, and privileged access management.
+        arch: ${{ inputs.goarch }}
+        version: ${{ steps.metadata.outputs.package-version }}
+        maintainer: HashiCorp
+        homepage: https://github.com/hashicorp/vault
+        license: BUSL-1.1
+        binary: ${{ steps.metadata.outputs.binary-path }}
+        deb_depends: openssl
+        rpm_depends: openssl
+        config_dir: .release/linux/package/
+        preinstall: .release/linux/preinst
+        postinstall: .release/linux/postinst
+        postremove: .release/linux/postrm
+    - if: inputs.create-packages == 'true'
+      id: package-files
+      name: Determine package file names
+      shell: bash
+      run: |
+        {
+          echo "rpm-files=$(basename out/*.rpm)"
+          echo "deb-files=$(basename out/*.deb)"
+        } | tee -a "$GITHUB_OUTPUT"
+    - if: inputs.create-packages == 'true'
+      # Use actions/upload-artifact @3.x until https://hashicorp.atlassian.net/browse/HREL-99 is resolved
+      uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+      with:
+        name: ${{ steps.package-files.outputs.rpm-files }}
+        path: out/${{ steps.package-files.outputs.rpm-files }}
+        if-no-files-found: error
+    - if: inputs.create-packages == 'true'
+      # Use actions/upload-artifact @3.x until https://hashicorp.atlassian.net/browse/HREL-99 is resolved
+      uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+      with:
+        name: ${{ steps.package-files.outputs.deb-files }}
+        path: out/${{ steps.package-files.outputs.deb-files }}
+        if-no-files-found: error
+    # Do our containerization last as it will move the binary location if we create containers.
+    - uses: ./.github/actions/containerize
+      id: containerize
+      with:
+        docker: ${{ inputs.create-docker-container }}
+        redhat: ${{ inputs.create-redhat-container }}
+        goarch: ${{ inputs.goarch }}
+        goos: ${{ inputs.goos }}
+        vault-binary-path: ${{ steps.metadata.outputs.binary-path }}
+        vault-edition: ${{ inputs.vault-edition }}
+        vault-version: ${{ inputs.vault-version }}

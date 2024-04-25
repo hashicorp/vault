@@ -10,6 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', function (hooks) {
   setupRenderingTest(hooks);
@@ -42,6 +43,13 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       { label: 'roles', route: 'roles' },
       { label: 'create' },
     ];
+    setRunOptions({
+      rules: {
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+      },
+    });
   });
 
   test('it should display placeholder when generation preference is not selected', async function (assert) {

@@ -316,7 +316,7 @@ func (c *serviceRegistration) NotifyInitializedStateChange(isInitialized bool) e
 	default:
 		// NOTE: If this occurs Vault's initialized status could be out of
 		// sync with Consul until checkTimer expires.
-		c.logger.Warn("concurrent initalize state change notify dropped")
+		c.logger.Warn("concurrent initialize state change notify dropped")
 	}
 
 	return nil
@@ -402,9 +402,9 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 						}
 
 						c.serviceLock.Lock()
-						defer c.serviceLock.Unlock()
-
 						registeredServiceID = serviceID
+						c.serviceLock.Unlock()
+
 						return
 					}
 				}()

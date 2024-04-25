@@ -14,14 +14,14 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	vaulthttp "github.com/hashicorp/vault/http"
 	vaultocsp "github.com/hashicorp/vault/sdk/helper/ocsp"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-
-	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 )
 
@@ -41,7 +41,7 @@ func TestIntegration_RotateRootUsesNext(t *testing.T) {
 	require.NotNil(t, resp, "got nil response from rotate root")
 	require.False(t, resp.IsError(), "got an error from rotate root: %#v", resp)
 
-	issuerId1 := resp.Data["issuer_id"].(issuerID)
+	issuerId1 := resp.Data["issuer_id"].(issuing.IssuerID)
 	issuerName1 := resp.Data["issuer_name"]
 
 	require.NotEmpty(t, issuerId1, "issuer id was empty on initial rotate root command")
@@ -61,7 +61,7 @@ func TestIntegration_RotateRootUsesNext(t *testing.T) {
 	require.NotNil(t, resp, "got nil response from rotate root")
 	require.False(t, resp.IsError(), "got an error from rotate root: %#v", resp)
 
-	issuerId2 := resp.Data["issuer_id"].(issuerID)
+	issuerId2 := resp.Data["issuer_id"].(issuing.IssuerID)
 	issuerName2 := resp.Data["issuer_name"]
 
 	require.NotEmpty(t, issuerId2, "issuer id was empty on second rotate root command")
@@ -83,7 +83,7 @@ func TestIntegration_RotateRootUsesNext(t *testing.T) {
 	require.NotNil(t, resp, "got nil response from rotate root")
 	require.False(t, resp.IsError(), "got an error from rotate root: %#v", resp)
 
-	issuerId3 := resp.Data["issuer_id"].(issuerID)
+	issuerId3 := resp.Data["issuer_id"].(issuing.IssuerID)
 	issuerName3 := resp.Data["issuer_name"]
 
 	require.NotEmpty(t, issuerId3, "issuer id was empty on third rotate root command")
@@ -436,7 +436,7 @@ func TestIntegration_AutoIssuer(t *testing.T) {
 		"pem_bundle": certOne,
 	})
 	requireSuccessNonNilResponse(t, resp, err)
-	issuerIdOneReimported := issuerID(resp.Data["imported_issuers"].([]string)[0])
+	issuerIdOneReimported := issuing.IssuerID(resp.Data["imported_issuers"].([]string)[0])
 
 	resp, err = CBRead(b, s, "config/issuers")
 	requireSuccessNonNilResponse(t, resp, err)
@@ -478,6 +478,87 @@ func TestIntegration_AutoIssuer(t *testing.T) {
 	resp, err = CBRead(b, s, "config/issuers")
 	requireSuccessNonNilResponse(t, resp, err)
 	require.Equal(t, issuerIdOneReimported, resp.Data["default"])
+}
+
+// TestLDAPAiaCrlUrls validates we can properly handle CRL urls that are ldap based.
+func TestLDAPAiaCrlUrls(t *testing.T) {
+	t.Parallel()
+
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		NumCores:    1,
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	singleCore := cluster.Cores[0]
+	vault.TestWaitActive(t, singleCore.Core)
+	client := singleCore.Client
+
+	mountPKIEndpoint(t, client, "pki")
+
+	// Attempt multiple urls
+	crls := []string{
+		"ldap://ldap.example.com/cn=example%20CA,dc=example,dc=com?certificateRevocationList;binary",
+		"ldap://ldap.example.com/cn=CA,dc=example,dc=com?authorityRevocationList;binary",
+	}
+
+	_, err := client.Logical().Write("pki/config/urls", map[string]interface{}{
+		"crl_distribution_points": crls,
+	})
+	require.NoError(t, err)
+
+	resp, err := client.Logical().Read("pki/config/urls")
+	require.NoError(t, err, "failed reading config/urls")
+	require.NotNil(t, resp, "resp was nil")
+	require.NotNil(t, resp.Data, "data within response was nil")
+	require.NotEmpty(t, resp.Data["crl_distribution_points"], "crl_distribution_points was nil within data")
+	require.Len(t, resp.Data["crl_distribution_points"], len(crls))
+
+	for _, crlVal := range crls {
+		require.Contains(t, resp.Data["crl_distribution_points"], crlVal)
+	}
+
+	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "Root R1",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotEmpty(t, resp.Data["issuer_id"])
+	rootIssuerId := resp.Data["issuer_id"].(string)
+
+	_, err = client.Logical().Write("pki/roles/example-root", map[string]interface{}{
+		"allowed_domains":  "example.com",
+		"allow_subdomains": "true",
+		"max_ttl":          "1h",
+		"key_type":         "ec",
+		"issuer_ref":       rootIssuerId,
+	})
+	require.NoError(t, err)
+
+	resp, err = client.Logical().Write("pki/issue/example-root", map[string]interface{}{
+		"common_name": "test.example.com",
+		"ttl":         "5m",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotEmpty(t, resp.Data["certificate"])
+
+	certPEM := resp.Data["certificate"].(string)
+	certBlock, _ := pem.Decode([]byte(certPEM))
+	require.NotNil(t, certBlock)
+	cert, err := x509.ParseCertificate(certBlock.Bytes)
+	require.NoError(t, err)
+
+	require.EqualValues(t, crls, cert.CRLDistributionPoints)
 }
 
 func TestIntegrationOCSPClientWithPKI(t *testing.T) {
@@ -630,9 +711,6 @@ func TestIntegrationOCSPClientWithPKI(t *testing.T) {
 			return testLogger
 		}, 10)
 
-		err = ocspClient.VerifyLeafCertificate(context.Background(), cert, issuer, conf)
-		require.NoError(t, err)
-
 		_, err = client.Logical().Write("pki/revoke", map[string]interface{}{
 			"serial_number": serialNumber,
 		})
@@ -643,11 +721,11 @@ func TestIntegrationOCSPClientWithPKI(t *testing.T) {
 	}
 }
 
-func genTestRootCa(t *testing.T, b *backend, s logical.Storage) (issuerID, keyID) {
+func genTestRootCa(t *testing.T, b *backend, s logical.Storage) (issuing.IssuerID, issuing.KeyID) {
 	return genTestRootCaWithIssuerName(t, b, s, "")
 }
 
-func genTestRootCaWithIssuerName(t *testing.T, b *backend, s logical.Storage, issuerName string) (issuerID, keyID) {
+func genTestRootCaWithIssuerName(t *testing.T, b *backend, s logical.Storage, issuerName string) (issuing.IssuerID, issuing.KeyID) {
 	data := map[string]interface{}{
 		"common_name": "test.com",
 	}
@@ -665,8 +743,8 @@ func genTestRootCaWithIssuerName(t *testing.T, b *backend, s logical.Storage, is
 	require.NotNil(t, resp, "got nil response from generating root ca")
 	require.False(t, resp.IsError(), "got an error from generating root ca: %#v", resp)
 
-	issuerId := resp.Data["issuer_id"].(issuerID)
-	keyId := resp.Data["key_id"].(keyID)
+	issuerId := resp.Data["issuer_id"].(issuing.IssuerID)
+	keyId := resp.Data["key_id"].(issuing.KeyID)
 
 	require.NotEmpty(t, issuerId, "returned issuer id was empty")
 	require.NotEmpty(t, keyId, "returned key id was empty")

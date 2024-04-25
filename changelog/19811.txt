@@ -1,0 +1,3 @@
+```release-note:bug
+cli/kv: Undelete now properly handles KV-V2 mount paths that are more than one layer deep.
+```

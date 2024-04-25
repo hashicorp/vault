@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+// Popup menu no longer exists, but these styles are still used in some places
 .popup-menu-content,
 .ember-power-select-options {
   border-radius: $radius;
@@ -27,7 +28,7 @@
   }
 
   .menu {
-    padding: $size-11 0;
+    padding: $spacing-4 0;
   }
 
   button.link,
@@ -42,10 +43,23 @@
     height: auto;
     font-size: $size-7;
     font-weight: $font-weight-semibold;
-    padding: $size-9 $size-8;
+    padding: $spacing-10 $spacing-12;
     text-align: left;
     text-decoration: none;
     width: 100%;
+  }
+
+  // TODO HDS polish - temp styling fix for ConfirmAction dropdown buttons
+  // so they match other dropdown elements until we replace popup-menu with Hds::Dropdown
+  .hds-confirm-action-critical {
+    &:hover {
+      background-color: $ui-gray-050;
+    }
+    div {
+      margin-left: -$spacing-4;
+      font-size: $size-7;
+      font-weight: $font-weight-semibold;
+    }
   }
 
   button.link,
@@ -95,12 +109,12 @@
     font-weight: $font-weight-normal;
     letter-spacing: 0;
     margin: 0;
-    padding: $size-10 $size-8 0;
+    padding: $spacing-8 $spacing-12 0;
     text-transform: uppercase;
   }
 
   .menu-content {
-    padding: $size-10 $size-8;
+    padding: $spacing-8 $spacing-12;
   }
 
   hr {
@@ -111,7 +125,7 @@
 
 .popup-menu-content p {
   box-shadow: none;
-  padding-top: $size-10;
+  padding-top: $spacing-8;
   font-weight: $font-weight-semibold;
 }
 
@@ -161,5 +175,20 @@
     &.ember-basic-dropdown--transitioning-out {
       animation: drop-fade-below 0.15s reverse;
     }
+  }
+}
+
+// Match HDS styling for namespace ink
+a.ns-dropdown-item {
+  color: var(--token-color-foreground-primary);
+  display: flex;
+  align-items: flex-start;
+  padding: 7px 9px 7px 0px;
+  border: 1px solid transparent;
+  outline-style: solid;
+  outline-color: transparent;
+  text-decoration: none;
+  &:hover {
+    color: var(--token-color-foreground-action-hover);
   }
 }

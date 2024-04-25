@@ -3,15 +3,17 @@
 
 scenario "seal_ha" {
   matrix {
-    arch            = ["amd64", "arm64"]
-    artifact_source = ["local", "crt", "artifactory"]
-    artifact_type   = ["bundle", "package"]
-    backend         = ["consul", "raft"]
-    consul_version  = ["1.12.9", "1.13.9", "1.14.9", "1.15.5", "1.16.1"]
-    distro          = ["ubuntu", "rhel"]
-    edition         = ["ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
-    primary_seal    = ["awskms"]
-    secondary_seal  = ["awskms"]
+    arch            = global.archs
+    artifact_source = global.artifact_sources
+    artifact_type   = global.artifact_types
+    backend         = global.backends
+    config_mode     = global.config_modes
+    consul_version  = global.consul_versions
+    distro          = global.distros
+    edition         = global.editions
+    // Seal HA is only supported with auto-unseal devices.
+    primary_seal   = ["awskms", "pkcs11"]
+    secondary_seal = ["awskms", "pkcs11"]
 
     # Our local builder always creates bundles
     exclude {
@@ -23,6 +25,17 @@ scenario "seal_ha" {
     exclude {
       arch    = ["arm64"]
       edition = ["ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+    }
+
+    # PKCS#11 can only be used on ent.hsm and ent.hsm.fips1402.
+    exclude {
+      primary_seal = ["pkcs11"]
+      edition      = ["ce", "ent", "ent.fips1402"]
+    }
+
+    exclude {
+      secondary_seal = ["pkcs11"]
+      edition        = ["ce", "ent", "ent.fips1402"]
     }
   }
 
@@ -83,20 +96,30 @@ scenario "seal_ha" {
   }
 
   step "create_primary_seal_key" {
-    module = "seal_key_${matrix.primary_seal}"
+    module     = "seal_${matrix.primary_seal}"
+    depends_on = [step.create_vpc]
+
+    providers = {
+      enos = provider.enos.ubuntu
+    }
 
     variables {
-      cluster_id   = step.create_vpc.cluster_id
+      cluster_id   = step.create_vpc.id
       cluster_meta = "primary"
       common_tags  = global.tags
     }
   }
 
   step "create_secondary_seal_key" {
-    module = "seal_key_${matrix.secondary_seal}"
+    module     = "seal_${matrix.secondary_seal}"
+    depends_on = [step.create_vpc]
+
+    providers = {
+      enos = provider.enos.ubuntu
+    }
 
     variables {
-      cluster_id      = step.create_vpc.cluster_id
+      cluster_id      = step.create_vpc.id
       cluster_meta    = "secondary"
       common_tags     = global.tags
       other_resources = step.create_primary_seal_key.resource_names
@@ -150,9 +173,9 @@ scenario "seal_ha" {
 
     variables {
       ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
-      seal_key_names  = step.create_secondary_seal_key.resource_names
       cluster_tag_key = global.backend_tag_key
       common_tags     = global.tags
+      seal_key_names  = step.create_secondary_seal_key.resource_names
       vpc_id          = step.create_vpc.id
     }
   }
@@ -196,6 +219,7 @@ scenario "seal_ha" {
       backend_cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = global.backend_tag_key
       cluster_name            = step.create_vault_cluster_targets.cluster_name
+      config_mode             = matrix.config_mode
       consul_license          = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       consul_release = matrix.backend == "consul" ? {
         edition = var.backend_edition
@@ -208,8 +232,8 @@ scenario "seal_ha" {
       manage_service       = local.manage_service
       packages             = concat(global.packages, global.distro_packages[matrix.distro])
       // Only configure our primary seal during our initial cluster setup
+      seal_attributes = step.create_primary_seal_key.attributes
       seal_type       = matrix.primary_seal
-      seal_key_name   = step.create_primary_seal_key.resource_name
       storage_backend = matrix.backend
       target_hosts    = step.create_vault_cluster_targets.hosts
     }
@@ -329,23 +353,71 @@ scenario "seal_ha" {
     }
 
     variables {
-      cluster_name            = step.create_vault_cluster_targets.cluster_name
-      install_dir             = local.vault_install_dir
-      license                 = matrix.edition != "ce" ? step.read_vault_license.license : null
-      manage_service          = local.manage_service
-      seal_type               = matrix.primary_seal
-      seal_key_name           = step.create_primary_seal_key.resource_name
-      seal_type_secondary     = matrix.secondary_seal
-      seal_key_name_secondary = step.create_secondary_seal_key.resource_name
-      storage_backend         = matrix.backend
-      target_hosts            = step.create_vault_cluster_targets.hosts
+      cluster_name              = step.create_vault_cluster_targets.cluster_name
+      install_dir               = local.vault_install_dir
+      license                   = matrix.edition != "ce" ? step.read_vault_license.license : null
+      manage_service            = local.manage_service
+      seal_attributes           = step.create_primary_seal_key.attributes
+      seal_attributes_secondary = step.create_secondary_seal_key.attributes
+      seal_type                 = matrix.primary_seal
+      seal_type_secondary       = matrix.secondary_seal
+      storage_backend           = matrix.backend
+      target_hosts              = step.create_vault_cluster_targets.hosts
+    }
+  }
+
+  // Wait for our cluster to elect a leader
+  step "wait_for_leader_election" {
+    module     = module.vault_wait_for_leader
+    depends_on = [step.add_ha_seal_to_cluster]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      timeout           = 120 # seconds
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  step "get_leader_ip_for_step_down" {
+    module     = module.vault_get_cluster_ips
+    depends_on = [step.wait_for_leader_election]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  // Force a step down to trigger a new leader election
+  step "vault_leader_step_down" {
+    module     = module.vault_step_down
+    depends_on = [step.get_leader_ip_for_step_down]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_install_dir = local.vault_install_dir
+      leader_host       = step.get_leader_ip_for_step_down.leader_host
+      vault_root_token  = step.create_vault_cluster.root_token
     }
   }
 
   // Wait for our cluster to elect a leader
   step "wait_for_new_leader" {
     module     = module.vault_wait_for_leader
-    depends_on = [step.add_ha_seal_to_cluster]
+    depends_on = [step.vault_leader_step_down]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -407,6 +479,7 @@ scenario "seal_ha" {
     }
   }
 
+  // Perform all of our standard verifications after we've enabled multiseal
   step "verify_vault_version" {
     module     = module.vault_verify_version
     depends_on = [step.wait_for_seal_rewrap]
@@ -457,6 +530,7 @@ scenario "seal_ha" {
     }
   }
 
+  // Make sure our data is still available
   step "verify_read_test_data" {
     module     = module.vault_verify_read_data
     depends_on = [step.wait_for_seal_rewrap]
@@ -484,6 +558,166 @@ scenario "seal_ha" {
     }
   }
 
+  // Make sure we have a "multiseal" seal type
+  step "verify_seal_type" {
+    // Don't run this on versions less than 1.16.0-beta1 until VAULT-21053 is fixed on prior branches.
+    skip_step  = semverconstraint(var.vault_product_version, "< 1.16.0-beta1")
+    module     = module.verify_seal_type
+    depends_on = [step.wait_for_seal_rewrap]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_install_dir = local.vault_install_dir
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      seal_type         = "multiseal"
+    }
+  }
+
+  // Now we'll migrate away from our initial seal to our secondary seal
+
+  // Stop the vault service on all nodes before we restart with new seal config
+  step "stop_vault_for_migration" {
+    module = module.stop_vault
+    depends_on = [
+      step.wait_for_seal_rewrap,
+      step.verify_read_test_data,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      target_hosts = step.create_vault_cluster_targets.hosts
+    }
+  }
+
+  // Remove the "primary" seal from the cluster. Set our "secondary" seal to priority 1. We do this
+  // by restarting vault with the correct config.
+  step "remove_primary_seal" {
+    module     = module.start_vault
+    depends_on = [step.stop_vault_for_migration]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      cluster_name    = step.create_vault_cluster_targets.cluster_name
+      install_dir     = local.vault_install_dir
+      license         = matrix.edition != "ce" ? step.read_vault_license.license : null
+      manage_service  = local.manage_service
+      seal_alias      = "secondary"
+      seal_attributes = step.create_secondary_seal_key.attributes
+      seal_type       = matrix.secondary_seal
+      storage_backend = matrix.backend
+      target_hosts    = step.create_vault_cluster_targets.hosts
+    }
+  }
+
+  // Wait for our cluster to elect a leader after restarting vault with a new primary seal
+  step "wait_for_leader_after_migration" {
+    module     = module.vault_wait_for_leader
+    depends_on = [step.remove_primary_seal]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      timeout           = 120 # seconds
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  // Since we've restarted our cluster we might have a new leader and followers. Get the new IPs.
+  step "get_cluster_ips_after_migration" {
+    module     = module.vault_get_cluster_ips
+    depends_on = [step.wait_for_leader_after_migration]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  // Make sure we unsealed
+  step "verify_vault_unsealed_after_migration" {
+    module     = module.vault_verify_unsealed
+    depends_on = [step.wait_for_leader_after_migration]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_install_dir = local.vault_install_dir
+      vault_instances   = step.create_vault_cluster_targets.hosts
+    }
+  }
+
+  // Wait for the seal rewrap to complete and verify that no entries failed
+  step "wait_for_seal_rewrap_after_migration" {
+    module = module.vault_wait_for_seal_rewrap
+    depends_on = [
+      step.wait_for_leader_after_migration,
+      step.verify_vault_unsealed_after_migration,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  // Make sure our data is still available after migration
+  step "verify_read_test_data_after_migration" {
+    module     = module.vault_verify_read_data
+    depends_on = [step.wait_for_seal_rewrap_after_migration]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      node_public_ips   = step.get_cluster_ips_after_migration.follower_public_ips
+      vault_install_dir = local.vault_install_dir
+    }
+  }
+
+  // Make sure we have our secondary seal type after migration
+  step "verify_seal_type_after_migration" {
+    // Don't run this on versions less than 1.16.0-beta1 until VAULT-21053 is fixed on prior branches.
+    skip_step  = semverconstraint(var.vault_product_version, "<= 1.16.0-beta1")
+    module     = module.verify_seal_type
+    depends_on = [step.wait_for_seal_rewrap_after_migration]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_install_dir = local.vault_install_dir
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      seal_type         = matrix.secondary_seal
+    }
+  }
+
   output "audit_device_file_path" {
     description = "The file path for the file audit device, if enabled"
     value       = step.create_vault_cluster.audit_device_file_path
@@ -499,9 +733,19 @@ scenario "seal_ha" {
     value       = step.create_vault_cluster.target_hosts
   }
 
-  output "primary_seal_key_name" {
-    description = "The Vault cluster primary seal key name"
-    value       = step.create_primary_seal_key.resource_name
+  output "initial_seal_rewrap" {
+    description = "The initial seal rewrap status"
+    value       = step.wait_for_initial_seal_rewrap.stdout
+  }
+
+  output "post_migration_seal_rewrap" {
+    description = "The seal rewrap status after migrating the primary seal"
+    value       = step.wait_for_seal_rewrap_after_migration.stdout
+  }
+
+  output "primary_seal_attributes" {
+    description = "The Vault cluster primary seal attributes"
+    value       = step.create_primary_seal_key.attributes
   }
 
   output "private_ips" {
@@ -534,9 +778,9 @@ scenario "seal_ha" {
     value       = step.create_vault_cluster.recovery_keys_hex
   }
 
-  output "secondary_seal_key_name" {
-    description = "The Vault cluster secondary seal key name"
-    value       = step.create_secondary_seal_key.resource_name
+  output "secondary_seal_attributes" {
+    description = "The Vault cluster secondary seal attributes"
+    value       = step.create_secondary_seal_key.attributes
   }
 
   output "unseal_keys_b64" {

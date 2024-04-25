@@ -9,6 +9,7 @@
     @subText="The total number of issuers in this PKI mount. Includes both root and intermediate certificates."
     @actionText="View issuers"
     @actionTo="issuers"
+    @actionModel={{@engine.id}}
   >
     <Hds::Text::Display @tag="h2" @size="500">
       {{format-number (if (eq @issuers 404) 0 @issuers.length)}}
@@ -20,6 +21,7 @@
       @subText="The total number of roles in this PKI mount that have been created to generate certificates."
       @actionText="View roles"
       @actionTo="roles"
+      @actionModel={{@engine.id}}
     >
       <Hds::Text::Display @tag="h2" @size="500">
         {{format-number (if (eq @roles 404) 0 @roles.length)}}
@@ -39,15 +41,15 @@
         @fallbackComponent="input-search"
         data-test-issue-certificate-input
       />
-      <button
+      <Hds::Button
+        @text="Issue"
+        @color="secondary"
+        class="has-left-margin-s align-self-baseline"
         type="submit"
-        class="button is-secondary has-left-margin-s"
         disabled={{unless this.rolesValue true}}
         {{on "click" this.transitionToIssueCertificates}}
         data-test-issue-certificate-button
-      >
-        Issue
-      </button>
+      />
     </div>
   </OverviewCard>
 
@@ -64,15 +66,14 @@
         @fallbackComponent="input-search"
         data-test-view-certificate-input
       />
-      <button
-        type="button"
-        class="button is-secondary {{unless this.certificateValue 'has-left-margin-s'}}"
+      <Hds::Button
+        @text="View"
+        @color="secondary"
+        class="align-self-baseline {{unless this.certificateValue 'has-left-margin-s'}}"
         disabled={{unless this.certificateValue true}}
         {{on "click" this.transitionToViewCertificates}}
         data-test-view-certificate-button
-      >
-        View
-      </button>
+      />
     </div>
   </OverviewCard>
 
@@ -91,15 +92,15 @@
         @nameKey={{"issuerName"}}
         data-test-issue-issuer-input
       />
-      <button
+      <Hds::Button
+        @text="View"
+        @color="secondary"
+        class="has-left-margin-s align-self-baseline"
         type="submit"
-        class="button is-secondary has-left-margin-s"
         disabled={{unless this.issuerValue true}}
         {{on "click" this.transitionToIssuerDetails}}
         data-test-view-issuer-button
-      >
-        View
-      </button>
+      />
     </div>
   </OverviewCard>
 </div>

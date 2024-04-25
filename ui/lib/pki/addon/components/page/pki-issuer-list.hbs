@@ -3,9 +3,9 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<PkiPaginatedList @listRoute="issuers.index" @list={{@issuers}}>
+<PkiPaginatedList @backend={{@backend}} @listRoute="issuers.index" @list={{@issuers}}>
   <:actions>
-    <ToolbarLink @route="issuers.import" data-test-generate-issuer="import">
+    <ToolbarLink @route="issuers.import" @model={{@backend}} data-test-generate-issuer="import">
       Import
     </ToolbarLink>
     <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
@@ -20,14 +20,20 @@
       <D.Content @defaultClass="popup-menu-content">
         <nav class="box menu" aria-label="generate options">
           <ul class="menu-list">
-            <li class="action">
-              <LinkTo @route="issuers.generate-root" {{on "click" (fn this.onLinkClick D)}} data-test-generate-issuer="root">
+            <li>
+              <LinkTo
+                @route="issuers.generate-root"
+                @model={{@backend}}
+                {{on "click" (fn this.onLinkClick D)}}
+                data-test-generate-issuer="root"
+              >
                 Root
               </LinkTo>
             </li>
-            <li class="action">
+            <li>
               <LinkTo
                 @route="issuers.generate-intermediate"
+                @model={{@backend}}
                 {{on "click" (fn this.onLinkClick D)}}
                 data-test-generate-issuer="intermediate"
               >
@@ -41,7 +47,11 @@
   </:actions>
   <:list as |issuers|>
     {{#each issuers as |pkiIssuer idx|}}
-      <LinkedBlock class="list-item-row" @params={{array "issuers.issuer.details" pkiIssuer.id}} @linkPrefix={{@mountPoint}}>
+      <LinkedBlock
+        class="list-item-row"
+        @params={{array "issuers.issuer.details" @backend pkiIssuer.id}}
+        @linkPrefix={{@mountPoint}}
+      >
         <div class="level is-mobile">
           <div class="level-left">
             <div data-test-issuer-list={{pkiIssuer.id}}>
@@ -84,22 +94,21 @@
           </div>
           <div class="level-right is-flex is-paddingless is-marginless">
             <div class="level-item">
-              <PopupMenu>
-                <nav class="menu" aria-label="issuer config options">
-                  <ul class="menu-list">
-                    <li data-test-popup-menu-details>
-                      <LinkTo @route="issuers.issuer.details" @model={{pkiIssuer.id}}>
-                        Details
-                      </LinkTo>
-                    </li>
-                    <li>
-                      <LinkTo @route="issuers.issuer.edit" @model={{pkiIssuer.id}}>
-                        Edit
-                      </LinkTo>
-                    </li>
-                  </ul>
-                </nav>
-              </PopupMenu>
+              <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+                <dd.ToggleIcon
+                  @icon="more-horizontal"
+                  @text="Manage issuer"
+                  @hasChevron={{false}}
+                  data-test-popup-menu-trigger
+                />
+                <dd.Interactive
+                  @text="Details"
+                  @route="issuers.issuer.details"
+                  @models={{array @backend pkiIssuer.id}}
+                  data-test-pki-issuer-details
+                />
+                <dd.Interactive @text="Edit" @route="issuers.issuer.edit" @models={{array @backend pkiIssuer.id}} />
+              </Hds::Dropdown>
             </div>
           </div>
         </div>
@@ -108,9 +117,13 @@
   </:list>
   <:empty>
     <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
-      <LinkTo @route="configuration.create">
-        Configure PKI
-      </LinkTo>
+      <Hds::Link::Standalone
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        @text="Configure PKI"
+        @route="configuration.create"
+        @model={{@backend}}
+      />
     </EmptyState>
   </:empty>
 </PkiPaginatedList>

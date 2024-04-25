@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { visit, currentURL, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import ENV from 'vault/config/environment';
+import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
 import authPage from 'vault/tests/pages/auth';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger, selectChoose } from 'ember-power-select/test-support/helpers';
@@ -22,9 +22,8 @@ import {
   PROVIDER_LIST_RESPONSE,
   PROVIDER_DATA_RESPONSE,
   clearRecord,
-  overrideCapabilities,
-  overrideMirageResponse,
 } from 'vault/tests/helpers/oidc-config';
+import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
 const searchSelect = create(ss);
 const flashMessage = create(fm);
 
@@ -34,25 +33,18 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'oidcConfig';
-  });
-
   hooks.beforeEach(function () {
+    oidcConfigHandlers(this.server);
     this.store = this.owner.lookup('service:store');
     // mock client list so OIDC BASE URL does not redirect to landing call-to-action image
-    this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
+    this.server.get('/identity/oidc/client', () => overrideResponse(null, { data: CLIENT_LIST_RESPONSE }));
     return authPage.login();
-  });
-
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
   });
 
   // LIST SCOPES EMPTY
   test('it navigates to scopes list view and renders empty state when no scopes are configured', async function (assert) {
     assert.expect(4);
-    this.server.get('/identity/oidc/scope', () => overrideMirageResponse(404));
+    this.server.get('/identity/oidc/scope', () => overrideResponse(404));
     await visit(OIDC_BASE_URL);
     await click('[data-test-tab="scopes"]');
     assert.strictEqual(currentURL(), '/vault/access/oidc/scopes');
@@ -60,20 +52,20 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     assert
       .dom(SELECTORS.scopeEmptyState)
       .hasText(
-        `No scopes yet Use scope to define identity information about the authenticated user. Learn more. Create scope`,
+        `No scopes yet Use scope to define identity information about the authenticated user. OIDC provider scopes`,
         'renders empty state no scopes are configured'
       );
     assert
-      .dom(SELECTORS.scopeCreateButtonEmptyState)
-      .hasAttribute('href', '/ui/vault/access/oidc/scopes/create', 'empty state renders create scope link');
+      .dom(SELECTORS.scopeCreateButton)
+      .hasAttribute('href', '/ui/vault/access/oidc/scopes/create', 'toolbar renders create scope link');
   });
 
   // LIST SCOPE EXIST
   test('it renders scope list when scopes exist', async function (assert) {
     assert.expect(11);
-    this.server.get('/identity/oidc/scope', () => overrideMirageResponse(null, SCOPE_LIST_RESPONSE));
+    this.server.get('/identity/oidc/scope', () => overrideResponse(null, { data: SCOPE_LIST_RESPONSE }));
     this.server.get('/identity/oidc/scope/test-scope', () =>
-      overrideMirageResponse(null, SCOPE_DATA_RESPONSE)
+      overrideResponse(null, { data: SCOPE_DATA_RESPONSE })
     );
     await visit(OIDC_BASE_URL + '/scopes');
     assert.strictEqual(
@@ -114,7 +106,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     );
 
     // navigate to details from index page
-    await click('[data-test-breadcrumb-link="oidc-scopes"]');
+    await click('[data-test-breadcrumb-link="oidc-scopes"] a');
     await click('[data-test-popup-menu-trigger]');
     await click('[data-test-oidc-scope-menu-link="details"]');
     assert.strictEqual(
@@ -132,13 +124,15 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
   // ERROR DELETING SCOPE
   test('it throws error when trying to delete when scope is currently being associated with any provider', async function (assert) {
     assert.expect(3);
-    this.server.get('/identity/oidc/scope', () => overrideMirageResponse(null, SCOPE_LIST_RESPONSE));
+    this.server.get('/identity/oidc/scope', () => overrideResponse(null, { data: SCOPE_LIST_RESPONSE }));
     this.server.get('/identity/oidc/scope/test-scope', () =>
-      overrideMirageResponse(null, SCOPE_DATA_RESPONSE)
+      overrideResponse(null, { data: SCOPE_DATA_RESPONSE })
     );
-    this.server.get('/identity/oidc/provider', () => overrideMirageResponse(null, PROVIDER_LIST_RESPONSE));
+    this.server.get('/identity/oidc/provider', () =>
+      overrideResponse(null, { data: PROVIDER_LIST_RESPONSE })
+    );
     this.server.get('/identity/oidc/provider/test-provider', () => {
-      overrideMirageResponse(null, PROVIDER_DATA_RESPONSE);
+      overrideResponse(null, { data: PROVIDER_DATA_RESPONSE });
     });
     // throw error when trying to delete test-scope since it is associated to test-provider
     this.server.delete(
@@ -224,7 +218,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       .hasText('this is an edit test', 'has correct edited description');
 
     // create a provider using test-scope
-    await click('[data-test-breadcrumb-link="oidc-scopes"]');
+    await click('[data-test-breadcrumb-link="oidc-scopes"] a');
     await click('[data-test-tab="providers"]');
     assert.dom('[data-test-tab="providers"]').hasClass('active', 'providers tab is active');
     await click('[data-test-oidc-provider-create]');
@@ -368,7 +362,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     );
 
     // navigate to details from index page
-    await click('[data-test-breadcrumb-link="oidc-providers"]');
+    await click('[data-test-breadcrumb-link="oidc-providers"] a');
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.oidc.providers.index',
@@ -376,24 +370,26 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     );
     await click('[data-test-oidc-provider-linked-block="default"] [data-test-popup-menu-trigger]');
     await click('[data-test-oidc-provider-menu-link="details"]');
-    assert.dom(SELECTORS.providerDeleteButton).isDisabled('delete button is disabled for default provider');
+    assert.dom(SELECTORS.providerDeleteButton).doesNotExist('delete button hidden for default provider');
   });
 
   // PROVIDER DELETE + EDIT PERMISSIONS
   test('it hides delete and edit for a provider when no permission', async function (assert) {
     assert.expect(3);
     this.server.get('/identity/oidc/providers', () =>
-      overrideMirageResponse(null, { providers: ['test-provider'] })
+      overrideResponse(null, { data: { providers: ['test-provider'] } })
     );
     this.server.get('/identity/oidc/provider/test-provider', () =>
-      overrideMirageResponse(null, {
-        allowed_client_ids: ['*'],
-        issuer: 'http://127.0.0.1:8200/v1/identity/oidc/provider/test-provider',
-        scopes_supported: ['test-scope'],
+      overrideResponse(null, {
+        data: {
+          allowed_client_ids: ['*'],
+          issuer: 'http://127.0.0.1:8200/v1/identity/oidc/provider/test-provider',
+          scopes_supported: ['test-scope'],
+        },
       })
     );
     this.server.post('/sys/capabilities-self', () =>
-      overrideCapabilities(OIDC_BASE_URL + '/provider/test-provider', ['read'])
+      capabilitiesStub(OIDC_BASE_URL + '/provider/test-provider', ['read'])
     );
 
     await visit(OIDC_BASE_URL + '/providers');

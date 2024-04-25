@@ -5,13 +5,15 @@
 
 <PageHeader as |p|>
   <p.top>
-    <div class="breadcrumb">
-      <LinkTo @route="vault.cluster.policies" @model={{this.policyType}} data-test-policy-list-link={{true}}>
-        <span class="sep">&#x0002f;</span>
-        {{uppercase this.policyType}}
-        Policies
-      </LinkTo>
-    </div>
+    <Hds::Breadcrumb>
+      <Hds::Breadcrumb::Item
+        @text="{{uppercase this.policyType}} policies"
+        @route="vault.cluster.policies"
+        @model={{this.policyType}}
+        data-test-policy-list-link
+      />
+      <Hds::Breadcrumb::Item @text="Create" @current={{true}} />
+    </Hds::Breadcrumb>
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">

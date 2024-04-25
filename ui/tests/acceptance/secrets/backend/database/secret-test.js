@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { currentURL, settled, click, visit, fillIn, typeIn } from '@ember/test-helpers';
+import { currentURL, settled, click, visit, fillIn, typeIn, waitFor } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { selectChoose, clickTrigger } from 'ember-power-select/test-support/helpers';
 
@@ -289,6 +289,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
         .hasText('Rotate your root credentials?', 'Modal appears asking to rotate root credentials');
       assert.dom('[data-test-enable-connection]').exists('Enable button exists');
       await click('[data-test-enable-connection]');
+      await waitFor('[data-test-component="info-table-row"]');
       assert.ok(
         currentURL().startsWith(`/vault/secrets/${backend}/show/${testCase.name}`),
         `Saves connection and takes you to show page for ${testCase.name}`
@@ -461,7 +462,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await authPage.logout();
     // Check with restricted permissions
     await authPage.login(token);
-    await click('[data-test-sidebar-nav-link="Secrets engines"]');
+    await click('[data-test-sidebar-nav-link="Secrets Engines"]');
     assert.dom(`[data-test-secrets-backend-link="${backend}"]`).exists('Shows backend on secret list page');
     await navToConnection(backend, connection);
     assert.strictEqual(
@@ -558,7 +559,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('renders connections tab');
 
     await click('[data-test-secret-create="connections"]');
-    assert.strictEqual(currentURL(), `/vault/secrets/${backend}/create`);
+    assert.strictEqual(currentURL(), `/vault/secrets/${backend}/create?itemType=connection`);
 
     // Login with restricted policy
     await logout.visit();

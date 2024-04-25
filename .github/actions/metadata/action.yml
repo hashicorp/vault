@@ -1,0 +1,156 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+---
+name: Gather and export useful workflow metadata information.
+description: |
+  Gather and export metadata about the repository, Github, and any other variable information we
+  might want for variables or flow control in our various workflows. We centralize it here so as
+  to have a single point of truth. This workflow also handles checking out the correct Git reference
+  depending on workflow trigger and tags. This workflow is used in both CE and Ent and thus needs
+  to maintain compatibility in both execution contexts.
+
+inputs:
+  vault-version:
+    description: |
+      The version of vault from hashicorp/action-set-product-version. If set we'll utilize this
+      base version of vault to output complex vault version metadata. If unset those outputs will
+      not be populated.
+    default: ""
+
+outputs:
+  compute-build:
+    description: A JSON encoded "runs-on" for App build worfkflows.
+    value: ${{ steps.workflow-metadata.outputs.compute-build }}
+  compute-build-compat:
+    description: A JSON encoded "runs-on" for App build workflows that need an older glibc to link against.
+    value: ${{ steps.workflow-metadata.outputs.compute-build-compat }}
+  compute-build-ui:
+    description: A JSON encoded "runs-on" for web UI build workflows.
+    value: ${{ steps.workflow-metadata.outputs.compute-build-ui }}
+  compute-test-go:
+    description: A JSON encoded "runs-on" for Go test workflows.
+    value: ${{ steps.workflow-metadata.outputs.compute-test-go }}
+  compute-test-ui:
+    description: A JSON encoded "runs-on" for web UI test workflows.
+    value: ${{ steps.workflow-metadata.outputs.compute-test-ui }}
+  compute-small:
+    description: A JSON encoded "runs-on" workflows that don't require optimized runners for resource usage.
+    value: ${{ steps.workflow-metadata.outputs.compute-small }}
+  go-tags:
+    description: The minimal set of Go tags required to build the correct edition of Vault.
+    value: ${{ steps.workflow-metadata.outputs.go-tags }}
+  is-draft:
+    description: Whether or not the workflow is executing in the context of a pull request draft.
+    value: ${{ steps.workflow-metadata.outputs.is-draft }}
+  is-enterprise:
+    description: Whether or not the workflow is executing in the context of Vault enterprise.
+    value: ${{ steps.workflow-metadata.outputs.is-enterprise }}
+  is-fork:
+    description: Whether or not the workflow is being triggered on a pull request that is a fork.
+    value: ${{ steps.workflow-metadata.outputs.is-fork }}
+  labels:
+    description: |
+      A JSON encoded array of pull request labels names associated with a commit SHA. If the workflow
+      is triggerd by a pull_request event then we'll get the label names of the pull request. If
+      it's triggered by any other event type we'll search for a pull request associated with the
+      commit SHA and return its label names.
+    value: ${{ steps.workflow-metadata.outputs.labels }}
+  vault-build-date:
+    description: The most recent Git commit date.
+    value: ${{ steps.vault-metadata.outputs.build-date }}
+  vault-binary-name:
+    description: The name of the Vault binary.
+    value: vault
+  vault-revision:
+    description: The most recent Git commit SHA.
+    value: ${{ steps.vault-metadata.outputs.vault-revision }}
+  vault-version:
+    description: The version of vault.
+    value: ${{ inputs.vault-version }}
+  vault-version-metadata:
+    description: The version of vault includiting edition and other metadata.
+    value: ${{ steps.workflow-metadata.outputs.vault-version-metadata }}
+  vault-version-package:
+    description: The version of vault formatted for Linux distro packages.
+    value: ${{ steps.vault-metadata.outputs.vault-version-package }}
+  workflow-trigger:
+    description: The github event type that triggered the workflow.
+    value: ${{ steps.workflow-metadata.outputs.workflow-trigger }}
+
+runs:
+  using: composite
+  steps:
+    - if: inputs.vault-version != ''
+      id: vault-metadata
+      name: vault-metadata
+      env:
+        VAULT_VERSION: ${{ inputs.vault-version }}
+      shell: bash
+      run: |
+        {
+          echo "build-date=$(make ci-get-date)"
+          echo "vault-revision=$(make ci-get-revision)"
+          echo "vault-version-package=$(make ci-get-version-package)"
+        } | tee -a "$GITHUB_OUTPUT"
+    - id: workflow-metadata
+      name: workflow-metadata
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        if [ '${{ github.event_name }}' = 'pull_request' ]; then
+          is_draft='${{ github.event.pull_request.draft }}'
+
+          # Determine our labels. If our event type is pull_request this is rather straight forward. If
+          # our even_type is push (merge) we'll need to look up the pull request associated with the
+          # commit and get the labels. This will return the label names as an array.
+          labels=$(jq -rc <<< '${{ toJSON(github.event.pull_request.labels.*.name) }}')
+        else
+          is_draft='false'
+
+          # Look up the labels for the pull request that is associated with the last commit. If
+          # there are none set it as a JSON encoded empty array.
+          if pr_number=$(gh api "/repos/${{ github.repository }}/commits/${{ github.ref }}/pulls" | jq -erc '.[0].number'); then
+            if ! labels=$(gh api "/repos/${{ github.repository }}/issues/${pr_number}/labels" | jq -erc '. | map(.name)'); then
+              labels='[]'
+            fi
+          else
+            labels='[]'
+          fi
+        fi
+
+        {
+          echo "is-draft=${is_draft}"
+          echo 'is-fork=${{ github.event.pull_request.head.repo.fork && 'true' || 'false' }}'
+          echo "labels=${labels}"
+          echo "workflow-trigger=${{ github.event_name }}"
+        } | tee -a "$GITHUB_OUTPUT"
+
+        # Set CE and Ent specific workflow metadata
+        is_enterprise='${{ contains(github.repository, 'vault-enterprise') }}'
+        if [ "$is_enterprise" = 'true' ]; then
+          {
+            echo 'compute-build=["self-hosted","ondemand","os=linux","disk_gb=64","type=c6a.4xlarge"]'
+            echo 'compute-build-compat=["self-hosted","ubuntu-20.04"]' # for older glibc compatibility, m6a.4xlarge
+            echo 'compute-build-ui=["self-hosted","ondemand","os=linux", "disk_gb=64", "type=c6a.2xlarge"]'
+            echo 'compute-test-go=["self-hosted","ondemand","os=linux","disk_gb=64","type=c6a.2xlarge"]'
+            echo 'compute-test-ui=["self-hosted","ondemand","os=linux","type=m6a.2xlarge"]'
+            echo 'compute-small=["self-hosted","linux","small"]'
+            echo 'go-tags=ent,enterprise'
+            echo 'is-enterprise=true'
+            echo 'vault-version-metadata=${{ inputs.vault-version }}+ent'
+          } | tee -a "$GITHUB_OUTPUT"
+        else
+          {
+            echo 'compute-build="custom-linux-medium-vault-latest"'
+            echo 'compute-build-compat="custom-linux-medium-vault-latest"'
+            echo 'compute-build-ui="custom-linux-xl-vault-latest"'
+            echo 'compute-test-go="custom-linux-medium-vault-latest"'
+            echo 'compute-test-ui="custom-linux-medium-vault-latest"'
+            echo 'compute-small="ubuntu-latest"'
+            echo 'go-tags='
+            echo 'is-enterprise=false'
+            echo 'vault-version-metadata=${{ inputs.vault-version }}'
+          } | tee -a "$GITHUB_OUTPUT"
+        fi

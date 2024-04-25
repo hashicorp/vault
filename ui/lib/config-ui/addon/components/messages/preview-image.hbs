@@ -1,0 +1,51 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::Modal
+  @onClose={{fn (mut @showMessagePreviewModal) false}}
+  id="message-alert-preview"
+  class="is-calc-large-height is-two-thirds-width"
+  data-test-modal="preview image"
+  as |M|
+>
+  <M.Body class="is-paddingless is-overflow-hidden">
+    <Hds::Alert
+      @type="page"
+      @color="highlight"
+      @onDismiss={{fn (mut @showMessagePreviewModal) false}}
+      class="has-bottom-margin-s"
+      data-test-custom-alert={{@message.title}}
+      as |A|
+    >
+      <A.Title data-test-custom-alert-title={{@message.title}}>{{@message.title}}</A.Title>
+      {{#each (new-line-split @message.message) as |msg|}}
+        <A.Description data-test-custom-alert-description={{@message.title}}>
+          {{msg}}
+        </A.Description>
+      {{/each}}
+      {{#unless (is-empty-value @message.link)}}
+        {{#each-in @message.link as |title href|}}
+          <A.LinkStandalone
+            @color="secondary"
+            @icon="external-link"
+            @isHrefExternal={{true}}
+            @iconPosition="trailing"
+            @text={{title}}
+            @href={{href}}
+            data-test-custom-alert-action="link"
+          />
+        {{/each-in}}
+      {{/unless}}
+
+    </Hds::Alert>
+    <img
+      src={{img-path (if @message.authenticated "~/custom-messages-dashboard.png" "~/custom-messages-login.png")}}
+      alt={{if @message.authenticated "dashboard page preview" "login page preview"}}
+    />
+  </M.Body>
+  <M.Footer as |F|>
+    <Hds::Button @text="Close preview" {{on "click" F.close}} data-test-modal-button="Close" />
+  </M.Footer>
+</Hds::Modal>

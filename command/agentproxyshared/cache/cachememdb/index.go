@@ -44,6 +44,12 @@ type Index struct {
 
 	// RequestPath is the path of the request that resulted in the response
 	// held by this index.
+	// For dynamic secrets, this will be the actual path sent to the request,
+	// e.g. /v1/foo/bar (which will not include the namespace if it was included
+	// in the headers).
+	// For static secrets, this will be the canonical path to the secret (i.e.
+	// after calling getStaticSecretPathFromRequest--see its godocs for more
+	// information).
 	// Required: true, Unique: false
 	RequestPath string
 

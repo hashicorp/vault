@@ -21,6 +21,8 @@ that do not modify Vault's storage.
 
 Performance Standbys require the request forwarding method described in the [HA
 Server-to-Server](/vault/docs/concepts/ha#server-to-server-communication) docs.
+Unlike regular standby nodes, performance standbys will **not** respect the
+`X-Vault-No-Request-Forwarding` header.
 
 A performance standby will connect to the active node over the existing request
 forwarding connection. If selected by the active node to be promoted to a

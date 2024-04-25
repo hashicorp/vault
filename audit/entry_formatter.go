@@ -8,136 +8,173 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"reflect"
+	"runtime/debug"
 	"strings"
 	"time"
 
-	"github.com/jefferai/jsonx"
-
-	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/go-jose/go-jose/v3/jwt"
-	"github.com/hashicorp/vault/internal/observability/event"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/jefferai/jsonx"
 )
 
-var (
-	_ Formatter        = (*EntryFormatter)(nil)
-	_ eventlogger.Node = (*EntryFormatter)(nil)
-)
+var _ eventlogger.Node = (*entryFormatter)(nil)
 
-// NewEntryFormatter should be used to create an EntryFormatter.
-// Accepted options: WithPrefix.
-func NewEntryFormatter(config FormatterConfig, salter Salter, opt ...Option) (*EntryFormatter, error) {
-	const op = "audit.NewEntryFormatter"
+// timeProvider offers a way to supply a pre-configured time.
+type timeProvider interface {
+	// formatTime provides the pre-configured time in a particular format.
+	formattedTime() string
+}
+
+// nonPersistentSalt is used for obtaining a salt that is not persisted.
+type nonPersistentSalt struct{}
+
+// entryFormatter should be used to format audit requests and responses.
+// NOTE: Use newEntryFormatter to initialize the entryFormatter struct.
+type entryFormatter struct {
+	config formatterConfig
+	salter Salter
+	logger hclog.Logger
+	name   string
+}
+
+// newEntryFormatter should be used to create an entryFormatter.
+func newEntryFormatter(name string, config formatterConfig, salter Salter, logger hclog.Logger) (*entryFormatter, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, fmt.Errorf("name is required: %w", ErrInvalidParameter)
+	}
 
 	if salter == nil {
-		return nil, fmt.Errorf("%s: cannot create a new audit formatter with nil salter: %w", op, event.ErrInvalidParameter)
+		return nil, fmt.Errorf("cannot create a new audit formatter with nil salter: %w", ErrInvalidParameter)
 	}
 
-	// We need to ensure that the format isn't just some default empty string.
-	if err := config.RequiredFormat.validate(); err != nil {
-		return nil, fmt.Errorf("%s: format not valid: %w", op, err)
+	if logger == nil || reflect.ValueOf(logger).IsNil() {
+		return nil, fmt.Errorf("cannot create a new audit formatter with nil logger: %w", ErrInvalidParameter)
 	}
 
-	opts, err := getOpts(opt...)
-	if err != nil {
-		return nil, fmt.Errorf("%s: error applying options: %w", op, err)
-	}
-
-	return &EntryFormatter{
-		salter:          salter,
-		config:          config,
-		headerFormatter: opts.withHeaderFormatter,
-		prefix:          opts.withPrefix,
+	return &entryFormatter{
+		config: config,
+		salter: salter,
+		logger: logger,
+		name:   name,
 	}, nil
 }
 
 // Reopen is a no-op for the formatter node.
-func (*EntryFormatter) Reopen() error {
+func (*entryFormatter) Reopen() error {
 	return nil
 }
 
 // Type describes the type of this node (formatter).
-func (*EntryFormatter) Type() eventlogger.NodeType {
+func (*entryFormatter) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeFormatter
 }
 
 // Process will attempt to parse the incoming event data into a corresponding
 // audit Request/Response which is serialized to JSON/JSONx and stored within the event.
-func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
-	const op = "audit.(EntryFormatter).Process"
-
+func (f *entryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *eventlogger.Event, retErr error) {
+	// Return early if the context was cancelled, eventlogger will not carry on
+	// asking nodes to process, so any sink node in the pipeline won't be called.
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
 	}
 
+	// Perform validation on the event, then retrieve the underlying AuditEvent
+	// and LogInput (from the AuditEvent Data).
 	if e == nil {
-		return nil, fmt.Errorf("%s: event is nil: %w", op, event.ErrInvalidParameter)
+		return nil, fmt.Errorf("event is nil: %w", ErrInvalidParameter)
 	}
 
-	a, ok := e.Payload.(*auditEvent)
+	a, ok := e.Payload.(*AuditEvent)
 	if !ok {
-		return nil, fmt.Errorf("%s: cannot parse event payload: %w", op, event.ErrInvalidParameter)
+		return nil, fmt.Errorf("cannot parse event payload: %w", ErrInvalidParameter)
 	}
 
-	var result []byte
-	data := new(logical.LogInput)
-	headers := make(map[string][]string)
+	if a.Data == nil {
+		return nil, fmt.Errorf("cannot audit event (%s) with no data: %w", a.Subtype, ErrInvalidParameter)
+	}
 
-	if a.Data != nil {
-		*data = *a.Data
-		if a.Data.Request != nil && a.Data.Request.Headers != nil {
-			headers = a.Data.Request.Headers
+	// Handle panics
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
 		}
+
+		f.logger.Error("panic during logging",
+			"request_path", a.Data.Request.Path,
+			"audit_device_path", f.name,
+			"error", r,
+			"stacktrace", string(debug.Stack()))
+
+		// Ensure that we add this error onto any pre-existing error that was being returned.
+		retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log: %q", f.name)).ErrorOrNil()
+	}()
+
+	// Take a copy of the event data before we modify anything.
+	data, err := a.Data.Clone()
+	if err != nil {
+		return nil, fmt.Errorf("unable to clone audit event data: %w", err)
 	}
 
-	if f.headerFormatter != nil {
-		adjustedHeaders, err := f.headerFormatter.ApplyConfig(ctx, headers, f.salter)
+	// If the request is present in the input data, apply header configuration
+	// regardless. We shouldn't be in a situation where the header formatter isn't
+	// present as it's required.
+	if data.Request != nil {
+		// Ensure that any headers in the request, are formatted as required, and are
+		// only present if they have been configured to appear in the audit log.
+		// e.g. via: /sys/config/auditing/request-headers/:name
+		data.Request.Headers, err = f.config.headerFormatter.ApplyConfig(ctx, data.Request.Headers, f.salter)
 		if err != nil {
-			return nil, fmt.Errorf("%s: unable to transform headers for auditing: %w", op, err)
+			return nil, fmt.Errorf("unable to transform headers for auditing: %w", err)
 		}
-
-		data.Request.Headers = adjustedHeaders
 	}
+
+	// If the request contains a Server-Side Consistency Token (SSCT), and we
+	// have an auth response, overwrite the existing client token with the SSCT,
+	// so that the SSCT appears in the audit log for this entry.
+	if data.Request != nil && data.Request.InboundSSCToken != "" && data.Auth != nil {
+		data.Auth.ClientToken = data.Request.InboundSSCToken
+	}
+
+	// Using 'any' as we have two different types that we can get back from either
+	// formatRequest or formatResponse, but the JSON encoder doesn't care about types.
+	var entry any
 
 	switch a.Subtype {
 	case RequestType:
-		entry, err := f.FormatRequest(ctx, data)
-		if err != nil {
-			return nil, fmt.Errorf("%s: unable to parse request from audit event: %w", op, err)
-		}
-
-		result, err = jsonutil.EncodeJSON(entry)
-		if err != nil {
-			return nil, fmt.Errorf("%s: unable to format request: %w", op, err)
-		}
+		entry, err = f.formatRequest(ctx, data, a)
 	case ResponseType:
-		entry, err := f.FormatResponse(ctx, data)
-		if err != nil {
-			return nil, fmt.Errorf("%s: unable to parse response from audit event: %w", op, err)
-		}
-
-		result, err = jsonutil.EncodeJSON(entry)
-		if err != nil {
-			return nil, fmt.Errorf("%s: unable to format response: %w", op, err)
-		}
+		entry, err = f.formatResponse(ctx, data, a)
 	default:
-		return nil, fmt.Errorf("%s: unknown audit event subtype: %q", op, a.Subtype)
+		return nil, fmt.Errorf("unknown audit event subtype: %q", a.Subtype)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse %s from audit event: %w", a.Subtype, err)
 	}
 
-	if f.config.RequiredFormat == JSONxFormat {
+	result, err := jsonutil.EncodeJSON(entry)
+	if err != nil {
+		return nil, fmt.Errorf("unable to format %s: %w", a.Subtype, err)
+	}
+
+	if f.config.requiredFormat == JSONxFormat {
 		var err error
 		result, err = jsonx.EncodeJSONBytes(result)
 		if err != nil {
-			return nil, fmt.Errorf("%s: unable to encode JSONx using JSON data: %w", op, err)
+			return nil, fmt.Errorf("unable to encode JSONx using JSON data: %w", err)
 		}
 		if result == nil {
-			return nil, fmt.Errorf("%s: encoded JSONx was nil: %w", op, err)
+			return nil, fmt.Errorf("encoded JSONx was nil: %w", err)
 		}
 	}
 
@@ -145,18 +182,34 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 	// don't support a prefix just sitting there.
 	// However, this would be a breaking change to how Vault currently works to
 	// include the prefix as part of the JSON object or XML document.
-	if f.prefix != "" {
-		result = append([]byte(f.prefix), result...)
+	if f.config.prefix != "" {
+		result = append([]byte(f.config.prefix), result...)
 	}
 
-	// Store the final format.
-	e.FormattedAs(f.config.RequiredFormat.String(), result)
+	// Copy some properties from the event (and audit event) and store the
+	// format for the next (sink) node to Process.
+	a2 := &AuditEvent{
+		ID:        a.ID,
+		Version:   a.Version,
+		Subtype:   a.Subtype,
+		Timestamp: a.Timestamp,
+		Data:      data, // Use the cloned data here rather than a pointer to the original.
+	}
 
-	return e, nil
+	e2 := &eventlogger.Event{
+		Type:      e.Type,
+		CreatedAt: e.CreatedAt,
+		Formatted: make(map[string][]byte), // we are about to set this ourselves.
+		Payload:   a2,
+	}
+
+	e2.FormattedAs(f.config.requiredFormat.String(), result)
+
+	return e2, nil
 }
 
-// FormatRequest attempts to format the specified logical.LogInput into a RequestEntry.
-func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput) (*RequestEntry, error) {
+// formatRequest attempts to format the specified logical.LogInput into a RequestEntry.
+func (f *entryFormatter) formatRequest(ctx context.Context, in *logical.LogInput, provider timeProvider) (*RequestEntry, error) {
 	switch {
 	case in == nil || in.Request == nil:
 		return nil, errors.New("request to request-audit a nil request")
@@ -176,14 +229,14 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 		connState = in.Request.Connection.ConnState
 	}
 
-	if !f.config.Raw {
+	if !f.config.raw {
 		var err error
-		auth, err = HashAuth(ctx, f.salter, auth, f.config.HMACAccessor)
+		auth, err = HashAuth(ctx, f.salter, auth, f.config.hmacAccessor)
 		if err != nil {
 			return nil, err
 		}
 
-		req, err = HashRequest(ctx, f.salter, req, f.config.HMACAccessor, in.NonHMACReqDataKeys)
+		req, err = HashRequest(ctx, f.salter, req, f.config.hmacAccessor, in.NonHMACReqDataKeys)
 		if err != nil {
 			return nil, err
 		}
@@ -251,6 +304,10 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 		},
 	}
 
+	if req.HTTPRequest != nil && req.HTTPRequest.RequestURI != req.Path {
+		reqEntry.Request.RequestURI = req.HTTPRequest.RequestURI
+	}
+
 	if !auth.IssueTime.IsZero() {
 		reqEntry.Auth.TokenIssueTime = auth.IssueTime.Format(time.RFC3339)
 	}
@@ -274,15 +331,16 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 		reqEntry.Request.WrapTTL = int(req.WrapInfo.TTL / time.Second)
 	}
 
-	if !f.config.OmitTime {
-		reqEntry.Time = time.Now().UTC().Format(time.RFC3339Nano)
+	if !f.config.omitTime {
+		// Use the time provider to supply the time for this entry.
+		reqEntry.Time = provider.formattedTime()
 	}
 
 	return reqEntry, nil
 }
 
-// FormatResponse attempts to format the specified logical.LogInput into a ResponseEntry.
-func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInput) (*ResponseEntry, error) {
+// formatResponse attempts to format the specified logical.LogInput into a ResponseEntry.
+func (f *entryFormatter) formatResponse(ctx context.Context, in *logical.LogInput, provider timeProvider) (*ResponseEntry, error) {
 	switch {
 	case f == nil:
 		return nil, errors.New("formatter is nil")
@@ -306,10 +364,10 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 		connState = in.Request.Connection.ConnState
 	}
 
-	elideListResponseData := f.config.ElideListResponses && req.Operation == logical.ListOperation
+	elideListResponseData := f.config.elideListResponses && req.Operation == logical.ListOperation
 
 	var respData map[string]interface{}
-	if f.config.Raw {
+	if f.config.raw {
 		// In the non-raw case, elision of list response data occurs inside HashResponse, to avoid redundant deep
 		// copies and hashing of data only to elide it later. In the raw case, we need to do it here.
 		if elideListResponseData && resp.Data != nil {
@@ -325,17 +383,17 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 		}
 	} else {
 		var err error
-		auth, err = HashAuth(ctx, f.salter, auth, f.config.HMACAccessor)
+		auth, err = HashAuth(ctx, f.salter, auth, f.config.hmacAccessor)
 		if err != nil {
 			return nil, err
 		}
 
-		req, err = HashRequest(ctx, f.salter, req, f.config.HMACAccessor, in.NonHMACReqDataKeys)
+		req, err = HashRequest(ctx, f.salter, req, f.config.hmacAccessor, in.NonHMACReqDataKeys)
 		if err != nil {
 			return nil, err
 		}
 
-		resp, err = HashResponse(ctx, f.salter, resp, f.config.HMACAccessor, in.NonHMACRespDataKeys, elideListResponseData)
+		resp, err = HashResponse(ctx, f.salter, resp, f.config.hmacAccessor, in.NonHMACRespDataKeys, elideListResponseData)
 		if err != nil {
 			return nil, err
 		}
@@ -468,6 +526,10 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 		},
 	}
 
+	if req.HTTPRequest != nil && req.HTTPRequest.RequestURI != req.Path {
+		respEntry.Request.RequestURI = req.HTTPRequest.RequestURI
+	}
+
 	if auth.PolicyResults != nil {
 		respEntry.Auth.PolicyResults = &PolicyResults{
 			Allowed: auth.PolicyResults.Allowed,
@@ -490,30 +552,12 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 		respEntry.Request.WrapTTL = int(req.WrapInfo.TTL / time.Second)
 	}
 
-	if !f.config.OmitTime {
-		respEntry.Time = time.Now().UTC().Format(time.RFC3339Nano)
+	if !f.config.omitTime {
+		// Use the time provider to supply the time for this entry.
+		respEntry.Time = provider.formattedTime()
 	}
 
 	return respEntry, nil
-}
-
-// NewFormatterConfig should be used to create a FormatterConfig.
-// Accepted options: WithElision, WithHMACAccessor, WithOmitTime, WithRaw, WithFormat.
-func NewFormatterConfig(opt ...Option) (FormatterConfig, error) {
-	const op = "audit.NewFormatterConfig"
-
-	opts, err := getOpts(opt...)
-	if err != nil {
-		return FormatterConfig{}, fmt.Errorf("%s: error applying options: %w", op, err)
-	}
-
-	return FormatterConfig{
-		ElideListResponses: opts.withElision,
-		HMACAccessor:       opts.withHMACAccessor,
-		OmitTime:           opts.withOmitTime,
-		Raw:                opts.withRaw,
-		RequiredFormat:     opts.withFormat,
-	}, nil
 }
 
 // getRemoteAddr safely gets the remote address avoiding a nil pointer
@@ -566,7 +610,7 @@ func parseVaultTokenFromJWT(token string) *string {
 // determined it should apply to a particular request. The data map that is passed in must be a copy that is safe to
 // modify in place, but need not be a full recursive deep copy, as only top-level keys are changed.
 //
-// See the documentation of the controlling option in FormatterConfig for more information on the purpose.
+// See the documentation of the controlling option in formatterConfig for more information on the purpose.
 func doElideListResponseData(data map[string]interface{}) {
 	for k, v := range data {
 		if k == "keys" {
@@ -581,12 +625,15 @@ func doElideListResponseData(data map[string]interface{}) {
 	}
 }
 
-// newTemporaryEntryFormatter creates a cloned EntryFormatter instance with a non-persistent Salter.
-func newTemporaryEntryFormatter(n *EntryFormatter) *EntryFormatter {
-	return &EntryFormatter{
-		salter:          &nonPersistentSalt{},
-		headerFormatter: n.headerFormatter,
-		config:          n.config,
-		prefix:          n.prefix,
+// newTemporaryEntryFormatter creates a cloned entryFormatter instance with a non-persistent Salter.
+func newTemporaryEntryFormatter(n *entryFormatter) *entryFormatter {
+	return &entryFormatter{
+		salter: &nonPersistentSalt{},
+		config: n.config,
 	}
+}
+
+// Salt returns a new salt with default configuration and no storage usage, and no error.
+func (s *nonPersistentSalt) Salt(_ context.Context) (*salt.Salt, error) {
+	return salt.NewNonpersistentSalt(), nil
 }

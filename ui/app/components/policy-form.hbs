@@ -23,11 +23,11 @@
       </div>
     {{/if}}
     <div class="field">
-      <Toolbar>
+      <Toolbar aria-label="toolbar for managing {{or @model.name 'new'}} policy">
         <label class="has-text-weight-bold has-right-margin-xxs">Policy</label>
         {{#if @renderPolicyExampleModal}}
           {{! only true in policy create and edit routes }}
-          <ToolbarFilters>
+          <ToolbarFilters aria-label="help tools for managing {{or @model.name 'new'}} policy">
             <Hds::Button
               @text="How to write a policy"
               @icon="bulb"
@@ -38,7 +38,7 @@
             />
           </ToolbarFilters>
         {{/if}}
-        <ToolbarActions>
+        <ToolbarActions aria-label="actions for managing {{or @model.name 'new'}} policy">
           <div class="toolbar-separator"></div>
           {{#if @model.isNew}}
             <div class="control is-flex">
@@ -46,12 +46,12 @@
                 id="fileUploadToggle"
                 @type="checkbox"
                 name="fileUploadToggle"
-                class="switch is-rounded is-success is-small"
+                class="toggle is-success is-small"
                 @checked={{this.showFileUpload}}
                 {{on "change" (fn (mut this.showFileUpload) (not this.showFileUpload))}}
                 data-test-policy-edit-toggle
               />
-              <label for="fileUploadToggle">Upload file</label>
+              <label for="fileUploadToggle" class="has-text-weight-bold is-size-8">Upload file</label>
             </div>
           {{else}}
             {{! EDITING - no file upload toggle}}
@@ -59,6 +59,9 @@
               @text="Copy"
               @isIconOnly={{true}}
               @textToCopy={{@model.policy}}
+              @onError={{(fn
+                (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+              )}}
               class="transparent"
               data-test-copy-button
             />

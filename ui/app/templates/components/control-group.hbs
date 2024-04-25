@@ -53,6 +53,9 @@
             @text="Copy"
             @isIconOnly={{true}}
             @textToCopy={{this.model.id}}
+            @onError={{(fn
+              (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+            )}}
             class="transparent top-right-absolute"
           />
           <div class="message-body">
@@ -95,7 +98,14 @@
         We’ve saved your request token, but you may want to copy it just in case:
       </p>
       <div>
-        <Hds::Copy::Snippet data-test-token-value @textToCopy={{this.controlGroupResponse.token}} @color="secondary" />
+        <Hds::Copy::Snippet
+          data-test-token-value
+          @textToCopy={{this.controlGroupResponse.token}}
+          @color="secondary"
+          @onError={{(fn
+            (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+          )}}
+        />
       </div>
     </div>
   {{/if}}
@@ -104,10 +114,14 @@
     <div class="field is-grouped box is-fullwidth is-bottomless">
       {{#if this.model.canAuthorize}}
         {{#if (or this.model.approved this.currentUserHasAuthorized)}}
-          <LinkTo @route="vault.cluster.access.control-groups" class="button" data-test-back-link={{true}}>
-            <Chevron @direction="left" />
-            Back
-          </LinkTo>
+          <Hds::Button
+            @text="Back"
+            @color="secondary"
+            @route="vault.cluster.access.control-groups"
+            @icon="chevron-left"
+            @iconPosition="leading"
+            data-test-back-link
+          />
         {{else}}
           <Hds::Button
             @text="Authorize"

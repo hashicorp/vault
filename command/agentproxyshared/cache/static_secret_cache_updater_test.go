@@ -7,16 +7,18 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	syncatomic "sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 
 	"github.com/hashicorp/go-hclog"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache/cacheboltdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
+	"github.com/hashicorp/vault/helper/constants"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -134,7 +136,8 @@ func TestNewStaticSecretCacheUpdater(t *testing.T) {
 }
 
 // TestOpenWebSocketConnection tests that the openWebSocketConnection function
-// works as expected. This uses a TLS enabled (wss) WebSocket connection.
+// works as expected (fails on CE, succeeds on ent).
+// This uses a TLS enabled (wss) WebSocket connection.
 func TestOpenWebSocketConnection(t *testing.T) {
 	t.Parallel()
 	// We need a valid cluster for the connection to succeed.
@@ -145,21 +148,154 @@ func TestOpenWebSocketConnection(t *testing.T) {
 	updater.tokenSink.WriteToken(client.Token())
 
 	conn, err := updater.openWebSocketConnection(context.Background())
-	if err != nil {
-		t.Fatal(err)
+	if constants.IsEnterprise {
+		require.NoError(t, err)
+		require.NotNil(t, conn)
+	} else {
+		require.Nil(t, conn)
+		require.Errorf(t, err, "ensure Vault is Enterprise version 1.16 or above")
 	}
-	require.NotNil(t, conn)
+}
+
+// TestOpenWebSocketConnection_BadPolicyToken tests attempting to open a websocket
+// connection to the events system using a token that has incorrect policy access
+// will not trigger auto auth
+func TestOpenWebSocketConnection_BadPolicyToken(t *testing.T) {
+	// We need a valid cluster for the connection to succeed.
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	updater := testNewStaticSecretCacheUpdater(t, client)
+
+	eventPolicy := `path "sys/events/subscribe/*" {
+		capabilities = ["deny"]
+	}`
+	client.Sys().PutPolicy("no_events_access", eventPolicy)
+
+	// Create a new token with a bad policy
+	token, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"no_events_access"},
+	})
+	require.NoError(t, err)
+
+	// Set the client token to one with an invalid policy
+	updater.tokenSink.WriteToken(token.Auth.ClientToken)
+	client.SetToken(token.Auth.ClientToken)
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	authInProgress := &syncatomic.Bool{}
+	renewalChannel := make(chan error)
+	errCh := make(chan error)
+	go func() {
+		errCh <- updater.Run(ctx, authInProgress, renewalChannel)
+	}()
+	defer func() {
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}()
+
+	defer cancelFunc()
+
+	// Verify that the token has been written to the sink before checking auto auth
+	// is not re-triggered
+	err = updater.streamStaticSecretEvents(ctx)
+	require.ErrorContains(t, err, logical.ErrPermissionDenied.Error())
+
+	// Auto auth should not be retriggered
+	timeout := time.After(2 * time.Second)
+	select {
+	case <-renewalChannel:
+		t.Fatal("incorrectly triggered auto auth")
+	case <-ctx.Done():
+		t.Fatal("context was closed before auto auth could be re-triggered")
+	case <-timeout:
+	}
+}
+
+// TestOpenWebSocketConnection_AutoAuthSelfHeal tests attempting to open a websocket
+// connection to the events system using an invalid token will re-trigger
+// auto auth.
+func TestOpenWebSocketConnection_AutoAuthSelfHeal(t *testing.T) {
+	// We need a valid cluster for the connection to succeed.
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	updater := testNewStaticSecretCacheUpdater(t, client)
+
+	// Revoke the token before it can be used to open a connection to the events system
+	client.Auth().Token().RevokeOrphan(client.Token())
+	updater.tokenSink.WriteToken(client.Token())
+	time.Sleep(100 * time.Millisecond)
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	authInProgress := &syncatomic.Bool{}
+	renewalChannel := make(chan error)
+	errCh := make(chan error)
+	go func() {
+		errCh <- updater.Run(ctx, authInProgress, renewalChannel)
+	}()
+	defer func() {
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}()
+
+	defer cancelFunc()
+
+	// Wait for static secret updater to begin
+	timeout := time.After(10 * time.Second)
+
+	select {
+	case <-renewalChannel:
+	case <-ctx.Done():
+		t.Fatal("context was closed before auto auth could be re-triggered")
+	case <-timeout:
+		t.Fatal("timed out before auto auth could be re-triggered")
+	}
+	authInProgress.Store(false)
+
+	// Verify that auto auth is re-triggered again because another auth is "not in progress"
+	timeout = time.After(15 * time.Second)
+	select {
+	case <-renewalChannel:
+	case <-ctx.Done():
+		t.Fatal("context was closed before auto auth could be re-triggered")
+	case <-timeout:
+		t.Fatal("timed out before auto auth could be re-triggered")
+	}
+	authInProgress.Store(true)
+
+	// Verify that auto auth is NOT re-triggered again because another auth is in progress
+	timeout = time.After(2 * time.Second)
+	select {
+	case <-renewalChannel:
+		t.Fatal("auto auth was incorrectly re-triggered")
+	case <-ctx.Done():
+		t.Fatal("context was closed before auto auth could be re-triggered")
+	case <-timeout:
+	}
 }
 
 // TestOpenWebSocketConnectionReceivesEventsDefaultMount tests that the openWebSocketConnection function
 // works as expected with the default KVV1 mount, and then the connection can be used to receive an event.
 // This acts as more of an event system sanity check than a test of the updater
 // logic. It's still important coverage, though.
-// As of right now, it does not pass since the default kv mount is LeasedPassthroughBackend.
-// If that is changed, this test will be unskipped.
 func TestOpenWebSocketConnectionReceivesEventsDefaultMount(t *testing.T) {
+	if !constants.IsEnterprise {
+		t.Skip("test can only run on enterprise due to requiring the event notification system")
+	}
 	t.Parallel()
-	t.Skip("This test won't finish, as the default KV mount is LeasedPassthroughBackend in tests, and therefore does not send events")
 	// We need a valid cluster for the connection to succeed.
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
@@ -211,6 +347,9 @@ func TestOpenWebSocketConnectionReceivesEventsDefaultMount(t *testing.T) {
 // This acts as more of an event system sanity check than a test of the updater
 // logic. It's still important coverage, though.
 func TestOpenWebSocketConnectionReceivesEventsKVV1(t *testing.T) {
+	if !constants.IsEnterprise {
+		t.Skip("test can only run on enterprise due to requiring the event notification system")
+	}
 	t.Parallel()
 	// We need a valid cluster for the connection to succeed.
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
@@ -273,6 +412,9 @@ func TestOpenWebSocketConnectionReceivesEventsKVV1(t *testing.T) {
 // This acts as more of an event system sanity check than a test of the updater
 // logic. It's still important coverage, though.
 func TestOpenWebSocketConnectionReceivesEventsKVV2(t *testing.T) {
+	if !constants.IsEnterprise {
+		t.Skip("test can only run on enterprise due to requiring the event notification system")
+	}
 	t.Parallel()
 	// We need a valid cluster for the connection to succeed.
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
@@ -335,6 +477,9 @@ func TestOpenWebSocketConnectionReceivesEventsKVV2(t *testing.T) {
 // works as expected using vaulthttp.TestServer. This server isn't TLS enabled, so tests
 // the ws path (as opposed to the wss) path.
 func TestOpenWebSocketConnectionTestServer(t *testing.T) {
+	if !constants.IsEnterprise {
+		t.Skip("test can only run on enterprise due to requiring the event notification system")
+	}
 	t.Parallel()
 	// We need a valid cluster for the connection to succeed.
 	core := vault.TestCoreWithConfig(t, &vault.CoreConfig{})
@@ -371,6 +516,9 @@ func TestOpenWebSocketConnectionTestServer(t *testing.T) {
 // ensuring that updateStaticSecret gets called by the event arriving
 // (as part of streamStaticSecretEvents) instead of testing calling it explicitly.
 func Test_StreamStaticSecretEvents_UpdatesCacheWithNewSecrets(t *testing.T) {
+	if !constants.IsEnterprise {
+		t.Skip("test can only run on enterprise due to requiring the event notification system")
+	}
 	t.Parallel()
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
@@ -424,6 +572,10 @@ func Test_StreamStaticSecretEvents_UpdatesCacheWithNewSecrets(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Wait for the event stream to be fully up and running. Should be faster than this in reality, but
+	// we make it five seconds to protect against CI flakiness.
+	time.Sleep(5 * time.Second)
+
 	// Put a secret, which should trigger an event
 	_, err = client.KVv2("secret-v2").Put(context.Background(), "foo", secretData)
 	if err != nil {
@@ -434,7 +586,7 @@ func Test_StreamStaticSecretEvents_UpdatesCacheWithNewSecrets(t *testing.T) {
 	// than this, but we make it five seconds to protect against CI flakiness.
 	time.Sleep(5 * time.Second)
 
-	// Then, do a GET to see if the event got updated
+	// Then, do a GET to see if the index got updated by the event
 	newIndex, err := leaseCache.db.Get(cachememdb.IndexNameID, indexId)
 	if err != nil {
 		t.Fatal(err)
@@ -578,4 +730,136 @@ func TestUpdateStaticSecret_HandlesNonCachedPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	require.Nil(t, err)
+}
+
+// TestPreEventStreamUpdate tests that preEventStreamUpdate correctly
+// updates old static secrets in the cache.
+func TestPreEventStreamUpdate(t *testing.T) {
+	t.Parallel()
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.VersionedKVFactory,
+		},
+	}, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	client := cluster.Cores[0].Client
+
+	updater := testNewStaticSecretCacheUpdater(t, client)
+	leaseCache := updater.leaseCache
+
+	// First, create the secret in the cache that we expect to be updated:
+	path := "secret-v2/data/foo"
+	indexId := hashStaticSecretIndex(path)
+	initialTime := time.Now().UTC()
+	// pre-populate the leaseCache with a secret to update
+	index := &cachememdb.Index{
+		Namespace:   "root/",
+		RequestPath: path,
+		LastRenewed: initialTime,
+		ID:          indexId,
+		// Valid token provided, so update should work.
+		Tokens:   map[string]struct{}{client.Token(): {}},
+		Response: []byte{},
+		Type:     cacheboltdb.StaticSecretType,
+	}
+	err := leaseCache.db.Set(index)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	secretData := map[string]interface{}{
+		"foo": "bar",
+	}
+
+	err = client.Sys().Mount("secret-v2", &api.MountInput{
+		Type: "kv-v2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Put a secret (with different values to what's currently in the cache)
+	_, err = client.KVv2("secret-v2").Put(context.Background(), "foo", secretData)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// perform the pre-event stream update:
+	err = updater.preEventStreamUpdate(context.Background())
+	require.Nil(t, err)
+
+	// Then, do a GET to see if the event got updated
+	newIndex, err := leaseCache.db.Get(cachememdb.IndexNameID, indexId)
+	require.Nil(t, err)
+	require.NotNil(t, newIndex)
+	require.NotEqual(t, []byte{}, newIndex.Response)
+	require.Truef(t, initialTime.Before(newIndex.LastRenewed), "last updated time not updated on index")
+	require.Equal(t, index.RequestPath, newIndex.RequestPath)
+	require.Equal(t, index.Tokens, newIndex.Tokens)
+}
+
+// TestPreEventStreamUpdateErrorUpdating tests that preEventStreamUpdate correctly responds
+// to errors on secret updates
+func TestPreEventStreamUpdateErrorUpdating(t *testing.T) {
+	t.Parallel()
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.VersionedKVFactory,
+		},
+	}, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	client := cluster.Cores[0].Client
+
+	updater := testNewStaticSecretCacheUpdater(t, client)
+	leaseCache := updater.leaseCache
+
+	// First, create the secret in the cache that we expect to be updated:
+	path := "secret-v2/data/foo"
+	indexId := hashStaticSecretIndex(path)
+	initialTime := time.Now().UTC()
+	// pre-populate the leaseCache with a secret to update
+	index := &cachememdb.Index{
+		Namespace:   "root/",
+		RequestPath: path,
+		LastRenewed: initialTime,
+		ID:          indexId,
+		// Valid token provided, so update should work.
+		Tokens:   map[string]struct{}{client.Token(): {}},
+		Response: []byte{},
+		Type:     cacheboltdb.StaticSecretType,
+	}
+	err := leaseCache.db.Set(index)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	secretData := map[string]interface{}{
+		"foo": "bar",
+	}
+
+	err = client.Sys().Mount("secret-v2", &api.MountInput{
+		Type: "kv-v2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Put a secret (with different values to what's currently in the cache)
+	_, err = client.KVv2("secret-v2").Put(context.Background(), "foo", secretData)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Seal Vault, so that the update will fail
+	cluster.EnsureCoresSealed(t)
+
+	// perform the pre-event stream update:
+	err = updater.preEventStreamUpdate(context.Background())
+	require.Nil(t, err)
+
+	// Then, we expect the index to be evicted since the token failed to update
+	_, err = leaseCache.db.Get(cachememdb.IndexNameID, indexId)
+	require.Equal(t, cachememdb.ErrCacheItemNotFound, err)
 }

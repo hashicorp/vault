@@ -29,15 +29,21 @@
           @text="Copy"
           @isIconOnly={{true}}
           @textToCopy={{stringify this.unwrapData}}
+          @onError={{(fn
+            (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+          )}}
           class="transparent top-right-absolute"
         />
       </div>
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
-      <LinkTo @route="vault.cluster.access.control-groups" class="button">
-        <Chevron @direction="left" />
-        Back
-      </LinkTo>
+      <Hds::Button
+        @text="Back"
+        @color="secondary"
+        @route="vault.cluster.access.control-groups"
+        @icon="chevron-left"
+        @iconPosition="leading"
+      />
     </div>
   {{else}}
     <div class="control-group-success" data-test-unwrap-form>
@@ -57,6 +63,7 @@
             autocomplete="off"
             spellcheck="false"
             name="token"
+            id="token"
             @value={{this.token}}
           />
         </div>

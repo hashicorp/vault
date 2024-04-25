@@ -31,9 +31,12 @@
   <Toolbar>
     <ToolbarActions>
       {{#if this.model.canDelete}}
-        <ConfirmAction @buttonClasses="toolbar-link" @onConfirmAction={{action "delete"}}>
-          Delete role
-        </ConfirmAction>
+        <ConfirmAction
+          @buttonText="Delete role"
+          class="toolbar-button"
+          @buttonColor="secondary"
+          @onConfirmAction={{action "delete"}}
+        />
         <div class="toolbar-separator"></div>
       {{/if}}
       {{#if (eq this.model.keyType "otp")}}

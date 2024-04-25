@@ -31,7 +31,7 @@ import ControlGroupError from 'vault/lib/control-group-error';
 import Ember from 'ember';
 import keys from 'core/utils/key-codes';
 import { action, set } from '@ember/object';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { isBlank, isNone } from '@ember/utils';
 import { task, waitForEvent } from 'ember-concurrency';
@@ -105,7 +105,7 @@ export default class SecretCreateOrUpdate extends Component {
     const secret = this.args.model;
     const secretData = this.args.modelForData;
 
-    let key = secretData.get('path') || secret.id;
+    let key = secretData?.path || secret.id;
 
     if (key.startsWith('/')) {
       key = key.replace(/^\/+/g, '');
@@ -150,7 +150,7 @@ export default class SecretCreateOrUpdate extends Component {
   addRow() {
     const data = this.args.secretData;
     // fired off on init
-    if (isNone(data.findBy('name', ''))) {
+    if (isNone(data.find((d) => d.name === ''))) {
       data.pushObject({ name: '', value: '' });
       this.handleChange();
     }
@@ -191,10 +191,11 @@ export default class SecretCreateOrUpdate extends Component {
   @action
   deleteRow(name) {
     const data = this.args.secretData;
-    const item = data.findBy('name', name);
+    const item = data.find((d) => d.name === name);
     if (isBlank(item.name)) {
       return;
     }
+    // secretData is a KVObject/ArrayProxy so removeObject is fine here
     data.removeObject(item);
     this.checkRows();
     this.handleChange();

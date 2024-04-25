@@ -4,7 +4,6 @@
 package event
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -12,7 +11,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
 	"github.com/hashicorp/go-uuid"
 )
 
@@ -60,18 +58,24 @@ func getOpts(opt ...Option) (options, error) {
 	return opts, nil
 }
 
+// ValidateOptions can be used to validate options before they are required.
+func ValidateOptions(opt ...Option) error {
+	_, err := getOpts(opt...)
+
+	return err
+}
+
 // NewID is a bit of a modified NewID has been done to stop a circular
 // dependency with the errors package that is caused by importing
 // boundary/internal/db
 func NewID(prefix string) (string, error) {
-	const op = "event.NewID"
 	if prefix == "" {
-		return "", fmt.Errorf("%s: missing prefix: %w", op, ErrInvalidParameter)
+		return "", fmt.Errorf("missing prefix: %w", ErrInvalidParameter)
 	}
 
 	id, err := uuid.GenerateUUID()
 	if err != nil {
-		return "", fmt.Errorf("%s: unable to generate ID: %w", op, err)
+		return "", fmt.Errorf("unable to generate ID: %w", err)
 	}
 
 	return fmt.Sprintf("%s_%s", prefix, id), nil
@@ -85,7 +89,7 @@ func WithID(id string) Option {
 		id := strings.TrimSpace(id)
 		switch {
 		case id == "":
-			err = errors.New("id cannot be empty")
+			err = fmt.Errorf("id cannot be empty: %w", ErrInvalidParameter)
 		default:
 			o.withID = id
 		}
@@ -101,7 +105,7 @@ func WithNow(now time.Time) Option {
 
 		switch {
 		case now.IsZero():
-			err = errors.New("cannot specify 'now' to be the zero time instant")
+			err = fmt.Errorf("cannot specify 'now' to be the zero time instant: %w", ErrInvalidParameter)
 		default:
 			o.withNow = now
 		}
@@ -113,7 +117,11 @@ func WithNow(now time.Time) Option {
 // WithFacility provides an Option to represent a 'facility' for a syslog sink.
 func WithFacility(facility string) Option {
 	return func(o *options) error {
-		o.withFacility = facility
+		facility = strings.TrimSpace(facility)
+
+		if facility != "" {
+			o.withFacility = facility
+		}
 
 		return nil
 	}
@@ -122,7 +130,11 @@ func WithFacility(facility string) Option {
 // WithTag provides an Option to represent a 'tag' for a syslog sink.
 func WithTag(tag string) Option {
 	return func(o *options) error {
-		o.withTag = tag
+		tag = strings.TrimSpace(tag)
+
+		if tag != "" {
+			o.withTag = tag
+		}
 
 		return nil
 	}
@@ -152,7 +164,7 @@ func WithMaxDuration(duration string) Option {
 
 		parsed, err := parseutil.ParseDurationSecond(duration)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to parse max duration: %w: %w", ErrInvalidParameter, err)
 		}
 
 		o.withMaxDuration = parsed
@@ -180,7 +192,7 @@ func WithFileMode(mode string) Option {
 
 		switch {
 		case err != nil:
-			return fmt.Errorf("unable to parse file mode: %w", err)
+			return fmt.Errorf("unable to parse file mode: %w: %w", ErrInvalidParameter, err)
 		default:
 			m := os.FileMode(raw)
 			o.withFileMode = &m
