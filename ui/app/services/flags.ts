@@ -42,7 +42,6 @@ export default class flagsService extends Service {
     return this.managedNamespaceRoot !== null;
   }
 
-  // TODO getter will be used in the upcoming persona service
   get secretsSyncIsActivated() {
     return this.activatedFlags.includes('secrets-sync');
   }
