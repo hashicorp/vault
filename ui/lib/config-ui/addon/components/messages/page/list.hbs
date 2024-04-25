@@ -81,54 +81,6 @@
   </:toolbarActions>
 </Messages::TabPageHeader>
 
-{{!--
-<div class="toolbar-basic">
-  <form {{on "submit" (perform this.handleSearch)}} aria-label="Filter custom message list">
-    <Hds::SegmentedGroup as |S|>
-      <S.TextInput
-        @value={{@params.pageFilter}}
-        name="search"
-        placeholder="Search secret path"
-        aria-label="Search by secret path"
-        size="32"
-        data-test-kv-list-filter
-      />
-      <S.Select aria-label="Filter by message status" name="status" as |S|>
-        <S.Options>
-          <option value="">Message status</option>
-          {{#each (array "active" "inactive") as |status|}}
-            <option value={{status}}>{{status}}</option>
-          {{/each}}
-        </S.Options>
-      </S.Select>
-      <S.Select aria-label="Filter by type" name="type" as |S|>
-        <S.Options>
-          <option value="">Message type</option>
-          {{#each (array "modal" "banner") as |status|}}
-            <option value={{status}}>{{status}}</option>
-          {{/each}}
-        </S.Options>
-      </S.Select>
-      <S.Button
-        @color="secondary"
-        @text="Search"
-        @icon={{if this.handleSearch.isRunning "loading" "search"}}
-        type="submit"
-        data-test-kv-list-filter-submit
-      />
-    </Hds::SegmentedGroup>
-  </form>
-  <Hds::Button
-    @text="Create message"
-    @icon="plus"
-    @color="secondary"
-    class="toolbar-button"
-    {{on "click" this.createMessage}}
-    data-test-button="create message"
-    aria-label="create message"
-  />
-</div> --}}
-
 {{#if @messages.length}}
   {{#each this.formattedMessages as |message|}}
     <LinkedBlock
