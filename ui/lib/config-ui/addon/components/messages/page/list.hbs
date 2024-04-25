@@ -9,40 +9,61 @@
   @breadcrumbs={{this.breadcrumbs}}
 >
   <:toolbarFilters>
-    <FilterInput
-      aria-label="Search by message title"
-      placeholder="Search by message title"
-      id="message-filter"
-      value={{@params.pageFilter}}
-      @autofocus={{true}}
-      @onInput={{this.onFilterInputChange}}
-    />
-    <div>
-      <SearchSelect
-        @id="filter-by-message-status"
-        class="has-left-margin-s"
-        @options={{this.statusFilterOptions}}
-        @selectLimit="1"
-        @searchEnabled={{false}}
-        @fallbackComponent="select"
-        @onChange={{fn this.onFilterChange "status"}}
-        @placeholder="Filter by message status"
-        @inputValue={{if @params.status (array @params.status)}}
-        data-test-filter-by-message-status
-      />
-    </div>
-    <SearchSelect
-      @id="filter-by-message-type"
-      class="has-left-margin-s"
-      @options={{this.typeFilterOptions}}
-      @selectLimit="1"
-      @searchEnabled={{false}}
-      @fallbackComponent="select"
-      @onChange={{fn this.onFilterChange "type"}}
-      @placeholder="Filter by message type"
-      @inputValue={{if @params.type (array @params.type)}}
-      data-test-filter-by-message-type
-    />
+    <form {{on "submit" (perform this.handleSearch)}} aria-label="Filter custom message list">
+      <Hds::SegmentedGroup as |S|>
+        <S.Button
+          @color="secondary"
+          @text="Clear"
+          @icon={{"trash"}}
+          @isIconOnly={{true}}
+          type="reset"
+          {{on "click" this.resetFilters}}
+        />
+        <S.TextInput
+          @value={{@params.pageFilter}}
+          @type="search"
+          name="pageFilter"
+          class="segment-filter"
+          placeholder="Search secret path"
+          aria-label="Search by secret path"
+          size="32"
+          data-test-kv-list-filter
+        />
+        <S.Select
+          aria-label="Filter by message status"
+          name="status"
+          class="segment-filter {{unless @params.status 'has-text-grey'}}"
+          as |S|
+        >
+          <S.Options>
+            <option value="" class="default-option">Message status</option>
+            {{#each (array "active" "inactive") as |status|}}
+              <option value={{status}} selected={{eq @params.status status}}>{{status}}</option>
+            {{/each}}
+          </S.Options>
+        </S.Select>
+        <S.Select
+          aria-label="Filter by type"
+          name="type"
+          class="segment-filter {{unless @params.status 'has-text-grey'}}"
+          as |S|
+        >
+          <S.Options>
+            <option value="" class="has-text-grey">Message type</option>
+            {{#each (array "modal" "banner") as |type|}}
+              <option value={{type}} selected={{eq @params.type type}}>{{type}}</option>
+            {{/each}}
+          </S.Options>
+        </S.Select>
+        <S.Button
+          @color="secondary"
+          @text="Filter"
+          @icon={{if this.handleSearch.isRunning "loading" "search"}}
+          type="submit"
+          data-test-kv-list-filter-submit
+        />
+      </Hds::SegmentedGroup>
+    </form>
   </:toolbarFilters>
   <:toolbarActions>
     <Hds::Button
@@ -56,6 +77,54 @@
     />
   </:toolbarActions>
 </Messages::TabPageHeader>
+
+{{!--
+<div class="toolbar-basic">
+  <form {{on "submit" (perform this.handleSearch)}} aria-label="Filter custom message list">
+    <Hds::SegmentedGroup as |S|>
+      <S.TextInput
+        @value={{@params.pageFilter}}
+        name="search"
+        placeholder="Search secret path"
+        aria-label="Search by secret path"
+        size="32"
+        data-test-kv-list-filter
+      />
+      <S.Select aria-label="Filter by message status" name="status" as |S|>
+        <S.Options>
+          <option value="">Message status</option>
+          {{#each (array "active" "inactive") as |status|}}
+            <option value={{status}}>{{status}}</option>
+          {{/each}}
+        </S.Options>
+      </S.Select>
+      <S.Select aria-label="Filter by type" name="type" as |S|>
+        <S.Options>
+          <option value="">Message type</option>
+          {{#each (array "modal" "banner") as |status|}}
+            <option value={{status}}>{{status}}</option>
+          {{/each}}
+        </S.Options>
+      </S.Select>
+      <S.Button
+        @color="secondary"
+        @text="Search"
+        @icon={{if this.handleSearch.isRunning "loading" "search"}}
+        type="submit"
+        data-test-kv-list-filter-submit
+      />
+    </Hds::SegmentedGroup>
+  </form>
+  <Hds::Button
+    @text="Create message"
+    @icon="plus"
+    @color="secondary"
+    class="toolbar-button"
+    {{on "click" this.createMessage}}
+    data-test-button="create message"
+    aria-label="create message"
+  />
+</div> --}}
 
 {{#if @messages.length}}
   {{#each this.formattedMessages as |message|}}
