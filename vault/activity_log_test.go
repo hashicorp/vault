@@ -4982,17 +4982,18 @@ func TestActivityLog_reportPrecomputedQueryMetrics(t *testing.T) {
 
 	// for each client type, make 3 clients in their own namespaces
 	for i := 0; i < 3; i++ {
-		for _, clientType := range []string{secretSyncActivityType, nonEntityTokenActivityType, entityActivityType} {
+		for _, clientType := range ActivityClientTypes {
 			client := &activity.EntityRecord{
 				ClientID:      fmt.Sprintf("%s-%d", clientType, i),
 				NamespaceID:   fmt.Sprintf("ns-%d", i),
 				MountAccessor: fmt.Sprintf("mnt-%d", i),
 				ClientType:    clientType,
-				NonEntity:     clientType == nonEntityTokenActivityType,
+				NonEntity:     clientType == nonEntityTokenActivityType || clientType == ACMEActivityType,
 			}
 			processClientRecord(client, byNS, byMonth, segmentTime)
 		}
 	}
+
 	endTime := timeutil.EndOfMonth(segmentTime)
 	opts := pqOptions{
 		byNamespace: byNS,
@@ -5001,7 +5002,6 @@ func TestActivityLog_reportPrecomputedQueryMetrics(t *testing.T) {
 	}
 
 	otherTime := segmentTime.Add(time.Hour)
-
 	hasNoMetric := func(t *testing.T, intervals []*metrics.IntervalMetrics, name string) {
 		t.Helper()
 		gauges := intervals[len(intervals)-1].Gauges
@@ -5011,6 +5011,7 @@ func TestActivityLog_reportPrecomputedQueryMetrics(t *testing.T) {
 			}
 		}
 	}
+
 	hasMetric := func(t *testing.T, intervals []*metrics.IntervalMetrics, name string, value float32, namespaceLabel *string) {
 		t.Helper()
 		fullMetric := fmt.Sprintf("%s;cluster=test-cluster", name)
@@ -5038,6 +5039,7 @@ func TestActivityLog_reportPrecomputedQueryMetrics(t *testing.T) {
 		hasNoMetric(t, data, "identity.entity.active.reporting_period")
 		hasNoMetric(t, data, "identity.secret_sync.active.reporting_period")
 	})
+
 	t.Run("monthly metric", func(t *testing.T) {
 		// activePeriodEnd is equal to the segment time, indicating that monthly
 		// metrics should be reported
@@ -5057,7 +5059,9 @@ func TestActivityLog_reportPrecomputedQueryMetrics(t *testing.T) {
 		// secret sync metrics should be the sum of clients across all
 		// namespaces
 		hasMetric(t, data, "identity.secret_sync.active.monthly", 3, nil)
+		hasMetric(t, data, "identity.pki_acme.active.monthly", 3, nil)
 	})
+
 	t.Run("reporting period metric", func(t *testing.T) {
 		// activePeriodEnd is not equal to the segment time but activePeriodStart
 		// is, which indicates that metrics for the reporting period should be
@@ -5078,5 +5082,6 @@ func TestActivityLog_reportPrecomputedQueryMetrics(t *testing.T) {
 		// secret sync metrics should be the sum of clients across all
 		// namespaces
 		hasMetric(t, data, "identity.secret_sync.active.reporting_period", 3, nil)
+		hasMetric(t, data, "identity.pki_acme.active.reporting_period", 3, nil)
 	})
 }
