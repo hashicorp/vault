@@ -91,7 +91,7 @@ export default ApplicationAdapter.extend({
     if (snapshot.attr('type') === 'ssh') {
       return this.ajax(`/v1/${encodePath(path)}/config/ca`, 'GET');
     }
-    return;
+    return { data: {} };
   },
 
   queryRecord(store, type, query) {
