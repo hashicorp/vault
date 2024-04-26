@@ -246,10 +246,8 @@ func (c *OperatorUsageCommand) parseNamespaceCount(rawVal interface{}) (UsageRes
 	// don't error if the secret syncs key is missing
 	ret.secretSyncs, _ = jsonNumberOK(counts, "secret_syncs")
 
-	ret.acmeCount, ok = jsonNumberOK(counts, "acme_clients")
-	if !ok {
-		return ret, errors.New("missing acme_clients")
-	}
+	// don't error if acme clients is missing
+	ret.acmeCount, _ = jsonNumberOK(counts, "acme_clients")
 
 	ret.clientCount, ok = jsonNumberOK(counts, "clients")
 	if !ok {
@@ -327,11 +325,8 @@ func (c *OperatorUsageCommand) totalOutput(data map[string]interface{}) []string
 	// don't error if secret syncs key is missing
 	secretSyncs, _ := jsonNumberOK(total, "secret_syncs")
 
-	acmeCount, ok := jsonNumberOK(total, "acme_clients")
-	if !ok {
-		c.UI.Error("missing acme_clients in total")
-		return out
-	}
+	// don't error if acme clients is missing
+	acmeCount, _ := jsonNumberOK(total, "acme_clients")
 
 	clientCount, ok := jsonNumberOK(total, "clients")
 	if !ok {
