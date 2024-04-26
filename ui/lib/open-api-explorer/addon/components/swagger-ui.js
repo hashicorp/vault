@@ -26,24 +26,24 @@ export default class SwaggerUiComponent extends Component {
     return {
       fn: {
         opsFilter: (taggedOps, phrase) => {
-          // map over the options and filter out operations where the path doesn't match what's typed
-          return (
-            taggedOps
-              .map((tagObj) => {
-                const operations = tagObj.get('operations');
+          const filteredOperations = taggedOps.reduce((acc, tagObj) => {
+            const operations = tagObj.get('operations');
 
-                const matchingOperations = operations.filter((operationObj) => {
-                  const path = operationObj.get('path');
-                  return path.includes(phrase);
-                });
+            // filter out operations where the path doesn't match search phrase
+            const operationsWithMatchingPath = operations.filter((operationObj) => {
+              const path = operationObj.get('path');
+              return path.includes(phrase);
+            });
 
-                return tagObj.set('operations', matchingOperations);
-              })
-              // then traverse again and remove the top level item if there are no operations left after filtering
-              .filter((tagObj) => {
-                return !!tagObj.get('operations').size;
-              })
-          );
+            // if there are any operations left after filtering, add the tagObj to the accumulator
+            if (operationsWithMatchingPath.size > 0) {
+              acc.push(tagObj.set('operations', operationsWithMatchingPath));
+            }
+
+            return acc;
+          }, []);
+
+          return filteredOperations;
         },
       },
     };
