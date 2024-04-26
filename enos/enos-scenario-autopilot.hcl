@@ -11,6 +11,7 @@ scenario "autopilot" {
     edition         = global.editions
     initial_version = global.upgrade_initial_versions
     seal            = global.seals
+    seal_ha_beta    = ["true", "false"]
 
     # Autopilot wasn't available before 1.11.x
     exclude {
@@ -167,6 +168,7 @@ scenario "autopilot" {
         version = matrix.initial_version
       }
       seal_attributes = step.create_seal_key.attributes
+      seal_ha_beta    = matrix.seal_ha_beta
       seal_type       = matrix.seal
       storage_backend = "raft"
       storage_backend_addl_config = {
@@ -252,6 +254,7 @@ scenario "autopilot" {
       packages                    = concat(global.packages, global.distro_packages[matrix.distro])
       root_token                  = step.create_vault_cluster.root_token
       seal_attributes             = step.create_seal_key.attributes
+      seal_ha_beta                = matrix.seal_ha_beta
       seal_type                   = matrix.seal
       shamir_unseal_keys          = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
       storage_backend             = "raft"

@@ -12,6 +12,7 @@ scenario "agent" {
     distro          = global.distros
     edition         = global.editions
     seal            = global.seals
+    seal_ha_beta    = ["true", "false"]
 
     # Our local builder always creates bundles
     exclude {
@@ -208,6 +209,7 @@ scenario "agent" {
       manage_service       = local.manage_service
       packages             = concat(global.packages, global.distro_packages[matrix.distro])
       seal_attributes      = step.create_seal_key.attributes
+      seal_ha_beta         = matrix.seal_ha_beta
       seal_type            = matrix.seal
       storage_backend      = matrix.backend
       target_hosts         = step.create_vault_cluster_targets.hosts

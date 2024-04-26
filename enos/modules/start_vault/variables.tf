@@ -64,6 +64,11 @@ variable "seal_alias" {
   default     = "primary"
 }
 
+variable "seal_ha_beta" {
+  description = "Enable using Seal HA on clusters that meet minimum version requirements and are enterprise editions"
+  default     = true
+}
+
 variable "seal_alias_secondary" {
   type        = string
   description = "The secondary seal alias name"

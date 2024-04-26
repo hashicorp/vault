@@ -14,6 +14,10 @@ terraform {
 
 locals {
   bin_path = "${var.install_dir}/vault"
+  environment = local.seal_secondary == null ? var.environment : merge(
+    var.environment,
+    { VAULT_ENABLE_SEAL_HA_BETA : tobool(var.seal_ha_beta) },
+  )
   // In order to get Terraform to plan we have to use collections with keys that are known at plan
   // time. Here we're creating locals that keep track of index values that point to our target hosts.
   followers = toset(slice(local.instances, 1, length(local.instances)))
@@ -157,7 +161,7 @@ resource "enos_vault_start" "leader" {
   bin_path    = local.bin_path
   config_dir  = var.config_dir
   config_mode = var.config_mode
-  environment = var.environment
+  environment = local.environment
   config = {
     api_addr     = "http://${var.target_hosts[each.value].private_ip}:8200"
     cluster_addr = "http://${var.target_hosts[each.value].private_ip}:8201"
@@ -198,7 +202,7 @@ resource "enos_vault_start" "followers" {
   bin_path    = local.bin_path
   config_dir  = var.config_dir
   config_mode = var.config_mode
-  environment = var.environment
+  environment = local.environment
   config = {
     api_addr     = "http://${var.target_hosts[each.value].private_ip}:8200"
     cluster_addr = "http://${var.target_hosts[each.value].private_ip}:8201"

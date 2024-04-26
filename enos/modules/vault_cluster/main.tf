@@ -134,6 +134,7 @@ module "start_vault" {
   manage_service            = var.manage_service
   seal_attributes           = var.seal_attributes
   seal_attributes_secondary = var.seal_attributes_secondary
+  seal_ha_beta              = var.seal_ha_beta
   seal_type                 = var.seal_type
   seal_type_secondary       = var.seal_type_secondary
   service_username          = local.vault_service_user
