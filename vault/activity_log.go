@@ -2399,6 +2399,7 @@ func (a *ActivityLog) reportPrecomputedQueryMetrics(ctx context.Context, segment
 				},
 			)
 			summedMetricsMonthly[secretSyncActivityType] += entry.Counts.countByType(secretSyncActivityType)
+			summedMetricsMonthly[ACMEActivityType] += entry.Counts.countByType(ACMEActivityType)
 		case opts.activePeriodStart:
 			a.metrics.SetGaugeWithLabels(
 				[]string{"identity", "entity", "active", "reporting_period"},
@@ -2415,14 +2416,15 @@ func (a *ActivityLog) reportPrecomputedQueryMetrics(ctx context.Context, segment
 				},
 			)
 			summedMetricsReporting[secretSyncActivityType] += entry.Counts.countByType(secretSyncActivityType)
+			summedMetricsReporting[ACMEActivityType] += entry.Counts.countByType(ACMEActivityType)
 		}
 	}
 
-	for clientType, count := range summedMetricsMonthly {
-		a.metrics.SetGauge([]string{"identity", strings.ReplaceAll(clientType, "-", "_"), "active", "monthly"}, float32(count))
+	for ct, count := range summedMetricsMonthly {
+		a.metrics.SetGauge([]string{"identity", strings.ReplaceAll(ct, "-", "_"), "active", "monthly"}, float32(count))
 	}
-	for clientType, count := range summedMetricsReporting {
-		a.metrics.SetGauge([]string{"identity", strings.ReplaceAll(clientType, "-", "_"), "active", "reporting_period"}, float32(count))
+	for ct, count := range summedMetricsReporting {
+		a.metrics.SetGauge([]string{"identity", strings.ReplaceAll(ct, "-", "_"), "active", "reporting_period"}, float32(count))
 	}
 }
 
