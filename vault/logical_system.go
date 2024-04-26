@@ -1355,7 +1355,7 @@ func (b *SystemBackend) handleGenerateRootDecodeTokenUpdate(ctx context.Context,
 	return resp, nil
 }
 
-func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[string]interface{} {
+func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry, legacyTTLFormat bool) map[string]interface{} {
 	info := map[string]interface{}{
 		"type":                    entry.Type,
 		"description":             entry.Description,
@@ -1369,11 +1369,24 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 		"running_plugin_version":  entry.RunningVersion,
 		"running_sha256":          entry.RunningSha256,
 	}
+	coreDefTTL := int64(b.Core.defaultLeaseTTL.Seconds())
+	coreMaxTTL := int64(b.Core.maxLeaseTTL.Seconds())
+	entDefTTL := int64(entry.Config.DefaultLeaseTTL.Seconds())
+	entMaxTTL := int64(entry.Config.MaxLeaseTTL.Seconds())
 	entryConfig := map[string]interface{}{
-		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
-		"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
+		"default_lease_ttl": entDefTTL,
+		"max_lease_ttl":     entMaxTTL,
 		"force_no_cache":    entry.Config.ForceNoCache,
 	}
+	if !legacyTTLFormat {
+		if entDefTTL == 0 {
+			entryConfig["default_lease_ttl"] = coreDefTTL
+		}
+		if entMaxTTL == 0 {
+			entryConfig["max_lease_ttl"] = coreMaxTTL
+		}
+	}
+
 	if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 		entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
 	}
@@ -1449,7 +1462,7 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 		}
 
 		// Populate mount info
-		info := b.mountInfo(ctx, entry)
+		info := b.mountInfo(ctx, entry, true)
 
 		resp.Data[entry.Path] = info
 	}
@@ -1733,7 +1746,7 @@ func (b *SystemBackend) handleReadMount(ctx context.Context, req *logical.Reques
 	}
 
 	resp := &logical.Response{
-		Data: b.mountInfo(ctx, entry),
+		Data: b.mountInfo(ctx, entry, true),
 	}
 	if entry.Version != "" && entry.Version != entry.RunningVersion {
 		warning := fmt.Sprintf("Plugin version is configured as %q, but running %q", entry.Version, entry.RunningVersion)
@@ -3043,7 +3056,7 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 			continue
 		}
 
-		info := b.mountInfo(ctx, entry)
+		info := b.mountInfo(ctx, entry, true)
 		resp.Data[entry.Path] = info
 	}
 
@@ -3077,7 +3090,7 @@ func (b *SystemBackend) handleReadAuth(ctx context.Context, req *logical.Request
 		}
 
 		return &logical.Response{
-			Data: b.mountInfo(ctx, entry),
+			Data: b.mountInfo(ctx, entry, true),
 		}, nil
 	}
 
@@ -4963,7 +4976,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
-				secretMounts[entry.Path] = b.mountInfo(ctx, entry)
+				secretMounts[entry.Path] = b.mountInfo(ctx, entry, false)
 			} else {
 				secretMounts[entry.Path] = map[string]interface{}{
 					"type":        entry.Type,
@@ -4990,7 +5003,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
-				authMounts[entry.Path] = b.mountInfo(ctx, entry)
+				authMounts[entry.Path] = b.mountInfo(ctx, entry, false)
 			} else {
 				authMounts[entry.Path] = map[string]interface{}{
 					"type":        entry.Type,
@@ -5053,7 +5066,7 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		return errResp, logical.ErrPermissionDenied
 	}
 	resp := &logical.Response{
-		Data: b.mountInfo(ctx, me),
+		Data: b.mountInfo(ctx, me, false),
 	}
 	resp.Data["path"] = me.Path
 
