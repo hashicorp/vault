@@ -15,7 +15,7 @@ export default Route.extend({
 
   model(params) {
     const { path } = params;
-    return this.store.findAll('auth-method').then((modelArray) => {
+    return this.store.query('auth-method', {}).then((modelArray) => {
       const model = modelArray.find((m) => m.id === path);
       if (!model) {
         const error = new AdapterError();

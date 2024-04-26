@@ -45,6 +45,22 @@ export default ApplicationAdapter.extend({
     });
   },
 
+  query() {
+    const url = `/${this.urlPrefix()}/internal/ui/mounts`;
+    return this.ajax(url, 'GET')
+      .then((result) => {
+        return {
+          data: result.data.auth,
+        };
+      })
+      .catch((e) => {
+        if (e instanceof AdapterError) {
+          set(e, 'policyPath', 'sys/internal/ui/mounts');
+        }
+        throw e;
+      });
+  },
+
   createRecord(store, type, snapshot) {
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot);
