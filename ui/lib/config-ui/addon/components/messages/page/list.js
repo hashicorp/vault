@@ -111,7 +111,8 @@ export default class MessagesList extends Component {
     yield timeout(Ember.testing ? 0 : 250);
     const params = {};
     for (const key of formData.keys()) {
-      const val = formData.get(key) || undefined;
+      const valDefault = key === 'pageFilter' ? '' : null;
+      const val = formData.get(key) || valDefault;
       params[key] = val;
     }
     this.transitionToMessagesWithParams(params);
@@ -119,7 +120,7 @@ export default class MessagesList extends Component {
 
   @action
   resetFilters() {
-    this.transitionToMessagesWithParams({ pageFilter: undefined, status: undefined, type: undefined });
+    this.transitionToMessagesWithParams({ pageFilter: '', status: null, type: null });
   }
 
   @action
