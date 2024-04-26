@@ -21,28 +21,21 @@ export default ApplicationAdapter.extend({
 
   findAll(store, type, sinceToken, snapshotRecordArray) {
     const isUnauthenticated = snapshotRecordArray?.adapterOptions?.unauthenticated;
-    if (isUnauthenticated) {
-      const url = `/${this.urlPrefix()}/internal/ui/mounts`;
-      return this.ajax(url, 'GET', {
-        unauthenticated: true,
+    const url = `/${this.urlPrefix()}/internal/ui/mounts`;
+    return this.ajax(url, 'GET', { unauthenticated: isUnauthenticated })
+      .then((result) => {
+        return {
+          data: result.data.auth,
+        };
       })
-        .then((result) => {
-          return {
-            data: result.data.auth,
-          };
-        })
-        .catch(() => {
-          return {
-            data: {},
-          };
-        });
-    }
-    return this.ajax(this.url(), 'GET').catch((e) => {
-      if (e instanceof AdapterError) {
-        set(e, 'policyPath', 'sys/auth');
-      }
-      throw e;
-    });
+      .catch((e) => {
+        if (isUnauthenticated) {
+          return { data: {} };
+        } else if (e instanceof AdapterError) {
+          set(e, 'policyPath', 'sys/auth');
+        }
+        throw e;
+      });
   },
 
   createRecord(store, type, snapshot) {
