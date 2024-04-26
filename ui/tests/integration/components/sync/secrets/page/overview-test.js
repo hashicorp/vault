@@ -24,19 +24,24 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    // the component calls on the two services below to determine the state of the page
     this.version = this.owner.lookup('service:version');
+    this.store = this.owner.lookup('service:store');
     this.version.type = 'enterprise';
     this.version.features = ['Secrets Sync'];
+
     syncScenario(this.server);
     syncHandlers(this.server);
 
-    const store = this.owner.lookup('service:store');
-    this.destinations = await store.query('sync/destination', {});
+    this.destinations = await this.store.query('sync/destination', {});
+    // component test so set values that would normally be calculated on the route model from the services.
     this.isActivated = true;
+    this.licenseHasSecretsSync = true;
+    this.isManged = false;
 
     this.renderComponent = () => {
       return render(
-        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @isActivated={{this.isActivated}} />`,
+        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @isActivated={{this.isActivated}} @licenseHasSecretsSync={{this.licenseHasSecretsSync}} @isManaged={{this.isManaged}} />`,
         {
           owner: this.engine,
         }
@@ -57,8 +62,6 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
   module('community', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'community';
-      this.version.features = [];
-      this.destinations = [];
       this.isActivated = false;
     });
 
@@ -74,6 +77,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
   module('ent', function (hooks) {
     hooks.beforeEach(function () {
+      this.isActivated = false;
       this.destinations = [];
     });
 
@@ -90,6 +94,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     test('it should show create CTA if license has the secrets sync feature', async function (assert) {
       this.version.features = ['Secrets Sync'];
+      this.isActivated = true;
       await this.renderComponent();
 
       assert.dom(title).hasText('Secrets Sync');

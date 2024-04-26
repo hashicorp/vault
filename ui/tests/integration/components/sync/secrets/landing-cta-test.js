@@ -44,9 +44,9 @@ module('Integration | Component | sync | Secrets::LandingCta', function (hooks) 
     assert
       .dom(cta.summary)
       .hasText(
-        'Sync secrets to platforms and tools across your stack to get secrets when and where you need them. Secrets Sync tutorial'
+        'This premium enterprise feature allows you to sync secrets to platforms and tools across your stack to get secrets when and where you need them. Learn more about Secrets Sync'
       );
-    assert.dom(cta.link).hasText('Secrets Sync tutorial');
+    assert.dom(cta.link).hasText('Learn more about Secrets Sync');
     assert.dom(cta.button).doesNotExist('does not render create destination button');
   });
 
@@ -58,9 +58,9 @@ module('Integration | Component | sync | Secrets::LandingCta', function (hooks) 
     assert
       .dom(cta.summary)
       .hasText(
-        'Sync secrets to platforms and tools across your stack to get secrets when and where you need them. Secrets Sync tutorial'
+        'This premium enterprise feature allows you to sync secrets to platforms and tools across your stack to get secrets when and where you need them. Learn more about Secrets Sync'
       );
-    assert.dom(cta.link).hasText('Secrets Sync tutorial');
+    assert.dom(cta.link).hasText('Learn more about Secrets Sync');
     assert.dom(cta.button).exists('it renders create destination button');
   });
 });
