@@ -61,6 +61,26 @@ If you register an external plugin called `myplugin` with `SOURCE=child`, the
 plugin process starts with `SOURCE=parent` and Vault reports a conflict for
 `myplugin`.
 
+### LDAP auth entity alias names no longer include upndomain
+
+The `userattr` field on the LDAP auth config is now used as the entity alias.
+Prior to 1.16, the LDAP auth method would detect if `upndomain` was configured
+on the mount and then use `<cn>@<upndomain>` as the entity alias value.
+
+The consequence of not configuring this correctly means users may not have the
+correct policies attached to their tokens when logging in.
+
+#### How to opt out
+
+To opt out of the entity alias change, update the `userattr` field on the config:
+
+```
+userattr="userprincipalname"
+```
+
+Refer to the [LDAP auth method (API)](/vault/api-docs/auth/ldap) page for
+more details on the configuration.
+
 ## Known issues and workarounds
 
 @include 'known-issues/1_16-jwt_auth_config.mdx'

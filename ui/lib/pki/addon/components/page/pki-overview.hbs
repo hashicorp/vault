@@ -9,6 +9,7 @@
     @subText="The total number of issuers in this PKI mount. Includes both root and intermediate certificates."
     @actionText="View issuers"
     @actionTo="issuers"
+    @actionModel={{@engine.id}}
   >
     <Hds::Text::Display @tag="h2" @size="500">
       {{format-number (if (eq @issuers 404) 0 @issuers.length)}}
@@ -20,6 +21,7 @@
       @subText="The total number of roles in this PKI mount that have been created to generate certificates."
       @actionText="View roles"
       @actionTo="roles"
+      @actionModel={{@engine.id}}
     >
       <Hds::Text::Display @tag="h2" @size="500">
         {{format-number (if (eq @roles 404) 0 @roles.length)}}

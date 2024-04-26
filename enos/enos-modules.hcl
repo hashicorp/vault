@@ -183,6 +183,12 @@ module "vault_setup_perf_secondary" {
   vault_install_dir = var.vault_install_dir
 }
 
+module "vault_step_down" {
+  source = "./modules/vault_step_down"
+
+  vault_install_dir = var.vault_install_dir
+}
+
 module "vault_test_ui" {
   source = "./modules/vault_test_ui"
 
@@ -202,7 +208,6 @@ module "vault_upgrade" {
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count
 }
-
 
 module "vault_verify_autopilot" {
   source = "./modules/vault_verify_autopilot"

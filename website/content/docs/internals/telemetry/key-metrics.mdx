@@ -5,6 +5,8 @@ description: >-
   Learn about the key Vault metrics you should monitor with health checks.
 ---
 
+# Key metrics for common health checks
+
 This document covers common Vault monitoring patterns. It is important to have operational and usage insight into a running Vault cluster to understand performance, assist with proactive incident response, and understand business workloads and use cases. 
 
 This document consists of five metrics sections: core, usage, storage backend, audit, and resource. Core metrics are fundamental internal metrics which you should monitor to ensure the health of your Vault cluster. The usage metrics section covers metrics which help count active and historical clients Vault. The storage backend section highlights the metrics to monitor so that you understand the storage infrastructure that your Vault cluster uses, allowing you to ensure your storage is functioning as intended. Audit metrics allow you to set up monitoring that helps you meet your compliance requirements. Resource metrics allow you to monitor metrics such as CPU, networking, and other resources Vault uses on its host. Replication covers metrics you can use to help ensure that Vault is replicating data as intended.
@@ -21,7 +23,7 @@ This document consists of five metrics sections: core, usage, storage backend, a
 
 #### Background:
 
-![Recommended architecture](/img/vault/vault-integrated-storage-reference-architecture.svg)
+![Recommended architecture](/img/vault-integrated-storage-reference-architecture.svg)
 
 The diagram illustrates a highly available Vault cluster with five nodes distributed between three availability zones. Vault's Integrated Storage uses a consensus protocol to provide consistency across the cluster nodes. The leader (active) node is responsible for ingesting new log entries, replicating them to the follower (standby) nodes, and managing when to commit an entry. Integrated Storage uses consensus protocol to provide consistency; therefore, if the leader is lost, the voting nodes will elect a new leader. Refer to the [Integrated storage](/vault/docs/internals/integrated-storage) documentation for more details.
 

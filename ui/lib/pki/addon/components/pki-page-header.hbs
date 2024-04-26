@@ -21,13 +21,21 @@
 <div class="tabs-container box is-bottomless is-marginless is-paddingless">
   <nav class="tabs" aria-label="pki tabs">
     <ul>
-      <li><LinkTo @route="overview" data-test-secret-list-tab="Overview">Overview</LinkTo></li>
-      <li><LinkTo @route="roles" data-test-secret-list-tab="Roles">Roles</LinkTo></li>
-      <li><LinkTo @route="issuers" data-test-secret-list-tab="Issuers">Issuers</LinkTo></li>
-      <li><LinkTo @route="keys" data-test-secret-list-tab="Keys">Keys</LinkTo></li>
-      <li><LinkTo @route="certificates" data-test-secret-list-tab="Certificates">Certificates</LinkTo></li>
-      <li><LinkTo @route="tidy" data-test-secret-list-tab="Tidy">Tidy</LinkTo></li>
-      <li><LinkTo @route="configuration" data-test-secret-list-tab="Configuration">Configuration</LinkTo></li>
+      <li><LinkTo @route="overview" @model={{@backend.id}} data-test-secret-list-tab="Overview">Overview</LinkTo></li>
+      <li><LinkTo @route="roles" @model={{@backend.id}} data-test-secret-list-tab="Roles">Roles</LinkTo></li>
+      <li><LinkTo @route="issuers" @model={{@backend.id}} data-test-secret-list-tab="Issuers">Issuers</LinkTo></li>
+      <li><LinkTo @route="keys" @model={{@backend.id}} data-test-secret-list-tab="Keys">Keys</LinkTo></li>
+      <li><LinkTo
+          @route="certificates"
+          @model={{@backend.id}}
+          data-test-secret-list-tab="Certificates"
+        >Certificates</LinkTo></li>
+      <li><LinkTo @route="tidy" @model={{@backend.id}} data-test-secret-list-tab="Tidy">Tidy</LinkTo></li>
+      <li><LinkTo
+          @route="configuration"
+          @model={{@backend.id}}
+          data-test-secret-list-tab="Configuration"
+        >Configuration</LinkTo></li>
     </ul>
   </nav>
 </div>
