@@ -3,8 +3,9 @@
 
 scenario "ui" {
   matrix {
-    backend = global.backends
-    edition = ["ce", "ent"]
+    backend      = global.backends
+    edition      = ["ce", "ent"]
+    seal_ha_beta = ["true", "false"]
   }
 
   terraform_cli = terraform_cli.default
@@ -110,6 +111,7 @@ scenario "ui" {
       cluster_tag_key = local.vault_tag_key
       common_tags     = local.tags
       seal_names      = step.create_seal_key.resource_names
+      seal_ha_beta    = matrix.seal_ha_beta
       vpc_id          = step.create_vpc.id
     }
   }

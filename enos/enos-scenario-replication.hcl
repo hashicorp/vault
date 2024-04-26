@@ -15,6 +15,7 @@ scenario "replication" {
     edition           = global.editions
     primary_backend   = global.backends
     primary_seal      = global.seals
+    seal_ha_beta      = ["true", "false"]
     secondary_backend = global.backends
     secondary_seal    = global.seals
 
@@ -294,6 +295,7 @@ scenario "replication" {
       manage_service       = local.manage_service
       packages             = concat(global.packages, global.distro_packages[matrix.distro])
       seal_attributes      = step.create_primary_seal_key.attributes
+      seal_ha_beta         = matrix.seal_ha_beta
       seal_type            = matrix.primary_seal
       storage_backend      = matrix.primary_backend
       target_hosts         = step.create_primary_cluster_targets.hosts
@@ -352,6 +354,7 @@ scenario "replication" {
       manage_service       = local.manage_service
       packages             = concat(global.packages, global.distro_packages[matrix.distro])
       seal_attributes      = step.create_secondary_seal_key.attributes
+      seal_ha_beta         = matrix.seal_ha_beta
       seal_type            = matrix.secondary_seal
       storage_backend      = matrix.secondary_backend
       target_hosts         = step.create_secondary_cluster_targets.hosts
@@ -648,6 +651,7 @@ scenario "replication" {
       packages             = concat(global.packages, global.distro_packages[matrix.distro])
       root_token           = step.create_primary_cluster.root_token
       seal_attributes      = step.create_primary_seal_key.attributes
+      seal_ha_beta         = matrix.seal_ha_beta
       seal_type            = matrix.primary_seal
       shamir_unseal_keys   = matrix.primary_seal == "shamir" ? step.create_primary_cluster.unseal_keys_hex : null
       storage_backend      = matrix.primary_backend
