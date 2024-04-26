@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentRouteName, settled } from '@ember/test-helpers';
+import { click, currentRouteName, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import page from 'vault/tests/pages/settings/auth/enable';
 import listPage from 'vault/tests/pages/access/methods';
 import authPage from 'vault/tests/pages/auth';
@@ -41,5 +42,17 @@ module('Acceptance | settings/auth/enable', function (hooks) {
 
     await listPage.visit();
     assert.ok(listPage.findLinkById(path), 'mount is present in the list');
+  });
+
+  test('it renders default config details', async function (assert) {
+    const path = `approle-config-${this.uid}`;
+    const type = 'approle';
+    await page.visit();
+    await page.enable(type, path);
+    await click(GENERAL.breadcrumbAtIdx(1));
+    assert
+      .dom(GENERAL.infoRowValue('Default Lease TTL'))
+      .hasText('1 month 1 day', 'shows system default TTL');
+    assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('1 month 1 day', 'shows the proper max TTL');
   });
 });
