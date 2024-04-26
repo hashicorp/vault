@@ -4,7 +4,7 @@
  */
 
 import { helper } from '@ember/component/helper';
-import { convertFromSeconds, durationToSeconds, largestUnitFromSeconds } from 'core/utils/duration-utils';
+import { durationToSeconds } from 'core/utils/duration-utils';
 import { formatDuration, intervalToDuration } from 'date-fns';
 
 export function duration([time]) {
@@ -23,10 +23,7 @@ export function duration([time]) {
       return '0 seconds';
     }
     // convert to human-readable format: '1 hour 6 seconds'
-    let unit = largestUnitFromSeconds(seconds);
-    if (unit === 'd') unit = 'h'; // highest increment backend returns is hour
-    const duration = convertFromSeconds(seconds, unit);
-    return `${formatDuration(durationObject)} (${duration}${unit})`;
+    return formatDuration(durationObject);
   }
   return time;
 }
