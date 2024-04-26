@@ -29,7 +29,7 @@ export default class SidebarNavClusterComponent extends Component {
 
     if (isManaged) return 'Plus';
     if (isEnterprise && !onLicense) return 'Premium';
-    if (!isEnterprise) 'Enterprise';
+    if (!isEnterprise) return 'Enterprise';
     // no badge for Enterprise clusters with Secrets Sync on their license--the only remaining option.
     return undefined;
   }
