@@ -34,35 +34,48 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	if !ok {
 		logVal = "info"
 	}
-	level := hclog.LevelFromString(logVal)
-	if level == hclog.NoLevel {
-		return nil, fmt.Errorf("failed to parse 'log_level' value: %q", logVal)
-	}
-	hlogger := hclog.Default()
-	hlogger.SetLevel(level)
 
-	creds, err := awsutil.RetrieveCreds(m["aws_access_key_id"], m["aws_secret_access_key"], m["aws_security_token"], hlogger)
-	if err != nil {
-		return nil, err
-	}
+	loginData := make(map[string]interface{})
+	var err error
+	headerVal, ok := m["iam_request_headers"]
+	if ok {
+		loginData = map[string]interface{}{
+			"iam_request_headers":     headerVal,
+			"iam_http_request_method": m["iam_http_request_method"],
+			"iam_request_url":         m["iam_request_url"],
+			"iam_request_body":        m["iam_request_body"],
+		}
+	} else {
+		level := hclog.LevelFromString(logVal)
+		if level == hclog.NoLevel {
+			return nil, fmt.Errorf("failed to parse 'log_level' value: %q", logVal)
+		}
+		hlogger := hclog.Default()
+		hlogger.SetLevel(level)
 
-	region := m["region"]
-	switch region {
-	case "":
-		// The CLI has always defaulted to "us-east-1" if a region is not provided.
-		region = awsutil.DefaultRegion
-	case "auto":
-		// Beginning in 1.10 we also accept the "auto" value, which uses the region detection logic in
-		// awsutil.GetRegion() to determine the region. That behavior is triggered when region = "".
-		region = ""
-	}
+		creds, err := awsutil.RetrieveCreds(m["aws_access_key_id"], m["aws_secret_access_key"], m["aws_security_token"], hlogger)
+		if err != nil {
+			return nil, err
+		}
 
-	loginData, err := awsutil.GenerateLoginData(creds, headerValue, region, hlogger)
-	if err != nil {
-		return nil, err
-	}
-	if loginData == nil {
-		return nil, fmt.Errorf("got nil response from GenerateLoginData")
+		region := m["region"]
+		switch region {
+		case "":
+			// The CLI has always defaulted to "us-east-1" if a region is not provided.
+			region = awsutil.DefaultRegion
+		case "auto":
+			// Beginning in 1.10 we also accept the "auto" value, which uses the region detection logic in
+			// awsutil.GetRegion() to determine the region. That behavior is triggered when region = "".
+			region = ""
+		}
+
+		loginData, err = awsutil.GenerateLoginData(creds, headerValue, region, hlogger)
+		if err != nil {
+			return nil, err
+		}
+		if loginData == nil {
+			return nil, fmt.Errorf("got nil response from GenerateLoginData")
+		}
 	}
 	loginData["role"] = role
 	path := fmt.Sprintf("auth/%s/login", mount)

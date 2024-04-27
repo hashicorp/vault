@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/pluginidentityutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -348,7 +349,6 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 		configEntry.MaxRetries = data.Get("max_retries").(int)
 	}
 
-	// TODO: check this
 	roleArnStr, ok := data.GetOk("role_arn")
 	if ok {
 		if configEntry.RoleARN != roleArnStr.(string) {
@@ -356,7 +356,6 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 			configEntry.RoleARN = roleArnStr.(string)
 		}
 	} else if req.Operation == logical.CreateOperation {
-		// TODO: do we need to set the default here?
 		configEntry.RoleARN = data.Get("role_arn").(string)
 	}
 
@@ -371,6 +370,18 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 
 	if configEntry.IdentityTokenAudience != "" && configEntry.RoleARN == "" {
 		return logical.ErrorResponse("role_arn must be set when identity_token_audience is set"), nil
+	}
+
+	if configEntry.IdentityTokenAudience != "" {
+		_, err := b.System().GenerateIdentityToken(ctx, &pluginutil.IdentityTokenRequest{
+			Audience: configEntry.IdentityTokenAudience,
+		})
+		if err != nil {
+			if errors.Is(err, pluginidentityutil.ErrPluginWorkloadIdentityUnsupported) {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			return nil, err
+		}
 	}
 
 	// Since this endpoint supports both create operation and update operation,
