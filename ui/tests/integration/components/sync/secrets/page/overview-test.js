@@ -24,7 +24,6 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    // the component calls on the two services below to determine the state of the page
     this.version = this.owner.lookup('service:version');
     this.store = this.owner.lookup('service:store');
     this.version.type = 'enterprise';
@@ -123,7 +122,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
   });
 
-  module('secrets sync not activated and license has secrets sync', function (hooks) {
+  module('secrets sync is not activated and license has secrets sync', function (hooks) {
     hooks.beforeEach(async function () {
       this.isActivated = false;
     });
@@ -177,7 +176,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
   });
 
-  module('secrets sync not activated and license does not have secrets sync', function (hooks) {
+  module('secrets sync is not activated and license does not have secrets sync', function (hooks) {
     hooks.beforeEach(async function () {
       this.licenseHasSecretsSync = false;
     });
