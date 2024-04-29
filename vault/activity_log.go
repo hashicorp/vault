@@ -201,7 +201,6 @@ type ActivityLog struct {
 	// precomputedQueryWritten receives an element whenever a precomputed query
 	// is written. It's used for unit testing
 	precomputedQueryWritten chan struct{}
-	acmeRegenerationDone    chan struct{}
 }
 
 // These non-persistent configuration options allow us to disable
@@ -1158,22 +1157,22 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup, r
 			go manager.activeFragmentWorker(ctx)
 		}
 
-		manager.acmeRegenerationDone = make(chan struct{})
-		if !reload && !manager.hasRegeneratedACME(ctx) {
-			go func() {
-				defer close(manager.acmeRegenerationDone)
+		doRegeneration := !reload && !manager.hasRegeneratedACME(ctx)
+		manager.computationWorkerDone = make(chan struct{})
+		// handle leftover intent logs and regenerating precomputed queries
+		// for ACME
+		go func() {
+			defer close(manager.computationWorkerDone)
+			if doRegeneration {
 				err := manager.regeneratePrecomputedQueries(ctx)
 				if err != nil {
 					manager.logger.Warn("unable to regenerate ACME data", "error", err)
 				}
-			}()
-		}
-
-		// Check for any intent log, in the background
-		manager.computationWorkerDone = make(chan struct{})
-		go func() {
-			manager.precomputedQueryWorker(ctx, nil)
-			close(manager.computationWorkerDone)
+			} else {
+				// run the precomputed query worker normally
+				// errors are logged within the function
+				manager.precomputedQueryWorker(ctx, nil)
+			}
 		}()
 
 		// Catch up on garbage collection
@@ -1215,7 +1214,7 @@ func (a *ActivityLog) regeneratePrecomputedQueries(ctx context.Context) error {
 
 	intentLogEntry, err := a.view.Get(ctx, activityIntentLogKey)
 	if err != nil {
-		return err
+		a.logger.Trace("could not load existing intent log", "error", err)
 	}
 	var intentLog *ActivityIntentLog
 	if intentLogEntry == nil {
@@ -1225,7 +1224,7 @@ func (a *ActivityLog) regeneratePrecomputedQueries(ctx context.Context) error {
 		}
 		a.logger.Debug("regenerating precomputed queries", "previous month", intentLog.PreviousMonth, "next month", intentLog.NextMonth)
 	}
-	a.precomputedQueryWorker(ctx, intentLog)
+	err = a.precomputedQueryWorker(ctx, intentLog)
 	if err != nil && !errors.Is(err, previousMonthNotFoundErr) {
 		return err
 	}
