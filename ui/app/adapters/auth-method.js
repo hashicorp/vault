@@ -21,21 +21,34 @@ export default ApplicationAdapter.extend({
 
   findAll(store, type, sinceToken, snapshotRecordArray) {
     const isUnauthenticated = snapshotRecordArray?.adapterOptions?.unauthenticated;
-    const url = `/${this.urlPrefix()}/internal/ui/mounts`;
-    return this.ajax(url, 'GET', { unauthenticated: isUnauthenticated })
-      .then((result) => {
-        return {
-          data: result.data.auth,
-        };
+    // sys/internal/ui/mounts returns the actual value of the system TTL
+    // instead of '0' which just indicates the mount is using system defaults
+    const useMountsEndpoint = snapshotRecordArray?.adapterOptions?.useMountsEndpoint;
+    if (isUnauthenticated || useMountsEndpoint) {
+      const url = `/${this.urlPrefix()}/internal/ui/mounts`;
+      return this.ajax(url, 'GET', {
+        unauthenticated: isUnauthenticated,
       })
-      .catch((e) => {
-        if (isUnauthenticated) {
-          return { data: {} };
-        } else if (e instanceof AdapterError) {
-          set(e, 'policyPath', 'sys/internal/ui/mounts');
-        }
-        throw e;
-      });
+        .then((result) => {
+          return {
+            data: result.data.auth,
+          };
+        })
+        .catch((e) => {
+          if (isUnauthenticated) return { data: {} };
+
+          if (e instanceof AdapterError) {
+            set(e, 'policyPath', 'sys/internal/ui/mounts');
+          }
+          throw e;
+        });
+    }
+    return this.ajax(this.url(), 'GET').catch((e) => {
+      if (e instanceof AdapterError) {
+        set(e, 'policyPath', 'sys/auth');
+      }
+      throw e;
+    });
   },
 
   createRecord(store, type, snapshot) {
