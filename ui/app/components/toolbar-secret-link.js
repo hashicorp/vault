@@ -30,8 +30,8 @@ import Component from '@glimmer/component';
  * ```
  *
  * @param {string} type - use "add" to change icon from "chevron-right" to "plus"
- * @param {string} mode - [required] passed to secret-link, controls route
- * @param {string} backend - [required] backend path. Passed to secret-link
+ * @param {string} mode - *required* passed to secret-link, controls route
+ * @param {string} backend - *required* backend path. Passed to secret-link
  * @param {string} secret - secret path. Passed to secret-link
  * @param {boolean} replace - passed to secret-link
  * @param {boolean} disabled - passed to secret-link

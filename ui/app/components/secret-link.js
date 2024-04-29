@@ -21,8 +21,8 @@ import { debug } from '@ember/debug';
  *   @disabled={{true}}
  * />
  *
- * @param {string} mode - [required] controls the route link. added to the base route vault.cluster.secrets.backend
- * @param {string} backend - [required] backend path. Is encoded in the component
+ * @param {string} mode - *required* controls the route link. added to the base route vault.cluster.secrets.backend
+ * @param {string} backend - *required* backend path. Is encoded in the component
  * @param {string} secret - secret path. Is encoded in the component
  * @param {object} queryParams - params passed to the link
  * @param {boolean} disabled - passed to LinkTo to disable link
