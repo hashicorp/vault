@@ -1021,6 +1021,11 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 		}
 		resp.AddWarning("Timeout hit while waiting for local replicated cluster to apply primary's write; this client may encounter stale reads of values written during this operation.")
 	}
+	if errwrap.Contains(err, consts.ErrOverloaded.Error()) {
+		logical.RespondWithStatusCode(resp, r, http.StatusServiceUnavailable)
+		respondError(w, http.StatusServiceUnavailable, err)
+		return resp, false, false
+	}
 	if errwrap.Contains(err, consts.ErrStandby.Error()) {
 		respondStandby(core, w, rawReq.URL)
 		return resp, false, false
