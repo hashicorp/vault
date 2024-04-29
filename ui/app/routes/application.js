@@ -66,6 +66,6 @@ export default Route.extend({
   },
 
   beforeModel() {
-    return this.flags.fetchFeatureFlags();
+    return this.flagsService.fetchFeatureFlags();
   },
 });

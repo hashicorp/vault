@@ -116,8 +116,8 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
 
     test('it should not show the opt-in banner if feature is activated', async function (assert) {
-      await this.renderComponent();
       this.isActivated = true;
+      await this.renderComponent();
 
       assert.dom(overview.optInBanner).doesNotExist('Opt-in banner is not shown');
     });
