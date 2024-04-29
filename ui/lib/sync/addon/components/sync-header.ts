@@ -29,6 +29,6 @@ export default class SyncHeaderComponent extends Component<Args> {
     if (isEnterprise && !onLicense) return 'Premium feature';
     if (!isEnterprise) return 'Enterprise feature';
     // no badge for Enterprise clusters with Secrets Sync on their license--the only remaining option.
-    return undefined;
+    return '';
   }
 }

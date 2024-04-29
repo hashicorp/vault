@@ -24,19 +24,34 @@ export default class flagsService extends Service {
   @service declare readonly version: VersionService;
   @service declare readonly store: StoreService;
 
-  @tracked flags: string[] = [];
   @tracked activatedFlags: string[] = [];
-
-  setFeatureFlags(flags: string[]) {
-    this.flags = flags;
-  }
+  @tracked featureFlags: string[] = [];
 
   get isManaged(): boolean {
-    return this.flags && this.flags.includes(FLAGS.vaultCloudNamespace);
+    return this.featureFlags.includes(FLAGS.vaultCloudNamespace);
   }
 
   get managedNamespaceRoot(): string | null {
     return this.isManaged ? 'admin' : null;
+  }
+
+  getFeatureFlags = keepLatestTask(async () => {
+    // managed clusters will always be an enterprise version
+    if (this.version.isCommunity) return;
+
+    try {
+      const response = await this.store
+        .adapterFor('application')
+        .ajax('/v1/sys/internal/ui/feature-flags', 'GET', { unauthenticated: true, namespace: null });
+      this.featureFlags = response.data?.feature_flags;
+      return;
+    } catch (error) {
+      if (DEBUG) console.error(error); // eslint-disable-line no-console
+    }
+  });
+
+  fetchFeatureFlags() {
+    return this.getFeatureFlags.perform();
   }
 
   get secretsSyncIsActivated(): boolean {

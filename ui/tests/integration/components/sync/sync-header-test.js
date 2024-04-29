@@ -68,7 +68,7 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
   module('managed', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'enterprise';
-      this.flags.setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
+      this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
     });
 
     test('it should render title and plus badge', async function (assert) {
