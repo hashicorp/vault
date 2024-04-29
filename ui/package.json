@@ -123,7 +123,6 @@
     "ember-auto-import": "2.6.3",
     "ember-basic-dropdown": "6.0.1",
     "ember-cli": "~4.12.1",
-    "ember-cli-autoprefixer": "^0.8.1",
     "ember-cli-babel": "^7.26.11",
     "ember-cli-clipboard": "0.16.0",
     "ember-cli-content-security-policy": "2.0.3",
