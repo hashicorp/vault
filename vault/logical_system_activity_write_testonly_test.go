@@ -526,7 +526,7 @@ func Test_handleActivityWriteData(t *testing.T) {
 		paths := resp.Data["paths"].([]string)
 		require.Len(t, paths, 9)
 
-		times, err := core.activityLog.availableLogs(context.Background())
+		times, err := core.activityLog.availableLogs(context.Background(), time.Now())
 		require.NoError(t, err)
 		require.Len(t, times, 4)
 
@@ -645,7 +645,7 @@ func Test_handleActivityWriteData(t *testing.T) {
 		require.Equal(t, timeutil.StartOfMonth(now), next.UTC())
 		require.Equal(t, timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, now)), prev.UTC())
 
-		times, err := core.activityLog.availableLogs(context.Background())
+		times, err := core.activityLog.availableLogs(context.Background(), time.Now())
 		require.NoError(t, err)
 		require.Len(t, times, 4)
 	})
