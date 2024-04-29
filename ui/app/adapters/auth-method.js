@@ -21,40 +21,17 @@ export default ApplicationAdapter.extend({
 
   findAll(store, type, sinceToken, snapshotRecordArray) {
     const isUnauthenticated = snapshotRecordArray?.adapterOptions?.unauthenticated;
-    if (isUnauthenticated) {
-      const url = `/${this.urlPrefix()}/internal/ui/mounts`;
-      return this.ajax(url, 'GET', {
-        unauthenticated: true,
-      })
-        .then((result) => {
-          return {
-            data: result.data.auth,
-          };
-        })
-        .catch(() => {
-          return {
-            data: {},
-          };
-        });
-    }
-    return this.ajax(this.url(), 'GET').catch((e) => {
-      if (e instanceof AdapterError) {
-        set(e, 'policyPath', 'sys/auth');
-      }
-      throw e;
-    });
-  },
-
-  query() {
     const url = `/${this.urlPrefix()}/internal/ui/mounts`;
-    return this.ajax(url, 'GET')
+    return this.ajax(url, 'GET', { unauthenticated: isUnauthenticated })
       .then((result) => {
         return {
           data: result.data.auth,
         };
       })
       .catch((e) => {
-        if (e instanceof AdapterError) {
+        if (isUnauthenticated) {
+          return { data: {} };
+        } else if (e instanceof AdapterError) {
           set(e, 'policyPath', 'sys/internal/ui/mounts');
         }
         throw e;
