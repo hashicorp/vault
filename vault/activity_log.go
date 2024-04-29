@@ -526,17 +526,17 @@ func (a *ActivityLog) availableLogs(ctx context.Context, upTo time.Time) ([]time
 	out := make([]time.Time, 0)
 	for _, path := range paths {
 		// generate a set of unique start times
-		time, err := timeutil.ParseTimeFromPath(path)
+		segmentTime, err := timeutil.ParseTimeFromPath(path)
 		if err != nil {
 			return nil, err
 		}
-		if time.After(upTo) {
+		if segmentTime.After(upTo) {
 			continue
 		}
 
-		if _, present := pathSet[time]; !present {
-			pathSet[time] = struct{}{}
-			out = append(out, time)
+		if _, present := pathSet[segmentTime]; !present {
+			pathSet[segmentTime] = struct{}{}
+			out = append(out, segmentTime)
 		}
 	}
 
@@ -1177,7 +1177,7 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) e
 
 func (a *ActivityLog) createRegenerationIntentLog(ctx context.Context, now time.Time) (*ActivityIntentLog, error) {
 	intentLog := &ActivityIntentLog{}
-	segments, err := a.availableLogs(ctx)
+	segments, err := a.availableLogs(ctx, now)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching available logs: %w", err)
 	}
@@ -2471,6 +2471,7 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context, intent *Activi
 			a.logger.Trace("no intent log found")
 			return err
 		}
+		intent = new(ActivityIntentLog)
 		err = json.Unmarshal(rawIntentLog.Value, intent)
 		if err != nil {
 			a.logger.Warn("could not parse intent log", "error", err)
