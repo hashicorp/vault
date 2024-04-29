@@ -25,4 +25,8 @@ var (
 	// ErrInvalidWrappingToken is returned when checking for the validity of
 	// a wrapping token that turns out to be invalid.
 	ErrInvalidWrappingToken = errors.New("wrapping token is not valid or does not exist")
+
+	// ErrOverloaded indicates the Vault server is at capacity. TODO should this
+	// live here or do we have something equivalent elsewhere already?
+	ErrOverloaded = errors.New("overloaded, try again later")
 )
