@@ -1,0 +1,41 @@
+---
+layout: docs
+page_title: Adaptive Overload Protection - Configuration
+description: |-
+  Vault Enterprise provides Adaptive Overload Protection to automatically
+  prevent workloads from overloading different resources of the Vault servers.
+---
+
+# `adaptive_overload_protection`
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/beta.mdx'
+
+The `adaptive_overload_protection` stanza allows operators to control overload
+protection features. Changes to this stanza require a server restart to take
+effect.
+
+For more information read [Adaptive Overload
+Protection](/vault/docs/concepts/adaptive-overload-protection).
+
+
+```hcl
+adaptive_overload_protection {
+  disable_write_controller = false
+}
+```
+
+## `adaptive_overload_protection` parameters
+
+These parameters apply to the `adaptive_overload_protection` stanza in the Vault
+configuration file:
+
+- `disable_write_controller` `(bool: <optional>)`: Disables the adaptive write
+  overload controller. Defaults to `true` (controller disabled). Set this to
+  `false` explicitly to enable the write controller during the beta period.
+
+
+
+~> **Warning** This feature is still in Beta. We recommend testing this in
+pre-production with realistic workloads and traffic levels.
