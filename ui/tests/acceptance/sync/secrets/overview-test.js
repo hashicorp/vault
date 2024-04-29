@@ -162,7 +162,7 @@ module('Acceptance | sync | overview', function (hooks) {
       this.server.post('/sys/activation-flags/secrets-sync/activate', (_, req) => {
         assert.strictEqual(
           req.requestHeaders['X-Vault-Namespace'],
-          undefined,
+          'root',
           'Request is made to root namespace'
         );
         return {};
@@ -193,8 +193,8 @@ module('Acceptance | sync | overview', function (hooks) {
       this.server.post('/sys/activation-flags/secrets-sync/activate', (_, req) => {
         assert.strictEqual(
           req.requestHeaders['X-Vault-Namespace'],
-          undefined,
-          'Request is made to root namespace even from within an admin namespace'
+          'admin',
+          'Request is made to the admin namespace'
         );
         return {};
       });

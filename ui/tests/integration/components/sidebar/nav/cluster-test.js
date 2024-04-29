@@ -138,7 +138,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
   });
 
   test('it should render badge for promotional links on managed clusters', async function (assert) {
-    this.owner.lookup('service:flags').setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
+    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
     const promotionalLinks = ['Secrets Sync'];
     stubFeaturesAndPermissions(this.owner, true, true);
     await renderComponent();
