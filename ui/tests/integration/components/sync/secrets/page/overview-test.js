@@ -25,18 +25,21 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.version = this.owner.lookup('service:version');
+    this.store = this.owner.lookup('service:store');
     this.version.type = 'enterprise';
     this.version.features = ['Secrets Sync'];
+
     syncScenario(this.server);
     syncHandlers(this.server);
 
-    const store = this.owner.lookup('service:store');
-    this.destinations = await store.query('sync/destination', {});
+    this.destinations = await this.store.query('sync/destination', {});
     this.isActivated = true;
+    this.licenseHasSecretsSync = true;
+    this.isManaged = false;
 
     this.renderComponent = () => {
       return render(
-        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @isActivated={{this.isActivated}} />`,
+        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @isActivated={{this.isActivated}} @licenseHasSecretsSync={{this.licenseHasSecretsSync}} @isManaged={{this.isManaged}} />`,
         {
           owner: this.engine,
         }
@@ -57,8 +60,6 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
   module('community', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'community';
-      this.version.features = [];
-      this.destinations = [];
       this.isActivated = false;
     });
 
@@ -74,6 +75,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
   module('ent', function (hooks) {
     hooks.beforeEach(function () {
+      this.isActivated = false;
       this.destinations = [];
     });
 
@@ -90,6 +92,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     test('it should show create CTA if license has the secrets sync feature', async function (assert) {
       this.version.features = ['Secrets Sync'];
+      this.isActivated = true;
       await this.renderComponent();
 
       assert.dom(title).hasText('Secrets Sync');
@@ -98,7 +101,28 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
   });
 
-  module('secrets sync not activated', function (hooks) {
+  module('managed', function (hooks) {
+    hooks.beforeEach(function () {
+      this.isActivated = false;
+      this.isManaged = true;
+      this.destinations = [];
+    });
+
+    test('it should show the opt-in banner if feature is not activated', async function (assert) {
+      await this.renderComponent();
+
+      assert.dom(overview.optInBanner).exists('Opt-in banner is shown');
+    });
+
+    test('it should not show the opt-in banner if feature is activated', async function (assert) {
+      this.isActivated = true;
+      await this.renderComponent();
+
+      assert.dom(overview.optInBanner).doesNotExist('Opt-in banner is not shown');
+    });
+  });
+
+  module('secrets sync is not activated and license has secrets sync', function (hooks) {
     hooks.beforeEach(async function () {
       this.isActivated = false;
     });
@@ -149,6 +173,18 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
       assert.dom(overview.optInError).exists('shows an error banner');
       assert.dom(overview.optInBanner).exists('banner is visible so user can try to opt-in again');
+    });
+  });
+
+  module('secrets sync is not activated and license does not have secrets sync', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.licenseHasSecretsSync = false;
+    });
+
+    test('it should hide the opt-in banner', async function (assert) {
+      await this.renderComponent();
+
+      assert.dom(overview.optInBanner).doesNotExist();
     });
   });
 

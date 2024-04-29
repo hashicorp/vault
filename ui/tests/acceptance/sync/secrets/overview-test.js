@@ -162,7 +162,7 @@ module('Acceptance | sync | overview', function (hooks) {
       this.server.post('/sys/activation-flags/secrets-sync/activate', (_, req) => {
         assert.strictEqual(
           req.requestHeaders['X-Vault-Namespace'],
-          undefined,
+          'root',
           'Request is made to root namespace'
         );
         return {};
@@ -177,10 +177,9 @@ module('Acceptance | sync | overview', function (hooks) {
       await click(ts.overview.optInConfirm);
     });
 
-    test.skip('it should make activation-flag requests to correct namespace when managed', async function (assert) {
-      // TODO: unskip for 1.16.1 when managed is supported
+    test('it should make activation-flag requests to correct namespace when managed', async function (assert) {
       assert.expect(3);
-      this.owner.lookup('service:flags').setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
+      this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
 
       this.server.get('/sys/activation-flags', (_, req) => {
         assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
@@ -195,7 +194,7 @@ module('Acceptance | sync | overview', function (hooks) {
         assert.strictEqual(
           req.requestHeaders['X-Vault-Namespace'],
           'admin',
-          'Request is made to admin namespace'
+          'Request is made to the admin namespace'
         );
         return {};
       });

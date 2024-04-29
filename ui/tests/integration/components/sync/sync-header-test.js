@@ -18,6 +18,7 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
 
   hooks.beforeEach(function () {
     this.version = this.owner.lookup('service:version');
+    this.flags = this.owner.lookup('service:flags');
     this.title = 'Secrets Sync';
     this.renderComponent = () => {
       return render(hbs`<SyncHeader @title={{this.title}} @breadcrumbs={{this.breadcrumbs}} />`, {
@@ -61,6 +62,18 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
       await this.renderComponent();
 
       assert.dom(title).hasText('Secrets Sync Enterprise feature');
+    });
+  });
+
+  module('managed', function (hooks) {
+    hooks.beforeEach(function () {
+      this.version.type = 'enterprise';
+      this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+    });
+
+    test('it should render title and plus badge', async function (assert) {
+      await this.renderComponent();
+      assert.dom(title).hasText('Secrets Sync Plus feature');
     });
   });
 

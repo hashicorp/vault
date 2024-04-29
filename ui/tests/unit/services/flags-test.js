@@ -14,6 +14,12 @@ const ACTIVATED_FLAGS_RESPONSE = {
   },
 };
 
+const FEATURE_FLAGS_RESPONSE = {
+  data: {
+    feature_flags: ['VAULT_CLOUD_ADMIN_NAMESPACE'],
+  },
+};
+
 module('Unit | Service | flags', function (hooks) {
   setupTest(hooks);
   setupMirage(hooks);
@@ -23,13 +29,8 @@ module('Unit | Service | flags', function (hooks) {
   });
 
   test('it loads with defaults', function (assert) {
-    assert.deepEqual(this.service.flags, [], 'Flags are empty until fetched');
+    assert.deepEqual(this.service.featureFlags, [], 'Flags are empty until fetched');
     assert.deepEqual(this.service.activatedFlags, [], 'Activated flags are empty until fetched');
-  });
-
-  test('#setFeatureFlags: it can set feature flags', function (assert) {
-    this.service.setFeatureFlags(['foo', 'bar']);
-    assert.deepEqual(this.service.flags, ['foo', 'bar'], 'Flags are set');
   });
 
   module('#fetchActivatedFlags', function (hooks) {
@@ -75,20 +76,42 @@ module('Unit | Service | flags', function (hooks) {
     });
   });
 
+  module('#fetchFeatureFlags', function (hooks) {
+    hooks.beforeEach(function () {
+      this.owner.lookup('service:version').type = 'enterprise';
+    });
+
+    test('it returns feature flags', async function (assert) {
+      assert.expect(2);
+
+      this.server.get('sys/internal/ui/feature-flags', () => {
+        assert.true(true, 'GET request made to feature-flags endpoint');
+        return FEATURE_FLAGS_RESPONSE;
+      });
+
+      await this.service.fetchFeatureFlags();
+      assert.deepEqual(
+        this.service.featureFlags,
+        FEATURE_FLAGS_RESPONSE.data.feature_flags,
+        'Feature flags are fetched and set'
+      );
+    });
+  });
+
   module('#managedNamespaceRoot', function () {
     test('it returns null when flag is not present', function (assert) {
       assert.strictEqual(this.service.managedNamespaceRoot, null);
     });
 
     test('it returns the namespace root when flag is present', function (assert) {
-      this.service.setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
+      this.service.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
       assert.strictEqual(
         this.service.managedNamespaceRoot,
         'admin',
         'Managed namespace is admin when flag present'
       );
 
-      this.service.setFeatureFlags(['SOMETHING_ELSE']);
+      this.service.featureFlags = ['SOMETHING_ELSE'];
       assert.strictEqual(
         this.service.managedNamespaceRoot,
         null,

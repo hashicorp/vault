@@ -65,14 +65,7 @@ export default Route.extend({
     },
   },
 
-  async beforeModel() {
-    const result = await fetch('/v1/sys/internal/ui/feature-flags', {
-      method: 'GET',
-    });
-    if (result.status === 200) {
-      const body = await result.json();
-      const flags = body.feature_flags || [];
-      this.flagsService.setFeatureFlags(flags);
-    }
+  beforeModel() {
+    return this.flagsService.fetchFeatureFlags();
   },
 });

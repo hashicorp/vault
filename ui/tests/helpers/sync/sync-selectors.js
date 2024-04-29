@@ -70,7 +70,7 @@ export const PAGE = {
       action: (name) => `[data-test-overview-table-action="${name}"]`,
     },
   },
-  syncBadge: {
+  badgeText: {
     icon: (name) => `[data-test-icon="${name}"]`,
     text: '.hds-badge__text',
   },
