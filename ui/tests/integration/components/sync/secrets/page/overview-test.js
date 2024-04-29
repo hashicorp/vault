@@ -34,10 +34,9 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     syncHandlers(this.server);
 
     this.destinations = await this.store.query('sync/destination', {});
-    // component test so set values that would normally be calculated on the route model from the services.
     this.isActivated = true;
     this.licenseHasSecretsSync = true;
-    this.isManged = false;
+    this.isManaged = false;
 
     this.renderComponent = () => {
       return render(
@@ -103,7 +102,28 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
   });
 
-  module('secrets sync not activated', function (hooks) {
+  module('managed', function (hooks) {
+    hooks.beforeEach(function () {
+      this.isActivated = false;
+      this.isManaged = true;
+      this.destinations = [];
+    });
+
+    test('it should show the opt-in banner if feature is not activated', async function (assert) {
+      await this.renderComponent();
+
+      assert.dom(overview.optInBanner).exists('Opt-in banner is shown');
+    });
+
+    test('it should not show the opt-in banner if feature is activated', async function (assert) {
+      await this.renderComponent();
+      this.isActivated = true;
+
+      assert.dom(overview.optInBanner).doesNotExist('Opt-in banner is not shown');
+    });
+  });
+
+  module('secrets sync not activated and license has secrets sync', function (hooks) {
     hooks.beforeEach(async function () {
       this.isActivated = false;
     });
@@ -154,6 +174,18 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
       assert.dom(overview.optInError).exists('shows an error banner');
       assert.dom(overview.optInBanner).exists('banner is visible so user can try to opt-in again');
+    });
+  });
+
+  module('secrets sync not activated and license does not have secrets sync', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.licenseHasSecretsSync = false;
+    });
+
+    test('it should hide the opt-in banner', async function (assert) {
+      await this.renderComponent();
+
+      assert.dom(overview.optInBanner).doesNotExist();
     });
   });
 

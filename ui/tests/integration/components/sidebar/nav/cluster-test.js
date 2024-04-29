@@ -49,6 +49,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
 
   test('it should hide links and headings user does not have access too', async function (assert) {
     await renderComponent();
+
     assert
       .dom('[data-test-sidebar-nav-link]')
       .exists({ count: 3 }, 'Nav links are hidden other than secrets, secrets sync and dashboard');
