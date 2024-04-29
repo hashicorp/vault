@@ -6,15 +6,43 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import { debug } from '@ember/debug';
 
+/**
+ * @module SecretLink
+ *
+ * @example
+ * ```js
+ * <SecretLink
+ *   @mode=""
+ *   @expirationTime="2021-05-12T23:20:50.52Z"
+ *   @licenseId="some-license-id"
+ *   @features={{array 'Namespaces' 'DR Replication'}}
+ *   @autoloaded={{true}}
+ *   @performanceStandbyCount=1
+ * />
+ *
+ * @param {string} icon - [required] renders the icon for the link
+ * @param {string} mode - [required] controls the route link. added to the base route vault.cluster.secrets.backend
+ * @param {string} backend - [required] backend path. Is encoded in the component
+ * @param {string} secret - secret path. Is encoded in the component
+ * @param {object} queryParams - params passed to the link
+ * @param {CallableFunction} onLinkClick - side effect when link is clicked
+ * @param {boolean} disabled - passed to LinkTo to disable link
+ */
 export default class SecretLink extends Component {
   get link() {
-    const { mode, secret } = this.args;
+    const { mode, secret, backend } = this.args;
+    if (!backend) {
+      debug(`Arg "backend" missing from secret-link with mode: ${mode} secret: ${secret}`);
+    }
     const route = `vault.cluster.secrets.backend.${mode}`;
+    const models = backend ? [encodePath(backend)] : [];
     if ((mode !== 'versions' && !secret) || secret === ' ') {
-      return { route: `${route}-root`, models: [] };
+      return { route: `${route}-root`, models };
     } else {
-      return { route, models: [encodePath(secret)] };
+      models.push(encodePath(secret));
+      return { route, models };
     }
   }
   get query() {
