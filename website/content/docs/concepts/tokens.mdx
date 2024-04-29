@@ -293,7 +293,7 @@ to ensure the validity of the parent token.
 When using a token that has been revoked, exceeded it's TTL, or is an otherwise invalid value, Vault will respond
 with a 403 error containing the following error messages: `invalid token` and `permission denied`.
 
-If using a token that with incorrect policy access, Vault will respond with a 403 error containing the error message
+When using a token with incorrect policy access, Vault will respond with a 403 error containing the error message
 `permission denied`.
 
 
