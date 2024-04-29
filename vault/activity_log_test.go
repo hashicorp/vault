@@ -690,7 +690,7 @@ func TestActivityLog_createRegenerationIntentLog(t *testing.T) {
 				time.Date(2024, 1, 4, 10, 54, 12, 0, time.UTC),
 				time.Date(2024, 1, 3, 10, 54, 12, 0, time.UTC),
 			},
-			&ActivityIntentLog{NextMonth: 1704365652, PreviousMonth: 1704279252},
+			&ActivityIntentLog{NextMonth: 0, PreviousMonth: 1704365652},
 			false,
 		},
 		{
