@@ -92,7 +92,7 @@ module('Unit | Service | flags', function (hooks) {
       await this.service.fetchFeatureFlags();
       assert.deepEqual(
         this.service.featureFlags,
-        FEATURE_FLAGS_RESPONSE,
+        FEATURE_FLAGS_RESPONSE.data.feature_flags,
         'Feature flags are fetched and set'
       );
     });
