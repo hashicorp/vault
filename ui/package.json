@@ -220,7 +220,9 @@
     "xmlhttprequest-ssl": "^1.6.2",
     "browserify-sign": "^4.2.2",
     "socket.io": "^4.6.2",
-    "json5": "^1.0.2"
+    "json5": "^1.0.2",
+    "lodash.template@^4.4.0": "patch:lodash.template@npm%3A4.5.0#./.yarn/patches/lodash.template-npm-4.5.0-5272df3039.patch",
+    "lodash.template@^4.5.0": "patch:lodash.template@npm%3A4.5.0#./.yarn/patches/lodash.template-npm-4.5.0-5272df3039.patch"
   },
   "engines": {
     "node": "16"
