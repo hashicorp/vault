@@ -287,3 +287,13 @@ to Vault).
 As a corollary, batch tokens can be used across performance replication
 clusters, but only if they are orphan, since non-orphan tokens will not be able
 to ensure the validity of the parent token.
+
+## Error Responses
+
+When using a token that has been revoked, exceeded it's TTL, or is an otherwise invalid value, Vault will respond
+with a 403 error containing the following error messages: `invalid token` and `permission denied`.
+
+If using a token that with incorrect policy access, Vault will respond with a 403 error containing the error message
+`permission denied`.
+
+
