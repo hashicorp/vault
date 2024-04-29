@@ -14,21 +14,19 @@ import { debug } from '@ember/debug';
  * @example
  * ```js
  * <SecretLink
- *   @mode=""
- *   @expirationTime="2021-05-12T23:20:50.52Z"
- *   @licenseId="some-license-id"
- *   @features={{array 'Namespaces' 'DR Replication'}}
- *   @autoloaded={{true}}
- *   @performanceStandbyCount=1
+ *   @mode="edit"
+ *   @backend="backend-path"
+ *   @secret="my/secret path"
+ *   @queryParams={{hash tab="version"}}
+ *   @disabled={{true}}
  * />
  *
- * @param {string} icon - [required] renders the icon for the link
  * @param {string} mode - [required] controls the route link. added to the base route vault.cluster.secrets.backend
  * @param {string} backend - [required] backend path. Is encoded in the component
  * @param {string} secret - secret path. Is encoded in the component
  * @param {object} queryParams - params passed to the link
- * @param {CallableFunction} onLinkClick - side effect when link is clicked
  * @param {boolean} disabled - passed to LinkTo to disable link
+ * @param {CallableFunction} onLinkClick - side effect when link is clicked
  */
 export default class SecretLink extends Component {
   get link() {
