@@ -58,10 +58,12 @@ func TestOperatorUsageCommandRun(t *testing.T) {
 		NewClientsSeen(6, clientcountutil.WithClientType("entity")).
 		NewClientsSeen(4, clientcountutil.WithClientType("non-entity-token")).
 		NewClientsSeen(2, clientcountutil.WithClientType("secret-sync")).
+		NewClientsSeen(7, clientcountutil.WithClientType("pki-acme")).
 		NewCurrentMonthData().
 		NewClientsSeen(3, clientcountutil.WithClientType("entity")).
 		NewClientsSeen(4, clientcountutil.WithClientType("non-entity-token")).
 		NewClientsSeen(5, clientcountutil.WithClientType("secret-sync")).
+		NewClientsSeen(8, clientcountutil.WithClientType("pki-acme")).
 		Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES, generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES)
 	require.NoError(t, err)
 
@@ -84,12 +86,14 @@ func TestOperatorUsageCommandRun(t *testing.T) {
 	require.Equal(t, fmt.Sprintf("Period end: %s", end), outputLines[1])
 
 	require.Contains(t, outputLines[3], "Secret sync")
+	require.Contains(t, outputLines[3], "ACME clients")
 	nsCounts := strings.Fields(outputLines[5])
 	require.Equal(t, "[root]", nsCounts[0])
 	require.Equal(t, "9", nsCounts[1])
 	require.Equal(t, "8", nsCounts[2])
 	require.Equal(t, "7", nsCounts[3])
-	require.Equal(t, "24", nsCounts[4])
+	require.Equal(t, "15", nsCounts[4])
+	require.Equal(t, "39", nsCounts[5])
 
 	totalCounts := strings.Fields(outputLines[7])
 	require.Equal(t, "Total", totalCounts[0])

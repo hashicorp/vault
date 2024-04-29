@@ -1,0 +1,3 @@
+```release-note:improvement
+core/activity: Include ACME clients in vault operator usage response
+```
