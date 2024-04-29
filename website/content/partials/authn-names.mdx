@@ -1,24 +1,24 @@
 In addition to custom authentication methods configured with secure plugins,
 Vault supports many standardized authentication methods by default.
 
-| AuthN method                                                            | Unique ID                                           | Configured with     |
-|-------------------------------------------------------------------------|-----------------------------------------------------|---------------------|
-| [AliCloud](/vault/docs/auth/alicloud)                                   | Principal ID                                        | Not configurable    |
-| [AppRole](/vault/api-docs/auth/approle#create-update-approle)           | Role ID                                             | Not configurable    |
-| [AWS IAM](/vault/docs/auth/aws#iam-auth-method)                         | Vault Role ID (default), IAM unique ID, Full ARN    | `iam_alias`         |
-| [AWS EC2](/vault/docs/auth/aws#ec2-auth-method)                         | Vault Role ID (default), EC2 instance ID, AMI ID    | `ec2_alias`         |
-| [Azure](/vault/api-docs/auth/azure#create-role)                         | Subject (from JWT claim)                            | Not configurable    |
-| [Cloud Foundry](/vault/docs/auth/cf)                                    | App ID                                              | Not configurable    |
-| [GitHub](/vault/docs/auth/github)                                       | User login name associated with token               | Not configurable    |
-| [Google Cloud](/vault/api-docs/auth/gcp#create-role)                    | Vault Role ID (default), Service account unique ID  | `iam_alias`         |
-| [JWT/OIDC](/vault/api-docs/auth/jwt#create-role)                        | The presented claims (no default value)             | `user_claim`        |
-| [Kerberos](/vault/docs/auth/kerberos)                                   | Username                                            | Not configurable    |
-| [Kubernetes](/vault/api-docs/auth/kubernetes#create-role)               | Service account UID (default), Service account Name | `alias_name_source` |
-| [LDAP](/vault/docs/auth/ldap)                                           | Username                                            | Not configurable    |
-| [OCI](/vault/api-docs/auth/oci#create-role)                             | Rolename                                            | Not configurable    |
-| [Okta](/vault/api-docs/auth/okta#register-user)                         | Username                                            | Not configurable    |
-| [RADIUS](/vault/docs/auth/radius)                                       | Username                                            | Not configurable    |
-| [SAML](/vault/docs/auth/saml)                                           | Assertion Subject                                   | Not configurable    |
-| [TLS Certificate](/vault/api-docs/auth/cert#create-ca-certificate-role) | Subject CommonName                                  | Not configurable    |
-| [Token](/vault/docs/auth/token)                                         | `entity_alias`                                      | Not configurable    |
-| [Username/Password](/vault/api-docs/auth/userpass#create-update-user)   | Username                                            | Not configurable    |
+| AuthN method                                                            | Unique ID                                                           | Configured with     |
+|-------------------------------------------------------------------------|---------------------------------------------------------------------|---------------------|
+| [AliCloud](/vault/docs/auth/alicloud)                                   | Principal ID                                                        | Not configurable    |
+| [AppRole](/vault/api-docs/auth/approle#create-update-approle)           | Role ID                                                             | Not configurable    |
+| [AWS IAM](/vault/docs/auth/aws#iam-auth-method)                         | Vault Role ID (default), IAM unique ID, Canonical ARN, Full ARN     | `iam_alias`         |
+| [AWS EC2](/vault/docs/auth/aws#ec2-auth-method)                         | Vault Role ID (default), EC2 instance ID, AMI ID                    | `ec2_alias`         |
+| [Azure](/vault/api-docs/auth/azure#create-role)                         | Subject (from JWT claim)                                            | Not configurable    |
+| [Cloud Foundry](/vault/docs/auth/cf)                                    | App ID                                                              | Not configurable    |
+| [GitHub](/vault/docs/auth/github)                                       | User login name associated with token                               | Not configurable    |
+| [Google Cloud](/vault/api-docs/auth/gcp#create-role)                    | Vault Role ID (default), Service account unique ID                  | `iam_alias`         |
+| [JWT/OIDC](/vault/api-docs/auth/jwt#create-role)                        | The presented claims (no default value)                             | `user_claim`        |
+| [Kerberos](/vault/docs/auth/kerberos)                                   | Username                                                            | Not configurable    |
+| [Kubernetes](/vault/api-docs/auth/kubernetes#create-role)               | Service account UID (default), Service account Name                 | `alias_name_source` |
+| [LDAP](/vault/docs/auth/ldap)                                           | Username                                                            | Not configurable    |
+| [OCI](/vault/api-docs/auth/oci#create-role)                             | Rolename                                                            | Not configurable    |
+| [Okta](/vault/api-docs/auth/okta#register-user)                         | Username                                                            | Not configurable    |
+| [RADIUS](/vault/docs/auth/radius)                                       | Username                                                            | Not configurable    |
+| [SAML](/vault/docs/auth/saml)                                           | Assertion Subject                                                   | Not configurable    |
+| [TLS Certificate](/vault/api-docs/auth/cert#create-ca-certificate-role) | Subject CommonName                                                  | Not configurable    |
+| [Token](/vault/docs/auth/token)                                         | `entity_alias`                                                      | Not configurable    |
+| [Username/Password](/vault/api-docs/auth/userpass#create-update-user)   | Username                                                            | Not configurable    |

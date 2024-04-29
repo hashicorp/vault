@@ -203,16 +203,17 @@ This configures the way that Vault interacts with the
 ### Parameters
 
 - `iam_alias` `(string: "role_id")` - How to generate the identity alias when
-  using the `iam` auth method. Valid choices are `role_id`, `unique_id`, and
-  `full_arn` When `role_id` is selected, the randomly generated ID of the Vault role
+  using the `iam` auth method. Valid choices are `role_id`, `unique_id`, `canonical_arn` and
+  `full_arn`. When `role_id` is selected, the randomly generated ID of the Vault role
   is used. When `unique_id` is selected, the [IAM Unique
   ID](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers#identifiers-unique-ids)
   of the IAM principal (either the user or role) is used as the identity alias
-  name. When `full_arn` is selected, the ARN returned by the
-  `sts:GetCallerIdentity` call is used as the alias name. This is either
+  name. When `canonical_arn` is selected, the role ARN returned by the `sts:GetCallerIdentity`call 
+  will be used. This will be `arn:aws:iam::<account_id>:role/<role name>`. When `full_arn` is selected, 
+  the ARN returned by the `sts:GetCallerIdentity` call is used as the alias name. This is either
   `arn:aws:iam::<account_id>:user/<optional_path/><user_name>` or
   `arn:aws:sts::<account_id>:assumed-role/<role_name_without_path>/<role_session_name>`.
-  **Note**: if you select `full_arn` and then delete and recreate the IAM role,
+  **Note**: if you select `canonical_arn` or `full_arn` and then delete and recreate the IAM role,
   Vault won't be aware and any identity aliases set up for the role name will
   still be valid.
 
