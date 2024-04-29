@@ -10,6 +10,7 @@
         <SecretLink
           @secret={{@key.id}}
           @mode="show"
+          @backend={{@key.backend}}
           @replace={{true}}
           @queryParams={{hash tab="actions"}}
           data-test-transit-key-actions-link={{true}}
@@ -22,6 +23,7 @@
         <SecretLink
           @secret={{@key.id}}
           @mode="show"
+          @backend={{@key.backend}}
           @replace={{true}}
           @queryParams={{hash tab="details"}}
           data-test-transit-link="details"
@@ -34,6 +36,7 @@
         <SecretLink
           @secret={{@key.id}}
           @mode="show"
+          @backend={{@key.backend}}
           @replace={{true}}
           @queryParams={{hash tab="versions"}}
           data-test-transit-link="versions"
