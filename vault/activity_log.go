@@ -1218,10 +1218,11 @@ func (a *ActivityLog) regeneratePrecomputedQueries(ctx context.Context) error {
 	}
 	var intentLog *ActivityIntentLog
 	if intentLogEntry == nil {
-		intentLog, err := a.createRegenerationIntentLog(ctx, a.clock.Now())
+		regenerationIntentLog, err := a.createRegenerationIntentLog(ctx, a.clock.Now())
 		if err != nil {
 			return err
 		}
+		intentLog = regenerationIntentLog
 		a.logger.Debug("regenerating precomputed queries", "previous month", intentLog.PreviousMonth, "next month", intentLog.NextMonth)
 	}
 	err = a.precomputedQueryWorker(ctx, intentLog)
