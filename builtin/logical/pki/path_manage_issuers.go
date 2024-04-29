@@ -20,7 +20,7 @@ import (
 )
 
 func pathIssuerGenerateRoot(b *backend) *framework.Path {
-	pattern := "issuers/generate/root/" + framework.GenericNameRegex("exported")
+	pattern := "issuers/generate/root/" + ExportedNameRegex
 
 	displayAttrs := &framework.DisplayAttributes{
 		OperationPrefix: operationPrefixPKIIssuers,
@@ -32,7 +32,7 @@ func pathIssuerGenerateRoot(b *backend) *framework.Path {
 }
 
 func pathRotateRoot(b *backend) *framework.Path {
-	pattern := "root/rotate/" + framework.GenericNameRegex("exported")
+	pattern := "root/rotate/" + ExportedNameRegex
 
 	displayAttrs := &framework.DisplayAttributes{
 		OperationPrefix: operationPrefixPKI,
@@ -120,7 +120,7 @@ func buildPathGenerateRoot(b *backend, pattern string, displayAttrs *framework.D
 }
 
 func pathIssuerGenerateIntermediate(b *backend) *framework.Path {
-	pattern := "issuers/generate/intermediate/" + framework.GenericNameRegex("exported")
+	pattern := "issuers/generate/intermediate/" + ExportedNameRegex
 
 	displayAttrs := &framework.DisplayAttributes{
 		OperationPrefix: operationPrefixPKIIssuers,
