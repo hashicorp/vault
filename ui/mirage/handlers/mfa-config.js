@@ -198,11 +198,9 @@ export default function (server) {
       name: 'test-entity',
     },
   }));
-  server.get('/sys/internal/ui/mounts', () => ({
+  server.get('/sys/auth', () => ({
     data: {
-      auth: {
-        'userpass/': { accessor: 'auth_userpass_bb95c2b1', type: 'userpass' },
-      },
+      'userpass/': { accessor: 'auth_userpass_bb95c2b1', type: 'userpass' },
     },
   }));
 }
