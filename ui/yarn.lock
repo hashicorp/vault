@@ -14442,13 +14442,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lodash.template@npm:^4.4.0, lodash.template@npm:^4.5.0":
+"lodash.template@npm:4.5.0":
   version: 4.5.0
   resolution: "lodash.template@npm:4.5.0"
   dependencies:
     lodash._reinterpolate: ^3.0.0
     lodash.templatesettings: ^4.0.0
   checksum: ca64e5f07b6646c9d3dbc0fe3aaa995cb227c4918abd1cef7a9024cd9c924f2fa389a0ec4296aa6634667e029bc81d4bbdb8efbfde11df76d66085e6c529b450
+  languageName: node
+  linkType: hard
+
+"lodash.template@patch:lodash.template@npm%3A4.5.0#./.yarn/patches/lodash.template-npm-4.5.0-5272df3039.patch::locator=vault%40workspace%3A.":
+  version: 4.5.0
+  resolution: "lodash.template@patch:lodash.template@npm%3A4.5.0#./.yarn/patches/lodash.template-npm-4.5.0-5272df3039.patch::version=4.5.0&hash=fc7e65&locator=vault%40workspace%3A."
+  dependencies:
+    lodash._reinterpolate: ^3.0.0
+    lodash.templatesettings: ^4.0.0
+  checksum: 7d6d1f5d57bf1ef0dd2877e49f00a45423030372e9d7bd2982c98e5d25805038a51af19149eabe7643bf558dfec2d53bc0db2abd627d2e91755d14da638e6030
   languageName: node
   linkType: hard
 
