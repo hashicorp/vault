@@ -74,12 +74,10 @@ module('Acceptance | auth-methods list view', function (hooks) {
   });
 
   test('it should show all methods in list view', async function (assert) {
-    this.server.get('/sys/internal/ui/mounts', () => ({
+    this.server.get('/sys/auth', () => ({
       data: {
-        auth: {
-          'token/': { accessor: 'auth_token_263b8b4e', type: 'token' },
-          'userpass/': { accessor: 'auth_userpass_87aca1f8', type: 'userpass' },
-        },
+        'token/': { accessor: 'auth_token_263b8b4e', type: 'token' },
+        'userpass/': { accessor: 'auth_userpass_87aca1f8', type: 'userpass' },
       },
     }));
     await page.visit();

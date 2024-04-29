@@ -17,8 +17,8 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
     this.model = this.store.createRecord('mfa-login-enforcement');
-    this.server.get('/sys/internal/ui/mounts', () => ({
-      data: { auth: { 'userpass/': { type: 'userpass', accessor: 'auth_userpass_1234' } } },
+    this.server.get('/sys/auth', () => ({
+      data: { 'userpass/': { type: 'userpass', accessor: 'auth_userpass_1234' } },
     }));
     this.server.get('/identity/mfa/method', () => ({
       data: {
