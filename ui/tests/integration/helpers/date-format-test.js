@@ -7,6 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { find, render, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import { formatTimeZone } from 'core/helpers/date-format';
 
 const TEST_DATE = new Date('2018-04-03T14:15:30');
 
@@ -67,5 +68,22 @@ module('Integration | Helper | date-format', function (hooks) {
     this.set('value', undefined);
     await settled();
     assert.dom(this.element).hasText('', 'renders empty string when falsey');
+  });
+
+  test('it formats timezone', async function (assert) {
+    assert.strictEqual(formatTimeZone('not a date'), '', 'returns an empty string for a non-date value');
+
+    // compute expected because we can't reliably assume timezone of the test suite
+    const expected = new Intl.DateTimeFormat('en', { timeZoneName: 'shortOffset' })
+      .format(TEST_DATE)
+      .split(',')[1];
+
+    const formatted = formatTimeZone(TEST_DATE);
+
+    assert.strictEqual(
+      formatted,
+      expected,
+      `formatted timezone: "${formatted}" equals expected: "${expected}"`
+    );
   });
 });
