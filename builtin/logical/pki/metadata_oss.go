@@ -11,12 +11,14 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var ErrMetadataIsEntOnly = errors.New("certificate metadata is only supported on Vault Enterprise")
 
-func storeMetadata(ctx context.Context, storage logical.Storage, certificate *x509.Certificate, metadata interface{}) error {
+func storeMetadata(ctx context.Context, storage logical.Storage, issuerId issuing.IssuerID, role string, certificate *x509.Certificate, metadata interface{}) error {
 	return ErrMetadataIsEntOnly
 }
 
