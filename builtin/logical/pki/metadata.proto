@@ -1,0 +1,10 @@
+package pki;
+option go_package = "github.com/hashicorp/vault-enterprise/builtin/logical;pki";
+import "google/protobuf/timestamp.proto";
+
+message CertificateMetadata {
+  required string issuer_id = 1;
+  required string role = 2;
+  required google.protobuf.Timestamp expiration = 3;
+  optional bytes client_metadata = 4;
+}

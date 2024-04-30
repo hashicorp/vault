@@ -39,7 +39,7 @@ func TestPki_FetchCertBySerial(t *testing.T) {
 			&logical.Request{
 				Storage: storage,
 			},
-			"certs/",
+			issuing.PathCerts,
 			"00:00:00:00:00:00:00:00",
 		},
 		"revoked cert": {

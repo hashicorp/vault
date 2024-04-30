@@ -5,6 +5,7 @@ package pki
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"net/http"
@@ -45,6 +46,34 @@ var pathFetchReadSchema = map[int][]framework.Response{
 			"ca_chain": {
 				Type:        framework.TypeString,
 				Description: `Issuing CA Chain`,
+				Required:    false,
+			},
+		},
+	}},
+}
+
+var pathFetchMetadataSchema = map[int][]framework.Response{
+	http.StatusOK: {{
+		Description: "OK",
+		Fields: map[string]*framework.FieldSchema{
+			"issuer_id": {
+				Type:        framework.TypeString,
+				Description: `ID of the issuer`,
+				Required:    false,
+			},
+			"role": {
+				Type:        framework.TypeString,
+				Description: `Role that issued the certificate`,
+				Required:    false,
+			},
+			"expiration_time_rfc3339": {
+				Type:        framework.TypeString,
+				Description: `Expiration time of the certificate, RFC 3339 formatted`,
+				Required:    true,
+			},
+			"metadata": {
+				Type:        framework.TypeString,
+				Description: `User provided certificate metadata, base64 encoded`,
 				Required:    false,
 			},
 		},
@@ -199,6 +228,36 @@ hyphen-separated octal`,
 	}
 }
 
+// Returns stored metadata for a cert.
+func pathFetchMetadata(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: `cert-metadata/(?P<serial>[0-9A-Fa-f-:]+)`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "cert-metadata",
+		},
+
+		Fields: map[string]*framework.FieldSchema{
+			"serial": {
+				Type: framework.TypeString,
+				Description: `Certificate serial number, in colon- or
+hyphen-separated octal`,
+			},
+		},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback:  b.pathFetchMetadata,
+				Responses: pathFetchMetadataSchema,
+			},
+		},
+
+		HelpSynopsis:    pathFetchHelpSyn,
+		HelpDescription: pathFetchHelpDesc,
+	}
+}
+
 // This returns the CRL in a non-raw format
 func pathFetchCRLViaCertPath(b *backend) *framework.Path {
 	pattern := `cert/(crl|delta-crl)`
@@ -248,7 +307,7 @@ func pathFetchListCerts(b *backend) *framework.Path {
 }
 
 func (b *backend) pathFetchCertList(ctx context.Context, req *logical.Request, _ *framework.FieldData) (response *logical.Response, retErr error) {
-	entries, err := req.Storage.List(ctx, "certs/")
+	entries, err := req.Storage.List(ctx, issuing.PathCerts)
 	if err != nil {
 		return nil, err
 	}
@@ -508,6 +567,35 @@ reply:
 	}
 
 	return
+}
+
+func (b *backend) pathFetchMetadata(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	serial := data.Get("serial").(string)
+
+	if len(serial) == 0 {
+		return logical.ErrorResponse("The serial number must be provided"), nil
+	}
+	serialNo, err := parseSerialNumStr(serial)
+	if err != nil {
+		return logical.ErrorResponse("error parsing serial number", err.Error()), nil
+	}
+	metadata, err := GetCertificateMetadata(ctx, req.Storage, serialNo)
+	if err != nil {
+		if err == ErrStorageItemNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var response logical.Response
+	response.Data = map[string]interface{}{
+		"issuer_id":  metadata.GetIssuerId(),
+		"role":       metadata.GetRole(),
+		"expiration": metadata.Expiration.AsTime().Format(time.RFC3339),
+	}
+	if len(metadata.ClientMetadata) > 0 {
+		response.Data["metadata"] = base64.StdEncoding.EncodeToString(metadata.ClientMetadata)
+	}
+	return &response, nil
 }
 
 const pathFetchHelpSyn = `

@@ -389,14 +389,16 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 				"error fetching CA certificate: %s", caErr)}
 		}
 	}
-
+	issuerId, err := issuing.ResolveIssuerReference(ctx, req.Storage, role.Issuer)
+	if err != nil {
+		return nil, err
+	}
 	input := &inputBundle{
 		req:     req,
 		apiData: data,
 		role:    role,
 	}
 	var parsedBundle *certutil.ParsedCertBundle
-	var err error
 	var warnings []string
 	if useCSR {
 		parsedBundle, warnings, err = signCert(b, input, signingBundle, false, useCSRValues)
@@ -427,6 +429,19 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	if !role.NoStore {
 		err = issuing.StoreCertificate(ctx, req.Storage, b.GetCertificateCounter(), parsedBundle)
 		if err != nil {
+			return nil, err
+		}
+	}
+
+	if metadata, ok := data.GetOk("metadata"); ok && len(metadata.(string)) > 0 {
+		metadataBytes, err := base64.StdEncoding.DecodeString(metadata.(string))
+		if err != nil {
+			// TODO: Should we clean up the original cert here?
+			return nil, err
+		}
+		err = storeMetadata(ctx, req.Storage, issuerId, role.Name, parsedBundle.Certificate, metadataBytes)
+		if err != nil {
+			// TODO: Should we clean up the original cert here?
 			return nil, err
 		}
 	}

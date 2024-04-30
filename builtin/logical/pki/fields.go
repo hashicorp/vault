@@ -166,6 +166,13 @@ Any values are added with OID 0.9.2342.19200300.100.1.1.`,
 			Name: "User ID(s)",
 		},
 	}
+	fields["metadata"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: `User supplied metadata to store associated with this certificate's serial number, base64 encoded`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Metadata",
+		},
+	}
 
 	fields = addIssuerRefField(fields)
 

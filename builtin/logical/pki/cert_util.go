@@ -216,8 +216,8 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 			path += deltaCRLPathSuffix
 		}
 	default:
-		legacyPath = "certs/" + colonSerial
-		path = "certs/" + hyphenSerial
+		legacyPath = issuing.PathCerts + colonSerial
+		path = issuing.PathCerts + hyphenSerial
 	}
 
 	certEntry, err = sc.Storage.Get(sc.Context, path)
