@@ -141,7 +141,7 @@
     "ember-cli-terser": "^4.0.2",
     "ember-composable-helpers": "5.0.0",
     "ember-concurrency": "^4.0.2",
-    "ember-data": "~5.3.0",
+    "ember-data": "~4.12.4",
     "ember-engines": "0.8.23",
     "ember-exam": "^9.0.0",
     "ember-fetch": "^8.1.2",
