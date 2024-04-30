@@ -248,6 +248,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	b.Backend.Invalidate = sysInvalidate(b)
 	b.Backend.InitializeFunc = sysInitialize(b)
 	b.Backend.Clean = sysClean(b)
+	b.entInit()
 	return b
 }
 
@@ -267,6 +268,7 @@ func (b *SystemBackend) rawPaths() []*framework.Path {
 // prefix. Conceptually it is similar to procfs on Linux.
 type SystemBackend struct {
 	*framework.Backend
+	entSystemBackend
 	Core        *Core
 	db          *memdb.MemDB
 	logger      log.Logger
