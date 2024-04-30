@@ -290,7 +290,7 @@ func (b *Broker) LogRequest(ctx context.Context, in *logical.LogInput) (ret erro
 		// context is not viable due to a short deadline, we detach ourselves from
 		// the original context (keeping only the namespace).
 		// This is so that we get a fair run at writing audit entries if Vault
-		// has taken up a lot of time handling the request before audit (response)
+		// has taken up a lot of time handling the request before audit (request)
 		// is triggered. Pipeline nodes and the eventlogger.Broker may check for a
 		// cancelled context and refuse to process the nodes further.
 		ns, err := namespace.FromContext(ctx)
