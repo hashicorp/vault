@@ -27,12 +27,12 @@ export default class flagsService extends Service {
   @tracked activatedFlags: string[] = [];
   @tracked featureFlags: string[] = [];
 
-  get isManaged(): boolean {
+  get isHvdManaged(): boolean {
     return this.featureFlags.includes(FLAGS.vaultCloudNamespace);
   }
 
-  get managedNamespaceRoot(): string | null {
-    return this.isManaged ? 'admin' : null;
+  get hvdManagedNamespaceRoot(): string | null {
+    return this.isHvdManaged ? 'admin' : null;
   }
 
   getFeatureFlags = keepLatestTask(async () => {

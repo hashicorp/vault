@@ -162,8 +162,8 @@ module('Acceptance | sync | overview', function (hooks) {
       this.server.post('/sys/activation-flags/secrets-sync/activate', (_, req) => {
         assert.strictEqual(
           req.requestHeaders['X-Vault-Namespace'],
-          'root',
-          'Request is made to root namespace'
+          'admin/foo',
+          'Request is made to admin/foo namespace'
         );
         return {};
       });
