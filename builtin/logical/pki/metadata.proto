@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki;
 option go_package = "github.com/hashicorp/vault-enterprise/builtin/logical;pki";
 import "google/protobuf/timestamp.proto";
