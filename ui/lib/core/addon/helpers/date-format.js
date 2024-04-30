@@ -69,11 +69,12 @@ export function dateFormat([value, style], { withTimeZone = false }) {
   let zone; // local timezone ex: 'PST'
   try {
     // passing undefined means default to the browser's locale
-    zone = ' ' + date.toLocaleTimeString(undefined, { timeZoneName: 'short' }).split(' ')[2];
+    zone = date.toLocaleTimeString(undefined, { timeZoneName: 'short' }).split(' ')[2];
   } catch (e) {
-    zone = '';
+    zone = null;
   }
-  zone = withTimeZone ? zone : '';
+
+  zone = withTimeZone && zone ? ` ${zone}` : '';
   return format(date, style) + zone;
 }
 
