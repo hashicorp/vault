@@ -2878,6 +2878,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@prettier/sync@npm:^0.2.1":
+  version: 0.2.1
+  resolution: "@prettier/sync@npm:0.2.1"
+  peerDependencies:
+    prettier: ^3.0.0
+  checksum: 708be7958a4d88b0299b4d856728981f9f68a1c4b8f99bf56490aee002b48d79ccb471b390908ab61951219b0b6cbdeb163f32a29cc92d438220c82cd4b6a7fe
+  languageName: node
+  linkType: hard
+
 "@rollup/plugin-replace@npm:2.3.0":
   version: 2.3.0
   resolution: "@rollup/plugin-replace@npm:2.3.0"
@@ -9786,15 +9795,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-template-lint-plugin-prettier@npm:4.0.0":
-  version: 4.0.0
-  resolution: "ember-template-lint-plugin-prettier@npm:4.0.0"
+"ember-template-lint-plugin-prettier@npm:^5.0.0":
+  version: 5.0.0
+  resolution: "ember-template-lint-plugin-prettier@npm:5.0.0"
   dependencies:
+    "@prettier/sync": ^0.2.1
     prettier-linter-helpers: ^1.0.0
   peerDependencies:
-    ember-template-lint: ^4.0.0
-    prettier: ">=1.18.1"
-  checksum: 1b6d94803a51991f952a7a426578a677cbd04402c8236073b6b4bc0fd27871b07088463566e77ddd2ed381b4368dd8a1258af8d17f2cf4102e429d946448e3c1
+    ember-template-lint: ">= 4.0.0"
+    prettier: ">= 3.0.0"
+  checksum: 46f1c12d4238526a712588fbcd14c88398ce0a5519fd4bdd7d848fe7f16e35a9d34fc740772e48a26bbcc55ad0327dd411f870a71b4911ad5d7e3be956fe5569
   languageName: node
   linkType: hard
 
@@ -19547,7 +19557,7 @@ __metadata:
     ember-style-modifier: ^4.1.0
     ember-svg-jar: 2.4.4
     ember-template-lint: ^6.0.0
-    ember-template-lint-plugin-prettier: 4.0.0
+    ember-template-lint-plugin-prettier: ^5.0.0
     ember-test-selectors: 6.0.0
     ember-tether: 3.0.0
     ember-truth-helpers: 3.0.0
