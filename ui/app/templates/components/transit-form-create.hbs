@@ -132,7 +132,12 @@
         type="submit"
         disabled={{@requestInFlight}}
       />
-      <Hds::Button @text="Cancel" @color="secondary" @route="vault.cluster.secrets.backend.list-root" />
+      <Hds::Button
+        @text="Cancel"
+        @color="secondary"
+        @model={{@key.backend}}
+        @route="vault.cluster.secrets.backend.list-root"
+      />
     </Hds::ButtonSet>
   </div>
 </form>
