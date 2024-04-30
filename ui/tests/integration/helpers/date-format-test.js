@@ -71,19 +71,12 @@ module('Integration | Helper | date-format', function (hooks) {
   });
 
   test('it formats timezone', async function (assert) {
+    // compute expected because otherwise this fails locally because of differing timezones
+    const expected = TEST_DATE.toLocaleTimeString(undefined, { timeZoneName: 'short' }).split(' ')[2];
+    const actual = formatTimeZone(TEST_DATE);
+
+    assert.notStrictEqual(actual, undefined, 'formatted timezone is not undefined');
     assert.strictEqual(formatTimeZone('not a date'), '', 'returns an empty string for a non-date value');
-
-    // compute expected because we can't reliably assume timezone of the test suite
-    const expected = new Intl.DateTimeFormat('en', { timeZoneName: 'shortOffset' })
-      .format(TEST_DATE)
-      .split(',')[1];
-
-    const formatted = formatTimeZone(TEST_DATE);
-
-    assert.strictEqual(
-      formatted,
-      expected,
-      `formatted timezone: "${formatted}" equals expected: "${expected}"`
-    );
+    assert.strictEqual(actual, expected, `formatted timezone: "${actual}" equals expected: "${expected}"`);
   });
 });
