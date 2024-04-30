@@ -199,36 +199,6 @@ hyphen-separated octal`,
 	}
 }
 
-// Returns stored metadata for a cert.
-func pathFetchMetadata(b *backend) *framework.Path {
-	return &framework.Path{
-		Pattern: `cert-metadata/(?P<serial>[0-9A-Fa-f-:]+)`,
-
-		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixPKI,
-			OperationSuffix: "cert-metadata",
-		},
-
-		Fields: map[string]*framework.FieldSchema{
-			"serial": {
-				Type: framework.TypeString,
-				Description: `Certificate serial number, in colon- or
-hyphen-separated octal`,
-			},
-		},
-
-		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.ReadOperation: &framework.PathOperation{
-				Callback:  b.pathFetchMetadata,
-				Responses: pathFetchMetadataSchema,
-			},
-		},
-
-		HelpSynopsis:    pathFetchHelpSyn,
-		HelpDescription: pathFetchHelpDesc,
-	}
-}
-
 // This returns the CRL in a non-raw format
 func pathFetchCRLViaCertPath(b *backend) *framework.Path {
 	pattern := `cert/(crl|delta-crl)`
