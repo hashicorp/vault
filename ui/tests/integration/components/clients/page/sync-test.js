@@ -36,12 +36,12 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     this.activity = await this.store.queryRecord('clients/activity', activityQuery);
     this.startTimestamp = START_TIME;
     this.endTimestamp = END_TIME;
-    this.isSecretsSyncActivated = true;
+    this.showSecretsSync = true;
 
     this.renderComponent = () =>
       render(hbs`
       <Clients::Page::Sync
-        @isSecretsSyncActivated={{this.isSecretsSyncActivated}}
+        @showSecretsSync={{this.showSecretsSync}}
         @activity={{this.activity}}
         @versionHistory={{this.versionHistory}}
         @startTimestamp={{this.startTimestamp}}
@@ -138,7 +138,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
   });
 
   test('it should render an empty state if secrets sync is not activated', async function (assert) {
-    this.isSecretsSyncActivated = false;
+    this.showSecretsSync = false;
 
     await this.renderComponent();
 
@@ -154,7 +154,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
   });
 
   test('it should render an empty total usage chart  if secrets sync is activated but monthly syncs are null or 0', async function (assert) {
-    this.isSecretsSyncActivated = true;
+    this.showSecretsSync = true;
     // manually stub because mirage isn't setup to handle mixed data yet
     const counts = {
       clients: 10,

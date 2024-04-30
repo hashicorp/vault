@@ -5,17 +5,16 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { DEBUG } from '@glimmer/env';
 import timestamp from 'core/utils/timestamp';
 import { getUnixTime } from 'date-fns';
 
+import type FlagsService from 'vault/services/flags';
 import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
-
 import type { ModelFrom } from 'vault/vault/route';
 import type ClientsRoute from '../clients';
-import type ClientsConfigModel from 'vault/models/clients/config';
 import type ClientsActivityModel from 'vault/models/clients/activity';
+import type ClientsConfigModel from 'vault/models/clients/config';
 import type ClientsCountsController from 'vault/controllers/vault/cluster/clients/counts';
 export interface ClientsCountsRouteParams {
   start_time?: string | number | undefined;
@@ -24,14 +23,8 @@ export interface ClientsCountsRouteParams {
   mountPath?: string | undefined;
 }
 
-interface ActivationFlagsResponse {
-  data: {
-    activated: Array<string>;
-    unactivated: Array<string>;
-  };
-}
-
 export default class ClientsCountsRoute extends Route {
+  @service declare readonly flags: FlagsService;
   @service declare readonly store: StoreService;
   @service declare readonly version: VersionService;
 
@@ -41,6 +34,10 @@ export default class ClientsCountsRoute extends Route {
     ns: { refreshModel: false, replace: true },
     mountPath: { refreshModel: false, replace: true },
   };
+
+  beforeModel() {
+    return this.flags.fetchActivatedFlags();
+  }
 
   async getActivity(start_time: number | null, end_time: number) {
     let activity, activityError;
@@ -59,28 +56,19 @@ export default class ClientsCountsRoute extends Route {
     return { activity, activityError };
   }
 
-  async getActivatedFeatures() {
-    try {
-      const resp: ActivationFlagsResponse = await this.store
-        .adapterFor('application')
-        .ajax('/v1/sys/activation-flags', 'GET', { unauthenticated: true, namespace: null });
-      return resp.data?.activated;
-    } catch (error) {
-      if (DEBUG) console.error(error); // eslint-disable-line no-console
-      return [];
-    }
-  }
+  showSecretsSync(activity: ClientsActivityModel | undefined): boolean {
+    // if there is any sync client data, show it
+    if (activity && activity?.total?.secret_syncs > 0) return true;
 
-  async isSecretsSyncActivated(activity: ClientsActivityModel | undefined) {
-    // if there are secrets, the feature is activated
-    if (activity && activity.total?.secret_syncs > 0) return true;
+    // otherwise, show the tab based on the cluster type and license
+    if (this.version.isCommunity) return false;
 
-    // if feature is not in license, it's definitely not activated
-    if (!this.version.hasSecretsSync) return false;
+    const isManaged = this.flags.isManaged;
+    const onLicense = this.version.hasSecretsSync;
 
-    // otherwise check explicitly if the feature has been activated
-    const activatedFeatures = await this.getActivatedFeatures();
-    return activatedFeatures.includes('secrets-sync');
+    // we can't tell if HVD clusters have the feature or not, so we show it by default
+    // if the cluster is not HVD, show the tab if the feature is on the license
+    return isManaged || onLicense;
   }
 
   async model(params: ClientsCountsRouteParams) {
@@ -95,14 +83,14 @@ export default class ClientsCountsRoute extends Route {
     const endTimestamp = Number(params.end_time) || getUnixTime(timestamp.now());
     const { activity, activityError } = await this.getActivity(startTimestamp, endTimestamp);
 
-    const isSecretsSyncActivated = await this.isSecretsSyncActivated(activity);
+    const showSecretsSync = this.showSecretsSync(activity);
 
     return {
       activity,
       activityError,
       config,
       endTimestamp,
-      isSecretsSyncActivated,
+      showSecretsSync,
       startTimestamp,
       versionHistory,
     };

@@ -95,7 +95,7 @@
         The
         <code>mount_path</code>
         for entity/non-entity clients is the corresponding authentication method path
-        {{if @isSecretsSyncActivated "and for secrets sync clients is the KV v2 engine path"}}.
+        {{if @showSecretsSync "and for secrets sync clients is the KV v2 engine path"}}.
       </p>
       <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if this.formattedEndDate " RANGE"}}</p>
       <p class="has-bottom-margin-s" data-test-export-date-range>

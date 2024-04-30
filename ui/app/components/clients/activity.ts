@@ -22,7 +22,7 @@ import type {
 } from 'core/utils/client-count-utils';
 
 interface Args {
-  isSecretsSyncActivated?: boolean;
+  showSecretsSync?: boolean;
   activity: ClientsActivityModel;
   versionHistory: ClientsVersionHistoryModel[];
   startTimestamp: number;

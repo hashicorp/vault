@@ -52,7 +52,7 @@ export default class Attribution extends Component {
       { key: 'acme_clients', label: 'ACME clients' },
     ];
 
-    if (this.args.isSecretsSyncActivated) {
+    if (this.args.showSecretsSync) {
       attributionLegend.push({ key: 'secret_syncs', label: 'secrets sync clients' });
     }
     return attributionLegend;
@@ -133,14 +133,14 @@ export default class Attribution extends Component {
     // destructure the namespace object  {label: 'some-namespace', entity_clients: 171, non_entity_clients: 20, acme_clients: 6, secret_syncs: 10, clients: 207}
     // to get integers for CSV file
     const { clients, entity_clients, non_entity_clients, acme_clients, secret_syncs } = object;
-    const { isSecretsSyncActivated } = this.args;
+    const { showSecretsSync } = this.args;
 
     return [
       clients,
       entity_clients,
       non_entity_clients,
       acme_clients,
-      ...(isSecretsSyncActivated ? [secret_syncs] : []),
+      ...(showSecretsSync ? [secret_syncs] : []),
     ];
   }
 
@@ -158,7 +158,7 @@ export default class Attribution extends Component {
   generateCsvData() {
     const totalAttribution = this.args.totalClientAttribution;
     const newAttribution = this.barChartNewClients ? this.args.newClientAttribution : null;
-    const { isSecretsSyncActivated } = this.args;
+    const { showSecretsSync } = this.args;
     const csvData = [];
     // added to clarify that the row of namespace totals without an auth method (blank) are not additional clients
     // but indicate the total clients for that ns, including its auth methods
@@ -176,7 +176,7 @@ export default class Attribution extends Component {
       'Entity clients',
       'Non-entity clients',
       'ACME clients',
-      ...(isSecretsSyncActivated ? ['Secrets sync clients'] : []),
+      ...(showSecretsSync ? ['Secrets sync clients'] : []),
     ];
 
     if (newAttribution) {
@@ -186,7 +186,7 @@ export default class Attribution extends Component {
         'New entity clients',
         'New non-entity clients',
         'New ACME clients',
-        ...(isSecretsSyncActivated ? 'New secrets sync clients' : []),
+        ...(showSecretsSync ? 'New secrets sync clients' : []),
       ];
     }
 
@@ -233,10 +233,10 @@ export default class Attribution extends Component {
   }
 
   get modalExportText() {
-    const { isSecretsSyncActivated } = this.args;
+    const { showSecretsSync } = this.args;
 
     const prefix = 'This export will include the namespace path, mount path and associated total, entity';
-    const mid = isSecretsSyncActivated ? ', non-entity and secrets sync clients' : ' and non-entity clients';
+    const mid = showSecretsSync ? ', non-entity and secrets sync clients' : ' and non-entity clients';
     const suffix = ` for the
     ${this.formattedEndDate ? 'date range' : 'month'}
     below.`;

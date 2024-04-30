@@ -6,14 +6,14 @@
 import Component from '@glimmer/component';
 
 interface Args {
-  isSecretsSyncActivated: boolean;
+  showSecretsSync: boolean;
 }
 
 export default class RunningTotal extends Component<Args> {
   get chartContainerText() {
-    const { isSecretsSyncActivated } = this.args;
+    const { showSecretsSync } = this.args;
     return `The total clients in the specified date range, displayed per month. This includes entity, non-entity${
-      isSecretsSyncActivated ? ', ACME and secrets sync clients' : ' and ACME clients'
+      showSecretsSync ? ', ACME and secrets sync clients' : ' and ACME clients'
     }. The total client count number is an important consideration for Vault billing.`;
   }
 }
