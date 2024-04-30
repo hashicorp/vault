@@ -19,12 +19,12 @@ export default class SyncSecretsOverviewRoute extends Route {
   async model() {
     const isActivated = this.flags.secretsSyncIsActivated;
     const licenseHasSecretsSync = this.version.hasSecretsSync;
-    const isManaged = this.flags.isManaged;
+    const isHVDManaged = this.flags.isHVDManaged;
 
     return hash({
       licenseHasSecretsSync,
       isActivated,
-      isManaged,
+      isHVDManaged,
       destinations: isActivated ? this.store.query('sync/destination', {}).catch(() => []) : [],
       associations: isActivated
         ? this.store

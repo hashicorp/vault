@@ -22,13 +22,13 @@ export default Controller.extend({
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
   wrappedToken: alias('vaultController.wrappedToken'),
   redirectTo: alias('vaultController.redirectTo'),
-  managedNamespaceRoot: alias('flagsService.managedNamespaceRoot'),
+  hvdManagedNamespaceRoot: alias('flagsService.hvdManagedNamespaceRoot'),
   authMethod: '',
   oidcProvider: '',
 
   get namespaceInput() {
     const namespaceQP = this.clusterController.namespaceQueryParam;
-    if (this.managedNamespaceRoot) {
+    if (this.hvdManagedNamespaceRoot) {
       // When managed, the user isn't allowed to edit the prefix `admin/` for their nested namespace
       const split = namespaceQP.split('/');
       if (split.length > 1) {
@@ -42,8 +42,8 @@ export default Controller.extend({
 
   fullNamespaceFromInput(value) {
     const strippedNs = sanitizePath(value);
-    if (this.managedNamespaceRoot) {
-      return `${this.managedNamespaceRoot}/${strippedNs}`;
+    if (this.hvdManagedNamespaceRoot) {
+      return `${this.hvdManagedNamespaceRoot}/${strippedNs}`;
     }
     return strippedNs;
   },
