@@ -9,40 +9,64 @@
   @breadcrumbs={{this.breadcrumbs}}
 >
   <:toolbarFilters>
-    <FilterInput
-      aria-label="Search by message title"
-      placeholder="Search by message title"
-      id="message-filter"
-      value={{@params.pageFilter}}
-      @autofocus={{true}}
-      @onInput={{this.onFilterInputChange}}
-    />
-    <div>
-      <SearchSelect
-        @id="filter-by-message-status"
-        class="has-left-margin-s"
-        @options={{this.statusFilterOptions}}
-        @selectLimit="1"
-        @searchEnabled={{false}}
-        @fallbackComponent="select"
-        @onChange={{fn this.onFilterChange "status"}}
-        @placeholder="Filter by message status"
-        @inputValue={{if @params.status (array @params.status)}}
-        data-test-filter-by-message-status
-      />
-    </div>
-    <SearchSelect
-      @id="filter-by-message-type"
-      class="has-left-margin-s"
-      @options={{this.typeFilterOptions}}
-      @selectLimit="1"
-      @searchEnabled={{false}}
-      @fallbackComponent="select"
-      @onChange={{fn this.onFilterChange "type"}}
-      @placeholder="Filter by message type"
-      @inputValue={{if @params.type (array @params.type)}}
-      data-test-filter-by-message-type
-    />
+    <form {{on "submit" (perform this.handleSearch)}} aria-label="Filter custom message list">
+      <Hds::SegmentedGroup as |S|>
+        <S.Button
+          @color="secondary"
+          @text="Clear filters"
+          @icon="trash"
+          @isIconOnly={{true}}
+          type="reset"
+          {{on "click" this.resetFilters}}
+          data-test-filter-reset
+        />
+        <S.TextInput
+          @value={{@params.pageFilter}}
+          @type="search"
+          name="pageFilter"
+          class="segment-filter"
+          placeholder="Search by message title"
+          aria-label="Search by message title"
+          size="32"
+          data-test-filter-by="pageFilter"
+        />
+        <S.Select
+          aria-label="Filter by message status"
+          name="status"
+          class="segment-filter {{unless @params.status 'has-text-grey'}}"
+          data-test-filter-by="status"
+          as |S|
+        >
+          <S.Options>
+            <option value="" class="default-option">Message status</option>
+            {{#each (array "active" "inactive") as |status|}}
+              <option value={{status}} selected={{eq @params.status status}}>{{status}}</option>
+            {{/each}}
+          </S.Options>
+        </S.Select>
+        <S.Select
+          aria-label="Filter by type"
+          name="type"
+          class="segment-filter {{unless @params.status 'has-text-grey'}}"
+          data-test-filter-by="type"
+          as |S|
+        >
+          <S.Options>
+            <option value="" class="has-text-grey">Message type</option>
+            {{#each (array "modal" "banner") as |type|}}
+              <option value={{type}} selected={{eq @params.type type}}>{{type}}</option>
+            {{/each}}
+          </S.Options>
+        </S.Select>
+        <S.Button
+          @color="secondary"
+          @text="Apply filters"
+          @icon={{if this.handleSearch.isRunning "loading" "filter"}}
+          type="submit"
+          data-test-filter-submit
+        />
+      </Hds::SegmentedGroup>
+    </form>
   </:toolbarFilters>
   <:toolbarActions>
     <Hds::Button

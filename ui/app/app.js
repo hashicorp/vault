@@ -15,7 +15,7 @@ export default class App extends Application {
   engines = {
     'config-ui': {
       dependencies: {
-        services: ['auth', 'flash-messages', 'namespace', 'router', 'store', 'version', 'customMessages'],
+        services: ['auth', 'flash-messages', 'namespace', 'router', 'store', 'version', 'custom-messages'],
       },
     },
     'open-api-explorer': {
@@ -114,7 +114,7 @@ export default class App extends Application {
     },
     sync: {
       dependencies: {
-        services: ['flash-messages', 'feature-flag', 'router', 'store', 'version'],
+        services: ['flash-messages', 'flags', 'router', 'store', 'version'],
         externalRoutes: {
           kvSecretDetails: 'vault.cluster.secrets.backend.kv.secret.details',
           clientCountOverview: 'vault.cluster.clients',

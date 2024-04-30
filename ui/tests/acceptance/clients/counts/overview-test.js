@@ -12,7 +12,7 @@ import { visit, click, findAll, settled } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
+import { CHARTS, CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { formatNumber } from 'core/helpers/format-number';
@@ -55,16 +55,12 @@ module('Acceptance | clients | overview', function (hooks) {
       .hasText('Jul 2023 - Jan 2024', 'Date range shows dates correctly parsed activity response');
     assert.dom(CLIENT_COUNT.attributionBlock).exists('Shows attribution area');
     assert
-      .dom(CLIENT_COUNT.chartContainer('Vault client counts'))
+      .dom(CHARTS.container('Vault client counts'))
       .exists('Shows running totals with monthly breakdown charts');
     assert
-      .dom(CLIENT_COUNT.charts.line.xAxisLabel)
+      .dom(`${CHARTS.container('Vault client counts')} ${CHARTS.xAxisLabel}`)
       .hasText('7/23', 'x-axis labels start with billing start date');
-    assert.strictEqual(
-      findAll('[data-test-line-chart="plot-point"]').length,
-      5,
-      'line chart plots 5 points to match query'
-    );
+    assert.strictEqual(findAll(CHARTS.plotPoint).length, 5, 'line chart plots 5 points to match query');
   });
 
   test('it should update charts when querying date ranges', async function (assert) {
@@ -77,7 +73,7 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(CLIENT_COUNT.usageStats('Vault client counts'))
       .doesNotExist('running total single month stat boxes do not show');
     assert
-      .dom(CLIENT_COUNT.chartContainer('Vault client counts'))
+      .dom(CHARTS.container('Vault client counts'))
       .doesNotExist('running total month over month charts do not show');
     assert.dom(CLIENT_COUNT.attributionBlock).exists('attribution area shows');
     assert
@@ -101,16 +97,12 @@ module('Acceptance | clients | overview', function (hooks) {
     await click('[data-test-date-dropdown-submit]');
     assert.dom(CLIENT_COUNT.attributionBlock).exists('Shows attribution area');
     assert
-      .dom(CLIENT_COUNT.chartContainer('Vault client counts'))
+      .dom(CHARTS.container('Vault client counts'))
       .exists('Shows running totals with monthly breakdown charts');
     assert
-      .dom(CLIENT_COUNT.charts.line.xAxisLabel)
+      .dom(`${CHARTS.container('Vault client counts')} ${CHARTS.xAxisLabel}`)
       .hasText('9/23', 'x-axis labels start with queried start month (upgrade date)');
-    assert.strictEqual(
-      findAll('[data-test-line-chart="plot-point"]').length,
-      5,
-      'line chart plots 5 points to match query'
-    );
+    assert.strictEqual(findAll(CHARTS.plotPoint).length, 5, 'line chart plots 5 points to match query');
 
     // query for single, historical month (upgrade month)
     await click(CLIENT_COUNT.rangeDropdown);
@@ -122,11 +114,11 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(CLIENT_COUNT.usageStats('Vault client counts'))
       .exists('running total single month usage stats show');
     assert
-      .dom(CLIENT_COUNT.chartContainer('Vault client counts'))
+      .dom(CHARTS.container('Vault client counts'))
       .doesNotExist('running total month over month charts do not show');
     assert.dom(CLIENT_COUNT.attributionBlock).exists('attribution area shows');
-    assert.dom('[data-test-chart-container="new-clients"]').exists('new client attribution chart shows');
-    assert.dom('[data-test-chart-container="total-clients"]').exists('total client attribution chart shows');
+    assert.dom(CHARTS.container('new-clients')).exists('new client attribution chart shows');
+    assert.dom(CHARTS.container('total-clients')).exists('total client attribution chart shows');
 
     // query historical date range (from September 2023 to December 2023)
     await click(CLIENT_COUNT.rangeDropdown);
@@ -135,14 +127,10 @@ module('Acceptance | clients | overview', function (hooks) {
 
     assert.dom(CLIENT_COUNT.attributionBlock).exists('Shows attribution area');
     assert
-      .dom(CLIENT_COUNT.chartContainer('Vault client counts'))
+      .dom(CHARTS.container('Vault client counts'))
       .exists('Shows running totals with monthly breakdown charts');
-    assert.strictEqual(
-      findAll('[data-test-line-chart="plot-point"]').length,
-      4,
-      'line chart plots 4 points to match query'
-    );
-    const xAxisLabels = findAll(CLIENT_COUNT.charts.line.xAxisLabel);
+    assert.strictEqual(findAll(CHARTS.plotPoint).length, 4, 'line chart plots 4 points to match query');
+    const xAxisLabels = findAll(CHARTS.xAxisLabel);
     assert
       .dom(xAxisLabels[xAxisLabels.length - 1])
       .hasText('12/23', 'x-axis labels end with queried end month');
@@ -167,7 +155,7 @@ module('Acceptance | clients | overview', function (hooks) {
 
   test('totals filter correctly with full data', async function (assert) {
     assert
-      .dom(CLIENT_COUNT.chartContainer('Vault client counts'))
+      .dom(CHARTS.container('Vault client counts'))
       .exists('Shows running totals with monthly breakdown charts');
     assert.dom(CLIENT_COUNT.attributionBlock).exists('Shows attribution area');
 
@@ -193,7 +181,7 @@ module('Acceptance | clients | overview', function (hooks) {
     };
     for (const label in expectedStats) {
       assert
-        .dom(CLIENT_COUNT.charts.statTextValue(label))
+        .dom(CLIENT_COUNT.statTextValue(label))
         .includesText(`${expectedStats[label]}`, `label: ${label} renders accurate namespace client counts`);
     }
 
@@ -213,7 +201,7 @@ module('Acceptance | clients | overview', function (hooks) {
     };
     for (const label in expectedStats) {
       assert
-        .dom(CLIENT_COUNT.charts.statTextValue(label))
+        .dom(CLIENT_COUNT.statTextValue(label))
         .includesText(`${expectedStats[label]}`, `label: "${label} "renders accurate mount client counts`);
     }
 
@@ -235,7 +223,7 @@ module('Acceptance | clients | overview', function (hooks) {
     };
     for (const label in expectedStats) {
       assert
-        .dom(CLIENT_COUNT.charts.statTextValue(label))
+        .dom(CLIENT_COUNT.statTextValue(label))
         .includesText(`${expectedStats[label]}`, `label: ${label} is back to unfiltered value`);
     }
   });
@@ -273,13 +261,13 @@ module('Acceptance | clients | overview | sync in license, activated', function 
   });
 
   test('it should show secrets sync data in overview and tab', async function (assert) {
-    assert.dom(CLIENT_COUNT.charts.statTextValue('Secret sync')).exists('shows secret sync data on overview');
+    assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists('shows secret sync data on overview');
     await click(GENERAL.tab('sync'));
 
     assert.dom(GENERAL.tab('sync')).hasClass('active');
     assert.dom(GENERAL.emptyStateTitle).doesNotExist();
     assert
-      .dom(CLIENT_COUNT.charts.chart('Secrets sync usage'))
+      .dom(CHARTS.chart('Secrets sync usage'))
       .exists('chart is shown because feature is active and has data');
   });
 });
@@ -302,7 +290,7 @@ module('Acceptance | clients | overview | sync in license, not activated', funct
 
   test('it should hide secrets sync charts', async function (assert) {
     assert
-      .dom(CLIENT_COUNT.charts.chart('Secrets sync usage'))
+      .dom(CHARTS.chart('Secrets sync usage'))
       .doesNotExist('chart is hidden because feature is not activated');
 
     assert.dom('[data-test-stat-text="secret-syncs"]').doesNotExist();
@@ -327,7 +315,7 @@ module('Acceptance | clients | overview | sync not in license', function (hooks)
   });
 
   test('it should hide secrets sync charts', async function (assert) {
-    assert.dom(CLIENT_COUNT.charts.chart('Secrets sync usage')).doesNotExist();
+    assert.dom(CHARTS.chart('Secrets sync usage')).doesNotExist();
 
     assert.dom('[data-test-stat-text="secret-syncs"]').doesNotExist();
   });
