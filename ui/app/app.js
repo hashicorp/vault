@@ -13,12 +13,12 @@ export default class App extends Application {
   podModulePrefix = config.podModulePrefix;
   Resolver = Resolver;
   engines = {
-    configUi: {
+    'config-ui': {
       dependencies: {
         services: ['auth', 'flash-messages', 'namespace', 'router', 'store', 'version', 'customMessages'],
       },
     },
-    openApiExplorer: {
+    'open-api-explorer': {
       dependencies: {
         services: ['auth', 'flash-messages', 'namespace', 'router', 'version'],
       },
@@ -114,7 +114,7 @@ export default class App extends Application {
     },
     sync: {
       dependencies: {
-        services: ['flash-messages', 'feature-flag', 'router', 'store', 'version'],
+        services: ['flash-messages', 'flags', 'router', 'store', 'version'],
         externalRoutes: {
           kvSecretDetails: 'vault.cluster.secrets.backend.kv.secret.details',
           clientCountOverview: 'vault.cluster.clients',

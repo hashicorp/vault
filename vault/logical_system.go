@@ -1133,14 +1133,14 @@ func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *l
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
-func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
 	hmac := d.Get("hmac").(bool)
 	if header == "" {
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	err := b.Core.AuditedHeadersConfig().add(ctx, header, hmac)
+	err := b.Core.AuditedHeadersConfig().Add(ctx, header, hmac)
 	if err != nil {
 		return nil, err
 	}
@@ -1149,13 +1149,13 @@ func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, req *logi
 }
 
 // handleAuditedHeaderDelete deletes the header with the given name
-func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
 	if header == "" {
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	err := b.Core.AuditedHeadersConfig().remove(ctx, header)
+	err := b.Core.AuditedHeadersConfig().Remove(ctx, header)
 	if err != nil {
 		return nil, err
 	}
@@ -1170,7 +1170,7 @@ func (b *SystemBackend) handleAuditedHeaderRead(_ context.Context, _ *logical.Re
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	settings, ok := b.Core.AuditedHeadersConfig().header(header)
+	settings, ok := b.Core.AuditedHeadersConfig().Header(header)
 	if !ok {
 		return logical.ErrorResponse("Could not find header in config"), nil
 	}
@@ -1184,7 +1184,7 @@ func (b *SystemBackend) handleAuditedHeaderRead(_ context.Context, _ *logical.Re
 
 // handleAuditedHeadersRead returns the whole audited headers config
 func (b *SystemBackend) handleAuditedHeadersRead(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	headerSettings := b.Core.AuditedHeadersConfig().headers()
+	headerSettings := b.Core.AuditedHeadersConfig().Headers()
 
 	return &logical.Response{
 		Data: map[string]interface{}{
@@ -1355,7 +1355,7 @@ func (b *SystemBackend) handleGenerateRootDecodeTokenUpdate(ctx context.Context,
 	return resp, nil
 }
 
-func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[string]interface{} {
+func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry, legacyTTLFormat bool) map[string]interface{} {
 	info := map[string]interface{}{
 		"type":                    entry.Type,
 		"description":             entry.Description,
@@ -1369,11 +1369,24 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 		"running_plugin_version":  entry.RunningVersion,
 		"running_sha256":          entry.RunningSha256,
 	}
+	coreDefTTL := int64(b.Core.defaultLeaseTTL.Seconds())
+	coreMaxTTL := int64(b.Core.maxLeaseTTL.Seconds())
+	entDefTTL := int64(entry.Config.DefaultLeaseTTL.Seconds())
+	entMaxTTL := int64(entry.Config.MaxLeaseTTL.Seconds())
 	entryConfig := map[string]interface{}{
-		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
-		"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
+		"default_lease_ttl": entDefTTL,
+		"max_lease_ttl":     entMaxTTL,
 		"force_no_cache":    entry.Config.ForceNoCache,
 	}
+	if !legacyTTLFormat {
+		if entDefTTL == 0 {
+			entryConfig["default_lease_ttl"] = coreDefTTL
+		}
+		if entMaxTTL == 0 {
+			entryConfig["max_lease_ttl"] = coreMaxTTL
+		}
+	}
+
 	if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 		entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
 	}
@@ -1449,7 +1462,7 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 		}
 
 		// Populate mount info
-		info := b.mountInfo(ctx, entry)
+		info := b.mountInfo(ctx, entry, true)
 
 		resp.Data[entry.Path] = info
 	}
@@ -1733,7 +1746,7 @@ func (b *SystemBackend) handleReadMount(ctx context.Context, req *logical.Reques
 	}
 
 	resp := &logical.Response{
-		Data: b.mountInfo(ctx, entry),
+		Data: b.mountInfo(ctx, entry, true),
 	}
 	if entry.Version != "" && entry.Version != entry.RunningVersion {
 		warning := fmt.Sprintf("Plugin version is configured as %q, but running %q", entry.Version, entry.RunningVersion)
@@ -1949,8 +1962,8 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 		err := b.moveMount(ns, logger, migrationID, entry, fromPathDetails, toPathDetails)
 		if err != nil {
 			logger.Error("remount failed", "error", err)
-			if err := b.Core.setMigrationStatus(migrationID, MigrationFailureStatus); err != nil {
-				logger.Error("Setting migration status failed", "error", err, "target_status", MigrationFailureStatus)
+			if err := b.Core.setMigrationStatus(migrationID, MigrationStatusFailure); err != nil {
+				logger.Error("Setting migration status failed", "error", err, "target_status", MigrationStatusFailure)
 			}
 		}
 	}(migrationID)
@@ -2006,7 +2019,7 @@ func (b *SystemBackend) moveMount(ns *namespace.Namespace, logger log.Logger, mi
 		return err
 	}
 
-	if err := b.Core.setMigrationStatus(migrationID, MigrationSuccessStatus); err != nil {
+	if err := b.Core.setMigrationStatus(migrationID, MigrationStatusSuccess); err != nil {
 		return err
 	}
 	logger.Info("Completed mount move operations")
@@ -3043,7 +3056,7 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 			continue
 		}
 
-		info := b.mountInfo(ctx, entry)
+		info := b.mountInfo(ctx, entry, true)
 		resp.Data[entry.Path] = info
 	}
 
@@ -3077,7 +3090,7 @@ func (b *SystemBackend) handleReadAuth(ctx context.Context, req *logical.Request
 		}
 
 		return &logical.Response{
-			Data: b.mountInfo(ctx, entry),
+			Data: b.mountInfo(ctx, entry, true),
 		}, nil
 	}
 
@@ -4963,7 +4976,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
-				secretMounts[entry.Path] = b.mountInfo(ctx, entry)
+				secretMounts[entry.Path] = b.mountInfo(ctx, entry, false)
 			} else {
 				secretMounts[entry.Path] = map[string]interface{}{
 					"type":        entry.Type,
@@ -4990,7 +5003,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
-				authMounts[entry.Path] = b.mountInfo(ctx, entry)
+				authMounts[entry.Path] = b.mountInfo(ctx, entry, false)
 			} else {
 				authMounts[entry.Path] = map[string]interface{}{
 					"type":        entry.Type,
@@ -5053,7 +5066,7 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		return errResp, logical.ErrPermissionDenied
 	}
 	resp := &logical.Response{
-		Data: b.mountInfo(ctx, me),
+		Data: b.mountInfo(ctx, me, false),
 	}
 	resp.Data["path"] = me.Path
 
@@ -5259,8 +5272,14 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 	context := d.Get("context").(string)
 
+	vaultVersion := version.Version
+	redactVersion, _, _, _ := logical.CtxRedactionSettingsValue(ctx)
+	if redactVersion {
+		vaultVersion = ""
+	}
+
 	// Set up target document
-	doc := framework.NewOASDocument(version.Version)
+	doc := framework.NewOASDocument(vaultVersion)
 
 	// Generic mount paths will primarily be used for code generation purposes.
 	// This will result in parameterized mount paths being returned instead of

@@ -73,6 +73,10 @@
             "path": "internals/telemetry/enable-telemetry"
           },
           {
+            "title": "Key metrics",
+            "path": "internals/telemetry/key-metrics"
+          },
+          {
             "title": "Metric reference",
             "routes": [
               {
@@ -2588,17 +2592,8 @@
     "divider": true
   },
   {
-    "title": "Deprecation Notices",
-    "routes": [
-      {
-        "title": "Overview",
-        "path": "deprecation"
-      },
-      {
-        "title": "FAQ",
-        "path": "deprecation/faq"
-      }
-    ]
+    "title": "Deprecation notices",
+    "path": "deprecation"
   },
   {
     "divider": true

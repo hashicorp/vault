@@ -288,7 +288,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
         {
           cardTitle: 'Total secrets',
           subText:
-            'The total number of secrets that have been synced from Vault. One secret will be counted as one sync client.',
+            'The total number of secrets that have been synced from Vault over time. One secret will be counted as one sync client.',
           actionText: 'View billing',
           count: '7',
         },

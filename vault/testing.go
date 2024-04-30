@@ -36,7 +36,6 @@ import (
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
-	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -131,7 +130,7 @@ func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 		EnableRaw:       enableRaw,
 		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		AuditBackends: map[string]audit.Factory{
-			"file": auditFile.Factory,
+			"file": audit.NewFileBackend,
 		},
 	}
 	return TestCoreWithSealAndUI(t, conf)
@@ -144,7 +143,7 @@ func TestCoreWithDeadlockDetection(t testing.T, testSeal Seal, enableRaw bool) *
 		EnableRaw:       enableRaw,
 		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		AuditBackends: map[string]audit.Factory{
-			"file": auditFile.Factory,
+			"file": audit.NewFileBackend,
 		},
 		DetectDeadlocks: "expiration,quotas,statelock,barrier",
 	}
@@ -1415,13 +1414,17 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	coreConfig := &CoreConfig{
 		LogicalBackends:    make(map[string]logical.Factory),
 		CredentialBackends: make(map[string]logical.Factory),
-		AuditBackends:      make(map[string]audit.Factory),
-		RedirectAddr:       fmt.Sprintf("https://127.0.0.1:%d", listeners[0][0].Address.Port),
-		ClusterAddr:        "https://127.0.0.1:0",
-		DisableMlock:       true,
-		EnableUI:           true,
-		EnableRaw:          true,
-		BuiltinRegistry:    corehelpers.NewMockBuiltinRegistry(),
+		AuditBackends: map[string]audit.Factory{
+			"file":   audit.NewFileBackend,
+			"socket": audit.NewSocketBackend,
+			"syslog": audit.NewSyslogBackend,
+		},
+		RedirectAddr:    fmt.Sprintf("https://127.0.0.1:%d", listeners[0][0].Address.Port),
+		ClusterAddr:     "https://127.0.0.1:0",
+		DisableMlock:    true,
+		EnableUI:        true,
+		EnableRaw:       true,
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 	}
 
 	if base != nil {

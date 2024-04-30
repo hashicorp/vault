@@ -12,11 +12,8 @@ interface Args {
 export default class RunningTotal extends Component<Args> {
   get chartContainerText() {
     const { isSecretsSyncActivated } = this.args;
-    const prefix = 'The total clients in the specified date range. This includes entity';
-
-    const mid = isSecretsSyncActivated ? ', non-entity, and secrets sync clients' : ' and non-entity clients';
-    const suffix = '. The total client count number is an important consideration for Vault billing.';
-
-    return `${prefix}${mid}${suffix}`;
+    return `The total clients in the specified date range, displayed per month. This includes entity, non-entity${
+      isSecretsSyncActivated ? ', ACME and secrets sync clients' : ' and ACME clients'
+    }. The total client count number is an important consideration for Vault billing.`;
   }
 }

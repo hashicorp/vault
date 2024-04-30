@@ -12,8 +12,8 @@ import sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
 import authPage from 'vault/tests/pages/auth';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
-import { ACTIVITY_RESPONSE_STUB, assertChart } from 'vault/tests/helpers/clients/client-count-helpers';
+import { CHARTS, CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
+import { ACTIVITY_RESPONSE_STUB, assertBarChart } from 'vault/tests/helpers/clients/client-count-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 
@@ -78,8 +78,8 @@ module('Acceptance | clients | counts | acme', function (hooks) {
     await click(searchSelect.option(searchSelect.optionIndex(this.nsPath)));
 
     // each chart assertion count is data array length + 2
-    assertChart(assert, 'ACME usage', nsMonthlyUsage);
-    assertChart(assert, 'Monthly new', nsMonthlyNew);
+    assertBarChart(assert, 'ACME usage', nsMonthlyUsage);
+    assertBarChart(assert, 'Monthly new', nsMonthlyNew);
     assert.strictEqual(
       currentURL(),
       `/vault/clients/counts/acme?ns=${this.nsPath}`,
@@ -114,8 +114,8 @@ module('Acceptance | clients | counts | acme', function (hooks) {
     await click(searchSelect.option(searchSelect.optionIndex(this.mountPath)));
 
     // each chart assertion count is data array length + 2
-    assertChart(assert, 'ACME usage', mountMonthlyUsage);
-    assertChart(assert, 'Monthly new', mountMonthlyNew);
+    assertBarChart(assert, 'ACME usage', mountMonthlyUsage);
+    assertBarChart(assert, 'Monthly new', mountMonthlyNew);
     assert.strictEqual(
       currentURL(),
       `/vault/clients/counts/acme?mountPath=${this.mountPath}&ns=${this.nsPath}`,
@@ -146,7 +146,7 @@ module('Acceptance | clients | counts | acme', function (hooks) {
     // no data because this is an auth mount (acme_clients come from pki mounts)
     await click(searchSelect.option(searchSelect.optionIndex('auth/authid/0')));
     assert.dom(CLIENT_COUNT.statText('Total ACME clients')).hasTextContaining('0');
-    assert.dom(`${CLIENT_COUNT.charts.chart('ACME usage')} ${CLIENT_COUNT.charts.dataBar}`).isNotVisible();
-    assert.dom(CLIENT_COUNT.charts.chart('Monthly new')).doesNotExist();
+    assert.dom(`${CHARTS.chart('ACME usage')} ${CHARTS.verticalBar}`).isNotVisible();
+    assert.dom(CHARTS.container('Monthly new')).doesNotExist();
   });
 });
