@@ -392,7 +392,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	issuerId, err := issuing.ResolveIssuerReference(ctx, req.Storage, role.Issuer)
 	if err != nil {
 		if issuerId == issuing.IssuerRefNotFound {
-			b.Logger().Warn("could not resolve issuer reference, may be using legacy storage")
+			b.Logger().Warn("could not resolve issuer reference, may be using a legacy CA bundle")
 		} else {
 			return nil, err
 		}
