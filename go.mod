@@ -12,7 +12,7 @@ module github.com/hashicorp/vault
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
 go 1.21
 
-toolchain go1.21.9
+toolchain go1.22.2
 
 replace github.com/hashicorp/vault/api => ./api
 
@@ -226,7 +226,7 @@ require (
 	google.golang.org/protobuf v1.32.0
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
-	layeh.com/radius v0.0.0-20190322222518-890bc1058917
+	layeh.com/radius v0.0.0-20231213012653-1006025d24f8
 	nhooyr.io/websocket v1.8.7
 )
 
