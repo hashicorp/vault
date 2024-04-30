@@ -158,3 +158,52 @@ func BenchmarkAuditBroker_File_Request_DevNull(b *testing.B) {
 		}
 	})
 }
+
+// TestBroker_isContextViable_basics checks the expected result of isContextViable
+// for basic inputs such as nil and a never-ending context.
+func TestBroker_isContextViable_basics(t *testing.T) {
+	t.Parallel()
+
+	require.False(t, isContextViable(nil))
+	require.True(t, isContextViable(context.Background()))
+}
+
+// TestBroker_isContextViable_timeouts checks the expected result of isContextViable
+// for various timeout durations.
+func TestBroker_isContextViable_timeouts(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		timeout  time.Duration
+		expected bool
+	}{
+		"2s-smaller-deadline": {
+			timeout:  timeout - 2*time.Second,
+			expected: false,
+		},
+		"same-deadline": {
+			timeout:  timeout,
+			expected: false, // Expected as a near miss
+		},
+		"same-deadline-plus": {
+			timeout:  timeout + 5*time.Millisecond,
+			expected: true,
+		},
+		"2x-longer-deadline": {
+			timeout:  timeout * 2,
+			expected: true,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx, cancel := context.WithTimeout(context.Background(), tc.timeout)
+			t.Cleanup(func() { cancel() })
+			require.Equal(t, tc.expected, isContextViable(ctx))
+		})
+	}
+}
