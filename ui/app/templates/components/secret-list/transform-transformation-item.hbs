@@ -15,6 +15,7 @@
       <SecretLink
         @mode="show"
         @secret={{@item.id}}
+        @backend={{@backendModel.id}}
         @queryParams={{if (eq @backendModel.type "transform") (hash tab="actions") ""}}
         class="has-text-black has-text-weight-semibold"
       >

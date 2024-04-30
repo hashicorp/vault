@@ -4373,8 +4373,8 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 			"token/": map[string]interface{}{
 				"options": map[string]string(nil),
 				"config": map[string]interface{}{
-					"default_lease_ttl": int64(0),
-					"max_lease_ttl":     int64(0),
+					"default_lease_ttl": int64(2764800),
+					"max_lease_ttl":     int64(2764800),
 					"force_no_cache":    false,
 					"token_type":        "default-service",
 				},

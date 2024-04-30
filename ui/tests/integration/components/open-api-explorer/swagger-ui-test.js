@@ -8,8 +8,14 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { waitUntil, find } from '@ember/test-helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render } from '@ember/test-helpers';
+import { render, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+
+const SELECTORS = {
+  container: '[data-test-swagger-ui]',
+  searchInput: '.operation-filter-input',
+  apiPathBlock: '.opblock-post',
+};
 
 module('Integration | Component | open-api-explorer | swagger-ui', function (hooks) {
   setupRenderingTest(hooks);
@@ -17,22 +23,39 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
   setupMirage(hooks);
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-  });
 
-  test('it renders', async function (assert) {
-    assert.expect(2);
     const openApiResponse = this.server.create('open-api-explorer');
     this.server.get('sys/internal/specs/openapi', () => {
       return openApiResponse;
     });
 
-    await render(hbs`<SwaggerUi/>`, {
-      owner: this.engine,
-    });
+    this.totalApiPaths = Object.keys(openApiResponse.paths).length;
 
-    await waitUntil(() => find('[data-test-swagger-ui]'));
-    assert.dom('[data-test-swagger-ui]').exists('renders component');
-    await waitUntil(() => find('.operation-filter-input'));
-    assert.dom('.opblock-post').exists({ count: 2 }, 'renders two blocks');
+    this.renderComponent = async () => {
+      await render(hbs`<SwaggerUi/>`, {
+        owner: this.engine,
+      });
+    };
+  });
+
+  test('it renders', async function (assert) {
+    await this.renderComponent();
+
+    await waitUntil(() => find(SELECTORS.container));
+
+    assert.dom(SELECTORS.container).exists('renders component');
+    assert.dom(SELECTORS.apiPathBlock).exists({ count: this.totalApiPaths }, 'renders all api paths');
+  });
+
+  test('it can search', async function (assert) {
+    await this.renderComponent();
+
+    await waitUntil(() => find(SELECTORS.searchInput));
+    await fillIn(SELECTORS.searchInput, 'token');
+
+    // for some reason search results are not rendered immediately in tests,
+    // so asserting that the search input has the value we expect is the best we can do here
+    // if the search fn breaks, this test will fail
+    assert.dom(SELECTORS.searchInput).hasValue('token', 'search input has value');
   });
 });

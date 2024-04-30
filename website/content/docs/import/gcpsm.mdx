@@ -21,14 +21,18 @@ Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common 
   `vault_role_name` must be unset.
 
 - `vault_mount_path` `(string: "")` - The Vault mount path to a pre-configured GCP
-  secrets engine used to generate dynamic credentials for the importer. If
-  `vault_mount_path` or `vault_role_name` are set, then `credentials` must be
+  secrets engine used to generate dynamic credentials for the importer. If one of
+  `vault_mount_path`, `vault_role_name`, or `vault_namespace` are set, then `credentials` must be
   unset.
 
 - `vault_role_name` `(string: "")` - The Vault role used to generate a dynamic
-  credential for the importer. The role name must exist in the pre-configured
-  GCP secrets engine mount. If `vault_role_name` or `vault_mount_path` are set,
-  then `credentials` must be unset.
+  credential for the importer. The role name must exist in the pre-configured GCP secrets
+  engine mount. If one of `vault_mount_path`, `vault_role_name`, or `vault_namespace`
+  are set, then `credentials` must be unset.
+
+- `vault_namespace` `(string: "")` - The Vault namespace containing the preconfigured GCP secrets engine
+  mount path specified in `vault_mount_path` for use with dynamic secrets. If one of `vault_mount_path`,
+  `vault_role_name`, or `vault_namespace` are set, then `credentials` must be unset.
 
 ## Example
 
@@ -36,9 +40,10 @@ Define and configure the `my-gcp-source-1` GCP source:
 
 ```hcl
 source_gcp {
-  name                 = "my-gcp-source-1"
-  secrets_engine_mount = "gcp"
-  secrets_engine_role  = "my-gcp-role-1"
+  name             = "my-gcp-source-1"
+  vault_mount_path = "gcp"
+  vault_role_name  = "my-gcp-role-1"
+  vault_namespace  = "ns-1"
 }
 ```
 
