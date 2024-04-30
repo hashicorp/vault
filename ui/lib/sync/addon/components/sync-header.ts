@@ -21,11 +21,11 @@ export default class SyncHeaderComponent extends Component<Args> {
   @service declare readonly flags: FlagsService;
 
   get badgeText() {
-    const isHVDManaged = this.flags.isHVDManaged;
+    const isHvdManaged = this.flags.isHvdManaged;
     const onLicense = this.version.hasSecretsSync;
     const isEnterprise = this.version.isEnterprise;
 
-    if (isHVDManaged) return 'Plus feature';
+    if (isHvdManaged) return 'Plus feature';
     if (isEnterprise && !onLicense) return 'Premium feature';
     if (!isEnterprise) return 'Enterprise feature';
     // no badge for Enterprise clusters with Secrets Sync on their license--the only remaining option.

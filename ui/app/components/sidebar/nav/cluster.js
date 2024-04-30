@@ -23,11 +23,11 @@ export default class SidebarNavClusterComponent extends Component {
   }
 
   get badgeText() {
-    const isHVDManaged = this.flags.isHVDManaged;
+    const isHvdManaged = this.flags.isHvdManaged;
     const onLicense = this.version.hasSecretsSync;
     const isEnterprise = this.version.isEnterprise;
 
-    if (isHVDManaged) return 'Plus';
+    if (isHvdManaged) return 'Plus';
     if (isEnterprise && !onLicense) return 'Premium';
     if (!isEnterprise) return 'Enterprise';
     // no badge for Enterprise clusters with Secrets Sync on their license--the only remaining option.
