@@ -42,6 +42,7 @@ module('Integration | Helper | date-format', function (hooks) {
   });
 
   test('displays time zone if withTimeZone=true', async function (assert) {
+    // this test may fail locally if you're in a non-US timezone
     this.set('withTimezone', true);
     this.set('timestampDate', TEST_DATE);
 
@@ -72,7 +73,7 @@ module('Integration | Helper | date-format', function (hooks) {
 
   test('it formats timezone', async function (assert) {
     // compute expected because otherwise this fails locally because of differing timezones
-    const expected = TEST_DATE.toLocaleTimeString(undefined, { timeZoneName: 'short' }).split(' ')[2];
+    const expected = ` ${TEST_DATE.toLocaleTimeString(undefined, { timeZoneName: 'short' }).split(' ')[2]}`;
     const actual = formatTimeZone(TEST_DATE);
 
     assert.notStrictEqual(actual, undefined, 'formatted timezone is not undefined');
