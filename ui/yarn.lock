@@ -9183,9 +9183,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-a11y-testing@npm:^5.2.1":
-  version: 5.2.1
-  resolution: "ember-a11y-testing@npm:5.2.1"
+"ember-a11y-testing@npm:^6.1.1":
+  version: 6.1.1
+  resolution: "ember-a11y-testing@npm:6.1.1"
   dependencies:
     "@ember/test-waiters": ^2.4.3 || ^3.0.0
     "@scalvert/ember-setup-middleware-reporter": ^0.1.1
@@ -9200,12 +9200,12 @@ __metadata:
     fs-extra: ^10.0.0
     validate-peer-dependencies: ^2.0.0
   peerDependencies:
-    "@ember/test-helpers": ^2.0.0
+    "@ember/test-helpers": ^3.0.3
     qunit: ">= 2"
   peerDependenciesMeta:
     qunit:
       optional: true
-  checksum: 4c8a2c1a04751c995679f537af3c93036c648dc7e289a2bfa044b8cab189662a8c451507ae6a7777d1b77e0589c0e2304f0c5c76e2ee53e75cf2c3c0845d23da
+  checksum: cbb69a7e043adb1eee73d8f46c11a9d7c393e30069ff4b0c20e3fb1d76accf460968d3d9876189a0cd1d95cfcaecc8731343cbd072171464ea35fa957cbb5ccc
   languageName: node
   linkType: hard
 
@@ -20830,7 +20830,7 @@ __metadata:
     deepmerge: ^4.0.0
     doctoc: ^2.2.0
     dompurify: ^3.0.2
-    ember-a11y-testing: ^5.2.1
+    ember-a11y-testing: ^6.1.1
     ember-auto-import: ^2.7.2
     ember-basic-dropdown: 6.0.1
     ember-cli: ~5.4.2
