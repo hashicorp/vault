@@ -1,6 +1,11 @@
 - `elide_list_responses` `(bool: false)` - See [Eliding list response
 bodies](/vault/docs/audit#eliding-list-response-bodies).
 
+- `exclude` `(string: "")` - <EnterpriseAlert inline="true" /> Allows a number of
+exclusions to be provided which, when their condition is matched, will remove the
+specified fields from the audit entry being written. See the [exclusion](/vault/docs/enterprise/audit/exclusion)
+section of the auditing overview for more information.
+
 - `fallback` `(bool: false)` - <EnterpriseAlert inline="true" /> Indicates whether the audit device is the
 fallback for filtering purposes. **Vault only supports one fallback audit
 device at a time**.

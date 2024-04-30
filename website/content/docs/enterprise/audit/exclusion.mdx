@@ -1,0 +1,264 @@
+---
+layout: docs
+page_title: Exclusion syntax for audit results
+description: >-
+  Learn about the behavior and syntax for excluding audit data in Vault Enterprise.
+---
+
+# Exclusion syntax for audit results
+
+@include 'alerts/enterprise-only.mdx'
+
+As of Vault 1.18.0, you can enable audit devices with an `exclude` option to exclude
+particular fields in an audit entry, written to a particular audit log and fine-tune
+your auditing process.
+
+<Warning title="Proceed with caution">
+
+  Excluding audit entry fields is an advanced feature. Use of exclusion settings
+  could lead to missing data in your audit logs.
+
+  **Always** test your audit configuration in a non-production environment
+  before deploying exclusions to production. And make sure to read the
+  [Vault security model](/vault/docs/internals/security) and
+  [filtering overview](/vault/docs/concepts/filtering) to familiarize yourself
+  with Vault auditing and filtering basics before enabling audit devices which use
+  exclusions.
+
+</Warning>
+
+Once you enable an audit device with exclusions, every audit entry Vault sends to
+that audit device is compared to an (optional) predicate expression (`condition`).
+Audit entries that match the expression are then modified to remove
+the fields specified for that condition, before being written to the audit log for the device.
+It is possible to specify multiple sets of condition and field combinations for an
+individual audit device.
+
+When you enable audit devices that use exclusion, the behavior of any existing audit
+device and the behavior of new audit devices that **do not** use exclusion remains
+unchanged.
+
+## `exclude` option
+
+The value provided with the `exclude` option must be a parsable JSON array (i.e. JSON or
+an escaped JSON string) of exclusion objects.
+
+### Exclusion object
+
+- `condition` `(string: <optional>)` - predicate expression using [filtering syntax](/vault/docs/concepts/filtering),
+when matched Vault will attempt to remove values identified by `fields`.
+- `fields` `(string[] <required>)` - string array of fields identified by [JSON pointer](https://tools.ietf.org/html/rfc6901)
+in the audit entry to exclude.
+
+```json
+[
+  {
+    "condition": "",
+    "fields": [ "" ]
+  }
+]
+```
+
+The `condition` is compared against an immutable golden source audit entry, so excluding
+a field in a preceding exclusion for an audit device won't change the value for subsequent
+exclusion conditions. Simply put, the overall output of excluded fields is cumulative,
+but the input used by conditions is not.
+
+### Exclusion examples
+
+#### Exclude response data (when present)
+
+This example does not supply a condition which means the specified fields will be
+excluded from any audit entry that contains them.
+
+```json
+[
+  {
+    "fields": [ "/response/data" ]
+  }
+]
+```
+
+#### Exclude request data (when present) for transit mounts
+
+This example uses a condition to restrict exclusion of the request data field only to
+audit entries with a mount type of `transit`.
+
+```json
+[
+  {
+    "condition": "\"/request/mount_type\" == transit",
+    "fields": [ "/request/data" ]
+  }
+]
+```
+#### Multiple exclusions
+
+This example uses multiple exclusions to exclude `data` from both the request and response,
+when the mount type is `transit`. Also to exclude the `entity_id` from requests where
+the `/auth/client_token` in the entry matches `hmac` and then more than one other character.
+
+```json
+[
+  {
+    "condition": "\"/request/mount_type\" == transit",
+    "fields": [ "/request/data", "/response/data" ]
+  },
+  {
+    "condition":  "\"/auth/client_token\" matches \"hmac.+\"",
+    "fields": [ "/auth/entity_id" ]
+  }
+]
+```
+
+## Audit entry structure
+
+In order to accurately construct `condition` and `fields` the Vault Operator will
+have to understand the structure of the (request/response) audit entry.
+
+This information can be obtained by reverse engineering the audit logs, however it
+the following can be used to understand the structure in a more proactive way.
+
+At a high level, there are only request audit entries and response audit entries,
+each of these entries contain different objects such as `auth`, `request` and `response`.
+
+### Request audit entry
+
+```json
+{
+  "auth": <auth>,
+  "error": "",
+  "forwarded_from": "",
+  "request": <request>,
+  "time": "",
+  "type": ""
+}
+```
+
+### Response audit entry
+
+```json
+{
+  "auth": <auth>,
+  "error": "",
+  "forwarded_from": "",
+  "request": <request>,
+  "response": <response>,
+  "time": "",
+  "type": ""
+}
+```
+
+### Auth object (`<auth>`)
+
+Complete with example data to show simple types (`string`, `bool`, `int`), other
+JSON examples which refer to `<auth>` are referring to this object.
+
+```json
+{
+  "accessor": "",
+  "client_token": "",
+  "display_name": "",
+  "entity_created": "",
+  "entity_id": "",
+  "external_namespace_policies": {
+    "allowed": true,
+    "granting_policies": [
+      {
+        "name": "",
+        "namespace_id": "",
+        "namespace_path": "",
+        "type": ""
+      }
+    ]
+  },
+  "identity_policies": [
+    ""
+  ],
+  "metadata": {},
+  "no_default_policy": false,
+  "num_uses": 10,
+  "policies": [
+    ""
+  ],
+  "policy_results": {},
+  "remaining_uses": 5,
+  "token_policies": [
+    ""
+  ],
+  "token_issue_time": "",
+  "token_ttl": 3600,
+  "token_type": ""
+}
+```
+
+### Request object (`<request>`)
+
+Complete with example data to show simple types (`string`, `bool`, `int`), other
+JSON examples which refer to `<request>` are referring to this object.
+
+```json
+{
+  "client_certificate_serial_number": "",
+  "client_id": "",
+  "client_token": "",
+  "client_token_accessor": "",
+  "data": { "":  {} },
+  "id": "",
+  "headers": { "": [ "" ] },
+  "mount_accessor": "",
+  "mount_class": "",
+  "mount_point": "",
+  "mount_type": "",
+  "mount_running_version": "",
+  "mount_running_sha256": "",
+  "mount_is_external_plugin": "",
+  "namespace": {
+    "id": "",
+    "path": ""
+  },
+  "operation": "",
+  "path": "",
+  "policy_override": true,
+  "remote_address": "",
+  "remote_port": 1234,
+  "replication_cluster": "",
+  "request_uri": "",
+  "wrap_ttl": 60
+}
+```
+
+### Response object (`<response>`)
+
+Complete with example data to show simple types (`string`, `bool`, `int`), other
+JSON examples which refer to `<response>` are referring to this object.
+
+```json
+{
+  "auth": <auth>,
+  "data": {},
+  "headers": {},
+  "mount_accessor": "",
+  "mount_class": "",
+  "mount_is_external_plugin": false,
+  "mount_point": "",
+  "mount_running_sha256": "",
+  "mount_running_plugin_version": "",
+  "mount_type": "",
+  "redirect": "",
+  "secret": {
+    "lease_id": ""
+  },
+  "wrap_info": {
+    "accessor": "",
+    "creation_path": "",
+    "creation_time": "",
+    "token": "",
+    "ttl": 60,
+    "wrapped_accessor": ""
+  },
+  "warnings": [
+    ""
+  ]
+}
+```

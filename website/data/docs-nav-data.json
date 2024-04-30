@@ -2795,6 +2795,10 @@
         "title": "Audit",
         "routes": [
           {
+            "title": "Audit Exclusion",
+            "path": "enterprise/audit/exclusion"
+          },
+          {
             "title": "Audit Filtering",
             "path": "enterprise/audit/filtering"
           }
