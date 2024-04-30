@@ -338,7 +338,6 @@ func (m *multipleMonthsActivityClients) timestampForMonth(i int, now time.Time) 
 		return timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
 	}
 	return now
-
 }
 
 func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog) ([]string, error) {
