@@ -130,10 +130,13 @@ export const formatByNamespace = (namespaceArray: NamespaceObject[]) => {
 // when querying historical data the response will always contain the latest client type keys because the activity log is
 // constructed based on the version of Vault the user is on (key values will be 0)
 export const destructureClientCounts = (verboseObject: Counts | ByNamespaceClients) => {
-  return CLIENT_TYPES.reduce((newObj: Record<ClientTypes, Counts[ClientTypes]>, clientType: ClientTypes) => {
-    newObj[clientType] = verboseObject[clientType];
-    return newObj;
-  }, {} as Record<ClientTypes, Counts[ClientTypes]>);
+  return CLIENT_TYPES.reduce(
+    (newObj: Record<ClientTypes, Counts[ClientTypes]>, clientType: ClientTypes) => {
+      newObj[clientType] = verboseObject[clientType];
+      return newObj;
+    },
+    {} as Record<ClientTypes, Counts[ClientTypes]>
+  );
 };
 
 export const sortMonthsByTimestamp = (monthsArray: ActivityMonthBlock[] | EmptyActivityMonthBlock[]) => {
@@ -159,19 +162,22 @@ export const namespaceArrayToObject = (
       // mounts_by_key is is used to filter further in a namespace and get monthly activity by mount
       // it's an object inside the namespace block where the keys are mount paths
       // and the values include new and total client counts for that mount in that month
-      const mounts_by_key = ns.mounts.reduce((mountObj: { [key: string]: MountByKey }, mount) => {
-        const newMountClients = newNsClients.mounts.find((m) => m.label === mount.label);
+      const mounts_by_key = ns.mounts.reduce(
+        (mountObj: { [key: string]: MountByKey }, mount) => {
+          const newMountClients = newNsClients.mounts.find((m) => m.label === mount.label);
 
-        if (newMountClients) {
-          mountObj[mount.label] = {
-            ...mount,
-            timestamp,
-            month,
-            new_clients: { month, timestamp, ...newMountClients },
-          };
-        }
-        return mountObj;
-      }, {} as { [key: string]: MountByKey });
+          if (newMountClients) {
+            mountObj[mount.label] = {
+              ...mount,
+              timestamp,
+              month,
+              new_clients: { month, timestamp, ...newMountClients },
+            };
+          }
+          return mountObj;
+        },
+        {} as { [key: string]: MountByKey }
+      );
 
       nsObject[ns.label] = {
         ...destructureClientCounts(ns),
