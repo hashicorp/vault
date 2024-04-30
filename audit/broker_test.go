@@ -165,7 +165,7 @@ func TestBroker_isContextViable_basics(t *testing.T) {
 	t.Parallel()
 
 	require.False(t, isContextViable(nil))
-	require.False(t, isContextViable(context.Background()))
+	require.True(t, isContextViable(context.Background()))
 }
 
 // TestBroker_isContextViable_timeouts checks the expected result of isContextViable
