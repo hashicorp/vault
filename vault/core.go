@@ -1226,7 +1226,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if c.recoveryMode {
 		checkResult, err := c.checkForSealMigration(context.Background(), conf.UnwrapSeal)
 		if err != nil {
-			return nil, fmt.Errorf("error checking if a seal migration is needed")
+			return nil, fmt.Errorf("error checking if a seal migration is needed: %w", err)
 		}
 		if conf.UnwrapSeal != nil || checkResult == sealMigrationCheckAdjust {
 			return nil, errors.New("cannot run in recovery mode when a seal migration is needed")
@@ -2324,7 +2324,7 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, performCleanup
 
 		if err := c.preSeal(); err != nil {
 			c.logger.Error("pre-seal teardown failed", "error", err)
-			return fmt.Errorf("internal error")
+			return fmt.Errorf("internal error: %w", err)
 		}
 	} else {
 		// If we are keeping the lock we already have the state write lock

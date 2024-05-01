@@ -211,7 +211,7 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 			if err == logical.ErrReadOnly && c.perfStandby {
 				return err
 			}
-			return errors.New("failed to update auth table")
+			return fmt.Errorf("failed to update auth table: %w", err)
 		}
 	}
 
@@ -406,7 +406,7 @@ func (c *Core) removeCredEntry(ctx context.Context, path string, updateStorage b
 				return err
 			}
 
-			return errors.New("failed to update auth table")
+			return fmt.Errorf("failed to update auth table: %w", err)
 		}
 	}
 
@@ -563,7 +563,7 @@ func (c *Core) taintCredEntry(ctx context.Context, nsID, path string, updateStor
 			if err == logical.ErrReadOnly && c.perfStandby {
 				return err
 			}
-			return errors.New("failed to update auth table")
+			return fmt.Errorf("failed to update auth table: %w", err)
 		}
 	}
 
