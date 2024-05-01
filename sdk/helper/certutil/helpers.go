@@ -923,6 +923,20 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 		IPAddresses:    data.Params.IPAddresses,
 		URIs:           data.Params.URIs,
 	}
+	permittedDnsNames := data.SigningBundle.Certificate.PermittedDNSDomains
+	if permittedDnsNames != nil && len(permittedDnsNames) > 0 {
+		for _, name := range certTemplate.DNSNames {
+			for _, permittedName := range permittedDnsNames {
+				if name == permittedName || strings.HasSuffix(name, permittedName) {
+					break
+				}
+			}
+			return nil, errutil.InternalError{Err: fmt.Errorf("error matching DNS Name {{name}} to permitted Names {{names}}", name, permittedDnsNames).Error()}
+		}
+	}
+	// TODO: Remove This; Force an Error for now to see where tests use this function
+	return nil, errutil.InternalError{Err: fmt.Errorf("error, so I can see what calls this in the tests suite").Error()}
+
 	if data.Params.NotBeforeDuration > 0 {
 		certTemplate.NotBefore = time.Now().Add(-1 * data.Params.NotBeforeDuration)
 	}
