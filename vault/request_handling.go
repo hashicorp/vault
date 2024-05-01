@@ -1023,7 +1023,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	// See if the call to CheckToken set any request priority. We push the
 	// processing down into CheckToken so we only have to do a router lookup
 	// once.
-	if auth.HTTPRequestPriority != nil {
+	if auth != nil && auth.HTTPRequestPriority != nil {
 		ctx = context.WithValue(ctx, logical.CtxKeyInFlightRequestPriority{}, *auth.HTTPRequestPriority)
 	}
 
