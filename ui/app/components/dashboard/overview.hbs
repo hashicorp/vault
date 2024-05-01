@@ -7,10 +7,10 @@
 
 <div class="has-bottom-margin-xl">
   <div class="is-flex-row gap-24">
-    {{#if (and @version.isEnterprise (or @license @isRootNamespace))}}
+    {{#if (and @version.isEnterprise @isRootNamespace)}}
       <div class="is-flex-column is-flex-1 gap-24">
-        {{#if @license}}
-          <Dashboard::ClientCountCard @license={{@license}} />
+        {{#if @version.isEnterprise}}
+          <Dashboard::ClientCountCard />
         {{/if}}
         {{#if
           (and @isRootNamespace (has-permission "status" routeParams="replication") (not (is-empty-value @replication)))
