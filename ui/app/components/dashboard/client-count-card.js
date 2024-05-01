@@ -16,10 +16,9 @@ import getUnixTime from 'date-fns/getUnixTime';
  * DashboardClientCountCard component are used to display total and new client count information
  *
  * @example
- * ```js
- * <Dashboard::ClientCountCard @license={{@model.license}}  />
- * ```
- *  @param {object} license - license object passed from the parent
+ *
+ * <Dashboard::ClientCountCard />
+ *
  */
 
 export default class DashboardClientCountCard extends Component {
