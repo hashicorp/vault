@@ -76,6 +76,7 @@ func TestSystemBackend_handleActivityWriteData(t *testing.T) {
 			name:      "correctly formatted data succeeds",
 			operation: logical.UpdateOperation,
 			input:     map[string]interface{}{"input": `{"write":["WRITE_PRECOMPUTED_QUERIES"],"data":[{"current_month":true,"all":{"clients":[{"count":5}]}}]}`},
+			wantPaths: 1,
 		},
 		{
 			name:      "entities with multiple segments",
