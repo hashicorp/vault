@@ -85,7 +85,7 @@ access to the root key shares.
 
 ## Auto unseal
 
-Auto Unseal was developed to aid in reducing the operational complexity of
+Auto unseal was developed to aid in reducing the operational complexity of
 keeping the unseal key secure. This feature delegates the responsibility of
 securing the unseal key from users to a trusted device or service. At startup
 Vault will connect to the device or service implementing the seal and ask it
@@ -112,10 +112,11 @@ For a list of examples and supported providers, please see the
 
 When DR replication is enabled in Vault Enterprise, [Performance Standby](/vault/docs/enterprise/performance-standby) nodes on the DR cluster will seal themselves, so they must be restarted to be unsealed.
 
--> **Warning:** Recovery keys cannot decrypt the root key, and thus are not
-sufficient to unseal Vault if the Auto Unseal mechanism isn't working. They
-are purely an authorization mechanism.  Using Auto Unseal 
-creates a strict Vault lifecycle dependency on the underlying seal mechanism. 
+<Warning title="Recovery keys cannot decrypt the root key">
+
+Recovery keys cannot decrypt the root key and thus are not sufficient to unseal
+Vault if the auto unseal mechanism isn't working. They are purely an authorization mechanism.
+Using auto unseal creates a strict Vault lifecycle dependency on the underlying seal mechanism. 
 This means that if the seal mechanism (such as the Cloud KMS key) becomes unavailable, 
 or deleted before the seal is migrated, then there is no ability to recover 
 access to the Vault cluster until the mechanism is available again. **If the seal 
@@ -130,6 +131,7 @@ seal configured independently of the primary, and when properly configured guard
 against *some* of this risk.  Unreplicated items such as local mounts could still 
 be lost.
 
+</Warning>
 
 ## Recovery key
 
@@ -190,7 +192,7 @@ API prefix for this operation is at `/sys/rekey-recovery-key` rather than
 
 ## Seal migration
 
-The Seal migration process cannot be performed without downtime, and due to the
+The seal migration process cannot be performed without downtime, and due to the
 technical underpinnings of the seal implementations, the process requires that
 you briefly take the whole cluster down. While experiencing some downtime may
 be unavoidable, we believe that switching seals is a rare event and that the
@@ -200,15 +202,15 @@ inconvenience of the downtime is an acceptable trade-off.
 something goes wrong.
 
 ~> **NOTE**: Seal migration operation will require both old and new seals to be
-available during the migration. For example, migration from Auto Unseal to Shamir
-seal will require that the service backing the Auto Unseal is accessible during
+available during the migration. For example, migration from auto unseal to Shamir
+seal will require that the service backing the auto unseal is accessible during
 the migration.
 
-~> **NOTE**: Seal migration from Auto Unseal to Auto Unseal of the same type is
+~> **NOTE**: Seal migration from auto unseal to auto unseal of the same type is
 supported since Vault 1.6.0. However, there is a current limitation that
 prevents migrating from AWSKMS to AWSKMS; all other seal migrations of the same
-type are supported. Seal migration from One Auto Unseal type (AWS KMS) to
-different Auto Unseal type (HSM, Azure KMS, etc.) is also supported on older
+type are supported. Seal migration from one auto unseal type (AWS KMS) to
+different auto unseal type (HSM, Azure KMS, etc.) is also supported on older
 versions as well.
 
 ### Migration post Vault 1.5.1
@@ -262,7 +264,7 @@ any storage backend.
 1. Seal migration is now completed. Take down the old active node, update its
    configuration to use the new seal blocks (completely unaware of the old seal type)
    ,and bring it back up. It will be auto-unsealed if the new seal is one of the
-   Auto seals, or will require unseal keys if the new seal is Shamir.
+   auto seals, or will require unseal keys if the new seal is Shamir.
 
 1. At this point, configuration files of all the nodes can be updated to only have the
    new seal information. Standby nodes can be restarted right away and the active
@@ -286,7 +288,7 @@ keys.
 
 #### Migration from auto unseal to shamir
 
-To migrate from Auto Unseal to Shamir keys, take your server cluster offline
+To migrate from auto unseal to Shamir keys, take your server cluster offline
 and update the [seal configuration](/vault/docs/configuration/seal) and add `disabled
 = "true"` to the seal block. This allows the migration to use this information
 to decrypt the key but will not unseal Vault. When you bring your server back
@@ -299,9 +301,9 @@ will be migrated to be used as unseal keys.
 
 ~> **NOTE**: Migration between same Auto Unseal types is supported in Vault
 1.6.0 and higher. For these pre-1.5.1 steps, it is only possible to migrate from
-one type of Auto Unseal to a different type (ie Transit -> AWSKMS).
+one type of auto unseal to a different type (ie Transit -> AWSKMS).
 
-To migrate from Auto Unseal to a different Auto Unseal configuration, take your
+To migrate from auto unseal to a different auto unseal configuration, take your
 server cluster offline and update the existing [seal
 configuration](/vault/docs/configuration/seal) and add `disabled = "true"` to the seal
 block. Then add another seal block to describe the new seal.
@@ -324,3 +326,74 @@ When the quorum of nodes are back up, Raft will elect a leader and the leader
 node that will perform the migration. The migrated information will be replicated to
 all other cluster peers and when the peers eventually become the leader,
 migration will not happen again on the peer nodes.
+
+## Seal high availability <EnterpriseAlert inline="true" />
+
+@include 'alerts/beta.mdx'
+
+Seal high availability (Seal HA) allows the configuration of more than one auto 
+seal mechanism such that Vault can tolerate the temporary loss of a seal service 
+
+or device for a time.  With Seal HA configured with at least two and no more than
+three auto seals, Vault can also start up and unseal if one of the
+configured seals is still available (though Vault will remain in a degraded mode in
+this case). While seals are unavailable, seal wrapping and entropy augmentation can
+still occur using the remaining seals, and values produced while a seal is down will
+be re-wrapped with all the seals when all seals become healthy again.
+
+An operator should choose two seals that are unlikely to become unavailable at the
+same time.  For example, they may choose KMS keys in two cloud regions, from
+two different providers; or a mix of HSM, KMS, or Transit seals.
+
+When an operator configures an additional seal or removes a seal (one at a time)
+and restarts Vault, Vault will automatically detect that it needs to re-wrap
+CSPs and seal wrapped values, and will start the process.  Seal re-wrapping can
+be monitored via the logs or via the `sys/seal-status` endpoint.  While a 
+re-wrap is in progress (or could not complete successfully), changes to the
+seal configuration are not allowed.
+
+In additional to high availability, seal HA can be used to migrate between two 
+auto seals in a simplified manner.  To migrate in this way:
+
+In additional to high availability, Seal HA can be used to migrate between two
+auto seals in a [simplified manner.](#migration-post-vault-1-16-0-via-seal-ha-for-auto-seals-enterprise)
+
+Note that Shamir seals are not auto seals and cannot be included in a Seal
+HA setup.  This is because auto seals support seal wrap while Shamir seals
+do not, so the loss of the auto seal does not necessarily leave Vault in a
+fully available state. 
+
+### Use and Configuration
+
+Refer to the [configuration](/vault/docs/configuration/seal/seal-ha) section
+for details on configuring Seal HA.
+
+### Seal Re-Wrapping
+
+Whenever seal configuration changes, Vault must re-wrap all CSPs and seal
+wrapped values, to ensure each value has an entry encrypted by all configured
+seals.  Vault detects these configuration changes automatically, and triggers
+a re-wrap.  Re-wraps can take some time, depending on the number of
+seal wrapped values.  While re-wrapping is in progress, no configuration changes
+to the seals can be made.
+
+Progress of the re-wrap can be monitored using
+the [`sys/sealwrap/rewrap`](/vault/api-docs/system/sealwrap-rewrap) endpoint.
+
+### Limitations and Known Issues
+
+In order to limit complexity and increase safety, there are some limitations
+to the use and configuration of Seal HA:
+
+* Vault must be configured for a single seal at the time of initialization.
+Extra seals can then be added.
+* Seals must be added or removed one at a time.
+* Only auto seals can be used in HA configurations.  Shamir and auto cannot
+be mixed.
+* A maximum of three seals can be configured.
+* As seal wrapped values must be wrapped by all configured seals, it is possible
+that large values may fail to persist as the size of the entry is multiplied by
+the number of seals causing it to exceed the storage entry size limit.   An example
+would be storing a large document in KVv2 with seal wrapping enabled.
+* It is not possible to rotate the data encryption key nor the recovery keys while
+unless all seals are healthy.
