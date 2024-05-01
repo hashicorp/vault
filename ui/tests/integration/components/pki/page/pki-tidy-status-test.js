@@ -9,7 +9,7 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { SELECTORS } from 'vault/tests/helpers/pki/page/pki-tidy';
+import { PKI_TIDY } from 'vault/tests/helpers/pki/pki-selectors';
 
 module('Integration | Component | Page::PkiTidyStatus', function (hooks) {
   setupRenderingTest(hooks);
@@ -62,44 +62,44 @@ module('Integration | Component | Page::PkiTidyStatus', function (hooks) {
       { owner: this.engine }
     );
     // running state
-    assert.dom(SELECTORS.hdsAlertTitle).hasText('Tidy in progress');
-    assert.dom(SELECTORS.cancelTidyAction).exists();
-    assert.dom(SELECTORS.hdsAlertButtonText).hasText('Cancel tidy');
+    assert.dom(PKI_TIDY.hdsAlertTitle).hasText('Tidy in progress');
+    assert.dom(PKI_TIDY.cancelTidyAction).exists();
+    assert.dom(PKI_TIDY.hdsAlertButtonText).hasText('Cancel tidy');
     // inactive state
     this.tidyStatus.state = 'Inactive';
     await render(
       hbs`<Page::PkiTidyStatus @autoTidyConfig={{this.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} />`,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.hdsAlertTitle).hasText('Tidy is inactive');
+    assert.dom(PKI_TIDY.hdsAlertTitle).hasText('Tidy is inactive');
     // finished state
     this.tidyStatus.state = 'Finished';
     await render(
       hbs`<Page::PkiTidyStatus @autoTidyConfig={{this.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} />`,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.hdsAlertTitle).hasText('Tidy operation finished');
+    assert.dom(PKI_TIDY.hdsAlertTitle).hasText('Tidy operation finished');
     // error state
     this.tidyStatus.state = 'Error';
     await render(
       hbs`<Page::PkiTidyStatus @autoTidyConfig={{this.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} />`,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.hdsAlertTitle).hasText('Tidy operation failed');
+    assert.dom(PKI_TIDY.hdsAlertTitle).hasText('Tidy operation failed');
     // cancelling state
     this.tidyStatus.state = 'Cancelling';
     await render(
       hbs`<Page::PkiTidyStatus @autoTidyConfig={{this.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} />`,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.hdsAlertTitle).hasText('Tidy operation cancelling');
+    assert.dom(PKI_TIDY.hdsAlertTitle).hasText('Tidy operation cancelling');
     // cancelled state
     this.tidyStatus.state = 'Cancelled';
     await render(
       hbs`<Page::PkiTidyStatus @autoTidyConfig={{this.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} />`,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.hdsAlertTitle).hasText('Tidy operation cancelled');
+    assert.dom(PKI_TIDY.hdsAlertTitle).hasText('Tidy operation cancelled');
   });
   test('shows the fields even if the data returns null values', async function (assert) {
     this.tidyStatus.time_started = null;
@@ -108,7 +108,7 @@ module('Integration | Component | Page::PkiTidyStatus', function (hooks) {
       hbs`<Page::PkiTidyStatus @autoTidyConfig={{this.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} />`,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.timeStartedRow).exists();
-    assert.dom(SELECTORS.timeFinishedRow).exists();
+    assert.dom(PKI_TIDY.timeStartedRow).exists();
+    assert.dom(PKI_TIDY.timeFinishedRow).exists();
   });
 });

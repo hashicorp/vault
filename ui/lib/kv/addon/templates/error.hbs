@@ -5,8 +5,12 @@
 
 <KvPageHeader @breadcrumbs={{this.breadcrumbs}} @mountName={{this.mountName}}>
   <:tabLinks>
-    <li><LinkTo @route="list" data-test-secrets-tab="Secrets">Secrets</LinkTo></li>
-    <li><LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo></li>
+    <li><LinkTo @route="list" @model={{this.mountName}} data-test-secrets-tab="Secrets">Secrets</LinkTo></li>
+    <li><LinkTo
+        @route="configuration"
+        @model={{this.mountName}}
+        data-test-secrets-tab="Configuration"
+      >Configuration</LinkTo></li>
   </:tabLinks>
 </KvPageHeader>
 

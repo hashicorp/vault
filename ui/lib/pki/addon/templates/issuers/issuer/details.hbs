@@ -8,7 +8,7 @@
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </p.top>
   <p.levelLeft>
-    <h1 class="title is-3" data-test-pki-issuer-page-title>
+    <h1 class="title is-3" data-test-page-title>
       <Icon @name="file-text" @size="24" class="has-text-grey-light" />
       View Issuer Certificate
     </h1>
@@ -24,4 +24,5 @@
   @canCrossSign={{this.model.issuer.canCrossSign}}
   @canSignIntermediate={{this.model.issuer.canSignIntermediate}}
   @canConfigure={{this.model.issuer.canConfigure}}
+  @backend={{this.model.backend}}
 />

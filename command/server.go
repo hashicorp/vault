@@ -52,7 +52,6 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
-	"github.com/hashicorp/vault/plugins/event"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -97,7 +96,6 @@ type ServerCommand struct {
 	CredentialBackends map[string]logical.Factory
 	LogicalBackends    map[string]logical.Factory
 	PhysicalBackends   map[string]physical.Factory
-	EventBackends      map[string]event.Factory
 
 	ServiceRegistrations map[string]sr.Factory
 
@@ -1682,10 +1680,16 @@ func (c *ServerCommand) Run(args []string) int {
 				level, err := loghelper.ParseLogLevel(config.LogLevel)
 				if err != nil {
 					c.logger.Error("unknown log level found on reload", "level", config.LogLevel)
-					goto RUNRELOADFUNCS
+				} else {
+					core.SetLogLevel(level)
 				}
-				core.SetLogLevel(level)
 			}
+
+			if err := core.ReloadCensus(); err != nil {
+				c.UI.Error(err.Error())
+			}
+
+			core.ReloadReplicationCanaryWriteInterval()
 
 		RUNRELOADFUNCS:
 			if err := c.Reload(c.reloadFuncsLock, c.reloadFuncs, c.flagConfigs, core); err != nil {
@@ -1697,9 +1701,6 @@ func (c *ServerCommand) Run(args []string) int {
 				c.UI.Error(err.Error())
 			}
 
-			if err := core.ReloadCensus(); err != nil {
-				c.UI.Error(err.Error())
-			}
 			select {
 			case c.licenseReloadedCh <- err:
 			default:
@@ -3105,7 +3106,6 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		AuditBackends:                  c.AuditBackends,
 		CredentialBackends:             c.CredentialBackends,
 		LogicalBackends:                c.LogicalBackends,
-		EventBackends:                  c.EventBackends,
 		LogLevel:                       config.LogLevel,
 		Logger:                         c.logger,
 		DetectDeadlocks:                config.DetectDeadlocks,
@@ -3485,13 +3485,30 @@ func (c *ServerCommand) reloadSeals(ctx context.Context, grabStateLock bool, cor
 
 	newGen := setSealResponse.barrierSeal.GetAccess().GetSealGenerationInfo()
 
-	err = core.SetSeals(ctx, grabStateLock, setSealResponse.barrierSeal, secureRandomReader, !newGen.IsRewrapped() || setSealResponse.hasPartiallyWrappedPaths)
-	if err != nil {
-		return false, fmt.Errorf("error setting seal: %s", err)
+	var standby, perf bool
+	if grabStateLock {
+		// If grabStateLock is false we know we are on a leader activation
+		standby, perf = core.StandbyStates()
 	}
+	switch {
+	case !perf && !standby:
+		c.logger.Debug("persisting reloaded seals as we are the active node")
+		err = core.SetSeals(ctx, grabStateLock, setSealResponse.barrierSeal, secureRandomReader, !newGen.IsRewrapped() || setSealResponse.hasPartiallyWrappedPaths)
+		if err != nil {
+			return false, fmt.Errorf("error setting seal: %s", err)
+		}
 
-	if err := core.SetPhysicalSealGenInfo(ctx, newGen); err != nil {
-		c.logger.Warn("could not update seal information in storage", "err", err)
+		if err := core.SetPhysicalSealGenInfo(ctx, newGen); err != nil {
+			c.logger.Warn("could not update seal information in storage", "err", err)
+		}
+	case perf:
+		c.logger.Debug("updating reloaded seals in memory on perf standby")
+		err = core.SetSealsOnPerfStandby(ctx, grabStateLock, setSealResponse.barrierSeal, secureRandomReader)
+		if err != nil {
+			return false, fmt.Errorf("error setting seal on perf standby: %s", err)
+		}
+	default:
+		return false, errors.New("skipping seal reload as we are a standby")
 	}
 
 	// finalize the old seals and set the new seals as the current ones

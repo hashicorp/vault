@@ -1,0 +1,95 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{! ACME clients added in 1.17 }}
+
+{{#if (not this.byMonthActivityData)}}
+  {{! byMonthActivityData is an empty array if there is no monthly data (monthly breakdown was added in 1.11)
+  this means the user has queried dates before ACME clients existed. we render an empty state instead of
+  "0 acme clients" (which is what the activity response returns) to be more explicit }}
+  <EmptyState
+    @title="No ACME clients"
+    @message="There is no ACME client data available for this {{if this.isDateRange 'date range' 'month'}}."
+    class="is-shadowless"
+  />
+{{else if this.isDateRange}}
+  <Clients::ChartContainer
+    @title={{this.title}}
+    @description={{this.description}}
+    @timestamp={{@activity.responseTimestamp}}
+    @hasChartData={{true}}
+    class="no-legend"
+  >
+    <:subTitle>
+      <StatText
+        @label="Total ACME clients"
+        @subText="The total number of ACME requests made to Vault during this time period."
+        @value={{this.totalUsageCounts.acme_clients}}
+        @tooltipText="This number is the total for the queried date range. The chart displays a monthly breakdown of total clients per month."
+        @size="l"
+      />
+    </:subTitle>
+
+    <:stats>
+      {{#let (this.average this.byMonthActivityData "acme_clients") as |avg|}}
+        {{! 0 is falsy, intentionally hide 0 averages }}
+        {{#if avg}}
+          <StatText
+            @label="Average ACME clients per month"
+            @value={{avg}}
+            @size="m"
+            class="data-details-top has-top-padding-l"
+          />
+        {{/if}}
+      {{/let}}
+    </:stats>
+
+    <:chart>
+      <Clients::Charts::VerticalBarBasic
+        @chartTitle={{this.title}}
+        @data={{this.byMonthActivityData}}
+        @dataKey="acme_clients"
+        @chartHeight={{200}}
+      />
+    </:chart>
+  </Clients::ChartContainer>
+
+  {{#if this.totalUsageCounts.acme_clients}}
+    {{! no need to render two empty charts! hide this one if there are no acme clients }}
+    <Clients::ChartContainer
+      @title="Monthly new"
+      @description="ACME clients which interacted with Vault for the first time each month. Each bar represents the total new ACME clients for that month."
+      @timestamp={{@activity.responseTimestamp}}
+      @hasChartData={{true}}
+      class="no-legend"
+    >
+      <:stats>
+        {{#let (this.average this.byMonthNewClients "acme_clients") as |avg|}}
+          {{#if avg}}
+            <StatText
+              @label="Average new ACME clients per month"
+              @value={{avg}}
+              @size="m"
+              class="chart-subTitle has-top-padding-l"
+            />
+          {{/if}}
+        {{/let}}
+      </:stats>
+
+      <:chart>
+        <Clients::Charts::VerticalBarBasic
+          @chartTitle="Monthly new"
+          @data={{this.byMonthNewClients}}
+          @dataKey="acme_clients"
+          @chartHeight={{200}}
+        />
+      </:chart>
+    </Clients::ChartContainer>
+  {{/if}}
+{{else}}
+  <Clients::UsageStats @title={{this.title}} @description={{this.description}}>
+    <StatText @label="Total ACME clients" @value={{this.totalUsageCounts.acme_clients}} @size="l" class="column" />
+  </Clients::UsageStats>
+{{/if}}

@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/builtin/logical/totp"
 	"github.com/hashicorp/vault/helper/testhelpers"
-	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -51,7 +50,7 @@ func doTwoPhaseLogin(t *testing.T, client *api.Client, totpCodePath, methodID, u
 }
 
 func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
-	noop := corehelpers.TestNoopAudit(t, "noop/", nil)
+	noop := audit.TestNoopAudit(t, "noop/", nil)
 
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
@@ -61,7 +60,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 			"totp": totp.Factory,
 		},
 		AuditBackends: map[string]audit.Factory{
-			"noop": func(ctx context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
+			"noop": func(config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 				return noop, nil
 			},
 		},

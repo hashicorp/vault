@@ -32,15 +32,16 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     const store = this.owner.lookup('service:store');
     this.destinations = await store.query('sync/destination', {});
-    this.activatedFeatures = ['secrets-sync'];
+    this.isActivated = true;
 
-    this.renderComponent = () =>
-      render(
-        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @activatedFeatures={{this.activatedFeatures}} @adapterError={{null}} />`,
+    this.renderComponent = () => {
+      return render(
+        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @isActivated={{this.isActivated}} />`,
         {
           owner: this.engine,
         }
       );
+    };
   });
 
   test('it should render header, tabs and toolbar for overview state', async function (assert) {
@@ -58,7 +59,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       this.version.type = 'community';
       this.version.features = [];
       this.destinations = [];
-      this.activatedFeatures = [];
+      this.isActivated = false;
     });
 
     test('it should show an upsell CTA', async function (assert) {
@@ -99,7 +100,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
   module('secrets sync not activated', function (hooks) {
     hooks.beforeEach(async function () {
-      this.activatedFeatures = [];
+      this.isActivated = false;
     });
 
     test('it should show the opt-in banner', async function (assert) {
@@ -151,7 +152,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
   });
 
-  module('secrets sync activated', function () {
+  module('secrets sync is activated', function () {
     test('it should hide the opt-in banner', async function (assert) {
       await this.renderComponent();
 
@@ -287,7 +288,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
         {
           cardTitle: 'Total secrets',
           subText:
-            'The total number of secrets that have been synced from Vault. One secret will be counted as one sync client.',
+            'The total number of secrets that have been synced from Vault over time. One secret will be counted as one sync client.',
           actionText: 'View billing',
           count: '7',
         },

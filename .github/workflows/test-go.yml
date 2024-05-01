@@ -407,6 +407,11 @@ jobs:
             package_parallelism="-p 2"
           fi
 
+          # If running Go Test 32bit nightly tests, add a flag to rerun failed tests
+          if [[  "${{inputs.name}}" == 'i386' ]]; then
+              RERUN_FAILS="--rerun-fails"
+          fi
+
           VAULT_TEST_LOG_DIR='${{ steps.metadata.outputs.go-test-log-dir-absolute }}'
           export VAULT_TEST_LOG_DIR
           mkdir -p "$VAULT_TEST_LOG_DIR"
@@ -416,6 +421,7 @@ jobs:
               --junitfile '${{ steps.metadata.outputs.gotestsum-junitfile }}' \
               --jsonfile '${{ steps.metadata.outputs.gotestsum-jsonfile }}' \
               --jsonfile-timing-events '${{ steps.metadata.outputs.gotestsum-timing-events }}' \
+              $RERUN_FAILS \
               --packages "$packages" \
               -- \
               $package_parallelism \

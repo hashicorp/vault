@@ -8,12 +8,12 @@ import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn, settled, typeIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { SELECTORS } from 'vault/tests/helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const {
   searchSelect: { option, options },
   kvSuggestion: { input },
-} = SELECTORS;
+} = GENERAL;
 
 module('Integration | Component | kv-suggestion-input', function (hooks) {
   setupRenderingTest(hooks);

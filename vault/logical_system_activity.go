@@ -353,6 +353,8 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 		return nil, err
 	}
 
+	prevRetentionMonths := config.RetentionMonths
+
 	{
 		// Parse the default report months
 		if defaultReportMonthsRaw, ok := d.GetOk("default_report_months"); ok {
@@ -437,6 +439,13 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 
 	// Set the new config on the activity log
 	a.SetConfig(ctx, config)
+
+	// reload census agent if retention months change during update when reporting is enabled
+	if prevRetentionMonths != config.RetentionMonths {
+		if err := a.core.ReloadCensusActivityLog(); err != nil {
+			return nil, err
+		}
+	}
 
 	if len(warnings) > 0 {
 		return &logical.Response{

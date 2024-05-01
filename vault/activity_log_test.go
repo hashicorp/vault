@@ -624,7 +624,7 @@ func TestActivityLog_availableLogsEmptyDirectory(t *testing.T) {
 	// verify that directory is empty, and nothing goes wrong
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
-	times, err := a.availableLogs(context.Background())
+	times, err := a.availableLogs(context.Background(), time.Now())
 	if err != nil {
 		t.Fatalf("error getting start_time(s) for empty activity log")
 	}
@@ -647,7 +647,7 @@ func TestActivityLog_availableLogs(t *testing.T) {
 	}
 
 	// verify above files are there, and dates in correct order
-	times, err := a.availableLogs(context.Background())
+	times, err := a.availableLogs(context.Background(), time.Now())
 	if err != nil {
 		t.Fatalf("error getting start_time(s) for activity log")
 	}
@@ -659,6 +659,102 @@ func TestActivityLog_availableLogs(t *testing.T) {
 		if !times[i].Equal(expectedTimes[i]) {
 			t.Errorf("invalid time. expected %v, got %v", expectedTimes[i], times[i])
 		}
+	}
+}
+
+// TestActivityLog_createRegenerationIntentLog tests that we can correctly create a regeneration intent log given the segments in storage
+func TestActivityLog_createRegenerationIntentLog(t *testing.T) {
+	testCases := []struct {
+		name          string
+		times         []time.Time
+		expectedLog   *ActivityIntentLog
+		expectedError bool
+	}{
+		{
+			"no segments",
+			[]time.Time{},
+			nil,
+			true,
+		},
+		{
+			"one segment",
+			[]time.Time{
+				time.Date(2024, 4, 4, 10, 54, 12, 0, time.UTC),
+			},
+			nil,
+			true,
+		},
+		{
+			"most recent segment is 3 months ago",
+			[]time.Time{
+				time.Date(2024, 1, 4, 10, 54, 12, 0, time.UTC),
+				time.Date(2024, 1, 3, 10, 54, 12, 0, time.UTC),
+			},
+			&ActivityIntentLog{NextMonth: 1704365652, PreviousMonth: 1704279252},
+			false,
+		},
+		{
+			"lots of segments",
+			[]time.Time{
+				// two this month
+				time.Date(2024, 4, 4, 10, 54, 12, 0, time.UTC),
+				time.Date(2024, 4, 6, 10, 54, 12, 0, time.UTC),
+				// three last month
+				time.Date(2024, 3, 3, 10, 54, 12, 0, time.UTC),
+				time.Date(2024, 3, 6, 10, 54, 12, 0, time.UTC),
+				time.Date(2024, 3, 14, 10, 54, 12, 0, time.UTC),
+				// two the month before that
+				time.Date(2024, 2, 10, 10, 54, 12, 0, time.UTC),
+				time.Date(2024, 2, 17, 10, 54, 12, 0, time.UTC),
+			},
+			&ActivityIntentLog{NextMonth: 1712228052, PreviousMonth: 1710413652},
+			false,
+		},
+	}
+
+	core, _, _ := TestCoreUnsealed(t)
+	a := core.activityLog
+	now := time.Date(2024, 4, 10, 10, 54, 12, 0, time.UTC)
+	ctx := context.Background()
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			deletePaths := make([]string, 0)
+
+			// insert the times we're given
+			paths := make([]string, 0, len(tc.times))
+			for _, tm := range tc.times {
+				paths = append(paths, fmt.Sprintf("entity/%d/1", tm.Unix()))
+			}
+
+			for _, subPath := range paths {
+				fullPath := ActivityLogPrefix + subPath
+				WriteToStorage(t, core, fullPath, []byte("test"))
+				deletePaths = append(deletePaths, fullPath)
+			}
+
+			// regenerate the log
+			intentLog, err := a.createRegenerationIntentLog(context.Background(), now)
+			if tc.expectedError && err == nil {
+				t.Fatal("expected an error and got none")
+			}
+			if !tc.expectedError && err != nil {
+				t.Fatal(err)
+			}
+
+			// verify it's what we expect
+			if diff := deep.Equal(intentLog, tc.expectedLog); len(diff) != 0 {
+				t.Errorf("got=%v, expected=%v, diff=%v", intentLog, tc.expectedLog, diff)
+			}
+
+			// delete everything we wrote so the next test starts fresh
+			for _, p := range deletePaths {
+				err := core.barrier.Delete(ctx, p)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+		})
 	}
 }
 
@@ -2629,7 +2725,7 @@ func TestActivityLog_CalculatePrecomputedQueriesWithMixedTWEs(t *testing.T) {
 		// Pretend we've successfully rolled over to the following month
 		a.SetStartTimestamp(tc.NextMonth)
 
-		err = a.precomputedQueryWorker(ctx)
+		err = a.precomputedQueryWorker(ctx, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -3010,7 +3106,7 @@ func TestActivityLog_Precompute(t *testing.T) {
 		// Pretend we've successfully rolled over to the following month
 		a.SetStartTimestamp(tc.NextMonth)
 
-		err = a.precomputedQueryWorker(ctx)
+		err = a.precomputedQueryWorker(ctx, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -3272,7 +3368,7 @@ func TestActivityLog_Precompute_SkipMonth(t *testing.T) {
 		// Pretend we've successfully rolled over to the following month
 		a.SetStartTimestamp(tc.NextMonth)
 
-		err = a.precomputedQueryWorker(ctx)
+		err = a.precomputedQueryWorker(ctx, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -3538,7 +3634,7 @@ func TestActivityLog_PrecomputeNonEntityTokensWithID(t *testing.T) {
 		// Pretend we've successfully rolled over to the following month
 		a.SetStartTimestamp(tc.NextMonth)
 
-		err = a.precomputedQueryWorker(ctx)
+		err = a.precomputedQueryWorker(ctx, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -3665,7 +3761,7 @@ func TestActivityLog_PrecomputeCancel(t *testing.T) {
 	// This will block if the shutdown didn't work.
 	go func() {
 		// We expect this to error because of BlockingInmemStorage
-		_ = a.precomputedQueryWorker(namespace.RootContext(nil))
+		_ = a.precomputedQueryWorker(namespace.RootContext(nil), nil)
 		close(done)
 	}()
 
@@ -4886,17 +4982,18 @@ func TestActivityLog_reportPrecomputedQueryMetrics(t *testing.T) {
 
 	// for each client type, make 3 clients in their own namespaces
 	for i := 0; i < 3; i++ {
-		for _, clientType := range []string{secretSyncActivityType, nonEntityTokenActivityType, entityActivityType} {
+		for _, clientType := range ActivityClientTypes {
 			client := &activity.EntityRecord{
 				ClientID:      fmt.Sprintf("%s-%d", clientType, i),
 				NamespaceID:   fmt.Sprintf("ns-%d", i),
 				MountAccessor: fmt.Sprintf("mnt-%d", i),
 				ClientType:    clientType,
-				NonEntity:     clientType == nonEntityTokenActivityType,
+				NonEntity:     clientType == nonEntityTokenActivityType || clientType == ACMEActivityType,
 			}
 			processClientRecord(client, byNS, byMonth, segmentTime)
 		}
 	}
+
 	endTime := timeutil.EndOfMonth(segmentTime)
 	opts := pqOptions{
 		byNamespace: byNS,
@@ -4905,7 +5002,6 @@ func TestActivityLog_reportPrecomputedQueryMetrics(t *testing.T) {
 	}
 
 	otherTime := segmentTime.Add(time.Hour)
-
 	hasNoMetric := func(t *testing.T, intervals []*metrics.IntervalMetrics, name string) {
 		t.Helper()
 		gauges := intervals[len(intervals)-1].Gauges
@@ -4915,6 +5011,7 @@ func TestActivityLog_reportPrecomputedQueryMetrics(t *testing.T) {
 			}
 		}
 	}
+
 	hasMetric := func(t *testing.T, intervals []*metrics.IntervalMetrics, name string, value float32, namespaceLabel *string) {
 		t.Helper()
 		fullMetric := fmt.Sprintf("%s;cluster=test-cluster", name)
@@ -4942,6 +5039,7 @@ func TestActivityLog_reportPrecomputedQueryMetrics(t *testing.T) {
 		hasNoMetric(t, data, "identity.entity.active.reporting_period")
 		hasNoMetric(t, data, "identity.secret_sync.active.reporting_period")
 	})
+
 	t.Run("monthly metric", func(t *testing.T) {
 		// activePeriodEnd is equal to the segment time, indicating that monthly
 		// metrics should be reported
@@ -4961,7 +5059,9 @@ func TestActivityLog_reportPrecomputedQueryMetrics(t *testing.T) {
 		// secret sync metrics should be the sum of clients across all
 		// namespaces
 		hasMetric(t, data, "identity.secret_sync.active.monthly", 3, nil)
+		hasMetric(t, data, "identity.pki_acme.active.monthly", 3, nil)
 	})
+
 	t.Run("reporting period metric", func(t *testing.T) {
 		// activePeriodEnd is not equal to the segment time but activePeriodStart
 		// is, which indicates that metrics for the reporting period should be
@@ -4982,5 +5082,6 @@ func TestActivityLog_reportPrecomputedQueryMetrics(t *testing.T) {
 		// secret sync metrics should be the sum of clients across all
 		// namespaces
 		hasMetric(t, data, "identity.secret_sync.active.reporting_period", 3, nil)
+		hasMetric(t, data, "identity.pki_acme.active.reporting_period", 3, nil)
 	})
 }

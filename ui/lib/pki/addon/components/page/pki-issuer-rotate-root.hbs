@@ -8,7 +8,7 @@
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </p.top>
   <p.levelLeft>
-    <h1 class="title is-3" data-test-pki-page-title>
+    <h1 class="title is-3" data-test-page-title>
       {{if @newRootModel.id "View Issuer Certificate" "Generate New Root"}}
     </h1>
   </p.levelLeft>
@@ -20,7 +20,7 @@
       <ToolbarLink
         @route="issuers.issuer.cross-sign"
         @type="pen-tool"
-        @model={{@newRootModel.issuerId}}
+        @models={{array @newRootModel.backend @newRootModel.issuerId}}
         data-test-pki-issuer-cross-sign
       >
         Cross-sign issuers
@@ -28,7 +28,7 @@
       <ToolbarLink
         @route="issuers.issuer.sign"
         @type="pen-tool"
-        @model={{@newRootModel.issuerId}}
+        @models={{array @newRootModel.backend @newRootModel.issuerId}}
         data-test-pki-issuer-sign-int
       >
         Sign Intermediate
@@ -72,7 +72,11 @@
           </nav>
         </D.Content>
       </BasicDropdown>
-      <ToolbarLink @route="issuers.issuer.edit" @model={{@newRootModel.issuerId}} data-test-pki-issuer-configure>
+      <ToolbarLink
+        @route="issuers.issuer.edit"
+        @models={{array @newRootModel.backend @newRootModel.issuerId}}
+        data-test-pki-issuer-configure
+      >
         Configure
       </ToolbarLink>
     </ToolbarActions>
@@ -98,6 +102,7 @@
         @iconPosition="trailing"
         @text="Cross-sign issuers"
         @route="issuers.issuer.cross-sign"
+        @models={{array @newRootModel.backend @newRootModel.issuerId}}
       />
 
     </Hds::Alert>
@@ -166,8 +171,8 @@
 
       <hr class="has-background-gray-100" />
       <Hds::ButtonSet>
-        <Hds::Button @text="Done" type="submit" data-test-pki-rotate-root-save />
-        <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-pki-rotate-root-cancel />
+        <Hds::Button @text="Done" type="submit" data-test-save />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-cancel />
       </Hds::ButtonSet>
       {{#if this.invalidFormAlert}}
         <div class="control">

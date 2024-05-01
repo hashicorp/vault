@@ -21,7 +21,7 @@ export { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS };
 
 export default class AuthSaml extends Component {
   @service store;
-  @service featureFlag;
+  @service flags;
 
   @tracked errorMessage;
 
