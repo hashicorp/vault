@@ -71,14 +71,10 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @task
   @waitFor
   *onFeatureConfirm() {
-    // If the cluster is managed let the application adapter handle adding the namespace header.
-    // For non-managed clusters never pass a namespace header.
-    const options = this.args.isHvdManaged ? undefined : { namespace: null };
-
     try {
       yield this.store
         .adapterFor('application')
-        .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST', options);
+        .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST');
       this.router.transitionTo('vault.cluster.sync.secrets.overview');
     } catch (error) {
       this.error = errorMessage(error);
