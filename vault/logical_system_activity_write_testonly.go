@@ -334,16 +334,21 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 	return nil
 }
 
-func (m *multipleMonthsActivityClients) addMissingCurrentMonth(writeEntities bool) {
+func (m *multipleMonthsActivityClients) addMissingCurrentMonth() {
 	missing := m.months[0].generationParameters == nil &&
 		len(m.months) > 1 &&
 		m.months[1].generationParameters != nil
 	if !missing {
 		return
 	}
-	if missing && writeEntities {
-		m.months[0].generationParameters = &generation.Data{EmptySegmentIndexes: []int32{0}, NumSegments: 2}
+	m.months[0].generationParameters = &generation.Data{EmptySegmentIndexes: []int32{0}, NumSegments: 2}
+}
+
+func (m *multipleMonthsActivityClients) timestampForMonth(i int, now time.Time) time.Time {
+	if i > 0 {
+		return timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
 	}
+	return now
 }
 
 func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog) ([]string, error) {
@@ -352,65 +357,48 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 
 	_, writePQ := opts[generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES]
 	_, writeDistinctClients := opts[generation.WriteOptions_WRITE_DISTINCT_CLIENTS]
-	_, writeEntities := opts[generation.WriteOptions_WRITE_ENTITIES]
 	_, writeIntentLog := opts[generation.WriteOptions_WRITE_INTENT_LOGS]
 
-	m.addMissingCurrentMonth(writeEntities)
-
-	latestTimestampWithCurrent := m.latestTimestamp(now, true)
-	pqOpts := pqOptions{}
-	if writePQ || writeDistinctClients {
-		pqOpts.byNamespace = make(map[string]*processByNamespace)
-		pqOpts.byMonth = make(map[int64]*processMonth)
-		pqOpts.activePeriodEnd = latestTimestampWithCurrent
-		pqOpts.endTime = timeutil.EndOfMonth(m.latestTimestamp(now, false))
-		pqOpts.activePeriodStart = m.earliestTimestamp(now)
-	}
+	m.addMissingCurrentMonth()
 
 	for i, month := range m.months {
 		if month.generationParameters == nil {
 			continue
 		}
-		var timestamp time.Time
-		if i > 0 {
-			timestamp = timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
-		} else {
-			timestamp = now
-		}
+		timestamp := m.timestampForMonth(i, now)
 		segments, err := month.populateSegments()
 		if err != nil {
 			return nil, err
 		}
 		for segmentIndex, segment := range segments {
-			if writeEntities || writeIntentLog {
-				if segment == nil {
-					// skip the index
-					continue
-				}
-				entityPath, err := activityLog.saveSegmentEntitiesInternal(ctx, segmentInfo{
-					startTimestamp:       timestamp.Unix(),
-					currentClients:       &activity.EntityActivityLog{Clients: segment},
-					clientSequenceNumber: uint64(segmentIndex),
-					tokenCount:           &activity.TokenCount{},
-				}, true)
-				if err != nil {
-					return nil, err
-				}
-				paths = append(paths, entityPath)
+			if segment == nil {
+				// skip the index
+				continue
 			}
-		}
-
-		if (writePQ || writeDistinctClients) && i > 0 {
-			reader := newProtoSegmentReader(segments)
-			err = activityLog.segmentToPrecomputedQuery(ctx, timestamp, reader, pqOpts)
+			entityPath, err := activityLog.saveSegmentEntitiesInternal(ctx, segmentInfo{
+				startTimestamp:       timestamp.Unix(),
+				currentClients:       &activity.EntityActivityLog{Clients: segment},
+				clientSequenceNumber: uint64(segmentIndex),
+				tokenCount:           &activity.TokenCount{},
+			}, true)
 			if err != nil {
 				return nil, err
 			}
+			paths = append(paths, entityPath)
 		}
-
+	}
+	if writePQ || writeDistinctClients {
+		// start with the oldest month of data, and create precomputed queries
+		// up to that month
+		for i := len(m.months) - 1; i > 0; i-- {
+			activityLog.precomputedQueryWorker(ctx, &ActivityIntentLog{
+				PreviousMonth: m.timestampForMonth(i, now).Unix(),
+				NextMonth:     0,
+			})
+		}
 	}
 	if writeIntentLog {
-		err := activityLog.writeIntentLog(ctx, m.latestTimestamp(now, false).Unix(), latestTimestampWithCurrent.UTC())
+		err := activityLog.writeIntentLog(ctx, m.latestTimestamp(now, false).Unix(), m.latestTimestamp(now, true).UTC())
 		if err != nil {
 			return nil, err
 		}
