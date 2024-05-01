@@ -1,10 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/application';
@@ -30,6 +30,7 @@ export default class KvListPageComponent extends Component {
   @service store;
 
   @tracked secretPath;
+  @tracked metadataToDelete = null; // set to the metadata intended to delete
 
   get mountPoint() {
     // mountPoint tells transition where to start. In this case, mountPoint will always be vault.cluster.secrets.backend.kv.
@@ -42,11 +43,11 @@ export default class KvListPageComponent extends Component {
     return pathIsDirectory(path) ? 'View list' : 'View secret';
   }
 
-  // callback from HDS pagination to set the queryParams currentPage
+  // callback from HDS pagination to set the queryParams page
   get paginationQueryParams() {
     return (page) => {
       return {
-        currentPage: page,
+        page,
       };
     };
   }
@@ -71,6 +72,8 @@ export default class KvListPageComponent extends Component {
     } catch (error) {
       const message = errorMessage(error, 'Error deleting secret. Please try again or contact support.');
       this.flashMessages.danger(message);
+    } finally {
+      this.metadataToDelete = null;
     }
   }
 

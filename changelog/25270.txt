@@ -1,0 +1,3 @@
+```release-note:improvement
+sdk/helper/testhelpers: add namespace helpers
+```

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 
 /**
@@ -21,6 +26,7 @@ interface Args {
   list: unknown[];
   listRoute: string;
   hasConfig?: boolean;
+  backend: string;
 }
 export default class PkiPaginatedListComponent extends Component<Args> {
   get paginationQueryParams() {

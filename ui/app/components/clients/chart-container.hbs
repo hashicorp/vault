@@ -1,0 +1,54 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{! HBS display template for rendering title, description and stat boxes with a chart on the right }}
+
+<div class="chart-wrapper single-chart-grid" data-test-chart-container={{@title}} ...attributes>
+  <div class="chart-header has-bottom-margin-xl">
+    <h2 class="chart-title">{{@title}}</h2>
+    <p class="chart-description">
+      {{@description}}
+    </p>
+  </div>
+
+  {{#if @hasChartData}}
+    {{#if (has-block "subTitle")}}
+      <div class="chart-subTitle">
+        {{yield to="subTitle"}}
+      </div>
+    {{/if}}
+
+    {{#if (has-block "stats")}}
+      {{yield to="stats"}}
+    {{/if}}
+
+    {{#if (has-block "chart")}}
+      <div class="chart-container-wide">
+        {{yield to="chart"}}
+      </div>
+    {{/if}}
+
+    {{#if @legend}}
+      <div class="legend" data-test-chart-container-legend>
+        {{#each @legend as |legend idx|}}
+          <span class="legend-colors dot-{{idx}}"></span>
+          <span class="legend-label">{{capitalize legend.label}}</span>
+        {{/each}}
+      </div>
+    {{/if}}
+
+  {{else}}
+    <div class="chart-empty-state chart-container-wide">
+      {{yield to="emptyState"}}
+    </div>
+  {{/if}}
+
+  {{#if @timestamp}}
+    <div class="timestamp" data-test-chart-container-timestamp>
+      Updated
+      {{date-format @timestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
+    </div>
+  {{/if}}
+</div>

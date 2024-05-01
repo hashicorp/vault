@@ -2,7 +2,6 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 ~}}
-
 <div class="auth-form" data-test-auth-form>
   {{#if (and this.waitingForOktaNumberChallenge (not this.cancelAuthForOktaNumberChallenge))}}
     <OktaNumberChallenge
@@ -51,7 +50,7 @@
       </nav>
     {{/if}}
     <div class="box is-marginless is-shadowless">
-      <MessageError @errorMessage={{if (and this.cluster.standby this.hasCSPError) this.cspErrorText this.error}} />
+      <MessageError @errorMessage={{if (and this.cluster.standby this.cspError) this.cspError this.error}} />
       {{#if this.selectedAuthBackend.path}}
         <div class="has-bottom-margin-s">
           <p class="is-label">{{this.selectedAuthBackend.path}}</p>
@@ -140,6 +139,7 @@
                   autocomplete="off"
                   spellcheck="false"
                   data-test-token={{true}}
+                  id="token"
                 />
               </div>
             </div>
@@ -181,19 +181,17 @@
               @selectedAuthIsPath={{this.selectedAuthIsPath}}
             />
           {{/if}}
-          <button
+          <Hds::Button
+            @text="Sign in"
+            @icon={{if this.authenticate.isRunning "loading"}}
             data-test-auth-submit={{true}}
             type="submit"
             disabled={{this.authenticate.isRunning}}
-            class="button is-primary {{if this.authenticate.isRunning 'is-loading'}}"
             id="auth-submit"
-          >
-            Sign In
-          </button>
+          />
           {{#if (and this.delayAuthMessageReminder.isIdle this.showLoading)}}
             <AlertInline
-              @paddingTop={{true}}
-              @sizeSmall={{true}}
+              class="has-top-padding-s"
               @type="info"
               @message="If login takes longer than usual, you may need to check your device for an MFA notification, or contact your administrator if login times out."
               data-test-auth-message="push"

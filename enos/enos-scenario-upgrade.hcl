@@ -3,14 +3,22 @@
 
 scenario "upgrade" {
   matrix {
-    arch            = ["amd64", "arm64"]
-    backend         = ["consul", "raft"]
-    artifact_source = ["local", "crt", "artifactory"]
-    artifact_type   = ["bundle", "package"]
-    consul_version  = ["1.14.2", "1.13.4", "1.12.7"]
-    distro          = ["ubuntu", "rhel"]
-    edition         = ["oss", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
-    seal            = ["awskms", "shamir"]
+    arch            = global.archs
+    artifact_source = global.artifact_sources
+    artifact_type   = global.artifact_types
+    backend         = global.backends
+    config_mode     = global.config_modes
+    consul_version  = global.consul_versions
+    distro          = global.distros
+    edition         = global.editions
+    // NOTE: when backporting the initial version make sure we don't include initial versions that
+    // are a higher minor version that our release candidate. Also, prior to 1.11.x the
+    // /v1/sys/seal-status API has known issues that could cause this scenario to fail when using
+    // those earlier versions, therefore support from 1.8.x to 1.10.x is unreliable. Prior to 1.8.x
+    // is not supported due to changes with vault's signaling of systemd and the enos-provider
+    // no longer supporting setting the license via the license API.
+    initial_version = global.upgrade_initial_versions
+    seal            = global.seals
 
     # Our local builder always creates bundles
     exclude {
@@ -22,6 +30,18 @@ scenario "upgrade" {
     exclude {
       arch    = ["arm64"]
       edition = ["ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+    }
+
+    # FIPS 140-2 editions began at 1.10
+    exclude {
+      edition         = ["ent.fips1402", "ent.hsm.fips1402"]
+      initial_version = ["1.8.12", "1.9.10"]
+    }
+
+    # PKCS#11 can only be used on ent.hsm and ent.hsm.fips1402.
+    exclude {
+      seal    = ["pkcs11"]
+      edition = ["ce", "ent", "ent.fips1402"]
     }
   }
 
@@ -85,7 +105,7 @@ scenario "upgrade" {
   // This step reads the contents of the backend license if we're using a Consul backend and
   // the edition is "ent".
   step "read_backend_license" {
-    skip_step = matrix.backend == "raft" || var.backend_edition == "oss"
+    skip_step = matrix.backend == "raft" || var.backend_edition == "ce"
     module    = module.read_license
 
     variables {
@@ -94,11 +114,25 @@ scenario "upgrade" {
   }
 
   step "read_vault_license" {
-    skip_step = matrix.edition == "oss"
+    skip_step = matrix.edition == "ce"
     module    = module.read_license
 
     variables {
       file_name = global.vault_license_path
+    }
+  }
+
+  step "create_seal_key" {
+    module     = "seal_${matrix.seal}"
+    depends_on = [step.create_vpc]
+
+    providers = {
+      enos = provider.enos.ubuntu
+    }
+
+    variables {
+      cluster_id  = step.create_vpc.id
+      common_tags = global.tags
     }
   }
 
@@ -111,11 +145,11 @@ scenario "upgrade" {
     }
 
     variables {
-      ami_id                = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
-      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      cluster_tag_key       = global.vault_tag_key
-      common_tags           = global.tags
-      vpc_id                = step.create_vpc.vpc_id
+      ami_id          = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
+      cluster_tag_key = global.vault_tag_key
+      common_tags     = global.tags
+      seal_key_names  = step.create_seal_key.resource_names
+      vpc_id          = step.create_vpc.id
     }
   }
 
@@ -128,11 +162,11 @@ scenario "upgrade" {
     }
 
     variables {
-      ami_id                = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
-      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      cluster_tag_key       = global.backend_tag_key
-      common_tags           = global.tags
-      vpc_id                = step.create_vpc.vpc_id
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      cluster_tag_key = global.backend_tag_key
+      common_tags     = global.tags
+      seal_key_names  = step.create_seal_key.resource_names
+      vpc_id          = step.create_vpc.id
     }
   }
 
@@ -171,23 +205,27 @@ scenario "upgrade" {
     }
 
     variables {
-      awskms_unseal_key_arn   = step.create_vpc.kms_key_arn
       backend_cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = global.backend_tag_key
-      consul_license          = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       cluster_name            = step.create_vault_cluster_targets.cluster_name
+      config_mode             = matrix.config_mode
+      consul_license          = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       consul_release = matrix.backend == "consul" ? {
         edition = var.backend_edition
         version = matrix.consul_version
       } : null
       enable_audit_devices = var.vault_enable_audit_devices
       install_dir          = local.vault_install_dir
-      license              = matrix.edition != "oss" ? step.read_vault_license.license : null
+      license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       packages             = concat(global.packages, global.distro_packages[matrix.distro])
-      release              = var.vault_upgrade_initial_release
-      storage_backend      = matrix.backend
-      target_hosts         = step.create_vault_cluster_targets.hosts
-      unseal_method        = matrix.seal
+      release = {
+        edition = matrix.edition
+        version = matrix.initial_version
+      }
+      seal_attributes = step.create_seal_key.attributes
+      seal_type       = matrix.seal
+      storage_backend = matrix.backend
+      target_hosts    = step.create_vault_cluster_targets.hosts
     }
   }
 
@@ -200,7 +238,7 @@ scenario "upgrade" {
     }
 
     variables {
-      vault_instances   = step.create_vault_cluster_targets.hosts
+      vault_hosts       = step.create_vault_cluster_targets.hosts
       vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -210,7 +248,7 @@ scenario "upgrade" {
     module = module.vault_verify_write_data
     depends_on = [
       step.create_vault_cluster,
-      step.get_vault_cluster_ips
+      step.get_vault_cluster_ips,
     ]
 
     providers = {
@@ -232,6 +270,7 @@ scenario "upgrade" {
     module = module.vault_upgrade
     depends_on = [
       step.create_vault_cluster,
+      step.verify_write_test_data,
     ]
 
     providers = {
@@ -249,11 +288,95 @@ scenario "upgrade" {
     }
   }
 
+  // Wait for our upgraded cluster to elect a leader
+  step "wait_for_leader_after_upgrade" {
+    module = module.vault_wait_for_leader
+    depends_on = [
+      step.create_vault_cluster,
+      step.upgrade_vault,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      timeout           = 120 # seconds
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  step "get_leader_ip_for_step_down" {
+    module     = module.vault_get_cluster_ips
+    depends_on = [step.wait_for_leader_after_upgrade]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  // Force a step down to trigger a new leader election
+  step "vault_leader_step_down" {
+    module     = module.vault_step_down
+    depends_on = [step.get_leader_ip_for_step_down]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_install_dir = local.vault_install_dir
+      leader_host       = step.get_leader_ip_for_step_down.leader_host
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  // Wait for our cluster to elect a leader
+  step "wait_for_leader_after_stepdown" {
+    module     = module.vault_wait_for_leader
+    depends_on = [step.vault_leader_step_down]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      timeout           = 120 # seconds
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  step "get_updated_vault_cluster_ips" {
+    module = module.vault_get_cluster_ips
+    depends_on = [
+      step.wait_for_leader_after_stepdown,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
   step "verify_vault_version" {
     module = module.vault_verify_version
     depends_on = [
-      step.create_backend_cluster,
-      step.upgrade_vault,
+      step.get_updated_vault_cluster_ips,
     ]
 
     providers = {
@@ -271,30 +394,10 @@ scenario "upgrade" {
     }
   }
 
-  step "get_updated_vault_cluster_ips" {
-    module = module.vault_get_cluster_ips
-    depends_on = [
-      step.create_vault_cluster,
-      step.upgrade_vault
-    ]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    variables {
-      vault_instances   = step.create_vault_cluster_targets.hosts
-      vault_install_dir = local.vault_install_dir
-      vault_root_token  = step.create_vault_cluster.root_token
-    }
-  }
-
   step "verify_vault_unsealed" {
     module = module.vault_verify_unsealed
     depends_on = [
-      step.create_vault_cluster,
       step.get_updated_vault_cluster_ips,
-      step.upgrade_vault,
     ]
 
     providers = {
@@ -329,8 +432,7 @@ scenario "upgrade" {
     skip_step = matrix.backend != "raft"
     module    = module.vault_verify_raft_auto_join_voter
     depends_on = [
-      step.create_backend_cluster,
-      step.upgrade_vault,
+      step.get_updated_vault_cluster_ips,
     ]
 
     providers = {
@@ -344,14 +446,41 @@ scenario "upgrade" {
     }
   }
 
+  step "verify_replication" {
+    module = module.vault_verify_replication
+    depends_on = [
+      step.get_updated_vault_cluster_ips,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_edition     = matrix.edition
+      vault_install_dir = local.vault_install_dir
+      vault_instances   = step.create_vault_cluster_targets.hosts
+    }
+  }
+
+  step "verify_ui" {
+    module = module.vault_verify_ui
+    depends_on = [
+      step.get_updated_vault_cluster_ips,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_instances = step.create_vault_cluster_targets.hosts
+    }
+  }
+
   output "audit_device_file_path" {
     description = "The file path for the file audit device, if enabled"
     value       = step.create_vault_cluster.audit_device_file_path
-  }
-
-  output "awskms_unseal_key_arn" {
-    description = "The Vault cluster KMS key arn"
-    value       = step.create_vpc.kms_key_arn
   }
 
   output "cluster_name" {
@@ -392,6 +521,11 @@ scenario "upgrade" {
   output "recovery_keys_hex" {
     description = "The Vault cluster recovery keys hex"
     value       = step.create_vault_cluster.recovery_keys_hex
+  }
+
+  output "seal_name" {
+    description = "The Vault cluster seal attributes"
+    value       = step.create_seal_key.attributes
   }
 
   output "unseal_keys_b64" {

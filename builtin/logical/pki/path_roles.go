@@ -5,14 +5,14 @@ package pki
 
 import (
 	"context"
-	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -860,137 +860,26 @@ serviced by this role.`,
 	}
 }
 
-func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*roleEntry, error) {
-	entry, err := s.Get(ctx, "role/"+n)
+// GetRole loads a role from storage, will validate it and error out if,
+// updates it and stores it back if possible. If the role does not exist
+// a nil, nil response is returned.
+func (b *backend) GetRole(ctx context.Context, s logical.Storage, n string) (*issuing.RoleEntry, error) {
+	result, err := issuing.GetRole(ctx, s, n)
 	if err != nil {
+		if errors.Is(err, issuing.ErrRoleNotFound) {
+			return nil, nil
+		}
 		return nil, err
-	}
-	if entry == nil {
-		return nil, nil
-	}
-
-	var result roleEntry
-	if err := entry.DecodeJSON(&result); err != nil {
-		return nil, err
-	}
-
-	// Migrate existing saved entries and save back if changed
-	modified := false
-	if len(result.DeprecatedTTL) == 0 && len(result.Lease) != 0 {
-		result.DeprecatedTTL = result.Lease
-		result.Lease = ""
-		modified = true
-	}
-	if result.TTL == 0 && len(result.DeprecatedTTL) != 0 {
-		parsed, err := parseutil.ParseDurationSecond(result.DeprecatedTTL)
-		if err != nil {
-			return nil, err
-		}
-		result.TTL = parsed
-		result.DeprecatedTTL = ""
-		modified = true
-	}
-	if len(result.DeprecatedMaxTTL) == 0 && len(result.LeaseMax) != 0 {
-		result.DeprecatedMaxTTL = result.LeaseMax
-		result.LeaseMax = ""
-		modified = true
-	}
-	if result.MaxTTL == 0 && len(result.DeprecatedMaxTTL) != 0 {
-		parsed, err := parseutil.ParseDurationSecond(result.DeprecatedMaxTTL)
-		if err != nil {
-			return nil, err
-		}
-		result.MaxTTL = parsed
-		result.DeprecatedMaxTTL = ""
-		modified = true
-	}
-	if result.AllowBaseDomain {
-		result.AllowBaseDomain = false
-		result.AllowBareDomains = true
-		modified = true
-	}
-	if result.AllowedDomainsOld != "" {
-		result.AllowedDomains = strings.Split(result.AllowedDomainsOld, ",")
-		result.AllowedDomainsOld = ""
-		modified = true
-	}
-	if result.AllowedBaseDomain != "" {
-		found := false
-		for _, v := range result.AllowedDomains {
-			if v == result.AllowedBaseDomain {
-				found = true
-				break
-			}
-		}
-		if !found {
-			result.AllowedDomains = append(result.AllowedDomains, result.AllowedBaseDomain)
-		}
-		result.AllowedBaseDomain = ""
-		modified = true
-	}
-	if result.AllowWildcardCertificates == nil {
-		// While not the most secure default, when AllowWildcardCertificates isn't
-		// explicitly specified in the stored Role, we automatically upgrade it to
-		// true to preserve compatibility with previous versions of Vault. Once this
-		// field is set, this logic will not be triggered any more.
-		result.AllowWildcardCertificates = new(bool)
-		*result.AllowWildcardCertificates = true
-		modified = true
-	}
-
-	// Upgrade generate_lease in role
-	if result.GenerateLease == nil {
-		// All the new roles will have GenerateLease always set to a value. A
-		// nil value indicates that this role needs an upgrade. Set it to
-		// `true` to not alter its current behavior.
-		result.GenerateLease = new(bool)
-		*result.GenerateLease = true
-		modified = true
-	}
-
-	// Upgrade key usages
-	if result.KeyUsageOld != "" {
-		result.KeyUsage = strings.Split(result.KeyUsageOld, ",")
-		result.KeyUsageOld = ""
-		modified = true
-	}
-
-	// Upgrade OU
-	if result.OUOld != "" {
-		result.OU = strings.Split(result.OUOld, ",")
-		result.OUOld = ""
-		modified = true
-	}
-
-	// Upgrade Organization
-	if result.OrganizationOld != "" {
-		result.Organization = strings.Split(result.OrganizationOld, ",")
-		result.OrganizationOld = ""
-		modified = true
-	}
-
-	// Set the issuer field to default if not set. We want to do this
-	// unconditionally as we should probably never have an empty issuer
-	// on a stored roles.
-	if len(result.Issuer) == 0 {
-		result.Issuer = defaultRef
-		modified = true
-	}
-
-	// Update CN Validations to be the present default, "email,hostname"
-	if len(result.CNValidations) == 0 {
-		result.CNValidations = []string{"email", "hostname"}
-		modified = true
 	}
 
 	// Ensure the role is valid after updating.
-	_, err = validateRole(b, &result, ctx, s)
+	_, err = validateRole(b, result, ctx, s)
 	if err != nil {
 		return nil, err
 	}
 
-	if modified && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
-		jsonEntry, err := logical.StorageEntryJSON("role/"+n, &result)
+	if result.WasModified && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+		jsonEntry, err := logical.StorageEntryJSON("role/"+n, result)
 		if err != nil {
 			return nil, err
 		}
@@ -1000,11 +889,10 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ro
 				return nil, err
 			}
 		}
+		result.WasModified = false
 	}
 
-	result.Name = n
-
-	return &result, nil
+	return result, nil
 }
 
 func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1022,7 +910,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 		return logical.ErrorResponse("missing role name"), nil
 	}
 
-	role, err := b.getRole(ctx, req.Storage, roleName)
+	role, err := b.GetRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -1049,7 +937,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	var err error
 	name := data.Get("name").(string)
 
-	entry := &roleEntry{
+	entry := &issuing.RoleEntry{
 		MaxTTL:                        time.Duration(data.Get("max_ttl").(int)) * time.Second,
 		TTL:                           time.Duration(data.Get("ttl").(int)) * time.Second,
 		AllowLocalhost:                data.Get("allow_localhost").(bool),
@@ -1156,7 +1044,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	return resp, nil
 }
 
-func validateRole(b *backend, entry *roleEntry, ctx context.Context, s logical.Storage) (*logical.Response, error) {
+func validateRole(b *backend, entry *issuing.RoleEntry, ctx context.Context, s logical.Storage) (*logical.Response, error) {
 	resp := &logical.Response{}
 	var err error
 
@@ -1194,11 +1082,11 @@ func validateRole(b *backend, entry *roleEntry, ctx context.Context, s logical.S
 		entry.Issuer = defaultRef
 	}
 	// Check that the issuers reference set resolves to something
-	if !b.useLegacyBundleCaStorage() {
+	if !b.UseLegacyBundleCaStorage() {
 		sc := b.makeStorageContext(ctx, s)
 		issuerId, err := sc.resolveIssuerReference(entry.Issuer)
 		if err != nil {
-			if issuerId == IssuerRefNotFound {
+			if issuerId == issuing.IssuerRefNotFound {
 				resp = &logical.Response{}
 				if entry.Issuer == defaultRef {
 					resp.AddWarning("Issuing Certificate was set to default, but no default issuing certificate (configurable at /config/issuers) is currently set")
@@ -1241,7 +1129,7 @@ func getTimeWithExplicitDefault(data *framework.FieldData, field string, default
 func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
-	oldEntry, err := b.getRole(ctx, req.Storage, name)
+	oldEntry, err := b.GetRole(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -1249,7 +1137,7 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		return logical.ErrorResponse("Unable to fetch role entry to patch"), nil
 	}
 
-	entry := &roleEntry{
+	entry := &issuing.RoleEntry{
 		MaxTTL:                        getTimeWithExplicitDefault(data, "max_ttl", oldEntry.MaxTTL),
 		TTL:                           getTimeWithExplicitDefault(data, "ttl", oldEntry.TTL),
 		AllowLocalhost:                getWithExplicitDefault(data, "allow_localhost", oldEntry.AllowLocalhost).(bool),
@@ -1361,206 +1249,6 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 	}
 
 	return resp, nil
-}
-
-func parseKeyUsages(input []string) int {
-	var parsedKeyUsages x509.KeyUsage
-	for _, k := range input {
-		switch strings.ToLower(strings.TrimSpace(k)) {
-		case "digitalsignature":
-			parsedKeyUsages |= x509.KeyUsageDigitalSignature
-		case "contentcommitment":
-			parsedKeyUsages |= x509.KeyUsageContentCommitment
-		case "keyencipherment":
-			parsedKeyUsages |= x509.KeyUsageKeyEncipherment
-		case "dataencipherment":
-			parsedKeyUsages |= x509.KeyUsageDataEncipherment
-		case "keyagreement":
-			parsedKeyUsages |= x509.KeyUsageKeyAgreement
-		case "certsign":
-			parsedKeyUsages |= x509.KeyUsageCertSign
-		case "crlsign":
-			parsedKeyUsages |= x509.KeyUsageCRLSign
-		case "encipheronly":
-			parsedKeyUsages |= x509.KeyUsageEncipherOnly
-		case "decipheronly":
-			parsedKeyUsages |= x509.KeyUsageDecipherOnly
-		}
-	}
-
-	return int(parsedKeyUsages)
-}
-
-func parseExtKeyUsages(role *roleEntry) certutil.CertExtKeyUsage {
-	var parsedKeyUsages certutil.CertExtKeyUsage
-
-	if role.ServerFlag {
-		parsedKeyUsages |= certutil.ServerAuthExtKeyUsage
-	}
-
-	if role.ClientFlag {
-		parsedKeyUsages |= certutil.ClientAuthExtKeyUsage
-	}
-
-	if role.CodeSigningFlag {
-		parsedKeyUsages |= certutil.CodeSigningExtKeyUsage
-	}
-
-	if role.EmailProtectionFlag {
-		parsedKeyUsages |= certutil.EmailProtectionExtKeyUsage
-	}
-
-	for _, k := range role.ExtKeyUsage {
-		switch strings.ToLower(strings.TrimSpace(k)) {
-		case "any":
-			parsedKeyUsages |= certutil.AnyExtKeyUsage
-		case "serverauth":
-			parsedKeyUsages |= certutil.ServerAuthExtKeyUsage
-		case "clientauth":
-			parsedKeyUsages |= certutil.ClientAuthExtKeyUsage
-		case "codesigning":
-			parsedKeyUsages |= certutil.CodeSigningExtKeyUsage
-		case "emailprotection":
-			parsedKeyUsages |= certutil.EmailProtectionExtKeyUsage
-		case "ipsecendsystem":
-			parsedKeyUsages |= certutil.IpsecEndSystemExtKeyUsage
-		case "ipsectunnel":
-			parsedKeyUsages |= certutil.IpsecTunnelExtKeyUsage
-		case "ipsecuser":
-			parsedKeyUsages |= certutil.IpsecUserExtKeyUsage
-		case "timestamping":
-			parsedKeyUsages |= certutil.TimeStampingExtKeyUsage
-		case "ocspsigning":
-			parsedKeyUsages |= certutil.OcspSigningExtKeyUsage
-		case "microsoftservergatedcrypto":
-			parsedKeyUsages |= certutil.MicrosoftServerGatedCryptoExtKeyUsage
-		case "netscapeservergatedcrypto":
-			parsedKeyUsages |= certutil.NetscapeServerGatedCryptoExtKeyUsage
-		}
-	}
-
-	return parsedKeyUsages
-}
-
-type roleEntry struct {
-	LeaseMax                      string        `json:"lease_max"`
-	Lease                         string        `json:"lease"`
-	DeprecatedMaxTTL              string        `json:"max_ttl"`
-	DeprecatedTTL                 string        `json:"ttl"`
-	TTL                           time.Duration `json:"ttl_duration"`
-	MaxTTL                        time.Duration `json:"max_ttl_duration"`
-	AllowLocalhost                bool          `json:"allow_localhost"`
-	AllowedBaseDomain             string        `json:"allowed_base_domain"`
-	AllowedDomainsOld             string        `json:"allowed_domains,omitempty"`
-	AllowedDomains                []string      `json:"allowed_domains_list"`
-	AllowedDomainsTemplate        bool          `json:"allowed_domains_template"`
-	AllowBaseDomain               bool          `json:"allow_base_domain"`
-	AllowBareDomains              bool          `json:"allow_bare_domains"`
-	AllowTokenDisplayName         bool          `json:"allow_token_displayname"`
-	AllowSubdomains               bool          `json:"allow_subdomains"`
-	AllowGlobDomains              bool          `json:"allow_glob_domains"`
-	AllowWildcardCertificates     *bool         `json:"allow_wildcard_certificates,omitempty"`
-	AllowAnyName                  bool          `json:"allow_any_name"`
-	EnforceHostnames              bool          `json:"enforce_hostnames"`
-	AllowIPSANs                   bool          `json:"allow_ip_sans"`
-	ServerFlag                    bool          `json:"server_flag"`
-	ClientFlag                    bool          `json:"client_flag"`
-	CodeSigningFlag               bool          `json:"code_signing_flag"`
-	EmailProtectionFlag           bool          `json:"email_protection_flag"`
-	UseCSRCommonName              bool          `json:"use_csr_common_name"`
-	UseCSRSANs                    bool          `json:"use_csr_sans"`
-	KeyType                       string        `json:"key_type"`
-	KeyBits                       int           `json:"key_bits"`
-	UsePSS                        bool          `json:"use_pss"`
-	SignatureBits                 int           `json:"signature_bits"`
-	MaxPathLength                 *int          `json:",omitempty"`
-	KeyUsageOld                   string        `json:"key_usage,omitempty"`
-	KeyUsage                      []string      `json:"key_usage_list"`
-	ExtKeyUsage                   []string      `json:"extended_key_usage_list"`
-	OUOld                         string        `json:"ou,omitempty"`
-	OU                            []string      `json:"ou_list"`
-	OrganizationOld               string        `json:"organization,omitempty"`
-	Organization                  []string      `json:"organization_list"`
-	Country                       []string      `json:"country"`
-	Locality                      []string      `json:"locality"`
-	Province                      []string      `json:"province"`
-	StreetAddress                 []string      `json:"street_address"`
-	PostalCode                    []string      `json:"postal_code"`
-	GenerateLease                 *bool         `json:"generate_lease,omitempty"`
-	NoStore                       bool          `json:"no_store"`
-	RequireCN                     bool          `json:"require_cn"`
-	CNValidations                 []string      `json:"cn_validations"`
-	AllowedOtherSANs              []string      `json:"allowed_other_sans"`
-	AllowedSerialNumbers          []string      `json:"allowed_serial_numbers"`
-	AllowedUserIDs                []string      `json:"allowed_user_ids"`
-	AllowedURISANs                []string      `json:"allowed_uri_sans"`
-	AllowedURISANsTemplate        bool          `json:"allowed_uri_sans_template"`
-	PolicyIdentifiers             []string      `json:"policy_identifiers"`
-	ExtKeyUsageOIDs               []string      `json:"ext_key_usage_oids"`
-	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca"`
-	NotBeforeDuration             time.Duration `json:"not_before_duration"`
-	NotAfter                      string        `json:"not_after"`
-	Issuer                        string        `json:"issuer"`
-	// Name is only set when the role has been stored, on the fly roles have a blank name
-	Name string `json:"-"`
-}
-
-func (r *roleEntry) ToResponseData() map[string]interface{} {
-	responseData := map[string]interface{}{
-		"ttl":                                int64(r.TTL.Seconds()),
-		"max_ttl":                            int64(r.MaxTTL.Seconds()),
-		"allow_localhost":                    r.AllowLocalhost,
-		"allowed_domains":                    r.AllowedDomains,
-		"allowed_domains_template":           r.AllowedDomainsTemplate,
-		"allow_bare_domains":                 r.AllowBareDomains,
-		"allow_token_displayname":            r.AllowTokenDisplayName,
-		"allow_subdomains":                   r.AllowSubdomains,
-		"allow_glob_domains":                 r.AllowGlobDomains,
-		"allow_wildcard_certificates":        r.AllowWildcardCertificates,
-		"allow_any_name":                     r.AllowAnyName,
-		"allowed_uri_sans_template":          r.AllowedURISANsTemplate,
-		"enforce_hostnames":                  r.EnforceHostnames,
-		"allow_ip_sans":                      r.AllowIPSANs,
-		"server_flag":                        r.ServerFlag,
-		"client_flag":                        r.ClientFlag,
-		"code_signing_flag":                  r.CodeSigningFlag,
-		"email_protection_flag":              r.EmailProtectionFlag,
-		"use_csr_common_name":                r.UseCSRCommonName,
-		"use_csr_sans":                       r.UseCSRSANs,
-		"key_type":                           r.KeyType,
-		"key_bits":                           r.KeyBits,
-		"signature_bits":                     r.SignatureBits,
-		"use_pss":                            r.UsePSS,
-		"key_usage":                          r.KeyUsage,
-		"ext_key_usage":                      r.ExtKeyUsage,
-		"ext_key_usage_oids":                 r.ExtKeyUsageOIDs,
-		"ou":                                 r.OU,
-		"organization":                       r.Organization,
-		"country":                            r.Country,
-		"locality":                           r.Locality,
-		"province":                           r.Province,
-		"street_address":                     r.StreetAddress,
-		"postal_code":                        r.PostalCode,
-		"no_store":                           r.NoStore,
-		"allowed_other_sans":                 r.AllowedOtherSANs,
-		"allowed_serial_numbers":             r.AllowedSerialNumbers,
-		"allowed_user_ids":                   r.AllowedUserIDs,
-		"allowed_uri_sans":                   r.AllowedURISANs,
-		"require_cn":                         r.RequireCN,
-		"cn_validations":                     r.CNValidations,
-		"policy_identifiers":                 r.PolicyIdentifiers,
-		"basic_constraints_valid_for_non_ca": r.BasicConstraintsValidForNonCA,
-		"not_before_duration":                int64(r.NotBeforeDuration.Seconds()),
-		"not_after":                          r.NotAfter,
-		"issuer_ref":                         r.Issuer,
-	}
-	if r.MaxPathLength != nil {
-		responseData["max_path_length"] = r.MaxPathLength
-	}
-	if r.GenerateLease != nil {
-		responseData["generate_lease"] = r.GenerateLease
-	}
-	return responseData
 }
 
 func checkCNValidations(validations []string) ([]string, error) {

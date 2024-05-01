@@ -7,10 +7,9 @@ import (
 	"context"
 	"errors"
 
-	"google.golang.org/grpc"
-
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
+	"google.golang.org/grpc"
 )
 
 var errMissingStorage = errors.New("missing storage implementation: this method should not be called during plugin Setup, but only during and after Initialize")

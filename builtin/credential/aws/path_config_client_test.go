@@ -98,7 +98,6 @@ func TestBackend_pathConfigClient(t *testing.T) {
 		Data:      data,
 		Storage:   storage,
 	})
-
 	if err != nil {
 		t.Fatal(err)
 	}

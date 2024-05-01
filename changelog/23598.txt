@@ -1,0 +1,3 @@
+```release-note:bug
+audit: Fix bug reopening 'file' audit devices on SIGHUP.
+```

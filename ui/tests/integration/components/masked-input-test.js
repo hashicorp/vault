@@ -46,19 +46,17 @@ module('Integration | Component | masked input', function (hooks) {
   });
 
   test('it renders a copy button when allowCopy is true', async function (assert) {
-    await render(hbs`<MaskedInput @allowCopy={{true}} />`);
+    this.set('value', { some: 'object' });
+    await render(hbs`<MaskedInput @allowCopy={{true}} @value={{this.value}} />`);
     assert.ok(component.copyButtonIsPresent);
   });
 
   test('it renders a download button when allowDownload is true', async function (assert) {
-    await render(hbs`<MaskedInput @allowDownload={{true}} /> <div id="modal-wormhole"></div>
-`);
+    await render(hbs`<MaskedInput @allowDownload={{true}} /> `);
     assert.ok(component.downloadIconIsPresent);
 
     await click('[data-test-download-icon]');
     assert.ok(component.downloadButtonIsPresent, 'clicking download icon opens modal with download button');
-
-    assert;
   });
 
   test('it shortens all outputs when displayOnly and masked', async function (assert) {
@@ -130,5 +128,38 @@ module('Integration | Component | masked input', function (hooks) {
     assert
       .dom('[data-test-icon="minus"]')
       .exists('shows minus icon when unmasked because value is empty string');
+  });
+
+  test('it should render stringify toggle in download modal', async function (assert) {
+    assert.expect(3);
+
+    // this looks wonky but need a new line in there to test stringify adding escape character
+    this.value = `bar
+`;
+
+    const downloadStub = sinon.stub(this.owner.lookup('service:download'), 'miscExtension');
+    downloadStub.callsFake((fileName, value) => {
+      const firstCall = downloadStub.callCount === 1;
+      const assertVal = firstCall ? this.value : JSON.stringify(this.value);
+      assert.strictEqual(assertVal, value, `Value is ${firstCall ? 'not ' : ''}stringified`);
+      return true;
+    });
+
+    await render(hbs`
+      <MaskedInput
+        @name="key"
+        @value={{this.value}}
+        @displayOnly={{true}}
+        @allowDownload={{true}}
+      />
+    `);
+
+    await click('[data-test-download-icon]');
+    assert.dom('[data-test-stringify-toggle]').isNotChecked('Stringify toggle off as default');
+    await click('[data-test-download-button]');
+
+    await click('[data-test-download-icon]');
+    await click('[data-test-stringify-toggle]');
+    await click('[data-test-download-button]');
   });
 });

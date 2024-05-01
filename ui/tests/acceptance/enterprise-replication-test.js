@@ -4,7 +4,17 @@
  */
 
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
-import { click, fillIn, findAll, currentURL, find, visit, settled, waitUntil } from '@ember/test-helpers';
+import {
+  click,
+  fillIn,
+  findAll,
+  currentURL,
+  find,
+  visit,
+  settled,
+  waitUntil,
+  waitFor,
+} from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
@@ -36,7 +46,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
   });
 
   test('replication', async function (assert) {
-    assert.expect(17);
+    assert.expect(18);
     const secondaryName = 'firstSecondary';
     const mode = 'deny';
 
@@ -80,8 +90,8 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await click('#deny');
     await clickTrigger();
-    const mountPath = searchSelect.options.objectAt(0).text;
     await searchSelect.options.objectAt(0).click();
+    const mountPath = find('[data-test-selected-option="0"]').innerText?.trim();
     await click('[data-test-secondary-add]');
 
     await pollCluster(this.owner);
@@ -99,7 +109,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     assert.dom('[data-test-mount-config-mode]').includesText(mode, 'show page renders the correct mode');
     assert
       .dom('[data-test-mount-config-paths]')
-      .includesText(mountPath, 'show page renders the correct mount path');
+      .includesText(`${mountPath}/`, 'show page renders the correct mount path');
 
     // delete config by choosing "no filter" in the edit screen
     await click('[data-test-replication-link="edit-mount-config"]');
@@ -123,7 +133,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('[data-test-replication-link="details"]');
 
     assert
-      .dom(`[data-test-secondaries=row-for-${secondaryName}]`)
+      .dom(`[data-test-secondaries-node=${secondaryName}]`)
       .exists('shows a table row the recently added secondary');
 
     // nav to DR
@@ -249,12 +259,16 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await pollCluster(this.owner);
     await settled();
-    const modalDefaultTtl = document.querySelector('[data-test-row-value="TTL"]').innerText;
+
     // checks on secondary token modal
-    assert.dom('#modal-wormhole').exists();
-    assert.strictEqual(modalDefaultTtl, '1800s', 'shows the correct TTL of 1800s');
+    assert.dom('#replication-copy-token-modal').exists();
+    assert.dom('[data-test-inline-error-message]').hasText('Copy token to dismiss modal');
+    assert.dom('[data-test-row-value="TTL"]').hasText('1800s', 'shows the correct TTL of 1800s');
     // click off the modal to make sure you don't just have to click on the copy-close button to copy the token
-    await click('[data-test-modal-background="Copy your token"]');
+    assert.dom('[data-test-modal-close]').isDisabled('cancel is disabled');
+    await click('[data-test-modal-copy]');
+    assert.dom('[data-test-modal-close]').isEnabled('cancel is enabled after token is copied');
+    await click('[data-test-modal-close]');
 
     // add another secondary not using the default ttl
     await click('[data-test-secondary-add]');
@@ -267,9 +281,9 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await pollCluster(this.owner);
     await settled();
-    const modalTtl = document.querySelector('[data-test-row-value="TTL"]').innerText;
-    assert.strictEqual(modalTtl, '180s', 'shows the correct TTL of 180s');
-    await click('[data-test-modal-background="Copy your token"]');
+    assert.dom('[data-test-row-value="TTL"]').hasText('180s', 'shows the correct TTL of 180s');
+    await click('[data-test-modal-copy]');
+    await click('[data-test-modal-close]');
 
     // confirm you were redirected to the secondaries page
     assert.strictEqual(
@@ -300,14 +314,20 @@ module('Acceptance | Enterprise | replication', function (hooks) {
       .doesNotExist(`does not render replication summary card when both modes are not enabled as primary`);
 
     // enable DR primary replication
-    await click('[data-test-replication-promote-secondary]');
+    await click('[data-test-replication-details-link="dr"]');
+    // eslint-disable-next-line ember/no-settled-after-test-helper
+    await settled(); // let the controller set replicationMode in afterModel
+    assert.dom('[data-test-replication-title]').hasText('Enable Disaster Recovery Replication');
     await click('[data-test-replication-enable]');
 
     await pollCluster(this.owner);
     await settled();
 
+    // Breadcrumbs only load once we're in the summary mode after enabling
+    await waitFor('[data-test-replication-breadcrumb]');
     // navigate using breadcrumbs back to replication.index
-    await click('[data-test-replication-breadcrumb]');
+    assert.dom('[data-test-replication-breadcrumb]').exists('shows the replication breadcrumb (flaky)');
+    await click('[data-test-replication-breadcrumb] a');
 
     assert
       .dom('[data-test-replication-summary-card]')
@@ -345,13 +365,15 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     // Click confirm button
     await click('[data-test-confirm-button="Demote to secondary?"]');
 
-    await click('[data-test-replication-link="details"]');
+    await pollCluster(this.owner);
+    await settled();
 
+    await click('[data-test-replication-link="details"]');
+    await waitFor('[data-test-replication-dashboard]');
     assert.dom('[data-test-replication-dashboard]').exists();
     assert.dom('[data-test-selectable-card-container="secondary"]').exists();
-    assert.ok(
-      find('[data-test-replication-mode-display]').textContent.includes('secondary'),
-      'it displays the cluster mode correctly'
-    );
+    assert
+      .dom('[data-test-replication-mode-display]')
+      .hasText('secondary', 'it displays the cluster mode correctly in header');
   });
 });

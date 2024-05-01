@@ -87,3 +87,7 @@ export function createTokenCmd(policyName = 'default') {
 export const tokenWithPolicyCmd = function (name, policy) {
   return [createPolicyCmd(name, policy), createTokenCmd(name)];
 };
+
+export function createNS(namespace) {
+  return `write sys/namespaces/${namespace} -f`;
+}

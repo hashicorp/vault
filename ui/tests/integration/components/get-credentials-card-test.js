@@ -10,6 +10,7 @@ import { click, render } from '@ember/test-helpers';
 import { selectChoose, clickTrigger } from 'ember-power-select/test-support/helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const storeService = Service.extend({
   query(modelType) {
@@ -38,6 +39,13 @@ module('Integration | Component | get-credentials-card', function (hooks) {
     this.owner.register('service:store', storeService);
     this.set('title', 'Get Credentials');
     this.set('searchLabel', 'Role to use');
+    setRunOptions({
+      rules: {
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+      },
+    });
   });
 
   hooks.afterEach(function () {

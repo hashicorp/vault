@@ -1,10 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { getOwner } from '@ember/application';
 import errorMessage from 'vault/utils/error-message';
@@ -15,6 +15,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type { Breadcrumb, EngineOwner } from 'vault/vault/app-types';
 import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
+import { tracked } from '@glimmer/tracking';
 
 interface Args {
   roles: Array<LdapRoleModel>;
@@ -28,6 +29,8 @@ export default class LdapRolesPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly router: RouterService;
   @service declare readonly store: StoreService;
+  @tracked credsToRotate: LdapRoleModel | null = null;
+  @tracked roleToDelete: LdapRoleModel | null = null;
 
   get mountPoint(): string {
     const owner = getOwner(this) as EngineOwner;
@@ -35,7 +38,7 @@ export default class LdapRolesPageComponent extends Component<Args> {
   }
 
   get paginationQueryParams() {
-    return (page: number) => ({ currentPage: page });
+    return (page: number) => ({ page });
   }
 
   @action
@@ -51,6 +54,8 @@ export default class LdapRolesPageComponent extends Component<Args> {
       this.flashMessages.success(message);
     } catch (error) {
       this.flashMessages.danger(`Error rotating credentials \n ${errorMessage(error)}`);
+    } finally {
+      this.credsToRotate = null;
     }
   }
 
@@ -64,6 +69,8 @@ export default class LdapRolesPageComponent extends Component<Args> {
       this.flashMessages.success(message);
     } catch (error) {
       this.flashMessages.danger(`Error deleting role \n ${errorMessage(error)}`);
+    } finally {
+      this.roleToDelete = null;
     }
   }
 }

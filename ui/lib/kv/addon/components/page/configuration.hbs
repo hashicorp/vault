@@ -1,7 +1,12 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <KvPageHeader @breadcrumbs={{@breadcrumbs}} @mountName={{@mountConfig.id}}>
   <:tabLinks>
-    <LinkTo @route="list" data-test-secrets-tab="Secrets">Secrets</LinkTo>
-    <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
+    <li><LinkTo @route="list" data-test-secrets-tab="Secrets">Secrets</LinkTo></li>
+    <li><LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo></li>
   </:tabLinks>
 </KvPageHeader>
 

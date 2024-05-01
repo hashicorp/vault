@@ -4,9 +4,9 @@
 ~}}
 
 {{#if this.isFlightIcon}}
-  <FlightIcon @name={{this.name}} @size={{this.size}} @stretched={{@stretched}} ...attributes />
+  <FlightIcon @name={{@name}} @size={{this.size}} @stretched={{@stretched}} ...attributes />
 {{else}}
-  <span class="hs-icon {{this.hsIconClass}}" ...attributes>
-    {{svg-jar this.name}}
+  <span class="hs-icon {{this.hsIconClass}}" aria-hidden="true" ...attributes>
+    {{svg-jar @name}}
   </span>
 {{/if}}

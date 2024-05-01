@@ -20,7 +20,7 @@ interface Args {
   };
 }
 
-export default class RadioSelectTtlOrString extends Component<Args> {
+export default class PkiNotValidAfterForm extends Component<Args> {
   @tracked groupValue = 'ttl';
   @tracked cachedNotAfter: string;
   @tracked cachedTtl: string | number;

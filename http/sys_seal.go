@@ -18,7 +18,7 @@ import (
 
 func handleSysSeal(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		req, _, statusCode, err := buildLogicalRequest(core, w, r)
+		req, _, statusCode, err := buildLogicalRequest(core, w, r, "")
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
 			return
@@ -48,7 +48,7 @@ func handleSysSeal(core *vault.Core) http.Handler {
 
 func handleSysStepDown(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		req, _, statusCode, err := buildLogicalRequest(core, w, r)
+		req, _, statusCode, err := buildLogicalRequest(core, w, r, "")
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
 			return
@@ -152,14 +152,14 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 	})
 }
 
-func handleSysSealStatus(core *vault.Core) http.Handler {
+func handleSysSealStatus(core *vault.Core, opt ...ListenerConfigOption) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			respondError(w, http.StatusMethodNotAllowed, nil)
 			return
 		}
 
-		handleSysSealStatusRaw(core, w, r)
+		handleSysSealStatusRaw(core, w, r, opt...)
 	})
 }
 
@@ -174,14 +174,30 @@ func handleSysSealBackendStatus(core *vault.Core) http.Handler {
 	})
 }
 
-func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
-	status, err := core.GetSealStatus(ctx)
+func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Request, opt ...ListenerConfigOption) {
+	ctx := r.Context()
+
+	var tokenPresent bool
+	token := r.Header.Get(consts.AuthHeaderName)
+	if token != "" {
+		// We don't care about the error, we just want to know if the token exists
+		lock := core.HALock()
+		lock.Lock()
+		tokenEntry, err := core.LookupToken(ctx, token)
+		lock.Unlock()
+		tokenPresent = err == nil && tokenEntry != nil
+	}
+
+	// If there are is no valid token then we will redact the specified values
+	if tokenPresent {
+		ctx = logical.CreateContextRedactionSettings(ctx, false, false, false)
+	}
+
+	status, err := core.GetSealStatus(ctx, true)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
-
 	respondOk(w, status)
 }
 
@@ -192,7 +208,6 @@ func handleSysSealBackendStatusRaw(core *vault.Core, w http.ResponseWriter, r *h
 		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
-
 	respondOk(w, status)
 }
 

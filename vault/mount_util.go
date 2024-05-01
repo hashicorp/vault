@@ -33,7 +33,7 @@ func runFilteredPathsEvaluation(context.Context, *Core, bool) error           { 
 // ViewPath returns storage prefix for the view
 func (e *MountEntry) ViewPath() string {
 	switch e.Type {
-	case systemMountType:
+	case mountTypeSystem:
 		return systemBarrierPrefix
 	case "token":
 		return path.Join(systemBarrierPrefix, tokenSubPath) + "/"

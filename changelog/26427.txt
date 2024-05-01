@@ -1,0 +1,3 @@
+```release-note:bug
+agent: `vault.namespace` no longer gets incorrectly overridden by `auto_auth.namespace`, if set
+```

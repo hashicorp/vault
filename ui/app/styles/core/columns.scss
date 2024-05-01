@@ -7,12 +7,12 @@
 
 // Columns (plural)
 .columns {
-  margin-left: -$size-9;
-  margin-right: -$size-9;
-  margin-top: -$size-9;
+  margin-left: -$spacing-10;
+  margin-right: -$spacing-10;
+  margin-top: -$spacing-10;
 
   &:last-child {
-    margin-bottom: -$size-9;
+    margin-bottom: -$spacing-10;
   }
 
   &.is-centered {
@@ -31,7 +31,7 @@
   }
 
   &.is-gapless:not(:last-child) {
-    margin-bottom: $size-4;
+    margin-bottom: $spacing-20;
   }
 
   &.is-gapless:last-child {

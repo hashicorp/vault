@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -275,7 +276,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 
 	keysAllowed := strings.HasSuffix(req.Path, "bundle") || req.Path == "config/ca"
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not import issuers until migration has completed"), nil
 	}
 
@@ -406,7 +407,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	}
 
 	if len(createdIssuers) > 0 {
-		warnings, err := b.crlBuilder.rebuild(sc, true)
+		warnings, err := b.CrlBuilder().rebuild(sc, true)
 		if err != nil {
 			// Before returning, check if the error message includes the
 			// string "PSS". If so, it indicates we might've wanted to modify
@@ -438,7 +439,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 			response.AddWarning("Unable to fetch default issuers configuration to update default issuer if necessary: " + err.Error())
 		} else if config.DefaultFollowsLatestIssuer {
 			if len(issuersWithKeys) == 1 {
-				if err := sc.updateDefaultIssuerId(issuerID(issuersWithKeys[0])); err != nil {
+				if err := sc.updateDefaultIssuerId(issuing.IssuerID(issuersWithKeys[0])); err != nil {
 					response.AddWarning("Unable to update this new root as the default issuer: " + err.Error())
 				}
 			} else if len(issuersWithKeys) > 1 {
@@ -627,11 +628,11 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 	defer b.issuersLock.Unlock()
 
 	// Issuer revocation can't work on the legacy cert bundle.
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("cannot revoke issuer until migration has completed"), nil
 	}
 
-	issuerName := getIssuerRef(data)
+	issuerName := GetIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
@@ -661,8 +662,8 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 	// new revocations of leaves issued by this issuer to trigger a CRL
 	// rebuild still.
 	issuer.Revoked = true
-	if issuer.Usage.HasUsage(IssuanceUsage) {
-		issuer.Usage.ToggleUsage(IssuanceUsage)
+	if issuer.Usage.HasUsage(issuing.IssuanceUsage) {
+		issuer.Usage.ToggleUsage(issuing.IssuanceUsage)
 	}
 
 	currTime := time.Now()
@@ -687,7 +688,7 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 	// include both in two separate CRLs. Hence, the former is the condition
 	// we check in CRL building, but this step satisfies other guarantees
 	// within Vault.
-	certEntry, err := fetchCertBySerial(sc, "certs/", issuer.SerialNumber)
+	certEntry, err := fetchCertBySerial(sc, issuing.PathCerts, issuer.SerialNumber)
 	if err == nil && certEntry != nil {
 		// We've inverted this error check as it doesn't matter; we already
 		// consider this certificate revoked.
@@ -730,7 +731,7 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	// Rebuild the CRL to include the newly revoked issuer.
-	warnings, crlErr := b.crlBuilder.rebuild(sc, false)
+	warnings, crlErr := b.CrlBuilder().rebuild(sc, false)
 	if crlErr != nil {
 		switch crlErr.(type) {
 		case errutil.UserError:

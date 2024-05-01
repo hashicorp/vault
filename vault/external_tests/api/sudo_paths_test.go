@@ -9,8 +9,11 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/helper/builtinplugins"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -24,19 +27,17 @@ func TestSudoPaths(t *testing.T) {
 		EnableRaw:           true,
 		EnableIntrospection: true,
 		BuiltinRegistry:     builtinplugins.Registry,
+		LogicalBackends: map[string]logical.Factory{
+			"pki": pki.Factory,
+		},
 	}
-	client, _, closer := testVaultServerCoreConfig(t, coreConfig)
-	defer closer()
 
-	// At present there are no auth methods with sudo paths, except for the automatically mounted token backend
-	for _, credBackendName := range []string{} {
-		err := client.Sys().EnableAuthWithOptions(credBackendName, &api.EnableAuthOptions{
-			Type: credBackendName,
-		})
-		if err != nil {
-			t.Fatalf("error enabling auth backend for test: %v", err)
-		}
-	}
+	cluster := minimal.NewTestSoloCluster(t, coreConfig)
+	client := cluster.Cores[0].Client
+
+	// NOTE: At present there are no auth methods with sudo paths, except for the
+	// automatically mounted token backend. If this changes this test should be
+	// updated to iterate over the auth methods and test them as we are doing below.
 
 	// Each secrets engine that contains sudo paths (other than automatically mounted ones) must be mounted here
 	for _, logicalBackendName := range []string{"pki"} {
@@ -80,8 +81,7 @@ func TestSudoPaths(t *testing.T) {
 }
 
 func getSudoPathsFromSpec(client *api.Client) (map[string]struct{}, error) {
-	r := client.NewRequest("GET", "/v1/sys/internal/specs/openapi")
-	resp, err := client.RawRequest(r)
+	resp, err := client.Logical().ReadRaw("sys/internal/specs/openapi")
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve sudo endpoints: %v", err)
 	}

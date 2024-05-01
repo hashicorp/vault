@@ -162,6 +162,9 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   variable. This key is mainly to work around a limitation within AWS's CloudHSM v5
   pkcs11 implementation.
 
+- `max_parallel` `(int: 1)` - The number of concurrent requests that may be
+  in flight to the HSM at any given time.
+
 - `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
 
 Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.

@@ -52,7 +52,7 @@ module('Integration | Component | client count config', function (hooks) {
   });
 
   test('it should function in edit mode when reporting is disabled', async function (assert) {
-    assert.expect(13);
+    assert.expect(12);
 
     this.server.put('/sys/internal/counters/config', (schema, req) => {
       const { enabled, retention_months } = JSON.parse(req.requestBody);
@@ -64,7 +64,6 @@ module('Integration | Component | client count config', function (hooks) {
     this.createModel('disable');
 
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <Clients::Config @model={{this.model}} @mode="edit" />
     `);
 
@@ -86,9 +85,8 @@ module('Integration | Component | client count config', function (hooks) {
 
     await fillIn('[data-test-input="retentionMonths"]', 24);
     await click('[data-test-clients-config-save]');
-    assert.dom('.modal.is-active').exists('Modal renders');
     assert
-      .dom('[data-test-modal-title] span')
+      .dom('[data-test-clients-config-modal="title"]')
       .hasText('Turn usage tracking on?', 'Correct modal title renders');
     assert.dom('[data-test-clients-config-modal="on"]').exists('Correct modal description block renders');
 
@@ -100,18 +98,18 @@ module('Integration | Component | client count config', function (hooks) {
 
     await click('[data-test-input="enabled"]');
     await click('[data-test-clients-config-save]');
-    assert.dom('.modal.is-active').exists('Modal renders');
+    assert.dom('[data-test-clients-config-modal]').exists('Modal renders');
     assert
-      .dom('[data-test-modal-title] span')
+      .dom('[data-test-clients-config-modal="title"]')
       .hasText('Turn usage tracking off?', 'Correct modal title renders');
     assert.dom('[data-test-clients-config-modal="off"]').exists('Correct modal description block renders');
 
     await click('[data-test-clients-config-modal="cancel"]');
-    assert.dom('.modal.is-active').doesNotExist('Modal is hidden on cancel');
+    assert.dom('[data-test-clients-config-modal]').doesNotExist('Modal is hidden on cancel');
   });
 
-  test('it should function in edit mode when reporting is enabled', async function (assert) {
-    assert.expect(6);
+  test('it should be hidden in edit mode when reporting is enabled', async function (assert) {
+    assert.expect(4);
 
     this.server.put('/sys/internal/counters/config', (schema, req) => {
       const { enabled, retention_months } = JSON.parse(req.requestBody);
@@ -123,17 +121,10 @@ module('Integration | Component | client count config', function (hooks) {
     this.createModel('enable', true, 24);
 
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <Clients::Config @model={{this.model}} @mode="edit" />
     `);
 
-    assert.dom('[data-test-input="enabled"]').isChecked('Data collection input is checked');
-    assert
-      .dom('[data-test-input="enabled"]')
-      .isDisabled('Data collection input disabled when reporting is enabled');
-    assert
-      .dom('label[for="enabled"]')
-      .hasText('Data collection is on', 'Correct label renders when data collection is on');
+    assert.dom('[data-test-input="enabled"]').doesNotExist('Data collection input not shown ');
     assert.dom('[data-test-input="retentionMonths"]').hasValue('24', 'Retention months render');
 
     await fillIn('[data-test-input="retentionMonths"]', 5);
@@ -162,7 +153,6 @@ module('Integration | Component | client count config', function (hooks) {
     this.createModel();
 
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <Clients::Config @model={{this.model}} @mode="edit" />
     `);
     await fillIn('[data-test-input="retentionMonths"]', 24);

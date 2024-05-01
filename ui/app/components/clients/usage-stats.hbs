@@ -1,0 +1,36 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{! Display only template that renders yielded components in columns, beneath a title and description }}
+<Hds::Card::Container
+  @level="base"
+  @hasBorder={{true}}
+  data-test-usage-stats={{@title}}
+  class="has-padding-m has-bottom-margin-m"
+>
+  <div class="flex row-wrap space-between">
+    <Hds::Text::Display @tag="h3" @weight="semibold" @size="400">
+      {{@title}}
+    </Hds::Text::Display>
+    <Hds::Link::Standalone
+      @href={{doc-link "/vault/tutorials/monitoring/usage-metrics"}}
+      @text="Usage metrics tutorial"
+      @icon="learn-link"
+      @iconPosition="trailing"
+      class="has-bottom-margin-s"
+    />
+  </div>
+  {{#if @description}}
+    <Hds::Text::Body @tag="p">
+      {{@description}}
+    </Hds::Text::Body>
+  {{/if}}
+
+  <hr class="has-background-gray-100 has-bottom-margin-m" />
+
+  <div class="columns">
+    {{yield}}
+  </div>
+</Hds::Card::Container>

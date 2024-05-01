@@ -8,30 +8,29 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import ENV from 'vault/config/environment';
-import {
-  OIDC_BASE_URL,
-  CLIENT_LIST_RESPONSE,
-  SELECTORS,
-  overrideMirageResponse,
-  overrideCapabilities,
-} from 'vault/tests/helpers/oidc-config';
+import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
+import { OIDC_BASE_URL, CLIENT_LIST_RESPONSE, SELECTORS } from 'vault/tests/helpers/oidc-config';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | oidc/key-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'oidcConfig';
-  });
-
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
-  });
-
   hooks.beforeEach(function () {
+    oidcConfigHandlers(this.server);
     this.store = this.owner.lookup('service:store');
-    this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
+    this.server.get('/identity/oidc/client', () => overrideResponse(null, { data: CLIENT_LIST_RESPONSE }));
+    setRunOptions({
+      rules: {
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+      },
+    });
   });
 
   test('it should save new key', async function (assert) {
@@ -173,7 +172,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
 
     this.model = this.store.peekRecord('oidc/key', 'test-key');
 
-    this.server.get('/identity/oidc/client', () => overrideMirageResponse(403));
+    this.server.get('/identity/oidc/client', () => overrideResponse(403));
     await render(hbs`
       <Oidc::KeyForm
         @model={{this.model}}
@@ -191,7 +190,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
   test('it should render error alerts when API returns an error', async function (assert) {
     assert.expect(2);
     this.model = this.store.createRecord('oidc/key');
-    this.server.post('/sys/capabilities-self', () => overrideCapabilities(OIDC_BASE_URL + '/keys'));
+    this.server.post('/sys/capabilities-self', () => capabilitiesStub(OIDC_BASE_URL + '/keys'));
     await render(hbs`
       <Oidc::KeyForm
         @model={{this.model}}

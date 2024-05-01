@@ -7,62 +7,62 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { later } from '@ember/runloop';
 import { tracked } from '@glimmer/tracking';
-import { messageTypes } from 'core/helpers/message-types';
+import { assert } from '@ember/debug';
 
 /**
  * @module AlertInline
- * `AlertInline` components are used to inform users of important messages.
+ * * Use Hds::Alert @type="compact" for displaying alert messages.
+ * This component renders a compact Hds::Alert that displays a loading icon if the
+ * @message arg changes and then re-renders the updated @message text.
+ * (Example: submitting a form and displaying the number of errors because on re-submit the number may change)
  *
  * @example
- * ```js
- * <AlertInline @type="danger" @message="{{model.keyId}} is not a valid lease ID"/>
+ * ```
+ * <AlertInline @type="danger" @message="There are 2 errors with this form."/>
  * ```
  *
- * @param {string} type=null - The alert type passed to the message-types helper.
- * @param {string} [message=null] - The message to display within the alert.
- * @param {boolean} [paddingTop=false] - Whether or not to add padding above component.
- * @param {boolean} [isMarginless=false] - Whether or not to remove margin bottom below component.
- * @param {boolean} [sizeSmall=false] - Whether or not to display a small font with padding below of alert message.
- * @param {boolean} [mimicRefresh=false] - If true will display a loading icon when attributes change (e.g. when a form submits and the alert message changes).
+ * @deprecated {string} type - color getter maps type to the Hds::Alert @color
+ * @param {string} color - Styles alert color and icon, can be one of: critical, warning, success, highlight, neutral
+ * @param {string} message - The message to display within the alert.
  */
 
 export default class AlertInlineComponent extends Component {
   @tracked isRefreshing = false;
 
-  get mimicRefresh() {
-    return this.args.mimicRefresh || false;
-  }
-
-  get paddingTop() {
-    return this.args.paddingTop ? ' padding-top' : '';
-  }
-
-  get isMarginless() {
-    return this.args.isMarginless ? ' is-marginless' : '';
-  }
-
-  get sizeSmall() {
-    return this.args.sizeSmall ? ' size-small' : '';
-  }
-
-  get textClass() {
-    if (this.args.type === 'danger') {
-      return this.alertType.glyphClass;
+  constructor() {
+    super(...arguments);
+    assert('@type arg is deprecated, pass @color="critical" instead', this.args.type !== 'critical');
+    if (this.args.color) {
+      const possibleColors = ['critical', 'warning', 'success', 'highlight', 'neutral'];
+      assert(
+        `${this.args.color} is not a valid color. @color must be one of: ${possibleColors.join(', ')}`,
+        possibleColors.includes(this.args.color)
+      );
     }
-    return null;
   }
 
-  get alertType() {
-    return messageTypes([this.args.type]);
+  get color() {
+    if (this.args.color) return this.args.color;
+    // @type arg is deprecated, this is for backward compatibility of old implementation
+    switch (this.args.type) {
+      case 'danger':
+        return 'critical';
+      case 'success':
+        return 'success';
+      case 'warning':
+        return 'warning';
+      case 'info':
+        return 'highlight';
+      default:
+        return 'neutral';
+    }
   }
 
   @action
   refresh() {
-    if (this.mimicRefresh) {
-      this.isRefreshing = true;
-      later(() => {
-        this.isRefreshing = false;
-      }, 200);
-    }
+    this.isRefreshing = true;
+    later(() => {
+      this.isRefreshing = false;
+    }, 200);
   }
 }

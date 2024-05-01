@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix the copy token button in the sidebar navigation window when in a collapsed state.
+```

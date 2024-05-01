@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: improve accessibility - color contrast, labels, and automatic testing
+```

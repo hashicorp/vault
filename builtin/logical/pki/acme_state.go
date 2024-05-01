@@ -17,7 +17,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/nonceutil"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -76,11 +78,27 @@ func (a *acmeState) Initialize(b *backend, sc *storageContext) error {
 		return fmt.Errorf("error initializing ACME engine: %w", err)
 	}
 
+	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary | consts.ReplicationPerformanceStandby) {
+		// It is assumed, that if the node does become the active node later
+		// the plugin is re-initialized, so this is safe. It also spares the node
+		// from loading the existing queue into memory for no reason.
+		b.Logger().Debug("Not on an active node, skipping starting ACME challenge validation engine")
+		return nil
+	}
 	// Kick off our ACME challenge validation engine.
 	go a.validator.Run(b, a, sc)
 
 	// All good.
 	return nil
+}
+
+func (a *acmeState) Shutdown(b *backend) {
+	// If we aren't the active node, nothing to shutdown
+	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary | consts.ReplicationPerformanceStandby) {
+		return
+	}
+
+	a.validator.Closing <- struct{}{}
 }
 
 func (a *acmeState) markConfigDirty() {
@@ -203,7 +221,7 @@ type acmeOrder struct {
 	CertificateSerialNumber string              `json:"cert-serial-number"`
 	CertificateExpiry       time.Time           `json:"cert-expiry"`
 	// The actual issuer UUID that issued the certificate, blank if an order exists but no certificate was issued.
-	IssuerId issuerID `json:"issuer-id"`
+	IssuerId issuing.IssuerID `json:"issuer-id"`
 }
 
 func (o acmeOrder) getIdentifierDNSValues() []string {
