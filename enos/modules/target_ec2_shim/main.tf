@@ -6,14 +6,13 @@ terraform {
     # We need to specify the provider source in each module until we publish it
     # to the public registry
     enos = {
-      source  = "app.terraform.io/hashicorp-qti/enos"
+      source  = "registry.terraform.io/hashicorp-forge/enos"
       version = ">= 0.3.24"
     }
   }
 }
 
 variable "ami_id" { default = null }
-variable "awskms_unseal_key_arn" { default = null }
 variable "cluster_name" { default = null }
 variable "cluster_tag_key" { default = null }
 variable "common_tags" { default = null }
@@ -25,6 +24,7 @@ variable "instance_mem_min" { default = null }
 variable "instance_types" { default = null }
 variable "max_price" { default = null }
 variable "project_name" { default = null }
+variable "seal_key_names" { default = null }
 variable "ssh_allow_ips" { default = null }
 variable "ssh_keypair" { default = null }
 variable "vpc_id" { default = null }

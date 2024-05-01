@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -87,13 +87,13 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
     await click('[data-test-save]');
 
     assert
-      .dom('[data-test-field-validation="name"] p')
+      .dom('[data-test-field-validation="name"]')
       .hasText('Library name is required.', 'Name validation error renders');
     assert
-      .dom('[data-test-field-validation="service_account_names"] p')
+      .dom('[data-test-field-validation="service_account_names"]')
       .hasText('At least one service account is required.', 'Service account name validation error renders');
     assert
-      .dom('[data-test-invalid-form-message] p')
+      .dom('[data-test-invalid-form-message]')
       .hasText('There are 2 errors with this form.', 'Invalid form message renders');
   });
 
@@ -147,7 +147,7 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
 
     await this.renderComponent();
 
-    await click('[data-test-string-list-button="delete"]');
+    await click('[data-test-string-list-row="0"] [data-test-string-list-button="delete"]');
     await click('[data-test-input="disable_check_in_enforcement"] input#Disabled');
     await click('[data-test-save]');
 

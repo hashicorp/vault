@@ -8,19 +8,19 @@ import { typeOf } from '@ember/utils';
 /*
   DS.attr('object')
 */
-export default Transform.extend({
-  deserialize: function (value) {
+export default class ObjectTransform extends Transform {
+  deserialize(value) {
     if (typeOf(value) !== 'object') {
       return {};
     } else {
       return value;
     }
-  },
-  serialize: function (value) {
+  }
+  serialize(value) {
     if (typeOf(value) !== 'object') {
       return {};
     } else {
       return value;
     }
-  },
-});
+  }
+}

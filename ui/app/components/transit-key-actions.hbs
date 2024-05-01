@@ -1,0 +1,133 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+<div {{did-update this.updateProps @selectedAction}}>
+  <MessageError @errorMessage={{this.errors}} />
+
+  {{#if (eq @selectedAction "encrypt")}}
+    <TransitKeyAction::Encrypt
+      @key={{@key}}
+      @param={{this.props.param}}
+      @context={{this.props.context}}
+      @nonce={{this.props.nonce}}
+      @bits={{this.props.bits}}
+      @key_version={{this.props.key_version}}
+      @encodedBase64={{this.props.encodedBase64}}
+      @toggleEncodeBase64={{this.toggleEncodeBase64}}
+      @plaintext={{this.props.plaintext}}
+      @ciphertext={{this.props.ciphertext}}
+      @doSubmit={{perform this.doSubmit}}
+      @isModalActive={{this.isModalActive}}
+      data-test-transit-action={{@selectedAction}}
+    />
+  {{else if (eq @selectedAction "decrypt")}}
+    <TransitKeyAction::Decrypt
+      @key={{@key}}
+      @ciphertext={{this.props.ciphertext}}
+      @context={{this.props.context}}
+      @nonce={{this.props.nonce}}
+      @isModalActive={{this.isModalActive}}
+      @plaintext={{this.props.plaintext}}
+      @doSubmit={{perform this.doSubmit}}
+      data-test-transit-action={{@selectedAction}}
+    />
+  {{else if (eq @selectedAction "datakey")}}
+    <TransitKeyAction::Datakey
+      @key={{@key}}
+      @param={{this.props.param}}
+      @context={{this.props.context}}
+      @nonce={{this.props.nonce}}
+      @bits={{this.props.bits}}
+      @plaintext={{this.props.plaintext}}
+      @ciphertext={{this.props.ciphertext}}
+      @doSubmit={{perform this.doSubmit}}
+      @isModalActive={{this.isModalActive}}
+      data-test-transit-action={{@selectedAction}}
+    />
+  {{else if (eq @selectedAction "rewrap")}}
+    <TransitKeyAction::Rewrap
+      @key={{@key}}
+      @param={{this.props.param}}
+      @context={{this.props.context}}
+      @nonce={{this.props.nonce}}
+      @key_version={{this.props.key_version}}
+      @ciphertext={{this.props.ciphertext}}
+      @isModalActive={{this.isModalActive}}
+      @doSubmit={{perform this.doSubmit}}
+      data-test-transit-action={{@selectedAction}}
+    />
+  {{else if (eq @selectedAction "hmac")}}
+    <TransitKeyAction::Hmac
+      @key={{@key}}
+      @trackedInput={{this.props.input}}
+      @algorithm={{this.props.algorithm}}
+      @key_version={{this.props.key_version}}
+      @encodedBase64={{this.props.encodedBase64}}
+      @toggleEncodeBase64={{this.toggleEncodeBase64}}
+      @hmac={{this.props.hmac}}
+      @isModalActive={{this.isModalActive}}
+      @doSubmit={{perform this.doSubmit}}
+      data-test-transit-action={{@selectedAction}}
+    />
+  {{else if (eq @selectedAction "verify")}}
+    <TransitKeyAction::Verify
+      @key={{@key}}
+      @trackedInput={{this.props.input}}
+      @signature={{this.props.signature}}
+      @signature_algorithm={{this.props.signature_algorithm}}
+      @hmac={{this.props.hmac}}
+      @hash_algorithm={{this.props.hash_algorithm}}
+      @context={{this.props.context}}
+      @prehashed={{this.props.prehashed}}
+      @encodedBase64={{this.props.encodedBase64}}
+      @verification={{this.props.verification}}
+      @valid={{this.props.valid}}
+      @toggleEncodeBase64={{this.toggleEncodeBase64}}
+      @keyIsRSA={{this.keyIsRSA}}
+      @isModalActive={{this.isModalActive}}
+      @doSubmit={{perform this.doSubmit}}
+      @submitIsRunning={{this.doSubmit.isRunning}}
+      @clearSpecificProps={{this.clearSpecificProps}}
+      data-test-transit-action={{@selectedAction}}
+    />
+  {{else if (eq @selectedAction "sign")}}
+    <TransitKeyAction::Sign
+      @key={{@key}}
+      @trackedInput={{this.props.input}}
+      @hash_algorithm={{this.props.hash_algorithm}}
+      @signature={{this.props.signature}}
+      @signature_algorithm={{this.props.signature_algorithm}}
+      @key_version={{this.props.key_version}}
+      @context={{this.props.context}}
+      @prehashed={{this.props.prehashed}}
+      @encodedBase64={{this.props.encodedBase64}}
+      @toggleEncodeBase64={{this.toggleEncodeBase64}}
+      @isModalActive={{this.isModalActive}}
+      @doSubmit={{perform this.doSubmit}}
+      @submitIsRunning={{this.doSubmit.isRunning}}
+      data-test-transit-action={{@selectedAction}}
+    />
+  {{else if (or (eq @selectedAction "export") (eq (get @key.supportedActions 0) "export"))}}
+    <TransitKeyAction::Export
+      @key={{@key}}
+      @keys={{this.props.keys}}
+      @trackedInput={{this.props.input}}
+      @hash_algorithm={{this.props.hash_algorithm}}
+      @signature={{this.props.signature}}
+      @signature_algorithm={{this.props.signature_algorithm}}
+      @key_version={{this.props.key_version}}
+      @context={{this.props.context}}
+      @prehashed={{this.props.prehashed}}
+      @encodedBase64={{this.props.encodedBase64}}
+      @exportKeyType={{this.props.exportKeyType}}
+      @exportKeyVersion={{this.props.exportKeyVersion}}
+      @wrappedToken={{this.props.wrappedToken}}
+      @wrappedTTL={{this.props.wrappedTTL}}
+      @toggleEncodeBase64={{this.toggleEncodeBase64}}
+      @isModalActive={{this.isModalActive}}
+      @doSubmit={{perform this.doSubmit}}
+      data-test-transit-action="export"
+    />
+  {{/if}}
+</div>

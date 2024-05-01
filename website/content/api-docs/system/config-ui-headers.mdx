@@ -1,0 +1,136 @@
+---
+layout: api
+page_title: /sys/config/ui/headers - HTTP API
+description: The '/sys/config/ui/headers' endpoint configures the UI.
+---
+
+# `/sys/config/ui/headers`
+
+@include 'alerts/restricted-root.mdx'
+
+The `/sys/config/ui/headers` endpoint is used to configure UI header settings.
+
+- **`sudo` required** – All of these endpoints require the `sudo` capability in
+  addition to any path-specific capabilities.
+
+## Read UI header settings
+
+This endpoint returns the given UI header configuration.
+
+| Method | Path                           |
+| :----- | :----------------------------- |
+| `GET`  | `/sys/config/ui/headers/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` – The name of the custom header.
+
+- `multivalue` `(bool: <optional>)` - Returns multiple values if true.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/config/ui/headers/X-Custom-Header
+```
+
+### Sample response
+
+```json
+{
+  "value": "custom-value"
+}
+```
+
+### Sample request (Multi value)
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/config/ui/headers/X-Custom-Header?multivalue=true
+```
+
+### Sample response
+
+```json
+{
+  "values": ["custom-value-1", "custom-value-2"]
+}
+```
+
+## Configure UI headers
+
+This endpoint allows configuring the values to be returned for the UI header.
+
+| Method | Path                           |
+| :----- | :----------------------------- |
+| `POST` | `/sys/config/ui/headers/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` – The name of the custom header.
+
+- `values` `(list: <required>)` - The values to be returned from the header.
+
+### Sample payload
+
+```json
+{
+  "values": ["custom value 1", "custom value 2"]
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/config/ui/headers/X-Custom-Header
+```
+
+## Delete a UI header
+
+This endpoint removes a UI header.
+
+| Method   | Path                           |
+| :------- | :----------------------------- |
+| `DELETE` | `/sys/config/ui/headers/:name` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/sys/config/ui/headers/X-Custom-Header
+```
+
+## List UI headers
+
+This endpoint returns a list of configured UI headers.
+
+| Method | Path                     |
+| :----- | :----------------------- |
+| `LIST` | `/sys/config/ui/headers` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST \
+    http://127.0.0.1:8200/v1/sys/config/ui/headers
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "keys": ["X-Custom...", "X-Header..."]
+  }
+}
+```

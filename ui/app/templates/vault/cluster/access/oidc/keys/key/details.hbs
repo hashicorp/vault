@@ -5,43 +5,30 @@
 
 <Toolbar>
   <ToolbarActions>
-    {{#if this.model.canDelete}}
-      <ToolTip @verticalPosition="above" as |T|>
-        <T.Trigger tabindex="-1">
-          <ConfirmAction
-            data-test-oidc-key-delete
-            @disabled={{eq this.model.name "default"}}
-            @buttonClasses="toolbar-link"
-            @onConfirmAction={{this.delete}}
-            @confirmTitle="Delete key?"
-            @confirmMessage="This key will be permanently deleted. You will not be able to recover it."
-            @confirmButtonText="Delete"
-          >
-            Delete key
-          </ConfirmAction>
-        </T.Trigger>
-        {{#if (eq this.model.name "default")}}
-          <T.Content @defaultClass="tool-tip smaller-font">
-            <div class="box">
-              This is a built-in key that cannot be deleted.
-            </div>
-          </T.Content>
-        {{/if}}
-      </ToolTip>
+    {{#if (and (not-eq this.model.name "default") this.model.canDelete)}}
+      <ConfirmAction
+        @buttonText="Delete key"
+        data-test-oidc-key-delete
+        class="toolbar-button"
+        @buttonColor="secondary"
+        @onConfirmAction={{this.delete}}
+        @confirmTitle="Delete key?"
+        @confirmMessage="This key will be permanently deleted. You will not be able to recover it."
+      />
       <div class="toolbar-separator"></div>
     {{/if}}
     {{#if this.model.canRotate}}
       <ConfirmAction
+        @buttonText="Rotate key"
         data-test-oidc-key-rotate
-        @buttonClasses="toolbar-link"
+        class="toolbar-button"
+        @buttonColor="secondary"
         @onConfirmAction={{perform this.rotateKey}}
         @confirmTitle="Rotate this key?"
         @confirmMessage="After rotation, a new public/private key pair will be generated."
-        @confirmButtonText="Rotate"
+        @modalColor="warning"
         @isRunning={{this.rotateKey.isRunning}}
-      >
-        Rotate key
-      </ConfirmAction>
+      />
     {{/if}}
     {{#if this.model.canEdit}}
       <ToolbarLink @route="vault.cluster.access.oidc.keys.key.edit" @model={{this.model.name}} data-test-oidc-key-edit>

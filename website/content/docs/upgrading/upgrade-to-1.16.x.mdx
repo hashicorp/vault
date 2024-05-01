@@ -1,0 +1,96 @@
+---
+layout: docs
+page_title: Upgrade to Vault 1.16.x - Guides
+description: |-
+  Deprecations, important or breaking changes, and remediation recommendations
+  for anyone upgrading to 1.16.x from Vault 1.15.x.
+---
+
+# Overview
+
+The Vault 1.16.x upgrade guide contains information on deprecations, important
+or breaking changes, and remediation recommendations for anyone upgrading from
+Vault 1.15. **Please read carefully**.
+
+## Important changes
+
+### External plugin variables take precedence over system variables ((#external-plugin-variables))
+
+Vault gives precedence to plugin environment variables over system environment
+variables when loading external plugins. The behavior for builtin plugins and
+plugins that do not specify additional environment variables is unaffected.
+
+For example, if you register an external plugin with `SOURCE=child` in the
+[env](/vault/api-docs/system/plugins-catalog#env) parameter but the main Vault
+process already has `SOURCE=parent` defined, the plugin process starts
+with `SOURCE=child`.
+
+Refer to the [plugin management](/vault/docs/plugins/plugin-management) page for
+more details on plugin environment variables.
+
+<Highlight title="Avoid conflicts with containerized plugins">
+
+  Containerized plugins do not inherit system-defined environment variables. As
+  a result, containerized plugins cannot have conflicts with Vault environment
+  variables.
+
+</Highlight>
+
+#### How to opt out
+
+To opt out of the precedence change, set the
+`VAULT_PLUGIN_USE_LEGACY_ENV_LAYERING` environment variable to `true` for the
+main Vault process:
+
+```shell-session
+$ export VAULT_PLUGIN_USE_LEGACY_ENV_LAYERING=true
+```
+
+Setting `VAULT_PLUGIN_USE_LEGACY_ENV_LAYERING` to `true` tells Vault to:
+
+1. prioritize environment variables from the Vault server environment whenever
+   the system detects a variable conflict.
+1. report on plugin variable conflicts during the unseal process by printing
+   warnings for plugins with conflicting environment variables or logging an
+   informational entry when there are no conflicts.
+
+For example, assume you set `VAULT_PLUGIN_USE_LEGACY_ENV_LAYERING` to `true`
+and have an environment variable `SOURCE=parent`.
+
+If you register an external plugin called `myplugin` with `SOURCE=child`, the
+plugin process starts with `SOURCE=parent` and Vault reports a conflict for
+`myplugin`.
+
+### LDAP auth entity alias names no longer include upndomain
+
+The `userattr` field on the LDAP auth config is now used as the entity alias.
+Prior to 1.16, the LDAP auth method would detect if `upndomain` was configured
+on the mount and then use `<cn>@<upndomain>` as the entity alias value.
+
+The consequence of not configuring this correctly means users may not have the
+correct policies attached to their tokens when logging in.
+
+#### How to opt out
+
+To opt out of the entity alias change, update the `userattr` field on the config:
+
+```
+userattr="userprincipalname"
+```
+
+Refer to the [LDAP auth method (API)](/vault/api-docs/auth/ldap) page for
+more details on the configuration.
+
+## Known issues and workarounds
+
+@include 'known-issues/1_16-jwt_auth_config.mdx'
+
+@include 'known-issues/1_16-ldap_auth_login_anonymous_group_search.mdx'
+
+@include 'known-issues/1_16-ldap_auth_login_missing_entity_alias.mdx'
+
+@include 'known-issues/1_16-default-policy-needs-to-be-updated.mdx'
+
+@include 'known-issues/1_16-default-lcq-pre-1_9-upgrade.mdx'
+
+@include 'known-issues/ocsp-redirect.mdx'

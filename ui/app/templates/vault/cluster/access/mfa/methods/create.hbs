@@ -4,6 +4,12 @@
 ~}}
 
 <PageHeader as |p|>
+  <p.top>
+    <Hds::Breadcrumb>
+      <Hds::Breadcrumb::Item @text="Methods" @route="vault.cluster.access.mfa.methods.index" />
+      <Hds::Breadcrumb::Item @text="Configure MFA Method" @current={{true}} />
+    </Hds::Breadcrumb>
+  </p.top>
   <p.levelLeft class="has-border-bottom-light">
     <h1 class="title is-3">
       {{#if this.method}}
@@ -15,18 +21,6 @@
       {{/if}}
     </h1>
   </p.levelLeft>
-  <p.top>
-    <nav class="breadcrumb">
-      <ul>
-        <li>
-          <span class="sep">&#x0002f;</span>
-          <LinkTo @route="vault.cluster.access.mfa.methods.index">
-            Methods
-          </LinkTo>
-        </li>
-      </ul>
-    </nav>
-  </p.top>
 </PageHeader>
 <div class="has-border-top-light has-top-padding-l">
   {{#if this.showForms}}
@@ -57,22 +51,21 @@
       <DocLink @path="/vault/api-docs/secret/identity/mfa">Learn more.</DocLink>
     </p>
     <div class="is-flex-row has-top-margin-xl">
-      {{#each this.methodNames as |methodName|}}
+      {{#each this.methods as |method|}}
         <RadioCard
-          @value={{lowercase methodName}}
+          @value={{lowercase method.name}}
           @groupValue={{this.type}}
           @onChange={{this.onTypeSelect}}
-          data-test-radio-card={{lowercase methodName}}
+          data-test-radio-card={{lowercase method.name}}
         >
           <div class="radio-card-row is-flex-v-centered">
             <div>
-              <Icon
-                @name={{if (eq methodName "Okta") "okta-color" (lowercase methodName)}}
-                @size="24"
-                class={{if (eq methodName "TOTP") "has-text-grey"}}
-              />
-              <p class="has-text-weight-semibold has-text-center {{if (eq methodName 'Okta') 'has-top-margin-xs'}}">
-                {{methodName}}
+              <Icon @name={{method.icon}} @size="24" class={{if (eq method.name "TOTP") "has-text-grey"}} />
+              <p
+                class="has-text-weight-semibold has-text-center
+                  {{if (or (eq method.name 'Okta') (eq method.name 'TOTP')) 'has-top-margin-xs'}}"
+              >
+                {{method.name}}
               </p>
             </div>
           </div>
@@ -92,16 +85,12 @@
   <div class="has-top-margin-l has-border-top-light">
     <div class="has-top-margin-l has-bottom-margin-l">
       {{#if this.showForms}}
-        <button class="button is-primary" type="button" {{on "click" (perform this.save)}} data-test-mfa-create-save>
-          Continue
-        </button>
-        <button class="button has-left-margin-xs" type="button" {{on "click" this.cancel}}>
-          Cancel
-        </button>
+        <Hds::ButtonSet>
+          <Hds::Button @text="Continue" {{on "click" (perform this.save)}} data-test-mfa-create-save />
+          <Hds::Button @text="Cancel" @color="secondary" {{on "click" this.cancel}} />
+        </Hds::ButtonSet>
       {{else if this.type}}
-        <button class="button is-primary" type="button" {{on "click" this.createModels}} data-test-mfa-create-next>
-          Next
-        </button>
+        <Hds::Button @text="Next" {{on "click" this.createModels}} data-test-mfa-create-next />
       {{/if}}
     </div>
   </div>

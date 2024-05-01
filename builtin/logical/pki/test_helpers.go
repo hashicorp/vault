@@ -59,6 +59,19 @@ func mountPKIEndpoint(t testing.TB, client *api.Client, path string) {
 	require.NoError(t, err, "failed mounting pki endpoint")
 }
 
+func mountCertEndpoint(t testing.TB, client *api.Client, path string) {
+	t.Helper()
+
+	err := client.Sys().EnableAuthWithOptions(path, &api.MountInput{
+		Type: "cert",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	require.NoError(t, err, "failed mounting cert endpoint")
+}
+
 // Signing helpers
 func requireSignedBy(t *testing.T, cert *x509.Certificate, signingCert *x509.Certificate) {
 	t.Helper()
@@ -435,4 +448,28 @@ func performOcspPost(t *testing.T, cert *x509.Certificate, issuerCert *x509.Cert
 	ocspResp, err := ocsp.ParseResponse(respDer, issuerCert)
 	require.NoError(t, err, "parsing ocsp get response")
 	return ocspResp
+}
+
+func requireCertMissingFromStorage(t *testing.T, client *api.Client, cert *x509.Certificate) {
+	serial := serialFromCert(cert)
+	requireSerialMissingFromStorage(t, client, serial)
+}
+
+func requireSerialMissingFromStorage(t *testing.T, client *api.Client, serial string) {
+	resp, err := client.Logical().ReadWithContext(context.Background(), "pki/cert/"+serial)
+	require.NoErrorf(t, err, "failed reading certificate with serial %s", serial)
+	require.Nilf(t, resp, "expected a nil response looking up serial %s got: %v", serial, resp)
+}
+
+func requireCertInStorage(t *testing.T, client *api.Client, cert *x509.Certificate) {
+	serial := serialFromCert(cert)
+	requireSerialInStorage(t, client, serial)
+}
+
+func requireSerialInStorage(t *testing.T, client *api.Client, serial string) {
+	resp, err := client.Logical().ReadWithContext(context.Background(), "pki/cert/"+serial)
+	require.NoErrorf(t, err, "failed reading certificate with serial %s", serial)
+	require.NotNilf(t, resp, "reading certificate returned a nil response for serial: %s", serial)
+	require.NotNilf(t, resp.Data, "reading certificate returned a nil data response for serial: %s", serial)
+	require.NotEmpty(t, resp.Data["certificate"], "certificate field was empty for serial: %s", serial)
 }

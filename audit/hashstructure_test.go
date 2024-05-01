@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"

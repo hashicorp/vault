@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
@@ -53,12 +52,12 @@ func NewAutoSeal(lowLevel seal.Access) *autoSeal {
 	ret.barrierConfig.Store((*SealConfig)(nil))
 	ret.recoveryConfig.Store((*SealConfig)(nil))
 
-	// See SealConfigType for the rules about computing the type.
-	if len(lowLevel.GetSealGenerationInfo().Seals) > 1 {
-		ret.barrierSealConfigType = SealConfigTypeMultiseal
+	// See SealConfigType for the rules about computing the type. Note that NewAccess guarantees
+	// that there is at least one wrapper
+	if wrappers := lowLevel.GetAllSealWrappersByPriority(); len(wrappers) == 1 {
+		ret.barrierSealConfigType = SealConfigType(wrappers[0].SealConfigType)
 	} else {
-		// Note that the Access constructors guarantee that there is at least one KMS config
-		ret.barrierSealConfigType = SealConfigType(lowLevel.GetSealGenerationInfo().Seals[0].Type)
+		ret.barrierSealConfigType = SealConfigTypeMultiseal
 	}
 
 	return ret
@@ -89,6 +88,7 @@ func (d *autoSeal) SetCore(core *Core) {
 	d.core = core
 	if d.logger == nil {
 		d.logger = d.core.Logger().Named("autoseal")
+		d.core.AddLogger(d.logger)
 	}
 }
 
@@ -194,13 +194,17 @@ func (d *autoSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 
 	barrierTypeUpgradeCheck(d.BarrierSealConfigType(), conf)
 
-	if conf.Type != d.BarrierSealConfigType().String() && conf.Type != "multiseal" {
+	if !CompatibleSealTypes(conf.Type, d.BarrierSealConfigType().String()) {
 		d.logger.Error("barrier seal type does not match loaded type", "seal_type", conf.Type, "loaded_type", d.BarrierSealConfigType())
 		return nil, fmt.Errorf("barrier seal type of %q does not match loaded type of %q", conf.Type, d.BarrierSealConfigType())
 	}
 
 	d.SetCachedBarrierConfig(conf)
 	return conf.Clone(), nil
+}
+
+func CompatibleSealTypes(a, b string) bool {
+	return a == b || a == SealConfigTypeMultiseal.String() || b == SealConfigTypeMultiseal.String()
 }
 
 func (d *autoSeal) ClearBarrierConfig(ctx context.Context) error {

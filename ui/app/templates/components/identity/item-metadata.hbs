@@ -16,7 +16,7 @@
       </div>
       <div class="column has-text-right">
         {{#if @model.canEdit}}
-          <Identity::PopupMetadata @params={{array @model key}} />
+          <Identity::PopupMetadata @key={{key}} @model={{@model}} />
         {{/if}}
       </div>
     </div>
@@ -24,16 +24,15 @@
 {{else}}
   <EmptyState
     @title="No metadata for {{@model.name}}"
-    @message="You can store custom data that you want to associate with a {{lowercase
+    @message='You can store custom data that you want to associate with this {{lowercase
       (humanize @model.identityType)
-    }}. Edit this {{lowercase (humanize @model.identityType)}} to get started."
+    }}. Click "Edit {{lowercase (humanize @model.identityType)}}" to get started.'
   >
-    <LinkTo @route="vault.cluster.access.identity.edit" @model={{@model.id}} class="link">
-      Edit
-      {{lowercase (humanize @model.identityType)}}
-    </LinkTo>
-    <DocLink @path="/vault/tutorials/auth-methods/identity">
-      Learn more
-    </DocLink>
+    <Hds::Link::Standalone
+      @text="Identity: entities and groups tutorial"
+      @href={{doc-link "/vault/tutorials/auth-methods/identity"}}
+      @icon="learn-link"
+      @iconPosition="trailing"
+    />
   </EmptyState>
 {{/each-in}}

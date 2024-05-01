@@ -16,13 +16,90 @@
       <EmptyState @title="The current cluster configuration does not support replication" />
     {{else if this.model.replicationIsInitializing}}
       <LayoutLoading />
-    {{else}}
-      <ReplicationSummary
-        @cluster={{this.model}}
-        @showModeSummary={{true}}
-        @onEnable={{action "onEnable"}}
-        @onDisable={{action "onDisable"}}
+    {{else if this.model.allReplicationDisabled}}
+      <PageHeader as |p|>
+        <p.levelLeft>
+          <h1 class="title is-3" data-test-replication-title>
+            Enable Replication
+          </h1>
+        </p.levelLeft>
+      </PageHeader>
+      <div class="box is-sideless is-fullwidth is-marginless">
+        <p class="has-text-grey-dark box is-shadowless is-fullwidth has-slim-padding">
+          <label for="replication-mode" class="is-label is-block">
+            Type of replication
+          </label>
+          In both Performance and Disaster Recovery (DR) Replication, secondaries share the underlying configuration,
+          policies, and supporting secrets as their primary cluster.
+        </p>
+        <div class="columns">
+          <div class="column is-flex">
+            <label for="dr" class="box-label is-column {{if (eq this.replicationMode 'dr') 'is-selected'}}">
+              <div>
+                <h3 class="box-label-header title is-6">
+                  <Icon @size="24" @name="replication-direct" />
+                  Disaster Recovery (DR)
+                </h3>
+                <p class="help has-text-grey-dark">
+                  {{replication-mode-description "dr"}}
+                </p>
+              </div>
+              <div>
+                <RadioButton
+                  id="dr"
+                  name="replication-mode"
+                  @value="dr"
+                  @groupValue={{this.modeSelection}}
+                  @onChange={{fn (mut this.modeSelection)}}
+                />
+                <label for="dr" data-test-replication-type-select="dr"></label>
+              </div>
+            </label>
+          </div>
+          <div class="column is-flex">
+            <label for="performance" class="box-label is-column {{if (eq this.modeSelection 'performance') 'is-selected'}}">
+              <div>
+                <h3 class="box-label-header title is-6">
+                  <Icon @size="24" @name="replication-perf" />
+                  Performance
+                </h3>
+                {{#if (not (has-feature "Performance Replication"))}}
+                  <p class="help has-text-grey-dark">
+                    Performance Replication is a feature of Vault Enterprise Premium
+                  </p>
+                {{else}}
+                  <p class="help has-text-grey-dark">
+                    {{replication-mode-description "performance"}}
+                  </p>
+                {{/if}}
+              </div>
+              <div>
+                {{#if (has-feature "Performance Replication")}}
+                  <RadioButton
+                    id="performance"
+                    name="replication-mode"
+                    @value="performance"
+                    @groupValue={{this.modeSelection}}
+                    @onChange={{fn (mut this.modeSelection)}}
+                  />
+                  <label for="performance" data-test-replication-type-select="performance"></label>
+                {{/if}}
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+      <EnableReplicationForm
+        @replicationMode={{this.modeSelection}}
+        @canEnablePrimary={{this.model.canEnablePrimary}}
+        @canEnableSecondary={{this.model.canEnableSecondary}}
+        @performanceReplicationDisabled={{this.model.performance.replicationDisabled}}
+        @performanceMode={{if this.model.performance.replicationDisabled "disabled" this.model.performance.modeForUrl}}
+        @onSuccess={{this.onEnableSuccess}}
+        @doTransition={{true}}
       />
+    {{else}}
+      <ReplicationSummary @cluster={{this.model}} @showModeSummary={{true}} @onDisable={{this.onDisable}} />
     {{/if}}
   </div>
 </section>

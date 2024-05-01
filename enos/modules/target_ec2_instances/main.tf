@@ -6,7 +6,7 @@ terraform {
     # We need to specify the provider source in each module until we publish it
     # to the public registry
     enos = {
-      source  = "app.terraform.io/hashicorp-qti/enos"
+      source  = "registry.terraform.io/hashicorp-forge/enos"
       version = ">= 0.3.24"
     }
   }
@@ -53,10 +53,6 @@ data "aws_subnets" "vpc" {
   }
 }
 
-data "aws_kms_key" "kms_key" {
-  key_id = var.awskms_unseal_key_arn
-}
-
 data "aws_iam_policy_document" "target" {
   statement {
     resources = ["*"]
@@ -67,16 +63,20 @@ data "aws_iam_policy_document" "target" {
     ]
   }
 
-  statement {
-    resources = [var.awskms_unseal_key_arn]
+  dynamic "statement" {
+    for_each = var.seal_key_names
 
-    actions = [
-      "kms:DescribeKey",
-      "kms:ListKeys",
-      "kms:Encrypt",
-      "kms:Decrypt",
-      "kms:GenerateDataKey"
-    ]
+    content {
+      resources = [statement.value]
+
+      actions = [
+        "kms:DescribeKey",
+        "kms:ListKeys",
+        "kms:Encrypt",
+        "kms:Decrypt",
+        "kms:GenerateDataKey"
+      ]
+    }
   }
 }
 

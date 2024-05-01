@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -13,6 +13,7 @@ import { click, fillIn, render } from '@ember/test-helpers';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) {
   setupRenderingTest(hooks);
@@ -36,6 +37,13 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       { label: this.backend, route: 'list' },
       { label: 'edit' },
     ];
+    setRunOptions({
+      rules: {
+        // TODO fix JSONEditor, KVObjectEditor, MaskedInput
+        label: { enabled: false },
+        'color-contrast': { enabled: false }, // JSONEditor only
+      },
+    });
   });
 
   hooks.afterEach(function () {
@@ -106,7 +114,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       { owner: this.engine }
     );
 
-    assert.dom(PAGE.edit.toggleDiff).isDisabled('Diff toggle is disabled');
+    assert.dom(PAGE.edit.toggleDiff).isNotDisabled('Diff toggle is not disabled');
     assert.dom(PAGE.edit.toggleDiffDescription).hasText('No changes to show. Update secret to view diff');
     assert.dom(PAGE.diff.visualDiff).doesNotExist('Does not show visual diff');
 

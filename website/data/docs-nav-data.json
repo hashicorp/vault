@@ -73,6 +73,10 @@
             "path": "internals/telemetry/enable-telemetry"
           },
           {
+            "title": "Key metrics",
+            "path": "internals/telemetry/key-metrics"
+          },
+          {
             "title": "Metric reference",
             "routes": [
               {
@@ -110,6 +114,10 @@
               {
                 "title": "Raft metrics",
                 "path": "internals/telemetry/metrics/raft"
+              },
+              {
+                "title": "Secrets Sync metrics",
+                "path": "internals/telemetry/metrics/secrets-sync"
               },
               {
                 "title": "Secrets metrics",
@@ -170,6 +178,14 @@
         "path": "concepts/lease"
       },
       {
+        "title": "Lease Explosions",
+        "path": "concepts/lease-explosions"
+      },
+      {
+        "title": "Lease count quota exceeded",
+        "path": "concepts/lease-count-quota-exceeded"
+      },
+      {
         "title": "Authentication",
         "path": "concepts/auth"
       },
@@ -208,6 +224,10 @@
       {
         "title": "Storage",
         "path": "concepts/storage"
+      },
+      {
+        "title": "Cloud access management",
+        "path": "concepts/cloud-access-management"
       },
       {
         "title": "Integrated Storage",
@@ -271,10 +291,42 @@
         "title": "Events",
         "path": "concepts/events",
         "badge": {
-          "text": "BETA",
+          "text": "ENTERPRISE",
           "type": "outlined",
-          "color": "highlight"
+          "color": "neutral"
         }
+      },
+      {
+        "title": "Filtering",
+        "path": "concepts/filtering",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
+        "title": "Request Limiter",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "concepts/request-limiter",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            }
+          },
+          {
+            "title": "Vault server temporarily overloaded",
+            "path": "concepts/request-limiter/vault-server-temporarily-overloaded"
+          }
+        ]
       }
     ]
   },
@@ -304,6 +356,11 @@
       },
       {
         "title": "<code>replication</code>",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "configuration/replication"
       },
       {
@@ -313,8 +370,9 @@
             "title": "Overview",
             "path": "configuration/seal"
           },
-          { "title": "High Availability",
-           "badge": {
+          {
+            "title": "High Availability",
+            "badge": {
               "text": "ENTERPRISE | BETA",
               "type": "outlined",
               "color": "highlight"
@@ -483,6 +541,10 @@
         "path": "configuration/telemetry"
       },
       {
+        "title": "<code>Request Limiter</code>",
+        "path": "configuration/request-limiter"
+      },
+      {
         "title": "<code>ui</code>",
         "path": "configuration/ui"
       },
@@ -520,6 +582,10 @@
       {
         "title": "Overview",
         "path": "commands"
+      },
+      {
+        "title": "Web REPL",
+        "path": "commands/web"
       },
       {
         "title": "<code>agent</code>",
@@ -590,6 +656,23 @@
       {
         "title": "<code>events</code>",
         "path": "commands/events"
+      },
+      {
+        "title": "<code>hcp</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/hcp"
+          },
+          {
+            "title": "<code>connect</code>",
+            "path": "commands/hcp/connect"
+          },
+          {
+            "title": "<code>disconnect</code>",
+            "path": "commands/hcp/disconnect"
+          }
+        ]
       },
       {
         "title": "<code>kv</code>",
@@ -710,6 +793,10 @@
             "path": "commands/operator/generate-root"
           },
           {
+            "title": "<code>import</code>",
+            "path": "commands/operator/import"
+          },
+          {
             "title": "<code>init</code>",
             "path": "commands/operator/init"
           },
@@ -752,6 +839,10 @@
           {
             "title": "<code>usage</code>",
             "path": "commands/operator/usage"
+          },
+          {
+            "title": "<code>utilization</code>",
+            "path": "commands/operator/utilization"
           }
         ]
       },
@@ -993,6 +1084,24 @@
     ]
   },
   {
+    "title": "Vault UI",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "ui"
+      },
+      {
+        "title": "Custom Messages",
+        "path": "ui/custom-messages",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      }
+    ]
+  },
+  {
     "title": "Vault Agent and Vault Proxy",
     "routes": [
       {
@@ -1099,6 +1208,15 @@
               {
                 "title": "Overview",
                 "path": "agent-and-proxy/proxy/caching"
+              },
+              {
+                "title": "Static Secret Caching",
+                "path": "agent-and-proxy/proxy/caching/static-secret-caching",
+                "badge": {
+                  "text": "ENTERPRISE",
+                  "type": "outlined",
+                  "color": "neutral"
+                }
               },
               {
                 "title": "Persistent Caching",
@@ -1350,18 +1468,18 @@
         ]
       },
       {
-        "title": "Key/Value",
+        "title": "Key Value",
         "routes": [
           {
             "title": "Overview",
             "path": "secrets/kv"
           },
           {
-            "title": "K/V Version 1",
+            "title": "KV version  1",
             "path": "secrets/kv/kv-v1"
           },
           {
-            "title": "K/V Version 2",
+            "title": "KV version  2",
             "path": "secrets/kv/kv-v2"
           }
         ]
@@ -1436,6 +1554,15 @@
               "color": "neutral"
             },
             "path": "secrets/pki/cieps"
+          },
+          {
+            "title": "Enrollment over Secure Transport (EST)",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            },
+            "path": "secrets/pki/est"
           }
         ]
       },
@@ -1524,12 +1651,7 @@
     "routes": [
       {
         "title": "Overview",
-        "path": "sync",
-        "badge": {
-          "text": "BETA",
-          "type": "outlined",
-          "color": "highlight"
-        }
+        "path": "sync"
       },
       {
         "title": "AWS Secrets Manager",
@@ -1550,6 +1672,33 @@
       {
         "title": "Vercel Project",
         "path": "sync/vercelproject"
+      }
+    ]
+  },
+  {
+    "title": "Secrets Import",
+    "badge": {
+      "text": "ENTERPRISE",
+      "type": "outlined",
+      "color": "neutral"
+    },
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "import",
+        "badge": {
+          "text": "ALPHA",
+          "type": "outlined",
+          "color": "highlight"
+        }
+      },
+      {
+        "title": "GCP Secret Manager",
+        "path": "import/gcpsm"
+      },
+      {
+        "title": "Mappings",
+        "path": "import/mappings"
       }
     ]
   },
@@ -1601,6 +1750,10 @@
               {
                 "title": "Overview",
                 "path": "auth/jwt/oidc-providers"
+              },
+              {
+                "title": "ADFS",
+                "path": "auth/jwt/oidc-providers/adfs"
               },
               {
                 "title": "Auth0",
@@ -1746,17 +1899,30 @@
         "path": "plugins/plugin-development"
       },
       {
+        "title": "Plugin Development — Event Notifications",
+        "path": "plugins/plugin-development-event-notifications",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "Plugin Management",
         "path": "plugins/plugin-management"
       },
       {
-        "title": "Containerized Plugins",
-        "path": "plugins/containerized-plugins",
-        "badge": {
-          "text": "BETA",
-          "type": "outlined",
-          "color": "highlight"
-        }
+        "title": "Containerized plugins",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "plugins/containerized-plugins"
+          },
+          {
+            "title": "Add a containerized plugin",
+            "path": "plugins/containerized-plugins/add-a-containerized-plugin"
+          }
+        ]
       },
       {
         "title": "Integrations Library",
@@ -1980,7 +2146,29 @@
                   },
                   {
                     "title": "Vault",
-                    "path": "platform/k8s/vso/sources/vault"
+                    "routes": [
+                      {
+                        "title": "Overview",
+                        "path": "platform/k8s/vso/sources/vault"
+                      },
+                      {
+                        "title": "Auth Methods",
+                        "routes": [
+                          {
+                            "title": "AWS",
+                            "path": "platform/k8s/vso/sources/vault/auth/aws"
+                          },
+                          {
+                            "title": "GCP",
+                            "path": "platform/k8s/vso/sources/vault/auth/gcp"
+                          }
+                        ]
+                      },
+                      {
+                        "title": "Encrypted client cache",
+                        "path": "platform/k8s/vso/sources/vault/client-cache"
+                      }
+                    ]
                   },
                   {
                     "title": "HCP Vault Secrets",
@@ -1989,12 +2177,16 @@
                 ]
               },
               {
-                "title": "Examples",
-                "path": "platform/k8s/vso/examples"
+                "title": "Secret Data Transformation",
+                "path": "platform/k8s/vso/secret-transformation"
               },
               {
                 "title": "Helm Chart",
                 "path": "platform/k8s/vso/helm"
+              },
+              {
+                "title": "Examples",
+                "path": "platform/k8s/vso/examples"
               },
               {
                 "title": "Telemetry",
@@ -2026,6 +2218,10 @@
           {
             "title": "Configuration",
             "path": "platform/mssql/configuration"
+          },
+          {
+            "title": "Key Rotation",
+            "path": "platform/mssql/rotation"
           },
           {
             "title": "Upgrading",
@@ -2081,6 +2277,14 @@
       {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
+      },
+      {
+        "title": "Upgrade to Raft WAL",
+        "path": "upgrading/raft-wal"
+      },
+      {
+        "title": "Upgrade to 1.16.x",
+        "path": "upgrading/upgrade-to-1.16.x"
       },
       {
         "title": "Upgrade to 1.15.x",
@@ -2335,6 +2539,10 @@
         "path": "release-notes"
       },
       {
+        "title": "1.16.1",
+        "path": "release-notes/1.16.1"
+      },
+      {
         "title": "1.15.0",
         "path": "release-notes/1.15.0"
       },
@@ -2384,17 +2592,8 @@
     "divider": true
   },
   {
-    "title": "Deprecation Notices",
-    "routes": [
-      {
-        "title": "Overview",
-        "path": "deprecation"
-      },
-      {
-        "title": "FAQ",
-        "path": "deprecation/faq"
-      }
-    ]
+    "title": "Deprecation notices",
+    "path": "deprecation"
   },
   {
     "divider": true
@@ -2461,17 +2660,32 @@
             "path": "enterprise/license/utilization-reporting"
           },
           {
+            "title": "Manual license utilization reporting",
+            "path": "enterprise/license/manual-reporting"
+          },
+          {
             "title": "FAQ",
             "path": "enterprise/license/faq"
           }
         ]
       },
-
+      {
+        "title": "Long-term support (LTS)",
+        "path": "enterprise/lts"
+      },
       {
         "title": "Replication",
-        "path": "enterprise/replication"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/replication"
+          },
+          {
+            "title": "Check for Merkle tree corruption",
+            "path": "enterprise/replication/check-merkle-tree-corruption"
+          }
+        ]
       },
-
       {
         "title": "HSM Support",
         "routes": [
@@ -2557,6 +2771,15 @@
           {
             "title": "Create an administrative namespace",
             "path": "enterprise/namespaces/create-admin-namespace"
+          },
+          {
+            "title": "Run Vault with many namespaces",
+            "path": "enterprise/namespaces/namespace-limits",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            }
           }
         ]
       },
@@ -2567,6 +2790,15 @@
       {
         "title": "Eventual Consistency",
         "path": "enterprise/consistency"
+      },
+      {
+        "title": "Audit",
+        "routes": [
+          {
+            "title": "Audit Filtering",
+            "path": "enterprise/audit/filtering"
+          }
+        ]
       },
       {
         "title": "Control Groups",

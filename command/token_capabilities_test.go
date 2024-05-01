@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 )
 
 func testTokenCapabilitiesCommand(tb testing.TB) (*cli.MockUi, *TokenCapabilitiesCommand) {
@@ -31,6 +31,24 @@ func TestTokenCapabilitiesCommand_Run(t *testing.T) {
 		out  string
 		code int
 	}{
+		{
+			"accessor_no_args",
+			[]string{"-accessor"},
+			"Not enough arguments",
+			1,
+		},
+		{
+			"accessor_too_few_args",
+			[]string{"-accessor", "abcd1234"},
+			"Not enough arguments",
+			1,
+		},
+		{
+			"accessor_too_many_args",
+			[]string{"-accessor", "abcd1234", "efgh5678", "ijkl9012"},
+			"Too many arguments",
+			1,
+		},
 		{
 			"too_many_args",
 			[]string{"foo", "bar", "zip"},
@@ -91,6 +109,48 @@ func TestTokenCapabilitiesCommand_Run(t *testing.T) {
 
 		code := cmd.Run([]string{
 			token, "secret/foo",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "read"
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
+
+	t.Run("accessor", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		policy := `path "secret/foo" { capabilities = ["read"] }`
+		if err := client.Sys().PutPolicy("policy", policy); err != nil {
+			t.Error(err)
+		}
+
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+			Policies: []string{"policy"},
+			TTL:      "30m",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
+			t.Fatalf("missing auth data: %#v", secret)
+		}
+		accessor := secret.Auth.Accessor
+
+		ui, cmd := testTokenCapabilitiesCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"-accessor",
+			accessor,
+			"secret/foo",
 		})
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)

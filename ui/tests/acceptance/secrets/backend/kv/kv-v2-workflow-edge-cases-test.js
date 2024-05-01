@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { click, currentURL, fillIn, findAll, setupOnerror, typeIn, visit } from '@ember/test-helpers';
@@ -16,9 +21,10 @@ import {
   destroyVersionsPolicy,
   metadataListPolicy,
   metadataPolicy,
-} from 'vault/tests/helpers/policy-generator/kv';
+} from 'vault/tests/helpers/kv/policy-generator';
 import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import codemirror from 'vault/tests/helpers/codemirror';
 
 /**
  * This test set is for testing edge cases, such as specific bug fixes or reported user workflows
@@ -53,11 +59,11 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       const backend = this.backend;
       const token = await runCmd([
         createPolicyCmd(
-          'nested-secret-list-reader',
+          `nested-secret-list-reader-${this.backend}`,
           metadataPolicy({ backend, secretPath, capabilities }) +
             dataPolicy({ backend, secretPath, capabilities })
         ),
-        createTokenCmd('nested-secret-list-reader'),
+        createTokenCmd(`nested-secret-list-reader-${this.backend}`),
       ]);
       await authPage.login(token);
     });
@@ -84,12 +90,12 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       // URL correct
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${root}%2F/directory`,
+        `/vault/secrets/${backend}/kv/list/${root}/`,
         'visits list-directory of root'
       );
 
       // Title correct
-      assert.dom(PAGE.title).hasText(`${backend} Version 2`);
+      assert.dom(PAGE.title).hasText(`${backend} version 2`);
       // Tabs correct
       assert.dom(PAGE.secretTab('Secrets')).hasText('Secrets');
       assert.dom(PAGE.secretTab('Secrets')).hasClass('active');
@@ -111,7 +117,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert.dom(PAGE.secretTab('Metadata')).doesNotHaveClass('active');
       assert.dom(PAGE.secretTab('Version History')).hasText('Version History');
       assert.dom(PAGE.secretTab('Version History')).doesNotHaveClass('active');
-      assert.dom(PAGE.toolbarAction).exists({ count: 5 }, 'toolbar renders all actions');
+      assert.dom(PAGE.toolbarAction).exists({ count: 4 }, 'toolbar renders all actions');
     });
 
     test('it navigates back to engine index route via breadcrumbs from secret details', async function (assert) {
@@ -125,7 +131,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       await click(PAGE.breadcrumbAtIdx(previousCrumb));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${root}%2F${subdirectory}%2F/directory`,
+        `/vault/secrets/${backend}/kv/list/${root}/${subdirectory}/`,
         'goes back to subdirectory list'
       );
       assert.dom(PAGE.list.filter).hasValue(`${root}/${subdirectory}/`);
@@ -136,7 +142,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       await click(PAGE.breadcrumbAtIdx(previousCrumb));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${root}%2F/directory`,
+        `/vault/secrets/${backend}/kv/list/${root}/`,
         'goes back to root directory'
       );
       assert.dom(PAGE.list.item(`${subdirectory}/`)).exists('renders linked block for subdirectory');
@@ -185,14 +191,14 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       // user has different permissions for each secret path
       const token = await runCmd([
         createPolicyCmd(
-          'destruction-no-read',
+          `destruction-no-read-${this.backend}`,
           dataPolicy({ backend, secretPath: 'data-delete-only', capabilities: ['delete'] }) +
             deleteVersionsPolicy({ backend, secretPath: 'delete-version-only' }) +
             destroyVersionsPolicy({ backend, secretPath: 'destroy-version-only' }) +
             metadataPolicy({ backend, secretPath: 'destroy-metadata-only', capabilities: ['delete'] }) +
             metadataListPolicy(backend)
         ),
-        createTokenCmd('destruction-no-read'),
+        createTokenCmd(`destruction-no-read-${this.backend}`),
       ]);
       for (const secret of testSecrets) {
         await writeVersionedSecret(backend, secret, 'foo', 'bar', 2);
@@ -253,7 +259,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   });
 
   test('no ghost item after editing metadata', async function (assert) {
-    await visit(`/vault/secrets/${this.backend}/kv/edge/directory`);
+    await visit(`/vault/secrets/${this.backend}/kv/list/edge/`);
     assert.dom(PAGE.list.item()).exists({ count: 2 }, 'two secrets are listed');
     await click(PAGE.list.item('two'));
     await click(PAGE.secretTab('Metadata'));
@@ -264,6 +270,86 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await click(PAGE.breadcrumbAtIdx(2));
     assert.dom(PAGE.list.item()).exists({ count: 2 }, 'two secrets are listed');
   });
+
+  test('advanced secret values default to JSON display', async function (assert) {
+    const obscuredData = `{
+  "foo3": {
+    "name": "********"
+  }
+}`;
+    await visit(`/vault/secrets/${this.backend}/kv/create`);
+    await fillIn(FORM.inputByAttr('path'), 'complex');
+
+    await click(FORM.toggleJson);
+    assert.strictEqual(codemirror().getValue(), '{ "": "" }');
+    codemirror().setValue('{ "foo3": { "name": "bar3" } }');
+    await click(FORM.saveBtn);
+
+    // Details view
+    assert.dom(FORM.toggleJson).isNotDisabled();
+    assert.dom(FORM.toggleJson).isChecked();
+    assert.strictEqual(
+      codemirror().getValue(),
+      obscuredData,
+      'Value is obscured by default on details view when advanced'
+    );
+    await click('[data-test-toggle-input="revealValues"]');
+    assert.false(codemirror().getValue().includes('*'), 'Value unobscured after toggle');
+
+    // New version view
+    await click(PAGE.detail.createNewVersion);
+    assert.dom(FORM.toggleJson).isNotDisabled();
+    assert.dom(FORM.toggleJson).isChecked();
+    assert.false(codemirror().getValue().includes('*'), 'Values are not obscured on edit view');
+  });
+
+  test('viewing advanced secret data versions displays the correct version data', async function (assert) {
+    assert.expect(2);
+    const obscuredDataV1 = `{
+  "foo1": {
+    "name": "********"
+  }
+}`;
+    const obscuredDataV2 = `{
+  "foo2": {
+    "name": "********"
+  }
+}`;
+
+    await visit(`/vault/secrets/${this.backend}/kv/create`);
+    await fillIn(FORM.inputByAttr('path'), 'complex_version_test');
+
+    await click(FORM.toggleJson);
+    codemirror().setValue('{ "foo1": { "name": "bar1" } }');
+    await click(FORM.saveBtn);
+
+    // Create another version
+    await click(PAGE.detail.createNewVersion);
+    codemirror().setValue('{ "foo2": { "name": "bar2" } }');
+    await click(FORM.saveBtn);
+
+    // View the first version and make sure the secret data is correct
+    await click(PAGE.detail.versionDropdown);
+    await click(`${PAGE.detail.version(1)} a`);
+    assert.strictEqual(codemirror().getValue(), obscuredDataV1, 'Version one data is displayed');
+
+    // Navigate back the second version and make sure the secret data is correct
+    await click(PAGE.detail.versionDropdown);
+    await click(`${PAGE.detail.version(2)} a`);
+    assert.strictEqual(codemirror().getValue(), obscuredDataV2, 'Version two data is displayed');
+  });
+
+  test('does not register as advanced when value includes {', async function (assert) {
+    await visit(`/vault/secrets/${this.backend}/kv/create`);
+    await fillIn(FORM.inputByAttr('path'), 'not-advanced');
+
+    await fillIn(FORM.keyInput(), 'foo');
+    await fillIn(FORM.maskedValueInput(), '{bar}');
+    await click(FORM.saveBtn);
+    await click(PAGE.detail.createNewVersion);
+    assert.dom(FORM.toggleJson).isNotDisabled();
+    assert.dom(FORM.toggleJson).isNotChecked();
+  });
 });
 
 // NAMESPACE TESTS
@@ -271,7 +357,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
   setupApplicationTest(hooks);
 
   const navToEngine = async (backend) => {
-    await click('[data-test-sidebar-nav-link="Secrets engines"]');
+    await click('[data-test-sidebar-nav-link="Secrets Engines"]');
     return await click(PAGE.backends.link(backend));
   };
 

@@ -4,11 +4,15 @@
 ~}}
 
 <form
-  onsubmit={{action
-    @doSubmit
-    (hash param=(compact (array @exportKeyType (if this.exportVersion @exportKeyVersion))))
-    (hash wrapTTL=this.wrapTTL)
+  {{on
+    "submit"
+    (fn
+      @doSubmit
+      (hash param=(compact (array @exportKeyType (if this.exportVersion @exportKeyVersion))))
+      (hash wrapTTL=@wrappedTTL)
+    )
   }}
+  ...attributes
 >
   <div class="box is-sideless is-fullwidth is-marginless">
     <div class="content">
@@ -55,13 +59,11 @@
         </div>
       {{/if}}
     </div>
-    <WrapTtl @onChange={{action (mut this.wrapTTL)}} />
+    <WrapTtl @onChange={{fn (mut @wrappedTTL)}} />
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button type="submit" class="button is-primary">
-        Export key
-      </button>
+      <Hds::Button @text="Export key" type="submit" />
     </div>
   </div>
 </form>
@@ -72,12 +74,17 @@
     </M.Header>
     <M.Body>
       <h2 class="title is-6">Wrapped key</h2>
-      {{#if this.wrapTTL}}
+      {{#if @wrappedTTL}}
         <Hds::Copy::Snippet
           class="has-bottom-margin-m"
           @textToCopy={{@wrappedToken}}
           @color="secondary"
           @container="#transit-export-modal"
+          @isFullWidth={{true}}
+          @isTruncated={{true}}
+          @onError={{(fn
+            (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+          )}}
           data-test-encrypted-value="export"
         />
       {{else}}
@@ -90,6 +97,9 @@
             @isIconOnly={{true}}
             @textToCopy={{stringify @keys}}
             @container="#transit-export-modal"
+            @onError={{(fn
+              (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+            )}}
             class="transparent top-right-absolute"
           />
         </div>

@@ -1,7 +1,7 @@
 ---
 layout: docs
 page_title: Integrated Storage - Storage Backends - Configuration
-description: |-
+description: >-
 
   The Integrated Storage (Raft) backend is used to persist Vault's data. Unlike all the other
   storage backends, this backend does not operate from a single source for the
@@ -49,14 +49,17 @@ set [`disable_mlock`](/vault/docs/configuration#disable_mlock) to `true`, and to
   This value can be overridden by setting the `VAULT_RAFT_PATH` environment variable.
 
 - `node_id` `(string: "")` - The identifier for the node in the Raft cluster.
-  This value can be overridden by setting the `VAULT_RAFT_NODE_ID` environment variable.
+  You can override `node_id` with the `VAULT_RAFT_NODE_ID` environment
+  variable.  When `VAULT_RAFT_NODE_ID` is unset, Vault assigns a random
+  GUID during initialization and writes the value to `data/node-id` in the
+  directory specified by the `path` parameter.
 
-- `performance_multiplier` `(integer: 0)` - An integer multiplier used by 
+- `performance_multiplier` `(integer: 0)` - An integer multiplier used by
   servers to scale key Raft timing parameters, where each increment translates to approximately 1 – 2 seconds of delay. For example, setting the multiplier to "3" translates to 3 – 6 seconds of total delay.  Tuning  the multiplier affects the time it
   takes Vault to detect leader failures and to perform leader elections, at the
   expense of requiring more network and CPU resources for better performance.
-  Omitting this value or setting it to 0 uses default timing described below. 
-  Lower values are used to tighten timing and increase sensitivity while higher 
+  Omitting this value or setting it to 0 uses default timing described below.
+  Lower values are used to tighten timing and increase sensitivity while higher
   values relax timings and reduce sensitivity.
 
 
@@ -66,7 +69,7 @@ telemetry indicators that a change is needed or different timing is required due
 to the overall reliability your platform (network, etc.).
 
 Setting the timing value to 1 configures Raft to its highest performance (lowest
-delay) mode. The maximum allowed value is 10. 
+delay) mode. The maximum allowed value is 10.
 
 - `trailing_logs` `(integer: 10000)` - This controls how many log entries are
   left in the log store on disk after a snapshot is made. This should only be
@@ -94,26 +97,29 @@ delay) mode. The maximum allowed value is 10.
    from performing a snapshot at once. The default snapshot interval is
    120 seconds.
 
-- `retry_join` `(list: [])` - There can be one or more
-  [`retry_join`](#retry_join-stanza) stanzas. When the Raft cluster is getting
-  bootstrapped, if the connection details of all the nodes are known beforehand,
-  then specifying this config stanzas enables the nodes to automatically join a
-  Raft cluster. All the nodes would mention all other nodes that they could join
-  using this config. When one of the nodes is initialized, it becomes the leader
-  and all the other nodes will join the leader node to form the cluster. When
-  using Shamir seal, the joined nodes will still need to be unsealed manually.
-  See [the section below](#retry_join-stanza) that describes the parameters
-  accepted by the [`retry_join`](#retry_join-stanza) stanza.
+- `retry_join` `(list: [])` - A set of connection details for another node in the
+  cluster, which is used to help nodes locate a leader in order to join a cluster.
+  There can be one or more [`retry_join`](#retry_join-stanza) stanzas.
 
-- `retry_join_as_non_voter` `(boolean: false)` - If set, causes any `retry_join`
-  config to join the Raft cluster as a non-voter. The node will not participate
-  in the Raft quorum but will still receive the data replication stream, adding
-  read scalability to a cluster. This option has the same effect as the
-  [`-non-voter`](/vault/docs/commands/operator/raft#non-voter) flag for the
-  `vault operator raft join` command, but only affects voting status when joining
-  via `retry_join` config. This setting can be overridden to true by setting the
-  `VAULT_RAFT_RETRY_JOIN_AS_NON_VOTER` environment variable to any non-empty value.
-  Only valid if there is at least one `retry_join` stanza.
+  If the connection details for all nodes in the cluster are known in advance, you
+  can include these stanzas to enable nodes to automatically join the Raft cluster.
+  Once one of the nodes is initialized as the leader, the remaining nodes will use
+  their [`retry_join`](#retry_join-stanza) configuration to locate the leader and
+  join the cluster. Note that when using Shamir seal, the joined nodes will still
+  need to be unsealed manually.
+  See [the section below](#retry_join-stanza) for the parameters accepted by the
+  [`retry_join`](#retry_join-stanza) stanza.
+
+- `retry_join_as_non_voter` `(boolean: false)` - <EnterpriseAlert inline />
+  Configures this node as a permanent non-voter. The node will not participate
+  in the Raft quorum but will still receive the data replication stream
+  enhancing the read throughput of the cluster. This option has the same effect
+  as the [`-non-voter`](/vault/docs/commands/operator/raft#non-voter) flag for
+  the `vault operator raft join` command, but only affects voting status when
+  joining via `retry_join` config. You can override the non-voter configuration
+  by setting the `VAULT_RAFT_RETRY_JOIN_AS_NON_VOTER` environment variable to
+  any non-empty value. Configuring a node as a non-voter is only valid if there
+  is at least one `retry_join` stanza.
 
 - `max_entry_size` `(integer: 1048576)` - This configures the maximum number of
   bytes for a Raft entry. It applies to both Put operations and transactions.
@@ -124,11 +130,21 @@ delay) mode. The maximum allowed value is 10.
   breaking a large value into chunks. By default, the chunk size is the same as
   Raft's max size log entry. The default value for this configuration is 1048576
   -- two times the chunking size.
-  - **Note:** This option corresponds to [Consul's `kv_max_value_size` parameter](https://developer.hashicorp.com/consul/docs/agent/config/config-files#kv_max_value_size) for
+  - **Note:** This option corresponds to [Consul's `kv_max_value_size` parameter](/consul/docs/agent/config/config-files#kv_max_value_size) for
     Vault clusters using a Consul storage backend.  If you are migrating from Consul
     storage to Raft Integrated Storage,  and have changed this value in Consul from its
-    default to a value larger than the Integrated Storage default of 1MB, then you will 
+    default to a value larger than the Integrated Storage default of 1MB, then you will
     need to make the same change in Vault's Integrated Storage config.
+
+- `max_mount_and_namespace_table_entry_size` `(integer)`- <EnterpriseAlert
+  inline /> Overrides `max_entry_size` to set a different limit for the specific
+  storage entries that contain mount tables, auth tables and namespace
+  configuration data. If you are reaching limits on the mount table size, you
+  can use this to increase the number of mounts and namespaces that can be
+  stored without the risk of other storage entries becoming too large. All other
+  notes on [`max_entry_size`](#max-entry-size) apply. Before changing this, read
+  the [/vault/docs/enterprise/namespaces/namespace-limits](Run Vault Enterprise
+  with many namespaces) guide regarding important performance considerations.
 
 - `autopilot_reconcile_interval` `(string: "10s")` - This is the interval after
   which autopilot will pick up any state changes. State change could mean multiple
@@ -144,17 +160,34 @@ delay) mode. The maximum allowed value is 10.
   configuration, known servers, latest raft index, and stats for all the known servers.
   The information that autopilot receives will be used to calculate its next state.
 
-- `autopilot_upgrade_version` `(string: "")` - This is an optional string that, if
-  provided, will be used reported to autopilot as Vault's version. This is then used
-  by autopilot when it makes decisions regarding
-  [automated upgrades](/vault/docs/enterprise/automated-upgrades). If omitted, the
-  version of Vault currently in use will be used. Note that this string must conform
-  to [Semantic Versioning](https://semver.org). Use of this feature requires Vault
-  Enterprise.
+- `autopilot_upgrade_version` `(string: "")` - <EnterpriseAlert inline />
+  Overrides the version used by Autopilot during [automated
+  upgrades](/vault/docs/enterprise/automated-upgrades). Vault's build version is
+  used by default. The string provided must be a valid [Semantic
+  Version](https://semver.org).
 
-- `autopilot_redundancy_zone` `(string: "")` - This is an optional string that specifies
-  Vault's [redundancy zone](/vault/docs/enterprise/redundancy-zones). This is reported to autopilot
-  and is used to enhance scaling and resiliency. Use of this feature requires Vault Enterprise.
+- `autopilot_redundancy_zone` `(string: "")` - <EnterpriseAlert inline />
+  Specifies a [redundancy zone](/vault/docs/enterprise/redundancy-zones) which
+  is used by Autopilot to automatically swap out failed servers for enhanced
+  reliability.
+
+<Warning title="Experimental">
+
+- `raft_wal` `(boolean: false)` - Enables the
+  [write-ahead](/vault/docs/internals/integrated-storage#configurable-raft-log-store)
+  log store instead of the default of BoltDB.
+
+- `raft_log_verifier_enabled` `(boolean: false)` - Enables the raft log verifier.
+  The verifier periodically writes small raft logs and verifies checksums to 
+  ensure that data has been written correctly. The verifier works with raft
+  write-ahead **and** BoltDB log stores.
+
+- `raft_log_verification_interval` `(string: "60s")` - Sets the interval at
+  which the raft log verifier write verification logs. The default interval is
+  `60s` and the minimum supported interval is `10s`. The `raft_log_verification_interval`
+  parameter has no effect if `raft_log_verifier_enabled` is `false`.
+
+</Warning>
 
 ### `retry_join` stanza
 

@@ -3,7 +3,7 @@ layout: docs
 page_title: Clients and entities
 description: |-
   Technical overview covering the concept of clients, entities, and entity IDs
-  in Vault 
+  in Vault
 ---
 
 # Clients and entities
@@ -69,13 +69,38 @@ calculations.
 
 For example:
 
-- Authentication requests from two ACME clients living on different servers that
-  request the same set of certificate identifiers are assigned to the same
-  certificate entity.
-- Multiple requests for the same certificate identifier from a single ACME
-  client are assigned to the same certificate entity.
-- Two authentication requests from a single ACME client for different
-  certificate identifiers are assigned to separate certificate entities.
+- ACME client requests (from the same server or separate servers) for the same
+  certificate identifier (a unique combination of CN,DNS, SANS and IP SANS)
+  are treated as the same entity.
+- If an ACME client makes a request for `a.test.com`, and subsequently makes a new
+  request for `b.test.com` and `*.test.com` then two distinct entities will be created,
+  one for `a.test.com` and another for the combination of `b.test.com` and `*.test.com`.
+- Overlap of certificate identifiers from different ACME clients will be treated
+  as the same entity e.g. if client 1 requests `a.test.com` and client 2 requests
+  `a.test.com` a single entity is created for both requests.
+
+## Secret sync clients
+Vault can automatically update secrets in external destinations with [secret sync](/vault/docs/sync).
+A secret that gets synced to one or more destinations is considered a **secret
+sync client** for client count calculations.
+
+Note that:
+
+- Each synced secret is counted distinctly based on the path and namespace of
+  the secret. If you have secrets at path `kv1/secret` and `kv2/secret`
+  which are both synced, then two distinct secret syncs will be counted.
+- A secret can be synced to multiple different destinations, and it will still
+  only be counted as one secret sync. If `kv/secret` is synced to both Azure Key
+  Vault and AWS Secret Manager, this will be counted as only one secret sync
+  client.
+- Secret sync clients are only created after you create an association between a
+  secret and a store. If you create `kv/secret` and do not associate this secret
+  with any destinations, it will not be counted as a secret sync client.
+- Secret syncs clients are registered in Vault's client counting system so long
+  as the sync is active. If you create `kv/secret` and associate it with a
+  destination in January, update the secret in May, and then delete the secret
+  in September, Vault will consider this client as having been seen throughout
+  the entire period of January through September.
 
 ## Entity assignment with namespaces
 
@@ -112,7 +137,7 @@ to dynamically generate tokens based on external identities.
 When clients authenticate with the [token auth method](/vault/docs/auth/token)
 **without** a client identity, the result is a **non-entity token**. For example,
 a service might use the token authentication method to create a token for a user
-whose explicit identity is unknown. 
+whose explicit identity is unknown.
 
 Ultimately, non-entity tokens trace back to a particular client or purpose so
 Vault assigns unique entity IDs to non-entity tokens based on a combination of
@@ -153,9 +178,6 @@ entity alias and token role.
   </li>
   <li>
     <a href="/vault/docs/concepts/client-count/faq">Client count FAQ</a>
-  </li>
-  <li>
-    <a href="/vault/docs/secrets/pki/best-practices/cicd-pipelines">Best practices for CI/CD pipelines</a>
   </li>
 </ul>
 </Tab>

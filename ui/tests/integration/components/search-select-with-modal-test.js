@@ -13,6 +13,7 @@ import { render, fillIn, click, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import ss from 'vault/tests/pages/components/search-select';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const component = create(ss);
 
@@ -57,6 +58,16 @@ module('Integration | Component | search select with modal', function (hooks) {
             '\n# Import strings library that exposes common string operations\nimport "strings"\n\n# Conditional rule (precond) checks the incoming request endpoint\n# targeted to sys/policies/acl/admin\nprecond = rule {\n    strings.has_prefix(request.path, "sys/policies/admin")\n}\n\n# Vault checks to see if the request was made by an entity\n# named James Thomas or Team Lead role defined as its metadata\nmain = rule when precond {\n    identity.entity.metadata.role is "Team Lead" or\n      identity.entity.name is "James Thomas"\n}\n',
         },
       };
+    });
+    setRunOptions({
+      rules: {
+        // TODO: Fix this component
+        'color-contrast': { enabled: false },
+        label: { enabled: false },
+        'aria-input-field-name': { enabled: false },
+        'aria-required-attr': { enabled: false },
+        'aria-valid-attr-value': { enabled: false },
+      },
     });
   });
 
@@ -144,7 +155,7 @@ module('Integration | Component | search select with modal', function (hooks) {
     );
     await component.selectOption();
 
-    assert.dom('.hds-modal#search-select-modal').exists('modal is active');
+    assert.dom('#search-select-modal').exists('modal is active');
     assert.dom('[data-test-empty-state-title]').hasText('No policy type selected');
     assert.ok(this.onChange.notCalled, 'onChange is not called');
   });
@@ -185,10 +196,10 @@ module('Integration | Component | search select with modal', function (hooks) {
     assert.dom('[data-test-empty-state-title]').hasText('No policy type selected');
     await fillIn('[data-test-select="policyType"]', 'acl');
     assert.dom('[data-test-policy-form]').exists('policy form renders after type is selected');
-    await click('[data-test-tab-example-policy]');
-    assert.dom('[data-test-tab-example-policy]').hasClass('is-active');
-    await click('[data-test-tab-your-policy]');
-    assert.dom('[data-test-tab-your-policy]').hasClass('is-active');
+    await click('[data-test-tab-example-policy] button');
+    assert.dom('[data-test-tab-example-policy] button').hasAttribute('aria-selected', 'true');
+    await click('[data-test-tab-your-policy] button');
+    assert.dom('[data-test-tab-your-policy] button').hasAttribute('aria-selected', 'true');
     await fillIn(
       '[data-test-component="code-mirror-modifier"] textarea',
       'path "secret/super-secret" { capabilities = ["deny"] }'

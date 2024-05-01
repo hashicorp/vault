@@ -162,12 +162,12 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 				"max_lease_ttl":                       json.Number("0"),
 				"pid_file":                            "",
 				"plugin_directory":                    "",
+				"plugin_tmpdir":                       "",
 				"plugin_file_uid":                     json.Number("0"),
 				"plugin_file_permissions":             json.Number("0"),
 				"enable_response_header_hostname":     false,
 				"enable_response_header_raft_node_id": false,
 				"log_requests_level":                  "",
-				"user_lockout_log_interval":           json.Number("0"),
 				"listeners": []interface{}{
 					map[string]interface{}{
 						"config": nil,

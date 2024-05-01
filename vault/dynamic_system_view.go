@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/version"
 )
 
@@ -38,6 +39,8 @@ type extendedSystemView interface {
 	// instead of in sdk/logical to avoid exposing to plugins
 	SudoPrivilege(context.Context, string, string) bool
 }
+
+var _ logical.ExtendedSystemView = (*extendedSystemViewImpl)(nil)
 
 type extendedSystemViewImpl struct {
 	dynamicSystemView
@@ -143,11 +146,24 @@ func (e extendedSystemViewImpl) APILockShouldBlockRequest() (bool, error) {
 	}
 	ns := mountEntry.Namespace()
 
-	if err := enterpriseBlockRequestIfError(e.core, ns.Path, mountEntry.Path); err != nil {
+	if err := e.core.entBlockRequestIfError(ns.Path, mountEntry.Path); err != nil {
 		return true, nil
 	}
 
 	return false, nil
+}
+
+func (e extendedSystemViewImpl) RequestWellKnownRedirect(ctx context.Context, src, dest string) error {
+	return e.core.WellKnownRedirects.TryRegister(ctx, e.core, e.mountEntry.UUID, src, dest)
+}
+
+func (e extendedSystemViewImpl) DeregisterWellKnownRedirect(ctx context.Context, src string) bool {
+	return e.core.WellKnownRedirects.DeregisterSource(e.mountEntry.UUID, src)
+}
+
+// GetPinnedPluginVersion implements logical.ExtendedSystemView.
+func (e extendedSystemViewImpl) GetPinnedPluginVersion(ctx context.Context, pluginType consts.PluginType, pluginName string) (*pluginutil.PinnedVersion, error) {
+	return e.core.pluginCatalog.GetPinnedVersion(ctx, pluginType, pluginName)
 }
 
 func (d dynamicSystemView) DefaultLeaseTTL() time.Duration {
@@ -273,7 +289,7 @@ func (d dynamicSystemView) LookupPluginVersion(ctx context.Context, name string,
 		if version != "" {
 			errContext += fmt.Sprintf(", version=%s", version)
 		}
-		return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, errContext)
+		return nil, fmt.Errorf("%w: %s", plugincatalog.ErrPluginNotFound, errContext)
 	}
 
 	return r, nil
@@ -440,4 +456,26 @@ func (d dynamicSystemView) ClusterID(ctx context.Context) (string, error) {
 	}
 
 	return clusterInfo.ID, nil
+}
+
+func (d dynamicSystemView) GenerateIdentityToken(ctx context.Context, req *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error) {
+	mountEntry := d.mountEntry
+	if mountEntry == nil {
+		return nil, fmt.Errorf("no mount entry")
+	}
+	nsCtx := namespace.ContextWithNamespace(ctx, mountEntry.Namespace())
+	storage := d.core.router.MatchingStorageByAPIPath(nsCtx, mountPathIdentity)
+	if storage == nil {
+		return nil, fmt.Errorf("failed to find storage entry for identity mount")
+	}
+
+	token, ttl, err := d.core.IdentityStore().generatePluginIdentityToken(nsCtx, storage, d.mountEntry, req.Audience, req.TTL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate plugin identity token: %w", err)
+	}
+
+	return &pluginutil.IdentityTokenResponse{
+		Token: pluginutil.IdentityToken(token),
+		TTL:   ttl,
+	}, nil
 }

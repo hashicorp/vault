@@ -9,7 +9,11 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"maps"
+	"net/textproto"
 	"os"
+	paths "path"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -21,13 +25,12 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
-	uberAtomic "go.uber.org/atomic"
-
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/http/priority"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -38,6 +41,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/quotas"
 	"github.com/hashicorp/vault/vault/tokens"
+	uberAtomic "go.uber.org/atomic"
 )
 
 const (
@@ -52,14 +56,10 @@ var (
 	// to complete, unless overridden on a per-handler basis
 	DefaultMaxRequestDuration = 90 * time.Second
 
-	ErrNoApplicablePolicies = errors.New("no applicable policies")
+	ErrNoApplicablePolicies    = errors.New("no applicable policies")
+	ErrPolicyNotExistInTypeMap = errors.New("policy does not exist in type map")
 
 	egpDebugLogging bool
-
-	// if this returns an error, the request should be blocked and the error
-	// should be returned to the client
-	// TODO remove once entBlockRequestIfError is implemented in ENT
-	enterpriseBlockRequestIfError = blockRequestIfErrorImpl
 )
 
 // HandlerProperties is used to seed configuration into a vaulthttp.Handler.
@@ -181,6 +181,13 @@ func (c *Core) getApplicableGroupPolicies(ctx context.Context, tokenNS *namespac
 
 	for _, policyName := range nsPolicies {
 		t, err := c.policyStore.GetNonEGPPolicyType(policyNS.ID, policyName)
+		if err != nil && errors.Is(err, ErrPolicyNotExistInTypeMap) {
+			// When we attempt to get a non-EGP policy type, and receive an
+			// explicit error that it doesn't exist (in the type map) we log the
+			// ns/policy and continue without error.
+			c.Logger().Debug(fmt.Errorf("%w: %v/%v", err, policyNS.ID, policyName).Error())
+			continue
+		}
 		if err != nil || t == nil {
 			return nil, fmt.Errorf("failed to look up type of policy: %w", err)
 		}
@@ -242,7 +249,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 
 	// Ensure the token is valid
 	if te == nil {
-		return nil, nil, nil, nil, logical.ErrPermissionDenied
+		return nil, nil, nil, nil, multierror.Append(logical.ErrPermissionDenied, logical.ErrInvalidToken)
 	}
 
 	// CIDR checks bind all tokens except non-expiring root tokens
@@ -477,6 +484,12 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		RootPrivsRequired: rootPath,
 	})
 
+	// Assign the sudo path priority if the request is issued against a sudo path.
+	if rootPath {
+		pri := uint8(priority.NeverDrop)
+		auth.HTTPRequestPriority = &pri
+	}
+
 	auth.PolicyResults = &logical.PolicyResults{
 		Allowed: authResults.Allowed,
 	}
@@ -571,6 +584,22 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	if ok {
 		ctx = context.WithValue(ctx, logical.CtxKeyRequestRole{}, requestRole)
 	}
+	if disable_repl_status, ok := logical.ContextDisableReplicationStatusEndpointsValue(httpCtx); ok {
+		ctx = logical.CreateContextDisableReplicationStatusEndpoints(ctx, disable_repl_status)
+	}
+	body, ok := logical.ContextOriginalBodyValue(httpCtx)
+	if ok {
+		ctx = logical.CreateContextOriginalBody(ctx, body)
+	}
+	redactVersion, redactAddresses, redactClusterName, ok := logical.CtxRedactionSettingsValue(httpCtx)
+	if ok {
+		ctx = logical.CreateContextRedactionSettings(ctx, redactVersion, redactAddresses, redactClusterName)
+	}
+	inFlightRequestPriority, ok := httpCtx.Value(logical.CtxKeyInFlightRequestPriority{}).(priority.AOPWritePriority)
+	if ok {
+		ctx = context.WithValue(ctx, logical.CtxKeyInFlightRequestPriority{}, inFlightRequestPriority)
+	}
+
 	resp, err = c.handleCancelableRequest(ctx, req)
 	req.SetTokenEntry(nil)
 	cancel()
@@ -610,6 +639,9 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 
 	err = c.PopulateTokenEntry(ctx, req)
 	if err != nil {
+		if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
+			return nil, multierror.Append(err, logical.ErrInvalidToken)
+		}
 		return nil, err
 	}
 
@@ -689,7 +721,6 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 			requestBodyToken = token.(string)
 			if IsSSCToken(token.(string)) {
 				token, err = c.CheckSSCToken(ctx, token.(string), c.isLoginRequest(ctx, req), c.perfStandby)
-
 				// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
 				// should receive a 403 bad token error like they do for all other invalid tokens, unless the error
 				// specifies that we should forward the request or retry the request.
@@ -761,7 +792,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	walState := &logical.WALState{}
 	ctx = logical.IndexStateContext(ctx, walState)
 	var auth *logical.Auth
-	if c.isLoginRequest(ctx, req) {
+	if c.isLoginRequest(ctx, req) && req.ClientTokenSource != logical.ClientTokenFromInternalAuth {
 		resp, auth, err = c.handleLoginRequest(ctx, req)
 	} else {
 		resp, auth, err = c.handleRequest(ctx, req)
@@ -884,7 +915,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 				NonHMACReqDataKeys:  nonHMACReqDataKeys,
 				NonHMACRespDataKeys: nonHMACRespDataKeys,
 			}
-			if auditErr := c.auditBroker.LogResponse(ctx, logInput, c.auditedHeaders); auditErr != nil {
+			if auditErr := c.auditBroker.LogResponse(ctx, logInput); auditErr != nil {
 				c.logger.Error("failed to audit response", "request_path", req.Path, "error", auditErr)
 				return nil, ErrInternalError
 			}
@@ -895,16 +926,16 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 		walState.ClusterID = c.ClusterID()
 		if walState.LocalIndex == 0 {
 			if c.perfStandby {
-				walState.LocalIndex = LastRemoteWAL(c)
+				walState.LocalIndex = c.EntLastRemoteWAL()
 			} else {
-				walState.LocalIndex = LastWAL(c)
+				walState.LocalIndex = c.EntLastWAL()
 			}
 		}
 		if walState.ReplicatedIndex == 0 {
 			if c.perfStandby {
-				walState.ReplicatedIndex = LastRemoteUpstreamWAL(c)
+				walState.ReplicatedIndex = c.entLastRemoteUpstreamWAL()
 			} else {
-				walState.ReplicatedIndex = LastRemoteWAL(c)
+				walState.ReplicatedIndex = c.EntLastRemoteWAL()
 			}
 		}
 
@@ -989,6 +1020,13 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		return nil, nil, ctErr
 	}
 
+	// See if the call to CheckToken set any request priority. We push the
+	// processing down into CheckToken so we only have to do a router lookup
+	// once.
+	if auth != nil && auth.HTTPRequestPriority != nil {
+		ctx = context.WithValue(ctx, logical.CtxKeyInFlightRequestPriority{}, *auth.HTTPRequestPriority)
+	}
+
 	// Updating in-flight request data with client/entity ID
 	inFlightReqID, ok := ctx.Value(logical.CtxKeyInFlightRequestID{}).(string)
 	if ok && req.ClientID != "" {
@@ -1009,7 +1047,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 		if te == nil {
 			// Token has been revoked by this point
-			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+			retErr = multierror.Append(retErr, logical.ErrPermissionDenied, logical.ErrInvalidToken)
 			return nil, nil, retErr
 		}
 		if te.NumUses == tokenRevocationPending {
@@ -1074,7 +1112,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 				OuterErr:           ctErr,
 				NonHMACReqDataKeys: nonHMACReqDataKeys,
 			}
-			if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+			if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 				c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			}
 		}
@@ -1095,14 +1133,14 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			Request:            req,
 			NonHMACReqDataKeys: nonHMACReqDataKeys,
 		}
-		if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+		if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 			c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
 		}
 	}
 
-	if err := enterpriseBlockRequestIfError(c, ns.Path, req.Path); err != nil {
+	if err := c.entBlockRequestIfError(ns.Path, req.Path); err != nil {
 		return nil, nil, multierror.Append(retErr, err)
 	}
 
@@ -1373,6 +1411,10 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 	// Return the response and error
 	if routeErr != nil {
+		if _, ok := routeErr.(*logical.RequestDelegatedAuthError); ok {
+			routeErr = fmt.Errorf("delegated authentication requested but authentication token present")
+		}
+
 		retErr = multierror.Append(retErr, routeErr)
 	}
 
@@ -1433,7 +1475,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			OuterErr:           ctErr,
 			NonHMACReqDataKeys: nonHMACReqDataKeys,
 		}
-		if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+		if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 			c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			return nil, nil, ErrInternalError
 		}
@@ -1457,7 +1499,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			Request:            req,
 			NonHMACReqDataKeys: nonHMACReqDataKeys,
 		}
-		if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+		if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 			c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			return nil, nil, ErrInternalError
 		}
@@ -1483,7 +1525,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			return nil, nil, err
 		}
 		if isloginUserLocked {
-			c.startLockoutLogger()
+			c.logger.Error("login attempts exceeded, user is locked out", "request_path", req.Path)
 			return nil, nil, logical.ErrPermissionDenied
 		}
 	}
@@ -1491,15 +1533,23 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	// Route the request
 	resp, routeErr := c.doRouting(ctx, req)
 
-	// if routeErr has invalid credentials error, update the userFailedLoginMap
-	if routeErr != nil && routeErr == logical.ErrInvalidCredentials {
+	handleInvalidCreds := func(err error) (*logical.Response, *logical.Auth, error) {
 		if !isUserLockoutDisabled {
 			err := c.failedUserLoginProcess(ctx, entry, req)
 			if err != nil {
 				return nil, nil, err
 			}
 		}
-		return resp, nil, routeErr
+		return resp, nil, err
+	}
+
+	if routeErr != nil {
+		// if routeErr has invalid credentials error, update the userFailedLoginMap
+		if routeErr == logical.ErrInvalidCredentials {
+			return handleInvalidCreds(routeErr)
+		} else if da, ok := routeErr.(*logical.RequestDelegatedAuthError); ok {
+			return c.handleDelegatedAuth(ctx, req, da, entry, handleInvalidCreds)
+		}
 	}
 
 	if resp != nil {
@@ -1561,7 +1611,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		// by placing this after the authorization check, we don't leak
 		// information about locked namespaces to unauthenticated clients.
-		if err := enterpriseBlockRequestIfError(c, ns.Path, req.Path); err != nil {
+		if err := c.entBlockRequestIfError(ns.Path, req.Path); err != nil {
 			retErr = multierror.Append(retErr, err)
 			return
 		}
@@ -1632,6 +1682,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			var err error
 			// Fetch the entity for the alias, or create an entity if one
 			// doesn't exist.
+
 			entity, entityCreated, err := c.identityStore.CreateOrFetchEntity(ctx, auth.Alias)
 			if err != nil {
 				switch auth.Alias.Local {
@@ -1639,7 +1690,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 					// Only create a new entity if the error was a readonly error and the creation flag is true
 					// i.e the entity was in the middle of being created
 					if entityCreated && errors.Is(err, logical.ErrReadOnly) {
-						entity, err = possiblyForwardEntityCreation(ctx, c, err, auth, nil)
+						entity, err = registerLocalAlias(ctx, c, auth.Alias)
 						if err != nil {
 							if strings.Contains(err.Error(), errCreateEntityUnimplemented) {
 								resp.AddWarning("primary cluster doesn't yet issue entities for local auth mounts; falling back to not issuing entities for local auth mounts")
@@ -1649,14 +1700,14 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 							}
 						}
 					}
-					err = updateLocalAlias(ctx, c, auth, entity)
 				default:
 					entity, entityCreated, err = possiblyForwardAliasCreation(ctx, c, err, auth, entity)
+					if err != nil {
+						return nil, nil, err
+					}
 				}
 			}
-			if err != nil {
-				return nil, nil, err
-			}
+
 			if entity == nil {
 				return nil, nil, fmt.Errorf("failed to create an entity for the authenticated alias")
 			}
@@ -1679,7 +1730,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		source := c.router.MatchingMount(ctx, req.Path)
 
 		// Login MFA
-		entity, _, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
+		entity, _, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, true)
 		if err != nil {
 			return nil, nil, ErrInternalError
 		}
@@ -1825,11 +1876,127 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	}
 
 	// this check handles the bad login credential case
-	if err := enterpriseBlockRequestIfError(c, ns.Path, req.Path); err != nil {
+	if err := c.entBlockRequestIfError(ns.Path, req.Path); err != nil {
 		return nil, nil, multierror.Append(retErr, err)
 	}
 
 	return resp, auth, routeErr
+}
+
+type invalidCredentialHandler func(err error) (*logical.Response, *logical.Auth, error)
+
+// handleDelegatedAuth when a backend request returns logical.RequestDelegatedAuthError, it is requesting that
+// an authentication workflow of its choosing be implemented prior to it being able to accept it. Normally
+// this is used for standard protocols that communicate the credential information in a non-standard Vault way
+func (c *Core) handleDelegatedAuth(ctx context.Context, origReq *logical.Request, da *logical.RequestDelegatedAuthError, entry *MountEntry, invalidCredHandler invalidCredentialHandler) (*logical.Response, *logical.Auth, error) {
+	// Make sure we didn't get into a routing loop.
+	if origReq.ClientTokenSource == logical.ClientTokenFromInternalAuth {
+		return nil, nil, fmt.Errorf("%w: original request had delegated auth token, "+
+			"forbidding another delegated request from path '%s'", ErrInternalError, origReq.Path)
+	}
+
+	// Backend has requested internally delegated authentication
+	requestedAccessor := da.MountAccessor()
+	if strings.TrimSpace(requestedAccessor) == "" {
+		return nil, nil, fmt.Errorf("%w: backend returned an invalid mount accessor '%s'", ErrInternalError, requestedAccessor)
+	}
+	// First, is this allowed by the mount tunable?
+	if !slices.Contains(entry.Config.DelegatedAuthAccessors, requestedAccessor) {
+		return nil, nil, fmt.Errorf("delegated auth to accessor %s not permitted", requestedAccessor)
+	}
+
+	reqNamespace, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed looking up namespace from context: %w", err)
+	}
+
+	mount := c.router.MatchingMountByAccessor(requestedAccessor)
+	if mount == nil {
+		return nil, nil, fmt.Errorf("%w: requested delegate authentication accessor '%s' was not found", logical.ErrPermissionDenied, requestedAccessor)
+	}
+	if mount.Table != credentialTableType {
+		return nil, nil, fmt.Errorf("%w: requested delegate authentication mount '%s' was not an auth mount", logical.ErrPermissionDenied, requestedAccessor)
+	}
+	if mount.NamespaceID != reqNamespace.ID {
+		return nil, nil, fmt.Errorf("%w: requested delegate authentication mount was in a different namespace than request", logical.ErrPermissionDenied)
+	}
+
+	// Found it, now form the login path and issue the request
+	path := paths.Join("auth", mount.Path, da.Path())
+	authReq, err := origReq.Clone()
+	if err != nil {
+		return nil, nil, err
+	}
+	authReq.MountAccessor = requestedAccessor
+	authReq.Path = path
+	authReq.Operation = logical.UpdateOperation
+
+	// filter out any response wrapping headers, for our embedded login request
+	delete(authReq.Headers, textproto.CanonicalMIMEHeaderKey(consts.WrapTTLHeaderName))
+	authReq.WrapInfo = nil
+
+	// Insert the data fields from the delegated auth error in our auth request
+	authReq.Data = maps.Clone(da.Data())
+
+	// Make sure we are going to perform a login request and not expose other backend types to this request
+	if !c.isLoginRequest(ctx, authReq) {
+		return nil, nil, fmt.Errorf("delegated path '%s' was not considered a login request", authReq.Path)
+	}
+
+	authResp, err := c.handleCancelableRequest(ctx, authReq)
+	if err != nil || authResp.IsError() {
+		// see if the backend wishes to handle the failed auth
+		if da.AuthErrorHandler() != nil {
+			if err != nil && errors.Is(err, logical.ErrInvalidCredentials) {
+				// We purposefully ignore the error here as the handler will
+				// always return the original error we passed in.
+				_, _, _ = invalidCredHandler(err)
+			}
+			resp, err := da.AuthErrorHandler()(ctx, origReq, authReq, authResp, err)
+			return resp, nil, err
+		}
+		switch err {
+		case nil:
+			return authResp, nil, nil
+		case logical.ErrInvalidCredentials:
+			return invalidCredHandler(err)
+		default:
+			return authResp, nil, err
+		}
+	}
+	if authResp == nil {
+		return nil, nil, fmt.Errorf("%w: delegated auth request returned empty response for request_path: %s", ErrInternalError, authReq.Path)
+	}
+	// A login request should never return a secret!
+	if authResp.Secret != nil {
+		return nil, nil, fmt.Errorf("%w: unexpected Secret response for login path for request_path: %s", ErrInternalError, authReq.Path)
+	}
+	if authResp.Auth == nil {
+		return nil, nil, fmt.Errorf("%w: Auth response was nil for request_path: %s", ErrInternalError, authReq.Path)
+	}
+	if authResp.Auth.ClientToken == "" {
+		if authResp.Auth.MFARequirement != nil {
+			return nil, nil, fmt.Errorf("%w: delegated auth request requiring MFA is not supported: %s", logical.ErrPermissionDenied, authReq.Path)
+		}
+		return nil, nil, fmt.Errorf("%w: delegated auth request did not return a client token for login path: %s", ErrInternalError, authReq.Path)
+	}
+
+	// Delegated auth tokens should only be batch tokens, as we don't want to incur
+	// the cost of storage/tidying for protocols that will be generating a token per
+	// request.
+	if !IsBatchToken(authResp.Auth.ClientToken) {
+		return nil, nil, fmt.Errorf("%w: delegated auth requests must be configured to issue batch tokens", logical.ErrPermissionDenied)
+	}
+
+	// Authentication successful, use the resulting ClientToken to reissue the original request
+	secondReq, err := origReq.Clone()
+	if err != nil {
+		return nil, nil, err
+	}
+	secondReq.ClientToken = authResp.Auth.ClientToken
+	secondReq.ClientTokenSource = logical.ClientTokenFromInternalAuth
+	resp, err := c.handleCancelableRequest(ctx, secondReq)
+	return resp, nil, err
 }
 
 // LoginCreateToken creates a token as a result of a login request.
@@ -2198,8 +2365,6 @@ func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig) (*
 	return mfaAny, nil
 }
 
-func blockRequestIfErrorImpl(_ *Core, _, _ string) error { return nil }
-
 // RegisterAuth uses a logical.Auth object to create a token entry in the token
 // store, and registers a corresponding token lease to the expiration manager.
 // role is the login role used as part of the creation of the token entry. If not
@@ -2500,7 +2665,6 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 	if !strings.HasPrefix(token, consts.ServiceTokenPrefix) {
 		return token, nil
 	}
-
 	// Check token length to guess if this is an server side consistent token or not.
 	// Note that even when the DisableSSCTokens flag is set, index
 	// bearing tokens that have already been given out may still be used.
@@ -2519,12 +2683,19 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 
 	err = proto.Unmarshal(tokenBytes, signedToken)
 	if err != nil {
-		return "", fmt.Errorf("error occurred when unmarshalling ssc token: %w", err)
+		// Log a warning here, but don't return an error. This is because we want don't
+		// want to forward the request to the active node if the token is invalid.
+		c.logger.Debug("error occurred when unmarshalling ssc token: %w", err)
+		return token, nil
 	}
 	hm, err := c.tokenStore.CalculateSignedTokenHMAC(signedToken.Token)
 	if !hmac.Equal(hm, signedToken.Hmac) {
-		return "", fmt.Errorf("token mac for %+v is incorrect: err %w", signedToken, err)
+		// As above, don't return an error so that the request is handled like normal,
+		// and handled by the node that received it.
+		c.logger.Debug("token mac is incorrect", "token", signedToken.Token)
+		return token, nil
 	}
+
 	plainToken := &tokens.Token{}
 	err = proto.Unmarshal([]byte(signedToken.Token), plainToken)
 	if err != nil {
@@ -2545,11 +2716,13 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 	if c.HasWALState(requiredWalState, isPerfStandby) {
 		return plainToken.Random, nil
 	}
+
 	// Make sure to forward the request instead of checking the token if the flag
 	// is set and we're on a perf standby
 	if c.ForwardToActive() == ForwardSSCTokenToActive && isPerfStandby {
 		return "", logical.ErrPerfStandbyPleaseForward
 	}
+
 	// In this case, the server side consistent token cannot be used on this node. We return the appropriate
 	// status code.
 	return "", logical.ErrMissingRequiredState

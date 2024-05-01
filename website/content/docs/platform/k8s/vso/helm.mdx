@@ -11,7 +11,7 @@ The chart is customizable using
 [Helm configuration values](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing).
 
 <!-- DO NOT EDIT. The docs below are generated automatically. To change, edit
-                  the vault-secrets-operator repo's values.yaml: file commit=e9c2b499105d977fa23a9f746186253991ebcee1 -->
+                  the vault-secrets-operator repo's values.yaml: file commit=787f43ac8f6e9a8c57e9a5d1f915fe2ec04abd6c -->
 <!-- codegen: start -->
 
 ## Top-Level Stanzas
@@ -79,9 +79,11 @@ Use these links to navigate to a particular top-level stanza.
 
     - `image` ((#v-controller-kuberbacproxy-image)) - Image sets the repo and tag of the kube-rbac-proxy image to use for the controller.
 
+      - `pullPolicy` ((#v-controller-kuberbacproxy-image-pullpolicy)) (`string: IfNotPresent`)
+
       - `repository` ((#v-controller-kuberbacproxy-image-repository)) (`string: gcr.io/kubebuilder/kube-rbac-proxy`)
 
-      - `tag` ((#v-controller-kuberbacproxy-image-tag)) (`string: v0.14.1`)
+      - `tag` ((#v-controller-kuberbacproxy-image-tag)) (`string: v0.15.0`)
 
     - `resources` ((#v-controller-kuberbacproxy-resources)) (`map`) - Configures the default resources for the kube rbac proxy container.
       For more information on configuring resources, see the K8s documentation:
@@ -117,9 +119,19 @@ Use these links to navigate to a particular top-level stanza.
 
     - `image` ((#v-controller-manager-image)) - Image sets the repo and tag of the vault-secrets-operator image to use for the controller.
 
+      - `pullPolicy` ((#v-controller-manager-image-pullpolicy)) (`string: IfNotPresent`)
+
       - `repository` ((#v-controller-manager-image-repository)) (`string: hashicorp/vault-secrets-operator`)
 
-      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.3.1`)
+      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.6.0`)
+
+    - `globalTransformationOptions` ((#v-controller-manager-globaltransformationoptions)) - Global secret transformation options. In addition to the boolean options
+      below, these options may be set via the
+      `VSO_GLOBAL_TRANSFORMATION_OPTIONS` environment variable as a
+      comma-separated list. Valid values are: `exclude-raw`
+
+      - `excludeRaw` ((#v-controller-manager-globaltransformationoptions-excluderaw)) (`boolean: false`) - excludeRaw directs the operator to prevent _raw secret data being stored
+        in the destination K8s Secret.
 
     - `clientCache` ((#v-controller-manager-clientcache)) - Configures the client cache which is used by the controller to cache (and potentially persist) vault tokens that
       are the result of using the VaultAuthMethod. This enables re-use of Vault Tokens
@@ -127,6 +139,7 @@ Use these links to navigate to a particular top-level stanza.
       Persistence is only useful in the context of Dynamic Secrets, so "none" is an okay default.
 
       - `persistenceModel` ((#v-controller-manager-clientcache-persistencemodel)) (`string: ""`) - Defines the `-client-cache-persistence-model` which caches+persists vault tokens.
+        May also be set via the `VSO_CLIENT_CACHE_PERSISTENCE_MODEL` environment variable.
         Valid values are:
         "none" - in-memory client cache is used, no tokens are persisted.
         "direct-unencrypted" - in-memory client cache is persisted, unencrypted. This is NOT recommended for any production workload.
@@ -138,6 +151,7 @@ Use these links to navigate to a particular top-level stanza.
         default: "none"
 
       - `cacheSize` ((#v-controller-manager-clientcache-cachesize)) (`integer: ""`) - Defines the size of the in-memory LRU cache *in entries*, that is used by the client cache controller.
+        May also be set via the `VSO_CLIENT_CACHE_SIZE` environment variable.
         Larger numbers will increase memory usage by the controller, lower numbers will cause more frequent evictions
         of the client cache which can result in additional Vault client counts.
 
@@ -235,6 +249,25 @@ Use these links to navigate to a particular top-level stanza.
           - `irsaServiceAccount` ((#v-controller-manager-clientcache-storageencryption-aws-irsaserviceaccount)) (`string: ""`) - Name of a Kubernetes service account that is configured with IAM Roles
             for Service Accounts (IRSA). Should be annotated with "eks.amazonaws.com/role-arn".
 
+        - `gcp` ((#v-controller-manager-clientcache-storageencryption-gcp))
+
+          - `role` ((#v-controller-manager-clientcache-storageencryption-gcp-role)) (`string: ""`) - Vault Auth Role to use
+            This is a required field and must be setup in Vault prior to deploying the helm chart
+            if using GCP for the Transit auth method.
+
+          - `workloadIdentityServiceAccount` ((#v-controller-manager-clientcache-storageencryption-gcp-workloadidentityserviceaccount)) (`string: ""`) - Name of a Kubernetes service account that is configured for workload
+            identity in GKE.
+
+          - `region` ((#v-controller-manager-clientcache-storageencryption-gcp-region)) (`string: ""`) - GCP Region of the GKE cluster's identity provider. Defaults to the
+            region returned from the operator pod's local metadata server if
+            unspecified.
+
+          - `clusterName` ((#v-controller-manager-clientcache-storageencryption-gcp-clustername)) (`string: ""`) - GKE cluster name. Defaults to the cluster-name returned from the
+            operator pod's local metadata server if unspecified.
+
+          - `projectID` ((#v-controller-manager-clientcache-storageencryption-gcp-projectid)) (`string: ""`) - GCP project id. Defaults to the project-id returned from the
+            operator pod's local metadata server if unspecified.
+
         - `params` ((#v-controller-manager-clientcache-storageencryption-params)) (`map`) - Params to use when authenticating to Vault using this auth method.
           params:
             param-something1: "foo"
@@ -243,16 +276,28 @@ Use these links to navigate to a particular top-level stanza.
           headers:
             X-vault-something1: "foo"
 
-    - `maxConcurrentReconciles` ((#v-controller-manager-maxconcurrentreconciles)) (`integer: ""`) - Defines the maximum number of concurrent reconciles by the controller.
-      NOTE: Currently this is only used by the reconciliation logic of dynamic secrets.
+    - `maxConcurrentReconciles` ((#v-controller-manager-maxconcurrentreconciles)) (`integer: ""`) - Defines the maximum number of concurrent reconciles for each controller.
+      May also be set via the `VSO_MAX_CONCURRENT_RECONCILES` environment variable.
 
       default: 100
 
     - `extraEnv` ((#v-controller-manager-extraenv)) (`array<map>`) - Defines additional environment variables to be added to the
-      vault-secrets-opearator manager container.
+      vault-secrets-operator manager container.
+      Example:
+
+      ```yaml
       extraEnv:
         - name: HTTP_PROXY
           value: http://proxy.example.com
+        - name: VSO_OUTPUT_FORMAT
+          value: json
+        - name: VSO_CLIENT_CACHE_SIZE
+          value: "20000"
+        - name: VSO_CLIENT_CACHE_PERSISTENCE_MODEL
+          value: "direct-encrypted"
+        - name: VSO_MAX_CONCURRENT_RECONCILES
+          value: "30"
+      ```
 
     - `extraArgs` ((#v-controller-manager-extraargs)) (`array: []`) - Defines additional commandline arguments to be passed to the
       vault-secrets-operator manager container.
@@ -275,12 +320,12 @@ Use these links to navigate to a particular top-level stanza.
 
         - `memory` ((#v-controller-manager-resources-requests-memory)) (`string: 64Mi`)
 
-  - `podSecurityContext` ((#v-controller-podsecuritycontext)) - Configures the Pod security context
+  - `podSecurityContext` ((#v-controller-podsecuritycontext)) - Configures the Pod Security Context
     https://kubernetes.io/docs/tasks/configure-pod-container/security-context
 
     - `runAsNonRoot` ((#v-controller-podsecuritycontext-runasnonroot)) (`boolean: true`)
 
-  - `securityContext` ((#v-controller-securitycontext)) - Configures the container security context
+  - `securityContext` ((#v-controller-securitycontext)) - Configures the Container Security Context
     https://kubernetes.io/docs/tasks/configure-pod-container/security-context
 
     - `allowPrivilegeEscalation` ((#v-controller-securitycontext-allowprivilegeescalation)) (`boolean: false`)
@@ -372,6 +417,8 @@ Use these links to navigate to a particular top-level stanza.
 
   - `namespace` ((#v-defaultauthmethod-namespace)) (`string: ""`) - Vault namespace for the VaultAuthMethod CR
 
+  - `allowedNamespaces` ((#v-defaultauthmethod-allowednamespaces)) (`array<string>: []`) - Kubernetes namespace glob patterns which are allow-listed for use with the default AuthMethod.
+
   - `method` ((#v-defaultauthmethod-method)) (`string: kubernetes`) - Vault Auth method to be used with the VaultAuthMethod CR
 
   - `mount` ((#v-defaultauthmethod-mount)) (`string: kubernetes`) - Mount path for the Vault Auth Method.
@@ -439,6 +486,25 @@ Use these links to navigate to a particular top-level stanza.
 
     - `irsaServiceAccount` ((#v-defaultauthmethod-aws-irsaserviceaccount)) (`string: ""`) - Name of a Kubernetes service account that is configured with IAM Roles
       for Service Accounts (IRSA). Should be annotated with "eks.amazonaws.com/role-arn".
+
+  - `gcp` ((#v-defaultauthmethod-gcp))
+
+    - `role` ((#v-defaultauthmethod-gcp-role)) (`string: ""`) - Vault Auth Role to use
+      This is a required field and must be setup in Vault prior to deploying the helm chart
+      if using GCP for the Transit auth method.
+
+    - `workloadIdentityServiceAccount` ((#v-defaultauthmethod-gcp-workloadidentityserviceaccount)) (`string: ""`) - Name of a Kubernetes service account that is configured for workload
+      identity in GKE.
+
+    - `region` ((#v-defaultauthmethod-gcp-region)) (`string: ""`) - GCP Region of the GKE cluster's identity provider. Defaults to the
+      region returned from the operator pod's local metadata server if
+      unspecified.
+
+    - `clusterName` ((#v-defaultauthmethod-gcp-clustername)) (`string: ""`) - GKE cluster name. Defaults to the cluster-name returned from the
+      operator pod's local metadata server if unspecified.
+
+    - `projectID` ((#v-defaultauthmethod-gcp-projectid)) (`string: ""`) - GCP project id. Defaults to the project-id returned from the
+      operator pod's local metadata server if unspecified.
 
   - `params` ((#v-defaultauthmethod-params)) (`map`) - Params to use when authenticating to Vault
     params:

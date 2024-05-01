@@ -8,9 +8,9 @@ description: >-
 
 # `/sys/replication/dr`
 
-@include 'alerts/enterprise-only.mdx'
-
 ## Check DR status
+
+@include 'alerts/enterprise-and-hcp.mdx'
 
 This endpoint prints information about the status of replication (mode,
 sync progress, etc).
@@ -36,22 +36,32 @@ primary, it will look something like:
 ```json
 {
   "data": {
-    "cluster_id": "d4095d41-3aee-8791-c421-9bc7f88f7c3e",
-    "known_secondaries": ["3"],
+    "cluster_id": "eef2a5ab-51e2-1c05-407c-8b4dc8d09ebf",
     "corrupted_merkle_tree": false,
-    "last_corruption_check_epoch": "1694456090",
-    "last_wal": 241,
-    "merkle_root": "56794a98e52598f35974024fba6691f047e772e9",
+    "known_secondaries": [
+      "4ca6b639-046b-5bb1-8043-6788ddf09121"
+    ],
+    "last_corruption_check_epoch": "-62135596800",
+    "last_dr_wal": 223,
+    "last_reindex_epoch": "0",
+    "last_wal": 223,
+    "merkle_root": "2494830f1a1c304829b5742a232d39b5457bce9a",
     "mode": "primary",
+    "primary_cluster_addr": "",
     "secondaries": [
       {
-        "api_address": "https://127.0.0.1:49264",
-        "cluster_address": "https://127.0.0.1:49267",
+        "api_address": "https://127.0.0.1:65531",
+        "clock_skew_ms": "0",
+        "cluster_address": "https://127.0.0.1:65534",
         "connection_status": "connected",
-        "last_heartbeat": "2020-06-10T15:40:47-07:00",
-        "node_id": "3"
+        "last_heartbeat": "2024-03-04T10:05:56-05:00",
+        "last_heartbeat_duration_ms": "0",
+        "node_id": "4ca6b639-046b-5bb1-8043-6788ddf09121",
+        "replication_primary_canary_age_ms": "696"
       }
-    ]
+    ],
+    "ssct_generation_counter": 0,
+    "state": "running"
   }
 }
 ```
@@ -64,21 +74,34 @@ secondary, it will look something like:
 ```json
 {
   "data": {
-    "cluster_id": "d4095d41-3aee-8791-c421-9bc7f88f7c3e",
-    "known_primary_cluster_addrs": ["https://127.0.0.1:8201"],
-    "last_remote_wal": 241,
-    "merkle_root": "56794a98e52598f35974024fba6691f047e772e9",
+    "cluster_id": "eef2a5ab-51e2-1c05-407c-8b4dc8d09ebf",
+    "connection_state": "ready",
+    "corrupted_merkle_tree": false,
+    "known_primary_cluster_addrs": [
+      "https://127.0.0.1:65524",
+      "https://127.0.0.1:65525",
+      "https://127.0.0.1:65526"
+    ],
+    "last_corruption_check_epoch": "-62135596800",
+    "last_reindex_epoch": "1709564746",
+    "last_remote_wal": 223,
+    "last_start": "2024-03-04T10:05:46-05:00",
+    "merkle_root": "2494830f1a1c304829b5742a232d39b5457bce9a",
     "mode": "secondary",
     "primaries": [
       {
-        "api_address": "https://127.0.0.1:49244",
-        "cluster_address": "https://127.0.0.1:8201",
+        "api_address": "https://127.0.0.1:65521",
+        "clock_skew_ms": "0",
+        "cluster_address": "https://127.0.0.1:65524",
         "connection_status": "connected",
-        "last_heartbeat": "2020-06-10T15:40:46-07:00"
+        "last_heartbeat": "2024-03-04T10:05:56-05:00",
+        "last_heartbeat_duration_ms": "0",
+        "replication_primary_canary_age_ms": "697"
       }
     ],
-    "primary_cluster_addr": "https://127.0.0.1:8201",
-    "secondary_id": "3",
+    "primary_cluster_addr": "https://127.0.0.1:65524",
+    "secondary_id": "4ca6b639-046b-5bb1-8043-6788ddf09121",
+    "ssct_generation_counter": 0,
     "state": "stream-wals"
   }
 }
@@ -87,6 +110,8 @@ secondary, it will look something like:
 ## Enable DR primary replication
 
 @include 'alerts/restricted-root.mdx'
+
+@include 'alerts/enterprise-only.mdx'
 
 This endpoint enables DR replication in primary mode. This is used when DR replication
 is currently disabled on the cluster (if the cluster is already a secondary, it
@@ -121,6 +146,8 @@ $ curl \
 
 ## Demote DR primary
 
+@include 'alerts/enterprise-only.mdx'
+
 @include 'alerts/restricted-root.mdx'
 
 This endpoint demotes a DR primary cluster to a secondary. This DR secondary cluster
@@ -142,6 +169,8 @@ $ curl \
 ```
 
 ## Disable DR primary
+
+@include 'alerts/enterprise-only.mdx'
 
 @include 'alerts/restricted-root.mdx'
 
@@ -166,6 +195,8 @@ $ curl \
 ```
 
 ## Generate DR secondary token
+
+@include 'alerts/enterprise-only.mdx'
 
 @include 'alerts/restricted-root.mdx'
 
@@ -230,6 +261,8 @@ $ curl \
 
 ## Revoke DR secondary token
 
+@include 'alerts/enterprise-only.mdx'
+
 @include 'alerts/restricted-root.mdx'
 
 This endpoint revokes a DR secondary's ability to connect to the DR primary cluster;
@@ -264,6 +297,8 @@ $ curl \
 
 ## Generate DR secondary public key
 
+@include 'alerts/enterprise-only.mdx'
+
 @include 'alerts/restricted-root.mdx'
 
 This endpoint allows generating a public key that is used to encrypt the returned
@@ -284,6 +319,8 @@ $ curl \
 ```
 
 ## Enable DR secondary
+
+@include 'alerts/enterprise-only.mdx'
 
 @include 'alerts/restricted-root.mdx'
 
@@ -334,6 +371,8 @@ $ curl \
 ```
 
 ## Promote DR secondary
+
+@include 'alerts/enterprise-only.mdx'
 
 @include 'alerts/restricted-root.mdx'
 
@@ -420,6 +459,8 @@ $ curl \
 
 ## Disable DR secondary
 
+@include 'alerts/enterprise-only.mdx'
+
 @include 'alerts/restricted-root.mdx'
 
 This endpoint disables DR replication entirely on the cluster. The cluster will no
@@ -455,6 +496,8 @@ $ curl \
 ```
 
 ## Update DR secondary's primary
+
+@include 'alerts/enterprise-only.mdx'
 
 @include 'alerts/restricted-root.mdx'
 
@@ -554,6 +597,8 @@ $ curl \
 
 ## Generate disaster recovery operation token
 
+@include 'alerts/enterprise-only.mdx'
+
 @include 'alerts/restricted-root.mdx'
 
 The `/sys/replication/dr/secondary/generate-operation-token` endpoint is used to create a new Disaster
@@ -562,6 +607,8 @@ certain DR Operations. They should be treated like traditional root tokens by
 being generated when needed and deleted soon after.
 
 ## Read generation progress
+
+@include 'alerts/enterprise-only.mdx'
 
 This endpoint reads the configuration and process of the current generation
 attempt.
@@ -599,6 +646,8 @@ token, its fingerprint will be returned. Note that if an OTP is being used to
 encode the final token, it will never be returned.
 
 ## Start token generation
+
+@include 'alerts/enterprise-only.mdx'
 
 @include 'alerts/restricted-root.mdx'
 
@@ -640,6 +689,8 @@ $ curl \
 
 ## Cancel generation
 
+@include 'alerts/enterprise-only.mdx'
+
 @include 'alerts/restricted-root.mdx'
 
 This endpoint cancels any in-progress generation attempt. This clears any
@@ -658,6 +709,8 @@ $ curl \
 ```
 
 ## Provide key share to generate token
+
+@include 'alerts/enterprise-only.mdx'
 
 @include 'alerts/restricted-root.mdx'
 
@@ -714,6 +767,8 @@ status, and the encoded token, if the attempt is complete.
 
 ## Delete DR operation token
 
+@include 'alerts/enterprise-only.mdx'
+
 @include 'alerts/restricted-root.mdx'
 
 This endpoint revokes the DR Operation Token. This token does not have a TTL
@@ -746,6 +801,8 @@ $ curl \
 ```
 
 ## Reindex Replication
+
+@include 'alerts/enterprise-only.mdx'
 
 @include 'alerts/restricted-root.mdx'
 
@@ -801,6 +858,8 @@ $ curl \
 ```
 
 ## `/sys/replication/dr/secondary/merkle-check`
+
+@include 'alerts/enterprise-only.mdx'
 
 @include 'alerts/restricted-root.mdx'
 

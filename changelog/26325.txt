@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fixed a bug where the replication pages did not update display when navigating between DR and performance
+```

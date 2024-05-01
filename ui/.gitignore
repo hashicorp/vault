@@ -38,3 +38,7 @@ package-lock.json
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# copywrite tool used in pre-commit hook
+.copywrite
+

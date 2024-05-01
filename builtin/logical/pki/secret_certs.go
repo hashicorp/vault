@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"fmt"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -49,13 +50,13 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, _
 		return nil, fmt.Errorf("could not find serial in internal secret data")
 	}
 
-	b.revokeStorageLock.Lock()
-	defer b.revokeStorageLock.Unlock()
+	b.GetRevokeStorageLock().Lock()
+	defer b.GetRevokeStorageLock().Unlock()
 
 	sc := b.makeStorageContext(ctx, req.Storage)
 	serial := serialInt.(string)
 
-	certEntry, err := fetchCertBySerial(sc, "certs/", serial)
+	certEntry, err := fetchCertBySerial(sc, issuing.PathCerts, serial)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +78,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, _
 		return nil, nil
 	}
 
-	config, err := sc.Backend.crlBuilder.getConfigWithUpdate(sc)
+	config, err := sc.Backend.CrlBuilder().getConfigWithUpdate(sc)
 	if err != nil {
 		return nil, fmt.Errorf("error revoking serial: %s: failed reading config: %w", serial, err)
 	}
