@@ -30,7 +30,7 @@
       </div>
       <div class="data-details-bottom is-flex-row">
         <StatText @label="ACME" @value={{@runningTotals.acme_clients}} @size="m" />
-        {{#if @showSecretsSync}}
+        {{#if @isSecretsSyncActivated}}
           <StatText @label="Secret sync" @value={{@runningTotals.secret_syncs}} @size="m" class="has-left-margin-l" />
         {{/if}}
       </div>
@@ -61,7 +61,7 @@
             <StatText @label="Entity" @value={{singleMonthData.new_clients.entity_clients}} @size="m" />
             <StatText @label="Non-entity" @value={{singleMonthData.new_clients.non_entity_clients}} @size="m" />
             <StatText @label="ACME" @value={{singleMonthData.new_clients.acme_clients}} @size="m" />
-            {{#if @showSecretsSync}}
+            {{#if @isSecretsSyncActivated}}
               <StatText @label="Secret sync" @value={{singleMonthData.new_clients.secret_syncs}} @size="m" />
             {{/if}}
           </div>
@@ -78,7 +78,7 @@
             <StatText @label="Entity" @value={{singleMonthData.entity_clients}} @size="m" />
             <StatText @label="Non-entity" @value={{singleMonthData.non_entity_clients}} @size="m" />
             <StatText @label="ACME" @value={{singleMonthData.acme_clients}} @size="m" />
-            {{#if @showSecretsSync}}
+            {{#if @isSecretsSyncActivated}}
               <StatText @label="Secret sync" @value={{singleMonthData.secret_syncs}} @size="m" class="column-start-4" />
             {{/if}}
           </div>
@@ -121,7 +121,7 @@
           @size="l"
           @subText="Each ACME request counts as one client."
         />
-        {{#if @showSecretsSync}}
+        {{#if @isSecretsSyncActivated}}
           <StatText
             class="column"
             @label="Secret sync"

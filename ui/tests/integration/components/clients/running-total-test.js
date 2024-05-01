@@ -43,13 +43,13 @@ module('Integration | Component | clients/running-total', function (hooks) {
       { label: 'entity clients', key: 'entity_clients' },
       { label: 'non-entity clients', key: 'non_entity_clients' },
     ]);
-    this.showSecretsSync = true;
+    this.isSecretsSyncActivated = true;
     this.isHistoricalMonth = false;
 
     this.renderComponent = async () => {
       await render(hbs`
       <Clients::RunningTotal
-        @showSecretsSync={{this.showSecretsSync}}
+        @isSecretsSyncActivated={{this.isSecretsSyncActivated}}
         @byMonthActivityData={{this.byMonthActivity}}
         @runningTotals={{this.totalUsageCounts}}
         @upgradeData={{this.upgradesDuringActivity}}
@@ -180,7 +180,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
   });
 
   test('it hides secret sync totals when feature is not activated', async function (assert) {
-    this.showSecretsSync = false;
+    this.isSecretsSyncActivated = false;
 
     await this.renderComponent();
 

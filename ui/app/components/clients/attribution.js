@@ -39,6 +39,7 @@ import { format, isSameMonth } from 'date-fns';
  * @param {string} responseTimestamp -  ISO timestamp created in serializer to timestamp the response, renders in bottom left corner below attribution chart
  * @param {boolean} isHistoricalMonth - when true data is from a single, historical month so side-by-side charts should display for attribution data
  * @param {array} upgradesDuringActivity - array of objects containing version history upgrade data
+ * @param {boolean} isSecretsSyncActivated - boolean to determine if secrets sync is activated
  */
 
 export default class Attribution extends Component {
@@ -52,7 +53,7 @@ export default class Attribution extends Component {
       { key: 'acme_clients', label: 'ACME clients' },
     ];
 
-    if (this.args.showSecretsSync) {
+    if (this.args.isSecretsSyncActivated) {
       attributionLegend.push({ key: 'secret_syncs', label: 'secrets sync clients' });
     }
     return attributionLegend;
@@ -133,14 +134,14 @@ export default class Attribution extends Component {
     // destructure the namespace object  {label: 'some-namespace', entity_clients: 171, non_entity_clients: 20, acme_clients: 6, secret_syncs: 10, clients: 207}
     // to get integers for CSV file
     const { clients, entity_clients, non_entity_clients, acme_clients, secret_syncs } = object;
-    const { showSecretsSync } = this.args;
+    const { isSecretsSyncActivated } = this.args;
 
     return [
       clients,
       entity_clients,
       non_entity_clients,
       acme_clients,
-      ...(showSecretsSync ? [secret_syncs] : []),
+      ...(isSecretsSyncActivated ? [secret_syncs] : []),
     ];
   }
 
@@ -158,7 +159,7 @@ export default class Attribution extends Component {
   generateCsvData() {
     const totalAttribution = this.args.totalClientAttribution;
     const newAttribution = this.barChartNewClients ? this.args.newClientAttribution : null;
-    const { showSecretsSync } = this.args;
+    const { isSecretsSyncActivated } = this.args;
     const csvData = [];
     // added to clarify that the row of namespace totals without an auth method (blank) are not additional clients
     // but indicate the total clients for that ns, including its auth methods
@@ -176,7 +177,7 @@ export default class Attribution extends Component {
       'Entity clients',
       'Non-entity clients',
       'ACME clients',
-      ...(showSecretsSync ? ['Secrets sync clients'] : []),
+      ...(isSecretsSyncActivated ? ['Secrets sync clients'] : []),
     ];
 
     if (newAttribution) {
@@ -186,7 +187,7 @@ export default class Attribution extends Component {
         'New entity clients',
         'New non-entity clients',
         'New ACME clients',
-        ...(showSecretsSync ? 'New secrets sync clients' : []),
+        ...(isSecretsSyncActivated ? 'New secrets sync clients' : []),
       ];
     }
 
@@ -233,10 +234,10 @@ export default class Attribution extends Component {
   }
 
   get modalExportText() {
-    const { showSecretsSync } = this.args;
+    const { isSecretsSyncActivated } = this.args;
 
     const prefix = 'This export will include the namespace path, mount path and associated total, entity';
-    const mid = showSecretsSync ? ', non-entity and secrets sync clients' : ' and non-entity clients';
+    const mid = isSecretsSyncActivated ? ', non-entity and secrets sync clients' : ' and non-entity clients';
     const suffix = ` for the
     ${this.formattedEndDate ? 'date range' : 'month'}
     below.`;

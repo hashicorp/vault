@@ -26,6 +26,7 @@ interface Args {
   namespace: string;
   onFilterChange: CallableFunction;
   startTimestamp: number;
+  showSecretsSync: boolean;
   versionHistory: ClientsVersionHistoryModel[];
 }
 
