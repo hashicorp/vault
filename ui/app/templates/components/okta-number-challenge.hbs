@@ -11,12 +11,12 @@
       {{#if @hasError}}
         <div class="has-top-margin-s">
           <MessageError @errorMessage="There was a problem" />
-          <button
-            type="button"
-            class="button"
+          <Hds::Button
+            @text="Return to login"
+            @color="secondary"
             {{on "click" @onReturnToLogin}}
             data-test-return-from-okta-number-challenge
-          >Return to login</button>
+          />
         </div>
       {{else if @correctAnswer}}
         <div class="has-top-margin-s">

@@ -1,0 +1,3 @@
+```release-note:bug
+sdk: Return error when failure occurs setting up node 0 in NewDockerCluster, instead of ignoring it.
+```

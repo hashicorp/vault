@@ -203,16 +203,17 @@ This configures the way that Vault interacts with the
 ### Parameters
 
 - `iam_alias` `(string: "role_id")` - How to generate the identity alias when
-  using the `iam` auth method. Valid choices are `role_id`, `unique_id`, and
-  `full_arn` When `role_id` is selected, the randomly generated ID of the role
+  using the `iam` auth method. Valid choices are `role_id`, `unique_id`, `canonical_arn` and
+  `full_arn`. When `role_id` is selected, the randomly generated ID of the Vault role
   is used. When `unique_id` is selected, the [IAM Unique
   ID](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers#identifiers-unique-ids)
   of the IAM principal (either the user or role) is used as the identity alias
-  name. When `full_arn` is selected, the ARN returned by the
-  `sts:GetCallerIdentity` call is used as the alias name. This is either
+  name. When `canonical_arn` is selected, the role ARN returned by the `sts:GetCallerIdentity`call 
+  will be used. This will be `arn:aws:iam::<account_id>:role/<role name>`. When `full_arn` is selected, 
+  the ARN returned by the `sts:GetCallerIdentity` call is used as the alias name. This is either
   `arn:aws:iam::<account_id>:user/<optional_path/><user_name>` or
   `arn:aws:sts::<account_id>:assumed-role/<role_name_without_path>/<role_session_name>`.
-  **Note**: if you select `full_arn` and then delete and recreate the IAM role,
+  **Note**: if you select `canonical_arn` or `full_arn` and then delete and recreate the IAM role,
   Vault won't be aware and any identity aliases set up for the role name will
   still be valid.
 
@@ -229,7 +230,7 @@ This configures the way that Vault interacts with the
 - `ec2_alias` `(string: "role_id")` - Configures how to generate the identity
   alias when using the `ec2` auth method. Valid choices are `role_id`,
   `instance_id`, and `image_id`. When `role_id` is selected, the randomly
-  generated ID of the role is used. When `instance_id` is selected, the
+  generated ID of the Vault role is used. When `instance_id` is selected, the
   instance identifier is used as the identity alias name. When `image_id` is
   selected, AMI ID of the instance is used as the identity alias name.
 
@@ -1057,7 +1058,7 @@ for more information on the signature types.
   when using the ec2 auth method.
 - `signature` `(string: <required-ec2>)` - Base64-encoded SHA256 RSA signature of
   the instance identity document, which can usually be obtained from the
-  `http://169.254.169.254/latest/dynamic/instance-identity/document` endpoint.
+  `http://169.254.169.254/latest/dynamic/instance-identity/signature` endpoint.
   Either both this _AND_ `identity` must be set _OR_ `pkcs7` must be set
   when using the ec2 auth method.
 - `pkcs7` `(string: <required-ec2>)` - PKCS#7 signature of the identity document
@@ -1103,7 +1104,13 @@ for more information on the signature types.
 ### Sample payload
 
 ```json
-{}
+{
+  "iam_http_request_method": "POST",
+  "iam_request_body": "QWN0aW9uPUdldENhbG...",
+  "iam_request_headers": "eyJBdXRob3JpemF0aW9uIj...",
+  "iam_request_url": "aHR0cHM6L...",
+  "role": "dev-role"
+}
 ```
 
 ### Sample request

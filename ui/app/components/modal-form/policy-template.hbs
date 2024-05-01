@@ -4,35 +4,21 @@
 ~}}
 
 {{#if this.policy.policyType}}
-  <nav class="tabs has-bottom-margin-l">
-    <ul>
-      <li class={{unless this.showExamplePolicy "active"}}>
-        <button
-          data-test-tab-your-policy
-          type="button"
-          name="form"
-          class="link link-plain tab has-text-weight-semibold {{unless this.showExamplePolicy ' is-active'}}"
-          {{on "click" (fn (mut this.showExamplePolicy) false)}}
-        >
-          Your Policy
-        </button>
-      </li>
-      <li class={{if this.showExamplePolicy "active"}}>
-        <button
-          data-test-tab-example-policy
-          type="button"
-          name="form"
-          class="link link-plain tab has-text-weight-semibold {{if this.showExamplePolicy ' is-active'}}"
-          {{on "click" (fn (mut this.showExamplePolicy) true)}}
-        >
-          Example Policy
-        </button>
-      </li>
-    </ul>
-  </nav>
-{{/if}}
-{{#if this.showExamplePolicy}}
-  <PolicyExample @policyType={{this.policy.policyType}} />
+  <Hds::Tabs as |T|>
+    <T.Tab data-test-tab-your-policy>
+      Your Policy
+    </T.Tab>
+    <T.Tab Tab data-test-tab-example-policy>
+      Example Policy
+    </T.Tab>
+
+    <T.Panel>
+      <PolicyForm @onSave={{this.onSave}} @model={{this.policy}} @onCancel={{@onCancel}} />
+    </T.Panel>
+    <T.Panel class="has-top-padding-m">
+      <PolicyExample @policyType={{this.policy.policyType}} @container="#search-select-modal" />
+    </T.Panel>
+  </Hds::Tabs>
 {{else}}
   <Select
     @name="policyType"
@@ -43,9 +29,5 @@
     @onChange={{this.setPolicyType}}
     @noDefault={{true}}
   />
-  {{#if this.policy.policyType}}
-    <PolicyForm @onSave={{this.onSave}} @model={{this.policy}} @onCancel={{@onCancel}} />
-  {{else}}
-    <EmptyState @title="No policy type selected" @message="Select a policy type to continue creating." />
-  {{/if}}
+  <EmptyState @title="No policy type selected" @message="Select a policy type to continue creating." />
 {{/if}}

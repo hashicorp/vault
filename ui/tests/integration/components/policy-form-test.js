@@ -366,8 +366,7 @@ module('Integration | Component | policy-form', function (hooks) {
       @onSave={{this.onSave}}
       @renderPolicyExampleModal={{true}}
     />
-    <div id="modal-wormhole"></div>
-    `);
+        `);
     assert.dom(SELECTORS.exampleButton).exists({ count: 1 }, 'Modal for the policy example exists');
     assert.dom(SELECTORS.exampleButton).exists({ count: 1 }, 'Button for the policy example modal exists');
   });
@@ -380,8 +379,7 @@ module('Integration | Component | policy-form', function (hooks) {
       @onSave={{this.onSave}}
       @renderPolicyExampleModal={{true}}
     />
-    <div id="modal-wormhole"></div>
-    `);
+        `);
     await click(SELECTORS.exampleButton);
     assert.dom(SELECTORS.exampleModalTitle).hasText('Example ACL Policy');
   });
@@ -396,8 +394,7 @@ module('Integration | Component | policy-form', function (hooks) {
       @onSave={{this.onSave}}
       @renderPolicyExampleModal={{true}}
     />
-    <div id="modal-wormhole"></div>
-    `);
+        `);
     await click(SELECTORS.exampleButton);
     assert.dom(SELECTORS.exampleModalTitle).hasText('Example RGP Policy');
   });
@@ -412,8 +409,7 @@ module('Integration | Component | policy-form', function (hooks) {
       @onSave={{this.onSave}}
       @renderPolicyExampleModal={{true}}
     />
-    <div id="modal-wormhole"></div>
-    `);
+        `);
     await click(SELECTORS.exampleButton);
     assert.dom(SELECTORS.exampleModalTitle).hasText('Example EGP Policy');
   });

@@ -3,15 +3,15 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<PkiPaginatedList @listRoute="keys.index" @list={{@keyModels}} @hasConfig={{@hasConfig}}>
+<PkiPaginatedList @backend={{@backend}} @listRoute="keys.index" @list={{@keyModels}} @hasConfig={{@hasConfig}}>
   <:actions>
     {{#if @canImportKey}}
-      <ToolbarLink @route="keys.import" @type="download" data-test-pki-key-import>
+      <ToolbarLink @route="keys.import" @model={{@backend}} @type="upload" data-test-pki-key-import>
         Import
       </ToolbarLink>
     {{/if}}
     {{#if @canGenerateKey}}
-      <ToolbarLink @route="keys.create" @type="add" data-test-pki-key-generate>
+      <ToolbarLink @route="keys.create" @model={{@backend}} @type="add" data-test-pki-key-generate>
         Generate
       </ToolbarLink>
     {{/if}}
@@ -23,7 +23,11 @@
   </:description>
   <:list as |keys|>
     {{#each keys as |pkiKey|}}
-      <LinkedBlock class="list-item-row" @params={{array "keys.key.details" pkiKey.keyId}} @linkPrefix={{@mountPoint}}>
+      <LinkedBlock
+        class="list-item-row"
+        @params={{array "keys.key.details" @backend pkiKey.keyId}}
+        @linkPrefix={{@mountPoint}}
+      >
         <div class="level is-mobile">
           <div class="level-left">
             <div>
@@ -40,32 +44,32 @@
           </div>
           <div class="level-right is-flex is-paddingless is-marginless">
             <div class="level-item">
-              <PopupMenu>
-                <nav class="menu">
-                  <ul class="menu-list">
-                    <li>
-                      <LinkTo
-                        @route="keys.key.details"
-                        @model={{pkiKey.keyId}}
-                        @disabled={{not @canRead}}
-                        data-test-key-menu-link="details"
-                      >
-                        Details
-                      </LinkTo>
-                    </li>
-                    <li>
-                      <LinkTo
-                        @route="keys.key.edit"
-                        @model={{pkiKey.keyId}}
-                        @disabled={{not @canEdit}}
-                        data-test-key-menu-link="edit"
-                      >
-                        Edit
-                      </LinkTo>
-                    </li>
-                  </ul>
-                </nav>
-              </PopupMenu>
+              {{#if (or @canRead @canEdit)}}
+                <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+                  <dd.ToggleIcon
+                    @icon="more-horizontal"
+                    @text="Manage key"
+                    @hasChevron={{false}}
+                    data-test-popup-menu-trigger
+                  />
+                  {{#if @canRead}}
+                    <dd.Interactive
+                      @text="Details"
+                      @route="keys.key.details"
+                      @models={{array @backend pkiKey.keyId}}
+                      data-test-key-menu-link="details"
+                    />
+                  {{/if}}
+                  {{#if @canEdit}}
+                    <dd.Interactive
+                      @text="Edit"
+                      @route="keys.key.edit"
+                      @models={{array @backend pkiKey.keyId}}
+                      data-test-key-menu-link="edit"
+                    />
+                  {{/if}}
+                </Hds::Dropdown>
+              {{/if}}
             </div>
           </div>
         </div>
@@ -79,9 +83,13 @@
 
   <:configure>
     <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
-      <LinkTo @route="configuration.create">
-        Configure PKI
-      </LinkTo>
+      <Hds::Link::Standalone
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        @text="Configure PKI"
+        @route="configuration.create"
+        @model={{@backend}}
+      />
     </EmptyState>
   </:configure>
 </PkiPaginatedList>

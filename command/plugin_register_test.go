@@ -11,10 +11,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/mitchellh/cli"
 )
 
 func testPluginRegisterCommand(tb testing.TB) (*cli.MockUi, *PluginRegisterCommand) {
@@ -85,8 +85,7 @@ func TestPluginRegisterCommand_Run(t *testing.T) {
 	t.Run("integration", func(t *testing.T) {
 		t.Parallel()
 
-		pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-		defer cleanup(t)
+		pluginDir := corehelpers.MakeTestPluginDir(t)
 
 		client, _, closer := testVaultServerPluginDir(t, pluginDir)
 		defer closer()
@@ -134,8 +133,7 @@ func TestPluginRegisterCommand_Run(t *testing.T) {
 	t.Run("integration with version", func(t *testing.T) {
 		t.Parallel()
 
-		pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-		defer cleanup(t)
+		pluginDir := corehelpers.MakeTestPluginDir(t)
 
 		client, _, closer := testVaultServerPluginDir(t, pluginDir)
 		defer closer()
@@ -251,7 +249,7 @@ func TestFlagParsing(t *testing.T) {
 			pluginType:      api.PluginTypeUnknown,
 			name:            "foo",
 			sha256:          "abc123",
-			expectedPayload: `{"type":0,"command":"foo","sha256":"abc123"}`,
+			expectedPayload: `{"type":"unknown","command":"foo","sha256":"abc123"}`,
 		},
 		"full": {
 			pluginType:      api.PluginTypeCredential,
@@ -263,14 +261,14 @@ func TestFlagParsing(t *testing.T) {
 			sha256:          "abc123",
 			args:            []string{"--a=b", "--b=c", "positional"},
 			env:             []string{"x=1", "y=2"},
-			expectedPayload: `{"type":1,"args":["--a=b","--b=c","positional"],"command":"cmd","sha256":"abc123","version":"v1.0.0","oci_image":"image","runtime":"runtime","env":["x=1","y=2"]}`,
+			expectedPayload: `{"type":"auth","args":["--a=b","--b=c","positional"],"command":"cmd","sha256":"abc123","version":"v1.0.0","oci_image":"image","runtime":"runtime","env":["x=1","y=2"]}`,
 		},
 		"command remains empty if oci_image specified": {
 			pluginType:      api.PluginTypeCredential,
 			name:            "name",
 			ociImage:        "image",
 			sha256:          "abc123",
-			expectedPayload: `{"type":1,"sha256":"abc123","oci_image":"image"}`,
+			expectedPayload: `{"type":"auth","sha256":"abc123","oci_image":"image"}`,
 		},
 	} {
 		tc := tc

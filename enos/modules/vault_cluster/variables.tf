@@ -12,12 +12,6 @@ variable "artifactory_release" {
   default     = null
 }
 
-variable "awskms_unseal_key_arn" {
-  type        = string
-  description = "The AWSKMS key ARN if using the awskms unseal method"
-  default     = null
-}
-
 variable "backend_cluster_name" {
   type        = string
   description = "The name of the backend cluster"
@@ -40,6 +34,16 @@ variable "config_dir" {
   type        = string
   description = "The directory to use for Vault configuration"
   default     = "/etc/vault.d"
+}
+
+variable "config_mode" {
+  description = "The method to use when configuring Vault. When set to 'env' we will configure Vault using VAULT_ style environment variables if possible. When 'file' we'll use the HCL configuration file for all configuration options."
+  default     = "file"
+
+  validation {
+    condition     = contains(["env", "file"], var.config_mode)
+    error_message = "The config_mode must be either 'env' or 'file'. No other configuration modes are supported."
+  }
 }
 
 variable "config_env_vars" {
@@ -92,7 +96,7 @@ variable "consul_release" {
   description = "Consul release version and edition to install from releases.hashicorp.com"
   default = {
     version = "1.15.1"
-    edition = "oss"
+    edition = "ce"
   }
 }
 
@@ -171,6 +175,43 @@ variable "root_token" {
   default     = null
 }
 
+variable "seal_ha_beta" {
+  description = "Enable using Seal HA on clusters that meet minimum version requirements and are enterprise editions"
+  default     = true
+}
+
+variable "seal_attributes" {
+  description = "The auto-unseal device attributes"
+  default     = null
+}
+
+variable "seal_attributes_secondary" {
+  description = "The secondary auto-unseal device attributes"
+  default     = null
+}
+
+variable "seal_type" {
+  type        = string
+  description = "The primary seal device type"
+  default     = "awskms"
+
+  validation {
+    condition     = contains(["awskms", "pkcs11", "shamir"], var.seal_type)
+    error_message = "The seal_type must be either 'awskms', 'pkcs11', or 'shamir'. No other seal types are supported."
+  }
+}
+
+variable "seal_type_secondary" {
+  type        = string
+  description = "A secondary HA seal device type. Only supported in Vault Enterprise >= 1.15"
+  default     = "none"
+
+  validation {
+    condition     = contains(["awskms", "none", "pkcs11"], var.seal_type_secondary)
+    error_message = "The secondary_seal_type must be 'awskms', 'none', or 'pkcs11'. No other secondary seal types are supported."
+  }
+}
+
 variable "shamir_unseal_keys" {
   type        = list(string)
   description = "Shamir unseal keys. Often only used adding additional nodes to an already initialized cluster."
@@ -206,15 +247,4 @@ variable "target_hosts" {
     private_ip = string
     public_ip  = string
   }))
-}
-
-variable "unseal_method" {
-  type        = string
-  description = "The method by which to unseal the Vault cluster"
-  default     = "awskms"
-
-  validation {
-    condition     = contains(["awskms", "shamir"], var.unseal_method)
-    error_message = "The unseal_method must be either awskms or shamir. No other unseal methods are supported."
-  }
 }

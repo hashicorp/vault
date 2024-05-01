@@ -13,6 +13,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -77,6 +78,20 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "write_undo_logs"}, 1, nil)
 			} else {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "write_undo_logs"}, 0, nil)
+			}
+
+			writeLimiter := c.GetRequestLimiter(limits.WriteLimiter)
+			if writeLimiter != nil {
+				c.metricSink.SetGaugeWithLabels([]string{
+					"core", "limits", "concurrency", limits.WriteLimiter,
+				}, float32(writeLimiter.EstimatedLimit()), nil)
+			}
+
+			pathLimiter := c.GetRequestLimiter(limits.SpecialPathLimiter)
+			if pathLimiter != nil {
+				c.metricSink.SetGaugeWithLabels([]string{
+					"core", "limits", "concurrency", limits.SpecialPathLimiter,
+				}, float32(pathLimiter.EstimatedLimit()), nil)
 			}
 
 			// Refresh the standby gauge, on all nodes
@@ -597,13 +612,13 @@ func (c *Core) inFlightReqGaugeMetric() {
 
 // configuredPoliciesGaugeCollector is used to collect gauge label values for the `vault.policy.configured.count` metric
 func (c *Core) configuredPoliciesGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
-	if c.policyStore == nil {
-		return []metricsutil.GaugeLabelValues{}, nil
-	}
-
 	c.stateLock.RLock()
 	policyStore := c.policyStore
 	c.stateLock.RUnlock()
+
+	if policyStore == nil {
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
 
 	ctx = namespace.RootContext(ctx)
 	namespaces := c.collectNamespaces()

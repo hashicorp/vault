@@ -195,7 +195,7 @@ $ vault write auth/ldap/config \
 - CA Certificate stored in file named `ldap_ca_cert.pem`
 - Server does not allow anonymous binds for performing user search.
 - Bind account used for searching is `cn=vault,ou=users,dc=example,dc=com` with password `My$ecrt3tP4ss`.
-- User objects are under the `ou=Users,dc-example,dc=com` organizational unit.
+- User objects are under the `ou=Users,dc=example,dc=com` organizational unit.
 - Username passed to vault when authenticating maps to the `sAMAccountName` attribute.
 - Group membership will be resolved via the `memberOf` attribute of _user_ objects. That search will begin under `ou=Users,dc=example,dc=com`.
 

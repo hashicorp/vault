@@ -11,6 +11,7 @@
 package command
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -21,9 +22,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/seal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -90,29 +94,6 @@ cloud {
 }
 `
 )
-
-func testServerCommand(tb testing.TB) (*cli.MockUi, *ServerCommand) {
-	tb.Helper()
-
-	ui := cli.NewMockUi()
-	return ui, &ServerCommand{
-		BaseCommand: &BaseCommand{
-			UI: ui,
-		},
-		ShutdownCh: MakeShutdownCh(),
-		SighupCh:   MakeSighupCh(),
-		SigUSR2Ch:  MakeSigUSR2Ch(),
-		PhysicalBackends: map[string]physical.Factory{
-			"inmem":    physInmem.NewInmem,
-			"inmem_ha": physInmem.NewInmemHA,
-		},
-
-		// These prevent us from random sleep guessing...
-		startedCh:         make(chan struct{}, 5),
-		reloadedCh:        make(chan struct{}, 5),
-		licenseReloadedCh: make(chan error),
-	}
-}
 
 func TestServer_ReloadListener(t *testing.T) {
 	t.Parallel()
@@ -399,4 +380,46 @@ func TestConfigureDevTLS(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestConfigureSeals(t *testing.T) {
+	testConfig := server.Config{SharedConfig: &configutil.SharedConfig{}}
+	_, testCommand := testServerCommand(t)
+
+	logger := corehelpers.NewTestLogger(t)
+	backend, err := physInmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	testCommand.logger = logger
+
+	setSealResponse, _, err := testCommand.configureSeals(context.Background(), &testConfig, backend, []string{}, map[string]string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(setSealResponse.barrierSeal.GetAccess().GetAllSealWrappersByPriority()) != 1 {
+		t.Fatalf("expected 1 seal, got %d", len(setSealResponse.barrierSeal.GetAccess().GetAllSealWrappersByPriority()))
+	}
+
+	if setSealResponse.barrierSeal.BarrierSealConfigType() != vault.SealConfigTypeShamir {
+		t.Fatalf("expected shamir seal, got seal type %s", setSealResponse.barrierSeal.BarrierSealConfigType())
+	}
+}
+
+func TestReloadSeals(t *testing.T) {
+	testCore := vault.TestCoreWithSeal(t, vault.NewTestSeal(t, &seal.TestSealOpts{StoredKeys: seal.StoredKeysSupportedShamirRoot}), false)
+	_, testCommand := testServerCommand(t)
+	testConfig := server.Config{SharedConfig: &configutil.SharedConfig{}}
+
+	testCommand.logger = corehelpers.NewTestLogger(t)
+	ctx := context.Background()
+	reloaded, err := testCommand.reloadSealsOnSigHup(ctx, testCore, &testConfig)
+	require.NoError(t, err)
+	require.False(t, reloaded, "reloadSeals does not support Shamir seals")
+
+	testConfig = server.Config{SharedConfig: &configutil.SharedConfig{Seals: []*configutil.KMS{{Disabled: true}}}}
+	reloaded, err = testCommand.reloadSealsOnSigHup(ctx, testCore, &testConfig)
+	require.NoError(t, err)
+	require.False(t, reloaded, "reloadSeals does not support Shamir seals")
 }

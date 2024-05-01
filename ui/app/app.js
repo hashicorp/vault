@@ -13,16 +13,31 @@ export default class App extends Application {
   podModulePrefix = config.podModulePrefix;
   Resolver = Resolver;
   engines = {
-    openApiExplorer: {
+    'config-ui': {
+      dependencies: {
+        services: ['auth', 'flash-messages', 'namespace', 'router', 'store', 'version', 'custom-messages'],
+      },
+    },
+    'open-api-explorer': {
       dependencies: {
         services: ['auth', 'flash-messages', 'namespace', 'router', 'version'],
       },
     },
     replication: {
       dependencies: {
-        services: ['auth', 'flash-messages', 'namespace', 'replication-mode', 'router', 'store', 'version'],
+        services: [
+          'auth',
+          'flash-messages',
+          'namespace',
+          'replication-mode',
+          'router',
+          'store',
+          'version',
+          '-portal',
+        ],
         externalRoutes: {
           replication: 'vault.cluster.replication.index',
+          vault: 'vault.cluster',
         },
       },
     },
@@ -73,6 +88,7 @@ export default class App extends Application {
         ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
+          syncDestination: 'vault.cluster.sync.secrets.destinations.destination',
         },
       },
     },
@@ -93,6 +109,15 @@ export default class App extends Application {
           secrets: 'vault.cluster.secrets.backends',
           externalMountIssuer: 'vault.cluster.secrets.backend.pki.issuers.issuer.details',
           secretsListRootConfiguration: 'vault.cluster.secrets.backend.configuration',
+        },
+      },
+    },
+    sync: {
+      dependencies: {
+        services: ['flash-messages', 'flags', 'router', 'store', 'version'],
+        externalRoutes: {
+          kvSecretDetails: 'vault.cluster.secrets.backend.kv.secret.details',
+          clientCountOverview: 'vault.cluster.clients',
         },
       },
     },

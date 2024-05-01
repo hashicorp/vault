@@ -3,7 +3,7 @@
 
 scenario "k8s" {
   matrix {
-    edition = ["oss", "ent"]
+    edition = ["ce", "ent"]
   }
 
   terraform_cli = terraform_cli.default
@@ -17,7 +17,7 @@ scenario "k8s" {
   locals {
     image_path = abspath(var.vault_docker_image_archive)
 
-    image_repo = var.vault_image_repository != null ? var.vault_image_repository : matrix.edition == "oss" ? "hashicorp/vault" : "hashicorp/vault-enterprise"
+    image_repo = var.vault_image_repository != null ? var.vault_image_repository : matrix.edition == "ce" ? "hashicorp/vault" : "hashicorp/vault-enterprise"
     image_tag  = replace(var.vault_product_version, "+ent", "-ent")
 
     // The additional '-0' is required in the constraint since without it, the semver function will
@@ -27,7 +27,7 @@ scenario "k8s" {
   }
 
   step "read_license" {
-    skip_step = matrix.edition == "oss"
+    skip_step = matrix.edition == "ce"
     module    = module.read_license
 
     variables {
@@ -66,7 +66,7 @@ scenario "k8s" {
       kubeconfig_base64 = step.create_kind_cluster.kubeconfig_base64
       vault_edition     = matrix.edition
       vault_log_level   = var.vault_log_level
-      ent_license       = matrix.edition != "oss" ? step.read_license.license : null
+      ent_license       = matrix.edition != "ce" ? step.read_license.license : null
     }
 
     depends_on = [step.load_docker_image, step.create_kind_cluster]
@@ -101,7 +101,7 @@ scenario "k8s" {
 
   step "verify_ui" {
     module    = module.k8s_verify_ui
-    skip_step = matrix.edition == "oss"
+    skip_step = matrix.edition == "ce"
 
     variables {
       vault_pods        = step.deploy_vault.vault_pods

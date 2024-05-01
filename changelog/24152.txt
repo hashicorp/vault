@@ -1,0 +1,3 @@
+```release-note:improvement
+website/docs: Add note about eventual consietency with the MongoDB Atlas database secrets engine
+```

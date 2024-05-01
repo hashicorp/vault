@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { stubFeaturesAndPermissions } from 'vault/tests/helpers/components/sidebar-nav';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const renderComponent = () => {
   return render(hbs`
@@ -19,6 +20,17 @@ const renderComponent = () => {
 
 module('Integration | Component | sidebar-nav-access', function (hooks) {
   setupRenderingTest(hooks);
+
+  hooks.beforeEach(function () {
+    setRunOptions({
+      rules: {
+        // This is an issue with Hds::SideNav::Header::HomeLink
+        'aria-prohibited-attr': { enabled: false },
+        // TODO: fix use Dropdown on user-menu
+        'nested-interactive': { enabled: false },
+      },
+    });
+  });
 
   test('it should render nav headings', async function (assert) {
     const headings = ['Authentication', 'Access Control', 'Organization', 'Administration'];

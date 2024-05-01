@@ -1,0 +1,62 @@
+---
+layout: docs
+page_title: plugin runtime register - Command
+description: |-
+  The "plugin runtime register" command registers a new plugin runtime in Vault's plugin runtime
+  catalog.
+---
+
+# plugin runtime register
+
+Register a new plugin runtime in the plugin runtime catalog of your Vault instance.
+
+<Note title="Limited type support">
+  Support for runtime types is currently limited to `container`.
+</Note>
+
+To use a registered plugin runtime, use the `-runtime` option with the
+[plugin registration command](/vault/docs/commands/plugin/register).
+
+## Examples
+
+Register a plugin runtime:
+
+```shell-session
+$ vault plugin runtime register -type=container -oci_runtime=runc runc
+Success! Registered plugin runtime: runc
+```
+
+Register a plugin runtime with resource limits:
+
+```shell-session
+vault plugin runtime register \
+    -type=container \
+    -cpu_nanos=100000000 \
+  runsc
+```
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/vault/docs/commands) included on all commands.
+
+### Command options
+
+- `-type` `(string: <required>)` - Plugin runtime type. Vault currently only
+  supports `container` as a runtime type.
+
+- `-rootless` `(bool: false)` - Whether the container runtime is running as a
+  non-privileged user. Must be set if plugin container images are also configured
+  to run as a non-root user.
+
+- `-cgroup_parent` `(string: "")` - Parent cgroup to set for each container.
+  Use `cgroup_parent` to control the total resource usage for a group of plugins.
+
+- `-cpu_nanos` `(int: 0)` - CPU limit to set per container in billionths of a
+  CPU core. Defaults to no limit.
+
+- `-memory_bytes` `(int: 0)` - Memory limit to set per container in bytes.
+  Defaults to no limit.
+
+- `-oci_runtime` `(string: "")` - Open Container Initiative (OCI) compliant
+  container runtime to use. Default is the gVisor OCI runtime, `runsc`.

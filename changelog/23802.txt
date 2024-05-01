@@ -1,0 +1,3 @@
+```release-note:bug
+core/mounts: Fix reading an "auth" mount using "sys/internal/ui/mounts/" when filter paths are enforced returns 500 error code from the secondary
+```

@@ -89,6 +89,10 @@ type RateLimitQuota struct {
 	closePurgeBlockedCh chan struct{}
 }
 
+func (q *RateLimitQuota) GetNamespacePath() string {
+	return q.NamespacePath
+}
+
 // NewRateLimitQuota creates a quota checker for imposing limits on the number
 // of requests in a given interval. An interval time duration of zero may be
 // provided, which will default to 1s when initialized. An optional block

@@ -15,16 +15,14 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/crypto/acme"
-
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki/dnstest"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/activity"
-
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/acme"
 )
 
 // TestACMEBilling is a basic test that will validate client counts created via ACME workflows.
@@ -133,10 +131,10 @@ func validateClientCount(t *testing.T, client *api.Client, mount string, expecte
 
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Data)
-	require.Contains(t, resp.Data, "non_entity_clients")
+	require.Contains(t, resp.Data, "acme_clients")
 	require.Contains(t, resp.Data, "months")
 
-	rawCount := resp.Data["non_entity_clients"].(json.Number)
+	rawCount := resp.Data["acme_clients"].(json.Number)
 	count, err := rawCount.Int64()
 	require.NoError(t, err, "failed to parse number as int64: "+rawCount.String())
 
@@ -160,8 +158,8 @@ func validateClientCount(t *testing.T, client *api.Client, mount string, expecte
 	// Validate this month's aggregate counts match the overall value.
 	require.Contains(t, monthlyInfo, "counts", "expected monthly info to contain a count key")
 	monthlyCounts := monthlyInfo["counts"].(map[string]interface{})
-	require.Contains(t, monthlyCounts, "non_entity_clients", "expected month[0].counts to contain a non_entity_clients key")
-	monthlyCountNonEntityRaw := monthlyCounts["non_entity_clients"].(json.Number)
+	require.Contains(t, monthlyCounts, "acme_clients", "expected month[0].counts to contain a non_entity_clients key")
+	monthlyCountNonEntityRaw := monthlyCounts["acme_clients"].(json.Number)
 	monthlyCountNonEntity, err := monthlyCountNonEntityRaw.Int64()
 	require.NoError(t, err, "failed to parse number as int64: "+monthlyCountNonEntityRaw.String())
 	require.Equal(t, count, monthlyCountNonEntity, "expected equal values for non entity client counts")
@@ -196,8 +194,8 @@ func validateClientCount(t *testing.T, client *api.Client, mount string, expecte
 		// This namespace must have a non-empty aggregate non-entity count.
 		require.Contains(t, namespace, "counts", "expected monthly.namespaces[%v] to contain a counts key", index)
 		namespaceCounts := namespace["counts"].(map[string]interface{})
-		require.Contains(t, namespaceCounts, "non_entity_clients", "expected namespace counts to contain a non_entity_clients key")
-		namespaceCountNonEntityRaw := namespaceCounts["non_entity_clients"].(json.Number)
+		require.Contains(t, namespaceCounts, "acme_clients", "expected namespace counts to contain a non_entity_clients key")
+		namespaceCountNonEntityRaw := namespaceCounts["acme_clients"].(json.Number)
 		namespaceCountNonEntity, err := namespaceCountNonEntityRaw.Int64()
 		require.NoError(t, err, "failed to parse number as int64: "+namespaceCountNonEntityRaw.String())
 		require.Greater(t, namespaceCountNonEntity, int64(0), "expected at least one non-entity client count value in the namespace")
@@ -219,8 +217,8 @@ func validateClientCount(t *testing.T, client *api.Client, mount string, expecte
 			// This mount must also have a non-empty non-entity client count.
 			require.Contains(t, mountInfo, "counts", "expected monthly.namespaces[%v].mounts[%v] to contain a counts key", index, mountIndex)
 			mountCounts := mountInfo["counts"].(map[string]interface{})
-			require.Contains(t, mountCounts, "non_entity_clients", "expected mount counts to contain a non_entity_clients key")
-			mountCountNonEntityRaw := mountCounts["non_entity_clients"].(json.Number)
+			require.Contains(t, mountCounts, "acme_clients", "expected mount counts to contain a non_entity_clients key")
+			mountCountNonEntityRaw := mountCounts["acme_clients"].(json.Number)
 			mountCountNonEntity, err := mountCountNonEntityRaw.Int64()
 			require.NoError(t, err, "failed to parse number as int64: "+mountCountNonEntityRaw.String())
 			require.Greater(t, mountCountNonEntity, int64(0), "expected at least one non-entity client count value in the mount")

@@ -19,11 +19,14 @@ const (
 )
 
 type ClusterInfo struct {
-	APIAddr          string `json:"api_address,omitempty" mapstructure:"api_address"`
-	ClusterAddress   string `json:"cluster_address,omitempty" mapstructure:"cluster_address"`
-	ConnectionStatus string `json:"connection_status,omitempty" mapstructure:"connection_status"`
-	LastHeartBeat    string `json:"last_heartbeat,omitempty" mapstructure:"last_heartbeat"`
-	NodeID           string `json:"node_id,omitempty" mapstructure:"node_id"`
+	APIAddr                           string `json:"api_address,omitempty" mapstructure:"api_address"`
+	ClusterAddress                    string `json:"cluster_address,omitempty" mapstructure:"cluster_address"`
+	ConnectionStatus                  string `json:"connection_status,omitempty" mapstructure:"connection_status"`
+	LastHeartBeat                     string `json:"last_heartbeat,omitempty" mapstructure:"last_heartbeat"`
+	LastHeartBeatDurationMillis       string `json:"last_heartbeat_duration_ms,omitempty" mapstructure:"last_heartbeat_duration_ms"`
+	ClockSkewMillis                   string `json:"clock_skew_ms,omitempty" mapstructure:"clock_skew_ms"`
+	NodeID                            string `json:"node_id,omitempty" mapstructure:"node_id"`
+	ReplicationPrimaryCanaryAgeMillis string `json:"replication_primary_canary_age_ms,omitempty" mapstructure:"replication_primary_canary_age_ms"`
 }
 
 type ReplicationStatusGenericResponse struct {

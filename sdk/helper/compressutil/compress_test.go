@@ -116,3 +116,40 @@ func TestCompressUtil_InvalidConfigurations(t *testing.T) {
 		t.Fatal("expected an error")
 	}
 }
+
+// TestDecompressWithCanaryLargeInput tests that DecompressWithCanary works
+// as expected even with large values.
+func TestDecompressWithCanaryLargeInput(t *testing.T) {
+	t.Parallel()
+
+	inputJSON := `{"sample":"data`
+	for i := 0; i < 100000; i++ {
+		inputJSON += " and data"
+	}
+	inputJSON += `"}`
+	inputJSONBytes := []byte(inputJSON)
+
+	compressedJSONBytes, err := Compress(inputJSONBytes, &CompressionConfig{Type: CompressionTypeGzip, GzipCompressionLevel: gzip.BestCompression})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	decompressedJSONBytes, wasNotCompressed, err := Decompress(compressedJSONBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check if the input for decompress was not compressed in the first place
+	if wasNotCompressed {
+		t.Fatalf("bytes were not compressed as expected")
+	}
+
+	if len(decompressedJSONBytes) == 0 {
+		t.Fatalf("bytes were not compressed as expected")
+	}
+
+	// Compare the value after decompression
+	if !bytes.Equal(inputJSONBytes, decompressedJSONBytes) {
+		t.Fatalf("decompressed value differs: decompressed value;\nexpected: %q\nactual: %q", string(inputJSONBytes), string(decompressedJSONBytes))
+	}
+}

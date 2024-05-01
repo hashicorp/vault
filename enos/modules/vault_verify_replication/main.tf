@@ -5,7 +5,7 @@
 terraform {
   required_providers {
     enos = {
-      source = "app.terraform.io/hashicorp-qti/enos"
+      source = "registry.terraform.io/hashicorp-forge/enos"
     }
   }
 }
@@ -22,9 +22,11 @@ locals {
 resource "enos_remote_exec" "smoke-verify-replication" {
   for_each = local.instances
 
-  content = templatefile("${path.module}/templates/smoke-verify-replication.sh", {
-    vault_edition = var.vault_edition
-  })
+  environment = {
+    VAULT_EDITION = var.vault_edition
+  }
+
+  scripts = [abspath("${path.module}/scripts/smoke-verify-replication.sh")]
 
   transport = {
     ssh = {

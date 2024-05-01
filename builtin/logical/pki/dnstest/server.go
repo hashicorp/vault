@@ -64,9 +64,10 @@ func (ts *TestServer) setupRunner(domain string, network string) {
 		ContainerName: "bind9-dns-" + strings.ReplaceAll(domain, ".", "-"),
 		NetworkName:   network,
 		Ports:         []string{"53/udp"},
-		LogConsumer: func(s string) {
-			ts.log.Info(s)
-		},
+		// DNS container logging was disabled to reduce content within CI logs.
+		//LogConsumer: func(s string) {
+		//	ts.log.Info(s)
+		//},
 	})
 	require.NoError(ts.t, err)
 }

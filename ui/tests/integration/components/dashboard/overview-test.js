@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { SELECTORS } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
+import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 
 module('Integration | Component | dashboard/overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -74,15 +74,15 @@ module('Integration | Component | dashboard/overview', function (hooks) {
           @refreshModel={{this.refreshModel}} />
       `
     );
-    assert.dom(SELECTORS.cardHeader('Vault version')).exists();
-    assert.dom(SELECTORS.cardName('secrets-engines')).exists();
-    assert.dom(SELECTORS.emptyState('secrets-engines')).exists();
-    assert.dom(SELECTORS.cardName('learn-more')).exists();
-    assert.dom(SELECTORS.cardName('quick-actions')).exists();
-    assert.dom(SELECTORS.emptyState('quick-actions')).exists();
-    assert.dom(SELECTORS.cardName('configuration-details')).doesNotExist();
-    assert.dom(SELECTORS.cardName('replication')).doesNotExist();
-    assert.dom(SELECTORS.cardName('client-count')).doesNotExist();
+    assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
+    assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
+    assert.dom(DASHBOARD.emptyState('secrets-engines')).exists();
+    assert.dom(DASHBOARD.cardName('learn-more')).exists();
+    assert.dom(DASHBOARD.cardName('quick-actions')).exists();
+    assert.dom(DASHBOARD.emptyState('quick-actions')).exists();
+    assert.dom(DASHBOARD.cardName('configuration-details')).doesNotExist();
+    assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
+    assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
   });
 
   test('it should hide client count and replication card on community', async function (assert) {
@@ -102,18 +102,19 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       `
     );
 
-    assert.dom(SELECTORS.cardHeader('Vault version')).exists();
-    assert.dom(SELECTORS.cardName('secrets-engines')).exists();
-    assert.dom(SELECTORS.cardName('learn-more')).exists();
-    assert.dom(SELECTORS.cardName('quick-actions')).exists();
-    assert.dom(SELECTORS.cardName('configuration-details')).exists();
-    assert.dom(SELECTORS.cardName('replication')).doesNotExist();
-    assert.dom(SELECTORS.cardName('client-count')).doesNotExist();
+    assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
+    assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
+    assert.dom(DASHBOARD.cardName('learn-more')).exists();
+    assert.dom(DASHBOARD.cardName('quick-actions')).exists();
+    assert.dom(DASHBOARD.cardName('configuration-details')).exists();
+    assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
+    assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
   });
 
-  test('it should show client count and replication card on enterprise w/ license + namespace enabled', async function (assert) {
+  test('it should show client count on enterprise w/ license', async function (assert) {
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1+ent';
+    this.version.type = 'enterprise';
     this.license = {
       autoloaded: {
         license_id: '7adbf1f4-56ef-35cd-3a6c-50ef2627865d',
@@ -131,19 +132,18 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       @license={{this.license}}
       @refreshModel={{this.refreshModel}} />`
     );
-
-    assert.dom(SELECTORS.cardHeader('Vault version')).exists();
-    assert.dom(SELECTORS.cardName('secrets-engines')).exists();
-    assert.dom(SELECTORS.cardName('learn-more')).exists();
-    assert.dom(SELECTORS.cardName('quick-actions')).exists();
-    assert.dom(SELECTORS.cardName('configuration-details')).exists();
-    assert.dom(SELECTORS.cardName('replication')).exists();
-    assert.dom(SELECTORS.cardName('client-count')).exists();
+    assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
+    assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
+    assert.dom(DASHBOARD.cardName('learn-more')).exists();
+    assert.dom(DASHBOARD.cardName('quick-actions')).exists();
+    assert.dom(DASHBOARD.cardName('configuration-details')).exists();
+    assert.dom(DASHBOARD.cardName('client-count')).exists();
   });
 
   test('it should hide client count on enterprise w/o license ', async function (assert) {
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1+ent';
+    this.version.type = 'enterprise';
     this.isRootNamespace = true;
 
     await render(
@@ -158,19 +158,19 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       />`
     );
 
-    assert.dom(SELECTORS.cardHeader('Vault version')).exists();
+    assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
     assert.dom('[data-test-badge-namespace]').exists();
-    assert.dom(SELECTORS.cardName('secrets-engines')).exists();
-    assert.dom(SELECTORS.cardName('learn-more')).exists();
-    assert.dom(SELECTORS.cardName('quick-actions')).exists();
-    assert.dom(SELECTORS.cardName('configuration-details')).exists();
-    assert.dom(SELECTORS.cardName('replication')).exists();
-    assert.dom(SELECTORS.cardName('client-count')).doesNotExist();
+    assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
+    assert.dom(DASHBOARD.cardName('learn-more')).exists();
+    assert.dom(DASHBOARD.cardName('quick-actions')).exists();
+    assert.dom(DASHBOARD.cardName('configuration-details')).exists();
+    assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
   });
 
   test('it should hide replication on enterprise not on root namespace', async function (assert) {
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1+ent';
+    this.version.type = 'enterprise';
     this.isRootNamespace = false;
     this.license = {
       autoloaded: {
@@ -190,14 +190,14 @@ module('Integration | Component | dashboard/overview', function (hooks) {
         @refreshModel={{this.refreshModel}} />`
     );
 
-    assert.dom(SELECTORS.cardHeader('Vault version')).exists();
+    assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
     assert.dom('[data-test-badge-namespace]').exists();
-    assert.dom(SELECTORS.cardName('secrets-engines')).exists();
-    assert.dom(SELECTORS.cardName('learn-more')).exists();
-    assert.dom(SELECTORS.cardName('quick-actions')).exists();
-    assert.dom(SELECTORS.cardName('configuration-details')).exists();
-    assert.dom(SELECTORS.cardName('replication')).doesNotExist();
-    assert.dom(SELECTORS.cardName('client-count')).exists();
+    assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
+    assert.dom(DASHBOARD.cardName('learn-more')).exists();
+    assert.dom(DASHBOARD.cardName('quick-actions')).exists();
+    assert.dom(DASHBOARD.cardName('configuration-details')).exists();
+    assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
+    assert.dom(DASHBOARD.cardName('client-count')).exists();
   });
 
   module('learn more card', function () {
@@ -220,6 +220,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     test('shows the learn more card on enterprise', async function (assert) {
       this.version = this.owner.lookup('service:version');
       this.version.version = '1.13.1+ent';
+      this.version.type = 'enterprise';
       this.version.features = [
         'Performance Replication',
         'DR Replication',

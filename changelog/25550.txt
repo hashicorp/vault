@@ -1,0 +1,3 @@
+```release-note:bug
+openapi: added the missing migrate parameter for the unseal endpoint in vault/logical_system_paths.go
+```

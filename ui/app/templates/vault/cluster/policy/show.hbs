@@ -5,15 +5,15 @@
 
 <PageHeader as |p|>
   <p.top>
-    <nav class="breadcrumb">
-      <li>
-        <LinkTo @route="vault.cluster.policies" @model={{this.policyType}} data-test-policy-list-link={{true}}>
-          <span class="sep">&#x0002f;</span>
-          {{uppercase this.policyType}}
-          policies
-        </LinkTo>
-      </li>
-    </nav>
+    <Hds::Breadcrumb>
+      <Hds::Breadcrumb::Item
+        @text="{{uppercase this.policyType}} policies"
+        @route="vault.cluster.policies"
+        @model={{this.policyType}}
+        data-test-policy-list-link
+      />
+      <Hds::Breadcrumb::Item @text={{this.model.id}} @current={{true}} />
+    </Hds::Breadcrumb>
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-policy-name="true">
@@ -29,16 +29,19 @@
 <Toolbar>
   <ToolbarActions>
     <DownloadButton
-      class="toolbar-link"
+      class="toolbar-button"
+      @color="secondary"
       @filename={{this.model.name}}
       @data={{this.model.policy}}
       @extension={{if (eq this.policyType "acl") this.model.format "sentinel"}}
-    >
-      Download policy
-      <Chevron @isButton={{true}} />
-    </DownloadButton>
+      @text="Download policy"
+    />
     {{#if (and (not-eq this.model.id "root") (or this.capabilities.canUpdate this.capabilities.canDelete))}}
-      <ToolbarLink @route="vault.cluster.policy.edit" @model={{this.model.id}} data-test-policy-edit-toggle>
+      <ToolbarLink
+        @route="vault.cluster.policy.edit"
+        @models={{array this.policyType this.model.id}}
+        data-test-policy-edit-toggle
+      >
         Edit policy
       </ToolbarLink>
     {{/if}}

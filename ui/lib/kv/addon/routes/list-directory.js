@@ -1,10 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { hash } from 'rsvp';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
 import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
@@ -19,7 +19,7 @@ export default class KvSecretsListRoute extends Route {
     pageFilter: {
       refreshModel: true,
     },
-    currentPage: {
+    page: {
       refreshModel: true,
     },
   };
@@ -29,8 +29,7 @@ export default class KvSecretsListRoute extends Route {
       .lazyPaginatedQuery('kv/metadata', {
         backend,
         responsePath: 'data.keys',
-        page: Number(params.currentPage) || 1,
-        size: Number(params.currentPageSize),
+        page: Number(params.page) || 1,
         pageFilter: params.pageFilter,
         pathToSecret,
       })
@@ -79,8 +78,8 @@ export default class KvSecretsListRoute extends Route {
     } else {
       breadcrumbsArray = [
         ...breadcrumbsArray,
-        { label: resolvedModel.backend, route: 'list' },
-        ...breadcrumbsForSecret(resolvedModel.pathToSecret, true),
+        { label: resolvedModel.backend, route: 'list', model: resolvedModel.backend },
+        ...breadcrumbsForSecret(resolvedModel.backend, resolvedModel.pathToSecret, true),
       ];
     }
 
@@ -90,7 +89,7 @@ export default class KvSecretsListRoute extends Route {
   resetController(controller, isExiting) {
     if (isExiting) {
       controller.set('pageFilter', null);
-      controller.set('currentPage', null);
+      controller.set('page', null);
     }
   }
 }

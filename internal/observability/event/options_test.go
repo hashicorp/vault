@@ -22,7 +22,7 @@ func TestOptions_WithNow(t *testing.T) {
 		"default-time": {
 			Value:                time.Time{},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "cannot specify 'now' to be the zero time instant",
+			ExpectedErrorMessage: "cannot specify 'now' to be the zero time instant: invalid parameter",
 		},
 		"valid-time": {
 			Value:           time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local),
@@ -63,12 +63,12 @@ func TestOptions_WithID(t *testing.T) {
 		"empty": {
 			Value:                "",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "id cannot be empty",
+			ExpectedErrorMessage: "id cannot be empty: invalid parameter",
 		},
 		"whitespace": {
 			Value:                "     ",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "id cannot be empty",
+			ExpectedErrorMessage: "id cannot be empty: invalid parameter",
 		},
 		"valid": {
 			Value:           "test",
@@ -152,7 +152,7 @@ func TestOptions_Opts(t *testing.T) {
 				WithNow(time.Time{}),
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "cannot specify 'now' to be the zero time instant",
+			ExpectedErrorMessage: "cannot specify 'now' to be the zero time instant: invalid parameter",
 		},
 		"with-multiple-valid-options": {
 			opts: []Option{
@@ -205,7 +205,7 @@ func TestOptions_WithFacility(t *testing.T) {
 		},
 		"whitespace": {
 			Value:         "    ",
-			ExpectedValue: "    ",
+			ExpectedValue: "",
 		},
 		"value": {
 			Value:         "juan",
@@ -213,7 +213,7 @@ func TestOptions_WithFacility(t *testing.T) {
 		},
 		"spacey-value": {
 			Value:         "   juan   ",
-			ExpectedValue: "   juan   ",
+			ExpectedValue: "juan",
 		},
 	}
 
@@ -243,7 +243,7 @@ func TestOptions_WithTag(t *testing.T) {
 		},
 		"whitespace": {
 			Value:         "    ",
-			ExpectedValue: "    ",
+			ExpectedValue: "",
 		},
 		"value": {
 			Value:         "juan",
@@ -251,7 +251,7 @@ func TestOptions_WithTag(t *testing.T) {
 		},
 		"spacey-value": {
 			Value:         "   juan   ",
-			ExpectedValue: "   juan   ",
+			ExpectedValue: "juan",
 		},
 	}
 
@@ -324,12 +324,12 @@ func TestOptions_WithMaxDuration(t *testing.T) {
 		"bad-value": {
 			Value:                "juan",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "time: invalid duration \"juan\"",
+			ExpectedErrorMessage: "unable to parse max duration: invalid parameter: time: invalid duration \"juan\"",
 		},
 		"bad-spacey-value": {
 			Value:                "   juan   ",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "time: invalid duration \"juan\"",
+			ExpectedErrorMessage: "unable to parse max duration: invalid parameter: time: invalid duration \"juan\"",
 		},
 		"duration-2s": {
 			Value:         "2s",
@@ -383,7 +383,7 @@ func TestOptions_WithFileMode(t *testing.T) {
 		"nonsense": {
 			Value:                "juan",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "unable to parse file mode: strconv.ParseUint: parsing \"juan\": invalid syntax",
+			ExpectedErrorMessage: "unable to parse file mode: invalid parameter: strconv.ParseUint: parsing \"juan\": invalid syntax",
 		},
 		"zero": {
 			Value:           "0000",

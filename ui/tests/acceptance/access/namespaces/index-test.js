@@ -35,6 +35,6 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     // Default page size is 15
     assert.strictEqual(store.peekAll('namespace').length, 15, 'Store has 15 namespaces records');
     assert.dom('.list-item-row').exists({ count: 15 });
-    assert.dom('[data-test-list-view-pagination]').exists();
+    assert.dom('.hds-pagination').exists();
   });
 });

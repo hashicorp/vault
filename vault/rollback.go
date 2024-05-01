@@ -25,6 +25,8 @@ const (
 	RollbackWorkersEnvVar     = "VAULT_ROLLBACK_WORKERS"
 )
 
+var rollbackCanceled = errors.New("rollback attempt canceled")
+
 // RollbackManager is responsible for performing rollbacks of partial
 // secrets within logical backends.
 //
@@ -74,7 +76,9 @@ type rollbackState struct {
 	cancelLockGrabCtxCancel context.CancelFunc
 	// scheduled is the time that this job was created and submitted to the
 	// rollbackRunner
-	scheduled time.Time
+	scheduled  time.Time
+	isRunning  chan struct{}
+	isCanceled chan struct{}
 }
 
 // NewRollbackManager is used to create a new rollback manager
@@ -192,29 +196,45 @@ func (m *RollbackManager) triggerRollbacks() {
 	}
 }
 
-// startOrLookupRollback is used to start an async rollback attempt.
-// This must be called with the inflightLock held.
-func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath string, grabStatelock bool) *rollbackState {
-	m.inflightLock.Lock()
-	defer m.inflightLock.Unlock()
+// lookupRollbackLocked checks if there's an inflight rollback with the given
+// path. Callers must have the inflightLock. The function also reports metrics,
+// since it is regularly called as part of the scheduled rollbacks.
+func (m *RollbackManager) lookupRollbackLocked(fullPath string) *rollbackState {
 	defer metrics.SetGauge([]string{"rollback", "queued"}, float32(m.runner.WaitingQueueSize()))
 	defer metrics.SetGauge([]string{"rollback", "inflight"}, float32(len(m.inflight)))
-	rsInflight, ok := m.inflight[fullPath]
-	if ok {
-		return rsInflight
-	}
+	rsInflight := m.inflight[fullPath]
+	return rsInflight
+}
 
+// newRollbackLocked creates a new rollback state and adds it to the inflight
+// rollback map. Callers must have the inflightLock
+func (m *RollbackManager) newRollbackLocked(fullPath string) *rollbackState {
 	cancelCtx, cancelFunc := context.WithCancel(context.Background())
 	rs := &rollbackState{
 		cancelLockGrabCtx:       cancelCtx,
 		cancelLockGrabCtxCancel: cancelFunc,
+		isRunning:               make(chan struct{}),
+		isCanceled:              make(chan struct{}),
+		scheduled:               time.Now(),
 	}
-
-	// If no inflight rollback is already running, kick one off
 	m.inflight[fullPath] = rs
 	rs.Add(1)
 	m.inflightAll.Add(1)
-	rs.scheduled = time.Now()
+	return rs
+}
+
+// startOrLookupRollback is used to start an async rollback attempt.
+func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath string, grabStatelock bool) *rollbackState {
+	m.inflightLock.Lock()
+	defer m.inflightLock.Unlock()
+	rs := m.lookupRollbackLocked(fullPath)
+	if rs != nil {
+		return rs
+	}
+
+	// If no inflight rollback is already running, kick one off
+	rs = m.newRollbackLocked(fullPath)
+
 	select {
 	case <-m.doneCh:
 		// if we've already shut down, then don't submit the task to avoid a panic
@@ -244,18 +264,27 @@ func (m *RollbackManager) finishRollback(rs *rollbackState, err error, fullPath 
 		m.inflightLock.Lock()
 		defer m.inflightLock.Unlock()
 	}
-	delete(m.inflight, fullPath)
+	if _, ok := m.inflight[fullPath]; ok {
+		delete(m.inflight, fullPath)
+	}
 }
 
 // attemptRollback invokes a RollbackOperation for the given path
 func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, rs *rollbackState, grabStatelock bool) (err error) {
+	close(rs.isRunning)
+	defer m.finishRollback(rs, err, fullPath, true)
+	select {
+	case <-rs.isCanceled:
+		return rollbackCanceled
+	default:
+	}
+
 	metrics.MeasureSince([]string{"rollback", "waiting"}, rs.scheduled)
 	metricName := []string{"rollback", "attempt"}
 	if m.rollbackMetricsMountName {
 		metricName = append(metricName, strings.ReplaceAll(fullPath, "/", "-"))
 	}
 	defer metrics.MeasureSince(metricName, time.Now())
-	defer m.finishRollback(rs, err, fullPath, true)
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -286,6 +315,7 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, 
 			case <-m.shutdownCh:
 			case <-rs.cancelLockGrabCtx.Done():
 			case <-doneCh:
+			case <-rs.isCanceled:
 			}
 		}()
 
@@ -298,6 +328,8 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, 
 			select {
 			case <-m.shutdownCh:
 				return errors.New("rollback shutting down")
+			case <-rs.isCanceled:
+				return rollbackCanceled
 			default:
 				releaseLock = false
 			}
@@ -339,21 +371,37 @@ func (m *RollbackManager) Rollback(ctx context.Context, path string) error {
 	}
 	fullPath := ns.Path + path
 
-	// Check for an existing attempt or start one if none
-	rs := m.startOrLookupRollback(ctx, fullPath, false)
+	m.inflightLock.Lock()
+	rs := m.lookupRollbackLocked(fullPath)
+	if rs != nil {
+		// Since we have the statelock held, tell any inflight rollback to give up
+		// trying to acquire it. This will prevent deadlocks in the case where we
+		// have the write lock. In the case where it was waiting to grab
+		// a read lock it will then simply continue with the rollback
+		// operation under the protection of our write lock.
+		rs.cancelLockGrabCtxCancel()
 
-	// Since we have the statelock held, tell any inflight rollback to give up
-	// trying to acquire it. This will prevent deadlocks in the case where we
-	// have the write lock. In the case where it was waiting to grab
-	// a read lock it will then simply continue with the rollback
-	// operation under the protection of our write lock.
-	rs.cancelLockGrabCtxCancel()
+		select {
+		case <-rs.isRunning:
+			// if the rollback has started then we should wait for it to complete
+			m.inflightLock.Unlock()
+			rs.Wait()
+			return rs.lastError
+		default:
+		}
 
-	// It's safe to do this, since the other thread either already has the lock
-	// held, or we just canceled it above.
+		// if the rollback hasn't started and there's no capacity, we could
+		// end up deadlocking. Cancel the existing rollback and start a new
+		// one.
+		close(rs.isCanceled)
+	}
+	rs = m.newRollbackLocked(fullPath)
+	m.inflightLock.Unlock()
+
+	// we can ignore the error, since it's going to be set in rs.lastError
+	m.attemptRollback(ctx, fullPath, rs, false)
+
 	rs.Wait()
-
-	// Return the last error
 	return rs.lastError
 }
 
@@ -384,6 +432,7 @@ func (c *Core) startRollback() error {
 		return ret
 	}
 	rollbackLogger := c.baseLogger.Named("rollback")
+	c.AddLogger(rollbackLogger)
 	c.rollback = NewRollbackManager(c.activeContext, rollbackLogger, backendsFunc, c.router, c)
 	c.rollback.Start()
 	return nil

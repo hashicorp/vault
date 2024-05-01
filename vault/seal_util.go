@@ -23,7 +23,7 @@ type PartialWrapFailCallback func(context.Context, map[string]error) error
 // Helper function to use for partial wrap fail callbacks where we don't want to allow a partial failure.  See
 // for example barrier or recovery key wrapping.  Just don't allow for those risky scenarios
 var DisallowPartialSealWrap = func(ctx context.Context, errs map[string]error) error {
-	return seal.JoinSealWrapErrors("not allowing operation to proceed without full wrapping involving all configured seals", errs)
+	return &seal.PartialSealWrapError{seal.JoinSealWrapErrors("not allowing operation to proceed without full wrapping involving all configured seals", errs)}
 }
 
 // SealWrapValue creates a SealWrappedValue wrapper with the entryValue being optionally encrypted with the give seal Access.

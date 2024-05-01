@@ -21,14 +21,14 @@ locals {
   // file name prefixes for the install packages of vault for the various distributions and artifact types (package or bundle)
   artifact_package_release_names = {
     ubuntu = {
-      "oss"              = "vault_"
+      "ce"               = "vault_"
       "ent"              = "vault-enterprise_",
       "ent.fips1402"     = "vault-enterprise-fips1402_",
       "ent.hsm"          = "vault-enterprise-hsm_",
       "ent.hsm.fips1402" = "vault-enterprise-hsm-fips1402_",
     },
     rhel = {
-      "oss"              = "vault-"
+      "ce"               = "vault-"
       "ent"              = "vault-enterprise-",
       "ent.fips1402"     = "vault-enterprise-fips1402-",
       "ent.hsm"          = "vault-enterprise-hsm-",
@@ -38,7 +38,7 @@ locals {
 
   // edition --> artifact name edition
   artifact_name_edition = {
-    "oss"              = ""
+    "ce"               = ""
     "ent"              = ""
     "ent.hsm"          = ".hsm"
     "ent.fips1402"     = ".fips1402"

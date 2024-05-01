@@ -1,0 +1,3 @@
+```release-note:bug
+core/activity: Fixes segments fragment loss due to exceeding entry record size limit 
+```

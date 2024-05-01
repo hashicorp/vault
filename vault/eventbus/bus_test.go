@@ -23,7 +23,7 @@ import (
 
 // TestBusBasics tests that basic event sending and subscribing function.
 func TestBusBasics(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,10 +75,51 @@ func TestBusBasics(t *testing.T) {
 	}
 }
 
+// TestBusIgnoresSendContext tests that the context is ignored when sending to an event,
+// so that we do not give up too quickly.
+func TestBusIgnoresSendContext(t *testing.T) {
+	bus, err := NewEventBus("", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	eventType := logical.EventType("someType")
+
+	event, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bus.Start()
+
+	ch, subCancel, err := bus.Subscribe(context.Background(), namespace.RootNamespace, string(eventType), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer subCancel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel immediately
+
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	if err != nil {
+		t.Errorf("Expected no error sending: %v", err)
+	}
+
+	timeout := time.After(1 * time.Second)
+	select {
+	case message := <-ch:
+		if message.Payload.(*logical.EventReceived).Event.Id != event.Id {
+			t.Errorf("Got unexpected message: %+v", message)
+		}
+	case <-timeout:
+		t.Error("Timeout waiting for message")
+	}
+}
+
 // TestSubscribeNonRootNamespace verifies that events for non-root namespaces
 // aren't filtered out by the bus.
 func TestSubscribeNonRootNamespace(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,7 +162,7 @@ func TestSubscribeNonRootNamespace(t *testing.T) {
 
 // TestNamespaceFiltering verifies that events for other namespaces are filtered out by the bus.
 func TestNamespaceFiltering(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +222,7 @@ func TestNamespaceFiltering(t *testing.T) {
 
 // TestBus2Subscriptions verifies that events of different types are successfully routed to the correct subscribers.
 func TestBus2Subscriptions(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,7 +293,7 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("cancel=%v", tc.cancel), func(t *testing.T) {
 			subscriptions.Store(0)
-			bus, err := NewEventBus(nil)
+			bus, err := NewEventBus("", nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -355,7 +396,7 @@ func waitFor(t *testing.T, maxWait time.Duration, f func() bool) {
 // TestBusWildcardSubscriptions tests that a single subscription can receive
 // multiple event types using * for glob patterns.
 func TestBusWildcardSubscriptions(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -430,7 +471,7 @@ func TestBusWildcardSubscriptions(t *testing.T) {
 // TestDataPathIsPrependedWithMount tests that "data_path", if present in the
 // metadata, is prepended with the plugin's mount.
 func TestDataPathIsPrependedWithMount(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -550,7 +591,7 @@ func TestDataPathIsPrependedWithMount(t *testing.T) {
 
 // TestBexpr tests go-bexpr filters are evaluated on an event.
 func TestBexpr(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -630,7 +671,7 @@ func TestBexpr(t *testing.T) {
 // TestPipelineCleanedUp ensures pipelines are properly cleaned up after
 // subscriptions are closed.
 func TestPipelineCleanedUp(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -642,6 +683,10 @@ func TestPipelineCleanedUp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// check that the filters are set
+	if !bus.filters.anyMatch(namespace.RootNamespace, eventType) {
+		t.Fatal()
+	}
 	if !bus.broker.IsAnyPipelineRegistered(eventTypeAll) {
 		cancel()
 		t.Fatal()
@@ -651,5 +696,334 @@ func TestPipelineCleanedUp(t *testing.T) {
 
 	if bus.broker.IsAnyPipelineRegistered(eventTypeAll) {
 		t.Fatal()
+	}
+
+	// and that the filters are cleaned up
+	if bus.filters.anyMatch(namespace.RootNamespace, eventType) {
+		t.Fatal()
+	}
+}
+
+// TestSubscribeGlobal tests that the global filter subscription mechanism works.
+func TestSubscribeGlobal(t *testing.T) {
+	bus, err := NewEventBus("", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bus.Start()
+
+	bus.filters.addGlobalPattern([]string{""}, "abc*")
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	t.Cleanup(cancelFunc)
+	ch, cancel2, err := bus.NewGlobalSubscription(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cancel2)
+	ev, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", ev)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case recv := <-ch:
+		// ok
+		event := recv.Payload.(*logical.EventReceived)
+		assert.Equal(t, "abcd", event.EventType)
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for event")
+	}
+}
+
+// TestSubscribeGlobal_WithApply tests that the global filter subscription mechanism works when using ApplyGlobalFilterChanges.
+func TestSubscribeGlobal_WithApply(t *testing.T) {
+	bus, err := NewEventBus("", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bus.Start()
+	assert.False(t, bus.GlobalMatch(namespace.RootNamespace, "abcd"))
+	bus.ApplyGlobalFilterChanges([]FilterChange{
+		{
+			Operation:         FilterChangeAdd,
+			NamespacePatterns: []string{""},
+			EventTypePattern:  "abc*",
+		},
+	})
+	assert.True(t, bus.GlobalMatch(namespace.RootNamespace, "abcd"))
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	t.Cleanup(cancelFunc)
+	ch, cancel2, err := bus.NewGlobalSubscription(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cancel2)
+	ev, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", ev)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case recv := <-ch:
+		// ok
+		event := recv.Payload.(*logical.EventReceived)
+		assert.Equal(t, "abcd", event.EventType)
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for event")
+	}
+}
+
+// TestSubscribeCluster tests that the cluster filter subscription mechanism works.
+func TestSubscribeCluster(t *testing.T) {
+	bus, err := NewEventBus("", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bus.Start()
+
+	bus.filters.addPattern("somecluster", []string{""}, "abc*")
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	t.Cleanup(cancelFunc)
+	ch, cancel2, err := bus.NewClusterSubscription(ctx, "somecluster")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cancel2)
+	ev, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", ev)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case recv := <-ch:
+		// ok
+		event := recv.Payload.(*logical.EventReceived)
+		assert.Equal(t, "abcd", event.EventType)
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for event")
+	}
+}
+
+// TestSubscribeCluster_WithApply tests that the cluster filter subscription mechanism works when using ApplyClusterFilterChanges.
+func TestSubscribeCluster_WithApply(t *testing.T) {
+	bus, err := NewEventBus("", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bus.Start()
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	t.Cleanup(cancelFunc)
+	bus.ApplyClusterFilterChanges("somecluster", []FilterChange{
+		{
+			Operation:         FilterChangeAdd,
+			NamespacePatterns: []string{""},
+			EventTypePattern:  "abc*",
+		},
+	})
+	ch, cancel2, err := bus.NewClusterSubscription(ctx, "somecluster")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cancel2)
+	ev, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", ev)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case recv := <-ch:
+		// ok
+		event := recv.Payload.(*logical.EventReceived)
+		assert.Equal(t, "abcd", event.EventType)
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for event")
+	}
+}
+
+// TestClearGlobalFilter tests that clearing the global filter means no messages get through.
+func TestClearGlobalFilter(t *testing.T) {
+	bus, err := NewEventBus("", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bus.Start()
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	t.Cleanup(cancelFunc)
+	bus.ApplyGlobalFilterChanges([]FilterChange{
+		{
+			Operation:         FilterChangeAdd,
+			NamespacePatterns: []string{""},
+			EventTypePattern:  "abc*",
+		},
+	})
+	bus.ClearGlobalFilter()
+	ch, cancel2, err := bus.NewGlobalSubscription(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cancel2)
+	ev, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", ev)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case <-ch:
+		t.Fatal("We should not have gotten an event")
+	case <-time.After(100 * time.Millisecond):
+		// ok
+	}
+}
+
+// TestClearClusterFilter tests that clearing a cluster filter means no messages get through.
+func TestClearClusterFilter(t *testing.T) {
+	bus, err := NewEventBus("", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bus.Start()
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	t.Cleanup(cancelFunc)
+	bus.ApplyClusterFilterChanges("somecluster", []FilterChange{
+		{
+			Operation:         FilterChangeAdd,
+			NamespacePatterns: []string{""},
+			EventTypePattern:  "abc*",
+		},
+	})
+	bus.ClearClusterFilter("somecluster")
+	ch, cancel2, err := bus.NewClusterSubscription(ctx, "somecluster")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cancel2)
+	ev, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", ev)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case <-ch:
+		t.Fatal("We should not have gotten an event")
+	case <-time.After(100 * time.Millisecond):
+		// ok
+	}
+}
+
+// TestNotifyOnGlobalFilterChanges tests that notifications on global filter changes are sent.
+func TestNotifyOnGlobalFilterChanges(t *testing.T) {
+	bus, err := NewEventBus("", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bus.Start()
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	t.Cleanup(cancelFunc)
+
+	ch, cancel2, err := bus.NotifyOnGlobalFilterChanges(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cancel2)
+	bus.ApplyGlobalFilterChanges([]FilterChange{
+		{
+			Operation:         FilterChangeAdd,
+			NamespacePatterns: []string{""},
+			EventTypePattern:  "abc*",
+		},
+	})
+
+	select {
+	case changes := <-ch:
+		if len(changes) == 2 {
+			assert.Equal(t, []FilterChange{{Operation: FilterChangeClear}, {Operation: FilterChangeAdd, NamespacePatterns: []string{""}, EventTypePattern: "abc*"}}, changes)
+		} else {
+			// could be split into two updates
+			assert.Len(t, changes, 1)
+			assert.Equal(t, []FilterChange{{Operation: FilterChangeClear}}, changes)
+			changes := <-ch
+			assert.Len(t, changes, 1)
+			assert.Equal(t, []FilterChange{{Operation: FilterChangeAdd, NamespacePatterns: []string{""}, EventTypePattern: "abc*"}}, changes)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("We expected to get a global filter notification")
+	}
+}
+
+// TestNotifyOnLocalFilterChanges tests that notifications on local cluster filter changes are sent.
+func TestNotifyOnLocalFilterChanges(t *testing.T) {
+	bus, err := NewEventBus("somecluster", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bus.Start()
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	t.Cleanup(cancelFunc)
+
+	ch, cancel2, err := bus.NotifyOnLocalFilterChanges(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cancel2)
+	bus.ApplyClusterFilterChanges("somecluster", []FilterChange{
+		{
+			Operation:         FilterChangeAdd,
+			NamespacePatterns: []string{""},
+			EventTypePattern:  "abc*",
+		},
+	})
+
+	select {
+	case changes := <-ch:
+		if len(changes) == 2 {
+			assert.Equal(t, []FilterChange{{Operation: FilterChangeClear}, {Operation: FilterChangeAdd, NamespacePatterns: []string{""}, EventTypePattern: "abc*"}}, changes)
+		} else {
+			// could be split into two updates
+			assert.Len(t, changes, 1)
+			assert.Equal(t, []FilterChange{{Operation: FilterChangeClear}}, changes)
+			changes := <-ch
+			assert.Len(t, changes, 1)
+			assert.Equal(t, []FilterChange{{Operation: FilterChangeAdd, NamespacePatterns: []string{""}, EventTypePattern: "abc*"}}, changes)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("We expected to get a global filter notification")
 	}
 }

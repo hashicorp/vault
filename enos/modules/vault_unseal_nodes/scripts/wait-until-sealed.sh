@@ -6,8 +6,8 @@
 binpath=${VAULT_INSTALL_DIR}/vault
 
 function fail() {
-	echo "$1" 1>&2
-	exit 1
+  echo "$1" 1>&2
+  exit 1
 }
 
 count=0

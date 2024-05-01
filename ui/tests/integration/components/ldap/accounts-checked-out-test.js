@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -44,8 +44,7 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
     this.renderComponent = () => {
       return render(
         hbs`
-          <div id="modal-wormhole"></div>
-          <AccountsCheckedOut
+                    <AccountsCheckedOut
             @libraries={{array this.library}}
             @statuses={{this.statuses}}
             @showLibraryColumn={{this.showLibraryColumn}}

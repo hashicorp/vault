@@ -6,5 +6,5 @@
 import Controller from '@ember/controller';
 
 export default class LdapRolesController extends Controller {
-  queryParams = ['pageFilter', 'currentPage'];
+  queryParams = ['pageFilter', 'page'];
 }

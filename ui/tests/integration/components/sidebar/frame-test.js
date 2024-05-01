@@ -8,9 +8,21 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | sidebar-frame', function (hooks) {
   setupRenderingTest(hooks);
+
+  hooks.beforeEach(function () {
+    setRunOptions({
+      rules: {
+        // This is an issue with Hds::SideNav::Header::HomeLink
+        'aria-prohibited-attr': { enabled: false },
+        // TODO: fix use Dropdown on user-menu
+        'nested-interactive': { enabled: false },
+      },
+    });
+  });
 
   test('it should hide and show sidebar', async function (assert) {
     this.set('showSidebar', true);
@@ -27,7 +39,7 @@ module('Integration | Component | sidebar-frame', function (hooks) {
     const currentCluster = this.owner.lookup('service:currentCluster');
     currentCluster.setCluster({ hcpLinkStatus: 'connected' });
     const version = this.owner.lookup('service:version');
-    version.version = '1.13.0-dev1+ent';
+    version.type = 'enterprise';
 
     await render(hbs`
       <Sidebar::Frame @showSidebar={{true}}>
@@ -37,12 +49,19 @@ module('Integration | Component | sidebar-frame', function (hooks) {
       </Sidebar::Frame>
     `);
 
-    assert.dom('.link-status').exists('Link status component renders');
+    assert.dom('[data-test-link-status]').exists('Link status component renders');
     assert.dom('[data-test-component="console/ui-panel"]').exists('Console UI panel renders');
     assert.dom('.page-container').exists('Block yields for app content');
   });
 
   test('it should render logo and actions in sidebar header', async function (assert) {
+    setRunOptions({
+      rules: {
+        'aria-prohibited-attr': { enabled: false },
+        'nested-interactive': { enabled: false },
+        label: { enabled: false },
+      },
+    });
     this.owner.lookup('service:currentCluster').setCluster({ name: 'vault' });
 
     await render(hbs`
@@ -53,6 +72,7 @@ module('Integration | Component | sidebar-frame', function (hooks) {
     assert.dom('[data-test-console-toggle]').exists('Console toggle button renders in sidebar header');
     await click('[data-test-console-toggle]');
     assert.dom('.panel-open').exists('Console ui panel opens');
+
     await click('[data-test-console-toggle]');
     assert.dom('.panel-open').doesNotExist('Console ui panel closes');
     assert.dom('[data-test-user-menu]').exists('User menu renders');

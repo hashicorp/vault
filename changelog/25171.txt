@@ -1,0 +1,3 @@
+```release-note:improvement
+core (enterprise): Improve seal unwrap performance when in degraded mode with one or more unhealthy seals.
+```
