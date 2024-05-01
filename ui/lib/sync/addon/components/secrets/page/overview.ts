@@ -68,12 +68,6 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
     this.hasConfirmedDocs = false;
   }
 
-  // try {
-  //     yield this.store
-  //       .adapterFor('application')
-  //       .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST', { namespace: null });
-  //     this.router.transitionTo('vault.cluster.sync.secrets.overview');
-  //   } catch (error) {
   @task
   @waitFor
   *onFeatureConfirm() {
