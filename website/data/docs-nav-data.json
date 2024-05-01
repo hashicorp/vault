@@ -73,6 +73,10 @@
             "path": "internals/telemetry/enable-telemetry"
           },
           {
+            "title": "Key metrics",
+            "path": "internals/telemetry/key-metrics"
+          },
+          {
             "title": "Metric reference",
             "routes": [
               {
@@ -222,6 +226,10 @@
         "path": "concepts/storage"
       },
       {
+        "title": "Cloud access management",
+        "path": "concepts/cloud-access-management"
+      },
+      {
         "title": "Integrated Storage",
         "routes": [
           {
@@ -285,7 +293,7 @@
         "badge": {
           "text": "ENTERPRISE",
           "type": "outlined",
-          "color": "highlight"
+          "color": "neutral"
         }
       },
       {
@@ -365,7 +373,7 @@
           {
             "title": "High Availability",
             "badge": {
-              "text": "ENTERPRISE",
+              "text": "ENTERPRISE | BETA",
               "type": "outlined",
               "color": "highlight"
             },
@@ -783,6 +791,10 @@
           {
             "title": "<code>generate-root</code>",
             "path": "commands/operator/generate-root"
+          },
+          {
+            "title": "<code>import</code>",
+            "path": "commands/operator/import"
           },
           {
             "title": "<code>init</code>",
@@ -1639,12 +1651,7 @@
     "routes": [
       {
         "title": "Overview",
-        "path": "sync",
-        "badge": {
-          "text": "BETA",
-          "type": "outlined",
-          "color": "highlight"
-        }
+        "path": "sync"
       },
       {
         "title": "AWS Secrets Manager",
@@ -1665,6 +1672,33 @@
       {
         "title": "Vercel Project",
         "path": "sync/vercelproject"
+      }
+    ]
+  },
+  {
+    "title": "Secrets Import",
+    "badge": {
+      "text": "ENTERPRISE",
+      "type": "outlined",
+      "color": "neutral"
+    },
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "import",
+        "badge": {
+          "text": "ALPHA",
+          "type": "outlined",
+          "color": "highlight"
+        }
+      },
+      {
+        "title": "GCP Secret Manager",
+        "path": "import/gcpsm"
+      },
+      {
+        "title": "Mappings",
+        "path": "import/mappings"
       }
     ]
   },
@@ -1865,6 +1899,15 @@
         "path": "plugins/plugin-development"
       },
       {
+        "title": "Plugin Development — Event Notifications",
+        "path": "plugins/plugin-development-event-notifications",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "Plugin Management",
         "path": "plugins/plugin-management"
       },
@@ -1873,21 +1916,11 @@
         "routes": [
           {
             "title": "Overview",
-            "path": "plugins/containerized-plugins",
-            "badge": {
-              "text": "BETA",
-              "type": "outlined",
-              "color": "highlight"
-            }
+            "path": "plugins/containerized-plugins"
           },
           {
             "title": "Add a containerized plugin",
-            "path": "plugins/containerized-plugins/add-a-containerized-plugin",
-            "badge": {
-              "text": "BETA",
-              "type": "outlined",
-              "color": "highlight"
-            }
+            "path": "plugins/containerized-plugins/add-a-containerized-plugin"
           }
         ]
       },
@@ -2130,6 +2163,10 @@
                             "path": "platform/k8s/vso/sources/vault/auth/gcp"
                           }
                         ]
+                      },
+                      {
+                        "title": "Encrypted client cache",
+                        "path": "platform/k8s/vso/sources/vault/client-cache"
                       }
                     ]
                   },
@@ -2181,6 +2218,10 @@
           {
             "title": "Configuration",
             "path": "platform/mssql/configuration"
+          },
+          {
+            "title": "Key Rotation",
+            "path": "platform/mssql/rotation"
           },
           {
             "title": "Upgrading",
@@ -2236,6 +2277,10 @@
       {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
+      },
+      {
+        "title": "Upgrade to Raft WAL",
+        "path": "upgrading/raft-wal"
       },
       {
         "title": "Upgrade to 1.16.x",
@@ -2494,8 +2539,8 @@
         "path": "release-notes"
       },
       {
-        "title": "1.16.0",
-        "path": "release-notes/1.16.0"
+        "title": "1.16.1",
+        "path": "release-notes/1.16.1"
       },
       {
         "title": "1.15.0",
@@ -2547,17 +2592,8 @@
     "divider": true
   },
   {
-    "title": "Deprecation Notices",
-    "routes": [
-      {
-        "title": "Overview",
-        "path": "deprecation"
-      },
-      {
-        "title": "FAQ",
-        "path": "deprecation/faq"
-      }
-    ]
+    "title": "Deprecation notices",
+    "path": "deprecation"
   },
   {
     "divider": true
@@ -2634,16 +2670,20 @@
         ]
       },
       {
+        "title": "Long-term support (LTS)",
+        "path": "enterprise/lts"
+      },
+      {
         "title": "Replication",
         "routes": [
-            {
-                "title": "Overview",
-                "path": "enterprise/replication"
-            },
-            {
-                "title": "Check for Merkle tree corruption",
-                "path": "enterprise/replication/check-merkle-tree-corruption"
-            }
+          {
+            "title": "Overview",
+            "path": "enterprise/replication"
+          },
+          {
+            "title": "Check for Merkle tree corruption",
+            "path": "enterprise/replication/check-merkle-tree-corruption"
+          }
         ]
       },
       {

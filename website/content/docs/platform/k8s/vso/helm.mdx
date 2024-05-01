@@ -11,7 +11,7 @@ The chart is customizable using
 [Helm configuration values](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing).
 
 <!-- DO NOT EDIT. The docs below are generated automatically. To change, edit
-                  the vault-secrets-operator repo's values.yaml: file commit=12d914f6ad83b28d56bc629cde6cbfd5ce1475f0 -->
+                  the vault-secrets-operator repo's values.yaml: file commit=787f43ac8f6e9a8c57e9a5d1f915fe2ec04abd6c -->
 <!-- codegen: start -->
 
 ## Top-Level Stanzas
@@ -123,9 +123,12 @@ Use these links to navigate to a particular top-level stanza.
 
       - `repository` ((#v-controller-manager-image-repository)) (`string: hashicorp/vault-secrets-operator`)
 
-      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.5.1`)
+      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.6.0`)
 
-    - `globalTransformationOptions` ((#v-controller-manager-globaltransformationoptions)) (`array<string>: ""`) - Global secret transformation options.
+    - `globalTransformationOptions` ((#v-controller-manager-globaltransformationoptions)) - Global secret transformation options. In addition to the boolean options
+      below, these options may be set via the
+      `VSO_GLOBAL_TRANSFORMATION_OPTIONS` environment variable as a
+      comma-separated list. Valid values are: `exclude-raw`
 
       - `excludeRaw` ((#v-controller-manager-globaltransformationoptions-excluderaw)) (`boolean: false`) - excludeRaw directs the operator to prevent _raw secret data being stored
         in the destination K8s Secret.

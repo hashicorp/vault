@@ -5,11 +5,12 @@
 
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { BAR_WIDTH, formatNumbers } from 'vault/utils/chart-helpers';
+import { BAR_WIDTH, numericalAxisLabel } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
-import type { Count, MonthlyChartData } from 'vault/vault/charts/client-counts';
+import type { MonthlyChartData } from 'vault/vault/charts/client-counts';
+import type { TotalClients } from 'core/utils/client-count-utils';
 
 interface Args {
   data: MonthlyChartData[];
@@ -51,7 +52,7 @@ export default class VerticalBarBasic extends Component<Args> {
   get chartData() {
     return this.args.data.map((d): ChartData => {
       const xValue = d.timestamp as string;
-      const yValue = (d[this.args.dataKey as keyof Count] as number) ?? null;
+      const yValue = (d[this.args.dataKey as keyof TotalClients] as number) ?? null;
       return {
         x: parseAPITimestamp(xValue, 'M/yy') as string,
         y: yValue,
@@ -92,6 +93,6 @@ export default class VerticalBarBasic extends Component<Args> {
   };
 
   formatTicksY = (num: number): string => {
-    return formatNumbers(num) || num.toString();
+    return numericalAxisLabel(num) || num.toString();
   };
 }

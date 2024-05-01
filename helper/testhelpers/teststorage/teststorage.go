@@ -14,13 +14,9 @@ import (
 	"github.com/hashicorp/go-hclog"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
-	auditFile "github.com/hashicorp/vault/builtin/audit/file"
-	auditSocket "github.com/hashicorp/vault/builtin/audit/socket"
-	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/physical/raft"
@@ -321,10 +317,10 @@ func ClusterSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions, setup 
 	}
 	if localConf.AuditBackends == nil {
 		localConf.AuditBackends = map[string]audit.Factory{
-			"file":   auditFile.Factory,
-			"socket": auditSocket.Factory,
-			"syslog": auditSyslog.Factory,
-			"noop":   corehelpers.NoopAuditFactory(nil),
+			"file":   audit.NewFileBackend,
+			"socket": audit.NewSocketBackend,
+			"syslog": audit.NewSyslogBackend,
+			"noop":   audit.NoopAuditFactory(nil),
 		}
 	}
 

@@ -18,13 +18,11 @@ import type RouterService from '@ember/routing/router-service';
 import type VersionService from 'vault/services/version';
 import type { SyncDestinationAssociationMetrics } from 'vault/vault/adapters/sync/association';
 import type SyncDestinationModel from 'vault/vault/models/sync/destination';
-import type { HTMLElementEvent } from 'vault/forms';
 
 interface Args {
   destinations: Array<SyncDestinationModel>;
   totalVaultSecrets: number;
   activatedFeatures: Array<string>;
-  isAdapterError: boolean;
 }
 
 export default class SyncSecretsDestinationsPageComponent extends Component<Args> {
@@ -36,7 +34,11 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @tracked destinationMetrics: SyncDestinationAssociationMetrics[] = [];
   @tracked page = 1;
   @tracked showActivateSecretsSyncModal = false;
-  @tracked confirmDisabled = true;
+  @tracked hasConfirmedDocs = false;
+  @tracked error = null;
+  // eventually remove when we deal with permissions on activation-features
+  @tracked hideOptIn = false;
+  @tracked hideError = false;
 
   pageSize = Ember.testing ? 3 : 5; // lower in tests to test pagination without seeding more data
 
@@ -45,13 +47,6 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
     if (this.args.destinations.length) {
       this.fetchAssociationsForDestinations.perform();
     }
-  }
-
-  get isActivated() {
-    if (this.args.isAdapterError) {
-      return false;
-    }
-    return this.args.activatedFeatures.includes('secrets-sync');
   }
 
   fetchAssociationsForDestinations = task(this, {}, async (page = 1) => {
@@ -68,8 +63,9 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   });
 
   @action
-  onDocsConfirmChange(event: HTMLElementEvent<HTMLInputElement>) {
-    this.confirmDisabled = !event.target.checked;
+  resetOptInModal() {
+    this.showActivateSecretsSyncModal = false;
+    this.hasConfirmedDocs = false;
   }
 
   @task
@@ -78,12 +74,13 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
     try {
       yield this.store
         .adapterFor('application')
-        .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST');
+        .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST', { namespace: null });
       this.router.transitionTo('vault.cluster.sync.secrets.overview');
     } catch (error) {
+      this.error = errorMessage(error);
       this.flashMessages.danger(`Error enabling feature \n ${errorMessage(error)}`);
     } finally {
-      this.showActivateSecretsSyncModal = false;
+      this.resetOptInModal();
     }
   }
 }

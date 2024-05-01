@@ -17,7 +17,14 @@ import {
   subMonths,
 } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
+import { CLIENT_TYPES } from 'core/utils/client-count-utils';
 
+/*
+HOW TO ADD NEW TYPES:
+1. add key to CLIENT_TYPES 
+2. Find "ADD NEW CLIENT TYPES HERE" comment below and add type to destructuring array
+3. Add generateMounts() for that client type to the mounts array
+*/
 export const LICENSE_START = new Date('2023-07-02T00:00:00Z');
 export const STATIC_NOW = new Date('2024-01-25T23:59:59Z');
 const COUNTS_START = subMonths(STATIC_NOW, 12); // user started Vault cluster on 2023-01-25
@@ -29,13 +36,16 @@ function getSum(array, key) {
 }
 
 function getTotalCounts(array) {
+  const counts = CLIENT_TYPES.reduce((obj, key) => {
+    obj[key] = getSum(array, key);
+    return obj;
+  }, {});
+
+  // add deprecated keys
   return {
-    distinct_entities: getSum(array, 'entity_clients'),
-    entity_clients: getSum(array, 'entity_clients'),
-    non_entity_tokens: getSum(array, 'non_entity_clients'),
-    non_entity_clients: getSum(array, 'non_entity_clients'),
-    secret_syncs: getSum(array, 'secret_syncs'),
-    clients: getSum(array, 'clients'),
+    ...counts,
+    distinct_entities: counts.entity_clients,
+    non_entity_tokens: counts.non_entity_clients,
   };
 }
 
@@ -43,61 +53,57 @@ function randomBetween(min, max) {
   return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
-function arrayOfCounts(max, arrayLength) {
-  var result = [];
-  var sum = 0;
-  for (var i = 0; i < arrayLength - 1; i++) {
-    result[i] = randomBetween(1, max - (arrayLength - i - 1) - sum);
-    sum += result[i];
-  }
-  result[arrayLength - 1] = max - sum;
-  return result.sort((a, b) => b - a);
+function generateMountBlock(path, counts) {
+  const baseObject = CLIENT_TYPES.reduce((obj, key) => {
+    obj[key] = 0;
+    return obj;
+  }, {});
+  return {
+    mount_path: path,
+    counts: {
+      ...baseObject,
+      distinct_entities: 0,
+      non_entity_tokens: 0,
+      // object contains keys for which 0-values of base object to overwrite
+      ...counts,
+    },
+  };
 }
 
-function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
+function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns, skipCounts = false) {
   const min = isLowerCounts ? 10 : 50;
-  const max = isLowerCounts ? 100 : 5000;
+  const max = isLowerCounts ? 100 : 1000;
   const nsBlock = {
     namespace_id: ns?.namespace_id || (idx === 0 ? 'root' : Math.random().toString(36).slice(2, 7) + idx),
-    namespace_path: ns?.namespace_path || (idx === 0 ? '' : `ns/${idx}`),
+    namespace_path: ns?.namespace_path || (idx === 0 ? '' : `ns${idx}`),
     counts: {},
     mounts: {},
   };
-  const mounts = [];
 
-  Array.from(Array(5)).forEach((mount, index) => {
-    const [secretSyncs] = arrayOfCounts(randomBetween(min, max), 1);
-    mounts.push({
-      mount_path: `kvv2-engine-${index}`,
-      counts: {
-        clients: secretSyncs,
-        // TODO test with live backend to confirm entity keys are present (and 0) for kv mounts
-        entity_clients: 0,
-        non_entity_clients: 0,
-        distinct_entities: 0,
-        non_entity_tokens: 0,
-        secret_syncs: secretSyncs,
-      },
-    });
-  });
+  if (skipCounts) return nsBlock; // skip counts to generate empty ns block with namespace ids and paths
 
-  // generate auth mounts array
-  Array.from(Array(10)).forEach((mount, index) => {
-    const mountClients = randomBetween(min, max);
-    const [nonEntity, entity] = arrayOfCounts(mountClients, 2);
-    mounts.push({
-      mount_path: `auth/authid${index}`,
-      counts: {
-        clients: mountClients,
-        entity_clients: entity,
-        non_entity_clients: nonEntity,
-        distinct_entities: entity,
-        non_entity_tokens: nonEntity,
-        // TODO test with live backend to confirm this key is present (and 0) for auth mounts (non-kv mounts)
-        secret_syncs: 0,
-      },
-    });
-  });
+  // generates one mount per client type
+  const mountsArray = (idx) => {
+    // * ADD NEW CLIENT TYPES HERE and pass to a new generateMountBlock() function below
+    const [acme_clients, entity_clients, non_entity_clients, secret_syncs] = CLIENT_TYPES.map(() =>
+      randomBetween(min, max)
+    );
+
+    // each mount type generates a different type of client
+    return [
+      generateMountBlock(`auth/authid/${idx}`, {
+        clients: non_entity_clients + entity_clients,
+        non_entity_clients,
+        entity_clients,
+      }),
+      generateMountBlock(`kvv2-engine-${idx}`, { clients: secret_syncs, secret_syncs }),
+      generateMountBlock(`pki-engine-${idx}`, { clients: acme_clients, acme_clients }),
+    ];
+  };
+
+  // two mounts per client type for more varied mock data
+  const mounts = [...mountsArray(0), ...mountsArray(1)];
+
   mounts.sort((a, b) => b.counts.clients - a.counts.clients);
   nsBlock.mounts = mounts;
   nsBlock.counts = getTotalCounts(mounts);
@@ -110,8 +116,10 @@ function generateMonths(startDate, endDate, namespaces) {
   const numberOfMonths = differenceInCalendarMonths(endDateObject, startDateObject) + 1;
   const months = [];
 
-  // only generate monthly block if queried dates span an upgrade
-  if (isWithinInterval(UPGRADE_DATE, { start: startDateObject, end: endDateObject })) {
+  // only generate monthly block if queried dates span or follow upgrade to 1.10
+  const upgradeWithin = isWithinInterval(UPGRADE_DATE, { start: startDateObject, end: endDateObject });
+  const upgradeAfter = isAfter(startDateObject, UPGRADE_DATE);
+  if (upgradeWithin || upgradeAfter) {
     for (let i = 0; i < numberOfMonths; i++) {
       const month = addMonths(startOfMonth(startDateObject), i);
       const hasNoData = isBefore(month, UPGRADE_DATE) && !isSameMonth(month, UPGRADE_DATE);
@@ -142,12 +150,34 @@ function generateMonths(startDate, endDate, namespaces) {
   return months;
 }
 
-function generateActivityResponse(namespaces, startDate, endDate) {
+function generateActivityResponse(startDate, endDate) {
+  let namespaces = Array.from(Array(12)).map((v, idx) => generateNamespaceBlock(idx, null, null, true));
+  const months = generateMonths(startDate, endDate, namespaces);
+  if (months.length) {
+    const monthlyCounts = months.filter((m) => m.counts);
+    // sum namespace counts from monthly data
+    namespaces.forEach((ns) => {
+      const nsData = monthlyCounts.map((d) =>
+        d.namespaces.find((n) => n.namespace_path === ns.namespace_path)
+      );
+      const mountCounts = nsData.flatMap((d) => d.mounts);
+      const paths = nsData[0].mounts.map(({ mount_path }) => mount_path);
+      ns.mounts = paths.map((path) => {
+        const counts = getTotalCounts(mountCounts.filter((m) => m.mount_path === path));
+        return { mount_path: path, counts };
+      });
+      ns.counts = getTotalCounts(nsData);
+    });
+  } else {
+    // if no monthly data due to upgrade stuff, generate counts
+    namespaces = Array.from(Array(12)).map((v, idx) => generateNamespaceBlock(idx));
+  }
+  namespaces.sort((a, b) => b.counts.clients - a.counts.clients);
   return {
     start_time: isAfter(new Date(startDate), COUNTS_START) ? startDate : formatRFC3339(COUNTS_START),
     end_time: endDate,
-    by_namespace: namespaces.sort((a, b) => b.counts.clients - a.counts.clients),
-    months: generateMonths(startDate, endDate, namespaces),
+    by_namespace: namespaces,
+    months,
     total: getTotalCounts(namespaces),
   };
 }
@@ -184,13 +214,12 @@ export default function (server) {
     // backend returns a timestamp if given unix time, so first convert to timestamp string here
     if (!start_time.includes('T')) start_time = fromUnixTime(start_time).toISOString();
     if (!end_time.includes('T')) end_time = fromUnixTime(end_time).toISOString();
-    const namespaces = Array.from(Array(12)).map((v, idx) => generateNamespaceBlock(idx));
     return {
       request_id: 'some-activity-id',
       lease_id: '',
       renewable: false,
       lease_duration: 0,
-      data: generateActivityResponse(namespaces, start_time, end_time),
+      data: generateActivityResponse(start_time, end_time),
       wrap_info: null,
       warnings: null,
       auth: null,

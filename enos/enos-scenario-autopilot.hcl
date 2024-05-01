@@ -6,11 +6,11 @@ scenario "autopilot" {
     arch            = global.archs
     artifact_source = global.artifact_sources
     artifact_type   = global.artifact_types
+    config_mode     = global.config_modes
     distro          = global.distros
     edition         = global.editions
     initial_version = global.upgrade_initial_versions
     seal            = global.seals
-    seal_ha_beta    = ["true", "false"]
 
     # Autopilot wasn't available before 1.11.x
     exclude {
@@ -157,6 +157,7 @@ scenario "autopilot" {
 
     variables {
       cluster_name         = step.create_vault_cluster_targets.cluster_name
+      config_mode          = matrix.config_mode
       enable_audit_devices = var.vault_enable_audit_devices
       install_dir          = local.vault_install_dir
       license              = matrix.edition != "ce" ? step.read_license.license : null
@@ -166,7 +167,6 @@ scenario "autopilot" {
         version = matrix.initial_version
       }
       seal_attributes = step.create_seal_key.attributes
-      seal_ha_beta    = matrix.seal_ha_beta
       seal_type       = matrix.seal
       storage_backend = "raft"
       storage_backend_addl_config = {
@@ -241,6 +241,7 @@ scenario "autopilot" {
       artifactory_release         = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
       enable_audit_devices        = var.vault_enable_audit_devices
       cluster_name                = step.create_vault_cluster_targets.cluster_name
+      config_mode                 = matrix.config_mode
       log_level                   = var.vault_log_level
       force_unseal                = matrix.seal == "shamir"
       initialize_cluster          = false
@@ -250,7 +251,6 @@ scenario "autopilot" {
       manage_service              = local.manage_service
       packages                    = concat(global.packages, global.distro_packages[matrix.distro])
       root_token                  = step.create_vault_cluster.root_token
-      seal_ha_beta                = matrix.seal_ha_beta
       seal_attributes             = step.create_seal_key.attributes
       seal_type                   = matrix.seal
       shamir_unseal_keys          = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null

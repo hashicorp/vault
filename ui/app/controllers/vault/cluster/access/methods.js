@@ -8,6 +8,7 @@ import { dropTask } from 'ember-concurrency';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import sortObjects from 'vault/utils/sort-objects';
 
 export default class VaultClusterAccessMethodsController extends Controller {
   @service flashMessages;
@@ -23,6 +24,7 @@ export default class VaultClusterAccessMethodsController extends Controller {
   pageFilter = null;
   filter = null;
 
+  // list returned by getter is sorted in template
   get authMethodList() {
     // return an options list to filter by engine type, ex: 'kv'
     if (this.selectedAuthType) {
@@ -39,7 +41,7 @@ export default class VaultClusterAccessMethodsController extends Controller {
     if (this.selectedAuthName) {
       return this.model.filter((method) => this.selectedAuthName === method.id);
     }
-    // no filters, return full sorted list.
+    // no filters, return full list
     return this.model;
   }
 
@@ -85,4 +87,7 @@ export default class VaultClusterAccessMethodsController extends Controller {
       this.methodToDisable = null;
     }
   }
+
+  // template helper
+  sortMethods = (methods) => sortObjects(methods.slice(), 'path');
 }

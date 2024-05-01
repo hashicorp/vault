@@ -31,6 +31,8 @@ import (
 	"golang.org/x/crypto/ocsp"
 )
 
+//go:generate enumer -type=FailOpenMode -trimprefix=FailOpen
+
 // FailOpenMode is OCSP fail open mode. FailOpenTrue by default and may
 // set to ocspModeFailClosed for fail closed mode
 type FailOpenMode uint32
@@ -75,6 +77,15 @@ const (
 	// cacheExpire specifies cache data expiration time in seconds.
 	cacheExpire = float64(24 * 60 * 60)
 )
+
+// ErrOcspIssuerVerification indicates an error verifying the identity of an OCSP response occurred
+type ErrOcspIssuerVerification struct {
+	Err error
+}
+
+func (e *ErrOcspIssuerVerification) Error() string {
+	return fmt.Sprintf("ocsp response verification error: %v", e.Err)
+}
 
 type ocspCachedResponse struct {
 	time       float64
@@ -162,9 +173,27 @@ func (c *Client) getHashAlgorithmFromOID(target pkix.AlgorithmIdentifier) crypto
 	return crypto.SHA1
 }
 
-// isInValidityRange checks the validity
-func isInValidityRange(currTime, nextUpdate time.Time) bool {
-	return !nextUpdate.IsZero() && !currTime.After(nextUpdate)
+// isInValidityRange checks the validity times of the OCSP response making sure
+// that thisUpdate and nextUpdate values are bounded within currTime
+func isInValidityRange(currTime time.Time, ocspRes *ocsp.Response) bool {
+	thisUpdate := ocspRes.ThisUpdate
+
+	// If the thisUpdate value in the OCSP response wasn't set or greater than current time fail this check
+	if thisUpdate.IsZero() || thisUpdate.After(currTime) {
+		return false
+	}
+
+	nextUpdate := ocspRes.NextUpdate
+	if nextUpdate.IsZero() {
+		// We don't have a nextUpdate field set, assume we are okay.
+		return true
+	}
+
+	if currTime.After(nextUpdate) || thisUpdate.After(nextUpdate) {
+		return false
+	}
+
+	return true
 }
 
 func extractCertIDKeyFromRequest(ocspReq []byte) (*certIDKey, *ocspStatus) {
@@ -209,7 +238,7 @@ func (c *Client) encodeCertIDKey(certIDKeyBase64 string) (*certIDKey, error) {
 	}, nil
 }
 
-func (c *Client) checkOCSPResponseCache(encodedCertID *certIDKey, subject, issuer *x509.Certificate) (*ocspStatus, error) {
+func (c *Client) checkOCSPResponseCache(encodedCertID *certIDKey, subject, issuer *x509.Certificate, config *VerifyConfig) (*ocspStatus, error) {
 	c.ocspResponseCacheLock.RLock()
 	var cacheValue *ocspCachedResponse
 	v, ok := c.ocspResponseCache.Get(*encodedCertID)
@@ -218,7 +247,7 @@ func (c *Client) checkOCSPResponseCache(encodedCertID *certIDKey, subject, issue
 	}
 	c.ocspResponseCacheLock.RUnlock()
 
-	status, err := c.extractOCSPCacheResponseValue(cacheValue, subject, issuer)
+	status, err := c.extractOCSPCacheResponseValue(cacheValue, subject, issuer, config)
 	if err != nil {
 		return nil, err
 	}
@@ -235,16 +264,23 @@ func (c *Client) deleteOCSPCache(encodedCertID *certIDKey) {
 	c.ocspResponseCacheLock.Unlock()
 }
 
-func validateOCSP(ocspRes *ocsp.Response) (*ocspStatus, error) {
+func validateOCSP(conf *VerifyConfig, ocspRes *ocsp.Response) (*ocspStatus, error) {
 	curTime := time.Now()
 
 	if ocspRes == nil {
 		return nil, errors.New("OCSP Response is nil")
 	}
-	if !isInValidityRange(curTime, ocspRes.NextUpdate) {
+	if !isInValidityRange(curTime, ocspRes) {
 		return &ocspStatus{
 			code: ocspInvalidValidity,
 			err:  fmt.Errorf("invalid validity: producedAt: %v, thisUpdate: %v, nextUpdate: %v", ocspRes.ProducedAt, ocspRes.ThisUpdate, ocspRes.NextUpdate),
+		}, nil
+	}
+
+	if conf.OcspThisUpdateMaxAge > 0 && curTime.Sub(ocspRes.ThisUpdate) > conf.OcspThisUpdateMaxAge {
+		return &ocspStatus{
+			code: ocspInvalidValidity,
+			err:  fmt.Errorf("invalid validity: thisUpdate: %v is greater than max age: %s", ocspRes.ThisUpdate, conf.OcspThisUpdateMaxAge),
 		}, nil
 	}
 	return returnOCSPStatus(ocspRes), nil
@@ -283,6 +319,7 @@ func (c *Client) retryOCSP(
 	ocspHost *url.URL,
 	headers map[string]string,
 	reqBody []byte,
+	subject,
 	issuer *x509.Certificate,
 ) (ocspRes *ocsp.Response, ocspResBytes []byte, ocspS *ocspStatus, retErr error) {
 	doRequest := func(request *retryablehttp.Request) (*http.Response, error) {
@@ -354,66 +391,19 @@ func (c *Client) retryOCSP(
 			continue
 		}
 
-		// Above, we use the unsafe issuer=nil parameter to ocsp.ParseResponse
-		// because Go's library does the wrong thing.
-		//
-		// Here, we lack a full chain, but we know we trust the parent issuer,
-		// so if the Go library incorrectly discards useful certificates, we
-		// likely cannot verify this without passing through the full chain
-		// back to the root.
-		//
-		// Instead, take one of two paths: 1. if there is no certificate in
-		// the ocspRes, verify the OCSP response directly with our trusted
-		// issuer certificate, or 2. if there is a certificate, either verify
-		// it directly matches our trusted issuer certificate, or verify it
-		// is signed by our trusted issuer certificate.
-		//
-		// See also: https://github.com/golang/go/issues/59641
-		//
-		// This addresses the !!unsafe!! behavior above.
-		if ocspRes.Certificate == nil {
-			if err := ocspRes.CheckSignatureFrom(issuer); err != nil {
-				err = fmt.Errorf("error directly verifying signature on %v OCSP response: %w", method, err)
-				retErr = multierror.Append(retErr, err)
-				continue
-			}
-		} else {
-			// Because we have at least one certificate here, we know that
-			// Go's ocsp library verified the signature from this certificate
-			// onto the response and it was valid. Now we need to know we trust
-			// this certificate. There's two ways we can do this:
-			//
-			// 1. Via confirming issuer == ocspRes.Certificate, or
-			// 2. Via confirming ocspRes.Certificate.CheckSignatureFrom(issuer).
-			if !bytes.Equal(issuer.Raw, ocspRes.Raw) {
-				// 1 must not hold, so 2 holds; verify the signature.
-				if err := ocspRes.Certificate.CheckSignatureFrom(issuer); err != nil {
-					err = fmt.Errorf("error checking chain of trust on %v OCSP response via %v failed: %w", method, issuer.Subject.String(), err)
-					retErr = multierror.Append(retErr, err)
-					continue
-				}
+		if err := validateOCSPParsedResponse(ocspRes, subject, issuer); err != nil {
+			err = fmt.Errorf("error validating %v OCSP response: %w", method, err)
 
-				// Verify the OCSP responder certificate is still valid and
-				// contains the required EKU since it is a delegated OCSP
-				// responder certificate.
-				if ocspRes.Certificate.NotAfter.Before(time.Now()) {
-					err := fmt.Errorf("error checking delegated OCSP responder on %v OCSP response: certificate has expired", method)
-					retErr = multierror.Append(retErr, err)
-					continue
-				}
-				haveEKU := false
-				for _, ku := range ocspRes.Certificate.ExtKeyUsage {
-					if ku == x509.ExtKeyUsageOCSPSigning {
-						haveEKU = true
-						break
-					}
-				}
-				if !haveEKU {
-					err := fmt.Errorf("error checking delegated OCSP responder on %v OCSP response: certificate lacks the OCSP Signing EKU", method)
-					retErr = multierror.Append(retErr, err)
-					continue
-				}
+			if IsOcspVerificationError(err) {
+				// We want to immediately give up on a verification error to a response
+				// and inform the user something isn't correct
+				return nil, nil, nil, err
 			}
+
+			retErr = multierror.Append(retErr, err)
+			// Clear the response out as we can't trust it.
+			ocspRes = nil
+			continue
 		}
 
 		// While we haven't validated the signature on the OCSP response, we
@@ -448,9 +438,83 @@ func (c *Client) retryOCSP(
 	return
 }
 
+func IsOcspVerificationError(err error) bool {
+	errOcspIssuer := &ErrOcspIssuerVerification{}
+	return errors.As(err, &errOcspIssuer)
+}
+
+func validateOCSPParsedResponse(ocspRes *ocsp.Response, subject, issuer *x509.Certificate) error {
+	// Above, we use the unsafe issuer=nil parameter to ocsp.ParseResponse
+	// because Go's library does the wrong thing.
+	//
+	// Here, we lack a full chain, but we know we trust the parent issuer,
+	// so if the Go library incorrectly discards useful certificates, we
+	// likely cannot verify this without passing through the full chain
+	// back to the root.
+	//
+	// Instead, take one of two paths: 1. if there is no certificate in
+	// the ocspRes, verify the OCSP response directly with our trusted
+	// issuer certificate, or 2. if there is a certificate, either verify
+	// it directly matches our trusted issuer certificate, or verify it
+	// is signed by our trusted issuer certificate.
+	//
+	// See also: https://github.com/golang/go/issues/59641
+	//
+	// This addresses the !!unsafe!! behavior above.
+	if ocspRes.Certificate == nil {
+		if err := ocspRes.CheckSignatureFrom(issuer); err != nil {
+			return &ErrOcspIssuerVerification{fmt.Errorf("error directly verifying signature: %w", err)}
+		}
+	} else {
+		// Because we have at least one certificate here, we know that
+		// Go's ocsp library verified the signature from this certificate
+		// onto the response and it was valid. Now we need to know we trust
+		// this certificate. There's two ways we can do this:
+		//
+		// 1. Via confirming issuer == ocspRes.Certificate, or
+		// 2. Via confirming ocspRes.Certificate.CheckSignatureFrom(issuer).
+		if !bytes.Equal(issuer.Raw, ocspRes.Raw) {
+			// 1 must not hold, so 2 holds; verify the signature.
+			if err := ocspRes.Certificate.CheckSignatureFrom(issuer); err != nil {
+				return &ErrOcspIssuerVerification{fmt.Errorf("error checking chain of trust %v failed: %w", issuer.Subject.String(), err)}
+			}
+
+			// Verify the OCSP responder certificate is still valid and
+			// contains the required EKU since it is a delegated OCSP
+			// responder certificate.
+			if ocspRes.Certificate.NotAfter.Before(time.Now()) {
+				return &ErrOcspIssuerVerification{fmt.Errorf("error checking delegated OCSP responder OCSP response: certificate has expired")}
+			}
+			haveEKU := false
+			for _, ku := range ocspRes.Certificate.ExtKeyUsage {
+				if ku == x509.ExtKeyUsageOCSPSigning {
+					haveEKU = true
+					break
+				}
+			}
+			if !haveEKU {
+				return &ErrOcspIssuerVerification{fmt.Errorf("error checking delegated OCSP responder: certificate lacks the OCSP Signing EKU")}
+			}
+		}
+	}
+
+	// Verify the response was for our original subject
+	if ocspRes.SerialNumber == nil || subject.SerialNumber == nil {
+		return &ErrOcspIssuerVerification{fmt.Errorf("OCSP response or cert did not contain a serial number")}
+	}
+	if ocspRes.SerialNumber.Cmp(subject.SerialNumber) != 0 {
+		return &ErrOcspIssuerVerification{fmt.Errorf(
+			"OCSP response serial number %s did not match the leaf certificate serial number %s",
+			certutil.GetHexFormatted(ocspRes.SerialNumber.Bytes(), ":"),
+			certutil.GetHexFormatted(subject.SerialNumber.Bytes(), ":"))}
+	}
+
+	return nil
+}
+
 // GetRevocationStatus checks the certificate revocation status for subject using issuer certificate.
 func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.Certificate, conf *VerifyConfig) (*ocspStatus, error) {
-	status, ocspReq, encodedCertID, err := c.validateWithCache(subject, issuer)
+	status, ocspReq, encodedCertID, err := c.validateWithCache(subject, issuer, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -491,15 +555,16 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 		timeout := defaultOCSPResponderTimeout
 
 		ocspClient := retryablehttp.NewClient()
+		ocspClient.RetryMax = conf.OcspMaxRetries
 		ocspClient.HTTPClient.Timeout = timeout
 		ocspClient.HTTPClient.Transport = newInsecureOcspTransport(conf.ExtraCas)
 
-		doRequest := func() error {
+		doRequest := func(i int) error {
 			if conf.QueryAllServers {
 				defer wg.Done()
 			}
 			ocspRes, _, ocspS, err := c.retryOCSP(
-				ctx, ocspClient, retryablehttp.NewRequest, u, headers, ocspReq, issuer)
+				ctx, ocspClient, retryablehttp.NewRequest, u, headers, ocspReq, subject, issuer)
 			ocspResponses[i] = ocspRes
 			if err != nil {
 				errors[i] = err
@@ -510,7 +575,7 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 				return nil
 			}
 
-			ret, err := validateOCSP(ocspRes)
+			ret, err := validateOCSP(conf, ocspRes)
 			if err != nil {
 				errors[i] = err
 				return err
@@ -527,9 +592,9 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 		}
 		if conf.QueryAllServers {
 			wg.Add(1)
-			go doRequest()
+			go doRequest(i)
 		} else {
-			err = doRequest()
+			err = doRequest(i)
 			if err == nil {
 				break
 			}
@@ -544,6 +609,9 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 	var firstError error
 	for i := range ocspHosts {
 		if errors[i] != nil {
+			if IsOcspVerificationError(errors[i]) {
+				return nil, errors[i]
+			}
 			if firstError == nil {
 				firstError = errors[i]
 			}
@@ -569,6 +637,14 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 		}
 	}
 
+	// If querying all servers is enabled, and we have an error from a host, we can't trust
+	// a good status from the other as we can't confirm the other server would have returned the
+	// same response, we do allow revoke responses through
+	if conf.QueryAllServers && firstError != nil && (ret != nil && ret.code == ocspStatusGood) {
+		return nil, fmt.Errorf("encountered an error on a server, "+
+			"ignoring good response status as ocsp_query_all_servers is set to true: %w", firstError)
+	}
+
 	// If no server reported the cert revoked, but we did have an error, report it
 	if (ret == nil || ret.code == ocspStatusUnknown) && firstError != nil {
 		return nil, firstError
@@ -582,6 +658,12 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 	if !isValidOCSPStatus(ret.code) {
 		return ret, nil
 	}
+
+	if ocspRes.NextUpdate.IsZero() {
+		// We should not cache values with no NextUpdate values
+		return ret, nil
+	}
+
 	v := ocspCachedResponse{
 		status:     ret.code,
 		time:       float64(time.Now().UTC().Unix()),
@@ -602,11 +684,13 @@ func isValidOCSPStatus(status ocspStatusCode) bool {
 }
 
 type VerifyConfig struct {
-	OcspEnabled         bool
-	ExtraCas            []*x509.Certificate
-	OcspServersOverride []string
-	OcspFailureMode     FailOpenMode
-	QueryAllServers     bool
+	OcspEnabled          bool
+	ExtraCas             []*x509.Certificate
+	OcspServersOverride  []string
+	OcspFailureMode      FailOpenMode
+	QueryAllServers      bool
+	OcspThisUpdateMaxAge time.Duration
+	OcspMaxRetries       int
 }
 
 // VerifyLeafCertificate verifies just the subject against it's direct issuer
@@ -692,12 +776,12 @@ func (c *Client) canEarlyExitForOCSP(results []*ocspStatus, chainSize int, conf 
 	return nil
 }
 
-func (c *Client) validateWithCacheForAllCertificates(verifiedChains []*x509.Certificate) (bool, error) {
+func (c *Client) validateWithCacheForAllCertificates(verifiedChains []*x509.Certificate, config *VerifyConfig) (bool, error) {
 	n := len(verifiedChains) - 1
 	for j := 0; j < n; j++ {
 		subject := verifiedChains[j]
 		issuer := verifiedChains[j+1]
-		status, _, _, err := c.validateWithCache(subject, issuer)
+		status, _, _, err := c.validateWithCache(subject, issuer, config)
 		if err != nil {
 			return false, err
 		}
@@ -708,7 +792,7 @@ func (c *Client) validateWithCacheForAllCertificates(verifiedChains []*x509.Cert
 	return true, nil
 }
 
-func (c *Client) validateWithCache(subject, issuer *x509.Certificate) (*ocspStatus, []byte, *certIDKey, error) {
+func (c *Client) validateWithCache(subject, issuer *x509.Certificate, config *VerifyConfig) (*ocspStatus, []byte, *certIDKey, error) {
 	ocspReq, err := ocsp.CreateRequest(subject, issuer, &ocsp.RequestOptions{})
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to create OCSP request from the certificates: %v", err)
@@ -717,7 +801,7 @@ func (c *Client) validateWithCache(subject, issuer *x509.Certificate) (*ocspStat
 	if ocspS.code != ocspSuccess {
 		return nil, nil, nil, fmt.Errorf("failed to extract CertID from OCSP Request: %v", err)
 	}
-	status, err := c.checkOCSPResponseCache(encodedCertID, subject, issuer)
+	status, err := c.checkOCSPResponseCache(encodedCertID, subject, issuer, config)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -725,7 +809,7 @@ func (c *Client) validateWithCache(subject, issuer *x509.Certificate) (*ocspStat
 }
 
 func (c *Client) GetAllRevocationStatus(ctx context.Context, verifiedChains []*x509.Certificate, conf *VerifyConfig) ([]*ocspStatus, error) {
-	_, err := c.validateWithCacheForAllCertificates(verifiedChains)
+	_, err := c.validateWithCacheForAllCertificates(verifiedChains, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -750,11 +834,11 @@ func (c *Client) verifyPeerCertificateSerial(conf *VerifyConfig) func(_ [][]byte
 	}
 }
 
-func (c *Client) extractOCSPCacheResponseValueWithoutSubject(cacheValue ocspCachedResponse) (*ocspStatus, error) {
-	return c.extractOCSPCacheResponseValue(&cacheValue, nil, nil)
+func (c *Client) extractOCSPCacheResponseValueWithoutSubject(cacheValue ocspCachedResponse, conf *VerifyConfig) (*ocspStatus, error) {
+	return c.extractOCSPCacheResponseValue(&cacheValue, nil, nil, conf)
 }
 
-func (c *Client) extractOCSPCacheResponseValue(cacheValue *ocspCachedResponse, subject, issuer *x509.Certificate) (*ocspStatus, error) {
+func (c *Client) extractOCSPCacheResponseValue(cacheValue *ocspCachedResponse, subject, issuer *x509.Certificate, conf *VerifyConfig) (*ocspStatus, error) {
 	subjectName := "Unknown"
 	if subject != nil {
 		subjectName = subject.Subject.CommonName
@@ -776,12 +860,27 @@ func (c *Client) extractOCSPCacheResponseValue(cacheValue *ocspCachedResponse, s
 		}, nil
 	}
 
-	return validateOCSP(&ocsp.Response{
+	sdkOcspStatus := internalStatusCodeToSDK(cacheValue.status)
+
+	return validateOCSP(conf, &ocsp.Response{
 		ProducedAt: time.Unix(int64(cacheValue.producedAt), 0).UTC(),
 		ThisUpdate: time.Unix(int64(cacheValue.thisUpdate), 0).UTC(),
 		NextUpdate: time.Unix(int64(cacheValue.nextUpdate), 0).UTC(),
-		Status:     int(cacheValue.status),
+		Status:     sdkOcspStatus,
 	})
+}
+
+func internalStatusCodeToSDK(internalStatusCode ocspStatusCode) int {
+	switch internalStatusCode {
+	case ocspStatusGood:
+		return ocsp.Good
+	case ocspStatusRevoked:
+		return ocsp.Revoked
+	case ocspStatusUnknown:
+		return ocsp.Unknown
+	default:
+		return int(internalStatusCode)
+	}
 }
 
 /*

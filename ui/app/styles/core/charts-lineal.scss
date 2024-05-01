@@ -1,0 +1,48 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+// LINEAL STYLING //
+.lineal-chart {
+  position: relative;
+  padding: 10px 10px 20px 50px;
+  width: 100%;
+  svg {
+    overflow: visible;
+  }
+}
+.lineal-chart-bar {
+  fill: var(--token-color-palette-blue-300);
+}
+.lineal-axis {
+  color: $ui-gray-500;
+  text {
+    font-size: 0.75rem;
+  }
+  line {
+    color: $ui-gray-300;
+  }
+}
+.lineal-tooltip-position {
+  position: absolute;
+  transform-style: preserve-3d;
+  bottom: 30px;
+  left: -20px;
+  pointer-events: none;
+  width: 140px;
+  transform: translate(calc(1px * var(--x, 0)), calc(-1px * var(--y, 0)));
+  transform-origin: bottom left;
+  z-index: 100;
+  margin-bottom: $spacing-8;
+}
+
+// @colorScale arg for Lineal::VBars is "blue-bar", indices are added by lineal
+.blue-bar-1 {
+  color: var(--token-color-palette-blue-100);
+  fill: var(--token-color-palette-blue-100);
+}
+.blue-bar-2 {
+  color: var(--token-color-palette-blue-200);
+  fill: var(--token-color-palette-blue-200);
+}

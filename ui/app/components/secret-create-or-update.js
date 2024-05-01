@@ -105,7 +105,7 @@ export default class SecretCreateOrUpdate extends Component {
     const secret = this.args.model;
     const secretData = this.args.modelForData;
 
-    let key = secretData.get('path') || secret.id;
+    let key = secretData?.path || secret.id;
 
     if (key.startsWith('/')) {
       key = key.replace(/^\/+/g, '');
@@ -195,6 +195,7 @@ export default class SecretCreateOrUpdate extends Component {
     if (isBlank(item.name)) {
       return;
     }
+    // secretData is a KVObject/ArrayProxy so removeObject is fine here
     data.removeObject(item);
     this.checkRows();
     this.handleChange();

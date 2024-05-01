@@ -5,39 +5,26 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { hash } from 'rsvp';
 
 import type RouterService from '@ember/routing/router-service';
-import type StoreService from 'vault/services/store';
-import type AdapterError from '@ember-data/adapter';
-
-interface ActivationFlagsResponse {
-  data: {
-    activated: Array<string>;
-    unactivated: Array<string>;
-  };
-}
+import type FlagService from 'vault/services/flags';
 
 export default class SyncSecretsRoute extends Route {
   @service declare readonly router: RouterService;
-  @service declare readonly store: StoreService;
+  @service declare readonly flags: FlagService;
 
-  model() {
-    return hash({
-      activatedFeatures: this.store
-        .adapterFor('application')
-        .ajax('/v1/sys/activation-flags', 'GET')
-        .then((resp: ActivationFlagsResponse) => {
-          return resp.data.activated;
-        })
-        .catch((error: AdapterError) => {
-          // we break out this error while passing args to the component and handle the error in the overview template
-          return error;
-        }),
-    });
+  beforeModel() {
+    return this.flags.fetchActivatedFlags();
   }
 
-  afterModel(model: { activatedFeatures: Array<string> | AdapterError }) {
+  model() {
+    return {
+      // TODO will modify when we use the persona service.
+      activatedFeatures: this.flags.activatedFlags,
+    };
+  }
+
+  afterModel(model: { activatedFeatures: Array<string> }) {
     if (!model.activatedFeatures) {
       this.router.transitionTo('vault.cluster.sync.secrets.overview');
     }

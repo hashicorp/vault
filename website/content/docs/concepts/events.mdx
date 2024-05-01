@@ -8,7 +8,7 @@ description: >-
 
 # Event Notifications
 
-<EnterpriseAlert product="vault" />
+@include 'alerts/enterprise-only.mdx'
 
 Event notifications are arbitrary, **non-secret** data that can be exchanged between producers (Vault and plugins)
 and subscribers (Vault components and external users via the API).
@@ -141,7 +141,7 @@ By default, the event notifications are delivered in protobuf binary format.
 The endpoint can also format the data as JSON if the `json` query parameter is set to `true`:
 
 ```shell-session
-$ wscat -H "X-Vault-Token: $(vault print token)" --connect 'ws://127.0.0.1:8200/v1/sys/events/subscribe/kv-v2/data-write?json=true
+$ wscat -H "X-Vault-Token: $(vault print token)" --connect 'ws://127.0.0.1:8200/v1/sys/events/subscribe/kv-v2/data-write?json=true'
 {"id":"a3be9fb1-b514-519f-5b25-b6f144a8c1ce","source":"vault://mycluster","specversion":"1.0","type":"*","data":{"event":{"id":"a3be9fb1-b514-519f-5b25-b6f144a8c1ce","metadata":{"current_version":"1","data_path":"secret/data/foo","modified":"true","oldest_version":"0","operation":"data-write","path":"secret/data/foo"}},"event_type":"kv-v2/data-write","plugin_info":{"mount_class":"secret","mount_accessor":"kv_5dc4d18e","mount_path":"secret/","plugin":"kv"}},"datacontentype":"application/cloudevents","time":"2023-09-12T15:19:49.394915-07:00"}
 ...
 ```

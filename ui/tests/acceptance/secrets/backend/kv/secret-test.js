@@ -18,6 +18,7 @@ import logout from 'vault/tests/pages/logout';
 import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import codemirror from 'vault/tests/helpers/codemirror';
 
 const deleteEngine = async function (enginePath, assert) {
   await logout.visit();
@@ -67,6 +68,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       assert
         .dom(PAGE.infoRowValue('Automate secret deletion'))
         .hasText('1 second', 'displays the delete version after set when configuring the secret-engine');
+      // [BANDAID] avoid error from missing param for links in SecretEdit > KeyValueHeader
+      await visit('/vault/secrets');
       await deleteEngine(enginePath, assert);
     });
 
@@ -76,6 +79,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await runCmd(['vault write sys/mounts/test type=kv', 'refresh', 'vault write test/a keys=a keys=b']);
       await showPage.visit({ backend: 'test', id: 'a' });
       assert.ok(showPage.editIsPresent, 'renders the page properly');
+      // [BANDAID] avoid error from missing param for links in SecretEdit > KeyValueHeader
+      await visit('/vault/secrets');
       await deleteEngine('test', assert);
     });
   });
@@ -245,6 +250,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
           `${path}: show page renders correctly`
         );
       }
+      // [BANDAID] avoid error from missing param for links in SecretEdit > KeyValueHeader
+      await visit('/vault/secrets');
       await deleteEngine(backend, assert);
     });
 
@@ -329,8 +336,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await listPage.visitRoot({ backend: this.backend });
       await listPage.create();
       await editPage.path(secretPath).toggleJSON();
-      const instance = document.querySelector('.CodeMirror').CodeMirror;
-      instance.setValue(content);
+      codemirror().setValue(content);
       await editPage.save();
 
       assert.strictEqual(
@@ -339,9 +345,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         'redirects to the show page'
       );
       assert.ok(showPage.editIsPresent, 'shows the edit button');
-      const savedInstance = document.querySelector('.CodeMirror').CodeMirror;
       assert.strictEqual(
-        savedInstance.options.value,
+        codemirror().options.value,
         JSON.stringify({ bar: 'boo', foo: 'fa' }, null, 2),
         'saves the content'
       );

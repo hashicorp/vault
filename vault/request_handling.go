@@ -30,6 +30,7 @@ import (
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/http/priority"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -248,7 +249,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 
 	// Ensure the token is valid
 	if te == nil {
-		return nil, nil, nil, nil, logical.ErrPermissionDenied
+		return nil, nil, nil, nil, multierror.Append(logical.ErrPermissionDenied, logical.ErrInvalidToken)
 	}
 
 	// CIDR checks bind all tokens except non-expiring root tokens
@@ -483,6 +484,12 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		RootPrivsRequired: rootPath,
 	})
 
+	// Assign the sudo path priority if the request is issued against a sudo path.
+	if rootPath {
+		pri := uint8(priority.NeverDrop)
+		auth.HTTPRequestPriority = &pri
+	}
+
 	auth.PolicyResults = &logical.PolicyResults{
 		Allowed: authResults.Allowed,
 	}
@@ -588,6 +595,11 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	if ok {
 		ctx = logical.CreateContextRedactionSettings(ctx, redactVersion, redactAddresses, redactClusterName)
 	}
+	inFlightRequestPriority, ok := httpCtx.Value(logical.CtxKeyInFlightRequestPriority{}).(priority.AOPWritePriority)
+	if ok {
+		ctx = context.WithValue(ctx, logical.CtxKeyInFlightRequestPriority{}, inFlightRequestPriority)
+	}
+
 	resp, err = c.handleCancelableRequest(ctx, req)
 	req.SetTokenEntry(nil)
 	cancel()
@@ -627,6 +639,9 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 
 	err = c.PopulateTokenEntry(ctx, req)
 	if err != nil {
+		if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
+			return nil, multierror.Append(err, logical.ErrInvalidToken)
+		}
 		return nil, err
 	}
 
@@ -1005,6 +1020,13 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		return nil, nil, ctErr
 	}
 
+	// See if the call to CheckToken set any request priority. We push the
+	// processing down into CheckToken so we only have to do a router lookup
+	// once.
+	if auth != nil && auth.HTTPRequestPriority != nil {
+		ctx = context.WithValue(ctx, logical.CtxKeyInFlightRequestPriority{}, *auth.HTTPRequestPriority)
+	}
+
 	// Updating in-flight request data with client/entity ID
 	inFlightReqID, ok := ctx.Value(logical.CtxKeyInFlightRequestID{}).(string)
 	if ok && req.ClientID != "" {
@@ -1025,7 +1047,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 		if te == nil {
 			// Token has been revoked by this point
-			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+			retErr = multierror.Append(retErr, logical.ErrPermissionDenied, logical.ErrInvalidToken)
 			return nil, nil, retErr
 		}
 		if te.NumUses == tokenRevocationPending {
@@ -1503,6 +1525,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			return nil, nil, err
 		}
 		if isloginUserLocked {
+			c.logger.Error("login attempts exceeded, user is locked out", "request_path", req.Path)
 			return nil, nil, logical.ErrPermissionDenied
 		}
 	}
@@ -2642,7 +2665,6 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 	if !strings.HasPrefix(token, consts.ServiceTokenPrefix) {
 		return token, nil
 	}
-
 	// Check token length to guess if this is an server side consistent token or not.
 	// Note that even when the DisableSSCTokens flag is set, index
 	// bearing tokens that have already been given out may still be used.
@@ -2661,12 +2683,19 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 
 	err = proto.Unmarshal(tokenBytes, signedToken)
 	if err != nil {
-		return "", fmt.Errorf("error occurred when unmarshalling ssc token: %w", err)
+		// Log a warning here, but don't return an error. This is because we want don't
+		// want to forward the request to the active node if the token is invalid.
+		c.logger.Debug("error occurred when unmarshalling ssc token: %w", err)
+		return token, nil
 	}
 	hm, err := c.tokenStore.CalculateSignedTokenHMAC(signedToken.Token)
 	if !hmac.Equal(hm, signedToken.Hmac) {
-		return "", fmt.Errorf("token mac for %+v is incorrect: err %w", signedToken, err)
+		// As above, don't return an error so that the request is handled like normal,
+		// and handled by the node that received it.
+		c.logger.Debug("token mac is incorrect", "token", signedToken.Token)
+		return token, nil
 	}
+
 	plainToken := &tokens.Token{}
 	err = proto.Unmarshal([]byte(signedToken.Token), plainToken)
 	if err != nil {
@@ -2687,11 +2716,13 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 	if c.HasWALState(requiredWalState, isPerfStandby) {
 		return plainToken.Random, nil
 	}
+
 	// Make sure to forward the request instead of checking the token if the flag
 	// is set and we're on a perf standby
 	if c.ForwardToActive() == ForwardSSCTokenToActive && isPerfStandby {
 		return "", logical.ErrPerfStandbyPleaseForward
 	}
+
 	// In this case, the server side consistent token cannot be used on this node. We return the appropriate
 	// status code.
 	return "", logical.ErrMissingRequiredState
