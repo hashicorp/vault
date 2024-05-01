@@ -37,7 +37,11 @@
       @text="Download policy"
     />
     {{#if (and (not-eq this.model.id "root") (or this.capabilities.canUpdate this.capabilities.canDelete))}}
-      <ToolbarLink @route="vault.cluster.policy.edit" @model={{this.model.id}} data-test-policy-edit-toggle>
+      <ToolbarLink
+        @route="vault.cluster.policy.edit"
+        @models={{array this.policyType this.model.id}}
+        data-test-policy-edit-toggle
+      >
         Edit policy
       </ToolbarLink>
     {{/if}}

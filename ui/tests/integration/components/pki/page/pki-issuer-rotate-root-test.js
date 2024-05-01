@@ -9,14 +9,14 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import sinon from 'sinon';
 import { hbs } from 'ember-cli-htmlbars';
-import { loadedCert } from 'vault/tests/helpers/pki/values';
 import camelizeKeys from 'vault/utils/camelize-object-keys';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
-import { SELECTORS as S } from 'vault/tests/helpers/pki/pki-generate-root';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
+import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/pki/pki-selectors';
 
 const SELECTORS = {
-  pageTitle: '[data-test-pki-page-title]',
   nextSteps: '[data-test-rotate-next-steps]',
   toolbarCrossSign: '[data-test-pki-issuer-cross-sign]',
   toolbarSignInt: '[data-test-pki-issuer-sign-int]',
@@ -24,17 +24,13 @@ const SELECTORS = {
   oldRadioSelect: 'input#use-old-root-settings',
   customRadioSelect: 'input#customize-new-root-certificate',
   toggle: '[data-test-details-toggle]',
-  input: (attr) => `[data-test-input="${attr}"]`,
-  infoRowValue: (attr) => `[data-test-value-div="${attr}"]`,
   validationError: '[data-test-pki-rotate-root-validation-error]',
   rotateRootForm: '[data-test-pki-rotate-old-settings-form]',
-  rotateRootSave: '[data-test-pki-rotate-root-save]',
-  rotateRootCancel: '[data-test-pki-rotate-root-cancel]',
   doneButton: '[data-test-done]',
   // root form
   generateRootForm: '[data-test-pki-config-generate-root-form]',
-  ...S,
 };
+const { loadedCert } = CERTIFICATES;
 
 module('Integration | Component | page/pki-issuer-rotate-root', function (hooks) {
   setupRenderingTest(hooks);
@@ -96,19 +92,19 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.pageTitle).hasText('Generate New Root');
+    assert.dom(GENERAL.title).hasText('Generate New Root');
     assert.dom(SELECTORS.oldRadioSelect).isChecked('defaults to use-old-settings');
     assert.dom(SELECTORS.rotateRootForm).exists('it renders old settings form');
     assert
-      .dom(SELECTORS.input('commonName'))
+      .dom(GENERAL.inputByAttr('commonName'))
       .hasValue(this.parsedRootCert.commonName, 'common name prefilled with root cert cn');
     assert.dom(SELECTORS.toggle).hasText('Old root settings', 'toggle renders correct text');
-    assert.dom(SELECTORS.input('issuerName')).exists('renders issuer name input');
+    assert.dom(GENERAL.inputByAttr('issuerName')).exists('renders issuer name input');
     assert.strictEqual(findAll('[data-test-row-label]').length, 0, 'it hides the old root info table rows');
     await click(SELECTORS.toggle);
     assert.strictEqual(findAll('[data-test-row-label]').length, 19, 'it shows the old root info table rows');
     assert
-      .dom(SELECTORS.infoRowValue('Issuer name'))
+      .dom(GENERAL.infoRowValue('Issuer name'))
       .hasText(this.oldRoot.issuerName, 'renders correct issuer data');
     await click(SELECTORS.toggle);
     assert.strictEqual(findAll('[data-test-row-label]').length, 0, 'it hides again');
@@ -117,21 +113,25 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     await click(SELECTORS.customRadioSelect);
     assert.dom(SELECTORS.generateRootForm).exists('it renders generate root form');
     assert
-      .dom(SELECTORS.input('permittedDnsDomains'))
+      .dom(GENERAL.inputByAttr('permittedDnsDomains'))
       .hasValue(this.parsedRootCert.permittedDnsDomains, 'form is prefilled with values from old root');
-    await click(SELECTORS.generateRootCancel);
+    await click(GENERAL.cancelButton);
     assert.ok(this.onCancel.calledOnce, 'custom form calls @onCancel passed from parent');
     await click(SELECTORS.oldRadioSelect);
-    await click(SELECTORS.rotateRootCancel);
+    await click(GENERAL.cancelButton);
     assert.ok(this.onCancel.calledTwice, 'old root settings form calls @onCancel from parent');
 
     // validations
-    await fillIn(SELECTORS.input('commonName'), '');
-    await fillIn(SELECTORS.input('issuerName'), 'default');
-    await click(SELECTORS.rotateRootSave);
+    await fillIn(GENERAL.inputByAttr('commonName'), '');
+    await fillIn(GENERAL.inputByAttr('issuerName'), 'default');
+    await click(GENERAL.saveButton);
     assert.dom(SELECTORS.validationError).hasText('There are 2 errors with this form.');
-    assert.dom(SELECTORS.input('commonName')).hasClass('has-error-border', 'common name has error border');
-    assert.dom(SELECTORS.input('issuerName')).hasClass('has-error-border', 'issuer name has error border');
+    assert
+      .dom(GENERAL.inputByAttr('commonName'))
+      .hasClass('has-error-border', 'common name has error border');
+    assert
+      .dom(GENERAL.inputByAttr('issuerName'))
+      .hasClass('has-error-border', 'issuer name has error border');
   });
 
   test('it sends request to rotate/internal on save when using old root settings', async function (assert) {
@@ -151,7 +151,7 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     `,
       { owner: this.engine }
     );
-    await click(SELECTORS.rotateRootSave);
+    await click(GENERAL.saveButton);
   });
 
   function testEndpoint(test, type) {
@@ -173,8 +173,8 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
         { owner: this.engine }
       );
       await click(SELECTORS.customRadioSelect);
-      await fillIn(SELECTORS.typeField, type);
-      await click(SELECTORS.generateRootSave);
+      await fillIn(GENERAL.inputByAttr('type'), type);
+      await click(GENERAL.saveButton);
     });
   }
   testEndpoint(test, 'internal');
@@ -205,21 +205,21 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
       `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.pageTitle).hasText('View Issuer Certificate');
+    assert.dom(GENERAL.title).hasText('View Issuer Certificate');
     assert
       .dom(SELECTORS.nextSteps)
       .hasText(
         'Next steps Your new root has been generated. Make sure to copy and save the private_key as it is only available once. If you’re ready, you can begin cross-signing issuers now. If not, the option to cross-sign is available when you use this certificate. Cross-sign issuers'
       );
-    assert.dom(SELECTORS.infoRowValue('Certificate')).exists();
-    assert.dom(SELECTORS.infoRowValue('Issuer name')).exists();
-    assert.dom(SELECTORS.infoRowValue('Issuing CA')).exists();
-    assert.dom(SELECTORS.infoRowValue('Private key')).exists();
-    assert.dom(`${SELECTORS.infoRowValue('Private key type')} span`).hasText('rsa');
-    assert.dom(SELECTORS.infoRowValue('Serial number')).hasText(this.returnedData.serial_number);
-    assert.dom(SELECTORS.infoRowValue('Key ID')).hasText(this.returnedData.key_id);
+    assert.dom(GENERAL.infoRowValue('Certificate')).exists();
+    assert.dom(GENERAL.infoRowValue('Issuer name')).exists();
+    assert.dom(GENERAL.infoRowValue('Issuing CA')).exists();
+    assert.dom(GENERAL.infoRowValue('Private key')).exists();
+    assert.dom(`${GENERAL.infoRowValue('Private key type')} span`).hasText('rsa');
+    assert.dom(GENERAL.infoRowValue('Serial number')).hasText(this.returnedData.serial_number);
+    assert.dom(GENERAL.infoRowValue('Key ID')).hasText(this.returnedData.key_id);
 
-    await click(SELECTORS.doneButton);
+    await click(PKI_CONFIGURE_CREATE.doneButton);
     assert.ok(this.onComplete.calledOnce, 'clicking done fires @onComplete from parent');
   });
 
@@ -242,7 +242,7 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
       `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.pageTitle).hasText('View Issuer Certificate');
+    assert.dom(GENERAL.title).hasText('View Issuer Certificate');
     assert.dom(SELECTORS.toolbarCrossSign).exists();
     assert.dom(SELECTORS.toolbarSignInt).exists();
     assert.dom(SELECTORS.toolbarDownload).exists();
@@ -251,13 +251,13 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
       .hasText(
         'Next steps Your new root has been generated. If you’re ready, you can begin cross-signing issuers now. If not, the option to cross-sign is available when you use this certificate. Cross-sign issuers'
       );
-    assert.dom(SELECTORS.infoRowValue('Certificate')).exists();
-    assert.dom(SELECTORS.infoRowValue('Issuer name')).exists();
-    assert.dom(SELECTORS.infoRowValue('Issuing CA')).exists();
-    assert.dom(`${SELECTORS.infoRowValue('Private key')} span`).hasText('internal');
-    assert.dom(`${SELECTORS.infoRowValue('Private key type')} span`).hasText('internal');
-    assert.dom(SELECTORS.infoRowValue('Serial number')).hasText(this.returnedData.serial_number);
-    assert.dom(SELECTORS.infoRowValue('Key ID')).hasText(this.returnedData.key_id);
+    assert.dom(GENERAL.infoRowValue('Certificate')).exists();
+    assert.dom(GENERAL.infoRowValue('Issuer name')).exists();
+    assert.dom(GENERAL.infoRowValue('Issuing CA')).exists();
+    assert.dom(`${GENERAL.infoRowValue('Private key')} span`).hasText('internal');
+    assert.dom(`${GENERAL.infoRowValue('Private key type')} span`).hasText('internal');
+    assert.dom(GENERAL.infoRowValue('Serial number')).hasText(this.returnedData.serial_number);
+    assert.dom(GENERAL.infoRowValue('Key ID')).hasText(this.returnedData.key_id);
 
     await click(SELECTORS.doneButton);
     assert.ok(this.onComplete.calledOnce, 'clicking done fires @onComplete from parent');

@@ -10,18 +10,15 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/backoff"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-)
-
-const (
-	defaultMinBackoff = 1 * time.Second
-	defaultMaxBackoff = 5 * time.Minute
 )
 
 // AuthMethod is the interface that auto-auth methods implement for the agent/proxy
@@ -55,6 +52,8 @@ type AuthHandler struct {
 	OutputCh                     chan string
 	TemplateTokenCh              chan string
 	ExecTokenCh                  chan string
+	AuthInProgress               *atomic.Bool
+	InvalidToken                 chan error
 	token                        string
 	userAgent                    string
 	metricsSignifier             string
@@ -96,6 +95,8 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		OutputCh:                     make(chan string, 1),
 		TemplateTokenCh:              make(chan string, 1),
 		ExecTokenCh:                  make(chan string, 1),
+		InvalidToken:                 make(chan error, 1),
+		AuthInProgress:               &atomic.Bool{},
 		token:                        conf.Token,
 		logger:                       conf.Logger,
 		client:                       conf.Client,
@@ -132,10 +133,10 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	}
 
 	if ah.minBackoff <= 0 {
-		ah.minBackoff = defaultMinBackoff
+		ah.minBackoff = consts.DefaultMinBackoff
 	}
 	if ah.maxBackoff <= 0 {
-		ah.maxBackoff = defaultMaxBackoff
+		ah.maxBackoff = consts.DefaultMaxBackoff
 	}
 	if ah.minBackoff > ah.maxBackoff {
 		return errors.New("auth handler: min_backoff cannot be greater than max_backoff")
@@ -184,6 +185,17 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	first := true
 
 	for {
+		// We will unset this bool in sink.go once the token has been written to
+		// any sinks, or the sink server stops
+		ah.AuthInProgress.Store(true)
+		// Drain any Invalid Token errors from the channel that could have been sent before AuthInProgress
+		// was set to true
+		select {
+		case <-ah.InvalidToken:
+			ah.logger.Info("renewal already in progress, draining extra auth renewal triggers")
+		default:
+			// Do nothing, keep going
+		}
 		select {
 		case <-ctx.Done():
 			return nil
@@ -498,6 +510,14 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			case <-credCh:
 				ah.logger.Info("auth method found new credentials, re-authenticating")
 				break LifetimeWatcherLoop
+			default:
+				select {
+				case <-ah.InvalidToken:
+					ah.logger.Info("invalid token found, re-authenticating")
+					break LifetimeWatcherLoop
+				default:
+					continue
+				}
 			}
 		}
 	}
@@ -510,11 +530,11 @@ type autoAuthBackoff struct {
 
 func newAutoAuthBackoff(min, max time.Duration, exitErr bool) *autoAuthBackoff {
 	if max <= 0 {
-		max = defaultMaxBackoff
+		max = consts.DefaultMaxBackoff
 	}
 
 	if min <= 0 {
-		min = defaultMinBackoff
+		min = consts.DefaultMinBackoff
 	}
 
 	retries := math.MaxInt

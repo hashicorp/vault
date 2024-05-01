@@ -5,7 +5,7 @@
 
 <PageHeader as |p|>
   <p.top>
-    <Hds::Breadcrumb>
+    <Hds::Breadcrumb data-test-breadcrumbs>
       <Hds::Breadcrumb::Item @text="Auth Methods" @route="vault.cluster.access.methods" />
       <Hds::Breadcrumb::Item @text={{this.model.id}} @route="vault.cluster.access.method" @model={{this.model.id}} />
       <Hds::Breadcrumb::Item @text="Configure" @current={{true}} />
@@ -19,7 +19,7 @@
   </p.levelLeft>
 </PageHeader>
 
-{{section-tabs this.model}}
+<SectionTabs @model={{this.model}} />
 
 <Toolbar>
   <ToolbarActions>

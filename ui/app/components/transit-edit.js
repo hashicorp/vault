@@ -32,6 +32,42 @@ export default Component.extend(FocusOnInsertMixin, {
     this._super(...arguments);
   },
 
+  get breadcrumbs() {
+    const baseCrumbs = [
+      {
+        label: 'secrets',
+        route: 'vault.cluster.secrets',
+      },
+      {
+        label: this.key.backend,
+        route: 'vault.cluster.secrets.backend.list-root',
+        model: this.key.backend,
+      },
+    ];
+    if (this.mode === 'show') {
+      return [
+        ...baseCrumbs,
+        {
+          label: this.key.id,
+        },
+      ];
+    } else if (this.mode === 'edit') {
+      return [
+        ...baseCrumbs,
+        {
+          label: this.key.id,
+          route: 'vault.cluster.secrets.backend.show',
+          models: [this.key.backend, this.key.id],
+          query: { tab: 'details' },
+        },
+        { label: 'edit' },
+      ];
+    } else if (this.mode === 'create') {
+      return [...baseCrumbs, { label: 'create' }];
+    }
+    return baseCrumbs;
+  },
+
   waitForKeyUp: task(function* () {
     while (true) {
       const event = yield waitForEvent(document.body, 'keyup');
@@ -80,7 +116,7 @@ export default Component.extend(FocusOnInsertMixin, {
         'save',
         () => {
           this.hasDataChanges();
-          this.transitionToRoute(SHOW_ROUTE, keyId);
+          this.transitionToRoute(SHOW_ROUTE, keyId, { queryParams: { tab: 'details' } });
         },
         type === 'create'
       );

@@ -13,7 +13,7 @@ export default Controller.extend({
   clusterController: controller('vault.cluster'),
   flashMessages: service(),
   namespaceService: service('namespace'),
-  featureFlagService: service('featureFlag'),
+  flagsService: service('flags'),
   version: service(),
   auth: service(),
   router: service(),
@@ -22,7 +22,7 @@ export default Controller.extend({
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
   wrappedToken: alias('vaultController.wrappedToken'),
   redirectTo: alias('vaultController.redirectTo'),
-  managedNamespaceRoot: alias('featureFlagService.managedNamespaceRoot'),
+  managedNamespaceRoot: alias('flagsService.managedNamespaceRoot'),
   authMethod: '',
   oidcProvider: '',
 
@@ -69,7 +69,9 @@ export default Controller.extend({
       transition = this.router.transitionTo('vault.cluster', { queryParams: { namespace } });
     }
     transition.followRedirects().then(() => {
-      this.customMessages.fetchMessages(namespace);
+      if (this.version.isEnterprise) {
+        this.customMessages.fetchMessages(namespace);
+      }
 
       if (isRoot) {
         this.auth.set('isRootToken', true);

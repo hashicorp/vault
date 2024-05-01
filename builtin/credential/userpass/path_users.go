@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	sockaddr "github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -37,7 +37,7 @@ func pathUsersList(b *backend) *framework.Path {
 
 func pathUsers(b *backend) *framework.Path {
 	p := &framework.Path{
-		Pattern: "users/" + framework.GenericNameRegex("username"),
+		Pattern: "users/" + framework.GenericNameRegex(paramUsername),
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixUserpass,
@@ -47,14 +47,22 @@ func pathUsers(b *backend) *framework.Path {
 		},
 
 		Fields: map[string]*framework.FieldSchema{
-			"username": {
+			paramUsername: {
 				Type:        framework.TypeString,
 				Description: "Username for this user.",
 			},
 
-			"password": {
+			paramPassword: {
 				Type:        framework.TypeString,
 				Description: "Password for this user.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Sensitive: true,
+				},
+			},
+
+			paramPasswordHash: {
+				Type:        framework.TypeString,
+				Description: "Pre-hashed password in bcrypt format for this user.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					Sensitive: true,
 				},
@@ -103,7 +111,7 @@ func pathUsers(b *backend) *framework.Path {
 }
 
 func (b *backend) userExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
-	userEntry, err := b.user(ctx, req.Storage, d.Get("username").(string))
+	userEntry, err := b.user(ctx, req.Storage, d.Get(paramUsername).(string))
 	if err != nil {
 		return false, err
 	}
@@ -163,7 +171,7 @@ func (b *backend) pathUserList(ctx context.Context, req *logical.Request, d *fra
 }
 
 func (b *backend) pathUserDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete(ctx, "user/"+strings.ToLower(d.Get("username").(string)))
+	err := req.Storage.Delete(ctx, "user/"+strings.ToLower(d.Get(paramUsername).(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +180,7 @@ func (b *backend) pathUserDelete(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	user, err := b.user(ctx, req.Storage, strings.ToLower(d.Get("username").(string)))
+	user, err := b.user(ctx, req.Storage, strings.ToLower(d.Get(paramUsername).(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +211,7 @@ func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *fra
 }
 
 func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	username := strings.ToLower(d.Get("username").(string))
+	username := strings.ToLower(d.Get(paramUsername).(string))
 	userEntry, err := b.user(ctx, req.Storage, username)
 	if err != nil {
 		return nil, err
@@ -217,7 +225,7 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	if _, ok := d.GetOk("password"); ok {
+	if d.Get(paramPassword).(string) != "" || d.Get(paramPasswordHash).(string) != "" {
 		userErr, intErr := b.updateUserPassword(req, d, userEntry)
 		if intErr != nil {
 			return nil, intErr
@@ -250,11 +258,18 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 }
 
 func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	password := d.Get("password").(string)
-	if req.Operation == logical.CreateOperation && password == "" {
-		return logical.ErrorResponse("missing password"), logical.ErrInvalidRequest
+	password := d.Get(paramPassword).(string)
+	passwordHash := d.Get(paramPasswordHash).(string)
+
+	switch {
+	case password != "" && passwordHash != "":
+		return logical.ErrorResponse(fmt.Sprintf("%q and %q cannot be supplied together", paramPassword, paramPasswordHash)), logical.ErrInvalidRequest
+	case password == "" && passwordHash == "" && req.Operation == logical.CreateOperation:
+		// Password or pre-hashed password are only required on 'create'.
+		return logical.ErrorResponse(fmt.Sprintf("%q or %q must be supplied", paramPassword, paramPasswordHash)), logical.ErrInvalidRequest
+	default:
+		return b.userCreateUpdate(ctx, req, d)
 	}
-	return b.userCreateUpdate(ctx, req, d)
 }
 
 type UserEntry struct {

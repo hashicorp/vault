@@ -10,6 +10,8 @@ import { action } from '@ember/object';
 import { set } from '@ember/object';
 import { next } from '@ember/runloop';
 import { tracked } from '@glimmer/tracking';
+import { addToArray } from 'vault/helpers/add-to-array';
+import { removeFromArray } from 'vault/helpers/remove-from-array';
 
 /**
  * @module StringList
@@ -33,6 +35,7 @@ export default class StringList extends Component {
   constructor() {
     super(...arguments);
 
+    // inputList is type ArrayProxy, so addObject etc are fine here
     this.inputList = ArrayProxy.create({
       // trim the `value` when accessing objects
       content: [],
@@ -70,7 +73,7 @@ export default class StringList extends Component {
   }
 
   toVal() {
-    const inputs = this.inputList.filter((x) => x.value).mapBy('value');
+    const inputs = this.inputList.filter((x) => x.value).map((x) => x.value);
     if (this.args.type === 'string') {
       return inputs.join(',');
     }
@@ -90,9 +93,11 @@ export default class StringList extends Component {
   @action
   inputChanged(idx, event) {
     if (event.target.value.includes(',') && !this.indicesWithComma.includes(idx)) {
-      this.indicesWithComma.pushObject(idx);
+      this.indicesWithComma = addToArray(this.indicesWithComma, idx);
     }
-    if (!event.target.value.includes(',')) this.indicesWithComma.removeObject(idx);
+    if (!event.target.value.includes(',')) {
+      this.indicesWithComma = removeFromArray(this.indicesWithComma, idx);
+    }
 
     const inputObj = this.inputList.objectAt(idx);
     set(inputObj, 'value', event.target.value);
@@ -101,16 +106,16 @@ export default class StringList extends Component {
 
   @action
   addInput() {
-    const inputList = this.inputList;
-    if (inputList.get('lastObject.value') !== '') {
-      inputList.pushObject({ value: '' });
+    const [lastItem] = this.inputList.slice(-1);
+    if (lastItem?.value !== '') {
+      this.inputList.pushObject({ value: '' });
     }
   }
 
   @action
   removeInput(idx) {
-    const inputs = this.inputList;
-    inputs.removeObject(inputs.objectAt(idx));
+    const itemToRemove = this.inputList.objectAt(idx);
+    this.inputList.removeObject(itemToRemove);
     this.args.onChange(this.toVal());
   }
 }

@@ -65,6 +65,7 @@
           <ToolbarSecretLink
             @secret=""
             @mode="create"
+            @backend={{@model.backend}}
             @type="add"
             @queryParams={{hash initialKey=@model.name itemType="role"}}
             data-test-secret-create={{true}}
@@ -73,7 +74,13 @@
           </ToolbarSecretLink>
         {{/if}}
         {{#if @model.canEdit}}
-          <ToolbarSecretLink @secret={{@model.id}} @mode="edit" data-test-edit-link={{true}} @replace={{true}}>
+          <ToolbarSecretLink
+            @secret={{@model.id}}
+            @mode="edit"
+            @backend={{@model.backend}}
+            data-test-edit-link={{true}}
+            @replace={{true}}
+          >
             Edit configuration
           </ToolbarSecretLink>
         {{/if}}

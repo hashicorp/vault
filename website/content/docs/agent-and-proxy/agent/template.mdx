@@ -23,11 +23,11 @@ the rest of Agent. This includes, but is not limited to, program exit behavior.
 Other parameters that apply to the templating engine as a whole may be added
 over time.
 
-The `template` stanza configures the Vault agent for rendering secrets to files
+The `template` stanza configures the Vault Agent for rendering secrets to files
 using Consul Template markup language. Multiple `template` stanzas can be
 defined to render multiple files.
 
-When the agent is started with templating enabled, it will attempt to acquire a
+When the Agent is started with templating enabled, it will attempt to acquire a
 Vault token using the configured auto-auth Method. On failure, it will back off
 for a short while (including some randomness to help prevent thundering herd
 scenarios) and retry. On success, secrets defined in the templates will be
@@ -111,6 +111,10 @@ failures.
   that the Vault Agent templating engine can use for a particular Vault host. This limit
   includes connections in the dialing, active, and idle states.
 
+- `lease_renewal_threshold` `(float: 0.9)` - How long Vault Agent's template
+  engine should wait for to refresh dynamic, non-renewable leases, measured as
+  a fraction of the lease duration.
+
 ### `template_config` stanza example
 
 ```hcl
@@ -122,7 +126,7 @@ template_config {
 ```
 
 In another example `template_config` with [`error_on_missing_key` parameter in the template stanza](/vault/docs/agent-and-proxy/agent/template#error_on_missing_key)
-as well as `exit_on_retry_failure` result in the agent exiting in case of no key
+as well as `exit_on_retry_failure` result in the Agent exiting in case of no key
 / value issues instead of the default retry behavior.
 
 ```hcl
@@ -152,7 +156,7 @@ continue on with its rendering.
 If the desire is to have Agent fail and exit on a missing key, both
 `template.error_on_missing_key` and `template_config.exit_on_retry_failure` must
 be set to true. Otherwise, the templating engine will error and render to its
-destination, but agent will not exit and will retry until the key exists or until
+destination, but Agent will not exit and will retry until the key exists or until
 the process is terminated.
 
 Note that a missing key from a secret's response is different from a missing or
@@ -238,9 +242,9 @@ template {
 }
 ```
 
-If you only want to use the Vault agent to render one or more templates and do
+If you only want to use the Vault Agent to render one or more templates and do
 not need to sink the acquired credentials, you can omit the `sink` stanza from
-the `auto_auth` stanza in the agent configuration.
+the `auto_auth` stanza in the Agent configuration.
 
 ## Renewals and updating secrets
 
@@ -257,14 +261,19 @@ of the secret's lease duration has elapsed.
 ### Non-Renewable secrets
 
 If a secret or token isn't renewable or leased, Vault Agent will fetch the secret every 5 minutes.
-This can be configured using Template config [static_secret_render_interval](/vault/docs/agent-and-proxy/agent/template#static_secret_render_interval) (requires Vault 1.8+).
+This can be configured using the `template_config` stanza value [static_secret_render_interval](/vault/docs/agent-and-proxy/agent/template#static_secret_render_interval) (requires Vault 1.8+).
 Non-renewable secrets include (but not limited to) [KV Version 2](/vault/docs/secrets/kv/kv-v2).
 
 ### Non-Renewable leased secrets
 
-If a secret or token is non-renewable but leased, Vault Agent will fetch the secret when 85% of the
-secrets time-to-live (TTL) is reached. Leased, non-renewable secrets include (but not limited
-to) dynamic secrets such as [database credentials](/vault/docs/secrets/databases) and [KV Version 1](/vault/docs/secrets/kv/kv-v1).
+If a secret or token is non-renewable but leased, Vault Agent will fetch the secret when 90% of the secrets time-to-live (TTL)
+is reached, plus or minus some jitter to ensure that many clients don't hit Vault simultaneously. Leased, non-renewable secrets
+include (but are not limited to) dynamic secrets such as [database credentials](/vault/docs/secrets/databases). The 90% value
+is configurable using the `template_config` stanza value
+[lease_renewal_threshold](/vault/docs/agent-and-proxy/agent/template#lease_renewal_threshold). While KVv1 secrets are not leased,
+this also controls the fraction at which Agent will re-fetch [KV Version 1](/vault/docs/secrets/kv/kv-v1) secrets that
+have a defined `lease_duration`.
+
 
 ### Static roles
 
@@ -311,7 +320,7 @@ behaviors on certificates:
 The following demonstrates Vault Agent Templates configuration blocks.
 
 ```hcl
-# Other Vault agent configuration blocks
+# Other Vault Agent configuration blocks
 # ...
 
 template_config {
@@ -336,7 +345,7 @@ And the following demonstrates how the templates look when using `env_template` 
 
 
 ```hcl
-# Other Vault agent configuration blocks
+# Other Vault Agent configuration blocks
 # ...
 
 template_config {

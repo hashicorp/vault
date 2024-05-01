@@ -36,7 +36,7 @@ export default Controller.extend({
   filterMatchesKey: computed('filter', 'model', 'model.[]', function () {
     var filter = this.filter;
     var content = this.model;
-    return !!(content && content.length && content.findBy('id', filter));
+    return !!(content && content.length && content.find((c) => c.id === filter));
   }),
 
   firstPartialMatch: computed('filter', 'model', 'model.[]', 'filterMatchesKey', function () {
@@ -50,7 +50,7 @@ export default Controller.extend({
     return filterMatchesKey
       ? null
       : content.find(function (key) {
-          return re.test(key.get('id'));
+          return re.test(key.id);
         });
   }),
 
@@ -62,7 +62,7 @@ export default Controller.extend({
       this.set('filterFocused', bool);
     },
     deletePolicy(model) {
-      const policyType = model.get('policyType');
+      const { policyType } = model;
       const name = model.id;
       const flash = this.flashMessages;
       model

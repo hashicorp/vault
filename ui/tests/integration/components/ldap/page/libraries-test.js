@@ -10,7 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
-import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap';
+import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | ldap | Page::Libraries', function (hooks) {
@@ -93,7 +93,7 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
     await this.renderComponent();
 
     assert.dom('[data-test-list-item-content] svg').hasClass('flight-icon-folder', 'List item icon renders');
-    assert.dom('[data-test-library]').hasText(this.libraries.firstObject.name, 'List item name renders');
+    assert.dom('[data-test-library]').hasText(this.libraries[0].name, 'List item name renders');
 
     await click('[data-test-popup-menu-trigger]');
     assert.dom('[data-test-edit]').hasText('Edit', 'Edit link renders in menu');

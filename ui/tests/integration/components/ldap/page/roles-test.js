@@ -10,7 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
-import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap';
+import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
 import sinon from 'sinon';
 
 module('Integration | Component | ldap | Page::Roles', function (hooks) {
@@ -95,12 +95,10 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
     await this.renderComponent();
 
     assert.dom('[data-test-list-item-content] svg').hasClass('flight-icon-user', 'List item icon renders');
-    assert
-      .dom('[data-test-role="static-test"]')
-      .hasText(this.roles.firstObject.name, 'List item name renders');
+    assert.dom('[data-test-role="static-test"]').hasText(this.roles[0].name, 'List item name renders');
     assert
       .dom('[data-test-role-type-badge="static-test"]')
-      .hasText(this.roles.firstObject.type, 'List item type badge renders');
+      .hasText(this.roles[0].type, 'List item type badge renders');
 
     await click('[data-test-popup-menu-trigger]');
     assert.dom('[data-test-edit]').hasText('Edit', 'Edit link renders in menu');

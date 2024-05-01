@@ -6,17 +6,19 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render, click, settled } from '@ember/test-helpers';
+import { render, click, settled, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import clientsHandler from 'vault/mirage/handlers/clients';
+import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { getUnixTime } from 'date-fns';
-import { SELECTORS as ts, dateDropdownSelect } from 'vault/tests/helpers/clients';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
+import { dateDropdownSelect } from 'vault/tests/helpers/clients/client-count-helpers';
 import { selectChoose } from 'ember-power-select/test-support/helpers';
 import timestamp from 'core/utils/timestamp';
 import sinon from 'sinon';
+import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
-const STATIC_NOW = new Date('2024-01-25T23:59:59Z');
-const START_TIME = getUnixTime(new Date('2023-10-01T00:00:00Z'));
+const START_TIME = getUnixTime(LICENSE_START);
 const END_TIME = getUnixTime(STATIC_NOW);
 
 module('Integration | Component | clients | Page::Counts', function (hooks) {
@@ -29,21 +31,24 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
   hooks.beforeEach(async function () {
     clientsHandler(this.server);
-    const store = this.owner.lookup('service:store');
+    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
+    this.store = this.owner.lookup('service:store');
     const activityQuery = {
       start_time: { timestamp: START_TIME },
       end_time: { timestamp: END_TIME },
     };
-    this.activity = await store.queryRecord('clients/activity', activityQuery);
-    this.config = await store.queryRecord('clients/config', {});
+    this.activity = await this.store.queryRecord('clients/activity', activityQuery);
+    this.config = await this.store.queryRecord('clients/config', {});
     this.startTimestamp = START_TIME;
     this.endTimestamp = END_TIME;
+    this.versionHistory = [];
     this.renderComponent = () =>
       render(hbs`
       <Clients::Page::Counts
         @activity={{this.activity}}
         @activityError={{this.activityError}}
         @config={{this.config}}
+        @versionHistory={{this.versionHistory}}
         @startTimestamp={{this.startTimestamp}}
         @endTimestamp={{this.endTimestamp}}
         @namespace={{this.namespace}}
@@ -63,9 +68,9 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom(ts.counts.startLabel).hasText('Client counting start date', 'Label renders for OSS');
+    assert.dom(CLIENT_COUNT.counts.startLabel).hasText('Client counting start date', 'Label renders for OSS');
     assert
-      .dom(ts.counts.description)
+      .dom(CLIENT_COUNT.counts.description)
       .hasText(
         'This date is when client counting starts. Without this starting point, the data shown is not reliable.',
         'Description renders for OSS'
@@ -74,9 +79,9 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     versionService.set('type', 'enterprise');
     await settled();
 
-    assert.dom(ts.counts.startLabel).hasText('Billing start month', 'Label renders for Enterprise');
+    assert.dom(CLIENT_COUNT.counts.startLabel).hasText('Billing start month', 'Label renders for Enterprise');
     assert
-      .dom(ts.counts.description)
+      .dom(CLIENT_COUNT.counts.description)
       .hasText(
         'This date comes from your license, and defines when client counting starts. Without this starting point, the data shown is not reliable.',
         'Description renders for Enterprise'
@@ -86,10 +91,10 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
   test('it should populate start and end month displays', async function (assert) {
     await this.renderComponent();
 
-    assert.dom(ts.counts.startMonth).hasText('October 2023', 'Start month renders');
+    assert.dom(CLIENT_COUNT.counts.startMonth).hasText('July 2023', 'Start month renders');
     assert
-      .dom(ts.calendarWidget.trigger)
-      .hasText('Oct 2023 - Jan 2024', 'Start and end months render in filter bar');
+      .dom(CLIENT_COUNT.calendarWidget.trigger)
+      .hasText('Jul 2023 - Jan 2024', 'Start and end months render in filter bar');
   });
 
   test('it should render no data empty state', async function (assert) {
@@ -98,8 +103,8 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     await this.renderComponent();
 
     assert
-      .dom(ts.emptyStateTitle)
-      .hasText('No data received from October 2023 to January 2024', 'No data empty state renders');
+      .dom(GENERAL.emptyStateTitle)
+      .hasText('No data received from July 2023 to January 2024', 'No data empty state renders');
   });
 
   test('it should render activity error', async function (assert) {
@@ -108,7 +113,9 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom(ts.emptyStateTitle).hasText('You are not authorized', 'Activity error empty state renders');
+    assert
+      .dom(GENERAL.emptyStateTitle)
+      .hasText('You are not authorized', 'Activity error empty state renders');
   });
 
   test('it should render config disabled alert', async function (assert) {
@@ -116,7 +123,9 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom(ts.counts.configDisabled).hasText('Tracking is disabled', 'Config disabled alert renders');
+    assert
+      .dom(CLIENT_COUNT.counts.configDisabled)
+      .hasText('Tracking is disabled', 'Config disabled alert renders');
   });
 
   test('it should send correct values on start and end date change', async function (assert) {
@@ -133,18 +142,18 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     await dateDropdownSelect('January', '2023');
 
     expected.start_time = END_TIME;
-    await click(ts.calendarWidget.trigger);
-    await click(ts.calendarWidget.currentMonth);
+    await click(CLIENT_COUNT.calendarWidget.trigger);
+    await click(CLIENT_COUNT.calendarWidget.currentMonth);
 
     expected.start_time = getUnixTime(this.config.billingStartTimestamp);
-    await click(ts.calendarWidget.trigger);
-    await click(ts.calendarWidget.currentBillingPeriod);
+    await click(CLIENT_COUNT.calendarWidget.trigger);
+    await click(CLIENT_COUNT.calendarWidget.currentBillingPeriod);
 
     expected = { end_time: getUnixTime(new Date('2023-12-31T00:00:00Z')) };
-    await click(ts.calendarWidget.trigger);
-    await click(ts.calendarWidget.customEndMonth);
-    await click(ts.calendarWidget.previousYear);
-    await click(ts.calendarWidget.calendarMonth('December'));
+    await click(CLIENT_COUNT.calendarWidget.trigger);
+    await click(CLIENT_COUNT.calendarWidget.customEndMonth);
+    await click(CLIENT_COUNT.calendarWidget.previousYear);
+    await click(CLIENT_COUNT.calendarWidget.calendarMonth('December'));
   });
 
   test('it should render namespace and auth mount filters', async function (assert) {
@@ -166,21 +175,20 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom(ts.counts.namespaces).includesText(this.namespace, 'Selected namespace renders');
-    assert.dom(ts.counts.mountPaths).includesText(this.mountPath, 'Selected auth mount renders');
+    assert.dom(CLIENT_COUNT.counts.namespaces).includesText(this.namespace, 'Selected namespace renders');
+    assert.dom(CLIENT_COUNT.counts.mountPaths).includesText(this.mountPath, 'Selected auth mount renders');
 
-    await click(`${ts.counts.namespaces} button`);
+    await click(`${CLIENT_COUNT.counts.namespaces} button`);
     // this is only necessary in tests since SearchSelect does not respond to initialValue changes
     // in the app the component is rerender on query param change
     assertion = null;
-    await click(`${ts.counts.mountPaths} button`);
-
-    assertion = (params) => assert.true(params.ns.includes('ns/'), 'Namespace value sent on change');
-    await selectChoose(ts.counts.namespaces, '.ember-power-select-option', 0);
+    await click(`${CLIENT_COUNT.counts.mountPaths} button`);
+    assertion = (params) => assert.true(params.ns.includes('ns'), 'Namespace value sent on change');
+    await selectChoose(CLIENT_COUNT.counts.namespaces, '.ember-power-select-option', 0);
 
     assertion = (params) =>
       assert.true(params.mountPath.includes('auth/'), 'Auth mount value sent on change');
-    await selectChoose(ts.counts.mountPaths, 'auth/authid0');
+    await selectChoose(CLIENT_COUNT.counts.mountPaths, 'auth/authid0');
   });
 
   test('it should render start time discrepancy alert', async function (assert) {
@@ -189,10 +197,52 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     await this.renderComponent();
 
     assert
-      .dom(ts.counts.startDiscrepancy)
+      .dom(CLIENT_COUNT.counts.startDiscrepancy)
       .hasText(
-        'Warning You requested data from June 2022. We only have data from October 2023, and that is what is being shown here.',
+        'You requested data from June 2022. We only have data from July 2023, and that is what is being shown here.',
         'Start discrepancy alert renders'
+      );
+  });
+
+  test('it renders alert if upgrade happened within queried activity', async function (assert) {
+    assert.expect(4);
+    this.versionHistory = await this.store.findAll('clients/version-history').then((resp) => {
+      return resp.map(({ version, previousVersion, timestampInstalled }) => {
+        return {
+          version,
+          previousVersion,
+          timestampInstalled,
+        };
+      });
+    });
+
+    await this.renderComponent();
+
+    assert
+      .dom(CLIENT_COUNT.upgradeWarning)
+      .hasTextContaining(
+        `Client count data contains 2 upgrades Vault was upgraded during this time period. Keep this in mind while looking at the data. Visit our Client count FAQ for more information.`,
+        'it renders title and subtext'
+      );
+    assert
+      .dom(`${CLIENT_COUNT.upgradeWarning} ul`)
+      .doesNotHaveTextContaining(
+        '1.9.1',
+        'Warning does not include subsequent patch releases (e.g. 1.9.1) of the same notable upgrade.'
+      );
+    const [first, second] = findAll(`${CLIENT_COUNT.upgradeWarning} li`);
+    assert
+      .dom(first)
+      .hasText(
+        `1.9.0 (upgraded on Jul 2, 2023) - We introduced changes to non-entity token and local auth mount logic for client counting in 1.9.`,
+        'alert includes 1.9.0 upgrade'
+      );
+
+    assert
+      .dom(second)
+      .hasTextContaining(
+        `1.10.1 (upgraded on Sep 2, 2023) - We added monthly breakdowns and mount level attribution starting in 1.10.`,
+        'alert includes 1.10.1 upgrade'
       );
   });
 
@@ -203,8 +253,10 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom(ts.emptyStateTitle).hasText('No start date found', 'Empty state renders');
-    assert.dom(ts.counts.startDropdown).exists('Date dropdown renders when start time is not provided');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No start date found', 'Empty state renders');
+    assert
+      .dom(CLIENT_COUNT.counts.startDropdown)
+      .exists('Date dropdown renders when start time is not provided');
   });
 
   test('it should render catch all empty state', async function (assert) {
@@ -213,7 +265,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     await this.renderComponent();
 
     assert
-      .dom(ts.emptyStateTitle)
-      .hasText('No data received from October 2023 to January 2024', 'Empty state renders');
+      .dom(GENERAL.emptyStateTitle)
+      .hasText('No data received from July 2023 to January 2024', 'Empty state renders');
   });
 });

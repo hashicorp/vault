@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+/* eslint-disable ember/no-settled-after-test-helper */
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
 import authPage from 'vault/tests/pages/auth';
-import { click, visit, currentURL, fillIn, currentRouteName } from '@ember/test-helpers';
+import { settled, click, visit, currentURL, fillIn, currentRouteName } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 
 // sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
@@ -101,6 +102,7 @@ module('Acceptance | sync | destination', function (hooks) {
     this.server.db.syncDestinations.update({ purge_initiated_at: '2024-02-08T11:49:04.123251-07:00' });
 
     await visit('vault/sync/secrets/overview');
+    await settled();
     await click(ts.overview.table.actionToggle(0));
     await click(ts.overview.table.action('sync'));
     assert.strictEqual(
@@ -126,5 +128,12 @@ module('Acceptance | sync | destination', function (hooks) {
       'vault.cluster.sync.secrets.destinations.destination.details',
       'Does no redirect when navigating to destination route other than edit or sync'
     );
+  });
+
+  test('it should render correct number of associations in list for sub keys', async function (assert) {
+    this.server.db.syncDestinations.update({ granularity: 'secret-key' });
+
+    await visit('vault/sync/secrets/destinations/vercel-project/destination-vercel/secrets');
+    assert.dom('[data-test-list-item]').exists({ count: 3 }, 'Sub key associations render in list');
   });
 });

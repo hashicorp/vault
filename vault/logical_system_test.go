@@ -24,6 +24,8 @@ import (
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
+	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/audit"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/experiments"
@@ -1072,7 +1074,7 @@ func TestSystemBackend_remount_auth(t *testing.T) {
 		)
 
 		migrationInfo := resp.Data["migration_info"].(*MountMigrationInfo)
-		if migrationInfo.MigrationStatus != MigrationSuccessStatus.String() {
+		if migrationInfo.MigrationStatus != MigrationStatusSuccess.String() {
 			return fmt.Errorf("Expected migration status to be successful, got %q", migrationInfo.MigrationStatus)
 		}
 		return nil
@@ -1224,7 +1226,7 @@ func TestSystemBackend_remount(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 		migrationInfo := resp.Data["migration_info"].(*MountMigrationInfo)
-		if migrationInfo.MigrationStatus != MigrationSuccessStatus.String() {
+		if migrationInfo.MigrationStatus != MigrationStatusSuccess.String() {
 			return fmt.Errorf("Expected migration status to be successful, got %q", migrationInfo.MigrationStatus)
 		}
 		return nil
@@ -2666,7 +2668,7 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 
 func TestSystemBackend_enableAudit(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
+	c.auditBackends["noop"] = audit.NoopAuditFactory(nil)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
 	req.Data["type"] = "noop"
@@ -2736,7 +2738,7 @@ func TestSystemBackend_decodeToken(t *testing.T) {
 
 func TestSystemBackend_auditHash(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
+	c.auditBackends["noop"] = audit.NoopAuditFactory(nil)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
 	req.Data["type"] = "noop"
@@ -2791,14 +2793,14 @@ func TestSystemBackend_enableAudit_invalid(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `unknown backend type: "nope"` {
+	if resp.Data["error"] != "unknown backend type: \"nope\": invalid configuration" {
 		t.Fatalf("bad: %v", resp)
 	}
 }
 
 func TestSystemBackend_auditTable(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
+	c.auditBackends["noop"] = audit.NoopAuditFactory(nil)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
 	req.Data["type"] = "noop"
@@ -2833,7 +2835,7 @@ func TestSystemBackend_auditTable(t *testing.T) {
 
 func TestSystemBackend_disableAudit(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
+	c.auditBackends["noop"] = audit.NoopAuditFactory(nil)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
 	req.Data["type"] = "noop"
@@ -4371,8 +4373,8 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 			"token/": map[string]interface{}{
 				"options": map[string]string(nil),
 				"config": map[string]interface{}{
-					"default_lease_ttl": int64(0),
-					"max_lease_ttl":     int64(0),
+					"default_lease_ttl": int64(2764800),
+					"max_lease_ttl":     int64(2764800),
 					"force_no_cache":    false,
 					"token_type":        "default-service",
 				},
@@ -6949,4 +6951,126 @@ func TestPathInternalUICustomMessagesCommon(t *testing.T) {
 	assert.Equal(t, 3, len(resp.Data["keys"].([]string)))
 	assert.Contains(t, resp.Data, "key_info")
 	assert.Equal(t, 3, len(resp.Data["key_info"].(map[string]any)))
+}
+
+// TestGetLeaderStatus_RedactionSettings verifies that the GetLeaderStatus response
+// is properly redacted based on the provided context.Context.
+func TestGetLeaderStatus_RedactionSettings(t *testing.T) {
+	testCluster := NewTestCluster(t, nil, nil)
+
+	testCluster.Start()
+	defer testCluster.Cleanup()
+
+	testCore := testCluster.Cores[0]
+
+	// Check with no redaction settings
+	resp, err := testCore.GetLeaderStatus(context.Background())
+	assert.NoError(t, err)
+	assert.NotEmpty(t, resp.LeaderAddress)
+	assert.NotEmpty(t, resp.LeaderClusterAddress)
+
+	// Check with redaction setting explicitly disabled
+	ctx := logical.CreateContextRedactionSettings(context.Background(), false, false, false)
+	resp, err = testCore.GetLeaderStatus(ctx)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, resp.LeaderAddress)
+	assert.NotEmpty(t, resp.LeaderClusterAddress)
+
+	// Check with redaction setting enabled
+	ctx = logical.CreateContextRedactionSettings(context.Background(), false, true, false)
+	resp, err = testCore.GetLeaderStatus(ctx)
+	assert.NoError(t, err)
+	assert.Empty(t, resp.LeaderAddress)
+	assert.Empty(t, resp.LeaderClusterAddress)
+}
+
+// TestGetSealStatus_RedactionSettings verifies that the GetSealStatus response
+// is properly redacted based on the provided context.Context.
+func TestGetSealStatus_RedactionSettings(t *testing.T) {
+	// This test function cannot be parallelized, because it messes with the
+	// global version.BuildDate variable.
+	oldBuildDate := version.BuildDate
+	version.BuildDate = time.Now().Format(time.RFC3339)
+	defer func() { version.BuildDate = oldBuildDate }()
+
+	testCluster := NewTestCluster(t, &CoreConfig{
+		ClusterName: "secret-cluster-name",
+	}, nil)
+
+	testCluster.Start()
+	defer testCluster.Cleanup()
+
+	testCore := testCluster.Cores[0]
+
+	// Check with no redaction settings
+	resp, err := testCore.GetSealStatus(context.Background(), false)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, resp.Version)
+	assert.NotEmpty(t, resp.BuildDate)
+	assert.NotEmpty(t, resp.ClusterName)
+
+	// Check with redaction setting explicitly disabled
+	ctx := logical.CreateContextRedactionSettings(context.Background(), false, false, false)
+	resp, err = testCore.GetSealStatus(ctx, false)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, resp.Version)
+	assert.NotEmpty(t, resp.BuildDate)
+	assert.NotEmpty(t, resp.ClusterName)
+
+	// Check with redaction setting enabled
+	ctx = logical.CreateContextRedactionSettings(context.Background(), true, false, true)
+	resp, err = testCore.GetSealStatus(ctx, false)
+	assert.NoError(t, err)
+	assert.Empty(t, resp.Version)
+	assert.Empty(t, resp.BuildDate)
+	assert.Empty(t, resp.ClusterName)
+}
+
+// TestWellKnownSysApi verifies the GET/LIST endpoints of /sys/well-known and /sys/well-known/<label>
+func TestWellKnownSysApi(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	b := c.systemBackend
+
+	myUuid, err := uuid.GenerateUUID()
+	require.NoError(t, err, "failed generating uuid")
+
+	err = c.WellKnownRedirects.TryRegister(context.Background(), c, myUuid, "mylabel1", "test-path/foo1")
+	require.NoError(t, err, "failed registering well-known redirect 1")
+
+	err = c.WellKnownRedirects.TryRegister(context.Background(), c, myUuid, "mylabel2", "test-path/foo2")
+	require.NoError(t, err, "failed registering well-known redirect 2")
+
+	// Test LIST operation
+	req := logical.TestRequest(t, logical.ListOperation, "well-known")
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	require.NoError(t, err, "failed list well-known request")
+	require.NotNil(t, resp, "response from list well-known request was nil")
+
+	require.Contains(t, resp.Data["keys"], "mylabel1")
+	require.Contains(t, resp.Data["keys"], "mylabel2")
+	require.Len(t, resp.Data["keys"], 2)
+
+	keyInfo := resp.Data["key_info"].(map[string]interface{})
+	keyInfoLabel1 := keyInfo["mylabel1"].(map[string]interface{})
+	require.Equal(t, myUuid, keyInfoLabel1["mount_uuid"])
+	require.Equal(t, "test-path/foo1", keyInfoLabel1["prefix"])
+
+	keyInfoLabel2 := keyInfo["mylabel2"].(map[string]interface{})
+	require.Equal(t, myUuid, keyInfoLabel2["mount_uuid"])
+	require.Equal(t, "test-path/foo2", keyInfoLabel2["prefix"])
+
+	// Test GET operation
+	req = logical.TestRequest(t, logical.ReadOperation, "well-known/mylabel1")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	require.NoError(t, err, "failed get well-known request")
+	require.NotNil(t, resp, "response from get well-known request was nil")
+
+	require.Equal(t, myUuid, resp.Data["mount_uuid"])
+	require.Equal(t, "test-path/foo1", resp.Data["prefix"])
+
+	// Test GET operation on unknown label
+	req = logical.TestRequest(t, logical.ReadOperation, "well-known/mylabel1-unknown")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	require.NoError(t, err, "failed get well-known request")
+	require.Nil(t, resp, "response from unknown should have been nil was %v", resp)
 }

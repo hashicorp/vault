@@ -6,7 +6,10 @@ package http
 import (
 	"bytes"
 	"context"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -263,6 +266,13 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		wrappedHandler = disableReplicationStatusEndpointWrapping(wrappedHandler)
 	}
 
+	// Add an extra wrapping handler if any of the Redaction settings are
+	// true that will create a new request with a context containing the
+	// redaction settings.
+	if props.ListenerConfig != nil && (props.ListenerConfig.RedactAddresses || props.ListenerConfig.RedactClusterName || props.ListenerConfig.RedactVersion) {
+		wrappedHandler = redactionSettingsWrapping(wrappedHandler, props.ListenerConfig.RedactVersion, props.ListenerConfig.RedactAddresses, props.ListenerConfig.RedactClusterName)
+	}
+
 	if props.ListenerConfig != nil && props.ListenerConfig.DisableRequestLimiter {
 		wrappedHandler = wrapRequestLimiterHandler(wrappedHandler, props)
 	}
@@ -500,6 +510,8 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 	hopSkips := l.XForwardedForHopSkips
 	authorizedAddrs := l.XForwardedForAuthorizedAddrs
 	rejectNotAuthz := l.XForwardedForRejectNotAuthorized
+	clientCertHeader := l.XForwardedForClientCertHeader
+	clientCertHeaderDecoders := l.XForwardedForClientCertHeaderDecoders
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		headers, headersOK := r.Header[textproto.CanonicalMIMEHeaderKey("X-Forwarded-For")]
 		if !headersOK || len(headers) == 0 {
@@ -582,6 +594,60 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 		}
 
 		r.RemoteAddr = net.JoinHostPort(acc[indexToUse], port)
+
+		// Import the Client Certificate forwarded by the reverse proxy
+		// There should be only 1 instance of the header, but looping allows for more flexibility
+		clientCertHeaders, clientCertHeadersOK := r.Header[textproto.CanonicalMIMEHeaderKey(clientCertHeader)]
+		if clientCertHeadersOK && len(clientCertHeaders) > 0 {
+			var client_certs []*x509.Certificate
+			for _, header := range clientCertHeaders {
+				// Multiple certs should be comma delimetered
+				vals := strings.Split(header, ",")
+				for _, v := range vals {
+					actions := strings.Split(clientCertHeaderDecoders, ",")
+					for _, action := range actions {
+						switch action {
+						case "URL":
+							decoded, err := url.QueryUnescape(v)
+							if err != nil {
+								respondError(w, http.StatusBadRequest, fmt.Errorf("failed to url unescape the client certificate: %w", err))
+								return
+							}
+							v = decoded
+						case "BASE64":
+							decoded, err := base64.StdEncoding.DecodeString(v)
+							if err != nil {
+								respondError(w, http.StatusBadRequest, fmt.Errorf("failed to base64 decode the client certificate: %w", err))
+								return
+							}
+							v = string(decoded[:])
+						case "DER":
+							decoded, _ := pem.Decode([]byte(v))
+							if decoded == nil {
+								respondError(w, http.StatusBadRequest, fmt.Errorf("failed to convert the client certificate to DER format: %w", err))
+								return
+							}
+							v = string(decoded.Bytes[:])
+						default:
+							respondError(w, http.StatusBadRequest, fmt.Errorf("unknown decode option specified: %s", action))
+							return
+						}
+					}
+
+					cert, err := x509.ParseCertificate([]byte(v))
+					if err != nil {
+						respondError(w, http.StatusBadRequest, fmt.Errorf("failed to parse the client certificate: %w", err))
+						return
+					}
+					client_certs = append(client_certs, cert)
+				}
+			}
+			if r.TLS == nil {
+				respondError(w, http.StatusBadRequest, fmt.Errorf("Server must use TLS for certificate authentication"))
+			} else {
+				r.TLS.PeerCertificates = append(client_certs, r.TLS.PeerCertificates...)
+			}
+		}
 		h.ServeHTTP(w, r)
 	})
 }
@@ -918,35 +984,15 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	w.Write(retBytes)
 }
 
-func acquireLimiterListener(core *vault.Core, rawReq *http.Request, r *logical.Request) (*limits.RequestListener, bool) {
-	var disable bool
-	disableRequestLimiter := rawReq.Context().Value(logical.CtxKeyDisableRequestLimiter{})
-	if disableRequestLimiter != nil {
-		disable = disableRequestLimiter.(bool)
-	}
-	r.RequestLimiterDisabled = disable
-	if disable {
-		return &limits.RequestListener{}, true
-	}
-
-	lim := &limits.RequestLimiter{}
-	if r.PathLimited {
-		lim = core.GetRequestLimiter(limits.SpecialPathLimiter)
-	} else {
-		switch rawReq.Method {
-		case http.MethodGet, http.MethodHead, http.MethodTrace, http.MethodOptions:
-			// We're only interested in the inverse, so do nothing here.
-		default:
-			lim = core.GetRequestLimiter(limits.WriteLimiter)
-		}
-	}
-	return lim.Acquire(rawReq.Context())
-}
-
 // request is a helper to perform a request and properly exit in the
 // case of an error.
 func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool, bool) {
-	lsnr, ok := acquireLimiterListener(core, rawReq, r)
+	lim := &limits.HTTPLimiter{
+		Method:      rawReq.Method,
+		PathLimited: r.PathLimited,
+		LookupFunc:  core.GetRequestLimiter,
+	}
+	lsnr, ok := lim.Acquire(rawReq.Context())
 	if !ok {
 		resp := &logical.Response{}
 		logical.RespondWithStatusCode(resp, r, http.StatusServiceUnavailable)
@@ -974,6 +1020,11 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 			resp = &logical.Response{}
 		}
 		resp.AddWarning("Timeout hit while waiting for local replicated cluster to apply primary's write; this client may encounter stale reads of values written during this operation.")
+	}
+	if errwrap.Contains(err, consts.ErrOverloaded.Error()) {
+		logical.RespondWithStatusCode(resp, r, http.StatusServiceUnavailable)
+		respondError(w, http.StatusServiceUnavailable, err)
+		return resp, false, false
 	}
 	if errwrap.Contains(err, consts.ErrStandby.Error()) {
 		respondStandby(core, w, rawReq.URL)

@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestProcessManual_NilData tests ProcessManual when nil data is supplied.
+// TestProcessManual_NilData tests processManual when nil data is supplied.
 func TestProcessManual_NilData(t *testing.T) {
 	t.Parallel()
 
@@ -32,14 +32,16 @@ func TestProcessManual_NilData(t *testing.T) {
 	ids = append(ids, sinkId)
 	nodes[sinkId] = sinkNode
 
-	err := ProcessManual(namespace.RootContext(context.Background()), nil, ids, nodes)
+	err := processManual(namespace.RootContext(context.Background()), nil, ids, nodes)
 	require.Error(t, err)
 	require.EqualError(t, err, "data cannot be nil")
 }
 
-// TestProcessManual_BadIDs tests ProcessManual when different bad values are
+// TestProcessManual_BadIDs tests processManual when different bad values are
 // supplied for the ID parameter.
 func TestProcessManual_BadIDs(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		IDs                  []eventlogger.NodeID
 		ExpectedErrorMessage string
@@ -74,14 +76,14 @@ func TestProcessManual_BadIDs(t *testing.T) {
 			require.NoError(t, err)
 			data := newData(requestId)
 
-			err = ProcessManual(namespace.RootContext(context.Background()), data, tc.IDs, nodes)
+			err = processManual(namespace.RootContext(context.Background()), data, tc.IDs, nodes)
 			require.Error(t, err)
 			require.EqualError(t, err, tc.ExpectedErrorMessage)
 		})
 	}
 }
 
-// TestProcessManual_NoNodes tests ProcessManual when no nodes are supplied.
+// TestProcessManual_NoNodes tests processManual when no nodes are supplied.
 func TestProcessManual_NoNodes(t *testing.T) {
 	t.Parallel()
 
@@ -101,12 +103,12 @@ func TestProcessManual_NoNodes(t *testing.T) {
 	require.NoError(t, err)
 	data := newData(requestId)
 
-	err = ProcessManual(namespace.RootContext(context.Background()), data, ids, nodes)
+	err = processManual(namespace.RootContext(context.Background()), data, ids, nodes)
 	require.Error(t, err)
 	require.EqualError(t, err, "nodes are required")
 }
 
-// TestProcessManual_IdNodeMismatch tests ProcessManual when IDs don't match with
+// TestProcessManual_IdNodeMismatch tests processManual when IDs don't match with
 // the nodes in the supplied map.
 func TestProcessManual_IdNodeMismatch(t *testing.T) {
 	t.Parallel()
@@ -128,12 +130,12 @@ func TestProcessManual_IdNodeMismatch(t *testing.T) {
 	require.NoError(t, err)
 	data := newData(requestId)
 
-	err = ProcessManual(namespace.RootContext(context.Background()), data, ids, nodes)
+	err = processManual(namespace.RootContext(context.Background()), data, ids, nodes)
 	require.Error(t, err)
 	require.ErrorContains(t, err, "node not found: ")
 }
 
-// TestProcessManual_NotEnoughNodes tests ProcessManual when there is only one
+// TestProcessManual_NotEnoughNodes tests processManual when there is only one
 // node provided.
 func TestProcessManual_NotEnoughNodes(t *testing.T) {
 	t.Parallel()
@@ -151,12 +153,12 @@ func TestProcessManual_NotEnoughNodes(t *testing.T) {
 	require.NoError(t, err)
 	data := newData(requestId)
 
-	err = ProcessManual(namespace.RootContext(context.Background()), data, ids, nodes)
+	err = processManual(namespace.RootContext(context.Background()), data, ids, nodes)
 	require.Error(t, err)
 	require.EqualError(t, err, "minimum of 2 ids are required")
 }
 
-// TestProcessManual_LastNodeNotSink tests ProcessManual when the last node is
+// TestProcessManual_LastNodeNotSink tests processManual when the last node is
 // not a Sink node.
 func TestProcessManual_LastNodeNotSink(t *testing.T) {
 	t.Parallel()
@@ -179,7 +181,7 @@ func TestProcessManual_LastNodeNotSink(t *testing.T) {
 	require.NoError(t, err)
 	data := newData(requestId)
 
-	err = ProcessManual(namespace.RootContext(context.Background()), data, ids, nodes)
+	err = processManual(namespace.RootContext(context.Background()), data, ids, nodes)
 	require.Error(t, err)
 	require.EqualError(t, err, "last node must be a filter or sink")
 }
@@ -208,7 +210,7 @@ func TestProcessManualEndWithSink(t *testing.T) {
 	require.NoError(t, err)
 	data := newData(requestId)
 
-	err = ProcessManual(namespace.RootContext(context.Background()), data, ids, nodes)
+	err = processManual(namespace.RootContext(context.Background()), data, ids, nodes)
 	require.NoError(t, err)
 }
 
@@ -241,7 +243,7 @@ func TestProcessManual_EndWithFilter(t *testing.T) {
 	require.NoError(t, err)
 	data := newData(requestId)
 
-	err = ProcessManual(namespace.RootContext(context.Background()), data, ids, nodes)
+	err = processManual(namespace.RootContext(context.Background()), data, ids, nodes)
 	require.NoError(t, err)
 }
 

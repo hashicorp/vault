@@ -48,7 +48,7 @@ func TestPolicy_NoDefaultPolicy(t *testing.T) {
 	}
 
 	// Configure LDAP auth backend
-	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "master")
 	defer cleanup()
 
 	_, err = client.Logical().Write("auth/ldap/config", map[string]interface{}{
@@ -106,7 +106,7 @@ func TestPolicy_NoConfiguredPolicy(t *testing.T) {
 	}
 
 	// Configure LDAP auth backend
-	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "master")
 	defer cleanup()
 
 	_, err = client.Logical().Write("auth/ldap/config", map[string]interface{}{
