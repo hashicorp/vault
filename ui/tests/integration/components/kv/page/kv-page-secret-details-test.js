@@ -13,7 +13,6 @@ import { kvDataPath, kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { FORM, PAGE, parseJsonEditor } from 'vault/tests/helpers/kv/kv-selectors';
 import { syncStatusResponse } from 'vault/mirage/handlers/sync';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | kv-v2 | Page::Secret::Details', function (hooks) {
   setupRenderingTest(hooks);
@@ -90,12 +89,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       secret: this.secretComplex,
       metadata: this.metadata,
     };
-    setRunOptions({
-      rules: {
-        // TODO: Fix JSONEditor component
-        label: { enabled: false },
-      },
-    });
   });
 
   test('it renders secret details and toggles json view', async function (assert) {
@@ -135,6 +128,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     await click(FORM.toggleMasked);
     assert.dom(PAGE.infoRowValue('foo')).hasText('bar', 'renders secret value');
     await click(FORM.toggleJson);
+    await click(FORM.toggleJsonValues);
     assert.propEqual(parseJsonEditor(find), this.secretData, 'json editor renders secret data');
     assert
       .dom(PAGE.detail.versionTimestamp)
@@ -142,7 +136,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
   });
 
   test('it renders json view when secret is complex', async function (assert) {
-    assert.expect(3);
+    assert.expect(4);
     await render(
       hbs`
        <Page::Secret::Details
@@ -154,7 +148,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       { owner: this.engine }
     );
     assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
-    assert.dom(FORM.toggleJson).isDisabled();
+    assert.dom(FORM.toggleJson).isChecked();
+    assert.dom(FORM.toggleJson).isNotDisabled();
     assert.dom('[data-test-component="code-mirror-modifier"]').exists('shows json editor');
   });
 

@@ -7,26 +7,19 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ldapMirageScenario from 'vault/mirage/scenarios/ldap';
-import ENV from 'vault/config/environment';
+import ldapHandlers from 'vault/mirage/handlers/ldap';
 import authPage from 'vault/tests/pages/auth';
 import { click, fillIn, visit } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
-import { isURL, visitURL } from 'vault/tests/helpers/ldap';
+import { isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
 
 module('Acceptance | ldap | overview', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'ldap';
-  });
-
   hooks.beforeEach(async function () {
+    ldapHandlers(this.server);
     return authPage.login();
-  });
-
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
   });
 
   test('it should transition to ldap overview on mount success', async function (assert) {

@@ -34,8 +34,9 @@ const appConfig = {
       return `${config.rootURL.replace(/\/$/, '')}${filePath}`;
     },
   },
-  babel: {
-    plugins: [['inline-json-import', {}]],
+  'ember-cli-babel': {
+    enableTypeScriptTransform: true,
+    throwUnlessParallelizable: true,
   },
   hinting: isTest,
   tests: isTest,
@@ -47,7 +48,8 @@ const appConfig = {
     onlyIncluded: true,
     precision: 4,
     includePaths: [
-      './node_modules/@hashicorp/design-system-components/app/styles',
+      './node_modules/@hashicorp/design-system-components/dist/styles',
+      './node_modules/@hashicorp/ember-flight-icons/dist/styles',
       './node_modules/@hashicorp/design-system-tokens/dist/products/css',
     ],
   },

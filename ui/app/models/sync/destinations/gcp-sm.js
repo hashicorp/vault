@@ -7,13 +7,29 @@ import SyncDestinationModel from '../destination';
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 
-const displayFields = ['name', 'credentials', 'secretNameTemplate', 'customTags'];
+const displayFields = [
+  // connection details
+  'name',
+  'projectId',
+  'credentials',
+  // vault sync config options
+  'granularity',
+  'secretNameTemplate',
+  'customTags',
+];
 const formFieldGroups = [
-  { default: ['name', 'secretNameTemplate', 'customTags'] },
+  { default: ['name', 'projectId', 'granularity', 'secretNameTemplate', 'customTags'] },
   { Credentials: ['credentials'] },
 ];
 @withFormFields(displayFields, formFieldGroups)
 export default class SyncDestinationsGoogleCloudSecretManagerModel extends SyncDestinationModel {
+  @attr('string', {
+    label: 'Project ID',
+    subText:
+      'The target project to manage secrets in. If set, overrides the project derived from the service account JSON credentials or application default credentials.',
+  })
+  projectId;
+
   @attr('string', {
     label: 'JSON credentials',
     subText:

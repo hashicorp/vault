@@ -10,6 +10,9 @@ import { capitalize } from 'vault/helpers/capitalize';
 import { humanize } from 'vault/helpers/humanize';
 import { dasherize } from 'vault/helpers/dasherize';
 import { assert } from '@ember/debug';
+import { addToArray } from 'vault/helpers/add-to-array';
+import { removeFromArray } from 'vault/helpers/remove-from-array';
+
 /**
  * @module FormField
  * `FormField` components are field elements associated with a particular model.
@@ -192,9 +195,12 @@ export default class FormFieldComponent extends Component {
 
   @action
   handleChecklist(event) {
-    const valueArray = this.args.model[this.valuePath];
-    const method = event.target.checked ? 'addObject' : 'removeObject';
-    valueArray[method](event.target.value);
-    this.setAndBroadcast(valueArray);
+    let updatedValue = this.args.model[this.valuePath];
+    if (event.target.checked) {
+      updatedValue = addToArray(updatedValue, event.target.value);
+    } else {
+      updatedValue = removeFromArray(updatedValue, event.target.value);
+    }
+    this.setAndBroadcast(updatedValue);
   }
 }

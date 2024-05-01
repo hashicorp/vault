@@ -110,23 +110,13 @@ type client struct {
 	ClientSecret string `json:"client_secret"`
 }
 
+//go:generate enumer -type=clientType -trimprefix=clientType -transform=snake
 type clientType int
 
 const (
 	confidential clientType = iota
 	public
 )
-
-func (k clientType) String() string {
-	switch k {
-	case confidential:
-		return "confidential"
-	case public:
-		return "public"
-	default:
-		return "unknown"
-	}
-}
 
 type provider struct {
 	Issuer           string   `json:"issuer"`
@@ -2629,15 +2619,15 @@ func (i *IdentityStore) lazyGenerateDefaultKey(ctx context.Context, storage logi
 			return err
 		}
 
-		if err := i.oidcCache.Delete(ns, namedKeyCachePrefix+defaultKeyName); err != nil {
-			return err
-		}
-
 		entry, err := logical.StorageEntryJSON(namedKeyConfigPath+defaultKeyName, defaultKey)
 		if err != nil {
 			return err
 		}
 		if err := storage.Put(ctx, entry); err != nil {
+			return err
+		}
+
+		if err := i.oidcCache.Flush(ns); err != nil {
 			return err
 		}
 	}

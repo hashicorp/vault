@@ -12,6 +12,8 @@ import (
 
 // TestAuditEvent_new exercises the newEvent func to create audit events.
 func TestAuditEvent_new(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Options              []Option
 		Subtype              subtype
@@ -29,21 +31,21 @@ func TestAuditEvent_new(t *testing.T) {
 			Subtype:              subtype(""),
 			Format:               format(""),
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.NewEvent: audit.(AuditEvent).validate: audit.(subtype).validate: '' is not a valid event subtype: invalid parameter",
+			ExpectedErrorMessage: "invalid event subtype \"\": invalid internal parameter",
 		},
 		"empty-Option": {
 			Options:              []Option{},
 			Subtype:              subtype(""),
 			Format:               format(""),
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.NewEvent: audit.(AuditEvent).validate: audit.(subtype).validate: '' is not a valid event subtype: invalid parameter",
+			ExpectedErrorMessage: "invalid event subtype \"\": invalid internal parameter",
 		},
 		"bad-id": {
 			Options:              []Option{WithID("")},
 			Subtype:              ResponseType,
 			Format:               JSONFormat,
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.NewEvent: error applying options: id cannot be empty",
+			ExpectedErrorMessage: "id cannot be empty",
 		},
 		"good": {
 			Options: []Option{
@@ -107,6 +109,8 @@ func TestAuditEvent_new(t *testing.T) {
 
 // TestAuditEvent_Validate exercises the validation for an audit event.
 func TestAuditEvent_Validate(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value                *AuditEvent
 		IsErrorExpected      bool
@@ -115,12 +119,12 @@ func TestAuditEvent_Validate(t *testing.T) {
 		"nil": {
 			Value:                nil,
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(AuditEvent).validate: event is nil: invalid parameter",
+			ExpectedErrorMessage: "event is nil: invalid internal parameter",
 		},
 		"default": {
 			Value:                &AuditEvent{},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(AuditEvent).validate: missing ID: invalid parameter",
+			ExpectedErrorMessage: "missing ID: invalid internal parameter",
 		},
 		"id-empty": {
 			Value: &AuditEvent{
@@ -131,7 +135,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 				Data:      nil,
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(AuditEvent).validate: missing ID: invalid parameter",
+			ExpectedErrorMessage: "missing ID: invalid internal parameter",
 		},
 		"version-fiddled": {
 			Value: &AuditEvent{
@@ -142,7 +146,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 				Data:      nil,
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(AuditEvent).validate: event version unsupported: invalid parameter",
+			ExpectedErrorMessage: "event version unsupported: invalid internal parameter",
 		},
 		"subtype-fiddled": {
 			Value: &AuditEvent{
@@ -153,7 +157,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 				Data:      nil,
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(AuditEvent).validate: audit.(subtype).validate: 'moon' is not a valid event subtype: invalid parameter",
+			ExpectedErrorMessage: "invalid event subtype \"moon\": invalid internal parameter",
 		},
 		"default-time": {
 			Value: &AuditEvent{
@@ -164,7 +168,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 				Data:      nil,
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(AuditEvent).validate: event timestamp cannot be the zero time instant: invalid parameter",
+			ExpectedErrorMessage: "event timestamp cannot be the zero time instant: invalid internal parameter",
 		},
 		"valid": {
 			Value: &AuditEvent{
@@ -198,6 +202,8 @@ func TestAuditEvent_Validate(t *testing.T) {
 
 // TestAuditEvent_Validate_Subtype exercises the validation for an audit event's subtype.
 func TestAuditEvent_Validate_Subtype(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value                string
 		IsErrorExpected      bool
@@ -206,12 +212,12 @@ func TestAuditEvent_Validate_Subtype(t *testing.T) {
 		"empty": {
 			Value:                "",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(subtype).validate: '' is not a valid event subtype: invalid parameter",
+			ExpectedErrorMessage: "invalid event subtype \"\": invalid internal parameter",
 		},
 		"unsupported": {
 			Value:                "foo",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(subtype).validate: 'foo' is not a valid event subtype: invalid parameter",
+			ExpectedErrorMessage: "invalid event subtype \"foo\": invalid internal parameter",
 		},
 		"request": {
 			Value:           "AuditRequest",
@@ -243,6 +249,8 @@ func TestAuditEvent_Validate_Subtype(t *testing.T) {
 
 // TestAuditEvent_Validate_Format exercises the validation for an audit event's format.
 func TestAuditEvent_Validate_Format(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value                string
 		IsErrorExpected      bool
@@ -251,12 +259,12 @@ func TestAuditEvent_Validate_Format(t *testing.T) {
 		"empty": {
 			Value:                "",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(format).validate: '' is not a valid format: invalid parameter",
+			ExpectedErrorMessage: "invalid format \"\": invalid internal parameter",
 		},
 		"unsupported": {
 			Value:                "foo",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(format).validate: 'foo' is not a valid format: invalid parameter",
+			ExpectedErrorMessage: "invalid format \"foo\": invalid internal parameter",
 		},
 		"json": {
 			Value:           "json",
@@ -282,6 +290,157 @@ func TestAuditEvent_Validate_Format(t *testing.T) {
 			default:
 				require.NoError(t, err)
 			}
+		})
+	}
+}
+
+// TestAuditEvent_Subtype_MetricTag is used to ensure that we get the string value
+// we expect for a subtype when we want to use it as a metrics tag.
+// In some strange scenario where the subtype was never validated, it is technically
+// possible to get a value that isn't related to request/response, but this shouldn't
+// really be happening, so we will return it as is.
+func TestAuditEvent_Subtype_MetricTag(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		input          string
+		expectedOutput string
+	}{
+		"request": {
+			input:          "AuditRequest",
+			expectedOutput: "log_request",
+		},
+		"response": {
+			input:          "AuditResponse",
+			expectedOutput: "log_response",
+		},
+		"non-validated": {
+			input:          "juan",
+			expectedOutput: "juan",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			st := subtype(tc.input)
+			tag := st.MetricTag()
+			require.Equal(t, tc.expectedOutput, tag)
+		})
+	}
+}
+
+// TestAuditEvent_Subtype_String is used to ensure that we get the string value
+// we expect for a subtype when it is used with the Stringer interface.
+// e.g. an AuditRequest subtype is 'request'
+func TestAuditEvent_Subtype_String(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		input          string
+		expectedOutput string
+	}{
+		"request": {
+			input:          "AuditRequest",
+			expectedOutput: "request",
+		},
+		"response": {
+			input:          "AuditResponse",
+			expectedOutput: "response",
+		},
+		"non-validated": {
+			input:          "juan",
+			expectedOutput: "juan",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			st := subtype(tc.input)
+			require.Equal(t, tc.expectedOutput, st.String())
+		})
+	}
+}
+
+// TestAuditEvent_formattedTime is used to check the output from the formattedTime
+// method returns the correct format.
+func TestAuditEvent_formattedTime(t *testing.T) {
+	theTime := time.Date(2024, time.March, 22, 10, 0o0, 5, 10, time.UTC)
+	a, err := NewEvent(ResponseType, WithNow(theTime))
+	require.NoError(t, err)
+	require.NotNil(t, a)
+	require.Equal(t, "2024-03-22T10:00:05.00000001Z", a.formattedTime())
+}
+
+// TestEvent_IsValidFormat ensures that we can correctly determine valid and
+// invalid formats.
+func TestEvent_IsValidFormat(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		input    string
+		expected bool
+	}{
+		"empty": {
+			input:    "",
+			expected: false,
+		},
+		"whitespace": {
+			input:    "     ",
+			expected: false,
+		},
+		"invalid-test": {
+			input:    "test",
+			expected: false,
+		},
+		"valid-json": {
+			input:    "json",
+			expected: true,
+		},
+		"upper-json": {
+			input:    "JSON",
+			expected: true,
+		},
+		"mixed-json": {
+			input:    "Json",
+			expected: true,
+		},
+		"spacey-json": {
+			input:    "  json  ",
+			expected: true,
+		},
+		"valid-jsonx": {
+			input:    "jsonx",
+			expected: true,
+		},
+		"upper-jsonx": {
+			input:    "JSONX",
+			expected: true,
+		},
+		"mixed-jsonx": {
+			input:    "JsonX",
+			expected: true,
+		},
+		"spacey-jsonx": {
+			input:    "  jsonx  ",
+			expected: true,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			res := IsValidFormat(tc.input)
+			require.Equal(t, tc.expected, res)
 		})
 	}
 }

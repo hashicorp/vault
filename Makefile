@@ -158,16 +158,23 @@ protolint: prep check-tools-external
 # now run as a pre-commit hook (and there's little value in
 # making every build run the formatter), we've removed that
 # dependency.
-prep: check-go-version
+prep: check-go-version clean
 	@echo "==> Running go generate..."
 	@GOARCH= GOOS= $(GO_CMD) generate $(MAIN_PACKAGES)
 	@GOARCH= GOOS= cd api && $(GO_CMD) generate $(API_PACKAGES)
 	@GOARCH= GOOS= cd sdk && $(GO_CMD) generate $(SDK_PACKAGES)
+
+# Git doesn't allow us to store shared hooks in .git. Instead, we make sure they're up-to-date
+# whenever a make target is invoked.
+.PHONY: hooks
+hooks:
 	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
+
+-include hooks # Make sure they're always up-to-date
 
 # bootstrap the build by generating any necessary code and downloading additional tools that may
 # be used by devs.
-bootstrap: prep tools
+bootstrap: tools prep
 
 # Note: if you have plugins in GOPATH you can update all of them via something like:
 # for i in $(ls | grep vault-plugin-); do cd $i; git remote update; git reset --hard origin/master; dep ensure -update; git add .; git commit; git push; cd ..; done
@@ -217,7 +224,10 @@ proto: check-tools-external
 	protoc-go-inject-tag -input=./helper/identity/types.pb.go
 	protoc-go-inject-tag -input=./helper/identity/mfa/types.pb.go
 
-fmt:
+importfmt: check-tools-external
+	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gosimports -w
+
+fmt: importfmt
 	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
 
 fmtcheck: check-go-fmt
@@ -378,4 +388,8 @@ ci-copywriteheaders:
 
 .PHONY: all-packages
 all-packages:
-	@echo $(ALL_PACKAGES) | tr ' ' '\n' 
+	@echo $(ALL_PACKAGES) | tr ' ' '\n'
+
+.PHONY: clean
+clean:
+	@echo "==> Cleaning..."

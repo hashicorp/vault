@@ -5,18 +5,11 @@
 
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
-import apiStub from 'vault/tests/helpers/noop-all-api-requests';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 module('Unit | Adapter | secret engine', function (hooks) {
   setupTest(hooks);
-
-  hooks.beforeEach(function () {
-    this.server = apiStub();
-  });
-
-  hooks.afterEach(function () {
-    this.server.shutdown();
-  });
+  setupMirage(hooks);
 
   const storeStub = {
     serializerFor() {
@@ -29,46 +22,44 @@ module('Unit | Adapter | secret engine', function (hooks) {
     modelName: 'secret-engine',
   };
 
-  const cases = [
-    {
-      description: 'Empty query',
-      adapterMethod: 'query',
-      args: [storeStub, type, {}],
-      url: '/v1/sys/internal/ui/mounts',
-      method: 'GET',
-    },
-    {
-      description: 'Query with a path',
-      adapterMethod: 'query',
-      args: [storeStub, type, { path: 'foo' }],
-      url: '/v1/sys/internal/ui/mounts/foo',
-      method: 'GET',
-    },
-
-    {
-      description: 'Query with nested path',
-      adapterMethod: 'query',
-      args: [storeStub, type, { path: 'foo/bar/baz' }],
-      url: '/v1/sys/internal/ui/mounts/foo/bar/baz',
-      method: 'GET',
-    },
-  ];
-  cases.forEach((testCase) => {
-    test(`secret-engine: ${testCase.description}`, function (assert) {
-      assert.expect(2);
-      const adapter = this.owner.lookup('adapter:secret-engine');
-      adapter[testCase.adapterMethod](...testCase.args);
-      const { url, method } = this.server.handledRequests[0];
-      assert.strictEqual(
-        url,
-        testCase.url,
-        `${testCase.adapterMethod} calls the correct url: ${testCase.url}`
-      );
-      assert.strictEqual(
-        method,
-        testCase.method,
-        `${testCase.adapterMethod} uses the correct http verb: ${testCase.method}`
-      );
+  test('Empty query', function (assert) {
+    assert.expect(1);
+    this.server.get('/sys/internal/ui/mounts', () => {
+      assert.ok('query calls the correct url');
+      return {};
     });
+    const adapter = this.owner.lookup('adapter:secret-engine');
+    adapter['query'](storeStub, type, {});
+  });
+  test('Query with a path', function (assert) {
+    assert.expect(1);
+    this.server.get('/sys/internal/ui/mounts/foo', () => {
+      assert.ok('query calls the correct url');
+      return {};
+    });
+    const adapter = this.owner.lookup('adapter:secret-engine');
+    adapter['query'](storeStub, type, { path: 'foo' });
+  });
+
+  test('Query with nested path', function (assert) {
+    assert.expect(1);
+    this.server.get('/sys/internal/ui/mounts/foo/bar/baz', () => {
+      assert.ok('query calls the correct url');
+      return {};
+    });
+    const adapter = this.owner.lookup('adapter:secret-engine');
+    adapter['query'](storeStub, type, { path: 'foo/bar/baz' });
+  });
+
+  test('Fails gracefully finding records for non ssh engines', function (assert) {
+    assert.expect(1);
+    const snapshot = {
+      attr() {
+        return { type: 'aws', path: 'aws/' };
+      },
+    };
+    const adapter = this.owner.lookup('adapter:secret-engine');
+    const response = adapter.findRecord(storeStub, 'aws', { path: 'aws' }, snapshot);
+    assert.propEqual(response, { data: {} }, 'returns empty data object');
   });
 });

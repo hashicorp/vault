@@ -39,6 +39,8 @@ var (
 		return nil
 	}
 
+	sysActivityLogReporting = func(b *SystemBackend) {}
+
 	getSystemSchemas = func() []func() *memdb.TableSchema { return nil }
 
 	getEGPListResponseKeyInfo = func(*SystemBackend, *namespace.Namespace) map[string]interface{} { return nil }
@@ -325,7 +327,7 @@ func (b *SystemBackend) tuneMountTTLs(ctx context.Context, path string, me *Moun
 	if err != nil {
 		me.Config.MaxLeaseTTL = origMax
 		me.Config.DefaultLeaseTTL = origDefault
-		return fmt.Errorf("failed to update mount table, rolling back TTL changes")
+		return fmt.Errorf("failed to update mount table, rolling back TTL changes: %w", err)
 	}
 	if b.Core.logger.IsInfo() {
 		b.Core.logger.Info("mount tuning of leases successful", "path", path)

@@ -13,16 +13,15 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
-
-	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
-	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
-	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 )
 
 const (
@@ -125,8 +124,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 				localDeltaWALPath,
 				legacyCRLPath,
 				clusterConfigPath,
-				"crls/",
-				"certs/",
+				issuing.PathCrls,
+				issuing.PathCerts,
 				acmePathPrefix,
 			},
 
@@ -791,7 +790,7 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 		return nil
 	}
 
-	entries, err := b.storage.List(ctx, "certs/")
+	entries, err := b.storage.List(ctx, issuing.PathCerts)
 	if err != nil {
 		return err
 	}

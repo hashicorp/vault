@@ -8,7 +8,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { currentRouteName } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import ENV from 'vault/config/environment';
+import chrootNamespaceHandlers from 'vault/mirage/handlers/chroot-namespace';
 import { createTokenCmd, runCmd, tokenWithPolicyCmd } from '../helpers/commands';
 
 const navLink = (title) => `[data-test-sidebar-nav-link="${title}"]`;
@@ -19,17 +19,29 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'chrootNamespace';
-  });
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
+  hooks.beforeEach(function () {
+    chrootNamespaceHandlers(this.server);
   });
 
   test('it should render normally when chroot namespace exists', async function (assert) {
     await authPage.login();
     assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'goes to dashboard page');
     assert.dom('[data-test-badge-namespace]').includesText('root', 'Shows root namespace badge');
+  });
+
+  test('root-only nav items are unavailable', async function (assert) {
+    await authPage.login();
+
+    ['Dashboard', 'Secrets Engines', 'Access', 'Tools', 'Policies', 'Client Count'].forEach((nav) => {
+      assert.dom(navLink(nav)).exists(`Shows ${nav} nav item in chroot listener`);
+    });
+    ['Replication', 'Raft Storage', 'License', 'Seal Vault'].forEach((nav) => {
+      assert.dom(navLink(nav)).doesNotExist(`Does not show ${nav} nav item in chroot listener`);
+    });
+
+    // cleanup namespace
+    await authPage.login();
+    await runCmd(`delete sys/namespaces/${namespace}`);
   });
 
   test('a user with default policy should see nav items', async function (assert) {

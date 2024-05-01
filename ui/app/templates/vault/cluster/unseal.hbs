@@ -14,11 +14,12 @@
         @bottomBorder={{true}}
         @message="Your Vault license has terminated and Vault is sealed. To unseal, add a current license to your configuration and restart Vault."
       >
-        <p class="align-right">
-          <DocLink @path="/vault/tutorials/enterprise/hashicorp-enterprise-license">
-            License documentation
-          </DocLink>
-        </p>
+        <Hds::Link::Standalone
+          @icon="learn-link"
+          @iconPosition="trailing"
+          @text="Install an enterprise license tutorial"
+          @href={{doc-link "/vault/tutorials/enterprise/hashicorp-enterprise-license"}}
+        />
       </EmptyState>
     </div>
   </div>
@@ -59,7 +60,7 @@
             @buttonText="Unseal"
             @onLicenseError={{action "handleLicenseError"}}
             @checkComplete={{action "isUnsealed"}}
-            @onShamirSuccess={{action "transitionToCluster"}}
+            @onShamirSuccess={{transition-to "vault.cluster" this.model.name}}
             class="has-top-margin-m"
           />
         {{/if}}

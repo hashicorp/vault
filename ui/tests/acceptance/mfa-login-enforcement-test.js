@@ -5,23 +5,18 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentRouteName, fillIn, visit } from '@ember/test-helpers';
+import { click, currentRouteName, fillIn, visit, waitFor } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import ENV from 'vault/config/environment';
+import mfaConfigHandlers from 'vault/mirage/handlers/mfa-config';
 
 module('Acceptance | mfa-login-enforcement', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'mfaConfig';
-  });
   hooks.beforeEach(function () {
+    mfaConfigHandlers(this.server);
     return authPage.login();
-  });
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
   });
 
   test('it should send the correct data when creating an enforcement', async function (assert) {
@@ -139,6 +134,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     assert.dom('h1').includesText(enforcement.name, 'Name renders in title');
     assert.dom('h1 svg').hasClass('flight-icon-lock', 'Lock icon renders in title');
     assert.dom('[data-test-tab="targets"]').hasClass('active', 'Targets tab is active by default');
+    await waitFor('[data-test-target]', { timeout: 5000 });
     assert.dom('[data-test-target]').exists({ count: 4 }, 'Targets render in list');
     // targets tab
     const targets = {
@@ -236,6 +232,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     await click('[data-test-mlef-remove-target="Authentication method"]');
     await click('[data-test-mlef-save]');
 
+    await waitFor('[data-test-target]', { timeout: 5000 });
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.enforcements.enforcement.index',

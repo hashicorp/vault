@@ -10,6 +10,7 @@
         <SecretLink
           @secret={{@key.id}}
           @mode="show"
+          @backend={{@key.backend}}
           @replace={{true}}
           @queryParams={{hash tab="actions"}}
           data-test-transit-key-actions-link={{true}}
@@ -22,6 +23,7 @@
         <SecretLink
           @secret={{@key.id}}
           @mode="show"
+          @backend={{@key.backend}}
           @replace={{true}}
           @queryParams={{hash tab="details"}}
           data-test-transit-link="details"
@@ -34,6 +36,7 @@
         <SecretLink
           @secret={{@key.id}}
           @mode="show"
+          @backend={{@key.backend}}
           @replace={{true}}
           @queryParams={{hash tab="versions"}}
           data-test-transit-link="versions"
@@ -47,12 +50,21 @@
 {{#if (not-eq @tab "actions")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if (eq @tab "versions")}}
-        <TransitKeyActions @key={{@key}} @selectedAction="rotate" @capabilities={{@capabilities}} @onRefresh={{@refresh}} />
+      {{#if (and (eq @tab "versions") @key.canRotate)}}
+        <ConfirmAction
+          @buttonText="Rotate encryption key"
+          class="toolbar-button"
+          @buttonColor="secondary"
+          @confirmTitle="Rotate this key?"
+          @confirmMessage="After rotation, all key actions will default to using the newest version of the key."
+          @modalColor="warning"
+          @onConfirmAction={{this.rotateKey}}
+          data-test-transit-key-rotate
+        />
       {{/if}}
       {{#if (eq @mode "show")}}
         {{#if (or @capabilities.canUpdate @capabilities.canDelete)}}
-          <ToolbarSecretLink @secret={{@key.id}} @mode="edit" replace={{true}}>
+          <ToolbarSecretLink @secret={{@key.id}} @backend={{@key.backend}} @mode="edit" replace={{true}}>
             Edit encryption key
           </ToolbarSecretLink>
         {{/if}}
@@ -65,7 +77,7 @@
   <div class="transit-card-container">
     {{#each @model.supportedActions as |supportedAction|}}
       <LinkedBlock
-        @params={{array "vault.cluster.secrets.backend.actions" @model.id}}
+        @params={{array "vault.cluster.secrets.backend.actions" @model.backend @model.id}}
         @queryParams={{hash action=supportedAction.name}}
         class="transit-card"
         data-test-transit-card={{supportedAction.name}}
@@ -151,21 +163,15 @@
             </div>
           </div>
           <div class="column is-1 is-flex-end">
-            <PopupMenu name="secret-menu">
-              <nav class="menu" aria-label="copy public key">
-                <ul class="menu-list">
-                  <li class="action">
-                    <Hds::Copy::Button
-                      @text="Copy Public Key"
-                      @textToCopy={{meta.public_key}}
-                      @isFullWidth={{true}}
-                      class="in-dropdown link is-flex-start"
-                      {{on "click" (action (set-flash-message "Public key copied!"))}}
-                    />
-                  </li>
-                </ul>
-              </nav>
-            </PopupMenu>
+            <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+              <dd.ToggleIcon
+                @icon="more-horizontal"
+                @text="Public key options"
+                @hasChevron={{false}}
+                data-test-popup-menu-trigger
+              />
+              <dd.CopyItem @text={{meta.public_key}} @copyItemTitle="Copy Public Key" />
+            </Hds::Dropdown>
           </div>
         </div>
       </div>

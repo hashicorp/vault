@@ -21,13 +21,12 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/mitchellh/mapstructure"
-	"k8s.io/utils/strings/slices"
-
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
+	"github.com/mitchellh/mapstructure"
+	"k8s.io/utils/strings/slices"
 )
 
 // Config is the configuration for Vault Agent.
@@ -170,6 +169,7 @@ type TemplateConfig struct {
 	StaticSecretRenderInt    time.Duration `hcl:"-"`
 	MaxConnectionsPerHostRaw interface{}   `hcl:"max_connections_per_host"`
 	MaxConnectionsPerHost    int           `hcl:"-"`
+	LeaseRenewalThreshold    *float64      `hcl:"lease_renewal_threshold"`
 }
 
 type ExecConfig struct {

@@ -4,7 +4,7 @@
  */
 
 import { click, fillIn } from '@ember/test-helpers';
-import { SELECTORS as GENERAL } from 'vault/tests/helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 export const PAGE = {
   ...GENERAL,
@@ -18,6 +18,7 @@ export const PAGE = {
       name: '[data-test-association-name]',
       status: '[data-test-association-status]',
       updated: '[data-test-association-updated]',
+      refresh: '[data-test-refresh-list]',
       menu: {
         sync: '[data-test-association-action="sync"]',
         view: '[data-test-association-action="view"]',
@@ -43,9 +44,20 @@ export const PAGE = {
       type: '[data-test-destination-type]',
       deleteAction: '[data-test-delete]',
       create: '[data-test-create-destination]',
+      menu: {
+        details: '[data-test-details]',
+        edit: '[data-test-edit]',
+      },
     },
   },
   overview: {
+    optInBanner: '[data-test-secrets-sync-opt-in-banner]',
+    optInBannerEnable: '[data-test-secrets-sync-opt-in-banner-enable]',
+    optInModal: '[data-test-secrets-sync-opt-in-modal]',
+    optInCheck: '[data-test-opt-in-check]',
+    optInConfirm: '[data-test-opt-in-confirm]',
+    optInCancel: '[data-test-opt-in-cancel]',
+    optInError: '[data-test-opt-in-error]',
     createDestination: '[data-test-create-destination]',
     table: {
       row: '[data-test-overview-table-row]',
@@ -63,7 +75,7 @@ export const PAGE = {
     text: '.hds-badge__text',
   },
   selectType: (type) => `[data-test-select-destination="${type}"]`,
-  cancelButton: '[data-test-cancel]',
+  createCancel: '[data-test-destination-create-cancel]',
   saveButton: '[data-test-save]',
   toolbar: (btnText) => `[data-test-toolbar="${btnText}"]`,
   form: {
@@ -71,6 +83,8 @@ export const PAGE = {
     fillInByAttr: async (attr, value) => {
       // for handling more complex form input elements by attr name
       switch (attr) {
+        case 'granularity':
+          return await click(`[data-test-radio="secret-key"]`);
         case 'credentials':
           await click('[data-test-text-toggle]');
           return fillIn('[data-test-text-file-textarea]', value);

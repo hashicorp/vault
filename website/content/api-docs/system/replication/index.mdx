@@ -113,38 +113,60 @@ performance primary and DR primary node, it will look something like:
 {
   "data": {
     "dr": {
-      "cluster_id": "f2c21cb5-523f-617b-20ac-c913d9154ba6",
-      "known_secondaries": ["3"],
-      "last_wal": 291,
-      "merkle_root": "38543b95d44132138003939addbaf94125ec184e",
+      "cluster_id": "eef2a5ab-51e2-1c05-407c-8b4dc8d09ebf",
+      "corrupted_merkle_tree": false,
+      "known_secondaries": [
+        "4ca6b639-046b-5bb1-8043-6788ddf09121"
+      ],
+      "last_corruption_check_epoch": "-62135596800",
+      "last_dr_wal": 223,
+      "last_reindex_epoch": "0",
+      "last_wal": 223,
+      "merkle_root": "2494830f1a1c304829b5742a232d39b5457bce9a",
       "mode": "primary",
       "primary_cluster_addr": "",
       "secondaries": [
         {
-          "api_address": "https://127.0.0.1:49264",
-          "cluster_address": "https://127.0.0.1:49267",
+          "api_address": "https://127.0.0.1:65531",
+          "clock_skew_ms": "0",
+          "cluster_address": "https://127.0.0.1:65534",
           "connection_status": "connected",
-          "last_heartbeat": "2020-06-10T15:40:47-07:00",
-          "node_id": "3"
+          "last_heartbeat": "2024-03-04T10:05:56-05:00",
+          "last_heartbeat_duration_ms": "0",
+          "node_id": "4ca6b639-046b-5bb1-8043-6788ddf09121",
+          "replication_primary_canary_age_ms": "696"
         }
-      ]
+      ],
+      "ssct_generation_counter": 0,
+      "state": "running"
     },
     "performance": {
-      "cluster_id": "1598d434-dfec-1f48-f019-3d22a8075bf9",
-      "known_secondaries": ["2"],
-      "last_wal": 291,
-      "merkle_root": "43f40fc775b40cc76cd5d7e289b2e6eaf4ba138c",
+      "cluster_id": "00616ea0-3094-5017-29f9-644f3633f0da",
+      "corrupted_merkle_tree": false,
+      "known_secondaries": [
+        "cd0463e0-a37f-7421-345e-aad53007479f"
+      ],
+      "last_corruption_check_epoch": "-62135596800",
+      "last_performance_wal": 223,
+      "last_reindex_epoch": "0",
+      "last_wal": 223,
+      "merkle_root": "7b75cf69bb9a862913b0de2478164e046d242e0f",
       "mode": "primary",
       "primary_cluster_addr": "",
       "secondaries": [
         {
-          "api_address": "https://127.0.0.1:49253",
-          "cluster_address": "https://127.0.0.1:49256",
+          "api_address": "https://127.0.0.1:49155",
+          "clock_skew_ms": "0",
+          "cluster_address": "https://127.0.0.1:49160",
           "connection_status": "connected",
-          "last_heartbeat": "2020-06-10T15:40:46-07:00",
-          "node_id": "2"
+          "last_heartbeat": "2024-03-04T10:05:56-05:00",
+          "last_heartbeat_duration_ms": "0",
+          "node_id": "cd0463e0-a37f-7421-345e-aad53007479f",
+          "replication_primary_canary_age_ms": "660"
         }
-      ]
+      ],
+      "ssct_generation_counter": 0,
+      "state": "running"
     }
   }
 }
@@ -162,40 +184,62 @@ performance secondary and DR primary node, it will look something like:
 {
   "data": {
     "dr": {
-      "cluster_id": "e4bfa800-002e-7b6d-14c2-617855ece02f",
-      "known_secondaries": ["4"],
-      "last_wal": 455,
-      "merkle_root": "cdcf796619240ce19dd8af30fa700f64c8006e3d",
+      "cluster_id": "8cfe8fd1-c7b7-c301-5aa8-3131d66d53ea",
+      "corrupted_merkle_tree": false,
+      "known_secondaries": [
+        "79f5e0b2-6420-fdcd-5f53-3a1745f3d979"
+      ],
+      "last_corruption_check_epoch": "-62135596800",
+      "last_dr_wal": 145,
+      "last_reindex_epoch": "0",
+      "last_wal": 145,
+      "merkle_root": "29a9794b2e7f1d39cb4ef3976566c02e740b72c2",
       "mode": "primary",
       "primary_cluster_addr": "",
       "secondaries": [
         {
-          "api_address": "https://127.0.0.1:49277",
-          "cluster_address": "https://127.0.0.1:49281",
+          "api_address": "https://127.0.0.1:49167",
+          "clock_skew_ms": "-1",
+          "cluster_address": "https://127.0.0.1:49170",
           "connection_status": "connected",
-          "last_heartbeat": "2020-06-10T15:40:46-07:00",
-          "node_id": "4"
+          "last_heartbeat": "2024-03-04T10:05:56-05:00",
+          "last_heartbeat_duration_ms": "2",
+          "node_id": "79f5e0b2-6420-fdcd-5f53-3a1745f3d979",
+          "replication_primary_canary_age_ms": "454"
         }
-      ]
+      ],
+      "ssct_generation_counter": 0,
+      "state": "running"
     },
     "performance": {
-      "cluster_id": "1598d434-dfec-1f48-f019-3d22a8075bf9",
-      "known_primary_cluster_addrs": ["https://127.0.0.1:8201"],
-      "last_remote_wal": 291,
-      "merkle_root": "43f40fc775b40cc76cd5d7e289b2e6eaf4ba138c",
+      "cluster_id": "00616ea0-3094-5017-29f9-644f3633f0da",
+      "connection_state": "ready",
       "corrupted_merkle_tree": false,
-      "last_corruption_check_epoch": "1694456090",
+      "known_primary_cluster_addrs": [
+        "https://127.0.0.1:65524",
+        "https://127.0.0.1:65525",
+        "https://127.0.0.1:65526"
+      ],
+      "last_corruption_check_epoch": "-62135596800",
+      "last_reindex_epoch": "1709564740",
+      "last_remote_wal": 223,
+      "last_start": "2024-03-04T10:05:48-05:00",
+      "merkle_root": "7b75cf69bb9a862913b0de2478164e046d242e0f",
       "mode": "secondary",
       "primaries": [
         {
-          "api_address": "https://127.0.0.1:49244",
-          "cluster_address": "https://127.0.0.1:8201",
+          "api_address": "https://127.0.0.1:65521",
+          "clock_skew_ms": "0",
+          "cluster_address": "https://127.0.0.1:65524",
           "connection_status": "connected",
-          "last_heartbeat": "2020-06-10T15:40:46-07:00"
+          "last_heartbeat": "2024-03-04T10:05:56-05:00",
+          "last_heartbeat_duration_ms": "0",
+          "replication_primary_canary_age_ms": "660"
         }
       ],
-      "primary_cluster_addr": "https://127.0.0.1:8201",
-      "secondary_id": "2",
+      "primary_cluster_addr": "https://127.0.0.1:65524",
+      "secondary_id": "cd0463e0-a37f-7421-345e-aad53007479f",
+      "ssct_generation_counter": 0,
       "state": "stream-wals"
     }
   }
@@ -221,6 +265,8 @@ You must provide an authentication token when calling `replication/merkle-check`
 
 ```shell-session
 $ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
     http://127.0.0.1:8200/v1/sys/replication/merkle-check
 ```
 

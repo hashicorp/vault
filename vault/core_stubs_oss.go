@@ -98,3 +98,13 @@ func (c *Core) entLastRemoteUpstreamWAL() uint64 {
 func (c *Core) EntWaitUntilWALShipped(ctx context.Context, index uint64) bool {
 	return true
 }
+
+func (c *Core) SecretsSyncLicensedActivated() bool { return false }
+
+func (c *Core) IsMultisealEnabled() bool { return false }
+
+func (c *Core) SetMultisealEnabled(_ bool) {}
+
+func (c *Core) ReloadReplicationCanaryWriteInterval() {}
+
+func (c *Core) GetReplicationLagMillisIgnoreErrs() int64 { return 0 }

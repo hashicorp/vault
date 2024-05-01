@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { hash } from 'rsvp';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
 import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
@@ -78,8 +78,8 @@ export default class KvSecretsListRoute extends Route {
     } else {
       breadcrumbsArray = [
         ...breadcrumbsArray,
-        { label: resolvedModel.backend, route: 'list' },
-        ...breadcrumbsForSecret(resolvedModel.pathToSecret, true),
+        { label: resolvedModel.backend, route: 'list', model: resolvedModel.backend },
+        ...breadcrumbsForSecret(resolvedModel.backend, resolvedModel.pathToSecret, true),
       ];
     }
 

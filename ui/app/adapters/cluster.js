@@ -4,7 +4,7 @@
  */
 
 import AdapterError from '@ember-data/adapter/error';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { hash, resolve } from 'rsvp';
 import { assert } from '@ember/debug';
 import { pluralize } from 'ember-inflector';
@@ -21,7 +21,6 @@ const ENDPOINTS = [
   'init',
   'capabilities-self',
   'license',
-  'internal/ui/version',
 ];
 
 const REPLICATION_ENDPOINTS = {
@@ -100,12 +99,8 @@ export default ApplicationAdapter.extend({
     });
   },
 
-  fetchVersion() {
-    return this.ajax(`${this.urlFor('internal/ui/version')}`, 'GET').catch(() => ({}));
-  },
-
-  sealStatus() {
-    return this.ajax(this.urlFor('seal-status'), 'GET', { unauthenticated: true });
+  sealStatus(unauthenticated = true) {
+    return this.ajax(this.urlFor('seal-status'), 'GET', { unauthenticated });
   },
 
   seal() {
@@ -174,7 +169,7 @@ export default ApplicationAdapter.extend({
   urlFor(endpoint) {
     if (!ENDPOINTS.includes(endpoint)) {
       throw new Error(
-        `Calls to a ${endpoint} endpoint are not currently allowed in the vault cluster adapater`
+        `Calls to a ${endpoint} endpoint are not currently allowed in the vault cluster adapter`
       );
     }
     return `${this.buildURL()}/${endpoint}`;

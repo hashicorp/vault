@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { visit, currentURL, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import ENV from 'vault/config/environment';
+import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
 import authPage from 'vault/tests/pages/auth';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
@@ -17,11 +17,11 @@ import {
   OIDC_BASE_URL, // -> '/vault/access/oidc'
   SELECTORS,
   clearRecord,
-  overrideCapabilities,
-  overrideMirageResponse,
   ASSIGNMENT_LIST_RESPONSE,
   ASSIGNMENT_DATA_RESPONSE,
 } from 'vault/tests/helpers/oidc-config';
+import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
+
 const searchSelect = create(ss);
 const flashMessage = create(fm);
 
@@ -29,17 +29,10 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'oidcConfig';
-  });
-
   hooks.beforeEach(function () {
+    oidcConfigHandlers(this.server);
     this.store = this.owner.lookup('service:store');
     return authPage.login();
-  });
-
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
   });
 
   test('it renders only allow_all when no assignments are configured', async function (assert) {
@@ -58,7 +51,7 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
 
   test('it renders empty state when no clients are configured', async function (assert) {
     assert.expect(5);
-    this.server.get('/identity/oidc/client', () => overrideMirageResponse(404));
+    this.server.get('/identity/oidc/client', () => overrideResponse(404));
 
     await visit(OIDC_BASE_URL);
     assert.strictEqual(currentURL(), '/vault/access/oidc');
@@ -284,10 +277,10 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
   test('it navigates to and from an assignment from the list view', async function (assert) {
     assert.expect(6);
     this.server.get('/identity/oidc/assignment', () =>
-      overrideMirageResponse(null, ASSIGNMENT_LIST_RESPONSE)
+      overrideResponse(200, { data: ASSIGNMENT_LIST_RESPONSE })
     );
     this.server.get('/identity/oidc/assignment/test-assignment', () =>
-      overrideMirageResponse(null, ASSIGNMENT_DATA_RESPONSE)
+      overrideResponse(200, { data: ASSIGNMENT_DATA_RESPONSE })
     );
     await visit(OIDC_BASE_URL + '/assignments');
     assert
@@ -334,13 +327,13 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
   test('it hides assignment delete and edit when no permission', async function (assert) {
     assert.expect(5);
     this.server.get('/identity/oidc/assignment', () =>
-      overrideMirageResponse(null, ASSIGNMENT_LIST_RESPONSE)
+      overrideResponse(null, { data: ASSIGNMENT_LIST_RESPONSE })
     );
     this.server.get('/identity/oidc/assignment/test-assignment', () =>
-      overrideMirageResponse(null, ASSIGNMENT_DATA_RESPONSE)
+      overrideResponse(null, { data: ASSIGNMENT_DATA_RESPONSE })
     );
     this.server.post('/sys/capabilities-self', () =>
-      overrideCapabilities(OIDC_BASE_URL + '/assignment/test-assignment', ['read'])
+      capabilitiesStub(OIDC_BASE_URL + '/assignment/test-assignment', ['read'])
     );
 
     await visit(OIDC_BASE_URL + '/assignments');

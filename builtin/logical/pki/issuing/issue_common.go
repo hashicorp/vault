@@ -16,15 +16,20 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/ryanuber/go-glob"
 	"golang.org/x/net/idna"
+)
 
-	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
-	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
+const (
+	PathCerts        = "certs/"
+	PathCertMetadata = "cert-metadata/"
+	PathCrls         = "crls/"
 )
 
 var (
@@ -1009,7 +1014,7 @@ func ApplyIssuerLeafNotAfterBehavior(caSign *certutil.CAInfoBundle, notAfter tim
 // StoreCertificate given a certificate bundle that was signed, persist the certificate to storage
 func StoreCertificate(ctx context.Context, s logical.Storage, certCounter pki_backend.CertificateCounter, certBundle *certutil.ParsedCertBundle) error {
 	hyphenSerialNumber := parsing.NormalizeSerialForStorageFromBigInt(certBundle.Certificate.SerialNumber)
-	key := "certs/" + hyphenSerialNumber
+	key := PathCerts + hyphenSerialNumber
 	certsCounted := certCounter.IsInitialized()
 	err := s.Put(ctx, &logical.StorageEntry{
 		Key:   key,

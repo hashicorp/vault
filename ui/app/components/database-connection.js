@@ -4,9 +4,10 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { waitFor } from '@ember/test-waiters';
 
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
@@ -78,18 +79,18 @@ export default class DatabaseConnectionEdit extends Component {
   }
 
   @action
-  continueWithRotate() {
+  @waitFor
+  async continueWithRotate() {
     this.showSaveModal = false;
     const { backend, name } = this.args.model;
-    this.rotateCredentials(backend, name)
-      .then(() => {
-        this.flashMessages.success(`Successfully rotated root credentials for connection "${name}"`);
-        this.transitionToRoute(SHOW_ROUTE, name);
-      })
-      .catch((e) => {
-        this.flashMessages.danger(`Error rotating root credentials: ${e.errors}`);
-        this.transitionToRoute(SHOW_ROUTE, name);
-      });
+    try {
+      await this.rotateCredentials(backend, name);
+      this.flashMessages.success(`Successfully rotated root credentials for connection "${name}"`);
+      this.transitionToRoute(SHOW_ROUTE, name);
+    } catch (e) {
+      this.flashMessages.danger(`Error rotating root credentials: ${e.errors}`);
+      this.transitionToRoute(SHOW_ROUTE, name);
+    }
   }
 
   @action

@@ -35,22 +35,25 @@ runs:
         GH_TOKEN: ${{ github.token }}
       run: |
         VERSION=$(gh release list -R golangci/misspell --exclude-drafts --exclude-pre-releases | grep ${{ inputs.version }} | cut -f1)
-        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
         mkdir -p $(dirname ${{ inputs.destination }})
         DESTINATION="$(readlink -f "${{ inputs.destination }}")"
-        echo "destination=$DESTINATION" >> "$GITHUB_OUTPUT"
         DESTINATION_DIR="$(dirname "$DESTINATION")"
         echo "$DESTINATION_DIR" >> "$GITHUB_PATH"
-        echo "destination-dir=$DESTINATION_DIR" >> "$GITHUB_OUTPUT"
+
+        {
+          echo "destination=$DESTINATION"
+          echo "version=$VERSION"
+          echo "destination-dir=$DESTINATION_DIR"
+        } | tee -a "$GITHUB_OUTPUT"
 
         ARCH="$(echo "$RUNNER_ARCH" | tr '[:upper:]' '[:lower:]')"
         OS="$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')"
         if [ "$ARCH" = "x64" ]; then
-          export ARCH="64bit"
+          export ARCH="amd64"
         fi
         if [ "$OS" = "macos" ]; then
-          export OS="mac"
+          export OS="darwin"
         fi
 
         mkdir -p tmp

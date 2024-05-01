@@ -16,7 +16,7 @@ import {
   createTokenCmd,
   tokenWithPolicyCmd,
 } from 'vault/tests/helpers/commands';
-import { personas } from 'vault/tests/helpers/policy-generator/kv';
+import { personas } from 'vault/tests/helpers/kv/policy-generator';
 import {
   addSecretMetadataCmd,
   clearRecords,
@@ -108,7 +108,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       return;
     });
     test('empty backend - breadcrumbs, title, tabs, emptyState (a)', async function (assert) {
-      assert.expect(18);
+      assert.expect(15);
       const backend = this.emptyBackend;
       await navToBackend(backend);
 
@@ -128,22 +128,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.list.filter).doesNotExist('List filter does not show because no secrets exists.');
       // Page content correct
       assert.dom(PAGE.emptyStateTitle).hasText('No secrets yet');
-      assert.dom(PAGE.emptyStateActions).hasText('Create secret');
       assert.dom(PAGE.list.createSecret).hasText('Create secret');
-
-      // Click empty state CTA
-      await click(`${PAGE.emptyStateActions} a`);
-      assert.ok(
-        currentURL().startsWith(`/vault/secrets/${backend}/kv/create`),
-        `url includes /vault/secrets/${backend}/kv/create`
-      );
-
-      // Click cancel btn
-      await click(FORM.cancelBtn);
-      assert.ok(
-        currentURL().startsWith(`/vault/secrets/${backend}/kv/list`),
-        `url includes /vault/secrets/${backend}/kv/list`
-      );
 
       // click toolbar CTA
       await click(PAGE.list.createSecret);
@@ -551,7 +536,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       return;
     });
     test('empty backend - breadcrumbs, title, tabs, emptyState (dlr)', async function (assert) {
-      assert.expect(18);
+      assert.expect(15);
       const backend = this.emptyBackend;
       await navToBackend(backend);
 
@@ -571,22 +556,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.list.filter).doesNotExist('List filter does not show because no secrets exists.');
       // Page content correct
       assert.dom(PAGE.emptyStateTitle).hasText('No secrets yet');
-      assert.dom(PAGE.emptyStateActions).hasText('Create secret');
       assert.dom(PAGE.list.createSecret).hasText('Create secret');
-
-      // Click empty state CTA
-      await click(`${PAGE.emptyStateActions} a`);
-      assert.ok(
-        currentURL().startsWith(`/vault/secrets/${backend}/kv/create`),
-        `url includes /vault/secrets/${backend}/kv/create`
-      );
-
-      // Click cancel btn
-      await click(FORM.cancelBtn);
-      assert.ok(
-        currentURL().startsWith(`/vault/secrets/${backend}/kv/list`),
-        `url includes /vault/secrets/${backend}/kv/list`
-      );
 
       // click toolbar CTA
       await click(PAGE.list.createSecret);
@@ -737,7 +707,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       return;
     });
     test('empty backend - breadcrumbs, title, tabs, emptyState (mm)', async function (assert) {
-      assert.expect(18);
+      assert.expect(15);
       const backend = this.emptyBackend;
       await navToBackend(backend);
 
@@ -757,22 +727,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.list.filter).doesNotExist('List filter does not show because no secrets exists.');
       // Page content correct
       assert.dom(PAGE.emptyStateTitle).hasText('No secrets yet');
-      assert.dom(PAGE.emptyStateActions).hasText('Create secret');
       assert.dom(PAGE.list.createSecret).hasText('Create secret');
-
-      // Click empty state CTA
-      await click(`${PAGE.emptyStateActions} a`);
-      assert.ok(
-        currentURL().startsWith(`/vault/secrets/${backend}/kv/create`),
-        `url includes /vault/secrets/${backend}/kv/create`
-      );
-
-      // Click cancel btn
-      await click(FORM.cancelBtn);
-      assert.ok(
-        currentURL().startsWith(`/vault/secrets/${backend}/kv/list`),
-        `url includes /vault/secrets/${backend}/kv/list`
-      );
 
       // click toolbar CTA
       await click(PAGE.list.createSecret);

@@ -3,9 +3,8 @@
 
 scenario "ui" {
   matrix {
-    backend      = global.backends
-    edition      = ["ce", "ent"]
-    seal_ha_beta = ["true", "false"]
+    backend = global.backends
+    edition = ["ce", "ent"]
   }
 
   terraform_cli = terraform_cli.default
@@ -180,7 +179,6 @@ scenario "ui" {
       license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path  = local.bundle_path
       packages             = global.distro_packages["ubuntu"]
-      seal_ha_beta         = matrix.seal_ha_beta
       seal_name            = step.create_seal_key.resource_name
       seal_type            = local.seal
       storage_backend      = matrix.backend

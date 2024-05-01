@@ -23,7 +23,6 @@ import (
 	bolt "github.com/hashicorp-forge/bbolt"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/base62"
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -31,7 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testBothRaftBackends(t *testing.T, f func(raftWALValue string)) {
+func testBothRaftBackends(t *testing.T, f func(t *testing.T, raftWALValue string)) {
 	t.Helper()
 
 	testCases := []struct {
@@ -51,7 +50,7 @@ func testBothRaftBackends(t *testing.T, f func(raftWALValue string)) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// we can't use t.Parallel() here because some raft tests manipulate package level variables
-			f(tc.useWAL)
+			f(t, tc.useWAL)
 		})
 	}
 }
@@ -205,7 +204,7 @@ func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB, dataOnly bool) error {
 func TestRaft_Backend(t *testing.T) {
 	t.Parallel()
 
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -267,7 +266,7 @@ func TestRaft_SwitchFromBoltDBToRaftWal(t *testing.T) {
 // i.e. we can stand up a raft cluster with the verifier enabled, do a bunch of raft things, let the verifier
 // do its thing, and nothing blows up.
 func TestRaft_VerifierEnabled(t *testing.T) {
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs":             "100",
 			"raft_wal":                  useRaftWal,
@@ -285,213 +284,10 @@ func TestRaft_VerifierEnabled(t *testing.T) {
 	})
 }
 
-// TestRaft_ParseRaftWalBackend ensures that the raft_wal config option parses correctly and returns an error if not
-func TestRaft_ParseRaftWalBackend(t *testing.T) {
-	raftDir := t.TempDir()
-	conf := map[string]string{
-		"path":     raftDir,
-		"node_id":  "abc123",
-		"raft_wal": "notabooleanlol",
-	}
-
-	_, err := NewRaftBackend(conf, hclog.NewNullLogger())
-	if err == nil {
-		t.Fatal("expected an error but got none")
-	}
-
-	if !strings.Contains(err.Error(), "does not parse as a boolean") {
-		t.Fatal("expected an error about parsing config keys but got none")
-	}
-}
-
-// TestRaft_ParseRaftWalVerifierEnabled checks to make sure we error correctly if raft_log_verifier_enabled is not a boolean
-func TestRaft_ParseRaftWalVerifierEnabled(t *testing.T) {
-	raftDir := t.TempDir()
-	conf := map[string]string{
-		"path":                      raftDir,
-		"node_id":                   "abc123",
-		"raft_wal":                  "true",
-		"raft_log_verifier_enabled": "notabooleanlol",
-	}
-
-	_, err := NewRaftBackend(conf, hclog.NewNullLogger())
-	if err == nil {
-		t.Fatal("expected an error but got none")
-	}
-
-	if !strings.Contains(err.Error(), "does not parse as a boolean") {
-		t.Fatal("expected an error about parsing config keys but got none")
-	}
-}
-
-// TestRaft_ParseRaftWalVerifierInterval checks to make sure we handle various intervals correctly and have a default
-func TestRaft_ParseRaftWalVerifierInterval(t *testing.T) {
-	testCases := []struct {
-		name             string
-		givenInterval    string
-		expectedInterval string
-		shouldError      bool
-	}{
-		{
-			"zero",
-			"0s",
-			defaultRaftLogVerificationInterval.String(),
-			false,
-		},
-		{
-			"one",
-			"1s",
-			defaultRaftLogVerificationInterval.String(),
-			false,
-		},
-		{
-			"nothing",
-			"",
-			defaultRaftLogVerificationInterval.String(),
-			false,
-		},
-		{
-			"default",
-			"60s",
-			defaultRaftLogVerificationInterval.String(),
-			false,
-		},
-		{
-			"more than the default",
-			"75s",
-			"75s",
-			false,
-		},
-		{
-			"obviously wrong",
-			"notadurationlol",
-			"",
-			true,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			raftDir := t.TempDir()
-			conf := map[string]string{
-				"path":                           raftDir,
-				"node_id":                        "abc123",
-				"raft_wal":                       "true",
-				"raft_log_verifier_enabled":      "true",
-				"raft_log_verification_interval": tc.givenInterval,
-			}
-
-			rbRaw, err := NewRaftBackend(conf, hclog.NewNullLogger())
-			if tc.shouldError {
-				if err == nil {
-					t.Fatal("expected an error but got none")
-				}
-
-				// return early, since we got the error we wanted
-				return
-			}
-			if !tc.shouldError && err != nil {
-				t.Fatal(err)
-			}
-
-			rb := rbRaw.(*RaftBackend)
-
-			parsedExpectedInterval, err := parseutil.ParseDurationSecond(tc.expectedInterval)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if parsedExpectedInterval != rb.verificationInterval() {
-				t.Fatal("expected intervals to match but they didn't")
-			}
-		})
-	}
-}
-
-// TestRaft_ParseAutopilotUpgradeVersion tests that autopilot_upgrade_version parses correctly and returns an error if not
-func TestRaft_ParseAutopilotUpgradeVersion(t *testing.T) {
-	raftDir := t.TempDir()
-	conf := map[string]string{
-		"path":                      raftDir,
-		"node_id":                   "abc123",
-		"autopilot_upgrade_version": "hahano",
-	}
-
-	_, err := NewRaftBackend(conf, hclog.NewNullLogger())
-	if err == nil {
-		t.Fatal("expected an error but got none")
-	}
-
-	if !strings.Contains(err.Error(), "does not parse") {
-		t.Fatal("expected an error about unparseable versions but got none")
-	}
-}
-
-func TestRaft_ParseNonVoter(t *testing.T) {
-	p := func(s string) *string {
-		return &s
-	}
-
-	for _, retryJoinConf := range []string{"", "not-empty"} {
-		t.Run(retryJoinConf, func(t *testing.T) {
-			for name, tc := range map[string]struct {
-				envValue             *string
-				configValue          *string
-				expectNonVoter       bool
-				invalidNonVoterValue bool
-			}{
-				"valid false":                {nil, p("false"), false, false},
-				"valid true":                 {nil, p("true"), true, false},
-				"invalid empty":              {nil, p(""), false, true},
-				"invalid truthy":             {nil, p("no"), false, true},
-				"invalid":                    {nil, p("totallywrong"), false, true},
-				"valid env false":            {p("false"), nil, true, false},
-				"valid env true":             {p("true"), nil, true, false},
-				"valid env not boolean":      {p("anything"), nil, true, false},
-				"valid env empty":            {p(""), nil, false, false},
-				"neither set, default false": {nil, nil, false, false},
-				"both set, env preferred":    {p("true"), p("false"), true, false},
-			} {
-				t.Run(name, func(t *testing.T) {
-					if tc.envValue != nil {
-						t.Setenv(EnvVaultRaftNonVoter, *tc.envValue)
-					}
-					raftDir := t.TempDir()
-					conf := map[string]string{
-						"path":       raftDir,
-						"node_id":    "abc123",
-						"retry_join": retryJoinConf,
-					}
-					if tc.configValue != nil {
-						conf[raftNonVoterConfigKey] = *tc.configValue
-					}
-
-					backend, err := NewRaftBackend(conf, hclog.NewNullLogger())
-					switch {
-					case tc.invalidNonVoterValue || (retryJoinConf == "" && tc.expectNonVoter):
-						if err == nil {
-							t.Fatal("expected an error but got none")
-						}
-					default:
-						if err != nil {
-							t.Fatalf("expected no error but got: %s", err)
-						}
-
-						raftBackend := backend.(*RaftBackend)
-						if tc.expectNonVoter != raftBackend.NonVoter() {
-							t.Fatalf("expected %s %v but got %v", raftNonVoterConfigKey, tc.expectNonVoter, raftBackend.NonVoter())
-						}
-					}
-				})
-			}
-		})
-	}
-}
-
 func TestRaft_Backend_LargeKey(t *testing.T) {
 	t.Parallel()
 
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -526,7 +322,7 @@ func TestRaft_Backend_LargeKey(t *testing.T) {
 func TestRaft_Backend_LargeValue(t *testing.T) {
 	t.Parallel()
 
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -560,7 +356,7 @@ func TestRaft_Backend_LargeValue(t *testing.T) {
 // raft backend will populate values for any transactions that are Get operations.
 func TestRaft_TransactionalBackend_GetTransactions(t *testing.T) {
 	t.Parallel()
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -623,7 +419,7 @@ func TestRaft_TransactionalBackend_GetTransactions(t *testing.T) {
 
 func TestRaft_TransactionalBackend_LargeKey(t *testing.T) {
 	t.Parallel()
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -668,7 +464,7 @@ func TestRaft_TransactionalBackend_LargeKey(t *testing.T) {
 
 func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
 	t.Parallel()
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -709,7 +505,7 @@ func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
 
 func TestRaft_Backend_ListPrefix(t *testing.T) {
 	t.Parallel()
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -722,7 +518,7 @@ func TestRaft_Backend_ListPrefix(t *testing.T) {
 
 func TestRaft_TransactionalBackend(t *testing.T) {
 	t.Parallel()
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -745,7 +541,7 @@ func TestRaft_HABackend(t *testing.T) {
 
 func TestRaft_Backend_ThreeNode(t *testing.T) {
 	t.Parallel()
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -772,7 +568,7 @@ func TestRaft_Backend_ThreeNode(t *testing.T) {
 
 func TestRaft_GetOfflineConfig(t *testing.T) {
 	t.Parallel()
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		config := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -824,7 +620,7 @@ func TestRaft_GetOfflineConfig(t *testing.T) {
 
 func TestRaft_Recovery(t *testing.T) {
 	t.Parallel()
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -937,7 +733,7 @@ func TestRaft_Recovery(t *testing.T) {
 
 func TestRaft_TransactionalBackend_ThreeNode(t *testing.T) {
 	t.Parallel()
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,
@@ -1046,7 +842,7 @@ func TestRaft_TransactionalLimitsEnvOverride(t *testing.T) {
 
 func TestRaft_Backend_Performance(t *testing.T) {
 	t.Parallel()
-	testBothRaftBackends(t, func(useRaftWal string) {
+	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
 		conf := map[string]string{
 			"trailing_logs": "100",
 			"raft_wal":      useRaftWal,

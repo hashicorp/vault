@@ -8,7 +8,7 @@ import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { allEngines, isAddonEngine } from 'vault/helpers/mountable-secret-engines';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
 import { assert } from '@ember/debug';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
@@ -69,7 +69,7 @@ export default Route.extend({
     const secretEngine = this.store.peekRecord('secret-engine', backend);
     const type = secretEngine?.engineType;
     assert('secretEngine.engineType is not defined', !!type);
-    const engineRoute = allEngines().findBy('type', type)?.engineRoute;
+    const engineRoute = allEngines().find((engine) => engine.type === type)?.engineRoute;
 
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
       return this.router.transitionTo('vault.cluster.secrets');
@@ -146,7 +146,7 @@ export default Route.extend({
     const backendModel = this.store.peekRecord('secret-engine', backend);
     const has404 = this.has404;
     // only clear store cache if this is a new model
-    if (secret !== controller.get('baseKey.id')) {
+    if (secret !== controller?.baseKey?.id) {
       this.store.clearAllDatasets();
     }
     controller.set('hasModel', true);
@@ -156,7 +156,7 @@ export default Route.extend({
       backend,
       backendModel,
       baseKey: { id: secret },
-      backendType: backendModel.get('engineType'),
+      backendType: backendModel.engineType,
     });
     if (!has404) {
       const pageFilter = secretParams.pageFilter;
@@ -187,7 +187,7 @@ export default Route.extend({
       const backend = this.enginePathParam();
       const is404 = error.httpStatus === 404;
       /* eslint-disable-next-line ember/no-controller-access-in-routes */
-      const hasModel = this.controllerFor(this.routeName).get('hasModel');
+      const hasModel = this.controllerFor(this.routeName).hasModel;
 
       // this will occur if we've deleted something,
       // and navigate to its parent and the parent doesn't exist -

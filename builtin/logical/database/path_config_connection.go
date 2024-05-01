@@ -14,7 +14,6 @@ import (
 	"github.com/fatih/structs"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/go-version"
-
 	"github.com/hashicorp/vault/helper/versions"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -31,8 +30,9 @@ var (
 // DatabaseConfig is used by the Factory function to configure a Database
 // object.
 type DatabaseConfig struct {
-	PluginName    string `json:"plugin_name" structs:"plugin_name" mapstructure:"plugin_name"`
-	PluginVersion string `json:"plugin_version" structs:"plugin_version" mapstructure:"plugin_version"`
+	PluginName           string `json:"plugin_name" structs:"plugin_name" mapstructure:"plugin_name"`
+	PluginVersion        string `json:"plugin_version" structs:"plugin_version" mapstructure:"plugin_version"`
+	RunningPluginVersion string `json:"running_plugin_version,omitempty" structs:"running_plugin_version,omitempty" mapstructure:"running_plugin_version,omitempty"`
 	// ConnectionDetails stores the database specific connection settings needed
 	// by each database type.
 	ConnectionDetails map[string]interface{} `json:"connection_details" structs:"connection_details" mapstructure:"connection_details"`
@@ -99,6 +99,7 @@ func (b *databaseBackend) pathConnectionReset() framework.OperationFunc {
 			return nil, err
 		}
 
+		b.dbEvent(ctx, "reset", req.Path, name, false)
 		return nil, nil
 	}
 }
@@ -195,7 +196,7 @@ func (b *databaseBackend) reloadPlugin() framework.OperationFunc {
 		if len(reloaded) == 0 {
 			resp.AddWarning(fmt.Sprintf("no connections were found with plugin_name %q", pluginName))
 		}
-
+		b.dbEvent(ctx, "reload", req.Path, "", true, "plugin_name", pluginName)
 		return resp, nil
 	}
 }
@@ -376,9 +377,22 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 		delete(config.ConnectionDetails, "private_key")
 		delete(config.ConnectionDetails, "service_account_json")
 
-		return &logical.Response{
-			Data: structs.New(config).Map(),
-		}, nil
+		resp := &logical.Response{}
+		if dbi, err := b.GetConnection(ctx, req.Storage, name); err == nil {
+			config.RunningPluginVersion = dbi.runningPluginVersion
+			if config.PluginVersion != "" && config.PluginVersion != config.RunningPluginVersion {
+				warning := fmt.Sprintf("Plugin version is configured as %q, but running %q", config.PluginVersion, config.RunningPluginVersion)
+				if pinnedVersion, _ := b.getPinnedVersion(ctx, config.PluginName); pinnedVersion == config.RunningPluginVersion {
+					warning += " because that version is pinned"
+				} else {
+					warning += " either due to a pinned version or because the plugin was upgraded and not yet reloaded"
+				}
+				resp.AddWarning(warning)
+			}
+		}
+
+		resp.Data = structs.New(config).Map()
+		return resp, nil
 	}
 }
 
@@ -399,6 +413,7 @@ func (b *databaseBackend) connectionDeleteHandler() framework.OperationFunc {
 			return nil, err
 		}
 
+		b.dbEvent(ctx, "config-delete", req.Path, name, true)
 		return nil, nil
 	}
 }
@@ -507,9 +522,10 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		// Close and remove the old connection
 		oldConn := b.connections.Put(name, &dbPluginInstance{
-			database: dbw,
-			name:     name,
-			id:       id,
+			database:             dbw,
+			name:                 name,
+			id:                   id,
+			runningPluginVersion: pluginVersion,
 		})
 		if oldConn != nil {
 			oldConn.Close()
@@ -544,6 +560,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 				"Vault (or the sdk if using a custom plugin) to gain password policy support", config.PluginName))
 		}
 
+		b.dbEvent(ctx, "config-write", req.Path, name, true)
 		if len(resp.Warnings) == 0 {
 			return nil, nil
 		}

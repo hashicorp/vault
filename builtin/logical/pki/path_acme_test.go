@@ -24,22 +24,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-
 	"github.com/go-test/deep"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/acme"
-	"golang.org/x/net/http2"
-
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki/dnstest"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/acme"
+	"golang.org/x/net/http2"
 )
 
 // TestAcmeBasicWorkflow a test that will validate a basic ACME workflow using the Golang ACME client.

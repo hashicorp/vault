@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 // ARG NOTE: Once you remove outer-html after glimmerizing you can remove the outer-html component
 import Component from './outer-html';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
@@ -19,7 +19,7 @@ export { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS, ERROR_JWT_LOGIN };
 
 export default Component.extend({
   store: service(),
-  featureFlagService: service('featureFlag'),
+  flagsService: service('flags'),
 
   selectedAuthPath: null,
   selectedAuthType: null,
@@ -133,7 +133,7 @@ export default Component.extend({
     // The namespace can be either be passed as a query parameter, or be embedded
     // in the state param in the format `<state_id>,ns=<namespace>`. So if
     // `namespace` is empty, check for namespace in state as well.
-    if (namespace === '' || this.featureFlagService.managedNamespaceRoot) {
+    if (namespace === '' || this.flagsService.managedNamespaceRoot) {
       const i = state.indexOf(',ns=');
       if (i >= 0) {
         // ",ns=" is 4 characters
