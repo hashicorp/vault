@@ -30,6 +30,7 @@ import (
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/http/priority"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -588,6 +589,11 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	if ok {
 		ctx = logical.CreateContextRedactionSettings(ctx, redactVersion, redactAddresses, redactClusterName)
 	}
+	inFlightRequestPriority, ok := httpCtx.Value(logical.CtxKeyInFlightRequestPriority{}).(priority.AOPWritePriority)
+	if ok {
+		ctx = context.WithValue(ctx, logical.CtxKeyInFlightRequestPriority{}, inFlightRequestPriority)
+	}
+
 	resp, err = c.handleCancelableRequest(ctx, req)
 	req.SetTokenEntry(nil)
 	cancel()
