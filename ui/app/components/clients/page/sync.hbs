@@ -2,7 +2,7 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 ~}}
-{{#if @showSecretsSync}}
+{{#if this.flags.secretsSyncIsActivated}}
   {{#if (not this.byMonthActivityData)}}
     {{! byMonthActivityData is an empty array if there is no monthly data (monthly breakdown was added in 1.11)
     this means the user has queried dates before sync clients existed. we render an empty state instead of
