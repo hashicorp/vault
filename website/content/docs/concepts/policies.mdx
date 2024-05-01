@@ -169,6 +169,8 @@ corresponding path and capability - even Vault's internal core configuration
 endpoints live under the `"sys/"` path. Policies define access to these paths and
 capabilities, which controls a token's access to credentials in Vault.
 
+## Priority matching
+
 ~> **Note:** The policy rules that Vault applies are determined by the most-specific match
 available, using the priority rules described below. This may be an exact match
 or the longest-prefix match of a glob. If the same pattern appears in multiple
