@@ -1218,7 +1218,7 @@ func (a *ActivityLog) regeneratePrecomputedQueries(ctx context.Context) error {
 	}
 	var intentLog *ActivityIntentLog
 	if intentLogEntry == nil {
-		regenerationIntentLog, err := a.createRegenerationIntentLog(ctx, a.clock.Now())
+		regenerationIntentLog, err := a.createRegenerationIntentLog(ctx, a.clock.Now().UTC())
 		if err != nil {
 			return err
 		}
