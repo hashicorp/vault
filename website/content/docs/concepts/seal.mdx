@@ -112,11 +112,11 @@ For a list of examples and supported providers, please see the
 
 When DR replication is enabled in Vault Enterprise, [Performance Standby](/vault/docs/enterprise/performance-standby) nodes on the DR cluster will seal themselves, so they must be restarted to be unsealed.
 
--> **Warning:** Recovery keys cannot decrypt the root key, and thus are not
+<Warning title="Recovery keys cannot decrypt the root key">
 
-sufficient to unseal Vault if the auto unseal mechanism isn't working. They
-are purely an authorization mechanism.  Using auto unseal 
-creates a strict Vault lifecycle dependency on the underlying seal mechanism. 
+Recovery keys cannot decrypt the root key and thus are not sufficient to unseal
+Vault if the auto unseal mechanism isn't working. They are purely an authorization mechanism.
+Using auto unseal creates a strict Vault lifecycle dependency on the underlying seal mechanism. 
 This means that if the seal mechanism (such as the Cloud KMS key) becomes unavailable, 
 or deleted before the seal is migrated, then there is no ability to recover 
 access to the Vault cluster until the mechanism is available again. **If the seal 
@@ -131,6 +131,7 @@ seal configured independently of the primary, and when properly configured guard
 against *some* of this risk.  Unreplicated items such as local mounts could still
 be lost.
 
+</Warning>
 
 ## Recovery key
 
