@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/nonceutil"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -220,7 +221,7 @@ type acmeOrder struct {
 	CertificateSerialNumber string              `json:"cert-serial-number"`
 	CertificateExpiry       time.Time           `json:"cert-expiry"`
 	// The actual issuer UUID that issued the certificate, blank if an order exists but no certificate was issued.
-	IssuerId issuerID `json:"issuer-id"`
+	IssuerId issuing.IssuerID `json:"issuer-id"`
 }
 
 func (o acmeOrder) getIdentifierDNSValues() []string {

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -25,7 +25,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Paths', function (hooks)
     ];
 
     this.assertClipboard = (assert, element, expected) => {
-      assert.dom(element).hasAttribute('data-clipboard-text', expected);
+      assert.dom(element).hasAttribute('data-test-copy-button', expected);
     };
   });
 
@@ -91,12 +91,10 @@ module('Integration | Component | kv-v2 | Page::Secret::Paths', function (hooks)
   });
 
   test('it renders copyable commands', async function (assert) {
-    assert.expect(4);
     const url = `https://127.0.0.1:8200/v1/${this.backend}/data/${this.path}`;
     const expected = {
       cli: `vault kv get -mount="${this.backend}" "${this.path}"`,
-      apiDisplay: `curl \\ --header \"X-Vault-Token: ...\" \\ --request GET \\ ${url}`,
-      apiCopy: `curl  --header \"X-Vault-Token: ...\"  --request GET \ ${url}`,
+      api: `curl \\ --header \"X-Vault-Token: ...\" \\ --request GET \\ ${url}`,
     };
     await render(
       hbs`
@@ -110,13 +108,10 @@ module('Integration | Component | kv-v2 | Page::Secret::Paths', function (hooks)
     );
 
     assert.dom(PAGE.paths.codeSnippet('cli')).hasText(expected.cli);
-    assert.dom(PAGE.paths.snippetCopy('cli')).hasAttribute('data-clipboard-text', expected.cli);
-    assert.dom(PAGE.paths.codeSnippet('api')).hasText(expected.apiDisplay);
-    assert.dom(PAGE.paths.snippetCopy('api')).hasAttribute('data-clipboard-text', expected.apiCopy);
+    assert.dom(PAGE.paths.codeSnippet('api')).hasText(expected.api);
   });
 
   test('it renders copyable encoded mount and path commands', async function (assert) {
-    assert.expect(4);
     this.path = `my spacey!"secret`;
     this.backend = `my fancy!"backend`;
 
@@ -126,8 +121,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Paths', function (hooks)
 
     const expected = {
       cli: `vault kv get -mount="${this.backend}" "${this.path}"`,
-      apiDisplay: `curl \\ --header \"X-Vault-Token: ...\" \\ --request GET \\ ${url}`,
-      apiCopy: `curl  --header \"X-Vault-Token: ...\"  --request GET \ ${url}`,
+      api: `curl \\ --header \"X-Vault-Token: ...\" \\ --request GET \\ ${url}`,
     };
     await render(
       hbs`
@@ -141,8 +135,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Paths', function (hooks)
     );
 
     assert.dom(PAGE.paths.codeSnippet('cli')).hasText(expected.cli);
-    assert.dom(PAGE.paths.snippetCopy('cli')).hasAttribute('data-clipboard-text', expected.cli);
-    assert.dom(PAGE.paths.codeSnippet('api')).hasText(expected.apiDisplay);
-    assert.dom(PAGE.paths.snippetCopy('api')).hasAttribute('data-clipboard-text', expected.apiCopy);
+    assert.dom(PAGE.paths.codeSnippet('api')).hasText(expected.api);
   });
 });

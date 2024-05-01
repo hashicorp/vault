@@ -25,11 +25,9 @@ import (
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/sdk/physical"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/seal"
-	"github.com/mitchellh/cli"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -96,29 +94,6 @@ cloud {
 }
 `
 )
-
-func testServerCommand(tb testing.TB) (*cli.MockUi, *ServerCommand) {
-	tb.Helper()
-
-	ui := cli.NewMockUi()
-	return ui, &ServerCommand{
-		BaseCommand: &BaseCommand{
-			UI: ui,
-		},
-		ShutdownCh: MakeShutdownCh(),
-		SighupCh:   MakeSighupCh(),
-		SigUSR2Ch:  MakeSigUSR2Ch(),
-		PhysicalBackends: map[string]physical.Factory{
-			"inmem":    physInmem.NewInmem,
-			"inmem_ha": physInmem.NewInmemHA,
-		},
-
-		// These prevent us from random sleep guessing...
-		startedCh:         make(chan struct{}, 5),
-		reloadedCh:        make(chan struct{}, 5),
-		licenseReloadedCh: make(chan error),
-	}
-}
 
 func TestServer_ReloadListener(t *testing.T) {
 	t.Parallel()
@@ -437,14 +412,14 @@ func TestReloadSeals(t *testing.T) {
 	_, testCommand := testServerCommand(t)
 	testConfig := server.Config{SharedConfig: &configutil.SharedConfig{}}
 
-	_, err := testCommand.reloadSeals(context.Background(), testCore, &testConfig)
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
+	testCommand.logger = corehelpers.NewTestLogger(t)
+	ctx := context.Background()
+	reloaded, err := testCommand.reloadSealsOnSigHup(ctx, testCore, &testConfig)
+	require.NoError(t, err)
+	require.False(t, reloaded, "reloadSeals does not support Shamir seals")
 
 	testConfig = server.Config{SharedConfig: &configutil.SharedConfig{Seals: []*configutil.KMS{{Disabled: true}}}}
-	_, err = testCommand.reloadSeals(context.Background(), testCore, &testConfig)
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
+	reloaded, err = testCommand.reloadSealsOnSigHup(ctx, testCore, &testConfig)
+	require.NoError(t, err)
+	require.False(t, reloaded, "reloadSeals does not support Shamir seals")
 }

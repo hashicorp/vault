@@ -4,7 +4,7 @@
 terraform {
   required_providers {
     enos = {
-      source = "app.terraform.io/hashicorp-qti/enos"
+      source = "registry.terraform.io/hashicorp-forge/enos"
     }
   }
 }
@@ -12,11 +12,6 @@ terraform {
 variable "vault_install_dir" {
   type        = string
   description = "The directory where the Vault binary will be installed"
-}
-
-variable "vault_instance_count" {
-  type        = number
-  description = "How many vault instances are in the cluster"
 }
 
 variable "vault_hosts" {

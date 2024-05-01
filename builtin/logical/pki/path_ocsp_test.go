@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -258,11 +259,11 @@ func TestOcsp_RevokedCertHasIssuerWithoutOcspUsage(t *testing.T) {
 	requireFieldsSetInResp(t, resp, "usage")
 
 	// Do not assume a specific ordering for usage...
-	usages, err := NewIssuerUsageFromNames(strings.Split(resp.Data["usage"].(string), ","))
+	usages, err := issuing.NewIssuerUsageFromNames(strings.Split(resp.Data["usage"].(string), ","))
 	require.NoError(t, err, "failed parsing usage return value")
-	require.True(t, usages.HasUsage(IssuanceUsage))
-	require.True(t, usages.HasUsage(CRLSigningUsage))
-	require.False(t, usages.HasUsage(OCSPSigningUsage))
+	require.True(t, usages.HasUsage(issuing.IssuanceUsage))
+	require.True(t, usages.HasUsage(issuing.CRLSigningUsage))
+	require.False(t, usages.HasUsage(issuing.OCSPSigningUsage))
 
 	// Request an OCSP request from it, we should get an Unauthorized response back
 	resp, err = SendOcspRequest(t, b, s, "get", testEnv.leafCertIssuer1, testEnv.issuer1, crypto.SHA1)
@@ -290,7 +291,7 @@ func TestOcsp_RevokedCertHasIssuerWithoutAKey(t *testing.T) {
 	resp, err = CBRead(b, s, "issuer/"+testEnv.issuerId1.String())
 	requireSuccessNonNilResponse(t, resp, err, "failed reading issuer")
 	requireFieldsSetInResp(t, resp, "key_id")
-	keyId := resp.Data["key_id"].(keyID)
+	keyId := resp.Data["key_id"].(issuing.KeyID)
 
 	// This is a bit naughty but allow me to delete the key...
 	sc := b.makeStorageContext(context.Background(), s)
@@ -343,11 +344,11 @@ func TestOcsp_MultipleMatchingIssuersOneWithoutSigningUsage(t *testing.T) {
 	requireSuccessNonNilResponse(t, resp, err, "failed resetting usage flags on issuer")
 	requireFieldsSetInResp(t, resp, "usage")
 	// Do not assume a specific ordering for usage...
-	usages, err := NewIssuerUsageFromNames(strings.Split(resp.Data["usage"].(string), ","))
+	usages, err := issuing.NewIssuerUsageFromNames(strings.Split(resp.Data["usage"].(string), ","))
 	require.NoError(t, err, "failed parsing usage return value")
-	require.True(t, usages.HasUsage(IssuanceUsage))
-	require.True(t, usages.HasUsage(CRLSigningUsage))
-	require.False(t, usages.HasUsage(OCSPSigningUsage))
+	require.True(t, usages.HasUsage(issuing.IssuanceUsage))
+	require.True(t, usages.HasUsage(issuing.CRLSigningUsage))
+	require.False(t, usages.HasUsage(issuing.OCSPSigningUsage))
 
 	// Request an OCSP request from it, we should get a Good response back, from the rotated cert
 	resp, err = SendOcspRequest(t, b, s, "get", testEnv.leafCertIssuer1, testEnv.issuer1, crypto.SHA1)
@@ -625,14 +626,14 @@ type ocspTestEnv struct {
 	issuer1 *x509.Certificate
 	issuer2 *x509.Certificate
 
-	issuerId1 issuerID
-	issuerId2 issuerID
+	issuerId1 issuing.IssuerID
+	issuerId2 issuing.IssuerID
 
 	leafCertIssuer1 *x509.Certificate
 	leafCertIssuer2 *x509.Certificate
 
-	keyId1 keyID
-	keyId2 keyID
+	keyId1 issuing.KeyID
+	keyId2 issuing.KeyID
 }
 
 func setupOcspEnv(t *testing.T, keyType string) (*backend, logical.Storage, *ocspTestEnv) {
@@ -643,8 +644,8 @@ func setupOcspEnvWithCaKeyConfig(t *testing.T, keyType string, caKeyBits int, ca
 	b, s := CreateBackendWithStorage(t)
 	var issuerCerts []*x509.Certificate
 	var leafCerts []*x509.Certificate
-	var issuerIds []issuerID
-	var keyIds []keyID
+	var issuerIds []issuing.IssuerID
+	var keyIds []issuing.KeyID
 
 	resp, err := CBWrite(b, s, "config/crl", map[string]interface{}{
 		"ocsp_enable": true,
@@ -662,8 +663,8 @@ func setupOcspEnvWithCaKeyConfig(t *testing.T, keyType string, caKeyBits int, ca
 		})
 		requireSuccessNonNilResponse(t, resp, err, "root/generate/internal")
 		requireFieldsSetInResp(t, resp, "issuer_id", "key_id")
-		issuerId := resp.Data["issuer_id"].(issuerID)
-		keyId := resp.Data["key_id"].(keyID)
+		issuerId := resp.Data["issuer_id"].(issuing.IssuerID)
+		keyId := resp.Data["key_id"].(issuing.KeyID)
 
 		resp, err = CBWrite(b, s, "roles/test"+strconv.FormatInt(int64(i), 10), map[string]interface{}{
 			"allow_bare_domains": true,

@@ -14,12 +14,14 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// ProcessManual will attempt to create an (audit) event with the specified data
-// and manually iterate over the supplied nodes calling Process on each.
+// processManual will attempt to create an (audit) event with the specified data
+// and manually iterate over the supplied nodes calling Process on each until the
+// event is nil (which indicates the pipeline has completed).
 // Order of IDs in the NodeID slice determines the order they are processed.
 // (Audit) Event will be of RequestType (as opposed to ResponseType).
-// The last node must be a sink node (eventlogger.NodeTypeSink).
-func ProcessManual(ctx context.Context, data *logical.LogInput, ids []eventlogger.NodeID, nodes map[eventlogger.NodeID]eventlogger.Node) error {
+// The last node must be a filter node (eventlogger.NodeTypeFilter) or
+// sink node (eventlogger.NodeTypeSink).
+func processManual(ctx context.Context, data *logical.LogInput, ids []eventlogger.NodeID, nodes map[eventlogger.NodeID]eventlogger.Node) error {
 	switch {
 	case data == nil:
 		return errors.New("data cannot be nil")
@@ -42,7 +44,7 @@ func ProcessManual(ctx context.Context, data *logical.LogInput, ids []eventlogge
 
 	// Create an eventlogger event with the audit event as the payload.
 	e := &eventlogger.Event{
-		Type:      eventlogger.EventType(event.AuditType.String()),
+		Type:      event.AuditType.AsEventType(),
 		CreatedAt: time.Now(),
 		Formatted: make(map[string][]byte),
 		Payload:   a,
@@ -52,9 +54,15 @@ func ProcessManual(ctx context.Context, data *logical.LogInput, ids []eventlogge
 
 	// Process nodes in order, updating the event with the result.
 	// This means we *should* do:
-	// 1. formatter (temporary)
-	// 2. sink
+	// 1. filter (optional if configured)
+	// 2. formatter (temporary)
+	// 3. sink
 	for _, id := range ids {
+		// If the event is nil, we've completed processing the pipeline (hopefully
+		// by either a filter node or a sink node).
+		if e == nil {
+			break
+		}
 		node, ok := nodes[id]
 		if !ok {
 			return fmt.Errorf("node not found: %v", id)
@@ -63,7 +71,7 @@ func ProcessManual(ctx context.Context, data *logical.LogInput, ids []eventlogge
 		switch node.Type() {
 		case eventlogger.NodeTypeFormatter:
 			// Use a temporary formatter node  which doesn't persist its salt anywhere.
-			if formatNode, ok := node.(*EntryFormatter); ok && formatNode != nil {
+			if formatNode, ok := node.(*entryFormatter); ok && formatNode != nil {
 				e, err = newTemporaryEntryFormatter(formatNode).Process(ctx, e)
 			}
 		default:
@@ -74,12 +82,14 @@ func ProcessManual(ctx context.Context, data *logical.LogInput, ids []eventlogge
 			return err
 		}
 
-		// Track the last node we have processed, as we should end with a sink.
+		// Track the last node we have processed, as we should end with a filter or sink.
 		lastSeen = node.Type()
 	}
 
-	if lastSeen != eventlogger.NodeTypeSink {
-		return errors.New("last node must be a sink")
+	switch lastSeen {
+	case eventlogger.NodeTypeSink, eventlogger.NodeTypeFilter:
+	default:
+		return errors.New("last node must be a filter or sink")
 	}
 
 	return nil

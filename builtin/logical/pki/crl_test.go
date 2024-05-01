@@ -12,15 +12,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/helper/constants"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -1063,7 +1062,7 @@ func TestAutoRebuild(t *testing.T) {
 	var revInfo revocationInfo
 	err = json.Unmarshal([]byte(revEntryValue), &revInfo)
 	require.NoError(t, err)
-	require.Equal(t, revInfo.CertificateIssuer, issuerID(rootIssuer))
+	require.Equal(t, revInfo.CertificateIssuer, issuing.IssuerID(rootIssuer))
 
 	// New serial should not appear on CRL.
 	crl = getCrlCertificateList(t, client, "pki")
@@ -1201,7 +1200,7 @@ func TestTidyIssuerAssociation(t *testing.T) {
 	require.NotEmpty(t, resp.Data["certificate"])
 	require.NotEmpty(t, resp.Data["issuer_id"])
 	rootCert := resp.Data["certificate"].(string)
-	rootID := resp.Data["issuer_id"].(issuerID)
+	rootID := resp.Data["issuer_id"].(issuing.IssuerID)
 
 	// Create a role for issuance.
 	_, err = CBWrite(b, s, "roles/local-testing", map[string]interface{}{
@@ -1474,7 +1473,7 @@ func TestCRLIssuerRemoval(t *testing.T) {
 
 	// List items in storage under both CRL paths so we know what is there in
 	// the "good" state.
-	crlList, err := s.List(ctx, "crls/")
+	crlList, err := s.List(ctx, issuing.PathCrls)
 	require.NoError(t, err)
 	require.Contains(t, crlList, "config")
 	require.Greater(t, len(crlList), 1)
@@ -1495,9 +1494,9 @@ func TestCRLIssuerRemoval(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 
-		key := string(resp.Data["key_id"].(keyID))
+		key := string(resp.Data["key_id"].(issuing.KeyID))
 		keyIDs = append(keyIDs, key)
-		issuer := string(resp.Data["issuer_id"].(issuerID))
+		issuer := string(resp.Data["issuer_id"].(issuing.IssuerID))
 		issuerIDs = append(issuerIDs, issuer)
 	}
 	_, err = CBRead(b, s, "crl/rotate")
@@ -1512,7 +1511,7 @@ func TestCRLIssuerRemoval(t *testing.T) {
 	}
 
 	// Finally list storage entries again to ensure they are cleaned up.
-	afterCRLList, err := s.List(ctx, "crls/")
+	afterCRLList, err := s.List(ctx, issuing.PathCrls)
 	require.NoError(t, err)
 	for _, entry := range crlList {
 		require.Contains(t, afterCRLList, entry)

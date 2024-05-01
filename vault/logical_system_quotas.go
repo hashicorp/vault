@@ -11,10 +11,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/vault/quotas"
 )
 
@@ -477,15 +476,6 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			rlq.BlockInterval = blockInterval
 			quota = rlq
 		}
-		entry, err := logical.StorageEntryJSON(quotas.QuotaStoragePath(qType, name), quota)
-		if err != nil {
-			return nil, err
-		}
-
-		if err := b.Core.systemBarrierView.storage.Put(ctx, entry); err != nil {
-			return nil, err
-		}
-
 		if err := b.Core.quotaManager.SetQuota(ctx, qType, quota, false); err != nil {
 			return nil, err
 		}
@@ -548,10 +538,6 @@ func (b *SystemBackend) handleRateLimitQuotasDelete() framework.OperationFunc {
 			if quota != nil && !strings.HasPrefix(quota.GetNamespacePath(), ns.Path) {
 				return logical.ErrorResponse(ErrInvalidQuotaDeletion), nil
 			}
-		}
-
-		if err := b.Core.systemBarrierView.Delete(ctx, quotas.QuotaStoragePath(qType, name)); err != nil {
-			return nil, err
 		}
 
 		if err := b.Core.quotaManager.DeleteQuota(ctx, qType, name); err != nil {

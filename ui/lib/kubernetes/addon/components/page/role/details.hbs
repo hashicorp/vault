@@ -14,7 +14,7 @@
   </p.levelLeft>
 </PageHeader>
 
-<Toolbar>
+<Toolbar aria-label="menu items for managing role {{@model.id}}">
   <ToolbarActions>
     {{#if @model.canDelete}}
       <ConfirmAction

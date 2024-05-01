@@ -38,6 +38,12 @@ const (
 	// PluginMultiplexingOptOut is an ENV name used to define a comma separated list of plugin names
 	// opted-out of the multiplexing feature; for emergencies if multiplexing ever causes issues
 	PluginMultiplexingOptOut = "VAULT_PLUGIN_MULTIPLEXING_OPT_OUT"
+
+	// PluginUseLegacyEnvLayering opts out of new environment variable precedence.
+	// If set to true, Vault process environment variables take precedence over any
+	// colliding plugin-specific environment variables. Otherwise, plugin-specific
+	// environment variables take precedence over Vault process environment variables.
+	PluginUseLegacyEnvLayering = "VAULT_PLUGIN_USE_LEGACY_ENV_LAYERING"
 )
 
 // OptionallyEnableMlock determines if mlock should be called, and if so enables

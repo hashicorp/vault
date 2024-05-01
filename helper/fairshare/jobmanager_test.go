@@ -9,8 +9,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestJobManager_NewJobManager(t *testing.T) {
@@ -176,7 +174,6 @@ func TestJobManager_Stop(t *testing.T) {
 	j := NewJobManager("job-mgr-test", 5, newTestLogger("jobmanager-test"), nil)
 
 	j.Start()
-	assert.False(t, j.Stopped())
 
 	doneCh := make(chan struct{})
 	timeout := time.After(5 * time.Second)
@@ -188,7 +185,6 @@ func TestJobManager_Stop(t *testing.T) {
 
 	select {
 	case <-doneCh:
-		assert.True(t, j.Stopped())
 		break
 	case <-timeout:
 		t.Fatal("timed out")
@@ -750,4 +746,24 @@ func TestFairshare_queueWorkersSaturated(t *testing.T) {
 		}
 		j.l.RUnlock()
 	}
+}
+
+func TestJobManager_GetWorkerCounts_RaceCondition(t *testing.T) {
+	j := NewJobManager("test-job-mgr", 20, nil, nil)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 10; i++ {
+			j.incrementWorkerCount("a")
+		}
+	}()
+	wcs := j.GetWorkerCounts()
+	wcs["foo"] = 10
+	for worker, count := range wcs {
+		_ = worker
+		_ = count
+	}
+
+	wg.Wait()
 }

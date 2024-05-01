@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { guidFor } from '@ember/object/internals';
+import { buildWaiter } from '@ember/test-waiters';
 /**
  * @module TextFile
  * `TextFile` components render a file upload input with the option to toggle a "Enter as text" button
@@ -26,6 +27,8 @@ import { guidFor } from '@ember/object/internals';
  * @param {string} [label='File']  - Text to use as the label for the file input. If none, default of 'File' is rendered
  */
 
+const waiter = buildWaiter('text-file');
+
 export default class TextFileComponent extends Component {
   @tracked content = '';
   @tracked filename = '';
@@ -34,6 +37,7 @@ export default class TextFileComponent extends Component {
   elementId = guidFor(this);
 
   async readFile(file) {
+    const waiterToken = waiter.beginAsync();
     try {
       this.content = await file.text();
       this.filename = file.name;
@@ -41,6 +45,8 @@ export default class TextFileComponent extends Component {
     } catch (error) {
       this.clearFile();
       this.uploadError = 'There was a problem uploading. Please try again.';
+    } finally {
+      waiter.endAsync(waiterToken);
     }
   }
 

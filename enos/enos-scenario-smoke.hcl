@@ -3,15 +3,15 @@
 
 scenario "smoke" {
   matrix {
-    arch            = ["amd64", "arm64"]
-    artifact_source = ["local", "crt", "artifactory"]
-    artifact_type   = ["bundle", "package"]
-    backend         = ["consul", "raft"]
-    consul_version  = ["1.12.9", "1.13.9", "1.14.9", "1.15.5", "1.16.1"]
-    distro          = ["ubuntu", "rhel"]
-    edition         = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
-    seal            = ["awskms", "shamir"]
-    seal_ha_beta    = ["true", "false"]
+    arch            = global.archs
+    artifact_source = global.artifact_sources
+    artifact_type   = global.artifact_types
+    backend         = global.backends
+    config_mode     = global.config_modes
+    consul_version  = global.consul_versions
+    distro          = global.distros
+    edition         = global.editions
+    seal            = global.seals
 
     # Our local builder always creates bundles
     exclude {
@@ -23,6 +23,12 @@ scenario "smoke" {
     exclude {
       arch    = ["arm64"]
       edition = ["ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+    }
+
+    # PKCS#11 can only be used on ent.hsm and ent.hsm.fips1402.
+    exclude {
+      seal    = ["pkcs11"]
+      edition = ["ce", "ent", "ent.fips1402"]
     }
   }
 
@@ -82,15 +88,6 @@ scenario "smoke" {
     }
   }
 
-  step "create_seal_key" {
-    module = "seal_key_${matrix.seal}"
-
-    variables {
-      cluster_id  = step.create_vpc.cluster_id
-      common_tags = global.tags
-    }
-  }
-
   // This step reads the contents of the backend license if we're using a Consul backend and
   // the edition is "ent".
   step "read_backend_license" {
@@ -108,6 +105,20 @@ scenario "smoke" {
 
     variables {
       file_name = global.vault_license_path
+    }
+  }
+
+  step "create_seal_key" {
+    module     = "seal_${matrix.seal}"
+    depends_on = [step.create_vpc]
+
+    providers = {
+      enos = provider.enos.ubuntu
+    }
+
+    variables {
+      cluster_id  = step.create_vpc.id
+      common_tags = global.tags
     }
   }
 
@@ -172,7 +183,7 @@ scenario "smoke" {
     depends_on = [
       step.create_backend_cluster,
       step.build_vault,
-      step.create_vault_cluster_targets
+      step.create_vault_cluster_targets,
     ]
 
     providers = {
@@ -184,6 +195,7 @@ scenario "smoke" {
       backend_cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = global.backend_tag_key
       cluster_name            = step.create_vault_cluster_targets.cluster_name
+      config_mode             = matrix.config_mode
       consul_license          = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       consul_release = matrix.backend == "consul" ? {
         edition = var.backend_edition
@@ -195,8 +207,7 @@ scenario "smoke" {
       local_artifact_path  = local.artifact_path
       manage_service       = local.manage_service
       packages             = concat(global.packages, global.distro_packages[matrix.distro])
-      seal_ha_beta         = matrix.seal_ha_beta
-      seal_key_name        = step.create_seal_key.resource_name
+      seal_attributes      = step.create_seal_key.attributes
       seal_type            = matrix.seal
       storage_backend      = matrix.backend
       target_hosts         = step.create_vault_cluster_targets.hosts
@@ -204,9 +215,57 @@ scenario "smoke" {
   }
 
   // Wait for our cluster to elect a leader
-  step "wait_for_leader" {
+  step "wait_for_new_leader" {
     module     = module.vault_wait_for_leader
     depends_on = [step.create_vault_cluster]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      timeout           = 120 # seconds
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  step "get_leader_ip_for_step_down" {
+    module     = module.vault_get_cluster_ips
+    depends_on = [step.wait_for_new_leader]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  // Force a step down to trigger a new leader election
+  step "vault_leader_step_down" {
+    module     = module.vault_step_down
+    depends_on = [step.get_leader_ip_for_step_down]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_install_dir = local.vault_install_dir
+      leader_host       = step.get_leader_ip_for_step_down.leader_host
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  // Wait for our cluster to elect a leader
+  step "wait_for_leader" {
+    module     = module.vault_wait_for_leader
+    depends_on = [step.vault_leader_step_down]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -403,9 +462,9 @@ scenario "smoke" {
     value       = step.create_vault_cluster.recovery_keys_hex
   }
 
-  output "seal_key_name" {
-    description = "The Vault cluster seal key name"
-    value       = step.create_seal_key.name
+  output "seal_key_attributes" {
+    description = "The Vault cluster seal attributes"
+    value       = step.create_seal_key.attributes
   }
 
   output "unseal_keys_b64" {

@@ -11,8 +11,9 @@ description: >-
 
 - A Kubernetes cluster running 1.23+
 - Helm 3.7+
+- [Optional] Kustomize 4.5.7+
 
-## Installation using helm
+## Installation using Helm
 
 [Install Helm](https://helm.sh/docs/intro/install) before beginning.
 
@@ -20,7 +21,7 @@ The [Vault Secrets Operator Helm chart](/vault/docs/platform/k8s/vso/helm) is th
 installing and configuring the Vault Secrets Operator.
 
 To install a new instance of the Vault Secrets Operator, first add the
-HashiCorp helm repository and ensure you have access to the chart:
+HashiCorp Helm repository and ensure you have access to the chart:
 
 ```shell-session
 $ helm repo add hashicorp https://helm.releases.hashicorp.com
@@ -30,17 +31,16 @@ $ helm repo add hashicorp https://helm.releases.hashicorp.com
 ```shell-session
 $ helm search repo hashicorp/vault-secrets-operator
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault-secrets-operator	0.4.0       	0.4.0     	Official HashiCorp Vault Secrets Operator Chart
+hashicorp/vault-secrets-operator	0.6.0       	0.6.0     	Official HashiCorp Vault Secrets Operator Chart
 ```
 
 Then install the Operator:
 
 ```shell-session
-$ helm install --version 0.4.0 --create-namespace --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
+$ helm install --version 0.6.0 --create-namespace --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
 ```
 
-
-## Upgrading using helm
+## Upgrading using Helm
 
 You can upgrade an existing installation with the `helm upgrade` command.
 Please always run Helm with the `--dry-run` option before any install or upgrade to verify
@@ -65,13 +65,13 @@ $ helm show crds --version <TARGET_VSO_VERSION> hashicorp/vault-secrets-operator
 $ helm upgrade --version <TARGET_VSO_VERSION> --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
 ```
 
-For example, if you are upgrading to VSO 0.4.0:
+For example, if you are upgrading to VSO 0.6.0:
 ```shell-session
-$ helm show crds --version 0.4.0 hashicorp/vault-secrets-operator | kubectl apply -f -
-$ helm upgrade --version 0.4.0 --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
+$ helm show crds --version 0.6.0 hashicorp/vault-secrets-operator | kubectl apply -f -
+$ helm upgrade --version 0.6.0 --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
 ```
 
-## Updating CRDs
+## Updating CRDs when using Helm
 
 You must update the CRDs for VSO manually **before** you upgrade the
  operator when the operator is managed by Helm.
@@ -83,9 +83,9 @@ To update the VSO CRDs, replace `<TARGET_VSO_VERSION>` with the VSO version you 
 $ helm show crds --version <TARGET_VSO_VERSION> hashicorp/vault-secrets-operator | kubectl apply -f -
 ```
 
-For example, if you are upgrading to VSO 0.4.0:
+For example, if you are upgrading to VSO 0.6.0:
 ```shell-session
-$ helm show crds --version 0.4.0 hashicorp/vault-secrets-operator | kubectl apply -f -
+$ helm show crds --version 0.6.0 hashicorp/vault-secrets-operator | kubectl apply -f -
 
 customresourcedefinition.apiextensions.k8s.io/hcpauths.secrets.hashicorp.com created
 customresourcedefinition.apiextensions.k8s.io/hcpvaultsecretsapps.secrets.hashicorp.com created
@@ -103,5 +103,62 @@ customresourcedefinition.apiextensions.k8s.io/vaultstaticsecrets.secrets.hashico
 
 ## Chart values
 
-Refer to the [VSO helm chart](/vault/docs/platform/k8s/vso/helm)
+Refer to the [VSO Helm chart](/vault/docs/platform/k8s/vso/helm)
  overview for a full list of supported chart values.
+
+## Installation using Kustomize
+
+You can install and update your installation using `kustomize` which allows you to extend the `config/` path of the VSO repository using Kustomize primitives.
+
+To install using Kustomize, download and untar/unzip the latest release from the [Releases Page](https://github.com/hashicorp/vault-secrets-operator/releases).
+```shell-session
+$ wget -q https://github.com/hashicorp/vault-secrets-operator/archive/refs/tags/v0.6.0.tar.gz
+$ tar -zxf v0.6.0.tar.gz
+$ cd vault-secrets-operator-0.6.0/
+```
+
+Next install using `kustomize build`:
+```shell-session
+$ kustomize build config/default | kubectl apply -f -
+namespace/vault-secrets-operator-system created
+customresourcedefinition.apiextensions.k8s.io/hcpauths.secrets.hashicorp.com created
+customresourcedefinition.apiextensions.k8s.io/hcpvaultsecretsapps.secrets.hashicorp.com created
+customresourcedefinition.apiextensions.k8s.io/vaultauths.secrets.hashicorp.com created
+customresourcedefinition.apiextensions.k8s.io/vaultconnections.secrets.hashicorp.com created
+customresourcedefinition.apiextensions.k8s.io/vaultdynamicsecrets.secrets.hashicorp.com created
+customresourcedefinition.apiextensions.k8s.io/vaultpkisecrets.secrets.hashicorp.com created
+customresourcedefinition.apiextensions.k8s.io/vaultstaticsecrets.secrets.hashicorp.com created
+serviceaccount/vault-secrets-operator-controller-manager created
+role.rbac.authorization.k8s.io/vault-secrets-operator-leader-election-role created
+clusterrole.rbac.authorization.k8s.io/vault-secrets-operator-manager-role created
+clusterrole.rbac.authorization.k8s.io/vault-secrets-operator-metrics-reader created
+clusterrole.rbac.authorization.k8s.io/vault-secrets-operator-proxy-role created
+rolebinding.rbac.authorization.k8s.io/vault-secrets-operator-leader-election-rolebinding created
+clusterrolebinding.rbac.authorization.k8s.io/vault-secrets-operator-manager-rolebinding created
+clusterrolebinding.rbac.authorization.k8s.io/vault-secrets-operator-proxy-rolebinding created
+configmap/vault-secrets-operator-manager-config created
+service/vault-secrets-operator-controller-manager-metrics-service created
+deployment.apps/vault-secrets-operator-controller-manager created
+```
+
+Confirm the operator has been installed by examining the pods:
+```shell-session
+$ kubectl get pods -n vault-secrets-operator-system
+NAMESPACE                       NAME                                                         READY   STATUS    RESTARTS   AGE
+vault-secrets-operator-system   vault-secrets-operator-controller-manager-56754d5496-cq69s   2/2     Running   0          1m17s
+```
+
+<Note title="Kustomize does not support all features of the Helm chart">
+
+  Notably it will not deploy default VaultAuthMethod, VaultConnection or Transit related resources.
+  Kustomize also does not support pre-delete hooks that the Helm chart uses to cleanup resources
+  and remove finalizers on the uninstall path. Please see [`config/samples`](https://github.com/hashicorp/vault-secrets-operator/tree/main/config/samples)
+  or `config/samples` in the downloaded release artifacts for additional resources.
+
+</Note>
+
+## Upgrade using Kustomize
+
+Upgrading using Kustomize is similar to installation: simply download the new release from github and follow
+the same steps as outlined in [Installation using Kustomize](#installation-using-kustomize).
+No additional steps are required to update the CRDs.

@@ -12,14 +12,11 @@ import (
 	"strings"
 	"text/template"
 
-	capldap "github.com/hashicorp/cap/ldap"
-	"github.com/hashicorp/go-secure-stdlib/tlsutil"
-
-	"github.com/hashicorp/vault/sdk/framework"
-
-	"github.com/hashicorp/errwrap"
-
 	"github.com/go-ldap/ldap/v3"
+	capldap "github.com/hashicorp/cap/ldap"
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
+	"github.com/hashicorp/vault/sdk/framework"
 )
 
 var ldapDerefAliasMap = map[string]int{
@@ -593,6 +590,8 @@ func ConvertConfig(cfg *ConfigEntry) *capldap.ClientConfig {
 		IncludeUserAttributes:                true,
 		ExcludedUserAttributes:               nil,
 		IncludeUserGroups:                    true,
+		LowerUserAttributeKeys:               true,
+		AllowEmptyAnonymousGroupSearch:       true,
 		MaximumPageSize:                      cfg.MaximumPageSize,
 		DerefAliases:                         cfg.DerefAliases,
 		DeprecatedVaultPre111GroupCNBehavior: cfg.UsePre111GroupCNBehavior,

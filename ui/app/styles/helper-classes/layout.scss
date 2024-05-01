@@ -50,6 +50,11 @@
   visibility: hidden;
 }
 
+// overflow
+.is-overflow-hidden {
+  overflow: hidden;
+}
+
 // width and height
 .is-fullwidth {
   width: 100%;
@@ -57,6 +62,10 @@
 
 .is-three-fourths-width {
   width: 75%;
+}
+
+.is-two-thirds-width {
+  width: 66%;
 }
 
 .is-auto-width {
@@ -68,11 +77,15 @@
 }
 
 .is-medium-width {
-  width: $desktop / 3;
+  width: calc($desktop / 2.5);
 }
 
 .is-medium-height {
   height: 125px;
+}
+
+.is-calc-large-height {
+  height: calc($desktop * 0.66);
 }
 
 // float
@@ -110,4 +123,8 @@
   .is-widescreen:not(.is-max-desktop) {
     max-width: 1152px;
   }
+}
+
+.has-margin-top-auto {
+  margin-top: auto;
 }

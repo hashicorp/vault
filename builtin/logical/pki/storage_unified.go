@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -17,10 +18,10 @@ const (
 )
 
 type unifiedRevocationEntry struct {
-	SerialNumber      string    `json:"-"`
-	CertExpiration    time.Time `json:"certificate_expiration_utc"`
-	RevocationTimeUTC time.Time `json:"revocation_time_utc"`
-	CertificateIssuer issuerID  `json:"issuer_id"`
+	SerialNumber      string           `json:"-"`
+	CertExpiration    time.Time        `json:"certificate_expiration_utc"`
+	RevocationTimeUTC time.Time        `json:"revocation_time_utc"`
+	CertificateIssuer issuing.IssuerID `json:"issuer_id"`
 }
 
 func getUnifiedRevocationBySerial(sc *storageContext, serial string) (*unifiedRevocationEntry, error) {

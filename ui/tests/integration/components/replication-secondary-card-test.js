@@ -7,6 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const TITLE = 'Status';
 
@@ -28,6 +29,13 @@ module('Integration | Component | replication-secondary-card', function (hooks) 
   hooks.beforeEach(function () {
     this.set('replicationDetails', REPLICATION_DETAILS);
     this.set('title', TITLE);
+    // TODO: remove Tooltip/ember-basic-dropdown
+    setRunOptions({
+      rules: {
+        'aria-command-name': { enabled: false },
+        'nested-interactive': { enabled: false },
+      },
+    });
   });
 
   test('it renders', async function (assert) {
@@ -71,11 +79,11 @@ module('Integration | Component | replication-secondary-card', function (hooks) 
     assert.dom('[data-test-empty-state]').exists('shows empty state');
   });
 
-  test('it renders tooltip with check-circle-outline when state is stream-wals', async function (assert) {
+  test('it renders tooltip with check-circle when state is stream-wals', async function (assert) {
     await render(
       hbs`<ReplicationSecondaryCard @replicationDetails={{this.replicationDetails}} @title={{this.title}} />`
     );
-    assert.dom('[data-test-glyph]').hasClass('has-text-success', `shows success icon`);
+    assert.dom('[data-test-icon="check-circle"]').hasClass('has-text-success', `shows success icon`);
   });
 
   test('it renders hasErrorMessage when state is idle', async function (assert) {

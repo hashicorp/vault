@@ -28,16 +28,17 @@
   </div>
   {{#unless this.isOIDC}}
     <div class="field">
-      <label for="token" class="is-label">JWT Token</label>
+      <label for="jwt-token" class="is-label">JWT Token</label>
       <div class="control">
         <Input
           @type="password"
           @value={{this.jwt}}
+          id="jwt-token"
           name="jwt"
           class="input"
           autocomplete="off"
           spellcheck="false"
-          data-test-jwt={{true}}
+          data-test-jwt
         />
       </div>
     </div>

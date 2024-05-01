@@ -4,25 +4,21 @@
 package teststorage
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"time"
 
-	"github.com/hashicorp/vault/internalshared/configutil"
-
 	"github.com/hashicorp/go-hclog"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
-	auditFile "github.com/hashicorp/vault/builtin/audit/file"
-	auditSocket "github.com/hashicorp/vault/builtin/audit/socket"
-	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 	"github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/helper/testhelpers"
-	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -105,7 +101,7 @@ func MakeFileBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBun
 	}
 }
 
-func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, extraConf map[string]interface{}) *vault.PhysicalBackendBundle {
+func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, extraConf map[string]interface{}, bridge *raft.ClusterAddrBridge) *vault.PhysicalBackendBundle {
 	nodeID := fmt.Sprintf("core-%d", coreIdx)
 	raftDir, err := ioutil.TempDir("", "vault-raft-")
 	if err != nil {
@@ -118,10 +114,25 @@ func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, extraConf ma
 
 	logger.Info("raft dir", "dir", raftDir)
 
+	backend, err := makeRaftBackend(logger, nodeID, raftDir, extraConf, bridge)
+	if err != nil {
+		cleanupFunc()
+		t.Fatal(err)
+	}
+
+	return &vault.PhysicalBackendBundle{
+		Backend: backend,
+		Cleanup: cleanupFunc,
+	}
+}
+
+func makeRaftBackend(logger hclog.Logger, nodeID, raftDir string, extraConf map[string]interface{}, bridge *raft.ClusterAddrBridge) (physical.Backend, error) {
 	conf := map[string]string{
-		"path":                   raftDir,
-		"node_id":                nodeID,
-		"performance_multiplier": "8",
+		"path":                         raftDir,
+		"node_id":                      nodeID,
+		"performance_multiplier":       "8",
+		"autopilot_reconcile_interval": "300ms",
+		"autopilot_update_interval":    "100ms",
 	}
 	for k, v := range extraConf {
 		val, ok := v.(string)
@@ -132,14 +143,13 @@ func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, extraConf ma
 
 	backend, err := raft.NewRaftBackend(conf, logger.Named("raft"))
 	if err != nil {
-		cleanupFunc()
-		t.Fatal(err)
+		return nil, err
+	}
+	if bridge != nil {
+		backend.(*raft.RaftBackend).SetServerAddressProvider(bridge)
 	}
 
-	return &vault.PhysicalBackendBundle{
-		Backend: backend,
-		Cleanup: cleanupFunc,
-	}
+	return backend, nil
 }
 
 // RaftHAFactory returns a PhysicalBackendBundle with raft set as the HABackend
@@ -220,19 +230,55 @@ func FileBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	opts.PhysicalFactory = SharedPhysicalFactory(MakeFileBackend)
 }
 
+func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
+	leader := cluster.Cores[0]
+
+	leaderInfos := []*raft.LeaderJoinInfo{
+		{
+			LeaderAPIAddr: leader.Client.Address(),
+			TLSConfig:     leader.TLSConfig(),
+		},
+	}
+
+	// Join followers
+	for i := 1; i < len(cluster.Cores); i++ {
+		core := cluster.Cores[i]
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		cluster.UnsealCore(t, core)
+	}
+}
+
 func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	opts.KeepStandbysSealed = true
-	opts.PhysicalFactory = MakeRaftBackend
+	var bridge *raft.ClusterAddrBridge
+	opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
+		// The same PhysicalFactory can be shared across multiple clusters.
+		// The coreIdx == 0 check ensures that each time a new cluster is setup,
+		// when setting up its first node we create a new ClusterAddrBridge.
+		if !opts.InmemClusterLayers && opts.ClusterLayers == nil && coreIdx == 0 {
+			bridge = raft.NewClusterAddrBridge()
+		}
+		bundle := MakeRaftBackend(t, coreIdx, logger, conf, bridge)
+		bundle.MutateCoreConfig = func(conf *vault.CoreConfig) {
+			logger.Trace("setting bridge", "idx", coreIdx, "bridge", fmt.Sprintf("%p", bridge))
+			conf.ClusterAddrBridge = bridge
+		}
+		return bundle
+	}
 	opts.SetupFunc = func(t testing.T, c *vault.TestCluster) {
 		if opts.NumCores != 1 {
-			testhelpers.RaftClusterJoinNodes(t, c)
+			RaftClusterJoinNodes(t, c)
 			time.Sleep(15 * time.Second)
 		}
 	}
 }
 
 func RaftHASetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions, bundler PhysicalBackendBundler) {
-	opts.KeepStandbysSealed = true
+	opts.InmemClusterLayers = true
 	opts.PhysicalFactory = RaftHAFactory(bundler)
 }
 
@@ -271,10 +317,10 @@ func ClusterSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions, setup 
 	}
 	if localConf.AuditBackends == nil {
 		localConf.AuditBackends = map[string]audit.Factory{
-			"file":   auditFile.Factory,
-			"socket": auditSocket.Factory,
-			"syslog": auditSyslog.Factory,
-			"noop":   corehelpers.NoopAuditFactory(nil),
+			"file":   audit.NewFileBackend,
+			"socket": audit.NewSocketBackend,
+			"syslog": audit.NewSyslogBackend,
+			"noop":   audit.NoopAuditFactory(nil),
 		}
 	}
 

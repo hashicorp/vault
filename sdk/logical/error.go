@@ -23,12 +23,15 @@ var (
 	// ErrPermissionDenied is returned if the client is not authorized
 	ErrPermissionDenied = errors.New("permission denied")
 
+	// ErrInvalidToken is returned if the token is revoked, expired, or non-existent
+	ErrInvalidToken = errors.New("invalid token")
+
 	// ErrInvalidCredentials is returned when the provided credentials are incorrect
 	// This is used internally for user lockout purposes. This is not seen externally.
 	// The status code returned does not change because of this error
 	ErrInvalidCredentials = errors.New("invalid credentials")
 
-	// ErrMultiAuthzPending is returned if the the request needs more
+	// ErrMultiAuthzPending is returned if the request needs more
 	// authorizations
 	ErrMultiAuthzPending = errors.New("request needs further approval")
 
@@ -62,6 +65,10 @@ var (
 	// Error indicating that the requested path used to serve a purpose in older
 	// versions, but the functionality has now been removed
 	ErrPathFunctionalityRemoved = errors.New("functionality on this path has been removed")
+
+	// ErrNotFound is an error used to indicate that a particular resource was
+	// not found.
+	ErrNotFound = errors.New("not found")
 )
 
 type DelegatedAuthErrorHandler func(ctx context.Context, initiatingRequest, authRequest *Request, authResponse *Response, err error) (*Response, error)

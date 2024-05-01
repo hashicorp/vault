@@ -83,7 +83,7 @@
 }
 .radio-card-message-body {
   line-height: 1.2;
-  color: $ui-gray-500;
+  color: var(--token-color-foreground-faint);
   font-size: $size-8;
 }
 

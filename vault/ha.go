@@ -109,7 +109,7 @@ func (c *Core) getHAMembers() ([]HAStatusNode, error) {
 	}
 
 	if rb := c.getRaftBackend(); rb != nil {
-		leader.UpgradeVersion = rb.EffectiveVersion()
+		leader.UpgradeVersion = rb.UpgradeVersion()
 		leader.RedundancyZone = rb.RedundancyZone()
 	}
 
@@ -118,13 +118,16 @@ func (c *Core) getHAMembers() ([]HAStatusNode, error) {
 	for _, peerNode := range c.GetHAPeerNodesCached() {
 		lastEcho := peerNode.LastEcho
 		nodes = append(nodes, HAStatusNode{
-			Hostname:       peerNode.Hostname,
-			APIAddress:     peerNode.APIAddress,
-			ClusterAddress: peerNode.ClusterAddress,
-			LastEcho:       &lastEcho,
-			Version:        peerNode.Version,
-			UpgradeVersion: peerNode.UpgradeVersion,
-			RedundancyZone: peerNode.RedundancyZone,
+			Hostname:                    peerNode.Hostname,
+			APIAddress:                  peerNode.APIAddress,
+			ClusterAddress:              peerNode.ClusterAddress,
+			LastEcho:                    &lastEcho,
+			Version:                     peerNode.Version,
+			UpgradeVersion:              peerNode.UpgradeVersion,
+			RedundancyZone:              peerNode.RedundancyZone,
+			EchoDurationMillis:          peerNode.EchoDuration.Milliseconds(),
+			ClockSkewMillis:             peerNode.ClockSkewMillis,
+			ReplicationPrimaryCanaryAge: peerNode.ReplicationPrimaryCanaryAge,
 		})
 	}
 
@@ -345,7 +348,7 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 		Auth:    auth,
 		Request: req,
 	}
-	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+	if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 		c.logger.Error("failed to audit request", "request_path", req.Path, "error", err)
 		return errors.New("failed to audit request, cannot continue")
 	}
@@ -578,6 +581,20 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		c.activeContext = activeCtx
 		c.activeContextCancelFunc.Store(activeCtxCancel)
 
+		// Trigger a seal reload if necessary. A seal reload is necessary when a node
+		// becomes the leader since its seal generation information may be out of
+		// date (as is the case, for example, when a new node joins the cluster).
+		if err := c.TriggerSealReload(c.activeContext); err != nil {
+			c.logger.Error("seal configuration reload error", "error", err)
+			c.barrier.Seal()
+			c.logger.Warn("vault is sealed")
+			c.heldHALock = nil
+			lock.Unlock()
+			close(continueCh)
+			c.stateLock.Unlock()
+			return
+		}
+
 		// Perform seal migration
 		if err := c.migrateSeal(c.activeContext); err != nil {
 			c.logger.Error("seal migration error", "error", err)
@@ -661,6 +678,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		err = c.postUnseal(activeCtx, activeCtxCancel, standardUnsealStrategy{})
 		if err == nil {
 			c.standby = false
+			c.activeTime = time.Now()
 			c.leaderUUID = uuid
 			c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 1, nil)
 		}
@@ -713,6 +731,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 
 			// Mark as standby
 			c.standby = true
+			c.activeTime = time.Time{}
 			c.leaderUUID = ""
 			c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 0, nil)
 
@@ -833,7 +852,7 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 
 	clusterAddr := ""
 	for {
-		timer := time.NewTimer(leaderCheckInterval)
+		timer := time.NewTimer(c.periodicLeaderRefreshInterval)
 		select {
 		case <-timer.C:
 			count := atomic.AddInt32(opCount, 1)

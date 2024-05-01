@@ -25,26 +25,20 @@
       </div>
       <div class="column has-text-right">
         {{#if (or @item.updatePath.canRead @item.updatePath.canUpdate)}}
-          <PopupMenu name="secret-menu">
-            <nav class="menu">
-              <ul class="menu-list">
-                {{#if @item.updatePath.canRead}}
-                  <li class="action">
-                    <SecretLink @mode="show" @secret={{@itemPath}} class="has-text-black has-text-weight-semibold">
-                      Details
-                    </SecretLink>
-                  </li>
-                {{/if}}
-                {{#if @item.updatePath.canUpdate}}
-                  <li class="action">
-                    <SecretLink @mode="edit" @secret={{@itemPath}} class="has-text-black has-text-weight-semibold">
-                      Edit
-                    </SecretLink>
-                  </li>
-                {{/if}}
-              </ul>
-            </nav>
-          </PopupMenu>
+          <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+            <dd.ToggleIcon
+              @icon="more-horizontal"
+              @text="Manage transform {{@itemType}}"
+              @hasChevron={{false}}
+              data-test-popup-menu-trigger
+            />
+            {{#if @item.updatePath.canRead}}
+              <dd.Interactive @text="Details" @route="vault.cluster.secrets.backend.show" @model={{@itemPath}} />
+            {{/if}}
+            {{#if @item.updatePath.canUpdate}}
+              <dd.Interactive @text="Edit" @route="vault.cluster.secrets.backend.edit" @model={{@itemPath}} />
+            {{/if}}
+          </Hds::Dropdown>
         {{/if}}
       </div>
     </div>
@@ -55,17 +49,13 @@
       <div class="column is-12 has-text-grey has-text-weight-semibold">
         <Icon @name="file" class="has-text-grey-light" />
         {{#if this.isBuiltin}}
-          <ToolTip @verticalPosition="above" @horizontalPosition="left" as |T|>
-            <T.Trigger @tabindex={{false}}>
-              {{@item.id}}
-            </T.Trigger>
-            <T.Content @defaultClass="tool-tip">
-              <div class="box">
-                This is a built-in HashiCorp
-                {{@itemType}}. It can't be viewed or edited.
-              </div>
-            </T.Content>
-          </ToolTip>
+          <Hds::TooltipButton
+            @text="This is a built-in HashiCorp {{@itemType}}. It can't be viewed or edited."
+            @placement="top-start"
+            aria-label="Why this item cannot be viewed or edited"
+          >
+            {{@item.id}}
+          </Hds::TooltipButton>
         {{else}}
           {{@item.id}}
         {{/if}}

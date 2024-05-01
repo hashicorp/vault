@@ -13,7 +13,7 @@
     <nav class="box menu">
       <ul class="menu-list">
         {{#each @metadata.sortedVersions as |versionData|}}
-          <li data-test-version={{versionData.version}} class="action">
+          <li data-test-version={{versionData.version}}>
             {{#if @onSelect}}
               {{! TODO use Hds::Dropdown instead https://helios.hashicorp.design/components/dropdown }}
               <button

@@ -6,7 +6,7 @@ terraform {
     # We need to specify the provider source in each module until we publish it
     # to the public registry
     enos = {
-      source  = "app.terraform.io/hashicorp-qti/enos"
+      source  = "registry.terraform.io/hashicorp-forge/enos"
       version = ">= 0.4.0"
     }
   }
@@ -16,6 +16,7 @@ data "enos_environment" "localhost" {}
 
 locals {
   audit_device_file_path = "/var/log/vault/vault_audit.log"
+  audit_socket_port      = "9090"
   bin_path               = "${var.install_dir}/vault"
   consul_bin_path        = "${var.consul_install_dir}/consul"
   enable_audit_devices   = var.enable_audit_devices && var.initialize_cluster
@@ -28,19 +29,23 @@ locals {
   key_shares = {
     "awskms" = null
     "shamir" = 5
+    "pkcs11" = null
   }
   key_threshold = {
     "awskms" = null
     "shamir" = 3
+    "pkcs11" = null
   }
   leader = toset(slice(local.instances, 0, 1))
   recovery_shares = {
     "awskms" = 5
     "shamir" = null
+    "pkcs11" = 5
   }
   recovery_threshold = {
     "awskms" = 3
     "shamir" = null
+    "pkcs11" = 3
   }
   vault_service_user = "vault"
 }
@@ -76,26 +81,14 @@ resource "enos_bundle_install" "vault" {
   }
 }
 
-resource "enos_remote_exec" "install_packages" {
+module "install_packages" {
+  source = "../install_packages"
   depends_on = [
     enos_bundle_install.vault, // Don't race for the package manager locks with vault install
   ]
-  for_each = {
-    for idx, host in var.target_hosts : idx => var.target_hosts[idx]
-    if length(var.packages) > 0
-  }
 
-  environment = {
-    PACKAGES = join(" ", var.packages)
-  }
-
-  scripts = [abspath("${path.module}/scripts/install-packages.sh")]
-
-  transport = {
-    ssh = {
-      host = each.value.public_ip
-    }
-  }
+  hosts    = var.target_hosts
+  packages = var.packages
 }
 
 resource "enos_consul_start" "consul" {
@@ -132,22 +125,22 @@ module "start_vault" {
     enos_bundle_install.vault,
   ]
 
-  cluster_name            = var.cluster_name
-  config_dir              = var.config_dir
-  install_dir             = var.install_dir
-  license                 = var.license
-  log_level               = var.log_level
-  manage_service          = var.manage_service
-  seal_ha_beta            = var.seal_ha_beta
-  seal_key_name           = var.seal_key_name
-  seal_key_name_secondary = var.seal_key_name_secondary
-  seal_type               = var.seal_type
-  seal_type_secondary     = var.seal_type_secondary
-  service_username        = local.vault_service_user
-  storage_backend         = var.storage_backend
-  storage_backend_attrs   = var.storage_backend_addl_config
-  storage_node_prefix     = var.storage_node_prefix
-  target_hosts            = var.target_hosts
+  cluster_name              = var.cluster_name
+  config_dir                = var.config_dir
+  config_mode               = var.config_mode
+  install_dir               = var.install_dir
+  license                   = var.license
+  log_level                 = var.log_level
+  manage_service            = var.manage_service
+  seal_attributes           = var.seal_attributes
+  seal_attributes_secondary = var.seal_attributes_secondary
+  seal_type                 = var.seal_type
+  seal_type_secondary       = var.seal_type_secondary
+  service_username          = local.vault_service_user
+  storage_backend           = var.storage_backend
+  storage_backend_attrs     = var.storage_backend_addl_config
+  storage_node_prefix       = var.storage_node_prefix
+  target_hosts              = var.target_hosts
 }
 
 resource "enos_vault_init" "leader" {
@@ -265,7 +258,35 @@ resource "enos_remote_exec" "create_audit_log_dir" {
     SERVICE_USER  = local.vault_service_user
   }
 
-  scripts = [abspath("${path.module}/scripts/create_audit_log_dir.sh")]
+  scripts = [abspath("${path.module}/scripts/create-audit-log-dir.sh")]
+
+  transport = {
+    ssh = {
+      host = var.target_hosts[each.value].public_ip
+    }
+  }
+}
+
+# We need to ensure that the socket listener used for the audit socket device is listening on each
+# node in the cluster. If we have a leader election or vault is restarted it'll fail unless the
+# listener is running.
+resource "enos_remote_exec" "start_audit_socket_listener" {
+  depends_on = [
+    module.start_vault,
+    enos_vault_unseal.leader,
+    enos_vault_unseal.followers,
+    enos_vault_unseal.maybe_force_unseal,
+  ]
+  for_each = toset([
+    for idx, host in toset(local.instances) : idx
+    if var.enable_audit_devices
+  ])
+
+  environment = {
+    SOCKET_PORT = local.audit_socket_port
+  }
+
+  scripts = [abspath("${path.module}/scripts/start-audit-socket-listener.sh")]
 
   transport = {
     ssh = {
@@ -277,6 +298,7 @@ resource "enos_remote_exec" "create_audit_log_dir" {
 resource "enos_remote_exec" "enable_audit_devices" {
   depends_on = [
     enos_remote_exec.create_audit_log_dir,
+    enos_remote_exec.start_audit_socket_listener,
   ]
   for_each = toset([
     for idx in local.leader : idx
@@ -284,26 +306,18 @@ resource "enos_remote_exec" "enable_audit_devices" {
   ])
 
   environment = {
-    VAULT_TOKEN    = enos_vault_init.leader[each.key].root_token
+    LOG_FILE_PATH  = local.audit_device_file_path
+    SOCKET_PORT    = local.audit_socket_port
     VAULT_ADDR     = "http://127.0.0.1:8200"
     VAULT_BIN_PATH = local.bin_path
-    LOG_FILE_PATH  = local.audit_device_file_path
-    SERVICE_USER   = local.vault_service_user
+    VAULT_TOKEN    = enos_vault_init.leader[each.key].root_token
   }
 
-  scripts = [abspath("${path.module}/scripts/enable_audit_logging.sh")]
+  scripts = [abspath("${path.module}/scripts/enable-audit-devices.sh")]
 
   transport = {
     ssh = {
       host = var.target_hosts[each.key].public_ip
     }
   }
-}
-
-resource "enos_local_exec" "wait_for_install_packages" {
-  depends_on = [
-    enos_remote_exec.install_packages,
-  ]
-
-  inline = ["true"]
 }

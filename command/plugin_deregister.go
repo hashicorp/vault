@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/cli"
 	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 

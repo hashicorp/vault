@@ -147,7 +147,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
       `/vault/secrets/${backend}/show/${transformationName}`,
       'redirects to show transformation page after submit'
     );
-    await click(`[data-test-secret-breadcrumb="${backend}"]`);
+    await click(`[data-test-secret-breadcrumb="${backend}"] a`);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/list`,
@@ -160,7 +160,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     const backend = await mount();
     // create transformation without role
     await newTransformation(backend, 'a-transformation', true);
-    await click(`[data-test-secret-breadcrumb="${backend}"]`);
+    await click(`[data-test-secret-breadcrumb="${backend}"] a`);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/list`,
@@ -186,7 +186,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
       `/vault/secrets/${backend}/show/role/${roleName}`,
       'redirects to show role page after submit'
     );
-    await click(`[data-test-secret-breadcrumb="${backend}"]`);
+    await click(`[data-test-secret-breadcrumb="${backend}"] a`);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/list?tab=role`,

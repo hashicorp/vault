@@ -29,7 +29,7 @@ $ vault read aws/creds/my-role
 
 ### API versus CLI
 
-Assuming that you have K/V version 2 (`kv-v2`) secrets engine enabled at
+Assuming that you have KV version 2 (`kv-v2`) secrets engine enabled at
 `secret/`, the following command reads secrets at the `secret/data/customers`
 API path:
 
@@ -44,7 +44,7 @@ $ curl --request GET --header "X-Vault-Token: $VAULT_TOKEN" \
     $VAULT_ADDR/v1/secret/data/customers
 ```
 
-Since K/V secrets engine is a commonly used feature, Vault CLI provides the
+Since KV secrets engine is a commonly used feature, Vault CLI provides the
 [`kv`](/vault/docs/commands/kv) command. Read secrets from the `secret/data/customers`
 path using the `kv` CLI command:
 
@@ -55,7 +55,7 @@ $ vault kv get -mount=secret customers
 -> **Comparison:** All three commands retrieve the same data, but display the
 output in a different format. By default, `vault read` prints output in
 key-value format. The `curl` command prints the response in JSON. Since the
-`kv` command is designed to handle operations associated with K/V secrets
+`kv` command is designed to handle operations associated with KV secrets
 engine, it prints the output in more structured format that is easy to read.
 
 ## Usage

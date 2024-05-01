@@ -15,6 +15,7 @@
       class="input field {{if this.modelValidations.name.errors 'has-error-border'}}"
       {{on "input" this.handleOperation}}
       data-test-input="name"
+      id="name"
     />
     {{#if this.modelValidations.name.errors}}
       <AlertInline @type="danger" @message={{join ", " this.modelValidations.name.errors}} />

@@ -5,28 +5,4 @@
 
 {{outlet}}
 
-<Hds::AppFooter as |AF|>
-  <AF.Link @href={{changelog-url-for this.auth.activeCluster.leaderNode.version}}>
-    Vault
-    {{this.auth.activeCluster.leaderNode.version}}
-  </AF.Link>
-  {{#if (is-version "OSS")}}
-    <AF.Link @href="https://hashicorp.com/products/vault/trial?source=vaultui">
-      Upgrade to Vault Enterprise
-    </AF.Link>
-  {{/if}}
-  <AF.Link @href={{doc-link "/vault"}}>
-    Documentation
-  </AF.Link>
-  <AF.LegalLinks />
-</Hds::AppFooter>
-
-{{#if (eq this.env "development")}}
-  <div class="env-banner level development">
-    <div class="level-item notification">
-      <Icon @name="git-branch" /><Icon @name="pencil-tool" />
-      Local development
-      <Icon @name="pencil-tool" /><Icon @name="git-branch" />
-    </div>
-  </div>
-{{/if}}
+<AppFooter />

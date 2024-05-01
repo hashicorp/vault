@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Store from '@ember-data/store';
+import Store, { CacheHandler } from '@ember-data/store';
+import RequestManager from '@ember-data/request';
+import { LegacyNetworkHandler } from '@ember-data/legacy-compat';
 import { run, schedule } from '@ember/runloop';
 import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
@@ -33,6 +35,16 @@ export function keyForCache(query) {
 }
 
 export default class StoreService extends Store {
+  requestManager = new RequestManager();
+
+  constructor(args) {
+    super(args);
+    // If at some point we no longer need an extended store, we can remove the @ember-data/legacy-compat dep
+    // See: https://api.emberjs.com/ember-data/4.12/modules/@ember-data%2Frequest
+    this.requestManager.use([LegacyNetworkHandler]);
+    this.requestManager.useCache(CacheHandler);
+  }
+
   lazyCaches = new Map();
 
   setLazyCacheForModel(modelName, key, value) {
@@ -64,8 +76,9 @@ export default class StoreService extends Store {
   //     the array of items will be found
   //   page: the page number to return
   //   size: the size of the page
-  //   pageFilter: a string that will be used to do a fuzzy match against the
-  //     results, this is done pre-pagination
+  //   pageFilter: a string that will be used to do a fuzzy match against the results,
+  //     OR a function to be executed that will receive the dataset as the lone arg.
+  //     Filter is done pre-pagination.
   lazyPaginatedQuery(modelType, query, adapterOptions) {
     const skipCache = query.skipCache;
     // We don't want skipCache to be part of the actual query key, so remove it
@@ -103,10 +116,14 @@ export default class StoreService extends Store {
   filterData(filter, dataset) {
     let newData = dataset || [];
     if (filter) {
-      newData = dataset.filter(function (item) {
-        const id = item.id || item.name || item;
-        return id.toLowerCase().includes(filter.toLowerCase());
-      });
+      if (filter instanceof Function) {
+        newData = filter(dataset);
+      } else {
+        newData = dataset.filter((item) => {
+          const id = item.id || item.name || item;
+          return id.toLowerCase().includes(filter.toLowerCase());
+        });
+      }
     }
     return newData;
   }
@@ -170,7 +187,7 @@ export default class StoreService extends Store {
         );
         // Hack to make sure all records get in model correctly. remove with update to ember-data@4.12
         this.peekAll(modelName).length;
-        const model = this.peekAll(modelName).toArray();
+        const model = this.peekAll(modelName).slice();
         model.set('meta', response.meta);
         resolve(model);
       });

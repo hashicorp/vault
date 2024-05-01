@@ -1,0 +1,3 @@
+```release-note:improvement
+events: Add support for event subscription plugins, including SQS
+```

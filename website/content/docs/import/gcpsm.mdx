@@ -1,0 +1,57 @@
+---
+layout: docs
+page_title: GCP secret import source
+description: The Google Cloud Platform Secret Manager source imports secrets from GCP to Vault.
+---
+
+# GCP import source
+
+Use the GCP source to import secret data from GCP Secret Manager into your Vault instance. To use dynamic
+credentials with GCP import, ensure the [GCP secrets engine](/vault/docs/secrets/gcp) is
+already configured.
+
+## Argument reference
+
+Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common to all source types.
+
+## Additional arguments
+
+- `credentials` `(string: "")` - The path to the service account key credentials file for the service account
+  with the [necessary permissions](#permissions). If `credentials` is set, then `vault_mount_path` and
+  `vault_role_name` must be unset.
+
+- `vault_mount_path` `(string: "")` - The Vault mount path to a pre-configured GCP
+  secrets engine used to generate dynamic credentials for the importer. If one of
+  `vault_mount_path`, `vault_role_name`, or `vault_namespace` are set, then `credentials` must be
+  unset.
+
+- `vault_role_name` `(string: "")` - The Vault role used to generate a dynamic
+  credential for the importer. The role name must exist in the pre-configured GCP secrets
+  engine mount. If one of `vault_mount_path`, `vault_role_name`, or `vault_namespace`
+  are set, then `credentials` must be unset.
+
+- `vault_namespace` `(string: "")` - The Vault namespace containing the preconfigured GCP secrets engine
+  mount path specified in `vault_mount_path` for use with dynamic secrets. If one of `vault_mount_path`,
+  `vault_role_name`, or `vault_namespace` are set, then `credentials` must be unset.
+
+## Example
+
+Define and configure the `my-gcp-source-1` GCP source:
+
+```hcl
+source_gcp {
+  name             = "my-gcp-source-1"
+  vault_mount_path = "gcp"
+  vault_role_name  = "my-gcp-role-1"
+  vault_namespace  = "ns-1"
+}
+```
+
+## Permissions
+
+To use GCP import, you must grant the associated GCP identity permission to read secrets:
+
+```shell-session
+"secretmanager.secrets.list",
+"secretmanager.versions.access",
+```

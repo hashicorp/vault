@@ -6,6 +6,7 @@ package logical
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -50,6 +51,7 @@ func (r *RequestWrapInfo) SentinelKeys() []string {
 	}
 }
 
+//go:generate enumer -type=ClientTokenSource -trimprefix=ClientTokenFrom -transform=snake
 type ClientTokenSource uint32
 
 const (
@@ -193,6 +195,10 @@ type Request struct {
 	// accessible.
 	Unauthenticated bool `json:"unauthenticated" structs:"unauthenticated" mapstructure:"unauthenticated"`
 
+	// PathLimited indicates that the request path is marked for special-case
+	// request limiting.
+	PathLimited bool `json:"path_limited" structs:"path_limited" mapstructure:"path_limited"`
+
 	// MFACreds holds the parsed MFA information supplied over the API as part of
 	// X-Vault-MFA header
 	MFACreds MFACreds `json:"mfa_creds" structs:"mfa_creds" mapstructure:"mfa_creds" sentinel:""`
@@ -247,15 +253,38 @@ type Request struct {
 
 	// When a request has been forwarded, contains information of the host the request was forwarded 'from'
 	ForwardedFrom string `json:"forwarded_from,omitempty"`
+
+	// Name of the chroot namespace for the listener that the request was made against
+	ChrootNamespace string `json:"chroot_namespace,omitempty"`
+
+	// RequestLimiterDisabled tells whether the request context has Request Limiter applied.
+	RequestLimiterDisabled bool `json:"request_limiter_disabled,omitempty"`
 }
 
-// Clone returns a deep copy of the request by using copystructure
+// Clone returns a deep copy (almost) of the request.
+// It will set unexported fields which were only previously accessible outside
+// the package via receiver methods.
+// NOTE: Request.Connection is NOT deep-copied, due to issues with the results
+// of copystructure on serial numbers within the x509.Certificate objects.
 func (r *Request) Clone() (*Request, error) {
 	cpy, err := copystructure.Copy(r)
 	if err != nil {
 		return nil, err
 	}
-	return cpy.(*Request), nil
+
+	req := cpy.(*Request)
+
+	// Add the unexported values that were only retrievable via receivers.
+	// copystructure isn't able to do this, which is why we're doing it manually.
+	req.mountClass = r.MountClass()
+	req.mountRunningVersion = r.MountRunningVersion()
+	req.mountRunningSha256 = r.MountRunningSha256()
+	req.mountIsExternalPlugin = r.MountIsExternalPlugin()
+	// This needs to be overwritten as the internal connection state is not cloned properly
+	// mainly the big.Int serial numbers within the x509.Certificate objects get mangled.
+	req.Connection = r.Connection
+
+	return req, nil
 }
 
 // Get returns a data field and guards for nil Data
@@ -449,13 +478,19 @@ func (c CtxKeyInFlightRequestID) String() string {
 	return "in-flight-request-ID"
 }
 
+type CtxKeyInFlightRequestPriority struct{}
+
+func (c CtxKeyInFlightRequestPriority) String() string {
+	return "in-flight-request-priority"
+}
+
 type CtxKeyRequestRole struct{}
 
 func (c CtxKeyRequestRole) String() string {
 	return "request-role"
 }
 
-// CtxKeyDisableReplicationStatusEndpoints is a custom type used as a key in
+// ctxKeyDisableReplicationStatusEndpoints is a custom type used as a key in
 // context.Context to store the value `true` when the
 // disable_replication_status_endpoints configuration parameter is set to true
 // for the listener through which a request was received.
@@ -483,38 +518,6 @@ func CreateContextDisableReplicationStatusEndpoints(parent context.Context, valu
 	return context.WithValue(parent, ctxKeyDisableReplicationStatusEndpoints{}, value)
 }
 
-// CtxKeyMaxRequestSize is a custom type used as a key in context.Context to
-// store the value of the max_request_size set for the listener through which
-// a request was received.
-type ctxKeyMaxRequestSize struct{}
-
-// String returns a string representation of the receiver type.
-func (c ctxKeyMaxRequestSize) String() string {
-	return "max_request_size"
-}
-
-// ContextMaxRequestSizeValue examines the provided context.Context for the max
-// request size value and returns it as an int64 value if it's found along with
-// the ok value set to true; otherwise the ok return value is false.
-func ContextMaxRequestSizeValue(ctx context.Context) (value int64, ok bool) {
-	value, ok = ctx.Value(ctxKeyMaxRequestSize{}).(int64)
-
-	return
-}
-
-// CreateContextMaxRequestSize creates a new context.Context based on the
-// provided parent that also includes the provided max request size value for
-// the ctxKeyMaxRequestSize key.
-func CreateContextMaxRequestSize(parent context.Context, value int64) context.Context {
-	return context.WithValue(parent, ctxKeyMaxRequestSize{}, value)
-}
-
-// ContextContainsMaxRequestSize returns a bool value that indicates if the
-// provided Context contains a value for the ctxKeyMaxRequestSize key.
-func ContextContainsMaxRequestSize(ctx context.Context) bool {
-	return ctx.Value(ctxKeyMaxRequestSize{}) != nil
-}
-
 // CtxKeyOriginalRequestPath is a custom type used as a key in context.Context
 // to store the original request path.
 type ctxKeyOriginalRequestPath struct{}
@@ -538,4 +541,51 @@ func ContextOriginalRequestPathValue(ctx context.Context) (value string, ok bool
 // for the ctxKeyOriginalRequestPath key.
 func CreateContextOriginalRequestPath(parent context.Context, value string) context.Context {
 	return context.WithValue(parent, ctxKeyOriginalRequestPath{}, value)
+}
+
+type ctxKeyOriginalBody struct{}
+
+func ContextOriginalBodyValue(ctx context.Context) (io.ReadCloser, bool) {
+	value, ok := ctx.Value(ctxKeyOriginalBody{}).(io.ReadCloser)
+	return value, ok
+}
+
+func CreateContextOriginalBody(parent context.Context, body io.ReadCloser) context.Context {
+	return context.WithValue(parent, ctxKeyOriginalBody{}, body)
+}
+
+type CtxKeyDisableRequestLimiter struct{}
+
+func (c CtxKeyDisableRequestLimiter) String() string {
+	return "disable_request_limiter"
+}
+
+// ctxKeyRedactionSettings is a custom type used as a key in context.Context to
+// store the value the redaction settings for the listener that received the
+// request.
+type ctxKeyRedactionSettings struct{}
+
+// String returns a string representation of the receiver type.
+func (c ctxKeyRedactionSettings) String() string {
+	return "redaction-settings"
+}
+
+// CtxRedactionSettingsValue examines the provided context.Context for the
+// redaction settings value and returns them as a tuple of bool values if they
+// are found along with the ok return value set to true; otherwise the ok return
+// value is false.
+func CtxRedactionSettingsValue(ctx context.Context) (redactVersion, redactAddresses, redactClusterName, ok bool) {
+	value, ok := ctx.Value(ctxKeyRedactionSettings{}).([]bool)
+	if !ok {
+		return false, false, false, false
+	}
+
+	return value[0], value[1], value[2], true
+}
+
+// CreatecontextRedactionSettings creates a new context.Context based on the
+// provided parent that also includes the provided redaction settings values for
+// the ctxKeyRedactionSettings key.
+func CreateContextRedactionSettings(parent context.Context, redactVersion, redactAddresses, redactClusterName bool) context.Context {
+	return context.WithValue(parent, ctxKeyRedactionSettings{}, []bool{redactVersion, redactAddresses, redactClusterName})
 }

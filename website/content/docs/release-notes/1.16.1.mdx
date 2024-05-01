@@ -1,0 +1,250 @@
+---
+layout: docs
+page_title: "1.16.1 release notes"
+description: |-
+  Key updates for  Vault 1.16.1
+---
+
+# Vault 1.16.1 release notes
+
+**GA date:** 2024-04-04
+
+@include 'release-notes/intro.mdx'
+
+## Important changes
+
+| Version         | Change                                                                                                                                                                                                                             |
+|-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1.16.0+         | [Existing clusters do not show the current Vault version in UI by default](/vault/docs/upgrading/upgrade-to-1.16.x#default-policy-changes)                                                                                                                |
+| 1.16.0+         | [Default LCQ enabled when upgrading pre-1.9](/vault/docs/upgrading/upgrade-to-1.16.x#default-lcq-pre-1.9-upgrade) |
+| 1.16.0+         | [External plugin environment variables take precedence over server variables](/vault/docs/upgrading/upgrade-to-1.16.x#external-plugin-variables)
+| 1.16.0+         | [LDAP auth entity alias names no longer include upndomain](/vault/docs/upgrading/upgrade-to-1.16.x#ldap-auth-entity-alias-names-no-longer-include-upndomain)
+
+## Vault companion updates
+
+Companion updates are Vault updates that live outside the main Vault binary.
+
+<table>
+  <thead>
+    <tr>
+      <th style={{verticalAlign: 'middle'}}>Release</th>
+      <th style={{verticalAlign: 'middle'}}>Update</th>
+      <th style={{verticalAlign: 'middle'}}>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Vault Secrets Operator (v0.5)
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Use templating to format, transform, and decode secrets before syncing to
+      Kubernetes secret.
+      <br /><br />
+      Learn more: <a href="/vault/docs/platform/k8s/vso/secret-transformation">Secret data transformation</a>
+    </td>
+  </tr>
+  </tbody>
+</table>
+
+## Core updates
+
+Follow the learn more links for more information, or browse the list of
+[Vault tutorials updated to highlight changes for the most recent GA release](/vault/tutorials/new-release).
+
+<table>
+  <thead>
+    <tr>
+      <th style={{verticalAlign: 'middle'}}>Release</th>
+      <th style={{verticalAlign: 'middle'}}>Update</th>
+      <th style={{verticalAlign: 'middle'}}>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Endpoint hardening
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Minimize network exposure by selectively redacting select fields like IP
+      addresses, cluster names, and Vault version from the HTTP responses of
+      your Vault server.
+      <br /><br />
+      Learn more:&nbsp;
+      <a href="/vault/docs/configuration/listener/tcp#redact_addresses"><tt>redact_addresses</tt> parameter</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      External plugins
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Run external plugins in their own container with native container platform
+      controls.
+      <br /><br />
+      Learn more: <a href="/vault/docs/plugins/containerized-plugins">Containerize Vault plugins</a>
+    </td>
+  </tr>
+
+  </tbody>
+</table>
+
+## Enterprise updates
+
+<table>
+  <thead>
+    <tr>
+      <th style={{verticalAlign: 'middle'}}>Release</th>
+      <th style={{verticalAlign: 'middle'}}>Update</th>
+      <th style={{verticalAlign: 'middle'}}>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Long-term support
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Reduce risk and operational overhead with Vault Enterprise Long-Term
+      Support (LTS) releases.
+      <br /><br />
+      Learn more: <a href="/vault/docs/enterprise/lts">LTS overview</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Vault GUI
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Configure custom messages and display those messages to targeted users in
+      the Vault GUI.
+        <br /><br />
+        Learn more: <a href="/vault/docs/ui/custom-messages">Custom UI messages</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Audit logging
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Filter audit logs to write data to different destinations based on the content.
+      <br /><br />
+      Learn more: <a href="/vault/docs/enterprise/audit/filtering">Filter syntax for audit results</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Static secret caching
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Use Vault Proxy to cache static secrets for a set period of time and receive
+      event notifications when secrets change.
+      <br /><br />
+      Learn more: <a href="/vault/docs/agent-and-proxy/proxy/caching/static-secret-caching">Vault Proxy static secret caching</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Event notifications
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Subscribe to notifications for various events in Vault. Includes support
+      for filtering, permissions, and cluster configurations with K-V secrets.
+      <br /><br />
+      Learn more: <a href="/vault/docs/concepts/events">Events</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Public Key Infrastructure (PKI)
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>BETA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Automate certificate lifecycle management for IoT/EST enabled devices with
+      native EST protocol support
+      <br /><br />
+      Learn more: <a href="/vault/docs/secrets/pki/est">Enrollment over Secure Transport (EST)</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Default lease count quotas
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      New server deployments automatically create a lease count quota in the
+      root namespace with a 300K limit.
+      <br /><br />
+      Learn more: <a href="/vault/docs/enterprise/lease-count-quotas">Lease count quotas</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      License utilization reporting
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Use the Vault CLI to bundle and report usage data to HashiCorp for
+      clusters that do not report license utilization data automatically.
+      <br /><br />
+      Learn more: <a href="/vault/docs/enterprise/license/manual-reporting">Manual license utilization reporting</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Secrets sync
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Sync Key Value (KV) v2 data between Vault and secrets managers from AWS,
+      Azure, Google Cloud Platform (GCP), GitHub, and Vercel.
+      <br /><br />
+      Learn more: <a href="/vault/docs/sync">Secrets Sync</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      AWS plugin
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      
+      Use automatic identity tokes for workload identity federation 
+      authentication flows with the AWS secret engine without explicitly
+      configuring sensitive security credentials.
+      <br /><br />
+      Learn more: <a href="/vault/docs/secrets/aws">AWS secrets engine</a>
+    </td>
+  </tr>
+
+  </tbody>
+</table>
+
+## Feature deprecations and EOL
+
+Deprecated in 1.16 | Retired in 1.16
+------------------ | ---------------
+None | None
+
+@include 'release-notes/deprecation-note.mdx'

@@ -22,7 +22,14 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <Hds::Copy::Button @text="Copy" @textToCopy={{@sum}} class="primary" />
+      <Hds::Copy::Button
+        @text="Copy"
+        @textToCopy={{@sum}}
+        @onError={{(fn
+          (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+        )}}
+        class="primary"
+      />
     </div>
     <div class="control">
       <Hds::Button @text="Back" @color="secondary" {{on "click" this.onClear}} data-test-tools-back={{true}} />
@@ -32,7 +39,7 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @errors={{@errors}} />
     <div class="field">
-      <label for="input" class="is-label">
+      <label for="input-hash" class="is-label">
         Input
       </label>
       <div class="control">

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -185,11 +186,11 @@ return a signed CRL based on the parameter values.`,
 }
 
 func (b *backend) pathUpdateResignCrlsHandler(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("This API cannot be used until the migration has completed"), nil
 	}
 
-	issuerRef := getIssuerRef(data)
+	issuerRef := GetIssuerRef(data)
 	crlNumber := data.Get(crlNumberParam).(int)
 	deltaCrlBaseNumber := data.Get(deltaCrlBaseNumberParam).(int)
 	nextUpdateStr := data.Get(nextUpdateParam).(string)
@@ -273,11 +274,11 @@ func (b *backend) pathUpdateResignCrlsHandler(ctx context.Context, request *logi
 }
 
 func (b *backend) pathUpdateSignRevocationListHandler(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("This API cannot be used until the migration has completed"), nil
 	}
 
-	issuerRef := getIssuerRef(data)
+	issuerRef := GetIssuerRef(data)
 	crlNumber := data.Get(crlNumberParam).(int)
 	deltaCrlBaseNumber := data.Get(deltaCrlBaseNumberParam).(int)
 	nextUpdateStr := data.Get(nextUpdateParam).(string)
@@ -551,6 +552,10 @@ func parseSerialNum(cert map[string]interface{}) (*big.Int, error) {
 	if !serialExists {
 		return nil, errors.New("missing 'serial_number' field")
 	}
+	return parseSerialNumStr(serialNumRaw)
+}
+
+func parseSerialNumStr(serialNumRaw interface{}) (*big.Int, error) {
 	serialNumStr, err := parseutil.ParseString(serialNumRaw)
 	if err != nil {
 		return nil, fmt.Errorf("'serial_number' field value was not a string: %w", err)
@@ -649,7 +654,7 @@ func getCaBundle(sc *storageContext, issuerRef string) (*certutil.CAInfoBundle, 
 		return nil, fmt.Errorf("failed to resolve issuer %s: %w", issuerRefParam, err)
 	}
 
-	return sc.fetchCAInfoByIssuerId(issuerId, CRLSigningUsage)
+	return sc.fetchCAInfoByIssuerId(issuerId, issuing.CRLSigningUsage)
 }
 
 func decodePemCrls(rawCrls []string) ([]*x509.RevocationList, error) {

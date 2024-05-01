@@ -1,0 +1,6 @@
+```release-note:improvement
+agent: Added new namespace top level configuration parameter, which can be used to make requests made by Agent to go to that namespace.
+```
+```release-note:improvement
+proxy: Added new namespace top level configuration parameter, and prepend_configured_namespace API Proxy configuration parameter, which can be used to make requests made to Proxy get proxied to that namespace.
+```

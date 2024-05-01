@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -26,7 +27,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/version"
 	"github.com/mholt/archiver/v3"
-	"github.com/mitchellh/cli"
 	"github.com/oklog/run"
 	"github.com/posener/complete"
 )
@@ -687,17 +687,18 @@ func (c *DebugCommand) collectHostInfo(ctx context.Context) {
 			return
 		}
 		if resp != nil {
-			defer resp.Body.Close()
-
 			secret, err := api.ParseSecret(resp.Body)
 			if err != nil {
 				c.captureError("host", err)
+				resp.Body.Close()
 				return
 			}
 			if secret != nil && secret.Data != nil {
 				hostEntry := secret.Data
 				c.hostInfoCollection = append(c.hostInfoCollection, hostEntry)
 			}
+
+			resp.Body.Close()
 		}
 	}
 }

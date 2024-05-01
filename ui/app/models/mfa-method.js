@@ -168,6 +168,15 @@ export default class MfaMethod extends Model {
     return this.type === 'totp' ? this.type.toUpperCase() : capitalize(this.type);
   }
 
+  get icon() {
+    switch (this.type) {
+      case 'totp':
+        return 'history';
+      default:
+        return this.type;
+    }
+  }
+
   get formFields() {
     return [...METHOD_PROPS.common, ...METHOD_PROPS[this.type]];
   }

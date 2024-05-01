@@ -29,6 +29,7 @@
       rows={{1}}
       wrap="off"
       spellcheck="false"
+      aria-label={{or @name "masked input"}}
       {{on "change" this.onChange}}
       {{on "keyup" (fn this.handleKeyUp @name)}}
       data-test-textarea
@@ -38,9 +39,12 @@
     <Hds::Copy::Button
       @text="Copy"
       @isIconOnly={{true}}
-      @textToCopy={{@value}}
+      @textToCopy={{this.copyValue}}
+      @onError={{(fn
+        (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+      )}}
       class="transparent has-padding-xxs"
-      data-test-copy-button
+      data-test-copy-button={{or this.copyValue true}}
     />
   {{/if}}
   {{#if @allowDownload}}
