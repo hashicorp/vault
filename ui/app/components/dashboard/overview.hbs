@@ -9,9 +9,7 @@
   <div class="is-flex-row gap-24">
     {{#if (and @version.isEnterprise @isRootNamespace)}}
       <div class="is-flex-column is-flex-1 gap-24">
-        {{#if @version.isEnterprise}}
-          <Dashboard::ClientCountCard />
-        {{/if}}
+        <Dashboard::ClientCountCard @isEnterprise={{@version.isEnterprise}} />
         {{#if
           (and @isRootNamespace (has-permission "status" routeParams="replication") (not (is-empty-value @replication)))
         }}

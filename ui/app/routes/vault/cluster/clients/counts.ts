@@ -10,13 +10,14 @@ import timestamp from 'core/utils/timestamp';
 import { getUnixTime } from 'date-fns';
 
 import type StoreService from 'vault/services/store';
-import type VersionService from 'vault/services/version';
+import VersionService from 'vault/services/version';
 
 import type { ModelFrom } from 'vault/vault/route';
 import type ClientsRoute from '../clients';
-import type ClientsConfigModel from 'vault/models/clients/config';
 import type ClientsActivityModel from 'vault/models/clients/activity';
 import type ClientsCountsController from 'vault/controllers/vault/cluster/clients/counts';
+import { setStartTimeQuery } from 'core/utils/client-count-utils';
+
 export interface ClientsCountsRouteParams {
   start_time?: string | number | undefined;
   end_time?: string | number | undefined;
@@ -86,10 +87,7 @@ export default class ClientsCountsRoute extends Route {
   async model(params: ClientsCountsRouteParams) {
     const { config, versionHistory } = this.modelFor('vault.cluster.clients') as ModelFrom<ClientsRoute>;
     // only enterprise versions will have a relevant billing start date, if null users must select initial start time
-    let startTime = null;
-    if (this.version.isEnterprise && this._hasConfig(config)) {
-      startTime = getUnixTime(config.billingStartTimestamp);
-    }
+    const startTime = setStartTimeQuery(this.version.isEnterprise, config);
 
     const startTimestamp = Number(params.start_time) || startTime;
     const endTimestamp = Number(params.end_time) || getUnixTime(timestamp.now());
@@ -117,9 +115,5 @@ export default class ClientsCountsRoute extends Route {
         mountPath: undefined,
       });
     }
-  }
-
-  _hasConfig(model: ClientsConfigModel | object): model is ClientsConfigModel {
-    return 'billingStartTimestamp' in model;
   }
 }

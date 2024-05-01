@@ -9,7 +9,7 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
-import getUnixTime from 'date-fns/getUnixTime';
+import { setStartTimeQuery } from 'core/utils/client-count-utils';
 
 /**
  * @module DashboardClientCountCard
@@ -47,7 +47,7 @@ export default class DashboardClientCountCard extends Component {
     if (!this.clientConfig) {
       // set config and license start time when component initializes
       this.clientConfig = yield this.store.queryRecord('clients/config', {}).catch(() => {});
-      this.licenseStartTime = getUnixTime(this.clientConfig.billingStartTimestamp);
+      this.licenseStartTime = setStartTimeQuery(this.args.isEnterprise, this.clientConfig);
     }
 
     // only make the network request if we have a start_time
