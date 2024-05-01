@@ -47,8 +47,8 @@ an escaped JSON string) of exclusion objects.
 
 - `condition` `(string: <optional>)` - predicate expression using [filtering syntax](/vault/docs/concepts/filtering),
 when matched Vault will attempt to remove values identified by `fields`.
-- `fields` `(string[] <required>)` - string array of fields identified by [JSON pointer](https://tools.ietf.org/html/rfc6901)
-in the audit entry to exclude.
+- `fields` `(string[] <required>)` - collection of fields in the audit entry to exclude,
+identified using [JSON pointer](https://tools.ietf.org/html/rfc6901) syntax.
 
 ```json
 [
@@ -59,10 +59,9 @@ in the audit entry to exclude.
 ]
 ```
 
-The `condition` is compared against an immutable golden source audit entry, so excluding
-a field in a preceding exclusion for an audit device won't change the value for subsequent
-exclusion conditions. Simply put, the overall output of excluded fields is cumulative,
-but the input used by conditions is not.
+Each `condition` is compared against the same golden source, immutable audit entry.
+This means excluding a particular field in a preceding exclusion, won't impact a
+subsequent condition evaluation.
 
 ### Exclusion examples
 
@@ -94,9 +93,10 @@ audit entries with a mount type of `transit`.
 ```
 #### Multiple exclusions
 
-This example uses multiple exclusions to exclude `data` from both the request and response,
-when the mount type is `transit`. Also to exclude the `entity_id` from requests where
-the `/auth/client_token` in the entry matches `hmac` and then more than one other character.
+This example uses multiple exclusions to exclude:
+
+* `data` from both the request and response when the mount type is `transit`.
+* `entity_id` from requests where the `/auth/client_token` in the entry matches `hmac` and then more than one other character.
 
 ```json
 [
