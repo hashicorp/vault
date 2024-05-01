@@ -552,6 +552,10 @@ func parseSerialNum(cert map[string]interface{}) (*big.Int, error) {
 	if !serialExists {
 		return nil, errors.New("missing 'serial_number' field")
 	}
+	return parseSerialNumStr(serialNumRaw)
+}
+
+func parseSerialNumStr(serialNumRaw interface{}) (*big.Int, error) {
 	serialNumStr, err := parseutil.ParseString(serialNumRaw)
 	if err != nil {
 		return nil, fmt.Errorf("'serial_number' field value was not a string: %w", err)

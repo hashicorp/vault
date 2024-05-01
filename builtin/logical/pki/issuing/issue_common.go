@@ -26,6 +26,12 @@ import (
 	"golang.org/x/net/idna"
 )
 
+const (
+	PathCerts        = "certs/"
+	PathCertMetadata = "cert-metadata/"
+	PathCrls         = "crls/"
+)
+
 var (
 	// labelRegex is a single label from a valid domain name and was extracted
 	// from hostnameRegex below for use in leftWildLabelRegex, without any
@@ -1008,7 +1014,7 @@ func ApplyIssuerLeafNotAfterBehavior(caSign *certutil.CAInfoBundle, notAfter tim
 // StoreCertificate given a certificate bundle that was signed, persist the certificate to storage
 func StoreCertificate(ctx context.Context, s logical.Storage, certCounter pki_backend.CertificateCounter, certBundle *certutil.ParsedCertBundle) error {
 	hyphenSerialNumber := parsing.NormalizeSerialForStorageFromBigInt(certBundle.Certificate.SerialNumber)
-	key := "certs/" + hyphenSerialNumber
+	key := PathCerts + hyphenSerialNumber
 	certsCounted := certCounter.IsInitialized()
 	err := s.Put(ctx, &logical.StorageEntry{
 		Key:   key,

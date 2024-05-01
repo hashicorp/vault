@@ -950,7 +950,7 @@ func (b *backend) startTidyOperation(req *logical.Request, config *tidyConfig) {
 }
 
 func (b *backend) doTidyCertStore(ctx context.Context, req *logical.Request, logger hclog.Logger, config *tidyConfig) error {
-	serials, err := req.Storage.List(ctx, "certs/")
+	serials, err := req.Storage.List(ctx, issuing.PathCerts)
 	if err != nil {
 		return fmt.Errorf("error fetching list of certs: %w", err)
 	}
@@ -971,14 +971,14 @@ func (b *backend) doTidyCertStore(ctx context.Context, req *logical.Request, log
 			time.Sleep(config.PauseDuration)
 		}
 
-		certEntry, err := req.Storage.Get(ctx, "certs/"+serial)
+		certEntry, err := req.Storage.Get(ctx, issuing.PathCerts+serial)
 		if err != nil {
 			return fmt.Errorf("error fetching certificate %q: %w", serial, err)
 		}
 
 		if certEntry == nil {
 			logger.Warn("certificate entry is nil; tidying up since it is no longer useful for any server operations", "serial", serial)
-			if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
+			if err := req.Storage.Delete(ctx, issuing.PathCerts+serial); err != nil {
 				return fmt.Errorf("error deleting nil entry with serial %s: %w", serial, err)
 			}
 			b.tidyStatusIncCertStoreCount()
@@ -987,7 +987,7 @@ func (b *backend) doTidyCertStore(ctx context.Context, req *logical.Request, log
 
 		if certEntry.Value == nil || len(certEntry.Value) == 0 {
 			logger.Warn("certificate entry has no value; tidying up since it is no longer useful for any server operations", "serial", serial)
-			if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
+			if err := req.Storage.Delete(ctx, issuing.PathCerts+serial); err != nil {
 				return fmt.Errorf("error deleting entry with nil value with serial %s: %w", serial, err)
 			}
 			b.tidyStatusIncCertStoreCount()
@@ -1000,7 +1000,7 @@ func (b *backend) doTidyCertStore(ctx context.Context, req *logical.Request, log
 		}
 
 		if time.Since(cert.NotAfter) > config.SafetyBuffer {
-			if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
+			if err := req.Storage.Delete(ctx, issuing.PathCerts+serial); err != nil {
 				return fmt.Errorf("error deleting serial %q from storage: %w", serial, err)
 			}
 			b.tidyStatusIncCertStoreCount()
@@ -1111,7 +1111,7 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 				if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
 					return fmt.Errorf("error deleting serial %q from revoked list: %w", serial, err)
 				}
-				if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
+				if err := req.Storage.Delete(ctx, issuing.PathCerts+serial); err != nil {
 					return fmt.Errorf("error deleting serial %q from store when tidying revoked: %w", serial, err)
 				}
 				rebuildCRL = true

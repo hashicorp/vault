@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -90,7 +91,7 @@ func (b *backend) acmeRevocationHandler(acmeCtx *acmeContext, _ *logical.Request
 	// Load our certificate from storage to ensure it exists and matches
 	// what was given to us.
 	serial := serialFromCert(cert)
-	certEntry, err := fetchCertBySerial(acmeCtx.sc, "certs/", serial)
+	certEntry, err := fetchCertBySerial(acmeCtx.sc, issuing.PathCerts, serial)
 	if err != nil {
 		return nil, fmt.Errorf("unable to revoke certificate: err reading global cert entry: %v: %w", err, ErrServerInternal)
 	}

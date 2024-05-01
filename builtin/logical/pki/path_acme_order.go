@@ -176,7 +176,7 @@ func (b *backend) acmeFetchCertOrderHandler(ac *acmeContext, _ *logical.Request,
 		return nil, fmt.Errorf("order is missing required fields to load certificate")
 	}
 
-	certEntry, err := fetchCertBySerial(ac.sc, "certs/", order.CertificateSerialNumber)
+	certEntry, err := fetchCertBySerial(ac.sc, issuing.PathCerts, order.CertificateSerialNumber)
 	if err != nil {
 		return nil, fmt.Errorf("failed reading certificate %s from storage: %w", order.CertificateSerialNumber, err)
 	}
