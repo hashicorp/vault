@@ -32,6 +32,7 @@ var (
 			"inferred_aws_region",
 			"inferred_entity_id",
 			"inferred_entity_type",
+			"inferred_hostname",
 		},
 	}
 
