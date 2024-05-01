@@ -147,7 +147,7 @@ module('Acceptance | sync | overview', function (hooks) {
       await authPage.loginNs('admin/foo');
     });
 
-    test('it should make activation-flag requests to correct namespace', async function (assert) {
+    test('it should make activation-flag requests to correct namespace when not managed', async function (assert) {
       assert.expect(3);
 
       this.server.get('/sys/activation-flags', (_, req) => {
@@ -162,8 +162,8 @@ module('Acceptance | sync | overview', function (hooks) {
       this.server.post('/sys/activation-flags/secrets-sync/activate', (_, req) => {
         assert.strictEqual(
           req.requestHeaders['X-Vault-Namespace'],
-          'admin/foo',
-          'Request is made to admin/foo namespace'
+          undefined,
+          'Request is made without a namespace'
         );
         return {};
       });
@@ -193,8 +193,8 @@ module('Acceptance | sync | overview', function (hooks) {
       this.server.post('/sys/activation-flags/secrets-sync/activate', (_, req) => {
         assert.strictEqual(
           req.requestHeaders['X-Vault-Namespace'],
-          'admin',
-          'Request is made to the admin namespace'
+          'admin/foo',
+          'Request is made to the admin/foo namespace'
         );
         return {};
       });

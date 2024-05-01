@@ -16,13 +16,16 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type StoreService from 'vault/services/store';
 import type RouterService from '@ember/routing/router-service';
 import type VersionService from 'vault/services/version';
+import type NamespaceService from 'vault/services/namespace';
 import type { SyncDestinationAssociationMetrics } from 'vault/vault/adapters/sync/association';
 import type SyncDestinationModel from 'vault/vault/models/sync/destination';
 
 interface Args {
   destinations: Array<SyncDestinationModel>;
   totalVaultSecrets: number;
-  activatedFeatures: Array<string>;
+  isActivated: boolean;
+  licenseHasSecretsSync: boolean;
+  isHvdManaged: boolean;
 }
 
 export default class SyncSecretsDestinationsPageComponent extends Component<Args> {
@@ -30,6 +33,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @service declare readonly store: StoreService;
   @service declare readonly router: RouterService;
   @service declare readonly version: VersionService;
+  @service declare readonly namespace: NamespaceService;
 
   @tracked destinationMetrics: SyncDestinationAssociationMetrics[] = [];
   @tracked page = 1;
@@ -68,13 +72,23 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
     this.hasConfirmedDocs = false;
   }
 
+  // try {
+  //     yield this.store
+  //       .adapterFor('application')
+  //       .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST', { namespace: null });
+  //     this.router.transitionTo('vault.cluster.sync.secrets.overview');
+  //   } catch (error) {
   @task
   @waitFor
   *onFeatureConfirm() {
+    // If the cluster is managed let the application adapter handle adding the namespace header.
+    // For non-managed clusters never pass a namespace header.
+    const options = this.args.isHvdManaged ? undefined : { namespace: null };
+
     try {
       yield this.store
         .adapterFor('application')
-        .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST');
+        .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST', options);
       this.router.transitionTo('vault.cluster.sync.secrets.overview');
     } catch (error) {
       this.error = errorMessage(error);
