@@ -33,15 +33,16 @@ const (
 
 	// StandardHTTP is the default AOPWritePriority for HTTP requests.
 	StandardHTTP AOPWritePriority = 128
+
+	// NeverDrop is used to mark a request such that it will never be rejected.
+	// This is currently used as an administrative priority used for requests on
+	// paths which require sudo capabilities.
+	NeverDrop AOPWritePriority = 255
 )
 
 // String returns the string representation of the AOPWritePriority.
 func (p AOPWritePriority) String() string {
-	switch p {
-	case AlwaysDrop:
-		return strconv.FormatUint(uint64(p), 8)
-	}
-	return ""
+	return strconv.FormatUint(uint64(p), 8)
 }
 
 // StringToAOPWritePriority converts a string to an AOPWritePriority.
