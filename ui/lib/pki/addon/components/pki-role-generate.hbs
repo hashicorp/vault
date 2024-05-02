@@ -17,6 +17,15 @@
           </FormField>
         {{/each}}
       {{/let}}
+
+      {{#if this.version.isEnterprise}}
+        {{#let (get @model.formFieldGroups "1") as |group|}}
+          {{#each group.enterpriseOnly as |attr|}}
+            <FormField @model={{@model}} @attr={{attr}} @modelValidations={{this.modelValidations}} />
+          {{/each}}
+        {{/let}}
+      {{/if}}
+
       <FormFieldGroups
         @model={{@model}}
         @renderGroup="Subject Alternative Name (SAN) Options"

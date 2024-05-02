@@ -11,6 +11,7 @@ const generateFromRole = [
   {
     default: ['csr', 'commonName', 'customTtl', 'format', 'removeRootsFromChain'],
   },
+  { enterpriseOnly: ['metadata'] },
   {
     'Subject Alternative Name (SAN) Options': [
       'excludeCnFromSans',

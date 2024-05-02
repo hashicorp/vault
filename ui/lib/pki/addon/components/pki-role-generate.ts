@@ -15,6 +15,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type DownloadService from 'vault/services/download';
 import type PkiCertificateGenerateModel from 'vault/models/pki/certificate/generate';
 import type PkiCertificateSignModel from 'vault/models/pki/certificate/sign';
+import VersionService from 'vault/services/version';
 
 interface Args {
   onSuccess: CallableFunction;
@@ -25,6 +26,7 @@ interface Args {
 export default class PkiRoleGenerate extends Component<Args> {
   @service declare readonly router: Router;
   @service declare readonly store: Store;
+  @service declare readonly version: VersionService;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly download: DownloadService;
 
