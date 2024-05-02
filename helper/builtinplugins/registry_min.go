@@ -7,7 +7,6 @@ package builtinplugins
 
 import (
 	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
-	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
 	credCF "github.com/hashicorp/vault-plugin-auth-cf"
 	credJWT "github.com/hashicorp/vault-plugin-auth-jwt"
 	credKerb "github.com/hashicorp/vault-plugin-auth-kerberos"
@@ -53,12 +52,8 @@ func newRegistry() *registry {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
-			"approle": {Factory: credAppRole.Factory},
-			"aws":     {Factory: credAws.Factory},
-			"centrify": {
-				Factory:           credCentrify.Factory,
-				DeprecationStatus: consts.Deprecated,
-			},
+			"approle":  {Factory: credAppRole.Factory},
+			"aws":      {Factory: credAws.Factory},
 			"cert":     {Factory: credCert.Factory},
 			"cf":       {Factory: credCF.Factory},
 			"github":   {Factory: credGitHub.Factory},

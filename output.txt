@@ -1,0 +1,30 @@
+vault-plugin-auth-azure NOT in minimal
+.//helper/builtinplugins/registry_full.go:	credAzure "github.com/hashicorp/vault-plugin-auth-azure"
+
+vault-plugin-auth-kubernetes NOT in minimal
+.//helper/builtinplugins/registry_full.go:	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
+
+vault-plugin-database-couchbase NOT in minimal
+.//helper/builtinplugins/registry_full.go:	dbCouchbase "github.com/hashicorp/vault-plugin-database-couchbase"
+
+vault-plugin-database-elasticsearch NOT in minimal
+.//helper/builtinplugins/registry_full.go:	dbElastic "github.com/hashicorp/vault-plugin-database-elasticsearch"
+
+vault-plugin-database-mongodbatlas NOT in minimal
+.//helper/builtinplugins/registry_full.go:	dbMongoAtlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
+
+vault-plugin-database-redis-elasticache NOT in minimal
+.//helper/builtinplugins/registry_full.go:	dbRedisElastiCache "github.com/hashicorp/vault-plugin-database-redis-elasticache"
+
+vault-plugin-secrets-alicloud NOT in minimal
+.//helper/builtinplugins/registry_full.go:	logicalAlicloud "github.com/hashicorp/vault-plugin-secrets-alicloud"
+
+vault-plugin-secrets-azure NOT in minimal
+.//helper/builtinplugins/registry_full.go:	logicalAzure "github.com/hashicorp/vault-plugin-secrets-azure"
+
+vault-plugin-secrets-kubernetes NOT in minimal
+.//helper/builtinplugins/registry_full.go:	logicalKube "github.com/hashicorp/vault-plugin-secrets-kubernetes"
+
+vault-plugin-secrets-terraform NOT in minimal
+.//helper/builtinplugins/registry_full.go:	logicalTerraform "github.com/hashicorp/vault-plugin-secrets-terraform"
+

@@ -7,7 +7,6 @@ vault-plugin-auth-oci
 vault-plugin-database-couchbase
 vault-plugin-database-elasticsearch
 vault-plugin-database-mongodbatlas
-vault-plugin-database-oracle
 vault-plugin-database-redis
 vault-plugin-database-redis-elasticache
 vault-plugin-secrets-ad
