@@ -163,6 +163,21 @@ func (a *HeadersConfig) Remove(ctx context.Context, header string) error {
 	return nil
 }
 
+// DefaultHeaders can be used to retrieve the set of default headers that will be
+// added to HeadersConfig in order to allow them to appear in audit logs in a raw
+// format. If the Vault Operator adds their own setting for any of the defaults,
+// their setting will be honored.
+func (a *HeadersConfig) DefaultHeaders() map[string]*HeaderSettings {
+	// Support deprecated 'x-' prefix (https://datatracker.ietf.org/doc/html/rfc6648)
+	const CorrelationID = "correlation-id"
+	XCorrelationID := fmt.Sprintf("x-%s", CorrelationID)
+
+	return map[string]*HeaderSettings{
+		CorrelationID:  {},
+		XCorrelationID: {},
+	}
+}
+
 // Invalidate attempts to refresh the allowed audit headers and their settings.
 // NOTE: Invalidate will acquire a write lock in order to update the underlying headers.
 func (a *HeadersConfig) Invalidate(ctx context.Context) error {
@@ -190,6 +205,14 @@ func (a *HeadersConfig) Invalidate(ctx context.Context) error {
 	lowerHeaders := make(map[string]*HeaderSettings, len(headers))
 	for k, v := range headers {
 		lowerHeaders[strings.ToLower(k)] = v
+	}
+
+	// Ensure that we have default headers configured to appear in the audit log.
+	// Add them if they're missing.
+	for header, setting := range a.DefaultHeaders() {
+		if _, ok := lowerHeaders[header]; !ok {
+			lowerHeaders[header] = setting
+		}
 	}
 
 	a.headerSettings = lowerHeaders
