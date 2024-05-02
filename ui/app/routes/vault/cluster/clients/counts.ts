@@ -63,12 +63,12 @@ export default class ClientsCountsRoute extends Route {
     // otherwise, show the tab based on the cluster type and license
     if (this.version.isCommunity) return false;
 
-    const isManaged = this.flags.isManaged;
+    const isHvd = this.flags.isHvdManaged;
     const onLicense = this.version.hasSecretsSync;
 
     // we can't tell if HVD clusters have the feature or not, so we show it by default
     // if the cluster is not HVD, show the tab if the feature is on the license
-    return isManaged || onLicense;
+    return isHvd || onLicense;
   }
 
   async model(params: ClientsCountsRouteParams) {
