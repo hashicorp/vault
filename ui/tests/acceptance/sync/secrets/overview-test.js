@@ -149,7 +149,7 @@ module('Acceptance | sync | overview', function (hooks) {
 
     test('it should make activation-flag requests to correct namespace', async function (assert) {
       assert.expect(4);
-      // should call GET activation-flags twice because it the component needs an updated response after confirming to see if the feature has been activated
+      // should call GET activation-flags twice because we need an updated response after activating the feature
       this.server.get('/sys/activation-flags', (_, req) => {
         assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
         return {
