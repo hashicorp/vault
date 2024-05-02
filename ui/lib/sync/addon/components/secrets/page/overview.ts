@@ -44,6 +44,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
+    // console.log(this.args.id, 'MODELID');
     if (this.args.destinations.length) {
       this.fetchAssociationsForDestinations.perform();
     }
@@ -75,7 +76,8 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
       yield this.store
         .adapterFor('application')
         .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST', { namespace: null });
-      this.router.transitionTo('vault.cluster.sync.secrets.overview');
+      // must refresh and not transition because transition does not refresh the model from within a namespace
+      yield this.router.refresh();
     } catch (error) {
       this.error = errorMessage(error);
       this.flashMessages.danger(`Error enabling feature \n ${errorMessage(error)}`);
