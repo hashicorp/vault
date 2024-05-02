@@ -478,6 +478,12 @@ func (c CtxKeyInFlightRequestID) String() string {
 	return "in-flight-request-ID"
 }
 
+type CtxKeyInFlightRequestPriority struct{}
+
+func (c CtxKeyInFlightRequestPriority) String() string {
+	return "in-flight-request-priority"
+}
+
 type CtxKeyRequestRole struct{}
 
 func (c CtxKeyRequestRole) String() string {

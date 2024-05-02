@@ -21,6 +21,11 @@ description: Installation steps for the Vault ServiceNow Credential Resolver.
 
     ```bash
     vault auth enable approle
+    vault policy write demo - <<EOF
+    path "secret/*" {
+      capabilities = ["read"]
+    }
+    EOF
     vault write auth/approle/role/role1 bind_secret_id=true token_policies=demo
     ```
 

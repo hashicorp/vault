@@ -68,12 +68,19 @@ active duty.
 
 To complete the cluster upgrade:
 
-1. Properly shut down the remaining (active) node
+1. Properly shut down the remaining (active) node via `SIGINT` or `SIGTERM`
+
+   <Warning title="Important">
+
+   DO NOT attempt to issue a [step-down](/vault/docs/commands/operator/step-down) 
+   operation at any time during the upgrade process. 
+
+   </Warning>
 
    <Note>
 
    It is important that you shut the node down properly.
-   This will perform a step-down and release the HA lock, allowing a standby
+   This will release the current leadership and the HA lock, allowing a standby
    node to take over with a very short delay.
    If you kill Vault without letting it release the lock, a standby node will
    not be able to take over until the lock's timeout period has expired. This

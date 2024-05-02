@@ -324,6 +324,8 @@ module('Acceptance | secrets/database/*', function (hooks) {
         `/vault/secrets/${backend}/list?tab=role`,
         'Cancel button links to role list view'
       );
+      // [BANDAID] navigate away to fix test failing on capabilities-self check before teardown
+      await visit('/vault/secrets');
     });
   }
   test('database connection create and edit: vault-plugin-database-oracle', async function (assert) {
@@ -436,6 +438,8 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert
       .dom('[data-test-empty-state-title]')
       .hasText('No connections in this backend', 'No connections listed because it was deleted');
+    // [BANDAID] navigate away to fix test failing on capabilities-self check before teardown
+    await visit('/vault/secrets');
   });
 
   test('buttons show up for managing connection', async function (assert) {
@@ -487,6 +491,8 @@ module('Acceptance | secrets/database/*', function (hooks) {
     // confirm get credentials card is an option to select. Regression bug.
     await typeIn('.ember-text-field', 'blah');
     assert.dom('[data-test-get-credentials]').isEnabled();
+    // [BANDAID] navigate away to fix test failing on capabilities-self check before teardown
+    await visit('/vault/secrets');
   });
 
   test('connection_url must be decoded', async function (assert) {
