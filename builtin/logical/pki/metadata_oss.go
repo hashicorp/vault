@@ -12,7 +12,6 @@ import (
 	"math/big"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
-
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
