@@ -1409,7 +1409,7 @@ func TestBackend_pathStsConfig(t *testing.T) {
 	}
 
 	data2 := map[string]interface{}{
-		"sts_role":    "arn:aws:iam:account1:role/myRole",
+		"sts_role":    "arn:aws:iam:account2:role/myRole2",
 		"external_id": "fake_id",
 	}
 
@@ -1451,6 +1451,21 @@ func TestBackend_pathStsConfig(t *testing.T) {
 	resp, err = b.HandleRequest(context.Background(), stsReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatal(err)
+	}
+
+	// test second read
+	stsReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(context.Background(), stsReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedStsRole = "arn:aws:iam:account2:role/myRole2"
+	expectedExternalID := "fake_id"
+	if resp.Data["sts_role"].(string) != expectedStsRole {
+		t.Fatalf("bad: expected:%s\n got:%s\n", expectedStsRole, resp.Data["sts_role"].(string))
+	}
+	if resp.Data["external_id"].(string) != expectedExternalID {
+		t.Fatalf("bad: expected:%s\n got:%s\n", expectedExternalID, resp.Data["external_id"].(string))
 	}
 
 	stsReq.Operation = logical.ListOperation
