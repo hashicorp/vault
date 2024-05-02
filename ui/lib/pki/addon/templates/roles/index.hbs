@@ -5,17 +5,26 @@
 
 <PkiPageHeader @backend={{this.model.parentModel}} />
 
-<PkiPaginatedList @listRoute="roles.index" @list={{this.model.roles}} @hasConfig={{this.model.hasConfig}}>
+<PkiPaginatedList
+  @backend={{this.model.parentModel.id}}
+  @listRoute="roles.index"
+  @list={{this.model.roles}}
+  @hasConfig={{this.model.hasConfig}}
+>
   <:actions>
     {{#if this.model.hasConfig}}
-      <ToolbarLink @type="add" @route="roles.create" data-test-pki-role-create-link>
+      <ToolbarLink @type="add" @route="roles.create" @model={{this.model.parentModel.id}} data-test-pki-role-create-link>
         Create role
       </ToolbarLink>
     {{/if}}
   </:actions>
   <:list as |roles|>
     {{#each roles as |pkiRole|}}
-      <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiRole.id}} @linkPrefix={{this.mountPoint}}>
+      <LinkedBlock
+        class="list-item-row"
+        @params={{array "roles.role.details" this.model.parentModel.id pkiRole.id}}
+        @linkPrefix={{this.mountPoint}}
+      >
         <div class="level is-mobile">
           <div class="level-left">
             <div>
@@ -34,8 +43,16 @@
                   @hasChevron={{false}}
                   data-test-popup-menu-trigger
                 />
-                <dd.Interactive @text="Details" @route="roles.role.details" @model={{pkiRole.id}} />
-                <dd.Interactive @text="Edit" @route="roles.role.edit" @model={{pkiRole.id}} />
+                <dd.Interactive
+                  @text="Details"
+                  @route="roles.role.details"
+                  @models={{array this.model.parentModel.id pkiRole.id}}
+                />
+                <dd.Interactive
+                  @text="Edit"
+                  @route="roles.role.edit"
+                  @models={{array this.model.parentModel.id pkiRole.id}}
+                />
               </Hds::Dropdown>
             </div>
           </div>
@@ -56,6 +73,7 @@
         @iconPosition="trailing"
         @text="Configure PKI"
         @route="configuration.create"
+        @model={{this.model.parentModel.id}}
       />
     </EmptyState>
   </:configure>

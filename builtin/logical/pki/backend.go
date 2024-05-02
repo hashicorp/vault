@@ -124,8 +124,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 				localDeltaWALPath,
 				legacyCRLPath,
 				clusterConfigPath,
-				"crls/",
-				"certs/",
+				issuing.PathCrls,
+				issuing.PathCerts,
 				acmePathPrefix,
 			},
 
@@ -790,7 +790,7 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 		return nil
 	}
 
-	entries, err := b.storage.List(ctx, "certs/")
+	entries, err := b.storage.List(ctx, issuing.PathCerts)
 	if err != nil {
 		return err
 	}

@@ -112,6 +112,8 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 	// appropriate code
 	if err != nil {
 		switch {
+		case errwrap.Contains(err, consts.ErrOverloaded.Error()):
+			statusCode = http.StatusServiceUnavailable
 		case errwrap.ContainsType(err, new(StatusBadRequest)):
 			statusCode = http.StatusBadRequest
 		case errwrap.Contains(err, ErrPermissionDenied.Error()):

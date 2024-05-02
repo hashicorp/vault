@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/google/tink/go/kwp/subtle"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -45,7 +46,7 @@ func (b *backend) pathImport() *framework.Path {
 				Default: "aes256-gcm96",
 				Description: `The type of key being imported. Currently, "aes128-gcm96" (symmetric), "aes256-gcm96" (symmetric), "ecdsa-p256"
 (asymmetric), "ecdsa-p384" (asymmetric), "ecdsa-p521" (asymmetric), "ed25519" (asymmetric), "rsa-2048" (asymmetric), "rsa-3072"
-(asymmetric), "rsa-4096" (asymmetric) are supported.  Defaults to "aes256-gcm96".
+(asymmetric), "rsa-4096" (asymmetric), "hmac", "aes128-cmac", "aes256-cmac" are supported.  Defaults to "aes256-gcm96".
 `,
 			},
 			"hash_function": {
@@ -214,8 +215,16 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_RSA4096
 	case "hmac":
 		polReq.KeyType = keysutil.KeyType_HMAC
+	case "aes128-cmac":
+		polReq.KeyType = keysutil.KeyType_AES128_CMAC
+	case "aes256-cmac":
+		polReq.KeyType = keysutil.KeyType_AES256_CMAC
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type: %v", keyType)), logical.ErrInvalidRequest
+	}
+
+	if polReq.KeyType.CMACSupported() && !constants.IsEnterprise {
+		return logical.ErrorResponse(ErrCmacEntOnly.Error()), logical.ErrInvalidRequest
 	}
 
 	p, _, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())

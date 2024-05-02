@@ -11,7 +11,7 @@ import hbs from 'htmlbars-inline-precompile';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { getUnixTime } from 'date-fns';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
+import { CLIENT_COUNT, CHARTS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { formatNumber } from 'core/helpers/format-number';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 import { dateFormat } from 'core/helpers/date-format';
@@ -19,7 +19,7 @@ import { assertBarChart } from 'vault/tests/helpers/clients/client-count-helpers
 
 const START_TIME = getUnixTime(LICENSE_START);
 const END_TIME = getUnixTime(STATIC_NOW);
-const { charts, chartContainer, statText, usageStats } = CLIENT_COUNT;
+const { statText, usageStats } = CLIENT_COUNT;
 
 module('Integration | Component | clients | Clients::Page::Sync', function (hooks) {
   setupRenderingTest(hooks);
@@ -81,7 +81,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     const formattedTimestamp = dateFormat([this.activity.responseTimestamp, 'MMM d yyyy, h:mm:ss aaa'], {
       withTimeZone: true,
     });
-    assert.dom(charts.timestamp).hasText(`Updated ${formattedTimestamp}`, 'renders response timestamp');
+    assert.dom(CHARTS.timestamp).hasText(`Updated ${formattedTimestamp}`, 'renders response timestamp');
 
     assertBarChart(assert, 'Secrets sync usage', this.activity.byMonth);
     assertBarChart(assert, 'Monthly new', this.activity.byMonth);
@@ -94,8 +94,8 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     const expectedTotal = formatNumber([this.activity.total.secret_syncs]);
     await this.renderComponent();
 
-    assert.dom(charts.chart('Secrets sync usage')).doesNotExist('total usage chart does not render');
-    assert.dom(chartContainer('Monthly new')).doesNotExist('monthly new chart does not render');
+    assert.dom(CHARTS.chart('Secrets sync usage')).doesNotExist('total usage chart does not render');
+    assert.dom(CHARTS.container('Monthly new')).doesNotExist('monthly new chart does not render');
     assert.dom(statText('Average sync clients per month')).doesNotExist();
     assert.dom(statText('Average new sync clients per month')).doesNotExist();
     assert
@@ -119,8 +119,8 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     assert.dom(GENERAL.emptyStateTitle).hasText('No secrets sync clients');
     assert.dom(GENERAL.emptyStateMessage).hasText('There is no sync data available for this date range.');
 
-    assert.dom(charts.chart('Secrets sync usage')).doesNotExist('vertical bar chart does not render');
-    assert.dom(chartContainer('Monthly new')).doesNotExist('monthly new chart does not render');
+    assert.dom(CHARTS.chart('Secrets sync usage')).doesNotExist('vertical bar chart does not render');
+    assert.dom(CHARTS.container('Monthly new')).doesNotExist('monthly new chart does not render');
     assert.dom(statText('Total sync clients')).doesNotExist();
     assert.dom(statText('Average sync clients per month')).doesNotExist();
     assert.dom(statText('Average new sync clients per month')).doesNotExist();
@@ -148,7 +148,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
       .hasText('No data is available because Secrets Sync has not been activated.');
     assert.dom(GENERAL.emptyStateActions).hasText('Activate Secrets Sync');
 
-    assert.dom(charts.chart('Secrets sync usage')).doesNotExist();
+    assert.dom(CHARTS.chart('Secrets sync usage')).doesNotExist();
     assert.dom(statText('Total sync clients')).doesNotExist();
     assert.dom(statText('Average sync clients per month')).doesNotExist();
   });
@@ -193,7 +193,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     assert.expect(6 + monthCount * 2);
     await this.renderComponent();
 
-    assert.dom(charts.chart('Secrets sync usage')).exists('renders empty sync usage chart');
+    assert.dom(CHARTS.chart('Secrets sync usage')).exists('renders empty sync usage chart');
     assert
       .dom(statText('Total sync clients'))
       .hasText(
@@ -202,7 +202,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     assert
       .dom(statText('Average sync clients per month'))
       .doesNotExist('Does not render average if the calculation is 0');
-    findAll(`${charts.chart('Secrets sync usage')} ${charts.xAxisLabel}`).forEach((e, i) => {
+    findAll(`${CHARTS.chart('Secrets sync usage')} ${CHARTS.xAxisLabel}`).forEach((e, i) => {
       assert
         .dom(e)
         .hasText(
@@ -210,11 +210,13 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
           `renders x-axis labels for empty bar chart: ${this.activity.byMonth[i].month}`
         );
     });
-    findAll(`${charts.chart('Secrets sync usage')} ${charts.dataBar}`).forEach((e, i) => {
+    findAll(`${CHARTS.chart('Secrets sync usage')} ${CHARTS.verticalBar}`).forEach((e, i) => {
       assert.dom(e).isNotVisible(`does not render data bar for: ${this.activity.byMonth[i].month}`);
     });
 
-    assert.dom(chartContainer('Monthly new')).doesNotExist('empty monthly new chart does not render at all');
+    assert
+      .dom(CHARTS.container('Monthly new'))
+      .doesNotExist('empty monthly new chart does not render at all');
     assert.dom(statText('Average sync clients per month')).doesNotExist();
     assert.dom(statText('Average new sync clients per month')).doesNotExist();
   });

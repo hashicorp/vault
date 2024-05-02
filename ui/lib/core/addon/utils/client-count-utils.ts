@@ -6,6 +6,7 @@
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { compareAsc, getUnixTime, isWithinInterval } from 'date-fns';
 
+import type ClientsConfigModel from 'vault/models/clients/config';
 import type ClientsVersionHistoryModel from 'vault/vault/models/clients/version-history';
 
 /*
@@ -24,7 +25,7 @@ export const CLIENT_TYPES = [
   'secret_syncs',
 ] as const;
 
-type ClientTypes = (typeof CLIENT_TYPES)[number];
+export type ClientTypes = (typeof CLIENT_TYPES)[number];
 
 // returns array of VersionHistoryModels for noteworthy upgrades: 1.9, 1.10
 // that occurred between timestamps (i.e. queried activity data)
@@ -59,6 +60,18 @@ export const filterVersionHistory = (
   return [];
 };
 
+export const setStartTimeQuery = (
+  isEnterprise: boolean,
+  config: ClientsConfigModel | Record<string, never>
+) => {
+  // CE versions have no license and so the start time defaults to "0001-01-01T00:00:00Z"
+  if (isEnterprise && _hasConfig(config)) {
+    return getUnixTime(config.billingStartTimestamp);
+  }
+  return null;
+};
+
+// METHODS FOR SERIALIZING ACTIVITY RESPONSE
 export const formatDateObject = (dateObj: { monthIdx: number; year: number }, isEnd: boolean) => {
   const { year, monthIdx } = dateObj;
   // day=0 for Date.UTC() returns the last day of the month before
@@ -188,6 +201,11 @@ export const namespaceArrayToObject = (
 };
 
 // type guards for conditionals
+function _hasConfig(model: ClientsConfigModel | object): model is ClientsConfigModel {
+  if (!model) return false;
+  return 'billingStartTimestamp' in model;
+}
+
 export function hasMountsKey(
   obj: ByMonthNewClients | NamespaceNewClients | MountNewClients
 ): obj is NamespaceNewClients {
@@ -201,7 +219,6 @@ export function hasNamespacesKey(
 }
 
 // TYPES RETURNED BY UTILS (serialized)
-
 export interface TotalClients {
   clients: number;
   entity_clients: number;

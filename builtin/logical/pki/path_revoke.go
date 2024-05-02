@@ -346,7 +346,7 @@ func (b *backend) pathRevokeWriteHandleCertificate(ctx context.Context, req *log
 	// Start with the latter since its cheaper. Fetch the cert (by serial)
 	// and if it exists, compare the contents.
 	sc := b.makeStorageContext(ctx, req.Storage)
-	certEntry, err := fetchCertBySerial(sc, "certs/", serial)
+	certEntry, err := fetchCertBySerial(sc, issuing.PathCerts, serial)
 	if err != nil {
 		return serial, false, nil, err
 	}
@@ -580,7 +580,7 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 			return logical.ErrorResponse("The serial number must be provided"), nil
 		}
 
-		certEntry, err := fetchCertBySerial(sc, "certs/", serial)
+		certEntry, err := fetchCertBySerial(sc, issuing.PathCerts, serial)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
@@ -632,7 +632,7 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 	// disk.
 	if writeCert {
 		err := req.Storage.Put(ctx, &logical.StorageEntry{
-			Key:   "certs/" + normalizeSerial(serial),
+			Key:   issuing.PathCerts + normalizeSerial(serial),
 			Value: cert.Raw,
 		})
 		if err != nil {

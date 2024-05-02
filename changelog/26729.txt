@@ -1,0 +1,3 @@
+```release-note:improvement
+ui (enterprise): Update dashboard to make activity log query using the same start time as the metrics overview
+```

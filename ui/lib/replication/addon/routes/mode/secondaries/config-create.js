@@ -19,7 +19,8 @@ export default Base.extend({
       .findRecord('path-filter-config', id)
       .then(() => {
         // if we find a record, transition to the edit view
-        return this.transitionTo('mode.secondaries.config-edit', id)
+        return this.router
+          .transitionTo('vault.cluster.replication.mode.secondaries.config-edit', id)
           .followRedirects()
           .then(() => {
             flash.info(
