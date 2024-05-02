@@ -15,7 +15,7 @@ repository {
   plugin "semgrep" {
     use_git_ignore = true
     exclude = ["vendor"]
-    config = ["tools/semgrep/ci", "p/r2c-security-audit"]
+    config = ["tools/semgrep/ci", "p/r2c-security-audit", "r/trailofbits.go.hanging-goroutine.hanging-goroutine"]
     exclude_rule = ["generic.html-templates.security.unquoted-attribute-var.unquoted-attribute-var"]
   }
   
