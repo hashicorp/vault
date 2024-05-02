@@ -29,13 +29,14 @@ export const GENERAL = {
   menuTrigger: '[data-test-popup-menu-trigger]',
   listItem: '[data-test-list-item-link]',
   // FORMS
+  checkboxByAttr: (attr: string) => `[data-test-checkbox="${attr}"]`,
+  enableField: (attr: string) => `[data-test-enable-field="${attr}"] button`,
+  fieldByAttr: (attr: string) => `[data-test-field="${attr}"]`,
   infoRowLabel: (label: string) => `[data-test-row-label="${label}"]`,
   infoRowValue: (label: string) => `[data-test-value-div="${label}"]`,
   inputByAttr: (attr: string) => `[data-test-input="${attr}"]`,
   selectByAttr: (attr: string) => `[data-test-select="${attr}"]`,
-  checkboxByAttr: (attr: string) => `[data-test-checkbox="${attr}"]`,
-  fieldByAttr: (attr: string) => `[data-test-field="${attr}"]`,
-  enableField: (attr: string) => `[data-test-enable-field="${attr}"] button`,
+  toggleInput: (attr: string) => `[data-test-toggle-input="${attr}"]`,
   ttl: {
     toggle: (attr: string) => `[data-test-toggle-label="${attr}"]`,
     input: (attr: string) => `[data-test-ttl-value="${attr}"]`,

@@ -10,12 +10,14 @@
         @alwaysRender={{not (is-empty-value (get @model attr.name))}}
         @label={{or attr.options.label (to-label attr.name)}}
         @value={{stringify (get @model attr.name)}}
+        @formatTtl={{eq attr.options.editType "ttl"}}
       />
     {{else}}
       <InfoTableRow
         @alwaysRender={{not (is-empty-value (get @model attr.name))}}
         @label={{or attr.options.label (to-label attr.name)}}
         @value={{get @model attr.name}}
+        @formatTtl={{eq attr.options.editType "ttl"}}
       />
     {{/if}}
   {{/each}}
