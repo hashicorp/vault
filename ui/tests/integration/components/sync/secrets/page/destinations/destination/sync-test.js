@@ -12,7 +12,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { render, click, fillIn, settled } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
-import { selectChoose } from 'ember-power-select/test-support/helpers';
+import { selectChoose } from 'ember-power-select/test-support';
 import sinon from 'sinon';
 import { Response } from 'miragejs';
 
