@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -18,6 +19,7 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -52,6 +54,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/plugincatalog"
+	"github.com/hashicorp/vault/vault/plugincatalog/puller"
 	uicustommessages "github.com/hashicorp/vault/vault/ui_custom_messages"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
@@ -511,8 +514,12 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
 
+	managed := d.Get("managed").(bool)
 	pluginTypeStr := d.Get("type").(string)
 	if pluginTypeStr == "" {
+		if managed {
+			return logical.ErrorResponse("must provide plugin type for managed plugin"), nil
+		}
 		// If the plugin type is not provided, list it as unknown so that we
 		// add it to the catalog and UpdatePlugins later will sort it.
 		pluginTypeStr = "unknown"
@@ -530,21 +537,58 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		return logical.ErrorResponse("version %q is not allowed because 'builtin' is a reserved metadata identifier", pluginVersion), nil
 	}
 
-	sha256 := d.Get("sha256").(string)
-	if sha256 == "" {
+	var sha256Bytes []byte
+	if sha256 := d.Get("sha256").(string); sha256 == "" {
 		sha256 = d.Get("sha_256").(string)
-		if sha256 == "" {
+		switch {
+		case sha256 != "":
+			sha256Bytes, err = hex.DecodeString(sha256)
+			if err != nil {
+				return logical.ErrorResponse("Could not decode SHA256 value from Hex %s: %s", sha256, err), err
+			}
+		case managed:
+			// No further validation.
+		default:
 			return logical.ErrorResponse("missing SHA-256 value"), nil
 		}
 	}
 
 	command := d.Get("command").(string)
 	ociImage := d.Get("oci_image").(string)
+	pluginRef := d.Get("plugin").(string)
 	if command == "" && ociImage == "" {
 		return logical.ErrorResponse("must provide at least one of command or oci_image"), nil
 	}
+	if ociImage != "" && pluginRef != "" {
+		return logical.ErrorResponse("cannot specify both oci_image and plugin"), nil
+	}
 
-	if ociImage == "" {
+	if managed {
+		// The rules for valid commandsand plugin names are super restrictive to avoid
+		// implementation surprises, as they will be used in the file system.
+		if len(command) > 64 {
+			return logical.ErrorResponse("managed plugin commands must be 64 characters or fewer"), nil
+		}
+		commandRegex := regexp.MustCompile(`^[a-z0-9_-]+$`)
+		if !commandRegex.MatchString(command) {
+			return logical.ErrorResponse("managed plugin commands must be lowercase alphanumeric with dashes or underscores"), nil
+		}
+		if len(pluginRef) > 64 {
+			return logical.ErrorResponse("plugin parameter must be 64 characters or fewer"), nil
+		}
+		// pluginRef should eventually take the form hostname/namespace/type/name,
+		// e.g. api.releases.hashicorp.com/hashicorp/auth/jwt
+		// However, we only support type/name for now.
+		pluginRefRegex := regexp.MustCompile(`^([a-z0-9-]+/)?(auth|secret|database)/[a-z0-9-]+$`)
+		if !pluginRefRegex.MatchString(pluginRef) {
+			return logical.ErrorResponse("invalid plugin reference, must be in the form namespace/type/name, or type/name, e.g. hashicorp/auth/jwt or auth/jwt"), nil
+		}
+		for _, c := range pluginRef {
+			if !unicode.IsLower(c) && !unicode.IsDigit(c) && c != '-' && c != '_' {
+				return logical.ErrorResponse("managed plugin commands must be lowercase alphanumeric with dashes or underscores"), nil
+			}
+		}
+	} else if ociImage == "" {
 		if err = b.Core.CheckPluginPerms(command); err != nil {
 			return nil, err
 		}
@@ -578,23 +622,48 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		}
 	}
 
-	env := d.Get("env").([]string)
-
-	sha256Bytes, err := hex.DecodeString(sha256)
-	if err != nil {
-		return logical.ErrorResponse("Could not decode SHA256 value from Hex %s: %s", sha256, err), err
+	if managed {
+		selectedVersion, downloadedSHA256, err := puller.EnsurePluginDownloaded(ctx, nil, puller.DownloadPluginInput{
+			Directory: b.Core.pluginDirectory,
+			Command:   command,
+			Version:   pluginVersion,
+		})
+		if err != nil {
+			return nil, err
+		}
+		// If SHA256 was provided, make sure the plugin we downloaded matches.
+		if sha256Bytes != nil {
+			if !bytes.Equal(sha256Bytes, downloadedSHA256) {
+				return logical.ErrorResponse("SHA256 mismatch for managed plugin %q, expected %s, got %s",
+					pluginName, hex.EncodeToString(sha256Bytes), hex.EncodeToString(downloadedSHA256)), nil
+			}
+		} else {
+			// If the plugin already exists in the catalog, make sure the SHA256 hasn't changed.
+			existingPlugin, err := b.Core.pluginCatalog.Get(ctx, pluginName, pluginType, pluginVersion)
+			if err == nil && !bytes.Equal(existingPlugin.Sha256, sha256Bytes) {
+				return logical.ErrorResponse("%s plugin %q version %s already exists with a different SHA256 sum (%s), "+
+					"delete the plugin or explicitly provide the new SHA256 (%s) to allow updating the plugin",
+					pluginType.String(), pluginName, pluginVersion, hex.EncodeToString(existingPlugin.Sha256), hex.EncodeToString(sha256Bytes)), nil
+			}
+		}
+		sha256Bytes = downloadedSHA256
+		if pluginVersion == "" {
+			pluginVersion = selectedVersion
+		}
 	}
 
 	err = b.Core.pluginCatalog.Set(ctx, pluginutil.SetPluginInput{
-		Name:     pluginName,
-		Type:     pluginType,
-		Version:  pluginVersion,
-		OCIImage: ociImage,
-		Runtime:  pluginRuntime,
-		Command:  command,
-		Args:     args,
-		Env:      env,
-		Sha256:   sha256Bytes,
+		Name:      pluginName,
+		Type:      pluginType,
+		Version:   pluginVersion,
+		OCIImage:  ociImage,
+		Runtime:   pluginRuntime,
+		Command:   command,
+		Managed:   managed,
+		PluginRef: pluginRef,
+		Args:      args,
+		Env:       d.Get("env").([]string),
+		Sha256:    sha256Bytes,
 	})
 	if err != nil {
 		if errors.Is(err, plugincatalog.ErrPluginNotFound) ||
@@ -606,7 +675,12 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		return nil, err
 	}
 
-	return nil, nil
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"version": pluginVersion,
+			"sha256":  hex.EncodeToString(sha256Bytes),
+		},
+	}, nil
 }
 
 func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -6785,11 +6859,11 @@ This path responds to the following HTTP methods.
 		`,
 	},
 	"plugin-catalog_name": {
-		"The name of the plugin",
+		"The name of the plugin within the plugin catalog.",
 		"",
 	},
 	"plugin-catalog_type": {
-		"The type of the plugin, may be auth, secret, or database",
+		"The type of the plugin, may be auth, secret, or database.",
 		"",
 	},
 	"plugin-catalog_sha-256": {
@@ -6814,6 +6888,14 @@ Each entry is of the form "key=value".`,
 	},
 	"plugin-catalog_version": {
 		"The semantic version of the plugin to use, or image tag if oci_image is provided.",
+		"",
+	},
+	"plugin-catalog_managed": {
+		"Whether the plugin binary lifecycle (download and delete) is managed by Vault.",
+		"",
+	},
+	"plugin-catalog_plugin": {
+		"The name of the plugin as specified by the plugin source Vault downloads managed plugins from.",
 		"",
 	},
 	"plugin-catalog_oci_image": {

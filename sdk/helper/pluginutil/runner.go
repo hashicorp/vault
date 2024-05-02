@@ -5,7 +5,9 @@ package pluginutil
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -63,6 +65,7 @@ type PluginRunner struct {
 	OCIImage       string                      `json:"oci_image" structs:"oci_image"`
 	Runtime        string                      `json:"runtime" structs:"runtime"`
 	Command        string                      `json:"command" structs:"command"`
+	Managed        bool                        `json:"managed" structs:"managed"`
 	Args           []string                    `json:"args" structs:"args"`
 	Env            []string                    `json:"env" structs:"env"`
 	Sha256         []byte                      `json:"sha256" structs:"sha256"`
@@ -90,19 +93,33 @@ func (p *PluginRunner) BinaryReference() string {
 	return imageRef
 }
 
+// FileName calculates a deterministic file name for a managed plugin
+// based on its metadata. The plugin config, including command, is replicated
+// across nodes, but the plugin binary is in each node's local plugin_dir, so
+// we want to be sure that we can share a common file name across nodes.
+func (p *PluginRunner) FileName() string {
+	if !p.Managed {
+		return p.Command
+	}
+
+	return fmt.Sprintf("%s-%s-%s", p.Command, p.Version, hex.EncodeToString(p.Sha256))
+}
+
 // SetPluginInput is only used as input for the plugin catalog's set methods.
 // We don't use the very similar PluginRunner struct to avoid confusion about
 // what's settable, which does not include the builtin fields.
 type SetPluginInput struct {
-	Name     string
-	Type     consts.PluginType
-	Version  string
-	Command  string
-	OCIImage string
-	Runtime  string
-	Args     []string
-	Env      []string
-	Sha256   []byte
+	Name      string
+	Type      consts.PluginType
+	Version   string
+	Command   string
+	Managed   bool
+	PluginRef string
+	OCIImage  string
+	Runtime   string
+	Args      []string
+	Env       []string
+	Sha256    []byte
 }
 
 // Run takes a wrapper RunnerUtil instance along with the go-plugin parameters and

@@ -215,6 +215,10 @@ type RegisterPluginInput struct {
 	// Env specifies a list of key=value pairs to add to the plugin's environment
 	// variables.
 	Env []string `json:"env,omitempty"`
+
+	// Managed specifies if the plugin binary lifecycle is managed by Vault.
+	// e.g. automatically downloaded.
+	Managed bool `json:"managed,omitempty"`
 }
 
 // RegisterPlugin wraps RegisterPluginWithContext using context.Background.

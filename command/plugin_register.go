@@ -27,6 +27,7 @@ type PluginRegisterCommand struct {
 	flagOCIImage string
 	flagRuntime  string
 	flagEnv      []string
+	flagManaged  bool
 }
 
 func (c *PluginRegisterCommand) Synopsis() string {
@@ -40,6 +41,10 @@ Usage: vault plugin register [options] TYPE NAME
   Registers a new plugin in the catalog. The plugin binary must exist in Vault's
   configured plugin directory. The argument of type takes "auth", "database",
   or "secret".
+
+  Register and automatically download a plugin named my-custom-plugin:
+
+  	  $ vault plugin register -managed -version=v1.0.0 auth my-custom-plugin
 
   Register the plugin named my-custom-plugin:
 
@@ -116,6 +121,12 @@ func (c *PluginRegisterCommand) Flags() *FlagSets {
 			"flag can be specified multiple times to specify multiple environment variables.",
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:   "managed",
+		Target: &c.flagManaged,
+		Usage:  "Automatically download and manage the lifecycle of the plugin binary.",
+	})
+
 	return set
 }
 
@@ -144,8 +155,11 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 	case len(args) > 2:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1 or 2, got %d)", len(args)))
 		return 1
-	case c.flagSHA256 == "":
-		c.UI.Error("SHA256 is required for all plugins, please provide -sha256")
+	case c.flagSHA256 == "" && !c.flagManaged:
+		c.UI.Error("-sha256 or -managed is required for all plugins")
+		return 1
+	case c.flagManaged && len(args) != 2:
+		c.UI.Error("Must specify plugin type and name when using -managed flag")
 		return 1
 
 	// These cases should come after invalid cases have been checked
@@ -171,8 +185,16 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 	pluginName := strings.TrimSpace(pluginNameRaw)
 
 	command := c.flagCommand
-	if command == "" && c.flagOCIImage == "" {
-		command = pluginName
+	if command == "" {
+		switch {
+		case c.flagOCIImage != "":
+			// Containerized plugins don't require a command.
+		case c.flagManaged:
+			c.UI.Info(fmt.Sprintf("Expecting plugin binary vault-plugin-%s-%s, use -command to override", pluginTypeRaw, pluginName))
+			command = fmt.Sprintf("vault-plugin-%s-%s", pluginTypeRaw, pluginName)
+		default:
+			command = pluginName
+		}
 	}
 
 	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
@@ -185,6 +207,7 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 		OCIImage: c.flagOCIImage,
 		Runtime:  c.flagRuntime,
 		Env:      c.flagEnv,
+		Managed:  c.flagManaged,
 	}); err != nil {
 		c.UI.Error(fmt.Sprintf("Error registering plugin %s: %s", pluginName, err))
 		return 2

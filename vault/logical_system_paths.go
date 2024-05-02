@@ -1890,6 +1890,14 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 				Type:        framework.TypeString,
 				Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
 			},
+			"managed": {
+				Type:        framework.TypeBool,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_managed"][0]),
+			},
+			"plugin": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_plugin"][0]),
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{

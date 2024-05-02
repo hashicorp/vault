@@ -30,6 +30,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	backendplugin "github.com/hashicorp/vault/sdk/plugin"
+	"github.com/hashicorp/vault/vault/plugincatalog/puller"
 	"github.com/hashicorp/vault/version"
 )
 
@@ -263,6 +264,10 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 		return nil, fmt.Errorf("no plugin found")
 	}
 
+	if err := c.ensureManagedPluginExists(ctx, pluginRunner); err != nil {
+		return nil, err
+	}
+
 	key, err := makeExternalPluginsKey(pluginRunner)
 	if err != nil {
 		return nil, err
@@ -361,6 +366,24 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 	extPlugin.multiplexingSupport = muxed
 
 	return extPlugin.connections[id], nil
+}
+
+func (c *PluginCatalog) ensureManagedPluginExists(ctx context.Context, plugin *pluginutil.PluginRunner) error {
+	if !plugin.Managed {
+		return nil
+	}
+
+	// We need to download the plugin.
+	if _, err := puller.EnsurePluginDownloaded(ctx, nil, puller.DownloadPluginInput{
+		Directory: c.directory,
+		Command:   plugin.Command,
+		Version:   plugin.Version,
+		SHA256Sum: plugin.Sha256,
+	}); err != nil {
+		return fmt.Errorf("error downloading plugin: %w", err)
+	}
+
+	return nil
 }
 
 // getPluginTypeFromUnknown will attempt to run the plugin to determine the
@@ -937,6 +960,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 		Env:      plugin.Env,
 		Sha256:   plugin.Sha256,
 		Builtin:  false,
+		Managed:  plugin.Managed,
 	}
 
 	buf, err := json.Marshal(entry)

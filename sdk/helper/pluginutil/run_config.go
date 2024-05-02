@@ -293,7 +293,7 @@ func (r *PluginRunner) RunConfig(ctx context.Context, opts ...RunOpt) (*plugin.C
 		imageTag = strings.TrimPrefix(r.Version, "v")
 	}
 	rc := runConfig{
-		command:       r.Command,
+		command:       r.FileName(),
 		image:         image,
 		imageTag:      imageTag,
 		args:          r.Args,
