@@ -23,23 +23,8 @@
       <VaultLogoSpinner />
     {{else}}
       <div class="is-grid grid-2-columns grid-gap-2 has-top-margin-m grid-align-items-start is-flex-v-centered">
-        <StatText
-          @label="Total"
-          @value={{this.activityData.total.clients}}
-          @size="l"
-          @subText="The number of clients in this billing period ({{date-format
-            this.licenseStartTime
-            'MMM yyyy'
-          }} - {{date-format this.updatedAt 'MMM yyyy'}})."
-          data-test-stat-text="total-clients"
-        />
-        <StatText
-          @label="New"
-          @value={{this.currentMonthActivityTotalCount}}
-          @size="l"
-          @subText="The number of clients new to Vault in the current month."
-          data-test-stat-text="new-clients"
-        />
+        <StatText @label="Total" @value={{this.activityData.total.clients}} @size="l" @subText={{this.statSubText.total}} />
+        <StatText @label="New" @value={{this.currentMonthActivityTotalCount}} @size="l" @subText={{this.statSubText.new}} />
       </div>
 
       <div class="has-top-margin-l is-flex-center">
@@ -55,7 +40,7 @@
         />
         <small class="has-left-margin-xs has-text-grey">
           Updated
-          {{date-format this.updatedAt "MMM dd, yyyy hh:mm:ss"}}
+          {{date-format this.updatedAt "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
         </small>
       </div>
     {{/if}}
