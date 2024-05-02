@@ -1473,7 +1473,7 @@ func TestCRLIssuerRemoval(t *testing.T) {
 
 	// List items in storage under both CRL paths so we know what is there in
 	// the "good" state.
-	crlList, err := s.List(ctx, "crls/")
+	crlList, err := s.List(ctx, issuing.PathCrls)
 	require.NoError(t, err)
 	require.Contains(t, crlList, "config")
 	require.Greater(t, len(crlList), 1)
@@ -1511,7 +1511,7 @@ func TestCRLIssuerRemoval(t *testing.T) {
 	}
 
 	// Finally list storage entries again to ensure they are cleaned up.
-	afterCRLList, err := s.List(ctx, "crls/")
+	afterCRLList, err := s.List(ctx, issuing.PathCrls)
 	require.NoError(t, err)
 	for _, entry := range crlList {
 		require.Contains(t, afterCRLList, entry)

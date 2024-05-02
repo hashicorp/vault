@@ -688,7 +688,7 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 	// include both in two separate CRLs. Hence, the former is the condition
 	// we check in CRL building, but this step satisfies other guarantees
 	// within Vault.
-	certEntry, err := fetchCertBySerial(sc, "certs/", issuer.SerialNumber)
+	certEntry, err := fetchCertBySerial(sc, issuing.PathCerts, issuer.SerialNumber)
 	if err == nil && certEntry != nil {
 		// We've inverted this error check as it doesn't matter; we already
 		// consider this certificate revoked.

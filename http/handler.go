@@ -32,6 +32,7 @@ import (
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/http/priority"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -251,6 +252,7 @@ func handler(props *vault.HandlerProperties) http.Handler {
 	wrappedHandler = rateLimitQuotaWrapping(wrappedHandler, core)
 	wrappedHandler = entWrapGenericHandler(core, wrappedHandler, props)
 	wrappedHandler = wrapMaxRequestSizeHandler(wrappedHandler, props)
+	wrappedHandler = priority.WrapRequestPriorityHandler(wrappedHandler)
 
 	// Add an extra wrapping handler if the DisablePrintableCheck listener
 	// setting isn't true that checks for non-printable characters in the
@@ -1020,6 +1022,18 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 			resp = &logical.Response{}
 		}
 		resp.AddWarning("Timeout hit while waiting for local replicated cluster to apply primary's write; this client may encounter stale reads of values written during this operation.")
+	}
+
+	// We need to rely on string comparison here because the error could be
+	// returned from an RPC client call with a non-ReplicatedResponse return
+	// value (see: PersistAlias). In these cases, the error we get back will
+	// contain the non-wrapped error message string we're looking for. We would
+	// love to clean up all error wrapping to be consistent in Vault but we
+	// considered that too high risk for now.
+	if err != nil && strings.Contains(err.Error(), consts.ErrOverloaded.Error()) {
+		logical.RespondWithStatusCode(resp, r, http.StatusServiceUnavailable)
+		respondError(w, http.StatusServiceUnavailable, err)
+		return resp, false, false
 	}
 	if errwrap.Contains(err, consts.ErrStandby.Error()) {
 		respondStandby(core, w, rawReq.URL)

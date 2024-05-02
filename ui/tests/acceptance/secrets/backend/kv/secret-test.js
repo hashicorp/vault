@@ -68,6 +68,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       assert
         .dom(PAGE.infoRowValue('Automate secret deletion'))
         .hasText('1 second', 'displays the delete version after set when configuring the secret-engine');
+      // [BANDAID] avoid error from missing param for links in SecretEdit > KeyValueHeader
+      await visit('/vault/secrets');
       await deleteEngine(enginePath, assert);
     });
 
@@ -77,6 +79,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await runCmd(['vault write sys/mounts/test type=kv', 'refresh', 'vault write test/a keys=a keys=b']);
       await showPage.visit({ backend: 'test', id: 'a' });
       assert.ok(showPage.editIsPresent, 'renders the page properly');
+      // [BANDAID] avoid error from missing param for links in SecretEdit > KeyValueHeader
+      await visit('/vault/secrets');
       await deleteEngine('test', assert);
     });
   });
@@ -246,6 +250,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
           `${path}: show page renders correctly`
         );
       }
+      // [BANDAID] avoid error from missing param for links in SecretEdit > KeyValueHeader
+      await visit('/vault/secrets');
       await deleteEngine(backend, assert);
     });
 
