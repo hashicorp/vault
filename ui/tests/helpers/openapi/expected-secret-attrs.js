@@ -625,6 +625,14 @@ const pki = {
       fieldGroup: 'default',
       type: 'string',
     },
+    metadata: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText:
+        "User supplied metadata to store associated with this certificate's serial number, base64 encoded",
+      label: 'Metadata',
+      type: 'string',
+    },
     notAfter: {
       editType: 'string',
       helpText:
@@ -741,6 +749,14 @@ const pki = {
       helpText:
         'Reference to a existing issuer; either "default" for the configured default issuer, an identifier or the name assigned to the issuer.',
       fieldGroup: 'default',
+      type: 'string',
+    },
+    metadata: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText:
+        "User supplied metadata to store associated with this certificate's serial number, base64 encoded",
+      label: 'Metadata',
       type: 'string',
     },
     notAfter: {

@@ -15,6 +15,8 @@ import expectedAuthAttrs from 'vault/tests/helpers/openapi/expected-auth-attrs';
  * are known by UI developers and adequately addressed in the UI. When changes
  * are detected from this set of tests, they should be updated to pass and
  * smoke tested to ensure changes to not break the GUI workflow.
+ * In some cases, a ticket should be made to track updating the relevant model or form,
+ * if it is not updated automatically or is a more involved feature request.
  * Marked as enterprise so it only runs periodically
  */
 module('Acceptance | OpenAPI provides expected attributes enterprise', function (hooks) {
