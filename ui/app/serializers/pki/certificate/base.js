@@ -5,7 +5,6 @@
 
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import ApplicationSerializer from '../../application';
-import { encodeString } from 'core/utils/b64';
 
 export default class PkiCertificateBaseSerializer extends ApplicationSerializer {
   primaryKey = 'serial_number';
@@ -27,13 +26,5 @@ export default class PkiCertificateBaseSerializer extends ApplicationSerializer 
       );
     }
     return super.normalizeResponse(...arguments);
-  }
-
-  serialize(snapshot) {
-    const data = super.serialize(snapshot);
-    if (Object.keys(data).includes('metadata')) {
-      data.metadata = encodeString(data.metadata);
-    }
-    return data;
   }
 }
