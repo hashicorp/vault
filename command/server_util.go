@@ -36,8 +36,9 @@ func testServerCommand(tb testing.TB) (*cli.MockUi, *ServerCommand) {
 		SighupCh:   MakeSighupCh(),
 		SigUSR2Ch:  MakeSigUSR2Ch(),
 		PhysicalBackends: map[string]physical.Factory{
-			"inmem":    physInmem.NewInmem,
-			"inmem_ha": physInmem.NewInmemHA,
+			"inmem":               physInmem.NewInmem,
+			"inmem_ha":            physInmem.NewInmemHA,
+			"inmem_transactional": physInmem.NewTransactionalInmem,
 		},
 
 		// These prevent us from random sleep guessing...
