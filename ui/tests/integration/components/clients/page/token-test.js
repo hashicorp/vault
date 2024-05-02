@@ -69,21 +69,25 @@ module('Integration | Component | clients | Clients::Page::Token', function (hoo
 
   test('it should render monthly total chart', async function (assert) {
     const count = this.activity.byMonth.length;
-    assert.expect(count + 7);
+    const { entity_clients, non_entity_clients } = this.activity.total;
+    assert.expect(count + 8);
     const getAverage = (data) => {
       const average = ['entity_clients', 'non_entity_clients'].reduce((count, key) => {
         return (count += calculateAverage(data, key) || 0);
       }, 0);
       return formatNumber([average]);
     };
-    const expectedTotal = getAverage(this.activity.byMonth);
+    const expectedAvg = getAverage(this.activity.byMonth);
+    const expectedTotal = formatNumber([entity_clients + non_entity_clients]);
     const chart = CHARTS.container('Entity/Non-entity clients usage');
-
     await this.renderComponent();
 
     assert
-      .dom(CLIENT_COUNT.statTextValue('Average total clients per month'))
+      .dom(CLIENT_COUNT.statTextValue('Total clients'))
       .hasText(expectedTotal, 'renders correct total clients');
+    assert
+      .dom(CLIENT_COUNT.statTextValue('Average total clients per month'))
+      .hasText(expectedAvg, 'renders correct average clients');
 
     // assert bar chart is correct
     assert.dom(`${chart} ${CHARTS.xAxis}`).hasText('7/23 8/23 9/23 10/23 11/23 12/23 1/24');
