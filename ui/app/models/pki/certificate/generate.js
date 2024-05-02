@@ -11,7 +11,6 @@ const generateFromRole = [
   {
     default: ['commonName', 'userIds', 'customTtl', 'format', 'privateKeyFormat'],
   },
-  { enterpriseOnly: ['metadata'] },
   {
     'Subject Alternative Name (SAN) Options': [
       'excludeCnFromSans',
@@ -32,7 +31,6 @@ const certDisplayFields = [
   'issuingCa',
   'privateKey',
   'privateKeyType',
-  'metadata',
 ];
 @withFormFields(certDisplayFields, generateFromRole)
 export default class PkiCertificateGenerateModel extends PkiCertificateBaseModel {
