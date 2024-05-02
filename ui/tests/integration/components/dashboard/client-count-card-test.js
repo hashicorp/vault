@@ -72,15 +72,14 @@ module('Integration | Component | dashboard/client-count-card', function (hooks)
   });
 
   test('it does not query activity for community edition', async function (assert) {
-    assert.expect(4);
-    this.server.get('sys/internal/counters/activity', () => {
-      // this assertion should NOT be hit in this test
-      assert.true(true, 'uh oh! makes request to sys/internal/counters/activity');
-      return {
-        request_id: 'some-activity-id',
-        data: ACTIVITY_RESPONSE_STUB,
-      };
-    });
+    assert.expect(3);
+    // in the template this component is wrapped in an isEnterprise conditional so this
+    // state is currently not possible, adding a test to safeguard against introducing
+    // regressions during future refactors
+    this.server.get(
+      'sys/internal/counters/activity',
+      () => new Error('uh oh! a request was made to sys/internal/counters/activity')
+    );
     this.server.get('sys/internal/counters/config', function () {
       assert.true(true, 'sys/internal/counters/config');
       return {

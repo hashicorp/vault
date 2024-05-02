@@ -28,6 +28,9 @@ used to normalize the sys/counters/activity response in the clients/activity
 serializer. these functions are tested individually here, instead of all at once
 in a serializer test for easier debugging
 */
+
+// TODO refactor tests into a module for each util method, then make each assertion its separate tests
+
 module('Integration | Util | client count utils', function (hooks) {
   setupTest(hooks);
 
