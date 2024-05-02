@@ -98,7 +98,7 @@ jobs:
     runs-on: ${{ fromJSON(inputs.compute-build) }}
     name: (${{ matrix.goos }}, ${{ matrix.goarch }})
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/build-vault
@@ -200,7 +200,7 @@ jobs:
     name: (${{ matrix.goos }}, ${{ matrix.goarch }}${{ matrix.goarm && ' ' || '' }}${{ matrix.goarm }})
     runs-on: ${{ fromJSON(inputs.compute-build) }}
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/build-vault
@@ -228,7 +228,7 @@ jobs:
       - core
       - extended
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
         with:
           ref: ${{ inputs.checkout-ref }}
       - name: Determine status
