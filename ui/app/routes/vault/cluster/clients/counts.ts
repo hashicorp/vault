@@ -10,7 +10,7 @@ import timestamp from 'core/utils/timestamp';
 import { getUnixTime } from 'date-fns';
 
 import type StoreService from 'vault/services/store';
-import VersionService from 'vault/services/version';
+import type VersionService from 'vault/services/version';
 
 import type { ModelFrom } from 'vault/vault/route';
 import type ClientsRoute from '../clients';
