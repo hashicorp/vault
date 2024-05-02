@@ -22,7 +22,7 @@ jobs:
           && (github.actor != 'dependabot[bot]') && ( github.actor != 'hc-github-team-secure-vault-core') }}
     
     steps:
-    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
     - name: Set up Go
       uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
@@ -31,12 +31,12 @@ jobs:
         go-version-file: .go-version
 
     - name: Set up Python
-      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+      uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5.1.0
       with:
         python-version: 3.x
 
     - name: Clone Security Scanner repo
-      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       with:
         repository: hashicorp/security-scanner
         token: ${{ secrets.HASHIBOT_PRODSEC_GITHUB_TOKEN }}
@@ -87,6 +87,6 @@ jobs:
         cat results.sarif
 
     - name: Upload SARIF file
-      uses: github/codeql-action/upload-sarif@65c74964a9ed8c44ed9f19d4bbc5757a6a8e9ab9  # TSCCR: could not find entry for github/codeql-action/upload-sarif
+      uses: github/codeql-action/upload-sarif@c4fb451437765abf5018c6fbf22cce1a7da1e5cc  # TSCCR: could not find entry for github/codeql-action/upload-sarif
       with:
         sarif_file: results.sarif

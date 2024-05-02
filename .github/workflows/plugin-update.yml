@@ -20,7 +20,7 @@ jobs:
       VAULT_BRANCH: "update/${{ inputs.repo }}/${{ inputs.plugin_tag }}"
     steps:
       - run: echo "Branch ${{ inputs.plugin_tag }} of ${{ inputs.repo }}"
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
         with:
           # We don't use the default token so that checks are executed on the resulting PR
           # https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
