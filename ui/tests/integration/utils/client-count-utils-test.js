@@ -378,7 +378,7 @@ module('Integration | Util | client count utils', function (hooks) {
   });
 
   test('setStartTimeQuery: it returns start time query for activity log', async function (assert) {
-    assert.expect(5);
+    assert.expect(6);
     const apiPath = 'sys/internal/counters/config';
     assert.strictEqual(setStartTimeQuery(true, {}), null, `it returns null if no permission to ${apiPath}`);
     assert.strictEqual(
@@ -400,6 +400,11 @@ module('Integration | Util | client count utils', function (hooks) {
       setStartTimeQuery(false, { foo: 'bar' }),
       null,
       'it returns null if billing_start_timestamp key does not exist'
+    );
+    assert.strictEqual(
+      setStartTimeQuery(false, undefined),
+      null,
+      'fails gracefully if no config model is passed'
     );
   });
 });

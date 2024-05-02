@@ -202,6 +202,7 @@ export const namespaceArrayToObject = (
 
 // type guards for conditionals
 function _hasConfig(model: ClientsConfigModel | object): model is ClientsConfigModel {
+  if (!model) return false;
   return 'billingStartTimestamp' in model;
 }
 
