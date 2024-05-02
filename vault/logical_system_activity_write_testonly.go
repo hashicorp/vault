@@ -390,12 +390,18 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 	if writePQ || writeDistinctClients {
 		// start with the oldest month of data, and create precomputed queries
 		// up to that month
+		pqWg := sync.WaitGroup{}
 		for i := len(m.months) - 1; i > 0; i-- {
-			activityLog.precomputedQueryWorker(ctx, &ActivityIntentLog{
-				PreviousMonth: m.timestampForMonth(i, now).Unix(),
-				NextMonth:     0,
-			})
+			pqWg.Add(1)
+			go func(i int) {
+				defer pqWg.Done()
+				activityLog.precomputedQueryWorker(ctx, &ActivityIntentLog{
+					PreviousMonth: m.timestampForMonth(i, now).Unix(),
+					NextMonth:     now.Unix(),
+				})
+			}(i)
 		}
+		pqWg.Wait()
 	}
 	if writeIntentLog {
 		err := activityLog.writeIntentLog(ctx, m.latestTimestamp(now, false).Unix(), m.latestTimestamp(now, true).UTC())
