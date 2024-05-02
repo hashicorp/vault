@@ -44,7 +44,6 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-    // console.log(this.args.id, 'MODELID');
     if (this.args.destinations.length) {
       this.fetchAssociationsForDestinations.perform();
     }
