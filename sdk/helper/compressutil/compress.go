@@ -11,6 +11,7 @@ import (
 	"io"
 
 	"github.com/golang/snappy"
+	"github.com/klauspost/compress/zstd"
 	"github.com/pierrec/lz4"
 )
 
@@ -31,6 +32,9 @@ const (
 
 	CompressionTypeLZ4        = "lz4"
 	CompressionCanaryLZ4 byte = '4'
+
+	CompressionTypeZstd   = "zstd"
+	CompressionCanaryZstd = 'T'
 )
 
 // CompressUtilReadCloser embeds the snappy reader which implements the io.Reader
@@ -109,6 +113,9 @@ func Compress(data []byte, config *CompressionConfig) ([]byte, error) {
 	case CompressionTypeLZ4:
 		buf.Write([]byte{CompressionCanaryLZ4})
 		writer = lz4.NewWriter(&buf)
+	case CompressionTypeZstd:
+		buf.Write([]byte{CompressionCanaryZstd})
+		writer, err = zstd.NewWriter(&buf)
 
 	default:
 		return nil, fmt.Errorf("unsupported compression type")
@@ -197,6 +204,17 @@ func DecompressWithCanary(data []byte) ([]byte, string, bool, error) {
 			Reader: lz4.NewReader(bytes.NewReader(cData)),
 		}
 		compressionType = CompressionTypeLZ4
+
+	case CompressionCanaryZstd:
+		if len(data) < 2 {
+			return nil, "", false, fmt.Errorf("invalid 'data' after the canary")
+		}
+		var r io.Reader
+		r, err = zstd.NewReader(bytes.NewReader(cData))
+		reader = &CompressUtilReadCloser{
+			Reader: r,
+		}
+		compressionType = CompressionTypeZstd
 
 	default:
 		// If the first byte doesn't match the canary byte, it means
