@@ -138,7 +138,6 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       @replication={{this.replication}}
       @version={{this.version}}
       @isRootNamespace={{true}}
-      @isEnterprise={{this.version.isEnterprise}}
       @refreshModel={{this.refreshModel}} />`
     );
     assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
@@ -163,7 +162,6 @@ module('Integration | Component | dashboard/overview', function (hooks) {
         @secretsEngines={{this.secretsEngines}}
         @vaultConfiguration={{this.vaultConfiguration}}
         @replication={{this.replication}}
-        @isEnterprise={{this.version.isEnterprise}}
         @refreshModel={{this.refreshModel}} />`
     );
 
@@ -215,7 +213,6 @@ module('Integration | Component | dashboard/overview', function (hooks) {
           <Dashboard::Overview
             @version={{this.version}}
             @isRootNamespace={{this.isRootNamespace}}
-            @isEnterprise={{this.version.isEnterprise}}
             @secretsEngines={{this.secretsEngines}}
             @vaultConfiguration={{this.vaultConfiguration}}
             @replication={{this.replication}}
