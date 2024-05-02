@@ -85,6 +85,7 @@ func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *lo
 	}
 	paths, err := generated.write(ctx, opts, b.Core.activityLog)
 	if err != nil {
+		b.logger.Debug("failed to write activity log data", "error", err.Error())
 		return logical.ErrorResponse("failed to write data"), err
 	}
 	return &logical.Response{
@@ -333,6 +334,18 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 	return nil
 }
 
+func (m *multipleMonthsActivityClients) addMissingCurrentMonth(writeEntities bool) {
+	missing := m.months[0].generationParameters == nil &&
+		len(m.months) > 1 &&
+		m.months[1].generationParameters != nil
+	if !missing {
+		return
+	}
+	if missing && writeEntities {
+		m.months[0].generationParameters = &generation.Data{EmptySegmentIndexes: []int32{0}, NumSegments: 2}
+	}
+}
+
 func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog) ([]string, error) {
 	now := time.Now().UTC()
 	paths := []string{}
@@ -342,16 +355,18 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 	_, writeEntities := opts[generation.WriteOptions_WRITE_ENTITIES]
 	_, writeIntentLog := opts[generation.WriteOptions_WRITE_INTENT_LOGS]
 
+	m.addMissingCurrentMonth(writeEntities)
+
+	latestTimestampWithCurrent := m.latestTimestamp(now, true)
 	pqOpts := pqOptions{}
 	if writePQ || writeDistinctClients {
 		pqOpts.byNamespace = make(map[string]*processByNamespace)
 		pqOpts.byMonth = make(map[int64]*processMonth)
-		pqOpts.activePeriodEnd = m.latestTimestamp(now, true)
-		pqOpts.endTime = timeutil.EndOfMonth(m.latestTimestamp(pqOpts.activePeriodEnd, false))
+		pqOpts.activePeriodEnd = latestTimestampWithCurrent
+		pqOpts.endTime = timeutil.EndOfMonth(m.latestTimestamp(now, false))
 		pqOpts.activePeriodStart = m.earliestTimestamp(now)
 	}
 
-	var earliestTimestamp, latestTimestamp time.Time
 	for i, month := range m.months {
 		if month.generationParameters == nil {
 			continue
@@ -361,12 +376,6 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 			timestamp = timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
 		} else {
 			timestamp = now
-		}
-		if earliestTimestamp.IsZero() || timestamp.Before(earliestTimestamp) {
-			earliestTimestamp = timestamp
-		}
-		if timestamp.After(latestTimestamp) {
-			latestTimestamp = timestamp
 		}
 		segments, err := month.populateSegments()
 		if err != nil {
@@ -401,7 +410,7 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 
 	}
 	if writeIntentLog {
-		err := activityLog.writeIntentLog(ctx, earliestTimestamp.UTC().Unix(), latestTimestamp.UTC())
+		err := activityLog.writeIntentLog(ctx, m.latestTimestamp(now, false).Unix(), latestTimestampWithCurrent.UTC())
 		if err != nil {
 			return nil, err
 		}
