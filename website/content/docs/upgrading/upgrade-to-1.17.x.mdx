@@ -1,0 +1,33 @@
+---
+layout: docs
+page_title: Upgrade to Vault 1.17.x - Guides
+description: |-
+  Deprecations, important or breaking changes, and remediation recommendations
+  for anyone upgrading to 1.17.x from Vault 1.16.x.
+---
+
+# Overview
+
+The Vault 1.17.x upgrade guide contains information on deprecations, important
+or breaking changes, and remediation recommendations for anyone upgrading from
+Vault 1.16. **Please read carefully**.
+
+## Important changes
+
+### PKI sign-intermediate now truncates notAfter field to signing issuer
+
+Prior to 1.17.x the sign-intermediate API would permit a calculated notAfter field to go beyond
+the signing issuer's notAfter. This would lead to a CA chain that would not validate properly. As
+of 1.17.x the default behavior has changed to truncate the intermediary's notAfter value to
+the signing issuer's notAfter if calculated to be greater.
+
+#### How to opt out
+
+A new flag has been introduced on the sign-intermediate API `enforce_leaf_not_after_behavior`. Setting
+this flag to true, the sign-intermediate API will use the signing issuer's configured
+`leaf_not_after_behavior` value to control the behavior. Configuring the issuer to a value of `permit`
+will along with setting the `enforce_leaf_not_after_behavior` to true will restore the legacy behavior.
+
+## Known issues and workarounds
+
+@include 'known-issues/ocsp-redirect.mdx'
