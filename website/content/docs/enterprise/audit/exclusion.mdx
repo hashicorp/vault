@@ -181,7 +181,17 @@ JSON examples which refer to `<auth>` are referring to this object.
   "policies": [
     ""
   ],
-  "policy_results": {},
+  "policy_results": {
+    "allowed": true,
+    "granting_policies": [
+      {
+        "name": "",
+        "namespace_id": "",
+        "namespace_path": "",
+        "type": ""
+      }
+    ]
+  },
   "remaining_uses": 5,
   "token_policies": [
     ""
@@ -203,9 +213,9 @@ JSON examples which refer to `<request>` are referring to this object.
   "client_id": "",
   "client_token": "",
   "client_token_accessor": "",
-  "data": { "":  {} },
+  "data": {},
   "id": "",
-  "headers": { "": [ "" ] },
+  "headers": {},
   "mount_accessor": "",
   "mount_class": "",
   "mount_point": "",
@@ -262,3 +272,14 @@ JSON examples which refer to `<response>` are referring to this object.
   ]
 }
 ```
+## JSON schema
+
+The JSON schema for both request and response audit entries are included below.
+
+### Request audit entry schema
+
+@include 'audit/request-entry-json-schema.mdx'
+
+### Response audit entry schema
+
+@include 'audit/request-entry-json-schema.mdx'
