@@ -233,15 +233,7 @@ module('Acceptance | clients | overview | sync in license, activated', function 
   });
 
   hooks.beforeEach(async function () {
-    clientsHandler(this.server);
-    this.store = this.owner.lookup('service:store');
-
-    // add feature to license
-    this.server.get('/sys/license/features', () => ({ features: ['Secrets Sync'] }));
-    // activate feature
-    this.server.get('/sys/activation-flags', () => ({
-      data: { activated: ['secrets-sync'], unactivated: [] },
-    }));
+    syncHandler(this.server);
 
     await authPage.login();
     return visit('/vault/clients/counts/overview');
@@ -255,12 +247,16 @@ module('Acceptance | clients | overview | sync in license, activated', function 
     assert.dom(GENERAL.tab('sync')).exists();
   });
 
-  test('it should show secrets sync data in overview and tab', async function (assert) {
+  test('it should show secrets sync stats', async function (assert) {
     assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists('shows secret sync data on overview');
+  });
+
+  test('it should navigate to secrets sync page', async function (assert) {
     await click(GENERAL.tab('sync'));
 
     assert.dom(GENERAL.tab('sync')).hasClass('active');
     assert.dom(GENERAL.emptyStateTitle).doesNotExist();
+
     assert
       .dom(CHARTS.chart('Secrets sync usage'))
       .exists('chart is shown because feature is active and has data');
@@ -272,7 +268,6 @@ module('Acceptance | clients | overview | sync in license, not activated', funct
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    this.store = this.owner.lookup('service:store');
     this.server.get('/sys/license/features', () => ({ features: ['Secrets Sync'] }));
 
     await authPage.login();
@@ -283,12 +278,10 @@ module('Acceptance | clients | overview | sync in license, not activated', funct
     assert.dom(GENERAL.tab('sync')).exists('sync tab is shown because feature is in license');
   });
 
-  test('it should hide secrets sync charts', async function (assert) {
+  test('it should hide secrets sync stats', async function (assert) {
     assert
-      .dom(CHARTS.chart('Secrets sync usage'))
-      .doesNotExist('chart is hidden because feature is not activated');
-
-    assert.dom('[data-test-stat-text="secret-syncs"]').doesNotExist();
+      .dom(CLIENT_COUNT.statTextValue('Secret sync'))
+      .doesNotExist('stat is hidden because feature is not activated');
   });
 });
 
@@ -297,7 +290,6 @@ module('Acceptance | clients | overview | sync not in license', function (hooks)
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    this.store = this.owner.lookup('service:store');
     // mocks endpoint for no additional license modules
     this.server.get('/sys/license/features', () => ({ features: [] }));
 
