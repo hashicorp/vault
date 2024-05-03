@@ -17,6 +17,7 @@ import type RouterService from '@ember/routing/router-service';
 interface Args {
   onClose: () => void;
   onError: (errorMessage: string) => void;
+  isHvdManaged: boolean;
 }
 
 export default class SyncActivationModal extends Component<Args> {
@@ -36,8 +37,9 @@ export default class SyncActivationModal extends Component<Args> {
     try {
       yield this.store
         .adapterFor('application')
-        .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST');
-      this.router.transitionTo('vault.cluster.sync.secrets.overview');
+        .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST', { namespace });
+      // must refresh and not transition because transition does not refresh the model from within a namespace
+      yield this.router.refresh();
     } catch (error) {
       this.args.onError(errorMessage(error));
       this.flashMessages.danger(`Error enabling feature \n ${errorMessage(error)}`);
