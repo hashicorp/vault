@@ -282,6 +282,7 @@ module('Acceptance | clients | overview | sync in license, not activated', funct
     assert
       .dom(CLIENT_COUNT.statTextValue('Secret sync'))
       .doesNotExist('stat is hidden because feature is not activated');
+    assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
   });
 });
 
@@ -303,6 +304,7 @@ module('Acceptance | clients | overview | sync not in license', function (hooks)
 
   test('it should hide secrets sync stats', async function (assert) {
     assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).doesNotExist();
+    assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
   });
 });
 
