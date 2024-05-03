@@ -39,6 +39,7 @@
         @disallowNewItems={{true}}
         @onChange={{this.handleRolesInput}}
         @fallbackComponent="input-search"
+        @renderInPlace={{true}}
         data-test-issue-certificate-input
       />
       <Hds::Button
@@ -64,6 +65,7 @@
         @disallowNewItems={{true}}
         @onChange={{this.handleCertificateInput}}
         @fallbackComponent="input-search"
+        @renderInPlace={{true}}
         data-test-view-certificate-input
       />
       <Hds::Button
@@ -89,7 +91,8 @@
         @onChange={{this.handleIssuerSearch}}
         @fallbackComponent="input-search"
         @shouldRenderName={{true}}
-        @nameKey={{"issuerName"}}
+        @nameKey="issuerName"
+        @renderInPlace={{true}}
         data-test-issue-issuer-input
       />
       <Hds::Button

@@ -57,15 +57,18 @@
             @selectLimit="1"
             @fallbackComponent="input-search"
             @onChange={{this.selectRole}}
+            @renderInPlace={{true}}
           />
-          <Hds::Button
-            @text="Get credentials"
-            @color="secondary"
-            class="has-left-margin-s"
-            disabled={{not this.selectedRole}}
-            {{on "click" this.generateCredentials}}
-            data-test-generate-credential-button
-          />
+          <div>
+            <Hds::Button
+              @text="Get credentials"
+              @color="secondary"
+              class="has-left-margin-s"
+              disabled={{not this.selectedRole}}
+              {{on "click" this.generateCredentials}}
+              data-test-generate-credential-button
+            />
+          </div>
         </div>
       </OverviewCard>
     </div>
