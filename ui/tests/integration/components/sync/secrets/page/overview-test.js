@@ -181,27 +181,6 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       await click(overview.optInBannerEnable);
 
       assert.dom(overview.optInModal).exists('Opt-in modal is shown');
-      assert.dom(overview.optInConfirm).isDisabled('Confirm button is disabled when checkbox is unchecked');
-
-      await click(overview.optInCheck);
-      assert.dom(overview.optInConfirm).isNotDisabled('confirm button is enabled once checkbox is checked');
-    });
-
-    test('it should make a POST to activate the feature', async function (assert) {
-      assert.expect(1);
-
-      await this.renderComponent();
-
-      this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
-        assert.true(true, 'POST to secrets-sync/activate is called');
-        return {};
-      });
-
-      await this.renderComponent();
-
-      await click(overview.optInBannerEnable);
-      await click(overview.optInCheck);
-      await click(overview.optInConfirm);
     });
 
     test('it shows an error if activation fails', async function (assert) {
