@@ -17,7 +17,7 @@ module('Integration | Component | license-banners', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.before(function () {
-    sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2018-04-03T14:15:30')));
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
   });
   hooks.beforeEach(function () {
     const mockNow = timestamp.now();
