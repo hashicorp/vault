@@ -24,6 +24,7 @@ export const GENERAL = {
   confirmButton: '[data-test-confirm-button]',
   confirmTrigger: '[data-test-confirm-action-trigger]',
   emptyStateTitle: '[data-test-empty-state-title]',
+  emptyStateSubtitle: '[data-test-empty-state-subtitle]',
   emptyStateMessage: '[data-test-empty-state-message]',
   emptyStateActions: '[data-test-empty-state-actions]',
   menuTrigger: '[data-test-popup-menu-trigger]',
