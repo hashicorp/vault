@@ -520,7 +520,8 @@ func (c *ProxyCommand) Run(args []string) int {
 				LeaseCache: leaseCache,
 				Logger:     c.logger.Named("cache.staticsecretcapabilitymanager"),
 				Client:     client,
-				StaticSecretTokenCapabilityRefreshInterval: config.Cache.StaticSecretTokenCapabilityRefreshInterval,
+				StaticSecretTokenCapabilityRefreshInterval:  config.Cache.StaticSecretTokenCapabilityRefreshInterval,
+				StaticSecretTokenCapabilityRefreshBehaviour: config.Cache.StaticSecretTokenCapabilityRefreshBehaviour,
 			})
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error creating static secret capability manager: %v", err))
