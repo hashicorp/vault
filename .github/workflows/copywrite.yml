@@ -12,7 +12,7 @@ jobs:
   copywrite:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       - uses: hashicorp/setup-copywrite@867a1a2a064a0626db322392806428f7dc59cb3e # v1.1.2
         name: Setup Copywrite
         with:

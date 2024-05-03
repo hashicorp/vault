@@ -12,6 +12,7 @@ import {
   destructureClientCounts,
   namespaceArrayToObject,
   sortMonthsByTimestamp,
+  setStartTimeQuery,
 } from 'core/utils/client-count-utils';
 import { LICENSE_START } from 'vault/mirage/handlers/clients';
 import {
@@ -27,6 +28,9 @@ used to normalize the sys/counters/activity response in the clients/activity
 serializer. these functions are tested individually here, instead of all at once
 in a serializer test for easier debugging
 */
+
+// TODO refactor tests into a module for each util method, then make each assertion its separate tests
+
 module('Integration | Util | client count utils', function (hooks) {
   setupTest(hooks);
 
@@ -370,6 +374,37 @@ module('Integration | Util | client count utils', function (hooks) {
         },
       },
       'it formats combined data for monthly namespaces_by_key spanning upgrade to 1.10'
+    );
+  });
+
+  test('setStartTimeQuery: it returns start time query for activity log', async function (assert) {
+    assert.expect(6);
+    const apiPath = 'sys/internal/counters/config';
+    assert.strictEqual(setStartTimeQuery(true, {}), null, `it returns null if no permission to ${apiPath}`);
+    assert.strictEqual(
+      setStartTimeQuery(false, {}),
+      null,
+      `it returns null for community edition and no permission to ${apiPath}`
+    );
+    assert.strictEqual(
+      setStartTimeQuery(true, { billingStartTimestamp: new Date('2022-06-08T00:00:00Z') }),
+      1654646400,
+      'it returns unix time if enterprise and billing_start_timestamp exists'
+    );
+    assert.strictEqual(
+      setStartTimeQuery(false, { billingStartTimestamp: new Date('0001-01-01T00:00:00Z') }),
+      null,
+      'it returns null time for community edition even if billing_start_timestamp exists'
+    );
+    assert.strictEqual(
+      setStartTimeQuery(false, { foo: 'bar' }),
+      null,
+      'it returns null if billing_start_timestamp key does not exist'
+    );
+    assert.strictEqual(
+      setStartTimeQuery(false, undefined),
+      null,
+      'fails gracefully if no config model is passed'
     );
   });
 });
