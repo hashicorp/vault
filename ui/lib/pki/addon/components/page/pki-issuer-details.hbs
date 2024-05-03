@@ -35,7 +35,13 @@
         Sign Intermediate
       </ToolbarLink>
     {{/if}}
-    <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
+    <BasicDropdown
+      @class="popup-menu"
+      @horizontalPosition="auto-right"
+      @verticalPosition="below"
+      @renderInPlace={{true}}
+      as |D|
+    >
       <D.Trigger
         data-test-popup-menu-trigger="true"
         class={{concat "toolbar-link" (if D.isOpen " is-active")}}
