@@ -56,21 +56,6 @@ export default class ClientsCountsRoute extends Route {
     return { activity, activityError };
   }
 
-  showSecretsSync(activity: ClientsActivityModel | undefined): boolean {
-    // if there is any sync client data, show it
-    if (activity && activity?.total?.secret_syncs > 0) return true;
-
-    // otherwise, show the tab based on the cluster type and license
-    if (this.version.isCommunity) return false;
-
-    const isHvd = this.flags.isHvdManaged;
-    const onLicense = this.version.hasSecretsSync;
-
-    // we can't tell if HVD clusters have the feature or not, so we show it by default
-    // if the cluster is not HVD, show the tab if the feature is on the license
-    return isHvd || onLicense;
-  }
-
   async model(params: ClientsCountsRouteParams) {
     const { config, versionHistory } = this.modelFor('vault.cluster.clients') as ModelFrom<ClientsRoute>;
     // only enterprise versions will have a relevant billing start date, if null users must select initial start time
@@ -83,14 +68,11 @@ export default class ClientsCountsRoute extends Route {
     const endTimestamp = Number(params.end_time) || getUnixTime(timestamp.now());
     const { activity, activityError } = await this.getActivity(startTimestamp, endTimestamp);
 
-    const showSecretsSync = this.showSecretsSync(activity);
-
     return {
       activity,
       activityError,
       config,
       endTimestamp,
-      showSecretsSync,
       startTimestamp,
       versionHistory,
     };

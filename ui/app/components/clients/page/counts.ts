@@ -12,6 +12,7 @@ import { filterVersionHistory, formatDateObject } from 'core/utils/client-count-
 import timestamp from 'core/utils/timestamp';
 
 import type AdapterError from '@ember-data/adapter';
+import type FlagsService from 'vault/services/flags';
 import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
 import type ClientsActivityModel from 'vault/models/clients/activity';
@@ -26,11 +27,11 @@ interface Args {
   namespace: string;
   onFilterChange: CallableFunction;
   startTimestamp: number;
-  showSecretsSync: boolean;
   versionHistory: ClientsVersionHistoryModel[];
 }
 
 export default class ClientsCountsPageComponent extends Component<Args> {
+  @service declare readonly flags: FlagsService;
   @service declare readonly version: VersionService;
   @service declare readonly store: StoreService;
 
@@ -161,6 +162,22 @@ export default class ClientsCountsPageComponent extends Component<Args> {
         : this.activityForNamespace;
     }
     return activity?.total;
+  }
+
+  get showSecretsSync(): boolean {
+    const { activity } = this.args;
+    // if there is any sync client data, show it
+    if (activity && activity?.total?.secret_syncs > 0) return true;
+
+    // otherwise, show the tab based on the cluster type and license
+    if (this.version.isCommunity) return false;
+
+    const isHvd = this.flags.isHvdManaged;
+    const onLicense = this.version.hasSecretsSync;
+
+    // we can't tell if HVD clusters have the feature or not, so we show it by default
+    // if the cluster is not HVD, show the tab if the feature is on the license
+    return isHvd || onLicense;
   }
 
   @action
