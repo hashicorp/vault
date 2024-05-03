@@ -18,10 +18,8 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
   setupEngine(hooks, 'kubernetes');
   setupMirage(hooks);
 
-  hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
-  });
   hooks.beforeEach(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
     this.backend = 'kubernetes-test';
     this.roleName = 'role-0';
 

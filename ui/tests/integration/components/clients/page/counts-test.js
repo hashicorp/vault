@@ -25,11 +25,8 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
-  });
-
   hooks.beforeEach(async function () {
+    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
     clientsHandler(this.server);
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.store = this.owner.lookup('service:store');
