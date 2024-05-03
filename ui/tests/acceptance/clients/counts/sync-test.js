@@ -20,7 +20,7 @@ module('Acceptance | clients | sync | activated', function (hooks) {
   setupMirage(hooks);
 
   hooks.before(function () {
-    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
+    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
   });
 
   hooks.beforeEach(async function () {
@@ -42,7 +42,7 @@ module('Acceptance | clients | sync | not activated', function (hooks) {
   setupMirage(hooks);
 
   hooks.before(function () {
-    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
+    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
   });
 
   hooks.beforeEach(async function () {

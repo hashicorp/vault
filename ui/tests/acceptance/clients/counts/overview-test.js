@@ -26,7 +26,7 @@ module('Acceptance | clients | overview', function (hooks) {
   setupMirage(hooks);
 
   hooks.before(function () {
-    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
+    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
   });
 
   hooks.beforeEach(async function () {
@@ -230,7 +230,7 @@ module('Acceptance | clients | overview | sync in license, activated', function 
   setupMirage(hooks);
 
   hooks.before(function () {
-    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
+    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
   });
 
   hooks.beforeEach(async function () {

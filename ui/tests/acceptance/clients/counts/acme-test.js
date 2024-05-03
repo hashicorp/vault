@@ -25,7 +25,7 @@ module('Acceptance | clients | counts | acme', function (hooks) {
   setupMirage(hooks);
 
   hooks.before(function () {
-    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
+    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
   });
 
   hooks.beforeEach(async function () {
