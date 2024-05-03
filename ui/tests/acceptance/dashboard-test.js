@@ -404,16 +404,14 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(DASHBOARD.cardName('client-count')).exists();
       const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
       assert.dom('[data-test-client-count-title]').hasText('Client count');
-      assert.dom('[data-test-stat-text="total-clients"] .stat-label').hasText('Total');
+      assert.dom('[data-test-stat-text="Total"] .stat-label').hasText('Total');
+      assert.dom('[data-test-stat-text="Total"] .stat-value').hasText(formatNumber([response.total.clients]));
+      assert.dom('[data-test-stat-text="New"] .stat-label').hasText('New');
       assert
-        .dom('[data-test-stat-text="total-clients"] .stat-value')
-        .hasText(formatNumber([response.total.clients]));
-      assert.dom('[data-test-stat-text="new-clients"] .stat-label').hasText('New');
-      assert
-        .dom('[data-test-stat-text="new-clients"] .stat-text')
+        .dom('[data-test-stat-text="New"] .stat-text')
         .hasText('The number of clients new to Vault in the current month.');
       assert
-        .dom('[data-test-stat-text="new-clients"] .stat-value')
+        .dom('[data-test-stat-text="New"] .stat-value')
         .hasText(formatNumber([response.byMonth.lastObject.new_clients.clients]));
     });
   });

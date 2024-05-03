@@ -2103,7 +2103,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	// list certs/
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.ListOperation,
-		Path:       "certs/",
+		Path:       issuing.PathCerts,
 		Storage:    storage,
 		MountPoint: "pki/",
 	})
@@ -6780,7 +6780,7 @@ func TestProperAuthing(t *testing.T) {
 		"cert/unified-delta-crl":                 shouldBeUnauthedReadList,
 		"cert/unified-delta-crl/raw":             shouldBeUnauthedReadList,
 		"cert/unified-delta-crl/raw/pem":         shouldBeUnauthedReadList,
-		"certs/":                                 shouldBeAuthed,
+		issuing.PathCerts:                        shouldBeAuthed,
 		"certs/revoked/":                         shouldBeAuthed,
 		"certs/revocation-queue/":                shouldBeAuthed,
 		"certs/unified-revoked/":                 shouldBeAuthed,

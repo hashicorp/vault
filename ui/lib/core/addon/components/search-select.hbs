@@ -46,7 +46,7 @@
         @renderInPlace={{@renderInPlace}}
         @verticalPosition="below"
         @disabled={{@disabled}}
-        @ariaLabel={{or @label (humanize @id)}}
+        @ariaLabel={{or @ariaLabel @label (humanize @id)}}
         as |option|
       >
         {{#if this.shouldRenderName}}
