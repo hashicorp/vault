@@ -38,9 +38,6 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
     this.model = model;
     this.tab = '';
   });
-  hooks.after(function () {
-    timestamp.now.restore();
-  });
 
   // TODO: Add capabilities tests
   test('it renders show view as default', async function (assert) {

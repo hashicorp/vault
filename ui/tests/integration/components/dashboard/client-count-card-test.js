@@ -20,11 +20,7 @@ module('Integration | Component | dashboard/client-count-card', function (hooks)
   setupMirage(hooks);
 
   hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
-  });
-
-  hooks.after(function () {
-    timestamp.now.restore();
+    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
   });
 
   test('it should display client count information', async function (assert) {

@@ -17,7 +17,7 @@ module('Integration | Component | license-banners', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+    sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2018-04-03T14:15:30')));
   });
   hooks.beforeEach(function () {
     const mockNow = timestamp.now();
@@ -29,9 +29,6 @@ module('Integration | Component | license-banners', function (hooks) {
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1+ent';
     this.version.type = 'enterprise';
-  });
-  hooks.after(function () {
-    timestamp.now.restore();
   });
 
   test('it does not render if no expiry', async function (assert) {

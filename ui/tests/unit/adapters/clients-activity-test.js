@@ -16,7 +16,7 @@ module('Unit | Adapter | clients activity', function (hooks) {
   setupMirage(hooks);
 
   hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2023-01-13T09:30:15'));
+    sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2023-01-13T09:30:15')));
   });
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
@@ -24,9 +24,6 @@ module('Unit | Adapter | clients activity', function (hooks) {
     this.startDate = subMonths(timestamp.now(), 6);
     this.endDate = timestamp.now();
     this.readableUnix = (unix) => parseAPITimestamp(fromUnixTime(unix).toISOString(), 'MMMM dd yyyy');
-  });
-  hooks.after(function () {
-    timestamp.now.restore();
   });
 
   test('it does not format if both params are timestamp strings', async function (assert) {

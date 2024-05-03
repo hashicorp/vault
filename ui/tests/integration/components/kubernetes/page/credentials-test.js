@@ -19,7 +19,7 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
   setupMirage(hooks);
 
   hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+    sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2018-04-03T14:15:30')));
   });
   hooks.beforeEach(function () {
     this.backend = 'kubernetes-test';
@@ -52,9 +52,6 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
         }
       );
     };
-  });
-  hooks.after(function () {
-    timestamp.now.restore();
   });
 
   test('it should display generate credentials form', async function (assert) {
