@@ -903,8 +903,9 @@ func (s *staticAccount) SetNextVaultRotation(t time.Time) {
 // Zero TTL, as they are likely in the process of being rotated and will quickly
 // be invalidated.
 func (s *staticAccount) CredentialTTL() time.Duration {
-	next := s.NextRotationTime()
-	ttl := next.Sub(time.Now()).Round(time.Second)
+	now := time.Now()
+	next := s.NextRotationTimeFromInput(now)
+	ttl := next.Sub(now).Round(time.Second)
 	if ttl < 0 {
 		ttl = time.Duration(0)
 	}
