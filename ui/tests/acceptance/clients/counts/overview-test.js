@@ -7,6 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import clientsHandler, { STATIC_NOW, LICENSE_START, UPGRADE_DATE } from 'vault/mirage/handlers/clients';
+import syncHandler from 'vault/mirage/handlers/sync';
 import sinon from 'sinon';
 import { visit, click, findAll, settled } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
@@ -308,9 +309,28 @@ module('Acceptance | clients | overview | sync not in license', function (hooks)
     assert.dom(GENERAL.tab('sync')).doesNotExist();
   });
 
-  test('it should hide secrets sync charts', async function (assert) {
-    assert.dom(CHARTS.chart('Secrets sync usage')).doesNotExist();
+  test('it should hide secrets sync stats', async function (assert) {
+    assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).doesNotExist();
+  });
+});
 
-    assert.dom('[data-test-stat-text="secret-syncs"]').doesNotExist();
+module('Acceptance | clients | overview | HVD', function (hooks) {
+  setupApplicationTest(hooks);
+  setupMirage(hooks);
+
+  hooks.beforeEach(async function () {
+    syncHandler(this.server);
+    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+
+    await authPage.login();
+    return visit('/vault/clients/counts/overview');
+  });
+
+  test('it should show the secrets sync tab', async function (assert) {
+    assert.dom(GENERAL.tab('sync')).exists();
+  });
+
+  test('it should show secrets sync stats', async function (assert) {
+    assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists();
   });
 });
