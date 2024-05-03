@@ -20,7 +20,7 @@ module('Integration | Component | calendar-widget', function (hooks) {
     sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
   });
   hooks.beforeEach(function () {
-    const CURRENT_DATE = timestamp.now();
+    const CURRENT_DATE = new Date('2018-04-03T14:15:30');
     this.set('currentDate', CURRENT_DATE);
     this.set('calendarStartDate', subMonths(CURRENT_DATE, 12));
     this.set('calendarEndDate', CURRENT_DATE);
