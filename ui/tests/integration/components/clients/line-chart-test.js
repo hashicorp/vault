@@ -14,7 +14,7 @@ import timestamp from 'core/utils/timestamp';
 module('Integration | Component | clients/line-chart', function (hooks) {
   setupRenderingTest(hooks);
   hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+    sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2018-04-03T14:15:30')));
   });
   hooks.beforeEach(function () {
     this.set('xKey', 'foo');
@@ -41,9 +41,6 @@ module('Integration | Component | clients/line-chart', function (hooks) {
         expectedLabel: '7/18',
       },
     ]);
-  });
-  hooks.after(function () {
-    timestamp.now.restore();
   });
 
   test('it renders', async function (assert) {

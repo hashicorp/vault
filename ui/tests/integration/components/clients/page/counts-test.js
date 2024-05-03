@@ -26,7 +26,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
   setupMirage(hooks);
 
   hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
+    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
   });
 
   hooks.beforeEach(async function () {
@@ -58,9 +58,6 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
         <div data-test-yield>Yield block</div>
       </Clients::Page::Counts>
     `);
-  });
-  hooks.after(function () {
-    timestamp.now.restore();
   });
 
   test('it should render start date label and description based on version', async function (assert) {

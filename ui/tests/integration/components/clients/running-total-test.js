@@ -24,7 +24,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
   setupMirage(hooks);
 
   hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
+    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
   });
 
   hooks.beforeEach(async function () {
@@ -64,10 +64,6 @@ module('Integration | Component | clients/running-total', function (hooks) {
         'scrollable-region-focusable': { enabled: false },
       },
     });
-  });
-
-  hooks.after(function () {
-    timestamp.now.restore();
   });
 
   test('it renders with full monthly activity data', async function (assert) {

@@ -20,17 +20,13 @@ module('Acceptance | clients | counts', function (hooks) {
   setupMirage(hooks);
 
   hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
+    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
   });
 
   hooks.beforeEach(async function () {
     clientsHandler(this.server);
     this.store = this.owner.lookup('service:store');
     return authPage.login();
-  });
-
-  hooks.after(function () {
-    timestamp.now.restore();
   });
 
   test('it should prompt user to query start time for community version', async function (assert) {

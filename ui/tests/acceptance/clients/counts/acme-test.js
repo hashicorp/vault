@@ -25,7 +25,7 @@ module('Acceptance | clients | counts | acme', function (hooks) {
   setupMirage(hooks);
 
   hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
+    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
   });
 
   hooks.beforeEach(async function () {
@@ -52,10 +52,6 @@ module('Acceptance | clients | counts | acme', function (hooks) {
 
     await authPage.login();
     return visit('/vault');
-  });
-
-  hooks.after(function () {
-    timestamp.now.restore();
   });
 
   test('it navigates to acme tab', async function (assert) {
