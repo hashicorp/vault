@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"math/rand"
 	"net/http"
@@ -478,10 +479,9 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		}
 
 		metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "success"}, 1)
-		// We don't want to trigger the renewal process for tokens with
-		// unlimited TTL, such as the root token.
-		if leaseDuration == 0 && isTokenFileMethod {
-			ah.logger.Info("not starting token renewal process, as token has unlimited TTL")
+		// We don't want to trigger the renewal process for the root token
+		if isRootToken(leaseDuration, isTokenFileMethod, secret) {
+			ah.logger.Info("not starting token renewal process, as token is root token")
 		} else {
 			ah.logger.Info("starting renewal process")
 			go watcher.Renew()
@@ -498,11 +498,23 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			case err := <-watcher.DoneCh():
 				ah.logger.Info("lifetime watcher done channel triggered")
 				if err != nil {
+					ah.logger.Error("error renewing token", "error", err, "backoff", backoffCfg)
 					metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
-					ah.logger.Error("error renewing token", "error", err)
 				}
-				break LifetimeWatcherLoop
 
+				// Add some exponential backoff so that if auth is successful
+				// but the watcher errors, we won't go into an immediate
+				// aggressive retry loop.
+				// This might be quite a small sleep, since if we have a successful
+				// auth, we reset the backoff. Still, some backoff is important, and
+				// ensuring we follow the normal flow is important:
+				// auth -> try to renew
+				if backoffSleep(ctx, backoffCfg) {
+					break LifetimeWatcherLoop
+				}
+
+				// We're at max retries. Return an error.
+				return fmt.Errorf("exceeded max retries failing to renew auth token")
 			case <-watcher.RenewCh():
 				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "success"}, 1)
 				ah.logger.Info("renewed auth token")
@@ -521,6 +533,21 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			}
 		}
 	}
+}
+
+func isRootToken(leaseDuration int, isTokenFileMethod bool, secret *api.Secret) bool {
+	// This check is cheaper than the others, so we do this first.
+	if leaseDuration == 0 && isTokenFileMethod && !secret.Renewable {
+		if secret != nil {
+			policies, err := secret.TokenPolicies()
+			if err == nil {
+				if len(policies) == 1 && policies[0] == "root" {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // autoAuthBackoff tracks exponential backoff state.
