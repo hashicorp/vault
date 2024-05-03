@@ -98,22 +98,22 @@ module('Unit | Service | flags', function (hooks) {
     });
   });
 
-  module('#managedNamespaceRoot', function () {
+  module('#hvdManagedNamespaceRoot', function () {
     test('it returns null when flag is not present', function (assert) {
-      assert.strictEqual(this.service.managedNamespaceRoot, null);
+      assert.strictEqual(this.service.hvdManagedNamespaceRoot, null);
     });
 
     test('it returns the namespace root when flag is present', function (assert) {
       this.service.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
       assert.strictEqual(
-        this.service.managedNamespaceRoot,
+        this.service.hvdManagedNamespaceRoot,
         'admin',
         'Managed namespace is admin when flag present'
       );
 
       this.service.featureFlags = ['SOMETHING_ELSE'];
       assert.strictEqual(
-        this.service.managedNamespaceRoot,
+        this.service.hvdManagedNamespaceRoot,
         null,
         'Flags were overwritten and root namespace is null again'
       );

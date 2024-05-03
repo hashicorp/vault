@@ -35,11 +35,11 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     this.destinations = await this.store.query('sync/destination', {});
     this.isActivated = true;
     this.licenseHasSecretsSync = true;
-    this.isManaged = false;
+    this.isHvdManaged = false;
 
     this.renderComponent = () => {
       return render(
-        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @isActivated={{this.isActivated}} @licenseHasSecretsSync={{this.licenseHasSecretsSync}} @isManaged={{this.isManaged}} />`,
+        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @isActivated={{this.isActivated}} @licenseHasSecretsSync={{this.licenseHasSecretsSync}} @isHvdManaged={{this.isHvdManaged}} />`,
         {
           owner: this.engine,
         }
@@ -104,7 +104,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
   module('managed', function (hooks) {
     hooks.beforeEach(function () {
       this.isActivated = false;
-      this.isManaged = true;
+      this.isHvdManaged = true;
       this.destinations = [];
     });
 
