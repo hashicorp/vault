@@ -24,7 +24,20 @@ LABEL name="Vault" \
       summary="Vault is a tool for securely accessing secrets." \
       description="Vault is a tool for securely accessing secrets. A secret is anything that you want to tightly control access to, such as API keys, passwords, certificates, and more. Vault provides a unified interface to any secret, while providing tight access control and recording a detailed audit log."
 
-COPY LICENSE /licenses/mozilla.txt
+# @see https://specs.opencontainers.org/image-spec/annotations/?v=v1.0.1#pre-defined-annotation-keys
+LABEL org.opencontainers.image.title=${BIN_NAME} \
+      org.opencontainers.image.description="Vault is a tool for securely accessing secrets. A secret is anything that you want to tightly control access to, such as API keys, passwords, certificates, and more. Vault provides a unified interface to any secret, while providing tight access control and recording a detailed audit log." \
+      org.opencontainers.image.authors="Vault Team <vault@hashicorp.com>" \
+      org.opencontainers.image.url="https://www.vaultproject.io/" \
+      org.opencontainers.image.documentation="https://www.vaultproject.io/docs" \
+      org.opencontainers.image.source="https://github.com/hashicorp/vault" \
+      org.opencontainers.image.version=${PRODUCT_VERSION} \
+      org.opencontainers.image.revision=${PRODUCT_REVISION} \
+      org.opencontainers.image.vendor="HashiCorp" \
+      org.opencontainers.image.licenses="BUSL-1.1"
+
+# Copy the license file as per Legal requirement
+COPY LICENSE "/usr/share/doc/${BIN_NAME}/LICENSE.txt"
 
 # Set ARGs as ENV so that they can be used in ENTRYPOINT/CMD
 ENV NAME=$NAME
