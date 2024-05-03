@@ -16,7 +16,7 @@ module('Unit | Adapter | clients activity', function (hooks) {
   setupMirage(hooks);
 
   hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2023-01-13T09:30:15'));
+    this.timestampStub = sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2023-01-13T09:30:15')));
   });
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
