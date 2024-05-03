@@ -132,6 +132,13 @@ $ curl \
 The API documentation uses `LIST` as the HTTP verb, but you can still use `GET`
 with the `?list=true` query string.
 
+When a list request is issued and the result is an empty set, the response will
+have the status code 404 and the following content:
+
+```json
+{"errors":[]}
+```
+
 To make an API with specific data in request body, issue a `POST`:
 
 ```text
