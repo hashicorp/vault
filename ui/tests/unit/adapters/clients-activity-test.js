@@ -16,13 +16,13 @@ module('Unit | Adapter | clients activity', function (hooks) {
   setupMirage(hooks);
 
   hooks.before(function () {
-    sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2023-01-13T09:30:15')));
+    this.timestampStub = sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2023-01-13T09:30:15')));
   });
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
     this.modelName = 'clients/activity';
-    this.startDate = subMonths(timestamp.now(), 6);
-    this.endDate = timestamp.now();
+    this.startDate = subMonths(this.timestampStub(), 6);
+    this.endDate = this.timestampStub();
     this.readableUnix = (unix) => parseAPITimestamp(fromUnixTime(unix).toISOString(), 'MMMM dd yyyy');
   });
 
