@@ -6,6 +6,7 @@
 import Mixin from '@ember/object/mixin';
 import { task } from 'ember-concurrency';
 import { ancestorKeysForKey } from 'core/utils/key-utils';
+import { service } from '@ember/service';
 
 // This mixin is currently used in a controller and a component, but we
 // don't see cancellation of the task as the while loop runs in either
@@ -17,13 +18,14 @@ import { ancestorKeysForKey } from 'core/utils/key-utils';
 // and we're catching any 404s, the loop continues until the transtion succeeds, or exhausts
 // the ancestors array and transitions to the root
 export default Mixin.create({
+  router: service(),
   navToNearestAncestor: task(function* (key) {
     const ancestors = ancestorKeysForKey(key);
     let errored = false;
     let nearest = ancestors.pop();
     while (nearest) {
       try {
-        const transition = this.transitionToRoute('vault.cluster.secrets.backend.list', nearest);
+        const transition = this.router.transitionTo('vault.cluster.secrets.backend.list', nearest);
         transition.data.isDeletion = true;
         yield transition.promise;
       } catch (e) {
@@ -40,6 +42,6 @@ export default Mixin.create({
         errored = false;
       }
     }
-    yield this.transitionToRoute('vault.cluster.secrets.backend.list-root');
+    yield this.router.transitionTo('vault.cluster.secrets.backend.list-root');
   }),
 });
