@@ -51,7 +51,7 @@
   {{#if (eq @activity.id "no-data")}}
     <Clients::NoData @config={{@config}} @dateRangeMessage={{this.dateRangeMessage}} />
   {{else if @activityError}}
-    <Clients::Error @error={{@activityError}} />
+    <Clients::Counts::Error @error={{@activityError}} />
   {{else}}
     {{#if (eq @config.enabled "Off")}}
       <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
