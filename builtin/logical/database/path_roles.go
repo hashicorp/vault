@@ -904,7 +904,7 @@ func (s *staticAccount) SetNextVaultRotation(t time.Time) {
 // be invalidated.
 func (s *staticAccount) CredentialTTL() time.Duration {
 	now := time.Now()
-	next := s.NextRotationTimeFromInput(now)
+	next := s.NextVaultRotation
 	ttl := next.Sub(now).Round(time.Second)
 	if ttl < 0 {
 		ttl = time.Duration(0)
