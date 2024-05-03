@@ -43,13 +43,13 @@
       as |D|
     >
       <D.Trigger
-        data-test-popup-menu-trigger="true"
         class={{concat "toolbar-link" (if D.isOpen " is-active")}}
         @htmlTag="button"
         data-test-issuer-download
+        data-test-popup-menu-trigger
       >
         Download
-        <Chevron @direction="down" @isButton={{true}} />
+        <Chevron @direction={{if D.isOpen "up" "down"}} @isButton={{true}} />
       </D.Trigger>
       <D.Content @defaultClass="popup-menu-content">
         <nav class="box menu" aria-label="snapshots actions">
