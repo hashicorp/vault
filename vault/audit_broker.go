@@ -22,6 +22,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const (
+	// timeout is the duration which should be used for context related timeouts.
+	timeout = 5 * time.Second
+)
+
 type backendEntry struct {
 	backend audit.Backend
 	local   bool
@@ -240,12 +245,32 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput) (ret
 
 	e.Data = in
 
-	// There may be cases where only the fallback device was added but no other
-	// normal audit devices, so check if the broker had an audit based pipeline
-	// registered before trying to send to it.
+	// Evaluate whether we need a new context for auditing.
+	var auditContext context.Context
+	if isContextViable(ctx) {
+		auditContext = ctx
+	} else {
+		// In cases where we are trying to audit the request, and the existing
+		// context is not viable due to a short deadline, we detach ourselves from
+		// the original context (keeping only the namespace).
+		// This is so that we get a fair run at writing audit entries if Vault
+		// has taken up a lot of time handling the request before audit (request)
+		// is triggered. Pipeline nodes and the eventlogger.Broker may check for a
+		// cancelled context and refuse to process the nodes further.
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			retErr = multierror.Append(retErr, fmt.Errorf("namespace missing from context: %w", err))
+			return retErr.ErrorOrNil()
+		}
+
+		tempContext, auditCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer auditCancel()
+		auditContext = namespace.ContextWithNamespace(tempContext, ns)
+	}
+
 	var status eventlogger.Status
 	if hasAuditPipelines(a.broker) {
-		status, err = a.broker.Send(ctx, event.AuditType.AsEventType(), e)
+		status, err = a.broker.Send(auditContext, event.AuditType.AsEventType(), e)
 		if err != nil {
 			retErr = multierror.Append(retErr, multierror.Append(err, status.Warnings...))
 			return retErr.ErrorOrNil()
@@ -266,7 +291,7 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput) (ret
 	// If a fallback device is registered we can rely on that to 'catch all'
 	// and also the broker level guarantee for completed sinks.
 	if a.fallbackBroker.IsAnyPipelineRegistered(event.AuditType.AsEventType()) {
-		status, err = a.fallbackBroker.Send(ctx, event.AuditType.AsEventType(), e)
+		status, err = a.fallbackBroker.Send(auditContext, event.AuditType.AsEventType(), e)
 		if err != nil {
 			retErr = multierror.Append(retErr, multierror.Append(fmt.Errorf("auditing request to fallback device failed: %w", err), status.Warnings...))
 		}
@@ -308,25 +333,29 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput) (re
 
 	e.Data = in
 
-	// In cases where we are trying to audit the response, we detach
-	// ourselves from the original context (keeping only the namespace).
-	// This is so that we get a fair run at writing audit entries if Vault
-	// has taken up a lot of time handling the request before audit (response)
-	// is triggered. Pipeline nodes and the eventlogger.Broker may check for a
-	// cancelled context and refuse to process the nodes further.
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		retErr = multierror.Append(retErr, fmt.Errorf("namespace missing from context: %w", err))
-		return retErr.ErrorOrNil()
+	// Evaluate whether we need a new context for auditing.
+	var auditContext context.Context
+	if isContextViable(ctx) {
+		auditContext = ctx
+	} else {
+		// In cases where we are trying to audit the response, and the existing
+		// context is not viable due to a short deadline, we detach ourselves from
+		// the original context (keeping only the namespace).
+		// This is so that we get a fair run at writing audit entries if Vault
+		// has taken up a lot of time handling the request before audit (response)
+		// is triggered. Pipeline nodes and the eventlogger.Broker may check for a
+		// cancelled context and refuse to process the nodes further.
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			retErr = multierror.Append(retErr, fmt.Errorf("namespace missing from context: %w", err))
+			return retErr.ErrorOrNil()
+		}
+
+		tempContext, auditCancel := context.WithTimeout(context.Background(), timeout)
+		defer auditCancel()
+		auditContext = namespace.ContextWithNamespace(tempContext, ns)
 	}
 
-	auditContext, auditCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer auditCancel()
-	auditContext = namespace.ContextWithNamespace(auditContext, ns)
-
-	// There may be cases where only the fallback device was added but no other
-	// normal audit devices, so check if the broker had an audit based pipeline
-	// registered before trying to send to it.
 	var status eventlogger.Status
 	if a.broker.IsAnyPipelineRegistered(event.AuditType.AsEventType()) {
 		status, err = a.broker.Send(auditContext, event.AuditType.AsEventType(), e)
@@ -521,4 +550,27 @@ func (a *AuditBroker) deregister(ctx context.Context, name string) error {
 // registered pipelines that are for the audit event type.
 func hasAuditPipelines(broker *eventlogger.Broker) bool {
 	return broker.IsAnyPipelineRegistered(event.AuditType.AsEventType())
+}
+
+// isContextViable examines the supplied context to see if its own deadline would
+// occur later than a newly created context with a specific timeout.
+// If the existing context is viable it can be used 'as-is', if not, the caller
+// should consider creating a new context with the relevant deadline and associated
+// context values (e.g. namespace) in order to reduce the likelihood that the
+// audit system believes there is a failure in audit (and updating its metrics)
+// when the root cause is elsewhere.
+func isContextViable(ctx context.Context) bool {
+	if ctx == nil {
+		return false
+	}
+
+	deadline, hasDeadline := ctx.Deadline()
+
+	// If there's no deadline on the context then we don't need to worry about
+	// it being cancelled due to a timeout.
+	if !hasDeadline {
+		return true
+	}
+
+	return deadline.After(time.Now().Add(timeout))
 }
