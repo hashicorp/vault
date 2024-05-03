@@ -1196,6 +1196,14 @@ func (a *ActivityLog) hasRegeneratedACME(ctx context.Context) bool {
 	return regenerated != nil
 }
 
+func (a *ActivityLog) writeRegeneratedACME(ctx context.Context) error {
+	regeneratedEntry, err := logical.StorageEntryJSON(activityACMERegenerationKey, true)
+	if err != nil {
+		return err
+	}
+	return a.view.Put(ctx, regeneratedEntry)
+}
+
 func (a *ActivityLog) regeneratePrecomputedQueries(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -1219,22 +1227,22 @@ func (a *ActivityLog) regeneratePrecomputedQueries(ctx context.Context) error {
 	var intentLog *ActivityIntentLog
 	if intentLogEntry == nil {
 		regenerationIntentLog, err := a.createRegenerationIntentLog(ctx, a.clock.Now().UTC())
+		if errors.Is(err, previousMonthNotFoundErr) {
+			// if there are no segments earlier than the current month, consider
+			// this a success
+			return a.writeRegeneratedACME(ctx)
+		}
 		if err != nil {
 			return err
 		}
 		intentLog = regenerationIntentLog
-		a.logger.Debug("regenerating precomputed queries", "previous month", intentLog.PreviousMonth, "next month", intentLog.NextMonth)
+		a.logger.Debug("regenerating precomputed queries", "previous month", time.Unix(intentLog.PreviousMonth, 0).UTC(), "next month", time.Unix(intentLog.NextMonth, 0).UTC())
 	}
 	err = a.precomputedQueryWorker(ctx, intentLog)
 	if err != nil && !errors.Is(err, previousMonthNotFoundErr) {
 		return err
 	}
-
-	regeneratedEntry, err := logical.StorageEntryJSON(activityACMERegenerationKey, true)
-	if err != nil {
-		return err
-	}
-	return a.view.Put(ctx, regeneratedEntry)
+	return a.writeRegeneratedACME(ctx)
 }
 
 func (a *ActivityLog) createRegenerationIntentLog(ctx context.Context, now time.Time) (*ActivityIntentLog, error) {
@@ -1257,7 +1265,7 @@ func (a *ActivityLog) createRegenerationIntentLog(ctx context.Context, now time.
 	}
 
 	if intentLog.PreviousMonth == 0 {
-		return nil, fmt.Errorf("insufficient data to create a regeneration intent log")
+		return nil, previousMonthNotFoundErr
 	}
 
 	return intentLog, nil
@@ -2573,8 +2581,8 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context, intent *Activi
 	}
 
 	lastMonth := intent.PreviousMonth
-	lastMonthTime := time.Unix(lastMonth, 0)
-	a.logger.Info("computing queries", "month", lastMonthTime.UTC())
+	lastMonthTime := time.Unix(lastMonth, 0).UTC()
+	a.logger.Info("computing queries", "month", lastMonthTime)
 
 	times, err := a.availableLogs(ctx, lastMonthTime)
 	if err != nil {
@@ -2613,7 +2621,7 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context, intent *Activi
 	for _, startTime := range times {
 		// Do not work back further than the current retention window,
 		// which will just get deleted anyway.
-		if startTime.Before(retentionWindow) {
+		if startTime.Before(retentionWindow) && strictEnforcement {
 			break
 		}
 		reader, err := a.NewSegmentFileReader(ctx, startTime)
