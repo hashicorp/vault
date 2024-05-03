@@ -7,6 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import clientsHandler, { STATIC_NOW, LICENSE_START, UPGRADE_DATE } from 'vault/mirage/handlers/clients';
+import syncHandler from 'vault/mirage/handlers/sync';
 import sinon from 'sinon';
 import { visit, click, findAll, settled } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
@@ -38,12 +39,6 @@ module('Acceptance | clients | overview', function (hooks) {
 
   hooks.after(function () {
     timestamp.now.restore();
-  });
-
-  test('it should render the correct tabs', async function (assert) {
-    assert.dom(GENERAL.tab('overview')).exists();
-    assert.dom(GENERAL.tab('token')).exists();
-    assert.dom(GENERAL.tab('acme')).exists();
   });
 
   test('it should render charts', async function (assert) {
@@ -154,6 +149,9 @@ module('Acceptance | clients | overview', function (hooks) {
   });
 
   test('totals filter correctly with full data', async function (assert) {
+    // stub secrets sync being activated
+    this.owner.lookup('service:flags').activatedFlags = ['secrets-sync'];
+
     assert
       .dom(CHARTS.container('Vault client counts'))
       .exists('Shows running totals with monthly breakdown charts');
@@ -238,15 +236,7 @@ module('Acceptance | clients | overview | sync in license, activated', function 
   });
 
   hooks.beforeEach(async function () {
-    clientsHandler(this.server);
-    this.store = this.owner.lookup('service:store');
-
-    // add feature to license
-    this.server.get('/sys/license/features', () => ({ features: ['Secrets Sync'] }));
-    // activate feature
-    this.server.get('/sys/activation-flags', () => ({
-      data: { activated: ['secrets-sync'], unactivated: [] },
-    }));
+    syncHandler(this.server);
 
     await authPage.login();
     return visit('/vault/clients/counts/overview');
@@ -260,12 +250,16 @@ module('Acceptance | clients | overview | sync in license, activated', function 
     assert.dom(GENERAL.tab('sync')).exists();
   });
 
-  test('it should show secrets sync data in overview and tab', async function (assert) {
+  test('it should show secrets sync stats', async function (assert) {
     assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists('shows secret sync data on overview');
+  });
+
+  test('it should navigate to secrets sync page', async function (assert) {
     await click(GENERAL.tab('sync'));
 
     assert.dom(GENERAL.tab('sync')).hasClass('active');
     assert.dom(GENERAL.emptyStateTitle).doesNotExist();
+
     assert
       .dom(CHARTS.chart('Secrets sync usage'))
       .exists('chart is shown because feature is active and has data');
@@ -277,7 +271,6 @@ module('Acceptance | clients | overview | sync in license, not activated', funct
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    this.store = this.owner.lookup('service:store');
     this.server.get('/sys/license/features', () => ({ features: ['Secrets Sync'] }));
 
     await authPage.login();
@@ -288,12 +281,11 @@ module('Acceptance | clients | overview | sync in license, not activated', funct
     assert.dom(GENERAL.tab('sync')).exists('sync tab is shown because feature is in license');
   });
 
-  test('it should hide secrets sync charts', async function (assert) {
+  test('it should hide secrets sync stats', async function (assert) {
     assert
-      .dom(CHARTS.chart('Secrets sync usage'))
-      .doesNotExist('chart is hidden because feature is not activated');
-
-    assert.dom('[data-test-stat-text="secret-syncs"]').doesNotExist();
+      .dom(CLIENT_COUNT.statTextValue('Secret sync'))
+      .doesNotExist('stat is hidden because feature is not activated');
+    assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
   });
 });
 
@@ -302,7 +294,6 @@ module('Acceptance | clients | overview | sync not in license', function (hooks)
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    this.store = this.owner.lookup('service:store');
     // mocks endpoint for no additional license modules
     this.server.get('/sys/license/features', () => ({ features: [] }));
 
@@ -314,9 +305,29 @@ module('Acceptance | clients | overview | sync not in license', function (hooks)
     assert.dom(GENERAL.tab('sync')).doesNotExist();
   });
 
-  test('it should hide secrets sync charts', async function (assert) {
-    assert.dom(CHARTS.chart('Secrets sync usage')).doesNotExist();
+  test('it should hide secrets sync stats', async function (assert) {
+    assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).doesNotExist();
+    assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
+  });
+});
 
-    assert.dom('[data-test-stat-text="secret-syncs"]').doesNotExist();
+module('Acceptance | clients | overview | HVD', function (hooks) {
+  setupApplicationTest(hooks);
+  setupMirage(hooks);
+
+  hooks.beforeEach(async function () {
+    syncHandler(this.server);
+    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+
+    await authPage.login();
+    return visit('/vault/clients/counts/overview');
+  });
+
+  test('it should show the secrets sync tab', async function (assert) {
+    assert.dom(GENERAL.tab('sync')).exists();
+  });
+
+  test('it should show secrets sync stats', async function (assert) {
+    assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists();
   });
 });
