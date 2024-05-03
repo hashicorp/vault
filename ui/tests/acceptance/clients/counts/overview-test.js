@@ -61,9 +61,11 @@ module('Acceptance | clients | overview', function (hooks) {
   test('it should update charts when querying date ranges', async function (assert) {
     // query for single, historical month with no new counts (July 2023)
     await click(CLIENT_COUNT.rangeDropdown);
-    await click('[data-test-show-calendar]');
-    await click('[data-test-previous-year]');
-    await click(`[data-test-calendar-month=${ARRAY_OF_MONTHS[LICENSE_START.getMonth()]}]`);
+    await click(CLIENT_COUNT.calendarWidget.customEndMonth);
+    await click(CLIENT_COUNT.calendarWidget.previousYear);
+
+    const month = ARRAY_OF_MONTHS[LICENSE_START.getMonth()];
+    await click(CLIENT_COUNT.calendarWidget.calendarMonth(month));
     assert
       .dom(CLIENT_COUNT.usageStats('Vault client counts'))
       .doesNotExist('running total single month stat boxes do not show');
@@ -72,24 +74,24 @@ module('Acceptance | clients | overview', function (hooks) {
       .doesNotExist('running total month over month charts do not show');
     assert.dom(CLIENT_COUNT.attributionBlock).exists('attribution area shows');
     assert
-      .dom('[data-test-chart-container="new-clients"] [data-test-component="empty-state"]')
+      .dom(`${CHARTS.container('new-clients')} ${GENERAL.emptyStateTitle}`)
       .exists('new client attribution has empty state');
     assert
-      .dom('[data-test-empty-state-subtext]')
+      .dom(GENERAL.emptyStateSubtitle)
       .hasText('There are no new clients for this namespace during this time period.    ');
-    assert.dom('[data-test-chart-container="total-clients"]').exists('total client attribution chart shows');
+    assert.dom(CHARTS.container('total-clients')).exists('total client attribution chart shows');
 
     // reset to billing period
     await click(CLIENT_COUNT.rangeDropdown);
-    await click('[data-test-current-billing-period]');
+    await click(CLIENT_COUNT.currentBillingPeriod);
 
     // change billing start to month/year of upgrade to 1.10
     await click(CLIENT_COUNT.counts.startEdit);
     await click(CLIENT_COUNT.monthDropdown);
-    await click(`[data-test-dropdown-month="${ARRAY_OF_MONTHS[UPGRADE_DATE.getMonth()]}"]`);
+    await click(CLIENT_COUNT.dateDropdown.selectMonth(ARRAY_OF_MONTHS[UPGRADE_DATE.getMonth()]));
     await click(CLIENT_COUNT.yearDropdown);
-    await click(`[data-test-dropdown-year="${UPGRADE_DATE.getFullYear()}"]`);
-    await click('[data-test-date-dropdown-submit]');
+    await click(CLIENT_COUNT.dateDropdown.selectYear(UPGRADE_DATE.getFullYear()));
+    await click(CLIENT_COUNT.dateDropdown.submit);
     assert.dom(CLIENT_COUNT.attributionBlock).exists('Shows attribution area');
     assert
       .dom(CHARTS.container('Vault client counts'))
@@ -101,10 +103,10 @@ module('Acceptance | clients | overview', function (hooks) {
 
     // query for single, historical month (upgrade month)
     await click(CLIENT_COUNT.rangeDropdown);
-    await click('[data-test-show-calendar]');
-    assert.dom('[data-test-display-year]').hasText('2024');
-    await click('[data-test-previous-year]');
-    await click('[data-test-calendar-month="September"]');
+    await click(CLIENT_COUNT.calendarWidget.customEndMonth);
+    assert.dom(CLIENT_COUNT.calendarWidget.displayYear).hasText('2024');
+    await click(CLIENT_COUNT.calendarWidget.previousYear);
+    await click(CLIENT_COUNT.calendarWidget.calendarMonth('September'));
     assert
       .dom(CLIENT_COUNT.usageStats('Vault client counts'))
       .exists('running total single month usage stats show');
@@ -117,8 +119,8 @@ module('Acceptance | clients | overview', function (hooks) {
 
     // query historical date range (from September 2023 to December 2023)
     await click(CLIENT_COUNT.rangeDropdown);
-    await click('[data-test-show-calendar]');
-    await click('[data-test-calendar-month="December"]');
+    await click(CLIENT_COUNT.calendarWidget.customEndMonth);
+    await click(CLIENT_COUNT.calendarWidget.calendarMonth('December'));
 
     assert.dom(CLIENT_COUNT.attributionBlock).exists('Shows attribution area');
     assert
@@ -132,14 +134,14 @@ module('Acceptance | clients | overview', function (hooks) {
 
     // reset to billing period
     await click(CLIENT_COUNT.rangeDropdown);
-    await click('[data-test-current-billing-period]');
+    await click(CLIENT_COUNT.currentBillingPeriod);
     // query month older than count start date
     await click(CLIENT_COUNT.counts.startEdit);
     await click(CLIENT_COUNT.monthDropdown);
-    await click(`[data-test-dropdown-month="${ARRAY_OF_MONTHS[LICENSE_START.getMonth()]}"]`);
+    await click(CLIENT_COUNT.dateDropdown.selectMonth(ARRAY_OF_MONTHS[LICENSE_START.getMonth()]));
     await click(CLIENT_COUNT.yearDropdown);
-    await click(`[data-test-dropdown-year="${LICENSE_START.getFullYear() - 3}"]`);
-    await click('[data-test-date-dropdown-submit]');
+    await click(CLIENT_COUNT.dateDropdown.selectYear(LICENSE_START.getFullYear() - 3));
+    await click(CLIENT_COUNT.dateDropdown.submit);
     assert
       .dom(CLIENT_COUNT.counts.startDiscrepancy)
       .hasTextContaining(
