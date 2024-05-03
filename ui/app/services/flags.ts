@@ -7,6 +7,7 @@ import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { keepLatestTask } from 'ember-concurrency';
 import { DEBUG } from '@glimmer/env';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
 
@@ -75,5 +76,14 @@ export default class flagsService extends Service {
 
   fetchActivatedFlags() {
     return this.getActivatedFlags.perform();
+  }
+
+  @lazyCapabilities(apiPath`sys/activation-flags/secrets-sync/activate`) secretsSyncActivatePath;
+
+  get canActivateSecretsSync() {
+    return (
+      this.secretsSyncActivatePath.get('canCreate') !== false ||
+      this.secretsSyncActivatePath.get('canUpdate') !== false
+    );
   }
 }
