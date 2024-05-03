@@ -16,10 +16,8 @@ import timestamp from 'core/utils/timestamp';
 module('Integration | Component | calendar-widget', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
-  });
   hooks.beforeEach(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
     const CURRENT_DATE = new Date('2018-04-03T14:15:30');
     this.set('currentDate', CURRENT_DATE);
     this.set('calendarStartDate', subMonths(CURRENT_DATE, 12));
