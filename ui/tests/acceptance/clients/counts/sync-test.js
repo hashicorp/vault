@@ -29,10 +29,6 @@ module('Acceptance | clients | sync | activated', function (hooks) {
     return visit('/vault/clients/counts/sync');
   });
 
-  hooks.after(function () {
-    timestamp.now.restore();
-  });
-
   test('it should render charts when secrets sync is activated', async function (assert) {
     syncHandler(this.server);
     assert.dom(CHARTS.chart('Secrets sync usage')).exists('Secrets sync usage chart is rendered');
@@ -52,10 +48,6 @@ module('Acceptance | clients | sync | not activated', function (hooks) {
   hooks.beforeEach(async function () {
     await authPage.login();
     return visit('/vault/clients/counts/sync');
-  });
-
-  hooks.after(function () {
-    timestamp.now.restore();
   });
 
   test('it should show an empty state when secrets sync is not activated', async function (assert) {

@@ -29,10 +29,6 @@ module('Acceptance | clients | counts', function (hooks) {
     return authPage.login();
   });
 
-  hooks.after(function () {
-    timestamp.now.restore();
-  });
-
   test('it should prompt user to query start time for community version', async function (assert) {
     assert.expect(2);
     this.owner.lookup('service:version').type = 'community';

@@ -59,9 +59,6 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       </Clients::Page::Counts>
     `);
   });
-  hooks.after(function () {
-    timestamp.now.restore();
-  });
 
   test('it should render start date label and description based on version', async function (assert) {
     const versionService = this.owner.lookup('service:version');

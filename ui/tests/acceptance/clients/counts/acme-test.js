@@ -54,10 +54,6 @@ module('Acceptance | clients | counts | acme', function (hooks) {
     return visit('/vault');
   });
 
-  hooks.after(function () {
-    timestamp.now.restore();
-  });
-
   test('it navigates to acme tab', async function (assert) {
     assert.expect(3);
     await click(GENERAL.navLink('Client Count'));

@@ -42,9 +42,6 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       },
     ]);
   });
-  hooks.after(function () {
-    timestamp.now.restore();
-  });
 
   test('it renders', async function (assert) {
     await render(hbs`

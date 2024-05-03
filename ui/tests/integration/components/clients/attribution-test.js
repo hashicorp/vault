@@ -35,11 +35,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
     this.namespaceMountsData = by_namespace.find((ns) => ns.label === 'ns1').mounts;
   });
 
-  hooks.after(function () {
-    timestamp.now.restore();
-    this.csvDownloadStub.restore();
-  });
-
   test('it renders empty state with no data', async function (assert) {
     await render(hbs`
       <Clients::Attribution />

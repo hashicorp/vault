@@ -66,10 +66,6 @@ module('Integration | Component | clients/running-total', function (hooks) {
     });
   });
 
-  hooks.after(function () {
-    timestamp.now.restore();
-  });
-
   test('it renders with full monthly activity data', async function (assert) {
     await this.renderComponent();
 
