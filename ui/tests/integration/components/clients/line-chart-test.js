@@ -10,6 +10,7 @@ import { find, render, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { format, formatRFC3339, subMonths } from 'date-fns';
 import timestamp from 'core/utils/timestamp';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | clients/line-chart', function (hooks) {
   setupRenderingTest(hooks);
@@ -273,7 +274,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
 
     assert.dom('[data-test-component="empty-state"]').exists('renders empty state when no data');
     assert
-      .dom('[data-test-empty-state-subtext]')
+      .dom(GENERAL.emptyStateSubtitle)
       .hasText(
         `this is a custom message to explain why you're not seeing a line chart`,
         'custom message renders'
