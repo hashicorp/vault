@@ -16,13 +16,16 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type StoreService from 'vault/services/store';
 import type RouterService from '@ember/routing/router-service';
 import type VersionService from 'vault/services/version';
+import type FlagsService from 'vault/services/flags';
 import type { SyncDestinationAssociationMetrics } from 'vault/vault/adapters/sync/association';
 import type SyncDestinationModel from 'vault/vault/models/sync/destination';
 
 interface Args {
   destinations: Array<SyncDestinationModel>;
   totalVaultSecrets: number;
-  activatedFeatures: Array<string>;
+  isActivated: boolean;
+  licenseHasSecretsSync: boolean;
+  isHvdManaged: boolean;
 }
 
 export default class SyncSecretsDestinationsPageComponent extends Component<Args> {
@@ -30,6 +33,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @service declare readonly store: StoreService;
   @service declare readonly router: RouterService;
   @service declare readonly version: VersionService;
+  @service declare readonly flags: FlagsService;
 
   @tracked destinationMetrics: SyncDestinationAssociationMetrics[] = [];
   @tracked page = 1;
@@ -71,11 +75,14 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @task
   @waitFor
   *onFeatureConfirm() {
+    // must return null instead of root for non managed cluster.
+    const namespace = this.args.isHvdManaged ? 'admin' : null;
     try {
       yield this.store
         .adapterFor('application')
-        .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST');
-      this.router.transitionTo('vault.cluster.sync.secrets.overview');
+        .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST', { namespace });
+      // must refresh and not transition because transition does not refresh the model from within a namespace
+      yield this.router.refresh();
     } catch (error) {
       this.error = errorMessage(error);
       this.flashMessages.danger(`Error enabling feature \n ${errorMessage(error)}`);

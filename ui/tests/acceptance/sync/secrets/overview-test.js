@@ -162,8 +162,8 @@ module('Acceptance | sync | overview', function (hooks) {
       this.server.post('/sys/activation-flags/secrets-sync/activate', (_, req) => {
         assert.strictEqual(
           req.requestHeaders['X-Vault-Namespace'],
-          'admin/foo',
-          'Request is made to admin/foo namespace'
+          undefined,
+          'Request is made to undefined namespace'
         );
         return {};
       });
@@ -178,7 +178,8 @@ module('Acceptance | sync | overview', function (hooks) {
     });
 
     test('it should make activation-flag requests to correct namespace when managed', async function (assert) {
-      assert.expect(3);
+      assert.expect(4);
+      // should call GET activation-flags twice because we need an updated response after activating the feature
       this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
 
       this.server.get('/sys/activation-flags', (_, req) => {
