@@ -76,6 +76,9 @@ export default class ClientsCountsPageComponent extends Component<Args> {
           case version.includes('1.10'):
             explanation = '- We added monthly breakdowns and mount level attribution starting in 1.10.';
             break;
+          case version.includes('1.17'):
+            explanation = '- We separated ACME clients from non-entity clients starting in 1.17.';
+            break;
           default:
             explanation = '';
             break;
