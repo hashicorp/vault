@@ -53,6 +53,8 @@ export const PAGE = {
   overview: {
     optInBanner: '[data-test-secrets-sync-opt-in-banner]',
     optInBannerEnable: '[data-test-secrets-sync-opt-in-banner-enable]',
+    optInBannerDescription: '[data-test-secrets-sync-opt-in-banner-description]',
+    optInDismiss: '[data-test-secrets-sync-opt-in-banner] [data-test-icon="x"]',
     optInModal: '[data-test-secrets-sync-opt-in-modal]',
     optInCheck: '[data-test-opt-in-check]',
     optInConfirm: '[data-test-opt-in-confirm]',

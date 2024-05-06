@@ -64,15 +64,17 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'community';
       this.isActivated = false;
+      this.licenseHasSecretsSync = false;
+      this.destinations = [];
     });
 
     test('it should show an upsell CTA', async function (assert) {
       await this.renderComponent();
-
       assert
         .dom(title)
         .hasText('Secrets Sync Enterprise feature', 'page title indicates feature is only for Enterprise');
       assert.dom(cta.button).doesNotExist();
+      assert.dom(cta.summary).exists();
     });
   });
 
@@ -125,15 +127,51 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
   });
 
-  module('secrets sync is not activated and license has secrets sync', function (hooks) {
+  module('user does not have post permissions to activate', function (hooks) {
+    hooks.beforeEach(function () {
+      this.isActivated = false;
+      this.destinations = [];
+      this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub(['read']));
+    });
+
+    test('it should show the opt-in banner without the ability to activate', async function (assert) {
+      await this.renderComponent();
+
+      assert
+        .dom(overview.optInBannerDescription)
+        .hasText(
+          'To use this feature, specific activation is required. Please contact your administrator to activate.'
+        );
+      assert.dom(overview.optInBannerEnable).doesNotExist('Opt-in enable button does not show');
+    });
+
+    test('it should not show allow the user to dismiss the opt-in banner', async function (assert) {
+      await this.renderComponent();
+
+      assert.dom(overview.optInDismiss).doesNotExist('dismiss opt-in banner does not show');
+    });
+  });
+
+  module('secrets sync is not activated and license has secrets sync meep', function (hooks) {
     hooks.beforeEach(async function () {
       this.isActivated = false;
     });
 
-    test('it should show the opt-in banner', async function (assert) {
+    test('it should show the opt-in banner with activate description', async function (assert) {
       await this.renderComponent();
 
       assert.dom(overview.optInBanner).exists('Opt-in banner is shown');
+      assert
+        .dom(overview.optInBannerDescription)
+        .hasText(
+          "To use this feature, specific activation is required. Please review the feature documentation and enable it. If you're upgrading from beta, your previous data will be accessible after activation."
+        );
+    });
+
+    test('it should show dismiss banner', async function (assert) {
+      await this.renderComponent();
+
+      assert.dom(overview.optInDismiss).exists('dismiss opt-in banner shows');
     });
 
     test('it should navigate to the opt-in modal', async function (assert) {
