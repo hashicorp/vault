@@ -1,0 +1,3 @@
+```release-note:change
+ui: Upgrade Ember to version 5.4
+```
