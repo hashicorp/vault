@@ -26,7 +26,7 @@ module('Acceptance | clients | overview', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
+    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
     clientsHandler(this.server);
     this.store = this.owner.lookup('service:store');
     await authPage.login();
@@ -227,7 +227,7 @@ module('Acceptance | clients | overview | sync in license, activated', function 
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
+    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
     clientsHandler(this.server);
     this.store = this.owner.lookup('service:store');
 

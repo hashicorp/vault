@@ -24,7 +24,7 @@ module('Integration | Component | date-dropdown', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+    sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2018-04-03T14:15:30')));
   });
 
   test('it renders dropdown', async function (assert) {

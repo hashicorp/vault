@@ -19,7 +19,7 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+    sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2018-04-03T14:15:30')));
     this.backend = 'kubernetes-test';
     this.roleName = 'role-0';
 

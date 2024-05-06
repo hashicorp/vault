@@ -20,7 +20,7 @@ module('Acceptance | clients | sync | activated', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
+    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
     syncHandler(this.server);
     await authPage.login();
     return visit('/vault/clients/counts/sync');
