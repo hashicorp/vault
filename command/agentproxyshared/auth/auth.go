@@ -543,6 +543,9 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	}
 }
 
+// isRootToken checks if the secret in the argument is the root token
+// This is determinable without leaseDuration and isTokenFileMethod,
+// but those make it easier to rule out other tokens cheaply.
 func isRootToken(leaseDuration int, isTokenFileMethod bool, secret *api.Secret) bool {
 	// This check is cheaper than the others, so we do this first.
 	if leaseDuration == 0 && isTokenFileMethod && !secret.Renewable {
