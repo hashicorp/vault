@@ -15,6 +15,7 @@ import syncHandlers from 'vault/mirage/handlers/sync';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { Response } from 'miragejs';
 import { dateFormat } from 'core/helpers/date-format';
+import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 const { title, tab, overviewCard, cta, overview, pagination, emptyStateTitle, emptyStateMessage } = PAGE;
 
@@ -24,6 +25,8 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    // allow capabilities as root by default to allow users to POST to the secrets-sync/activate endpoint
+    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.version = this.owner.lookup('service:version');
     this.store = this.owner.lookup('service:store');
     this.version.type = 'enterprise';

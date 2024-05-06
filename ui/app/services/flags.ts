@@ -29,7 +29,7 @@ export default class flagsService extends Service {
   @tracked featureFlags: string[] = [];
 
   get isHvdManaged(): boolean {
-    return this.featureFlags.includes(FLAGS.vaultCloudNamespace);
+    return this.featureFlags?.includes(FLAGS.vaultCloudNamespace);
   }
 
   get hvdManagedNamespaceRoot(): string | null {
