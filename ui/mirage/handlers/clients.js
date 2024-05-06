@@ -232,7 +232,7 @@ export default function (server) {
     return {
       request_id: 'version-history-request-id',
       data: {
-        keys: ['1.9.0', '1.9.1', '1.10.1', '1.14.4', '1.16.0'],
+        keys: ['1.9.0', '1.9.1', '1.10.1', '1.14.4', '1.16.0', '1.17.0'],
         key_info: {
           // entity/non-entity breakdown added
           '1.9.0': {
@@ -263,6 +263,12 @@ export default function (server) {
             build_date: addMonths(LICENSE_START, 4).toISOString(),
             previous_version: '1.14.4',
             timestamp_installed: addMonths(LICENSE_START, 4).toISOString(),
+          },
+          // acme_clients separated from non-entity clients
+          '1.17.0': {
+            build_date: addMonths(LICENSE_START, 5).toISOString(),
+            previous_version: '1.16.0',
+            timestamp_installed: addMonths(LICENSE_START, 5).toISOString(),
           },
         },
       },
