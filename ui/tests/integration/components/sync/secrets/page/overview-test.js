@@ -70,6 +70,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     test('it should show an upsell CTA', async function (assert) {
       await this.renderComponent();
+
       assert
         .dom(title)
         .hasText('Secrets Sync Enterprise feature', 'page title indicates feature is only for Enterprise');
