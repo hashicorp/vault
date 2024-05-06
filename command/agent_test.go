@@ -3179,7 +3179,11 @@ vault {
 	}
 }
 
-// TestAgent_TokenRenewal TODO
+// TestAgent_TokenRenewal tests that the token renewal process by the LifetimeWatcher
+// for a token without the policy to allow it to renew itself doesn't result in many,
+// many unnecessary requests to attempt to renew itself.
+// Prior to a bug fix in the PR that added this test, this would have resulted
+// in hundreds of token renewal requests with no backoff.
 func TestAgent_TokenRenewal(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
@@ -3290,7 +3294,8 @@ log_level = "trace"
 		t.Errorf("stderr: %s", ui.ErrorWriter.String())
 	}
 
-	// Sleep, to allow the renewal/auth process to work
+	// Sleep, to allow the renewal/auth process to work and ensure that it doesn't
+	// go crazy with renewals.
 	time.Sleep(30 * time.Second)
 
 	fileBytes, err := os.ReadFile(auditLogFileName)
@@ -3304,8 +3309,11 @@ log_level = "trace"
 	// Prior to the fix made in the same PR this test was added, it would trigger many, many
 	// retries (hundreds to thousands in less than a minute).
 	// We really want to make sure that doesn't happen.
-	if strings.Count(stringAudit, "auth/token/renew-self") > 10 {
-		t.Fatalf("did too many renews, full audit log: %s", stringAudit)
+	numberOfRenewSelves := strings.Count(stringAudit, "auth/token/renew-self")
+	// We actually expect ~6, but I added some buffer for CI weirdness. It can also vary
+	// due to the grace added/removed from the sleep in LifetimeWatcher too.
+	if numberOfRenewSelves > 10 {
+		t.Fatalf("did too many renews -- Vault received %d renew-self requests", numberOfRenewSelves)
 	}
 }
 
