@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncHandler from 'vault/mirage/handlers/sync';
-import { STATIC_NOW } from 'vault/mirage/handlers/clients';
+import { CONFIG_RESPONSE, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { visit, click, currentURL } from '@ember/test-helpers';
 import sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
@@ -39,6 +39,9 @@ module('Acceptance | clients | sync | not activated', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    this.server.get('/sys/internal/counters/config', function () {
+      return CONFIG_RESPONSE;
+    });
     sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
     await authPage.login();
     return visit('/vault/clients/counts/sync');
