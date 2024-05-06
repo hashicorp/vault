@@ -158,7 +158,6 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     // https://github.com/hashicorp/vault/issues/5960
     test('version 1: nested paths creation maintains ability to navigate the tree', async function (assert) {
       const enginePath = this.backend;
-      // await visit('/vault/secrets');
       await runCmd([
         `write ${enginePath}/1/2 foo=bar`,
         `write ${enginePath}/1/2/3/4 foo=bar`,
