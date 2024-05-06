@@ -134,6 +134,8 @@ function prepare_legal() {
   mkdir -p ".release/linux/package/usr/share/doc/$PKG_NAME"
   cp dist/EULA.txt ".release/linux/package/usr/share/doc/$PKG_NAME/EULA.txt"
   cp dist/TermsOfEvaluation.txt ".release/linux/package/usr/share/doc/$PKG_NAME/TermsOfEvaluation.txt"
+  mkdir -p ".release/linux/package/usr/share/doc/$PKG_NAME"
+  cp LICENSE "$LICENSE_DIR/LICENSE.txt"
   popd
 }
 
