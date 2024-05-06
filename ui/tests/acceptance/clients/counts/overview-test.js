@@ -25,19 +25,12 @@ module('Acceptance | clients | overview', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
-  });
-
   hooks.beforeEach(async function () {
+    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
     clientsHandler(this.server);
     this.store = this.owner.lookup('service:store');
     await authPage.login();
     return visit('/vault/clients/counts/overview');
-  });
-
-  hooks.after(function () {
-    timestamp.now.restore();
   });
 
   test('it should render the correct tabs', async function (assert) {
@@ -233,11 +226,8 @@ module('Acceptance | clients | overview | sync in license, activated', function 
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
-  });
-
   hooks.beforeEach(async function () {
+    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
     clientsHandler(this.server);
     this.store = this.owner.lookup('service:store');
 
@@ -250,10 +240,6 @@ module('Acceptance | clients | overview | sync in license, activated', function 
 
     await authPage.login();
     return visit('/vault/clients/counts/overview');
-  });
-
-  hooks.after(function () {
-    timestamp.now.restore();
   });
 
   test('it should render the correct tabs', async function (assert) {

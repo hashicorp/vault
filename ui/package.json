@@ -155,7 +155,7 @@
     "ember-responsive": "5.0.0",
     "ember-router-helpers": "^0.4.0",
     "ember-service-worker": "meirish/ember-service-worker#configurable-scope",
-    "ember-sinon": "^4.0.0",
+    "ember-sinon-qunit": "^7.4.0",
     "ember-source": "~4.12.0",
     "ember-style-modifier": "^4.1.0",
     "ember-svg-jar": "2.4.4",

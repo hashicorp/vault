@@ -25,11 +25,8 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
-  });
-
   hooks.beforeEach(async function () {
+    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
     clientsHandler(this.server);
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.store = this.owner.lookup('service:store');
@@ -58,9 +55,6 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
         <div data-test-yield>Yield block</div>
       </Clients::Page::Counts>
     `);
-  });
-  hooks.after(function () {
-    timestamp.now.restore();
   });
 
   test('it should render start date label and description based on version', async function (assert) {
@@ -205,7 +199,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
   });
 
   test('it renders alert if upgrade happened within queried activity', async function (assert) {
-    assert.expect(4);
+    assert.expect(5);
     this.versionHistory = await this.store.findAll('clients/version-history').then((resp) => {
       return resp.map(({ version, previousVersion, timestampInstalled }) => {
         return {
@@ -221,7 +215,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     assert
       .dom(CLIENT_COUNT.upgradeWarning)
       .hasTextContaining(
-        `Client count data contains 2 upgrades Vault was upgraded during this time period. Keep this in mind while looking at the data. Visit our Client count FAQ for more information.`,
+        `Client count data contains 3 upgrades Vault was upgraded during this time period. Keep this in mind while looking at the data. Visit our Client count FAQ for more information.`,
         'it renders title and subtext'
       );
     assert
@@ -230,7 +224,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
         '1.9.1',
         'Warning does not include subsequent patch releases (e.g. 1.9.1) of the same notable upgrade.'
       );
-    const [first, second] = findAll(`${CLIENT_COUNT.upgradeWarning} li`);
+    const [first, second, third] = findAll(`${CLIENT_COUNT.upgradeWarning} li`);
     assert
       .dom(first)
       .hasText(
@@ -243,6 +237,13 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       .hasTextContaining(
         `1.10.1 (upgraded on Sep 2, 2023) - We added monthly breakdowns and mount level attribution starting in 1.10.`,
         'alert includes 1.10.1 upgrade'
+      );
+
+    assert
+      .dom(third)
+      .hasTextContaining(
+        `1.17.0 (upgraded on Dec 2, 2023) - We separated ACME clients from non-entity clients starting in 1.17.`,
+        'alert includes 1.17.0 upgrade'
       );
   });
 
