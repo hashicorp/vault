@@ -1685,16 +1685,16 @@ func (c *ServerCommand) Run(args []string) int {
 				}
 			}
 
+			// notify ServiceRegistration that a configuration reload has occurred
+			if sr := coreConfig.GetServiceRegistration(); sr != nil && config.ServiceRegistration != nil {
+				sr.NotifyConfigurationReload(config.ServiceRegistration.Config)
+			}
+
 			if err := core.ReloadCensus(); err != nil {
 				c.UI.Error(err.Error())
 			}
 
 			core.ReloadReplicationCanaryWriteInterval()
-
-			// notify ServiceRegistration that a configuration reload has occurred
-			if sr := coreConfig.GetServiceRegistration(); sr != nil {
-				sr.NotifyConfigurationReload(config.ServiceRegistration.Config)
-			}
 
 		RUNRELOADFUNCS:
 			if err := c.Reload(c.reloadFuncsLock, c.reloadFuncs, c.flagConfigs, core); err != nil {
