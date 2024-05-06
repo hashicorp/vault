@@ -53,6 +53,7 @@
 
           <SearchSelect
             class="is-flex-grow-1"
+            @ariaLabel={{this.searchSelectParams.title}}
             @selectLimit="1"
             @models={{array this.searchSelectParams.model}}
             @placeholder={{this.searchSelectParams.placeholder}}
