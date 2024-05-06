@@ -49,6 +49,7 @@ import { addToArray } from 'vault/helpers/add-to-array';
  * @param {string} id - The name of the form field
  * @param {string} [label] - Label for this form field
  * @param {string} [labelClass] - overwrite default label size (14px) from class="is-label"
+ * @param {string} [ariaLabel] - fallback accessible label if label is not provided
  * @param {string} [subText] - Text to be displayed below the label
  * @param {string} fallbackComponent - name of component to be rendered if the API call 403s
  * @param {string} [helpText] - Text to be displayed in the info tooltip for this form field
@@ -142,7 +143,7 @@ export default class SearchSelect extends Component {
     }
 
     if (!this.args.models) {
-      if (this.args.options) {
+      if (Array.isArray(this.args.options)) {
         const { options } = this.args;
         // if options are nested, let parent handle formatting - see path-filter-config-list.js
         this.dropdownOptions = options.some((e) => Object.keys(e).includes('groupName'))

@@ -31,6 +31,7 @@ lint:
       - vault/hcp_link/proto/node_status/status.proto
       - vault/replication_services_ent.proto
     PACKAGE_DIRECTORY_MATCH:
+      - builtin/logical/pki/metadata.proto
       - enthelpers/merkle/types_ent.proto
       - enthelpers/wal/types_ent.proto
       - helper/forwarding/types.proto
@@ -63,6 +64,7 @@ lint:
       - vault/replication_services_ent.proto
       - vault/request_forwarding_service.proto
     PACKAGE_VERSION_SUFFIX:
+      - builtin/logical/pki/metadata.proto
       - enthelpers/merkle/types_ent.proto
       - enthelpers/wal/types_ent.proto
       - helper/forwarding/types.proto

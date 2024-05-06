@@ -19,6 +19,13 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+type TokenCapabilityRefreshBehaviour int
+
+const (
+	TokenCapabilityRefreshBehaviourOptimistic TokenCapabilityRefreshBehaviour = iota
+	TokenCapabilityRefreshBehaviourPessimistic
+)
+
 const (
 	// DefaultWorkers is the default number of workers for the worker pool.
 	DefaultWorkers = 5
@@ -37,15 +44,17 @@ type StaticSecretCapabilityManager struct {
 	logger                                     hclog.Logger
 	workerPool                                 *workerpool.WorkerPool
 	staticSecretTokenCapabilityRefreshInterval time.Duration
+	tokenCapabilityRefreshBehaviour            TokenCapabilityRefreshBehaviour
 }
 
 // StaticSecretCapabilityManagerConfig is the configuration for initializing a new
 // StaticSecretCapabilityManager.
 type StaticSecretCapabilityManagerConfig struct {
-	LeaseCache                                 *LeaseCache
-	Logger                                     hclog.Logger
-	Client                                     *api.Client
-	StaticSecretTokenCapabilityRefreshInterval time.Duration
+	LeaseCache                                  *LeaseCache
+	Logger                                      hclog.Logger
+	Client                                      *api.Client
+	StaticSecretTokenCapabilityRefreshInterval  time.Duration
+	StaticSecretTokenCapabilityRefreshBehaviour string
 }
 
 // NewStaticSecretCapabilityManager creates a new instance of a StaticSecretCapabilityManager.
@@ -70,6 +79,18 @@ func NewStaticSecretCapabilityManager(conf *StaticSecretCapabilityManagerConfig)
 		conf.StaticSecretTokenCapabilityRefreshInterval = DefaultStaticSecretTokenCapabilityRefreshInterval
 	}
 
+	behaviour := TokenCapabilityRefreshBehaviourOptimistic
+	if conf.StaticSecretTokenCapabilityRefreshBehaviour != "" {
+		switch conf.StaticSecretTokenCapabilityRefreshBehaviour {
+		case "optimistic":
+			behaviour = TokenCapabilityRefreshBehaviourOptimistic
+		case "pessimistic":
+			behaviour = TokenCapabilityRefreshBehaviourPessimistic
+		default:
+			return nil, fmt.Errorf("TokenCapabilityRefreshBehaviour must be either \"optimistic\" or \"pessimistic\"")
+		}
+	}
+
 	workerPool := workerpool.New(DefaultWorkers)
 
 	return &StaticSecretCapabilityManager{
@@ -78,6 +99,7 @@ func NewStaticSecretCapabilityManager(conf *StaticSecretCapabilityManagerConfig)
 		logger:     conf.Logger,
 		workerPool: workerPool,
 		staticSecretTokenCapabilityRefreshInterval: conf.StaticSecretTokenCapabilityRefreshInterval,
+		tokenCapabilityRefreshBehaviour:            behaviour,
 	}, nil
 }
 
@@ -136,9 +158,15 @@ func (sscm *StaticSecretCapabilityManager) StartRenewingCapabilities(indexToRene
 
 		capabilities, err := getCapabilities(indexReadablePaths, client)
 		if err != nil {
-			sscm.logger.Error("error when attempting to retrieve updated token capabilities", "indexToRenew.ID", indexToRenew.ID, "err", err)
-			sscm.submitWorkToPoolAfterInterval(work)
-			return
+			sscm.logger.Warn("error when attempting to retrieve updated token capabilities", "indexToRenew.ID", indexToRenew.ID, "err", err)
+			if sscm.tokenCapabilityRefreshBehaviour == TokenCapabilityRefreshBehaviourPessimistic {
+				// Vault is be sealed or unreachable. If pessimistic, assume we might have
+				// lost access. Set capabilities to an empty set, so they are all removed.
+				capabilities = make(map[string][]string)
+			} else {
+				sscm.submitWorkToPoolAfterInterval(work)
+				return
+			}
 		}
 
 		newReadablePaths := reconcileCapabilities(indexReadablePaths, capabilities)
@@ -188,6 +216,7 @@ func (sscm *StaticSecretCapabilityManager) StartRenewingCapabilities(indexToRene
 				sscm.submitWorkToPoolAfterInterval(work)
 				return
 			}
+			sscm.logger.Debug("successfully evicted capabilities index from cache", "index.ID", indexToRenew.ID)
 			// If we successfully evicted the index, no need to re-submit the work to the pool.
 			return
 		}

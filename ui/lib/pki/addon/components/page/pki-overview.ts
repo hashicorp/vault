@@ -13,8 +13,8 @@ import type PkiIssuerModel from 'vault/models/pki/issuer';
 import type PkiRoleModel from 'vault/models/pki/role';
 
 interface Args {
-  issuers: PkiIssuerModel | number;
-  roles: PkiRoleModel | number;
+  issuers: PkiIssuerModel[] | number;
+  roles: PkiRoleModel[] | number;
   engine: string;
 }
 

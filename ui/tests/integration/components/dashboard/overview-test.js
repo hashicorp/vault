@@ -9,6 +9,7 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
+import { LICENSE_START } from 'vault/mirage/handlers/clients';
 
 module('Integration | Component | dashboard/overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -60,6 +61,14 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       ],
     };
     this.refreshModel = () => {};
+    this.server.get('sys/internal/counters/config', function () {
+      return {
+        request_id: 'some-config-id',
+        data: {
+          billing_start_timestamp: LICENSE_START.toISOString(),
+        },
+      };
+    });
   });
 
   test('it should show dashboard empty states', async function (assert) {
@@ -129,7 +138,6 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       @replication={{this.replication}}
       @version={{this.version}}
       @isRootNamespace={{true}}
-      @license={{this.license}}
       @refreshModel={{this.refreshModel}} />`
     );
     assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
@@ -140,43 +148,11 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     assert.dom(DASHBOARD.cardName('client-count')).exists();
   });
 
-  test('it should hide client count on enterprise w/o license ', async function (assert) {
-    this.version = this.owner.lookup('service:version');
-    this.version.version = '1.13.1+ent';
-    this.version.type = 'enterprise';
-    this.isRootNamespace = true;
-
-    await render(
-      hbs`
-      <Dashboard::Overview
-        @secretsEngines={{this.secretsEngines}}
-        @vaultConfiguration={{this.vaultConfiguration}}
-        @replication={{this.replication}}
-        @version={{this.version}}
-        @isRootNamespace={{this.isRootNamespace}}
-        @refreshModel={{this.refreshModel}}
-      />`
-    );
-
-    assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
-    assert.dom('[data-test-badge-namespace]').exists();
-    assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
-    assert.dom(DASHBOARD.cardName('learn-more')).exists();
-    assert.dom(DASHBOARD.cardName('quick-actions')).exists();
-    assert.dom(DASHBOARD.cardName('configuration-details')).exists();
-    assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
-  });
-
   test('it should hide replication on enterprise not on root namespace', async function (assert) {
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1+ent';
     this.version.type = 'enterprise';
     this.isRootNamespace = false;
-    this.license = {
-      autoloaded: {
-        license_id: '7adbf1f4-56ef-35cd-3a6c-50ef2627865d',
-      },
-    };
 
     await render(
       hbs`
@@ -186,7 +162,6 @@ module('Integration | Component | dashboard/overview', function (hooks) {
         @secretsEngines={{this.secretsEngines}}
         @vaultConfiguration={{this.vaultConfiguration}}
         @replication={{this.replication}}
-        @license={{this.license}}
         @refreshModel={{this.refreshModel}} />`
     );
 
@@ -197,7 +172,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     assert.dom(DASHBOARD.cardName('quick-actions')).exists();
     assert.dom(DASHBOARD.cardName('configuration-details')).exists();
     assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
-    assert.dom(DASHBOARD.cardName('client-count')).exists();
+    assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
   });
 
   module('learn more card', function () {
@@ -238,7 +213,6 @@ module('Integration | Component | dashboard/overview', function (hooks) {
           <Dashboard::Overview
             @version={{this.version}}
             @isRootNamespace={{this.isRootNamespace}}
-            @license={{this.license}}
             @secretsEngines={{this.secretsEngines}}
             @vaultConfiguration={{this.vaultConfiguration}}
             @replication={{this.replication}}
