@@ -19,15 +19,8 @@ module('Integration | Component | dashboard/client-count-card', function (hooks)
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
-  });
-
-  hooks.after(function () {
-    timestamp.now.restore();
-  });
-
   test('it should display client count information', async function (assert) {
+    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
     assert.expect(6);
     const { months, total } = ACTIVITY_RESPONSE_STUB;
     const [latestMonth] = months.slice(-1);

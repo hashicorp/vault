@@ -19,13 +19,13 @@ module('Integration | Component | clients/attribution', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+    this.timestampStub = sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2018-04-03T14:15:30')));
   });
 
   hooks.beforeEach(function () {
     const { total, by_namespace } = SERIALIZED_ACTIVITY_RESPONSE;
     this.csvDownloadStub = sinon.stub(this.owner.lookup('service:download'), 'csv');
-    const mockNow = timestamp.now();
+    const mockNow = this.timestampStub();
     this.mockNow = mockNow;
     this.startTimestamp = formatRFC3339(subMonths(mockNow, 6));
     this.timestamp = formatRFC3339(mockNow);
@@ -36,7 +36,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
   });
 
   hooks.after(function () {
-    timestamp.now.restore();
     this.csvDownloadStub.restore();
   });
 
