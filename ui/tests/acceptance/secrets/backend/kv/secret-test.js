@@ -19,6 +19,7 @@ import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run
 import { runCmd } from 'vault/tests/helpers/commands';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const deleteEngine = async function (enginePath, assert) {
   await logout.visit();
@@ -157,31 +158,29 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     // https://github.com/hashicorp/vault/issues/5960
     test('version 1: nested paths creation maintains ability to navigate the tree', async function (assert) {
       const enginePath = this.backend;
-      const secretPath = '1/2/3/4';
-      await listPage.create();
-      await editPage.createSecret(secretPath, 'foo', 'bar');
+      // await visit('/vault/secrets');
+      await runCmd([
+        `write ${enginePath}/1/2 foo=bar`,
+        `write ${enginePath}/1/2/3/4 foo=bar`,
+        `write ${enginePath}/1/2/3/4a foo=bar`,
+        'refresh',
+      ]);
+      await settled();
+      // navigate to farthest leaf
+      await visit(`/vault/secrets/${enginePath}/list`);
+      assert.dom('[data-test-component="navigate-input"]').hasNoValue();
+      assert.dom('[data-test-secret-link]').exists({ count: 1 });
+      await click('[data-test-secret-link="1/"]');
+      assert.dom('[data-test-component="navigate-input"]').hasValue('1/');
+      assert.dom('[data-test-secret-link]').exists({ count: 2 });
+      await click('[data-test-secret-link="1/2/"]');
+      assert.dom('[data-test-component="navigate-input"]').hasValue('1/2/');
+      assert.dom('[data-test-secret-link]').exists({ count: 1 });
+      await click('[data-test-secret-link="1/2/3/"]');
+      assert.dom('[data-test-component="navigate-input"]').hasValue('1/2/3/');
+      assert.dom('[data-test-secret-link]').exists({ count: 2 });
 
-      // setup an ancestor for when we delete
-      await listPage.visitRoot({ backend: enginePath });
-      await listPage.secrets.filterBy('text', '1/')[0].click();
-      await listPage.create();
-      await editPage.createSecret('1/2', 'foo', 'bar');
-
-      // lol we have to do this because ember-cli-page-object doesn't like *'s in visitable
-      await listPage.visitRoot({ backend: enginePath });
-      await listPage.secrets.filterBy('text', '1/')[0].click();
-      await listPage.secrets.filterBy('text', '2/')[0].click();
-      await listPage.secrets.filterBy('text', '3/')[0].click();
-      await listPage.create();
-
-      await editPage.createSecret(secretPath + 'a', 'foo', 'bar');
-      await listPage.visitRoot({ backend: enginePath });
-      await listPage.secrets.filterBy('text', '1/')[0].click();
-      await listPage.secrets.filterBy('text', '2/')[0].click();
-      const secretLink = listPage.secrets.filterBy('text', '3/')[0];
-      assert.ok(secretLink, 'link to the 3/ branch displays properly');
-
-      await listPage.secrets.filterBy('text', '3/')[0].click();
+      // delete the items
       await listPage.secrets.objectAt(0).menuToggle();
       await settled();
       await listPage.delete();
@@ -190,17 +189,20 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.list');
       assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/list/1/2/3/`, 'remains on the page');
 
+      assert.dom('[data-test-secret-link]').exists({ count: 1 });
       await listPage.secrets.objectAt(0).menuToggle();
       await listPage.delete();
       await listPage.confirmDelete();
       await settled();
-      assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.list');
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${enginePath}/list/1/`,
-        'navigates to the ancestor created earlier'
-      );
+      assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/list/1/2/3/`, 'remains on the page');
+      assert.dom(GENERAL.emptyStateTitle).hasText('No secrets under "1/2/3/".');
+      await fillIn('[data-test-component="navigate-input"]', '1/2/');
+      assert.dom(GENERAL.emptyStateTitle).hasText('No secrets under "1/2/".');
+      await click('[data-test-list-root-link]');
+      assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/list`);
+      assert.dom('[data-test-secret-link]').exists({ count: 1 });
     });
+
     test('first level secrets redirect properly upon deletion', async function (assert) {
       const secretPath = 'test';
       await listPage.create();
