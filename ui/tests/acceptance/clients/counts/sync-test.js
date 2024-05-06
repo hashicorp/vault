@@ -7,14 +7,13 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncHandler from 'vault/mirage/handlers/sync';
-import { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
+import { CONFIG_RESPONSE, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { visit, click, currentURL } from '@ember/test-helpers';
 import sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
 import authPage from 'vault/tests/pages/auth';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT, CHARTS } from 'vault/tests/helpers/clients/client-count-selectors';
-import { formatRFC3339 } from 'date-fns';
 
 module('Acceptance | clients | sync | activated', function (hooks) {
   setupApplicationTest(hooks);
@@ -52,18 +51,7 @@ module('Acceptance | clients | sync | not activated', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.server.get('/sys/internal/counters/config', function () {
-      return {
-        request_id: 'abc-config',
-        data: {
-          billing_start_timestamp: formatRFC3339(LICENSE_START),
-          default_report_months: 12,
-          enabled: 'default-enabled',
-          minimum_retention_months: 48,
-          queries_available: false,
-          reporting_enabled: true,
-          retention_months: 48,
-        },
-      };
+      return CONFIG_RESPONSE;
     });
     await authPage.login();
     return visit('/vault/clients/counts/sync');
