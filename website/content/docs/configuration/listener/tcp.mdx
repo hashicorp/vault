@@ -206,8 +206,8 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
   used for checking the authenticity of client.
 
 - `tls_disable_client_certs` `(string: "false")` – Turns off client
-  authentication for this listener. The default behavior (when this is false)
-  is for Vault to request client certificates when available.
+  authentication for this listener. The default behavior (when this is false) 
+  is for Vault to request client authentication certificates when available.
 
   ~> **Warning**: The `tls_disable_client_certs` and `tls_require_and_verify_client_cert` fields in the listener stanza of the Vault server configuration are mutually exclusive fields. Please ensure they are not both set to true. TLS client verification remains optional with default settings and is not enforced.
 
