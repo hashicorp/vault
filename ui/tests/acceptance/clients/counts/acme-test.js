@@ -24,11 +24,8 @@ module('Acceptance | clients | counts | acme', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
-  });
-
   hooks.beforeEach(async function () {
+    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
     this.server.get('sys/internal/counters/activity', () => {
       return {
         request_id: 'some-activity-id',

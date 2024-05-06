@@ -38,11 +38,8 @@ module('Acceptance | clients | sync | not activated', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
-  });
-
   hooks.beforeEach(async function () {
+    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
     await authPage.login();
     return visit('/vault/clients/counts/sync');
   });
