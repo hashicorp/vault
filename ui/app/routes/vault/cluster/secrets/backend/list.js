@@ -15,6 +15,20 @@ import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
 
+function getValidPage(pageParam) {
+  if (typeof pageParam === 'number') {
+    return pageParam;
+  }
+  if (typeof pageParam === 'string') {
+    try {
+      return parseInt(pageParam, 10) || 1;
+    } catch (e) {
+      return 1;
+    }
+  }
+  return 1;
+}
+
 export default Route.extend({
   store: service(),
   templateName: 'vault/cluster/secrets/backend/list',
@@ -119,7 +133,7 @@ export default Route.extend({
           id: secret,
           backend,
           responsePath: 'data.keys',
-          page: params.page || 1,
+          page: getValidPage(params.page),
           pageFilter: params.pageFilter,
         })
         .then((model) => {
@@ -127,8 +141,7 @@ export default Route.extend({
           return model;
         })
         .catch((err) => {
-          // if we're at the root we don't want to throw
-          if (backendModel && err.httpStatus === 404 && secret === '') {
+          if (backendModel && err.httpStatus === 404) {
             return [];
           } else {
             // else we're throwing and dealing with this in the error action
