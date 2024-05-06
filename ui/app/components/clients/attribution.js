@@ -234,14 +234,9 @@ export default class Attribution extends Component {
 
   get modalExportText() {
     const { isSecretsSyncActivated } = this.args;
-
-    const prefix = 'This export will include the namespace path, mount path and associated total, entity';
-    const mid = isSecretsSyncActivated ? ', non-entity and secrets sync clients' : ' and non-entity clients';
-    const suffix = ` for the
-    ${this.formattedEndDate ? 'date range' : 'month'}
-    below.`;
-
-    return `${prefix}${mid}${suffix}`;
+    return `This export will include the namespace path, mount path and associated total entity, non-entity${
+      isSecretsSyncActivated ? ', ACME and secrets sync clients' : ' and ACME clients'
+    } for the ${this.formattedEndDate ? 'date range' : 'month'} below.`;
   }
 
   @action
