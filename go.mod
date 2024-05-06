@@ -12,7 +12,7 @@ module github.com/hashicorp/vault
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
 go 1.21
 
-toolchain go1.21.8
+toolchain go1.22.2
 
 replace github.com/hashicorp/vault/api => ./api
 
@@ -82,7 +82,7 @@ require (
 	github.com/hashicorp/cap v0.6.0
 	github.com/hashicorp/cap/ldap v0.0.0-20240328153749-fcfe271d0227
 	github.com/hashicorp/cli v1.1.6
-	github.com/hashicorp/consul-template v0.37.3
+	github.com/hashicorp/consul-template v0.37.5
 	github.com/hashicorp/consul/api v1.27.0
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/eventlogger v0.2.8
@@ -234,7 +234,7 @@ require (
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	k8s.io/apimachinery v0.29.1
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
-	layeh.com/radius v0.0.0-20190322222518-890bc1058917
+	layeh.com/radius v0.0.0-20231213012653-1006025d24f8
 	nhooyr.io/websocket v1.8.7
 )
 

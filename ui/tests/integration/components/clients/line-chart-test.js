@@ -15,7 +15,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 module('Integration | Component | clients/line-chart', function (hooks) {
   setupRenderingTest(hooks);
   hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+    this.timestampStub = sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2018-04-03T14:15:30')));
   });
   hooks.beforeEach(function () {
     this.set('xKey', 'foo');
@@ -43,9 +43,6 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       },
     ]);
   });
-  hooks.after(function () {
-    timestamp.now.restore();
-  });
 
   test('it renders', async function (assert) {
     await render(hbs`
@@ -71,7 +68,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
   });
 
   test('it renders upgrade data', async function (assert) {
-    const now = timestamp.now();
+    const now = this.timestampStub();
     this.set('dataset', [
       {
         foo: formatRFC3339(subMonths(now, 4)),
@@ -125,7 +122,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
 
   test('it renders tooltip', async function (assert) {
     assert.expect(1);
-    const now = timestamp.now();
+    const now = this.timestampStub();
     const tooltipData = [
       {
         month: format(subMonths(now, 4), 'M/yy'),

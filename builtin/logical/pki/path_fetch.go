@@ -248,7 +248,7 @@ func pathFetchListCerts(b *backend) *framework.Path {
 }
 
 func (b *backend) pathFetchCertList(ctx context.Context, req *logical.Request, _ *framework.FieldData) (response *logical.Response, retErr error) {
-	entries, err := req.Storage.List(ctx, "certs/")
+	entries, err := req.Storage.List(ctx, issuing.PathCerts)
 	if err != nil {
 		return nil, err
 	}

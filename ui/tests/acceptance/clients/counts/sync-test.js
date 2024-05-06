@@ -18,20 +18,12 @@ import { CLIENT_COUNT, CHARTS } from 'vault/tests/helpers/clients/client-count-s
 module('Acceptance | clients | sync', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
-
   module('sync activated', function (hooks) {
-    hooks.before(function () {
-      sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
-    });
-
     hooks.beforeEach(async function () {
+      sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
       syncHandler(this.server);
       await authPage.login();
       return visit('/vault/clients/counts/sync');
-    });
-
-    hooks.after(function () {
-      timestamp.now.restore();
     });
 
     test('it should render charts when secrets sync is activated', async function (assert) {
@@ -43,17 +35,10 @@ module('Acceptance | clients | sync', function (hooks) {
   });
 
   module('sync not activated', function (hooks) {
-    hooks.before(function () {
-      sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
-    });
-
     hooks.beforeEach(async function () {
+      sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
       await authPage.login();
       return visit('/vault/clients/counts/sync');
-    });
-
-    hooks.after(function () {
-      timestamp.now.restore();
     });
 
     test('it should show an empty state when secrets sync is not activated', async function (assert) {
