@@ -48,17 +48,12 @@ const generateHealthResponse = (now, state) => {
 module('Acceptance | Enterprise | License banner warnings', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
-  });
   hooks.beforeEach(function () {
+    sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2018-04-03T14:15:30')));
     this.now = timestamp.now();
   });
   hooks.afterEach(function () {
     this.server.shutdown();
-  });
-  hooks.after(function () {
-    timestamp.now.restore();
   });
 
   test('it shows no license banner if license expires in > 30 days', async function (assert) {
