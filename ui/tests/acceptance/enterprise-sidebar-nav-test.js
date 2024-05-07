@@ -41,10 +41,11 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
       'Replication performance route renders'
     );
 
-    await click(link('Disaster Recovery'));
-    assert.strictEqual(currentURL(), '/vault/replication/dr', 'Replication dr route renders');
-    // for some reason this link would locally cause the testing browser to navigate
-    // manually redirecting to dashboard resolves the issue
+    // for some reason clicking this link would cause the testing browser locally
+    // to navigate to 'vault/replication/dr' and halt the test runner
+    assert
+      .dom(link('Disaster Recovery'))
+      .hasAttribute('href', '/ui/vault/replication/dr', 'Replication dr route renders');
     await visit('/vault');
 
     await click(link('Client Count'));
