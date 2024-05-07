@@ -38,27 +38,25 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
     };
   });
 
-  [1, 2, 3, 4, 5].forEach((i) => {
-    test(`it renders ${i}`, async function (assert) {
-      await this.renderComponent();
+  test(`it renders`, async function (assert) {
+    await this.renderComponent();
 
-      await waitFor(SELECTORS.container);
+    await waitFor(SELECTORS.container);
 
-      assert.dom(SELECTORS.container).exists('renders component');
-      assert.dom(SELECTORS.apiPathBlock).exists({ count: this.totalApiPaths }, 'renders all api paths');
-    });
+    assert.dom(SELECTORS.container).exists('renders component');
+    assert.dom(SELECTORS.apiPathBlock).exists({ count: this.totalApiPaths }, 'renders all api paths');
+  });
 
-    test(`it can search ${i}`, async function (assert) {
-      await this.renderComponent();
+  test(`it can search`, async function (assert) {
+    await this.renderComponent();
 
-      // in testing only the input is not filling correctly except after the second time
-      await fillIn(SELECTORS.searchInput, 'moot');
-      await fillIn(SELECTORS.searchInput, 'token');
+    // in testing only the input is not filling correctly except after the second time
+    await fillIn(SELECTORS.searchInput, 'moot');
+    await fillIn(SELECTORS.searchInput, 'token');
 
-      // for some reason search results are not rendered immediately in tests,
-      // so asserting that the search input has the value we expect is the best we can do here
-      // if the search fn breaks, this test will fail
-      assert.dom(SELECTORS.searchInput).hasValue('token', 'search input has value');
-    });
+    // for some reason search results are not rendered immediately in tests,
+    // so asserting that the search input has the value we expect is the best we can do here
+    // if the search fn breaks, this test will fail
+    assert.dom(SELECTORS.searchInput).hasValue('token', 'search input has value');
   });
 });
