@@ -10,6 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 import { LICENSE_START } from 'vault/mirage/handlers/clients';
+import { stubFeaturesAndPermissions } from 'vault/tests/helpers/components/sidebar-nav';
 
 module('Integration | Component | dashboard/overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -17,7 +18,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-
+    this.version = this.owner.lookup('service:version');
     this.replication = {
       dr: {
         clusterId: '123',
@@ -69,10 +70,25 @@ module('Integration | Component | dashboard/overview', function (hooks) {
         },
       };
     });
+
+    this.renderComponent = async () => {
+      return await render(
+        hbs`
+        <Dashboard::Overview
+          @secretsEngines={{this.secretsEngines}}
+          @vaultConfiguration={{this.vaultConfiguration}}
+          @replication={{this.replication}}
+          @version={{this.version}}
+          @isRootNamespace={{this.isRootNamespace}}
+          @refreshModel={{this.refreshModel}} 
+          @replicationUpdatedAt={{this.replicationUpdatedAt}}
+          />
+      `
+      );
+    };
   });
 
   test('it should show dashboard empty states', async function (assert) {
-    this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1';
     this.isRootNamespace = true;
     await render(
@@ -95,21 +111,10 @@ module('Integration | Component | dashboard/overview', function (hooks) {
   });
 
   test('it should hide client count and replication card on community', async function (assert) {
-    this.version = this.owner.lookup('service:version');
-    this.version.version = '1.13.1';
+    this.version.type = 'community';
     this.isRootNamespace = true;
 
-    await render(
-      hbs`
-        <Dashboard::Overview
-          @secretsEngines={{this.secretsEngines}}
-          @vaultConfiguration={{this.vaultConfiguration}}
-          @replication={{this.replication}}
-          @version={{this.version}}
-          @isRootNamespace={{this.isRootNamespace}}
-          @refreshModel={{this.refreshModel}} />
-      `
-    );
+    await this.renderComponent();
 
     assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
     assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
@@ -120,63 +125,44 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
   });
 
-  test('it should show client count on enterprise w/ license', async function (assert) {
-    this.version = this.owner.lookup('service:version');
+  test('it should show client count and replication on enterprise if has permission and in root namespace', async function (assert) {
     this.version.version = '1.13.1+ent';
     this.version.type = 'enterprise';
-    this.license = {
-      autoloaded: {
-        license_id: '7adbf1f4-56ef-35cd-3a6c-50ef2627865d',
-      },
-    };
+    this.isRootNamespace = true;
+    stubFeaturesAndPermissions(this.owner, true);
+    await this.renderComponent();
+    assert.dom(DASHBOARD.cardName('client-count')).exists();
+    assert.dom(DASHBOARD.cardName('replication')).exists();
+  });
 
-    await render(
-      hbs`
-      <Dashboard::Overview
-      @secretsEngines={{this.secretsEngines}}
-      @vaultConfiguration={{this.vaultConfiguration}}
-      @replication={{this.replication}}
-      @version={{this.version}}
-      @isRootNamespace={{true}}
-      @refreshModel={{this.refreshModel}} />`
-    );
+  test('it should hide on enterprise if no permission and in root namespace', async function (assert) {
+    this.version.version = '1.13.1+ent';
+    this.version.type = 'enterprise';
+    this.isRootNamespace = true;
+    await this.renderComponent();
     assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
     assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
     assert.dom(DASHBOARD.cardName('learn-more')).exists();
     assert.dom(DASHBOARD.cardName('quick-actions')).exists();
     assert.dom(DASHBOARD.cardName('configuration-details')).exists();
-    assert.dom(DASHBOARD.cardName('client-count')).exists();
+    assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+    assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
   });
 
-  test('it should hide replication on enterprise not on root namespace', async function (assert) {
-    this.version = this.owner.lookup('service:version');
+  test('it should hide on enterprise if permission and not in root namespace', async function (assert) {
     this.version.version = '1.13.1+ent';
     this.version.type = 'enterprise';
     this.isRootNamespace = false;
-
-    await render(
-      hbs`
-      <Dashboard::Overview
-        @version={{this.version}}
-        @isRootNamespace={{this.isRootNamespace}}
-        @secretsEngines={{this.secretsEngines}}
-        @vaultConfiguration={{this.vaultConfiguration}}
-        @replication={{this.replication}}
-        @refreshModel={{this.refreshModel}} />`
-    );
-
-    assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
-    assert.dom('[data-test-badge-namespace]').exists();
-    assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
-    assert.dom(DASHBOARD.cardName('learn-more')).exists();
-    assert.dom(DASHBOARD.cardName('quick-actions')).exists();
-    assert.dom(DASHBOARD.cardName('configuration-details')).exists();
-    assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
+    stubFeaturesAndPermissions(this.owner, true);
+    await this.renderComponent();
     assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+    assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
   });
+  // TODO separate tests for permission for one and not the other
 
   module('learn more card', function () {
     test('shows the learn more card on community', async function (assert) {
+      this.version.type = 'community';
       await render(
         hbs`<Dashboard::Overview @secretsEngines={{this.secretsEngines}} @vaultConfiguration={{this.vaultConfiguration}} @replication={{this.replication}} @refreshModel={{this.refreshModel}} />`
       );
