@@ -3319,7 +3319,7 @@ func (m *mockServiceRegistration) NotifyInitializedStateChange(isInitialized boo
 	return nil
 }
 
-func (m *mockServiceRegistration) NotifyConfigurationReload(config map[string]string) error {
+func (m *mockServiceRegistration) NotifyConfigurationReload(config *map[string]string) error {
 	m.notifyConfigurationReload++
 	return nil
 }

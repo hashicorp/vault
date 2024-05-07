@@ -149,16 +149,57 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 		"vault":  {"active", "initialized"},
 	})
 
+	// change the token and trigger reload
 	if sd.(*serviceRegistration).config.Token == "" {
 		t.Fatal("expected service registration token to not be '' before configuration reload")
 	}
 
-	srConfig["token"] = ""
-	sd.NotifyConfigurationReload(srConfig)
+	srConfigWithoutToken := make(map[string]string)
+	for k, v := range srConfig {
+		srConfigWithoutToken[k] = v
+	}
+	srConfigWithoutToken["token"] = ""
+	err = sd.NotifyConfigurationReload(&srConfigWithoutToken)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if sd.(*serviceRegistration).config.Token != "" {
 		t.Fatal("expected service registration token to be '' after configuration reload")
 	}
+
+	// reconfigure the configuration back to its original state and verify vault is registered
+	err = sd.NotifyConfigurationReload(&srConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	waitForServices(t, map[string][]string{
+		"consul": {},
+		"vault":  {"active", "initialized"},
+	})
+
+	// send 'nil' configuration to verify that the service is deregistered
+	err = sd.NotifyConfigurationReload(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	waitForServices(t, map[string][]string{
+		"consul": {},
+	})
+
+	// reconfigure the configuration back to its original state and verify vault
+	// is re-registered
+	err = sd.NotifyConfigurationReload(&srConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	waitForServices(t, map[string][]string{
+		"consul": {},
+		"vault":  {"active", "initialized"},
+	})
 }
 
 func TestConsul_ServiceAddress(t *testing.T) {

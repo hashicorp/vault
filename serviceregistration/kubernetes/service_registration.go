@@ -106,7 +106,7 @@ func (r *serviceRegistration) NotifyInitializedStateChange(isInitialized bool) e
 	return nil
 }
 
-func (c *serviceRegistration) NotifyConfigurationReload(conf map[string]string) error {
+func (c *serviceRegistration) NotifyConfigurationReload(conf *map[string]string) error {
 	return nil
 }
 

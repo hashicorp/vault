@@ -102,5 +102,8 @@ type ServiceRegistration interface {
 	// If errors are returned, Vault only logs a warning, so it is
 	// the implementation's responsibility to retry updating state
 	// in the face of errors.
-	NotifyConfigurationReload(conf map[string]string) error
+	//
+	// If the passed in conf is nil, it is assumed that the service registration
+	// configuration no longer exits and should be deregistered.
+	NotifyConfigurationReload(conf *map[string]string) error
 }

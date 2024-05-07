@@ -1686,8 +1686,12 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 			// notify ServiceRegistration that a configuration reload has occurred
-			if sr := coreConfig.GetServiceRegistration(); sr != nil && config.ServiceRegistration != nil {
-				sr.NotifyConfigurationReload(config.ServiceRegistration.Config)
+			if sr := coreConfig.GetServiceRegistration(); sr != nil {
+				var srConfig *map[string]string
+				if config.ServiceRegistration != nil {
+					srConfig = &config.ServiceRegistration.Config
+				}
+				sr.NotifyConfigurationReload(srConfig)
 			}
 
 			if err := core.ReloadCensus(); err != nil {
