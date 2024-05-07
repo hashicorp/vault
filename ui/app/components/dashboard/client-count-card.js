@@ -23,7 +23,7 @@ export default class DashboardClientCountCard extends Component {
   @service store;
 
   @tracked activityData = null;
-  @tracked hasActivity = null;
+  @tracked hasActivity = false;
   @tracked updatedAt = null;
 
   constructor() {
