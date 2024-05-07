@@ -1540,9 +1540,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.RawConfig = c
 	}
 
+	// If the caller didn't supply any configuration for types of audit device,
+	// default to adding `file` (and enabling it later).
 	addAuditBackend := len(coreConfig.AuditBackends) == 0
 	if addAuditBackend {
-		coreConfig.AuditBackends["noop"] = audit.NoopAuditFactory(nil)
+		coreConfig.AuditBackends[audit.TypeFile] = audit.NewFileBackend
 	}
 
 	if coreConfig.Physical == nil && (opts == nil || opts.PhysicalFactory == nil) {
@@ -1975,6 +1977,9 @@ func (tc *TestCluster) InitCores(t testing.T, opts *TestClusterOptions, addAudit
 	tc.initCores(t, opts, addAuditBackend)
 }
 
+// initCores attempts to initialize a core for a test cluster using the supplied
+// options. If the addAuditBackend flag is true, the core will have a file audit
+// device enabled with the 'discard' file path (See: /vault/docs/audit/file#discard).
 func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAuditBackend bool) {
 	leader := tc.Cores[0]
 
@@ -2087,8 +2092,11 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 		auditReq := &logical.Request{
 			Operation:   logical.UpdateOperation,
 			ClientToken: tc.RootToken,
-			Path:        "sys/audit/noop",
-			Data:        map[string]interface{}{"type": "noop"},
+			Path:        "sys/audit/file",
+			Data: map[string]interface{}{
+				"type":      audit.TypeFile,
+				"file_path": "discard",
+			},
 		}
 		resp, err := leader.Core.HandleRequest(namespace.RootContext(ctx), auditReq)
 		if err != nil {
