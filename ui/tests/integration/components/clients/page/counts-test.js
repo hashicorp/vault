@@ -13,7 +13,7 @@ import { getUnixTime } from 'date-fns';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 import { dateDropdownSelect } from 'vault/tests/helpers/clients/client-count-helpers';
-import { selectChoose } from 'ember-power-select/test-support/helpers';
+import { selectChoose } from 'ember-power-select/test-support';
 import timestamp from 'core/utils/timestamp';
 import sinon from 'sinon';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
