@@ -418,6 +418,10 @@ leading to failure to complete merkle sync without a full re-index. [[GH-23013](
 ## 1.15.8 Enterprise
 ### April 24, 2024
 
+SECURITY:
+
+* core (enterprise): fix bug where http headers were displayed in the audit log of a performance standby node [HCSEC-2024-10](https://discuss.hashicorp.com/t/hsec-2024-10-vault-enterprise-leaks-sensitive-http-request-headers-in-audit-log-when-deployed-with-a-performance-standby-node) 
+
 CHANGES:
 
 * core: Bump Go version to 1.21.9.
