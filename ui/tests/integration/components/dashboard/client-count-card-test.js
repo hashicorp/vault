@@ -59,6 +59,22 @@ module('Integration | Component | dashboard/client-count-card', function (hooks)
     await click('[data-test-refresh]');
   });
 
+  test('it shows no data subtext if no start or end timestamp', async function (assert) {
+    assert.expect(2);
+    // as far as I know, responses will always have a start/end time
+    // stubbing this unrealistic response just to test component subtext logic
+    this.server.get('sys/internal/counters/activity', () => {
+      return {
+        request_id: 'some-activity-id',
+        data: { by_namespace: [], months: [], total: {} },
+      };
+    });
+
+    await render(hbs`<Dashboard::ClientCountCard />`);
+    assert.dom(CLIENT_COUNT.statText('Total')).hasText('Total No total client data available. -');
+    assert.dom(CLIENT_COUNT.statText('New')).hasText('New No new client data available. -');
+  });
+
   test('it shows empty state if no activity data', async function (assert) {
     // the activity response has changed and now should ALWAYS return something
     // but adding this test until we update the adapter to reflect that

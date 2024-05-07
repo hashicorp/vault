@@ -38,7 +38,7 @@ export default class DashboardClientCountCard extends Component {
   get statSubText() {
     const format = (date) => parseAPITimestamp(date, 'MMM yyyy');
     const { startTime, endTime } = this.activityData;
-    return this.hasActivity
+    return startTime && endTime
       ? {
           total: `The number of clients in this billing period (${format(startTime)} - ${format(endTime)}).`,
           new: 'The number of clients new to Vault in the current month.',

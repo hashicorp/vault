@@ -41,7 +41,7 @@
       </div>
     {{/if}}
   {{else}}
-    {{! This will likely not be show since the client activity api was changed to always return data. In the past it
+    {{! This will likely never show since the clients activity api has changed to always return data. In the past it
   would return no activity data. Adding this empty state here to match the current client count behavior }}
     <Clients::NoData @config={{hash enabled="On"}} />
   {{/if}}
