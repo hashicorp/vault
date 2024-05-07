@@ -433,16 +433,19 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 			checkTimer.Reset(0)
 		case <-reconcileTimer.C:
 			// Unconditionally rearm the reconcileTimer
+			c.serviceLock.RLock()
 			reconcileTimer.Reset(c.reconcileTimeout - randomStagger(c.reconcileTimeout/checkJitterFactor))
+			disableRegistration := c.disableRegistration
+			c.serviceLock.RUnlock()
 
 			// Abort if service discovery is disabled or a
 			// reconcile handler is already active
-			if !c.disableRegistration && atomic.CompareAndSwapInt32(serviceRegLock, 0, 1) {
+			if !disableRegistration && atomic.CompareAndSwapInt32(serviceRegLock, 0, 1) {
 				// Enter handler with serviceRegLock held
 				go func() {
 					defer atomic.CompareAndSwapInt32(serviceRegLock, 1, 0)
 					for !shutdown.Load() {
-						serviceID, err := c.reconcileConsul(c.registeredServiceID)
+						serviceID, err := c.reconcileConsul()
 						if err != nil {
 							if c.logger.IsWarn() {
 								c.logger.Warn("reconcile unable to talk with Consul backend", "error", err)
@@ -461,14 +464,22 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 			}
 		case <-checkTimer.C:
 			checkTimer.Reset(c.checkDuration())
+			c.serviceLock.RLock()
+			disableRegistration := c.disableRegistration
+			c.serviceLock.RUnlock()
+
 			// Abort if service discovery is disabled or a
 			// reconcile handler is active
-			if !c.disableRegistration && atomic.CompareAndSwapInt32(checkLock, 0, 1) {
+			if !disableRegistration && atomic.CompareAndSwapInt32(checkLock, 0, 1) {
 				// Enter handler with checkLock held
 				go func() {
 					defer atomic.CompareAndSwapInt32(checkLock, 1, 0)
 					for !shutdown.Load() {
-						if c.registeredServiceID != "" {
+						c.serviceLock.RLock()
+						registeredServiceID := c.registeredServiceID
+						c.serviceLock.RUnlock()
+
+						if registeredServiceID != "" {
 							if err := c.runCheck(c.isSealed.Load()); err != nil {
 								if c.logger.IsWarn() {
 									c.logger.Warn("check unable to talk with Consul backend", "error", err)
@@ -487,8 +498,8 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 		}
 	}
 
-	c.serviceLock.RLock()
-	defer c.serviceLock.RUnlock()
+	c.serviceLock.Lock()
+	defer c.serviceLock.Unlock()
 	c.deregisterService()
 }
 
@@ -520,10 +531,12 @@ func (c *serviceRegistration) serviceID() string {
 
 // reconcileConsul queries the state of Vault Core and Consul and fixes up
 // Consul's state according to what's in Vault.  reconcileConsul is called
-// without any locks held and can be run concurrently, therefore no changes
+// with a read lock and can be run concurrently, therefore no changes
 // to serviceRegistration can be made in this method (i.e. wtb const receiver for
 // compiler enforced safety).
-func (c *serviceRegistration) reconcileConsul(registeredServiceID string) (serviceID string, err error) {
+func (c *serviceRegistration) reconcileConsul() (serviceID string, err error) {
+	c.serviceLock.RLock()
+	defer c.serviceLock.RUnlock()
 	agent := c.Client.Agent()
 	catalog := c.Client.Catalog()
 
@@ -545,7 +558,7 @@ func (c *serviceRegistration) reconcileConsul(registeredServiceID string) (servi
 	var reregister bool
 
 	switch {
-	case currentVaultService == nil, registeredServiceID == "":
+	case currentVaultService == nil, c.registeredServiceID == "":
 		reregister = true
 	default:
 		switch {
