@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/x509"
 	"errors"
+	"github.com/hashicorp/go-hclog"
 	"math/big"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
@@ -23,4 +24,8 @@ func storeMetadata(ctx context.Context, storage logical.Storage, issuerId issuin
 
 func GetCertificateMetadata(ctx context.Context, storage logical.Storage, serialNumber *big.Int) (*CertificateMetadata, error) {
 	return nil, ErrMetadataIsEntOnly
+}
+
+func (b *backend) doTidyCertMetadata(ctx context.Context, req *logical.Request, logger hclog.Logger, config *tidyConfig) error {
+	return ErrMetadataIsEntOnly
 }

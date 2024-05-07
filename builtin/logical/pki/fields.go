@@ -579,6 +579,11 @@ the cross-cluster revoked certificate store. Only runs on the active
 primary node.`,
 	}
 
+	fields["tidy_cert_metadata"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Description: `Set to true to enable tidying up certificate metadata`,
+	}
+
 	return fields
 }
 

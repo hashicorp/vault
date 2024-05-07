@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/helper/constants"
 	"net/http"
 	"sync/atomic"
 	"time"
@@ -50,6 +51,7 @@ type tidyStatus struct {
 	tidyRevocationQueue   bool
 	tidyCrossRevokedCerts bool
 	tidyAcme              bool
+	tidyCertMetadata      bool
 	pauseDuration         string
 
 	// Status
@@ -66,6 +68,7 @@ type tidyStatus struct {
 	missingIssuerCertCount   uint
 	revQueueDeletedCount     uint
 	crossRevokedDeletedCount uint
+	certMetadataDeletedCount uint
 
 	acmeAccountsCount        uint
 	acmeAccountsRevokedCount uint
@@ -87,6 +90,7 @@ type tidyConfig struct {
 	RevocationQueue   bool `json:"tidy_revocation_queue"`
 	CrossRevokedCerts bool `json:"tidy_cross_cluster_revoked_certs"`
 	TidyAcme          bool `json:"tidy_acme"`
+	CertMetadata      bool `json:"tidy_cert_metadata"`
 
 	// Safety Buffers
 	SafetyBuffer            time.Duration `json:"safety_buffer"`
@@ -101,7 +105,7 @@ type tidyConfig struct {
 }
 
 func (tc *tidyConfig) IsAnyTidyEnabled() bool {
-	return tc.CertStore || tc.RevokedCerts || tc.IssuerAssocs || tc.ExpiredIssuers || tc.BackupBundle || tc.TidyAcme || tc.CrossRevokedCerts || tc.RevocationQueue
+	return tc.CertStore || tc.RevokedCerts || tc.IssuerAssocs || tc.ExpiredIssuers || tc.BackupBundle || tc.TidyAcme || tc.CrossRevokedCerts || tc.RevocationQueue || tc.CertMetadata
 }
 
 func (tc *tidyConfig) AnyTidyConfig() string {
@@ -126,6 +130,7 @@ var defaultTidyConfig = tidyConfig{
 	RevocationQueue:         false,
 	QueueSafetyBuffer:       48 * time.Hour,
 	CrossRevokedCerts:       false,
+	CertMetadata:            false,
 }
 
 func pathTidy(b *backend) *framework.Path {
@@ -215,6 +220,11 @@ func pathTidyCancel(b *backend) *framework.Path {
 							"tidy_expired_issuers": {
 								Type:        framework.TypeBool,
 								Description: `Tidy expired issuers`,
+								Required:    false,
+							},
+							"tidy_cert_metadata": {
+								Type:        framework.TypeBool,
+								Description: `Tidy cert metadata`,
 								Required:    false,
 							},
 							"pause_duration": {
@@ -397,6 +407,11 @@ func pathTidyStatus(b *backend) *framework.Path {
 							"tidy_acme": {
 								Type:        framework.TypeBool,
 								Description: `Tidy Unused Acme Accounts, and Orders`,
+								Required:    true,
+							},
+							"tidy_cert_metadata": {
+								Type:        framework.TypeBool,
+								Description: `Tidy cert metadata`,
 								Required:    true,
 							},
 							"pause_duration": {
@@ -587,6 +602,11 @@ available on the tidy-status endpoint.`,
 								Description: `Tidy Unused Acme Accounts, and Orders`,
 								Required:    true,
 							},
+							"tidy_cert_metadata": {
+								Type:        framework.TypeBool,
+								Description: `Tidy cert metadata`,
+								Required:    true,
+							},
 							"safety_buffer": {
 								Type:        framework.TypeInt,
 								Description: `Safety buffer time duration`,
@@ -680,6 +700,11 @@ available on the tidy-status endpoint.`,
 								Description: `Tidy Unused Acme Accounts, and Orders`,
 								Required:    true,
 							},
+							"tidy_cert_metadata": {
+								Type:        framework.TypeBool,
+								Description: `Tidy cert metadata`,
+								Required:    true,
+							},
 							"safety_buffer": {
 								Type:        framework.TypeInt,
 								Description: `Safety buffer time duration`,
@@ -753,6 +778,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	tidyCrossRevokedCerts := d.Get("tidy_cross_cluster_revoked_certs").(bool)
 	tidyAcme := d.Get("tidy_acme").(bool)
 	acmeAccountSafetyBuffer := d.Get("acme_account_safety_buffer").(int)
+	tidyCertMetadata := d.Get("tidy_cert_metadata").(bool)
 
 	if safetyBuffer < 1 {
 		return logical.ErrorResponse("safety_buffer must be greater than zero"), nil
@@ -782,6 +808,10 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
+	if tidyCertMetadata && !constants.IsEnterprise {
+		return logical.ErrorResponse(ErrMetadataIsEntOnly.Error()), nil
+	}
+
 	bufferDuration := time.Duration(safetyBuffer) * time.Second
 	issuerBufferDuration := time.Duration(issuerSafetyBuffer) * time.Second
 	queueSafetyBufferDuration := time.Duration(queueSafetyBuffer) * time.Second
@@ -804,6 +834,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 		CrossRevokedCerts:       tidyCrossRevokedCerts,
 		TidyAcme:                tidyAcme,
 		AcmeAccountSafetyBuffer: acmeAccountSafetyBufferDuration,
+		CertMetadata:            tidyCertMetadata,
 	}
 
 	if !atomic.CompareAndSwapUint32(b.tidyCASGuard, 0, 1) {
@@ -926,6 +957,17 @@ func (b *backend) startTidyOperation(req *logical.Request, config *tidyConfig) {
 
 			if config.TidyAcme {
 				if err := b.doTidyAcme(ctx, req, logger, config); err != nil {
+					return err
+				}
+			}
+
+			// Check for cancel before continuing.
+			if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {
+				return tidyCancelledError
+			}
+
+			if config.CertMetadata {
+				if err := b.doTidyCertMetadata(ctx, req, logger, config); err != nil {
 					return err
 				}
 			}
@@ -1647,6 +1689,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"tidy_revocation_queue":                 nil,
 			"tidy_cross_cluster_revoked_certs":      nil,
 			"tidy_acme":                             nil,
+			"tidy_cert_metadata":                    nil,
 			"pause_duration":                        nil,
 			"state":                                 "Inactive",
 			"error":                                 nil,
@@ -1666,6 +1709,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"acme_account_revoked_count":            nil,
 			"acme_orders_deleted_count":             nil,
 			"acme_account_safety_buffer":            nil,
+			"cert_metadata_deleted_count":           nil,
 		},
 	}
 
@@ -1699,6 +1743,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["tidy_revocation_queue"] = b.tidyStatus.tidyRevocationQueue
 	resp.Data["tidy_cross_cluster_revoked_certs"] = b.tidyStatus.tidyCrossRevokedCerts
 	resp.Data["tidy_acme"] = b.tidyStatus.tidyAcme
+	resp.Data["tidy_cert_metadata"] = b.tidyStatus.tidyCertMetadata
 	resp.Data["pause_duration"] = b.tidyStatus.pauseDuration
 	resp.Data["time_started"] = b.tidyStatus.timeStarted
 	resp.Data["message"] = b.tidyStatus.message
@@ -1714,6 +1759,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["acme_account_revoked_count"] = b.tidyStatus.acmeAccountsRevokedCount
 	resp.Data["acme_orders_deleted_count"] = b.tidyStatus.acmeOrdersDeletedCount
 	resp.Data["acme_account_safety_buffer"] = b.tidyStatus.acmeAccountSafetyBuffer
+	resp.Data["cert_metadata_deleted_count"] = b.tidyStatus.certMetadataDeletedCount
 
 	switch b.tidyStatus.state {
 	case tidyStatusStarted:
@@ -1839,6 +1885,14 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 		}
 	}
 
+	if tidyCertMetadataRaw, ok := d.GetOk("tidy_cert_metadata"); ok {
+		config.CertMetadata = tidyCertMetadataRaw.(bool)
+
+		if config.CertMetadata && !constants.IsEnterprise {
+			return logical.ErrorResponse(ErrMetadataIsEntOnly.Error()), nil
+		}
+	}
+
 	if config.Enabled && !config.IsAnyTidyEnabled() {
 		return logical.ErrorResponse("Auto-tidy enabled but no tidy operations were requested. Enable at least one tidy operation to be run (" + config.AnyTidyConfig() + ")."), nil
 	}
@@ -1881,6 +1935,7 @@ func (b *backend) tidyStatusStart(config *tidyConfig) {
 		tidyRevocationQueue:     config.RevocationQueue,
 		tidyCrossRevokedCerts:   config.CrossRevokedCerts,
 		tidyAcme:                config.TidyAcme,
+		tidyCertMetadata:        config.CertMetadata,
 		pauseDuration:           config.PauseDuration.String(),
 
 		state:       tidyStatusStarted,
@@ -1981,6 +2036,13 @@ func (b *backend) tidyStatusIncDelAcmeOrderCount() {
 	defer b.tidyStatusLock.Unlock()
 
 	b.tidyStatus.acmeOrdersDeletedCount++
+}
+
+func (b *backend) tidyStatusIncCertMetadataCount() {
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+
+	b.tidyStatus.certMetadataDeletedCount++
 }
 
 const pathTidyHelpSyn = `
@@ -2094,5 +2156,6 @@ func getTidyConfigData(config tidyConfig) map[string]interface{} {
 		"tidy_revocation_queue":                    config.RevocationQueue,
 		"revocation_queue_safety_buffer":           int(config.QueueSafetyBuffer / time.Second),
 		"tidy_cross_cluster_revoked_certs":         config.CrossRevokedCerts,
+		"tidy_cert_metadata":                       config.CertMetadata,
 	}
 }
