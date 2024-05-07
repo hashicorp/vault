@@ -1166,7 +1166,7 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup, r
 			if doRegeneration {
 				err := manager.regeneratePrecomputedQueries(ctx)
 				if err != nil {
-					manager.logger.Warn("unable to regenerate ACME data", "error", err)
+					manager.logger.Error("unable to regenerate ACME data", "error", err)
 				}
 			} else {
 				// run the precomputed query worker normally
@@ -1190,7 +1190,7 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup, r
 func (a *ActivityLog) hasRegeneratedACME(ctx context.Context) bool {
 	regenerated, err := a.view.Get(ctx, activityACMERegenerationKey)
 	if err != nil {
-		a.logger.Warn("unable to access ACME regeneration key")
+		a.logger.Error("unable to access ACME regeneration key")
 		return false
 	}
 	return regenerated != nil
@@ -1222,7 +1222,7 @@ func (a *ActivityLog) regeneratePrecomputedQueries(ctx context.Context) error {
 
 	intentLogEntry, err := a.view.Get(ctx, activityIntentLogKey)
 	if err != nil {
-		a.logger.Trace("could not load existing intent log", "error", err)
+		a.logger.Error("could not load existing intent log", "error", err)
 	}
 	var intentLog *ActivityIntentLog
 	if intentLogEntry == nil {

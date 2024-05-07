@@ -197,3 +197,70 @@ func TestACMERegeneration_RegeneratePreviousMonths(t *testing.T) {
 		ACMEClients:      17,
 	}, getTotals(t, resp))
 }
+
+// TestACMERegeneration_RegenerateWithIntentLog creates segments for the
+// previous 3 months, and an intent log for 2 months ago. The test verifies that
+// the existing intent log is used for regeneration, and that the clients from 1
+// month ago are not included in the total. The test then regenerates again, and
+// verifies that (because there's no more intent log) the data from 1 month ago
+// is included.
+func TestACMERegeneration_RegenerateWithIntentLog(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{EnableRaw: true})
+	client := cluster.Cores[0].Client
+
+	now := time.Now().UTC()
+	_, err := clientcountutil.NewActivityLogData(client).
+		NewPreviousMonthData(3).
+		// 3 months ago, 15 non-entity clients and 10 ACME clients
+		NewClientsSeen(15, clientcountutil.WithClientType("non-entity-token")).
+		NewClientsSeen(10, clientcountutil.WithClientType(vault.ACMEActivityType)).
+		NewPreviousMonthData(2).
+		// 2 months ago, 7 new non-entity clients and 5 new ACME clients
+		RepeatedClientsSeen(2, clientcountutil.WithClientType("non-entity-token")).
+		NewClientsSeen(7, clientcountutil.WithClientType("non-entity-token")).
+		RepeatedClientsSeen(5, clientcountutil.WithClientType(vault.ACMEActivityType)).
+		NewClientsSeen(5, clientcountutil.WithClientType(vault.ACMEActivityType)).
+		Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES, generation.WriteOptions_WRITE_INTENT_LOGS)
+
+	require.NoError(t, err)
+
+	_, err = clientcountutil.NewActivityLogData(client).
+		NewPreviousMonthData(1).
+		// 1 months ago, 4 new non-entity clients and 2 new ACME clients
+		// These clients won't be included at first, because they're not
+		// included in the existing intent log
+		NewClientsSeen(4, clientcountutil.WithClientType("non-entity-token")).
+		NewClientsSeen(2, clientcountutil.WithClientType(vault.ACMEActivityType)).
+		Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
+	require.NoError(t, err)
+
+	forceRegeneration(t, cluster)
+
+	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(5, now)).Format(time.RFC3339)},
+		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
+	})
+	require.NoError(t, err)
+	require.Equal(t, vault.ResponseCounts{
+		NonEntityTokens:  22,
+		NonEntityClients: 22,
+		Clients:          37,
+		ACMEClients:      15,
+	}, getTotals(t, resp))
+
+	// regenerate, which no longer has an existing intent log to use
+	// it will cause the regeneration to happen up to 1 month ago
+	forceRegeneration(t, cluster)
+	resp, err = client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(5, now)).Format(time.RFC3339)},
+		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
+	})
+	require.NoError(t, err)
+	require.Equal(t, vault.ResponseCounts{
+		NonEntityTokens:  26,
+		NonEntityClients: 26,
+		Clients:          43,
+		ACMEClients:      17,
+	}, getTotals(t, resp))
+}
