@@ -1,0 +1,3 @@
+```release-note:improvement
+ui (enterprise): Allow HVD users to access Secrets Sync.
+```
