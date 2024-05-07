@@ -305,6 +305,7 @@ module('Acceptance | clients | overview | HVD', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
     syncHandler(this.server);
     this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
 
