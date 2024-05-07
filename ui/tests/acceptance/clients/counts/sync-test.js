@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncHandler from 'vault/mirage/handlers/sync';
-import { STATIC_NOW } from 'vault/mirage/handlers/clients';
+import { CONFIG_RESPONSE, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { visit, click, currentURL } from '@ember/test-helpers';
 import sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
@@ -36,6 +36,9 @@ module('Acceptance | clients | sync', function (hooks) {
 
   module('sync not activated', function (hooks) {
     hooks.beforeEach(async function () {
+      this.server.get('/sys/internal/counters/config', function () {
+        return CONFIG_RESPONSE;
+      });
       sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
       await authPage.login();
       return visit('/vault/clients/counts/sync');
@@ -43,18 +46,6 @@ module('Acceptance | clients | sync', function (hooks) {
 
     test('it should show an empty state when secrets sync is not activated', async function (assert) {
       assert.expect(3);
-
-      // ensure secret_syncs clients activity is 0
-      this.server.get('/sys/internal/counters/activity', () => {
-        // return only the things that determine whether to show/hide secrets sync
-        return {
-          data: {
-            total: {
-              secret_syncs: 0,
-            },
-          },
-        };
-      });
 
       this.server.get('/sys/activation-flags', () => {
         assert.true(true, '/sys/activation-flags/ is called to check if secrets-sync is activated');
