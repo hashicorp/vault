@@ -35,14 +35,19 @@ export const filterVersionHistory = (
   end: string
 ) => {
   if (versionHistory) {
-    const notableUpgrades = ['1.9', '1.10', '1.17'];
     const upgrades = versionHistory.reduce((array: ClientsVersionHistoryModel[], upgradeData) => {
-      const includesVersion = (v: string) =>
-        // only add first match, disregard subsequent patch releases of the same version
-        upgradeData.version.match(v) && !array.some((d: ClientsVersionHistoryModel) => d.version.match(v));
+      const isRelevantHistory = (v: string) => {
+        return (
+          upgradeData.version.match(v) &&
+          // only add if there is a previous version, otherwise this upgrade is the users' first version
+          upgradeData.previousVersion &&
+          // only add first match, disregard subsequent patch releases of the same version
+          !array.some((d: ClientsVersionHistoryModel) => d.version.match(v))
+        );
+      };
 
-      notableUpgrades.forEach((v) => {
-        if (includesVersion(v)) array.push(upgradeData);
+      ['1.9', '1.10', '1.17'].forEach((v) => {
+        if (isRelevantHistory(v)) array.push(upgradeData);
       });
 
       return array;
@@ -144,13 +149,10 @@ export const formatByNamespace = (namespaceArray: NamespaceObject[]) => {
 // when querying historical data the response will always contain the latest client type keys because the activity log is
 // constructed based on the version of Vault the user is on (key values will be 0)
 export const destructureClientCounts = (verboseObject: Counts | ByNamespaceClients) => {
-  return CLIENT_TYPES.reduce(
-    (newObj: Record<ClientTypes, Counts[ClientTypes]>, clientType: ClientTypes) => {
-      newObj[clientType] = verboseObject[clientType];
-      return newObj;
-    },
-    {} as Record<ClientTypes, Counts[ClientTypes]>
-  );
+  return CLIENT_TYPES.reduce((newObj: Record<ClientTypes, Counts[ClientTypes]>, clientType: ClientTypes) => {
+    newObj[clientType] = verboseObject[clientType];
+    return newObj;
+  }, {} as Record<ClientTypes, Counts[ClientTypes]>);
 };
 
 export const sortMonthsByTimestamp = (monthsArray: ActivityMonthBlock[] | EmptyActivityMonthBlock[]) => {
@@ -176,22 +178,19 @@ export const namespaceArrayToObject = (
       // mounts_by_key is is used to filter further in a namespace and get monthly activity by mount
       // it's an object inside the namespace block where the keys are mount paths
       // and the values include new and total client counts for that mount in that month
-      const mounts_by_key = ns.mounts.reduce(
-        (mountObj: { [key: string]: MountByKey }, mount) => {
-          const newMountClients = newNsClients.mounts.find((m) => m.label === mount.label);
+      const mounts_by_key = ns.mounts.reduce((mountObj: { [key: string]: MountByKey }, mount) => {
+        const newMountClients = newNsClients.mounts.find((m) => m.label === mount.label);
 
-          if (newMountClients) {
-            mountObj[mount.label] = {
-              ...mount,
-              timestamp,
-              month,
-              new_clients: { month, timestamp, ...newMountClients },
-            };
-          }
-          return mountObj;
-        },
-        {} as { [key: string]: MountByKey }
-      );
+        if (newMountClients) {
+          mountObj[mount.label] = {
+            ...mount,
+            timestamp,
+            month,
+            new_clients: { month, timestamp, ...newMountClients },
+          };
+        }
+        return mountObj;
+      }, {} as { [key: string]: MountByKey });
 
       nsObject[ns.label] = {
         ...destructureClientCounts(ns),
