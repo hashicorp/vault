@@ -169,12 +169,12 @@ func (a *HeadersConfig) Remove(ctx context.Context, header string) error {
 // their setting will be honored.
 func (a *HeadersConfig) DefaultHeaders() map[string]*HeaderSettings {
 	// Support deprecated 'x-' prefix (https://datatracker.ietf.org/doc/html/rfc6648)
-	const CorrelationID = "correlation-id"
-	XCorrelationID := fmt.Sprintf("x-%s", CorrelationID)
+	const correlationID = "correlation-id"
+	xCorrelationID := fmt.Sprintf("x-%s", correlationID)
 
 	return map[string]*HeaderSettings{
-		CorrelationID:  {},
-		XCorrelationID: {},
+		correlationID:  {},
+		xCorrelationID: {},
 	}
 }
 
