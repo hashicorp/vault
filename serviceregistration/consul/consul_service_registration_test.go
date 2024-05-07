@@ -63,6 +63,15 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	_, err = client.Agent().UpdateAgentACLToken(config.Token, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.Agent().UpdateDefaultACLToken(config.Token, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// waitForServices waits for the services in the Consul catalog to
 	// reach an expected value, returning the delta if that doesn't happen in time.
 	waitForServices := func(t *testing.T, expected map[string][]string) map[string][]string {
@@ -93,8 +102,9 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 	// Create a ServiceRegistration that points to our consul instance
 	logger := logging.NewVaultLogger(log.Trace)
 	srConfig := map[string]string{
-		"address": config.Address(),
-		"token":   config.Token,
+		"address":           config.Address(),
+		"token":             config.Token,
+		"reconcile_timeout": "1s",
 	}
 	sd, err := NewServiceRegistration(srConfig, logger, sr.State{})
 	if err != nil {

@@ -51,7 +51,7 @@ const (
 
 	// reconcileTimeout is how often Vault should query Consul to detect
 	// and fix any state drift.
-	reconcileTimeout = 60 * time.Second
+	DefaultReconcileTimeout = 60 * time.Second
 
 	// metaExternalSource is a metadata value for external-source that can be
 	// used by the Consul UI.
@@ -76,6 +76,7 @@ type serviceRegistration struct {
 	serviceAddress      *string
 	disableRegistration bool
 	checkTimeout        time.Duration
+	reconcileTimeout    time.Duration
 
 	notifyActiveCh      chan struct{}
 	notifySealedCh      chan struct{}
@@ -257,6 +258,25 @@ func (c *serviceRegistration) merge(conf map[string]string) error {
 		}
 	}
 
+	reconcileTimeout := DefaultReconcileTimeout
+	reconcileTimeoutStr, ok := conf["reconcile_timeout"]
+	if ok {
+		d, err := parseutil.ParseDurationSecond(reconcileTimeoutStr)
+		if err != nil {
+			return err
+		}
+
+		min, _ := durationMinusBufferDomain(d, checkMinBuffer, checkJitterFactor)
+		if min < checkMinBuffer {
+			return fmt.Errorf("consul reconcile_timeout must be greater than %v", min)
+		}
+
+		reconcileTimeout = d
+		if c.logger.IsDebug() {
+			c.logger.Debug("config reconcile_timeout set", "reconcile_timeout", d)
+		}
+	}
+
 	// Configure the client
 	consulConf := api.DefaultConfig()
 	// Set MaxIdleConnsPerHost to the number of processes used in expiration.Restore
@@ -277,6 +297,7 @@ func (c *serviceRegistration) merge(conf map[string]string) error {
 	c.serviceAddress = serviceAddr
 	c.checkTimeout = checkTimeout
 	c.disableRegistration = disableRegistration
+	c.reconcileTimeout = reconcileTimeout
 
 	return nil
 }
@@ -412,7 +433,7 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 			checkTimer.Reset(0)
 		case <-reconcileTimer.C:
 			// Unconditionally rearm the reconcileTimer
-			reconcileTimer.Reset(reconcileTimeout - randomStagger(reconcileTimeout/checkJitterFactor))
+			reconcileTimer.Reset(c.reconcileTimeout - randomStagger(c.reconcileTimeout/checkJitterFactor))
 
 			// Abort if service discovery is disabled or a
 			// reconcile handler is already active
