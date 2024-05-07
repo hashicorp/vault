@@ -3179,10 +3179,9 @@ vault {
 	}
 }
 
-// TestAgent_TokenRenewal tests that the token renewal process by the LifetimeWatcher
-// for a token without the policy to allow it to renew itself doesn't result in many,
-// many unnecessary requests to attempt to renew itself.
-// Prior to a bug fix in the PR that added this test, this would have resulted
+// TestAgent_TokenRenewal tests that LifeTimeWatcher does not make
+// many renewal attempts if the token's policy does not allow for it to renew
+// itself. Prior to a bug fix in the PR that added this test, this would have resulted
 // in hundreds of token renewal requests with no backoff.
 func TestAgent_TokenRenewal(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
