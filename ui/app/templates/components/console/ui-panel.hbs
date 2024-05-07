@@ -3,17 +3,19 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div class="console-close-button">
-  <Hds::Button
-    class="hds-side-nav__icon-button"
-    {{on "click" (action "closeConsole")}}
-    data-test-console-panel-close
-    @text="Close console"
-    @icon="x"
-    @isIconOnly={{true}}
-  />
-</div>
 <div class="console-ui-panel-content">
+  <div class="content has-bottom-margin-s">
+    <div class="console-close-button">
+      <Hds::Button
+        class="hds-side-nav__icon-button"
+        {{on "click" (action "closeConsole")}}
+        data-test-console-panel-close
+        @text="Close console"
+        @icon="x"
+        @isIconOnly={{true}}
+      />
+    </div>
+  </div>
   <div class="content has-bottom-margin-l">
     <p class="console-ui-panel-intro is-font-mono has-bottom-margin-s">
       The Vault Web REPL provides an easy way to execute common Vault CLI commands, such as write, read, delete, and list. It
@@ -44,6 +46,5 @@
     @onFullscreen={{action "toggleFullscreen"}}
     @onExecuteCommand={{action "executeCommand"}}
     @onShiftCommand={{action "shiftCommandIndex"}}
-    @onEscCommand={{action "closeConsole"}}
   />
 </div>
