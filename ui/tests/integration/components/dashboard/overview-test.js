@@ -9,8 +9,6 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
-import { LICENSE_START } from 'vault/mirage/handlers/clients';
-import { stubFeaturesAndPermissions } from 'vault/tests/helpers/components/sidebar-nav';
 
 module('Integration | Component | dashboard/overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -18,6 +16,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
+    this.permissions = this.owner.lookup('service:permissions');
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1+ent';
     this.version.type = 'enterprise';
@@ -65,15 +64,6 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       ],
     };
     this.refreshModel = () => {};
-    this.server.get('sys/internal/counters/config', function () {
-      return {
-        request_id: 'some-config-id',
-        data: {
-          billing_start_timestamp: LICENSE_START.toISOString(),
-        },
-      };
-    });
-
     this.renderComponent = async () => {
       return await render(
         hbs`
@@ -111,7 +101,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
   module('client count and replication card', function () {
     test('it should hide cards on community in root namespace', async function (assert) {
       this.version.version = '1.13.1';
-      history.this.version.type = 'community';
+      this.version.type = 'community';
       await this.renderComponent();
 
       assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
@@ -123,8 +113,15 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
     });
 
-    test('it should hide cards on enterprise if permission and not in root namespace', async function (assert) {
-      stubFeaturesAndPermissions(this.owner, true);
+    test('it should hide cards on enterprise if permission but not in root namespace', async function (assert) {
+      this.permissions.exactPaths = {
+        'sys/internal/counters/activity': {
+          capabilities: ['read'],
+        },
+        'sys/replication/status': {
+          capabilities: ['read'],
+        },
+      };
       this.isRootNamespace = false;
       await this.renderComponent();
       assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
@@ -132,19 +129,26 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     });
 
     test('it should show cards on enterprise if has permission and in root namespace', async function (assert) {
-      stubFeaturesAndPermissions(this.owner, true);
-      await this.renderComponent();
-      assert.dom(DASHBOARD.cardName('client-count')).exists();
-      assert.dom(DASHBOARD.cardName('replication')).exists();
-    });
-
-    test('it should hide cards on enterprise if no permission and in root namespace', async function (assert) {
+      this.permissions.exactPaths = {
+        'sys/internal/counters/activity': {
+          capabilities: ['read'],
+        },
+        'sys/replication/status': {
+          capabilities: ['read'],
+        },
+      };
       await this.renderComponent();
       assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
       assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
       assert.dom(DASHBOARD.cardName('learn-more')).exists();
       assert.dom(DASHBOARD.cardName('quick-actions')).exists();
       assert.dom(DASHBOARD.cardName('configuration-details')).exists();
+      assert.dom(DASHBOARD.cardName('client-count')).exists();
+      assert.dom(DASHBOARD.cardName('replication')).exists();
+    });
+
+    test('it should hide cards on enterprise in root namespace but no permission', async function (assert) {
+      await this.renderComponent();
       assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
       assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
     });
@@ -156,8 +160,8 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
     });
 
-    test('it should hide client count on enterprise in root namespace if no permission', async function (assert) {
-      const policy = {
+    test('it should hide client count on enterprise in root namespace if no activity permission', async function (assert) {
+      this.permissions.exactPaths = {
         'sys/internal/counters/activity': {
           capabilities: ['deny'],
         },
@@ -165,15 +169,14 @@ module('Integration | Component | dashboard/overview', function (hooks) {
           capabilities: ['read'],
         },
       };
-      this.permissions = this.owner.lookup('service:permissions');
-      this.permissions.exactPaths = policy;
+
       await this.renderComponent();
       assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
       assert.dom(DASHBOARD.cardName('replication')).exists();
     });
 
-    test('it should hide replication on enterprise in root namespace if no permission', async function (assert) {
-      const policy = {
+    test('it should hide replication on enterprise in root namespace if no replication status permission', async function (assert) {
+      this.permissions.exactPaths = {
         'sys/internal/counters/activity': {
           capabilities: ['read'],
         },
@@ -181,15 +184,21 @@ module('Integration | Component | dashboard/overview', function (hooks) {
           capabilities: ['deny'],
         },
       };
-      this.permissions = this.owner.lookup('service:permissions');
-      this.permissions.exactPaths = policy;
+
       await this.renderComponent();
       assert.dom(DASHBOARD.cardName('client-count')).exists();
       assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
     });
 
-    test('it should hide replication on enterprise in root namespace if empty', async function (assert) {
-      stubFeaturesAndPermissions(this.owner, true);
+    test('it should hide replication on enterprise if has permission and in root namespace but is empty', async function (assert) {
+      this.permissions.exactPaths = {
+        'sys/internal/counters/activity': {
+          capabilities: ['read'],
+        },
+        'sys/replication/status': {
+          capabilities: ['read'],
+        },
+      };
       this.replication = {};
       await this.renderComponent();
       assert.dom(DASHBOARD.cardName('client-count')).exists();
@@ -199,6 +208,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
 
   module('learn more card', function () {
     test('shows the learn more card on community', async function (assert) {
+      this.version.version = '1.13.1';
       this.version.type = 'community';
       await this.renderComponent();
 
