@@ -11,6 +11,11 @@ export default class ActivityAdapter extends ApplicationAdapter {
   // create date object from user's input using Date.UTC() then send to backend as unix
   // time params from the backend are formatted as a zulu timestamp
   formatQueryParams(queryParams) {
+    if (queryParams?.current_billing_period) {
+      // { current_billing_period: true } automatically queries the activity log
+      // from the builtin license start timestamp to the current month
+      return queryParams;
+    }
     let { start_time, end_time } = queryParams;
     start_time = start_time.timestamp || formatDateObject(start_time);
     end_time = end_time.timestamp || formatDateObject(end_time, true);
