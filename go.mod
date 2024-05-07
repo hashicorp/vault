@@ -82,7 +82,7 @@ require (
 	github.com/hashicorp/cap v0.6.0
 	github.com/hashicorp/cap/ldap v0.0.0-20240328153749-fcfe271d0227
 	github.com/hashicorp/cli v1.1.6
-	github.com/hashicorp/consul-template v0.37.5
+	github.com/hashicorp/consul-template v0.37.6
 	github.com/hashicorp/consul/api v1.27.0
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/eventlogger v0.2.8
