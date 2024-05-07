@@ -63,6 +63,8 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// update the agent's ACL token so that we can successfully deregister the
+	// service later in the test
 	_, err = client.Agent().UpdateAgentACLToken(config.Token, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -102,8 +104,9 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 	// Create a ServiceRegistration that points to our consul instance
 	logger := logging.NewVaultLogger(log.Trace)
 	srConfig := map[string]string{
-		"address":           config.Address(),
-		"token":             config.Token,
+		"address": config.Address(),
+		"token":   config.Token,
+		// decrease reconcile timeout to make test run faster
 		"reconcile_timeout": "1s",
 	}
 	sd, err := NewServiceRegistration(srConfig, logger, sr.State{})
