@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentURL } from '@ember/test-helpers';
+import { click, currentURL, visit } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import authPage from 'vault/tests/pages/auth';
 
@@ -43,13 +43,18 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
 
     await click(link('Disaster Recovery'));
     assert.strictEqual(currentURL(), '/vault/replication/dr', 'Replication dr route renders');
+    // for some reason this link would locally cause the testing browser to navigate
+    // manually redirecting to dashboard resolves the issue
+    await visit('/vault');
 
     await click(link('Client Count'));
+    assert.dom(panel('Client Count')).exists('Client Count nav panel renders');
+    assert.dom(link('Vault Usage Metrics')).hasClass('active', 'Vault Usage Metrics link is active');
     assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'Client counts route renders');
+    await click(link('Back to main navigation'));
 
     await click(link('License'));
     assert.strictEqual(currentURL(), '/vault/license', 'License route renders');
-
     await click(link('Access'));
     await click(link('Control Groups'));
     assert.strictEqual(currentURL(), '/vault/access/control-groups', 'Control groups route renders');
