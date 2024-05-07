@@ -7,6 +7,7 @@ import Component from '@ember/component';
 import keys from 'core/utils/key-codes';
 
 export default Component.extend({
+  onEscCommand() {},
   onExecuteCommand() {},
   onFullscreen() {},
   onValueUpdate() {},
@@ -18,6 +19,9 @@ export default Component.extend({
     handleKeyUp(event) {
       const keyCode = event.keyCode;
       switch (keyCode) {
+        case keys.ESC:
+          this.onEscCommand(keyCode);
+          break;
         case keys.ENTER:
           this.onExecuteCommand(event.target.value);
           break;
