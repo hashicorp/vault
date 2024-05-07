@@ -10,7 +10,7 @@
     {{#if (and @version.isEnterprise @isRootNamespace)}}
       <div class="is-flex-column is-flex-1 gap-24">
         {{#if (has-permission "clients" routeParams="activity")}}
-          <Dashboard::ClientCountCard @isEnterprise={{@version.isEnterprise}} />
+          <Dashboard::ClientCountCard />
         {{/if}}
         {{#if (and (has-permission "status" routeParams="replication") (not (is-empty-value @replication)))}}
           <Dashboard::ReplicationCard

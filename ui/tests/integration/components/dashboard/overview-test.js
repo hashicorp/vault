@@ -102,6 +102,10 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     test('it should hide cards on community in root namespace', async function (assert) {
       this.version.version = '1.13.1';
       this.version.type = 'community';
+      this.server.get(
+        'sys/internal/counters/activity',
+        () => new Error('uh oh! a request was made to sys/internal/counters/activity')
+      );
       await this.renderComponent();
 
       assert.dom(DASHBOARD.cardHeader('Vault version')).exists();

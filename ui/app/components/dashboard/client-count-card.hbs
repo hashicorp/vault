@@ -14,11 +14,7 @@
 
   <hr class="has-background-gray-100" />
 
-  {{#if this.noActivityData}}
-    {{! This will likely not be show since the client activity api was changed to always return data. In the past it
-  would return no activity data. Adding this empty state here to match the current client count behavior }}
-    <Clients::NoData @config={{this.clientConfig}} />
-  {{else}}
+  {{#if this.hasActivity}}
     {{#if this.fetchClientActivity.isRunning}}
       <VaultLogoSpinner />
     {{else}}
@@ -44,5 +40,9 @@
         </small>
       </div>
     {{/if}}
+  {{else}}
+    {{! This will likely not be show since the client activity api was changed to always return data. In the past it
+  would return no activity data. Adding this empty state here to match the current client count behavior }}
+    <Clients::NoData @config={{hash enabled="On"}} />
   {{/if}}
 </Hds::Card::Container>
