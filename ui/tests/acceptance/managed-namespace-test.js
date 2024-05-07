@@ -9,10 +9,6 @@ import { setupApplicationTest } from 'ember-qunit';
 import Pretender from 'pretender';
 import { getManagedNamespace } from 'vault/routes/vault/cluster';
 
-const FEATURE_FLAGS_RESPONSE = {
-  feature_flags: ['VAULT_CLOUD_ADMIN_NAMESPACE'],
-};
-
 module('Acceptance | Enterprise | Managed namespace root', function (hooks) {
   setupApplicationTest(hooks);
 
@@ -22,10 +18,9 @@ module('Acceptance | Enterprise | Managed namespace root', function (hooks) {
      * we have to populate them on the beforeEach hook because
      * the fetch won't trigger again within the tests
      */
+
+    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
     this.server = new Pretender(function () {
-      this.get('/v1/sys/internal/ui/feature-flags', () => {
-        return [200, { 'Content-Type': 'application/json' }, JSON.stringify(FEATURE_FLAGS_RESPONSE)];
-      });
       this.get('/v1/sys/health', this.passthrough);
       this.get('/v1/sys/seal-status', this.passthrough);
       this.get('/v1/sys/license/features', this.passthrough);

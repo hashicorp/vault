@@ -300,24 +300,23 @@ module('Acceptance | clients | overview | sync not in license', function (hooks)
   });
 });
 
-// TODO return and understand why this is flaky
-// module('Acceptance | clients | overview | HVD', function (hooks) {
-//   setupApplicationTest(hooks);
-//   setupMirage(hooks);
+module('Acceptance | clients | overview | HVD', function (hooks) {
+  setupApplicationTest(hooks);
+  setupMirage(hooks);
 
-//   hooks.beforeEach(async function () {
-//     syncHandler(this.server);
-//     this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+  hooks.beforeEach(async function () {
+    syncHandler(this.server);
+    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
 
-//     await authPage.login();
-//     return visit('/vault/clients/counts/overview');
-//   });
+    await authPage.login();
+    return visit('/vault/clients/counts/overview');
+  });
 
-//   test.skip('it should show the secrets sync tab', async function (assert) {
-//     assert.dom(GENERAL.tab('sync')).exists();
-//   });
+  test('it should show the secrets sync tab', async function (assert) {
+    assert.dom(GENERAL.tab('sync')).exists();
+  });
 
-//   test.skip('it should show secrets sync stats', async function (assert) {
-//     assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists();
-//   });
-// });
+  test('it should show secrets sync stats', async function (assert) {
+    assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists();
+  });
+});
