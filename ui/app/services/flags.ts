@@ -38,14 +38,14 @@ export default class flagsService extends Service {
 
   getFeatureFlags = keepLatestTask(async () => {
     // managed clusters will always be an enterprise version
-    if (this.version.isCommunity) return;
-
     try {
-      const response = await this.store
-        .adapterFor('application')
-        .ajax('/v1/sys/internal/ui/feature-flags', 'GET', { unauthenticated: true, namespace: null });
-      this.featureFlags = response.data?.feature_flags;
-      return;
+      const result = await fetch('/v1/sys/internal/ui/feature-flags', {
+        method: 'GET',
+      });
+      if (result.status === 200) {
+        const body = await result.json();
+        this.featureFlags = body.feature_flags || [];
+      }
     } catch (error) {
       if (DEBUG) console.error(error); // eslint-disable-line no-console
     }
