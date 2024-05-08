@@ -31,14 +31,14 @@ if [ ! -d "$PREVIEW_DIR" ]; then
   should_pull=false
 fi
 
-git checkout zs.update-gha-node-20
-
 cd "$PREVIEW_DIR"
 
 # If the directory already existed, pull to ensure the clone is fresh
 if [ "$should_pull" = true ]; then
   git pull origin main
 fi
+
+git checkout zs.update-gha-node-20
 
 # Run the dev-portal content-repo start script
 REPO=$PRODUCT \
