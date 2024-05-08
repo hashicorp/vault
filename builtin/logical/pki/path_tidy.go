@@ -331,6 +331,11 @@ func pathTidyCancel(b *backend) *framework.Path {
 								Description: `The number of expired, unused acme orders removed`,
 								Required:    false,
 							},
+							"cert_metadata_deleted_count": {
+								Type:        framework.TypeInt,
+								Description: `The number of metadata entries removed`,
+								Required:    false,
+							},
 						},
 					}},
 				},
@@ -512,6 +517,11 @@ func pathTidyStatus(b *backend) *framework.Path {
 							"acme_orders_deleted_count": {
 								Type:        framework.TypeInt,
 								Description: `The number of expired, unused acme orders removed`,
+								Required:    false,
+							},
+							"cert_metadata_deleted_count": {
+								Type:        framework.TypeInt,
+								Description: `The number of metadata entries removed`,
 								Required:    false,
 							},
 						},
