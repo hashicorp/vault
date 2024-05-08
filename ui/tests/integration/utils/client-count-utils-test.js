@@ -5,6 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 import {
   filterVersionHistory,
   formatByMonths,
@@ -14,11 +15,10 @@ import {
   sortMonthsByTimestamp,
   setStartTimeQuery,
 } from 'core/utils/client-count-utils';
-import { LICENSE_START } from 'vault/mirage/handlers/clients';
+import clientsHandler from 'vault/mirage/handlers/clients';
 import {
   ACTIVITY_RESPONSE_STUB as RESPONSE,
   MIXED_ACTIVITY_RESPONSE_STUB as MIXED_RESPONSE,
-  VERSION_HISTORY,
   SERIALIZED_ACTIVITY_RESPONSE,
 } from 'vault/tests/helpers/clients/client-count-helpers';
 
@@ -34,31 +34,89 @@ in a serializer test for easier debugging
 module('Integration | Util | client count utils', function (hooks) {
   setupTest(hooks);
 
-  test('filterVersionHistory: it returns version data for relevant upgrades that occurred during date range', async function (assert) {
-    assert.expect(2);
-    // LICENSE_START is '2023-07-02T00:00:00Z'
-    const original = [...VERSION_HISTORY];
-    const expected = [
-      {
-        previousVersion: null,
-        timestampInstalled: '2023-07-02T00:00:00.000Z',
-        version: '1.9.0',
-      },
-      {
-        previousVersion: '1.9.1',
-        timestampInstalled: '2023-09-02T00:00:00.000Z',
-        version: '1.10.1',
-      },
-    ];
+  module('filterVersionHistory', function (hooks) {
+    setupMirage(hooks);
 
-    const startTime = LICENSE_START.toISOString(); // same as license start to catch same day edge cases
-    const endTime = '2024-03-04T16:14:21.000Z';
-    assert.propEqual(
-      filterVersionHistory(VERSION_HISTORY, startTime, endTime),
-      expected,
-      'it only returns upgrades between given start and end times'
-    );
-    assert.propEqual(VERSION_HISTORY, original, 'it does not modify original array');
+    hooks.beforeEach(async function () {
+      clientsHandler(this.server);
+      const store = this.owner.lookup('service:store');
+      // format returned by model hook in routes/vault/cluster/clients.ts
+      this.versionHistory = await store.findAll('clients/version-history').then((resp) => {
+        return resp.map(({ version, previousVersion, timestampInstalled }) => {
+          return {
+            version,
+            previousVersion,
+            timestampInstalled,
+          };
+        });
+      });
+    });
+
+    test('it returns version data for upgrade to notable versions: 1.9, 1.10, 1.17', async function (assert) {
+      assert.expect(3);
+      const original = [...this.versionHistory];
+      const expected = [
+        {
+          previousVersion: '1.9.0',
+          timestampInstalled: '2023-08-02T00:00:00.000Z',
+          version: '1.9.1',
+        },
+        {
+          previousVersion: '1.9.1',
+          timestampInstalled: '2023-09-02T00:00:00.000Z',
+          version: '1.10.1',
+        },
+        {
+          previousVersion: '1.16.0',
+          timestampInstalled: '2023-12-02T01:00:00.000Z',
+          version: '1.17.0',
+        },
+      ];
+      // set start/end times longer than version history to test all relevant upgrades return
+      const startTime = '2023-06-02T00:00:00Z'; // first upgrade installed '2023-07-02T00:00:00Z'
+      const endTime = '2024-03-04T16:14:21.000Z'; // latest upgrade installed '2023-12-02T01:00:00.000Z'
+      const filteredHistory = filterVersionHistory(this.versionHistory, startTime, endTime);
+      assert.propEqual(filteredHistory, expected, 'it returns all notable upgrades');
+      assert.notPropContains(
+        filteredHistory,
+        {
+          version: '1.9.0',
+          previousVersion: null,
+          timestampInstalled: '2023-07-02T00:00:00Z',
+        },
+        'does not include version history if previous_version is null'
+      );
+      assert.propEqual(this.versionHistory, original, 'it does not modify original array');
+    });
+
+    test('it only returns version data for initial upgrades between given date range', async function (assert) {
+      assert.expect(2);
+      const expected = [
+        {
+          previousVersion: '1.9.0',
+          timestampInstalled: '2023-08-02T00:00:00.000Z',
+          version: '1.9.1',
+        },
+        {
+          previousVersion: '1.9.1',
+          timestampInstalled: '2023-09-02T00:00:00.000Z',
+          version: '1.10.1',
+        },
+      ];
+      const startTime = '2023-08-02T00:00:00.000Z'; // same date as 1.9.1 install date to catch same day edge cases
+      const endTime = '2023-11-02T01:00:00.000Z';
+      const filteredHistory = filterVersionHistory(this.versionHistory, startTime, endTime);
+      assert.propEqual(filteredHistory, expected, 'it only returns upgrades during date range');
+      assert.notPropContains(
+        filteredHistory,
+        {
+          version: '1.10.3',
+          previousVersion: '1.10.1',
+          timestampInstalled: '2023-09-23T00:00:00.000Z',
+        },
+        'it does not return subsequent patch versions of the same notable upgrade version'
+      );
+    });
   });
 
   test('formatByMonths: it formats the months array', async function (assert) {

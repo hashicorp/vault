@@ -4,6 +4,7 @@
  */
 
 import {
+  add,
   addMonths,
   differenceInCalendarMonths,
   endOfMonth,
@@ -237,11 +238,11 @@ export default function (server) {
     return {
       request_id: 'version-history-request-id',
       data: {
-        keys: ['1.9.0', '1.9.1', '1.10.1', '1.14.4', '1.16.0', '1.17.0'],
+        keys: ['1.9.0', '1.9.1', '1.10.1', '1.10.3', '1.14.4', '1.16.0', '1.17.0'],
         key_info: {
           // entity/non-entity breakdown added
           '1.9.0': {
-            // we don't currently use build_date, including for accuracy. it's only tracked in versions >= 1.110
+            // we don't currently use build_date, including for accuracy. it's only tracked in versions >= 1.11.0
             build_date: null,
             previous_version: null,
             timestamp_installed: LICENSE_START.toISOString(),
@@ -255,12 +256,17 @@ export default function (server) {
           '1.10.1': {
             build_date: null,
             previous_version: '1.9.1',
-            timestamp_installed: UPGRADE_DATE.toISOString(),
+            timestamp_installed: addMonths(LICENSE_START, 2).toISOString(), // same as UPGRADE_DATE
+          },
+          '1.10.3': {
+            build_date: null,
+            previous_version: '1.10.1',
+            timestamp_installed: add(LICENSE_START, { months: 2, weeks: 3 }).toISOString(),
           },
           // no notable UI changes
           '1.14.4': {
             build_date: addMonths(LICENSE_START, 3).toISOString(),
-            previous_version: '1.10.1',
+            previous_version: '1.10.3',
             timestamp_installed: addMonths(LICENSE_START, 3).toISOString(),
           },
           // sync clients added
