@@ -2,7 +2,7 @@
 
 Client counts have been available via the usage metrics UI since Vault 1.6. We
 have made continual improvements to the Vault client count computation logic
-provided in the Vault UI and API. 
+provided in the Vault UI and API.
 
 | Version | Interface | Accuracy improvement
 | :-----: | --------- | --------------------
@@ -36,8 +36,6 @@ version of the client count computation logic.
 | 1.10    | Data on the **Current month** tab does not take the billing period into account.
 
 ### What happens to client count when I upgrade? ((#what-happens-at-upgrade))
-
-**Vault will only reflect the number of active unique clients since the upgrade**.
 
 We recommend upgrading **before** your next billing period begins so that the
 usage metrics UI correctly reflects all clients for the current billing period.
@@ -75,5 +73,7 @@ usage metrics UI correctly reflects all clients for the current billing period.
 
     Each unique combination of authN mount, namespace, and alias, will be counted
     as a distinct client.
+
+    **Vault will only reflect the number of active unique clients since the upgrade**.
   </Tab>
 </Tabs>
