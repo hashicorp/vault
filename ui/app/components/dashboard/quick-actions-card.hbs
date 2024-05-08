@@ -4,10 +4,10 @@
 ~}}
 
 <Hds::Card::Container @hasBorder={{true}} class="has-padding-l" data-test-card="quick-actions">
-  <h3 class="title is-4">Quick actions</h3>
+  <h2 class="title is-4">Quick actions</h2>
   {{#if this.filteredSecretEngines}}
     <div class="has-top-margin-m has-bottom-margin-m">
-      <h4 class="title is-marginless is-6" data-test-card-subtitle="secrets-engines">Secrets engines</h4>
+      <h3 class="title is-marginless is-6" data-test-card-subtitle="secrets-engines">Secrets engines</h3>
       <p class="is-size-8 has-top-margin-xxs has-bottom-margin-s has-text-grey">Supported engines include databases, KV
         version 2, and PKI.</p>
       <SearchSelect
@@ -28,7 +28,7 @@
     </div>
 
     {{#if this.selectedEngine}}
-      <h4 id="action-select-title" class="title is-6" data-test-card-subtitle="secrets-engines">Action</h4>
+      <h3 id="action-select-title" class="title is-6" data-test-card-subtitle="secrets-engines">Action</h3>
       <Select
         @name="action-select"
         @options={{this.actionOptions}}
@@ -49,7 +49,7 @@
             @onChange={{fn (mut this.paramValue)}}
           />
         {{else}}
-          <h4 class="title is-6" data-test-card-subtitle="param">{{this.searchSelectParams.title}}</h4>
+          <h3 class="title is-6" data-test-card-subtitle="param">{{this.searchSelectParams.title}}</h3>
 
           <SearchSelect
             class="is-flex-grow-1"
