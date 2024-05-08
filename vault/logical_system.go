@@ -1409,6 +1409,9 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 		}
 		entryConfig["user_lockout_config"] = userLockoutConfig
 	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("delegated_auth_accessors"); ok {
+		entryConfig["delegated_auth_accessors"] = rawVal.([]string)
+	}
 
 	// Add deprecation status only if it exists
 	builtinType := b.Core.builtinTypeFromMountEntry(ctx, entry)
