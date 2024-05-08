@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -97,6 +98,10 @@ func (b *backend) pathPolicyBYOKExportRead(ctx context.Context, req *logical.Req
 		return logical.ErrorResponse("key is not exportable"), nil
 	}
 
+	if srcP.Type.CMACSupported() && !constants.IsEnterprise {
+		return logical.ErrorResponse(ErrCmacEntOnly.Error()), logical.ErrInvalidRequest
+	}
+
 	retKeys := map[string]string{}
 	switch version {
 	case "":
@@ -154,7 +159,7 @@ func getBYOKExportKey(dstP *keysutil.Policy, srcP *keysutil.Policy, key *keysuti
 
 	var targetKey interface{}
 	switch srcP.Type {
-	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305, keysutil.KeyType_HMAC:
+	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305, keysutil.KeyType_HMAC, keysutil.KeyType_AES128_CMAC, keysutil.KeyType_AES256_CMAC:
 		targetKey = key.Key
 	case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
 		targetKey = key.RSAKey

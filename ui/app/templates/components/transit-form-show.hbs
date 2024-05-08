@@ -10,6 +10,7 @@
         <SecretLink
           @secret={{@key.id}}
           @mode="show"
+          @backend={{@key.backend}}
           @replace={{true}}
           @queryParams={{hash tab="actions"}}
           data-test-transit-key-actions-link={{true}}
@@ -22,6 +23,7 @@
         <SecretLink
           @secret={{@key.id}}
           @mode="show"
+          @backend={{@key.backend}}
           @replace={{true}}
           @queryParams={{hash tab="details"}}
           data-test-transit-link="details"
@@ -34,6 +36,7 @@
         <SecretLink
           @secret={{@key.id}}
           @mode="show"
+          @backend={{@key.backend}}
           @replace={{true}}
           @queryParams={{hash tab="versions"}}
           data-test-transit-link="versions"
@@ -61,7 +64,7 @@
       {{/if}}
       {{#if (eq @mode "show")}}
         {{#if (or @capabilities.canUpdate @capabilities.canDelete)}}
-          <ToolbarSecretLink @secret={{@key.id}} @mode="edit" replace={{true}}>
+          <ToolbarSecretLink @secret={{@key.id}} @backend={{@key.backend}} @mode="edit" replace={{true}}>
             Edit encryption key
           </ToolbarSecretLink>
         {{/if}}
@@ -74,7 +77,7 @@
   <div class="transit-card-container">
     {{#each @model.supportedActions as |supportedAction|}}
       <LinkedBlock
-        @params={{array "vault.cluster.secrets.backend.actions" @model.id}}
+        @params={{array "vault.cluster.secrets.backend.actions" @model.backend @model.id}}
         @queryParams={{hash action=supportedAction.name}}
         class="transit-card"
         data-test-transit-card={{supportedAction.name}}

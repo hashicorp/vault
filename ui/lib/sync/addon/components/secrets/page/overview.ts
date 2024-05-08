@@ -49,10 +49,6 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
     }
   }
 
-  get isActivated() {
-    return this.args.activatedFeatures.includes('secrets-sync');
-  }
-
   fetchAssociationsForDestinations = task(this, {}, async (page = 1) => {
     try {
       const total = page * this.pageSize;
@@ -79,7 +75,8 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
       yield this.store
         .adapterFor('application')
         .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST', { namespace: null });
-      this.router.transitionTo('vault.cluster.sync.secrets.overview');
+      // must refresh and not transition because transition does not refresh the model from within a namespace
+      yield this.router.refresh();
     } catch (error) {
       this.error = errorMessage(error);
       this.flashMessages.danger(`Error enabling feature \n ${errorMessage(error)}`);

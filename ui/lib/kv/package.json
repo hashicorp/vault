@@ -5,6 +5,7 @@
     "ember-engine"
   ],
   "dependencies": {
+    "ember-auto-import": "*",
     "ember-cli-htmlbars": "*",
     "ember-cli-babel": "*",
     "ember-concurrency": "*",

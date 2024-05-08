@@ -12,13 +12,9 @@ import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
-import {
-  OIDC_BASE_URL,
-  SELECTORS,
-  overrideMirageResponse,
-  overrideCapabilities,
-} from 'vault/tests/helpers/oidc-config';
+import { OIDC_BASE_URL, SELECTORS } from 'vault/tests/helpers/oidc-config';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
 
 const searchSelect = create(ss);
 
@@ -227,7 +223,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
   test('it should render fallback for search select', async function (assert) {
     assert.expect(1);
     this.model = this.store.createRecord('oidc/client');
-    this.server.get('/identity/oidc/assignment', () => overrideMirageResponse(403));
+    this.server.get('/identity/oidc/assignment', () => overrideResponse(403));
     await render(hbs`
       <Oidc::ClientForm
         @model={{this.model}}
@@ -245,7 +241,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
   test('it should render error alerts when API returns an error', async function (assert) {
     assert.expect(2);
     this.model = this.store.createRecord('oidc/client');
-    this.server.post('/sys/capabilities-self', () => overrideCapabilities(OIDC_BASE_URL + '/clients'));
+    this.server.post('/sys/capabilities-self', () => capabilitiesStub(OIDC_BASE_URL + '/clients'));
     await render(hbs`
       <Oidc::ClientForm
         @model={{this.model}}

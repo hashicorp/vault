@@ -960,7 +960,7 @@ func tryRevokeCertBySerial(sc *storageContext, config *crlConfig, serial string)
 	sc.Backend.GetRevokeStorageLock().Lock()
 	defer sc.Backend.GetRevokeStorageLock().Unlock()
 
-	certEntry, err := fetchCertBySerial(sc, "certs/", serial)
+	certEntry, err := fetchCertBySerial(sc, issuing.PathCerts, serial)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -1858,7 +1858,7 @@ func buildAnyCRLsWithCerts(
 		}
 
 		if !stillHaveIssuerForID {
-			if err := sc.Storage.Delete(sc.Context, "crls/"+crlId.String()); err != nil {
+			if err := sc.Storage.Delete(sc.Context, issuing.PathCrls+crlId.String()); err != nil {
 				return nil, fmt.Errorf("error building CRLs: unable to clean up deleted issuers' CRL: %w", err)
 			}
 		}
@@ -2217,7 +2217,7 @@ WRITE:
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error creating new CRL: %s", err)}
 	}
 
-	writePath := "crls/" + identifier.String()
+	writePath := issuing.PathCrls + identifier.String()
 	if thisIssuerId == legacyBundleShimID {
 		// Ignore the CRL ID as it won't be persisted anyways; hard-code the
 		// old legacy path and allow it to be updated.

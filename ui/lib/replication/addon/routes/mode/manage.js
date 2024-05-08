@@ -7,7 +7,7 @@ import { camelize } from '@ember/string';
 import { all } from 'rsvp';
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import { replicationActionForMode } from 'replication/helpers/replication-action-for-mode';
+import { replicationActionForMode } from 'core/helpers/replication-action-for-mode';
 
 const pathForAction = (action, replicationMode, clusterMode) => {
   let path;

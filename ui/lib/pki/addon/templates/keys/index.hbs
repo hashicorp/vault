@@ -8,6 +8,7 @@
 <Page::PkiKeyList
   @keyModels={{this.model.keyModels}}
   @mountPoint={{this.mountPoint}}
+  @backend={{this.model.parentModel.id}}
   @canImportKey={{(get (get this.model.keyModels 0) "canImportKey")}}
   @canGenerateKey={{(get (get this.model.keyModels 0) "canGenerateKey")}}
   @canRead={{(get (get this.model.keyModels 0) "canRead")}}

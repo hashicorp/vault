@@ -39,7 +39,7 @@ class MessageError extends Component {
       if (!adapterError) {
         return null;
       }
-      if (adapterError.errors.length > 0) {
+      if (adapterError.errors?.length > 0) {
         return adapterError.errors.map((e) => {
           if (typeof e === 'object') return e.title || e.message || JSON.stringify(e);
           return e;

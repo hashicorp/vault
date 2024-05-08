@@ -16,7 +16,7 @@
         />
         <div class="toolbar-separator"></div>
       {{/if}}
-      <ToolbarLink @route="configuration.edit">
+      <ToolbarLink @route="configuration.edit" @model={{@backend}}>
         Edit configuration
       </ToolbarLink>
     </ToolbarActions>

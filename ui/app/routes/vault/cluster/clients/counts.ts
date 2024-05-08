@@ -12,35 +12,17 @@ import { getUnixTime } from 'date-fns';
 import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
 
-import type { ClientsRouteModel } from '../clients';
-import type ClientsConfigModel from 'vault/models/clients/config';
-import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
+import type { ModelFrom } from 'vault/vault/route';
+import type ClientsRoute from '../clients';
 import type ClientsActivityModel from 'vault/models/clients/activity';
-import type Controller from '@ember/controller';
-import type AdapterError from 'ember-data/adapter'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
+import type ClientsCountsController from 'vault/controllers/vault/cluster/clients/counts';
+import { setStartTimeQuery } from 'core/utils/client-count-utils';
 
 export interface ClientsCountsRouteParams {
   start_time?: string | number | undefined;
   end_time?: string | number | undefined;
   ns?: string | undefined;
   mountPath?: string | undefined;
-}
-
-export interface ClientsCountsRouteModel {
-  config: ClientsConfigModel;
-  versionHistory: ClientsVersionHistoryModel;
-  activity?: ClientsActivityModel;
-  activityError?: AdapterError;
-  isSecretsSyncActivated: boolean;
-  startTimestamp: number;
-  endTimestamp: number;
-}
-interface ClientsCountsController extends Controller {
-  model: ClientsCountsRouteModel;
-  start_time: number | undefined;
-  end_time: number | undefined;
-  ns: string | undefined;
-  mountPath: string | undefined;
 }
 
 interface ActivationFlagsResponse {
@@ -74,9 +56,8 @@ export default class ClientsCountsRoute extends Route {
       } catch (error) {
         activityError = error;
       }
-      return [activity, activityError];
     }
-    return [{}, null];
+    return { activity, activityError };
   }
 
   async getActivatedFeatures() {
@@ -91,7 +72,7 @@ export default class ClientsCountsRoute extends Route {
     }
   }
 
-  async isSecretsSyncActivated(activity: ClientsActivityModel) {
+  async isSecretsSyncActivated(activity: ClientsActivityModel | undefined) {
     // if there are secrets, the feature is activated
     if (activity && activity.total?.secret_syncs > 0) return true;
 
@@ -104,14 +85,15 @@ export default class ClientsCountsRoute extends Route {
   }
 
   async model(params: ClientsCountsRouteParams) {
-    const { config, versionHistory } = this.modelFor('vault.cluster.clients') as ClientsRouteModel;
-    // only enterprise versions will have a relevant billing start date, pass null so community users must select initial start time
-    const startTime = this.version.isEnterprise ? getUnixTime(config.billingStartTimestamp) : null;
+    const { config, versionHistory } = this.modelFor('vault.cluster.clients') as ModelFrom<ClientsRoute>;
+    // only enterprise versions will have a relevant billing start date, if null users must select initial start time
+    const startTime = setStartTimeQuery(this.version.isEnterprise, config);
+
     const startTimestamp = Number(params.start_time) || startTime;
     const endTimestamp = Number(params.end_time) || getUnixTime(timestamp.now());
-    const [activity, activityError] = await this.getActivity(startTimestamp, endTimestamp);
+    const { activity, activityError } = await this.getActivity(startTimestamp, endTimestamp);
 
-    const isSecretsSyncActivated = await this.isSecretsSyncActivated(activity as ClientsActivityModel);
+    const isSecretsSyncActivated = await this.isSecretsSyncActivated(activity);
 
     return {
       activity,

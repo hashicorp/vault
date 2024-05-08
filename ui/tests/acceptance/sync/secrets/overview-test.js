@@ -26,26 +26,45 @@ module('Acceptance | sync | overview', function (hooks) {
     await authPage.login();
   });
 
-  module('when feature is activated and has pre-existing destinations', function (hooks) {
+  module('when feature is activated', function (hooks) {
     hooks.beforeEach(async function () {
       syncScenario(this.server);
     });
 
-    test('it should transition to correct routes when performing actions', async function (assert) {
-      await click(ts.navLink('Secrets Sync'));
-      await click(ts.destinations.list.create);
-      await click(ts.createCancel);
-      await click(ts.overviewCard.actionLink('Create new'));
-      await click(ts.createCancel);
-      await waitFor(ts.overview.table.actionToggle(0));
-      await click(ts.overview.table.actionToggle(0));
-      await click(ts.overview.table.action('sync'));
-      await click(ts.destinations.sync.cancel);
-      await click(ts.breadcrumbLink('Secrets Sync'));
-      await waitFor(ts.overview.table.actionToggle(0));
-      await click(ts.overview.table.actionToggle(0));
-      await click(ts.overview.table.action('details'));
-      assert.dom(ts.tab('Secrets')).hasClass('active', 'Navigates to secrets view for destination');
+    test('it fetches destinations and associations', async function (assert) {
+      assert.expect(2);
+
+      this.server.get('/sys/sync/destinations', () => {
+        assert.true(true, 'destinations is called');
+      });
+      this.server.get('/sys/sync/associations', () => {
+        assert.true(true, 'associations is called');
+      });
+
+      await visit('/vault/sync/secrets/overview');
+    });
+
+    module('when there are pre-existing destinations', function (hooks) {
+      hooks.beforeEach(async function () {
+        syncScenario(this.server);
+      });
+
+      test('it should transition to correct routes when performing actions', async function (assert) {
+        await click(ts.navLink('Secrets Sync'));
+        await click(ts.destinations.list.create);
+        await click(ts.createCancel);
+        await click(ts.overviewCard.actionLink('Create new'));
+        await click(ts.createCancel);
+        await waitFor(ts.overview.table.actionToggle(0));
+        await click(ts.overview.table.actionToggle(0));
+        await click(ts.overview.table.action('sync'));
+        await click(ts.destinations.sync.cancel);
+        await click(ts.breadcrumbLink('Secrets Sync'));
+        await waitFor(ts.overview.table.actionToggle(0));
+        await click(ts.overview.table.actionToggle(0));
+        await click(ts.overview.table.action('details'));
+        assert.dom(ts.tab('Secrets')).hasClass('active', 'Navigates to secrets view for destination');
+      });
     });
   });
 
@@ -76,9 +95,19 @@ module('Acceptance | sync | overview', function (hooks) {
         wasActivatePOSTCalled = true;
         return {};
       });
+    });
 
-      // override mirage to simulate no pre-existing destinations
-      this.server.get('/sys/sync/destinations', () => {});
+    test('it does not fetch destinations and associations', async function (assert) {
+      assert.expect(0);
+
+      this.server.get('/sys/sync/destinations', () => {
+        assert.true(false, 'destinations is not called');
+      });
+      this.server.get('/sys/sync/associations', () => {
+        assert.true(false, 'associations is not called');
+      });
+
+      await visit('/vault/sync/secrets/overview');
     });
 
     test('the activation workflow works', async function (assert) {
@@ -119,8 +148,8 @@ module('Acceptance | sync | overview', function (hooks) {
     });
 
     test('it should make activation-flag requests to correct namespace', async function (assert) {
-      assert.expect(3);
-
+      assert.expect(4);
+      // should call GET activation-flags twice because we need an updated response after activating the feature
       this.server.get('/sys/activation-flags', (_, req) => {
         assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
         return {
@@ -151,7 +180,7 @@ module('Acceptance | sync | overview', function (hooks) {
     test.skip('it should make activation-flag requests to correct namespace when managed', async function (assert) {
       // TODO: unskip for 1.16.1 when managed is supported
       assert.expect(3);
-      this.owner.lookup('service:feature-flag').setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
+      this.owner.lookup('service:flags').setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
 
       this.server.get('/sys/activation-flags', (_, req) => {
         assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');

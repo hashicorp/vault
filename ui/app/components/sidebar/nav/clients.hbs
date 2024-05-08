@@ -1,0 +1,31 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::SideNav::Portal @ariaLabel="Client Count Navigation Links" data-test-sidebar-nav-panel="Client Count" as |Nav|>
+  <Nav.BackLink
+    @route="vault.cluster"
+    @current-when={{false}}
+    @icon="arrow-left"
+    @text="Back to main navigation"
+    data-test-sidebar-nav-link="Back to main navigation"
+  />
+
+  <Nav.Title data-test-sidebar-nav-heading="Client Count">Client Count</Nav.Title>
+
+  <Nav.Link
+    @route="vault.cluster.clients.counts.overview"
+    @current-when="vault.cluster.clients.counts"
+    @text="Vault Usage Metrics"
+    data-test-sidebar-nav-link="Vault Usage Metrics"
+  />
+  {{#if @canReadConfig}}
+    <Nav.Link
+      @route="vault.cluster.clients.config"
+      @text="Configuration"
+      @current-when="vault.cluster.clients.config vault.cluster.clients.edit"
+      data-test-sidebar-nav-link="Configuration"
+    />
+  {{/if}}
+</Hds::SideNav::Portal>
