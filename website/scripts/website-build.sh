@@ -36,7 +36,7 @@ fi
 echo "⏳ Cloning the $REPO_TO_CLONE repo, this might take a while..."
 git clone "https://github.com/hashicorp/$REPO_TO_CLONE.git" "$CLONE_DIR"
 
-git checkout "zs.update-gha-node-20"
+git checkout zs.update-gha-node-20
 
 if [ "$from_cache" = true ]; then
   echo "Setting up $PREVIEW_DIR"

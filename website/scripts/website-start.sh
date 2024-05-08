@@ -31,7 +31,7 @@ if [ ! -d "$PREVIEW_DIR" ]; then
   should_pull=false
 fi
 
-git checkout "zs.update-gha-node-20"
+git checkout zs.update-gha-node-20
 
 cd "$PREVIEW_DIR"
 
