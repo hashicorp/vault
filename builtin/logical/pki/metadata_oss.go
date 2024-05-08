@@ -9,9 +9,9 @@ import (
 	"context"
 	"crypto/x509"
 	"errors"
-	"github.com/hashicorp/go-hclog"
 	"math/big"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/logical"
 )
