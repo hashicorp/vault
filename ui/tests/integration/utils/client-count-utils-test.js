@@ -76,7 +76,11 @@ module('Integration | Util | client count utils', function (hooks) {
       const startTime = '2023-06-02T00:00:00Z'; // first upgrade installed '2023-07-02T00:00:00Z'
       const endTime = '2024-03-04T16:14:21.000Z'; // latest upgrade installed '2023-12-02T01:00:00.000Z'
       const filteredHistory = filterVersionHistory(this.versionHistory, startTime, endTime);
-      assert.propEqual(filteredHistory, expected, 'it returns all notable upgrades');
+      assert.strictEqual(
+        JSON.stringify(filteredHistory),
+        JSON.stringify(expected),
+        'it returns all notable upgrades'
+      );
       assert.notPropContains(
         filteredHistory,
         {
