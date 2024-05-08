@@ -1414,17 +1414,13 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	coreConfig := &CoreConfig{
 		LogicalBackends:    make(map[string]logical.Factory),
 		CredentialBackends: make(map[string]logical.Factory),
-		AuditBackends: map[string]audit.Factory{
-			"file":   audit.NewFileBackend,
-			"socket": audit.NewSocketBackend,
-			"syslog": audit.NewSyslogBackend,
-		},
-		RedirectAddr:    fmt.Sprintf("https://127.0.0.1:%d", listeners[0][0].Address.Port),
-		ClusterAddr:     "https://127.0.0.1:0",
-		DisableMlock:    true,
-		EnableUI:        true,
-		EnableRaw:       true,
-		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		AuditBackends:      make(map[string]audit.Factory),
+		RedirectAddr:       fmt.Sprintf("https://127.0.0.1:%d", listeners[0][0].Address.Port),
+		ClusterAddr:        "https://127.0.0.1:0",
+		DisableMlock:       true,
+		EnableUI:           true,
+		EnableRaw:          true,
+		BuiltinRegistry:    corehelpers.NewMockBuiltinRegistry(),
 	}
 
 	if base != nil {
