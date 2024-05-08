@@ -89,17 +89,15 @@ using the [secrets enable](/vault/docs/commands/secrets/enable) command, and the
 
 [auth tune](/vault/docs/commands/auth/tune)
 
-[secrets tune](/vault/docs/commands/secrets/tune)
-
 ## Audit request headers
 
 Vault Operators can audit specific HTTP headers when those headers are present in
-the incoming client request. Configuration for audit request headers is done via
+the incoming client request. Configuration for audit request headers is applied via
 the [Vault API](/vault/api-docs/system/config-auditing).
 
 When Vault Operators [create](/vault/api-docs/system/config-auditing#create-update-audit-request-header)
 an exception allowing a request header to appear in the audit log, by default the
-value of the header is **not** to be HMAC'ed, this is [configurable](/vault/api-docs/system/config-auditing#hmac)
+value of the header is **not** HMAC'd, this is [configurable](/vault/api-docs/system/config-auditing#hmac)
 per header.
 
 ### Default headers
@@ -109,7 +107,7 @@ per header.
   Prior to Vault 1.17 **only** headers configured by the Vault Operator could appear
   in an audit log.
 
-  As of Vault 1.17 this behavior changes see below for further information.
+  As of Vault 1.17 this behavior changes, see below for further information.
 
 </Warning>
 
@@ -120,7 +118,7 @@ include Vault.
 - `correlation-id`
 - `x-correlation-id`
 
-By default, the values of these headers are **not** [HMAC'ed](/vault/api-docs/system/config-auditing#hmac),
+By default, the values of these headers are **not** [HMAC'd](/vault/api-docs/system/config-auditing#hmac),
 however Vault Operators may override this setting by [manually configuring](/vault/api-docs/system/config-auditing#create-update-audit-request-header)
 the headers described above, supplying an `HMAC` value of `true`.
 
