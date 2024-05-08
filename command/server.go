@@ -1182,20 +1182,6 @@ func (c *ServerCommand) Run(args []string) int {
 				"in a Docker container, provide the IPC_LOCK cap to the container."))
 	}
 
-	inmemMetrics, metricSink, prometheusEnabled, err := configutil.SetupTelemetry(&configutil.SetupTelemetryOpts{
-		Config:      config.Telemetry,
-		Ui:          c.UI,
-		ServiceName: "vault",
-		DisplayName: "Vault",
-		UserAgent:   useragent.String(),
-		ClusterName: config.ClusterName,
-	})
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
-		return 1
-	}
-	metricsHelper := metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
-
 	// Initialize the storage backend
 	var backend physical.Backend
 	if !c.flagDev || config.Storage != nil {
@@ -1210,6 +1196,27 @@ func (c *ServerCommand) Run(args []string) int {
 			return 1
 		}
 	}
+
+	clusterName := config.ClusterName
+
+	// Attempt to retrieve cluster name from insecure storage
+	if clusterName == "" {
+		clusterName, err = c.readClusterNameFromInsecureStorage(backend)
+	}
+
+	inmemMetrics, metricSink, prometheusEnabled, err := configutil.SetupTelemetry(&configutil.SetupTelemetryOpts{
+		Config:      config.Telemetry,
+		Ui:          c.UI,
+		ServiceName: "vault",
+		DisplayName: "Vault",
+		UserAgent:   useragent.String(),
+		ClusterName: clusterName,
+	})
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
+		return 1
+	}
+	metricsHelper := metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
 
 	// Initialize the Service Discovery, if there is one
 	var configSR sr.ServiceRegistration
@@ -3517,6 +3524,32 @@ func (c *ServerCommand) reloadSeals(ctx context.Context, grabStateLock bool, cor
 	c.logger.Debug("seal configuration reloaded successfully")
 
 	return true, nil
+}
+
+// Attempt to read the cluster name from the insecure storage.
+func (c *ServerCommand) readClusterNameFromInsecureStorage(b physical.Backend) (string, error) {
+	ctx := context.Background()
+	entry, err := b.Get(ctx, "core/cluster/local/name")
+	if err != nil {
+		return "", err
+	}
+
+	var result map[string]interface{}
+	// Decode JSON data into the map
+
+	if entry != nil {
+		if err := jsonutil.DecodeJSON(entry.Value, &result); err != nil {
+			return "", fmt.Errorf("failed to decode JSON data: %w", err)
+		}
+	}
+
+	// Retrieve the value of the "name" field from the map
+	name, ok := result["name"].(string)
+	if !ok {
+		return "", fmt.Errorf("failed to extract name field from decoded JSON")
+	}
+
+	return name, nil
 }
 
 func SetStorageMigration(b physical.Backend, active bool) error {
