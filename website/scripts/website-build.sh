@@ -34,7 +34,9 @@ fi
 
 # Clone the base project, if needed
 echo "⏳ Cloning the $REPO_TO_CLONE repo, this might take a while..."
-git clone --depth=1 "https://github.com/hashicorp/$REPO_TO_CLONE.git" "$CLONE_DIR"
+git clone "https://github.com/hashicorp/$REPO_TO_CLONE.git" "$CLONE_DIR"
+
+git checkout "zs.update-gha-node-20"
 
 if [ "$from_cache" = true ]; then
   echo "Setting up $PREVIEW_DIR"
@@ -46,10 +48,10 @@ cd "$PREVIEW_DIR"
 
 # Run the build:deploy-preview start script
 PREVIEW_FROM_REPO=$PRODUCT \
-IS_CONTENT_PREVIEW=true \
-PREVIEW_MODE=$PREVIEW_MODE \
-REPO=$PRODUCT \
-HASHI_ENV=project-preview \
-LOCAL_CONTENT_DIR=$LOCAL_CONTENT_DIR \
-CURRENT_GIT_BRANCH=$CURRENT_GIT_BRANCH \
-npm run build:deploy-preview
+  IS_CONTENT_PREVIEW=true \
+  PREVIEW_MODE=$PREVIEW_MODE \
+  REPO=$PRODUCT \
+  HASHI_ENV=project-preview \
+  LOCAL_CONTENT_DIR=$LOCAL_CONTENT_DIR \
+  CURRENT_GIT_BRANCH=$CURRENT_GIT_BRANCH \
+  npm run build:deploy-preview

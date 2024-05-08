@@ -26,22 +26,24 @@ should_pull=true
 
 # Clone the dev-portal project, if needed
 if [ ! -d "$PREVIEW_DIR" ]; then
-    echo "⏳ Cloning the $REPO_TO_CLONE repo, this might take a while..."
-    git clone --depth=1 https://github.com/hashicorp/$REPO_TO_CLONE.git "$PREVIEW_DIR"
-    should_pull=false
+  echo "⏳ Cloning the $REPO_TO_CLONE repo, this might take a while..."
+  git clone https://github.com/hashicorp/$REPO_TO_CLONE.git "$PREVIEW_DIR"
+  should_pull=false
 fi
+
+git checkout "zs.update-gha-node-20"
 
 cd "$PREVIEW_DIR"
 
 # If the directory already existed, pull to ensure the clone is fresh
 if [ "$should_pull" = true ]; then
-    git pull origin main
+  git pull origin main
 fi
 
 # Run the dev-portal content-repo start script
 REPO=$PRODUCT \
-PREVIEW_FROM_REPO=$PRODUCT \
-LOCAL_CONTENT_DIR=$LOCAL_CONTENT_DIR \
-CURRENT_GIT_BRANCH=$CURRENT_GIT_BRANCH \
-PREVIEW_MODE=$PREVIEW_MODE \
-npm run start:local-preview
+  PREVIEW_FROM_REPO=$PRODUCT \
+  LOCAL_CONTENT_DIR=$LOCAL_CONTENT_DIR \
+  CURRENT_GIT_BRANCH=$CURRENT_GIT_BRANCH \
+  PREVIEW_MODE=$PREVIEW_MODE \
+  npm run start:local-preview
