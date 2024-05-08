@@ -6,18 +6,33 @@ on:
     types:
       - closed
       - labeled
+  repository_dispatch:
+    types: [ent-backport]
 
 jobs:
   backport-targeted-release-branch:
     if: github.event.pull_request.merged
     runs-on: ubuntu-latest
-    container: hashicorpdev/backport-assistant:0.3.3
+    container: hashicorpdev/backport-assistant:0.4.0
     steps:
       - name: Backport changes to targeted release branch
         run: |
-          backport-assistant backport -merge-method=squash -gh-automerge 
+          backport-assistant backport -merge-method=squash -gh-automerge
         env:
           BACKPORT_LABEL_REGEXP: "backport/(?P<target>\\d+\\.\\d+\\.[+\\w]+)"
           BACKPORT_TARGET_TEMPLATE: "release/{{.target}}"
           BACKPORT_MERGE_COMMIT: true
           GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          ENABLE_VERSION_MANIFESTS: true
+  backport-ent:
+    if: github.event.pull_request.merged && contains(join(github.event.pull_request.labels.*.name), 'backport/ent')
+    runs-on: ubuntu-latest
+    container: hashicorpdev/backport-assistant:0.4.0
+    steps:
+      - name: Trigger backport for Enterprise
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
+        with:
+          token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          repository: hashicorp/vault-enterprise
+          event-type: ent-backport
+          client-payload: ${{ toJson(github.event) }}
