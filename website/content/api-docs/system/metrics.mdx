@@ -33,6 +33,11 @@ $ curl \
   --header "X-Vault-Token: ..." \
     'http://127.0.0.1:8200/v1/sys/metrics?format=prometheus'
 ```
+When requesting metric information, only the active node in a Vault cluster
+responds with data. Follower nodes ignore metric requests, which typically
+results in a timeout response. For example, `curl` command returns with the
+error code `0` and no output.
+
 
 ### Sample response
 

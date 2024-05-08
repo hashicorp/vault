@@ -20,7 +20,7 @@
       <ToolbarLink
         @route="issuers.issuer.cross-sign"
         @type="pen-tool"
-        @model={{@newRootModel.issuerId}}
+        @models={{array @newRootModel.backend @newRootModel.issuerId}}
         data-test-pki-issuer-cross-sign
       >
         Cross-sign issuers
@@ -28,12 +28,18 @@
       <ToolbarLink
         @route="issuers.issuer.sign"
         @type="pen-tool"
-        @model={{@newRootModel.issuerId}}
+        @models={{array @newRootModel.backend @newRootModel.issuerId}}
         data-test-pki-issuer-sign-int
       >
         Sign Intermediate
       </ToolbarLink>
-      <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
+      <BasicDropdown
+        @class="popup-menu"
+        @horizontalPosition="auto-right"
+        @verticalPosition="below"
+        @renderInPlace={{true}}
+        as |D|
+      >
         <D.Trigger
           data-test-popup-menu-trigger
           class={{concat "toolbar-link" (if D.isOpen " is-active")}}
@@ -72,7 +78,11 @@
           </nav>
         </D.Content>
       </BasicDropdown>
-      <ToolbarLink @route="issuers.issuer.edit" @model={{@newRootModel.issuerId}} data-test-pki-issuer-configure>
+      <ToolbarLink
+        @route="issuers.issuer.edit"
+        @models={{array @newRootModel.backend @newRootModel.issuerId}}
+        data-test-pki-issuer-configure
+      >
         Configure
       </ToolbarLink>
     </ToolbarActions>
@@ -98,6 +108,7 @@
         @iconPosition="trailing"
         @text="Cross-sign issuers"
         @route="issuers.issuer.cross-sign"
+        @models={{array @newRootModel.backend @newRootModel.issuerId}}
       />
 
     </Hds::Alert>

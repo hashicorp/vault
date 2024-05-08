@@ -32,8 +32,8 @@ function splitSegments(secretPath) {
  * @param {boolean} lastItemCurrent
  * @returns array of breadcrumbs specific to KV engine
  */
-export function breadcrumbsForSecret(secretPath, lastItemCurrent = false) {
-  if (!secretPath) return [];
+export function breadcrumbsForSecret(backend, secretPath, lastItemCurrent = false) {
+  if (!backend || !secretPath) return [];
   const isDir = pathIsDirectory(secretPath);
   const segments = splitSegments(secretPath);
 
@@ -45,9 +45,9 @@ export function breadcrumbsForSecret(secretPath, lastItemCurrent = false) {
         };
       }
       if (!isDir) {
-        return { label: segment.label, route: 'secret.details', model: segment.model };
+        return { label: segment.label, route: 'secret.details', models: [backend, segment.model] };
       }
     }
-    return { label: segment.label, route: 'list-directory', model: `${segment.model}/` };
+    return { label: segment.label, route: 'list-directory', models: [backend, `${segment.model}/`] };
   });
 }

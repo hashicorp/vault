@@ -24,10 +24,7 @@ import (
 	"github.com/jefferai/jsonx"
 )
 
-var (
-	_ Formatter        = (*EntryFormatter)(nil)
-	_ eventlogger.Node = (*EntryFormatter)(nil)
-)
+var _ eventlogger.Node = (*entryFormatter)(nil)
 
 // timeProvider offers a way to supply a pre-configured time.
 type timeProvider interface {
@@ -35,81 +32,20 @@ type timeProvider interface {
 	formattedTime() string
 }
 
-// FormatterConfig is used to provide basic configuration to a formatter.
-// Use NewFormatterConfig to initialize the FormatterConfig struct.
-type FormatterConfig struct {
-	Raw          bool
-	HMACAccessor bool
+// nonPersistentSalt is used for obtaining a salt that is not persisted.
+type nonPersistentSalt struct{}
 
-	// Vault lacks pagination in its APIs. As a result, certain list operations can return **very** large responses.
-	// The user's chosen audit sinks may experience difficulty consuming audit records that swell to tens of megabytes
-	// of JSON. The responses of list operations are typically not very interesting, as they are mostly lists of keys,
-	// or, even when they include a "key_info" field, are not returning confidential information. They become even less
-	// interesting once HMAC-ed by the audit system.
-	//
-	// Some example Vault "list" operations that are prone to becoming very large in an active Vault installation are:
-	//   auth/token/accessors/
-	//   identity/entity/id/
-	//   identity/entity-alias/id/
-	//   pki/certs/
-	//
-	// This option exists to provide such users with the option to have response data elided from audit logs, only when
-	// the operation type is "list". For added safety, the elision only applies to the "keys" and "key_info" fields
-	// within the response data - these are conventionally the only fields present in a list response - see
-	// logical.ListResponse, and logical.ListResponseWithInfo. However, other fields are technically possible if a
-	// plugin author writes unusual code, and these will be preserved in the audit log even with this option enabled.
-	// The elision replaces the values of the "keys" and "key_info" fields with an integer count of the number of
-	// entries. This allows even the elided audit logs to still be useful for answering questions like
-	// "Was any data returned?" or "How many records were listed?".
-	ElideListResponses bool
-
-	// This should only ever be used in a testing context
-	OmitTime bool
-
-	// The required/target format for the event (supported: JSONFormat and JSONxFormat).
-	RequiredFormat format
-
-	// headerFormatter specifies the formatter used for headers that existing in any incoming audit request.
-	headerFormatter HeaderFormatter
-
-	// Prefix specifies a Prefix that should be prepended to any formatted request or response before serialization.
-	Prefix string
-}
-
-// EntryFormatter should be used to format audit requests and responses.
-// NOTE: Use NewEntryFormatter to initialize the EntryFormatter struct.
-type EntryFormatter struct {
-	config FormatterConfig
+// entryFormatter should be used to format audit requests and responses.
+// NOTE: Use newEntryFormatter to initialize the entryFormatter struct.
+type entryFormatter struct {
+	config formatterConfig
 	salter Salter
 	logger hclog.Logger
 	name   string
 }
 
-// NewFormatterConfig should be used to create a FormatterConfig.
-// Accepted options: WithElision, WithFormat, WithHMACAccessor, WithOmitTime, WithPrefix, WithRaw.
-func NewFormatterConfig(headerFormatter HeaderFormatter, opt ...Option) (FormatterConfig, error) {
-	if headerFormatter == nil || reflect.ValueOf(headerFormatter).IsNil() {
-		return FormatterConfig{}, fmt.Errorf("header formatter is required: %w", ErrInvalidParameter)
-	}
-
-	opts, err := getOpts(opt...)
-	if err != nil {
-		return FormatterConfig{}, err
-	}
-
-	return FormatterConfig{
-		headerFormatter:    headerFormatter,
-		ElideListResponses: opts.withElision,
-		HMACAccessor:       opts.withHMACAccessor,
-		OmitTime:           opts.withOmitTime,
-		Prefix:             opts.withPrefix,
-		Raw:                opts.withRaw,
-		RequiredFormat:     opts.withFormat,
-	}, nil
-}
-
-// NewEntryFormatter should be used to create an EntryFormatter.
-func NewEntryFormatter(name string, config FormatterConfig, salter Salter, logger hclog.Logger) (*EntryFormatter, error) {
+// newEntryFormatter should be used to create an entryFormatter.
+func newEntryFormatter(name string, config formatterConfig, salter Salter, logger hclog.Logger) (*entryFormatter, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, fmt.Errorf("name is required: %w", ErrInvalidParameter)
@@ -123,7 +59,7 @@ func NewEntryFormatter(name string, config FormatterConfig, salter Salter, logge
 		return nil, fmt.Errorf("cannot create a new audit formatter with nil logger: %w", ErrInvalidParameter)
 	}
 
-	return &EntryFormatter{
+	return &entryFormatter{
 		config: config,
 		salter: salter,
 		logger: logger,
@@ -132,18 +68,18 @@ func NewEntryFormatter(name string, config FormatterConfig, salter Salter, logge
 }
 
 // Reopen is a no-op for the formatter node.
-func (*EntryFormatter) Reopen() error {
+func (*entryFormatter) Reopen() error {
 	return nil
 }
 
 // Type describes the type of this node (formatter).
-func (*EntryFormatter) Type() eventlogger.NodeType {
+func (*entryFormatter) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeFormatter
 }
 
 // Process will attempt to parse the incoming event data into a corresponding
 // audit Request/Response which is serialized to JSON/JSONx and stored within the event.
-func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *eventlogger.Event, retErr error) {
+func (f *entryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *eventlogger.Event, retErr error) {
 	// Return early if the context was cancelled, eventlogger will not carry on
 	// asking nodes to process, so any sink node in the pipeline won't be called.
 	select {
@@ -211,14 +147,14 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 	}
 
 	// Using 'any' as we have two different types that we can get back from either
-	// FormatRequest or FormatResponse, but the JSON encoder doesn't care about types.
+	// formatRequest or formatResponse, but the JSON encoder doesn't care about types.
 	var entry any
 
 	switch a.Subtype {
 	case RequestType:
-		entry, err = f.FormatRequest(ctx, data, a)
+		entry, err = f.formatRequest(ctx, data, a)
 	case ResponseType:
-		entry, err = f.FormatResponse(ctx, data, a)
+		entry, err = f.formatResponse(ctx, data, a)
 	default:
 		return nil, fmt.Errorf("unknown audit event subtype: %q", a.Subtype)
 	}
@@ -231,7 +167,7 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 		return nil, fmt.Errorf("unable to format %s: %w", a.Subtype, err)
 	}
 
-	if f.config.RequiredFormat == JSONxFormat {
+	if f.config.requiredFormat == JSONxFormat {
 		var err error
 		result, err = jsonx.EncodeJSONBytes(result)
 		if err != nil {
@@ -246,8 +182,8 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 	// don't support a prefix just sitting there.
 	// However, this would be a breaking change to how Vault currently works to
 	// include the prefix as part of the JSON object or XML document.
-	if f.config.Prefix != "" {
-		result = append([]byte(f.config.Prefix), result...)
+	if f.config.prefix != "" {
+		result = append([]byte(f.config.prefix), result...)
 	}
 
 	// Copy some properties from the event (and audit event) and store the
@@ -267,13 +203,13 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 		Payload:   a2,
 	}
 
-	e2.FormattedAs(f.config.RequiredFormat.String(), result)
+	e2.FormattedAs(f.config.requiredFormat.String(), result)
 
 	return e2, nil
 }
 
-// FormatRequest attempts to format the specified logical.LogInput into a RequestEntry.
-func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput, provider timeProvider) (*RequestEntry, error) {
+// formatRequest attempts to format the specified logical.LogInput into a RequestEntry.
+func (f *entryFormatter) formatRequest(ctx context.Context, in *logical.LogInput, provider timeProvider) (*RequestEntry, error) {
 	switch {
 	case in == nil || in.Request == nil:
 		return nil, errors.New("request to request-audit a nil request")
@@ -293,14 +229,14 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 		connState = in.Request.Connection.ConnState
 	}
 
-	if !f.config.Raw {
+	if !f.config.raw {
 		var err error
-		auth, err = HashAuth(ctx, f.salter, auth, f.config.HMACAccessor)
+		auth, err = HashAuth(ctx, f.salter, auth, f.config.hmacAccessor)
 		if err != nil {
 			return nil, err
 		}
 
-		req, err = HashRequest(ctx, f.salter, req, f.config.HMACAccessor, in.NonHMACReqDataKeys)
+		req, err = HashRequest(ctx, f.salter, req, f.config.hmacAccessor, in.NonHMACReqDataKeys)
 		if err != nil {
 			return nil, err
 		}
@@ -395,7 +331,7 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 		reqEntry.Request.WrapTTL = int(req.WrapInfo.TTL / time.Second)
 	}
 
-	if !f.config.OmitTime {
+	if !f.config.omitTime {
 		// Use the time provider to supply the time for this entry.
 		reqEntry.Time = provider.formattedTime()
 	}
@@ -403,8 +339,8 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 	return reqEntry, nil
 }
 
-// FormatResponse attempts to format the specified logical.LogInput into a ResponseEntry.
-func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInput, provider timeProvider) (*ResponseEntry, error) {
+// formatResponse attempts to format the specified logical.LogInput into a ResponseEntry.
+func (f *entryFormatter) formatResponse(ctx context.Context, in *logical.LogInput, provider timeProvider) (*ResponseEntry, error) {
 	switch {
 	case f == nil:
 		return nil, errors.New("formatter is nil")
@@ -428,10 +364,10 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 		connState = in.Request.Connection.ConnState
 	}
 
-	elideListResponseData := f.config.ElideListResponses && req.Operation == logical.ListOperation
+	elideListResponseData := f.config.elideListResponses && req.Operation == logical.ListOperation
 
 	var respData map[string]interface{}
-	if f.config.Raw {
+	if f.config.raw {
 		// In the non-raw case, elision of list response data occurs inside HashResponse, to avoid redundant deep
 		// copies and hashing of data only to elide it later. In the raw case, we need to do it here.
 		if elideListResponseData && resp.Data != nil {
@@ -447,17 +383,17 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 		}
 	} else {
 		var err error
-		auth, err = HashAuth(ctx, f.salter, auth, f.config.HMACAccessor)
+		auth, err = HashAuth(ctx, f.salter, auth, f.config.hmacAccessor)
 		if err != nil {
 			return nil, err
 		}
 
-		req, err = HashRequest(ctx, f.salter, req, f.config.HMACAccessor, in.NonHMACReqDataKeys)
+		req, err = HashRequest(ctx, f.salter, req, f.config.hmacAccessor, in.NonHMACReqDataKeys)
 		if err != nil {
 			return nil, err
 		}
 
-		resp, err = HashResponse(ctx, f.salter, resp, f.config.HMACAccessor, in.NonHMACRespDataKeys, elideListResponseData)
+		resp, err = HashResponse(ctx, f.salter, resp, f.config.hmacAccessor, in.NonHMACRespDataKeys, elideListResponseData)
 		if err != nil {
 			return nil, err
 		}
@@ -616,7 +552,7 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 		respEntry.Request.WrapTTL = int(req.WrapInfo.TTL / time.Second)
 	}
 
-	if !f.config.OmitTime {
+	if !f.config.omitTime {
 		// Use the time provider to supply the time for this entry.
 		respEntry.Time = provider.formattedTime()
 	}
@@ -674,7 +610,7 @@ func parseVaultTokenFromJWT(token string) *string {
 // determined it should apply to a particular request. The data map that is passed in must be a copy that is safe to
 // modify in place, but need not be a full recursive deep copy, as only top-level keys are changed.
 //
-// See the documentation of the controlling option in FormatterConfig for more information on the purpose.
+// See the documentation of the controlling option in formatterConfig for more information on the purpose.
 func doElideListResponseData(data map[string]interface{}) {
 	for k, v := range data {
 		if k == "keys" {
@@ -689,9 +625,9 @@ func doElideListResponseData(data map[string]interface{}) {
 	}
 }
 
-// newTemporaryEntryFormatter creates a cloned EntryFormatter instance with a non-persistent Salter.
-func newTemporaryEntryFormatter(n *EntryFormatter) *EntryFormatter {
-	return &EntryFormatter{
+// newTemporaryEntryFormatter creates a cloned entryFormatter instance with a non-persistent Salter.
+func newTemporaryEntryFormatter(n *entryFormatter) *entryFormatter {
+	return &entryFormatter{
 		salter: &nonPersistentSalt{},
 		config: n.config,
 	}

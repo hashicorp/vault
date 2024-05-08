@@ -16,37 +16,10 @@ export const CLIENT_COUNT = {
     mountPaths: '[data-test-counts-auth-mounts]',
     startDiscrepancy: '[data-test-counts-start-discrepancy]',
   },
-  tokenTab: {
-    entity: '[data-test-monthly-new-entity]',
-    nonentity: '[data-test-monthly-new-nonentity]',
-    legend: '[data-test-monthly-new-legend]',
-  },
-  syncTab: {
-    total: '[data-test-total-sync-clients]',
-    average: '[data-test-average-sync-clients]',
-  },
-  charts: {
-    chart: (title: string) => `[data-test-chart="${title}"]`, // newer lineal charts
-    statTextValue: (label: string) =>
-      label ? `[data-test-stat-text-container="${label}"] .stat-value` : '[data-test-stat-text-container]',
-    legend: '[data-test-chart-container-legend]',
-    legendLabel: (nth: number) => `.legend-label:nth-child(${nth * 2})`, // nth * 2 accounts for dots in legend
-    timestamp: '[data-test-chart-container-timestamp]',
-    dataBar: '[data-test-vertical-bar]',
-    xAxisLabel: '[data-test-x-axis] text',
-    // selectors for old d3 charts
-    verticalBar: '[data-test-vertical-bar-chart]',
-    lineChart: '[data-test-line-chart]',
-    bar: {
-      xAxisLabel: '[data-test-vertical-chart="x-axis-labels"] text',
-      dataBar: '[data-test-vertical-chart="data-bar"]',
-    },
-    line: {
-      xAxisLabel: '[data-test-line-chart] [data-test-x-axis] text',
-      plotPoint: '[data-test-line-chart="plot-point"]',
-    },
-  },
-  usageStats: '[data-test-usage-stats]',
+  statText: (label: string) => `[data-test-stat-text="${label}"]`,
+  statTextValue: (label: string) =>
+    label ? `[data-test-stat-text="${label}"] .stat-value` : '[data-test-stat-text]',
+  usageStats: (title: string) => `[data-test-usage-stats="${title}"]`,
   dateDisplay: '[data-test-date-display]',
   attributionBlock: '[data-test-clients-attribution]',
   filterBar: '[data-test-clients-filter-bar]',
@@ -70,18 +43,26 @@ export const CLIENT_COUNT = {
     nextYear: '[data-test-next-year]',
     calendarMonth: (month: string) => `[data-test-calendar-month="${month}"]`,
   },
-  runningTotalMonthStats: '[data-test-running-total="single-month-stats"]',
-  runningTotalMonthlyCharts: '[data-test-running-total="monthly-charts"]',
-  selectedAuthMount: 'div#auth-method-search-select [data-test-selected-option] div',
+  selectedAuthMount: 'div#mounts-search-select [data-test-selected-option] div',
   selectedNs: 'div#namespace-search-select [data-test-selected-option] div',
   upgradeWarning: '[data-test-clients-upgrade-warning]',
 };
 
-export const CHART_ELEMENTS = {
-  entityClientDataBars: '[data-test-group="entity_clients"]',
-  nonEntityDataBars: '[data-test-group="non_entity_clients"]',
-  yLabels: '[data-test-group="y-labels"]',
-  actionBars: '[data-test-group="action-bars"]',
-  labelActionBars: '[data-test-group="label-action-bars"]',
-  totalValues: '[data-test-group="total-values"]',
+export const CHARTS = {
+  // container
+  container: (title: string) => `[data-test-chart-container="${title}"]`,
+  timestamp: '[data-test-chart-container-timestamp]',
+  legend: '[data-test-chart-container-legend]',
+  legendLabel: (nth: number) => `.legend-label:nth-child(${nth * 2})`, // nth * 2 accounts for dots in legend
+
+  // chart elements
+  chart: (title: string) => `[data-test-chart="${title}"]`,
+  hover: (area: string) => `[data-test-interactive-area="${area}"]`,
+  table: '[data-test-underlying-data]',
+  tooltip: '[data-test-tooltip]',
+  verticalBar: '[data-test-vertical-bar]',
+  xAxis: '[data-test-x-axis]',
+  yAxis: '[data-test-y-axis]',
+  xAxisLabel: '[data-test-x-axis] text',
+  plotPoint: '[data-test-plot-point]',
 };

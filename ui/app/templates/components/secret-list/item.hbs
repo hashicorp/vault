@@ -18,6 +18,7 @@
       <SecretLink
         @mode={{if @item.isFolder "list" "show"}}
         @secret={{@item.id}}
+        @backend={{@backendModel.id}}
         @queryParams={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
         class="has-text-black has-text-weight-semibold"
       >

@@ -51,6 +51,7 @@ func (r *RequestWrapInfo) SentinelKeys() []string {
 	}
 }
 
+//go:generate enumer -type=ClientTokenSource -trimprefix=ClientTokenFrom -transform=snake
 type ClientTokenSource uint32
 
 const (
@@ -475,6 +476,12 @@ type CtxKeyInFlightRequestID struct{}
 
 func (c CtxKeyInFlightRequestID) String() string {
 	return "in-flight-request-ID"
+}
+
+type CtxKeyInFlightRequestPriority struct{}
+
+func (c CtxKeyInFlightRequestPriority) String() string {
+	return "in-flight-request-priority"
 }
 
 type CtxKeyRequestRole struct{}

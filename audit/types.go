@@ -4,67 +4,8 @@
 package audit
 
 import (
-	"context"
-
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/internal/observability/event"
-	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
-
-// Backend interface must be implemented for an audit
-// mechanism to be made available. Audit backends can be enabled to
-// sink information to different backends such as logs, file, databases,
-// or other external services.
-type Backend interface {
-	// Salter interface must be implemented by anything implementing Backend.
-	Salter
-
-	// The PipelineReader interface allows backends to surface information about their
-	// nodes for node and pipeline registration.
-	event.PipelineReader
-
-	// IsFallback can be used to determine if this audit backend device is intended to
-	// be used as a fallback to catch all events that are not written when only using
-	// filtered pipelines.
-	IsFallback() bool
-
-	// LogTestMessage is used to check an audit backend before adding it
-	// permanently. It should attempt to synchronously log the given test
-	// message, WITHOUT using the normal Salt (which would require a storage
-	// operation on creation, which is currently disallowed.)
-	LogTestMessage(context.Context, *logical.LogInput) error
-
-	// Reload is called on SIGHUP for supporting backends.
-	Reload(context.Context) error
-
-	// Invalidate is called for path invalidation
-	Invalidate(context.Context)
-}
-
-// Salter is an interface that provides a way to obtain a Salt for hashing.
-type Salter interface {
-	// Salt returns a non-nil salt or an error.
-	Salt(context.Context) (*salt.Salt, error)
-}
-
-// Formatter is an interface that is responsible for formatting a request/response into some format.
-// It is recommended that you pass data through Hash prior to formatting it.
-type Formatter interface {
-	// FormatRequest formats the logical.LogInput into an RequestEntry.
-	FormatRequest(context.Context, *logical.LogInput, timeProvider) (*RequestEntry, error)
-	// FormatResponse formats the logical.LogInput into an ResponseEntry.
-	FormatResponse(context.Context, *logical.LogInput, timeProvider) (*ResponseEntry, error)
-}
-
-// HeaderFormatter is an interface defining the methods of the
-// vault.AuditedHeadersConfig structure needed in this package.
-type HeaderFormatter interface {
-	// ApplyConfig returns a map of header values that consists of the
-	// intersection of the provided set of header values with a configured
-	// set of headers and will hash headers that have been configured as such.
-	ApplyConfig(context.Context, map[string][]string, Salter) (map[string][]string, error)
-}
 
 // RequestEntry is the structure of a request audit log entry.
 type RequestEntry struct {
@@ -179,28 +120,3 @@ type Namespace struct {
 	ID   string `json:"id,omitempty"`
 	Path string `json:"path,omitempty"`
 }
-
-// nonPersistentSalt is used for obtaining a salt that is not persisted.
-type nonPersistentSalt struct{}
-
-// BackendConfig contains configuration parameters used in the factory func to
-// instantiate audit backends
-type BackendConfig struct {
-	// The view to store the salt
-	SaltView logical.Storage
-
-	// The salt config that should be used for any secret obfuscation
-	SaltConfig *salt.Config
-
-	// Config is the opaque user configuration provided when mounting
-	Config map[string]string
-
-	// MountPath is the path where this Backend is mounted
-	MountPath string
-
-	// Logger is used to emit log messages usually captured in the server logs.
-	Logger hclog.Logger
-}
-
-// Factory is the factory function to create an audit backend.
-type Factory func(context.Context, *BackendConfig, HeaderFormatter) (Backend, error)

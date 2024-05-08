@@ -6,6 +6,7 @@
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { compareAsc, getUnixTime, isWithinInterval } from 'date-fns';
 
+import type ClientsConfigModel from 'vault/models/clients/config';
 import type ClientsVersionHistoryModel from 'vault/vault/models/clients/version-history';
 
 /*
@@ -24,7 +25,7 @@ export const CLIENT_TYPES = [
   'secret_syncs',
 ] as const;
 
-type ClientTypes = (typeof CLIENT_TYPES)[number];
+export type ClientTypes = (typeof CLIENT_TYPES)[number];
 
 // returns array of VersionHistoryModels for noteworthy upgrades: 1.9, 1.10
 // that occurred between timestamps (i.e. queried activity data)
@@ -35,12 +36,18 @@ export const filterVersionHistory = (
 ) => {
   if (versionHistory) {
     const upgrades = versionHistory.reduce((array: ClientsVersionHistoryModel[], upgradeData) => {
-      const includesVersion = (v: string) =>
-        // only add first match, disregard subsequent patch releases of the same version
-        upgradeData.version.match(v) && !array.some((d: ClientsVersionHistoryModel) => d.version.match(v));
+      const isRelevantHistory = (v: string) => {
+        return (
+          upgradeData.version.match(v) &&
+          // only add if there is a previous version, otherwise this upgrade is the users' first version
+          upgradeData.previousVersion &&
+          // only add first match, disregard subsequent patch releases of the same version
+          !array.some((d: ClientsVersionHistoryModel) => d.version.match(v))
+        );
+      };
 
-      ['1.9', '1.10'].forEach((v) => {
-        if (includesVersion(v)) array.push(upgradeData);
+      ['1.9', '1.10', '1.17'].forEach((v) => {
+        if (isRelevantHistory(v)) array.push(upgradeData);
       });
 
       return array;
@@ -59,6 +66,18 @@ export const filterVersionHistory = (
   return [];
 };
 
+export const setStartTimeQuery = (
+  isEnterprise: boolean,
+  config: ClientsConfigModel | Record<string, never>
+) => {
+  // CE versions have no license and so the start time defaults to "0001-01-01T00:00:00Z"
+  if (isEnterprise && _hasConfig(config)) {
+    return getUnixTime(config.billingStartTimestamp);
+  }
+  return null;
+};
+
+// METHODS FOR SERIALIZING ACTIVITY RESPONSE
 export const formatDateObject = (dateObj: { monthIdx: number; year: number }, isEnd: boolean) => {
   const { year, monthIdx } = dateObj;
   // day=0 for Date.UTC() returns the last day of the month before
@@ -130,10 +149,13 @@ export const formatByNamespace = (namespaceArray: NamespaceObject[]) => {
 // when querying historical data the response will always contain the latest client type keys because the activity log is
 // constructed based on the version of Vault the user is on (key values will be 0)
 export const destructureClientCounts = (verboseObject: Counts | ByNamespaceClients) => {
-  return CLIENT_TYPES.reduce((newObj: Record<ClientTypes, Counts[ClientTypes]>, clientType: ClientTypes) => {
-    newObj[clientType] = verboseObject[clientType];
-    return newObj;
-  }, {} as Record<ClientTypes, Counts[ClientTypes]>);
+  return CLIENT_TYPES.reduce(
+    (newObj: Record<ClientTypes, Counts[ClientTypes]>, clientType: ClientTypes) => {
+      newObj[clientType] = verboseObject[clientType];
+      return newObj;
+    },
+    {} as Record<ClientTypes, Counts[ClientTypes]>
+  );
 };
 
 export const sortMonthsByTimestamp = (monthsArray: ActivityMonthBlock[] | EmptyActivityMonthBlock[]) => {
@@ -159,25 +181,28 @@ export const namespaceArrayToObject = (
       // mounts_by_key is is used to filter further in a namespace and get monthly activity by mount
       // it's an object inside the namespace block where the keys are mount paths
       // and the values include new and total client counts for that mount in that month
-      const mounts_by_key = ns.mounts.reduce((mountObj: { [key: string]: MountByKey }, mount) => {
-        const newMountClients = newNsClients.mounts.find((m) => m.label === mount.label);
+      const mounts_by_key = ns.mounts.reduce(
+        (mountObj: { [key: string]: MountByKey }, mount) => {
+          const newMountClients = newNsClients.mounts.find((m) => m.label === mount.label);
 
-        if (newMountClients) {
-          mountObj[mount.label] = {
-            ...mount,
-            timestamp,
-            month,
-            new_clients: { month, ...newMountClients },
-          };
-        }
-        return mountObj;
-      }, {} as { [key: string]: MountByKey });
+          if (newMountClients) {
+            mountObj[mount.label] = {
+              ...mount,
+              timestamp,
+              month,
+              new_clients: { month, timestamp, ...newMountClients },
+            };
+          }
+          return mountObj;
+        },
+        {} as { [key: string]: MountByKey }
+      );
 
       nsObject[ns.label] = {
         ...destructureClientCounts(ns),
         timestamp,
         month,
-        new_clients: { month, ...newNsClients },
+        new_clients: { month, timestamp, ...newNsClients },
         mounts_by_key,
       };
     }
@@ -188,6 +213,11 @@ export const namespaceArrayToObject = (
 };
 
 // type guards for conditionals
+function _hasConfig(model: ClientsConfigModel | object): model is ClientsConfigModel {
+  if (!model) return false;
+  return 'billingStartTimestamp' in model;
+}
+
 export function hasMountsKey(
   obj: ByMonthNewClients | NamespaceNewClients | MountNewClients
 ): obj is NamespaceNewClients {
@@ -201,7 +231,6 @@ export function hasNamespacesKey(
 }
 
 // TYPES RETURNED BY UTILS (serialized)
-
 export interface TotalClients {
   clients: number;
   entity_clients: number;
@@ -241,6 +270,7 @@ export interface NamespaceByKey extends TotalClients {
 
 export interface NamespaceNewClients extends TotalClients {
   month: string;
+  timestamp: string;
   label: string;
   mounts: MountClients[];
 }
@@ -254,6 +284,7 @@ export interface MountByKey extends TotalClients {
 
 export interface MountNewClients extends TotalClients {
   month: string;
+  timestamp: string;
   label: string;
 }
 

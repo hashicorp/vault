@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -63,7 +62,7 @@ func (c *Core) generateAuditTestProbe() (*logical.LogInput, error) {
 	}, nil
 }
 
-// enableAudit is used to enable a new audit backend
+// enableAudit is used to enable a new audit backend that didn't exist in storage beforehand.
 func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage bool) error {
 	// Check ahead of time if the type of audit device we're trying to enable is configured in Vault.
 	if _, ok := c.auditBackends[entry.Type]; !ok {
@@ -71,7 +70,7 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	}
 
 	// We can check early to ensure that non-Enterprise versions aren't trying to supply Enterprise only options.
-	if hasInvalidAuditOptions(entry.Options) {
+	if audit.HasInvalidOptions(entry.Options) {
 		return fmt.Errorf("enterprise-only options supplied: %w", audit.ErrExternalOptions)
 	}
 
@@ -85,17 +84,6 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 		return fmt.Errorf("backend path must be specified: %w", audit.ErrExternalOptions)
 	}
 
-	if fallbackRaw, ok := entry.Options["fallback"]; ok {
-		fallback, err := parseutil.ParseBool(fallbackRaw)
-		if err != nil {
-			return fmt.Errorf("cannot parse supplied 'fallback' setting: %w", audit.ErrExternalOptions)
-		}
-
-		// Reassigning the fallback value means we can ensure that the formatting
-		// of it as a string is consistent for future comparisons.
-		entry.Options["fallback"] = strconv.FormatBool(fallback)
-	}
-
 	if skipTestRaw, ok := entry.Options["skip_test"]; ok {
 		skipTest, err := parseutil.ParseBool(skipTestRaw)
 		if err != nil {
@@ -107,15 +95,19 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 		entry.Options["skip_test"] = strconv.FormatBool(skipTest)
 	}
 
-	// Update the audit table
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return fmt.Errorf("%w: %w", audit.ErrInternal, err)
+	}
+	entry.NamespaceID = ns.ID
+	entry.namespace = ns
+
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
 
 	// Look for matching name
 	for _, ent := range c.audit.Entries {
 		switch {
-		case entry.Options["fallback"] == "true" && ent.Options["fallback"] == "true":
-			return fmt.Errorf("fallback device already exists '%s': %w", ent.Path, audit.ErrExternalOptions)
 		// Existing is sql/mysql/ new is sql/ or
 		// existing is sql/ and new is sql/mysql/
 		case strings.HasPrefix(ent.Path, entry.Path):
@@ -142,22 +134,20 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	}
 	viewPath := entry.ViewPath()
 	view := NewBarrierView(c.barrier, viewPath)
-	addAuditPathChecker(c, entry, view, viewPath)
-	origViewReadOnlyErr := view.getReadOnlyErr()
 
 	// Mark the view as read-only until the mounting is complete and
 	// ensure that it is reset after. This ensures that there will be no
 	// writes during the construction of the backend.
+	defer view.setReadOnlyErr(view.getReadOnlyErr())
 	view.setReadOnlyErr(logical.ErrSetupReadOnly)
-	defer view.setReadOnlyErr(origViewReadOnlyErr)
 
 	// Lookup the new backend
-	backend, err := c.newAuditBackend(ctx, entry, view, entry.Options)
+	backend, err := c.newAuditBackend(entry, view, entry.Options)
 	if err != nil {
 		return err
 	}
 	if backend == nil {
-		return fmt.Errorf("nil audit backend of type %q returned from factory: %w", entry.Type, audit.ErrInternal)
+		return fmt.Errorf("nil audit backend of type %q: %w", entry.Type, audit.ErrInternal)
 	}
 
 	if entry.Options["skip_test"] != "true" {
@@ -174,30 +164,27 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 		}
 	}
 
+	// Now that we're happy that the backend has been created correctly, we can
+	// try to register the backend with the audit broker.
+	// An error at this point doesn't cause issues anywhere outside the broker.
+	err = c.auditBroker.Register(backend, entry.Local)
+	if err != nil {
+		return fmt.Errorf("failed to register %q audit backend %q: %w", entry.Type, entry.Path, err)
+	}
+
+	// Update a copy of the mount table, we will swap out the oneCore has access to
+	// for this one unless there is a problem persisting storage (if required).
 	newTable := c.audit.shallowClone()
 	newTable.Entries = append(newTable.Entries, entry)
-
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return fmt.Errorf("%w: %w", audit.ErrInternal, err)
-	}
-	entry.NamespaceID = ns.ID
-	entry.namespace = ns
-
 	if updateStorage {
 		if err := c.persistAudit(ctx, newTable, entry.Local); err != nil {
 			return fmt.Errorf("failed to update audit table: %w: %w", audit.ErrInternal, err)
 		}
 	}
 
+	// Wrap things up, add the path checker, swap the table, log our success.
+	addAuditPathChecker(c, entry, view, viewPath)
 	c.audit = newTable
-
-	// Register the backend
-	err = c.auditBroker.Register(entry.Path, backend, entry.Local)
-	if err != nil {
-		return fmt.Errorf("failed to register %q audit backend %q: %w", entry.Type, entry.Path, err)
-	}
-
 	c.logger.Info("enabled audit backend", "path", entry.Path, "type", entry.Type)
 	return nil
 }
@@ -246,7 +233,7 @@ func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool
 	if updateStorage {
 		// Update the audit table
 		if err := c.persistAudit(ctx, newTable, entry.Local); err != nil {
-			return existed, errors.New("failed to update audit table")
+			return existed, fmt.Errorf("failed to update audit table: %w: %w", audit.ErrInternal, err)
 		}
 	}
 
@@ -432,7 +419,7 @@ func (c *Core) setupAudits(ctx context.Context) error {
 
 	brokerLogger := c.baseLogger.Named("audit")
 
-	broker, err := NewAuditBroker(brokerLogger)
+	broker, err := audit.NewBroker(brokerLogger)
 	if err != nil {
 		return err
 	}
@@ -444,19 +431,17 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		// Create a barrier view using the UUID
 		viewPath := entry.ViewPath()
 		view := NewBarrierView(c.barrier, viewPath)
-		addAuditPathChecker(c, entry, view, viewPath)
-		origViewReadOnlyErr := view.getReadOnlyErr()
 
 		// Mark the view as read-only until the mounting is complete and
 		// ensure that it is reset after. This ensures that there will be no
 		// writes during the construction of the backend.
 		view.setReadOnlyErr(logical.ErrSetupReadOnly)
 		c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
-			view.setReadOnlyErr(origViewReadOnlyErr)
+			view.setReadOnlyErr(view.getReadOnlyErr())
 		})
 
 		// Initialize the backend
-		backend, err := c.newAuditBackend(ctx, entry, view, entry.Options)
+		backend, err := c.newAuditBackend(entry, view, entry.Options)
 		if err != nil {
 			c.logger.Error("failed to create audit entry", "path", entry.Path, "error", err)
 			continue
@@ -467,12 +452,13 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		}
 
 		// Mount the backend
-		err = broker.Register(entry.Path, backend, entry.Local)
+		err = broker.Register(backend, entry.Local)
 		if err != nil {
 			c.logger.Error("failed to setup audit backed", "path", entry.Path, "type", entry.Type, "error", err)
 			continue
 		}
 
+		addAuditPathChecker(c, entry, view, viewPath)
 		successCount++
 	}
 
@@ -513,7 +499,7 @@ func (c *Core) teardownAudits() error {
 // audit lock needs to be held before calling this.
 func (c *Core) removeAuditReloadFunc(entry *MountEntry) {
 	switch entry.Type {
-	case "file":
+	case audit.TypeFile:
 		key := "audit_file|" + entry.Path
 		c.reloadFuncsLock.Lock()
 
@@ -528,9 +514,9 @@ func (c *Core) removeAuditReloadFunc(entry *MountEntry) {
 }
 
 // newAuditBackend is used to create and configure a new audit backend by name
-func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logical.Storage, conf map[string]string) (audit.Backend, error) {
+func (c *Core) newAuditBackend(entry *MountEntry, view logical.Storage, conf map[string]string) (audit.Backend, error) {
 	// Ensure that non-Enterprise versions aren't trying to supply Enterprise only options.
-	if hasInvalidAuditOptions(entry.Options) {
+	if audit.HasInvalidOptions(entry.Options) {
 		return nil, fmt.Errorf("enterprise-only options supplied: %w", audit.ErrInvalidParameter)
 	}
 
@@ -545,15 +531,13 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 	}
 	auditLogger := c.baseLogger.Named("audit")
 
-	be, err := f(
-		ctx, &audit.BackendConfig{
-			SaltView:   view,
-			SaltConfig: saltConfig,
-			Config:     conf,
-			MountPath:  entry.Path,
-			Logger:     auditLogger,
-		},
-		c.auditedHeaders)
+	be, err := f(&audit.BackendConfig{
+		SaltView:   view,
+		SaltConfig: saltConfig,
+		Config:     conf,
+		MountPath:  entry.Path,
+		Logger:     auditLogger,
+	}, c.auditedHeaders)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create new audit backend: %w", err)
 	}
@@ -562,7 +546,7 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 	}
 
 	switch entry.Type {
-	case "file":
+	case audit.TypeFile:
 		key := "audit_file|" + entry.Path
 
 		c.reloadFuncsLock.Lock()
@@ -576,15 +560,15 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 
 		c.reloadFuncs[key] = append(c.reloadFuncs[key], func() error {
 			auditLogger.Info("reloading file audit backend", "path", entry.Path)
-			return be.Reload(ctx)
+			return be.Reload()
 		})
 
 		c.reloadFuncsLock.Unlock()
-	case "socket":
+	case audit.TypeSocket:
 		if auditLogger.IsDebug() && entry.Options != nil {
 			auditLogger.Debug("socket backend options", "path", entry.Path, "address", entry.Options["address"], "socket type", entry.Options["socket_type"])
 		}
-	case "syslog":
+	case audit.TypeSyslog:
 		if auditLogger.IsDebug() && entry.Options != nil {
 			auditLogger.Debug("syslog backend options", "path", entry.Path, "facility", entry.Options["facility"], "tag", entry.Options["tag"])
 		}
@@ -643,30 +627,4 @@ func (g genericAuditor) AuditResponse(ctx context.Context, input *logical.LogInp
 	logInput := *input
 	logInput.Type = g.mountType + "-response"
 	return g.c.auditBroker.LogResponse(ctx, &logInput)
-}
-
-// hasInvalidAuditOptions is used to determine if a non-Enterprise version of Vault
-// is being used when supplying options that contain options exclusive to Enterprise.
-func hasInvalidAuditOptions(options map[string]string) bool {
-	return !constants.IsEnterprise && hasEnterpriseAuditOptions(options)
-}
-
-// hasValidEnterpriseAuditOptions is used to check if any of the options supplied
-// are only for use in the Enterprise version of Vault.
-func hasEnterpriseAuditOptions(options map[string]string) bool {
-	const enterpriseAuditOptionFilter = "filter"
-	const enterpriseAuditOptionFallback = "fallback"
-
-	enterpriseAuditOptions := []string{
-		enterpriseAuditOptionFallback,
-		enterpriseAuditOptionFilter,
-	}
-
-	for _, o := range enterpriseAuditOptions {
-		if _, ok := options[o]; ok {
-			return true
-		}
-	}
-
-	return false
 }

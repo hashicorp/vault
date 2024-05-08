@@ -26,12 +26,14 @@
       <div class="has-top-margin-m is-flex">
         <SearchSelect
           class="is-flex-grow-1"
+          @ariaLabel="Role"
           @placeholder="Type to find a role..."
           @disallowNewItems={{true}}
           @options={{this.roleOptions}}
           @selectLimit="1"
           @fallbackComponent="input-search"
           @onChange={{this.selectRole}}
+          @renderInPlace={{true}}
         />
         <Hds::Button
           @text="Generate"
