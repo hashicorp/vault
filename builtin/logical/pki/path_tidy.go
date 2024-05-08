@@ -819,7 +819,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	if tidyCertMetadata && !constants.IsEnterprise {
-		return logical.ErrorResponse(ErrMetadataIsEntOnly.Error()), nil
+		return logical.ErrorResponse("certificate metadata is only supported on Vault Enterprise"), nil
 	}
 
 	bufferDuration := time.Duration(safetyBuffer) * time.Second
@@ -1899,7 +1899,7 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 		config.CertMetadata = tidyCertMetadataRaw.(bool)
 
 		if config.CertMetadata && !constants.IsEnterprise {
-			return logical.ErrorResponse(ErrMetadataIsEntOnly.Error()), nil
+			return logical.ErrorResponse("certificate metadata is only supported on Vault Enterprise"), nil
 		}
 	}
 
