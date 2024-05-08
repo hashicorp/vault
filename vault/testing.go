@@ -2094,8 +2094,10 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 			ClientToken: tc.RootToken,
 			Path:        "sys/audit/file",
 			Data: map[string]interface{}{
-				"type":      audit.TypeFile,
-				"file_path": "discard",
+				"type": audit.TypeFile,
+				"options": map[string]string{
+					"file_path": "discard",
+				},
 			},
 		}
 		resp, err := leader.Core.HandleRequest(namespace.RootContext(ctx), auditReq)
