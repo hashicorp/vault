@@ -122,7 +122,9 @@ By default, the values of these headers are **not** [HMAC'd](/vault/api-docs/sys
 however Vault Operators may override this setting by [manually configuring](/vault/api-docs/system/config-auditing#create-update-audit-request-header)
 the headers described above, supplying an `HMAC` value of `true`.
 
-#### Example override for `correlation-id`
+To ensure Vault uses HMAC on the header values during logging, set the `hmac` value to true for the `config/auditing/request-headers` API call.
+
+For example, to enable HMAC for `correlation-id`
 
 ```shell
 curl \
