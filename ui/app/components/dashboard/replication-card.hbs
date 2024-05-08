@@ -79,7 +79,7 @@
       />
       <small class="has-left-margin-xs has-text-grey">
         Updated
-        {{date-format @updatedAt "MMM dd, yyyy hh:mm:ss"}}
+        {{date-format @updatedAt "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
       </small>
     </div>
   {{else}}

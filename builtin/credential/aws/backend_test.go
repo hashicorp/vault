@@ -1046,6 +1046,7 @@ This is an acceptance test.
 	export TEST_AWS_EC2_IAM_ROLE_ARN=$(aws iam get-role --role-name $(curl -q http://169.254.169.254/latest/meta-data/iam/security-credentials/ -S -s) --query Role.Arn --output text)
 	export TEST_AWS_EC2_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 
+
 	If the test is not being run on an EC2 instance that has access to
 	credentials using EC2RoleProvider, on top of the above vars, following
 	needs to be set:
@@ -1407,6 +1408,11 @@ func TestBackend_pathStsConfig(t *testing.T) {
 		"sts_role": "arn:aws:iam:account1:role/myRole",
 	}
 
+	data2 := map[string]interface{}{
+		"sts_role":    "arn:aws:iam:account2:role/myRole2",
+		"external_id": "fake_id",
+	}
+
 	stsReq.Data = data
 	// test create operation
 	resp, err := b.HandleRequest(context.Background(), stsReq)
@@ -1440,11 +1446,26 @@ func TestBackend_pathStsConfig(t *testing.T) {
 
 	stsReq.Operation = logical.CreateOperation
 	stsReq.Path = "config/sts/account2"
-	stsReq.Data = data
-	// create another entry to test the list operation
+	stsReq.Data = data2
+	// create another entry with alternate data to test ExternalID and LIST
 	resp, err = b.HandleRequest(context.Background(), stsReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatal(err)
+	}
+
+	// test second read
+	stsReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(context.Background(), stsReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedStsRole = "arn:aws:iam:account2:role/myRole2"
+	expectedExternalID := "fake_id"
+	if resp.Data["sts_role"].(string) != expectedStsRole {
+		t.Fatalf("bad: expected:%s\n got:%s\n", expectedStsRole, resp.Data["sts_role"].(string))
+	}
+	if resp.Data["external_id"].(string) != expectedExternalID {
+		t.Fatalf("bad: expected:%s\n got:%s\n", expectedExternalID, resp.Data["external_id"].(string))
 	}
 
 	stsReq.Operation = logical.ListOperation

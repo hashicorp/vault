@@ -1,0 +1,3 @@
+```release-note:change
+ui: deleting a nested secret will no longer redirect you to the nearest path segment
+```

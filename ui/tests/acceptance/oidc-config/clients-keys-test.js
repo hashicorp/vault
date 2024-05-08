@@ -10,7 +10,8 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
 import authPage from 'vault/tests/pages/auth';
 import { create } from 'ember-cli-page-object';
-import { clickTrigger, selectChoose } from 'ember-power-select/test-support/helpers';
+import { clickTrigger } from 'ember-power-select/test-support/helpers';
+import { selectChoose } from 'ember-power-select/test-support';
 import ss from 'vault/tests/pages/components/search-select';
 import fm from 'vault/tests/pages/components/flash-message';
 import {
@@ -21,6 +22,7 @@ import {
   CLIENT_DATA_RESPONSE,
 } from 'vault/tests/helpers/oidc-config';
 import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
+
 const searchSelect = create(ss);
 const flashMessage = create(fm);
 
