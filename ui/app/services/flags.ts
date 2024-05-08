@@ -37,11 +37,11 @@ export default class flagsService extends Service {
   }
 
   getFeatureFlags = keepLatestTask(async () => {
-    // managed clusters will always be an enterprise version
     try {
       const result = await fetch('/v1/sys/internal/ui/feature-flags', {
         method: 'GET',
       });
+
       if (result.status === 200) {
         const body = await result.json();
         this.featureFlags = body.feature_flags || [];

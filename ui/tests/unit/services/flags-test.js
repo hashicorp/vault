@@ -15,9 +15,7 @@ const ACTIVATED_FLAGS_RESPONSE = {
 };
 
 const FEATURE_FLAGS_RESPONSE = {
-  data: {
-    feature_flags: ['VAULT_CLOUD_ADMIN_NAMESPACE'],
-  },
+  feature_flags: ['VAULT_CLOUD_ADMIN_NAMESPACE'],
 };
 
 module('Unit | Service | flags', function (hooks) {
@@ -90,9 +88,10 @@ module('Unit | Service | flags', function (hooks) {
       });
 
       await this.service.fetchFeatureFlags();
+
       assert.deepEqual(
         this.service.featureFlags,
-        FEATURE_FLAGS_RESPONSE.data.feature_flags,
+        FEATURE_FLAGS_RESPONSE.feature_flags,
         'Feature flags are fetched and set'
       );
     });
