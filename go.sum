@@ -2331,8 +2331,6 @@ github.com/hashicorp/cap/ldap v0.0.0-20240328153749-fcfe271d0227 h1:R5CMNyBNZqOD
 github.com/hashicorp/cap/ldap v0.0.0-20240328153749-fcfe271d0227/go.mod h1:Ofp5fMLl1ImcwjNGu9FtEwNOdxA0LYoWpcWQE2vltuI=
 github.com/hashicorp/cli v1.1.6 h1:CMOV+/LJfL1tXCOKrgAX0uRKnzjj/mpmqNXloRSy2K8=
 github.com/hashicorp/cli v1.1.6/go.mod h1:MPon5QYlgjjo0BSoAiN0ESeT5fRzDjVRp+uioJ0piz4=
-github.com/hashicorp/consul-template v0.37.5 h1:pTM6+oWdGW0rDvhPzdCa9iVtn227uG1DePu1Q0ydM64=
-github.com/hashicorp/consul-template v0.37.5/go.mod h1:tT9BVCw6W4JUxHJlv+onPuUzBTiYwvPRfXYPDgXDbIA=
 github.com/hashicorp/consul-template v0.37.6 h1:7iz+BjuO4/LHQn/x04o3b+42UspILcIKZQk6DQJd59M=
 github.com/hashicorp/consul-template v0.37.6/go.mod h1:tT9BVCw6W4JUxHJlv+onPuUzBTiYwvPRfXYPDgXDbIA=
 github.com/hashicorp/consul/api v1.1.0/go.mod h1:VmuI/Lkw1nC05EYQWNKwWGbkg+FbDBtguAZLlVdkD9Q=
@@ -2565,8 +2563,8 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms v0.16.0 h1:1wEYeplJl/9FLwBQSmfp
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.16.0/go.mod h1:dTyKQItGjGeCnjdWZtO+LPIpzi192uEwk8UxP/R3rMQ=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.7.0 h1:IRsrGZyYjecQrAvpKXodQDus4oQRpGDUsQiyJ8Szlmk=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.7.0/go.mod h1:StJ4o4D+ChaQ3lKzaWB5CAGDx62ONP9pDFr7iK8i9HU=
-github.com/hashicorp/vault-plugin-secrets-kv v0.17.0 h1:UNYINnuymcGRT+7UA0MciYAz06/6CB3Ll/P32nTXrNk=
-github.com/hashicorp/vault-plugin-secrets-kv v0.17.0/go.mod h1:2U8dr0BrVNIndr1lYrJ3Q92RCrJzpnDCkAmZe/JRyFo=
+github.com/hashicorp/vault-plugin-secrets-kv v0.18.0 h1:pho3GabXdDp8KM0UTNG88W0yEVrif4GtlS03EJa6uGo=
+github.com/hashicorp/vault-plugin-secrets-kv v0.18.0/go.mod h1:RWDJ382+SsTX/s+zfxkjkvIf9ckCUOhzJbg5AVRdNVY=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.11.0 h1:NU7X28xzc/WBY0jMJNnan+elmKFWv/n5zbWXHfKf9/I=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.11.0/go.mod h1:l6kmbSsAVTrzhsliH283dTo9LYZ4ClPMbBgEyWiUtz8=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.12.1 h1:8BSRXpPplF15ZL77vIQFi9+8zUmbVWjHpdEmkIaqVLg=
