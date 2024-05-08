@@ -91,9 +91,8 @@ using the [secrets enable](/vault/docs/commands/secrets/enable) command, and the
 
 ## Audit request headers
 
-Vault Operators can audit specific HTTP headers when those headers are present in
-the incoming client request. Configuration for audit request headers is applied via
-the [Vault API](/vault/api-docs/system/config-auditing).
+Use the [Vault API](/vault/api-docs/system/config-auditing) to configure request
+headers to monitor and audit headers in incoming client request.
 
 When Vault Operators [create](/vault/api-docs/system/config-auditing#create-update-audit-request-header)
 an exception allowing a request header to appear in the audit log, by default the
