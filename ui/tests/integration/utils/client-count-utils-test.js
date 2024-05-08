@@ -44,9 +44,10 @@ module('Integration | Util | client count utils', function (hooks) {
       this.versionHistory = await store.findAll('clients/version-history').then((resp) => {
         return resp.map(({ version, previousVersion, timestampInstalled }) => {
           return {
-            version,
+            // order of keys needs to match expected order
             previousVersion,
             timestampInstalled,
+            version,
           };
         });
       });
@@ -76,7 +77,7 @@ module('Integration | Util | client count utils', function (hooks) {
       const startTime = '2023-06-02T00:00:00Z'; // first upgrade installed '2023-07-02T00:00:00Z'
       const endTime = '2024-03-04T16:14:21.000Z'; // latest upgrade installed '2023-12-02T01:00:00.000Z'
       const filteredHistory = filterVersionHistory(this.versionHistory, startTime, endTime);
-      assert.strictEqual(
+      assert.deepEqual(
         JSON.stringify(filteredHistory),
         JSON.stringify(expected),
         'it returns all notable upgrades'
@@ -110,7 +111,11 @@ module('Integration | Util | client count utils', function (hooks) {
       const startTime = '2023-08-02T00:00:00.000Z'; // same date as 1.9.1 install date to catch same day edge cases
       const endTime = '2023-11-02T01:00:00.000Z';
       const filteredHistory = filterVersionHistory(this.versionHistory, startTime, endTime);
-      assert.propEqual(filteredHistory, expected, 'it only returns upgrades during date range');
+      assert.deepEqual(
+        JSON.stringify(filteredHistory),
+        JSON.stringify(expected),
+        'it only returns upgrades during date range'
+      );
       assert.notPropContains(
         filteredHistory,
         {
