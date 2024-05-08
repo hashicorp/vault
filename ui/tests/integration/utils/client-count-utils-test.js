@@ -69,7 +69,7 @@ module('Integration | Util | client count utils', function (hooks) {
         },
         {
           previousVersion: '1.16.0',
-          timestampInstalled: '2023-12-02T01:00:00.000Z',
+          timestampInstalled: '2023-12-02T00:00:00.000Z',
           version: '1.17.0',
         },
       ];
@@ -109,7 +109,7 @@ module('Integration | Util | client count utils', function (hooks) {
         },
       ];
       const startTime = '2023-08-02T00:00:00.000Z'; // same date as 1.9.1 install date to catch same day edge cases
-      const endTime = '2023-11-02T01:00:00.000Z';
+      const endTime = '2023-11-02T00:00:00.000Z';
       const filteredHistory = filterVersionHistory(this.versionHistory, startTime, endTime);
       assert.deepEqual(
         JSON.stringify(filteredHistory),
