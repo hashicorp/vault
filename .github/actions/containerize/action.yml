@@ -90,7 +90,7 @@ runs:
         [[ ! -d "$dest_dir" ]] && mkdir -p "$dest_dir"
         [[ ! -f "$dest_path" ]] && cp ${{ inputs.vault-binary-path }} "${dest_path}"
     - if: inputs.docker == 'true'
-      uses: hashicorp/actions-docker-build@v1
+      uses: hashicorp/actions-docker-build@v2
       with:
         arch: ${{ inputs.goarch }}
         do_zip_extract_step: 'false' # Don't download and extract an already present binary
@@ -99,7 +99,7 @@ runs:
         revision: ${{ steps.vars.outputs.revision }}
         version: ${{ steps.vars.outputs.container-version }}
     - if: inputs.redhat == 'true'
-      uses: hashicorp/actions-docker-build@v1
+      uses: hashicorp/actions-docker-build@v2
       with:
         arch: ${{ inputs.goarch }}
         do_zip_extract_step: 'false' # Don't download and extract an already present binary
