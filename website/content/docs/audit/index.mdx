@@ -94,10 +94,11 @@ using the [secrets enable](/vault/docs/commands/secrets/enable) command, and the
 Use the [Vault API](/vault/api-docs/system/config-auditing) to configure request
 headers to monitor and audit headers in incoming client request.
 
-When Vault Operators [create](/vault/api-docs/system/config-auditing#create-update-audit-request-header)
-an exception allowing a request header to appear in the audit log, by default the
-value of the header is **not** HMAC'd, this is [configurable](/vault/api-docs/system/config-auditing#hmac)
-per header.
+By default, Vault **does not** encrypt request header values with HMAC if you
+[create](/vault/api-docs/system/config-auditing#create-update-audit-request-header)
+an exception to allow request headers in the audit log. To encrypt the header
+values, you must [configure](/vault/api-docs/system/config-auditing#hmac) the
+relevant headers individually.
 
 ### Default headers
 
