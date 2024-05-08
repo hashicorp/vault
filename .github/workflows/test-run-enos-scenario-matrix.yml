@@ -127,8 +127,7 @@ jobs:
           chmod 600 "./enos/support/private_key.pem"
           echo "debug_data_artifact_name=enos-debug-data_$(echo "${{ matrix.scenario }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')" >> "$GITHUB_OUTPUT"
       - if: contains(inputs.sample-name, 'build')
-        # Use actions/download-artifact @3.x until https://hashicorp.atlassian.net/browse/HREL-99 is resolved
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
         with:
           name: ${{ inputs.build-artifact-name }}
           path: ./enos/support/downloads
@@ -176,28 +175,28 @@ jobs:
       # https://api.slack.com/apps/A05E31CH1LG/incoming-webhooks
       - if: ${{ always() && ! cancelled() }}
         name: Notify launch failed
-        uses: hashicorp/actions-slack-status@v1
+        uses: hashicorp/actions-slack-status@v2
         with:
           failure-message: "enos scenario launch ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.launch.outcome }}
           slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
       - if: ${{ always() && ! cancelled() }}
         name: Notify retry launch failed
-        uses: hashicorp/actions-slack-status@v1
+        uses: hashicorp/actions-slack-status@v2
         with:
           failure-message: "retry enos scenario launch ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.launch_retry.outcome }}
           slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
       - if: ${{ always() && ! cancelled() }}
         name: Notify destroy failed
-        uses: hashicorp/actions-slack-status@v1
+        uses: hashicorp/actions-slack-status@v2
         with:
           failure-message: "enos scenario destroy ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.destroy.outcome }}
           slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
       - if: ${{ always() && ! cancelled() }}
         name: Notify retry destroy failed
-        uses: hashicorp/actions-slack-status@v1
+        uses: hashicorp/actions-slack-status@v2
         with:
           failure-message: "retry enos scenario destroy ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.destroy_retry.outcome }}

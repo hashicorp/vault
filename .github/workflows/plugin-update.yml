@@ -25,7 +25,7 @@ jobs:
           # https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
           token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
 
-      - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+      - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
           cache: false # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
           go-version-file: .go-version

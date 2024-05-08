@@ -164,7 +164,7 @@ jobs:
           node-version-file: './ui/package.json'
           cache: yarn
           cache-dependency-path: ui/yarn.lock
-      - uses: browser-actions/setup-chrome@82b9ce628cc5595478a9ebadc480958a36457dc2 # v1.6.0
+      - uses: browser-actions/setup-chrome@361a23fcf94a523a91c9cfae6f11c2a5c2d87f64 # v1.6.1
       - name: ui-dependencies
         working-directory: ./ui
         run: |
