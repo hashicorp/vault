@@ -2529,8 +2529,8 @@ github.com/hashicorp/vault-plugin-auth-cf v0.16.0 h1:t4+0LY6002NQvY6c0c43ikZjxqR
 github.com/hashicorp/vault-plugin-auth-cf v0.16.0/go.mod h1:q+Lt3FhtFlP+pulKSjrbnR8ecu4vY9TlgPvs+nnBey8=
 github.com/hashicorp/vault-plugin-auth-gcp v0.16.2 h1:HC1PpXxGNzfu7IUfN7Ok7dIMV29R8a/2EJ5uDnrpxz0=
 github.com/hashicorp/vault-plugin-auth-gcp v0.16.2/go.mod h1:8FWNvFElzQBWJGCZ3SBPqsSc/x9bge9Et+JuwVLlJPM=
-github.com/hashicorp/vault-plugin-auth-jwt v0.20.2 h1:UAfUPSL7OgL9wdS7rrzxFVtbVcPmNgip+g4nYq2iQO4=
-github.com/hashicorp/vault-plugin-auth-jwt v0.20.2/go.mod h1:mOngmkea6zPgfo3xX6sQnb12HbEJpl9cuyK+Y3ePB0c=
+github.com/hashicorp/vault-plugin-auth-jwt v0.20.3 h1:mLsdorH4m43rBqybHDZKl33rrmc80ens4hSB6E7i9o0=
+github.com/hashicorp/vault-plugin-auth-jwt v0.20.3/go.mod h1:1IQjNAZ2z8GdTPM/XizC6eA4X9brnOXiwSoYEOfuDlM=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.11.0 h1:XjdH8nqosqgKeAwBptMS7DoXsdi8IKL2fbBSyvL/HRM=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.11.0/go.mod h1:xupzh9O6Us6bqKLZ6wfRsjqlf1Mb1TRylKpxZPJd5rA=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.18.0 h1:mGVVdcTI55t/NrMefkLjnenAVunJiQZg5o0opuU7ixw=
@@ -4643,8 +4643,6 @@ gopkg.in/cheggaaa/pb.v1 v1.0.25/go.mod h1:V/YB90LKu/1FcN3WVnfiiE5oMCibMjukxqG/qS
 gopkg.in/errgo.v2 v2.1.0/go.mod h1:hNsd1EY+bozCKY1Ytp96fpM3vjJbqLJn88ws8XvfDNI=
 gopkg.in/fsnotify.v1 v1.4.7/go.mod h1:Tz8NjZHkW78fSQdbUxIjBTcgA1z1m8ZHf0WmKUhAMys=
 gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2/go.mod h1:Xk6kEKp8OKb+X14hQBKWaSkCsqBpgog8nAV2xsGOxlo=
-gopkg.in/go-jose/go-jose.v2 v2.6.3 h1:nt80fvSDlhKWQgSWyHyy5CfmlQr+asih51R8PTWNKKs=
-gopkg.in/go-jose/go-jose.v2 v2.6.3/go.mod h1:zzZDPkNNw/c9IE7Z9jr11mBZQhKQTMzoEEIoEdZlFBI=
 gopkg.in/inconshreveable/log15.v2 v2.0.0-20180818164646-67afb5ed74ec/go.mod h1:aPpfJ7XW+gOuirDoZ8gHhLh3kZ1B08FtV2bbmy7Jv3s=
 gopkg.in/inf.v0 v0.9.1 h1:73M5CoZyi3ZLMOyDlQh031Cx6N9NDJ2Vvfl76EDAgDc=
 gopkg.in/inf.v0 v0.9.1/go.mod h1:cWUDdTG/fYaXco+Dcufb5Vnc6Gp2YChqWtbxRZE0mXw=
