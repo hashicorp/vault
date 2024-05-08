@@ -67,13 +67,12 @@ usage metrics UI correctly reflects all clients for the current billing period.
   </Tab>
 
   <Tab heading="Upgrading from Vault 1.6">
+    Vault will only reflect the number of active unique clients since the upgrade.
     As of v1.7, Vault forbids users from creating two aliases from the same authN
     mount under a single entity. Additionally, Vault 1.9 forbids mapping multiple
     service accounts under different namespaces to a single entity.
 
     Each unique combination of authN mount, namespace, and alias, will be counted
     as a distinct client.
-
-    Vault will only reflect the number of active unique clients since the upgrade.
   </Tab>
 </Tabs>
