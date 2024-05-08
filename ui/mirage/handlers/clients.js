@@ -217,6 +217,12 @@ export default function (server) {
 
   server.get('/sys/internal/counters/activity', (schema, req) => {
     let { start_time, end_time } = req.queryParams;
+    if (req.queryParams.current_billing_period) {
+      // { current_billing_period: true } automatically queries the activity log
+      // from the builtin license start timestamp to the current month
+      start_time = LICENSE_START.toISOString();
+      end_time = STATIC_NOW.toISOString();
+    }
     // backend returns a timestamp if given unix time, so first convert to timestamp string here
     if (!start_time.includes('T')) start_time = fromUnixTime(start_time).toISOString();
     if (!end_time.includes('T')) end_time = fromUnixTime(end_time).toISOString();
