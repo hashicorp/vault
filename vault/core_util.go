@@ -222,6 +222,3 @@ func (c *Core) GetRequestLimiter(key string) *limits.RequestLimiter {
 
 // ReloadRequestLimiter is a no-op on CE.
 func (c *Core) ReloadRequestLimiter() {}
-
-// ReloadOverloadController is a no-op on CE.
-func (c *Core) ReloadOverloadController() {}
