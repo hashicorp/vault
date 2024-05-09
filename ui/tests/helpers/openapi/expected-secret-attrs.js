@@ -1206,6 +1206,12 @@ const pki = {
       fieldGroup: 'default',
       type: 'string',
     },
+    enforceLeafNotAfterBehavior: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText: "Do not truncate the NotAfter field, use the issuer's configured leaf_not_after_behavior",
+      type: 'boolean',
+    },
     excludeCnFromSans: {
       editType: 'boolean',
       helpText:
