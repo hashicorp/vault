@@ -308,11 +308,10 @@
       {
         "title": "Request Limiter",
         "badge": {
-          "text": "ENTERPRISE",
+          "text": "ENTERPRISE | DEPRECATED",
           "type": "outlined",
           "color": "neutral"
         },
-        "hidden": true,
         "routes": [
           {
             "title": "Overview",
@@ -326,9 +325,9 @@
         ]
       },
       {
-        "title": "Adaptive Overload Protection",
+        "title": "Adaptive overload protection",
         "badge": {
-          "text": "ENTERPRISE",
+          "text": "ENTERPRISE | BETA",
           "type": "outlined",
           "color": "neutral"
         },
@@ -565,7 +564,7 @@
         "path": "configuration/request-limiter"
       },
       {
-        "title": "<code>Adaptive Overload Protection</code>",
+        "title": "Adaptive overload protection",
         "path": "configuration/adaptive-overload-protection"
       },
       {

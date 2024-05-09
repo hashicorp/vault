@@ -2,4 +2,8 @@
 
 Metric type | Value   | Description
 ----------- | ------- | -----------
-gauge       | number  | The current proportional error value detected by the write controller. There is no unit. This metric is intended for tuning or debugging the controller behavior for Vault developers and may be of limited use in normal operation.
+gauge       | number  | Current proportional error value detected by the write controller.
+
+The `vault.wal.write_controller.p` metric has limited production use, but Vault
+developers may find `vault.wal.write_controller.p` useful for tuning or
+debugging controller behavior.

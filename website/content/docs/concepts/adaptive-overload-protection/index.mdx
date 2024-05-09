@@ -1,27 +1,24 @@
 ---
 layout: docs
-page_title: 'Adaptive Overload Protection'
+page_title: 'Adaptive overload protection'
 description: >-
-  Vault Enterprise provides Adaptive Overload Protection to automatically
+  Vault Enterprise provides adaptive overload protection to automatically
   prevent workloads from overloading different resources of the Vault servers.
 ---
 
-# Adaptive Overload Protection
+# Adaptive overload protection
 
 @include 'alerts/enterprise-only.mdx'
 
 @include 'alerts/beta.mdx'
 
-This document contains conceptual information about Vault Enterprise's Adaptive
-Overload Protection measures.
-
-## Preventing overload
-
-Adaptive Overload Protection refers to a set of features in Vault Enterprise
+Adaptive overload protection refers to a set of features in Vault Enterprise
 that prevent client requests from overwhelming different server resources
 leading to poor availability.
 
-Vault currently supports one type of Adaptive Overload Protection that prevents
+## Preventing overload
+
+Vault currently supports one type of adaptive overload protection that prevents
 Vault servers from being overwhelmed by write requests.
 
 These protection measures are "Adaptive" in the sense that they automatically
@@ -43,7 +40,7 @@ Enterprise is able to provide long-term protection against overloads.
 ## Types of overload
 
 There are many potential resources that could become a performance bottleneck in
-a Vault Enterprise cluster. Different forms of Adaptive Overload Protection
+a Vault Enterprise cluster. Different forms of adaptive overload protection
 target specific components and workloads. This allows each one to be carefully
 specialized and tuned to the needs of that sub-system. The sections below
 describe specific mechanisms that prevent overload of particular subsystems and

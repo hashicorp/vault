@@ -2,4 +2,7 @@
 
 Metric type | Value   | Description
 ----------- | ------- | -----------
-gauge       | number  | Fraction between 0 and 1 indicating the number of write requests the [write controller](/vault/docs/concepts/adaptive-overload-protection) currently estimate need to be rejected to maintain cluster stability.
+gauge       | number  | The estimated fraction of write requests that must be rejected to maintain cluster stability.
+
+The [write controller](/vault/docs/concepts/adaptive-overload-protection) reject
+fraction is an estimate between 0 and 1.

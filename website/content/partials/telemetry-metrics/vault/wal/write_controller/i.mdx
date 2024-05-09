@@ -2,4 +2,9 @@
 
 Metric type | Value   | Description
 ----------- | ------- | -----------
-gauge       | number  | The current integral value computed by the write controller. There is no unit. This metric is intended for tuning or debugging the controller behavior for Vault developers and may be of limited use in normal operation.
+gauge       | number  | Current integral value computed by the write controller.
+
+
+The `vault.wal.write_controller.i` metric has limited production use, but Vault
+developers may find `vault.wal.write_controller.i` useful for tuning or
+debugging controller behavior.
