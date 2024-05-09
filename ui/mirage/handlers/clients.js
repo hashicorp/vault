@@ -24,6 +24,20 @@ const COUNTS_START = subMonths(STATIC_NOW, 12); // user started Vault cluster on
 // upgrade happened 2 month after license start
 export const UPGRADE_DATE = addMonths(LICENSE_START, 2); // monthly attribution added
 
+// exported so that tests not using this scenario can use the same response
+export const CONFIG_RESPONSE = {
+  request_id: 'some-config-id',
+  data: {
+    billing_start_timestamp: formatRFC3339(LICENSE_START),
+    default_report_months: 12,
+    enabled: 'default-enabled',
+    minimum_retention_months: 48,
+    queries_available: false,
+    reporting_enabled: true,
+    retention_months: 48,
+  },
+};
+
 function getSum(array, key) {
   return array.reduce((sum, { counts }) => sum + counts[key], 0);
 }
@@ -167,16 +181,7 @@ export default function (server) {
   });
 
   server.get('sys/internal/counters/config', function () {
-    return {
-      request_id: 'some-config-id',
-      data: {
-        default_report_months: 12,
-        enabled: 'default-enable',
-        queries_available: true,
-        retention_months: 24,
-        billing_start_timestamp: formatRFC3339(LICENSE_START),
-      },
-    };
+    return CONFIG_RESPONSE;
   });
 
   server.get('/sys/internal/counters/activity', (schema, req) => {
