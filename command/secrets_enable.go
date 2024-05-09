@@ -41,6 +41,7 @@ type SecretsEnableCommand struct {
 	flagExternalEntropyAccess     bool
 	flagVersion                   int
 	flagAllowedManagedKeys        []string
+	flagDelegatedAuthAccessors    []string
 	flagIdentityTokenKey          string
 }
 
@@ -229,6 +230,14 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 			"each time with 1 key.",
 	})
 
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameDelegatedAuthAccessors,
+		Target: &c.flagDelegatedAuthAccessors,
+		Usage: "A list of permitted authentication accessors this backend can delegate authentication to. " +
+			"Note that multiple values may be specified by providing this option multiple times, " +
+			"each time with 1 accessor.",
+	})
+
 	f.StringVar(&StringVar{
 		Name:    flagNameIdentityTokenKey,
 		Target:  &c.flagIdentityTokenKey,
@@ -337,6 +346,10 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNameAllowedManagedKeys {
 			mountInput.Config.AllowedManagedKeys = c.flagAllowedManagedKeys
+		}
+
+		if fl.Name == flagNameDelegatedAuthAccessors {
+			mountInput.Config.DelegatedAuthAccessors = c.flagDelegatedAuthAccessors
 		}
 
 		if fl.Name == flagNamePluginVersion {

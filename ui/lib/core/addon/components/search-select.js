@@ -12,6 +12,7 @@ import { resolve } from 'rsvp';
 import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-utils';
 import { removeFromArray } from 'vault/helpers/remove-from-array';
 import { addToArray } from 'vault/helpers/add-to-array';
+import { assert } from '@ember/debug';
 /**
  * @module SearchSelect
  * The `SearchSelect` is an implementation of the [ember-power-select](https://github.com/cibernox/ember-power-select) used for form elements where options come dynamically from the API.
@@ -73,6 +74,14 @@ export default class SearchSelect extends Component {
   @tracked selectedOptions = []; // array of selected options (initially set by @inputValue)
   @tracked dropdownOptions = []; // options that will render in dropdown, updates as selections are added/discarded
   @tracked allOptions = []; // both selected and unselected options, used for wildcard filter
+
+  constructor() {
+    super(...arguments);
+    assert(
+      'one of @id, @label, or @ariaLabel must be passed to search-select component',
+      this.args.id || this.args.label || this.args.ariaLabel
+    );
+  }
 
   get hidePowerSelect() {
     return this.selectedOptions.length >= this.args.selectLimit;
