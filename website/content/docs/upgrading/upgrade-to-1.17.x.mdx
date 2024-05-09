@@ -14,6 +14,22 @@ Vault 1.16. **Please read carefully**.
 
 ## Important changes
 
+### Allowed audit headers now have unremovable defaults
+
+The [config auditing API endpoint](/vault/api-docs/system/config-auditing#create-update-audit-request-header)
+tells Vault to log incoming request headers (when present) in the audit log.
+
+Previously, Vault only logged headers that were explicitly configured for
+logging. As of version 1.17, Vault automatically logs a predefined set of
+[default headers](/vault/docs/audit#default-headers). By default, the header
+values are not HMAC encrypted. You must explicitly configure the
+[HMAC setting](/vault/api-docs/system/config-auditing#hmac) for each of the
+default headers if required.
+
+Refer to the
+[audit request headers documentation](/vault/docs/audit#audit-request-headers)
+for more information.
+
 ### PKI sign-intermediate now truncates notAfter field to signing issuer
 
 Prior to 1.17.x, Vault allowed the calculated sign-intermediate `notAfter` field
