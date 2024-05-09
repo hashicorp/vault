@@ -1669,6 +1669,8 @@ func (c *ServerCommand) Run(args []string) int {
 
 			core.ReloadRequestLimiter()
 
+			core.ReloadOverloadController()
+
 			// reloading HCP link
 			hcpLink, err = c.reloadHCPLink(hcpLink, config, core, hcpLogger)
 			if err != nil {
