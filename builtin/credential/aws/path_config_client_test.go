@@ -133,9 +133,9 @@ func TestBackend_pathConfigClient(t *testing.T) {
 	}
 }
 
-// TestBackend_PathConfigRoot_PluginIdentityToken tests that configuration
+// TestBackend_PathConfigClient_PluginIdentityToken tests that configuration
 // of plugin WIF returns an immediate error.
-func TestBackend_PathConfigRoot_PluginIdentityToken(t *testing.T) {
+func TestBackend_PathConfigClient_PluginIdentityToken(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	config.System = &testSystemView{}

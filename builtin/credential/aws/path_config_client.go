@@ -90,7 +90,7 @@ func (b *backend) pathConfigClient() *framework.Path {
 
 			"role_arn": {
 				Type:        framework.TypeString,
-				Default:     "", // TODO: do we need to set the default here?
+				Default:     "",
 				Description: "Role ARN to assume for plugin identity token federation",
 			},
 		},
