@@ -76,6 +76,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @waitFor
   *onFeatureConfirm() {
     // must return null instead of root for non managed cluster.
+    // child namespaces are not sent.
     const namespace = this.args.isHvdManaged ? 'admin' : null;
     try {
       yield this.store
