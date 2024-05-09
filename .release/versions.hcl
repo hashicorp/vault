@@ -5,13 +5,13 @@
 
 schema = 1
 active_versions {
-  version "1.16" {
+  version "1.16.x" {
     ce_active = true
   }
-  version "1.15" {
+  version "1.15.x" {
     ce_active = true
   }
-  version "1.14" {
+  version "1.14.x" {
     ce_active = true
   }
   version "1.16.x+ent" {
