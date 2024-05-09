@@ -3111,7 +3111,13 @@ vault {
 // in hundreds of token renewal requests with no backoff.
 func TestAgent_TokenRenewal(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+	coreConfig := &vault.CoreConfig{
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
 	cluster.Start()
