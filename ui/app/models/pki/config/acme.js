@@ -66,6 +66,14 @@ export default class PkiConfigAcmeModel extends Model {
   })
   dnsResolver;
 
+  @attr({
+    label: 'Max TTL',
+    editType: 'ttl',
+    helperTextDisabled: 'Specify the maximum TTL for ACME certificates.',
+    helperTextEnabled: 'Role TTL values will be limited to this value.',
+  })
+  maxTtl;
+
   @lazyCapabilities(apiPath`${'id'}/config/acme`, 'id')
   acmePath;
 

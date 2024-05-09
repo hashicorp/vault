@@ -569,6 +569,12 @@ const pki = {
       fieldGroup: 'default',
       type: 'boolean',
     },
+    maxTtl: {
+      editType: 'ttl',
+      fieldGroup: 'default',
+      helpText:
+        'Specify the maximum TTL for ACME certificates. Role TTL values will be limited to this value',
+    },
   },
   'pki/certificate/generate': {
     role: {
