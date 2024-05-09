@@ -1424,6 +1424,9 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry, legacy
 		}
 		entryConfig["user_lockout_config"] = userLockoutConfig
 	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("delegated_auth_accessors"); ok {
+		entryConfig["delegated_auth_accessors"] = rawVal.([]string)
+	}
 
 	// Add deprecation status only if it exists
 	builtinType := b.Core.builtinTypeFromMountEntry(ctx, entry)
@@ -6331,11 +6334,11 @@ in the plugin catalog.`,
 	},
 
 	"tune_audit_non_hmac_request_keys": {
-		`The list of keys in the request data object that will not be HMAC'ed by audit devices.`,
+		`The list of keys in the request data object that will not be HMAC'd by audit devices.`,
 	},
 
 	"tune_audit_non_hmac_response_keys": {
-		`The list of keys in the response data object that will not be HMAC'ed by audit devices.`,
+		`The list of keys in the response data object that will not be HMAC'd by audit devices.`,
 	},
 
 	"tune_mount_options": {

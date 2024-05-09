@@ -84,7 +84,7 @@ func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, reg
 // It uses getRawClientConfig to obtain config for the runtime environment, and if
 // stsRole is a non-empty string, it will use AssumeRole to obtain a set of assumed
 // credentials. The credentials will expire after 15 minutes but will auto-refresh.
-func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region, stsRole, accountID, clientType string) (*aws.Config, error) {
+func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region, stsRole, externalID, accountID, clientType string) (*aws.Config, error) {
 	config, err := b.getRawClientConfig(ctx, s, region, clientType)
 	if err != nil {
 		return nil, err
@@ -105,7 +105,7 @@ func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region
 		if err != nil {
 			return nil, err
 		}
-		assumedCredentials := stscreds.NewCredentials(sess, stsRole)
+		assumedCredentials := stscreds.NewCredentials(sess, stsRole, func(p *stscreds.AssumeRoleProvider) { p.ExternalID = aws.String(externalID) })
 		// Test that we actually have permissions to assume the role
 		if _, err = assumedCredentials.Get(); err != nil {
 			return nil, err
@@ -180,22 +180,22 @@ func (b *backend) setCachedUserId(userId, arn string) {
 	}
 }
 
-func (b *backend) stsRoleForAccount(ctx context.Context, s logical.Storage, accountID string) (string, error) {
+func (b *backend) stsRoleForAccount(ctx context.Context, s logical.Storage, accountID string) (string, string, error) {
 	// Check if an STS configuration exists for the AWS account
 	sts, err := b.lockedAwsStsEntry(ctx, s, accountID)
 	if err != nil {
-		return "", fmt.Errorf("error fetching STS config for account ID %q: %w", accountID, err)
+		return "", "", fmt.Errorf("error fetching STS config for account ID %q: %w", accountID, err)
 	}
 	// An empty STS role signifies the master account
 	if sts != nil {
-		return sts.StsRole, nil
+		return sts.StsRole, sts.ExternalID, nil
 	}
-	return "", nil
+	return "", "", nil
 }
 
 // clientEC2 creates a client to interact with AWS EC2 API
 func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, accountID string) (*ec2.EC2, error) {
-	stsRole, err := b.stsRoleForAccount(ctx, s, accountID)
+	stsRole, stsExternalID, err := b.stsRoleForAccount(ctx, s, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, acco
 
 	// Create an AWS config object using a chain of providers
 	var awsConfig *aws.Config
-	awsConfig, err = b.getClientConfig(ctx, s, region, stsRole, accountID, "ec2")
+	awsConfig, err = b.getClientConfig(ctx, s, region, stsRole, stsExternalID, accountID, "ec2")
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +247,7 @@ func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, acco
 
 // clientIAM creates a client to interact with AWS IAM API
 func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, accountID string) (*iam.IAM, error) {
-	stsRole, err := b.stsRoleForAccount(ctx, s, accountID)
+	stsRole, stsExternalID, err := b.stsRoleForAccount(ctx, s, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +277,7 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, acco
 
 	// Create an AWS config object using a chain of providers
 	var awsConfig *aws.Config
-	awsConfig, err = b.getClientConfig(ctx, s, region, stsRole, accountID, "iam")
+	awsConfig, err = b.getClientConfig(ctx, s, region, stsRole, stsExternalID, accountID, "iam")
 	if err != nil {
 		return nil, err
 	}
