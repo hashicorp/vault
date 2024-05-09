@@ -1,0 +1,3 @@
+```release-note:bug
+core: Add missing field delegated_auth_accessors to GET /sys/mounts/:path API response
+```
