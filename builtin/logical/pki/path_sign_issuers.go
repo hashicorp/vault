@@ -36,6 +36,11 @@ func pathSignIntermediate(b *backend) *framework.Path {
 
 func buildPathIssuerSignIntermediateRaw(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	fields := addIssuerRefField(map[string]*framework.FieldSchema{})
+	fields["enforce_leaf_not_after_behavior"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Default:     false,
+		Description: "Do not truncate the NotAfter field, use the issuer's configured leaf_not_after_behavior",
+	}
 	path := &framework.Path{
 		Pattern:      pattern,
 		DisplayAttrs: displayAttrs,
