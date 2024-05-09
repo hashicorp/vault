@@ -543,13 +543,20 @@ type TestLogger struct {
 }
 
 func NewTestLogger(t testing.T) *TestLogger {
+	return NewTestLoggerWithSuffix(t, "")
+}
+
+func NewTestLoggerWithSuffix(t testing.T, logFileSuffix string) *TestLogger {
 	var logFile *os.File
 	var logPath string
 	output := os.Stderr
 
 	logDir := os.Getenv("VAULT_TEST_LOG_DIR")
 	if logDir != "" {
-		logPath = filepath.Join(logDir, t.Name()+".log")
+		if logFileSuffix != "" && !strings.HasPrefix(logFileSuffix, "_") {
+			logFileSuffix = "_" + logFileSuffix
+		}
+		logPath = filepath.Join(logDir, t.Name()+logFileSuffix+".log")
 		// t.Name may include slashes.
 		dir, _ := filepath.Split(logPath)
 		err := os.MkdirAll(dir, 0o755)
