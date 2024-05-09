@@ -3179,6 +3179,143 @@ vault {
 	}
 }
 
+// TestAgent_TokenRenewal tests that LifeTimeWatcher does not make
+// many renewal attempts if the token's policy does not allow for it to renew
+// itself. Prior to a bug fix in the PR that added this test, this would have resulted
+// in hundreds of token renewal requests with no backoff.
+func TestAgent_TokenRenewal(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	serverClient := cluster.Cores[0].Client
+
+	auditLogFileName := makeTempFile(t, "audit-log", "")
+	err := serverClient.Sys().EnableAuditWithOptions("file-audit-for-TestAgent_TokenRenewal", &api.EnableAuditOptions{
+		Type: "file",
+		Options: map[string]string{
+			"file_path": auditLogFileName,
+		},
+	})
+	require.NoError(t, err)
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	policyName := "less-than-default"
+	// Has a subset of the default policy's permissions
+	// Specifically removing renew-self.
+	err = serverClient.Sys().PutPolicy(policyName, `
+path "auth/token/lookup-self" {
+    capabilities = ["read"]
+}
+
+# Allow tokens to revoke themselves
+path "auth/token/revoke-self" {
+    capabilities = ["update"]
+}
+
+# Allow a token to look up its own capabilities on a path
+path "sys/capabilities-self" {
+    capabilities = ["update"]
+}
+`)
+	require.NoError(t, err)
+
+	renewable := true
+	// Make the token renewable but give it no permissions
+	// (e.g. the permission to renew itself)
+	tokenCreateRequest := &api.TokenCreateRequest{
+		Policies:        []string{policyName},
+		TTL:             "10s",
+		Renewable:       &renewable,
+		NoDefaultPolicy: true,
+	}
+
+	secret, err := serverClient.Auth().Token().CreateOrphan(tokenCreateRequest)
+	require.NoError(t, err)
+	lowPermissionToken := secret.Auth.ClientToken
+
+	tokenFileName := makeTempFile(t, "token-file", lowPermissionToken)
+
+	sinkFileName := makeTempFile(t, "sink-file", "")
+
+	autoAuthConfig := fmt.Sprintf(`
+auto_auth {
+    method {
+		type = "token_file"
+        config = {
+            token_file_path = "%s"
+        }
+    }
+
+	sink "file" {
+		config = {
+			path = "%s"
+		}
+	}
+}`, tokenFileName, sinkFileName)
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+
+log_level = "trace"
+
+%s
+`, serverClient.Address(), autoAuthConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+
+	// Start the agent
+	ui, cmd := testAgentCommand(t, logger)
+
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+		t.Errorf("stdout: %s", ui.OutputWriter.String())
+		t.Errorf("stderr: %s", ui.ErrorWriter.String())
+	}
+
+	// Sleep, to allow the renewal/auth process to work and ensure that it doesn't
+	// go crazy with renewals.
+	time.Sleep(30 * time.Second)
+
+	fileBytes, err := os.ReadFile(auditLogFileName)
+	require.NoError(t, err)
+	stringAudit := string(fileBytes)
+
+	// This is a bit of an imperfect way to test things, but we want to make sure
+	// that a token like this doesn't keep triggering retries.
+	// Due to the fact this is an auto-auth specific thing, unit tests for the
+	// LifetimeWatcher wouldn't be sufficient here.
+	// Prior to the fix made in the same PR this test was added, it would trigger many, many
+	// retries (hundreds to thousands in less than a minute).
+	// We really want to make sure that doesn't happen.
+	numberOfRenewSelves := strings.Count(stringAudit, "auth/token/renew-self")
+	// We actually expect ~6, but I added some buffer for CI weirdness. It can also vary
+	// due to the grace added/removed from the sleep in LifetimeWatcher too.
+	if numberOfRenewSelves > 10 {
+		t.Fatalf("did too many renews -- Vault received %d renew-self requests", numberOfRenewSelves)
+	}
+}
+
 // TestAgent_Logging_ConsulTemplate attempts to ensure two things about Vault Agent logs:
 // 1. When -log-format command line arg is set to JSON, it is honored as the output format
 // for messages generated from within the consul-template library.
