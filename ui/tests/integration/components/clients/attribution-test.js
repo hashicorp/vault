@@ -241,8 +241,8 @@ module('Integration | Component | clients/attribution', function (hooks) {
     assert.strictEqual(filename, 'clients_by_namespace_June 2022-December 2022', 'csv has expected filename');
     assert.strictEqual(
       content,
-      `Namespace path,Mount path
-  *namespace totals, inclusive of mount clients,Total clients,Entity clients,Non-entity clients,ACME clients,Secrets sync clients
+      `Namespace path,"Mount path
+ *namespace totals, inclusive of mount clients",Total clients,Entity clients,Non-entity clients,ACME clients,Secrets sync clients
 ns1,*,18903,4256,4138,5699,4810
 ns1,auth/authid/0,8394,4256,4138,0,0
 ns1,kvv2-engine-0,4810,0,0,0,4810
@@ -272,8 +272,8 @@ root,pki-engine-0,4003,0,0,4003,0`,
     assert.strictEqual(filename, 'clients_by_namespace_June 2022', 'csv has single month in filename');
     assert.strictEqual(
       content,
-      `Namespace path,Mount path
-  *namespace totals, inclusive of mount clients,Total clients,Entity clients,Non-entity clients,ACME clients,Secrets sync clients
+      `Namespace path,"Mount path
+ *namespace totals, inclusive of mount clients",Total clients,Entity clients,Non-entity clients,ACME clients,Secrets sync clients
 ns1,*,18903,4256,4138,5699,4810
 ns1,auth/authid/0,8394,4256,4138,0,0
 ns1,kvv2-engine-0,4810,0,0,0,4810
@@ -311,7 +311,7 @@ root,pki-engine-0,4003,0,0,4003,0`,
     );
     assert.strictEqual(
       content,
-      `Namespace path,Mount path,Total clients,Entity clients,Non-entity clients,ACME clients,Secrets sync clients
+      `Namespace path,"Mount path",Total clients,Entity clients,Non-entity clients,ACME clients,Secrets sync clients
 ns1,auth/authid/0,8394,4256,4138,0,0
 ns1,kvv2-engine-0,4810,0,0,0,4810
 ns1,pki-engine-0,5699,0,0,5699,0`,
@@ -355,8 +355,50 @@ ns1,pki-engine-0,5699,0,0,5699,0`,
     const [, content] = this.csvDownloadStub.lastCall.args;
     assert.strictEqual(
       content,
-      `Namespace path,Mount path
-  *namespace totals, inclusive of mount clients,Total clients,Entity clients,Non-entity clients,ACME clients
+      `Namespace path,"Mount path
+ *namespace totals, inclusive of mount clients",Total clients,Entity clients,Non-entity clients,ACME clients
+ns1,*,18903,4256,4138,5699
+ns1,auth/authid/0,8394,4256,4138,0
+ns1,kvv2-engine-0,4810,0,0,0
+ns1,pki-engine-0,5699,0,0,5699
+root,*,16384,4002,4089,4003
+root,auth/authid/0,8091,4002,4089,0
+root,kvv2-engine-0,4290,0,0,0
+root,pki-engine-0,4003,0,0,4003`
+    );
+  });
+
+  test('csv filename includes upgrade mention if there is upgrade activity', async function (assert) {
+    assert.expect(1);
+    this.totalClientAttribution = this.totalClientAttribution.map((ns) => {
+      const namespace = { ...ns };
+      delete namespace.secret_syncs;
+      return namespace;
+    });
+    this.upgradeActivity = [
+      {
+        previousVersion: '1.9.0',
+        timestampInstalled: '2023-08-02T00:00:00.000Z',
+        version: '1.9.1',
+      },
+    ];
+    await render(hbs`
+      <Clients::Attribution
+        @isSecretsSyncActivated={{false}}
+        @totalClientAttribution={{this.totalClientAttribution}}
+        @responseTimestamp={{this.timestamp}}
+        @upgradesDuringActivity={{this.upgradeActivity}}
+        />
+    `);
+
+    await click('[data-test-attribution-export-button]');
+    await click(GENERAL.confirmButton);
+    const [, content] = this.csvDownloadStub.lastCall.args;
+    assert.strictEqual(
+      content,
+      `Namespace path,"Mount path
+ *namespace totals, inclusive of mount clients
+ **data contains an upgrade (mount summation may not equal namespace totals)",Total clients,Entity clients,Non-entity clients,ACME clients
 ns1,*,18903,4256,4138,5699
 ns1,auth/authid/0,8394,4256,4138,0
 ns1,kvv2-engine-0,4810,0,0,0
