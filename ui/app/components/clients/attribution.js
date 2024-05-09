@@ -164,15 +164,15 @@ export default class Attribution extends Component {
     // added to clarify that the row of namespace totals without an auth method (blank) are not additional clients
     // but indicate the total clients for that ns, including its auth methods
     const upgrade = this.args.upgradesDuringActivity?.length
-      ? `\n **data contains an upgrade, mount summation may not equal namespace totals`
+      ? `\n **data contains an upgrade (mount summation may not equal namespace totals)`
       : '';
     const descriptionOfBlanks = this.isSingleNamespace
       ? ''
-      : `\n  *namespace totals, inclusive of mount clients${upgrade}`;
+      : `\n *namespace totals, inclusive of mount clients${upgrade}`;
     // client type order here should match array order returned by destructureCountsToArray
     let csvHeader = [
       'Namespace path',
-      `Mount path${descriptionOfBlanks}`,
+      `"Mount path${descriptionOfBlanks}"`, // double quotes necessary so description stays inside this cell
       'Total clients',
       'Entity clients',
       'Non-entity clients',
