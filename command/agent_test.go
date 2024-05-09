@@ -3194,7 +3194,7 @@ func TestAgent_TokenRenewal(t *testing.T) {
 	serverClient := cluster.Cores[0].Client
 
 	auditLogFileName := makeTempFile(t, "audit-log", "")
-	err := serverClient.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
+	err := serverClient.Sys().EnableAuditWithOptions("file-audit-for-TestAgent_TokenRenewal", &api.EnableAuditOptions{
 		Type: "file",
 		Options: map[string]string{
 			"file_path": auditLogFileName,
