@@ -42,6 +42,7 @@
       <InfoTableRow
         @label={{or attr.options.label (humanize (dasherize attr.name))}}
         @value={{or (get @acme attr.name) "None"}}
+        @formatTtl={{eq attr.options.editType "ttl"}}
       />
     {{/each}}
   {{/if}}

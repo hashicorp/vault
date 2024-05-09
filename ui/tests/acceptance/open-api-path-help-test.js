@@ -19,46 +19,49 @@ import expectedAuthAttrs from 'vault/tests/helpers/openapi/expected-auth-attrs';
  * if it is not updated automatically or is a more involved feature request.
  * Marked as enterprise so it only runs periodically
  */
-module('Acceptance | OpenAPI provides expected attributes enterprise', function (hooks) {
-  setupApplicationTest(hooks);
-  hooks.beforeEach(function () {
-    this.pathHelp = this.owner.lookup('service:pathHelp');
-    this.store = this.owner.lookup('service:store');
-    return authPage.login();
-  });
-
-  // Secret engines that use OpenAPI
-  ['ssh', 'kmip', 'pki'].forEach(function (testCase) {
-    return module(`${testCase} engine`, function (hooks) {
-      hooks.beforeEach(async function () {
-        this.backend = `${testCase}-openapi`;
-        await runCmd(mountEngineCmd(testCase, this.backend), false);
-      });
-      hooks.afterEach(async function () {
-        await runCmd(deleteEngineCmd(this.backend), false);
-      });
-
-      secretEngineHelper(test, testCase);
+module(
+  'Acceptance | Heads up - backend param changes! Expected OpenAPI attributes enterprise',
+  function (hooks) {
+    setupApplicationTest(hooks);
+    hooks.beforeEach(function () {
+      this.pathHelp = this.owner.lookup('service:pathHelp');
+      this.store = this.owner.lookup('service:store');
+      return authPage.login();
     });
-  });
 
-  // All auth backends use OpenAPI except aws
-  ['azure', 'userpass', 'cert', 'gcp', 'github', 'jwt', 'kubernetes', 'ldap', 'okta', 'radius'].forEach(
-    function (testCase) {
-      return module(`${testCase} auth`, function (hooks) {
+    // Secret engines that use OpenAPI
+    ['ssh', 'kmip', 'pki'].forEach(function (testCase) {
+      return module(`${testCase} engine`, function (hooks) {
         hooks.beforeEach(async function () {
-          this.mount = `${testCase}-openapi`;
-          await runCmd(mountAuthCmd(testCase, this.mount), false);
+          this.backend = `${testCase}-openapi`;
+          await runCmd(mountEngineCmd(testCase, this.backend), false);
         });
         hooks.afterEach(async function () {
-          await runCmd(deleteAuthCmd(this.backend), false);
+          await runCmd(deleteEngineCmd(this.backend), false);
         });
 
-        authEngineHelper(test, testCase);
+        secretEngineHelper(test, testCase);
       });
-    }
-  );
-});
+    });
+
+    // All auth backends use OpenAPI except aws
+    ['azure', 'userpass', 'cert', 'gcp', 'github', 'jwt', 'kubernetes', 'ldap', 'okta', 'radius'].forEach(
+      function (testCase) {
+        return module(`${testCase} auth`, function (hooks) {
+          hooks.beforeEach(async function () {
+            this.mount = `${testCase}-openapi`;
+            await runCmd(mountAuthCmd(testCase, this.mount), false);
+          });
+          hooks.afterEach(async function () {
+            await runCmd(deleteAuthCmd(this.backend), false);
+          });
+
+          authEngineHelper(test, testCase);
+        });
+      }
+    );
+  }
+);
 
 function secretEngineHelper(test, secretEngine) {
   const engineData = expectedSecretAttrs[secretEngine];
