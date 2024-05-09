@@ -29,6 +29,8 @@ import (
 	"golang.org/x/crypto/ed25519"
 )
 
+const intCaTruncatationWarning = "the signed intermediary CA certificate's notAfter was truncated to the issuer's notAfter"
+
 func pathGenerateRoot(b *backend) *framework.Path {
 	pattern := "root/generate/" + framework.GenericNameRegex("exported")
 
@@ -375,10 +377,14 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		}
 	}
 
-	// Since we are signing an intermediate, we explicitly want to override
-	// the leaf NotAfterBehavior to permit issuing intermediates longer than
-	// the life of this issuer.
-	signingBundle.LeafNotAfterBehavior = certutil.PermitNotAfterBehavior
+	warnAboutTruncate := false
+	if enforceLeafNotAfter := data.Get("enforce_leaf_not_after_behavior").(bool); !enforceLeafNotAfter {
+		// Since we are signing an intermediate, we will by default truncate the
+		// signed intermediary in order to generate a valid intermediary chain. This
+		// was changed in 1.17.x as the default prior was PermitNotAfterBehavior
+		warnAboutTruncate = true
+		signingBundle.LeafNotAfterBehavior = certutil.TruncateNotAfterBehavior
+	}
 
 	useCSRValues := data.Get("use_csr_values").(bool)
 
@@ -416,6 +422,11 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 	err = issuing.StoreCertificate(ctx, req.Storage, b.GetCertificateCounter(), parsedBundle)
 	if err != nil {
 		return nil, err
+	}
+
+	if warnAboutTruncate &&
+		signingBundle.Certificate.NotAfter.Equal(parsedBundle.Certificate.NotAfter) {
+		resp.AddWarning(intCaTruncatationWarning)
 	}
 
 	return resp, nil
