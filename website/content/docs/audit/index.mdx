@@ -89,6 +89,39 @@ using the [secrets enable](/vault/docs/commands/secrets/enable) command, and the
 
 [auth tune](/vault/docs/commands/auth/tune)
 
+## Audit request headers
+
+Use the [Vault API](/vault/api-docs/system/config-auditing) to configure request
+headers to monitor and audit headers in incoming client request.
+
+By default, Vault **does not** encrypt request header values with HMAC if you
+[create](/vault/api-docs/system/config-auditing#create-update-audit-request-header)
+an exception to allow request headers in the audit log. To encrypt the header
+values, you must [configure](/vault/api-docs/system/config-auditing#hmac) the
+relevant headers individually.
+
+### Default headers
+
+
+To help correlate requests across distributed systems, Vault automatically
+records the following headers in the audit log:
+
+- `correlation-id`
+- `x-correlation-id`
+
+
+To ensure Vault uses HMAC on the header values during logging, set the `hmac` value to true for the `config/auditing/request-headers` API call.
+
+For example, to enable HMAC for `correlation-id`
+
+```shell
+curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/config/auditing/request-headers/correlation-id \
+    --data '{ "hmac": true }'
+```
+
+
 ## Enabling/Disabling audit devices
 
 When a Vault server is first initialized, no auditing is enabled. Audit
