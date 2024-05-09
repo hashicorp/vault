@@ -1,0 +1,32 @@
+---
+layout: docs
+page_title: Upgrade to Vault 1.17.x - Guides
+description: |-
+  Deprecations, important or breaking changes, and remediation recommendations
+  for anyone upgrading to 1.17.x from Vault 1.16.x.
+---
+
+# Overview
+
+The Vault 1.17.x upgrade guide contains information on deprecations, important
+or breaking changes, and remediation recommendations for anyone upgrading from
+Vault 1.16. **Please read carefully**.
+
+## Important changes
+
+### Allowed audit headers now have unremovable defaults
+
+Vault provides an [API endpoint](/vault/api-docs/system/config-auditing#create-update-audit-request-header)
+for Operators to allow a given header, if present in an incoming request, to appear
+in audit logs.
+
+In previous versions of Vault no headers were added unless the Operator had explicitly
+configured them.
+
+As of Vault 1.17 a predefined set of [default headers](/vault/docs/audit#default-headers)
+are now added automatically. By default, the value of these headers **are not** HMAC'd,
+but Operators can manually configure the [HMAC setting](/vault/api-docs/system/config-auditing#hmac)
+for each of the default headers if required.
+
+Please read the [audit request headers documentation](/vault/docs/audit#audit-request-headers)
+for more detailed information.
