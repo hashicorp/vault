@@ -22,8 +22,6 @@ import (
 	"golang.org/x/net/idna"
 )
 
-var maxAcmeCertTTL = 90 * (24 * time.Hour)
-
 func pathAcmeListOrders(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
 	return patternAcmeListOrders(b, baseUrl+"/orders", opts)
 }
@@ -546,9 +544,16 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		return nil, "", fmt.Errorf("failed computing certificate TTL from role/mount: %v: %w", err, ErrMalformed)
 	}
 
-	// Force a maximum 90 day TTL or lower for ACME
-	if time.Now().Add(maxAcmeCertTTL).Before(normalNotAfter) {
-		input.apiData.Raw["ttl"] = maxAcmeCertTTL
+	// We only allow ServerAuth key usage from ACME issued certs
+	// when configuration does not allow usage of ExtKeyusage field.
+	config, err := ac.sc.Backend.GetAcmeState().getConfigWithUpdate(ac.sc)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to fetch ACME configuration: %w", err)
+	}
+
+	// Force our configured max acme TTL
+	if time.Now().Add(config.MaxTTL).Before(normalNotAfter) {
+		input.apiData.Raw["ttl"] = config.MaxTTL.Seconds()
 	}
 
 	if csr.PublicKeyAlgorithm == x509.UnknownPublicKeyAlgorithm || csr.PublicKey == nil {
@@ -575,13 +580,6 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 
 	if err = parsedBundle.Verify(); err != nil {
 		return nil, "", fmt.Errorf("verification of parsed bundle failed: %w", err)
-	}
-
-	// We only allow ServerAuth key usage from ACME issued certs
-	// when configuration does not allow usage of ExtKeyusage field.
-	config, err := ac.sc.Backend.GetAcmeState().getConfigWithUpdate(ac.sc)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to fetch ACME configuration: %w", err)
 	}
 
 	if !config.AllowRoleExtKeyUsage {
