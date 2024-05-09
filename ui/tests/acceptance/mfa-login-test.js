@@ -8,6 +8,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { click, currentRouteName, fillIn, visit, waitUntil, find, waitFor } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import mfaLoginHandler, { validationHandler } from '../../mirage/handlers/mfa-login';
+import { GENERAL } from '../helpers/general-selectors';
 
 module('Acceptance | mfa-login', function (hooks) {
   setupApplicationTest(hooks);
@@ -181,7 +182,7 @@ module('Acceptance | mfa-login', function (hooks) {
     assert.dom('[data-test-auth-form]').doesNotExist('Auth form hidden when mfa fails');
     assert.dom('[data-test-empty-state-title]').hasText('Unauthorized', 'Error title renders');
     assert
-      .dom('[data-test-empty-state-subText]')
+      .dom(GENERAL.emptyStateSubtitle)
       .hasText('PingId MFA validation failed', 'Error message from server renders');
     assert
       .dom('[data-test-empty-state-message]')

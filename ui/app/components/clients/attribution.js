@@ -39,6 +39,7 @@ import { format, isSameMonth } from 'date-fns';
  * @param {string} responseTimestamp -  ISO timestamp created in serializer to timestamp the response, renders in bottom left corner below attribution chart
  * @param {boolean} isHistoricalMonth - when true data is from a single, historical month so side-by-side charts should display for attribution data
  * @param {array} upgradesDuringActivity - array of objects containing version history upgrade data
+ * @param {boolean} isSecretsSyncActivated - boolean to determine if secrets sync is activated
  */
 
 export default class Attribution extends Component {

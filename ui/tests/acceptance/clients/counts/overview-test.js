@@ -7,6 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import clientsHandler, { STATIC_NOW, LICENSE_START, UPGRADE_DATE } from 'vault/mirage/handlers/clients';
+import syncHandler from 'vault/mirage/handlers/sync';
 import sinon from 'sinon';
 import { visit, click, findAll, settled } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
@@ -33,12 +34,6 @@ module('Acceptance | clients | overview', function (hooks) {
     return visit('/vault/clients/counts/overview');
   });
 
-  test('it should render the correct tabs', async function (assert) {
-    assert.dom(GENERAL.tab('overview')).exists();
-    assert.dom(GENERAL.tab('token')).exists();
-    assert.dom(GENERAL.tab('acme')).exists();
-  });
-
   test('it should render charts', async function (assert) {
     assert
       .dom(CLIENT_COUNT.counts.startMonth)
@@ -59,9 +54,11 @@ module('Acceptance | clients | overview', function (hooks) {
   test('it should update charts when querying date ranges', async function (assert) {
     // query for single, historical month with no new counts (July 2023)
     await click(CLIENT_COUNT.rangeDropdown);
-    await click('[data-test-show-calendar]');
-    await click('[data-test-previous-year]');
-    await click(`[data-test-calendar-month=${ARRAY_OF_MONTHS[LICENSE_START.getMonth()]}]`);
+    await click(CLIENT_COUNT.calendarWidget.customEndMonth);
+    await click(CLIENT_COUNT.calendarWidget.previousYear);
+
+    const month = ARRAY_OF_MONTHS[LICENSE_START.getMonth()];
+    await click(CLIENT_COUNT.calendarWidget.calendarMonth(month));
     assert
       .dom(CLIENT_COUNT.usageStats('Vault client counts'))
       .doesNotExist('running total single month stat boxes do not show');
@@ -70,24 +67,24 @@ module('Acceptance | clients | overview', function (hooks) {
       .doesNotExist('running total month over month charts do not show');
     assert.dom(CLIENT_COUNT.attributionBlock).exists('attribution area shows');
     assert
-      .dom('[data-test-chart-container="new-clients"] [data-test-component="empty-state"]')
+      .dom(`${CHARTS.container('new-clients')} ${GENERAL.emptyStateTitle}`)
       .exists('new client attribution has empty state');
     assert
-      .dom('[data-test-empty-state-subtext]')
+      .dom(GENERAL.emptyStateSubtitle)
       .hasText('There are no new clients for this namespace during this time period.    ');
-    assert.dom('[data-test-chart-container="total-clients"]').exists('total client attribution chart shows');
+    assert.dom(CHARTS.container('total-clients')).exists('total client attribution chart shows');
 
     // reset to billing period
     await click(CLIENT_COUNT.rangeDropdown);
-    await click('[data-test-current-billing-period]');
+    await click(CLIENT_COUNT.currentBillingPeriod);
 
     // change billing start to month/year of upgrade to 1.10
     await click(CLIENT_COUNT.counts.startEdit);
     await click(CLIENT_COUNT.monthDropdown);
-    await click(`[data-test-dropdown-month="${ARRAY_OF_MONTHS[UPGRADE_DATE.getMonth()]}"]`);
+    await click(CLIENT_COUNT.dateDropdown.selectMonth(ARRAY_OF_MONTHS[UPGRADE_DATE.getMonth()]));
     await click(CLIENT_COUNT.yearDropdown);
-    await click(`[data-test-dropdown-year="${UPGRADE_DATE.getFullYear()}"]`);
-    await click('[data-test-date-dropdown-submit]');
+    await click(CLIENT_COUNT.dateDropdown.selectYear(UPGRADE_DATE.getFullYear()));
+    await click(CLIENT_COUNT.dateDropdown.submit);
     assert.dom(CLIENT_COUNT.attributionBlock).exists('Shows attribution area');
     assert
       .dom(CHARTS.container('Vault client counts'))
@@ -99,10 +96,10 @@ module('Acceptance | clients | overview', function (hooks) {
 
     // query for single, historical month (upgrade month)
     await click(CLIENT_COUNT.rangeDropdown);
-    await click('[data-test-show-calendar]');
-    assert.dom('[data-test-display-year]').hasText('2024');
-    await click('[data-test-previous-year]');
-    await click('[data-test-calendar-month="September"]');
+    await click(CLIENT_COUNT.calendarWidget.customEndMonth);
+    assert.dom(CLIENT_COUNT.calendarWidget.displayYear).hasText('2024');
+    await click(CLIENT_COUNT.calendarWidget.previousYear);
+    await click(CLIENT_COUNT.calendarWidget.calendarMonth('September'));
     assert
       .dom(CLIENT_COUNT.usageStats('Vault client counts'))
       .exists('running total single month usage stats show');
@@ -115,8 +112,8 @@ module('Acceptance | clients | overview', function (hooks) {
 
     // query historical date range (from September 2023 to December 2023)
     await click(CLIENT_COUNT.rangeDropdown);
-    await click('[data-test-show-calendar]');
-    await click('[data-test-calendar-month="December"]');
+    await click(CLIENT_COUNT.calendarWidget.customEndMonth);
+    await click(CLIENT_COUNT.calendarWidget.calendarMonth('December'));
 
     assert.dom(CLIENT_COUNT.attributionBlock).exists('Shows attribution area');
     assert
@@ -130,14 +127,14 @@ module('Acceptance | clients | overview', function (hooks) {
 
     // reset to billing period
     await click(CLIENT_COUNT.rangeDropdown);
-    await click('[data-test-current-billing-period]');
+    await click(CLIENT_COUNT.currentBillingPeriod);
     // query month older than count start date
     await click(CLIENT_COUNT.counts.startEdit);
     await click(CLIENT_COUNT.monthDropdown);
-    await click(`[data-test-dropdown-month="${ARRAY_OF_MONTHS[LICENSE_START.getMonth()]}"]`);
+    await click(CLIENT_COUNT.dateDropdown.selectMonth(ARRAY_OF_MONTHS[LICENSE_START.getMonth()]));
     await click(CLIENT_COUNT.yearDropdown);
-    await click(`[data-test-dropdown-year="${LICENSE_START.getFullYear() - 3}"]`);
-    await click('[data-test-date-dropdown-submit]');
+    await click(CLIENT_COUNT.dateDropdown.selectYear(LICENSE_START.getFullYear() - 3));
+    await click(CLIENT_COUNT.dateDropdown.submit);
     assert
       .dom(CLIENT_COUNT.counts.startDiscrepancy)
       .hasTextContaining(
@@ -147,6 +144,9 @@ module('Acceptance | clients | overview', function (hooks) {
   });
 
   test('totals filter correctly with full data', async function (assert) {
+    // stub secrets sync being activated
+    this.owner.lookup('service:flags').activatedFlags = ['secrets-sync'];
+
     assert
       .dom(CHARTS.container('Vault client counts'))
       .exists('Shows running totals with monthly breakdown charts');
@@ -228,15 +228,8 @@ module('Acceptance | clients | overview | sync in license, activated', function 
 
   hooks.beforeEach(async function () {
     sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
-    clientsHandler(this.server);
-    this.store = this.owner.lookup('service:store');
 
-    // add feature to license
-    this.server.get('/sys/license/features', () => ({ features: ['Secrets Sync'] }));
-    // activate feature
-    this.server.get('/sys/activation-flags', () => ({
-      data: { activated: ['secrets-sync'], unactivated: [] },
-    }));
+    syncHandler(this.server);
 
     await authPage.login();
     return visit('/vault/clients/counts/overview');
@@ -246,12 +239,16 @@ module('Acceptance | clients | overview | sync in license, activated', function 
     assert.dom(GENERAL.tab('sync')).exists();
   });
 
-  test('it should show secrets sync data in overview and tab', async function (assert) {
+  test('it should show secrets sync stats', async function (assert) {
     assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists('shows secret sync data on overview');
+  });
+
+  test('it should navigate to secrets sync page', async function (assert) {
     await click(GENERAL.tab('sync'));
 
     assert.dom(GENERAL.tab('sync')).hasClass('active');
     assert.dom(GENERAL.emptyStateTitle).doesNotExist();
+
     assert
       .dom(CHARTS.chart('Secrets sync usage'))
       .exists('chart is shown because feature is active and has data');
@@ -263,7 +260,6 @@ module('Acceptance | clients | overview | sync in license, not activated', funct
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    this.store = this.owner.lookup('service:store');
     this.server.get('/sys/license/features', () => ({ features: ['Secrets Sync'] }));
 
     await authPage.login();
@@ -274,12 +270,11 @@ module('Acceptance | clients | overview | sync in license, not activated', funct
     assert.dom(GENERAL.tab('sync')).exists('sync tab is shown because feature is in license');
   });
 
-  test('it should hide secrets sync charts', async function (assert) {
+  test('it should hide secrets sync stats', async function (assert) {
     assert
-      .dom(CHARTS.chart('Secrets sync usage'))
-      .doesNotExist('chart is hidden because feature is not activated');
-
-    assert.dom('[data-test-stat-text="secret-syncs"]').doesNotExist();
+      .dom(CLIENT_COUNT.statTextValue('Secret sync'))
+      .doesNotExist('stat is hidden because feature is not activated');
+    assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
   });
 });
 
@@ -288,7 +283,6 @@ module('Acceptance | clients | overview | sync not in license', function (hooks)
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    this.store = this.owner.lookup('service:store');
     // mocks endpoint for no additional license modules
     this.server.get('/sys/license/features', () => ({ features: [] }));
 
@@ -300,9 +294,30 @@ module('Acceptance | clients | overview | sync not in license', function (hooks)
     assert.dom(GENERAL.tab('sync')).doesNotExist();
   });
 
-  test('it should hide secrets sync charts', async function (assert) {
-    assert.dom(CHARTS.chart('Secrets sync usage')).doesNotExist();
+  test('it should hide secrets sync stats', async function (assert) {
+    assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).doesNotExist();
+    assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
+  });
+});
 
-    assert.dom('[data-test-stat-text="secret-syncs"]').doesNotExist();
+module('Acceptance | clients | overview | HVD', function (hooks) {
+  setupApplicationTest(hooks);
+  setupMirage(hooks);
+
+  hooks.beforeEach(async function () {
+    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
+    syncHandler(this.server);
+    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+
+    await authPage.login();
+    return visit('/vault/clients/counts/overview');
+  });
+
+  test('it should show the secrets sync tab', async function (assert) {
+    assert.dom(GENERAL.tab('sync')).exists();
+  });
+
+  test('it should show secrets sync stats', async function (assert) {
+    assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists();
   });
 });

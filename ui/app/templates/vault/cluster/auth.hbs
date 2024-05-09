@@ -62,9 +62,9 @@
               <div class="field-label is-normal">
                 <label class="is-label" for="namespace">Namespace</label>
               </div>
-              {{#if this.managedNamespaceRoot}}
+              {{#if this.hvdManagedNamespaceRoot}}
                 <div class="field-label">
-                  <span class="has-text-grey" data-test-managed-namespace-root>/{{this.managedNamespaceRoot}}</span>
+                  <span class="has-text-grey" data-test-managed-namespace-root>/{{this.hvdManagedNamespaceRoot}}</span>
                 </div>
               {{/if}}
               <div class="field-body">
@@ -73,7 +73,7 @@
                     <input
                       data-test-auth-form-ns-input
                       value={{this.namespaceInput}}
-                      placeholder={{if this.managedNamespaceRoot "/ (Default)" "/ (Root)"}}
+                      placeholder={{if this.hvdManagedNamespaceRoot "/ (Default)" "/ (Root)"}}
                       {{on "input" (perform this.updateNamespace value="target.value")}}
                       autocomplete="off"
                       spellcheck="false"

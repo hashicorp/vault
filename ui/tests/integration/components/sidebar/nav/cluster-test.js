@@ -49,6 +49,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
 
   test('it should hide links and headings user does not have access too', async function (assert) {
     await renderComponent();
+
     assert
       .dom('[data-test-sidebar-nav-link]')
       .exists({ count: 3 }, 'Nav links are hidden other than secrets, secrets sync and dashboard');
@@ -85,7 +86,8 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
 
   test('it should render badge for promotional links on community version', async function (assert) {
     const promotionalLinks = ['Secrets Sync'];
-    stubFeaturesAndPermissions(this.owner, false, true);
+    // if no features passed, it defaults to all features and we need to specifically remove Secrets Sync
+    stubFeaturesAndPermissions(this.owner, false, true, []);
     await renderComponent();
 
     promotionalLinks.forEach((link) => {
@@ -135,13 +137,16 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     });
   });
 
-  test('it should not show sync links for managed cluster', async function (assert) {
-    this.owner.lookup('service:flags').setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
-    stubFeaturesAndPermissions(this.owner, true, true, ['Secrets Sync']);
+  test('it should render badge for promotional links on managed clusters', async function (assert) {
+    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+    const promotionalLinks = ['Secrets Sync'];
+    stubFeaturesAndPermissions(this.owner, true, true);
     await renderComponent();
 
-    assert
-      .dom(`[data-test-sidebar-nav-link="Secrets Sync"]`)
-      .doesNotExist(`Secret Sync is hidden in managed vault`);
+    promotionalLinks.forEach((link) => {
+      assert
+        .dom(`[data-test-sidebar-nav-link="${link}"]`)
+        .hasText(`${link} Plus`, `${link} link renders Plus badge`);
+    });
   });
 });
