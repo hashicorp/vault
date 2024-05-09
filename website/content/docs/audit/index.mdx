@@ -121,14 +121,6 @@ curl \
     --data '{ "hmac": true }'
 ```
 
-#### Example override for `x-correlation-id`
-
-```shell
-curl \
-    --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/sys/config/auditing/request-headers/x-correlation-id \
-    --data '{ "hmac": true }'
-```
 
 ## Enabling/Disabling audit devices
 
