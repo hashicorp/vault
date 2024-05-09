@@ -16,17 +16,16 @@ Vault 1.16. **Please read carefully**.
 
 ### Allowed audit headers now have unremovable defaults
 
-Vault provides an [API endpoint](/vault/api-docs/system/config-auditing#create-update-audit-request-header)
-for Operators to allow a given header, if present in an incoming request, to appear
-in audit logs.
+The [config auditing API endpoint](/vault/api-docs/system/config-auditing#create-update-audit-request-header)
+tells Vault to log incoming request headers (when present) in the audit log.
 
-In previous versions of Vault no headers were added unless the Operator had explicitly
-configured them.
+Previously, Vault only logged headers that were explicitly configured for
+logging. As of version 1.17, Vault automatically logs a predefined set of
+[default headers](/vault/docs/audit#default-headers). By default, the header
+values are not HMAC encrypted. You must explicitly configure the
+[HMAC setting](/vault/api-docs/system/config-auditing#hmac) for each of the
+default headers if required.
 
-As of Vault 1.17 a predefined set of [default headers](/vault/docs/audit#default-headers)
-are now added automatically. By default, the value of these headers **are not** HMAC'd,
-but Operators can manually configure the [HMAC setting](/vault/api-docs/system/config-auditing#hmac)
-for each of the default headers if required.
-
-Please read the [audit request headers documentation](/vault/docs/audit#audit-request-headers)
-for more detailed information.
+Refer to the
+[audit request headers documentation](/vault/docs/audit#audit-request-headers)
+for more information.
