@@ -29,3 +29,27 @@ default headers if required.
 Refer to the
 [audit request headers documentation](/vault/docs/audit#audit-request-headers)
 for more information.
+
+### PKI sign-intermediate now truncates notAfter field to signing issuer
+
+Prior to 1.17.x, Vault allowed the calculated sign-intermediate `notAfter` field
+to go beyond the signing issuer `notAfter` field. The extended value lead to a
+CA chain that would not validate properly. As of 1.17.x, Vault truncates the
+intermediary `notAfter` value to the signing issuer `notAfter` if the calculated
+field is greater.
+
+#### How to opt out
+
+You can use the new `enforce_leaf_not_after_behavior` flag on the
+sign-intermediate API along with the `leaf_not_after_behavior` flag for the
+signing issuer to opt out of the truncating behavior.
+
+When you set `enforce_leaf_not_after_behavior` to true, the sign-intermediate
+API uses the `leaf_not_after_behavior` value configured for the signing issuer
+to control truncation the behavior. Setting the issuer `leaf_not_after_behavior`
+field to `permit` and `enforce_leaf_not_after_behavior` to true restores the
+legacy behavior.
+
+## Known issues and workarounds
+
+@include 'known-issues/ocsp-redirect.mdx'
