@@ -69,8 +69,9 @@ export default class PkiConfigAcmeModel extends Model {
   @attr({
     label: 'Max TTL',
     editType: 'ttl',
-    helperTextDisabled: 'Specify the maximum TTL for ACME certificates.',
-    helperTextEnabled: 'Role TTL values will be limited to this value.',
+    hideToggle: true,
+    helperTextEnabled:
+      'Specify the maximum TTL for ACME certificates. Role TTL values will be limited to this value.',
   })
   maxTtl;
 
