@@ -132,8 +132,8 @@ By default, the events are delivered in protobuf binary format.
 The endpoint can also format the data as JSON if the `json` query parameter is set to `true`:
 
 ```shell-session
-$ wscat -H "X-Vault-Token: $(vault print token)" --connect 'ws://127.0.0.1:8200/v1/sys/events/subscribe/kv-v2/data-write?json=true
-{"id":"901f2388-aabb-a385-7bc0-0b09d5fa060b","source":"https://vaultproject.io/","specversion":"1.0","type":"*","data":{"event":{"id":"901f2388-aabb-a385-7bc0-0b09d5fa060b","metadata":{"current_version":"1","oldest_version":"0","path":"data/foo"}},"event_type":"kv-v2/data-write","plugin_info":{"mount_class":"secret","mount_accessor":"kv_a6081d01","mount_path":"secret/","plugin":"kv"}},"datacontentype":"application/cloudevents","time":"2023-02-17T13:11:39.227341-08:00"}
+$ wscat -H "X-Vault-Token: $(vault print token)" --connect 'ws://127.0.0.1:8200/v1/sys/events/subscribe/kv-v2/data-write?json=true'
+{"id":"a3be9fb1-b514-519f-5b25-b6f144a8c1ce","source":"vault://mycluster","specversion":"1.0","type":"*","data":{"event":{"id":"a3be9fb1-b514-519f-5b25-b6f144a8c1ce","metadata":{"current_version":"1","data_path":"secret/data/foo","modified":"true","oldest_version":"0","operation":"data-write","path":"secret/data/foo"}},"event_type":"kv-v2/data-write","plugin_info":{"mount_class":"secret","mount_accessor":"kv_5dc4d18e","mount_path":"secret/","plugin":"kv"}},"datacontentype":"application/cloudevents","time":"2023-09-12T15:19:49.394915-07:00"}
 ...
 ```
 
