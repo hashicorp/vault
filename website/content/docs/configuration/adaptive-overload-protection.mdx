@@ -17,6 +17,14 @@ protection features for your Vault server.
 
 @include 'alerts/config-reload-supported.mdx'
 
+<Warning title="Do not disable during overload">
+
+Do not disable the adaptive overload protection features during an overload.
+This feature is designed to protect your Vault server from overload conditions.
+Disabling it can lead to poor availability.
+
+</Warning>
+
 For more information read [Adaptive Overload
 Protection](/vault/docs/concepts/adaptive-overload-protection).
 
