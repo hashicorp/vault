@@ -111,7 +111,7 @@ jobs:
       - uses: ./.github/actions/checkout
         id: checkout # Make sure we check out correct ref after checking changed files
       # Get the vault version metadata
-      - uses: hashicorp/actions-set-product-version@v1
+      - uses: hashicorp/actions-set-product-version@v2
         id: set-product-version
         with:
           checkout: false # don't override the reference we've checked out
