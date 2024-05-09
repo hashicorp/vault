@@ -28,6 +28,7 @@ This README outlines the details of collaborating on this Ember application.
 
 | Vault Version | Ember Version |
 | ------------- | ------------- |
+| 1.17.x        | 5.4.2         |
 | 1.15.x        | 4.12.0        |
 | 1.14.x        | 4.4.0         |
 | 1.13.x        | 4.4.0         |

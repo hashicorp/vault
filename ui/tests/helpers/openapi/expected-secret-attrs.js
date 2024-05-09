@@ -569,6 +569,12 @@ const pki = {
       fieldGroup: 'default',
       type: 'boolean',
     },
+    maxTtl: {
+      editType: 'ttl',
+      fieldGroup: 'default',
+      helpText:
+        'Specify the maximum TTL for ACME certificates. Role TTL values will be limited to this value',
+    },
   },
   'pki/certificate/generate': {
     role: {
@@ -1199,6 +1205,12 @@ const pki = {
       helpText: 'PEM-format CSR to be signed.',
       fieldGroup: 'default',
       type: 'string',
+    },
+    enforceLeafNotAfterBehavior: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText: "Do not truncate the NotAfter field, use the issuer's configured leaf_not_after_behavior",
+      type: 'boolean',
     },
     excludeCnFromSans: {
       editType: 'boolean',

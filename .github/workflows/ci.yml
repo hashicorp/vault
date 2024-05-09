@@ -164,7 +164,7 @@ jobs:
           node-version-file: './ui/package.json'
           cache: yarn
           cache-dependency-path: ui/yarn.lock
-      - uses: browser-actions/setup-chrome@82b9ce628cc5595478a9ebadc480958a36457dc2 # v1.6.0
+      - uses: browser-actions/setup-chrome@361a23fcf94a523a91c9cfae6f11c2a5c2d87f64 # v1.6.1
       - name: ui-dependencies
         working-directory: ./ui
         run: |
@@ -177,7 +177,7 @@ jobs:
       - if: needs.setup.outputs.is-enterprise == 'true'
         id: secrets
         name: Fetch secrets
-        uses: hashicorp/vault-action@9f522b85981b491eab9a52c144d15aedbd0bf371 # v2.8.0
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -268,7 +268,7 @@ jobs:
       - if: needs.setup.outputs.is-enterprise == 'true'
         id: secrets
         name: Fetch Vault Secrets
-        uses: hashicorp/vault-action@9f522b85981b491eab9a52c144d15aedbd0bf371 # v2.8.0
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
