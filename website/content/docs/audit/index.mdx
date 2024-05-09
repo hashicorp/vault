@@ -103,9 +103,8 @@ relevant headers individually.
 ### Default headers
 
 
-As of Vault 1.17 the following headers are **always automatically enabled** in
-order to facilitate correlation of requests across distributed systems which
-include Vault.
+To help correlate requests across distributed systems, Vault automatically
+records the following headers in the audit log:
 
 - `correlation-id`
 - `x-correlation-id`
