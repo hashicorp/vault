@@ -5,8 +5,9 @@
 
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
-import Pretender from 'pretender';
 import Service from '@ember/service';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
 
 const PERMISSIONS_RESPONSE = {
   data: {
@@ -34,17 +35,13 @@ const PERMISSIONS_RESPONSE = {
 
 module('Unit | Service | permissions', function (hooks) {
   setupTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.server = new Pretender();
-    this.server.get('/v1/sys/internal/ui/resultant-acl', () => {
-      return [200, { 'Content-Type': 'application/json' }, JSON.stringify(PERMISSIONS_RESPONSE)];
+    this.server.get('/sys/internal/ui/resultant-acl', () => {
+      return PERMISSIONS_RESPONSE;
     });
     this.service = this.owner.lookup('service:permissions');
-  });
-
-  hooks.afterEach(function () {
-    this.server.shutdown();
   });
 
   test('sets paths properly', async function (assert) {
@@ -59,9 +56,7 @@ module('Unit | Service | permissions', function (hooks) {
   });
 
   test('defaults to show all items when policy cannot be found', async function (assert) {
-    this.server.get('/v1/sys/internal/ui/resultant-acl', () => {
-      return [403, { 'Content-Type': 'application/json' }];
-    });
+    this.server.get('/sys/internal/ui/resultant-acl', () => overrideResponse(403));
     await this.service.getPaths.perform();
     assert.true(this.service.canViewAll);
   });

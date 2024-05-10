@@ -5,13 +5,12 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import Pretender from 'pretender';
 import { render, settled, select } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { hbs } from 'ember-cli-htmlbars';
 import { typeInSearch, clickTrigger } from 'ember-power-select/test-support/helpers';
 import searchSelect from '../../../pages/components/search-select';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 const SELECTORS = {
   form: '[data-test-keymgmt-distribution-form]',
@@ -30,84 +29,55 @@ const ssComponent = create(searchSelect);
 
 module('Integration | Component | keymgmt/distribute', function (hooks) {
   setupRenderingTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.set('backend', 'keymgmt');
     this.set('providers', ['provider-aws', 'provider-gcp', 'provider-azure']);
-    this.server = new Pretender(function () {
-      this.get('/v1/keymgmt/key', (response) => {
-        return [
-          response,
-          { 'Content-Type': 'application/json' },
-          JSON.stringify({
-            data: {
-              keys: ['example-1', 'example-2', 'example-3'],
-            },
-          }),
-        ];
-      });
-      this.get('/v1/keymgmt/key/:name', (response) => {
-        const name = response.params.name;
-        return [
-          response,
-          { 'Content-Type': 'application/json' },
-          JSON.stringify({
-            data: {
-              name,
-              type: 'aes256-gcm96', // incompatible with azurekeyvault only
-            },
-          }),
-        ];
-      });
-      this.get('/v1/keymgmt/kms/:name', (response) => {
-        const name = response.params.name;
-        let provider;
-        switch (name) {
-          case 'provider-aws':
-            provider = 'awskms';
-            break;
-          case 'provider-azure':
-            provider = 'azurekeyvault';
-            break;
-          default:
-            provider = 'gcpckms';
-            break;
-        }
-        return [
-          response,
-          { 'Content-Type': 'application/json' },
-          JSON.stringify({
-            data: {
-              name,
-              provider,
-            },
-          }),
-        ];
-      });
-      this.get('/v1/keymgmt/kms', (response) => {
-        return [
-          response,
-          { 'Content-Type': 'application/json' },
-          JSON.stringify({
-            data: {
-              keys: ['provider-aws', 'provider-azure', 'provider-gcp'],
-            },
-          }),
-        ];
-      });
+    this.server.get('/keymgmt/key', () => {
+      return {
+        data: {
+          keys: ['example-1', 'example-2', 'example-3'],
+        },
+      };
     });
-    setRunOptions({
-      rules: {
-        // TODO: Fix SearchSelect component
-        'aria-required-attr': { enabled: false },
-        label: { enabled: false },
-        'color-contrast': { enabled: false },
-      },
+    this.server.get('/keymgmt/key/:name', (_, req) => {
+      const name = req.params.name;
+      return {
+        data: {
+          name,
+          type: 'aes256-gcm96', // incompatible with azurekeyvault only
+        },
+      };
     });
-  });
-
-  hooks.afterEach(function () {
-    this.server.shutdown();
+    this.server.get('/keymgmt/kms/:name', (_, req) => {
+      const name = req.params.name;
+      let provider;
+      switch (name) {
+        case 'provider-aws':
+          provider = 'awskms';
+          break;
+        case 'provider-azure':
+          provider = 'azurekeyvault';
+          break;
+        default:
+          provider = 'gcpckms';
+          break;
+      }
+      return {
+        data: {
+          name,
+          provider,
+        },
+      };
+    });
+    this.server.get('/keymgmt/kms', () => {
+      return {
+        data: {
+          keys: ['provider-aws', 'provider-azure', 'provider-gcp'],
+        },
+      };
+    });
   });
 
   test('it does not allow operation selection until valid key/provider combo selected', async function (assert) {

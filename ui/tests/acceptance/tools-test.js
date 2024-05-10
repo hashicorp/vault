@@ -14,16 +14,17 @@ import {
   waitUntil,
   waitFor,
 } from '@ember/test-helpers';
-import Pretender from 'pretender';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { toolsActions } from 'vault/helpers/tools-actions';
 import authPage from 'vault/tests/pages/auth';
 import { capitalize } from '@ember/string';
 import codemirror from 'vault/tests/helpers/codemirror';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 module('Acceptance | tools', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     return authPage.login();
@@ -161,10 +162,8 @@ module('Acceptance | tools', function (hooks) {
   };
 
   test('ensure unwrap with auth block works properly', async function (assert) {
-    this.server = new Pretender(function () {
-      this.post('/v1/sys/wrapping/unwrap', (response) => {
-        return [response, { 'Content-Type': 'application/json' }, JSON.stringify(AUTH_RESPONSE)];
-      });
+    this.server.post('/sys/wrapping/unwrap', () => {
+      return AUTH_RESPONSE;
     });
     await visit('/vault/tools');
 
@@ -180,6 +179,5 @@ module('Acceptance | tools', function (hooks) {
       AUTH_RESPONSE.auth,
       'unwrapped data equals input data'
     );
-    this.server.shutdown();
   });
 });
