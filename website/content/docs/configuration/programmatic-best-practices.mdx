@@ -44,9 +44,10 @@ namespace.
 
 ## Terraform Vault provider recommendations
 
-- **Use dynamic provider credentials for Vault when possible**. Dynamic provider
-  credentials generate short-lived credentials as needed, which limits the need
-  for static credentials and improves the security posture of your integration.
+- **Use dynamic provider credentials for Vault when possible**.
+  [Dynamic provider credentials](/terraform/cloud-docs/workspaces/dynamic-provider-credentials/vault-configuration)
+  generate short-lived credentials as needed, which limits the need for static
+  credentials and improves the security posture of your integration.
 
 - **Do not pass `address`, `token`, or `namespace` to the provider configuration block**.
   When you use dynamic provider credentials, Terraform populates the environment
@@ -69,10 +70,10 @@ namespace.
 ## Vault recommendations
 
 - **Use Vault-backed dynamic credentials for different cloud providers**.
-  Vault-backed dynamic credentials limits the need for unique dynamic provider
-  credentials across different cloud providers so you can centralize sensitive
-  data management with Vault while generating short-lived credentials with
-  multiple cloud providers.
+  [Vault-backed dynamic credentials](/terraform/cloud-docs/workspaces/dynamic-provider-credentials/vault-backed)
+  limits the need for unique dynamic provider credentials across different cloud
+  providers so you can centralize sensitive data management with Vault while
+  generating short-lived credentials with multiple cloud providers.
 
 - **Use the namespace attribute in resources and data sources**. Using the
   namespace attribute of a resource, instead of a provider alias, simplifies
@@ -80,9 +81,11 @@ namespace.
 
 - **Use distinct token capabilities**. Use the minimal required Vault token
   capabilities to manage your Vault resources. For example, reading data from a
-  KV datasource and drift detection functionality only require the `read` capability. The `create` or `update` capability is required to manage the KV resource and depends on whether the resource already exists. The `delete` capability is required if you remove the KV resource from the Terraform configuration.
+  KV data source and drift detection functionality only require the `read`
+  capability. But managing the KV resource requires the `create` or `update`
+  capability depending on whether the resource already exists. And removing the
+  KV resource from the Terraform configuration requires the `delete` capability.
 
 - **Migrate existing resources to Terraform**. If you created Vault resources
   outside of your Terraform provisioning workflow,
-  [migrate the un-managed resources](/vault/docs/configuration/programmatic-management#migrate)
-  as soon as possible.
+  [migrate the un-managed resources](/vault/docs/configuration/programmatic-management#migrate).
