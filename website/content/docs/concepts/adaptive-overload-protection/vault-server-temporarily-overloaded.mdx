@@ -1,0 +1,51 @@
+---
+layout: docs
+page_title: Vault server temporarily overloaded
+description: |-
+  How to handle Vault servers rejecting requests due to overload.
+---
+
+Vault Enterprise includes features for [Adaptive Overload
+Protection](/vault/docs/concepts/adaptive-overload-protection). When some server
+resource is at capacity, Vault Enterprise may reject some HTTP client requests
+to preserve the Vault server's ability to remain stable and available. This
+document described considerations for handling these requests in client code.
+
+# Vault server temporarily overloaded
+
+Vault returns a `503 - Service Unavailable` response to indicate that a request
+was rejected because there was not enough capacity to service it in a timely way:
+
+```
+Error making API request.
+
+URL: PUT https://127.0.0.1:61555/v1/auth/userpass/login/foo
+Code: 503. Errors:
+
+* 1 error occurred:
+	* Vault server temporarily overloaded
+```
+
+`503 - Service Unavailable` is a retryable HTTP error.
+
+Vault clients should retry their request with a suitable backoff strategy.
+When retrying you should:
+ * Wait for an increasing amount of time between retries.
+ * Randomize the wait time between retries to avoid many clients becoming
+   synchronized and all retrying at the same moment. This is often called
+   adding "jitter".
+ * Limit the total number of retries so that request volume doesn't continue to
+   grow for the duration of an outage as more and more clients add on retries.
+
+~> **NOTE**:  `429 - Too Many Requests` is typically used to indicate that a
+specific client is issuing too many requests. A `503 - Service Unavailable`
+instead indicates that that the server is under excess load, which is likely to
+be unrelated to the behavior of the specific client being rejected.
+
+For more information on request rejection, refer to the [Adaptive Overload
+Protection Overview](/vault/docs/concepts/adaptive-overload-protection).
+
+## API Package
+
+For clients written in Go that use Vault's API package, retries are handled by
+default with no further work needed.
